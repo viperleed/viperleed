@@ -63,17 +63,21 @@ def test_ase_cell_correct(ase_Ni_100_1x1_cell):
     # make sure there are 6 atoms
     assert len(cell.positions) == 6
 
-# @Michele: replace with Slab.from_ase method
+# TODO: will need to replace with Slab.from_ase method
+def slab_from_ase(ase_atoms):
+    """Return a Slab from an ase.Atoms object."""
+    return Slab(ase_atoms)
+
+
 @pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
 def test_Ni_slab_from_ase(ase_atoms):
-    slab = Slab(ase_atoms)
+    slab = slab_from_ase(ase_atoms)
     assert len(ase_atoms.positions) == len(slab.atlist)
 
 
-# @Michele: replace with new function - currently not working
 @pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
 def test_rot_mat_c(ase_atoms):
-    slab = Slab(ase_atoms)
+    slab = slab_from_ase(ase_atoms)
     a_before, b_before = slab.ucell[:,0], slab.ucell[:,1]
     theta = 30 # degrees
     rot_mat = vpr_ase.rot_mat_c(theta)
