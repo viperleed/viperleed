@@ -59,9 +59,12 @@ def fixture_ase_nickel_cell():
     return cell_1x1
 
 
-@pytest.mark.parametrize("ase_atoms, n_atoms", (("ase_ni_100_1x1_cell", 6),))
-def test_ase_n_atoms(ase_atoms, n_atoms):
+# TODO: find a better way, perhaps a decorator that does
+# the request + extracting fixture value.
+@pytest.mark.parametrize("fixture, n_atoms", (("ase_ni_100_1x1_cell", 6),))
+def test_ase_n_atoms(fixture, n_atoms, request):
     """Make sure `ase_atoms` has `n_atoms` atoms."""
+    ase_atoms = request.getfixturevalue(fixture)
     assert len(ase_atoms.positions) == n_atoms
 
 
@@ -71,9 +74,10 @@ def slab_from_ase(ase_atoms):
     return Slab(ase_atoms)
 
 
-@pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
-def test_n_atoms_from_ase(ase_atoms):
+@pytest.mark.parametrize("fixture", _ASE_ATOMS)
+def test_n_atoms_from_ase(fixture, request):
     """Make sure the number of atoms in Slab match those in ase.Atoms."""
+    ase_atoms = request.getfixturevalue(fixture)
     slab = slab_from_ase(ase_atoms)
     assert len(ase_atoms.positions) == len(slab.atlist)
 
@@ -85,9 +89,10 @@ def test_rotation_matrices():
 
 THETA = 14.7  # degrees
 
-@pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
-def test_rot_mat_c(ase_atoms):
+@pytest.mark.parametrize("fixture", _ASE_ATOMS)
+def test_rot_mat_c(fixture, request):
     """Assert correct rotation around z axis."""
+    ase_atoms = request.getfixturevalue(fixture)
     slab = slab_from_ase(ase_atoms)
     rot_mat = vpr_ase.rot_mat_c(THETA)
     ucell_before = slab.ucell.T.copy()
