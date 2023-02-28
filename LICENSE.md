@@ -1,19 +1,22 @@
+ViPErLEED is a package for LEED-IV calculations and measurements.
 Copyright (c) 2019-2023, ViPErLEED Developers.
 
 The ViPErLEED project aims to provide free and open software.
 However, because ViPErLEED is building on existing software, the
 ViPErLEED developers cannot grant a license to all parts of this
-repository. See below for details. For inquiries or questions, pleasecontact the ViPErLEED developers.
+repository. See below for details. For inquiries or questions, please
+contact the ViPErLEED developers under <info@viperleed.org>.
 
 All files in this repository authored by the ViPErLEED developers are
 licensed under the the GNU General Public License version 3 (GPLv3; see
-below for license text). This explicitly includes the TensErLEED manager(tleedm), ViPErLEED utility scripts, the ViPErLEED GUI, the ViPErLEED
+below for license text). This explicitly includes the TensErLEED manager
+(tleedm), ViPErLEED utility scripts, the ViPErLEED GUI, the ViPErLEED
 electronics control software, the ViPErLEED electronics firmware,
 schematics for the ViPErLEED electronics and the ViPErLEED
 documentation. Changes to the TensErLEED source code made by the
 ViPErLEED authors, which are clearly marked as such, are similarly
 licensed under GPLv3.
-The ViPErLEED Spot tracker is #TODO Michael: which license?.
+The ViPErLEED Spot tracker is licensed under ... TODO Michael
 
 NOT COVERED under GPLv3 are:
 - All other parts of TensErLEED
@@ -34,6 +37,24 @@ authors ASK that you cite the used parts of the package in resulting publication
 - Tleedm: TODO
 - Electronics: TODO
 - SpotTracker: TODO
+
+
+The following applies for all parts of ViPErLEED that are covered by
+GPLv3:
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
@@ -656,56 +677,3 @@ Program, unless a warranty or assumption of liability accompanies a
 copy of the Program in return for a fee.
 
                      END OF TERMS AND CONDITIONS
-
-            How to Apply These Terms to Your New Programs
-
-  If you develop a new program, and you want it to be of the greatest
-possible use to the public, the best way to achieve this is to make it
-free software which everyone can redistribute and change under these terms.
-
-  To do so, attach the following notices to the program.  It is safest
-to attach them to the start of each source file to most effectively
-state the exclusion of warranty; and each file should have at least
-the "copyright" line and a pointer to where the full notice is found.
-
-    <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) <year>  <name of author>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-Also add information on how to contact you by electronic and paper mail.
-
-  If the program does terminal interaction, make it output a short
-notice like this when it starts in an interactive mode:
-
-    <program>  Copyright (C) <year>  <name of author>
-    This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
-    This is free software, and you are welcome to redistribute it
-    under certain conditions; type `show c' for details.
-
-The hypothetical commands `show w' and `show c' should show the appropriate
-parts of the General Public License.  Of course, your program's commands
-might be different; for a GUI interface, you would use an "about box".
-
-  You should also get your employer (if you work as a programmer) or school,
-if any, to sign a "copyright disclaimer" for the program, if necessary.
-For more information on this, and how to apply and follow the GNU GPL, see
-<https://www.gnu.org/licenses/>.
-
-  The GNU General Public License does not permit incorporating your program
-into proprietary programs.  If your program is a subroutine library, you
-may consider it more useful to permit linking proprietary applications with
-the library.  If this is what you want to do, use the GNU Lesser General
-Public License instead of this License.  But first, please read
-<https://www.gnu.org/licenses/why-not-lgpl.html>.
