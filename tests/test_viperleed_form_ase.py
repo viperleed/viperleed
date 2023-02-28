@@ -48,7 +48,6 @@ _TRANSFORMATIONS_FOR_REFCALC = (
 
 _ASE_ATOMS = (
     "ase_ni_100_1x1_cell",
-    "ase_ni_100_1x1_cell",
     )
 
 
