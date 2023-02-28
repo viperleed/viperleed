@@ -136,6 +136,9 @@ def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
     ase_atoms = ase_ni_100_1x1_cell
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
                                         numbered=True)
+    # The "initialization" folder contains only a PARAMETERS file,
+    # but the required IVBEAMS or EXPBEAMS are not present, so the
+    # next run_from_ase call will actually FAIL. This is fine though
     inputs_path = INPUTS_ASE / "initialization"
     results = vpr_ase.run_from_ase(
         exec_path=exec_path,
