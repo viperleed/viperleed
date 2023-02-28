@@ -12,9 +12,10 @@ import logging
 import numpy as np
 import re
 import os
-from viperleed import fortranformat as ff
 import copy
 from io import StringIO
+
+import fortranformat as ff
 
 import viperleed.tleedmlib as tl
 from viperleed.guilib import project_to_first_domain

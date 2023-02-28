@@ -9,9 +9,10 @@ Functions for reading and writing files relevant to the delta calculation
 
 import logging
 import numpy as np
-from viperleed import fortranformat as ff
 import os
 import shutil
+
+import fortranformat as ff
 
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 

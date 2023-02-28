@@ -9,7 +9,9 @@ Functions for reading, processing and writing files relevant to the search
 
 import logging
 import numpy as np
-from viperleed import fortranformat as ff
+
+import fortranformat as ff
+
 import copy
 import os
 import random

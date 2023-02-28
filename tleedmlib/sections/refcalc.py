@@ -17,7 +17,8 @@ from pathlib import Path
 
 import numpy as np
 
-from viperleed import fortranformat as ff
+import fortranformat as ff
+
 from viperleed.tleedmlib.leedbase import (
     fortran_compile_batch, getTLEEDdir, getMaxTensorIndex, monitoredPool,
     copy_compile_log)

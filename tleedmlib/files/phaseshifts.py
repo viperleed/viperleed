@@ -13,7 +13,7 @@ import os
 from itertools import combinations
 from pathlib import Path
 
-from viperleed import fortranformat as ff
+import fortranformat as ff
 
 from viperleed.tleedmlib.leedbase import (get_atomic_number,
                                           get_element_symbol)

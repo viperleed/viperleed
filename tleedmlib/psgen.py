@@ -15,8 +15,9 @@ import re
 import shutil
 
 import viperleed.tleedmlib as tl
-from viperleed import fortranformat as ff
 from viperleed.tleedmlib.files.parameters import PARAM_LIMITS
+
+import fortranformat as ff
 
 logger = logging.getLogger("tleedm.psgen")
 

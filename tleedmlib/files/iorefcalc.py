@@ -11,7 +11,8 @@ import numpy as np
 import logging
 import os
 import copy
-from viperleed import fortranformat as ff
+
+import fortranformat as ff
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import splitMaxRight
