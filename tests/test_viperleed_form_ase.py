@@ -52,14 +52,14 @@ _ASE_ATOMS = (
     )
 
 
-@pytest.fixture(name="ase_Ni_100_1x1_cell")
+@pytest.fixture(name="ase_ni_100_1x1_cell")
 def fixture_ase_nickel_cell():
     element = 'Ni'
     cell_1x1 = ase.build.fcc110(element, size=(1,1,6), vacuum=3)
     return cell_1x1
 
 
-@pytest.mark.parametrize("ase_atoms, n_atoms", (("ase_Ni_100_1x1_cell", 6),))
+@pytest.mark.parametrize("ase_atoms, n_atoms", (("ase_ni_100_1x1_cell", 6),))
 def test_ase_n_atoms(ase_atoms, n_atoms):
     """Make sure `ase_atoms` has `n_atoms` atoms."""
     assert len(ase_atoms.positions) == n_atoms
@@ -100,9 +100,9 @@ def test_rot_mat_c(ase_atoms):
     assert np.allclose(ucell_before[2], ucell_after[2])
 
 
-@pytest.fixture(name="init_Ni_from_ase")
-def fixture_run_from_ase_initialization(ase_Ni_100_1x1_cell, tmp_path_factory):
-    ase_atoms = ase_Ni_100_1x1_cell
+@pytest.fixture(name="run_from_ase_initialization")
+def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
+    ase_atoms = ase_ni_100_1x1_cell
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
                                         numbered=True)
     inputs_path = INPUTS_ASE / "initialization"
@@ -115,10 +115,12 @@ def fixture_run_from_ase_initialization(ase_Ni_100_1x1_cell, tmp_path_factory):
     return results, exec_path, ase_atoms
 
 
-@pytest.fixture(name="refcalc_Ni_from_ase", params=_TRANSFORMATIONS_FOR_REFCALC)
-def fixture_run_from_ase_refcalc(ase_Ni_100_1x1_cell, tmp_path_factory, request):
+@pytest.fixture(name="run_from_ase_refcalc",
+                params=_TRANSFORMATIONS_FOR_REFCALC)
+def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
+                                 tmp_path_factory, request):
     uc_transformation_matrix, uc_scaling = request.param
-    ase_atoms = ase_Ni_100_1x1_cell
+    ase_atoms = ase_ni_100_1x1_cell
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
                                         numbered=True)
     inputs_path = INPUTS_ASE / "refcalc"
@@ -131,54 +133,59 @@ def fixture_run_from_ase_refcalc(ase_Ni_100_1x1_cell, tmp_path_factory, request)
     return results, exec_path, ase_atoms
 
 
-@pytest.fixture(name="refcalc_Ni_from_ase_beamlist")
-def fixture_refcalc_thoeobeams(refcalc_Ni_from_ase):
-    (theobeams, *_), *_ = refcalc_Ni_from_ase
+@pytest.fixture(name="refcalc_thoeobeams")
+def fixture_refcalc_thoeobeams(run_from_ase_refcalc):
+    """Return a list of full-dynamically calculated beams."""
+    (theobeams, *_), *_ = run_from_ase_refcalc
     return readOUTBEAMS(StringIO(theobeams))
 
 
-def test_returns_v0i(init_Ni_from_ase):
-    (*_, v0i), *_ = init_Ni_from_ase
+def test_returns_v0i(run_from_ase_initialization):
+    """Make sure the last return of run_from_ase is V0i."""
+    (*_, v0i), *_ = run_from_ase_initialization
     assert isinstance(v0i, float)
 
 
-def test_init_writes_POSCAR(init_Ni_from_ase):
-    _, exec_path, _ = init_Ni_from_ase
+def test_init_writes_POSCAR(run_from_ase_initialization):
+    _, exec_path, _ = run_from_ase_initialization
     assert (exec_path / "POSCAR").is_file()
 
 
-def test_init_writes_sensible_POSCAR(init_Ni_from_ase):
-    _, exec_path, ase_atoms = init_Ni_from_ase
-    poscar_path = exec_path / "POSCAR"
-    slab = readPOSCAR(poscar_path)
+def test_init_writes_sensible_poscar(run_from_ase_initialization):
+    """Ensure that written POSCAR has the right number of atoms."""
+    _, exec_path, ase_atoms = run_from_ase_initialization
+    slab = readPOSCAR(exec_path / "POSCAR")
     assert len(slab.atlist) == len(ase_atoms.positions)
 
 
-def test_init_generates_VIBROCC(init_Ni_from_ase):
-    _, exec_path, _ = init_Ni_from_ase
+def test_init_generates_VIBROCC(run_from_ase_initialization):
+    _, exec_path, _ = run_from_ase_initialization
     assert (exec_path / "work" / "VIBROCC").is_file()
 
-@pytest.mark.parametrize('expected_file', (('BEAMLIST'), ('VIBROCC'), ('IVBEAMS')))
-def test_run_from_ase_refcalc_files(refcalc_Ni_from_ase, expected_file):
-    _, exec_path, _ = refcalc_Ni_from_ase
-    work_path = exec_path / "work"
-    assert (work_path / expected_file).is_file()
+
+@pytest.mark.parametrize('file', ('BEAMLIST', 'VIBROCC', 'IVBEAMS'))
+def test_refcalc_writes_file(run_from_ase_refcalc, file):
+    """Ensure that run_from_ase writes work `file` during refcalc."""
+    _, exec_path, _ = run_from_ase_refcalc
+    assert (exec_path / "work" / file).is_file()
 
 
-def test_refcalc_output_not_empty(refcalc_Ni_from_ase):
-    (theobeams, *_), *_ = refcalc_Ni_from_ase
-    assert theobeams != ""
-
-def test_refcalc_output_correct_len(refcalc_Ni_from_ase_beamlist):
-    theobeams_list = refcalc_Ni_from_ase_beamlist
-    assert len(theobeams_list) == 4 # as defined in IVBEAMS
-
-def test_refcalc_output_correct_energies(refcalc_Ni_from_ase_beamlist):
-    theobeams_list = refcalc_Ni_from_ase_beamlist
-    assert np.allclose(theobeams_list[0].energies, np.linspace(50, 70, 11))
-
-def test_refcalc_output_non_nan(refcalc_Ni_from_ase_beamlist):
-    theobeams_list = refcalc_Ni_from_ase_beamlist
-    assert not all(np.isnan(theobeams_list[0].energies))
+def test_refcalc_output_not_empty(run_from_ase_refcalc):
+    """Ensure that run_from_ase ref-calc returns a non-empty output."""
+    (theobeams, *_), *_ = run_from_ase_refcalc
+    assert theobeams
 
 
+def test_refcalc_output_correct_len(refcalc_thoeobeams):
+    """Ensure ref-calc produced the correct number of beams."""
+    assert len(refcalc_thoeobeams) == 4  # As per IVBEAMS
+
+
+def test_refcalc_output_correct_energies(refcalc_thoeobeams):
+    """Ensure ref-calc produced the correct energies."""
+    assert all(refcalc_thoeobeams[0].energies == np.linspace(50, 70, 11))
+
+
+def test_refcalc_output_non_nan(refcalc_thoeobeams):
+    """Ensure ref-calc energies are numbers."""
+    assert not any(np.isnan(refcalc_thoeobeams[0].energies))
