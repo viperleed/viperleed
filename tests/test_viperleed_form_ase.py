@@ -80,14 +80,18 @@ def test_n_atoms_from_ase(ase_atoms):
 @pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
 def test_rot_mat_c(ase_atoms):
     slab = slab_from_ase(ase_atoms)
-    a_before, b_before = slab.ucell[:,0], slab.ucell[:,1]
     theta = 30 # degrees
     rot_mat = vpr_ase.rot_mat_c(theta)
+    ucell_before = slab.ucell.T.copy()
     slab.apply_matrix_transformation(rot_mat)
-    a_after, b_after = slab.ucell[:,0], slab.ucell[:,1]
-    get_angle = lambda x,y: np.arccos(np.dot(x,y)/np.linalg.norm(x)/np.linalg.norm(y))
-    assert np.isclose(np.degrees(get_angle(a_before, a_after)), theta)
-    assert np.isclose(np.degrees(get_angle(b_before, b_after)), theta)
+    ucell_after = slab.ucell.T
+
+    # a and b unit vectors
+    for _before, _after in zip(ucell_before[:2], ucell_after[:2]):
+        assert np.isclose(_before[2], _after[2])  # Same z
+        assert np.isclose(np.degrees(angle(_before, _after)), theta)
+    # c unit vector
+    assert np.allclose(ucell_before[2], ucell_after[2])
 
 
 @pytest.fixture(name="init_Ni_from_ase")
