@@ -77,6 +77,11 @@ def test_n_atoms_from_ase(ase_atoms):
     assert len(ase_atoms.positions) == len(slab.atlist)
 
 
+def test_rotation_matrices():
+    """Test that rotation matrices are as expected."""
+    raise NotImplementedError
+
+
 THETA = 14.7  # degrees
 
 @pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
