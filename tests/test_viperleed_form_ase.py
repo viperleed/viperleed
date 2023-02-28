@@ -46,8 +46,8 @@ _TRANSFORMATIONS_FOR_REFCALC = (
     )
 
 
-@pytest.fixture()
-def ase_Ni_100_1x1_cell():
+@pytest.fixture(name="ase_Ni_100_1x1_cell")
+def fixture_ase_nickel_cell():
     element = 'Ni'
     cell_1x1 = ase.build.fcc110(element, size=(1,1,6), vacuum=3)
     return cell_1x1
@@ -77,8 +77,8 @@ def test_rot_mat_c(ase_Ni_100_1x1_cell):
     assert np.isclose(np.degrees(get_angle(b_before, b_after)), theta)
 
 
-@pytest.fixture()
-def init_Ni_from_ase(ase_Ni_100_1x1_cell, tmp_path_factory):
+@pytest.fixture(name="init_Ni_from_ase")
+def fixture_run_from_ase_initialization(ase_Ni_100_1x1_cell, tmp_path_factory):
     ase_cell = ase_Ni_100_1x1_cell
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init', numbered=True)
     inputs_path = INPUTS_ASE / "initialization"
@@ -90,8 +90,8 @@ def init_Ni_from_ase(ase_Ni_100_1x1_cell, tmp_path_factory):
     )
     return results, exec_path
 
-@pytest.fixture(params=_TRANSFORMATIONS_FOR_REFCALC)
-def refcalc_Ni_from_ase(ase_Ni_100_1x1_cell, tmp_path_factory, request):
+@pytest.fixture(name="refcalc_Ni_from_ase", params=_TRANSFORMATIONS_FOR_REFCALC)
+def fixture_run_from_ase_refcalc(ase_Ni_100_1x1_cell, tmp_path_factory, request):
     uc_transformation_matrix, uc_scaling = request.param
     ase_cell = ase_Ni_100_1x1_cell
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init', numbered=True)
@@ -104,8 +104,8 @@ def refcalc_Ni_from_ase(ase_Ni_100_1x1_cell, tmp_path_factory, request):
     )
     return results, exec_path
 
-@pytest.fixture()
-def refcalc_Ni_from_ase_beamlist(refcalc_Ni_from_ase):
+@pytest.fixture(name="refcalc_Ni_from_ase_beamlist")
+def fixture_refcalc_thoeobeams(refcalc_Ni_from_ase):
     (theobeams, *_), _ = refcalc_Ni_from_ase
     theobeams_list = readOUTBEAMS(StringIO(theobeams))
     return theobeams_list
