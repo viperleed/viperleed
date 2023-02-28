@@ -107,6 +107,39 @@ def test_rot_mat_c(fixture, request):
     assert np.allclose(ucell_before[2], ucell_after[2])
 
 
+class TestRaises:
+    """Container for test that check exceptions."""
+
+    @staticmethod
+    def test_non_existing_exec_path():
+        """Test exception for non existing execution path."""
+        missing_path = INPUTS_ASE / "__th_is__do_es_not_ex_is_t__"
+        with pytest.raises(ValueError) as exc:
+            vpr_ase.run_from_ase(missing_path, None)
+        assert exc.match("exec_path")
+
+    @staticmethod
+    def test_non_existing_parameters():
+        """Test exception for non-existing PARAMETERS file."""
+        with pytest.raises(RuntimeError) as exc:
+            vpr_ase.run_from_ase(INPUTS_ASE, None)
+        assert exc.match("PARAMETERS")
+
+    @staticmethod
+    def test_out_of_plane_ab(ase_ni_100_1x1_cell):
+        """Test exception raised for a slab with non-xy a/b vectors."""
+        rot_mat = vpr_ase.rot_mat_a(20)
+        ase_atoms = ase_ni_100_1x1_cell
+        exec_path = INPUTS_ASE / "initialization"  # Will not run
+        with pytest.raises(RuntimeError) as exc:
+            vpr_ase.run_from_ase(
+                exec_path,
+                ase_atoms,
+                uc_transformation_matrix=rot_mat
+                )
+        assert exc.match("z component")
+
+
 # TODO: find a nice way to generate multiple fixtures dynamically.
 # See also notes in helpers.py. Difficulties:
 # - make temp path dependent on the name of the first argument in
