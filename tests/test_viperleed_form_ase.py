@@ -106,8 +106,9 @@ def fixture_run_from_ase_initialization(ase_Ni_100_1x1_cell, tmp_path_factory):
         ase_object=ase_atoms,
         inputs_path=inputs_path,
         cut_cell_c_fraction=0.0
-    )
-    return results, exec_path
+        )
+    return results, exec_path, ase_atoms
+
 
 @pytest.fixture(name="refcalc_Ni_from_ase", params=_TRANSFORMATIONS_FOR_REFCALC)
 def fixture_run_from_ase_refcalc(ase_Ni_100_1x1_cell, tmp_path_factory, request):
@@ -121,41 +122,46 @@ def fixture_run_from_ase_refcalc(ase_Ni_100_1x1_cell, tmp_path_factory, request)
         ase_object=ase_atoms,
         inputs_path=inputs_path,
         cut_cell_c_fraction=0.0
-    )
-    return results, exec_path
+        )
+    return results, exec_path, ase_atoms
+
 
 @pytest.fixture(name="refcalc_Ni_from_ase_beamlist")
 def fixture_refcalc_thoeobeams(refcalc_Ni_from_ase):
-    (theobeams, *_), _ = refcalc_Ni_from_ase
-    theobeams_list = readOUTBEAMS(StringIO(theobeams))
-    return theobeams_list
+    (theobeams, *_), *_ = refcalc_Ni_from_ase
+    return readOUTBEAMS(StringIO(theobeams))
+
 
 def test_returns_v0i(init_Ni_from_ase):
-    (*_, v0i), _ = init_Ni_from_ase
+    (*_, v0i), *_ = init_Ni_from_ase
     assert isinstance(v0i, float)
 
+
 def test_init_writes_POSCAR(init_Ni_from_ase):
-    _, exec_path = init_Ni_from_ase
+    _, exec_path, _ = init_Ni_from_ase
     assert (exec_path / "POSCAR").is_file()
 
-def test_init_writes_sensible_POSCAR(init_Ni_from_ase, ase_Ni_100_1x1_cell):
-    _, exec_path = init_Ni_from_ase
+
+def test_init_writes_sensible_POSCAR(init_Ni_from_ase):
+    _, exec_path, ase_atoms = init_Ni_from_ase
     poscar_path = exec_path / "POSCAR"
     slab = readPOSCAR(poscar_path)
-    assert len(slab.atlist) == len(ase_Ni_100_1x1_cell.positions)
+    assert len(slab.atlist) == len(ase_atoms.positions)
+
 
 def test_init_generates_VIBROCC(init_Ni_from_ase):
-    _, exec_path = init_Ni_from_ase
+    _, exec_path, _ = init_Ni_from_ase
     assert (exec_path / "work" / "VIBROCC").is_file()
 
 @pytest.mark.parametrize('expected_file', (('BEAMLIST'), ('VIBROCC'), ('IVBEAMS')))
 def test_run_from_ase_refcalc_files(refcalc_Ni_from_ase, expected_file):
-    _, exec_path = refcalc_Ni_from_ase
+    _, exec_path, _ = refcalc_Ni_from_ase
     work_path = exec_path / "work"
     assert (work_path / expected_file).is_file()
 
+
 def test_refcalc_output_not_empty(refcalc_Ni_from_ase):
-    (theobeams, *_), _ = refcalc_Ni_from_ase
+    (theobeams, *_), *_ = refcalc_Ni_from_ase
     assert theobeams != ""
 
 def test_refcalc_output_correct_len(refcalc_Ni_from_ase_beamlist):
