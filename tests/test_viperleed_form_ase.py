@@ -97,12 +97,13 @@ def test_rot_mat_c(ase_atoms):
 
 @pytest.fixture(name="init_Ni_from_ase")
 def fixture_run_from_ase_initialization(ase_Ni_100_1x1_cell, tmp_path_factory):
-    ase_cell = ase_Ni_100_1x1_cell
-    exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init', numbered=True)
+    ase_atoms = ase_Ni_100_1x1_cell
+    exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
+                                        numbered=True)
     inputs_path = INPUTS_ASE / "initialization"
     results = vpr_ase.run_from_ase(
         exec_path=exec_path,
-        ase_object=ase_cell,
+        ase_object=ase_atoms,
         inputs_path=inputs_path,
         cut_cell_c_fraction=0.0
     )
@@ -111,12 +112,13 @@ def fixture_run_from_ase_initialization(ase_Ni_100_1x1_cell, tmp_path_factory):
 @pytest.fixture(name="refcalc_Ni_from_ase", params=_TRANSFORMATIONS_FOR_REFCALC)
 def fixture_run_from_ase_refcalc(ase_Ni_100_1x1_cell, tmp_path_factory, request):
     uc_transformation_matrix, uc_scaling = request.param
-    ase_cell = ase_Ni_100_1x1_cell
-    exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init', numbered=True)
+    ase_atoms = ase_Ni_100_1x1_cell
+    exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
+                                        numbered=True)
     inputs_path = INPUTS_ASE / "refcalc"
     results = vpr_ase.run_from_ase(
         exec_path=exec_path,
-        ase_object=ase_cell,
+        ase_object=ase_atoms,
         inputs_path=inputs_path,
         cut_cell_c_fraction=0.0
     )
