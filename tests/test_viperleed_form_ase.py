@@ -1,28 +1,33 @@
-import pytest
-import shutil, tempfile
-import sys
-import os
-from pathlib import Path
-from copy import deepcopy
-import numpy as np
-from io import StringIO
 
-vpr_path = str(Path(__file__).parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
+from io import StringIO
+from pathlib import Path
+import sys
+
+import ase.build
+import numpy as np
+import pytest
+
+VPR_PATH = str(Path(__file__).resolve().parents[2])
+if VPR_PATH not in sys.path:
+    sys.path.append(VPR_PATH)
+
+# pylint: disable=wrong-import-position
+# Unfortunately no way to do this the correct way till we have
+# an installable version of viperleed. The reason is the VPR_PATH
+# bit above.
+from viperleed import viperleed_from_ase as vpr_ase
+from viperleed.tleedmlib.base import angle
+from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.files.beams import readOUTBEAMS
+from viperleed.tleedmlib.files.poscar import readPOSCAR
+# pylint: enable=wrong-import-position
+
 
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 INPUTS_ASE = INPUTS_ORIGIN / "from_ase"
 
-import viperleed
 
-from viperleed.tleedmlib.files.poscar import readPOSCAR
-from viperleed import tleedmlib as tl
-from viperleed.tleedmlib.classes.slab import Slab
-from viperleed.tleedmlib.files.beams import readOUTBEAMS
-from viperleed.viperleed_from_ase import run_from_ase, rot_mat_c
 
-import ase.build
 
 # @Michele: put transformations to test here
 _TRANSFORMATIONS_FOR_REFCALC = (
@@ -54,7 +59,7 @@ def test_rot_mat_c(ase_Ni_100_1x1_cell):
     slab = Slab(ase_Ni_100_1x1_cell)
     a_before, b_before = slab.ucell[:,0], slab.ucell[:,1]
     theta = 30 # degrees
-    rot_mat = rot_mat_c(theta)
+    rot_mat = vpr_ase.rot_mat_c(theta)
     slab.apply_matrix_transformation(rot_mat)
     a_after, b_after = slab.ucell[:,0], slab.ucell[:,1]
     get_angle = lambda x,y: np.arccos(np.dot(x,y)/np.linalg.norm(x)/np.linalg.norm(y))
@@ -67,7 +72,7 @@ def init_Ni_from_ase(ase_Ni_100_1x1_cell, tmp_path_factory):
     ase_cell = ase_Ni_100_1x1_cell
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init', numbered=True)
     inputs_path = INPUTS_ASE / "initialization"
-    results = run_from_ase(
+    results = vpr_ase.run_from_ase(
         exec_path=exec_path,
         ase_object=ase_cell,
         inputs_path=inputs_path,
@@ -81,7 +86,7 @@ def refcalc_Ni_from_ase(ase_Ni_100_1x1_cell, tmp_path_factory, request):
     ase_cell = ase_Ni_100_1x1_cell
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init', numbered=True)
     inputs_path = INPUTS_ASE / "refcalc"
-    results = run_from_ase(
+    results = vpr_ase.run_from_ase(
         exec_path=exec_path,
         ase_object=ase_cell,
         inputs_path=inputs_path,
