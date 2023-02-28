@@ -58,10 +58,12 @@ def fixture_ase_nickel_cell():
     cell_1x1 = ase.build.fcc110(element, size=(1,1,6), vacuum=3)
     return cell_1x1
 
-def test_ase_cell_correct(ase_Ni_100_1x1_cell):
-    cell = ase_Ni_100_1x1_cell
-    # make sure there are 6 atoms
-    assert len(cell.positions) == 6
+
+@pytest.mark.parametrize("ase_atoms, n_atoms", (("ase_Ni_100_1x1_cell", 6),))
+def test_ase_n_atoms(ase_atoms, n_atoms):
+    """Make sure `ase_atoms` has `n_atoms` atoms."""
+    assert len(ase_atoms.positions) == n_atoms
+
 
 # TODO: will need to replace with Slab.from_ase method
 def slab_from_ase(ase_atoms):
@@ -70,7 +72,7 @@ def slab_from_ase(ase_atoms):
 
 
 @pytest.mark.parametrize("ase_atoms", _ASE_ATOMS)
-def test_Ni_slab_from_ase(ase_atoms):
+def test_n_atoms_from_ase(ase_atoms):
     slab = slab_from_ase(ase_atoms)
     assert len(ase_atoms.positions) == len(slab.atlist)
 
