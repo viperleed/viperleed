@@ -28,8 +28,8 @@ if VPR_PATH not in sys.path:
 from viperleed import viperleed_from_ase as vpr_ase
 from viperleed.tleedmlib.base import angle
 from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
-from viperleed.tleedmlib.files.poscar import readPOSCAR
 # pylint: enable=wrong-import-position
 
 
@@ -43,6 +43,11 @@ from viperleed.tleedmlib.files.poscar import readPOSCAR
 
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 INPUTS_ASE = INPUTS_ORIGIN / "from_ase"
+
+
+_ASE_ATOMS = (
+    "ase_ni_100_1x1_cell",
+    )
 
 
 def _make_refcalc_ok_transforms():
@@ -68,20 +73,16 @@ def _make_refcalc_fail_transforms():
     """Yield slab transforms and names that cause the refcalc to fail."""
     # A single transform-nothing.
     # Fails because too few bulk layers.
-    cut_default = vpr_ase.SlabTransform()
-    yield cut_default, "cut default"
+    cut_half = vpr_ase.SlabTransform(cut_cell_c_fraction=0.5)
+    yield cut_half, "cut half"
 
     # A 90-degrees in-plane rotation and cut default.
     # Fails because of too few bulk layers.
-    rot_90_z = vpr_ase.SlabTransform(
+    rot_90_z_and_cut = vpr_ase.SlabTransform(
         orthogonal_matrix=vpr_ase.rot_mat_z(90),
+        cut_cell_c_fraction=0.5
         )
-    yield rot_90_z, "90deg z rotation, cut default"
-
-
-_ASE_ATOMS = (
-    "ase_ni_100_1x1_cell",
-    )
+    yield rot_90_z_and_cut, "90deg z rotation, cut half"
 
 
 @pytest.fixture(name="ase_ni_100_1x1_cell", scope="class")
@@ -100,7 +101,6 @@ def test_ase_n_atoms(fixture, n_atoms, request):
     assert len(ase_atoms.positions) == n_atoms
 
 
-# TODO: will need to replace with Slab.from_ase method
 def slab_from_ase(ase_atoms):
     """Return a Slab from an ase.Atoms object."""
     return Slab(ase_atoms)
@@ -401,7 +401,7 @@ class TestFailingInitialization:
     # checksums for files to be generated, and check them over here
     def test_writes_sensible_poscar(self):
         """Ensure that written POSCAR has the right number of atoms."""
-        slab = readPOSCAR(self.exec_path / "POSCAR")
+        slab = poscar.readPOSCAR(self.exec_path / "POSCAR")
         assert len(slab.atlist) == len(self.ase_atoms.positions)
 
 
