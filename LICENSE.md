@@ -7,6 +7,13 @@ ViPErLEED developers cannot grant a license to all parts of this
 repository. See below for details. For inquiries or questions, please
 contact the ViPErLEED developers under <info@viperleed.org>.
 
+If you are using ViPErLEED for your research, the authors ViPErLEED
+authors ASK that you cite the used parts of the package in resulting
+publications:
+- Tleedm: TODO
+- Electronics: TODO
+- SpotTracker: TODO
+
 All files in this repository authored by the ViPErLEED developers are
 licensed under the the GNU General Public License version 3 (GPLv3; see
 below for license text). This explicitly includes the TensErLEED manager
@@ -19,27 +26,56 @@ licensed under GPLv3.
 The ViPErLEED Spot tracker is licensed under ... TODO Michael
 
 NOT COVERED under GPLv3 are:
-- All other parts of TensErLEED
+- All parts of TensErLEED not authored by the ViPErLEED team
 - EEASISSS
 - BEAMGEN (TODO remove after merge branch)
 - ATOMIC DENSITY
 
+The ViPErLEED developers have obtained permission by the authors to use
+and distribute these codes as part of ViPErLEED.
+Due to licensing issues, others may not redistribute TensErLEED,
+EEASISSS and ... without permission by the original authors.
+
+# TensErLEED
+
 The v1.2 version of TensErLEED was published with the Computer Physics
 Communications User License, which REQUIRES users to reference the
-original article in resulting publications.
-For details on TensErLEED versions see the file 'tensorleed/README'.
-- V. Blum and K. Heinz, _Fast LEED Intensity Calculations for Surface Crystallography Using Tensor LEED_, Computer Physics Communications **134**, 392 (2001).
+original article in resulting publications:
+- V. Blum and K. Heinz, _Fast LEED Intensity Calculations for Surface
+  Crystallography Using Tensor LEED_, Computer Physics Communications
+  **134**, 392 (2001).
 Computer Physics Communications User License:
 https://www.elsevier.com/about/policies/open-access-licenses/elsevier-user-license/cpc-license
 
-If you are using ViPErLEED for your research, the authors ViPErLEED
-authors ASK that you cite the used parts of the package in resulting publications:
-- Tleedm: TODO
-- Electronics: TODO
-- SpotTracker: TODO
+All marked changes made to the TensErLEED source code by the
+ViPErLEED authors are licensed under GPLv3. The copyright to these
+changes remains with the ViPErLEED authors.
+The ViPErLEED developers took over development and maintenance of
+TensErLEED in version >=1.61.
+
+# EEASISSS
+
+Elastic Electron-Atom Scattering in Solids and Solid Surfaces (EEASISSS)
+is written and maintained by John O. Rundgren (jru@KTH.se) and used by
+ViPErLEED with permission by the author.
+
+The author appreciates acknowledgement in publications by citation of
+the relevant works:
+- J. Rundgren, B. E. Sernelius, and W. Moritz, _Low-Energy Electron
+  Diffraction with Signal Electron Carrier-Wave Wavenumber Modulated by
+  Signal Exchange-Correlation Interaction_, J. Phys. Commun. **5**,
+  105012 (2021).
+- J. Rundgren, _Elastic Electron-Atom Scattering in Amplitude-Phase
+  Representation with Application to Electron Diffraction and
+  Spectroscopy_, Phys. Rev. B **76**, 195441 (2007).
+- J. Rundgren, _Optimized Surface-Slab Excited-State Muffin-Tin
+  Potential and Surface Core Level Shifts_, Phys. Rev. B **68**,
+  125405 (2003).
 
 
-The following applies for all parts of ViPErLEED that are covered by
+# GNU GENERAL PUBLIC LICENSE
+
+The following applies for all parts of ViPErLEED that ARE covered by
 GPLv3:
 
 This program is free software: you can redistribute it and/or modify

@@ -5,31 +5,7 @@ The ViPErLEED team is using and modifying TensErLEED with express
 permission by the authors.
 TODO: insert email snippet or permission notice
 
-The v1.2 version of TensErLEED was published with the Computer Physics
-Communications User License, which REQUIRES users to reference the
-original article in resulting publications.
-For details on TensErLEED versions see the file 'tensorleed/README'.
-Blum, V.; Heinz, K. (2001), “Fast LEED intensity calculations for surface crystallography using Tensor LEED ”, Mendeley Data, V1, doi: 10.17632/js36dx77rz.1
-Computer Physics Communications User License:
-https://www.elsevier.com/about/policies/open-access-licenses/elsevier-user-license/cpc-license
 
-All marked changes made to the TensErLEED source code by the
-ViPErLEED authors are licensed under GPLv3. The copyright to these
-changes remains with the ViPErLEED authors.
-The ViPErLEED developers took over development and maintenance of
-TensErLEED in version >=1.61.
-
-
-# EEASISSS
-
-Elastic Electron-Atom Scattering in Solids and Solid Surfaces (EEASISSS)
-is written and maintained by John O. Rundgren (jru@KTH.se) and used by
-ViPErLEED with express permission by the author.
-
-The author appreciates acknowledgement in publications by citation of the relevant works:
-- J. Rundgren, B. E. Sernelius, and W. Moritz, _Low-Energy Electron Diffraction with Signal Electron Carrier-Wave Wavenumber Modulated by Signal Exchange-Correlation Interaction_, J. Phys. Commun. **5**, 105012 (2021).
-- J. Rundgren, _Elastic Electron-Atom Scattering in Amplitude-Phase Representation with Application to Electron Diffraction and Spectroscopy_, Phys. Rev. B **76**, 195441 (2007).
-- J. Rundgren, _Optimized Surface-Slab Excited-State Muffin-Tin Potential and Surface Core Level Shifts_, Phys. Rev. B **68**, 125405 (2003).
 
 In the below email snippets, the author gives permission to the
 ViPErLEED developers to use the EEASISSS software.
