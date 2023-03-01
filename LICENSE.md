@@ -1,18 +1,19 @@
 ViPErLEED is a package for LEED-IV calculations and measurements.
 Copyright (c) 2019-2023, ViPErLEED Developers.
 
+The ViPErLEED project is described in detail in these publications:
+- Tleedm: TODO
+- Electronics: TODO
+- SpotTracker: TODO
+If you find ViPErLEED useful in your research, the authors appreciate
+acknowledgement by citation in resulting publications.
+
+
 The ViPErLEED project aims to provide free and open software.
 However, because ViPErLEED is building on existing software, the
 ViPErLEED developers cannot grant a license to all parts of this
 repository. See below for details. For inquiries or questions, please
 contact the ViPErLEED developers under <info@viperleed.org>.
-
-If you are using ViPErLEED for your research, the authors ViPErLEED
-authors ASK that you cite the used parts of the package in resulting
-publications:
-- Tleedm: TODO
-- Electronics: TODO
-- SpotTracker: TODO
 
 All files in this repository authored by the ViPErLEED developers are
 licensed under the the GNU General Public License version 3 (GPLv3; see
@@ -22,7 +23,7 @@ electronics control software, the ViPErLEED electronics firmware,
 schematics for the ViPErLEED electronics and the ViPErLEED
 documentation. Changes to the TensErLEED source code made by the
 ViPErLEED authors, which are clearly marked as such, are similarly
-licensed under GPLv3.
+licensed under GPLv3 or later.
 The ViPErLEED Spot tracker is licensed under ... TODO Michael
 
 NOT COVERED under GPLv3 are:
