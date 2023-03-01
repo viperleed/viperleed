@@ -187,6 +187,49 @@ def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
     return results, exec_path, ase_atoms
 
 
+class TestFailingInitialization:
+    """Tests for an "initialization" run that will fail.
+
+    The failure comes from the fact the the "initialization" input
+    directory is missing the required IVBEAMS file.
+    """
+
+    def __init__(self):
+        """Initialize instance."""
+        self.init_results = tuple()
+        self.exec_path = None
+        self.ase_atoms = None
+
+    @pytest.fixture(autouse=True, scope="class")
+    def run_init(self, run_from_ase_initialization):
+        """Run the initialization once for the whole class."""
+        (self.init_results,
+         self.exec_path,
+         self.ase_atoms) = run_from_ase_initialization
+
+    def test_output_empty(self):
+        """Ensure that run_from_ase initialization returns an empty output."""
+        *all_except_v0i, _ = self.init_results
+        assert all(not s for s in all_except_v0i)
+
+    def test_returns_v0i(self):
+        """Make sure the last return of run_from_ase is V0i."""
+        *_, v0i = self.init_resuls
+        assert isinstance(v0i, float)
+
+    @pytest.mark.parametrize('file', ('POSCAR', 'work/VIBROCC'))
+    def test_writes_file(self, file):
+        """Ensure that run_from_ase writes `file` during initialization."""
+        assert (self.exec_path / file).is_file()
+
+    # TODO: perhaps it would be even better to store somewhere
+    # checksums for files to be generated, and check them over here
+    def test_writes_sensible_poscar(self):
+        """Ensure that written POSCAR has the right number of atoms."""
+        slab = readPOSCAR(self.exec_path / "POSCAR")
+        assert len(slab.atlist) == len(self.ase_atoms.positions)
+
+
 # TODO: find a nice way to generate multiple fixtures dynamically.
 @pytest.fixture(name="run_from_ase_refcalc",
                 params=_TRANSFORMATIONS_FOR_REFCALC)
@@ -228,64 +271,47 @@ def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
     return results, exec_path, ase_atoms
 
 
-@pytest.fixture(name="refcalc_thoeobeams")
-def fixture_refcalc_thoeobeams(run_from_ase_refcalc):
-    """Return a list of full-dynamically calculated beams."""
-    (theobeams, *_), *_ = run_from_ase_refcalc
-    return readOUTBEAMS(StringIO(theobeams))
+class TestSuccessfulRefcalc:
+    """Tests for a "reference calculation" run with successful outcome."""
 
+    def __init__(self):
+        """Initialize instance."""
+        self.refcalc_results = tuple()
+        self.exec_path = None
+        self.ase_atoms = None
+        self.theobeams = tuple()
 
-def test_init_output_empty(run_from_ase_initialization):
-    """Ensure that run_from_ase initialization returns an empty output."""
-    (*all_except_v0i, _), *_ = run_from_ase_initialization
-    assert all(not s for s in all_except_v0i)
+    @pytest.fixture(autouse=True, scope="class"):
+    def run_refcalc(self, run_from_ase_refcalc):
+        """Run the ref-calc once for the whole class."""
+        (self.refcalc_results,
+         self.exec_path,
+         self.ase_atoms) = run_from_ase_refcalc
 
+    @pytest.fixture(autouse=True, scope="class")
+    def read_theobeams_from_results(self):
+        """Store a list of full-dynamically calculated beams."""
+        theobeams_content, *_ = self.refcalc_results
+        self.theobeams = readOUTBEAMS(StringIO(theobeams))
 
-def test_returns_v0i(run_from_ase_initialization):
-    """Make sure the last return of run_from_ase is V0i."""
-    (*_, v0i), *_ = run_from_ase_initialization
-    assert isinstance(v0i, float)
+    @pytest.mark.parametrize('file', ('BEAMLIST', 'VIBROCC', 'IVBEAMS'))
+    def test_writes_file(self, file):
+        """Ensure that run_from_ase writes work `file` during refcalc."""
+        assert (self.exec_path / "work" / file).is_file()
 
+    def test_output_not_empty(self):
+        """Ensure that run_from_ase ref-calc returns a non-empty output."""
+        theobeams_content, *_ = self.refcalc_results
+        assert theobeams_content
 
-@pytest.mark.parametrize('file', ('POSCAR', 'work/VIBROCC'))
-def test_init_writes_file(run_from_ase_initialization, file):
-    """Ensure that run_from_ase writes `file` during initialization."""
-    _, exec_path, _ = run_from_ase_initialization
-    assert (exec_path / file).is_file()
+    def test_correct_nr_beams(self):
+        """Ensure ref-calc produced the correct number of beams."""
+        assert len(self.theobeams) == 4  # As per IVBEAMS
 
+    def test_correct_energies(self):
+        """Ensure ref-calc produced the correct energies."""
+        assert all(self.theobeams[0].energies == np.linspace(50, 70, 11))
 
-# TODO: perhaps it would be even better to store somewhere
-# checksums for files to be generated, and check them over here
-def test_init_writes_sensible_poscar(run_from_ase_initialization):
-    """Ensure that written POSCAR has the right number of atoms."""
-    _, exec_path, ase_atoms = run_from_ase_initialization
-    slab = readPOSCAR(exec_path / "POSCAR")
-    assert len(slab.atlist) == len(ase_atoms.positions)
-
-
-@pytest.mark.parametrize('file', ('BEAMLIST', 'VIBROCC', 'IVBEAMS'))
-def test_refcalc_writes_file(run_from_ase_refcalc, file):
-    """Ensure that run_from_ase writes work `file` during refcalc."""
-    _, exec_path, _ = run_from_ase_refcalc
-    assert (exec_path / "work" / file).is_file()
-
-
-def test_refcalc_output_not_empty(run_from_ase_refcalc):
-    """Ensure that run_from_ase ref-calc returns a non-empty output."""
-    (theobeams, *_), *_ = run_from_ase_refcalc
-    assert theobeams
-
-
-def test_refcalc_output_correct_len(refcalc_thoeobeams):
-    """Ensure ref-calc produced the correct number of beams."""
-    assert len(refcalc_thoeobeams) == 4  # As per IVBEAMS
-
-
-def test_refcalc_output_correct_energies(refcalc_thoeobeams):
-    """Ensure ref-calc produced the correct energies."""
-    assert all(refcalc_thoeobeams[0].energies == np.linspace(50, 70, 11))
-
-
-def test_refcalc_output_non_nan(refcalc_thoeobeams):
-    """Ensure ref-calc energies are numbers."""
-    assert not any(np.isnan(refcalc_thoeobeams[0].energies))
+    def test_no_nan_energies(self):
+        """Ensure ref-calc energies are numbers."""
+        assert not any(np.isnan(self.theobeams[0].energies))
