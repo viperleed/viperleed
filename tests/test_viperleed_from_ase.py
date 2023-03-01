@@ -33,12 +33,12 @@ from viperleed.tleedmlib.files.poscar import readPOSCAR
 # pylint: enable=wrong-import-position
 
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #  IMPORTANT NOTICE: all the fixtures below are class-scoped. This means the  #
-#  calculations will only run once per class. This also means that if new     # 
+#  calculations will only run once per class. This also means that if new     #
 #  tests are added that modify the objects, each of the test sets working     #
 #  with one modified object should be collected into its own class.           #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
