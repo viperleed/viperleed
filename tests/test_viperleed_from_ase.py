@@ -33,6 +33,14 @@ from viperleed.tleedmlib.files.poscar import readPOSCAR
 # pylint: enable=wrong-import-position
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#  IMPORTANT NOTICE: all the fixtures below are class-scoped. This means the  #
+#  calculations will only run once per class. This also means that if new     # 
+#  tests are added that modify the objects, each of the test sets working     #
+#  with one modified object should be collected into its own class.           #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 INPUTS_ASE = INPUTS_ORIGIN / "from_ase"
 
@@ -65,12 +73,11 @@ _ASE_ATOMS = (
     )
 
 
-@pytest.fixture(name="ase_ni_100_1x1_cell")
+@pytest.fixture(name="ase_ni_100_1x1_cell", scope="class")
 def fixture_ase_nickel_cell():
     """Return an ase.Atoms Ni(100)-1x1 with 6 layers."""
     element = 'Ni'
-    cell_1x1 = ase.build.fcc110(element, size=(1,1,6), vacuum=3)
-    return cell_1x1
+    return ase.build.fcc110(element, size=(1,1,6), vacuum=3)
 
 
 # TODO: find a better way, perhaps a decorator that does
@@ -166,7 +173,7 @@ class TestRaises:
 # - make temp path dependent on the name of the first argument in
 #   the signature
 # - pick the right folder in "initialization"
-@pytest.fixture(name="run_from_ase_initialization")
+@pytest.fixture(name="run_from_ase_initialization", scope="class")
 def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
     """Return the results of an initialization run.
 
@@ -211,7 +218,7 @@ class TestFailingInitialization:
     directory is missing the required IVBEAMS file.
     """
 
-    @pytest.fixture(autouse=True)                                              # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
+    @pytest.fixture(autouse=True)
     def run_init(self, run_from_ase_initialization):
         """Run the initialization once for the whole class."""
         # pylint: disable=attribute-defined-outside-init
@@ -246,7 +253,9 @@ class TestFailingInitialization:
 
 
 # TODO: find a nice way to generate multiple fixtures dynamically.
-@pytest.fixture(name="run_from_ase_refcalc", **_TRANSFORMATIONS_FOR_REFCALC)
+@pytest.fixture(name="run_from_ase_refcalc",
+                scope="class",
+                **_TRANSFORMATIONS_FOR_REFCALC)
 def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
                                  tmp_path_factory, request):
     """Return the results of a reference calculation run.
@@ -288,7 +297,7 @@ def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
 class TestSuccessfulRefcalc:
     """Tests for a "reference calculation" run with successful outcome."""
 
-    @pytest.fixture(autouse=True, name="run_refcalc")                           # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
+    @pytest.fixture(autouse=True, name="run_refcalc")
     def fixture_run_refcalc(self, run_from_ase_refcalc):
         """Run the ref-calc once for the whole class."""
         # pylint: disable=attribute-defined-outside-init
@@ -299,7 +308,7 @@ class TestSuccessfulRefcalc:
          self.exec_path,
          self.ase_atoms) = run_from_ase_refcalc
 
-    @pytest.fixture(autouse=True)                                               # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
+    @pytest.fixture(autouse=True)
     def read_theobeams_from_results(self, run_refcalc):
         """Store a list of full-dynamically calculated beams."""
         # pylint: disable=attribute-defined-outside-init
