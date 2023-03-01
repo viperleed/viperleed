@@ -306,8 +306,8 @@ def writePOSCAR(sl, filename='CONTCAR', reorder=False, comments='none',
         with open(filename, 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error("Failed to write "+filename)
+        logger.error(f"Failed to write {filename}")
         raise
     if not silent:
-        logger.debug("Wrote to "+filename+" successfully")
+        logger.debug(f"Wrote to {filename} successfully")
     return
