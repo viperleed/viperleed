@@ -1783,11 +1783,11 @@ class Slab:
         (v, as column vectors) are transformed to v' = O @ v. This
         transformation is essentially equivalent to a change of basis.
 
-        This method differs from  `rotateUnitCell`, `rotateAtoms`,
-        `mirror` and in that the latter two only cause a rotation of
-        the atoms, but not of the unit cell, whereas the former
-        rotates the unit cell but not the atoms. Here both unit cell
-        and atoms are transformed.
+        This method differs from  `rotateUnitCell`, `rotateAtoms`, and
+        `mirror` in that the latter two only cause a rotation of the
+        atoms, but not of the unit cell, whereas the former rotates the
+        unit cell but not the atoms. Here both unit cell and atoms are
+        transformed.
 
         If the transformation is an out-of-plane rotation/mirror (i.e.,
         it changes the z components of unit vectors), layers, bulkslab,
