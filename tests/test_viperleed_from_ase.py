@@ -45,7 +45,7 @@ INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 INPUTS_ASE = INPUTS_ORIGIN / "from_ase"
 
 
-def _make_refcalc_transforms():
+def _make_refcalc_ok_transforms():
     """Yield slab transforms (or sequences thereof) and names (for ids)."""
     # A single transform-nothing, on its own and as a sequence:
     no_transform = vpr_ase.SlabTransform(cut_cell_c_fraction=0.)
@@ -252,47 +252,73 @@ class TestFailingInitialization:
         assert len(slab.atlist) == len(self.ase_atoms.positions)
 
 
-# TODO: find a nice way to generate multiple fixtures dynamically.
-@pytest.fixture(name="run_from_ase_refcalc",
-                scope="class",
-                **_TRANSFORMATIONS_FOR_REFCALC)
-def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
-                                 tmp_path_factory, request):
-    """Return the results of a reference calculation run.
+def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):
+    """Return a pytest.fixture for a refcalc with name and kwargs.
 
     Parameters
     ----------
-    ase_ni_100_1x1_cell : pytest.fixture
-        The ase.Atoms object from which to run.
-    tmp_path_factory : pytest.fixture
-        The pytest default name for the temporary directory factory.
-    request : pytest.fixture
-        The pytest default `equest` fixture for accessing
-        fixture-level parameters. Used to access the transform
-        to be applied to the slab.
+    name : str
+        The name to give to the fixture returned.
+    slab_transforms_and_ids : Iterable
+        Should yield pairs of the form (transforms, id) to be
+        used for tests.
+    kwargs : dict
+        Keyword arguments to pass to the fixture decorator.
 
     Returns
     -------
-    results : tuple
-        The return value of the call to run_from_ase.
-    exec_path : Path
-        The pat to the temporary directory created where the
-        calculation was run.
-    ase_atoms : ase.Atoms
-        The Atoms object fed to run_from_ase.
+    fixture : pytest.fixture
+        The fixture that can be used for running a refcalc.
+        The fixture is class-scoped by default. This can be
+        changed by passing an appropriate keyword argument.
     """
-    ase_atoms = ase_ni_100_1x1_cell
-    exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
-                                        numbered=True)
-    inputs_path = INPUTS_ASE / "refcalc"
-    results = vpr_ase.run_from_ase(
-        exec_path=exec_path,
-        ase_object=ase_atoms,
-        inputs_path=inputs_path,
-        slab_transforms=request.param,
-        )
-    return results, exec_path, ase_atoms
+    params_and_ids_dict = dict(zip(("params", "ids"),
+                                   zip(*slab_transforms_and_ids)))
+    params_and_ids_dict.update(kwargs)
 
+    @pytest.fixture(name=name, scope="class", **params_and_ids_dict)
+    def _fixture(ase_ni_100_1x1_cell, tmp_path_factory, request):
+        """Return the results of a reference calculation run.
+
+        Parameters
+        ----------
+        ase_ni_100_1x1_cell : pytest.fixture
+            The ase.Atoms object from which to run.
+        tmp_path_factory : pytest.fixture
+            The pytest default name for the temporary directory factory.
+        request : pytest.fixture
+            The pytest default `equest` fixture for accessing
+            fixture-level parameters. Used to access the transform
+            to be applied to the slab.
+
+        Returns
+        -------
+        results : tuple
+            The return value of the call to run_from_ase.
+        exec_path : Path
+            The pat to the temporary directory created where the
+            calculation was run.
+        ase_atoms : ase.Atoms
+            The Atoms object fed to run_from_ase.
+        """
+        ase_atoms = ase_ni_100_1x1_cell
+        exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
+                                            numbered=True)
+        inputs_path = INPUTS_ASE / "refcalc"
+        results = vpr_ase.run_from_ase(
+            exec_path=exec_path,
+            ase_object=ase_atoms,
+            inputs_path=inputs_path,
+            slab_transforms=request.param,
+            )
+        return results, exec_path, ase_atoms
+    return _fixture
+
+
+fixture_run_from_ase_refcalc = make_refcalc_fixture(
+    "run_from_ase_refcalc",
+    _make_refcalc_ok_transforms()
+    )
 
 class TestSuccessfulRefcalc:
     """Tests for a "reference calculation" run with successful outcome."""
