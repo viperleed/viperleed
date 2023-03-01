@@ -214,6 +214,10 @@ class TestFailingInitialization:
     @pytest.fixture(autouse=True)                                              # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
     def run_init(self, run_from_ase_initialization):
         """Run the initialization once for the whole class."""
+        # pylint: disable=attribute-defined-outside-init
+        # Could in principle add an __init__ for these, then have a
+        # custom test collection, e.g., as suggested in
+        # https://github.com/pytest-dev/pytest/issues/7033
         (self.init_results,
          self.exec_path,
          self.ase_atoms) = run_from_ase_initialization
@@ -287,6 +291,10 @@ class TestSuccessfulRefcalc:
     @pytest.fixture(autouse=True, name="run_refcalc")                           # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
     def fixture_run_refcalc(self, run_from_ase_refcalc):
         """Run the ref-calc once for the whole class."""
+        # pylint: disable=attribute-defined-outside-init
+        # Could in principle add an __init__ for these, then have a
+        # custom test collection, e.g., as suggested in
+        # https://github.com/pytest-dev/pytest/issues/7033
         (self.refcalc_results,
          self.exec_path,
          self.ase_atoms) = run_from_ase_refcalc
@@ -294,6 +302,8 @@ class TestSuccessfulRefcalc:
     @pytest.fixture(autouse=True)                                               # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
     def read_theobeams_from_results(self, run_refcalc):
         """Store a list of full-dynamically calculated beams."""
+        # pylint: disable=attribute-defined-outside-init
+        # See note in fixture_run_refcalc
         _ = run_refcalc  # Otherwise unused-argument
         theobeams_content, *_ = self.refcalc_results
         self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
