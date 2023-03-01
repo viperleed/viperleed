@@ -294,7 +294,7 @@ class TestSuccessfulRefcalc:
     @pytest.fixture(autouse=True)                                               # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
     def read_theobeams_from_results(self, run_refcalc):
         """Store a list of full-dynamically calculated beams."""
-        *_ = run_refcalc  # Otherwise unused-argument
+        _ = run_refcalc  # Otherwise unused-argument
         theobeams_content, *_ = self.refcalc_results
         self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
 
