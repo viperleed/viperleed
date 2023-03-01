@@ -271,7 +271,7 @@ class TestSlabTransforms:
         raise NotImplementedError
 
     @staticmethod
-    def todo_test_apply_two_transforms()
+    def todo_test_apply_two_transforms():
         """Apply consecutive transforms, and verify correctness."""
         # Should use the _apply_transform function.
         # Ideas:
