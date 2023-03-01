@@ -64,10 +64,21 @@ def _make_refcalc_ok_transforms():
     yield rot_90_z, "90deg z rotation"
 
 
-_TRANSFORMATIONS_FOR_REFCALC = dict(zip(
-    ("params", "ids"),
-    zip(*_make_refcalc_transforms())
-    ))
+def _make_refcalc_fail_transforms():
+    """Yield slab transforms and names that cause the refcalc to fail."""
+    # A single transform-nothing.
+    # Fails because too few bulk layers.
+    cut_default = vpr_ase.SlabTransform()
+    yield cut_default, "cut default"
+
+    # A 90-degrees in-plane rotation and cut default.
+    # Fails because of too few bulk layers.
+    rot_90_z = vpr_ase.SlabTransform(
+        orthogonal_matrix=vpr_ase.rot_mat_z(90),
+        )
+    yield rot_90_z, "90deg z rotation, cut default"
+
+
 _ASE_ATOMS = (
     "ase_ni_100_1x1_cell",
     )
@@ -364,3 +375,47 @@ class TestSuccessfulRefcalc:
     def test_no_nan_energies(self):
         """Ensure ref-calc energies are numbers."""
         assert not any(np.isnan(self.theobeams[0].energies))
+
+
+fixture_run_from_ase_refcalc_fails = make_refcalc_fixture(
+    "run_from_ase_refcalc_fails",
+    _make_refcalc_fail_transforms()
+    )
+
+
+class TestFailingRefcalc:
+    """Tests for a "reference calculation" run with successful outcome."""
+
+    @pytest.fixture(autouse=True, name="run_refcalc")
+    def fixture_run_refcalc(self, run_from_ase_refcalc_fails):
+        """Run the ref-calc once for the whole class."""
+        # pylint: disable=attribute-defined-outside-init
+        # Could in principle add an __init__ for these, then have a
+        # custom test collection, e.g., as suggested in
+        # https://github.com/pytest-dev/pytest/issues/7033
+        (self.refcalc_results,
+         self.exec_path,
+         self.ase_atoms) = run_from_ase_refcalc_fails
+
+    @pytest.fixture(autouse=True)
+    def read_theobeams_from_results(self, run_refcalc):
+        """Store an (empty) list of full-dynamically calculated beams."""
+        # pylint: disable=attribute-defined-outside-init
+        # See note in fixture_run_refcalc
+        _ = run_refcalc  # Otherwise unused-argument
+        theobeams_content, *_ = self.refcalc_results
+        self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
+
+    @pytest.mark.parametrize('file', ('BEAMLIST', ))
+    def test_does_not_write_file(self, file):
+        """Ensure that run_from_ase does not write work `file`."""
+        assert not (self.exec_path / "work" / file).is_file()
+
+    def test_output_empty(self):
+        """Ensure that run_from_ase ref-calc returns an empty output."""
+        theobeams_content, *_ = self.refcalc_results
+        assert not theobeams_content
+
+    def test_no_beams(self):
+        """Ensure ref-calc did not produce any beam."""
+        assert not self.theobeams
