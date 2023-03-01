@@ -128,14 +128,16 @@ class TestRaises:
     @staticmethod
     def test_out_of_plane_ab(ase_ni_100_1x1_cell):
         """Test exception raised for a slab with non-xy a/b vectors."""
-        rot_mat = vpr_ase.rot_mat_a(20)
+        transform = vpr_ase.SlabTransform(
+            orthogonal_matrix=vpr_ase.rot_mat_x(20)
+            )
         ase_atoms = ase_ni_100_1x1_cell
         exec_path = INPUTS_ASE / "initialization"  # Will not run
         with pytest.raises(ValueError) as exc:
             vpr_ase.run_from_ase(
                 exec_path,
                 ase_atoms,
-                uc_transformation_matrix=rot_mat
+                slab_transforms=transform
                 )
         assert exc.match("z component")
 
@@ -172,6 +174,7 @@ def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
         The Atoms object fed to run_from_ase.
     """
     ase_atoms = ase_ni_100_1x1_cell
+    no_cut = vpr_ase.SlabTransform(cut_cell_c_fraction=0.)
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
                                         numbered=True)
     # The "initialization" folder contains only a PARAMETERS file,
@@ -182,7 +185,7 @@ def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
         exec_path=exec_path,
         ase_object=ase_atoms,
         inputs_path=inputs_path,
-        cut_cell_c_fraction=0.0
+        slab_transforms=no_cut,
         )
     return results, exec_path, ase_atoms
 
@@ -260,7 +263,7 @@ def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
         exec_path=exec_path,
         ase_object=ase_atoms,
         inputs_path=inputs_path,
-        cut_cell_c_fraction=0.0
+        slab_transforms=request.param,
         )
     return results, exec_path, ase_atoms
 
