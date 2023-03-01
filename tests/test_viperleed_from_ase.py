@@ -37,15 +37,29 @@ INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 INPUTS_ASE = INPUTS_ORIGIN / "from_ase"
 
 
+def _make_refcalc_transforms():
+    """Yield slab transforms (or sequences thereof) and names (for ids)."""
+    # A single transform-nothing, on its own and as a sequence:
+    no_transform = vpr_ase.SlabTransform(cut_cell_c_fraction=0.)
+    yield no_transform, "no_transform"
+    yield (no_transform,), "no_transform, sequence"
+
+    # A simple cut
+    cut_only = vpr_ase.SlabTransform(cut_cell_c_fraction=0.2)
+    yield cut_only, "cut only"
+
+    # A 90-degrees in-plane rotation, no cutting
+    rot_90_z = vpr_ase.SlabTransform(
+        orthogonal_matrix=vpr_ase.rot_mat_z(90),
+        cut_cell_c_fraction=0.
+        )
+    yield rot_90_z, "90deg z rotation"
 
 
-# @Michele: put transformations to test here
-_TRANSFORMATIONS_FOR_REFCALC = (
-    # (orthogonal_transformation, isotropic_scaling)
-    (None, None),
-    )
-
-
+_TRANSFORMATIONS_FOR_REFCALC = dict(zip(
+    ("params", "ids"),
+    zip(*_make_refcalc_transforms())
+    ))
 _ASE_ATOMS = (
     "ase_ni_100_1x1_cell",
     )
@@ -228,8 +242,7 @@ class TestFailingInitialization:
 
 
 # TODO: find a nice way to generate multiple fixtures dynamically.
-@pytest.fixture(name="run_from_ase_refcalc",
-                params=_TRANSFORMATIONS_FOR_REFCALC)
+@pytest.fixture(name="run_from_ase_refcalc", **_TRANSFORMATIONS_FOR_REFCALC)
 def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
                                  tmp_path_factory, request):
     """Return the results of a reference calculation run.
