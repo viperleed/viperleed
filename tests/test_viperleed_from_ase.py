@@ -114,9 +114,71 @@ def test_n_atoms_from_ase(fixture, request):
     assert len(ase_atoms.positions) == len(slab.atlist)
 
 
-def test_rotation_matrices():
-    """Test that rotation matrices are as expected."""
-    raise NotImplementedError
+class TestRotationMatrices:
+    """Test correctness of some simple rotation matrices."""
+
+    _angles = (0, 12.3, 34, 95, 129.7, 256, 316)
+
+    @staticmethod
+    def test_rot_z_90():
+        """Test 90deg rotation around z."""
+        assert np.allclose(vpr_ase.rot_mat_z(90),
+                           ((0, -1, 0), (1, 0, 0), (0, 0, 1)))
+
+    @staticmethod
+    def test_rot_x_90():
+        """Test 90deg rotation around x."""
+        assert np.allclose(vpr_ase.rot_mat_x(90),
+                           ((1, 0, 0), (0, 0, -1), (0, 1, 0)))
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_rot_axis_x(theta):
+        """Test that rotation around [1,0,0] is the same as around x."""
+        assert np.allclose(vpr_ase.rot_mat_axis([1, 0, 0], theta),
+                           vpr_ase.rot_mat_x(theta))
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_rot_axis_z(theta):
+        """Test that rotation around [1,0,0] is the same as around x."""
+        assert np.allclose(vpr_ase.rot_mat_axis([0, 0, 3], theta),
+                           vpr_ase.rot_mat_z(theta))
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_apply_twice_rot_x(theta):
+        """Ensure that rotating twice around x is the same as 2*theta."""
+        _rot_theta = vpr_ase.rot_mat_x(theta)
+        _rot_2theta = vpr_ase.rot_mat_x(2*theta)
+        assert np.allclose(_rot_theta.dot(_rot_theta), _rot_2theta)
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_apply_twice_rot_axis(theta):
+        """Ensure that rotating twice around x is the same as 2*theta."""
+        _rot_theta = vpr_ase.rot_mat_axis((-4, 3, 12), theta)
+        _rot_2theta = vpr_ase.rot_mat_axis((-4, 3, 12), 2*theta)
+        assert np.allclose(_rot_theta.dot(_rot_theta), _rot_2theta)
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_orthogonal_rot_x(theta):
+        """Ensure R(theta).T == inv(R(theta)) == R(-theta)."""
+        _rot_theta = vpr_ase.rot_mat_x(theta)
+        _rot_minus_theta = vpr_ase.rot_mat_x(-theta)
+        assert np.allclose(_rot_theta.dot(_rot_theta.T), np.identity(3))
+        assert np.allclose(_rot_theta.T, _rot_minus_theta)
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_orthogonal_rot_axis(theta):
+        """Ensure R(theta).T == inv(R(theta)) == R(-theta)."""
+        _rand_axis = np.random.rand(3)
+        _rot_theta = vpr_ase.rot_mat_axis(_rand_axis, theta)
+        _rot_minus_theta = vpr_ase.rot_mat_axis(_rand_axis, -theta)
+        assert np.allclose(_rot_theta.dot(_rot_theta.T), np.identity(3))
+        assert np.allclose(_rot_theta.T, _rot_minus_theta)
 
 
 THETA = 14.7  # degrees
@@ -330,6 +392,7 @@ fixture_run_from_ase_refcalc = make_refcalc_fixture(
     "run_from_ase_refcalc",
     _make_refcalc_ok_transforms()
     )
+
 
 class TestSuccessfulRefcalc:
     """Tests for a "reference calculation" run with successful outcome."""
