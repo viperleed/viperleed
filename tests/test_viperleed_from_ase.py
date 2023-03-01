@@ -181,24 +181,104 @@ class TestRotationMatrices:
         assert np.allclose(_rot_theta.T, _rot_minus_theta)
 
 
-THETA = 14.7  # degrees
+class TestSlabTransforms:
+    """Test of simple slab transformations."""
 
-@pytest.mark.parametrize("fixture", _ASE_ATOMS)
-def test_rot_mat_z(fixture, request):
-    """Assert correct rotation around z axis."""
-    ase_atoms = request.getfixturevalue(fixture)
-    slab = slab_from_ase(ase_atoms)
-    rot_mat = vpr_ase.rot_mat_z(THETA)
-    ucell_before = slab.ucell.T.copy()
-    slab.apply_matrix_transformation(rot_mat)
-    ucell_after = slab.ucell.T
+    _theta = 14.7  # degrees
+    _axis = np.random.rand(3)
 
-    # a and b unit vectors
-    for _before, _after in zip(ucell_before[:2], ucell_after[:2]):
-        assert np.isclose(_before[2], _after[2])  # Same z
-        assert np.isclose(np.degrees(angle(_before, _after)), THETA)
-    # c unit vector
-    assert np.allclose(ucell_before[2], ucell_after[2])
+    @staticmethod
+    @pytest.fixture(params=_ASE_ATOMS, scope="function")
+    def slab(request):
+        """Return a slab from ASE."""
+        ase_atoms = request.getfixturevalue(request.param)
+        return slab_from_ase(ase_atoms)
+
+    @staticmethod
+    def parallel(vec_1, vec_2):
+        """Return whether vec_1 and vec_2 are parallel."""
+        return np.allclose(np.cross(vec_1, vec_2), 0)
+
+    @staticmethod
+    def normalized(vec):
+        """Return a unit vector along vec."""
+        return vec / np.linalg.norm(vec)
+
+    @staticmethod
+    def angle3(uvec1, uvec2):
+        """Return the angle between two 3D unit-norm vectors."""
+        return np.arccos(np.clip(np.dot(uvec1, uvec2), -1.0, 1.0))
+
+    def test_rot_mat_z(self, slab):
+        """Assert correct rotation around z axis."""
+        rot_mat = vpr_ase.rot_mat_z(self._theta)
+        ucell_before = slab.ucell.T.copy()
+        slab.apply_matrix_transformation(rot_mat)
+        ucell_after = slab.ucell.T
+
+        for _before, _after in zip(ucell_before, ucell_after):
+            assert np.isclose(_before[2], _after[2])  # Same z
+            assert np.isclose(np.linalg.norm(_before), np.linalg.norm(_after))
+            if all(self.parallel(v, (0, 0, 1)) for v in (_before, _after)):
+                # Skip next for vectors along the rotation axis
+                continue
+            assert np.isclose(np.degrees(angle(_before, _after)),  # in-plane
+                              self._theta)
+
+    def test_rot_mat_x(self, slab):
+        """Assert correct rotation around x axis."""
+        rot_mat = vpr_ase.rot_mat_x(self._theta)
+        ucell_before = slab.ucell.T.copy()
+        slab.apply_matrix_transformation(rot_mat)
+        ucell_after = slab.ucell.T
+
+        for _before, _after in zip(ucell_before, ucell_after):
+            assert np.isclose(_before[0], _after[0])  # Same x
+            assert np.isclose(np.linalg.norm(_before), np.linalg.norm(_after))
+            if all(self.parallel(v, (1, 0, 0)) for v in (_before, _after)):
+                # Skip next for vectors along the rotation axis
+                continue
+            assert np.isclose(
+                np.degrees(angle(_before[1:], _after[1:])),
+                self._theta
+                )
+
+    def test_rot_mat_axis(self, slab):
+        """Assert correct rotation around z axis."""
+        axis = self._axis
+        rot_mat = vpr_ase.rot_mat_axis(axis, self._theta)
+        ucell_before = slab.ucell.T.copy()
+        slab.apply_matrix_transformation(rot_mat)
+        ucell_after = slab.ucell.T
+
+        for _before, _after in zip(ucell_before, ucell_after):
+            assert np.isclose(_before.dot(axis), _after.dot(axis))
+            assert np.isclose(np.linalg.norm(_before), np.linalg.norm(_after))
+            if all(self.parallel(v, axis) for v in (_before, _after)):
+                # Skip next for vectors along the rotation axis
+                continue
+            _perp_before = self.normalized(np.cross(_before, axis))
+            _perp_after = self.normalized(np.cross(_after, axis))
+            assert np.isclose(
+                np.degrees(self.angle3(_perp_before, _perp_after)),
+                self._theta
+                )
+
+    @staticmethod
+    def todo_test_swap_axis_transform():
+        """Apply a swap transform and verify correctness."""
+        # Should use the _apply_transform function
+        raise NotImplementedError
+
+    @staticmethod
+    def todo_test_apply_two_transforms()
+        """Apply consecutive transforms, and verify correctness."""
+        # Should use the _apply_transform function.
+        # Ideas:
+        # - rotate twice same angle same axis, verify with single
+        # - swap twice same --> unchanged
+        # - swap cyclically
+        raise NotImplementedError
 
 
 class TestRaises:
