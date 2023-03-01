@@ -12,7 +12,6 @@ dependencies:
   - scikit-learn
   - psutil # on linux, may require sudo apt install pythonxx.xx-dev to build
   - line_profiler
-  - fortranformat
   - pip
   - pip:
     - quicktions
