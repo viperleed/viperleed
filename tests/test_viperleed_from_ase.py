@@ -194,13 +194,7 @@ class TestFailingInitialization:
     directory is missing the required IVBEAMS file.
     """
 
-    def __init__(self):
-        """Initialize instance."""
-        self.init_results = tuple()
-        self.exec_path = None
-        self.ase_atoms = None
-
-    @pytest.fixture(autouse=True, scope="class")
+    @pytest.fixture(autouse=True)                                              # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
     def run_init(self, run_from_ase_initialization):
         """Run the initialization once for the whole class."""
         (self.init_results,
@@ -214,7 +208,7 @@ class TestFailingInitialization:
 
     def test_returns_v0i(self):
         """Make sure the last return of run_from_ase is V0i."""
-        *_, v0i = self.init_resuls
+        *_, v0i = self.init_results
         assert isinstance(v0i, float)
 
     @pytest.mark.parametrize('file', ('POSCAR', 'work/VIBROCC'))
@@ -274,25 +268,18 @@ def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
 class TestSuccessfulRefcalc:
     """Tests for a "reference calculation" run with successful outcome."""
 
-    def __init__(self):
-        """Initialize instance."""
-        self.refcalc_results = tuple()
-        self.exec_path = None
-        self.ase_atoms = None
-        self.theobeams = tuple()
-
-    @pytest.fixture(autouse=True, scope="class"):
-    def run_refcalc(self, run_from_ase_refcalc):
+    @pytest.fixture(autouse=True, name="run_refcalc")                           # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
+    def fixture_run_refcalc(self, run_from_ase_refcalc):
         """Run the ref-calc once for the whole class."""
         (self.refcalc_results,
          self.exec_path,
          self.ase_atoms) = run_from_ase_refcalc
 
-    @pytest.fixture(autouse=True, scope="class")
-    def read_theobeams_from_results(self):
+    @pytest.fixture(autouse=True)                                               # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
+    def read_theobeams_from_results(self, run_refcalc):
         """Store a list of full-dynamically calculated beams."""
         theobeams_content, *_ = self.refcalc_results
-        self.theobeams = readOUTBEAMS(StringIO(theobeams))
+        self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
 
     @pytest.mark.parametrize('file', ('BEAMLIST', 'VIBROCC', 'IVBEAMS'))
     def test_writes_file(self, file):
