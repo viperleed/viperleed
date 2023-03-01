@@ -16,6 +16,7 @@ dependencies:
   - pip
   - pip:
     - quicktions
+    - fortranformat
     - pyqt5
     - mplcairo
   # additional development/quality-of-life dependencies

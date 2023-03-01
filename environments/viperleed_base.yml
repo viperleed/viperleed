@@ -11,8 +11,8 @@ dependencies:
   - psutil # on linux, may require sudo apt install pythonxx.xx-dev to build
   - line_profiler
   - pip
-  - fortranformat
   - pip:
     - quicktions
+    - fortranformat
     - pyqt5
     - mplcairo
