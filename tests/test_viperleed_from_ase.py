@@ -114,14 +114,14 @@ class TestRaises:
     def test_non_existing_exec_path():
         """Test exception for non existing execution path."""
         missing_path = INPUTS_ASE / "__th_is__do_es_not_ex_is_t__"
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(FileNotFoundError) as exc:
             vpr_ase.run_from_ase(missing_path, None)
         assert exc.match("exec_path")
 
     @staticmethod
     def test_non_existing_parameters():
         """Test exception for non-existing PARAMETERS file."""
-        with pytest.raises(RuntimeError) as exc:
+        with pytest.raises(FileNotFoundError) as exc:
             vpr_ase.run_from_ase(INPUTS_ASE, None)
         assert exc.match("PARAMETERS")
 
@@ -131,7 +131,7 @@ class TestRaises:
         rot_mat = vpr_ase.rot_mat_a(20)
         ase_atoms = ase_ni_100_1x1_cell
         exec_path = INPUTS_ASE / "initialization"  # Will not run
-        with pytest.raises(RuntimeError) as exc:
+        with pytest.raises(ValueError) as exc:
             vpr_ase.run_from_ase(
                 exec_path,
                 ase_atoms,
