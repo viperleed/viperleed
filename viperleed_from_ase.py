@@ -90,12 +90,12 @@ class SlabTransform:
         c AFTER all transformations (see uc_transformation_matrix)
         are applied. Only the part of the cell above (i.e., >=)
         this value will be kept. Everything else is discarded.
-        Default is 0.4.
+        Default is zero.
     """
 
     orthogonal_matrix: Any = None
     uc_scaling: Any = None
-    cut_cell_c_fraction: float = 0.4
+    cut_cell_c_fraction: float = 0.
 
 
 # We would really like to use frozen=True here, but since python 3.8.10
@@ -181,8 +181,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
         from the LAST SlabTransform given. Make sure that vectors a & b
         do not have any components in z after transformation as this is
         not allowed and will raise a ValueError. Default is a single
-        SlabTransform(), corresponding to no transformation and cut
-        at c>=0.4.
+        SlabTransform(), corresponding to no transformation and no cut.
     cleanup_work : bool, optional
         Whether the work directory created during execution of the
         calculation is to be removed at the end. Default is False.
