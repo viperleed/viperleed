@@ -90,11 +90,11 @@ def test_rotation_matrices():
 THETA = 14.7  # degrees
 
 @pytest.mark.parametrize("fixture", _ASE_ATOMS)
-def test_rot_mat_c(fixture, request):
+def test_rot_mat_z(fixture, request):
     """Assert correct rotation around z axis."""
     ase_atoms = request.getfixturevalue(fixture)
     slab = slab_from_ase(ase_atoms)
-    rot_mat = vpr_ase.rot_mat_c(THETA)
+    rot_mat = vpr_ase.rot_mat_z(THETA)
     ucell_before = slab.ucell.T.copy()
     slab.apply_matrix_transformation(rot_mat)
     ucell_after = slab.ucell.T
