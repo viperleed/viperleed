@@ -409,7 +409,7 @@ def _make_preset_params(rparams, slab):
                     "will be added for atoms visible from vacuum.")
     preset_params = {}
     site_def = defaultdict(list)
-    for atom in slab.getSurfaceAtoms():
+    for atom in slab.getSurfaceAtoms(rparams):
         site_def[atom.el].append(atom.oriN)
     preset_params["SITE_DEF"] = site_def
 
