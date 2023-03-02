@@ -28,22 +28,21 @@ if VPR_PATH not in sys.path:
 from viperleed import viperleed_from_ase as vpr_ase
 from viperleed.tleedmlib.base import angle
 from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
-from viperleed.tleedmlib.files.poscar import readPOSCAR
 # pylint: enable=wrong-import-position
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#  IMPORTANT NOTICE: all the fixtures below are class-scoped. This means the  #
+#  calculations will only run once per class. This also means that if new     #
+#  tests are added that modify the objects, each of the test sets working     #
+#  with one modified object should be collected into its own class.           #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 INPUTS_ASE = INPUTS_ORIGIN / "from_ase"
-
-
-
-
-# @Michele: put transformations to test here
-_TRANSFORMATIONS_FOR_REFCALC = (
-    # (orthogonal_transformation, isotropic_scaling)
-    (None, None),
-    )
 
 
 _ASE_ATOMS = (
@@ -51,12 +50,46 @@ _ASE_ATOMS = (
     )
 
 
-@pytest.fixture(name="ase_ni_100_1x1_cell")
+def _make_refcalc_ok_transforms():
+    """Yield slab transforms (or sequences thereof) and names (for ids)."""
+    # A single transform-nothing, on its own and as a sequence:
+    no_transform = vpr_ase.SlabTransform(cut_cell_c_fraction=0.)
+    yield no_transform, "no_transform"
+    yield (no_transform,), "no_transform, sequence"
+
+    # A simple cut
+    cut_only = vpr_ase.SlabTransform(cut_cell_c_fraction=0.2)
+    yield cut_only, "cut only"
+
+    # A 90-degrees in-plane rotation, no cutting
+    rot_90_z = vpr_ase.SlabTransform(
+        orthogonal_matrix=vpr_ase.rot_mat_z(90),
+        cut_cell_c_fraction=0.
+        )
+    yield rot_90_z, "90deg z rotation"
+
+
+def _make_refcalc_fail_transforms():
+    """Yield slab transforms and names that cause the refcalc to fail."""
+    # A single transform-nothing.
+    # Fails because too few bulk layers.
+    cut_half = vpr_ase.SlabTransform(cut_cell_c_fraction=0.5)
+    yield cut_half, "cut half"
+
+    # A 90-degrees in-plane rotation and cut default.
+    # Fails because of too few bulk layers.
+    rot_90_z_and_cut = vpr_ase.SlabTransform(
+        orthogonal_matrix=vpr_ase.rot_mat_z(90),
+        cut_cell_c_fraction=0.5
+        )
+    yield rot_90_z_and_cut, "90deg z rotation, cut half"
+
+
+@pytest.fixture(name="ase_ni_100_1x1_cell", scope="class")
 def fixture_ase_nickel_cell():
     """Return an ase.Atoms Ni(100)-1x1 with 6 layers."""
     element = 'Ni'
-    cell_1x1 = ase.build.fcc110(element, size=(1,1,6), vacuum=3)
-    return cell_1x1
+    return ase.build.fcc110(element, size=(1,1,6), vacuum=3)
 
 
 # TODO: find a better way, perhaps a decorator that does
@@ -68,7 +101,6 @@ def test_ase_n_atoms(fixture, n_atoms, request):
     assert len(ase_atoms.positions) == n_atoms
 
 
-# TODO: will need to replace with Slab.from_ase method
 def slab_from_ase(ase_atoms):
     """Return a Slab from an ase.Atoms object."""
     return Slab(ase_atoms)
@@ -82,29 +114,171 @@ def test_n_atoms_from_ase(fixture, request):
     assert len(ase_atoms.positions) == len(slab.atlist)
 
 
-def test_rotation_matrices():
-    """Test that rotation matrices are as expected."""
-    raise NotImplementedError
+class TestRotationMatrices:
+    """Test correctness of some simple rotation matrices."""
+
+    _angles = (0, 12.3, 34, 95, 129.7, 256, 316)
+
+    @staticmethod
+    def test_rot_z_90():
+        """Test 90deg rotation around z."""
+        assert np.allclose(vpr_ase.rot_mat_z(90),
+                           ((0, -1, 0), (1, 0, 0), (0, 0, 1)))
+
+    @staticmethod
+    def test_rot_x_90():
+        """Test 90deg rotation around x."""
+        assert np.allclose(vpr_ase.rot_mat_x(90),
+                           ((1, 0, 0), (0, 0, -1), (0, 1, 0)))
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_rot_axis_x(theta):
+        """Test that rotation around [1,0,0] is the same as around x."""
+        assert np.allclose(vpr_ase.rot_mat_axis([1, 0, 0], theta),
+                           vpr_ase.rot_mat_x(theta))
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_rot_axis_z(theta):
+        """Test that rotation around [1,0,0] is the same as around x."""
+        assert np.allclose(vpr_ase.rot_mat_axis([0, 0, 3], theta),
+                           vpr_ase.rot_mat_z(theta))
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_apply_twice_rot_x(theta):
+        """Ensure that rotating twice around x is the same as 2*theta."""
+        _rot_theta = vpr_ase.rot_mat_x(theta)
+        _rot_2theta = vpr_ase.rot_mat_x(2*theta)
+        assert np.allclose(_rot_theta.dot(_rot_theta), _rot_2theta)
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_apply_twice_rot_axis(theta):
+        """Ensure that rotating twice around x is the same as 2*theta."""
+        _rot_theta = vpr_ase.rot_mat_axis((-4, 3, 12), theta)
+        _rot_2theta = vpr_ase.rot_mat_axis((-4, 3, 12), 2*theta)
+        assert np.allclose(_rot_theta.dot(_rot_theta), _rot_2theta)
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_orthogonal_rot_x(theta):
+        """Ensure R(theta).T == inv(R(theta)) == R(-theta)."""
+        _rot_theta = vpr_ase.rot_mat_x(theta)
+        _rot_minus_theta = vpr_ase.rot_mat_x(-theta)
+        assert np.allclose(_rot_theta.dot(_rot_theta.T), np.identity(3))
+        assert np.allclose(_rot_theta.T, _rot_minus_theta)
+
+    @staticmethod
+    @pytest.mark.parametrize("theta", _angles)
+    def test_orthogonal_rot_axis(theta):
+        """Ensure R(theta).T == inv(R(theta)) == R(-theta)."""
+        _rand_axis = np.random.rand(3)
+        _rot_theta = vpr_ase.rot_mat_axis(_rand_axis, theta)
+        _rot_minus_theta = vpr_ase.rot_mat_axis(_rand_axis, -theta)
+        assert np.allclose(_rot_theta.dot(_rot_theta.T), np.identity(3))
+        assert np.allclose(_rot_theta.T, _rot_minus_theta)
 
 
-THETA = 14.7  # degrees
+class TestSlabTransforms:
+    """Test of simple slab transformations."""
 
-@pytest.mark.parametrize("fixture", _ASE_ATOMS)
-def test_rot_mat_c(fixture, request):
-    """Assert correct rotation around z axis."""
-    ase_atoms = request.getfixturevalue(fixture)
-    slab = slab_from_ase(ase_atoms)
-    rot_mat = vpr_ase.rot_mat_c(THETA)
-    ucell_before = slab.ucell.T.copy()
-    slab.apply_matrix_transformation(rot_mat)
-    ucell_after = slab.ucell.T
+    _theta = 14.7  # degrees
+    _axis = np.random.rand(3)
 
-    # a and b unit vectors
-    for _before, _after in zip(ucell_before[:2], ucell_after[:2]):
-        assert np.isclose(_before[2], _after[2])  # Same z
-        assert np.isclose(np.degrees(angle(_before, _after)), THETA)
-    # c unit vector
-    assert np.allclose(ucell_before[2], ucell_after[2])
+    @staticmethod
+    @pytest.fixture(params=_ASE_ATOMS, scope="function")
+    def slab(request):
+        """Return a slab from ASE."""
+        ase_atoms = request.getfixturevalue(request.param)
+        return slab_from_ase(ase_atoms)
+
+    @staticmethod
+    def parallel(vec_1, vec_2):
+        """Return whether vec_1 and vec_2 are parallel."""
+        return np.allclose(np.cross(vec_1, vec_2), 0)
+
+    @staticmethod
+    def normalized(vec):
+        """Return a unit vector along vec."""
+        return vec / np.linalg.norm(vec)
+
+    @staticmethod
+    def angle3(uvec1, uvec2):
+        """Return the angle between two 3D unit-norm vectors."""
+        return np.arccos(np.clip(np.dot(uvec1, uvec2), -1.0, 1.0))
+
+    def test_rot_mat_z(self, slab):
+        """Assert correct rotation around z axis."""
+        rot_mat = vpr_ase.rot_mat_z(self._theta)
+        ucell_before = slab.ucell.T.copy()
+        slab.apply_matrix_transformation(rot_mat)
+        ucell_after = slab.ucell.T
+
+        for _before, _after in zip(ucell_before, ucell_after):
+            assert np.isclose(_before[2], _after[2])  # Same z
+            assert np.isclose(np.linalg.norm(_before), np.linalg.norm(_after))
+            if all(self.parallel(v, (0, 0, 1)) for v in (_before, _after)):
+                # Skip next for vectors along the rotation axis
+                continue
+            assert np.isclose(np.degrees(angle(_before, _after)),  # in-plane
+                              self._theta)
+
+    def test_rot_mat_x(self, slab):
+        """Assert correct rotation around x axis."""
+        rot_mat = vpr_ase.rot_mat_x(self._theta)
+        ucell_before = slab.ucell.T.copy()
+        slab.apply_matrix_transformation(rot_mat)
+        ucell_after = slab.ucell.T
+
+        for _before, _after in zip(ucell_before, ucell_after):
+            assert np.isclose(_before[0], _after[0])  # Same x
+            assert np.isclose(np.linalg.norm(_before), np.linalg.norm(_after))
+            if all(self.parallel(v, (1, 0, 0)) for v in (_before, _after)):
+                # Skip next for vectors along the rotation axis
+                continue
+            assert np.isclose(
+                np.degrees(angle(_before[1:], _after[1:])),
+                self._theta
+                )
+
+    def test_rot_mat_axis(self, slab):
+        """Assert correct rotation around z axis."""
+        axis = self._axis
+        rot_mat = vpr_ase.rot_mat_axis(axis, self._theta)
+        ucell_before = slab.ucell.T.copy()
+        slab.apply_matrix_transformation(rot_mat)
+        ucell_after = slab.ucell.T
+
+        for _before, _after in zip(ucell_before, ucell_after):
+            assert np.isclose(_before.dot(axis), _after.dot(axis))
+            assert np.isclose(np.linalg.norm(_before), np.linalg.norm(_after))
+            if all(self.parallel(v, axis) for v in (_before, _after)):
+                # Skip next for vectors along the rotation axis
+                continue
+            _perp_before = self.normalized(np.cross(_before, axis))
+            _perp_after = self.normalized(np.cross(_after, axis))
+            assert np.isclose(
+                np.degrees(self.angle3(_perp_before, _perp_after)),
+                self._theta
+                )
+
+    @staticmethod
+    def todo_test_swap_axis_transform():
+        """Apply a swap transform and verify correctness."""
+        # Should use the _apply_transform function
+        raise NotImplementedError
+
+    @staticmethod
+    def todo_test_apply_two_transforms():
+        """Apply consecutive transforms, and verify correctness."""
+        # Should use the _apply_transform function.
+        # Ideas:
+        # - rotate twice same angle same axis, verify with single
+        # - swap twice same --> unchanged
+        # - swap cyclically
+        raise NotImplementedError
 
 
 class TestRaises:
@@ -114,28 +288,30 @@ class TestRaises:
     def test_non_existing_exec_path():
         """Test exception for non existing execution path."""
         missing_path = INPUTS_ASE / "__th_is__do_es_not_ex_is_t__"
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(FileNotFoundError) as exc:
             vpr_ase.run_from_ase(missing_path, None)
         assert exc.match("exec_path")
 
     @staticmethod
     def test_non_existing_parameters():
         """Test exception for non-existing PARAMETERS file."""
-        with pytest.raises(RuntimeError) as exc:
+        with pytest.raises(FileNotFoundError) as exc:
             vpr_ase.run_from_ase(INPUTS_ASE, None)
         assert exc.match("PARAMETERS")
 
     @staticmethod
     def test_out_of_plane_ab(ase_ni_100_1x1_cell):
         """Test exception raised for a slab with non-xy a/b vectors."""
-        rot_mat = vpr_ase.rot_mat_a(20)
+        transform = vpr_ase.SlabTransform(
+            orthogonal_matrix=vpr_ase.rot_mat_x(20)
+            )
         ase_atoms = ase_ni_100_1x1_cell
         exec_path = INPUTS_ASE / "initialization"  # Will not run
-        with pytest.raises(RuntimeError) as exc:
+        with pytest.raises(ValueError) as exc:
             vpr_ase.run_from_ase(
                 exec_path,
                 ase_atoms,
-                uc_transformation_matrix=rot_mat
+                slab_transforms=transform
                 )
         assert exc.match("z component")
 
@@ -150,7 +326,7 @@ class TestRaises:
 # - make temp path dependent on the name of the first argument in
 #   the signature
 # - pick the right folder in "initialization"
-@pytest.fixture(name="run_from_ase_initialization")
+@pytest.fixture(name="run_from_ase_initialization", scope="class")
 def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
     """Return the results of an initialization run.
 
@@ -172,6 +348,7 @@ def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
         The Atoms object fed to run_from_ase.
     """
     ase_atoms = ase_ni_100_1x1_cell
+    no_cut = vpr_ase.SlabTransform(cut_cell_c_fraction=0.)
     exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
                                         numbered=True)
     # The "initialization" folder contains only a PARAMETERS file,
@@ -182,7 +359,7 @@ def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
         exec_path=exec_path,
         ase_object=ase_atoms,
         inputs_path=inputs_path,
-        cut_cell_c_fraction=0.0
+        slab_transforms=no_cut,
         )
     return results, exec_path, ase_atoms
 
@@ -194,9 +371,13 @@ class TestFailingInitialization:
     directory is missing the required IVBEAMS file.
     """
 
-    @pytest.fixture(autouse=True)                                              # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
+    @pytest.fixture(autouse=True)
     def run_init(self, run_from_ase_initialization):
         """Run the initialization once for the whole class."""
+        # pylint: disable=attribute-defined-outside-init
+        # Could in principle add an __init__ for these, then have a
+        # custom test collection, e.g., as suggested in
+        # https://github.com/pytest-dev/pytest/issues/7033
         (self.init_results,
          self.exec_path,
          self.ase_atoms) = run_from_ase_initialization
@@ -220,65 +401,99 @@ class TestFailingInitialization:
     # checksums for files to be generated, and check them over here
     def test_writes_sensible_poscar(self):
         """Ensure that written POSCAR has the right number of atoms."""
-        slab = readPOSCAR(self.exec_path / "POSCAR")
+        slab = poscar.readPOSCAR(self.exec_path / "POSCAR")
         assert len(slab.atlist) == len(self.ase_atoms.positions)
 
 
-# TODO: find a nice way to generate multiple fixtures dynamically.
-@pytest.fixture(name="run_from_ase_refcalc",
-                params=_TRANSFORMATIONS_FOR_REFCALC)
-def fixture_run_from_ase_refcalc(ase_ni_100_1x1_cell,
-                                 tmp_path_factory, request):
-    """Return the results of a reference calculation run.
+def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):
+    """Return a pytest.fixture for a refcalc with name and kwargs.
 
     Parameters
     ----------
-    ase_ni_100_1x1_cell : pytest.fixture
-        The ase.Atoms object from which to run.
-    tmp_path_factory : pytest.fixture
-        The pytest default name for the temporary directory factory.
-    request : pytest.fixture
-        The pytest default `equest` fixture for accessing
-        fixture-level parameters. Used to access the transform
-        to be applied to the slab.
+    name : str
+        The name to give to the fixture returned.
+    slab_transforms_and_ids : Iterable
+        Should yield pairs of the form (transforms, id) to be
+        used for tests.
+    kwargs : dict
+        Keyword arguments to pass to the fixture decorator.
 
     Returns
     -------
-    results : tuple
-        The return value of the call to run_from_ase.
-    exec_path : Path
-        The pat to the temporary directory created where the
-        calculation was run.
-    ase_atoms : ase.Atoms
-        The Atoms object fed to run_from_ase.
+    fixture : pytest.fixture
+        The fixture that can be used for running a refcalc.
+        The fixture is class-scoped by default. This can be
+        changed by passing an appropriate keyword argument.
     """
-    ase_atoms = ase_ni_100_1x1_cell
-    exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
-                                        numbered=True)
-    inputs_path = INPUTS_ASE / "refcalc"
-    results = vpr_ase.run_from_ase(
-        exec_path=exec_path,
-        ase_object=ase_atoms,
-        inputs_path=inputs_path,
-        cut_cell_c_fraction=0.0
-        )
-    return results, exec_path, ase_atoms
+    params_and_ids_dict = dict(zip(("params", "ids"),
+                                   zip(*slab_transforms_and_ids)))
+    params_and_ids_dict.update(kwargs)
+
+    @pytest.fixture(name=name, scope="class", **params_and_ids_dict)
+    def _fixture(ase_ni_100_1x1_cell, tmp_path_factory, request):
+        """Return the results of a reference calculation run.
+
+        Parameters
+        ----------
+        ase_ni_100_1x1_cell : pytest.fixture
+            The ase.Atoms object from which to run.
+        tmp_path_factory : pytest.fixture
+            The pytest default name for the temporary directory factory.
+        request : pytest.fixture
+            The pytest default `equest` fixture for accessing
+            fixture-level parameters. Used to access the transform
+            to be applied to the slab.
+
+        Returns
+        -------
+        results : tuple
+            The return value of the call to run_from_ase.
+        exec_path : Path
+            The pat to the temporary directory created where the
+            calculation was run.
+        ase_atoms : ase.Atoms
+            The Atoms object fed to run_from_ase.
+        """
+        ase_atoms = ase_ni_100_1x1_cell
+        exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
+                                            numbered=True)
+        inputs_path = INPUTS_ASE / "refcalc"
+        results = vpr_ase.run_from_ase(
+            exec_path=exec_path,
+            ase_object=ase_atoms,
+            inputs_path=inputs_path,
+            slab_transforms=request.param,
+            )
+        return results, exec_path, ase_atoms
+    return _fixture
+
+
+fixture_run_from_ase_refcalc = make_refcalc_fixture(
+    "run_from_ase_refcalc",
+    _make_refcalc_ok_transforms()
+    )
 
 
 class TestSuccessfulRefcalc:
     """Tests for a "reference calculation" run with successful outcome."""
 
-    @pytest.fixture(autouse=True, name="run_refcalc")                           # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
+    @pytest.fixture(autouse=True, name="run_refcalc")
     def fixture_run_refcalc(self, run_from_ase_refcalc):
         """Run the ref-calc once for the whole class."""
+        # pylint: disable=attribute-defined-outside-init
+        # Could in principle add an __init__ for these, then have a
+        # custom test collection, e.g., as suggested in
+        # https://github.com/pytest-dev/pytest/issues/7033
         (self.refcalc_results,
          self.exec_path,
          self.ase_atoms) = run_from_ase_refcalc
 
-    @pytest.fixture(autouse=True)                                               # TODO: would be nice to have scope="class", but tmp_path... needs scope="function"
+    @pytest.fixture(autouse=True)
     def read_theobeams_from_results(self, run_refcalc):
         """Store a list of full-dynamically calculated beams."""
-        *_ = run_refcalc  # Otherwise unused-argument
+        # pylint: disable=attribute-defined-outside-init
+        # See note in fixture_run_refcalc
+        _ = run_refcalc  # Otherwise unused-argument
         theobeams_content, *_ = self.refcalc_results
         self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
 
@@ -303,3 +518,47 @@ class TestSuccessfulRefcalc:
     def test_no_nan_energies(self):
         """Ensure ref-calc energies are numbers."""
         assert not any(np.isnan(self.theobeams[0].energies))
+
+
+fixture_run_from_ase_refcalc_fails = make_refcalc_fixture(
+    "run_from_ase_refcalc_fails",
+    _make_refcalc_fail_transforms()
+    )
+
+
+class TestFailingRefcalc:
+    """Tests for a "reference calculation" run with successful outcome."""
+
+    @pytest.fixture(autouse=True, name="run_refcalc")
+    def fixture_run_refcalc(self, run_from_ase_refcalc_fails):
+        """Run the ref-calc once for the whole class."""
+        # pylint: disable=attribute-defined-outside-init
+        # Could in principle add an __init__ for these, then have a
+        # custom test collection, e.g., as suggested in
+        # https://github.com/pytest-dev/pytest/issues/7033
+        (self.refcalc_results,
+         self.exec_path,
+         self.ase_atoms) = run_from_ase_refcalc_fails
+
+    @pytest.fixture(autouse=True)
+    def read_theobeams_from_results(self, run_refcalc):
+        """Store an (empty) list of full-dynamically calculated beams."""
+        # pylint: disable=attribute-defined-outside-init
+        # See note in fixture_run_refcalc
+        _ = run_refcalc  # Otherwise unused-argument
+        theobeams_content, *_ = self.refcalc_results
+        self.theobeams = readOUTBEAMS(StringIO(theobeams_content))
+
+    @pytest.mark.parametrize('file', ('BEAMLIST', ))
+    def test_does_not_write_file(self, file):
+        """Ensure that run_from_ase does not write work `file`."""
+        assert not (self.exec_path / "work" / file).is_file()
+
+    def test_output_empty(self):
+        """Ensure that run_from_ase ref-calc returns an empty output."""
+        theobeams_content, *_ = self.refcalc_results
+        assert not theobeams_content
+
+    def test_no_beams(self):
+        """Ensure ref-calc did not produce any beam."""
+        assert not self.theobeams

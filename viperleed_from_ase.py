@@ -7,308 +7,459 @@ based on tleedm_from_ase.py by Florian Kraushofer
 Requires viperleed to be in the system path (or on PYTHONPATH).
 """
 
-import os
-import warnings
-from pathlib import Path
-import numpy as np
-import shutil
+from collections import defaultdict
+from dataclasses import dataclass, FrozenInstanceError
 from io import StringIO
-import copy
 import logging
+from numbers import Real
+import os
+from pathlib import Path
+import shutil
+from typing import Sequence, Any
+import warnings
 
-import viperleed
+import numpy as np
 
 # for run_from_ase
+import viperleed
 from viperleed.tleedm import run_tleedm
-from viperleed.tleedmlib import Slab, Rparams
-from viperleed.tleedmlib.files.poscar import writePOSCAR
-from viperleed.tleedmlib.files.parameters import readPARAMETERS, interpretPARAMETERS
-
+from viperleed.tleedmlib.base import rotation_matrix
+from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.files import poscar
+from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
+                                                  interpretPARAMETERS)
 # for rfactor_from_csv
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
 from viperleed.tleedmlib.files.iorfactor import beamlist_to_array
-from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
-from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
+from viperleed.tleedmlib.files.ivplot import plot_iv  # for plot_iv_from_csv
+from viperleed.tleedmlib.wrapped.error_codes import check_ierr
 
-# for plot_iv_from_csv
-from viperleed.tleedmlib.files.ivplot import plot_iv
-from typing import Sequence
+try:
+    from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf          # TODO: pylint complains if not compiled
+except ImportError:
+    _HAS_NEW_RFACTOR = False
+else:
+    _HAS_NEW_RFACTOR = True
 
-LOGGER = logging.getLogger()
+_LOGGER = logging.getLogger()
+_INPUT_FILES = (
+    "PARAMETERS",
+    "VIBROCC",
+    "IVBEAMS",
+    "PHASESHIFTS",
+    "DISPLACEMENTS",
+    "EXPBEAMS",
+    "EXPBEAMS.csv",
+    )
 
-def run_from_ase(
-    exec_path,
-    ase_object,
-    inputs_path=None,
-    cut_cell_c_fraction=0.4,
-    uc_transformation_matrix=None,
-    uc_scaling=None,
-):
-    """Perform a ViPErLEED calulation starting from an ase.Atoms object.
-    
-    This function is a core part of the API for ViPErLEED. It allows to run
-    a calulation from an ASE-type object.  The ASE object which is expected
-    to contain a simulation cell will be cut at a specified height fraction,
+
+@dataclass
+class SlabTransform:
+    """A container for unit-cell transformations.
+
+    Attributes
+    ----------
+    orthogonal_matrix : numpy.ndarray, optional
+        Shape (3, 3). Can contain an arbitrary orthogonal transform
+        (i.e., a combination of mirroring and rotations) that will
+        be applied to the cell. The transformation is applied BEFORE
+        scaling, i.e., using the original unit cell. The matrix (O)
+        is applied to both the unit cell and all Cartesian atomic
+        positions. The unit cell U (unit vectors as columns) is
+        transformed to O @ U. Atom Cartesian coordinates (v) are
+        transformed to O @ v. This attribute can be used, e.g., to
+        apply a rotation or a mirroring of the slab.
+    uc_scaling : float or Sequence of float, optional
+        Scaling to be applied to the cell. Scaling is applied AFTER
+        the transformation, i.e., along the new unit cell vectors. This
+        can be used to apply an isotropic scaling in all directions or
+        to stretch/compress along unit cell vectors in order to change
+        lattice constants in some direction. If the scaling is given as
+        a number or a 1-element sequence, an isotropic scaling will be
+        applied to the unit cell and atom positions. If a sequence with
+        three entries is provided, the scaling will be applied along
+        the unit cell vectors in the given order. Specifically, given
+        uc_scaling == (s1, s2, s3), the new unit cell vectors will be
+        a' = a * s1, b' = b * s2, c' = c * s3. Default is None, i.e.,
+        no scaling.
+    cut_cell_c_fraction : float, optional
+        Fractional position along the c vector to cut the slab.
+        (ViPErLEED expects the cell to have the surface at the
+        "top" -- i.e., at high z coordinates, and bulk-like layers
+        at the bottom). Cutting will be performed along the vector
+        c AFTER all transformations (see uc_transformation_matrix)
+        are applied. Only the part of the cell above (i.e., >=)
+        this value will be kept. Everything else is discarded.
+        Default is zero.
+    """
+
+    orthogonal_matrix: Any = None
+    uc_scaling: Any = None
+    cut_cell_c_fraction: float = 0.
+
+
+# We would really like to use frozen=True here, but since python 3.8.10
+# a frozen cannot inherit from a non-frozen. We're forced to emulate
+# the frozen-ness by overriding __setattr__ and __delattr__, and using
+# the __init__ implementation for frozen dataclasses. It is NOT A GOOD
+# IDEA TO INHERIT FROM THIS WORKAROUND CLASS.
+@dataclass
+class _ImmutableSlabTransform(SlabTransform):
+    """A container for immutable slab transformations.
+
+    This class is meant exclusively as the type for Slab
+    transformations that cannot be represented via a left-
+    multiplication of the unit cell with an orthogonal
+    matrix. These transforms cannot perform any scaling
+    nor cutting of the unit cell. They should be combined
+    with SlabTransform instances for that purpose.
+    """
+
+    def __init__(self):
+        """Initialize instance attributes."""
+        object.__setattr__(self, 'orthogonal_matrix', None)
+        object.__setattr__(self, 'uc_scaling', None)
+        object.__setattr__(self, 'cut_cell_c_fraction', 0.)
+
+    def __setattr__(self, name, value, /):
+        """Raise FrozenInstanceError."""
+        if name == '__doc__':
+            # One exception to allow nicer 'help' for instances
+            super().__setattr__(name, value)
+            return
+        raise FrozenInstanceError(f"cannot assign to field {name!r}")
+
+    def __delattr__(self, name, /):
+        """Raise FrozenInstanceError."""
+        raise FrozenInstanceError(f"cannot assign to field {name!r}")
+
+
+def run_from_ase(exec_path, ase_object, inputs_path=None,
+                 slab_transforms=(SlabTransform(),), cleanup_work=False):
+    """Perform a ViPErLEED calculation starting from an ase.Atoms object.
+
+    This function is a core part of the API for ViPErLEED. It allows
+    to run a calculation from an ASE (Atomic Simulation Environment)
+    Atoms object. The ase.Atoms object, which is expected to contain
+    a simulation cell, will be cut at a specified height fraction,
     transformed into a ViPErLEED Slab and written to a POSCAR file. The
-    ViPErLEED calculation will then be executed on the given structure using
-    the input files found either in inputs_path or exec_path. The type of
-    calculation performed depends on the value of the RUN parameter in the
-    PARAMETERS file. If RUN = 1, this ultimately yields reference electron
-    scattering amplitudes and intensities. These are collected in CSV files
-    which are returned as strings for further processing.
-    
+    ViPErLEED calculation is then executed on the structure using the
+    input files found either in `inputs_path` or `exec_path`. The type
+    of calculation performed depends on the value of the RUN parameter
+    in the PARAMETERS file. If RUN = 1, this yields reference electron
+    scattering amplitudes and intensities. These are collected in CSV
+    files, which are returned as strings for further processing.
+
     Parameters
     ----------
-    exec_path: string
-        Path where to execute the reference calculation. The directory needs
-        to exist. Input files will be copied from inputs_path, if provided.
-        Otherwise it is assumed that all input files are already in exec_path.
-        Temporary files will be stored in a subdirectory called work.
+    exec_path: string or Path
+        Path where to execute the ViPErLEED calculation. The directory
+        needs to exist. Input files will be copied from `inputs_path`,
+        if provided. Otherwise it is assumed that all input files are
+        already in `exec_path`. Temporary files will be stored in a
+        subdirectory called work.
     ase_object : ase.Atoms
-        ASE-type object that contains the atoms for the slab to be used with
-        ViPErLEED. This is expected to contain a simulation cell which will
-        be cut as described below.
-    inputs_path: string, optional
-        Path to directory containing input files (PARAMETERS, VIBROCC, etc.)
-        for ViPErLEED calculation. If provided, files will be copied from
-        inputs_path to exec_path (overwriting existing files there!).
-    cut_cell_c_fraction : float, default=0.4
-        Where to cut the ase object cell (ViPErLEED expects the cell to have
-        the surface at the "top" -- i.e., at high z coordinates, and bulk-like
-        layers at the bottom). Cutting will be performed along the vector c
-        AFTER all transformations (see uc_transformation_matrix) are applied.
-        Only the part of the cell above (i.e., >=) this value will be
-        kept and everything else will be discarded.
-    uc_transformation_matrix : np.ndarray, optional
-        3x3 array, can contain an arbitray orthogonal transforamtion (i.e.,
-        a combination of mirroring and rotations) that will be applied to the
-        cell. Default is None, i.e., no transformation. The transformation is
-        applied BEFORE scaling, i.e., using the original unit cell.
-        The transformation is described by an orthogonal transfomation matrix
-        (O) which is applied to both the unit cell and all atomic positions.
-        This transformation is essentially equivalent to a change of basis.
-        The transformation of the unit cell (U) is of the form OUO^T. Atom
-        positions (v, both fractional and cartesian) are transformed as Ov.
-        This parameter can be used to switch indices, rotate the slab, etc..
-        Make sure that vectors a & b do not have any components in z
-        direction after transformation as this is not allowed and will raise
-        an error.
-    uc_scaling : float or list of floats, optional
-        Scaling to be applied to the cell. Default is None, i.e., no scaling.
-        Scaling will be applied AFTER the transformation, i.e. along the new
-        unit cell vectors. This can be used to apply an isotropic scaling in
-        all directions or to strech/compress along unit cell vectors in order
-        to change lattice constants in some direction. If the scaling is given
-        as a number or a 1-element sequence, an isotropic scaling will be
-        applied to the unit cell and atom positions. If a sequence with 3
-        entries is provided, the scaling will be applied along the unit cell
-        vectors in the given order. Given uc_scaling == (s1, s2, s3), the
-        new unit cell vectors will be a' = a * s1, b' = b * s2, c' = c * s3.
+        ASE-type object that contains the atoms for the slab to be used
+        with ViPErLEED. This is expected to contain a simulation cell,
+        which will be transformed using `slab_transforms`.
+    inputs_path: str or Path or None, optional
+        Path to directory containing input files (PARAMETERS, VIBROCC,
+        etc.) for ViPErLEED calculation. If provided, files will be
+        copied from `inputs_path` to `exec_path` (silently overwriting
+        existing files there!). If None or not given, no copying
+        occurs. Default is None.
+    slab_transforms : SlabTransform or Sequence thereof, optional
+        Sequence of transformation operations to be applied to the Slab
+        constructed from ase_object. These include optional "change of
+        basis" operations, optional `uc_scaling` for scaling the unit
+        vector lengths, and a `cut_cell_c_fraction` for selecting only
+        a portion of the `ase_object`. In addition, some special
+        SlabTransform objects that swap unit cell axes can also be used
+        (swap_a_b, swap_b_c, and swap_c_a). See help(SlabTransform) and
+        help(swap_*_*) for further details. The transforms are applied
+        in the order given. The `cut_cell_c_fraction` is taken only
+        from the LAST SlabTransform given. Make sure that vectors a & b
+        do not have any components in z after transformation as this is
+        not allowed and will raise a ValueError. Default is a single
+        SlabTransform(), corresponding to no transformation and no cut.
+    cleanup_work : bool, optional
+        Whether the work directory created during execution of the
+        calculation is to be removed at the end. Default is False.
 
     Returns
     -------
-    theobeams_file_str : string
-        String containg the contents of the file "THEOBEAMS.csv", i.e. the
-        scattering intensities as calculated in the reference calculation.
-        An empty string is returned if no reference calculation was run.
-    amp_real_file_str : string
-        String containg the contents of the file "Complex_amplitudes_real.csv",
-        i.e., the real part of the scattering amplitudes as calculated in the
-        reference calculation. An empty string is returned if no reference
-        calculation was run.
-    amp_imag_file_str : string
-        String containg the contents of the file "Complex_amplitudes_imag.csv",
-        i.e., the imaginary part of the scattering amplitudes as calculated in
-        the reference calculation. An empty string is returned if no reference
-        calculation was run.
+    theobeams_file_str : str
+        Contents of the file "THEOBEAMS.csv", i.e. the scattering
+        intensities as calculated in the reference calculation. An
+        empty string is returned if no reference calculation was run.
+    amp_real_file_str : str
+        Contents of the file "Complex_amplitudes_real.csv", i.e.,
+        the real part of the scattering amplitudes as calculated
+        in the reference calculation. An empty string is returned
+        if no reference calculation was run or if the file was not
+        found.
+    amp_imag_file_str : str
+        Contents of the file "Complex_amplitudes_imag.csv", i.e., the
+        imaginary part of the scattering amplitudes as calculated in
+        the reference calculation. An empty string is returned if no
+        reference calculation was run or if the file was not found.
     v0i : float
-        Imaginary part of the inner potential as read from "PARAMETERS". This is
-        returned here since it is an input parameter for the R-factor calculation.
-        The value is read from PARAMETERS and left unchanged - it is not a result
-        of the calculation and is returned here for convenience only.
-    
+        Imaginary part of the inner potential as read from the
+        PARAMETERS file. This is returned here since it is an input
+        parameter for the R-factor calculation. The value is read
+        from PARAMETERS and left unchanged - it is not a result of
+        the calculation and is returned here for convenience only.
+
     Raises
     ------
+    FileNotFoundError
+        If `exec_path` is non-existent or not a directory.
+    FileNotFoundError
+        If no PARAMETERS file was found in `exec_path`, after
+        potentially copying over from `inputs_path`
     ValueError
-        If exec_path is non-existent (or not a directory)
+        If either of the first two unit cell vectors have a
+        component perpendicular to the surface (i.e., along
+        the z coordinate) after transformation of the unit cell
     RuntimeError
-        If no PARAMETERS file was found in exec_path (after potentially
-        copying over from inputs_path)
-    RuntimeError
-        If either of the first two unit cell vectors have a component
-        perpendicular to the surface (i.e., along the z coordinate)
-        after transformation of the unit cell
-    
+        If the ViPErLEED calculation fails.
+
     Notes
     -------
-    The parameter uc_transformation_matrix can be used to apply some useful
-    transformations to the Slab object. Examples include swapping vectors b
-    and c, rotations around an axis and flipping the cell along c (in case
-    the lower part has to be kept, rather than the top one). For these standard
-    applications, have a look at the matrices we provide as part of this module:
-        switch_b_c_mat : Switches vectors b & c
-        switch_a_b_mat : Switches vectors a & b
-        flip_c_mat : Flips (i.e., mirrors) cell along c
-        rot_mat_c(theta) : Returns a rotation matrix around c (by theta rad.)
-        rot_mat_a(theta) : Returns a rotation matrix around a (by theta rad.)
-    For applying multiple operations, the order does matter. You can combine
-    operations via matrix multiplication (@ symbol or np.dot); the left-most
-    matrix is applied last.
+    The parameter slab_transform and its `orthogonal_matrix` attribute
+    can be used to apply some useful transformations to the Slab.
+    Examples include rotations around an axis and flipping the cell
+    along c (in case the lower part has to be kept, rather than the
+    upper one). A few special SlabTransform objects are also provided
+    for swapping unit-cell vectors. Have a look at the matrices
+    provided as part of this module (use as the `orthogonal_matrix`
+    attribute of a SlabTransform):
+        rot_mat_x(theta) : Rotation matrix around x by theta (deg)
+        rot_mat_z(theta) : Rotation matrix around z by theta (deg)
+        rot_mat_axis(axis, theta): Rotation around axis by theta (deg)
+        flip_c_mat : Mirror matrix that flips the cell along c
+    and the special SlabTransform objects:
+        swap_a_b : Swap vectors a & b (changes handedness)
+        swap_b_c : Swap vectors b & c (changes handedness)
+        swap_c_a : Swap vectors c & a (changes handedness)
+    For applying multiple operations, the order does matter. You
+    can: (i) Combine multiple orthogonal transformation matrices
+    via matrix multiplication (@ symbol or np.dot) into a single
+    SlabTransform object (into its `orthogonal_matrix` attribute):
+    in this case the leftmost matrix is applied last. (ii) Provide
+    a sequence of SlabTransform objects in `slab_transforms`: here
+    transformations are applied in the order given (i.e., the
+    leftmost is the applied first). (iii) A combination of the
+    previous two.
     """
-
-    exec_path = Path(exec_path)
+    exec_path = Path(exec_path).resolve()
     if not exec_path.is_dir():
-        # Invalid path given
-        raise ValueError("Invalid exec_path: not existent, or not a directory")
+        raise FileNotFoundError(
+            f"Invalid {exec_path=}: not "
+            + "existent" if not exec_path.exists() else "a directory"
+            )
 
-    input_files = [
-        "PARAMETERS",
-        "VIBROCC",
-        "IVBEAMS",
-        "PHASESHIFTS",
-        "DISPLACEMENTS",
-        "EXPBEAMS",
-        "EXPBEAMS.csv",
-    ]
+    _copy_inputs_to_exec_path(inputs_path, exec_path)
 
-    # Copy all files in the input Path
-    if inputs_path is not None:
-        inputs_path = Path(inputs_path)
-        for file in input_files:
-            try:
-                shutil.copy2(inputs_path / file, exec_path / file)
-            except FileNotFoundError:
-                pass
-
-    # check for PARAMETERS file - without that we can't proceed
-    parameters_name = "PARAMETERS"
-    if not (exec_path / parameters_name).exists():
-        # No PARAMETERS file – Error
-        raise RuntimeError("No PARAMETERS file found – this is required")
-    # If present, we are good to go.
+    # Check for PARAMETERS file - without that we can't proceed
     # Files PHASESHIFTS and VIBROCC are not required and can be
-    # autogenerated if PARAMETERS are set correctly. IVBEAMS can
-    # be generated if EXPBEAMS exists.
-    
-    # Transfer ASE object into slab object for ViPErLEED
-    slab = Slab(ase_atoms=ase_object)
+    # generated if PARAMETERS are set correctly. IVBEAMS can be
+    # generated if EXPBEAMS exists.
+    parameters_file = exec_path / "PARAMETERS"
+    if not parameters_file.is_file():
+        # No PARAMETERS file – Error
+        raise FileNotFoundError("No PARAMETERS file found – this is required")
 
-    # Get temporary parameters object
-    rp = readPARAMETERS(exec_path / parameters_name)
-    interpretPARAMETERS(rp, slab = slab)
-    v0i = rp.V0_IMAG
-
-    # Transformation of slab object: Rotation or isotropic streching/shrinking
-    if uc_transformation_matrix is not None:
-        slab.apply_matrix_transformation(uc_transformation_matrix)
-    if uc_scaling is not None:
-        slab.apply_scaling(uc_scaling)
-
-    # check if the now transformed slab has any z components in vectors a & b
-    # raise an error because this would mess up parts of the TensErleed
-    # calculations (as we pass on only the first two components).
-
-    a, b, _ = slab.ucell.T
-    if abs(a[2]) > 1e-5 or abs(b[2]) > 1e-5:
-        raise RuntimeError(
-            "z component found in unit cell vector a or b. This is not "
-            "allowed in the TensErLEED calculation. Check eventual "
-            "transformations applied to the unit cell and make sure a "
-            "and b are parallel to the surface."
-        )
-
-    # Cut the slab as given in cut_cell_c_fraction - very important
-    slab.atlist = [at for at in slab.atlist if at.pos[2] >= cut_cell_c_fraction]
-    # Update Slab
-    slab.updateAtomNumbers()
-    slab.updateElementCount()
-    
-    # Some Parameters may be necessary to set here rather than later
-    preset_params = {}
-
-    # assign site definitions from PARAMETERS if available
-    if not rp.SITE_DEF:
-        # assign default surface sites but warn
-        LOGGER.warning("Parameter SITE_DEF not specified. "
-                      "Double check PARAMETERS and POSCAR to "
-                      "make sure all sites are recognized correctly. "
-                      "Default *_surf sites definitions will be added "
-                      "for atoms visible from vacuum.")
-        # figure out surface sites
-        site_def = {}
-        surface_atoms = slab.getSurfaceAtoms(rp)
-        # surface species of each element
-        for element in slab.elements:
-            atn = [at.oriN for at in surface_atoms if at.el == element]
-            if atn:
-                site_def[element] = {"surf": atn}
-        preset_params["SITE_DEF"] = site_def
-
-    poscar_name = "POSCAR"
-    poscar_path = (exec_path / poscar_name)
-    if poscar_path.exists():
-        LOGGER.warning(
-            "A 'POSCAR' file is already present in exec_path - calculation "
-            "aborted. Check if a ViPErLEED calculation was already run in "
-            "this directory."
-        )
-
-    writePOSCAR(slab, str(poscar_path))
+    # Transfer ASE object into slab object for ViPErLEED,
+    # and save it as a POSCAR file for debug purposes.
+    slab = _make_and_check_slab(ase_object, slab_transforms)
+    _write_poscar(slab, exec_path)
 
     # Take care of input files and work directory
-    work_path = exec_path / "work"
-    work_path.mkdir(exist_ok=True)
-    # copy input files to work directory
     # NOTE: PARAMETERS should NOT contain SITE_DEF flags.
     # VIBROCC should contain *_surf sites for all elements.
-    for file in input_files:
-        try:
-            shutil.copy2(exec_path / file, work_path / file)
-        except FileNotFoundError:
-            pass
+    work_path = _make_work_dir(exec_path)
 
-    home = Path(".").resolve()
+    home = Path.cwd()
     os.chdir(work_path)
+
+    # Get temporary parameters object
+    rparams = readPARAMETERS(parameters_file)
+    interpretPARAMETERS(rparams, slab=slab)
 
     # We are ready to run ViPErLEED! Have fun!
     try:
-        run_tleedm(
-            slab=slab,
-            preset_params=preset_params,
-            source=os.path.dirname(viperleed.__file__),
-        )
+        run_tleedm(slab=slab,
+                   preset_params=_make_preset_params(rparams, slab),
+                   source=Path(viperleed.__file__).parent,)
     except Exception as err:
         # If ViPErLEED fails, move back to home directory
         os.chdir(home)
-        raise RuntimeError("ViPErLEED calculation failed.") from err
+        raise RuntimeError("ViPErLEED calculation failed") from err
 
     # ViPErLEED should have suceeded if you arrive here. However, we may not
     # have run a refcalc (id == 1). In that case, return empty strings.
-    if 1 not in rp.RUN:
-        return "", "", "", v0i
+    if 1 not in rparams.RUN:
+        os.chdir(home)
+        return "", "", "", rparams.V0_IMAG
 
-    # read out the THEOBEAMS.csv file and complex amplitudes:
-    theobeams_name = "THEOBEAMS.csv"
-    amp_real_name = "Complex_amplitudes_real.csv"
-    amp_imag_name = "Complex_amplitudes_imag.csv"
-
-    content_list = []
-
-    for filename in (theobeams_name, amp_real_name, amp_imag_name):
-        try:
-            with open(filename, "r", encoding="utf-8") as fproxy:
-                content_str = fproxy.read()
-        except FileNotFoundError:
-            LOGGER.error(f"Could not find file {filename}")
-            content_str = ""
-        content_list.append(content_str)
-
-    theobeams_file_str, amp_real_file_str, amp_imag_file_str = content_list
+    # read out the THEOBEAMS.csv file and complex amplitudes
+    content_list = _read_refcalc_output(rparams)
 
     # Move back home
     os.chdir(home)
 
-    return theobeams_file_str, amp_real_file_str, amp_imag_file_str, v0i
+    if cleanup_work:
+        try:
+            shutil.rmtree(work_path)
+        except OSError as err:
+            _LOGGER.warning(
+                f"Failed to remove work directory {work_path}. Info: {err}"
+                )
+    return *content_list, rparams.V0_IMAG
+
+
+def _copy_inputs_to_exec_path(inputs_path, exec_path):
+    """Copy all tleedm input files from inputs_path to exec_path."""
+    if inputs_path is None:
+        return
+    inputs_path = Path(inputs_path)
+    for file in _INPUT_FILES:
+        try:
+            shutil.copy2(inputs_path / file, exec_path / file)
+        except FileNotFoundError:
+            pass
+
+
+def _apply_transform(slab, transform, apply_cut=False):
+    """Apply a single SlabTransform `transform` to `slab`."""
+    indices = None       # Unit-cell and position indices to be swapped
+    if transform is swap_a_b:
+        indices = (0, 1), (1, 0)
+    elif transform is swap_b_c:
+        indices = (2, 1), (1, 2)
+    elif transform is swap_c_a:
+        indices = (0, 2), (2, 0)
+
+    if indices:
+        # Swapping axes will require to make a new bulk slab for sure
+        slab.bulkslab = None
+        new_axes, old_axes = ((ind,) for ind in indices)
+        slab.ucell.T[new_axes] = slab.ucell.T[old_axes]
+        for atom in slab:
+            atom.pos[new_axes] = atom.pos[old_axes]
+        return  # No scaling nor cutting
+
+    if transform.orthogonal_matrix is not None:
+        slab.apply_matrix_transformation(transform.orthogonal_matrix)
+    if transform.uc_scaling is not None:
+        if isinstance(transform.uc_scaling, Real):
+            transform.uc_scaling = (transform.uc_scaling,)
+        slab.apply_scaling(*transform.uc_scaling)
+
+    if not apply_cut or not transform.cut_cell_c_fraction:
+        return
+
+    # Cut the slab as given in cut_cell_c_fraction - very important
+    if transform.cut_cell_c_fraction:
+        slab.atlist = [at for at in slab.atlist
+                       if at.pos[2] >= transform.cut_cell_c_fraction]
+    slab.updateAtomNumbers()
+    slab.updateElementCount()
+
+
+def _make_and_check_slab(ase_object, transforms):
+    """Return a Slab from ase.Atoms with transformations applied."""
+    slab = Slab(ase_atoms=ase_object)
+
+    # Transformations of slab:
+    # Mirror/rotation/swapping and/or stretching/shrinking
+    if isinstance(transforms, SlabTransform):
+        transforms = (transforms,)
+    last_transform = transforms[-1]
+    for transform in transforms:
+        _apply_transform(slab, transform,
+                         apply_cut=transform is last_transform)
+
+    # Check if the now transformed slab has any z components in vectors
+    # a & b. Error out as this would mess up parts of the TensErLEED
+    # calculations, as we always pass on only the first two components.
+    ab_vecs = slab.ucell.T[:2]
+    if any(ab_vecs[:, 2] > 1e-5):
+        raise ValueError(
+            f"z component found in unit cell vector a ({ab_vecs[0]}) or b "
+            f"({ab_vecs[1]}). This is not allowed in a TensErLEED calculation."
+            " Check eventual transformations applied to the unit cell and make"
+            " sure a and b are in the (x,y) plane."
+            )
+    return slab
+
+
+def _make_preset_params(rparams, slab):
+    """Return preset parameters to use when running tleedm."""
+    if rparams.SITE_DEF:
+        return {}
+
+    # When no sites are explicitly defined, give all
+    # atoms visible from vacuum a '_surf' site label
+    _LOGGER.warning("Parameter SITE_DEF not specified. Double check "
+                    "PARAMETERS and POSCAR to make sure all sites are "
+                    "recognized correctly. Default *_surf sites definitions "
+                    "will be added for atoms visible from vacuum.")
+    preset_params = {}
+    site_def = defaultdict(list)
+    for atom in slab.getSurfaceAtoms(rparams):
+        site_def[atom.el].append(atom.oriN)
+    preset_params["SITE_DEF"] = {
+        element: {"surf": atom_numbers}
+        for element, atom_numbers in site_def.items()
+        }
+
+    return preset_params
+
+
+def _make_work_dir(exec_path):
+    """Return exec_path/'work' after copying there all input files."""
+    work_path = exec_path / "work"
+    work_path.mkdir(exist_ok=True)
+    # copy input files to work directory
+    for file in _INPUT_FILES:
+        try:
+            shutil.copy2(exec_path / file, work_path / file)
+        except FileNotFoundError:
+            pass
+    return work_path
+
+
+def _read_refcalc_output(rparams):
+    """Return the contents of the output files produced by a refcalc."""
+    # List of file name and earliest version in which it appeared
+    output_files = (
+        ("THEOBEAMS.csv", 0),
+        ("Complex_amplitudes_real.csv", 1.73),
+        ("Complex_amplitudes_imag.csv", 1.73),
+        )
+
+    content_list = []
+    for filename, min_version in output_files:
+        _path = Path(filename).resolve()
+        content_str = ""
+        if _path.is_file():
+            with _path.open("r", encoding="utf-8") as fproxy:
+                content_str = fproxy.read()
+        elif rparams.TL_VERSION >= min_version:
+            _LOGGER.error(f"Could not find file {filename}")
+        content_list.append(content_str)
+    return content_list
+
+
+def _write_poscar(slab, exec_path):                                             # TODO: could be done with a flag on writePOSCAR
+    """Save slab as a POSCAR file, but warn if one is already there."""
+    poscar_path = exec_path / "POSCAR"
+    if poscar_path.exists():
+        _LOGGER.warning("A 'POSCAR' file is already present in "
+                        f"{exec_path} and will be overwritten.")
+    poscar.writePOSCAR(slab, poscar_path)
 
 
 def rfactor_from_csv(
@@ -321,11 +472,11 @@ def rfactor_from_csv(
     return_beam_arrays = False,
 ):  ## TODO: add kwarg for mapping for averaging
     """Compute the Pendry R-factor between two CSV files (in ViPErLEED format).
-    
+
     Read in two CSV files containing LEED-I(V) spectra and compute the mutual
     R-factor. The format of the files must be the same as accepted/generated by
     ViPErLEED.
-    
+
     Parameters
     ----------
     beams_files : tuple of two string
@@ -354,7 +505,7 @@ def rfactor_from_csv(
     return_beam_arrays : bool, default = False
         For debugging, you can optionally return the interpolated beams,
         y-functions, number of overlapping points & per-beam R-factors.
-        
+
     Returns
     -------
     best_R : float
@@ -363,8 +514,16 @@ def rfactor_from_csv(
     best_v0r : float
         The v0r value for which the best R-factor was found.
     """
-    # Use Pendry R-factor - TODO: dicuss if this should be a user parameter
-    #         in the API (if so, the code below will need a few ajustments)
+    if not _HAS_NEW_RFACTOR:
+        raise ModuleNotFoundError(
+            "Missing R-factor compiled Fortran extension module. "
+            "Run make in viperleed/tleedmlib/wrapped, then try again",
+            name='viperleed.tleedmlib.wrapped.rfactor'
+            )
+
+    # Use Pendry R-factor - TODO: discuss if this should be a user
+    # parameter in the API (if so, the code below will need a few
+    # adjustments)
     which_r = 1
 
     # Check compilation of wrapped R-factor code
@@ -533,7 +692,7 @@ def rfactor_from_csv(
         beams2_n_e_beams_out,
         v0i
     )
-    
+
     # Ready to calculate R-factor
     v0r_shift_range_int = np.int32([round(v / intpol_step) for v in v0r_shift_range])
     v0r_center = sum(v0r_shift_range_int) // 2
@@ -616,7 +775,7 @@ def plot_iv_from_csv(
     else:
         n_beams = 1
         assert type(beam_file_is_content) is bool
-    
+
     all_beam_data = []
     labels = []
     for file, is_content in zip(beam_file, beam_file_is_content):
@@ -653,51 +812,109 @@ def plot_iv_from_csv(
     return plot_iv(all_beam_data, output_file, labels=labels, legends=legends)
 
 
-def rot_mat_a(theta):
-    """Generates a rotation matrix around the a axis.
-    
-    The rotation is positive, i.e. clockwise when looking along a.
-    
+def rot_mat_x(theta):
+    """Return a rotation matrix around the x axis.
+
+    The rotation is positive, i.e., clockwise when looking along x,
+    when applied from the left to column vectors. The same rotation
+    for row vectors can be obtained by multiplying on the right with
+    the transpose of the return value.
+
     Parameters
     ----------
     theta : float
-        Angle of rotation in degrees. (Use np.degrees to convert)
+        Angle of rotation in degrees.
+
+    Returns
+    -------
+    rot_mat : numpy.ndarray
+        Shape (3, 3). Rotation matrix around the x axis.
     """
     theta = np.radians(theta)
-    rot_mat = [
-        [1, 0, 0],
-        [0, np.cos(theta), -np.sin(theta)],
-        [0, np.sin(theta), np.cos(theta)],
-    ]
-    return np.array(rot_mat)
+    rot_mat = np.identity(3)
+    rot_mat[1:, 1:] = rotation_matrix(theta, dim=2)
+    return rot_mat
 
 
-def rot_mat_c(theta):
-    """Generates a rotation matrix around the c axis.
-    
-    The rotation is positive, i.e. clockwise when looking along c.
-    
+def rot_mat_z(theta):
+    """Return a rotation matrix around the z axis.
+
+    The rotation is positive, i.e. clockwise when looking along z,
+    when applied from the left to column vectors. The same rotation
+    for row vectors can be obtained by multiplying on the right with
+    the transpose of the return value.
+
     Parameters
     ----------
     theta : float
-        Angle of rotation in degrees. (Use np.degrees to convert)
+        Angle of rotation in degrees.
+
+    Returns
+    -------
+    rot_mat : numpy.ndarray
+        Shape (3, 3). Rotation matrix around the z axis.
     """
     theta = np.radians(theta)
-    rot_mat = [
-        [np.cos(theta), -np.sin(theta), 0],
-        [np.sin(theta), np.cos(theta), 0],
-        [0, 0, 1],
-    ]
-    return np.array(rot_mat)
+    return rotation_matrix(theta, dim=3)
 
 
-# some other useful matrices
+def rot_mat_axis(axis, theta):
+    """Return a 3D rotation matrix by `theta` around `axis`.
 
-# Be careful: These WILL change chirality (handedness) of the cell -
-# use rotation around a or c if you want to avoid this. (Chirality
-# changes can not be expressed via rotations.)
-switch_b_c_mat = np.array([[1, 0, 0], [0, 0, 1], [0, 1, 0]])  # swap b and c
-switch_a_b_mat = np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]])  # swap a and b
+    Parameters
+    ----------
+    axis : numpy.ndarray
+        A vector parallel to the rotation axis. Shape (3,).
+    theta : float
+        Rotation angle in degrees.
+
+    Returns
+    -------
+    rotation_matrix : numpy.ndarray
+        Rotation matrix around `axis` by `theta`. The rotation is
+        counter-clockwise when applied to column vectors from
+        the left.
+    """
+    # We use the 'concise form' of the axis--angle formulation from
+    # en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+    axis_dir = axis / np.linalg.norm(axis)
+
+    # Cross-product matrix from stackoverflow.com/questions/66707295
+    u_cross = np.cross(axis_dir, -np.identity(3))
+    u_outer = np.outer(axis_dir, axis_dir)
+    theta = np.radians(theta)
+    return (np.cos(theta) * np.identity(3)
+            + np.sin(theta) * u_cross
+            + (1 - np.cos(theta)) * u_outer)
+
+
+# Some other useful transformations
+# Swapping unit cell vectors
+swap_a_b = swap_b_a = _ImmutableSlabTransform()
+swap_b_c = swap_c_b = _ImmutableSlabTransform()
+swap_c_a = swap_a_c = _ImmutableSlabTransform()
+
+
+# Notice: the __doc__ edit will work fine in python >=3.10, but earlier
+# versions print out type(obj).__doc__ when help is called. There's no
+# good way around this, other than making each a separate class.
+_FMT_DOC = """
+    This SlabTransform swaps the '{}' and '{}' unit cell vectors,
+    but does not change the Cartesian coordinates of the atoms.
+
+    Be careful, as this transform WILL CHANGE THE HANDEDNESS of the
+    unit cell. To avoid this, you can instead use a rotation around an
+    appropriate axis. For orthogonal cells, you can use a 90 degrees
+    rotation around '{}'.
+"""
+
+# pylint: disable=no-member
+# Perhaps a bug? __doc__ exists and is set properly
+swap_a_b.__doc__ += _FMT_DOC.format('a', 'b', 'c')
+swap_b_c.__doc__ += _FMT_DOC.format('b', 'c', 'a')
+swap_c_a.__doc__ += _FMT_DOC.format('c', 'a', 'b')
+# pylint: enable=no-member
+
 
 # flip the cell along c (useful if the lower half of the cell is to be kept)
 flip_c_mat = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])
