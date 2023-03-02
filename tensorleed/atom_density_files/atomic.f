@@ -1,3 +1,15 @@
+! Note by the ViPErLEED developers:
+! This program was written by Eric L. Shirley (NIST). The ViPErLEED
+! authors have obtained permission from him to include the program in
+! the ViPErLEED package and release it under GPLv3 (or later). The
+! copyright remains with Eric L. Shirley.
+!
+! If you find this program useful in your research, the author
+! appreciates acknowledgement by including the following attribution
+! in resulting publications:
+! Eric L. Shirley, PhD Thesis, University of Illinois at Urbana-Champaign, 1991
+
+
       module PARAMS
       integer, parameter :: iorbs = 36
       integer, parameter :: lmax = 4

@@ -30,7 +30,6 @@ NOT COVERED under GPLv3 are:
 - All parts of TensErLEED not authored by the ViPErLEED team
 - EEASISSS
 - BEAMGEN (TODO remove after merge branch)
-- ATOMIC DENSITY
 
 The ViPErLEED developers have obtained permission by the authors to use
 and distribute these codes as part of ViPErLEED.
@@ -72,6 +71,20 @@ the relevant works:
 - J. Rundgren, _Optimized Surface-Slab Excited-State Muffin-Tin
   Potential and Surface Core Level Shifts_, Phys. Rev. B **68**,
   125405 (2003).
+
+# Local-density-functional calculations of the energy of atoms
+
+The program "Local-density-functional calculations of the energy of
+atoms" (viperleed/tensorleed/atomic_density_files/atomic.f) was written
+by Eric L. Shirley (NIST). The ViPErLEED authors have obtained
+permission from the author to include the program in the ViPErLEED
+package and release it under GPLv3 (or later). The copyright remains
+with the author.
+
+If you find this program useful in your research, the author appreciates
+acknowledgement by including the following attribution in resulting
+publications:
+- Eric L. Shirley, PhD Thesis, University of Illinois at Urbana-Champaign, 1991
 
 
 # GNU GENERAL PUBLIC LICENSE
