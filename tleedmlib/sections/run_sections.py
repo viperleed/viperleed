@@ -325,15 +325,6 @@ def section_loop(rp, sl):
                         dp.rp.resetSearchConv()
                     if rp.RUN[:2] != [2, 3]:
                         rp.RUN = [2, 3] + rp.RUN
-                # when done with search: reset so a follow up search is not blocked
-                elif len(rp.disp_blocks) == rp.search_index:
-                    rp.search_index=0
-                    if not rp.domainParams:
-                        sl.restoreOriState()
-                    rp.resetSearchConv()
-                    for dp in rp.domainParams:
-                        dp.sl.restoreOriState()
-                        dp.rp.resetSearchConv()
         except KeyboardInterrupt:
             logger.warning("Stopped by keyboard interrupt, attempting "
                            "clean exit...")
