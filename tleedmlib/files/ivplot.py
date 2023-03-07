@@ -218,9 +218,11 @@ def plot_iv(data, filename, labels=[], annotations=[],
     logger.setLevel(logging.INFO)
     try:
         fig_exists = False
+        idx = 0
         for ct in range(n_beams):   # iterate through beams
             if all([len(xy_per_beam_per_dataset[i][ct]) == 0
                     for i in range(len(data))]):
+                idx += 1
                 continue   # no data for this beam in any dataset, skip
             if (ct % figs_per_page == 0) or (not fig_exists):
                 # need a new figure
