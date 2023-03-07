@@ -205,10 +205,9 @@ def readPARAMETERS(filename='PARAMETERS'):
                 param.lower().replace("_", "") in _PARAM_ALIAS):
             param = _PARAM_ALIAS[param.lower().replace("_", "")]
         if param not in _KNOWN_PARAMS:
-            logger.warning('PARAMETERS file: Parameter '+param+' not '
-                           'recognized.')
-            rpars.setHaltingLevel(1)
-            continue
+            # If a parameter is not recognized stop execution. If ignored, unintended behavior may occur.
+            raise RuntimeError('PARAMETERS file: Parameter '+param+' not '
+                               'recognized.')
         value = line.split('=', maxsplit=1)[1].rstrip()
         if not value:
             logger.warning('PARAMETERS file: ' + param + ' appears to '
