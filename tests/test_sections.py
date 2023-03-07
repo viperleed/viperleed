@@ -192,6 +192,13 @@ class TestInitialization(TestSetup):
     def test_init_files_present(self, init_files, expected_file):
         """Checks if files are present after initialization"""
         assert init_files.expected_file_exists(expected_file)
+    
+    def test_PARAMETERS_was_updated(self, init_files):
+        """Checks if PARAMETERS file was updated."""
+        assert init_files.expected_file_exists('PARAMETERS')
+        with open(init_files.work_path / 'PARAMETERS', 'r') as param_file:
+            param_content = param_file.read()
+        assert "line commented out automatically" in param_content
 
 
 class TestRefCalc(TestInitialization):
