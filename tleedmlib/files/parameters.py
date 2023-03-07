@@ -69,7 +69,7 @@ for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
 
 
-def updatePARAMETERS(rp, filename='PARAMETERS', update_from=Path()):
+def updatePARAMETERS(rp, filename='PARAMETERS', update_from="."):
     """
     Reads PARAMETERS file again, but ignores everything not concerning the
     search or STOP. Updates the given Rparams object accordingly.
@@ -1571,7 +1571,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     return
 
 
-def modifyPARAMETERS(rp, modpar, new="", comment="", path=Path(),
+def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
                      suppress_ori=False, include_left=False):
     """
     Looks for 'modpar' in the PARAMETERS file, comments that line out, and
@@ -1614,7 +1614,7 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path=Path(),
                 "modifyPARAMETERS: Could not copy PARAMETERS file "
                 "to PARAMETERS_ori. Proceeding, original file will be lost.")
         rp.manifest.append(oriname)
-    if "PARAMETERS" not in rp.manifest and _path is Path():
+    if "PARAMETERS" not in rp.manifest and _path == Path():
         rp.manifest.append("PARAMETERS")
     output = ""
     headerPrinted = False
