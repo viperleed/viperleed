@@ -610,3 +610,26 @@ def make_unique_list(w_duplicates):
         if item not in unique_list:
             unique_list.append(item)
     return unique_list
+
+def get_matplotlib():
+    try:
+        import matplotlib
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return None
+
+    matplotlib.rcParams.update({'figure.max_open_warning': 0})
+    matplotlib.use('Agg')  # TODO: check with Michele if this causes conflicts
+    # set fonttype 42 so Pdfs are editable
+    matplotlib.rcParams['pdf.fonttype'] = 42
+    # import matplotlib.ticker as plticker
+    matplotlib.rcParams["mathtext.default"] = "regular"
+    return plt
+
+
+def get_matplotlib_pdfpages():
+    try:
+        from matplotlib.backends.backend_pdf import PdfPages
+    except ImportError:
+        return None
+    return PdfPages

@@ -17,18 +17,12 @@ import fortranformat as ff
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.leedbase import getBeamCorrespondence, getYfunc
 from viperleed.tleedmlib.files.ivplot import plot_iv
+from viperleed.tleedmlib.base import get_matplotlib, get_matplotlib PdfPages
 
-try:
-    import matplotlib
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-    import matplotlib.ticker as plticker
-except Exception:
-    plotting = False
-else:
-    plotting = True
+
+plt = get_matplotlib()
+plotting = True if plt else False
+PdfPages = get_matplotlib_pdfpages()
 
 logger = logging.getLogger("tleedm.files.iorfactor")
 

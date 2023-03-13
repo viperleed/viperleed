@@ -8,19 +8,13 @@ Created on Mon Oct 25 18:47:39 2021
 import logging
 import numpy as np
 
-try:
-    import matplotlib
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-    import matplotlib.ticker as plticker
-except Exception:
-    plotting = False
-else:
-    plotting = True
 
 import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.base import get_matplotlib, get_matplotlib_pdfpages
+
+plt = get_matplotlib()
+plotting = True if plt else False
+PdfPages = get_matplotlib_pdfpages()
 
 logger = logging.getLogger("tleedm.files.ivplot")
 

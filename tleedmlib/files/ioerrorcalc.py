@@ -13,20 +13,11 @@ import re
 from scipy import interpolate
 from zipfile import ZipFile, ZIP_DEFLATED
 
-from viperleed.tleedmlib.base import range_to_str, max_diff
+from viperleed.tleedmlib.base import range_to_str, max_diff, get_matplotlib, get_matplotlib_pdfpages
 
-try:
-    import matplotlib
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-    # import matplotlib.ticker as plticker
-    matplotlib.rcParams["mathtext.default"] = "regular"
-except Exception:
-    plotting = False
-else:
-    plotting = True
+plt = get_matplotlib()
+plotting = True if plt else False
+PdfPages = get_matplotlib_pdfpages()
 
 logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)

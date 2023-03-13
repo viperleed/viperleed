@@ -12,21 +12,13 @@ import logging
 import copy
 from numpy.polynomial import Polynomial
 
-try:
-    import matplotlib
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-    from matplotlib import cm
-    matplotlib.rcParams["mathtext.default"] = "regular"
-except Exception:
-    plotting = False
-else:
-    plotting = True
-
 from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
+from viperleed.tleedmlin.base import get_matplotlib, get_matplotlib_pdfpages
+
+plt = get_matplotlib()
+plotting = True if plt else False
+PdfPages = get_matplotlib_pdfpages()
 
 logger = logging.getLogger("tleedm.files.iofdout")
 logger.setLevel(logging.INFO)

@@ -16,20 +16,16 @@ import shutil
 from timeit import default_timer as timer
 from pathlib import Path
 
-try:
-    import matplotlib.pyplot as plt
-except Exception:
-    plotting = False
-else:
-    plotting = True
-
 from viperleed.tleedmlib.files.iodeltas import checkDelta
 from viperleed.tleedmlib.leedbase import getMaxTensorIndex
-from viperleed.tleedmlib.base import available_cpu_count
+from viperleed.tleedmlib.base import available_cpu_count, get_matplotlib
 from viperleed.tleedmlib.checksums import (
     KNOWN_TL_VERSIONS,
     UnknownTensErLEEDVersionError
 )
+
+plt = get_matplotlib()
+plotting = True if plt else False
 
 logger = logging.getLogger("tleedm.rparams")
 

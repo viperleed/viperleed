@@ -17,17 +17,11 @@ import fortranformat as ff
 
 from viperleed.tleedmlib.leedbase import (get_atomic_number,
                                           get_element_symbol)
+from viperleed.tleedmlib.base import get_matplotlib, get_matplotlin_pdfpages
 
-try:
-    import matplotlib
-except ImportError:
-    _CAN_PLOT = False
-else:
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-    _CAN_PLOT = True
+plt = get_matplotlib()
+_CAN_PLOT = True if plt else False
+PdfPages = get_matplotlib_pdfpages()
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
 _HARTREE_TO_EV = 27.211396
