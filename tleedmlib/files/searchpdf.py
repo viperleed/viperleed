@@ -14,17 +14,11 @@ from matplotlib.markers import MarkerStyle
 logger = logging.getLogger("tleedm.files.searchpdf")
 logger.setLevel(logging.INFO)
 
-try:
-    import matplotlib
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-except Exception:
-    plotting = False
-else:
-    plotting = True
+from viperleed.tleedmlib.base import get_matplotlib, get_matplotlib_pdfpages
 
+plt = get_matplotlib()
+plotting = True if plt else False
+PdfPages = get_matplotlib_pdfpages()
 
 def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                            outname="Search-progress.pdf",
