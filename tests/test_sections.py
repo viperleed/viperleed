@@ -522,3 +522,39 @@ class Test_readVIBROCC:
         atom.offset_occ[atom.el] = +0.2
         atom.mergeDisp(atom.el)
         assert np.allclose(atom.disp_occ['Ag'], [0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+
+
+class Test_restore_oristate:
+    def test_save_restore_oristate_geo(self, ag100_slab_with_displacements_and_offsets):
+            slab, param = ag100_slab_with_displacements_and_offsets
+            slab_copy = deepcopy(slab)
+            for at in slab.atlist:
+                at.disp_geo_offset['all'] = np.array([0.1, 0.0, 0.0])
+                at.offset_geo['all'] = np.array([0.0, 0.0, 0.1])
+                at.mergeDisp(at.el)
+
+            slab.restoreOriState()
+            for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
+                assert np.allclose(at_rest.disp_geo['all'], at_orig.disp_geo['all'])
+
+    def test_save_restore_oristate_vib(self, ag100_slab_with_displacements_and_offsets):
+            slab, param = ag100_slab_with_displacements_and_offsets
+            slab_copy = deepcopy(slab)
+            for at in slab.atlist:
+                at.offset_vib['all'] = 0.1
+                at.mergeDisp(at.el)
+
+            slab.restoreOriState()
+            for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
+                assert np.allclose(at_rest.disp_vib['all'], at_orig.disp_vib['all'])
+
+    def test_save_restore_oristate_occ(self, ag100_slab_with_displacements_and_offsets):
+            slab, param = ag100_slab_with_displacements_and_offsets
+            slab_copy = deepcopy(slab)
+            for at in slab.atlist:
+                at.offset_occ[at.el] = 0.1
+                at.mergeDisp(at.el)
+
+            slab.restoreOriState()
+            for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
+                assert np.allclose(at_rest.disp_occ[at_rest.el], at_orig.disp_occ[at_rest.el])
