@@ -13,11 +13,21 @@ import re
 from scipy import interpolate
 from zipfile import ZipFile, ZIP_DEFLATED
 
-from viperleed.tleedmlib.base import range_to_str, max_diff, get_matplotlib, get_matplotlib_pdfpages
+from viperleed import GLOBALS
+from viperleed.tleedmlib.base import range_to_str, max_diff, set_matplotlib_rc
 
-plt = get_matplotlib()
-plotting = True if plt else False
-PdfPages = get_matplotlib_pdfpages()
+# try to import matplotlib
+try:
+    import matplotlib
+except ImportError:
+    GLOBALS['CAN_PLOT'] = False
+else:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    GLOBALS['CAN_PLOT'] = True
+    set_matplotlib_rc(matplotlib)
+
+plotting = GLOBALS['CAN_PLOT']
 
 logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)

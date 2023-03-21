@@ -15,13 +15,21 @@ from pathlib import Path
 
 import fortranformat as ff
 
+from viperleed import GLOBALS
 from viperleed.tleedmlib.leedbase import (get_atomic_number,
                                           get_element_symbol)
-from viperleed.tleedmlib.base import get_matplotlib, get_matplotlin_pdfpages
+from viperleed.tleedmlib.base import set_matplotlib_rc
 
-plt = get_matplotlib()
-_CAN_PLOT = True if plt else False
-PdfPages = get_matplotlib_pdfpages()
+# try to import matplotlib
+try:
+    import matplotlib
+except ImportError:
+    GLOBALS['CAN_PLOT'] = False
+else:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    GLOBALS['CAN_PLOT'] = True
+    set_matplotlib_rc(matplotlib)
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
 _HARTREE_TO_EV = 27.211396
@@ -514,7 +522,7 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
     -------
     None.
     """
-    if not _CAN_PLOT:
+    if not GLOBALS['CAN_PLOT']:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "Phaseshift plotting.")
         return

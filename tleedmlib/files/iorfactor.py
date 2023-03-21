@@ -14,16 +14,24 @@ import os
 
 import fortranformat as ff
 
+from viperleed import GLOBALS
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.leedbase import getBeamCorrespondence, getYfunc
 from viperleed.tleedmlib.files.ivplot import plot_iv
-from viperleed.tleedmlib.base import get_matplotlib, get_matplotlib PdfPages
+from viperleed.tleedmlib.base import set_matplotlib_rc
 
+# try to import matplotlib
+try:
+    import matplotlib
+except ImportError:
+    GLOBALS['CAN_PLOT'] = False
+else:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    GLOBALS['CAN_PLOT'] = True
+    set_matplotlib_rc(matplotlib)
 
-plt = get_matplotlib()
-plotting = True if plt else False
-PdfPages = get_matplotlib_pdfpages()
-
+plotting = GLOBALS['CAN_PLOT']
 logger = logging.getLogger("tleedm.files.iorfactor")
 
 
@@ -504,7 +512,7 @@ def prepare_analysis_plot(formatting, xyExp, xyTheo):
     dy = ymax - ymin
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
     tick = 50
-    oritick = plticker.MultipleLocator(base=tick)
+    oritick = matplotlib.ticker.MultipleLocator(base=tick)
     xlims = (np.floor(xmin / tick) * tick,
              np.ceil(xmax / tick) * tick)
     dx = xlims[1] - xlims[0]

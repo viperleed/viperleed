@@ -16,16 +16,26 @@ import shutil
 from timeit import default_timer as timer
 from pathlib import Path
 
+from viperleed import GLOBALS
 from viperleed.tleedmlib.files.iodeltas import checkDelta
 from viperleed.tleedmlib.leedbase import getMaxTensorIndex
-from viperleed.tleedmlib.base import available_cpu_count, get_matplotlib
+from viperleed.tleedmlib.base import available_cpu_count, set_matplotlib_rc
 from viperleed.tleedmlib.checksums import (
     KNOWN_TL_VERSIONS,
     UnknownTensErLEEDVersionError
 )
 
-plt = get_matplotlib()
-plotting = True if plt else False
+try:
+    import matplotlib
+except ImportError:
+    GLOBALS['CAN_PLOT'] = False
+else:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    GLOBALS['CAN_PLOT'] = True
+    set_matplotlib_rc(matplotlib)
+
+plotting = GLOBALS['CAN_PLOT']
 
 logger = logging.getLogger("tleedm.rparams")
 

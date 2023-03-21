@@ -8,13 +8,22 @@ Created on Mon Oct 25 18:47:39 2021
 import logging
 import numpy as np
 
-
+from viperleed import GLOBALS
 import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.base import get_matplotlib, get_matplotlib_pdfpages
+from viperleed.tleedmlib.base import set_matplotlib_rc
 
-plt = get_matplotlib()
-plotting = True if plt else False
-PdfPages = get_matplotlib_pdfpages()
+# try to import matplotlib
+try:
+    import matplotlib
+except ImportError:
+    GLOBALS['CAN_PLOT'] = False
+else:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    GLOBALS['CAN_PLOT'] = True
+    set_matplotlib_rc(matplotlib)
+
+plotting = GLOBALS['CAN_PLOT']
 
 logger = logging.getLogger("tleedm.files.ivplot")
 
@@ -176,7 +185,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
 
     # set ticks spacing to 50 eV and round the x limits to a multiple of it
     tick = 50
-    oritick = plticker.MultipleLocator(base=tick)
+    oritick = matplotlib.ticker.MultipleLocator(base=tick)
     majortick = oritick
     minortick = None
     xlims = (np.floor(xmin/tick)*tick,
@@ -194,7 +203,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
     if dx / (tick * fontscale) > 16:  # too many labelled ticks
         minortick = majortick
         newbase = int(np.ceil(dx / (tick * fontscale * 16))) * tick
-        majortick = plticker.MultipleLocator(base=newbase)
+        majortick = matplotlib.ticker.MultipleLocator(base=newbase)
     ticklen = 3*fontscale
 
     # axes helper variables

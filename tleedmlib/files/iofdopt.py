@@ -12,14 +12,23 @@ import logging
 import copy
 from numpy.polynomial import Polynomial
 
+from viperleed import GLOBALS
 from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
-from viperleed.tleedmlin.base import get_matplotlib, get_matplotlib_pdfpages
+from viperleed.tleedmlib.base import set_matplotlib_rc
 
-plt = get_matplotlib()
-plotting = True if plt else False
-PdfPages = get_matplotlib_pdfpages()
+# try to import matplotlib
+try:
+    import matplotlib
+except ImportError:
+    GLOBALS['CAN_PLOT'] = False
+else:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    GLOBALS['CAN_PLOT'] = True
+    set_matplotlib_rc(matplotlib)
 
+plotting = GLOBALS['CAN_PLOT']
 logger = logging.getLogger("tleedm.files.iofdout")
 logger.setLevel(logging.INFO)
 
@@ -211,7 +220,7 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
               for b in rp.expbeams]
     formatting = copy.deepcopy(rp.PLOT_IV)  # use to set colors
     formatting['colors'] = (
-        list(cm.get_cmap('viridis', len(points)).colors)
+        list(matplotlib.cm.get_cmap('viridis', len(points)).colors)
         + [np.array([0, 0, 0, 1])])
     formatting['linewidths'] = [0.5] * len(points) + [1.]
     formatting['linewidths'][best_point_ind] = 1.

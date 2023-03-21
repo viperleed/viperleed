@@ -11,14 +11,23 @@ import numpy as np
 import logging
 from matplotlib.markers import MarkerStyle
 
+from viperleed import GLOBALS
+from viperleed.tleedmlib.base import set_matplotlib_rc
+
+# try to import matplotlib
+try:
+    import matplotlib
+except ImportError:
+    GLOBALS['CAN_PLOT'] = False
+else:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    GLOBALS['CAN_PLOT'] = True
+    set_matplotlib_rc(matplotlib)
+
+plotting = GLOBALS['CAN_PLOT']
 logger = logging.getLogger("tleedm.files.searchpdf")
 logger.setLevel(logging.INFO)
-
-from viperleed.tleedmlib.base import get_matplotlib, get_matplotlib_pdfpages
-
-plt = get_matplotlib()
-plotting = True if plt else False
-PdfPages = get_matplotlib_pdfpages()
 
 def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                            outname="Search-progress.pdf",

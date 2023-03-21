@@ -4,7 +4,8 @@
 =================
 '''
 
-# print('You have imported', __name__)
 
 GLOBALS = {'USE_GUI': None,
+           'CAN_PLOT': None,
            'version': '0.9.0', }
+
