@@ -70,6 +70,17 @@ void pwm_config(double freq, double duty_cycle, uint8_t channel)
 }
 
 
+void set_ten_bit_value(uint16_t ten_bits_value, uint8_t REGISTER){
+  // Registers are 8 bits. Some can also accept 10-bit values.
+  // To do this, the two highest bits are to be written in the
+  // *shared* register TC4H right before the remaining 8 bits
+  // are written in the desired register. More info: Atmega32U4
+  // datasheet, section 15.11.
+  TC4H = ten_bits_value >> 8;
+  REGISTER = ten_bits_value & 255;
+}
+
+
 void loop()
 { 
   while(1)
