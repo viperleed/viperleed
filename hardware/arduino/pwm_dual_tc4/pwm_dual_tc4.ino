@@ -21,6 +21,13 @@ void setup()
   pinMode(COIL_2, OUTPUT);             // Define PC7 (OC4A) as output
 }
 
+
+void loop()
+{
+  delay(1000);
+}
+
+
 // Register names 'OCRnx' contain device number 'n' (where 'n' is Timer/Counter n) and Output Compare unit 'x' (where 'x' is A/B/C)
 // E.g. OCR4A = Output Compare register on Timer/Counter 4, channel A 
 // Function call 'pwm_config' makes use of 10-bit Timer/Counter4
@@ -81,26 +88,8 @@ void set_ten_bit_value(uint16_t ten_bits_value, uint8_t REGISTER){
 }
 
 
-void loop()
-{ 
-  while(1)
-  {    
-    delay(1000);
-    
-    // Serial.print("Register value of CLKSTA: ");       // Clock Status Register
-    // Serial.println(CLKSTA, BIN);
-
-    // Serial.print("Register value of CLKPR: ");        // Clock Prescaler Register
-    // Serial.println(CLKPR, BIN);
-
-    // Serial.print("Register value of PLLCSR: ");       // PLL Control and Status Register
-    // Serial.println(PLLCSR, BIN);
-
-    // Serial.print("Register value of PLLFRQ: ");       // PLL Frequency Control Register
-    // Serial.println(PLLFRQ, BIN);
 
 
-    //Serial.print("Register value of PORTB: ");
-    //Serial.println(PORTB, HEX);
-  }
-}
+
+
+
