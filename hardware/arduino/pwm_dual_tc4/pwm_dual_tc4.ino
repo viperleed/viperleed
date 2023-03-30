@@ -1,8 +1,13 @@
 
 
-#define F_CLK_T4 16e6             // Timer/Counter4 clock = 16 MHz
 #define COIL_1 PC7
 #define COIL_2 PB6
+
+#define F_CLK_T4     16000      // Timer/Counter4 clock = 16 MHz
+#define PWM_MIN_FREQ 15.625     // Value comes from maximum value for
+                                // register OCR4C and from the choice of a
+                                // value of 1 in set_pwm_clock_prescaler
+
 
 
 
@@ -27,6 +32,7 @@ void pwm_config(double freq, double duty_cycle, uint8_t channel)
 {
   // 'uint16_t' is sufficient because TC4H:OCR4C is 10 bits wide
   uint16_t temp;
+  if (freq < PWM_MIN_FREQ || freq > F_CLK_T4) return 1;
 
   // Pins OC4A, OC4B: cleared on compare match (TCNT = OCR4A/B), set when TCNT = 0x000; Enable PWM output channels A and B 
   TCCR4A = (1 << COM4A1) | (0 << COM4A0) | (1 << COM4B1) | (0 << COM4B0) | (1 << PWM4A) | (1 << PWM4B);
