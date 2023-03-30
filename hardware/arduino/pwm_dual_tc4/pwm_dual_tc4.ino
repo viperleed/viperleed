@@ -1,6 +1,9 @@
 
 
 #define F_CLK_T4 16e6             // Timer/Counter4 clock = 16 MHz
+#define COIL_1 PC7
+#define COIL_2 PB6
+
 
 
 void setup()
@@ -8,10 +11,10 @@ void setup()
   pwm_config(20000, 0.625, 0);    
   pwm_config(20000, 0.25, 1);
 
-  DDRC |= (1 << PC7);             // Define PC7 (OC4A) as output
-  DDRB |= (1 << PB6);             // Define PB6 (OC4B) as output
-} 
 
+  pinMode(COIL_1, OUTPUT);             // Define PC7 (OC4A) as output
+  pinMode(COIL_2, OUTPUT);             // Define PC7 (OC4A) as output
+}
 
 // Register names 'OCRnx' contain device number 'n' (where 'n' is Timer/Counter n) and Output Compare unit 'x' (where 'x' is A/B/C)
 // E.g. OCR4A = Output Compare register on Timer/Counter 4, channel A 
