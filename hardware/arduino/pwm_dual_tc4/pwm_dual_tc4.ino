@@ -1,7 +1,7 @@
 
 
-#define COIL_1 PD7   // Also A7,  and D6
-#define COIL_2 PB6   // Also A10, and D10
+#define COIL_1  6   // Also A7;  PD7 on Atmega32U4
+#define COIL_2 10   // Also A10; PB6 on Atmega32U4
 
 #define F_CLK_T4     16000      // Timer/Counter4 clock = 16 MHz
 #define PWM_MIN_FREQ 15.625     // Value comes from maximum value for
