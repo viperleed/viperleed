@@ -72,7 +72,7 @@ byte set_pwm_frequency(double freq){
 
   // Set PWM frequency to freq (TC4H:OCR4C = 799 gives freq exactly;
   // datasheet formula [Section 15.8.2] off by one for fast PWM mode)
-  set_ten_bit_value(pwm_clock_divider, OCR4C);
+  set_ten_bit_value(pwm_clock_divider, &OCR4C);
 }
 
 
@@ -93,16 +93,16 @@ byte set_coil_current(double coil_current, uint8_t coil){
       2 for coil_current out-of-range
       3 for invalid coil
   **/
-  uint8_t _register;
+  uint8_t *_reg_addr;
 
   if (coil_current < 0 || coil_current > 1) return 2;
   switch(coil)
   {
     case COIL_1:
-      _register = OCR4D;
+      _reg_addr = &OCR4D;
       break;
     case COIL_2:
-      _register = OCR4B;
+      _reg_addr = &OCR4B;
       break;
     default:
       return 3;
@@ -111,21 +111,21 @@ byte set_coil_current(double coil_current, uint8_t coil){
   // Notice that the coil_current, i.e., the time-averaged
   // value of the signal from the PWM, is exactly the same
   // as the duty cycle of the PWM itself.
-  // Set PWM duty cycle for channel `_register`:
+  // Set PWM duty cycle for channel at `_reg_addr`:
   //    `duty_cycle` == `coil_current` = TC4H:`_register` / TC4H:OCR4C
-  set_ten_bit_value(pwm_clock_divider  * coil_current, _register);
+  set_ten_bit_value(pwm_clock_divider  * coil_current, _reg_addr);
   return 0;
 }
 
 
-void set_ten_bit_value(uint16_t ten_bits_value, uint8_t REGISTER){
+void set_ten_bit_value(uint16_t ten_bits_value, uint8_t *REGISTER){
   // Registers are 8 bits. Some can also accept 10-bit values.
   // To do this, the two highest bits are to be written in the
   // *shared* register TC4H right before the remaining 8 bits
   // are written in the desired register. More info: Atmega32U4
   // datasheet, section 15.11.
   TC4H = ten_bits_value >> 8;
-  REGISTER = ten_bits_value & 255;
+  *REGISTER = ten_bits_value & 255;
 }
 
 
