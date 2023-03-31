@@ -136,8 +136,9 @@ void set_pwm_polarity(){
   // "low" when the counter reaches the threshold. This can be
   // used for flipping the signal.
   // For more info, see Atmega32U4 datasheet, section 15.12.1
-  TCCR4A |= (1 << COM4A1)   | (0 << COM4A0)  // count up, non-inverting, OC4A
-            | (1 << COM4B1) | (0 << COM4B0); // count up, non-inverting, OC4B
+  TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0));   // Clear <COM4D1:COM4D0>
+  TCCR4A |= (1 << COM4B1) | (0 << COM4B0); // count up, non-inverting, OC4B
+  TCCR4C |= (1 << COM4D1) | (0 << COM4D0); // count up, non-inverting, OC4D
 }
 
 
@@ -151,6 +152,14 @@ void set_pwm_clock_prescaler(){
 
   // NOTE: Should one decide to use a different clock divider, the value
   //       of the PWM_MIN_FREQ should be changed accordingly!
+  // Clear entire register except MSbit 'PWM4X'
+  TCCR4B &= ~((1 << PSR4) 
+              | (1 << DTPS41) 
+              | (1 << DTPS40) 
+              | (1 << CS43) 
+              | (1 << CS42) 
+              | (1 << CS41) 
+              | (1 << CS40));     
   TCCR4B |= (0 << CS43) | (0 << CS42) | (0 << CS41) | (1 << CS40);
 }
 
@@ -166,8 +175,11 @@ void set_pwm_threshold_channels(){
 
 
 void set_fast_pwm_mode(){
+  // Keep PWM output non-inverted (Clear 'PWM4X')
+  TCCR4B &= ~(1 << PWM4X);
+
   // Enable Fast PWM Mode (WGM41:40 = 0B00)
-  TCCR4D |= (0 << WGM41) | (0 << WGM40);
+  TCCR4D &= ~((1 << WGM41) | (1 << WGM40));     // Clear <WGM41:WGM40> only
 }
 
 
