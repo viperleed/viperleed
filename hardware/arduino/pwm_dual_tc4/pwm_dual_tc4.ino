@@ -22,8 +22,8 @@ void setup()
   set_coil_current(0.625, COIL_1);
   set_coil_current(0.25,  COIL_2);
 
-  pinMode(COIL_1, OUTPUT);             // Define PC7 (OC4A) as output
-  pinMode(COIL_2, OUTPUT);             // Define PC7 (OC4A) as output
+  pinMode(COIL_1, OUTPUT);             // Define PD7 (OC4D) as output
+  pinMode(COIL_2, OUTPUT);             // Define PB6 (OC4B) as output
 }
 
 
@@ -170,7 +170,8 @@ void set_pwm_threshold_channels(){
   // when the corresponding counter TCNT4 reaches the
   // values in these registers pins OC4A/B will toggle
   // More info: see Atmega32U4 datasheet, section 15.8.2
-  TCCR4A |= (1 << PWM4A)  | (1 << PWM4B);
+  TCCR4A |= (1 << PWM4B);
+  TCCR4C |= (1 << PWM4D);
 }
 
 
