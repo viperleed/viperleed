@@ -218,16 +218,15 @@ def plot_iv(data, filename, labels=[], annotations=[],
     logger.setLevel(logging.INFO)
     try:
         fig_exists = False
-        idx = 0
+        fig_index_on_page = 0
         for ct in range(n_beams):   # iterate through beams
             if all([len(xy_per_beam_per_dataset[i][ct]) == 0
                     for i in range(len(data))]):
-                idx += 1
                 continue   # no data for this beam in any dataset, skip
-            if (ct % figs_per_page == 0) or (not fig_exists):
+            if (fig_index_on_page >= figs_per_page) or (not fig_exists):
                 # need a new figure
                 fig_exists = True # at least one fig exists
-                idx = 0
+                fig_index_on_page = 0
                 fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
                                         squeeze=False)
                 axs = axs.flatten(order='C')  # flatten row-style
@@ -285,31 +284,31 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 else:
                     lw = linewidth
                 if i < len(plotcolors):
-                    axs[idx].plot(xy[:, 0], xy[:, 1], label=label,
+                    axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
                                   linewidth=lw,
                                   color=plotcolors[i])
                 else:
-                    axs[idx].plot(xy[:, 0], xy[:, 1], label=label,
+                    axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
                                   linewidth=lw)
             if labels:
-                axs[idx].annotate(labels[ct], namePos, fontsize=10*fontscale)
+                axs[fig_index_on_page].annotate(labels[ct], namePos, fontsize=10*fontscale)
             if annotations:
-                axs[idx].annotate(annotations[ct], annotationPos,
+                axs[fig_index_on_page].annotate(annotations[ct], annotationPos,
                                   fontsize=10*fontscale)
             if ((print_legend == 'all'
-                    or (print_legend == 'first' and idx == 0)
+                    or (print_legend == 'first' and fig_index_on_page == 0)
                     or (print_legend == 'tr'
-                        and (idx//xfigs == 0 and ((idx+1) % xfigs == 0
+                        and (fig_index_on_page//xfigs == 0 and ((fig_index_on_page+1) % xfigs == 0
                                                   or ct + 1 == n_beams))))
                     and len(data) > 1):
                 legendscale = 1.
                 if len(data) > 2:
                     legendscale = 1/np.sqrt(len(data)-1)
-                legend = axs[idx].legend(fontsize=9*fontscale*legendscale,
+                legend = axs[fig_index_on_page].legend(fontsize=9*fontscale*legendscale,
                                          loc="upper right", frameon=False,
                                          ncol=(len(data) // 3 + 1))
                 legend.get_frame().set_linewidth(linewidth)
-            idx += 1
+            fig_index_on_page += 1
 
         # finally, in case the last figure is empty (i.e. the number of beams
         # is odd) turn off the last axes (but leave the blank space).
