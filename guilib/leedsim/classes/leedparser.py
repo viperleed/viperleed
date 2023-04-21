@@ -350,7 +350,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                         and isinstance(value, np.ndarray)):
                     structure[key] = gl.array2string(value)
                 elif self.optionxform(key) == 'bulk3Dsym':
-                    structure[key] = str(value)
+                    structure[key] = str(value) if value else ''
 
         super().read_dict(dictionary, source)
 
