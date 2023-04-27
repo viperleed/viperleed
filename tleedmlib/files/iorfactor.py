@@ -66,7 +66,7 @@ def readROUT(filename="ROUT"):
         i += 1
         line = lines[-i]
     if line == "":
-        return 0, 0, []
+        return (0, 0, 0), 0, []
     rfac = 0
     rfac_int = -1
     rfac_frac = -1
