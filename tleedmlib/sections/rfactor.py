@@ -576,6 +576,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     except Exception:  # TODO catch correct exception
         logger.error("Error reading ROUT file", exc_info=rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
+        rfaclist = []
     else:
         logger.info(
             "With inner potential shift of {:.2f} eV: "
