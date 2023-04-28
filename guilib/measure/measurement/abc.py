@@ -485,7 +485,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             return
         self.__aborted = True
         self._camera_timer.stop()
-        self.settings.set('measurement_settings', 'was_aborted', 'True')
+        if self.settings:
+            self.settings.set('measurement_settings', 'was_aborted', 'True')
         self.__force_end_timer.start()
         self._prepare_finalization()
 
