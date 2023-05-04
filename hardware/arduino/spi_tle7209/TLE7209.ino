@@ -18,6 +18,8 @@ Communication parameters for the TLE7209-3R:
 
 #include "TLE7209.h"
 
+#define DEBUG 1
+
 #define TLE_CHIPSELECT 11       // PB7                                          // TODO: will need to go in the Arduino firmware, not in the library
 
 
@@ -65,6 +67,9 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
 
     // Chip ID is fixed, check if match
     if(deviceID != TLE7209_DEFAULT_DEVICE_ID)
+        #if DEBUG
+            Serial.println("Verification byte: TRANS_F is set and/or wrong bit toggle sequence detected\n");
+        #endif
         return TLE7209_InvalidDeviceId;
 
     errcode = readTLE7209(chipSelectPin, TLE7209_READ_VERSION, version);
