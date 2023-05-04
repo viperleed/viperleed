@@ -33,6 +33,7 @@ void TLE7209startIO(byte chipSelectPin) {
 /** Finishes an I/O operation for the TLE7209 with given chip-select pin */
 void TLE7209endIO(byte chipSelectPin) {
     digitalWrite(chipSelectPin, HIGH);
+    SPI.endTransaction();
 }
 
                                                                                 // TODO: docstring
@@ -108,12 +109,9 @@ void setup()
 {
     pinMode(TLE_CHIPSELECT, OUTPUT);                                              // TODO: to Arduino FW
 
-  SPI.begin();                    // SPI.begin initializes the SPI bus (defines SCK and MOSI as output pins)
-                                  // Alternatively, use pinMode() on SCK and MOSI below
-  pinMode(SCK, OUTPUT);           // SCK = pin PB1
-  pinMode(MOSI, OUTPUT);          // MOSI = pin PB2
-  pinMode(MISO, INPUT);           // MISO = pin PB3
-} 
+    SPI.begin();  // Initializes the SPI bus (SCK and MOSI as OUTPUT)             // TODO: to Arduino FW
+    pinMode(MISO, INPUT);  // MISO = pin PB3                                      // TODO: to Arduino FW
+}
 
 
 void loop()
