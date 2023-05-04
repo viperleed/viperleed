@@ -6,3 +6,25 @@ test.py
 *wrong*
 guilib/measure/uimeasurement_keepmeasuring.py
 *.ini
+*.DS_STORE
+*.mod
+*.o
+*.so
+*.pyf
+tensorleed/beamgen.v1.7
+
+tleedmlib/wrapped/source/wrapf2py
+tleedmlib/wrapped/source/interpolation_benchmarks
+tleedmlib/wrapped/source/compile
+tleedmlib/wrapped/verification_data
+
+**/calculations
+
+#IDE specific
+**/.vscode
+**/.cspell
+
+**/doc/_build/**
+**/.ipynb_checkpoints
+tleedmlib/**/*.ipynb
+
