@@ -1,6 +1,7 @@
 /**                                                                             // TODO: add description of the contents of the file + autors/date...
 **/
 
+#include <Arduino.h>  // for interrupts()/noInterrupts()
 
 
 #define COIL_1  6   // Also A7;  PD7 on Atmega32U4
@@ -152,8 +153,10 @@ void set_ten_bit_value(uint16_t ten_bits_value, uint8_t *REGISTER){
     // *shared* register TC4H right before the remaining 8 bits
     // are written in the desired register. More info: Atmega32U4
     // datasheet, section 15.11.
+    noInterrupts();  // Ensure nothing bothers setting two registers
     TC4H = ten_bits_value >> 8;
     *REGISTER = ten_bits_value & 255;
+    interrupts();
 }
 
 
