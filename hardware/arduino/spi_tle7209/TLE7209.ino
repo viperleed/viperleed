@@ -47,8 +47,12 @@ TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){     // 
     // Check verification byte
     uint8_t transmit_ok = bytesRead >> 8;
     transmit_ok &= 0b00111111 // The highest two bits are not relevant
-    if(transmit_ok != TLE7209_SPI_TRANSMISSION_OK)
+    if(transmit_ok != TLE7209_SPI_TRANSMISSION_OK){
+        #if DEBUG
+            Serial.println("Verification byte: TRANS_F is set and/or wrong bit toggle sequence detected\n");
+        #endif
         return TLE7209_TransmissionError;
+    }
 
     // Return only the LSB (data byte)
     *data = (uint8_t)bytesRead;
@@ -62,15 +66,20 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
     TLE7209_Error errcode = TLE7209_NoError;
     errcode = readTLE7209(chipSelectPin, TLE7209_READ_IDENTIFIER, &deviceID);
 
-    if(errcode)
-      return errcode;
+    if(errcode){
+        #if DEBUG
+            Serial.println("TLE7209readIDandVersion() failed");
+        #endif
+        return errcode;
+    }
 
     // Chip ID is fixed, check if match
-    if(deviceID != TLE7209_DEFAULT_DEVICE_ID)
+    if(deviceID != TLE7209_DEFAULT_DEVICE_ID){
         #if DEBUG
-            Serial.println("Verification byte: TRANS_F is set and/or wrong bit toggle sequence detected\n");
+            Serial.println("Wrong Device ID detected\n");
         #endif
         return TLE7209_InvalidDeviceId;
+    }
 
     errcode = readTLE7209(chipSelectPin, TLE7209_READ_VERSION, version);
     return errcode;
@@ -85,14 +94,22 @@ TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
                           TLE7209_READ_DIAG_REGISTER,
                           diagnostics);
 
-    if(errcode)
+    if(errcode){
+        #if DEBUG
+            Serial.println("TLE7209readDiagnosticRegister() failed");
+        #endif
         return errcode;
+    }
 
     // All bits except the MSB are set to 1 when no error occurred;
     // The MSB is just for info: mask out the MSB, then check against
     // the no-error condition
-    if ((diagnostics & TLE7209_ALL_ERROR_BITS) != TLE7209_ALL_ERROR_BITS)
+    if ((diagnostics & TLE7209_ALL_ERROR_BITS) != TLE7209_ALL_ERROR_BITS){
+        #if DEBUG
+            Serial.println("DIA_REG: several bits set\n")
+        #endif
         return TLE7209_DiagnosticsError;
+    }
     return TLE7209_NoError;
 }
 
@@ -103,8 +120,12 @@ TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
 
 void setup()
 {
-    pinMode(TLE_CHIPSELECT, OUTPUT);                                              // TODO: to Arduino FW
+    #if DEBUG
+        Serial.setTimeout(100);
+        Serial.begin(9600); // opens serial port, sets data rate to 9600 bps
+    #endif
 
+    pinMode(TLE_CHIPSELECT, OUTPUT);                                              // TODO: to Arduino FW
     SPI.begin();  // Initializes the SPI bus (SCK and MOSI as OUTPUT)             // TODO: to Arduino FW
     pinMode(MISO, INPUT);  // MISO = pin PB3                                      // TODO: to Arduino FW
 }
@@ -114,6 +135,10 @@ void loop()
 {
     uint8_t byteRead;
     TLE7209_NoError errcode;
+    
+    #if DEBUG
+        Serial.println("Heartbeat\n");
+    #endif
 
     errcode = TLE7209readIDandVersion(TLE_CHIPSELECT, &byteRead);
     delayMicroseconds(50);
