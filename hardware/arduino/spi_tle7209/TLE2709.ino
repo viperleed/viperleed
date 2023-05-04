@@ -7,7 +7,7 @@ Date: 21.04.2023
 */
 
 
-/* 
+/*
 Communication parameters for the TLE7209-3R:
   - The TLE7209 always operates in slave mode (read-only)
   - Max. baud rate: 2 MBaud
@@ -18,23 +18,24 @@ Communication parameters for the TLE7209-3R:
 
 #include "TLE7209.h"
 
-#define TLE_CHIPSELECT 11       // PB7
+#define TLE_CHIPSELECT 11       // PB7                                          // TODO: will need to go in the Arduino firmware, not in the library
 
 
 /* ---------- TLE7209 FUNCTIONS ---------- */
 
-/** Starts an I/O operation for the TLE7209 with given chip select pin */
+/** Starts an I/O operation for the TLE7209 with given chip-select pin */
 void TLE7209startIO(byte chipSelectPin) {
     SPI.beginTransaction(TLE7209_SPI_SETTING);
     digitalWrite(chipSelectPin, LOW);
 }
 
 
-/** Finishes an I/O operation for the TLE7209 with given chip select pin */
+/** Finishes an I/O operation for the TLE7209 with given chip-select pin */
 void TLE7209endIO(byte chipSelectPin) {
     digitalWrite(chipSelectPin, HIGH);
 }
 
+                                                                                // TODO: docstring
 
 byte readTLE7209(byte chipSelectPin, byte request){     // request = {TLE7209_READ_IDENTIFIER, TLE7209_READ_VERSION, TLE7209_READ_DIAG_REGISTER}
   TLE7209startIO(chipSelectPin);
@@ -44,12 +45,12 @@ byte readTLE7209(byte chipSelectPin, byte request){     // request = {TLE7209_RE
   // Check verification byte; If LSbit is clear, last transfer was recognized as valid
   if(((uint8_t)(bytesRead >> 8) | 0B00101010) != 0B00101010)
     return -1; 
+// Perform two transfers back-to-back (READ_ID, READ_VER)                       // TODO: docstring
 
   // Return only the LSB (data byte)
   return (uint8_t)bytesRead;
 }
 
-// Perform two transfers back-to-back (READ_ID, READ_VER)
  byte TLE7209readIDandVersion(byte chipSelectPin){
   byte deviceID = readTLE7209(chipSelectPin, TLE7209_READ_IDENTIFIER); 
   
@@ -99,9 +100,13 @@ byte TLE7209readDiagnosticRegister(byte chipSelectPin){
 }
 
 
+// TODO: may implement an extra function that gives more info about
+// which diagnostics error happened, e.g., readErrorDetails
+
+
 void setup()
-{ 
-  pinMode(TLE_CHIPSELECT, OUTPUT);  
+{
+    pinMode(TLE_CHIPSELECT, OUTPUT);                                              // TODO: to Arduino FW
 
   SPI.begin();                    // SPI.begin initializes the SPI bus (defines SCK and MOSI as output pins)
                                   // Alternatively, use pinMode() on SCK and MOSI below
