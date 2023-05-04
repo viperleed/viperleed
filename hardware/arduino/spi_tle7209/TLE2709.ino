@@ -37,67 +37,58 @@ void TLE7209endIO(byte chipSelectPin) {
 }
 
                                                                                 // TODO: docstring
+TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){     // request = {TLE7209_READ_IDENTIFIER, TLE7209_READ_VERSION, TLE7209_READ_DIAG_REGISTER}
+    TLE7209startIO(chipSelectPin);
+    uint16_t bytesRead = SPI.transfer16((uint16_t)(request << 8));
+    TLE7209endIO(chipSelectPin);
 
-byte readTLE7209(byte chipSelectPin, byte request){     // request = {TLE7209_READ_IDENTIFIER, TLE7209_READ_VERSION, TLE7209_READ_DIAG_REGISTER}
-  TLE7209startIO(chipSelectPin);
-  uint16_t bytesRead = SPI.transfer16((uint16_t)(request << 8));
-  TLE7209endIO(chipSelectPin);
+    // Check verification byte
+    uint8_t transmit_ok = bytesRead >> 8;
+    transmit_ok &= 0b00111111 // The highest two bits are not relevant
+    if(transmit_ok != TLE7209_SPI_TRANSMISSION_OK)
+        return TLE7209_TransmissionError;
 
-  // Check verification byte; If LSbit is clear, last transfer was recognized as valid
-  if(((uint8_t)(bytesRead >> 8) | 0B00101010) != 0B00101010)
-    return -1; 
+    // Return only the LSB (data byte)
+    *data = (uint8_t)bytesRead;
+    return TLE7209_NoError;
+}
+
+
 // Perform two transfers back-to-back (READ_ID, READ_VER)                       // TODO: docstring
+TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
+    byte deviceID;
+    TLE7209_Error errcode = TLE7209_NoError;
+    errcode = readTLE7209(chipSelectPin, TLE7209_READ_IDENTIFIER, &deviceID);
 
-  // Return only the LSB (data byte)
-  return (uint8_t)bytesRead;
+    if(errcode)
+      return errcode;
+
+    // Chip ID is fixed, check if match
+    if(deviceID != TLE7209_DEFAULT_DEVICE_ID)
+        return TLE7209_InvalidDeviceId;
+
+    errcode = readTLE7209(chipSelectPin, TLE7209_READ_VERSION, version);
+    return errcode;
 }
 
- byte TLE7209readIDandVersion(byte chipSelectPin){
-  byte deviceID = readTLE7209(chipSelectPin, TLE7209_READ_IDENTIFIER); 
-  
-  if(deviceID == -1)
-    return -2;
 
-  // Chip ID is fixed, check if match
-  if(deviceID != 0B10100010)
-    return -1;
-    
-  return readTLE7209(chipSelectPin, TLE7209_READ_VERSION);
-}
+TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
+                                            byte *diagnostics){                 // TODO: docstring
 
+    TLE7209_Error errcode = TLE7209_NoError;
+    errcode = readTLE7209(chipSelectPin,
+                          TLE7209_READ_DIAG_REGISTER,
+                          diagnostics);
 
-byte TLE7209readDiagnosticRegister(byte chipSelectPin){
-  byte diagnosticReg = readTLE7209(chipSelectPin, TLE7209_READ_DIAG_REGISTER);
+    if(errcode)
+        return errcode;
 
-  if(diagnosticReg == -1)
-    return -2;
-
-  switch(diagnosticReg)   // Handle diagnostic bits, return corresponding error code
-  {
-    case TLE7209_EN_DIS:
-      break;
-    case TLE7209_OVER_TEMP:
-      break;
-    case TLE7209_CURR_RED:
-      break;
-    case TLE7209_CURR_LIM:
-      break;
-    case TLE7209_DIA21:
-      break;
-    case TLE7209_DIA_20:
-      break;
-    case TLE7209_DIA_11:
-      break;
-    case TLE7209_DIA_10:
-      break;
-
-    default:
-    {
-      // Handle combinations according to fault priority (TLE7209-3R datasheet, p. 16)
-    }
-  }
-
-  return diagnosticReg;
+    // All bits except the MSB are set to 1 when no error occurred;
+    // The MSB is just for info: mask out the MSB, then check against
+    // the no-error condition
+    if ((diagnostics & TLE7209_ALL_ERROR_BITS) != TLE7209_ALL_ERROR_BITS)
+        return TLE7209_DiagnosticsError;
+    return TLE7209_NoError;
 }
 
 
@@ -115,12 +106,13 @@ void setup()
 
 
 void loop()
-{ 
-  uint8_t byteRead;
+{
+    uint8_t byteRead;
+    TLE7209_NoError errcode;
 
-  byteRead = TLE7209readIDandVersion(TLE_CHIPSELECT);  
-  delayMicroseconds(50);
-  
-  byteRead = TLE7209readDiagnosticRegister(TLE_CHIPSELECT);
-  delayMicroseconds(50);
+    errcode = TLE7209readIDandVersion(TLE_CHIPSELECT, &byteRead);
+    delayMicroseconds(50);
+
+    byteRead = TLE7209readDiagnosticRegister(TLE_CHIPSELECT);
+    delayMicroseconds(50);
 }
