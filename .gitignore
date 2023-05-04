@@ -5,3 +5,6 @@
 test.py
 *wrong*
 guilib/measure/uimeasurement_keepmeasuring.py
+
+# Ignore TLE7209 logic analyzer trace files
+*.sal
