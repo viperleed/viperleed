@@ -41,7 +41,17 @@ Date: 21.04.2023
 #define TLE7209_DIA_20 0x04	// Diagnostic bit 1 of output OUT2
 #define TLE7209_DIA_11 0x02	// Diagnostic bit 2 of output OUT1
 #define TLE7209_DIA_10 0x01	// Diagnostic bit 1 of output OUT1
- 
+
+
+
+// TLE7209 error codes
+enum TLE7209_Error {
+    TLE7209_NoError = 0
+    TLE7209_TransmissionError
+    TLE7209_InvalidDeviceId
+    TLE7209_DiagnosticsError
+}
+
 
 // TLE7209 verification byte definitions
 #define TLE7209_TRANS_F 0x01	// Bit is set if previous transfer was recognized as valid
