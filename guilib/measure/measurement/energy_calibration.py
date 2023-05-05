@@ -16,7 +16,10 @@ primary controller".
 from configparser import NoSectionError, NoOptionError
 
 from numpy.polynomial.polynomial import Polynomial
-from PyQt5 import QtCore as qtc
+
+from PyQt5 import (QtWidgets as qtw,
+                   QtCore as qtc)
+from PyQt5.QtWidgets.QWidget import (QDialogButtonBox, QVBoxLayout)
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
@@ -270,6 +273,11 @@ class MeasureEnergyCalibration(MeasurementABC):
                 )
             return
 
+        # prompt user if they want to save the new calibration
+        ask_dialog = AskKeepEnergyCalibrationDialog(self, (offs, gain),
+                                              self.__old_coefficients)
+        ask_dialog.open()
+
         primary.settings.set('energy_calibration', 'coefficients',
                              str(list(fit_polynomial.coef)))
         primary.settings.set('energy_calibration', 'domain', str(domain))
@@ -303,3 +311,34 @@ class MeasureEnergyCalibration(MeasurementABC):
                                                  'coefficients',
                                                  self.__old_coefficients)
         super().abort()
+
+class AskKeepEnergyCalibrationDialog(qtw.QDialog):
+    """Dialog to ask the user if we should keep the new calibration curve."""
+
+    def __init__(self, parent, new_coefs, old_coefs):
+        super().__init__(parent)
+
+        self.setWindowTitle("Apply Energy Calibration?")
+
+        QBtn = QDialogButtonBox.Apply | QDialogButtonBox.Discard
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+        message = (f"New: {new_coefs}"
+                  f"Old: {old_coefs}")
+        self.layout.addWidget(message)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
+
+
+    @qtc.pyqtSlot()
+    def keep(self):
+        pass
+
+    @qtc.pyqtSlot()
+    def discard(self):
+        pass
+    
