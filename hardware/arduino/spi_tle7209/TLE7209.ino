@@ -134,7 +134,7 @@ void setup()
 void loop()
 {
     uint8_t byteRead;
-    TLE7209_NoError errcode;
+    TLE7209_Error errcode = TLE7209_NoError;
     
     #if DEBUG
         Serial.println("Heartbeat\n");
