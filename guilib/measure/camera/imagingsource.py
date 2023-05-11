@@ -348,6 +348,7 @@ class ImagingSourceCamera(abc.CameraABC):
         # when we have to interrupt an oversized trigger burst
         if (self.mode != 'triggered'
             or self.n_frames <= 1
+            or not self.__extra_delay
                 or not self.supports_trigger_burst):
             return 0.0
         return np.mean(self.__extra_delay)
