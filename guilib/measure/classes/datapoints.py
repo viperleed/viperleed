@@ -459,7 +459,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         # the information in the header to decide from
         # which folder images should be opened (in ImageJ)
         self[-1][QuantityInfo.IMAGES][camera].append(
-            f"{camera.name}/{camera.process_info.filename}"
+            f"{camera.name_clean}/{camera.process_info.filename}"
             )
 
     def calculate_times(self, complain=True):  # too-complex
