@@ -47,11 +47,11 @@ Date: 21.04.2023
 
 // TLE7209 error codes
 enum TLE7209_Error {
-    TLE7209_NoError = 0
-    TLE7209_TransmissionError
-    TLE7209_InvalidDeviceId
+    TLE7209_NoError = 0,
+    TLE7209_TransmissionError,
+    TLE7209_InvalidDeviceId,
     TLE7209_DiagnosticsError
-}
+};
 
 
 // TLE7209 verification byte definitions
