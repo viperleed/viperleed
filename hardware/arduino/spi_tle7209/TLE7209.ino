@@ -104,7 +104,7 @@ TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
     // All bits except the MSB are set to 1 when no error occurred;
     // The MSB is just for info: mask out the MSB, then check against
     // the no-error condition
-    if ((diagnostics & TLE7209_ALL_ERROR_BITS) != TLE7209_ALL_ERROR_BITS){
+    if ((*diagnostics & TLE7209_ALL_ERROR_BITS) != TLE7209_ALL_ERROR_BITS){
         #if DEBUG
             Serial.println("DIA_REG: several bits set\n")
         #endif
