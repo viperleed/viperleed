@@ -106,7 +106,7 @@ TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
     // the no-error condition
     if ((*diagnostics & TLE7209_ALL_ERROR_BITS) != TLE7209_ALL_ERROR_BITS){
         #if DEBUG
-            Serial.println("DIA_REG: several bits set\n")
+            Serial.println("DIA_REG: several bits set\n");
         #endif
         return TLE7209_DiagnosticsError;
     }
