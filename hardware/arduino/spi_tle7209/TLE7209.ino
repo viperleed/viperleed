@@ -19,7 +19,6 @@ Communication parameters for the TLE7209-3R:
 
 #define DEBUG true
 
-#define TLE_CHIPSELECT 11       // PB7                                          // TODO: will need to go in the Arduino firmware, not in the library
 
 
 /* ---------- TLE7209 FUNCTIONS ---------- */
