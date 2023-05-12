@@ -116,33 +116,3 @@ TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
 
 // TODO: may implement an extra function that gives more info about
 // which diagnostics error happened, e.g., readErrorDetails
-
-
-void setup()
-{
-    #if DEBUG
-        Serial.setTimeout(100);
-        Serial.begin(9600); // opens serial port, sets data rate to 9600 bps
-    #endif
-
-    pinMode(TLE_CHIPSELECT, OUTPUT);                                              // TODO: to Arduino FW
-    SPI.begin();  // Initializes the SPI bus (SCK and MOSI as OUTPUT)             // TODO: to Arduino FW
-    pinMode(MISO, INPUT);  // MISO = pin PB3                                      // TODO: to Arduino FW
-}
-
-
-void loop()
-{
-    uint8_t byteRead;
-    TLE7209_Error errcode = TLE7209_NoError;
-    
-    #if DEBUG
-        Serial.println("Heartbeat\n");
-    #endif
-
-    errcode = TLE7209readIDandVersion(TLE_CHIPSELECT, &byteRead);
-    delayMicroseconds(50);
-
-    byteRead = TLE7209readDiagnosticRegister(TLE_CHIPSELECT);
-    delayMicroseconds(50);
-}
