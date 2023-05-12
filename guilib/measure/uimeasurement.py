@@ -813,7 +813,6 @@ class Measure(ViPErLEEDPluginBase):
 
         # And use the information in the config for
         # correctly updating the DataPoints
-        data.time_resolved = (cls_name == "TimeResolved")
         if data.is_time_resolved:
             data.continuous = config.getboolean('measurement_settings',
                                                 'is_continuous')
@@ -949,30 +948,36 @@ class Measure(ViPErLEEDPluginBase):
                 base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR,
                                 fname / "measurement.ini", err)
                 return False
+
+        meas_config.read_string(cfg_lines)
+        meas_config.base_dir = fname
+        cls_name = meas_config['measurement_settings']['measurement_class']
+        datapts.time_resolved = (cls_name == "TimeResolved")
+
         try:
             datapts.read_lines(csv_lines)
         except RuntimeError as err:
             base.emit_error(self, UIErrors.FILE_UNSUPPORTED, fname, err)
             return False
-
-        meas_config.read_string(cfg_lines)
-        meas_config.base_dir = fname
         return True
 
     def __read_folder(self, csv_name, datapts, meas_config):
         """Read data from a folder containing .csv and .ini."""
-        try:
-            datapts.read_csv(csv_name)
-        except RuntimeError as err:
-            base.emit_error(self, UIErrors.FILE_UNSUPPORTED, csv_name, err)
-            return False
-
-        config_name = csv_name.replace(".csv", ".ini")
+        config_name = csv_name.with_suffix(".ini")
         try:
             meas_config.read(config_name)
         except MissingSettingsFileError as err:
             base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR,
                             config_name, err)
+            return False
+
+        cls_name = meas_config['measurement_settings']['measurement_class']
+        datapts.time_resolved = (cls_name == "TimeResolved")
+
+        try:
+            datapts.read_csv(csv_name)
+        except RuntimeError as err:
+            base.emit_error(self, UIErrors.FILE_UNSUPPORTED, csv_name, err)
             return False
         return True
 
