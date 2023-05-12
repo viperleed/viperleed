@@ -46,7 +46,7 @@ TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){     // 
 
     // Check verification byte
     uint8_t transmit_ok = bytesRead >> 8;
-    transmit_ok &= 0b00111111 // The highest two bits are not relevant
+    transmit_ok &= 0b00111111; // The highest two bits are not relevant
     if(transmit_ok != TLE7209_SPI_TRANSMISSION_OK){
         #if DEBUG
             Serial.println("Verification byte: TRANS_F is set and/or wrong bit toggle sequence detected\n");
