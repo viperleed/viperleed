@@ -10,9 +10,9 @@ Date: 21.04.2023
 #ifndef _VIPERLEED_TLE7209
 #define _VIPERLEED_TLE7209
 
-// #ifndef _VIPERLEED
-//     #error Must be included after "viper-ino.h"
-// #endif
+#ifndef _VIPERLEED
+      #error Must be included after "spi_tle7209.h"
+#endif
 
 
 
