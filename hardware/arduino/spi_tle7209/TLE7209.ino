@@ -10,9 +10,8 @@ Date: 21.04.2023
 /*
 Communication parameters for the TLE7209-3R:
   - The TLE7209 always operates in slave mode (read-only)
-  - Max. baud rate: 2 MBaud
-  - SPI active when 'DMS' > 3.5V
-  - Clock polarity and phase: CPOL = 0, CPHA = 1
+  - Baud rate: 2 MBaud/s max.
+  - MSbit first, clock polarity and phase: CPOL = 0, CPHA = 1
 */
 
 
@@ -39,7 +38,7 @@ void TLE7209endIO(byte chipSelectPin) {
 }
 
                                                                                 // TODO: docstring
-TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){     // request = {TLE7209_READ_IDENTIFIER, TLE7209_READ_VERSION, TLE7209_READ_DIAG_REGISTER}
+TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){        // request = {TLE7209_READ_IDENTIFIER, TLE7209_READ_VERSION, TLE7209_READ_DIAG_REGISTER}
     TLE7209startIO(chipSelectPin);
     uint16_t bytesRead = SPI.transfer16((uint16_t)(request << 8));
     TLE7209endIO(chipSelectPin);
