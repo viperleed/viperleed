@@ -11,7 +11,7 @@ Date: 12.05.2023
 #include "spi_tle7209.h"      // Arduino-related settings, also includes motor driver header
 
 #define DEBUG true            // Debug mode, writes to serial line, for use in serial monitor
-#define TLE_CHIPSELECT 11     // PB7 on the Arduino Micro board
+#define TLE_CHIPSELECT 11     // PB7 on the Arduino Micro board                                 // TODO: probably nicer to move all compiler defines to .h (maybe except DEBUG?). Also, we will eventually have two motor drivers for two coils. Would be great to have them prepared already. Not sure if it's cleaner to have a struct that contains all the stuff relevant to each coil (spi settings, chip select, ...)
 
 
 void setup() {
