@@ -50,7 +50,7 @@ enum TLE7209_Error {
     TLE7209_NoError = 0,
     TLE7209_TransmissionError,
     TLE7209_InvalidDeviceId,
-    TLE7209_DiagnosticsError
+    TLE7209_DiagnosticsError,
 };
 
 
