@@ -1,5 +1,10 @@
-/**                                                                             // TODO: add description of the contents of the file + autors/date...
-**/
+/*
+Test firmware for Arduino dual channel PWM generation
+---------------------
+Author: Michele Riva, Christoph Pfungen
+Date: 15.05.2023
+---------------------
+*/
 
 #include <Arduino.h>  // for interrupts()/noInterrupts()
 
