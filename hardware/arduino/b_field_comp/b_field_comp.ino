@@ -1,78 +1,107 @@
+/*
+Test firmware for Arduino dual channel PWM generation
+---------------------
+Author: Michele Riva, Christoph Pfungen
+Date: 15.05.2023
+---------------------
+*/
+
+
+#include <Arduino.h>  // for interrupts()/noInterrupts()
 #include <SPI.h>
+#include "pwm.h"
+#include "TLE7209.h"
 
-#define TLE_CHIPSELECT 11 // CS line on IO11/PB7
+                              // TODO: #include other defines, e.g. 'adc.h', 'struct.h', ...
+
+#define DEBUG true            // Debug mode, writes to serial line, for use in serial monitor
 
 
-// PWM period = 50 µs / PWM frequency = 20 kHz 
 void setup()
-{ 
-  // Enable Fast PWM Mode (PWM4X = 1, WGM41..40 = 0), TOP = OCR4C
-  TCCR4D &= ~ 0x3;
+{
+    #if DEBUG
+        Serial.setTimeout(100);
+        Serial.begin(9600);           // opens serial port, sets data rate to 9600 bps
+    #endif
 
-  TCCR4A = (1 << COM4A0) + (1 << COM4B0) + (1 << PWM4A) + (1 << PWM4B);           // Toggle OC4A (pin PC7) and OC4B (PB6) at compare match
-  TCCR4B = (0 << CS43) + (0 << CS42) + (1 << CS41) + (1 << CS40);                 // prescaler = 4; 
+    set_pwm_frequency(20);            // 20 kHz
+    set_coil_current(0.625, COIL_1);
+    set_coil_current(0.25,  COIL_2);
 
-  OCR4C = 200;                    // PWM period = T_clk * prescaler * OCR4C;  T_clk = 62.5 ns (Arduino Micro)       
+    pinMode(COIL_1, OUTPUT);          // Define PD7 (OC4D) as output
+    pinMode(COIL_2, OUTPUT);          // Define PB6 (OC4B) as output
+    pinMode(COIL_1_SIGN, OUTPUT);     // Define PF7 as output
+    pinMode(COIL_2_SIGN, OUTPUT);     // Define PF6 as output
 
-  OCR4A = 100;                    // OC4A PWM duty cycle = OCR4A / OCR4C
-  OCR4B = 100;                    // OC4B PWM duty cycle = OCR4B / OCR4C
+    pinMode(TLE_CHIPSELECT, OUTPUT);
+    SPI.begin();                      // Initializes the SPI bus (SCK and MOSI as OUTPUT)
+    pinMode(MISO, INPUT);             // MISO = pin PB3
+}
 
-  DDRC |= (1 << PC7);             // Define PC7 as output (Pin PC7 = IO13)
-  DDRB |= (1 << PB6);             // Define PB6 as output (Pin PB6 = IO10)
-
-  Serial.begin(9600);
-  //Serial.setTimeout(100);
-
-  pinMode(TLE_CHIPSELECT, OUTPUT);  
-
-  SPI.begin();                    // SPI.begin initializes the SPI bus (defines SCK and MOSI as output pins)
-                                  // Alternatively, use pinMode() on SCK and MOSI below
-  //pinMode(SCK, OUTPUT);           // SCK = pin PB1
-  //pinMode(MOSI, OUTPUT);          // MOSI = pin PB2
-  //pinMode(MISO, INPUT);           // MISO = pin PB3
-} 
-
-
-// uint8_t data[] = {0x0000};
 
 void loop()
-{ 
-  // while(1)
-  // {
-  //   Serial.println("\nType 'go' to read register DDRB: ");
-  //   while (Serial.available() == 0) {}     //wait for data available
+{
+    uint8_t byteRead;
+    TLE7209_Error errcode = TLE7209_NoError;
+    
+    delay(1000);
 
-  //   String teststr = Serial.readString();  //read until timeout
-  //   teststr.trim();                        // remove any \r \n whitespace at the end of the String
-  //   if (teststr == "go") 
-  //   {
-  //     Serial.print("Register value of DDRB: ");
-  //     Serial.println(DDRB, HEX);
-  //   } else 
-  //   {
-  //     Serial.println("Something else");
-  //   }
-  // }
+    #if DEBUG
+        Serial.println("Heartbeat\n");
+    #endif
 
+    errcode = TLE7209readIDandVersion(TLE_CHIPSELECT, &byteRead);
+    delayMicroseconds(50);
 
-  while(1)
-  {
-    delayMicroseconds(200);
-    //Serial.print("Serial debug\n\n");    
-
-    // Note: The TLE7209 always operates in slave mode (MOSI = SDI, MISO = SDO)
-    // SPI Mode 1: CPOL = 0, CPHA = 1
-    digitalWrite(TLE_CHIPSELECT, LOW);
-    delayMicroseconds(5);
-    SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE1));
-
-    SPI.transfer(0x00);
-    SPI.transfer(0x00);
-
-    digitalWrite(TLE_CHIPSELECT, HIGH);
-    SPI.endTransaction();  
-
-    delayMicroseconds(10);
-
-  }
+    byteRead = TLE7209readDiagnosticRegister(TLE_CHIPSELECT, &byteRead);
+    delayMicroseconds(50);
 }
+
+
+byte set_coil_current(double coil_current, uint8_t coil){
+    /**Set fraction of maximum current in a coil.
+
+    Parameters
+    ----------
+    coil_current : double
+        Fraction of maximum current. Should be between zero and one.
+    coil : {COIL_1, COIL_2}
+        Which coil's current should be set.
+
+    Returns
+    -------
+    error_code : byte
+        0 for no error
+        2 for coil_current out-of-range
+        3 for invalid coil
+    **/
+    uint8_t *_reg_addr;
+    byte sign_select_pin;
+
+    if (coil_current < -1 || coil_current > 1) return 2;                        // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
+    switch(coil)
+    {
+        case COIL_1:
+            _reg_addr = &OCR4D;
+            sign_select_pin = COIL_1_SIGN;
+            break;
+        case COIL_2:
+            _reg_addr = &OCR4B;
+            sign_select_pin = COIL_2_SIGN;
+            break;
+        default:
+            return 3;
+    }
+
+    // Notice that the coil_current, i.e., the time-averaged
+    // value of the signal from the PWM, is exactly the same
+    // as the duty cycle of the PWM itself.
+    // Set PWM duty cycle for channel at `_reg_addr`:
+    //    `duty_cycle` == `coil_current` = TC4H:`_register` / TC4H:OCR4C
+    set_current_sign(coil_current, sign_select_pin);
+    set_ten_bit_value(pwm_clock_divider * coil_current, _reg_addr);
+    return 0;
+}
+
+
+
