@@ -7,6 +7,7 @@ Date: 15.05.2023
 */
 
 #include <Arduino.h>  // for interrupts()/noInterrupts()
+#include "pwm_dual_tc4.h"
 
 
 // pwm_clock_divider: how many intervals the counters count before
