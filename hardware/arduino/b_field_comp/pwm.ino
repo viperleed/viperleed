@@ -53,6 +53,52 @@ byte set_pwm_frequency(double freq){
 }
 
 
+byte set_coil_current(double coil_current, uint8_t coil){
+    /**Set fraction of maximum current in a coil.
+
+    Parameters
+    ----------
+    coil_current : double
+        Fraction of maximum current. Should be between zero and one.
+    coil : {COIL_1, COIL_2}
+        Which coil's current should be set.
+
+    Returns
+    -------
+    error_code : byte
+        0 for no error
+        2 for coil_current out-of-range
+        3 for invalid coil
+    **/
+    uint8_t *_reg_addr;
+    byte sign_select_pin;
+
+    if (coil_current < -1 || coil_current > 1) return 2;                        // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
+    switch(coil)
+    {
+        case COIL_1:
+            _reg_addr = &OCR4D;
+            sign_select_pin = COIL_1_SIGN;
+            break;
+        case COIL_2:
+            _reg_addr = &OCR4B;
+            sign_select_pin = COIL_2_SIGN;
+            break;
+        default:
+            return 3;
+    }
+
+    // Notice that the coil_current, i.e., the time-averaged
+    // value of the signal from the PWM, is exactly the same
+    // as the duty cycle of the PWM itself.
+    // Set PWM duty cycle for channel at `_reg_addr`:
+    //    `duty_cycle` == `coil_current` = TC4H:`_register` / TC4H:OCR4C
+    set_current_sign(coil_current, sign_select_pin);
+    set_ten_bit_value(pwm_clock_divider * coil_current, _reg_addr);
+    return 0;
+}
+
+
 void set_current_sign(byte sign, byte sign_select_pin){
     if (sign < 0){
         set_pwm_polarity(NEGATIVE_CURRENT);
