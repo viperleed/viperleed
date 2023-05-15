@@ -36,8 +36,25 @@ void TLE7209endIO(byte chipSelectPin) {
     SPI.endTransaction();
 }
 
-                                                                                // TODO: docstring
-TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){        // request = {TLE7209_READ_IDENTIFIER, TLE7209_READ_VERSION, TLE7209_READ_DIAG_REGISTER}
+
+TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){
+    /**Generic SPI routine to read a register from the TLE7209
+
+    Parameters
+    ----------
+    chipSelectPin : byte
+        Pin on the Arduino Micro acting as the chip select line for the TLE7209
+    request : {TLE7209_READ_IDENTIFIER, TLE7209_READ_VERSION, TLE7209_READ_DIAG_REGISTER}
+        Describes the register or value which should be retrieved
+    data : byte *
+    		After a successful read, this is where the register content is stored
+
+    Returns
+    -------
+    TLE7209_Error : enum
+        TLE7209_NoError for successful read
+        TLE7209_TransmissionError if verification byte indicates errors
+    **/
     TLE7209startIO(chipSelectPin);
     uint16_t bytesRead = SPI.transfer16((uint16_t)(request << 8));
     TLE7209endIO(chipSelectPin);
@@ -58,8 +75,24 @@ TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){        
 }
 
 
-// Perform two transfers back-to-back (READ_ID, READ_VER)                       // TODO: docstring
+// Perform two transfers back-to-back (READ_ID, READ_VER)
 TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
+    /**Read device ID and chip revision from the TLE7209
+
+    Parameters
+    ----------
+    chipSelectPin : byte
+        Pin on the Arduino Micro acting as the chip select line for the TLE7209
+    version : byte *
+    		After a successful read, this is where the chip revision is stored
+
+    Returns
+    -------
+    TLE7209_Error : enum
+        TLE7209_NoError for successful read
+        TLE7209_TransmissionError if verification byte indicates errors
+        TLE7209_InvalidDeviceId if device ID does not match fixed value, cf. datasheet
+    **/
     byte deviceID;
     TLE7209_Error errcode = TLE7209_NoError;
     errcode = readTLE7209(chipSelectPin, TLE7209_READ_IDENTIFIER, &deviceID);
@@ -85,8 +118,24 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
 
 
 TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
-                                            byte *diagnostics){                 // TODO: docstring
+                                            byte *diagnostics){
+                                                /**Read device ID and chip revision from the TLE7209
 
+    Parameters
+    ----------
+    chipSelectPin : byte
+        Pin on the Arduino Micro acting as the chip select line for the TLE7209
+    diagnostics : byte *
+    		After a successful read, this is where the register content is stored
+
+    Returns
+    -------
+    TLE7209_Error : enum
+        TLE7209_NoError for successful read
+        TLE7209_TransmissionError if verification byte indicates errors
+        TLE7209_DiagnosticsError if one or more status flags have been set by the TLE7209
+        
+    **/
     TLE7209_Error errcode = TLE7209_NoError;
     errcode = readTLE7209(chipSelectPin,
                           TLE7209_READ_DIAG_REGISTER,
