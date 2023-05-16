@@ -9,12 +9,12 @@ Date: 15.05.2023
 
 #include <Arduino.h>  // for interrupts()/noInterrupts()
 #include <SPI.h>
-#include "pwm.h"
+#include "pwm.h"      // for set_pwm_frequency, set_coil_current
 #include "TLE7209.h"
 
-                              // TODO: #include other defines, e.g. 'adc.h', 'struct.h', ...
+// TODO: #include other defines, e.g. 'adc.h', 'struct.h', ...
 
-#define DEBUG true            // Debug mode, writes to serial line, for use in serial monitor
+#define DEBUG true    // Debug mode, writes to serial line, for use in serial monitor
 
 
 void setup()
@@ -24,8 +24,8 @@ void setup()
         Serial.begin(9600);           // opens serial port, sets data rate to 9600 bps
     #endif
 
-    set_pwm_frequency(20);            // 20 kHz
     set_coil_current(0.625, COIL_1);
+    set_pwm_frequency(20);  // kHz
     set_coil_current(0.25,  COIL_2);
 
     pinMode(COIL_1, OUTPUT);          // Define PD7 (OC4D) as output
@@ -43,7 +43,7 @@ void loop()
 {
     uint8_t byteRead;
     TLE7209_Error errcode = TLE7209_NoError;
-    
+
     delay(1000);
 
     #if DEBUG
@@ -55,13 +55,13 @@ void loop()
 
     byteRead = TLE7209readDiagnosticRegister(TLE_CHIPSELECT, &byteRead);
     delayMicroseconds(50);
-    
-    
+
+
     /*
-    		TODO: 
-    			-	Call 'set_coil_current' and adjust current as needed
-    			-	Check return code, transmit error message over serial console
-   				- Integrate ADC readout from INA214 and current shunt    
+    TODO:
+        - Call 'set_coil_current' and adjust current as needed
+        - Check return code, transmit error message over serial console
+        - Integrate ADC readout from INA214 and current shunt
     */
     // set_coil_current(double coil_current, uint8_t coil)
 }

@@ -44,10 +44,11 @@ TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){
     ----------
     chipSelectPin : byte
         Pin on the Arduino Micro acting as the chip select line for the TLE7209
-    request : {TLE7209_READ_IDENTIFIER, TLE7209_READ_VERSION, TLE7209_READ_DIAG_REGISTER}
+    request : {TLE7209_READ_IDENTIFIER, TLE7209_READ_VERSION,
+               TLE7209_READ_DIAG_REGISTER}
         Describes the register or value which should be retrieved
     data : byte *
-    		After a successful read, this is where the register content is stored
+        After a successful read, this is where the register content is stored
 
     Returns
     -------
@@ -84,14 +85,15 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
     chipSelectPin : byte
         Pin on the Arduino Micro acting as the chip select line for the TLE7209
     version : byte *
-    		After a successful read, this is where the chip revision is stored
+        After a successful read, this is where the chip revision is stored
 
     Returns
     -------
     TLE7209_Error : enum
         TLE7209_NoError for successful read
         TLE7209_TransmissionError if verification byte indicates errors
-        TLE7209_InvalidDeviceId if device ID does not match fixed value, cf. datasheet
+        TLE7209_InvalidDeviceId if device ID does not match fixed value,
+        cf. datasheet
     **/
     byte deviceID;
     TLE7209_Error errcode = TLE7209_NoError;
@@ -119,21 +121,22 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
 
 TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
                                             byte *diagnostics){
-                                                /**Read device ID and chip revision from the TLE7209
+    /**Read device ID and chip revision from the TLE7209
 
     Parameters
     ----------
     chipSelectPin : byte
         Pin on the Arduino Micro acting as the chip select line for the TLE7209
     diagnostics : byte *
-    		After a successful read, this is where the register content is stored
+        After a successful read, this is where the register content is stored
 
     Returns
     -------
     TLE7209_Error : enum
         TLE7209_NoError for successful read
         TLE7209_TransmissionError if verification byte indicates errors
-        TLE7209_DiagnosticsError if one or more status flags have been set by the TLE7209
+        TLE7209_DiagnosticsError if one or more status flags have been
+        set by the TLE7209
         
     **/
     TLE7209_Error errcode = TLE7209_NoError;

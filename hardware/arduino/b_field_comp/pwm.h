@@ -29,7 +29,5 @@ uint16_t pwm_clock_divider;  // Use set_pwm_frequency for setting!
 #define PWM_MIN_FREQ 15.625     // Value comes from maximum value for
                                 // register OCR4C and from the choice of a
                                 // value of 1 in set_pwm_clock_prescaler
-                                
-                                
-                                
+
 #endif
