@@ -13,6 +13,7 @@ Date: 09.02.2022
 #include <stdarg.h>
 
 #include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
+#include "arduino_utils.h"  // from ../lib; for setChipSelectHigh
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
@@ -46,7 +47,7 @@ void setup() {
     setChipSelectHigh(CS_DAC);
     setChipSelectHigh(CS_ADC_0);
     setChipSelectHigh(CS_ADC_1);
-    pinMode(SCK, OUTPUT);  // Should not be needed, but it did not work without
+    pinMode(SCK, OUTPUT);  // Should not be needed, but it did not work without  // Probably just because SPI.begin call is missing?
     pinMode(MOSI, OUTPUT);
 
     // Reset ADC and DAC, set DAC output to zero,
@@ -2046,22 +2047,6 @@ void setSerialNr() {
     encodeAndSend(PC_OK);
     currentState = STATE_IDLE;
 }
-
-/** -------------------------- ARDUINO UTILITIES --------------------------- **/
-
-void setChipSelectHigh(byte ioPin) {
-    /**
-    Set a digital output used as a chip select signal from
-    the default high-impedance state to high (=unselected),
-    without a glitch to the low state.
-    **/
-    pinMode(ioPin, INPUT_PULLUP);
-    digitalWrite(ioPin, HIGH);
-    pinMode(ioPin, OUTPUT);
-}
-
-
-
 
 
 
