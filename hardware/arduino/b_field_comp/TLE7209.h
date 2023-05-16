@@ -16,8 +16,15 @@ Date: 21.04.2023
 
 #define TLE7209_DELAY_MICRO 100
 
-// Definitions for TLE7209-3R H-Bridge
-#define TLE7209_SPIMODE SPI_MODE1   // SPI_MODE1 should translate to CPOL = 0, CPHA = 1
+/*
+Communication parameters for the TLE7209-3R:
+  - The TLE7209 always operates in slave mode (read-only)
+  - Baud rate: 2 MBaud/s max.
+  - MSbit first, clock polarity (CPOL=0) and phase (CPHA=1)
+*/
+#define TLE7209_SPI_BAUD  1E5        // Can be increased later, up to 2E6
+#define TLE7209_SPIMODE   SPI_MODE1  // SPI_MODE1 means CPOL=0, CPHA=1
+SPISettings TLE7209_SPI_SETTING(TLE7209_SPI_BAUD, MSBFIRST, TLE7209_SPIMODE);
 
 
 // TLE7209 SPI instruction-byte encoding
@@ -51,12 +58,6 @@ enum TLE7209_Error {
 
 // TLE7209 verification byte definitions
 #define TLE7209_TRANS_F 0x01	// Bit is set if previous transfer was recognized as valid
-
-
-// SPI communication settings
-SPISettings TLE7209_SPI_SETTING(100000, MSBFIRST, TLE7209_SPIMODE);
-
-
                                 // Bit is cleared on error during previous transfer
 
 

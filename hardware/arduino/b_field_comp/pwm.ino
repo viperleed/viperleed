@@ -1,5 +1,5 @@
 /*
-Test firmware for Arduino dual channel PWM generation
+Add-on for Arduino Micro for using fast-PWM mode via Timer/counter 4.
 ---------------------
 Author: Michele Riva, Christoph Pfungen
 Date: 15.05.2023

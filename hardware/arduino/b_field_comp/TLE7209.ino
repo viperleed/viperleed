@@ -1,17 +1,9 @@
 /*
-ViPErLEED - Driver for TLE7209-3R H-Bridge
+ViPErLEED - Driver for SPI interface of TLE7209-3R H-Bridge
 ---------------------
 Author: Michele Riva, Christoph Pfungen
 Date: 21.04.2023
 ---------------------
-*/
-
-
-/*
-Communication parameters for the TLE7209-3R:
-  - The TLE7209 always operates in slave mode (read-only)
-  - Baud rate: 2 MBaud/s max.
-  - MSbit first, clock polarity and phase: CPOL = 0, CPHA = 1
 */
 
 
