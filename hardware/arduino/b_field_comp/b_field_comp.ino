@@ -12,6 +12,7 @@ Date: 15.05.2023
 #include "b_field_comp.h"  // globals, #defines, etc.
 #include "pwm.h"           // for set_pwm_frequency, set_coil_current
 #include "TLE7209.h"
+#include "arduino_utils.h" // from '../lib'; for setChipSelectHigh
 
 // TODO: #include other defines, e.g. 'adc.h', 'struct.h', ...
 
@@ -34,7 +35,7 @@ void setup()
     pinMode(COIL_1_SIGN, OUTPUT);     // Define PF7 as output
     pinMode(COIL_2_SIGN, OUTPUT);     // Define PF6 as output
 
-    pinMode(TLE_CHIPSELECT, OUTPUT);
+    setChipSelectHigh(TLE_CHIPSELECT);
     SPI.begin();                      // Initializes the SPI bus (SCK and MOSI as OUTPUT)
     pinMode(MISO, INPUT);             // MISO = pin PB3
 }
