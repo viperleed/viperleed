@@ -7,8 +7,8 @@ Date: 15.05.2023
 */
 
 
-#ifndef _VIPERLEED_B_FIELD_COMP
-#define _VIPERLEED_B_FIELD_COMP
+#ifndef _VIPERLEED_B_FIELD_PWM
+#define _VIPERLEED_B_FIELD_PWM
 
 
 // pwm_clock_divider: how many intervals the counters count before

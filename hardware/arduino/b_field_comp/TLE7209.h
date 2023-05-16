@@ -13,7 +13,6 @@ Date: 21.04.2023
 
 #include <SPI.h>
 
-#define TLE_CHIPSELECT 11     // PB7 on the Arduino Micro board
 
 #define TLE7209_DELAY_MICRO 100
 
