@@ -7,9 +7,10 @@ Date: 15.05.2023
 */
 
 
-#include <Arduino.h>  // for interrupts()/noInterrupts()
+#include <Arduino.h>       // for interrupts()/noInterrupts()
 #include <SPI.h>
-#include "pwm.h"      // for set_pwm_frequency, set_coil_current
+#include "b_field_comp.h"  // globals, #defines, etc.
+#include "pwm.h"           // for set_pwm_frequency, set_coil_current
 #include "TLE7209.h"
 
 // TODO: #include other defines, e.g. 'adc.h', 'struct.h', ...
