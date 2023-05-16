@@ -811,12 +811,6 @@ class Measure(ViPErLEEDPluginBase):
         meas_dict = {c.__name__: t for t, c in ALL_MEASUREMENTS.items()}
         self._ctrls['select'].setCurrentText(meas_dict[cls_name])
 
-        # And use the information in the config for
-        # correctly updating the DataPoints
-        if data.is_time_resolved:
-            data.continuous = config.getboolean('measurement_settings',
-                                                'is_continuous')
-
     def __on_set_energy(self):
         """Set energy on primary controller."""
         # energy = float(self._ctrls['select'].currentText())
@@ -952,8 +946,12 @@ class Measure(ViPErLEEDPluginBase):
         meas_config.read_string(cfg_lines)
         meas_config.base_dir = fname
         cls_name = meas_config['measurement_settings']['measurement_class']
+        # Use the information in the config for
+        # correctly updating the DataPoints
         datapts.time_resolved = (cls_name == "TimeResolved")
-
+        if datapts.is_time_resolved:
+            datapts.continuous = meas_config.getboolean('measurement_settings',
+                                                        'is_continuous')
         try:
             datapts.read_lines(csv_lines)
         except RuntimeError as err:
@@ -973,7 +971,9 @@ class Measure(ViPErLEEDPluginBase):
 
         cls_name = meas_config['measurement_settings']['measurement_class']
         datapts.time_resolved = (cls_name == "TimeResolved")
-
+        if datapts.is_time_resolved:
+            datapts.continuous = meas_config.getboolean('measurement_settings',
+                                                        'is_continuous')
         try:
             datapts.read_csv(csv_name)
         except RuntimeError as err:
