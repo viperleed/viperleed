@@ -27,6 +27,9 @@ import json
 import warnings
 
 
+BASE_PATH = Path(__file__).parent.resolve()
+
+
 def get_arduino_cli_from_git():
     """Obtain the latest version of Arduino CLI from GitHub.
 
@@ -67,7 +70,7 @@ def get_arduino_cli_from_git():
                            "to compile from the source at "
                            "https://github.com/arduino/arduino-cli")
 
-    base_path = Path(__file__).parent.resolve() / 'arduino-cli'
+    base_path = BASE_PATH / 'arduino-cli'
     with open(base_path / correct_name, 'wb') as archive:
         archive.write(requests.get(url_latest).content)
     shutil.unpack_archive(base_path / correct_name, base_path)
@@ -100,7 +103,7 @@ def get_arduino_cli(get_from_git=False):                                        
         return Path('arduino-cli')
 
     # Look for the executable in the arduino-cli subfolder
-    base_path = Path(__file__).parent.resolve() / 'arduino-cli'
+    base_path = BASE_PATH / 'arduino-cli'
     try:
         base_path.mkdir()
     except FileExistsError:
@@ -240,7 +243,7 @@ def get_viperleed_hardware():
     return viper_boards
 
 
-def compile_(for_board, upload=False):
+def compile_(for_board, sketch_name='viper-ino', upload=False):
     """Compile viper-ino for the specified board.
 
     Parameters
@@ -252,13 +255,17 @@ def compile_(for_board, upload=False):
         after successful compilation
     """
     cli = get_arduino_cli()
-    viperino = Path(__file__).parent.resolve() / 'viper-ino'
+    viperino = BASE_PATH / sketch_name
     if "matching_boards" not in for_board:
         raise ValueError(f"Invalid Arduino device: {for_board}")
 
     argv = ['compile', '--clean', '-b',
             for_board['matching_boards'][0]['fqbn'],
             viperino]
+    lib_root = BASE_PATH / 'lib'
+    if lib_root.exists():
+        argv.extend(['--library', str(lib_root)])
+
     if upload:
         argv.extend(['-u', '-p', for_board['port']['address']])
 
