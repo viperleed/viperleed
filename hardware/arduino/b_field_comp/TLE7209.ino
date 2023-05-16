@@ -18,6 +18,7 @@ Communication parameters for the TLE7209-3R:
 #include "TLE7209.h"
 
 #define DEBUG true
+#define DEBUG_PRINT(x) (if(DEBUG) Serial.println(x))                            // TODO: see if possible to use #if ... #endif or similar to have this done by the preprocessor
 
 
 
@@ -92,7 +93,8 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
     TLE7209_Error : enum
         TLE7209_NoError for successful read
         TLE7209_TransmissionError if verification byte indicates errors
-        TLE7209_InvalidDeviceId if device ID does not match fixed value, cf. datasheet
+        TLE7209_InvalidDeviceId if device ID does not match fixed value,
+        cf. datasheet                                                           // TODO: page
     **/
     byte deviceID;
     TLE7209_Error errcode = TLE7209_NoError;

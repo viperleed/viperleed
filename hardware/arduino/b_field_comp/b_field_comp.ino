@@ -24,8 +24,8 @@ void setup()
         Serial.begin(9600);           // opens serial port, sets data rate to 9600 bps
     #endif
 
-    set_coil_current(0.625, COIL_1);
     set_pwm_frequency(20);  // kHz
+    set_coil_current(0.625, COIL_1);                                            // TODO: could become a .set_current method of coil_t objects? Similarly, the two pinMode calls below could be grouped into a .setup method the coil_t object
     set_coil_current(0.25,  COIL_2);
 
     pinMode(COIL_1, OUTPUT);          // Define PD7 (OC4D) as output

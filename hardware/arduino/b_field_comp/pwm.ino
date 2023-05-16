@@ -99,6 +99,7 @@ byte set_coil_current(double coil_current, uint8_t coil){
 }
 
 
+// TODO: docstring
 void set_current_sign(byte sign, byte sign_select_pin){
     if (sign < 0){
         set_pwm_polarity(NEGATIVE_CURRENT);
@@ -111,6 +112,7 @@ void set_current_sign(byte sign, byte sign_select_pin){
 }
 
 
+// TODO: docstring
 void set_ten_bit_value(uint16_t ten_bits_value, uint8_t *REGISTER){
     // Registers are 8 bits. Some can also accept 10-bit values.
     // To do this, the two highest bits are to be written in the
@@ -124,6 +126,7 @@ void set_ten_bit_value(uint16_t ten_bits_value, uint8_t *REGISTER){
 }
 
 
+// TODO: docstring
 void set_pwm_polarity(byte polarity){
     // Pins OC4B, OC4BD: cleared on compare match (TCNT = OCR4B/D),
     // set when TCNT = 0x000; Enable PWM output channels B and D
@@ -149,6 +152,7 @@ void set_pwm_polarity(byte polarity){
 }
 
 
+// TODO: docstring
 void set_pwm_clock_prescaler(){
     // Set Timer/Counter4 prescaler to 1;
     // Timer/Counter4 clock frequency = system clock frequency / 1
@@ -171,6 +175,7 @@ void set_pwm_clock_prescaler(){
 }
 
 
+// TODO: docstring
 void set_pwm_threshold_channels(){
     // Make OCR4B/D the registers whose values will be
     // used to determine the duty cycle of the PWM. I.e.,
@@ -182,6 +187,7 @@ void set_pwm_threshold_channels(){
 }
 
 
+// TODO: docstring
 void set_fast_pwm_mode(){
     // Keep PWM output non-inverted (Clear 'PWM4X')
     TCCR4B &= ~(1 << PWM4X);
@@ -192,6 +198,7 @@ void set_fast_pwm_mode(){
 
 
 // !!! USE AT YOUR OWN RISK !!!
+// TODO: docstring
 void use_pwm_enhanced_mode(){
     // In principle, this mode would allow to gain 1 more resolution
     // bit for the PWM on Timer/Counter4 only. However, it seems like
