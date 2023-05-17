@@ -81,6 +81,9 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # BUG: system settings: folder renamed with small/capital not detected as change
 
 #   C A M E R A   &  C O.
+# BUG: camera with short exposure consumes an insane amount of memory. Is there a leak?
+# TODO: complain if camera lost in live view
+# BUG: camera lost with viewer & settings open --> cannot open again after power-up
 # TODO: bad pixels finder top progress bar should scale better, with actual
 #       duration of tasks
 # TODO: improve progress for preliminary tasks
