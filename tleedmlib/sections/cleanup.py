@@ -18,6 +18,7 @@ import re
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from viperleed.tleedmlib.base import get_elapsed_time_str
+from viperleed.tleedmlib.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
 
 
 # files to go in SUPP
@@ -31,7 +32,7 @@ _SUPP_FILES = ("AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
                "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
                "restrict.f", "Phaseshifts_plots.pdf")
 
-_SUPP_DIRS = ("original_inputs", "compile_logs")
+_SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
 
 # files to go in OUT
 _OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",

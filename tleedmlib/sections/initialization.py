@@ -3,7 +3,7 @@
 """
 Created on Aug 11 2020
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 
 Tensor LEED Manager section Initialization
 """
@@ -34,30 +34,34 @@ from viperleed.tleedmlib.files.patterninfo import writePatternInfo
 
 logger = logging.getLogger("tleedm.initialization")
 
+ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
+
 
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
         # check for experimental beams:
-        expbeamsname = ""
         for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
+        expbeams_name = ""
             if os.path.isfile(fn):
                 expbeamsname = fn
                 break
-        if expbeamsname:
+        if expbeams_name:  # experimental beams provided
             if len(rp.THEO_ENERGIES) == 0:
                 er = []
             else:
                 er = rp.THEO_ENERGIES[:2]
             if not rp.fileLoaded["EXPBEAMS"]:
                 try:
-                    rp.expbeams = readOUTBEAMS(filename=fn, enrange=er)
+                    rp.expbeams = readOUTBEAMS(filename=expbeams_name, enrange=er)
                     if len(rp.expbeams) > 0:
                         rp.fileLoaded["EXPBEAMS"] = True
                     else:
-                        logger.error("Error reading "+fn+": No data was read.")
+                        logger.error(f"Error reading {expbeams_name}: "
+                                     "No data was read.")
                 except Exception:
-                    logger.error("Error while reading file "+fn, exc_info=True)
+                    logger.error(f"Error while reading file {expbeams_name}.",
+                                 exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
@@ -733,18 +737,16 @@ def preserve_original_input(rp, init_logger, path=""):
     """
     Creates directory original_inputs and copies input files there for preservation.
     """
-    # Folder name "original_inputs" hardcoded. If changed, change also in cleanup.py !
-    folder_name = "original_inputs"
     if not path:
         path = "."
 
     # makes orig_inputs directory
     try:
-        orig_inputs_path = os.path.join(path, folder_name)
+        orig_inputs_path = Path(path) / ORIGINAL_INPUTS_DIR_NAME
         os.makedirs(orig_inputs_path, exist_ok=True)
     except Exception:
-        logger.warning("Could not create directory {}".format(folder_name))
         rp.setHaltingLevel(1)
+        raise RuntimeError("Could not create directory "
 
     # copy all files to orig_inputs that were used as original input
     # !!! TODO: rp.fileLoaded contains only files that were needed so far,
@@ -754,15 +756,16 @@ def preserve_original_input(rp, init_logger, path=""):
         if rp.fileLoaded[file]:
             # copy to original input
             try:
-                if file == "EXPBEAMS": file += ".csv" # file is called EXPBEAMS.csv
-                if os.path.isfile(file):
-                    shutil.copy2(os.path.join(path, file), orig_inputs_path)
-                else:
-                    raise FileNotFoundError
-            except Exception:
-                init_logger.warning("Could not copy file {} to ".format(file)
-                                    + folder_name)
+                shutil.copy2(Path(path) / file, orig_inputs_path)
+            except OSError:
+                init_logger.warning(f"Could not copy file {file} to "
+                                    f"{ORIGINAL_INPUTS_DIR_NAME}.")
                 rp.setHaltingLevel(1)
+        else:
+            init_logger.warning(f"Could not find file {file}. "
+                                    "It will not be stored in "
+                                    f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            rp.setHaltingLevel(1)
     return
 
 
