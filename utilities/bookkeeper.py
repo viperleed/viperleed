@@ -23,7 +23,7 @@ def translateTimestamp(s):
 
 
 def bookkeeper():
-    histname = "history"  # name of history folder in home dir
+    history_name = "history"  # name of history folder in home dir
     workhistname = "workhistory"  # name of history folder in work dir
     copyfiles = ["POSCAR", "PHASESHIFTS", "PARAMETERS", "IVBEAMS",
                  "DISPLACEMENTS", "VIBROCC", "EXPBEAMS.csv"]
@@ -51,18 +51,18 @@ def bookkeeper():
               "Bookkeeper will stop.")
         return 1
     # make list of stuff to move
-    tomove = [d for d in os.listdir() if os.path.isdir(d)
+    files_to_move = [d for d in os.listdir() if os.path.isdir(d)
               and (d == "OUT" or d == "SUPP")]
     # logs will be saved to history; tleedm in root, others in SUPP
-    tomove_logs = []
+    logs_to_move = []
     for file in os.listdir():
         if os.path.isfile(file) and file.endswith(".log"):
             if file.startswith("tleedm"):
-                tomove.append(file)
+                files_to_move.append(file)
             else:
-                tomove_logs.append(file)
+                logs_to_move.append(file)
     # if there's nothing to move, return.
-    if len(tomove) == 0:
+    if len(files_to_move) == 0:
         found = False
         # check workhist folder:
         if os.path.isdir(workhistname):
@@ -75,9 +75,9 @@ def bookkeeper():
             print("Bookkeeper: Found nothing to do. Exiting...")
             return 1
     # check whether history folder is there. If not, make one
-    if not os.path.isdir(histname):
+    if not os.path.isdir(history_name):
         try:
-            os.mkdir(histname)
+            os.mkdir(history_name)
         except Exception:
             print("Error creating history folder.")
             raise
@@ -95,8 +95,8 @@ def bookkeeper():
         if indlist:
             tnum = max(indlist)
     # figure out the number of the run
-    dl = [n for n in os.listdir(histname)
-          if os.path.isdir(os.path.join(histname, n))]
+    dl = [n for n in os.listdir(history_name)
+          if os.path.isdir(os.path.join(history_name, n))]
     maxnums = {}  # max. job number per tensor number
     rgx = re.compile(r't[0-9]{3}.r[0-9]{3}_')
     for d in dl:
@@ -145,7 +145,7 @@ def bookkeeper():
         dirname = "t{:03d}.r{:03d}_".format(tnum, num) + oldTimeStamp
         if args.name:
             dirname += "_" + args.name
-        tdir = os.path.join(histname, dirname)
+        tdir = os.path.join(history_name, dirname)
         if os.path.isdir(tdir):
             tdir2 = tdir+"_moved-"+timestamp
             print("Error: Target directory " + tdir + " already exists. Will "
@@ -196,7 +196,7 @@ def bookkeeper():
         else:
             print("Error: Flag --cont was set, but no OUT folder exists.")
     # move old stuff
-    for f in tomove:
+    for f in files_to_move:
         if not args.discard:
             try:
                 shutil.move(f, os.path.join(tdir, f))
@@ -213,7 +213,7 @@ def bookkeeper():
             except Exception:
                 print("Failed to discard directory " + f)
     # move log files to SUPP (except for general log tleedm....log)
-    for log_file in tomove_logs:
+    for log_file in logs_to_move:
         if not args.discard:
             try:
                 supp_path = os.path.join(tdir, 'SUPP')
@@ -256,7 +256,7 @@ def bookkeeper():
                            + d[9:])
                 try:
                     shutil.move(os.path.join(workhistname, d),
-                                os.path.join(histname, newname))
+                                os.path.join(history_name, newname))
                 except Exception:
                     print("Error: Failed to move "
                           + os.path.join(workhistname, d))
@@ -267,10 +267,10 @@ def bookkeeper():
                 shutil.rmtree(workhistname)
             except Exception as e:
                 if args.discard:
-                    print("Failed to discard workhistory folder: " + e)
+                    print(f"Failed to discard workhistory folder: {e}")
                 else:
-                    print("Failed to delete empty "+workhistname+" directory: "
-                          + e)
+                    print(f"Failed to delete empty {workhistname} directory: "
+                          f"{str(e)}")
     if args.discard:  # all done
         return 0
     jobnums = []
@@ -335,7 +335,7 @@ def bookkeeper():
                 if t:
                     hi += t + line.split(":", maxsplit=1)[1].strip() + "\n"
 
-    hi += "# TIME ".ljust(spacing) + translateTimestamp(oldTimeStamp) + "\n"
+    hi += "# TIME ".ljust(spacing) + translate_timestamp(oldTimeStamp) + "\n"
     hi += "# FOLDER ".ljust(spacing) + dirname + "\n"
     hi += "Notes: " + notes + "\n"
     hi += "\n###########\n"
