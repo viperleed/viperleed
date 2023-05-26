@@ -7,6 +7,7 @@ Defines an enumeration of calculation sections.
 """
 
 from enum import Enum
+from itertools import chain
 
 from viperleed.tleedmlib.base import split_string_range, readIntRange
 
@@ -141,3 +142,28 @@ _SECTION_ORDERING = {  # Default order of execution
         TLEEDMSection.ERRORCALC
         ))
     }
+
+_REQUIRED_FILES = {  # Required input files per section
+    TLEEDMSection.INITIALIZATION: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
+    TLEEDMSection.REFCALC: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
+                         "IVBEAMS", "VIBROCC"],
+    TLEEDMSection.DELTAS: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
+                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS"],
+    TLEEDMSection.SEARCH: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
+                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS", "EXPBEAMS"],
+    TLEEDMSection.RFACTOR_REFCALC: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
+    TLEEDMSection.RFACTOR_SUPERPOS: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
+    TLEEDMSection.SUPERPOS: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
+                          "VIBROCC", "DISPLACEMENTS"],
+    TLEEDMSection.ERRORCALC: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
+                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS", "EXPBEAMS"],
+    TLEEDMSection.FD_OPTIMIZATION: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
+                         "IVBEAMS", "VIBROCC", "EXPBEAMS"],
+}
+
+# set of all input files
+ALL_INPUT_FILES = set(chain.from_iterable(_REQUIRED_FILES.values()))
+
+# allowed names for the file containing the experimental beams
+# files will be used in precedence from left to right
+EXPBEAMS_NAMES = ("EXPBEAMS.csv", "EXPBEAMS")
