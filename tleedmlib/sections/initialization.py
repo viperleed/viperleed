@@ -18,6 +18,8 @@ from zipfile import ZipFile
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import angle, rotation_matrix
+from viperleed.tleedmlib.sections._sections import (ALL_INPUT_FILES, 
+                                                    EXPBEAMS_NAMES)
 from viperleed.tleedmlib.beamgen import runBeamGen
 from viperleed.tleedmlib.psgen import (runPhaseshiftGen, runPhaseshiftGen_old)
 from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
@@ -40,6 +42,15 @@ ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
+        # check if multiple experimental input files were provided and warn if so
+        exp_files_provided = (os.path.isfile(fn) for fn in EXPBEAMS_NAMES)
+        if sum(exp_files_provided) > 1:
+            logger.warning("Multiple files with experimental I(V) curves "
+                           "were provided. "
+                           "Check if the root directory contains the correct "
+                           "files. "
+                           "ViPErLEED will preferentially use 'EXPBEAMS.csv'.")
+            rp.setHaltingLevel(1)
         # check for experimental beams:
         for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
         expbeams_name = ""
