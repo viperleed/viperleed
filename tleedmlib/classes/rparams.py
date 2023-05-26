@@ -39,6 +39,7 @@ logger = logging.getLogger("tleedm.rparams")
 
 
 DEFAULTS = {
+    'EXPBEAMS_INPUT_FILE' : None,
     'PHASESHIFT_EPS': {
         'r': 0.1,
         'n': 0.05,
@@ -131,6 +132,7 @@ class Rparams:
         self.DOMAIN_STEP = 1      # area step in percent for domain search
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
+        self.EXPBEAMS_INPUT_FILE = DEFAULTS["EXPBEAMS_INPUT_FILE"]
         self.FILAMENT_WF = 2.65   # work function of emitting cathode
         self.FORTRAN_COMP = ["", ""]      # before files, after files
         self.FORTRAN_COMP_MPI = ["", ""]  # before files, after files

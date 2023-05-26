@@ -52,10 +52,11 @@ def initialization(sl, rp, subdomain=False):
                            "ViPErLEED will preferentially use 'EXPBEAMS.csv'.")
             rp.setHaltingLevel(1)
         # check for experimental beams:
-        for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
         expbeams_name = ""
+        for fn in EXPBEAMS_NAMES:
             if os.path.isfile(fn):
-                expbeamsname = fn
+                expbeams_name = fn
+                rp.EXPBEAMS_INPUT_FILE = fn  # store which file name was used
                 break
         if expbeams_name:  # experimental beams provided
             if len(rp.THEO_ENERGIES) == 0:
@@ -756,16 +757,20 @@ def preserve_original_input(rp, init_logger, path=""):
         orig_inputs_path = Path(path) / ORIGINAL_INPUTS_DIR_NAME
         os.makedirs(orig_inputs_path, exist_ok=True)
     except Exception:
-        rp.setHaltingLevel(1)
         raise RuntimeError("Could not create directory "
+                           f"{ORIGINAL_INPUTS_DIR_NAME}. "
+                           "Check disk permissions.")
+
+    # make sure the correct version of EXPBEAMS is stored (if used)
+    files_to_preserve = ALL_INPUT_FILES.copy()
+    files_to_preserve.remove('EXPBEAMS')
+    if rp.EXPBEAMS_INPUT_FILE:
+        files_to_preserve.add(rp.EXPBEAMS_INPUT_FILE)
 
     # copy all files to orig_inputs that were used as original input
-    # !!! TODO: rp.fileLoaded contains only files that were needed so far,
-    #  and EXPBEAMS is missing the .csv extension -> probably better to list
-    #  all input files explicitly here
-    for file in rp.fileLoaded:
-        if rp.fileLoaded[file]:
-            # copy to original input
+    for file in files_to_preserve:
+        # save under name EXPBEAMS.csv
+        if os.path.isfile(file):
             try:
                 shutil.copy2(Path(path) / file, orig_inputs_path)
             except OSError:
