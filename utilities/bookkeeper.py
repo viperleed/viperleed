@@ -2,7 +2,7 @@
 """
 Created on Thu Jan 30 11:12:30 2020
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 """
 
 import os
@@ -10,9 +10,12 @@ import re
 import time
 import argparse
 import shutil
+from pathlib import Path
 
+_INPUT_FILES = ["POSCAR", "PHASESHIFTS", "PARAMETERS", "IVBEAMS",
+                 "DISPLACEMENTS", "VIBROCC", "EXPBEAMS.csv", "EXPBEAMS"]
 
-def translateTimestamp(s):
+def translate_timestamp(s):
     """Takes a timestamp YYMMDD-hhmmss and translates it to format DD.MM.YY
     hh:mm:ss"""
     if len(s) != 13:
@@ -21,12 +24,41 @@ def translateTimestamp(s):
     return "{}.{}.{} {}:{}:{}".format(s[4:6], s[2:4], s[0:2],
                                       s[7:9], s[9:11], s[11:13])
 
+def store_input_files_to_history(root_path, history_path):
+    """Finds and copies input files to history.
+
+    Parameters
+    ----------
+    root_path : pathlike
+        Root directory from which to take files. Should be cwd, not ./work.
+    history_path : pathlike
+        Path to the history directory in which the files should be stored.
+    """
+    _root_path, _history_path = Path(root_path), Path(history_path)
+    original_inputs_path = _root_path / "work" / "original_inputs"
+    if original_inputs_path.is_dir():
+        input_origin_path = original_inputs_path
+    else:
+        input_origin_path = _root_path
+        print("Could not find directory 'original_inputs' with unaltered "
+              "input files. Files will instead be copied from the root "
+              "directory.")
+
+    # only files, no dirs
+    files_in_dir =  (f for f in Path(input_origin_path).iterdir()
+                     if f.is_file())
+    files_to_copy = (file for file in files_in_dir
+                     if file.name in _INPUT_FILES)
+    # copy files to history
+    for file in files_to_copy:
+        try:
+            shutil.copy2(file, _history_path/file.name)
+        except OSError as error_msg:
+            print(f"Failed to copy file {file} to history: {error_msg}")
 
 def bookkeeper():
     history_name = "history"  # name of history folder in home dir
     workhistname = "workhistory"  # name of history folder in work dir
-    copyfiles = ["POSCAR", "PHASESHIFTS", "PARAMETERS", "IVBEAMS",
-                 "DISPLACEMENTS", "VIBROCC", "EXPBEAMS.csv"]
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c", "--cont",
@@ -159,11 +191,9 @@ def bookkeeper():
                   + "\n Stopping...")
             raise 1
         # copy (or discard) files
-        for f in [f for f in os.listdir() if f in copyfiles]:
-            try:
-                shutil.copy2(f, os.path.join(tdir, f))
-            except Exception:
-                print("Error: Failed to copy "+f)
+        cwd_path = Path(".")
+        store_input_files_to_history(cwd_path, tdir)
+
     # if CONT, check for POSCAR_OUT / VIBROCC_OUT
     if args.cont and not args.discard:
         if os.path.isdir("OUT"):
