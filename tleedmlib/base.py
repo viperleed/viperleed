@@ -179,6 +179,19 @@ def readIntRange(s):
     return list(set(out))
 
 
+def split_string_range(range_string):
+    """Return start and stop as strings from "start:stop" or "start-stop"."""
+    range_list = []
+    if '-' in range_string:
+        range_list = range_string.split('-')
+    elif ':' in range_string:
+        range_list = range_string.split(':')
+    try:
+        return range_list[0], range_list[-1]
+    except IndexError:
+        raise ValueError(f"Invalid range string: {range_string}") from None
+
+
 def range_to_str(il):
     """Takes a list of integers, sorts them and returns a string short form.
     For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
