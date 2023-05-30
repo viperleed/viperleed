@@ -479,7 +479,7 @@ def init_domains(rp):
                 raise
             try:
                 with ZipFile(path, 'r') as zip_ref:
-                    zip_ref.extractall(tensorDir)
+                    zip_ref.extractall(tensorDir)  # TODO: maybe it would be nicer to read directly from the zip file
             except Exception:
                 logger.error("Failed to unpack Tensors for domain {} from "
                              "file {}".format(name, path))

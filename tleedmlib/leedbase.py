@@ -350,7 +350,7 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
             unpack_path = (Path(targetdir) / "Tensors" / dn)
             try:
                 with ZipFile(zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(unpack_path)
+                    zip_ref.extractall(unpack_path)  # TODO: maybe it would be nicer to read directly from the zip file
             except Exception:
                 logger.error("Failed to unpack {}.zip".format(dn))
                 raise
@@ -391,7 +391,7 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
         logger.info("Unpacking {}.zip...".format(dn))
         try:
             with ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(_targetdir)
+                zip_ref.extractall(_targetdir)  # TODO: maybe it would be nicer to read directly from the zip file
         except Exception:
             logger.error("Failed to unpack {}.zip".format(dn))
             raise
