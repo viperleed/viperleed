@@ -48,7 +48,7 @@ def extract_var_r(errors):
 def write_errors_summary_csv(summary_content, summary_path,
                              summary_fname="Errors_summary.csv"):
     try:
-        with open(summary_path/summary_fname, "w") as wf:
+        with open(summary_path/summary_fname, "w", encoding="utf-8") as wf:
             wf.write(summary_content)
     except Exception as err:
         logger.error("Failed to write error calculation summary "
