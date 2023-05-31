@@ -99,8 +99,21 @@ byte set_coil_current(double coil_current, uint8_t coil){
 }
 
 
-// TODO: docstring
 void set_current_sign(byte sign, byte sign_select_pin){
+    /**Set digital I/O pin according to current direction in a coil
+
+    Parameters
+    ----------
+    sign : byte
+        Coil current direction: Either positive or negative
+    sign_select_pin : byte
+        Which I/O pin to use as a sign indicator
+
+    Returns
+    -------
+    Nothing
+
+    **/
     if (sign < 0){
         set_pwm_polarity(NEGATIVE_CURRENT);
         digitalWrite(sign_select_pin, HIGH);                                    // TODO: check if this is the right way (test on coil)
@@ -112,13 +125,26 @@ void set_current_sign(byte sign, byte sign_select_pin){
 }
 
 
-// TODO: docstring
 void set_ten_bit_value(uint16_t ten_bits_value, uint8_t *REGISTER){
-    // Registers are 8 bits. Some can also accept 10-bit values.
-    // To do this, the two highest bits are to be written in the
-    // *shared* register TC4H right before the remaining 8 bits
-    // are written in the desired register. More info: Atmega32U4
-    // datasheet, section 15.11.
+    /**Write 10-Bit value to Timer/Counter4 register
+
+    Parameters
+    ----------
+    ten_bits_value : uint16_t
+        10-Bit value to be written
+    REGISTER : uint8_t *
+        Address of register to be written to
+
+    Returns
+    -------
+    Nothing
+    
+    Registers are 8 bits. Some can also accept 10-bit values.
+    To do this, the two highest bits are to be written in the
+    *shared* register TC4H right before the remaining 8 bits
+    are written in the desired register. More info: Atmega32U4
+    datasheet, section 15.11.
+    **/
     noInterrupts();  // Ensure nothing bothers setting two registers
     TC4H = ten_bits_value >> 8;
     *REGISTER = ten_bits_value & 255;
@@ -126,14 +152,25 @@ void set_ten_bit_value(uint16_t ten_bits_value, uint8_t *REGISTER){
 }
 
 
-// TODO: docstring
 void set_pwm_polarity(byte polarity){
-    // Pins OC4B, OC4BD: cleared on compare match (TCNT = OCR4B/D),
-    // set when TCNT = 0x000; Enable PWM output channels B and D
-    // This part essentially selects whether we output "high" or
-    // "low" when the counter reaches the threshold. This can be
-    // used for flipping the signal.
-    // For more info, see Atmega32U4 datasheet, section 15.12.1
+    /**Set PWM polarity
+
+    Parameters
+    ----------
+    polarity : byte
+        Sets the requested counter polarity
+
+    Returns
+    -------
+    Nothing
+    
+    Pins OC4B, OC4BD: cleared on compare match (TCNT = OCR4B/D),
+    set when TCNT = 0x000; Enable PWM output channels B and D
+    This part essentially selects whether we output "high" or
+    "low" when the counter reaches the threshold. This can be
+    used for flipping the signal.
+    For more info, see Atmega32U4 datasheet, section 15.12.1
+    **/
     TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0));   // Clear <COM4D1:COM4D0>
     TCCR4A &= ~((1 << COM4B1) | (1 << COM4B0));   // Clear <COM4B1:COM4B0>
 
@@ -152,17 +189,27 @@ void set_pwm_polarity(byte polarity){
 }
 
 
-// TODO: docstring
 void set_pwm_clock_prescaler(){
-    // Set Timer/Counter4 prescaler to 1;
-    // Timer/Counter4 clock frequency = system clock frequency / 1
-    // (f_clk_T4 = 16 MHz)
-    // Notice that we should not divide it further: the faster the counter,
-    // the better our resolution. With 16 MHz input and 20 kHz output one
-    // gets ~ 16 MHz / 20 kHz = 800 steps of resolution.
+    /**Set PWM clock prescaler
 
-    // NOTE: Should one decide to use a different clock divider, the value
-    //       of the PWM_MIN_FREQ should be changed accordingly!
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    Nothing
+    
+    Set Timer/Counter4 prescaler to 1;
+    Timer/Counter4 clock frequency = system clock frequency / 1
+    (f_clk_T4 = 16 MHz)
+    Notice that we should not divide it further: the faster the counter,
+    the better our resolution. With 16 MHz input and 20 kHz output one
+    gets ~ 16 MHz / 20 kHz = 800 steps of resolution.
+
+    NOTE: Should one decide to use a different clock divider, the value
+          of the PWM_MIN_FREQ should be changed accordingly!
+    **/
     // Clear entire register except MSbit 'PWM4X'
     TCCR4B &= ~((1 << PSR4)
                 | (1 << DTPS41)
@@ -175,20 +222,40 @@ void set_pwm_clock_prescaler(){
 }
 
 
-// TODO: docstring
 void set_pwm_threshold_channels(){
-    // Make OCR4B/D the registers whose values will be
-    // used to determine the duty cycle of the PWM. I.e.,
-    // when the corresponding counter TCNT4 reaches the
-    // values in these registers pins OC4B/D will toggle
-    // More info: see Atmega32U4 datasheet, section 15.8.2
+    /**Enable PWM output on Timer/Counter4 channels B and D
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    Nothing
+    
+    Make OCR4B/D the registers whose values will be
+    used to determine the duty cycle of the PWM. I.e.,
+    when the corresponding counter TCNT4 reaches the
+    values in these registers pins OC4B/D will toggle
+    More info: see Atmega32U4 datasheet, section 15.8.2
+    **/
     TCCR4A |= (1 << PWM4B);
     TCCR4C |= (1 << PWM4D);
 }
 
 
-// TODO: docstring
 void set_fast_pwm_mode(){
+    /**Enable Fast PWM Mode on Timer/Counter4
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    Nothing
+
+    **/
     // Keep PWM output non-inverted (Clear 'PWM4X')
     TCCR4B &= ~(1 << PWM4X);
 
@@ -198,12 +265,22 @@ void set_fast_pwm_mode(){
 
 
 // !!! USE AT YOUR OWN RISK !!!
-// TODO: docstring
 void use_pwm_enhanced_mode(){
-    // In principle, this mode would allow to gain 1 more resolution
-    // bit for the PWM on Timer/Counter4 only. However, it seems like
-    // this mode has been NOT FUNCTIONING for Atmega32U4, at least up
-    // to revision D.
+    /**Enable Enhanced PWM Mode on Timer/Counter4
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    Nothing
+
+    In principle, this mode would allow to gain 1 more resolution
+    bit for the PWM on Timer/Counter4 only. However, it seems like
+    this mode has been NOT FUNCTIONING for Atmega32U4, at least up
+    to revision D.
+    **/
     // Enable Enhanced Compare/PWM mode (ENHC4 = 1)
     TCCR4E |= 1 << ENHC4;
 }
