@@ -62,7 +62,7 @@ void loop()
 
     /*
     TODO:
-        - Call 'set_coil_current' and adjust current as needed
+        - Call '.set_current' method and adjust current as needed
         - Check return code, transmit error message over serial console
         - Integrate ADC readout from INA214 and current shunt
     */
