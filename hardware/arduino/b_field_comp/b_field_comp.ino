@@ -33,7 +33,10 @@ void setup()
     pinMode(COIL_1_SIGN, OUTPUT);     // Define PF7 as output
     pinMode(COIL_2_SIGN, OUTPUT);     // Define PF6 as output
 
-    setChipSelectHigh(TLE_CHIPSELECT);
+    //setChipSelectHigh(TLE_CHIPSELECT);                                          // TODO: The compiler cannot find 'arduino_utils.h'
+    digitalWrite(TLE_CHIPSELECT_1, HIGH);
+    digitalWrite(TLE_CHIPSELECT_2, HIGH);
+
     SPI.begin();                      // Initializes the SPI bus (SCK and MOSI as OUTPUT)
     pinMode(MISO, INPUT);             // MISO = pin PB3
 }
