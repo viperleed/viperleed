@@ -53,10 +53,10 @@ void loop()
         Serial.println("Heartbeat\n");
     #endif
 
-    errcode = TLE7209readIDandVersion(TLE_CHIPSELECT, &byteRead);
+    errcode = TLE7209readIDandVersion(TLE_CHIPSELECT_1, &byteRead);
     delayMicroseconds(50);
 
-    byteRead = TLE7209readDiagnosticRegister(TLE_CHIPSELECT, &byteRead);
+    byteRead = TLE7209readDiagnosticRegister(TLE_CHIPSELECT_1, &byteRead);
     delayMicroseconds(50);
 
 
