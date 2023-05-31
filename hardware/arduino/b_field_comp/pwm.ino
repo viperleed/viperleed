@@ -61,7 +61,7 @@ byte set_coil_current(double coil_current, uint8_t coil){
     Parameters
     ----------
     coil_current : double
-        Fraction of maximum current. Should be between zero and one.
+        Fraction of maximum current. Should be between -1.0 and +1.0.
     coil : {COIL_1, COIL_2}
         Which coil's current should be set.
 
