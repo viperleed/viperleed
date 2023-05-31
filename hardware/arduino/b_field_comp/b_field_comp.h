@@ -16,6 +16,9 @@ Date: 16.05.2023
 #include "TLE7209.h"
 
 
+// Tell the compiler that 'set_coil_current' is declared in another file
+// This is necessary for the CoilClass declaration below
+extern byte set_coil_current(double, uint8_t);
 
 
 #endif
