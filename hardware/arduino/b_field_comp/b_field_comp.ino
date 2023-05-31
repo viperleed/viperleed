@@ -30,8 +30,6 @@ void setup()
     Coil1.setup();                    // Define PD7 and PB6 as output (used for PWM)
     Coil2.setup();
 
-    pinMode(COIL_1, OUTPUT);          // Define PD7 (OC4D) as output
-    pinMode(COIL_2, OUTPUT);          // Define PB6 (OC4B) as output
     pinMode(COIL_1_SIGN, OUTPUT);     // Define PF7 as output
     pinMode(COIL_2_SIGN, OUTPUT);     // Define PF6 as output
 
