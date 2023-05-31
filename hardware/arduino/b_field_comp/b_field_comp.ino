@@ -7,12 +7,8 @@ Date: 15.05.2023
 */
 
 
-#include <Arduino.h>       // for interrupts()/noInterrupts()
-#include <SPI.h>
 #include "b_field_comp.h"  // globals, #defines, etc.
-#include "pwm.h"           // for set_pwm_frequency, set_coil_current
-#include "TLE7209.h"
-#include "arduino_utils.h" // from '../lib'; for setChipSelectHigh
+//#include "arduino_utils.h" // from '../lib'; for setChipSelectHigh
 
 // TODO: #include other defines, e.g. 'adc.h', 'struct.h', ...
 
