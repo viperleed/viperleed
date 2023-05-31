@@ -51,6 +51,7 @@ byte set_pwm_frequency(double freq){
     // Set PWM frequency to freq (TC4H:OCR4C = 799 gives freq exactly;
     // datasheet formula [Section 15.8.2] off by one for fast PWM mode)
     set_ten_bit_value(pwm_clock_divider, &OCR4C);
+    return 0;
 }
 
 
