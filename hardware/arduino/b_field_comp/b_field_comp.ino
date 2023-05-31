@@ -23,8 +23,13 @@ void setup()
     #endif
 
     set_pwm_frequency(20);  // kHz
-    set_coil_current(0.625, COIL_1);                                            // TODO: could become a .set_current method of coil_t objects? Similarly, the two pinMode calls below could be grouped into a .setup method the coil_t object
-    set_coil_current(0.25,  COIL_2);
+    set_pwm_frequency(20);            // kHz
+
+    Coil1.set_current(0.625);
+    Coil2.set_current(0.25);
+
+    Coil1.setup();                    // Define PD7 and PB6 as output (used for PWM)
+    Coil2.setup();
 
     pinMode(COIL_1, OUTPUT);          // Define PD7 (OC4D) as output
     pinMode(COIL_2, OUTPUT);          // Define PB6 (OC4B) as output
