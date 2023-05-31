@@ -33,4 +33,31 @@ extern byte set_coil_current(double, uint8_t);
 
 #define TLE_CHIPSELECT_1 11     // For SPI communication; PB7 on ATmega32U4 
 #define TLE_CHIPSELECT_2 12     // For SPI communication; PD6 on ATmega32U4 
+
+
+
+class CoilClass {
+public:
+  // Once the constructor has been called, 'coil' will be initialized with
+  // the desired coil (COIL_1, COIL_2)
+  byte coil;
+  
+  // Class constructor
+  CoilClass(byte _coil) {
+    coil = _coil;
+  }
+
+  void setup() {
+    pinMode(coil, OUTPUT);
+  };
+
+  byte set_current(double coil_current) {
+    return set_coil_current(coil_current, coil);
+  };
+};
+
+// Create two global instances of CoilClass with respective initializers
+CoilClass Coil1(COIL_1), Coil2(COIL_2);
+
+
 #endif
