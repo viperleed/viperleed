@@ -26,6 +26,7 @@ byte set_pwm_frequency(double freq){
     error_code : byte
         0 for no-error
         1 freq out-of-range
+
     **/
     if (freq < PWM_MIN_FREQ || freq > F_CLK_T4) return 1;
 
@@ -69,6 +70,7 @@ byte set_coil_current(double coil_current, uint8_t coil){
         0 for no error
         2 for coil_current out-of-range
         3 for invalid coil
+
     **/
     uint8_t *_reg_addr;
     byte sign_select_pin;
