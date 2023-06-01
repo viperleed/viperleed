@@ -28,6 +28,7 @@ import warnings
 
 
 BASE_PATH = Path(__file__).parent.resolve()
+ARDUINO_MICRO = {'matching_boards':({'fqbn': 'arduino:avr:micro'},)}
 
 
 def get_arduino_cli_from_git():
@@ -243,7 +244,7 @@ def get_viperleed_hardware():
     return viper_boards
 
 
-def compile_(for_board, sketch_name='viper-ino', upload=False):
+def compile_(for_board, sketch_name='viper-ino', upload=False, verbose='False'):
     """Compile viper-ino for the specified board.
 
     Parameters
@@ -266,6 +267,9 @@ def compile_(for_board, sketch_name='viper-ino', upload=False):
     if lib_root.exists():
         argv.extend(['--library', str(lib_root)])
 
+    if verbose:
+        argv.append('-v')
+
     if upload:
         argv.extend(['-u', '-p', for_board['port']['address']])
 
@@ -284,4 +288,6 @@ if __name__ == '__main__':
     # install_arduino_core('arduino:avr')
     # print(get_arduino_cores())
     # print(get_viperleed_hardware())
-    compile_(get_viperleed_hardware()[0], upload=True)
+    # compile_(get_viperleed_hardware()[0], upload=True)
+    compile_(get_viperleed_hardware()[0], sketch_name='b_field_comp',
+             upload=False, verbose=True)
