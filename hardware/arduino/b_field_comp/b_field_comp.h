@@ -31,6 +31,10 @@ Date: 16.05.2023
 // This is necessary for the CoilClass declaration below
 extern byte set_coil_current(double, uint8_t);
 
+// Same for the TLE7209 functions used in the driver
+extern TLE7209_Error TLE7209readIDandVersion(byte, byte*);
+extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte*);
+
 
 // The next two pins SHOULD POSSIBLY NOT BE CHANGED. Changing these
 #define COIL_1  6   // PWM output, i.e., voltage value; Also A7;  PD7 on Atmega32U4
@@ -44,6 +48,28 @@ extern byte set_coil_current(double, uint8_t);
 
 #define TLE_CHIPSELECT_1 11     // For SPI communication; PB7 on ATmega32U4 
 #define TLE_CHIPSELECT_2 12     // For SPI communication; PD6 on ATmega32U4 
+
+
+
+class MotorDriver{
+    public:
+        MotorDriver(byte chip_select_pin) : spi_cs_pin(chip_select_pin) {};
+        
+        void setup() {
+            setChipSelectHigh(spi_cs_pin);
+        };
+        
+        TLE7209_Error get_version(byte* version){
+            return TLE7209readIDandVersion(spi_cs_pin, version);
+        };
+        
+        TLE7209_Error get_diagnostic_info(byte* info){
+            return TLE7209readDiagnosticRegister(spi_cs_pin, info);
+        };
+
+    private:
+        const byte spi_cs_pin;
+};
 
 
 
