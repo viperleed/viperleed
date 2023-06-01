@@ -6,7 +6,7 @@ Date: 15.05.2023
 ---------------------
 */
 
-
+#include <Arduino.h>        // for interrupts()/noInterrupts()
 #include "pwm.h"
 
 
@@ -102,8 +102,9 @@ byte set_coil_current(double coil_current, uint8_t coil){
 }
 
 
-void set_current_sign(byte sign, byte sign_select_pin){
-    /**Set digital I/O pin according to current direction in a coil
+
+void set_current_sign(double sign, byte sign_select_pin){
+    /**Set digital I/O pin according to current direction in a coil.
 
     Parameters
     ----------
@@ -128,8 +129,8 @@ void set_current_sign(byte sign, byte sign_select_pin){
 }
 
 
-void set_ten_bit_value(uint16_t ten_bits_value, uint8_t *REGISTER){
-    /**Write 10-Bit value to Timer/Counter4 register
+void set_ten_bit_value(uint16_t ten_bits_value, volatile uint8_t *REGISTER){
+    /**Write 10-Bit value to Timer/Counter4 register.
 
     Parameters
     ----------
@@ -138,10 +139,8 @@ void set_ten_bit_value(uint16_t ten_bits_value, uint8_t *REGISTER){
     REGISTER : uint8_t *
         Address of register to be written to
 
-    Returns
-    -------
-    Nothing
-    
+    Notes
+    -----
     Registers are 8 bits. Some can also accept 10-bit values.
     To do this, the two highest bits are to be written in the
     *shared* register TC4H right before the remaining 8 bits
@@ -156,17 +155,15 @@ void set_ten_bit_value(uint16_t ten_bits_value, uint8_t *REGISTER){
 
 
 void set_pwm_polarity(byte polarity){
-    /**Set PWM polarity
+    /**Set PWM polarity.
 
     Parameters
     ----------
     polarity : byte
         Sets the requested counter polarity
 
-    Returns
-    -------
-    Nothing
-    
+    Notes
+    -----
     Pins OC4B, OC4BD: cleared on compare match (TCNT = OCR4B/D),
     set when TCNT = 0x000; Enable PWM output channels B and D
     This part essentially selects whether we output "high" or
@@ -193,25 +190,22 @@ void set_pwm_polarity(byte polarity){
 
 
 void set_pwm_clock_prescaler(){
-    /**Set PWM clock prescaler
-
-    Parameters
-    ----------
-    None
+    /**Set PWM clock prescaler.
 
     Returns
     -------
     Nothing
-    
-    Set Timer/Counter4 prescaler to 1;
-    Timer/Counter4 clock frequency = system clock frequency / 1
-    (f_clk_T4 = 16 MHz)
-    Notice that we should not divide it further: the faster the counter,
-    the better our resolution. With 16 MHz input and 20 kHz output one
-    gets ~ 16 MHz / 20 kHz = 800 steps of resolution.
 
-    NOTE: Should one decide to use a different clock divider, the value
-          of the PWM_MIN_FREQ should be changed accordingly!
+    Notes
+    -----
+    - Set Timer/Counter4 prescaler to 1;
+    - Timer/Counter4 clock frequency = system clock frequency / 1
+      (f_clk_T4 = 16 MHz).
+      Notice that we should not divide it further: the faster the
+      counter, the better our resolution. With 16 MHz input and 20
+      kHz output one gets ~ 16 MHz / 20 kHz = 800 steps of resolution
+    - IMPORTANT: Should one decide to use a different clock divider,
+      the value of the PWM_MIN_FREQ should be changed accordingly!
     **/
     // Clear entire register except MSbit 'PWM4X'
     TCCR4B &= ~((1 << PSR4)
@@ -226,16 +220,14 @@ void set_pwm_clock_prescaler(){
 
 
 void set_pwm_threshold_channels(){
-    /**Enable PWM output on Timer/Counter4 channels B and D
-
-    Parameters
-    ----------
-    None
+    /**Enable PWM output on Timer/Counter4 channels B and D.
 
     Returns
     -------
     Nothing
-    
+
+    Notes
+    -----
     Make OCR4B/D the registers whose values will be
     used to determine the duty cycle of the PWM. I.e.,
     when the corresponding counter TCNT4 reaches the
@@ -248,16 +240,11 @@ void set_pwm_threshold_channels(){
 
 
 void set_fast_pwm_mode(){
-    /**Enable Fast PWM Mode on Timer/Counter4
-
-    Parameters
-    ----------
-    None
+    /**Enable Fast PWM Mode on Timer/Counter4.
 
     Returns
     -------
     Nothing
-
     **/
     // Keep PWM output non-inverted (Clear 'PWM4X')
     TCCR4B &= ~(1 << PWM4X);
@@ -269,16 +256,14 @@ void set_fast_pwm_mode(){
 
 // !!! USE AT YOUR OWN RISK !!!
 void use_pwm_enhanced_mode(){
-    /**Enable Enhanced PWM Mode on Timer/Counter4
-
-    Parameters
-    ----------
-    None
+    /**Enable Enhanced PWM Mode on Timer/Counter4.
 
     Returns
     -------
     Nothing
 
+    Notes
+    -----
     In principle, this mode would allow to gain 1 more resolution
     bit for the PWM on Timer/Counter4 only. However, it seems like
     this mode has been NOT FUNCTIONING for Atmega32U4, at least up
