@@ -82,7 +82,7 @@ class Coil {
         const MotorDriver driver;
 
         // Class constructor
-        CoilClass(byte pwm, byte _pwm_register, byte sign, byte spi_cs)
+        Coil(byte pwm, byte _pwm_register, byte sign, byte spi_cs)
            : driver(spi_cs), pwm_pin(pwm), pwm_register(_pwm_register),
              pwm_sign_pin(sign) {};
 
