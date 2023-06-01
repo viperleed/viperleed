@@ -244,7 +244,7 @@ def get_viperleed_hardware():
     return viper_boards
 
 
-def compile_(for_board, sketch_name='viper-ino', upload=False, verbose='False'):
+def compile_(for_board, sketch_name='viper-ino', upload=False, verbose=False):
     """Compile viper-ino for the specified board.
 
     Parameters
@@ -280,6 +280,8 @@ def compile_(for_board, sketch_name='viper-ino', upload=False, verbose='False'):
         raise RuntimeError("Arduino CLI failed. Return code="
                            f"{cli.returncode}. The error was:\n"
                            + cli.stderr.decode())
+    finally:
+        print(f"Arduino CLI Output:\n{cli.stdout.decode()}")
 
 
 if __name__ == '__main__':
@@ -290,4 +292,4 @@ if __name__ == '__main__':
     # print(get_viperleed_hardware())
     # compile_(get_viperleed_hardware()[0], upload=True)
     compile_(get_viperleed_hardware()[0], sketch_name='b_field_comp',
-             upload=False, verbose=True)
+             upload=False)
