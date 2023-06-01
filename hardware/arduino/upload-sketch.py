@@ -290,6 +290,5 @@ if __name__ == '__main__':
     # install_arduino_core('arduino:avr')
     # print(get_arduino_cores())
     # print(get_viperleed_hardware())
-    # compile_(get_viperleed_hardware()[0], upload=True)
-    compile_(get_viperleed_hardware()[0], sketch_name='b_field_comp',
-             upload=False)
+    compile_(get_viperleed_hardware()[0], upload=True)
+    # compile_(ARDUINO_MICRO, sketch_name='b_field_comp', upload=False)
