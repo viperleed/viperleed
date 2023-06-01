@@ -25,7 +25,7 @@ Date: 16.05.2023
 // added manually. As an alternative, use upload_sketch.py for compiling,
 // and/or uploading, as that one automatically takes care of linking
 // library root directories before compilation.
-//#include "arduino_utils.h"  // for setChipSelectHigh
+#include "arduino_utils.h"  // for setChipSelectHigh
 
 
 // Tell the compiler that 'set_signed_pwm_value' is declared in another file
@@ -77,7 +77,7 @@ class MotorDriver{
 
 
 
-class CoilClass {
+class Coil {
     public:
         const MotorDriver driver;
 
@@ -107,8 +107,8 @@ class CoilClass {
 
 
 // Create two global instances of CoilClass with respective initializers
-CoilClass coil_1(COIL_1_PWM, COIL_1_PWM_REGISTER, COIL_1_SIGN, COIL_1_SPI_CS);
-CoilClass coil_2(COIL_2_PWM, COIL_2_PWM_REGISTER, COIL_2_SIGN, COIL_2_SPI_CS);
+Coil coil_1(COIL_1_PWM, COIL_1_PWM_REGISTER, COIL_1_SIGN, COIL_1_SPI_CS);
+Coil coil_2(COIL_2_PWM, COIL_2_PWM_REGISTER, COIL_2_SIGN, COIL_2_SPI_CS);
 
 
 #endif   // _VIPERLEED_B_FIELD_COMP
