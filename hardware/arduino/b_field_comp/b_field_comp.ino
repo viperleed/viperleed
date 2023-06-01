@@ -25,18 +25,11 @@ void setup()
 
     set_pwm_frequency(20);            // kHz
 
-    Coil1.set_current(0.625);
-    Coil2.set_current(0.25);
+    coil_1.set_current(0.625);
+    coil_2.set_current(0.25);
 
-    Coil1.setup();                    // Define PD7 and PB6 as output (used for PWM)
-    Coil2.setup();
-
-    pinMode(COIL_1_SIGN, OUTPUT);     // Define PF7 as output
-    pinMode(COIL_2_SIGN, OUTPUT);     // Define PF6 as output
-
-    //setChipSelectHigh(TLE_CHIPSELECT);                                          // TODO: The compiler cannot find 'arduino_utils.h'
-    digitalWrite(TLE_CHIPSELECT_1, HIGH);
-    digitalWrite(TLE_CHIPSELECT_2, HIGH);
+    coil_1.setup();                    // Define PD7 and PB6 as output (used for PWM)
+    coil_2.setup();
 
     SPI.begin();                      // Initializes the SPI bus (SCK and MOSI as OUTPUT)
     pinMode(MISO, INPUT);             // MISO = pin PB3
@@ -54,10 +47,10 @@ void loop()
         Serial.println("Heartbeat\n");
     #endif
 
-    errcode = TLE7209readIDandVersion(TLE_CHIPSELECT_1, &byteRead);
+    errcode = coil_1.driver.get_version(&byteRead);
     delayMicroseconds(50);
 
-    byteRead = TLE7209readDiagnosticRegister(TLE_CHIPSELECT_1, &byteRead);
+    byteRead = coil_1.driver.get_diagnostic_info(&byteRead);
     delayMicroseconds(50);
 
 
