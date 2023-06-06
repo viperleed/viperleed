@@ -32,7 +32,8 @@ For the beam HV pin:
     - a short shrink tube (~1.5 cm),
 
 For the beam HV port:
-    - **TODO: cable, components**
+    - a SHV plug (e.g. RS stock no. 212-7444),
+    - **TODO: cable length, diameter?, other components**
 
 
 Additionally, you will need the following tools to perform the modifications:
@@ -159,7 +160,7 @@ We recommend placing the "Beam HV" port below the ":math:`I0_{\text{MON}}`" port
 
 Carefully punch a hole in the backplate of the chassis in the desired location.
 This may require removing the power plug and screen connector from the backplate.
-Then, place the new high-voltage coaxial connector, solder the connection wire to it and place a shrink tube over he solder spot.
+Then, place the new SHV connector, solder the connection wire to it and place a shrink tube over he solder spot.
 Secure the coaxial connector in place by tightening the nut that came with it on the inside of the backplate.
 
 Finally, re-attach the power and screen plugs if you had to remove them.
