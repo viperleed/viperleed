@@ -542,7 +542,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
             )
     except Exception:
         logger.error(
-            "Error during R-factor calculation. Also check " "R-factor log file."
+            "Error during R-factor calculation. Also check R-factor log file."
         )
         raise
     logger.info("Finished R-factor calculation. Processing files...")
@@ -551,12 +551,12 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         os.rename("WEXPEL", "rfactor-WEXPEL")
     except OSError:
         logger.warning(
-            "Failed to rename R-factor input file WEXPEL to " "rfactor-WEXPEL"
+            "Failed to rename R-factor input file WEXPEL to rfactor-WEXPEL"
         )
     try:
         os.rename("PARAM", "rfactor-PARAM")
     except OSError:
-        logger.warning("Failed to rename R-factor input file PARAM to " "rfactor-PARAM")
+        logger.warning("Failed to rename R-factor input file PARAM to rfactor-PARAM")
     if not os.path.isfile(os.path.join(".", "ROUT")):
         logger.error("No ROUT file was found after R-Factor calculation!")
         rp.setHaltingLevel(2)
