@@ -192,13 +192,13 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
                  + real_iv_shift[1]) + 0.01
-    step = min(expEnergies[1]-expEnergies[0],
-               theoEnergies[1]-theoEnergies[0])
+    # chose energy step width
     if rp.IV_SHIFT_RANGE[2] > 0:
         vincr = rp.IV_SHIFT_RANGE[2]
-        # step = min(step, vincr)
     else:
-        vincr = step
+        min_used_energy_step = min(expEnergies[1]-expEnergies[0],
+            theoEnergies[1]-theoEnergies[0])
+        vincr = min_used_energy_step
     # find correspondence experimental to theoretical beams:
     beamcorr = getBeamCorrespondence(sl, rp)
     # integer & fractional beams
@@ -219,7 +219,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     output = " &NL1\n"
     output += (" EMIN=" + f72.write([minen]).rjust(9) + ",\n")
     output += (" EMAX=" + f72.write([maxen]).rjust(9) + ",\n")
-    output += (" EINCR=" + f72.write([step]).rjust(8) + ",\n")
+    output += (" EINCR=" + f72.write([vincr]).rjust(8) + ",\n")  # interpolation step width
     output += " LIMFIL=      1,\n"  # number of consecutive input files
     output += " IPR=         0,\n"  # output formatting
     output += (" VI=" + f72.write([rp.V0_IMAG]).rjust(11) + ",\n")
