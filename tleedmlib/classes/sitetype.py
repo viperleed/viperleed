@@ -12,7 +12,7 @@ import re
 import numpy as np
 
 import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.periodoc_table import (PERIODIC_TABLE,
+from viperleed.tleedmlib.periodic_table import (PERIODIC_TABLE,
                                                 COVALENT_RADIUS,
                                                 ATOMIC_MASS)
 
