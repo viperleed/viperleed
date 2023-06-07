@@ -76,37 +76,89 @@ for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
 
 
-class ParametersFileError(Exception):
-    """A generic exception related to the PARAMETERS file."""
+class ParameterBaseError(Exception):
+    '''Base class for errors raised during PARAMETERS interpretation'''
 
-    def __init__(self, msg):
-        """Initialize instance."""
-        if not msg.startswith("PARAMETERS file:"):
-            msg = f"PARAMETERS file: {msg}"
-        super().__init__(msg)
+    def __init__(self, parameter, message_text):
+        message = f"PARAMETERS file: parameter {str(parameter)}:\n"
+        if message_text:
+            message += message_text + " "  # add space before "input will be ignored"
+        super().__init__(message)
 
+class ParameterNotRecognizedError(ParameterBaseError):
+    '''Raised when a parameter is not recognized'''
 
-class ParametersSyntaxError(ParametersFileError):
-    """The syntax for a PARAMETER is invalid or could not be parsed."""
+    def __init__(self, parameter):
+        super().__init__(parameter, "Parameter not recognized.")
 
-    def __init__(self, msg, parameter=None):
-        """Initialize instance."""
-        self.parameter = parameter
-        if parameter:
-            msg += f"{parameter.upper()}: {msg}"
-        super().__init__(msg)
+class ParameterUnexpectedInputError(ParameterBaseError):
+    '''Raised when unexpected input is encountered'''
 
+    def __init__(self, parameter):
+        super().__init__(parameter,
+                         "Encountered unexpected input."
+                         "Check parameter syntax.")
 
-class NeedsFlagError(ParametersSyntaxError):
-    """A PARAMETER needs one or more flags that were not found."""
+class ParameterBooleanConversionError(ParameterBaseError):
+    '''Raised when a boolean conversion fails'''
 
+    def __init__(self, parameter):
+        super().__init__(parameter,
+                         "Failed to convert input to boolean."
+                         "Check parameter syntax.")
 
-class NotANumericValueError(ParametersSyntaxError):
-    """A PARAMETER that should have numeric values does not."""
+class ParameterFloatConversionError(ParameterBaseError):
+    '''Raised when a float conversion fails'''
 
+    def __init__(self, parameter):
+        super().__init__(parameter,
+                         "Failed to convert input to float(s)."
+                         "Check parameter syntax.")
 
-class OutOfRangeError(ParametersSyntaxError):
-    """A numeric value is out of bounds."""
+class ParameterIntConversionError(ParameterBaseError):
+    '''Raised when an int conversion fails'''
+
+    def __init__(self, parameter):
+        super().__init__(parameter,
+                         "Failed to convert input to integer(s)."
+                         "Check parameter syntax.")
+
+class ParameterParseError(ParameterBaseError):
+    '''Raised when parsing fails'''
+
+    def __init__(self, parameter):
+        super().__init__(parameter,
+                         "Could not parse input."
+                         "Check parameter syntax.")
+
+class ParameterNumberOfInputsError(ParameterBaseError):
+    '''Raised when the number of inputs is unexpected'''
+
+    def __init__(self, parameter):
+        super().__init__(parameter,
+                         "Unexpected number of inputs.")
+
+class ParameterRangeError(ParameterBaseError):
+    '''Raised when the value is not in the allowed range'''
+
+    def __init__(self, parameter, given_value, allowed_range):
+        message = (f"Value {given_value} is outside allowed range "
+                   f"({allowed_range[0]} <= {parameter} <= "
+                   f"{allowed_range[1]}).")
+        super().__init__(parameter, message)
+
+class ParameterUnknownFlagError(ParameterBaseError):
+    '''Raised when an unknown flag is encountered'''
+
+    def __init__(self, parameter, flag):
+        super().__init__(parameter,
+                         f"Unknown flag '{flag}' encountered.")
+
+class ParameterCustomError(ParameterBaseError):
+    '''Raised when a custom error message is given'''
+
+    def __init__(self, parameter, custom_message):
+        super().__init__(parameter, custom_message)
 
 
 def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
