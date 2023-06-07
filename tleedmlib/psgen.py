@@ -15,7 +15,7 @@ import re
 import shutil
 
 import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.periodoc_table import PERIODIC_TABLE
+from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
 
 import fortranformat as ff
 
@@ -211,7 +211,7 @@ def runPhaseshiftGen_old(sl, rp,
 
     output += (str(len(nsl.atlist))+"  "+str(len(nsl.atlist))
                + "                  #AtomTypes,#OccupiedAtomTypes\n")
-    ptl = [el.lower() for el PERIODIC_TABLE]
+    ptl = [el.lower() for el in PERIODIC_TABLE]
 
     chemels = {}
     chemelspaths = {}

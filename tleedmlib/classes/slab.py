@@ -24,7 +24,7 @@ try:
 except ImportError:
     has_ase = False
 
-from viperleed.tleedmlib.periodoc_table import PERIODIC_TABLE, COVALENT_RADIUS
+from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
