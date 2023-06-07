@@ -205,51 +205,49 @@ def readPARAMETERS(filename='PARAMETERS'):
         Object storing parameters for current run. Will contain parameters
         read in this function, and some 'global' parameters defined at runtime.
     """
+    filename = Path(filename).resolve()
     try:
-        rf = open(filename, 'r')
+        rf = filename.open('r')
     except FileNotFoundError:
         logger.warning("PARAMETERS file not found.")
         raise
     # read PARAMETERS:
-    rpars = tl.Rparams()
+    rpars = rparams.Rparams()
     for line in rf:
-        if "!" in line:
-            line = line.split("!")[0].rstrip()
-        line = line.lstrip()
+        line = strip_comments(line)
         for param in ["STOP", "SEARCH_KILL"]:
-            if line.lstrip().upper().startswith(param) and not re.match(
-                    r"\s*" + param + r"\s*=\s*[Ff](alse)?", line):
+            if (line.upper().startswith(param)
+                    and not re.match(fr"\s*{param}\s*=\s*[Ff](alse)?", line)):
                 logger.warning(
-                    'PARAMETERS file: {0} was set at start of '
-                    'program. Modifying PARAMETERS to disable {0}; re-insert '
-                    'it if you actually want to stop.'.format(param))
+                    f'PARAMETERS file: {param} was set at start of '
+                    f'program. Modifying PARAMETERS to disable {param}; '
+                    're-insert it if you actually want to stop.'
+                    )
                 modifyPARAMETERS(rpars, param, comment='Disabled at program '
-                                 'start', path=os.path.dirname(filename),
+                                 'start', path=filename.parent,
                                  suppress_ori=True)
         if "=" not in line:
             continue     # ignore all lines that don't have an "=" sign at all
-        param = line.split('=')[0]      # parameter is defined left of "="
+        param, value = line.split('=', maxsplit=1)  # parameter at left of "="
         if not param:
             continue
         # get rid of spaces and check the leftmost entry.
-        plist = param.split()
-        param = plist[0]
+        param, *flags = param.split()
         if (param not in _KNOWN_PARAMS and
                 param.lower().replace("_", "") in _PARAM_ALIAS):
             param = _PARAM_ALIAS[param.lower().replace("_", "")]
         if param not in _KNOWN_PARAMS:
-            # If a parameter is not recognized stop execution. If ignored, unintended behavior may occur.
-            raise RuntimeError('PARAMETERS file: Parameter '+param+' not '
-                               'recognized.')
-        value = line.split('=', maxsplit=1)[1].rstrip()
+            logger.warning(f'PARAMETERS file: Parameter {param} not '
+                           'recognized.')
+            rpars.setHaltingLevel(1)
+            continue
+        value = value.strip()
         if not value:
-            logger.warning('PARAMETERS file: ' + param + ' appears to '
+            logger.warning(f'PARAMETERS file: {param} appears to '
                            'have no value')
             rpars.setHaltingLevel(1)
             continue
-        if param not in rpars.readParams:
-            rpars.readParams[param] = []
-        rpars.readParams[param].append((plist, value))
+        rpars.readParams[param].append((flags, value))
     rf.close()
     return rpars
 
