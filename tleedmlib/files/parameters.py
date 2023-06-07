@@ -110,18 +110,37 @@ class ParameterBooleanConversionError(ParameterError):
 class ParameterFloatConversionError(ParameterError):
     '''Raised when a float conversion fails'''
 
-    def __init__(self, parameter):
-        super().__init__(parameter,
-                         "Failed to convert input to float(s)."
-                         "Check parameter syntax.")
+    def __init__(self, parameter, given_value=None):
+        if given_value:
+            super().__init__(parameter,
+                             f'Failed to convert "{given_value}" to float(s).')
+        else:
+            super().__init__(parameter,
+                            "Failed to convert input to float(s)."
+                            "Check parameter syntax.")
 
 class ParameterIntConversionError(ParameterError):
     '''Raised when an int conversion fails'''
 
-    def __init__(self, parameter):
-        super().__init__(parameter,
-                         "Failed to convert input to integer(s)."
-                         "Check parameter syntax.")
+    def __init__(self, parameter, given_value=None):
+        if given_value:
+            super().__init__(parameter,
+                            f'Failed to convert "{given_value}"to integer(s).')
+        else:
+            super().__init__(parameter,
+                            "Failed to convert input to integer(s)."
+                            "Check parameter syntax.")
+
+class ParameterValueError(ParameterError):
+    '''Raised when the value is not allowed'''
+
+    def __init__(self, parameter, given_value=None):
+        if given_value:
+            super().__init__(parameter,
+                             f'Could not interpret "{given_value}".')
+        else:
+            super().__init__(parameter,
+                             "Could not interpret given value.")
 
 class ParameterParseError(ParameterError):
     '''Raised when parsing fails'''
