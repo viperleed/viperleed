@@ -8,13 +8,19 @@ Functions for reading from and writing to the PARAMETERS file
 """
 
 import logging
-import numpy as np
+from pathlib import Path
 import re
 import shutil
-import os
-from pathlib import Path
 
-import viperleed.tleedmlib as tl
+import numpy as np
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import (strip_comments, splitSublists,
+                                      readVector, readIntRange,
+                                      recombineListElements)
+from viperleed.tleedmlib.classes import rparams
+
+
 logger = logging.getLogger("tleedm.files.parameters")
 
 # TODO: fill dict of parameter limits here (e.g. LMAX etc.)
