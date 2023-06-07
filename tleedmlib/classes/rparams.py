@@ -23,8 +23,8 @@ except Exception:
 else:
     plotting = True
 
+import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.files.iodeltas import checkDelta
-from viperleed.tleedmlib.leedbase import getMaxTensorIndex
 from viperleed.tleedmlib.base import available_cpu_count
 from viperleed.tleedmlib.checksums import (
     KNOWN_TL_VERSIONS,
@@ -326,7 +326,7 @@ class Rparams:
         """
         # TENSOR_INDEX:
         if self.TENSOR_INDEX is None:
-            self.TENSOR_INDEX = getMaxTensorIndex()
+            self.TENSOR_INDEX = tl.leedbase.getMaxTensorIndex()
         # TL_VERSION:
         if self.TL_VERSION == 0.:
             path = os.path.join(self.sourcedir, "tensorleed")
