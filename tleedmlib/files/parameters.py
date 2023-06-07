@@ -739,8 +739,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                         parameter=param,
                         found_and_expected=(len(values), 2)
                         )
-                    rpars.setHaltingLevel(1)
-                    continue
                 for ind, name in enumerate(['THETA', 'PHI']):
                     d[name] = getNumericalParameter(
                         f'{param} {name}', values[ind],
@@ -896,34 +894,23 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             try:
                 fl = [float(s) for s in values]
             except ValueError:
-                logger.warning('PARAMETERS file: Failed to convert '
-                               'IV_SHIFT_RANGE input to floats Input will '
-                               'be ignored')
-                rpars.setHaltingLevel(1)
-                continue
+                raise ParameterFloatConversionError(parameter=param)
             if fl[1] < fl[0]:
-                logger.warning('PARAMETERS file: IV_SHIFT_RANGE end energy '
-                               'has to be greater than or equal to start '
-                               'energy. Input will be ignored.')
-                rpars.setHaltingLevel(1)
+                message = "IV_SHIFT_RANGE end energy has to >= start energy."
+                raise ParameterError(param, message)
                 continue
 
             for i in range(0, 2):
                 rpars.IV_SHIFT_RANGE[i] = fl[i]
             if len(fl) == 3 and fl[2] <= 0:
-                logger.warning('PARAMETERS file: IV_SHIFT_RANGE step has '
-                               'to be positive. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-                continue
+                message = "IV_SHIFT_RANGE step has to be positive."
+                raise ParameterError(parameter=param, message=message)
             rpars.IV_SHIFT_RANGE[2] = fl[2]
         elif param == 'LAYER_CUTS':
             # some simple filtering here, but leave as list of strings
             if all(c in right_side for c in "<>"):
-                logger.warning('PARAMETERS file: LAYER_CUTS parameter: '
-                               'Cannot parse list containing both "<" and ">" '
-                               'signs. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-                continue
+                raise ParameterParseError(param,
+                                     'Cannot parse list with both "<" and ">".')
             elif any(c in right_side for c in "<>"):
                 newlist = []
                 for s in values:
@@ -940,17 +927,13 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                             float(m.group('cutoff'))
                             values[i] = m.group(0)
                         except Exception:                                       # TODO: catch better; only 1 statement in try.
-                            logger.warning(
-                                'PARAMETERS file: LAYER_CUTS parameter: Could '
-                                'not parse function ' + s + '. Input will be '
-                                'ignored.')
-                            rpars.setHaltingLevel(1)
-                            continue
+                            raise ParameterParseError(param,
+                                                      f'Could not parse function {s}')
                 elif not (s == "<" or s == ">"):
                     try:
                         float(s)
                     except Exception:
-                        raise ParameterParseError(parameter=param)
+                        raise ParameterParseError(param)
             rpars.LAYER_CUTS = values
         elif param == 'LMAX':
             _min, _max = rpars.get_limits(param)
@@ -959,52 +942,39 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             try:
                 il = [int(v) for v in values]
             except ValueError:
-                logger.warning('PARAMETERS file: LMAX parameter: Could not '
-                               f'parse {right_side!r} as integer(s). Input'
-                               'will be ignored.')
-                rpars.setHaltingLevel(1)
-                continue
+                raise ParameterIntConversionError(param)
             if len(il) > 2:
-                logger.warning(
-                    'PARAMETERS file: LMAX parameter: Expected one or two '
-                    f'values, found {len(il)}. First two values will be used.'
-                    )
-                il = il[:2]
+                raise ParameterNumberOfInputsError(param)
             if len(il) == 1:
                 if not _min < il[0] <= _max:
                     _, il[0], _ = sorted((_min, il[0], _max))
-                    logger.warning(
-                        f'PARAMETERS file: LMAX must be between {_min} '
-                        f'and {_max}. Value will be set to {il[0]}.'
-                        )
+                    raise ParameterError(
+                        param,
+                        f"LMAX must be between {_min} and {_max}."
+                    )
                 rpars.LMAX = [il[0], il[0]]
             elif len(il) == 2:
                 if il[1] < il[0]:
                     il.reverse()
                 if il[0] < _min:
-                    logger.warning('PARAMETERS file: LMAX lower bound must be '
-                                   f'positive. Value will be set to {_min}.')
-                    il[0] = _min
+                    raise ParameterError(
+                        param,
+                        "LMAX lower bound must be positive."
+                    )
                 if il[1] > _max:
-                    logger.warning('PARAMETERS file: LMAX values greater than '
-                                   f'{_max} are currently not supported. Upper'
-                                   f' bound will be set to {_max}.')
-                    il[1] = _max
+                    raise ParameterError(
+                        param,
+                        f"LMAX values greater than {_max} are currently not supported."
+                        )
                 rpars.LMAX = il
         elif param == 'OPTIMIZE':
             if not flags:
-                logger.warning('PARAMETERS file: OPTIMIZE: Parameter to '
-                               'optimize not defined. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-                continue
+                message = ("Parameter to optimize not defined.")
+                raise ParameterError(param, message)
             which = flags[0].lower()
             if which not in ['theta', 'phi', 'v0i',
                              'a', 'b', 'c', 'ab', 'abc', 's_ovl']:
-                logger.warning('PARAMETERS file: OPTIMIZE: Parameter '
-                               f'{which!r} not recognized. Input will '
-                               'be ignored.')
-                rpars.setHaltingLevel(1)
-                continue
+                raise ParameterUnknownFlagError(param, f"{which!r}")
             rpars.OPTIMIZE['which'] = which
             if not other_values:
                 try:
@@ -1016,15 +986,12 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             sublists = splitSublists(values, ',')
             for sl in sublists:
                 if len(sl) != 2:
-                    logger.warning('PARAMETERS file: OPTIMIZE: Expected '
-                                   '"flag value" pairs, found ' + " ".join(sl))
-                    rpars.setHaltingLevel(1)
-                    continue
+                    message = "Expected 'flag value' pairs, found " + " ".join(sl)
+                    raise ParameterError(param, message)
                 flag = sl[0].lower()
                 if flag not in ['step', 'convergence',
                                 'minpoints', 'maxpoints', 'maxstep']:
-                    logger.warning(f'PARAMETERS file: OPTIMIZE: Flag {sl[0]!r}'
-                                   ' not recognized.')
+                    raise ParameterUnknownFlagError(param, f"{flag!r}")
                     rpars.setHaltingLevel(1)
                     continue
                 partype = {'step': float, 'convergence': float,
@@ -1035,10 +1002,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                'Value will be ignored.')
                 try:
                     rpars.OPTIMIZE[flag] = partype[flag](sl[1])
-                except ValueError:
-                    logger.warning(value_error)
-                    rpars.setHaltingLevel(1)
-                    continue
+                except ValueError as err:
+                    raise ParameterError(param, value_error) from err
         elif param == 'PARABOLA_FIT':
             if value == 'off':
                 rpars.PARABOLA_FIT['type'] = 'none'
@@ -1056,8 +1021,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                          'ridge', 'elasticnet', 'none'):
                         rpars.PARABOLA_FIT['type'] = sl[1]
                     else:
-                        logger.warning(value_error)
-                        rpars.setHaltingLevel(1)
+                        raise ParameterError(param, value_error)
                 elif flag in ('alpha', 'mincurv', 'localize'):
                     try:
                         f = float(sl[1])
@@ -1066,8 +1030,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     if f >= 0:
                         rpars.PARABOLA_FIT[flag] = f
                     else:
-                        logger.warning(value_error)
-                        rpars.setHaltingLevel(1)
+                        raise ParameterError(param, value_error)
         elif param == 'PHASESHIFT_EPS':
             try:
                 f = float(value)
@@ -1076,33 +1039,20 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 ps_eps_default_dict = rpars.get_default(param)
                 f = ps_eps_default_dict.get(s, None)
                 if f is None:
-                    logger.warning('PARAMETERS file: PHASESHIFT_EPS: '
-                                   'Could not convert value to float. '
-                                   'Input will be ignored.')
-                    rpars.setHaltingLevel(1)
-                    continue
+                    raise ParameterFloatConversionError(param)
             if 0 < f < 1:
                 rpars.PHASESHIFT_EPS = f
             else:
-                logger.warning(
-                    'PARAMETERS file: PHASESHIFT_EPS: Unexpected value '
-                    '(should be between 0 and 1). Input will be ignored.')
-                rpars.setHaltingLevel(1)
+                raise ParameterRangeError(param, given_value=f, allowed_range=(0,1))
         elif param == 'PLOT_IV':
             if not flags:
-                logger.warning('PARAMETERS file: PLOT_IV: Found no flag. '
-                               'Input will be ignored.')
-                rpars.setHaltingLevel(1)
-                continue
+                raise ParameterNeedsFlagError(param)
             flag = flags[0].lower()
             value = value.lower()
             if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
                             'border', 'borders', 'axes', 'legend', 'legends',
                             'layout', 'overbar', 'overline', 'plot'):
-                logger.warning(f'PARAMETERS file: PLOT_IV: Flag {flag} not '
-                               'recognized. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-                continue
+                raise ParameterUnknownFlagError(param, f"{flag!r}")
             if flag == 'plot':
                 # should it plot?
                 if value in ('true'):
@@ -1569,9 +1519,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 except (ValueError, IndexError):
                     message = ("Could not parse constants for Rundgren-type "
                                "function.")
-                    raise ParameterCustomError(param, custom_message=message)
-                    logger.warning(
-                    rpars.setHaltingLevel(1)
+                    raise ParameterError(param, message=message)
             else:
                 setTo = re.sub("(?i)EE", "EEV+workfn", right_side)
             if isinstance(setTo, str):
