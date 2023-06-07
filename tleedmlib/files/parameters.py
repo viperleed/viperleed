@@ -1002,7 +1002,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     try:
                         i = int(value)
                     except (ValueError, IndexError):
-                        raise ParameterIntConversionError(param, value
+                        raise ParameterIntConversionError(param, value)
                     if i <= 0:
                         message = "perpage value has to be positive integer."
                         raise ParameterParseError(param, message)
