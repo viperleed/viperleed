@@ -351,8 +351,9 @@ def readPARAMETERS(filename='PARAMETERS'):
             continue
         value = value.strip()
         if not value:
-            continue
             raise ParameterNotRecognizedError(parameter=param)
+        if param not in rpars.readParams:
+            rpars.readParams[param] = []
         rpars.readParams[param].append((flags, value))
     rf.close()
     return rpars
@@ -736,10 +737,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                 )
                             break
                     else:
-                        logger.warning(f'PARAMETERS file: {param}: Unknown '
-                                       'flag found. Input will be ignored.')
-                        rpars.setHaltingLevel(1)
-                        continue
+                        raise ParameterUnknownFlagError(parameter=param,
+                                                        flag=sl[0])
             else:
                 if len(values) != 2:
                     logger.warning(
@@ -797,12 +796,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             name = flags[0] if flags else ""
             names = [n for (n, _) in rpars.DOMAINS]
             if name in names:
-                logger.warning(
-                    'PARAMETERS file: Multiple sources defined '
-                    f'for DOMAIN {name}. Last entry will be ignored.'
-                    )
-                rpars.setHaltingLevel(2)
-                continue
+                # TODO: raise in this case?
+                error_message = ("Multiple sources defined for"
+                                 f"domain {name}.")
+                raise ParameterCustomError(parameter=param,
+                                           custom_message=error_message)
             if not name:  # get unique name
                 i = 1
                 while str(i) in names:
@@ -815,26 +813,20 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             elif Path(right_side).with_suffix(".zip").is_file():
                 path = right_side + ".zip"
             else:
-                logger.warning(
-                    f'PARAMETERS file: Value for DOMAIN {name} could '
-                    'not be interpreted as either a path or a .zip file.'
-                    )
-                rpars.setHaltingLevel(2)
-                continue
+                error_message = (f"Value for DOMAIN {name} could not be "
+                                 "interpreted as either a path or a .zip file.")
+                raise ParameterCustomError(parameter=param,
+                                           custom_message=error_message)
             rpars.DOMAINS.append((name, path))
         elif param == 'DOMAIN_STEP':
             try:
                 i = int(value)
             except ValueError:
-                logger.warning(
-                    'PARAMETERS file: DOMAIN_STEP: Could not '
-                    'convert value to integer. Input will be ignored.')
-                rpars.setHaltingLevel(1)
+                raise ParameterIntConversionError(parameter=param)
             if not (1 <= i <= 100):
-                logger.warning('PARAMETERS file: DOMAIN_STEP: Invalid '
-                               'value given. Input will be ignored.')
-                rpars.setHaltingLevel(1)
-                continue
+                raise ParameterRangeError(parameter=param,
+                                          given_value=i,
+                                          allowed_range=(1, 100))
             if 100 % i != 0:
                 j = i-1
                 while 100 % j != 0:
@@ -848,29 +840,21 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             else:
                 rpars.DOMAIN_STEP = i
         elif param == 'ELEMENT_MIX':                                            # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME?
-            ptl = [el.lower() for el in leedbase.PERIODIC_TABLE]
+            ptl = [el.lower() for el in leedbase.PERIODIC_TABLE]                # TODO: nicer to use the leedbase element getter function and catch exceptions
             found = False
             for el in values:
                 if el.lower() not in ptl:
-                    logger.warning(
-                        f'PARAMETERS file: ELEMENT_MIX for {flags[0]}: '
-                        f'{el} not found in periodic table. ELEMENT_MIX '
-                        f'for {flags[0]} will be ignored.'
-                        )
-                    rpars.setHaltingLevel(1)
-                    found = True
+                    message = f"Element {el} not found in periodic table."
+                    raise ParameterCustomError(parameter=param,
+                                               custom_message=message)
             if not found:
                 rpars.ELEMENT_MIX[flags[0].capitalize()] = [el.capitalize()
                                                             for el in values]
         elif param == 'ELEMENT_RENAME':
-            ptl = [el.lower() for el in leedbase.PERIODIC_TABLE]                # TODO: nicer to use the leedbase element getter function and catch exceptions
             if value.lower() not in ptl:
-                logger.warning(
-                    f'PARAMETERS file: ELEMENT_RENAME for {flags[0]}: '
-                    f'{value} not found in periodic table. ELEMENT_RENAME '
-                    f'for {flags[0]} will be ignored.'
-                    )
-                rpars.setHaltingLevel(1)
+                message = f"Element {el} not found in periodic table."
+                raise ParameterCustomError(parameter=param,
+                                            custom_message=message)
             else:
                 rpars.ELEMENT_RENAME[flags[0].capitalize()] = (
                     value.capitalize()
@@ -892,12 +876,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             else:
                 delim = value[0]     # should be quotation marks                # TODO: is this needed now that we use f-strings?
                 if delim not in ["'", '"']:
-                    logger.warning(
-                        'PARAMETERS file: FORTRAN_COMP '
-                        'parameter: No valid shorthand and not delimited '
-                        'by quotation marks. Value will be ignored.')
-                    rpars.setHaltingLevel(1)
-                    continue
+                    message = ("No valid shorthand and not delimited by "
+                               "quotation marks.")
+                    raise ParameterCustomError(parameter=param,
+                                               custom_message=message)
                 else:
                     setTo = right_side.split(delim)[1]
                 if not flags:
@@ -909,20 +891,16 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 elif flags[0].lower() == "mpipost":
                     rpars.FORTRAN_COMP_MPI[1] = setTo
                 else:
-                    logger.warning(
-                        'PARAMETERS file: FORTRAN_COMP parameter: Could '
-                        'not interpret flags. Value will be ignored.'
-                        )
-                    rpars.setHaltingLevel(1)
+                    raise ParameterUnknownFlagError(parameter=param,
+                                                    flag=plist[1])
         elif param == 'INTPOL_DEG':
             if value in ('3', '5'):
                 rpars.INTPOL_DEG = int(value)
             else:
-                logger.warning(
-                    'PARAMETERS file: INTPOL_DEG parameter: Only degree '
-                    '3 and 5 supported at the moment. Defaulting to 3.'
-                    )
-                rpars.setHaltingLevel(1)
+                message = ("Only degree 3 and 5 interpolation supported at the "
+                           "moment.")
+                raise ParameterCustomError(parameter=param,
+                                             custom_message=message)
         elif param == 'IV_SHIFT_RANGE':
             if len(values) not in (2, 3):
                 logger.warning('PARAMETERS file: Unexpected number of '
@@ -986,11 +964,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     try:
                         float(s)
                     except Exception:
-                        logger.warning('PARAMETERS file: LAYER_CUTS '
-                                       'parameter: Error parsing values. '
-                                       'Input will be ignored.')
-                        rpars.setHaltingLevel(1)
-                        continue
+                        raise ParameterParseError(parameter=param)
             rpars.LAYER_CUTS = values
         elif param == 'LMAX':
             _min, _max = rpars.get_limits(param)
@@ -1607,10 +1581,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 try:
                     setTo = [float(other_values[i]) for i in range(4)]
                 except (ValueError, IndexError):
+                    message = ("Could not parse constants for Rundgren-type "
+                               "function.")
+                    raise ParameterCustomError(param, custom_message=message)
                     logger.warning(
-                        "PARAMETERS file: V0_REAL parameter: "
-                        "could not parse constants for Rundgren-type "
-                        "function. Input will be ignored.")
                     rpars.setHaltingLevel(1)
             else:
                 setTo = re.sub("(?i)EE", "EEV+workfn", right_side)
