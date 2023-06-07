@@ -270,9 +270,9 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
     try:
         with open(update_from / filename, 'r') as rf:
             lines = rf.readlines()
-    except FileNotFoundError:
-        logger.warning("updatePARAMETERS routine: PARAMETERS file not found.")  # TODO: raise?
-        return
+    except FileNotFoundError as err:
+        logger.error("updatePARAMETERS routine: PARAMETERS file not found.")
+        raise err
 
     for line in lines:
         line = strip_comments(line)
@@ -319,9 +319,9 @@ def readPARAMETERS(filename='PARAMETERS'):
     filename = Path(filename).resolve()
     try:
         rf = filename.open('r')
-    except FileNotFoundError:
-        logger.warning("PARAMETERS file not found.")
-        raise
+    except FileNotFoundError as err:
+        logger.error("PARAMETERS file not found.")
+        raise err
     # read PARAMETERS:
     rpars = rparams.Rparams()
     for line in rf:
@@ -348,10 +348,7 @@ def readPARAMETERS(filename='PARAMETERS'):
                 param.lower().replace("_", "") in _PARAM_ALIAS):
             param = _PARAM_ALIAS[param.lower().replace("_", "")]
         if param not in _KNOWN_PARAMS:
-            logger.warning(f'PARAMETERS file: Parameter {param} not '
-                           'recognized.')
-            rpars.setHaltingLevel(1)
-            continue
+            raise ParameterNotRecognizedError(parameter=param)
         value = value.strip()
         if not value:
             raise ParameterNotRecognizedError(parameter=param)
@@ -390,8 +387,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
     """
 
     def setBoolParameter(rp, param, value, varname=None,
-                         addAllowedValues={False: [], True: []},
-                         haltingOnFail=1):
+                         addAllowedValues={False: [], True: []}):
         """
         Generic function for setting a given parameter to a boolean value.
 
@@ -409,8 +405,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             Additional string values which should be interpreted as False or
             True. By default, 'f' and 'false' are False, 't' and 'true' are
             True.
-        haltingOnFail : int, optional
-            What halting level should be set if the 'fail' event is triggered.
 
         Returns
         ----------
@@ -432,8 +426,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
         setattr(rp, varname, v)
         return 0
 
-    def getNumericalParameter(param, value, type_=float,
-                              range_=(None, None), haltingOnFail=1,
+    def getNumericalParameter(param, value,
+                              type_=float,
+                              range_=(None, None),
                               range_exclude=(False, False),
                               outOfRangeEvent=('fail', 'fail')):
         """
@@ -461,8 +456,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             brought within the range by '%' operation. For 'set', the value
             will be set to the lowest allowed value. The default is
             ('fail', 'fail').
-        haltingOnFail : int, optional
-            What halting level should be set if the 'fail' event is triggered.
 
         Returns
         ----------
@@ -470,7 +463,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             The value to set, or None if interpretation failed.
 
         """
-
+        if type_ not in (int, float):
+            raise ValueError('type_ must be int or float')
         try:
             try:
                 v = type_(value)
@@ -479,12 +473,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     raise
                 v = int(float(value))  # for e.g. '1e6' to int
         except ValueError:
-            logger.warning(
-                f'PARAMETERS file: {param}: Could not convert '
-                f'value to {type_.__name__}. Input will be ignored.'
-                )
-            rpars.setHaltingLevel(haltingOnFail)
-            return None
+            if type is int:
+                raise ParameterIntegerConversionError(parameter=param)
+            else:  # type is float
+                raise ParameterFloatConversionError(parameter=param)
         outOfRange = [False, False]
         if range_[0] is not None and (v < range_[0] or
                                       (range_exclude[0] and v == range_[0])):
@@ -510,10 +502,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 outOfRangeStr = f'larger than {range_[1]}'
         if any(outOfRange[i] and outOfRangeEvent[i] == 'fail'
                for i in range(0, 2)):
-            logger.warning(f'PARAMETERS file: {param}: Value {v} is '
-                           f'{outOfRangeStr}. Input will be ignored.')
-            rpars.setHaltingLevel(haltingOnFail)
-            return None
+            message = f"Value {v} is {outOfRangeStr}."
+            raise ParameterError(param, message=message)
 
         for i in range(0, 2):
             if not outOfRange[i]:
@@ -536,6 +526,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     setTo = range_[i] + mult
             else:
                 setTo = range_[i]
+            # TODO: raise?
             logger.warning(f'PARAMETERS file: {param}: Value {v} is '
                            f'{outOfRangeStr}. Value will be set to {setTo}.')
             v = setTo
@@ -744,9 +735,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                                         flag=sl[0])
             else:
                 if len(values) != 2:
-                    logger.warning(
-                        f'PARAMETERS file: {param}: Expected 2 values, '
-                        f'found {len(values)}. Input will be ignored.'
+                    raise ParameterNumberOfInputsError(
+                        parameter=param,
+                        found_and_expected=(len(values), 2)
                         )
                     rpars.setHaltingLevel(1)
                     continue
@@ -757,7 +748,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                         outOfRangeEvent=outOfRangeEvent[name]
                         )
             if any(v is None for v in d.values()):
-                continue    # some error occurred, don't set values
+                raise ParameterParseError(parameter=param)
+            # check for negative theta and adjust phi
             if d['THETA'] < 0:
                 d['THETA'] = abs(d['THETA'])
                 d['PHI'] = (d['PHI'] + 180) % 360
@@ -802,8 +794,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 # TODO: raise in this case?
                 error_message = ("Multiple sources defined for"
                                  f"domain {name}.")
-                raise ParameterCustomError(parameter=param,
-                                           custom_message=error_message)
+                raise ParameterError(parameter=param,
+                                           message=error_message)
             if not name:  # get unique name
                 i = 1
                 while str(i) in names:
@@ -818,8 +810,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             else:
                 error_message = (f"Value for DOMAIN {name} could not be "
                                  "interpreted as either a path or a .zip file.")
-                raise ParameterCustomError(parameter=param,
-                                           custom_message=error_message)
+                raise ParameterError(parameter=param,
+                                           message=error_message)
             rpars.DOMAINS.append((name, path))
         elif param == 'DOMAIN_STEP':
             try:
@@ -831,15 +823,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                           given_value=i,
                                           allowed_range=(1, 100))
             if 100 % i != 0:
-                j = i-1
-                while 100 % j != 0:
-                    j -= 1
-                logger.warning(
-                    'PARAMETERS file: DOMAIN_STEP: 100 is not divisible by '
-                    f'given value {i}. DOMAIN_STEP will be set to {j} instead.'
-                    )
-                rpars.setHaltingLevel(1)
-                rpars.DOMAIN_STEP = j
+                message = (f"100 is not divisible by given value {i}.")
+                raise ParameterError(parameter=param,message=message)
             else:
                 rpars.DOMAIN_STEP = i
         elif param == 'ELEMENT_MIX':                                            # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME?
@@ -848,16 +833,17 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             for el in values:
                 if el.lower() not in ptl:
                     message = f"Element {el} not found in periodic table."
-                    raise ParameterCustomError(parameter=param,
-                                               custom_message=message)
+                    raise ParameterError(parameter=param,
+                                               message=message)
             if not found:
                 rpars.ELEMENT_MIX[flags[0].capitalize()] = [el.capitalize()
                                                             for el in values]
         elif param == 'ELEMENT_RENAME':
+            ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]             # TODO: nicer to use the leedbase element getter function and catch exceptions
             if value.lower() not in ptl:
                 message = f"Element {el} not found in periodic table."
-                raise ParameterCustomError(parameter=param,
-                                            custom_message=message)
+                raise ParameterError(parameter=param,
+                                            message=message)
             else:
                 rpars.ELEMENT_RENAME[flags[0].capitalize()] = (
                     value.capitalize()
@@ -881,8 +867,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 if delim not in ["'", '"']:
                     message = ("No valid shorthand and not delimited by "
                                "quotation marks.")
-                    raise ParameterCustomError(parameter=param,
-                                               custom_message=message)
+                    raise ParameterError(parameter=param,
+                                               message=message)
                 else:
                     setTo = right_side.split(delim)[1]
                 if not flags:
@@ -902,14 +888,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             else:
                 message = ("Only degree 3 and 5 interpolation supported at the "
                            "moment.")
-                raise ParameterCustomError(parameter=param,
-                                             custom_message=message)
+                raise ParameterError(parameter=param,
+                                             message=message)
         elif param == 'IV_SHIFT_RANGE':
             if len(values) not in (2, 3):
-                logger.warning('PARAMETERS file: Unexpected number of '
-                               'values for IV_SHIFT_RANGE. Input will be '
-                               'ignored.')
-                continue
+                raise ParameterNumberOfInputsError(parameter=param)
             try:
                 fl = [float(s) for s in values]
             except ValueError:
