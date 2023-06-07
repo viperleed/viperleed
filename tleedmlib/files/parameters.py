@@ -19,6 +19,7 @@ from viperleed.tleedmlib.base import (strip_comments, splitSublists,
                                       readVector, readIntRange,
                                       recombineListElements)
 from viperleed.tleedmlib.classes import rparams
+from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
 
 logger = logging.getLogger("tleedm.files.parameters")
@@ -27,7 +28,7 @@ logger = logging.getLogger("tleedm.files.parameters")
 # TODO: change module level globals to ALL_CAPS everywhere
 
 # list of allowed parameters
-_KNOWN_PARAMS = [
+_KNOWN_PARAMS = [                                                               # TODO: IntEnum?
     'ATTENUATION_EPS', 'AVERAGE_BEAMS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'BULKDOUBLING_MAX', 'BULK_LIKE_BELOW', 'BULK_REPEAT', 'DOMAIN',
     'DOMAIN_STEP', 'ELEMENT_MIX',
@@ -200,81 +201,48 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
     rp : Rparams
         Parameters for current run, as defined previously. Will be updated if
         parameters have changed.
-    filename : string, optional
+    filename : str, optional
         The file to be read. The default is 'PARAMETERS'.
-    update_from : pathlike, optional
+    update_from : str or path-like, optional                                    # TODO: missing doc
 
     Returns
     -------
     None.
-
     """
-    _update_from = Path(update_from)
+    update_from = Path(update_from)
     try:
-        with open(_update_from / filename, 'r') as rf:
+        with open(update_from / filename, 'r') as rf:
             lines = rf.readlines()
     except FileNotFoundError:
-        logger.warning("updatePARAMETERS routine: PARAMETERS file not found.")
+        logger.warning("updatePARAMETERS routine: PARAMETERS file not found.")  # TODO: raise?
         return
+
     for line in lines:
-        for c in ["!", "#", "%"]:    # start of comment
-            line = line.split(c)[0].rstrip()
+        line = strip_comments(line)
         for param in ["SEARCH_KILL", "STOP"]:  # SEARCH_KILL is legacy name
-            if line.lstrip().upper().startswith(param):
-                if not re.match(r"\s*"+param+r"\s*=\s*[Ff](alse)?", line):
+            if line.upper().startswith(param):
+                if not re.match(fr"\s*{param}\s*=\s*[Ff](alse)?", line):
                     rp.STOP = True
-        if "=" not in line:
+        if "=" not in line:                                                     # TODO: perhaps we should rather look at the first entry of a .split() and see if, by chance, it is a valid parameter. Then warn and continue reading.
             continue  # ignore all lines that don't have an "=" sign at all
-        param = line.split('=')[0]        # parameter is defined left of "="
+        param, value = line.split('=', maxsplit=1)
         if param:
             # get rid of spaces and check the leftmost entry.
-            plist = param.split()
-            if plist:
-                param = plist[0]
-        if (param not in _KNOWN_PARAMS and
-                param.lower().replace("_", "") in _PARAM_ALIAS):
-            param = _PARAM_ALIAS[param.lower().replace("_", "")]
+            param, *flags = param.split()
+        param_alias = param.lower().replace("_", "")
+        if param not in _KNOWN_PARAMS and param_alias in _PARAM_ALIAS:
+            param = _PARAM_ALIAS[param_alias]
         if param not in _KNOWN_PARAMS:
             continue
-        try:
-            value = line.split('=', maxsplit=1)[1].rstrip()
-            llist = value.split()  # read the stuff to the right of "="
-        except IndexError:
-            llist = []
-        if not llist:
-            continue
+        values = value.rstrip().split()
+        if not values:
+            continue                                                            # TODO: shouldn't we complain?
         if param == 'SEARCH_CONVERGENCE':
-            flags = plist[1:]
-            if not flags or flags[0].lower() not in ['dgen', 'gaussian']:
-                continue
-            fl = [None, None]
-            for (i, s) in enumerate(llist[:2]):
-                try:
-                    fl[i] = float(s)
-                except Exception:
-                    pass
-            if flags[0].lower() == 'gaussian':
-                if (fl[0] is not None and fl[0] > 0
-                        and fl[0] != rp.searchConvInit["gaussian"]):
-                    rp.GAUSSIAN_WIDTH = fl[0]
-                    rp.searchConvInit["gaussian"] = fl[0]
-                if fl[1] is not None:
-                    if 0 < fl[1] <= 1:
-                        rp.GAUSSIAN_WIDTH_SCALING = fl[1]
-            elif flags[0].lower() == 'dgen':
-                if len(flags) == 1:
-                    target = 'dec'
-                elif flags[1].lower() in ['dec', 'best', 'all']:
-                    target = flags[1].lower()
-                else:
-                    continue
-                if fl[0] is not None and fl[0] > 0:
-                    if fl[0] != rp.searchConvInit["dgen"][target]:
-                        rp.SEARCH_MAX_DGEN[target] = fl[0]
-                        rp.searchConvInit["dgen"][target] = fl[0]
-                if fl[1] is not None:
-                    if 1 <= fl[1]:
-                        rp.SEARCH_MAX_DGEN_SCALING[target] = fl[1]
+            try:
+                _interpret_SEARCH_CONVERGENCE(rp, flags, values,
+                                              is_updating=True)
+            except ParametersSyntaxError:
+                pass                                                            # TODO: this was the default behaviour, but perhaps we should warn that we have skipped some lines because they had incorrect syntax?
 
 
 def readPARAMETERS(filename='PARAMETERS'):
@@ -340,7 +308,7 @@ def readPARAMETERS(filename='PARAMETERS'):
     return rpars
 
 
-def interpretPARAMETERS(rpars, slab=None, silent=False):
+def interpretPARAMETERS(rpars, slab=None, silent=False):                        # TODO: replace the implementation of this one with a PARAMETERSInterpreter class; make the defs below into methods, make a method that interprets one of the loop iterations, split all the branches into methods. The _interpret_SEARCH_CONVERGENCE above would become one such method.
     """
     Interprets the string values in an Rparams object, read previously by
     readPARAMETERS, to fill the parameter variables.
@@ -589,75 +557,82 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     searchConvRead = False
     # define order that parameters should be read in
     orderedParams = ["LOG_DEBUG", "RUN"]
-    checkParams = [p for p in orderedParams if p in rpars.readParams]
-    checkParams.extend([p for p in _KNOWN_PARAMS if (p in rpars.readParams and
-                                                   p not in checkParams)])
+    param_names = [p for p in orderedParams if p in rpars.readParams]
+    param_names.extend(p for p in _KNOWN_PARAMS
+                       if p in rpars.readParams and p not in param_names)
+
+    # Flatten out the (possibly multiple) assignments read from
+    # the PARAMETERS file for each parameter
+    flat_params = ((p_name, *flags_and_value)
+                   for p_name in param_names
+                   for flags_and_value in rpars.readParams[p_name])
     domainsIgnoreParams = [
         'BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
         'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'SUPERLATTICE',
         'SYMMETRY_CELL_TRANSFORM', 'TENSOR_INDEX', 'TENSOR_OUTPUT']
-    for (param, plist, value) in [(param, lel[0], lel[1])
-                                  for param in checkParams
-                                  for lel in rpars.readParams[param]]:
-        if (4 in rpars.RUN or rpars.domainParams) and (param in
-                                                       domainsIgnoreParams):
+    _is_doman_calc = Section.DOMAINS in rpars.RUN or rpars.domainParams
+    for param, flags, right_side in flat_params:
+        if _is_doman_calc and param in domainsIgnoreParams:
             continue
-        llist = value.split()
+        values = right_side.split()
+        value, *other_values = values                                           # TODO: probably cleaner to use a namedtuple or a simple @dataclass?
         # parameters not interpreted right now
         if param == 'VIBR_AMP_SCALE':
-            rpars.VIBR_AMP_SCALE.extend(value.split(","))
+            rpars.VIBR_AMP_SCALE.extend(right_side.split(","))
         # simple bool parameters
         elif param in ['LOG_DEBUG', 'LOG_SEARCH', 'PHASESHIFTS_CALC_OLD',
-                       'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY', 'SUPPRESS_EXECUTION',
-                       'SYMMETRIZE_INPUT', 'SYMMETRY_FIND_ORI', 'TL_IGNORE_CHECKSUM']:
-            setBoolParameter(rpars, param, llist[0])
+                       'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY',
+                       'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
+                       'SYMMETRY_FIND_ORI', 'TL_IGNORE_CHECKSUM']:
+            setBoolParameter(rpars, param, value)
         # slightly more complicated bools
         elif param == 'LAYER_STACK_VERTICAL':
-            setBoolParameter(rpars, param, llist[0],
-                             addAllowedValues={False: ['c'], True: ['z']})
+            setBoolParameter(rpars, param, value,
+                             addAllowedValues={False: 'c', True: 'z'})
         # positive-only integers
         elif param in ['BULKDOUBLING_MAX', 'N_CORES', 'SEARCH_MAX_GEN',
                        'TENSOR_INDEX']:
-            setNumericalParameter(rpars, param, llist[0], type_=int,
+            setNumericalParameter(rpars, param, value, type_=int,
                                   range_=(1, None))
         # positive-only floats
-        elif param in ['T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'TL_VERSION', 'S_OVL']:
-            setNumericalParameter(rpars, param, llist[0], range_=(0, None))
+        elif param in ['T_DEBYE', 'T_EXPERIMENT',
+                       'V0_IMAG', 'TL_VERSION', 'S_OVL']:
+            setNumericalParameter(rpars, param, value, range_=(0, None))
         # simple numericals
         elif param == 'V0_Z_ONSET':
-            setNumericalParameter(rpars, param, llist[0])
+            setNumericalParameter(rpars, param, value)
         elif param == 'ATTENUATION_EPS':
-            setNumericalParameter(rpars, param, llist[0], range_=(1e-6, 1),
+            setNumericalParameter(rpars, param, value, range_=(1e-6, 1),
                                   range_exclude=(False, True))
         elif param == 'BULKDOUBLING_EPS':
-            setNumericalParameter(rpars, param, llist[0],
+            setNumericalParameter(rpars, param, value,
                                   range_=(0.0001, None),
                                   outOfRangeEvent=('set', 'fail'))
         elif param == 'BULK_LIKE_BELOW':
-            setNumericalParameter(rpars, param, llist[0], range_=(0, 1),
+            setNumericalParameter(rpars, param, value, range_=(0, 1),
                                   range_exclude=(True, True))
         elif param == 'HALTING':
-            setNumericalParameter(rpars, param, llist[0], type_=int,
+            setNumericalParameter(rpars, param, value, type_=int,
                                   range_=(1, 3))
         elif param == 'N_BULK_LAYERS':
-            setNumericalParameter(rpars, param, llist[0], type_=int,
+            setNumericalParameter(rpars, param, value, type_=int,
                                   range_=(1, 2), haltingOnFail=2)
         elif param == 'R_FACTOR_SMOOTH':
-            setNumericalParameter(rpars, param, llist[0], type_=int,
+            setNumericalParameter(rpars, param, value, type_=int,
                                   range_=(0, 999))
         elif param == 'R_FACTOR_TYPE':
-            setNumericalParameter(rpars, param, llist[0], type_=int,
+            setNumericalParameter(rpars, param, value, type_=int,
                                   range_=(1, 2))
         elif param == 'SCREEN_APERTURE':
-            setNumericalParameter(rpars, param, llist[0], range_=(0, 180))
+            setNumericalParameter(rpars, param, value, range_=(0, 180))
         elif param == 'SEARCH_POPULATION':
-            r = setNumericalParameter(rpars, param, llist[0], type_=int,
+            r = setNumericalParameter(rpars, param, value, type_=int,
                                       range_=(1, None))
             if r == 0 and rpars.SEARCH_POPULATION < 16:
                 logger.warning('SEARCH_POPULATION is very small. A '
                                'minimum value of 16 is recommended.')
         elif param == 'SYMMETRY_EPS':
-            r = setNumericalParameter(rpars, param, llist[0],
+            r = setNumericalParameter(rpars, param, value,
                                       range_=(1e-100, None),
                                       outOfRangeEvent=("set", "set"))
             if r == 0 and rpars.SYMMETRY_EPS > 1.0:
@@ -668,8 +643,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     'incorrect symmetry detection. Be sure to check '
                     'the output!')
                 rpars.setHaltingLevel(1)
-            if len(llist) > 1:
-                r = setNumericalParameter(rpars, param, llist[0],
+            if other_values:
+                r = setNumericalParameter(rpars, param, other_values[0],
                                           range_=(1e-100, None),
                                           outOfRangeEvent=("set", "set"),
                                           varname='SYMMETRY_EPS_Z')
@@ -685,49 +660,55 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.SYMMETRY_EPS_Z = rpars.SYMMETRY_EPS
             else:
                 rpars.SYMMETRY_EPS_Z = rpars.SYMMETRY_EPS
+        elif param == 'ZIP_COMPRESSION_LEVEL':
+            setNumericalParameter(rpars, param, value, type_=int,
+                                  range_=(0, 9))
         # non-trivial parameters
         elif param in ['AVERAGE_BEAMS', 'BEAM_INCIDENCE']:  # same syntax
             if param == 'AVERAGE_BEAMS':   # special cases
-                if value.strip().lower() in ['off', 'none', 'false', 'f']:
+                right_side = right_side.lower().strip()
+                if right_side in ['off', 'none', 'false', 'f']:
                     rpars.AVERAGE_BEAMS = False
                     continue
-                elif value.lower() in ['all', 'perpendicular', 'perp']:
+                if right_side.lower() in ['all', 'perpendicular', 'perp']:
                     rpars.AVERAGE_BEAMS = (0., 0.)
                     continue
             range_ = {'THETA': (-90, 90), 'PHI': (0, 360)}
             outOfRangeEvent = {'THETA': ('fail', 'fail'),
                                'PHI': ('modulo', 'modulo')}
             d = {'THETA': 0, 'PHI': 0}
-            if ',' in value:
-                sublists = tl.base.splitSublists(llist, ',')
+            if ',' in right_side:
+                sublists = splitSublists(values, ',')
                 for sl in sublists:
                     for name in ['THETA', 'PHI']:
                         if sl[0].upper() == name:
                             d[name] = getNumericalParameter(
-                                '{} {}'.format(param, name), sl[1],
+                                f'{param} {name}', sl[1],
                                 range_=range_[name],
-                                outOfRangeEvent=outOfRangeEvent[name])
+                                outOfRangeEvent=outOfRangeEvent[name]
+                                )
                             break
                     else:
-                        logger.warning(
-                            'PARAMETERS file: {}: Unknown flag found. Input '
-                            'will be ignored.').format(param)
+                        logger.warning(f'PARAMETERS file: {param}: Unknown '
+                                       'flag found. Input will be ignored.')
                         rpars.setHaltingLevel(1)
                         continue
             else:
-                if len(llist) != 2:
+                if len(values) != 2:
                     logger.warning(
-                        'PARAMETERS file: {}: Expected 2 values, found {}. '
-                        'Input will be ignored.').format(param, len(llist))
+                        f'PARAMETERS file: {param}: Expected 2 values, '
+                        f'found {len(values)}. Input will be ignored.'
+                        )
                     rpars.setHaltingLevel(1)
                     continue
                 for ind, name in enumerate(['THETA', 'PHI']):
                     d[name] = getNumericalParameter(
-                        '{} {}'.format(param, name), llist[ind],
+                        f'{param} {name}', values[ind],
                         range_=range_[name],
-                        outOfRangeEvent=outOfRangeEvent[name])
+                        outOfRangeEvent=outOfRangeEvent[name]
+                        )
             if any(v is None for v in d.values()):
-                continue    # some error occured, don't set values
+                continue    # some error occurred, don't set values
             if d['THETA'] < 0:
                 d['THETA'] = abs(d['THETA'])
                 d['PHI'] = (d['PHI'] + 180) % 360
@@ -738,11 +719,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 rpars.THETA = d['THETA']
                 rpars.PHI = d['PHI']
         elif param == 'BULK_REPEAT':
-            s = value.lower()
+            s = right_side.lower()
             if "[" not in s:
                 if "(" not in s:
                     try:
-                        rpars.BULK_REPEAT = abs(float(llist[0]))
+                        rpars.BULK_REPEAT = abs(float(value))
                     except ValueError:
                         logger.warning(
                             'PARAMETERS file: BULK_REPEAT: Could not convert '
@@ -767,9 +748,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                             if "z" in s:
                                 rpars.BULK_REPEAT = v
                             else:  # c
-                                rpars.BULK_REPEAT = slab.ucell[2, 2] * v
+                                rpars.BULK_REPEAT = slab.ucell[2, 2] * v        # TODO: what if slab is None??
             else:  # vector
-                vec = tl.base.readVector(s, slab.ucell)
+                vec = readVector(s, slab.ucell)                                 # TODO: what if slab is None??
                 if vec is None:
                     logger.warning(
                         'PARAMETERS file: BULK_REPEAT: Could not parse input '
@@ -778,15 +759,13 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.BULK_REPEAT = vec
         elif param == 'DOMAIN':
             # check name
-            if len(plist) > 1:
-                name = plist[1]
-            else:
-                name = ""
+            name = flags[0] if flags else ""
             names = [n for (n, _) in rpars.DOMAINS]
             if name in names:
                 logger.warning(
                     'PARAMETERS file: Multiple sources defined '
-                    'for DOMAIN {}. Last entry will be ignored.'.format(name))
+                    f'for DOMAIN {name}. Last entry will be ignored.'
+                    )
                 rpars.setHaltingLevel(2)
                 continue
             if not name:  # get unique name
@@ -795,22 +774,22 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     i += 1
                 name = str(i)
             # check path
-            value = value.strip()
-            if os.path.exists(value):
-                path = value
-            elif os.path.isfile(value + ".zip"):
-                path = value + ".zip"
+            right_side = right_side.strip()
+            if Path(right_side).exists():
+                path = right_side
+            elif Path(right_side).with_suffix(".zip").is_file():
+                path = right_side + ".zip"
             else:
                 logger.warning(
-                    'PARAMETERS file: Value for DOMAIN {} could not be '
-                    'interpreted as either a path or a .zip file.'
-                    .format(name))
+                    f'PARAMETERS file: Value for DOMAIN {name} could '
+                    'not be interpreted as either a path or a .zip file.'
+                    )
                 rpars.setHaltingLevel(2)
                 continue
             rpars.DOMAINS.append((name, path))
         elif param == 'DOMAIN_STEP':
             try:
-                i = int(llist[0])
+                i = int(value)
             except ValueError:
                 logger.warning(
                     'PARAMETERS file: DOMAIN_STEP: Could not '
@@ -826,54 +805,57 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 while 100 % j != 0:
                     j -= 1
                 logger.warning(
-                    'PARAMETERS file: DOMAIN_STEP: 100 is not '
-                    'divisible by given value {}. DOMAIN_STEP will be set to '
-                    '{} instead.'.format(i, j))
+                    'PARAMETERS file: DOMAIN_STEP: 100 is not divisible by '
+                    f'given value {i}. DOMAIN_STEP will be set to {j} instead.'
+                    )
                 rpars.setHaltingLevel(1)
                 rpars.DOMAIN_STEP = j
             else:
                 rpars.DOMAIN_STEP = i
-        elif param == 'ELEMENT_MIX':
-            ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]
+        elif param == 'ELEMENT_MIX':                                            # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME?
+            ptl = [el.lower() for el in leedbase.PERIODIC_TABLE]
             found = False
-            for el in llist:
+            for el in values:
                 if el.lower() not in ptl:
                     logger.warning(
-                        'PARAMETERS file: ELEMENT_MIX for {0}: {1} not found '
-                        'in periodic table. ELEMENT_MIX for {0} will be '
-                        'ignored.'.format(plist[1], el))
+                        f'PARAMETERS file: ELEMENT_MIX for {flags[0]}: '
+                        f'{el} not found in periodic table. ELEMENT_MIX '
+                        f'for {flags[0]} will be ignored.'
+                        )
                     rpars.setHaltingLevel(1)
                     found = True
             if not found:
-                rpars.ELEMENT_MIX[plist[1].capitalize()] = [el.capitalize()
-                                                            for el in llist]
+                rpars.ELEMENT_MIX[flags[0].capitalize()] = [el.capitalize()
+                                                            for el in values]
         elif param == 'ELEMENT_RENAME':
-            ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]
-            if llist[0].lower() not in ptl:
+            ptl = [el.lower() for el in leedbase.PERIODIC_TABLE]                # TODO: nicer to use the leedbase element getter function and catch exceptions
+            if value.lower() not in ptl:
                 logger.warning(
-                    'PARAMETERS file: ELEMENT_RENAME for {0}: {1} not found '
-                    'in periodic table. ELEMENT_RENAME for {0} will be '
-                    'ignored.'.format(plist[1], llist[0]))
+                    f'PARAMETERS file: ELEMENT_RENAME for {flags[0]}: '
+                    f'{value} not found in periodic table. ELEMENT_RENAME '
+                    f'for {flags[0]} will be ignored.'
+                    )
                 rpars.setHaltingLevel(1)
             else:
-                rpars.ELEMENT_RENAME[plist[1].capitalize()] = (llist[0]
-                                                               .capitalize())
+                rpars.ELEMENT_RENAME[flags[0].capitalize()] = (
+                    value.capitalize()
+                    )
         elif param == 'FILAMENT_WF':
-            if llist[0].lower() == 'w':
+            if value.lower() == 'w':
                 rpars.FILAMENT_WF = 4.5
-            elif llist[0].lower() == 'lab6':
+            elif value.lower() == 'lab6':
                 rpars.FILAMENT_WF = 2.65
             else:
-                setNumericalParameter(rpars, param, llist[0])
+                setNumericalParameter(rpars, param, value)
         elif param == 'FORTRAN_COMP':
-            if (len(plist) <= 1 and llist[0].lower() in ["ifort", "gfortran"]
-                    and len(llist) == 1):
-                rpars.getFortranComp(comp=llist[0].lower())
-            elif (len(plist) > 1 and plist[1].lower() == "mpi"
-                  and llist[0].lower() in ["mpifort", "mpiifort"]):
-                rpars.getFortranMpiComp(comp=llist[0].lower())
+            if (not flags and value.lower() in ["ifort", "gfortran"]
+                    and not other_values):
+                rpars.getFortranComp(comp=value.lower())
+            elif (flags and flags[0].lower() == "mpi"
+                  and value.lower() in ["mpifort", "mpiifort"]):
+                rpars.getFortranMpiComp(comp=value.lower())
             else:
-                delim = llist[0][0]     # should be quotation marks
+                delim = value[0]     # should be quotation marks                # TODO: is this needed now that we use f-strings?
                 if delim not in ["'", '"']:
                     logger.warning(
                         'PARAMETERS file: FORTRAN_COMP '
@@ -882,85 +864,83 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.setHaltingLevel(1)
                     continue
                 else:
-                    setTo = value.split(delim)[1]
-                if len(plist) <= 1:
+                    setTo = right_side.split(delim)[1]
+                if not flags:
                     rpars.FORTRAN_COMP[0] = setTo
-                elif plist[1].lower() == "post":
+                elif flags[0].lower() == "post":
                     rpars.FORTRAN_COMP[1] = setTo
-                elif plist[1].lower() == "mpi":
+                elif flags[0].lower() == "mpi":
                     rpars.FORTRAN_COMP_MPI[0] = setTo
-                elif plist[1].lower() == "mpipost":
+                elif flags[0].lower() == "mpipost":
                     rpars.FORTRAN_COMP_MPI[1] = setTo
                 else:
                     logger.warning(
-                        'PARAMETERS file: FORTRAN_COMP parameter: '
-                        'Could not interpret flags. Value will be ignored.')
+                        'PARAMETERS file: FORTRAN_COMP parameter: Could '
+                        'not interpret flags. Value will be ignored.'
+                        )
                     rpars.setHaltingLevel(1)
         elif param == 'INTPOL_DEG':
-            if llist[0] in ('3', '5'):
-                rpars.INTPOL_DEG = int(llist[0])
+            if value in ('3', '5'):
+                rpars.INTPOL_DEG = int(value)
             else:
                 logger.warning(
-                    'PARAMETERS file: INTPOL_DEG parameter: '
-                    'Only degree 3 and 5 supported at the moment. Defaulting to 3.'
-                )
+                    'PARAMETERS file: INTPOL_DEG parameter: Only degree '
+                    '3 and 5 supported at the moment. Defaulting to 3.'
+                    )
                 rpars.setHaltingLevel(1)
         elif param == 'IV_SHIFT_RANGE':
-            if len(llist) in (2, 3):
-                fl = []
-                try:
-                    fl = [float(s) for s in llist]
-                except ValueError:
-                    logger.warning(
-                        'PARAMETERS file: Failed to convert IV_SHIFT_RANGE '
-                        'input to floats Input will be ignored')
-                    rpars.setHaltingLevel(1)
-                else:
-                    if fl[1] >= fl[0]:
-                        for i in range(0, 2):
-                            rpars.IV_SHIFT_RANGE[i] = fl[i]
-                    else:
-                        logger.warning(
-                            'PARAMETERS file: IV_SHIFT_RANGE '
-                            'end energy has to be greater than or equal '
-                            'to start energy. Input will be ignored.')
-                        rpars.setHaltingLevel(1)
-                    if len(fl) == 3:
-                        if fl[2] > 0:
-                            rpars.IV_SHIFT_RANGE[2] = fl[2]
-                        else:
-                            logger.warning(
-                                'PARAMETERS file: IV_SHIFT_RANGE step has to '
-                                'be positive. Input will be ignored.')
-                            rpars.setHaltingLevel(1)
-            else:
+            if len(values) not in (2, 3):
                 logger.warning('PARAMETERS file: Unexpected number of '
                                'values for IV_SHIFT_RANGE. Input will be '
                                'ignored.')
+                continue
+            try:
+                fl = [float(s) for s in values]
+            except ValueError:
+                logger.warning('PARAMETERS file: Failed to convert '
+                               'IV_SHIFT_RANGE input to floats Input will '
+                               'be ignored')
+                rpars.setHaltingLevel(1)
+                continue
+            if fl[1] < fl[0]:
+                logger.warning('PARAMETERS file: IV_SHIFT_RANGE end energy '
+                               'has to be greater than or equal to start '
+                               'energy. Input will be ignored.')
+                rpars.setHaltingLevel(1)
+                continue
+
+            for i in range(0, 2):
+                rpars.IV_SHIFT_RANGE[i] = fl[i]
+            if len(fl) == 3 and fl[2] <= 0:
+                logger.warning('PARAMETERS file: IV_SHIFT_RANGE step has '
+                               'to be positive. Input will be ignored.')
+                rpars.setHaltingLevel(1)
+                continue
+            rpars.IV_SHIFT_RANGE[2] = fl[2]
         elif param == 'LAYER_CUTS':
             # some simple filtering here, but leave as list of strings
-            if "<" in value and ">" in value:
+            if all(c in right_side for c in "<>"):
                 logger.warning('PARAMETERS file: LAYER_CUTS parameter: '
                                'Cannot parse list containing both "<" and ">" '
                                'signs. Input will be ignored.')
                 rpars.setHaltingLevel(1)
                 continue
-            elif "<" in value or ">" in value:
+            elif any(c in right_side for c in "<>"):
                 newlist = []
-                for s in llist:
+                for s in values:
                     s = s.replace("<", " < ")
                     s = s.replace(">", " > ")
                     newlist.extend(s.split())
-                llist = newlist
+                values = newlist
             rgx = re.compile(r'\s*(dz|dc)\s*\(\s*(?P<cutoff>[0-9.]+)\s*\)')
-            for (i, s) in enumerate(llist):
+            for (i, s) in enumerate(values):
                 if "dz" in s.lower() or "dc" in s.lower():
-                    m = rgx.match(value.lower())
+                    m = rgx.match(right_side.lower())
                     if m:
                         try:
                             float(m.group('cutoff'))
-                            llist[i] = m.group(0)
-                        except Exception:
+                            values[i] = m.group(0)
+                        except Exception:                                       # TODO: catch better; only 1 statement in try.
                             logger.warning(
                                 'PARAMETERS file: LAYER_CUTS parameter: Could '
                                 'not parse function ' + s + '. Input will be '
@@ -976,31 +956,31 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                        'Input will be ignored.')
                         rpars.setHaltingLevel(1)
                         continue
-            rpars.LAYER_CUTS = llist
+            rpars.LAYER_CUTS = values
         elif param == 'LMAX':
-            _min, _max = PARAM_LIMITS[param]
-            
-            llist = re.sub(r'[:-]', ' ', value).split()
+            _min, _max = rpars.get_limits(param)
+
+            values = re.sub(r'[:-]', ' ', right_side).split()
             try:
-                il = [int(v) for v in llist]
+                il = [int(v) for v in values]
             except ValueError:
                 logger.warning('PARAMETERS file: LMAX parameter: Could not '
-                               'parse "' + value + '" as integer(s). Input'
+                               f'parse {right_side!r} as integer(s). Input'
                                'will be ignored.')
                 rpars.setHaltingLevel(1)
                 continue
             if len(il) > 2:
                 logger.warning(
                     'PARAMETERS file: LMAX parameter: Expected one or two '
-                    'values, found {}. First two values will be used.'
-                    .format(len(il)))
+                    f'values, found {len(il)}. First two values will be used.'
+                    )
                 il = il[:2]
             if len(il) == 1:
                 if not _min < il[0] <= _max:
                     _, il[0], _ = sorted((_min, il[0], _max))
                     logger.warning(
-                        f'PARAMETERS file: LMAX must be between {_min} and {_max}. '
-                        f'Value will be set to {il[0]}.'
+                        f'PARAMETERS file: LMAX must be between {_min} '
+                        f'and {_max}. Value will be set to {il[0]}.'
                         )
                 rpars.LMAX = [il[0], il[0]]
             elif len(il) == 2:
@@ -1012,32 +992,33 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     il[0] = _min
                 if il[1] > _max:
                     logger.warning('PARAMETERS file: LMAX values greater than '
-                                   f'{_max} are currently not supported. Upper '
-                                   f'bound will be set to {_max}.')
+                                   f'{_max} are currently not supported. Upper'
+                                   f' bound will be set to {_max}.')
                     il[1] = _max
                 rpars.LMAX = il
         elif param == 'OPTIMIZE':
-            if len(plist) == 1:
+            if not flags:
                 logger.warning('PARAMETERS file: OPTIMIZE: Parameter to '
                                'optimize not defined. Input will be ignored.')
                 rpars.setHaltingLevel(1)
                 continue
-            which = plist[1].lower()
+            which = flags[0].lower()
             if which not in ['theta', 'phi', 'v0i',
                              'a', 'b', 'c', 'ab', 'abc', 's_ovl']:
-                logger.warning('PARAMETERS file: OPTIMIZE: Parameter "{}" '
-                               'not recognized. Input will be ignored.'
-                               .format(which))
+                logger.warning('PARAMETERS file: OPTIMIZE: Parameter '
+                               f'{which!r} not recognized. Input will '
+                               'be ignored.')
                 rpars.setHaltingLevel(1)
                 continue
             rpars.OPTIMIZE['which'] = which
-            if len(llist) == 1:
+            if not other_values:
                 try:
-                    rpars.OPTIMIZE['step'] = float(llist[0])
-                    continue
+                    rpars.OPTIMIZE['step'] = float(value)
                 except ValueError:
                     pass   # will be caught below
-            sublists = tl.base.splitSublists(llist, ',')
+                else:
+                    continue
+            sublists = splitSublists(values, ',')
             for sl in sublists:
                 if len(sl) != 2:
                     logger.warning('PARAMETERS file: OPTIMIZE: Expected '
@@ -1047,16 +1028,16 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 flag = sl[0].lower()
                 if flag not in ['step', 'convergence',
                                 'minpoints', 'maxpoints', 'maxstep']:
-                    logger.warning('PARAMETERS file: OPTIMIZE: Flag "{}" '
-                                   'not recognized.'.format(sl[0]))
+                    logger.warning(f'PARAMETERS file: OPTIMIZE: Flag {sl[0]!r}'
+                                   ' not recognized.')
                     rpars.setHaltingLevel(1)
                     continue
                 partype = {'step': float, 'convergence': float,
                            'minpoints': int, 'maxpoints': int,
                            'maxstep': float}
-                value_error = ('PARAMETERS file: OPTIMIZE: Value {} is '
-                               'not valid for flag {}. Value will be ignored.'
-                               .format(sl[1], sl[0]))
+                value_error = ('PARAMETERS file: OPTIMIZE: Value '
+                               f'{sl[1]} is not valid for flag {sl[0]}. '
+                               'Value will be ignored.')
                 try:
                     rpars.OPTIMIZE[flag] = partype[flag](sl[1])
                 except ValueError:
@@ -1064,17 +1045,17 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.setHaltingLevel(1)
                     continue
         elif param == 'PARABOLA_FIT':
-            if llist[0] == 'off':
+            if value == 'off':
                 rpars.PARABOLA_FIT['type'] = 'none'
                 continue
-            sublists = tl.base.splitSublists(llist, ',')
+            sublists = splitSublists(values, ',')
             for sl in sublists:
                 flag = sl[0].lower()
                 if flag.lower() == 'localise':
                     flag = 'localize'
-                value_error = ('PARAMETERS file: PARABOLA_FIT: Value {} is '
-                               'not valid for flag {}. Value will be ignored.'
-                               .format(sl[1], sl[0]))
+                value_error = (f'PARAMETERS file: PARABOLA_FIT: Value {sl[1]} '
+                               f'is not valid for flag {sl[0]}. Value will be '
+                               'ignored.')
                 if flag == 'type':
                     if sl[1].lower() in ('linear', 'linearregression', 'lasso',
                                          'ridge', 'elasticnet', 'none'):
@@ -1094,9 +1075,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         rpars.setHaltingLevel(1)
         elif param == 'PHASESHIFT_EPS':
             try:
-                f = float(llist[0])
+                f = float(value)
             except ValueError:
-                s = llist[0].lower()[0]
+                s = value.lower()[0]
                 ps_eps_default_dict = rpars.get_default(param)
                 f = ps_eps_default_dict.get(s, None)
                 if f is None:
@@ -1104,7 +1085,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                    'Could not convert value to float. '
                                    'Input will be ignored.')
                     rpars.setHaltingLevel(1)
-            if f > 0 and f < 1:
+                    continue
+            if 0 < f < 1:
                 rpars.PHASESHIFT_EPS = f
             else:
                 logger.warning(
@@ -1112,63 +1094,60 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     '(should be between 0 and 1). Input will be ignored.')
                 rpars.setHaltingLevel(1)
         elif param == 'PLOT_IV':
-            if len(plist) == 1:
+            if not flags:
                 logger.warning('PARAMETERS file: PLOT_IV: Found no flag. '
                                'Input will be ignored.')
                 rpars.setHaltingLevel(1)
                 continue
-            flag = plist[1].lower()
+            flag = flags[0].lower()
+            value = value.lower()
             if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
                             'border', 'borders', 'axes', 'legend', 'legends',
                             'layout', 'overbar', 'overline', 'plot'):
-                logger.warning('PARAMETERS file: PLOT_IV: Flag {} not '
-                               'recognized. Input will be ignored.'
-                               .format(flag))
+                logger.warning(f'PARAMETERS file: PLOT_IV: Flag {flag} not '
+                               'recognized. Input will be ignored.')
                 rpars.setHaltingLevel(1)
                 continue
             if flag == 'plot':
-            #should it plot?
-                if llist[0].lower() in ('true'):
+                # should it plot?
+                if value in ('true'):
                      rpars.PLOT_IV['plot'] = True
-                elif llist[0].lower() in ('false', 'none'):
+                elif value in ('false', 'none'):
                     rpars.PLOT_IV['plot'] = False
             if flag in ('border', 'borders', 'axes'):
-                if llist[0].lower() in ('all', 'none'):
-                    rpars.PLOT_IV['axes'] = llist[0].lower()
-                elif llist[0].lower() in ('less', 'lb'):
+                if value in ('all', 'none'):
+                    rpars.PLOT_IV['axes'] = value
+                elif value in ('less', 'lb'):
                     rpars.PLOT_IV['axes'] = 'lb'
-                elif llist[0].lower() in ('bottom', 'b'):
+                elif value in ('bottom', 'b'):
                     rpars.PLOT_IV['axes'] = 'b'
                 else:
-                    logger.warning(
-                        'PARAMETERS file: PLOT_IV {}: Value not '
-                        'recognized. Input will be ignored.'.format(flag))
+                    logger.warning(f'PARAMETERS file: PLOT_IV {flag}: Value '
+                                   'not recognized. Input will be ignored.')
             elif flag in ('color', 'colour', 'colors', 'colours'):
-                rpars.PLOT_IV['colors'] = llist
+                rpars.PLOT_IV['colors'] = values
             elif flag in ('legend', 'legends'):
-                if llist[0].lower() in ('all', 'first', 'none'):
-                    rpars.PLOT_IV['legend'] = llist[0].lower()
-                elif llist[0].lower() in ('topright', 'tr'):
+                if value in ('all', 'first', 'none'):
+                    rpars.PLOT_IV['legend'] = value
+                elif value in ('topright', 'tr'):
                     rpars.PLOT_IV['legend'] = 'tr'
                 else:
-                    logger.warning(
-                        'PARAMETERS file: PLOT_IV {}: Value not '
-                        'recognized. Input will be ignored.'.format(flag))
+                    logger.warning(f'PARAMETERS file: PLOT_IV {flag}: Value '
+                                   'not recognized. Input will be ignored.')
                     continue
             elif flag in ('overbar', 'overline'):
-                if llist[0].lower().startswith("t"):
+                if value.startswith("t"):
                     rpars.PLOT_IV['overbar'] = True
-                elif llist[0].lower().startswith("f"):
+                elif value.startswith("f"):
                     rpars.PLOT_IV['overbar'] = False
                 else:
-                    logger.warning(
-                        'PARAMETERS file: PLOT_IV {}: Value not '
-                        'recognized. Input will be ignored.'.format(flag))
+                    logger.warning(f'PARAMETERS file: PLOT_IV {flag}: Value '
+                                   'not recognized. Input will be ignored.')
                     continue
             elif flag in ('perpage', 'layout'):
-                if len(llist) == 1:
+                if not other_values:
                     try:
-                        i = int(llist[0])
+                        i = int(value)
                     except (ValueError, IndexError):
                         logger.warning(
                             'PARAMETERS file: PLOT_IV perpage: Could not '
@@ -1180,16 +1159,16 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                             'to be positive integer. Input will be ignored.')
                         continue
                     rpars.PLOT_IV['perpage'] = i
-                elif len(llist) >= 2:
+                elif len(values) >= 2:
                     try:
-                        il = [int(v) for v in llist[:2]]
-                    except (ValueError, IndexError):
+                        il = [int(v) for v in values[:2]]
+                    except ValueError:
                         logger.warning(
                             'PARAMETERS file: PLOT_IV perpage: Could not '
                             'convert values to integers. Input will be '
                             'ignored.')
                         continue
-                    if any([i <= 0 for i in il]):
+                    if any(i <= 0 for i in il):
                         logger.warning(
                             'PARAMETERS file: PLOT_IV perpage: Values '
                             'have to be positive integers. Input will be '
@@ -1198,46 +1177,20 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     rpars.PLOT_IV['perpage'] = tuple(il)
         elif param == 'RUN':
             rl = []
-            aliases = {0: ["initialization", "initialisation", "init", "ini"],
-                       1: ["refcalc", "ref", "fd"],
-                       11: ["rfactor", "rfac"],
-                       12: ["rfacsuper"],
-                       2: ["deltaamplitudes", "deltas", "delta", "del"],
-                       3: ["search"],
-                       31: ["superpos", "super", "sup"],
-                       4: ["domains", "domain", "dom"],
-                       5: ["error", "err"],
-                       6: ["opt", "optimize", "fdopt"]
-                       }
-            for s in llist:
-                for ind in aliases:
-                    for a in aliases[ind]:
-                        s = s.replace(a, str(ind))
-                ir = tl.base.readIntRange(s)
-                if len(ir) > 0:
-                    rl.extend(ir)
-                else:
+            for s in values:
+                try:
+                    rl.extend(Section.sequence_from_string(s))
+                except ValueError as err:
                     logger.warning(
-                        'PARAMETERS file: RUN: Could not interpret value '
-                        + s + ', skipping value...')
+                        'PARAMETERS file: RUN: Could not interpret '
+                        f'value {s}, skipping value. Info: {err}'
+                        )
                     rpars.setHaltingLevel(2)
-            if len(rl) > 0:
-                if 4 in rl:
-                    logger.info('Found domain search.')
-                i = 0
-                while i < len(rl):
-                    if rl[i] not in (0, 1, 2, 3, 4, 5, 6, 11, 12, 31):
-                        logger.warning(
-                            'PARAMETERS file: RUN: Value {} does not '
-                            'correspond to a segment and will be skipped.'
-                            .format(rl[i]))
-                        rl.pop(i)
-                        rpars.setHaltingLevel(1)
-                    else:
-                        i += 1
-            if len(rl) > 0:
-                if rl[0] != 0:
-                    rl.insert(0, 0)
+            if Section.DOMAINS in rl:
+                logger.info('Found domain search.')
+            if rl:
+                if rl[0] is not Section.INITIALIZATION:
+                    rl.insert(0, Section.INITIALIZATION)
                 rpars.RUN = rl
             else:
                 # could in principle try carrying on with some default, but
@@ -1247,90 +1200,29 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                'no values were read. Execution will stop.')
                 rpars.setHaltingLevel(3)
         elif param == 'SEARCH_BEAMS':
-            if llist[0][0].lower() in ["0", "a"]:
+            value = value.lower()
+            if value.startswith(('0', 'a')):
                 rpars.SEARCH_BEAMS = 0
-            elif llist[0][0].lower() in ["1", "i"]:
+            elif value.startswith(('1', 'i')):
                 rpars.SEARCH_BEAMS = 1
-            elif llist[0][0].lower() in ["2", "f"]:
+            elif value.startswith(('2', 'f')):
                 rpars.SEARCH_BEAMS = 2
             else:
                 logger.warning('PARAMETERS file: SEARCH_BEAMS: value not '
                                'recognized. Input will be ignored.')
                 rpars.setHaltingLevel(1)
         elif param == 'SEARCH_CONVERGENCE':
-            if len(plist) == 1:
-                if value.lower().strip() == 'off':
-                    rpars.GAUSSIAN_WIDTH_SCALING = 1.
-                    continue
-                else:
-                    logger.warning(
-                        'PARAMETERS file: SEARCH_CONVERGENCE: '
-                        'no flag given, value ' + value + ' not recognized.')
-                    rpars.setHaltingLevel(1)
-                    continue
-            flags = plist[1:]
-            if flags[0].lower() not in ['dgen', 'gaussian']:
-                logger.warning(
-                    'PARAMETERS file: SEARCH_CONVERGENCE: flag "'
-                    + flags[0] + '" not recognized.')
+            try:
+                searchConvRead = _interpret_SEARCH_CONVERGENCE(
+                    rpars, flags, values,
+                    search_convergence_known=searchConvRead
+                    )
+            except ParametersSyntaxError as exc:
+                logger.warning(exc)
                 rpars.setHaltingLevel(1)
-                continue
-            fl = [None, None]
-            for (i, s) in enumerate(llist[:2]):
-                try:
-                    fl[i] = float(s)
-                except ValueError:
-                    logger.warning(
-                        'PARAMETERS file: SEARCH_CONVERGENCE gaussian: could '
-                        'not convert value to float.')
-                    rpars.setHaltingLevel(1)
-            if flags[0].lower() == 'gaussian':
-                if fl[0] is not None and fl[0] > 0:
-                    rpars.GAUSSIAN_WIDTH = fl[0]
-                else:
-                    logger.warning(
-                        'PARAMETERS file: SEARCH_CONVERGENCE '
-                        'gaussian should be a positive number.')
-                    rpars.setHaltingLevel(1)
-                if fl[1] is not None:
-                    if 0 < fl[1] <= 1:
-                        rpars.GAUSSIAN_WIDTH_SCALING = fl[1]
-                    else:
-                        logger.warning(
-                            'PARAMETERS file: SEARCH_CONVERGENCE gaussian: '
-                            'scaling value should be in range ]0, 1[')
-                        rpars.setHaltingLevel(1)
-            elif flags[0].lower() == 'dgen':
-                if len(flags) == 1:
-                    target = 'dec'
-                elif flags[1].lower() in ['dec', 'best', 'all']:
-                    target = flags[1].lower()
-                else:
-                    logger.warning(
-                        'PARAMETERS file: SEARCH CONVERGENCE '
-                        'dgen: flag "' + flags[1] + '" not recognized.')
-                    rpars.setHaltingLevel(1)
-                    continue
-                if fl[0] is not None and fl[0] > 0:
-                    if not searchConvRead:  # clear default values
-                        rpars.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 0}
-                        searchConvRead = True
-                    rpars.SEARCH_MAX_DGEN[target] = fl[0]
-                else:
-                    logger.warning('PARAMETERS file: SEARCH_CONVERGENCE '
-                                   'dgen should be a positive number.')
-                    rpars.setHaltingLevel(1)
-                if fl[1] is not None:
-                    if 1 <= fl[1]:
-                        rpars.SEARCH_MAX_DGEN_SCALING[target] = fl[1]
-                    else:
-                        logger.warning(
-                            'PARAMETERS file: SEARCH_CONVERGENCE dgen '+target
-                            + ': scaling value cannot be smaller than 1.')
-                        rpars.setHaltingLevel(1)
         elif param == 'SEARCH_CULL':
             try:
-                f = float(llist[0])
+                f = float(value)
             except ValueError:
                 logger.warning('PARAMETERS file: SEARCH_CULL: could not '
                                'interpret value.')
@@ -1351,22 +1243,23 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                'negative.')
                 rpars.setHaltingLevel(1)
                 continue
-            if len(llist) > 1:
-                if llist[1].lower() in ["clone", "genetic", "random"]:
-                    rpars.SEARCH_CULL_TYPE = llist[1].lower()
+            if other_values:
+                next_value = other_values[0].lower()
+                if next_value in ["clone", "genetic", "random"]:
+                    rpars.SEARCH_CULL_TYPE = next_value
                 else:
                     logger.warning('PARAMETERS file: SEARCH_CULL type '
                                    'not recognized.')
                     rpars.setHaltingLevel(1)
         elif param == 'SEARCH_START':
-            s = llist[0].lower()
-            if s in ["random", "rand"]:
+            value = value.lower()
+            if value.startswith("rand"):
                 rpars.SEARCH_START = "random"
-            elif s in ["centered", "center"]:
+            elif value.startswith("center"):
                 rpars.SEARCH_START = "centered"
-            elif s == "control":
+            elif value.startswith("control"):
                 rpars.SEARCH_START = "control"
-            elif s in ["cr", "crand", "crandom"]:
+            elif value.startswith("cr"):
                 rpars.SEARCH_START = "crandom"
             else:
                 logger.warning('PARAMETERS file: SEARCH_START: flag '
@@ -1374,11 +1267,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 rpars.setHaltingLevel(1)
         elif param == 'SITE_DEF':
             newdict = {}
-            sublists = tl.base.splitSublists(llist, ',')
+            sublists = splitSublists(values, ',')
             for sl in sublists:
                 atnums = []
                 for i in range(1, len(sl)):
-                    ir = tl.base.readIntRange(sl[i])
+                    ir = readIntRange(sl[i])
                     if len(ir) > 0:
                         atnums.extend(ir)
                     elif "top(" in sl[i]:
@@ -1388,42 +1281,45 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                 'parameter contains a top() function, '
                                 'but no slab was passed. The atoms '
                                 'will be assigned the default site '
-                                'type instead.')
+                                'type instead.'
+                                )
                             rpars.setHaltingLevel(1)
-                        else:
-                            n = int(sl[i].split('(')[1].split(')')[0])
-                            csatlist = slab.atlist[:]
-                            csatlist.sort(key=lambda atom: atom.pos[2])
-                            while n > 0:
-                                at = csatlist.pop()
-                                if at.el == plist[1]:
-                                    atnums.append(at.oriN)
-                                    n -= 1
+                            continue
+                        n = int(sl[i].split('(')[1].split(')')[0])
+                        csatlist = sorted(slab.atlist,
+                                          key=lambda atom: atom.pos[2])
+                        while n > 0:
+                            at = csatlist.pop()
+                            if at.el == flags[0]:
+                                atnums.append(at.oriN)
+                                n -= 1
                     else:
                         logger.error('PARAMETERS file: Problem with '
                                      'SITE_DEF input format')
-                        raise
+                        raise ParametersSyntaxError("Invalid syntax",           # TODO: more explicit message?
+                                                    parameter=param)
                 newdict[sl[0]] = atnums
-            rpars.SITE_DEF[plist[1]] = newdict
+            rpars.SITE_DEF[flags[0]] = newdict
         elif param in ['SUPERLATTICE', 'SYMMETRY_CELL_TRANSFORM']:
-            if 'M' not in plist:
+            if 'M' not in flags:
                 if slab is None:
                     logger.warning(
-                        'PARAMETERS file: {} parameter appears to be in Wood '
-                        'notation, but no slab was passed; cannot calculate '
-                        'bulk unit cell!'.format(param))
+                        f'PARAMETERS file: {param} parameter appears to be '
+                        'in Wood notation, but no slab was passed; cannot'
+                        ' calculate bulk unit cell!'
+                        )
                     rpars.setHaltingLevel(2)
                 else:
-                    setattr(rpars, param, tl.leedbase.readWoodsNotation(
-                        value, slab.ucell))
+                    setattr(rpars,
+                            param,
+                            leedbase.readWoodsNotation(right_side, slab.ucell))
                     if param == 'SUPERLATTICE':
                         rpars.superlattice_defined = True
             else:
-                sublists = tl.base.splitSublists(llist, ',')
+                sublists = splitSublists(values, ',')
                 if not len(sublists) == 2:
-                    logger.warning('PARAMETERS file: error reading {} '
-                                   'matrix: number of lines is not equal 2.'
-                                   .format(param))
+                    logger.warning(f'PARAMETERS file: error reading {param} '
+                                   'matrix: number of lines is not equal 2.')
                     rpars.setHaltingLevel(2)
                 else:
                     write = True
@@ -1434,16 +1330,16 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                                 nl.append([float(s) for s in sl])
                             except ValueError:
                                 logger.warning(
-                                    'PARAMETERS file: error '
-                                    'reading {} matrix: could not convert {} '
-                                    'to floats.'.format(param, sl))
+                                    f'PARAMETERS file: error reading {param} '
+                                    f'matrix: could not convert {sl} to floats.'
+                                    )
                                 rpars.setHaltingLevel(2)
                                 write = False
                         else:
                             logger.warning(
-                                'PARAMETERS file: error reading {} matrix: '
-                                'number of columns is not equal 2.'
-                                .format(param))
+                                f'PARAMETERS file: error reading {param} '
+                                'matrix: number of columns is not equal 2.'
+                                )
                             rpars.setHaltingLevel(2)
                             write = False
                     if write:
@@ -1451,22 +1347,19 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         if param == 'SUPERLATTICE':
                             rpars.superlattice_defined = True
         elif param == 'SYMMETRY_BULK':
-            recombined_list = []
-            while llist:
-                v = llist.pop(0).lower()
-                if "[" in v and "]" in llist[0]:
-                    v += " " + llist.pop(0).lower()
+            recombined_list = []                                                # TODO: use ast
+            while values:
+                v = values.pop(0).lower()
+                if "[" in v and "]" in values[0]:
+                    v += " " + values.pop(0).lower()
                 recombined_list.append(v)
             for v in recombined_list:
-                if v.split("[")[0] in grouplist:
-                    rpars.SYMMETRY_BULK['group'] = v
-                elif v.startswith("r"):
+                if v.startswith("r"):
                     try:
                         i = int(v[1])
                     except (ValueError, IndexError):
-                        logger.warning(
-                            "PARAMETERS file: error reading value '" + v
-                            + "' in SYMMETRY_BULK.")
+                        logger.warning("PARAMETERS file: error reading "
+                                       f"value {v!r} in SYMMETRY_BULK.")
                         rpars.setHaltingLevel(2)
                         continue
                     if 'rotation' not in rpars.SYMMETRY_BULK:
@@ -1476,23 +1369,24 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 elif v.startswith("m"):
                     if "[" not in v or "]" not in v:
                         logger.warning(
-                            "PARAMETERS file: error reading value '" + v
-                            + "' in SYMMETRY_BULK: no direction recognized.")
+                            f"PARAMETERS file: error reading value {v!r} "
+                            "in SYMMETRY_BULK: no direction recognized."
+                            )
                         rpars.setHaltingLevel(2)
                         continue
                     str_vals = v.split("[")[1].split("]")[0].split()
                     if len(str_vals) != 2:
                         logger.warning(
-                            "PARAMETERS file: error reading value '" + v
-                            + "' in SYMMETRY_BULK: expected 2 values.")
+                            f"PARAMETERS file: error reading value {v!r} "
+                            "in SYMMETRY_BULK: expected 2 values."
+                            )
                         rpars.setHaltingLevel(2)
                         continue
                     try:
                         int_vals = tuple(int(v) for v in str_vals)
                     except (ValueError, IndexError):
-                        logger.warning(
-                            "PARAMETERS file: error reading value '" + v
-                            + "' in SYMMETRY_BULK.")
+                        logger.warning("PARAMETERS file: error reading "
+                                       f"value {v!r} in SYMMETRY_BULK.")
                         rpars.setHaltingLevel(2)
                         continue
                     if int_vals[0] < 0:
@@ -1501,66 +1395,77 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         rpars.SYMMETRY_BULK['mirror'] = []
                     if int_vals in rpars.SYMMETRY_BULK['mir']:
                         rpars.SYMMETRY_BULK['mirror'].append(int_vals)
-        elif param == 'SYMMETRY_FIX':
-            s = llist[0].lower()
-            if s == 'true':
-                pass    # same as default, determine symmetry automatically
-            elif s == 'false':
-                rpars.SYMMETRY_FIX = 'p1'
-            elif s in grouplist:
-                if s not in ("cm", "pmg"):
-                    rpars.SYMMETRY_FIX = s
                 else:
-                    logger.warning('PARAMETERS file: SYMMETRY_FIX: For '
-                                   'group '+s+', direction needs to be '
-                                   'specified. Input will be ignored.')
-                    rpars.setHaltingLevel(1)
-            elif s[0:2] in ["pm", "pg", "cm"] or s[0:3] == "pmg":
+                    try:
+                        rpars.SYMMETRY_BULK['group'] = v
+                    except ValueError as err:
+                        logger.warning("PARAMETERS file: error reading "
+                                       f"value {v!r} in SYMMETRY_BULK: {err}.")
+                        rpars.setHaltingLevel(2)
+        elif param == 'SYMMETRY_FIX':
+            group = value.lower()
+            if group.startswith('t'):
+                continue  # same as default, determine symmetry automatically
+            if group.startswith('f'):
+                rpars.SYMMETRY_FIX = 'p1'
+                continue
+            if group in grouplist and group in ("cm", "pmg"):
+                logger.warning('PARAMETERS file: SYMMETRY_FIX: For '
+                               f'group {group}, direction needs to be '
+                               'specified. Input will be ignored.')
+                rpars.setHaltingLevel(1)
+                continue
+            if group in grouplist:
+                rpars.SYMMETRY_FIX = group
+                continue
+            if group.startswith(("pm", "pg", "cm", "rcm", "pmg")):
                 # regex to read
                 rgx = re.compile(
                     r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*'
                     + r'\[\s*(?P<i1>[-012]+)\s+(?P<i2>[-012]+)\s*\]')
-                m = rgx.match(value.lower())
+                m = rgx.match(right_side.lower())
                 if not m:
                     logger.warning(
                         'PARAMETERS file: SYMMETRY_FIX: Could '
                         'not parse given value. Input will be ignored.')
                     rpars.setHaltingLevel(1)
+                    continue
+                i1 = i2 = -2
+                group = m.group('group')
+                try:
+                    i1 = int(m.group('i1'))
+                    i2 = int(m.group('i2'))
+                except ValueError:
+                    logger.warning('PARAMETERS file: SYMMETRY_FIX: '
+                                   'Could not parse given value. '
+                                   'Input will be ignored.')
+                    rpars.setHaltingLevel(1)
+                    continue
+                if (group in ["pm", "pg", "cm", "rcm", "pmg"]
+                        and i1 in range(-1, 3) and i2 in range(-1, 3)):
+                    rpars.SYMMETRY_FIX = m.group(0)
                 else:
-                    i1 = i2 = -2
-                    group = m.group('group')
-                    try:
-                        i1 = int(m.group('i1'))
-                        i2 = int(m.group('i2'))
-                    except ValueError:
-                        logger.warning('PARAMETERS file: SYMMETRY_FIX: '
-                                       'Could not parse given value. '
-                                       'Input will be ignored.')
-                        rpars.setHaltingLevel(1)
-                    if (group in ["pm", "pg", "cm", "rcm", "pmg"]
-                            and i1 in range(-1, 3) and i2 in range(-1, 3)):
-                        rpars.SYMMETRY_FIX = m.group(0)
-                    else:
-                        logger.warning('PARAMETERS file: SYMMETRY_FIX: '
-                                       'Could not parse given value. '
-                                       'Input will be ignored.')
-                        rpars.setHaltingLevel(1)
+                    logger.warning('PARAMETERS file: SYMMETRY_FIX: '
+                                   'Could not parse given value. '
+                                   'Input will be ignored.')
+                    rpars.setHaltingLevel(1)
             else:
                 logger.warning('PARAMETERS file: SYMMETRY_FIX: Could not '
                                'parse given value. Input will be ignored.')
                 rpars.setHaltingLevel(1)
         elif param == 'TENSOR_OUTPUT':
-            nl = tl.base.recombineListElements(llist, '*')
+            nl = recombineListElements(values, '*')
             for s in nl:
                 s = re.sub(r'[Tt](rue|RUE)?', '1', s)
                 s = re.sub(r'[Ff](alse|ALSE)?', '0', s)
                 try:
                     v = int(s)
-                    if v != 0 and v != 1:
+                    if v not in (0, 1):
                         logger.warning(
                             'PARAMETERS file: Problem with '
-                            'TENSOR_OUTPUT input format: Found value '+str(v)
-                            + ', expected 0 or 1. Value will be ignored.')
+                            f'TENSOR_OUTPUT input format: Found value {v}'
+                            ', expected 0 or 1. Value will be ignored.'
+                            )
                         rpars.setHaltingLevel(1)
                     else:
                         rpars.TENSOR_OUTPUT.append(v)
@@ -1574,29 +1479,28 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                             logger.warning(
                                 'PARAMETERS file: Problem with '
                                 'TENSOR_OUTPUT input format: could not read '
-                                'value '+s+', value will be ignored.')
+                                f'value {s}, value will be ignored.')
                             rpars.setHaltingLevel(1)
-                        if v != 0 and v != 1:
+                        if v not in (0, 1):
                             logger.warning(
                                 'PARAMETERS file: Problem with '
                                 'TENSOR_OUTPUT input format: Found value '
-                                + str(v) + ', expected 0 or 1. Value will be '
+                                f'{v}, expected 0 or 1. Value will be '
                                 'ignored.')
                             rpars.setHaltingLevel(1)
                         else:
-                            for i in range(0, r):
-                                rpars.TENSOR_OUTPUT.append(v)
+                            rpars.TENSOR_OUTPUT.extend([v]*r)
                     else:
                         logger.warning(
                             'PARAMETERS file: Problem with '
                             'TENSOR_OUTPUT input format: could not read '
-                            'value '+s+', value will be ignored.')
+                            f'value {s}, value will be ignored.')
                         rpars.setHaltingLevel(1)
         elif param == 'THEO_ENERGIES':
-            if len(llist) == 1:
+            if not other_values:
                 # single value input - only one energy requested
                 try:
-                    f = float(llist[0])
+                    f = float(value)
                 except ValueError:
                     logger.warning(
                         'PARAMETERS file: Failed to convert '
@@ -1605,72 +1509,68 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 else:
                     if f > 0:
                         rpars.THEO_ENERGIES = [f, f, 1]
+                        continue
+                    logger.warning('PARAMETERS file: Unexpected input for '
+                                   'THEO_ENERGIES. Input will be ignored.')
+                    rpars.setHaltingLevel(1)
+                continue
+            if len(values) != 3:
+                logger.warning('PARAMETERS file: Unexpected input for '
+                               'THEO_ENERGIES. Input will be ignored.')
+                rpars.setHaltingLevel(1)
+                continue
+            fl = []
+            defined = 0
+            for s in values:
+                if s == "_":
+                    fl.append(-1)
+                    continue  # s in values loop
+                try:
+                    f = float(s)
+                except ValueError:
+                    logger.warning('PARAMETERS file: Failed to convert '
+                                   'THEO_ENERGIES input to floats. '
+                                   'Input will be ignored.')
+                    rpars.setHaltingLevel(1)
+                else:
+                    if f > 0:
+                        fl.append(f)
+                        defined += 1
                     else:
-                        logger.warning(
-                            'PARAMETERS file: Unexpected input for '
-                            'THEO_ENERGIES. Input will be ignored.')
-                        rpars.setHaltingLevel(1)
-            elif len(llist) == 3:
-                fl = []
-                defined = 0
-                for s in llist:
-                    if s == "_":
-                        fl.append(-1)
-                    else:
-                        try:
-                            f = float(s)
-                            if f > 0:
-                                fl.append(f)
-                                defined += 1
-                            else:
-                                logger.warning(
-                                    'PARAMETERS file: '
-                                    'THEO_ENERGIES values have to be '
-                                    'positive. Input will be ignored.')
-                                rpars.setHaltingLevel(1)
-                        except ValueError:
-                            logger.warning(
-                                'PARAMETERS file: Failed to convert '
-                                'THEO_ENERGIES input to floats. '
-                                'Input will be ignored.')
-                            rpars.setHaltingLevel(1)
-                if len(fl) == 3:
-                    if defined < 3:
-                        rpars.THEO_ENERGIES = fl
-                    elif (fl[0] > 0 and fl[1] > fl[0] and fl[2] > 0):
-                        if (fl[1] - fl[0]) % fl[2] != 0:
-                            # if the max is not hit by the steps exactly,
-                            #   correct max up to make it so
-                            fl[0] -= fl[2] - (fl[1] - fl[0]) % fl[2]
-                            if fl[0] <= 0:
-                                fl[0] = fl[0] % fl[2]
-                                if fl[0] == 0:
-                                    fl[0] += fl[2]
-                            logger.info(
-                                'THEO_ENERGIES parameter: '
-                                '(Eto-Efrom)%Estep != 0, Efrom was '
-                                'corrected to '+str(fl[0]))
-                        rpars.THEO_ENERGIES = fl
-                    else:
-                        logger.warning('PARAMETERS file: Unexpected '
-                                       'input for THEO_ENERGIES. Input '
+                        logger.warning('PARAMETERS file: THEO_ENERGIES '
+                                       'values have to be positive. Input '
                                        'will be ignored.')
                         rpars.setHaltingLevel(1)
-                else:
-                    logger.warning('PARAMETERS file: THEO_ENERGIES '
-                                   'appears to have no value.')
-                    rpars.setHaltingLevel(1)
+
+            if len(fl) != 3:
+                logger.warning('PARAMETERS file: THEO_ENERGIES '
+                               'appears to have no value.')
+                rpars.setHaltingLevel(1)
+                continue
+            if defined < 3:
+                rpars.THEO_ENERGIES = fl
+                continue
+            if (fl[0] > 0 and fl[1] > fl[0] and fl[2] > 0):
+                if (fl[1] - fl[0]) % fl[2] != 0:
+                    # if the max is not hit by the steps exactly,
+                    #   correct max up to make it so
+                    fl[0] -= fl[2] - (fl[1] - fl[0]) % fl[2]
+                    if fl[0] <= 0:
+                        fl[0] = fl[0] % fl[2]
+                        if fl[0] == 0:
+                            fl[0] += fl[2]
+                    logger.info('THEO_ENERGIES parameter: '
+                                '(Eto-Efrom)%Estep != 0, Efrom was '
+                                f'corrected to {fl[0]}')
+                rpars.THEO_ENERGIES = fl
             else:
                 logger.warning('PARAMETERS file: Unexpected input for '
                                'THEO_ENERGIES. Input will be ignored.')
                 rpars.setHaltingLevel(1)
         elif param == 'V0_REAL':
-            if llist[0].lower() == 'rundgren':
+            if value.lower() == 'rundgren':
                 try:
-                    c = []
-                    for i in range(0, 4):
-                        c.append(float(llist[i+1]))
-                    setTo = c
+                    setTo = [float(other_values[i]) for i in range(4)]
                 except (ValueError, IndexError):
                     logger.warning(
                         "PARAMETERS file: V0_REAL parameter: "
@@ -1678,15 +1578,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                         "function. Input will be ignored.")
                     rpars.setHaltingLevel(1)
             else:
-                setTo = re.sub("(?i)EE", "EEV+workfn", value)
-            if type(setTo) == str:
+                setTo = re.sub("(?i)EE", "EEV+workfn", right_side)
+            if isinstance(setTo, str):
                 setTo = setTo.rstrip()
             rpars.V0_REAL = setTo
-        elif param == 'ZIP_COMPRESSION_LEVEL':
-            setNumericalParameter(rpars, param, llist[0], type_=int,
-                                  range_=(0, 9))
     logger.setLevel(loglevel)
-    return
 
 
 def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
