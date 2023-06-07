@@ -69,6 +69,39 @@ for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
 
 
+class ParametersFileError(Exception):
+    """A generic exception related to the PARAMETERS file."""
+
+    def __init__(self, msg):
+        """Initialize instance."""
+        if not msg.startswith("PARAMETERS file:"):
+            msg = f"PARAMETERS file: {msg}"
+        super().__init__(msg)
+
+
+class ParametersSyntaxError(ParametersFileError):
+    """The syntax for a PARAMETER is invalid or could not be parsed."""
+
+    def __init__(self, msg, parameter=None):
+        """Initialize instance."""
+        self.parameter = parameter
+        if parameter:
+            msg += f"{parameter.upper()}: {msg}"
+        super().__init__(msg)
+
+
+class NeedsFlagError(ParametersSyntaxError):
+    """A PARAMETER needs one or more flags that were not found."""
+
+
+class NotANumericValueError(ParametersSyntaxError):
+    """A PARAMETER that should have numeric values does not."""
+
+
+class OutOfRangeError(ParametersSyntaxError):
+    """A numeric value is out of bounds."""
+
+
 def updatePARAMETERS(rp, filename='PARAMETERS', update_from="."):
     """
     Reads PARAMETERS file again, but ignores everything not concerning the
