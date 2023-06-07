@@ -76,22 +76,22 @@ for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
 
 
-class ParameterBaseError(Exception):
+class ParameterError(Exception):
     '''Base class for errors raised during PARAMETERS interpretation'''
 
-    def __init__(self, parameter, message_text):
+    def __init__(self, parameter, message):
         message = f"PARAMETERS file: parameter {str(parameter)}:\n"
-        if message_text:
-            message += message_text + " "  # add space before "input will be ignored"
+        if message:
+            message += message + " "  # add space before "input will be ignored"
         super().__init__(message)
 
-class ParameterNotRecognizedError(ParameterBaseError):
+class ParameterNotRecognizedError(ParameterError):
     '''Raised when a parameter is not recognized'''
 
     def __init__(self, parameter):
         super().__init__(parameter, "Parameter not recognized.")
 
-class ParameterUnexpectedInputError(ParameterBaseError):
+class ParameterUnexpectedInputError(ParameterError):
     '''Raised when unexpected input is encountered'''
 
     def __init__(self, parameter):
@@ -99,7 +99,7 @@ class ParameterUnexpectedInputError(ParameterBaseError):
                          "Encountered unexpected input."
                          "Check parameter syntax.")
 
-class ParameterBooleanConversionError(ParameterBaseError):
+class ParameterBooleanConversionError(ParameterError):
     '''Raised when a boolean conversion fails'''
 
     def __init__(self, parameter):
@@ -107,7 +107,7 @@ class ParameterBooleanConversionError(ParameterBaseError):
                          "Failed to convert input to boolean."
                          "Check parameter syntax.")
 
-class ParameterFloatConversionError(ParameterBaseError):
+class ParameterFloatConversionError(ParameterError):
     '''Raised when a float conversion fails'''
 
     def __init__(self, parameter):
@@ -115,7 +115,7 @@ class ParameterFloatConversionError(ParameterBaseError):
                          "Failed to convert input to float(s)."
                          "Check parameter syntax.")
 
-class ParameterIntConversionError(ParameterBaseError):
+class ParameterIntConversionError(ParameterError):
     '''Raised when an int conversion fails'''
 
     def __init__(self, parameter):
@@ -123,22 +123,31 @@ class ParameterIntConversionError(ParameterBaseError):
                          "Failed to convert input to integer(s)."
                          "Check parameter syntax.")
 
-class ParameterParseError(ParameterBaseError):
+class ParameterParseError(ParameterError):
     '''Raised when parsing fails'''
 
-    def __init__(self, parameter):
-        super().__init__(parameter,
-                         "Could not parse input."
-                         "Check parameter syntax.")
+    def __init__(self, parameter, supp_message=None):
+        if supp_message:
+            super().__init__(parameter,
+                             f"Could not parse input. {supp_message}")
+        else:
+            super().__init__(parameter,
+                            "Could not parse input."
+                            "Check parameter syntax.")
 
-class ParameterNumberOfInputsError(ParameterBaseError):
+class ParameterNumberOfInputsError(ParameterError):
     '''Raised when the number of inputs is unexpected'''
 
-    def __init__(self, parameter):
-        super().__init__(parameter,
-                         "Unexpected number of inputs.")
+    def __init__(self, parameter, found_and_expected=None):
+        if found_and_expected:
+            super().__init__(parameter,
+                             f"Expected {found_and_expected[1]} inputs, "
+                             "but found {found_and_expected[0]}.")
+        else:
+            super().__init__(parameter,
+                            "Unexpected number of inputs.")
 
-class ParameterRangeError(ParameterBaseError):
+class ParameterRangeError(ParameterError):
     '''Raised when the value is not in the allowed range'''
 
     def __init__(self, parameter, given_value, allowed_range):
@@ -147,25 +156,19 @@ class ParameterRangeError(ParameterBaseError):
                    f"{allowed_range[1]}).")
         super().__init__(parameter, message)
 
-class ParameterUnknownFlagError(ParameterBaseError):
+class ParameterUnknownFlagError(ParameterError):
     '''Raised when an unknown flag is encountered'''
 
     def __init__(self, parameter, flag):
         super().__init__(parameter,
                          f"Unknown flag '{flag}' encountered.")
 
-class ParameterNeedsFlagError(ParameterBaseError):
+class ParameterNeedsFlagError(ParameterError):
     '''Raised when a flag is needed but not given'''
 
     def __init__(self, parameter):
         super().__init__(parameter,
                          "Parameter requires a flag.")
-
-class ParameterCustomError(ParameterBaseError):
-    '''Raised when a custom error message is given'''
-
-    def __init__(self, parameter, custom_message):
-        super().__init__(parameter, custom_message)
 
 
 def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
@@ -202,7 +205,7 @@ def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
         elif should_update:
             message = "gaussian width should be a positive number "
             _errors.append(
-                ParameterCustomError(param, custom_message=message)
+                ParameterCustomError(param, message=message)
                 )
         if scaling is not None and 0 < scaling <= 1:
             rpars.GAUSSIAN_WIDTH_SCALING = scaling
@@ -230,14 +233,14 @@ def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
         elif should_update:
             message = "dgen should be a positive number "
             _errors.append(
-                ParameterCustomError(param, custom_message=message)
+                ParameterError(param, message=message)
                 )
         if scaling is not None and scaling >= 1:
             rpars.SEARCH_MAX_DGEN_SCALING[target] = scaling
         elif scaling:
             message = "scaling value cannot be smaller than 1."
             _errors.append(
-                ParameterCustomError(param, custom_message=message)
+                ParameterError(param, message=message)
                 )
 
     if _errors:
