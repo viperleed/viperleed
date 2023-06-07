@@ -14,8 +14,9 @@ import shutil
 
 import numpy as np
 
-from viperleed.tleedmlib import leedbase
+
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
+from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.base import (strip_comments, splitSublists,
                                       readVector, readIntRange,
                                       recombineListElements)
