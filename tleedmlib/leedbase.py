@@ -22,7 +22,7 @@ from quicktions import Fraction
 from zipfile import ZipFile
 
 from viperleed.guilib import get_equivalent_beams
-from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec
+from viperleed.tleedmlib.base import cosvec
 from viperleed.tleedmlib.files.parameters import (
     readPARAMETERS, interpretPARAMETERS, updatePARAMETERS)
 from viperleed.tleedmlib.files.poscar import readPOSCAR
