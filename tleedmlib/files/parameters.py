@@ -316,8 +316,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                 v = key
                 break
         else:
-            logger.warning('PARAMETERS file: {}: Could not interpret given '
-                           'value. Input will be ignored.'.format(param))
+            logger.warning(f'PARAMETERS file: {param}: Could not interpret '
+                           'given value. Input will be ignored.')
             rpars.setHaltingLevel(haltingOnFail)
             return 1
         if not varname:
@@ -372,9 +372,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
                     raise
                 v = int(float(value))  # for e.g. '1e6' to int
         except ValueError:
-            logger.warning('PARAMETERS file: {}: Could not convert value to '
-                           '{}. Input will be ignored.'
-                           .format(param, type_.__name__))
+            logger.warning(
+                f'PARAMETERS file: {param}: Could not convert '
+                f'value to {type_.__name__}. Input will be ignored.'
+                )
             rpars.setHaltingLevel(haltingOnFail)
             return None
         outOfRange = [False, False]
@@ -386,53 +387,52 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
             outOfRange[1] = True
         rangeChars = ({False: "[", True: "]"}, {False: "]", True: "["})
         if all([v is not None for v in range_]):
-            outOfRangeStr = 'not in range {}{}, {}{}'.format(
-                                        rangeChars[0][range_exclude[0]],
-                                        range_[0], range_[1],
-                                        rangeChars[1][range_exclude[1]])
+            outOfRangeStr = (
+                f'not in range {rangeChars[0][range_exclude[0]]}{range_[0]}, '
+                f'{range_[1]}{rangeChars[1][range_exclude[1]]}'
+                )
         elif range_[0] is not None:
             if range_exclude[0]:
-                outOfRangeStr = 'less than or equal to {}'.format(range_[0])
+                outOfRangeStr = f'less than or equal to {range_[0]}'
             else:
-                outOfRangeStr = 'less than {}'.format(range_[0])
+                outOfRangeStr = f'less than {range_[0]}'
         else:
             if range_exclude[1]:
-                outOfRangeStr = 'larger than or equal to {}'.format(range_[1])
+                outOfRangeStr = f'larger than or equal to {range_[1]}'
             else:
-                outOfRangeStr = 'larger than {}'.format(range_[1])
-        if any([outOfRange[i] and outOfRangeEvent[i] == 'fail'
-                for i in range(0, 2)]):
-            logger.warning('PARAMETERS file: {}: Value {} is {}. Input will '
-                           'be ignored.'.format(param, v, outOfRangeStr))
+                outOfRangeStr = f'larger than {range_[1]}'
+        if any(outOfRange[i] and outOfRangeEvent[i] == 'fail'
+               for i in range(0, 2)):
+            logger.warning(f'PARAMETERS file: {param}: Value {v} is '
+                           f'{outOfRangeStr}. Input will be ignored.')
             rpars.setHaltingLevel(haltingOnFail)
             return None
-        else:
-            for i in range(0, 2):
-                if outOfRange[i]:
-                    if outOfRangeEvent == 'modulo':
-                        if not range_[1]:
-                            raise ValueError(
-                                'Cannot use outOfRangeEvent modulo if upper '
-                                'limit is undefined.')
-                        if not range_[0]:
-                            range_[0] = 0
-                        setTo = (((v - range_[0]) % (range_[1] - range_[0]))
-                                 + range_[0])
-                    elif range_exclude[i]:
-                        mult = 1
-                        if i == 1:
-                            mult = -1
-                        if type_ == float:
-                            setTo = range_[i] + mult*1e-4
-                        else:
-                            setTo = range_[i] + mult
-                    else:
-                        setTo = range_[i]
-                    logger.warning('PARAMETERS file: {}: Value {} is {}. '
-                                   'Value will be set to {}.'
-                                   .format(param, v, outOfRangeStr, setTo))
-                    v = setTo
-                    break
+
+        for i in range(0, 2):
+            if not outOfRange[i]:
+                continue
+            if outOfRangeEvent == 'modulo':
+                if not range_[1]:
+                    raise ValueError('Cannot use outOfRangeEvent modulo '
+                                     'if upper limit is undefined.')
+                if not range_[0]:
+                    range_[0] = 0
+                setTo = (((v - range_[0]) % (range_[1] - range_[0]))
+                         + range_[0])
+            elif range_exclude[i]:
+                mult = 1
+                if i == 1:
+                    mult = -1
+                if type_ == float:
+                    setTo = range_[i] + mult*1e-4
+                else:
+                    setTo = range_[i] + mult
+            else:
+                setTo = range_[i]
+            logger.warning(f'PARAMETERS file: {param}: Value {v} is '
+                           f'{outOfRangeStr}. Value will be set to {setTo}.')
+            v = setTo
+            break
         return v
 
     def setNumericalParameter(rp, param, value, varname=None, type_=float,
