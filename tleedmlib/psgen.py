@@ -21,6 +21,11 @@ import fortranformat as ff
 
 logger = logging.getLogger("tleedm.psgen")
 
+# TODO: repeat from parameters.py. Remove during package restructure to avoid circular imports.
+PARAM_LIMITS = {
+    'LMAX': (1, 18),
+    }
+
 ###############################################
 #                 GLOBALS                     #
 ###############################################
