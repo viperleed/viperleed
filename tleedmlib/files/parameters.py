@@ -351,10 +351,8 @@ def readPARAMETERS(filename='PARAMETERS'):
             continue
         value = value.strip()
         if not value:
-            logger.warning(f'PARAMETERS file: {param} appears to '
-                           'have no value')
-            rpars.setHaltingLevel(1)
             continue
+            raise ParameterNotRecognizedError(parameter=param)
         rpars.readParams[param].append((flags, value))
     rf.close()
     return rpars
@@ -424,10 +422,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 v = key
                 break
         else:
-            logger.warning(f'PARAMETERS file: {param}: Could not interpret '
-                           'given value. Input will be ignored.')
-            rpars.setHaltingLevel(haltingOnFail)
-            return 1
+            raise ParameterBooleanConversionError(parameter=param)
         if not varname:
             varname = param
         setattr(rp, varname, v)
@@ -777,25 +772,16 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     try:
                         rpars.BULK_REPEAT = abs(float(value))
                     except ValueError:
-                        logger.warning(
-                            'PARAMETERS file: BULK_REPEAT: Could not convert '
-                            'value to float. Input will be ignored.')
-                        rpars.setHaltingLevel(1)
+                        raise ParameterFloatConversionError(parameter=param)
                 else:
                     m = re.match(r'\s*(c|z)\(\s*(?P<val>[0-9.]+)\s*\)', s)
                     if not m:
-                        logger.warning(
-                            'PARAMETERS file: BULK_REPEAT: Could not parse '
-                            'input expression. Input will be ignored.')
+                        raise ParameterParseError(parameter=param)
                     else:
                         try:
                             v = abs(float(m.group("val")))
                         except Exception:
-                            logger.warning(
-                                'PARAMETERS file: BULK_REPEAT: Could not '
-                                'convert value to float. Input will be '
-                                'ignored.')
-                            rpars.setHaltingLevel(1)
+                            raise ParameterFloatConversionError(parameter=param)
                         else:
                             if "z" in s:
                                 rpars.BULK_REPEAT = v
@@ -804,11 +790,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             else:  # vector
                 vec = readVector(s, slab.ucell)                                 # TODO: what if slab is None??
                 if vec is None:
-                    logger.warning(
-                        'PARAMETERS file: BULK_REPEAT: Could not parse input '
-                        'expression. Input will be ignored.')
-                else:
-                    rpars.BULK_REPEAT = vec
+                    raise ParameterParseError(parameter=param)
+                rpars.BULK_REPEAT = vec
         elif param == 'DOMAIN':
             # check name
             name = flags[0] if flags else ""
