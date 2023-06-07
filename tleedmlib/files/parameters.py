@@ -108,7 +108,89 @@ class OutOfRangeError(ParametersSyntaxError):
     """A numeric value is out of bounds."""
 
 
-def updatePARAMETERS(rp, filename='PARAMETERS', update_from="."):
+def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
+                                  search_convergence_known=True,
+                                  is_updating=False):
+    """Interpret SEARCH_CONVERGENCE. Raise ParametersSyntaxError."""
+    if (not flags and len(values) == 1 and values[0].lower() == 'off'
+            and not is_updating):                                                # TODO: this is the behaviour of updatePARAMETERS. Was skipping this intended there?
+        rpars.GAUSSIAN_WIDTH_SCALING = 1.
+        return
+
+    if not flags:
+        raise NeedsFlagError("No flag given, and value "
+                             f"{' '.join(values)} not recognized.",
+                             parameter="SEARCH_CONVERGENCE")
+    elif flags[0].lower() not in ['dgen', 'gaussian']:
+        raise ParametersSyntaxError(f'Flag {flags[0]!r} not recognized.',
+                                    parameter="SEARCH_CONVERGENCE")
+
+    numeric = [None, None]
+    for i, value in enumerate(values[:2]):
+        try:
+            numeric[i] = float(value)
+        except ValueError:
+            raise NotANumericValueError("Could not convert value to float.",
+                                        "SEARCH_CONVERGENCE") from None
+
+    _errors = []
+    if flags[0].lower() == 'gaussian':
+        gauss_width, scaling = numeric
+        should_update = (not is_updating
+                         or gauss_width != rpars.searchConvInit["gaussian"])
+        if gauss_width is not None and gauss_width > 0 and should_update:
+            rpars.GAUSSIAN_WIDTH = gauss_width
+            if is_updating:
+                rpars.searchConvInit["gaussian"] = gauss_width
+        elif should_update:
+            _errors.append(
+                OutOfRangeError('gaussian should be a positive number.',
+                                parameter="SEARCH_CONVERGENCE")
+                )
+        if scaling is not None and 0 < scaling <= 1:
+            rpars.GAUSSIAN_WIDTH_SCALING = scaling
+        elif scaling is not None:
+            _errors.append(
+                OutOfRangeError('scaling value should be in range ]0, 1]',
+                                parameter="SEARCH_CONVERGENCE gaussian")
+                )
+    elif flags[0].lower() == 'dgen':
+        if len(flags) == 1:
+            target = 'dec'
+        elif flags[1].lower() in ['dec', 'best', 'all']:
+            target = flags[1].lower()
+        else:
+            raise ParametersSyntaxError(f"flag {flags[1]!r} not recognized.",
+                                        parameter="SEARCH CONVERGENCE dgen")
+        max_dgen, scaling = numeric
+        should_update = (not is_updating
+                         or max_dgen != rpars.searchConvInit["dgen"][target])
+        if max_dgen is not None and max_dgen > 0 and should_update:
+            if not search_convergence_known:  # clear default values
+                rpars.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 0}
+                search_convergence_known = True
+            rpars.SEARCH_MAX_DGEN[target] = max_dgen
+            if is_updating:
+                rpars.searchConvInit["dgen"][target] = max_dgen
+        elif should_update:
+            _errors.append(
+                OutOfRangeError("dgen should be a positive number.",
+                                parameter="SEARCH_CONVERGENCE")
+                )
+        if scaling is not None and scaling >= 1:
+            rpars.SEARCH_MAX_DGEN_SCALING[target] = scaling
+        elif scaling:
+            _errors.append(
+                OutOfRangeError("scaling value cannot be smaller than 1.",
+                                parameter="SEARCH_CONVERGENCE dgen")
+                )
+
+    if _errors:
+        raise _errors[0]
+    return search_convergence_known
+
+
+def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
     """
     Reads PARAMETERS file again, but ignores everything not concerning the
     search or STOP. Updates the given Rparams object accordingly.
