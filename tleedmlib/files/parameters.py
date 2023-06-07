@@ -1602,8 +1602,9 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
         will be commented out without replacement.
     comment : str, optional
         A comment to be added in the new line in PARAMETERS.
-    path : pathlike, str, optional
+    path : str or path-like, optional
         Where to find the PARAMETERS file that should be modified.
+        Default is an empty string, i.e., the current directory.
     suppress_ori : bool, optional
         If True, no 'PARAMETERS_original' file will be created.
     include_left : bool, optional
@@ -1617,10 +1618,9 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
     """
     _path = Path(path)
     file = _path / "PARAMETERS"
-    oriname = "PARAMETERS_ori_"+rp.timestamp
+    oriname = f"PARAMETERS_ori_{rp.timestamp}"
     ori = _path / oriname
-    if (oriname not in rp.manifest and not suppress_ori
-            and os.path.isfile(file)):
+    if oriname not in rp.manifest and not suppress_ori and file.is_file():
         try:
             shutil.copy2(file, ori)
         except Exception:
@@ -1647,37 +1647,30 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
             headerPrinted = True
         valid = False
         param = ""
-        if "=" in line:  # ignore all lines that don't have an "=" sign at all
-            param = line.split('=')[0]      # parameter is defined left of "="
+        stripped_line = strip_comments(line)
+        if "=" in stripped_line:
+            # Parameter is defined left of "="
+            param, *_ = stripped_line.split('=')
             if param:
                 valid = True
-                plist = param.split()
-                if plist:
-                    param = plist[0]
-                if param[0] == '!':
-                    valid = False
+                param, *_ = param.split()
         else:
             for p in ["STOP", "SEARCH_KILL"]:
-                if line.lstrip().upper().startswith(p):
+                if stripped_line.upper().startswith(p):
                     valid = True
                     param = p
         if valid and param == modpar:
             found = True
-            if new:
-                if (modpar+" = "+new.strip()) == line.split("!")[0].strip():
-                    output += line
-                else:
-                    output += ("!"+line[:-1]
-                               + " ! line automatically changed to:\n")
-                    if not include_left:
-                        output += modpar + " = " + new + " ! " + comment + "\n"
-                    else:
-                        output += new + " ! " + comment + "\n"
+            if new and f"{modpar} = {new.strip()}" == stripped_line:
+                output += line
+            elif new:
+                output += f"!{line[:-1]} ! line automatically changed to:\n"
+                if not include_left:
+                    output += f"{modpar} = "
+                output += f"{new} ! {comment}\n"
             else:
-                if comment == "":
-                    comment = "line commented out automatically"
-                output += (("!" + line.rstrip()).ljust(35)
-                           + " ! " + comment + "\n")
+                comment = comment or "line commented out automatically"
+                output += f"!{line.rstrip():<34} ! {comment}\n"
         else:
             output += line
     if new and not found:
@@ -1688,14 +1681,12 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
 ! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #
 ! ######################################################
 """
-            headerPrinted = True
-        output += "\n" + modpar + " = " + new
+        output += f"\n{modpar} = {new}"
         if comment:
-            output += " ! " + comment
+            output += f" ! {comment}"
     try:
         with open(file, "w") as wf:
             wf.write(output)
     except Exception:
         logger.error("modifyPARAMETERS: Failed to write PARAMETERS file.")
         raise
-    return
