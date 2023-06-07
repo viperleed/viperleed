@@ -154,6 +154,13 @@ class ParameterUnknownFlagError(ParameterBaseError):
         super().__init__(parameter,
                          f"Unknown flag '{flag}' encountered.")
 
+class ParameterNeedsFlagError(ParameterBaseError):
+    '''Raised when a flag is needed but not given'''
+
+    def __init__(self, parameter):
+        super().__init__(parameter,
+                         "Parameter requires a flag.")
+
 class ParameterCustomError(ParameterBaseError):
     '''Raised when a custom error message is given'''
 
