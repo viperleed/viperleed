@@ -15,6 +15,7 @@ import shutil
 import numpy as np
 
 from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
 from viperleed.tleedmlib.base import (strip_comments, splitSublists,
                                       readVector, readIntRange,
                                       recombineListElements)
@@ -845,7 +846,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             else:
                 rpars.DOMAIN_STEP = i
         elif param == 'ELEMENT_MIX':                                            # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME?
-            ptl = [el.lower() for el in leedbase.PERIODIC_TABLE]                # TODO: nicer to use the leedbase element getter function and catch exceptions
+            ptl = [el.lower() for el in PERIODIC_TABLE]                # TODO: nicer to use the leedbase element getter function and catch exceptions
             found = False
             for el in values:
                 if el.lower() not in ptl:
@@ -856,7 +857,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 rpars.ELEMENT_MIX[flags[0].capitalize()] = [el.capitalize()
                                                             for el in values]
         elif param == 'ELEMENT_RENAME':
-            ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]             # TODO: nicer to use the leedbase element getter function and catch exceptions
+            ptl = [el.lower() for el in PERIODIC_TABLE]             # TODO: nicer to use the leedbase element getter function and catch exceptions
             if value.lower() not in ptl:
                 message = f"Element {el} not found in periodic table."
                 raise ParameterError(parameter=param,

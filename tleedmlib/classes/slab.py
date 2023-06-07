@@ -24,6 +24,7 @@ try:
 except ImportError:
     has_ase = False
 
+from viperleed.tleedmlib.periodoc_table import PERIODIC_TABLE, COVALENT_RADIUS
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
@@ -1668,8 +1669,8 @@ class Slab:
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a set."""
 
-        _PTL = set(el.lower() for el in tl.leedbase.PERIODIC_TABLE)
-        _RADII = tl.leedbase.COVALENT_RADIUS
+        _PTL = set(el.lower() for el in PERIODIC_TABLE)
+        _RADII = COVALENT_RADIUS
 
         atoms = copy.deepcopy(self.atlist)
         # run from top to bottom of slab

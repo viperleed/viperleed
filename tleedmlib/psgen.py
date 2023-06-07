@@ -15,7 +15,7 @@ import re
 import shutil
 
 import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.files.parameters import PARAM_LIMITS
+from viperleed.tleedmlib.periodoc_table import PERIODIC_TABLE
 
 import fortranformat as ff
 
@@ -206,7 +206,7 @@ def runPhaseshiftGen_old(sl, rp,
 
     output += (str(len(nsl.atlist))+"  "+str(len(nsl.atlist))
                + "                  #AtomTypes,#OccupiedAtomTypes\n")
-    ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]
+    ptl = [el.lower() for el PERIODIC_TABLE]
 
     chemels = {}
     chemelspaths = {}
@@ -238,7 +238,7 @@ def runPhaseshiftGen_old(sl, rp,
             if at in subatlists[(site, el)]:
                 chemel = chemels[el]
                 chgdenpath = chemelspaths[el]
-        output += ("1 "+str(tl.leedbase.PERIODIC_TABLE.index(chemel)+1)
+        output += ("1 "+str(PERIODIC_TABLE.index(chemel)+1)
                    + ".  0.  0.  '"+chgdenpath+"'\n")
         ol = ""
         for j in range(0, 3):

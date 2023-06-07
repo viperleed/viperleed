@@ -15,8 +15,8 @@ from pathlib import Path
 
 import fortranformat as ff
 
-from viperleed.tleedmlib.leedbase import (get_atomic_number,
-                                          get_element_symbol)
+from viperleed.tleedmlib.periodic_table import (get_atomic_number,
+                                                get_element_symbol)
 
 try:
     import matplotlib
