@@ -2,7 +2,7 @@
 """
 Created on Tue Aug 18 16:56:39 2020
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Michele Riva, Alexander Imre
 
 Functions for reading from and writing to the PARAMETERS file
 """
@@ -172,26 +172,23 @@ def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
                                   search_convergence_known=True,
                                   is_updating=False):
     """Interpret SEARCH_CONVERGENCE. Raise ParametersSyntaxError."""
+    param = 'SEARCH_CONVERGENCE'
     if (not flags and len(values) == 1 and values[0].lower() == 'off'
             and not is_updating):                                                # TODO: this is the behaviour of updatePARAMETERS. Was skipping this intended there?
         rpars.GAUSSIAN_WIDTH_SCALING = 1.
         return
 
     if not flags:
-        raise NeedsFlagError("No flag given, and value "
-                             f"{' '.join(values)} not recognized.",
-                             parameter="SEARCH_CONVERGENCE")
+        raise ParameterNeedsFlagError(param)
     elif flags[0].lower() not in ['dgen', 'gaussian']:
-        raise ParametersSyntaxError(f'Flag {flags[0]!r} not recognized.',
-                                    parameter="SEARCH_CONVERGENCE")
+        raise ParameterUnknownFlagError(param, f"{flags[0]!r}")
 
     numeric = [None, None]
     for i, value in enumerate(values[:2]):
         try:
             numeric[i] = float(value)
         except ValueError:
-            raise NotANumericValueError("Could not convert value to float.",
-                                        "SEARCH_CONVERGENCE") from None
+            raise ParameterFloatConversionError(param)
 
     _errors = []
     if flags[0].lower() == 'gaussian':
@@ -203,16 +200,15 @@ def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
             if is_updating:
                 rpars.searchConvInit["gaussian"] = gauss_width
         elif should_update:
+            message = "gaussian width should be a positive number "
             _errors.append(
-                OutOfRangeError('gaussian should be a positive number.',
-                                parameter="SEARCH_CONVERGENCE")
+                ParameterCustomError(param, custom_message=message)
                 )
         if scaling is not None and 0 < scaling <= 1:
             rpars.GAUSSIAN_WIDTH_SCALING = scaling
         elif scaling is not None:
             _errors.append(
-                OutOfRangeError('scaling value should be in range ]0, 1]',
-                                parameter="SEARCH_CONVERGENCE gaussian")
+                ParameterRangeError(param, scaling, (0, 1))
                 )
     elif flags[0].lower() == 'dgen':
         if len(flags) == 1:
@@ -220,8 +216,7 @@ def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
         elif flags[1].lower() in ['dec', 'best', 'all']:
             target = flags[1].lower()
         else:
-            raise ParametersSyntaxError(f"flag {flags[1]!r} not recognized.",
-                                        parameter="SEARCH CONVERGENCE dgen")
+            raise ParameterUnknownFlagError(param, f"{flags[1]!r}")
         max_dgen, scaling = numeric
         should_update = (not is_updating
                          or max_dgen != rpars.searchConvInit["dgen"][target])
@@ -233,16 +228,16 @@ def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
             if is_updating:
                 rpars.searchConvInit["dgen"][target] = max_dgen
         elif should_update:
+            message = "dgen should be a positive number "
             _errors.append(
-                OutOfRangeError("dgen should be a positive number.",
-                                parameter="SEARCH_CONVERGENCE")
+                ParameterCustomError(param, custom_message=message)
                 )
         if scaling is not None and scaling >= 1:
             rpars.SEARCH_MAX_DGEN_SCALING[target] = scaling
         elif scaling:
+            message = "scaling value cannot be smaller than 1."
             _errors.append(
-                OutOfRangeError("scaling value cannot be smaller than 1.",
-                                parameter="SEARCH_CONVERGENCE dgen")
+                ParameterCustomError(param, custom_message=message)
                 )
 
     if _errors:
@@ -297,11 +292,9 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
         if not values:
             continue                                                            # TODO: shouldn't we complain?
         if param == 'SEARCH_CONVERGENCE':
-            try:
-                _interpret_SEARCH_CONVERGENCE(rp, flags, values,
-                                              is_updating=True)
-            except ParametersSyntaxError:
-                pass                                                            # TODO: this was the default behaviour, but perhaps we should warn that we have skipped some lines because they had incorrect syntax?
+            # Previously we would pass if a line was not interpretable, but
+            # new behaviour is to raise an error.
+            _interpret_SEARCH_CONVERGENCE(rp, flags, values, is_updating=True)
 
 
 def readPARAMETERS(filename='PARAMETERS'):
