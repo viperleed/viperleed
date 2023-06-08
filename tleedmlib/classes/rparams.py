@@ -37,6 +37,10 @@ logger = logging.getLogger("tleedm.rparams")
 ###############################################
 
 
+# Notice that the defaults in here that may be mutated during execution
+# are saved as immutable types to prevent inadvertent modification of
+# this global, and are rather converted to their mutable equivalent
+# in the relevant places
 DEFAULTS = {
     'EXPBEAMS_INPUT_FILE' : None,
     'PHASESHIFT_EPS': {
@@ -47,7 +51,14 @@ DEFAULTS = {
     },
     'ZIP_COMPRESSION_LEVEL': 2,
     'SEARCH_EVAL_TIME':  60, # time interval between reads of SD.TL, TODO: should be dynamic?
+    'RUN': (0, 1, 2, 3),
 }
+
+
+PARAM_LIMITS = {
+    'LMAX': (1, 18),
+    }
+
 
 class SearchPar:
     """Stores properties of ONE parameter of the search, i.e. what variation
@@ -158,7 +169,7 @@ class Rparams:
         self.PHI = 0.0           # from BEAM_INCIDENCE
         self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [],
                         'legend': 'all', 'overbar': False, 'perpage': 2}
-        self.RUN = [0, 1, 2, 3]        # what segments should be run
+        self.RUN = self.get_default('RUN')        # what segments should be run
         self.R_FACTOR_LEGACY = True # use old runtime-compiled R-factor calculation
         self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
         self.R_FACTOR_SMOOTH = 0
@@ -274,7 +285,15 @@ class Rparams:
         # complete figures for each search, with search names as keys
 
     def get_default(self, param):
-        return DEFAULTS[param]
+        """Return the default value of param."""
+        value = DEFAULTS[param]
+        if isinstance(value, tuple):
+            value = list(value)
+        return value
+
+    def get_limits(self, param):
+        """Return the smallest and largest acceptable values of param."""
+        return PARAM_LIMITS[param]
 
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and

@@ -75,10 +75,6 @@ _PARAM_ALIAS = {
     }
 
 
-PARAM_LIMITS = {
-    'LMAX': (1, 18),
-    }
-
 for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
 

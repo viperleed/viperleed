@@ -21,10 +21,6 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
 
 logger = logging.getLogger("tleedm.psgen")
 
-# TODO: repeat from parameters.py. Remove during package restructure to avoid circular imports.
-PARAM_LIMITS = {
-    'LMAX': (1, 18),
-    }
 
 ###############################################
 #                 GLOBALS                     #
@@ -68,7 +64,7 @@ def runPhaseshiftGen_old(sl, rp,
     psgensource = os.path.join(rp.sourcedir, psgensource)
     excosource = os.path.join(shortpath, excosource)
 
-    _, lmax = PARAM_LIMITS['LMAX']
+    _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.addBulkLayers(rp)
     outvals = {}
     # dict containing lists of values to output: outvals[energy][block][L]
