@@ -8,24 +8,21 @@ Created on Aug 11 2020
 Tensor LEED Manager section Superpos
 """
 
-import os
-import logging
 import copy
+import logging
+import os
+from pathlib import Path
 import shutil
 import subprocess
-from pathlib import Path
 
-from viperleed.tleedmlib.leedbase import copy_compile_log
-
-import viperleed.tleedmlib.files.iosuperpos as tl_io
-from viperleed.tleedmlib.leedbase import (getDeltas, getTLEEDdir,
-                                          fortran_compile)
-from viperleed.tleedmlib.files.beams import (
-    writeOUTBEAMS, averageBeams, writeFdOut)
-from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
-from viperleed.tleedmlib.files.iosearch import readSDTL_end, readSDTL_blocks
-from viperleed.tleedmlib.files.iorefcalc import readFdOut
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.checksums import validate_multiple_files
+from viperleed.tleedmlib.files.beams import (writeOUTBEAMS, averageBeams,
+                                             writeFdOut)
+from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
+from viperleed.tleedmlib.files.iorefcalc import readFdOut
+from viperleed.tleedmlib.files.iosearch import readSDTL_end, readSDTL_blocks
+import viperleed.tleedmlib.files.iosuperpos as tl_io
 
 logger = logging.getLogger("tleedm.superpos")
 
@@ -87,8 +84,8 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     if not rp.disp_block_read:
         readDISPLACEMENTS_block(rp, sl, rp.disp_blocks[rp.search_index])
         rp.disp_block_read = True
-    if not any([ind in rp.runHistory for ind in [2, 3]]) and not for_error:
-        getDeltas(rp.TENSOR_INDEX, required=True)
+    if not any(ind in rp.runHistory for ind in [2, 3]) and not for_error:
+        leedbase.getDeltas(rp.TENSOR_INDEX, required=True)
     # make sure search parameters are initialized
     if 3 not in rp.runHistory and not subdomain and not for_error:
         logger.debug("Superpos calculation executed without search. "
@@ -124,54 +121,57 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
                        "calculation will not proceed. Stopping...")
         rp.setHaltingLevel(3)
         return
-    if rp.FORTRAN_COMP[0] == "":
+
+    if not rp.FORTRAN_COMP[0]:
         rp.getFortranComp()
-    # get fortran files   # TODO: use CompileTask subclass (Issue #43)
+    # Get FORTRAN files                                                         # TODO: use CompileTask subclass (Issue #43)
     try:
-        tldir = getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
+        tldir = leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
-        srcpath = tldir / 'src'
-        srcname = [f for f in os.listdir(srcpath)
-                   if f.startswith('superpos')][0]
-        shutil.copy2(srcpath / srcname, srcname)
-        libpath = tldir / 'lib'
-        libname = [f for f in os.listdir(libpath)
-                   if f.startswith('lib.superpos')][0]
-        shutil.copy2(libpath / libname, libname)
+        src_dir = tldir / 'src'
+        src_path = next(f for f in src_dir.glob('superpos*'))                   # TODO: StopIteration; Probably also want *.f* in the glob?
+        shutil.copy2(src_path, src_path.name)
+        lib_dir = tldir / 'lib'
+        lib_path = next(f for f in lib_dir.glob('lib.superpos*'))               # TODO: StopIteration; Probably also want *.f* in the glob?
+        shutil.copy2(lib_path, lib_path.name)
         globalname = "GLOBAL"
-        shutil.copy2(srcpath / globalname, globalname)
+        shutil.copy2(src_dir / globalname, globalname)
     except Exception:
         logger.error("Error getting TensErLEED files for superpos: ")
         raise
-    
+
     # Validate checksums
     if not rp.TL_IGNORE_CHECKSUM:
-        files_to_check = (libpath / libname,
-                          srcpath / srcname,
-                          srcpath / globalname)
-        validate_multiple_files(files_to_check, logger, "superpos", rp.TL_VERSION_STR)
-    
-    # compile fortran files
-    sposname = "superpos-"+rp.timestamp
+        files_to_check = (lib_path,
+                          src_path,
+                          src_dir / globalname)
+        validate_multiple_files(files_to_check, logger,
+                                "superpos", rp.TL_VERSION_STR)
+
+    # Compile FORTRAN files
+    sposname = Path(f"superpos-{rp.timestamp}")
     logger.info("Compiling fortran input files...")
-    
+
     compile_log = "compile-superpos.log"
     try:
-        fortran_compile(rp.FORTRAN_COMP[0]+" -o", sposname+" "
-                        + srcname + " " + libname, rp.FORTRAN_COMP[1], logname = compile_log)
+        leedbase.fortran_compile(f"{rp.FORTRAN_COMP[0]} -o",
+                                 f"{sposname} {src_path.name} {lib_path.name}",
+                                 rp.FORTRAN_COMP[1],
+                                 logname=compile_log)
     except Exception:
-        copy_compile_log(rp, Path(compile_log), "superpos-compile")
+        leedbase.copy_compile_log(rp, Path(compile_log), "superpos-compile")
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
+
     logger.info("Starting Superpos calculation...")
     outname = "superpos-spec.out"
     err_log = ""
     try:
         with open(outname, "w") as out:
-            complete = subprocess.run(os.path.join('.', sposname),
-                           input=contrin, encoding="ascii",
-                           capture_output=True)
+            complete = subprocess.run(sposname.resolve(),                       # TODO: Perhaps nicer to have log be a TextIO stream?
+                                      input=contrin, encoding="ascii",
+                                      capture_output=True)
             out.write(complete.stdout)
             err_log = complete.stderr
     except Exception:
