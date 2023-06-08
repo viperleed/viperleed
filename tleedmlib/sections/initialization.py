@@ -499,9 +499,7 @@ def init_domains(rp):
                     raise
                 dp.sl.fullUpdate(dp.rp)
                 try:
-                    dp.rp.ivbeams = readIVBEAMS()
-                    dp.rp.ivbeams_sorted = False
-                    dp.rp.fileLoaded["IVBEAMS"] = True
+                    dp.rp.ivbeams = tl_beams.readIVBEAMS()
                 except FileNotFoundError:
                     pass
                 except Exception:
