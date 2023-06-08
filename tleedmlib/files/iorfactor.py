@@ -485,8 +485,9 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
             ytheo = leedbase.getYfunc(theo, v0i)
             yexp = leedbase.getYfunc(exp, v0i)
 
-            plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, rfact, theo, xlims, yexp, ylims,
-                          ytheo, v0i)
+            plot_analysis(exp, figs, figsize, name, namePos, oritick,
+                          plotcolors, rPos, rfact, theo, xlims, yexp,
+                          ylims, ytheo, v0i)
 
         for fig in figs:
             pdf.savefig(fig)

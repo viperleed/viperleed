@@ -27,7 +27,7 @@ import viperleed.tleedmlib.files.iodeltas as tl_io
 
 logger = logging.getLogger("tleedm.deltas")
 
-# TODO: would be nice to all os.path with pathlib
+# TODO: would be nice to replace all os.path with pathlib
 
 class DeltaCompileTask():
     """Stores information for a worker to compile a delta file, and keeps
@@ -201,14 +201,14 @@ def compileDelta(comptask):
                      "delta-amplitudes: ", exc_info=True)
         return ("Error encountered by DeltaCompileTask " + comptask.foldername
                 + "while trying to fetch fortran source files")
-    
+
     # TODO: we could skip this, if we implemented a general CompileTask (Issue #43)
     (srcname, lib_tleed,
      lib_delta, _) = (
          str(fname.name) if fname is not None else None
          for fname in comptask.get_source_files()
          )
-    
+
     # compile
     ctasks = [(comptask.fortran_comp[0] + " -o " + oname + " -c",
                fname, comptask.fortran_comp[1]) for (fname, oname)
@@ -510,14 +510,13 @@ def deltas(sl, rp, subdomain=False):
         return (deltaCompTasks, deltaRunTasks)
 
     rp.updateCores()
-    
+
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
         validate_multiple_files(deltaCompTasks[0].get_source_files(),
-                                logger,
-                                "delta calculations",
+                                logger, "delta calculations",
                                 rp.TL_VERSION_STR)
-    
+
     # compile files
     logger.info("Compiling fortran files...")
     poolsize = min(len(deltaCompTasks), rp.N_CORES)

@@ -2,7 +2,8 @@
 """
 Created on Thu Mar 18 10:28:52 2021
 
-@author: Florian Kraushofer, Alexander M. Imre
+@author: Florian Kraushofer
+author: Alexander M. Imre
 
 TensErLEED Manager section Error calculation
 """
@@ -51,9 +52,12 @@ def errorcalc(sl, rp):
     for mode in "geo", "vib", "occ":
         sl.restoreOriState()  # reset positions, store any changes as offsets
         # read DISPLACEMENTS block - ONLY geo OR vib
-        deltas_required = tl.files.displacements.readDISPLACEMENTS_block(
-            rp, sl, rp.disp_blocks[rp.search_index],
-            only_mode=mode)
+        deltas_required = readDISPLACEMENTS_block(
+            rp,
+            sl,
+            rp.disp_blocks[rp.search_index],
+            only_mode=mode
+            )
         rp.disp_block_read = True  # to prevent deltas segment from re-reading
         if not deltas_required:
             continue
@@ -137,8 +141,9 @@ def errorcalc(sl, rp):
         if any(var_r_info.values()):
             var_str = []
             for mode, var_r in var_r_info.items():
-                if var_r:
-                    var_str.append(f"{mode}: {tl_io.format_col_content(var_r)}")
+                if not var_r:
+                    continue
+                var_str.append(f"{mode}: {tl_io.format_col_content(var_r)}")
             var_str = ", ".join(var_str)
             logger.info(f"Found values for var(R): {var_str}")
         else:
@@ -159,4 +164,3 @@ def errorcalc(sl, rp):
     # Errors.pdf
     errors_figs = tl_io.make_errors_figs(errors)
     tl_io.write_errors_pdf(errors_figs, filename = "Errors.pdf")
-    return

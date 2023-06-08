@@ -3,6 +3,7 @@
 Created on Fri Jun  4 16:02:20 2021
 
 @author: Florian Kraushofer
+@author: Michele Riva
 
 Wrapper functions for running a section, and section loop for tleedm.
 """
@@ -50,7 +51,6 @@ def run_section(index, sl, rp):
     Returns
     -------
     None.
-
     """
     sectionNames = {0: "INITIALIZATION",
                     1: "REFERENCE CALCULATION",
@@ -98,117 +98,118 @@ def run_section(index, sl, rp):
     while i < len(checkfiles):
         filename = checkfiles[i]
         ignoreError = False
-        if not rp.fileLoaded[filename]:
-            # try loading files
-            if filename == "EXPBEAMS":
-                if len(rp.THEO_ENERGIES) == 0:
-                    er = []
-                else:
-                    er = rp.THEO_ENERGIES[:2]
+        if rp.fileLoaded[filename]:
+            i += 1
+            continue
+        # try loading files
+        if filename == "EXPBEAMS":
+            er = rp.THEO_ENERGIES[:2]
+            try:
+                rp.expbeams = readOUTBEAMS("EXPBEAMS.csv", enrange=er)
+                if len(rp.expbeams) > 0:
+                    rp.fileLoaded["EXPBEAMS"] = True
+            except FileNotFoundError:
                 try:
-                    rp.expbeams = readOUTBEAMS("EXPBEAMS.csv", enrange=er)
+                    # try without the .csv extension
+                    rp.expbeams = readOUTBEAMS("EXPBEAMS", enrange=er)
                     if len(rp.expbeams) > 0:
                         rp.fileLoaded["EXPBEAMS"] = True
-                except FileNotFoundError:
-                    try:
-                        # try without the .csv extension
-                        rp.expbeams = readOUTBEAMS("EXPBEAMS", enrange=er)
-                        if len(rp.expbeams) > 0:
-                            rp.fileLoaded["EXPBEAMS"] = True
-                    except Exception:
-                        logger.error("Error while reading required file "
-                                     "EXPBEAMS.csv", exc_info=rp.LOG_DEBUG)
-                except Exception as e:
-                    logger.error("Error while reading required file EXPBEAMS",
-                                 exc_info=(type(e) != FileNotFoundError))
-                if index != 0:
-                    checkEXPBEAMS(sl, rp)
-            elif filename == "IVBEAMS":
-                try:
-                    rp.ivbeams = readIVBEAMS()
-                    rp.ivbeams_sorted = False
-                    rp.fileLoaded["IVBEAMS"] = True
-                except FileNotFoundError:
-                    if (os.path.isfile("EXPBEAMS")
-                            or os.path.isfile("EXPBEAMS.csv")):
-                        checkfiles.insert(i+1, "EXPBEAMS")
-                        logger.warning("IVBEAMS file not found. Will attempt "
-                                       "generating IVBEAMS from EXBEAMS.")
-                        ignoreError = True
-                    else:
-                        logger.error("Neither IVBEAMS not EXPBEAMS file "
-                                     "found.")
-                except Exception as e:
-                    logger.error("Error while reading required file IVBEAMS",
-                                 exc_info=(type(e) != FileNotFoundError))
-            elif filename == "BEAMLIST":
-                try:
-                    rp.beamlist = readBEAMLIST()
-                    rp.fileLoaded["BEAMLIST"] = True
-                except Exception as e:
+                except Exception:
                     logger.error("Error while reading required file "
-                                 "BEAMLIST", exc_info=(type(e) !=
-                                                       FileNotFoundError))
-            elif filename == "VIBROCC":
-                changeVIBROCC = False
-                try:
-                    changeVIBROCC = readVIBROCC(rp, sl)
-                    rp.fileLoaded["VIBROCC"] = True
-                except Exception as e:
-                    logger.error("Error while reading required file VIBROCC",
-                                 exc_info=(type(e) != FileNotFoundError))
-                sl.fullUpdate(rp)
-                if changeVIBROCC:
-                    if os.path.isfile("VIBROCC"):
-                        os.rename("VIBROCC", "VIBROCC_user")
-                        rp.manifest.append("VIBROCC_user")
-                        logger.info(
-                            "VIBROCC file was modified with automatically "
-                            "generated vibrational amplitudes.")
-                    writeVIBROCC(sl, rp, "VIBROCC")
-                    rp.manifest.append("VIBROCC")
-                if rp.T_EXPERIMENT is not None:
-                    modifyPARAMETERS(rp, "T_EXPERIMENT", new="")
-                if rp.T_DEBYE is not None:
-                    modifyPARAMETERS(rp, "T_DEBYE", new="")
-                if len(rp.VIBR_AMP_SCALE) > 0:
-                    modifyPARAMETERS(rp, "VIBR_AMP_SCALE", new="")
-            elif filename == "PHASESHIFTS":
-                try:
-                    (rp.phaseshifts_firstline, rp.phaseshifts,
-                     newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp)
-                    if newpsGen:
-                        logger.error(
-                            "PHASESHIFTS file generation is only supported "
-                            "during initialization. Stopping execution...")
-                        raise RuntimeError("Inconsistent PHASESHIFT file")
-                    elif newpsWrite:
-                        logger.warning(
-                            "Writing a new PHASESHIFTS file is "
-                            "only supported during initialization. The "
-                            "data in the provided file will be used, but "
-                            "running the initialization is recommended.")
-                        rp.fileLoaded["PHASESHIFTS"] = True
-                    else:
-                        rp.fileLoaded["PHASESHIFTS"] = True
-                except Exception as e:
-                    logger.error("Error while reading required file "
-                                 "PHASESHIFTS", exc_info=(type(e) !=
-                                                          FileNotFoundError))
-            elif filename == "DISPLACEMENTS":
-                try:
-                    readDISPLACEMENTS(rp)
-                    rp.fileLoaded["DISPLACEMENTS"] = True
-                except Exception as e:
-                    logger.error("Error while reading required file "
-                                 "DISPLACEMENTS", exc_info=(type(e) !=
-                                                            FileNotFoundError))
-            if not rp.fileLoaded[filename] and not ignoreError:
-                # and if that didn't work, stop:
-                logger.error("Step '" + sectionNames[index] + "' requires "
-                             "file " + filename + ". Stopping execution...")
-                rp.setHaltingLevel(3)
-                return
+                                 "EXPBEAMS.csv", exc_info=rp.LOG_DEBUG)
+            except Exception as e:
+                logger.error("Error while reading required file EXPBEAMS",
+                             exc_info=(type(e) != FileNotFoundError))
+            if index != 0:
+                checkEXPBEAMS(sl, rp)
+        elif filename == "IVBEAMS":
+            try:
+                rp.ivbeams = readIVBEAMS()
+                rp.ivbeams_sorted = False
+                rp.fileLoaded["IVBEAMS"] = True
+            except FileNotFoundError:
+                if (os.path.isfile("EXPBEAMS")
+                        or os.path.isfile("EXPBEAMS.csv")):
+                    checkfiles.insert(i+1, "EXPBEAMS")
+                    logger.warning("IVBEAMS file not found. Will attempt "
+                                   "generating IVBEAMS from EXBEAMS.")
+                    ignoreError = True
+                else:
+                    logger.error("Neither IVBEAMS not EXPBEAMS file "
+                                 "found.")
+            except Exception as e:
+                logger.error("Error while reading required file IVBEAMS",
+                             exc_info=(type(e) != FileNotFoundError))
+        elif filename == "BEAMLIST":
+            try:
+                rp.beamlist = readBEAMLIST()
+                rp.fileLoaded["BEAMLIST"] = True
+            except Exception as e:
+                logger.error("Error while reading required file "
+                             "BEAMLIST", exc_info=(type(e) !=
+                                                   FileNotFoundError))
+        elif filename == "VIBROCC":
+            changeVIBROCC = False
+            try:
+                changeVIBROCC = readVIBROCC(rp, sl)
+                rp.fileLoaded["VIBROCC"] = True
+            except Exception as exc:
+                _not_found = not isinstance(exc, FileNotFoundError)
+                logger.error("Error while reading required file VIBROCC",
+                             exc_info=_not_found)
+            sl.fullUpdate(rp)
+            if changeVIBROCC:
+                if os.path.isfile("VIBROCC"):
+                    os.rename("VIBROCC", "VIBROCC_user")
+                    rp.manifest.append("VIBROCC_user")
+                    logger.info(
+                        "VIBROCC file was modified with automatically "
+                        "generated vibrational amplitudes."
+                        )
+                writeVIBROCC(sl, rp, "VIBROCC")
+                rp.manifest.append("VIBROCC")
+            if rp.T_EXPERIMENT is not None:
+                modifyPARAMETERS(rp, "T_EXPERIMENT", new="")
+            if rp.T_DEBYE is not None:
+                modifyPARAMETERS(rp, "T_DEBYE", new="")
+            if len(rp.VIBR_AMP_SCALE) > 0:
+                modifyPARAMETERS(rp, "VIBR_AMP_SCALE", new="")
+        elif filename == "PHASESHIFTS":
+            try:
+                (rp.phaseshifts_firstline, rp.phaseshifts,
+                 newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp)
+                if newpsGen:
+                    logger.error(
+                        "PHASESHIFTS file generation is only supported "
+                        "during initialization. Stopping execution...")
+                    raise RuntimeError("Inconsistent PHASESHIFT file")
+                elif newpsWrite:
+                    logger.warning(
+                        "Writing a new PHASESHIFTS file is "
+                        "only supported during initialization. The "
+                        "data in the provided file will be used, but "
+                        "running the initialization is recommended.")
+                    rp.fileLoaded["PHASESHIFTS"] = True
+                else:
+                    rp.fileLoaded["PHASESHIFTS"] = True
+            except Exception as e:
+                logger.error("Error while reading required file "
+                             "PHASESHIFTS", exc_info=(type(e) !=
+                                                      FileNotFoundError))
+        elif filename == "DISPLACEMENTS":
+            try:
+                readDISPLACEMENTS(rp)
+                rp.fileLoaded["DISPLACEMENTS"] = True
+            except Exception as e:
+                logger.error("Error while reading required file "
+                             "DISPLACEMENTS", exc_info=(type(e) !=
+                                                        FileNotFoundError))
+        if not rp.fileLoaded[filename] and not ignoreError:
+            # and if that didn't work, stop:
+            logger.error(f"Step '{sectionNames[index]}' requires "
+                         f"file {filename}. Stopping execution...")
+            rp.setHaltingLevel(3)
+            return
         i += 1
     try:
         if index == 0:
@@ -228,13 +229,12 @@ def run_section(index, sl, rp):
         elif index == 6:
             fd_optimization.fd_optimization(sl, rp)
     except Exception:
-        logger.error("Error in section {}".format(sectionNames[index]))
+        logger.error(f"Error in section {sectionNames[index]}")
         raise
-    elapsedTimeStr = get_elapsed_time_str(timer() - sectionStartTime)
-    logger.info("Finishing section at " + time.strftime("%H:%M:%S",
-                                                        time.localtime())
-                + ". Section took " + elapsedTimeStr + ".")
-    return
+    logger.info(
+        f"Finishing section at {time.strftime('%H:%M:%S', time.localtime())}. "
+        f"Section took {get_elapsed_time_str(timer() - sectionStartTime)}."
+        )
 
 
 def section_loop(rp, sl):
@@ -255,13 +255,12 @@ def section_loop(rp, sl):
         1: clean exit through KeyboardInterrupt
         2: exit due to Exception before entering main loop
         3: exit due to Exception during main loop
-
     """
     sectionorder = [0, 1, 6, 11, 2, 3, 31, 12, 4, 5]
     searchLoopR = None
     searchLoopLevel = 0
     initHalt = False
-    while len(rp.RUN) > 0:
+    while rp.RUN:
         try:
             sec = rp.RUN.pop(0)
             if rp.runHistory and (sectionorder.index(sec)
@@ -274,31 +273,34 @@ def section_loop(rp, sl):
                     logger.warning(
                         "Exception while trying to clean up earlier segments. "
                         "Program will proceed, but old files may be lost.",
-                        exc_info=True)
+                        exc_info=True
+                        )
             run_section(sec, sl, rp)
             if rp.domainParams and sl is None:
                 sl = rp.pseudoSlab
             if rp.domainParams:
-                rp.setHaltingLevel(max([dp.rp.halt for dp in rp.domainParams]))
+                rp.setHaltingLevel(max(dp.rp.halt for dp in rp.domainParams))
+
+            # Decide how to proceed
+            next_section = next(iter(rp.RUN), None)
             if (sec == 0 and not rp.domainParams and not sl.preprocessed
                     and rp.HALTING <= 2 and len(rp.RUN) > 0):
-                logger.info(
-                    "Initialization finished. Execution will stop. Please "
-                    "check whether comments in POSCAR are correct, then "
-                    "restart.")
-                rp.checklist.append(
-                    "Check whether comments in POSCAR are correct")
+                logger.info("Initialization finished. Execution will stop. "
+                            "Please check whether comments in POSCAR are "
+                            "correct, then restart.")
+                rp.checklist.append("Check whether comments in "
+                                    "POSCAR are correct")
                 rp.setHaltingLevel(2)
                 initHalt = True
             elif (sec == 1 and rp.fileLoaded["EXPBEAMS"]):
-                if (rp.RUN[:1] != [11] and          # r-factor after refcalc
+                if (next_section != 11 and          # r-factor after refcalc
                         (not rp.domainParams or 3 in rp.runHistory)):
                     rp.RUN.insert(0, 11)
             elif (sec == 3 and rp.fileLoaded["EXPBEAMS"]):
-                if rp.RUN[:1] != [31]:  # superpos after search
+                if next_section != 31:  # superpos after search
                     rp.RUN.insert(0, 31)
             elif sec == 31 and rp.fileLoaded["EXPBEAMS"]:
-                if rp.RUN[:1] != [12]:   # r-factor after superpos
+                if next_section != 12:   # r-factor after superpos
                     rp.RUN.insert(0, 12)
             elif sec == 12 and not rp.STOP:
                 loops = [t for t in rp.disp_loops if t[1] == rp.search_index]
@@ -344,9 +346,10 @@ def section_loop(rp, sl):
         if rp.halt >= rp.HALTING:
             if not initHalt:
                 logger.info(
-                    "# An exception occured that meets the halting "
+                    "# An exception occurred that meets the halting "
                     "criteria defined by the HALTING parameter. Execution "
-                    "will stop, check log for warnings and errors.")
+                    "will stop, check log for warnings and errors."
+                    )
             break
         updatePARAMETERS(rp)
         if rp.RUN and rp.STOP and not rp.RUN[0] in [11, 12, 31]:

@@ -10,15 +10,16 @@ Master script running the TensErLEED Manager.
 import logging
 import multiprocessing
 import os
+from pathlib import Path
 import shutil
 import sys
 import time
 
-cd = os.path.realpath(os.path.dirname(__file__))
 # NB: it's necessary to add vpr_path to sys.path so that viperleed
 #     can be loaded correctly at the top-level package
-vpr_path = os.path.realpath(os.path.join(cd, '..'))
-for import_path in (cd, vpr_path):
+cd = Path(__file__).resolve().parent
+vpr_path = cd.parent
+for import_path in (str(cd), str(vpr_path)):
     if import_path not in sys.path:
         sys.path.append(import_path)
 
@@ -113,11 +114,11 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     if domains:  # no POSCAR in main folder for domain searches
         slab = None
     elif slab is None:
-        if os.path.isfile(os.path.join(".", "POSCAR")):
-            poscarfile = os.path.join(".", "POSCAR")
+        poscarfile = Path("POSCAR")
+        if poscarfile.is_file():
             logger.info("Reading structure from file POSCAR")
             try:
-                slab = readPOSCAR(filename=poscarfile)
+                slab = readPOSCAR(filename=str(poscarfile.resolve()))
             except Exception:
                 logger.error("Exception while reading POSCAR", exc_info=True)
                 cleanup(tmpmanifest)
@@ -153,18 +154,17 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         try:
             setattr(rp, p, preset_params[p])
         except Exception:
-            logger.warning("Error applying preset parameter {}: ".format(p),
+            logger.warning(f"Error applying preset parameter {p}: ",
                            exc_info=True)
     if not domains:
         slab.fullUpdate(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
 
     rp.systemName = system_name
-    rp.sourcedir = os.path.abspath(source)
+    rp.sourcedir = str(Path(source).resolve())                                  # TODO: use Path instead of str
     if not rp.systemName:
         # use name of parent folder
-        rp.systemName = os.path.basename(os.path.abspath(
-            os.path.join(os.getcwd(), os.pardir)))
+        rp.systemName = str(Path.cwd().parent.name)
     # check if halting condition is already in effect:
     if rp.halt >= rp.HALTING:
         logger.info("Halting execution...")

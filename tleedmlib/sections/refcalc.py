@@ -53,16 +53,15 @@ class RefcalcCompileTask():
 
         if os.name == 'nt':
             self.exename += '.exe'
-            
+
     @property
     def logfile(self):
         return self.basedir / self.foldername / "fortran-compile.log"
-        
+
     @property
     def compile_log_name(self):
         # name as it should appear in the compile_logs directory
         return self.foldername
-        
 
     def get_source_files(self):
         """Return a tuple of source files needed for running a refcalc."""
@@ -75,7 +74,7 @@ class RefcalcCompileTask():
         _muftin = Path("muftin.f")
         muftinname =_muftin if _muftin.is_file() else None
         if any(f is None for f in (srcname, lib_tleed)):
-            raise RuntimeError(f"Source files missing in {sourcedir}")       # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
+            raise RuntimeError(f"Source files missing in {sourcedir}")          # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
         return lib_tleed, srcname, globalname, muftinname
 
     def copy_source_files_to_local(self):
@@ -343,7 +342,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     except Exception:
         logger.error(
             "Exception while trying to write refcalc-FIN file. "
-            "Execution will proceed. The exception was: ", exc_info=True)
+            "Execution will proceed. The exception was: ",
+            exc_info=True
+            )
     if rp.TL_VERSION < 1.7:   # muftin.f deprecated in version 1.7
         try:
             tl_io.writeMuftin(sl, rp)
@@ -356,7 +357,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         rp.setHaltingLevel(3)
         return
 
-    energies = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01,
+    energies = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01,         # TODO: use better arange
                          rp.THEO_ENERGIES[2])
     tldir = os.path.abspath(
         leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
@@ -376,10 +377,11 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     if single_threaded or rp.LMAX[0] == rp.LMAX[1] or rp.TL_VERSION <= 1.6:
         which_lmax = set([rp.LMAX[1]])
     else:    # find appropriate LMAX per energy
-        ps_en = [(i, ps[0]*27.211396) for (i, ps) in enumerate(rp.phaseshifts)]
+        ps_en = [(i, ps[0]*27.211396) for (i, ps) in enumerate(rp.phaseshifts)] # TODO: use HARTREE_TO_EV
         lmax = {}  # lmax as a function of energy
         warn_small = True
         warn_large = True
+        _, _max = rp.get_limits("LMAX")
         for en in energies:
             try:
                 ps_ind = [pe[0] for pe in ps_en if pe[1] >= en][0]
@@ -398,20 +400,19 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                          if abs(v) > rp.PHASESHIFT_EPS]) + 1)
                 except (IndexError, ValueError):
                     pass
-            lmax[en] = min(max(max(lmax_cands), rp.LMAX[0]), rp.LMAX[1])
+            lmax[en] = min(max((rp.LMAX[0], *lmax_cands)), rp.LMAX[1])
             if lmax[en] < 6 and warn_small:
                 warn_small = False
-                logger.debug(
-                    "Found small LMAX value based on PHASESHIFT_EPS parameter "
-                    "(LMAX = {}, E = {:.2f} eV)".format(lmax[en], en))
-            if lmax[en] > 18:
-                lmax[en] = 18
+                logger.debug("Found small LMAX value based on PHASESHIFT_EPS "
+                             f"parameter (LMAX = {lmax[en]}, E = {en:.2f} eV)")
+            if lmax[en] > _max:
+                lmax[en] = _max
                 if warn_large:
                     warn_large = False
-                    logger.info(
-                        "The LMAX found based on the PHASESHIFT_EPS "
-                        "parameter is greater than 18, which is currently "
-                        "not supported. LMAX was set to 18.")
+                    logger.info("The LMAX found based on the PHASESHIFT_EPS "
+                                f"parameter is greater than {_max}, which is "
+                                "currently not supported. LMAX was set to "
+                                f"{_max}.")
         which_lmax = set(lmax.values())
 
     # collect compile tasks
@@ -426,8 +427,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             raise
         comp_tasks.append(RefcalcCompileTask(param, lm, rp.FORTRAN_COMP,
                                              tldir, basedir=rp.workdir))
-        collect_param += ("### PARAM file for LMAX = {} ###\n\n".format(lm)
-                          + param + "\n\n")
+        collect_param += f"### PARAM file for LMAX = {lm} ###\n\n{param}\n\n"
     try:
         with open("refcalc-PARAM", "w") as wf:
             wf.write(collect_param)
@@ -465,7 +465,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             if len(which_lmax) == 1:
                 ct = comp_tasks[0]
             else:
-                ct = [ct for ct in comp_tasks if ct.lmax == lmax[en]][0]
+                ct = next(ct for ct in comp_tasks if ct.lmax == lmax[en])
             ref_tasks.append(RefcalcRunTask(fin, en, ct, logname,
                                             collect_at=collection_dir,
                                             single_threaded=False,
@@ -474,7 +474,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         ct = comp_tasks[0]
         ref_tasks.append(RefcalcRunTask(fin, -1, ct, logname,
                                         single_threaded=True,
-                                        tl_version=rp.TL_VERSION))    
+                                        tl_version=rp.TL_VERSION))
 
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
@@ -504,8 +504,6 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                     "Set the N_CORES parameter to speed it up.")
         try:
             r = run_refcalc(ref_tasks[0])
-        except Exception:
-            raise
         finally:
             os.chdir(home)
         if r:
@@ -564,10 +562,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.error("Error reading fd.out after reference calculation. "
                      "Check settings and refcalc log.")
         raise
-    if len(rp.theobeams["refcalc"]) == 0:
-        logger.error("No data found in fd.out . "
-                     "Check if file is empty.")
-        raise
+    if not len(rp.theobeams["refcalc"]):
+        logger.error("No data found in fd.out. Check if file is empty.")
+        raise RuntimeError                                                      # TODO: better exception
     # clear oriState for atoms and sites, current state will be new origin
     for at in sl.atlist:
         at.oriState = None
@@ -791,4 +788,3 @@ def refcalc_domains(rp):
     except Exception:
         logger.error("Error writing averaged refcalc-fd.out for R-factor "
                      "calculation.", exc_info=rp.LOG_DEBUG)
-    return
