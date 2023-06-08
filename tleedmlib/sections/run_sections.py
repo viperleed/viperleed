@@ -7,22 +7,29 @@ Created on Fri Jun  4 16:02:20 2021
 Wrapper functions for running a section, and section loop for tleedm.
 """
 
-import time
-from timeit import default_timer as timer
 import logging
 import os
+import time
+from timeit import default_timer as timer
 
-import viperleed.tleedmlib.sections as sections
-from viperleed.tleedmlib.sections.cleanup import cleanup, move_oldruns
 from viperleed.tleedmlib.base import get_elapsed_time_str
-# from viperleed import GLOBALS
+from viperleed.tleedmlib.sections import initialization                         # TODO: perhaps use TLEEDMSection
+from viperleed.tleedmlib.sections import refcalc
+from viperleed.tleedmlib.sections import rfactor
+from viperleed.tleedmlib.sections import deltas
+from viperleed.tleedmlib.sections import search
+from viperleed.tleedmlib.sections import superpos
+from viperleed.tleedmlib.sections import errorcalc
+from viperleed.tleedmlib.sections import fd_optimization
+from viperleed.tleedmlib.sections.cleanup import cleanup, move_oldruns
+from viperleed.tleedmlib.files.beams import (readBEAMLIST, readIVBEAMS,
+                                             readOUTBEAMS, checkEXPBEAMS)
+from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS
 from viperleed.tleedmlib.files.parameters import (modifyPARAMETERS,
                                                   updatePARAMETERS)
 from viperleed.tleedmlib.files.phaseshifts import readPHASESHIFTS
-from viperleed.tleedmlib.files.beams import (
-    readBEAMLIST, readIVBEAMS, readOUTBEAMS, checkEXPBEAMS)
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC, writeVIBROCC
-from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS
+
 
 logger = logging.getLogger("tleedm.sections.run_sections")
 
@@ -205,21 +212,21 @@ def run_section(index, sl, rp):
         i += 1
     try:
         if index == 0:
-            sections.initialization(sl, rp)
+            initialization.initialization(sl, rp)
         elif index == 1:
-            sections.refcalc(sl, rp)
+            refcalc.refcalc(sl, rp)
         elif index in [11, 12]:
-            sections.rfactor(sl, rp, index)
+            rfactor.rfactor(sl, rp, index)
         elif index == 2:
-            sections.deltas(sl, rp)
+            deltas.deltas(sl, rp)
         elif index == 3:
-            sections.search(sl, rp)
+            search.search(sl, rp)
         elif index == 31:
-            sections.superpos(sl, rp)
+            superpos.superpos(sl, rp)
         elif index == 5:
-            sections.errorcalc(sl, rp)
+            errorcalc.errorcalc(sl, rp)
         elif index == 6:
-            sections.fd_optimization(sl, rp)
+            fd_optimization.fd_optimization(sl, rp)
     except Exception:
         logger.error("Error in section {}".format(sectionNames[index]))
         raise

@@ -8,31 +8,27 @@ Created on Aug 11 2020
 Tensor LEED Manager section Initialization
 """
 
-import os
-import shutil
-import logging
 import copy
-import numpy as np
+import logging
+import os
 from pathlib import Path
+import shutil
 from zipfile import ZipFile
 
-import viperleed.tleedmlib as tl
+import numpy as np
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib import symmetry as tl_symmetry
 from viperleed.tleedmlib.base import angle, rotation_matrix
-from viperleed.tleedmlib.sections._sections import (ALL_INPUT_FILES, 
-                                                    EXPBEAMS_NAMES)
 from viperleed.tleedmlib.beamgen import runBeamGen
-from viperleed.tleedmlib.psgen import (runPhaseshiftGen, runPhaseshiftGen_old)
-from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
-from viperleed.tleedmlib.files.vibrocc import readVIBROCC
-from viperleed.tleedmlib.files.parameters import (
-    readPARAMETERS, interpretPARAMETERS, modifyPARAMETERS)
-from viperleed.tleedmlib.files.phaseshifts import (
-    readPHASESHIFTS, writePHASESHIFTS, plot_phaseshifts
-    )
-from viperleed.tleedmlib.files.beams import (
-    readOUTBEAMS, readBEAMLIST, checkEXPBEAMS, readIVBEAMS, sortIVBEAMS,
-    writeIVBEAMS)
-from viperleed.tleedmlib.files.patterninfo import writePatternInfo
+from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.classes.rparams import DomainParameters
+from viperleed.tleedmlib.files import beams as tl_beams, parameters
+from viperleed.tleedmlib.files import patterninfo, phaseshifts, poscar, vibrocc
+from viperleed.tleedmlib.psgen import runPhaseshiftGen, runPhaseshiftGen_old
+from viperleed.tleedmlib.sections._sections import (ALL_INPUT_FILES,
+                                                    EXPBEAMS_NAMES)
+
 
 logger = logging.getLogger("tleedm.initialization")
 
@@ -42,38 +38,7 @@ ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
-        # check if multiple experimental input files were provided and warn if so
-        exp_files_provided = (os.path.isfile(fn) for fn in EXPBEAMS_NAMES)
-        if sum(exp_files_provided) > 1:
-            logger.warning("Multiple files with experimental I(V) curves "
-                           "were provided. "
-                           "Check if the root directory contains the correct "
-                           "files. "
-                           "ViPErLEED will preferentially use 'EXPBEAMS.csv'.")
-            rp.setHaltingLevel(1)
-        # check for experimental beams:
-        expbeams_name = ""
-        for fn in EXPBEAMS_NAMES:
-            if os.path.isfile(fn):
-                expbeams_name = fn
-                rp.EXPBEAMS_INPUT_FILE = fn  # store which file name was used
-                break
-        if expbeams_name:  # experimental beams provided
-            if len(rp.THEO_ENERGIES) == 0:
-                er = []
-            else:
-                er = rp.THEO_ENERGIES[:2]
-            if not rp.fileLoaded["EXPBEAMS"]:
-                try:
-                    rp.expbeams = readOUTBEAMS(filename=expbeams_name, enrange=er)
-                    if len(rp.expbeams) > 0:
-                        rp.fileLoaded["EXPBEAMS"] = True
-                    else:
-                        logger.error(f"Error reading {expbeams_name}: "
-                                     "No data was read.")
-                except Exception:
-                    logger.error(f"Error while reading file {expbeams_name}.",
-                                 exc_info=True)
+        _get_expbeams(rp)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
@@ -82,43 +47,37 @@ def initialization(sl, rp, subdomain=False):
 
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
-        tl.symmetry.findSymmetry(sl, rp)
-        tl.symmetry.enforceSymmetry(sl, rp)
+        tl_symmetry.findSymmetry(sl, rp)
+        tl_symmetry.enforceSymmetry(sl, rp)
 
     # check whether the slab unit cell is minimal:
     changecell, mincell = sl.getMinUnitCell(rp)
     transform = np.dot(np.transpose(sl.ucell[:2, :2]),
                        np.linalg.inv(mincell)).round()
-    ws = tl.leedbase.writeWoodsNotation(transform)
+    ws = leedbase.writeWoodsNotation(transform)
     if changecell and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
                                  np.identity(2)).all():
         if ws:
-            ws = "= "+ws
+            ws = f"= {ws}"
         else:
-            ws = "M = {} {}, {} {}".format(*[x for y in transform.astype(int)
-                                             for x in y])
+            ws = "M = {} {}, {} {}".format(*transform.astype(int).ravel())
         ssl = sl.makeSymBaseSlab(rp, transform=transform)
         if subdomain:
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info("Found SYMMETRY_CELL_TRANSFORM "+ws)
             sl.symbaseslab = ssl
-            if "M = " not in ws:
-                modifyPARAMETERS(rp, "SYMMETRY_CELL_TRANSFORM", new=ws)
-            else:
-                modifyPARAMETERS(
-                    rp, "SYMMETRY_CELL_TRANSFORM",
-                    new=("SYMMETRY_CELL_TRANSFORM M = "
-                         "{:.0f} {:.0f}, {:.0f} {:.0f}".format(
-                                     *[x for y in transform for x in y])),
-                    include_left=True)
+            parameters.modifyPARAMETERS(rp, "SYMMETRY_CELL_TRANSFORM",
+                                        new=f"SYMMETRY_CELL_TRANSFORM {ws}",
+                                        include_left=True)
         else:
             logger.warning(
-                "POSCAR unit cell is not minimal (supercell {}). "
+                f"POSCAR unit cell is not minimal (supercell {ws}). "
                 "A minimal POSCAR will be written as POSCAR_mincell for "
                 "information. Consider calculating with POSCAR_mincell, "
                 "or setting SYMMETRY_CELL_TRANSFORM to conserve "
-                "translational symmetry.".format(ws))
-            writePOSCAR(ssl, filename="POSCAR_mincell")
+                "translational symmetry."
+                )
+            poscar.writePOSCAR(ssl, filename="POSCAR_mincell")
             rp.setHaltingLevel(1)
     elif not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, transform).all():
@@ -130,10 +89,10 @@ def initialization(sl, rp, subdomain=False):
     if sl.symbaseslab is not None:
         logger.info("A symmetry cell transformation was found. Re-running "
                     "slab symmetry search using base unit cell...")
-        tl.symmetry.getSymBaseSymmetry(sl, rp)
+        tl_symmetry.getSymBaseSymmetry(sl, rp)
         try:
-            writePOSCAR(sl.symbaseslab, filename='POSCAR_mincell',
-                        comments='all')
+            poscar.writePOSCAR(sl.symbaseslab, filename='POSCAR_mincell',
+                               comments='all')
         except Exception:
             logger.warning("Exception occurred while writing POSCAR_mincell")
 
@@ -141,7 +100,7 @@ def initialization(sl, rp, subdomain=False):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
-        writePOSCAR(tmpslab, filename='POSCAR', comments='all')
+        poscar.writePOSCAR(tmpslab, filename='POSCAR', comments='all')
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
@@ -149,7 +108,7 @@ def initialization(sl, rp, subdomain=False):
     # generate POSCAR_oricell
     tmpslab.revertUnitCell()
     try:
-        writePOSCAR(tmpslab, filename='POSCAR_oricell', comments='nodir')
+        poscar.writePOSCAR(tmpslab, filename='POSCAR_oricell', comments='nodir')
     except Exception:
         logger.error("Exception occurred while writing POSCAR_oricell, "
                      "execution will continue...")
@@ -164,15 +123,19 @@ def initialization(sl, rp, subdomain=False):
             cvec, cuts = sl.detectBulk(rp)
             rp.BULK_REPEAT = cvec
             vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            modifyPARAMETERS(rp, "BULK_REPEAT", vec_str,
-                             comment="Automatically detected repeat vector")
-            logger.info("Detected bulk repeat vector: " + vec_str)
+            parameters.modifyPARAMETERS(
+                rp, "BULK_REPEAT", vec_str,
+                comment="Automatically detected repeat vector"
+                )
+            logger.info(f"Detected bulk repeat vector: {vec_str}")
             layer_cuts = sl.createLayers(rp, bulk_cuts=cuts)
-            modifyPARAMETERS(rp, "LAYER_CUTS", " ".join(["{:.4f}".format(f)
-                                                         for f in layer_cuts]))
+            parameters.modifyPARAMETERS(
+                rp, "LAYER_CUTS",
+                " ".join(f"{c:.4f}" for c in layer_cuts)
+                )
             rp.N_BULK_LAYERS = len(cuts)
-            modifyPARAMETERS(rp, "N_BULK_LAYERS", str(len(cuts)))
-        modifyPARAMETERS(rp, "BULK_LIKE_BELOW", new="")
+            parameters.modifyPARAMETERS(rp, "N_BULK_LAYERS", str(len(cuts)))
+        parameters.modifyPARAMETERS(rp, "BULK_LIKE_BELOW", new="")
 
     # create bulk slab:
     if sl.bulkslab is None:
@@ -185,9 +148,11 @@ def initialization(sl, rp, subdomain=False):
         if rvec is not None:
             rp.BULK_REPEAT = rvec
             vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            modifyPARAMETERS(rp, "BULK_REPEAT", vec_str,
-                             comment="Automatically detected repeat vector")
-            logger.info("Detected bulk repeat vector: " + vec_str)
+            parameters.modifyPARAMETERS(
+                rp, "BULK_REPEAT", vec_str,
+                comment="Automatically detected repeat vector"
+                )
+            logger.info(f"Detected bulk repeat vector: {vec_str}")
             # update bulk slab vector
             sl.bulkslab.getCartesianCoordinates()
             sl.bulkslab.ucell[:, 2] = np.copy(rvec)
@@ -204,9 +169,10 @@ def initialization(sl, rp, subdomain=False):
         else:
             rp.BULK_REPEAT = (blayers[0].cartbotz
                               - sl.layers[blayers[0].num-1].cartbotz)
-        modifyPARAMETERS(rp, "BULK_REPEAT", "{:.5f}".format(rp.BULK_REPEAT),
-                         comment=("Automatically detected spacing. "
-                                  "Check POSCAR_bulk."))
+        parameters.modifyPARAMETERS(
+            rp, "BULK_REPEAT", f"{rp.BULK_REPEAT:.5f}",
+            comment="Automatically detected spacing. Check POSCAR_bulk."
+            )
         logger.warning(
             "The BULK_REPEAT parameter was undefined, which may lead to "
             "unintended changes in the bulk unit cell during optimization if "
@@ -238,16 +204,16 @@ def initialization(sl, rp, subdomain=False):
 
         # bulk plane group detection:
         logger.info("Starting bulk symmetry search...")
-        tl.symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
+        tl_symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
         bsl.revertUnitCell()  # keep origin matched with main slab
-        logger.info("Found bulk plane group: "+bsl.foundplanegroup)
-        tl.symmetry.findBulkSymmetry(bsl, rp)
+        logger.info(f"Found bulk plane group: {bsl.foundplanegroup}")
+        tl_symmetry.findBulkSymmetry(bsl, rp)
 
         # write POSCAR_bulk
         bsl = copy.deepcopy(sl.bulkslab)
         bsl.sortOriginal()
         try:
-            writePOSCAR(bsl, filename='POSCAR_bulk', comments='bulk')
+            poscar.writePOSCAR(bsl, filename='POSCAR_bulk', comments='bulk')
         except Exception:
             logger.error("Exception occurred while writing POSCAR_bulk")
             raise
@@ -260,8 +226,8 @@ def initialization(sl, rp, subdomain=False):
         if len(bsl.sublayers) <= len(bsl.elements):
             n += 1
     try:
-        writePOSCAR(sl.addBulkLayers(rp, n=n)[0],
-                    filename='POSCAR_bulk_appended')
+        poscar.writePOSCAR(sl.addBulkLayers(rp, n=n)[0],
+                           filename='POSCAR_bulk_appended')
     except Exception:
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
 
@@ -270,9 +236,11 @@ def initialization(sl, rp, subdomain=False):
     # True: new phaseshifts need to be generated/written
     if os.path.isfile("PHASESHIFTS") or os.path.isfile("_PHASESHIFTS"):
         try:
-            (rp.phaseshifts_firstline, rp.phaseshifts,
-             newpsGen, newpsWrite) = readPHASESHIFTS(sl, rp,
-                                                     ignoreEnRange=subdomain)
+            (rp.phaseshifts_firstline,
+             rp.phaseshifts,
+             newpsGen,
+             newpsWrite) = phaseshifts.readPHASESHIFTS(sl, rp,
+                                                       ignoreEnRange=subdomain)
         except Exception:
             logger.warning(
                 "Found a PHASESHIFTS file but could not "
@@ -324,7 +292,8 @@ def initialization(sl, rp, subdomain=False):
             raise
     if newpsWrite:
         try:
-            writePHASESHIFTS(rp.phaseshifts_firstline, rp.phaseshifts)
+            phaseshifts.writePHASESHIFTS(rp.phaseshifts_firstline,
+                                         rp.phaseshifts)
         except Exception:
             logger.error("Exception during writePHASESHIFTS: ")
             raise
@@ -332,7 +301,7 @@ def initialization(sl, rp, subdomain=False):
     rp.updateDerivedParams()
     rp.manifest.append("PHASESHIFTS")
     try:
-        plot_phaseshifts(sl, rp)
+        phaseshifts.plot_phaseshifts(sl, rp)
     except Exception:
         logger.warning("Failed to plot phaseshifts", exc_info=rp.LOG_DEBUG)
 
@@ -346,22 +315,22 @@ def initialization(sl, rp, subdomain=False):
         logger.error("Exception occurred while calling beamgen.")
         raise
     try:
-        rp.beamlist = readBEAMLIST()
+        rp.beamlist = tl_beams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
     except Exception:
         logger.error("Error while reading required file BEAMLIST")
         raise
 
     if not subdomain:
-        writePatternInfo(sl, rp)
+        patterninfo.writePatternInfo(sl, rp)
 
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
         if rp.fileLoaded["EXPBEAMS"]:
-            checkEXPBEAMS(sl, rp)
+            tl_beams.checkEXPBEAMS(sl, rp)
         # write and sort IVBEAMS
         if not rp.fileLoaded["IVBEAMS"]:
             try:
-                rp.ivbeams = writeIVBEAMS(sl, rp)
+                rp.ivbeams = tl_beams.writeIVBEAMS(sl, rp)
                 rp.ivbeams_sorted = False
                 rp.fileLoaded["IVBEAMS"] = True
                 rp.manifest.append("IVBEAMS")
@@ -370,7 +339,7 @@ def initialization(sl, rp, subdomain=False):
                              "EXPBEAMS data.")
                 raise
     if rp.fileLoaded["IVBEAMS"] and not rp.ivbeams_sorted:
-        rp.ivbeams = sortIVBEAMS(sl, rp)
+        rp.ivbeams = tl_beams.sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
 
     # Create directory compile_logs in which logs from compilation will be saved
@@ -381,29 +350,46 @@ def initialization(sl, rp, subdomain=False):
     return
 
 
+def _get_expbeams(rp):                                                          # TODO: could become an RParams method
+    """Load an EXPBEAMS file into rp."""
+    # Check if multiple experimental input files were provided
+    exp_files_provided = [fn for fn in EXPBEAMS_NAMES if Path(fn).is_file()]
+    if len(exp_files_provided) > 1:
+        logger.warning(
+            "Multiple files with experimental I(V) curves were provided. "
+            "Check if the root directory contains the correct files. "
+            f"ViPErLEED will preferentially use '{exp_files_provided[0]}'."
+            )
+        rp.setHaltingLevel(1)
+
+    # Check for experimental beams
+    try:
+        rp.EXPBEAMS_INPUT_FILE = exp_files_provided[0]
+    except IndexError:                                                          # TODO: Should we reset the default?
+        return
+
+    if rp.fileLoaded["EXPBEAMS"]:                                               # TODO: shouldn't this be all the way up?
+        return
+
+    enrange = rp.THEO_ENERGIES[:2] if len(rp.THEO_ENERGIES) else []
+    err_msg = f"Error while reading file {rp.EXPBEAMS_INPUT_FILE}"
+    try:
+        rp.expbeams = tl_beams.readOUTBEAMS(filename=rp.EXPBEAMS_INPUT_FILE,
+                                            enrange=enrange)
+    except Exception:                                                           # TODO: catch better
+        logger.error(f"{err_msg}.", exc_info=True)
+        return
+
+    if len(rp.expbeams):
+        rp.fileLoaded["EXPBEAMS"] = True
+    else:
+        logger.error(f"{err_msg}: No data was read.")
+
+
 def init_domains(rp):
     """Runs an alternative initialization for the domain search. This will
     include running the 'normal' initialization for each domain."""
-    # check for experimental beams:
-    expbeamsname = ""
-    for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
-        if os.path.isfile(fn):
-            expbeamsname = fn
-            break
-    if expbeamsname:
-        if len(rp.THEO_ENERGIES) == 0:
-            er = []
-        else:
-            er = rp.THEO_ENERGIES[:2]
-        if not rp.fileLoaded["EXPBEAMS"]:
-            try:
-                rp.expbeams = readOUTBEAMS(filename=fn, enrange=er)
-                if len(rp.expbeams) > 0:
-                    rp.fileLoaded["EXPBEAMS"] = True
-                else:
-                    logger.error("Error reading "+fn+": No data was read.")
-            except Exception:
-                logger.error("Error while reading file "+fn, exc_info=True)
+    _get_expbeams(rp)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
     if len(rp.DOMAINS) < 2:
         logger.error("A domain search was defined, but less than two domains "
@@ -411,27 +397,27 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
-    home = Path(os.getcwd())
+    home = Path.cwd()
     for (name, path) in rp.DOMAINS:
         # determine the target path
-        target = Path(os.path.abspath("Domain_"+name))
-        dp = tl.DomainParameters(target, home, name)
-        if os.path.isdir(target):
+        target = Path(f"Domain_{name}").resolve()
+        dp = DomainParameters(target, home, name)
+        if target.is_dir():
             logger.warning(f"Folder {target} already exists. "
                            "Contents may get overwritten.")
         else:
-            os.mkdir(target)
-        logger.info("Fetching input files for domain {}".format(name))
+            target.mkdir()
+        logger.info(f"Fetching input files for domain {name}")
         if os.path.isdir(path):
             # check the path for Tensors
-            tensorIndex = tl.leedbase.getMaxTensorIndex(path)
+            tensorIndex = leedbase.getMaxTensorIndex(path)
             if tensorIndex != 0:
                 try:
-                    tl.leedbase.getTensors(tensorIndex, basedir=path,
-                                           targetdir=target)
-                except Exception as e:
+                    leedbase.getTensors(tensorIndex, basedir=path,
+                                        targetdir=target)
+                except Exception as exc:
                     tensorIndex = 0
-                    logger.warning("Error fetching Tensors: " + str(e))
+                    logger.warning(f"Error fetching Tensors: {exc}")
             if tensorIndex != 0:
                 tensorDir = target / "Tensors" / ("Tensors_"+str(tensorIndex).zfill(3))
                 for file in (checkFiles + ["IVBEAMS"]):
@@ -469,7 +455,7 @@ def init_domains(rp):
                         raise RuntimeError("Error getting domain input files")
         elif os.path.isfile(path):
             try:
-                tensorIndex = tl.leedbase.getMaxTensorIndex(target)
+                tensorIndex = leedbase.getMaxTensorIndex(target)
             except Exception:
                 tensorIndex = 0
             tensorDir = target / "Tensors" / ("Tensors_"+str(tensorIndex+1).zfill(3))
@@ -498,17 +484,17 @@ def init_domains(rp):
             os.chdir(target)
             logger.info("Reading input files for domain {}".format(name))
             try:
-                dp.sl = readPOSCAR()
-                dp.rp = readPARAMETERS()
+                dp.sl = poscar.readPOSCAR()
+                dp.rp = parameters.readPARAMETERS()
                 dp.rp.workdir = home
                 dp.rp.sourcedir = rp.sourcedir
                 dp.rp.timestamp = rp.timestamp
-                interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
+                parameters.interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
                 dp.sl.fullUpdate(dp.rp)   # gets PARAMETERS data into slab
                 dp.rp.fileLoaded["POSCAR"] = True
                 dp.rp.updateDerivedParams()
                 try:
-                    readVIBROCC(dp.rp, dp.sl)
+                    vibrocc.readVIBROCC(dp.rp, dp.sl)
                     dp.rp.fileLoaded["VIBROCC"] = True
                 except Exception:
                     logger.error("Error while reading required file VIBROCC")
@@ -613,17 +599,17 @@ def init_domains(rp):
                                                    .rp.SUPERLATTICE)
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans
-                    ws = tl.leedbase.writeWoodsNotation(trans)
+                    ws = leedbase.writeWoodsNotation(trans)
                     if ws:
-                        modifyPARAMETERS(dp.rp, "SYMMETRY_CELL_TRANSFORM",
-                                         new=ws, path=dp.workdir)
+                        ws = f"= {ws}"
                     else:
-                        modifyPARAMETERS(
-                            dp.rp, "SYMMETRY_CELL_TRANSFORM",
-                            new=("SYMMETRY_CELL_TRANSFORM M = "
-                                 "{:.0f} {:.0f}, {:.0f} {:.0f}".format(
-                                       *[x for y in trans for x in y])),
-                            path=dp.workdir, include_left=True)
+                        ws = ("M = {:.0f} {:.0f}, "
+                              "{:.0f} {:.0f}".format(*trans.ravel()))
+                    parameters.modifyPARAMETERS(
+                        dp.rp, "SYMMETRY_CELL_TRANSFORM",
+                        new=f"SYMMETRY_CELL_TRANSFORM {ws}",
+                        path=dp.workdir, include_left=True
+                        )
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
@@ -642,18 +628,18 @@ def init_domains(rp):
         logger.error("Exception occurred while calling beamgen.")
         raise
     try:
-        rp.beamlist = readBEAMLIST()
+        rp.beamlist = tl_beams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
     except Exception:
         logger.error("Error while reading required file BEAMLIST")
         raise
     # if EXPBEAMS was loaded, it hasn't been checked yet - check now
     if rp.fileLoaded["EXPBEAMS"]:
-        checkEXPBEAMS(None, rp, domains=True)
+        tl_beams.checkEXPBEAMS(None, rp, domains=True)
     # write and sort IVBEAMS
     if not rp.fileLoaded["IVBEAMS"]:
         try:
-            rp.ivbeams = writeIVBEAMS(None, rp, domains=True)
+            rp.ivbeams = tl_beams.writeIVBEAMS(None, rp, domains=True)
             rp.ivbeams_sorted = False
             rp.fileLoaded["IVBEAMS"] = True
             rp.manifest.append("IVBEAMS")
@@ -662,7 +648,7 @@ def init_domains(rp):
                          "EXPBEAMS data.")
             raise
     if not rp.ivbeams_sorted:
-        rp.ivbeams = sortIVBEAMS(None, rp)
+        rp.ivbeams = tl_beams.sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
 
     rp.updateDerivedParams()

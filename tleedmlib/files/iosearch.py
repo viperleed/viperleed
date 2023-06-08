@@ -7,22 +7,22 @@ Created on Wed Aug 19 13:35:50 2020
 Functions for reading, processing and writing files relevant to the search
 """
 
-import logging
-import numpy as np
-
-import fortranformat as ff
-
 import copy
+import logging
 import os
+from pathlib import Path
 import random
 import shutil
-from pathlib import Path
 
+import fortranformat as ff
+import numpy as np
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import BackwardsReader, readIntLine
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.files.poscar import writePOSCAR
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
-from viperleed.tleedmlib.base import BackwardsReader, readIntLine
-from viperleed.tleedmlib.leedbase import getBeamCorrespondence
+
 
 logger = logging.getLogger("tleedm.files.iosearch")
 
@@ -299,7 +299,7 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     else:
         vincr = step
     # find correspondence experimental to theoretical beams:
-    beamcorr = getBeamCorrespondence(sl, rp)
+    beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for beam in rp.expbeams:

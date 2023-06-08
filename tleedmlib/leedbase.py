@@ -7,26 +7,28 @@ Created on Jun 13 2019
 Contains LEED- and TLEEDM-specific functions used throughout the tleedm module
 """
 
+import copy
 import logging
-import numpy as np
+import multiprocessing
+import os
+from pathlib import Path
 import re
 import subprocess
-import os
 import shutil
-import copy
-import psutil
-import multiprocessing
 import time
-from pathlib import Path
-from quicktions import Fraction
 from zipfile import ZipFile
+
+import numpy as np
+import psutil
+from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
 from viperleed.tleedmlib.base import cosvec
-from viperleed.tleedmlib.files.parameters import (
-    readPARAMETERS, interpretPARAMETERS, updatePARAMETERS)
-from viperleed.tleedmlib.files.poscar import readPOSCAR
-from viperleed.tleedmlib.files.vibrocc import readVIBROCC
+
+# The following imports are potentially the cause of ciclic
+# imports. They are used exclusively as part of getTensorOriStates
+# which could potentially be split off somewhere else 
+from viperleed.tleedmlib.files import parameters, poscar, vibrocc
 
 logger = logging.getLogger("tleedm.leedbase")
 
@@ -301,12 +303,14 @@ def getTensorOriStates(sl, path):
             raise RuntimeError("Could not check Tensors: File missing")
     dn = os.path.basename(path)
     try:
-        tsl = readPOSCAR(os.path.join(path, "POSCAR"))
-        trp = readPARAMETERS(filename=os.path.join(path, "PARAMETERS"))
-        interpretPARAMETERS(trp, slab=tsl, silent=True)
+        tsl = poscar.readPOSCAR(os.path.join(path, "POSCAR"))
+        trp = parameters.readPARAMETERS(
+            filename=os.path.join(path, "PARAMETERS")
+            )
+        parameters.interpretPARAMETERS(trp, slab=tsl, silent=True)
         tsl.fullUpdate(trp)
-        readVIBROCC(trp, tsl, filename=os.path.join(path, "VIBROCC"),
-                    silent=True)
+        vibrocc.readVIBROCC(trp, tsl, filename=os.path.join(path, "VIBROCC"),
+                            silent=True)
         tsl.fullUpdate(trp)
     except Exception:
         logger.error("Error checking Tensors: Error while reading "

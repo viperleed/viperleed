@@ -9,9 +9,9 @@ Class storing properties of a site
 
 import logging
 import re
+
 import numpy as np
 
-import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.periodic_table import (PERIODIC_TABLE,
                                                 COVALENT_RADIUS,
                                                 ATOMIC_MASS)
@@ -39,8 +39,8 @@ class Sitetype:
         """Checks whether two sites are equivalent, i.e. have the same label
         and the same values for vibrational amplitudes and occupations."""
         if (self.label == site2.label
-                and tl.base.dict_equal(self.vibamp, site2.vibamp)
-                and tl.base.dict_equal(self.occ, site2.occ)):
+                and self.vibamp == site2.vibamp
+                and self.occ == site2.occ):
             return True
         return False
 
@@ -124,8 +124,8 @@ class Atom_type(Sitetype):
         """Checks whether two sites are equivalent, i.e. have the same label
         and the same values for vibrational amplitudes and occupations."""
         if (self.label == site2.label
-                and tl.base.dict_equal(self.vibamp, site2.vibamp)
-                and tl.base.dict_equal(self.occ, site2.occ)
+                and self.vibamp == site2.vibamp
+                and self.occ == site2.occ
                 and self.el == site2.el
                 and self.new_bulk == site2.new_bulk):
             return True

@@ -6,29 +6,26 @@ Created on Aug 11 2020
 Tensor LEED Manager section Rfactor
 """
 
-import os
 import logging
+import os
+from pathlib import Path
 import shutil
 import subprocess
-from pathlib import Path
 
 import numpy as np
 
-from viperleed.tleedmlib.leedbase import copy_compile_log
-
-from viperleed.tleedmlib.files.iorefcalc import readFdOut
-from viperleed.tleedmlib.leedbase import fortran_compile_batch, getTLEEDdir, getTensors
-import viperleed.tleedmlib.files.iorfactor as tl_io
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.checksums import validate_multiple_files
+from viperleed.tleedmlib.files import iorfactor as tl_io
+from viperleed.tleedmlib.files.iorefcalc import readFdOut
 
 try:
     from viperleed.tleedmlib.wrapped.rfactor import r_factor_new as rf
 except ImportError:
-    pass
-    # import warnings
-    # warnings.warn("Unable to load compiled rfactor module. "
-    #             "Only legacy rfactor currently available.")
-from viperleed.tleedmlib.wrapped.error_codes import error_codes, check_ierr
+    _HAS_NEW_R_FACTOR = False
+else:
+    from viperleed.tleedmlib.wrapped.error_codes import check_ierr
+    _HAS_NEW_R_FACTOR = True
 
 
 logger = logging.getLogger("tleedm.rfactor")
@@ -76,9 +73,9 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):
             path = ""
             if index == 11:
                 # try getting from Tensors
-                getTensors(rp.TENSOR_INDEX, required=False)
                 dn = "Tensors_" + str(rp.TENSOR_INDEX).zfill(3)
                 if os.path.isfile(os.path.join(".", "Tensors", dn, fn)):
+                leedbase.getTensors(rp.TENSOR_INDEX, required=False)
                     logger.warning(
                         "R-factor calculation was called without "
                         "stored spectrum data. Reading from file "
@@ -466,13 +463,15 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         logger.error("Exception during writeWEXPEL: ")
         raise
     try:
-        tl_io.writeRfactPARAM(rp, theobeams, for_error=for_error, only_vary=only_vary)
+        tl_io.writeRfactPARAM(rp, theobeams,
+                              for_error=for_error,
+                              only_vary=only_vary)
     except Exception:
         logger.error("Exception during writeRfactPARAM: ")
         raise
     # get fortran files and compile
     try:
-        tldir = getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
+        tldir = leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
         libpath = tldir / "lib"
@@ -513,11 +512,11 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     # Compile
     compile_log = "compile-rfactor.log"
     try:
-        fortran_compile_batch(ctasks, logname=compile_log)
+        leedbase.fortran_compile_batch(ctasks, logname=compile_log)
     except Exception:
         logger.error("Error compiling fortran files: ", exc_info=True)
         # move compile log to compile_logs directory
-        copy_compile_log(rp, Path(compile_log), "rfactor-compile")
+        leedbase.copy_compile_log(rp, compile_log, "rfactor-compile")
         raise
     else:
         # move log file to supp
@@ -576,75 +575,59 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     except Exception:  # TODO catch correct exception
         logger.error("Error reading ROUT file", exc_info=rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
-        rfaclist = []
-    else:
-        logger.info(
-            "With inner potential shift of {:.2f} eV: "
-            "R = {:.4f}\n".format(v0rshift, rfac)
-        )
-        rp.best_v0r = v0rshift
-        dir_list = ["."]
-        if os.path.isdir("OUT"):
-            dir_list.append("OUT")
-        for dir_name in dir_list:
-            for f_name in [
-                f
-                for f in os.listdir(dir_name)
-                if f.startswith("R_OUT_" + rp.timestamp)
-                and os.path.isfile(os.path.join(dir_name, f))
-            ]:
-                try:  # delete old R_OUT files
-                    os.remove(os.path.join(dir_name, f_name))
-                except Exception:
-                    pass
-        if rfac <= 0.00001:
-            logger.warning(
-                "ROUT reports R-Factor as zero. This may mean "
-                "something went wrong in the reference "
-                "calculation or in the R-factor calculation. "
-                "If you are comparing with pseudo-experiment data, "
-                "you can ignore this warning."
-            )
-            # Do not halt - R=0 can be valid for comparisons with pseudo experiments.
-            # rp.setHaltingLevel(2)
+        return []
 
-        f_name = "R_OUT_" + name + "_" + rp.timestamp + "_R={:.4f}".format(rfac)
-        rp.last_R = rfac
-        rp.stored_R[name] = (rfac, r_int, r_frac)
+    logger.info("With inner potential shift of {:.2f} eV: "
+                "R = {:.4f}\n".format(v0rshift, rfac))
+    rp.best_v0r = v0rshift
+    dir_list = [Path()]
+    if Path("OUT").is_dir():
+        dir_list.append(Path("OUT"))
+    for dir_name in dir_list:
+        for f_name in dir_name.glob(f"R_OUT_{rp.timestamp}*"):
+            if not f_name.is_file():
+                continue
+            try:  # delete old R_OUT files
+                f_name.unlink()
+            except Exception:
+                pass
+    if rfac <= 0.00001:
+        logger.warning(
+            "ROUT reports R-Factor as zero. This may mean "
+            "something went wrong in the reference "
+            "calculation or in the R-factor calculation. "
+            "If you are comparing with pseudo-experiment data, "
+            "you can ignore this warning."
+            )
+
+    f_name = f"R_OUT_{name}_{rp.timestamp}_R={rfac:.4f}"
+    rp.last_R = rfac
+    rp.stored_R[name] = (rfac, r_int, r_frac)
+    try:
+        os.rename("ROUT", f_name)
+    except OSError:
+        logger.warning("Failed to rename R-factor "
+                       f"output file ROUT to {f_name}")
+    if len(rfaclist) != len(rp.expbeams):
+        logger.warning("Failed to read R-Factors per "
+                       "beam from R-factor output file ROUT.")
+        rfaclist = [-1] * len(rp.expbeams)
+
+    if rp.PLOT_IV["plot"]:
+        outname = f"Rfactor_plots_{name}.pdf"
+        aname = f"Rfactor_analysis_{name}.pdf"
+        labelstyle = "overbar" if rp.PLOT_IV["overbar"] else "minus"
+        labelwidth = max(beam.getLabel(style=labelstyle)[1]
+                         for beam in rp.expbeams)
         try:
-            os.rename("ROUT", f_name)
-        except OSError:
-            logger.warning("Failed to rename R-factor output file " "ROUT to " + f_name)
-        if len(rfaclist) != len(rp.expbeams):
-            logger.warning(
-                "Failed to read R-Factors per beam from " "R-factor output file ROUT."
-            )
-            rfaclist = [-1] * len(rp.expbeams)
-
-        if rp.PLOT_IV["plot"]:
-            outname = "Rfactor_plots_{}.pdf".format(name)
-            aname = "Rfactor_analysis_{}.pdf".format(name)
-            if rp.PLOT_IV["overbar"]:
-                labelstyle = "overbar"
-            else:
-                labelstyle = "minus"
-            labelwidth = max(
-                [beam.getLabel(style=labelstyle)[1] for beam in rp.expbeams]
-            )
-            try:
-                tl_io.writeRfactorPdf(
-                    [
-                        (
-                            b.getLabel(lwidth=labelwidth, style=labelstyle)[0],
-                            rfaclist[i],
-                        )
-                        for (i, b) in enumerate(rp.expbeams)
-                    ],
-                    outName=outname,
-                    analysisFile=aname,
-                    v0i=rp.V0_IMAG,
-                    formatting=rp.PLOT_IV,
+            tl_io.writeRfactorPdf(
+                [(b.getLabel(lwidth=labelwidth, style=labelstyle)[0], r)
+                 for b, r in zip(rp.expbeams, rfaclist)],
+                outName=outname,
+                analysisFile=aname,
+                v0i=rp.V0_IMAG,
+                formatting=rp.PLOT_IV,
                 )
-            except Exception:  # TODO catch correct excpetion
-                logger.warning("Error plotting R-factors.", exc_info=True)
+        except Exception:                                                       # TODO catch correct exception
+            logger.warning("Error plotting R-factors.", exc_info=True)
     return rfaclist

@@ -8,22 +8,22 @@ Created on Aug 11 2020
 Tensor LEED Manager section Delta Amplitudes
 """
 
-import os
+import hashlib
 import logging
+import os
+from pathlib import Path
 import shutil
 import subprocess
-import hashlib
-from pathlib import Path
 
 import numpy as np
 
 import viperleed.tleedmlib as tl
-import viperleed.tleedmlib.files.iodeltas as tl_io
+# from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_log
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.checksums import validate_multiple_files
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
-# from viperleed.tleedmlib.files.parameters import updatePARAMETERS
-from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_log
-from viperleed.tleedmlib.checksums import validate_multiple_files
+import viperleed.tleedmlib.files.iodeltas as tl_io
 
 logger = logging.getLogger("tleedm.deltas")
 
@@ -218,7 +218,7 @@ def compileDelta(comptask):
                    "main.o lib.tleed.o lib.delta.o",
                    comptask.fortran_comp[1]))
     try:
-        tl.leedbase.fortran_compile_batch(ctasks)
+        leedbase.fortran_compile_batch(ctasks)
     except Exception as e:
         logger.error("Error compiling fortran files: " + str(e))
         return ("Fortran compile error in DeltaCompileTask "
@@ -242,16 +242,16 @@ def deltas(sl, rp, subdomain=False):
     if not os.path.isdir(os.path.join(".", "Tensors")):
         logger.error("No Tensors directory found.")
         raise RuntimeError("Tensors not found")
-    tl.leedbase.getTensors(rp.TENSOR_INDEX)
+    leedbase.getTensors(rp.TENSOR_INDEX)
     if 1 not in rp.runHistory:
         dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
         logger.debug(
             "Running without reference calculation, checking "
             "input files in "+dn+" to determine original configuration.")
-        tl.leedbase.getTensorOriStates(sl, os.path.join(".", "Tensors", dn))
+        leedbase.getTensorOriStates(sl, os.path.join(".", "Tensors", dn))
         sl.restoreOriState(keepDisp=True)
     # if there are old deltas, fetch them
-    tl.leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
+    leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
     dbasic = tl_io.generateDeltaBasic(sl, rp)
     # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
     if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
@@ -495,8 +495,8 @@ def deltas(sl, rp, subdomain=False):
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    tl_path = tl.leedbase.getTLEEDdir(os.path.abspath(rp.sourcedir),
-                                  version=rp.TL_VERSION)
+    tl_path = leedbase.getTLEEDdir(os.path.abspath(rp.sourcedir),
+                                   version=rp.TL_VERSION)
     if not tl_path:
         raise RuntimeError("TensErLEED code not found.")
     for ct in deltaCompTasks:
@@ -522,11 +522,11 @@ def deltas(sl, rp, subdomain=False):
     logger.info("Compiling fortran files...")
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
     try:
-        monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+        leedbase.monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
     except Exception:
         # save log files in case of error:
         for ct in deltaCompTasks:
-            copy_compile_log(rp, ct.logfile, ct.compile_log_name)
+            leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
         raise
     if rp.STOP:
         return
@@ -534,14 +534,14 @@ def deltas(sl, rp, subdomain=False):
     # run executions
     logger.info("Running delta calculations...")
     poolsize = min(len(deltaRunTasks), rp.N_CORES)
-    monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+    leedbase.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
     if rp.STOP:
         return
     logger.info("Delta calculations finished.")
 
     # clean up compile folders - AMI: move logs first to compile_logs !
     for ct in deltaCompTasks:
-        copy_compile_log(rp, ct.logfile, ct.compile_log_name)
+        leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
         try:
             shutil.rmtree(os.path.join(ct.basedir, ct.foldername)) # AMI here
         except Exception:
@@ -596,7 +596,7 @@ def deltas_domains(rp):
     if len(deltaCompTasks) > 0:
         logger.info("Compiling fortran files...")
         poolsize = min(len(deltaCompTasks), rp.N_CORES)
-        monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+        leedbase.monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
         if rp.STOP:
             return
 
@@ -604,14 +604,14 @@ def deltas_domains(rp):
     if len(deltaRunTasks) > 0:
         logger.info("Running delta calculations...")
         poolsize = min(len(deltaRunTasks), rp.N_CORES)
-        monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+        leedbase.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
         if rp.STOP:
             return
         logger.info("Delta calculations finished.")
 
     # clean up
     for ct in deltaCompTasks:
-        copy_compile_log(rp, ct.logfile, ct.compile_log_name) # copy compile folder
+        leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name) # copy compile folder
         d = os.path.join(ct.basedir, ct.foldername)
         try:
             shutil.rmtree(d)

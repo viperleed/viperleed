@@ -8,27 +8,28 @@ Functions for reading and writing files relevant to the rfactor calculation
 """
 
 import logging
-import re
-import numpy as np
 import os
+import re
 
 import fortranformat as ff
-
-from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
-from viperleed.tleedmlib.leedbase import getBeamCorrespondence, getYfunc
-from viperleed.tleedmlib.files.ivplot import plot_iv
+import numpy as np
 
 try:
     import matplotlib
+except ImportError:
+    plotting = False
+else:
+    plotting = True
     matplotlib.rcParams.update({'figure.max_open_warning': 0})
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
-except Exception:
-    plotting = False
-else:
-    plotting = True
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
+from viperleed.tleedmlib.files.ivplot import plot_iv
+
 
 logger = logging.getLogger("tleedm.files.iorfactor")
 
@@ -200,7 +201,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
             theoEnergies[1]-theoEnergies[0])
         vincr = min_used_energy_step
     # find correspondence experimental to theoretical beams:
-    beamcorr = getBeamCorrespondence(sl, rp)
+    beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for (i, beam) in enumerate(rp.expbeams):
@@ -481,8 +482,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
             if len(exp) == 0:
                 continue
-            ytheo = getYfunc(theo, v0i)
-            yexp = getYfunc(exp, v0i)
+            ytheo = leedbase.getYfunc(theo, v0i)
+            yexp = leedbase.getYfunc(exp, v0i)
 
             plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, rfact, theo, xlims, yexp, ylims,
                           ytheo, v0i)

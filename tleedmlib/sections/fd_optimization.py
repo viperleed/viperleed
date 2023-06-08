@@ -8,18 +8,21 @@ Created on Oct 22 2021
 Tensor LEED Manager section Full-dynamic Optimization
 """
 
-import os
-import logging
 import copy
-import shutil
+import logging
+import os
 from pathlib import Path
+import shutil
+
 import numpy as np
 from numpy.polynomial import Polynomial
 
-import viperleed.tleedmlib as tl
-import viperleed.tleedmlib.files.iofdopt as tl_io
-import viperleed.tleedmlib.psgen as psgen
+from viperleed.tleedmlib import psgen
+from viperleed.tleedmlib.files import iofdopt as tl_io
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
+from viperleed.tleedmlib.files.poscar import writePOSCAR
+from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
+from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 
 
 logger = logging.getLogger("tleedm.fdopt")
@@ -68,13 +71,13 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
                 raise
         logger.info("Starting full-dynamic calculation")
         try:
-            tl.sections.refcalc(sl, rp, parent_dir=home_dir)
+            section_refcalc(sl, rp, parent_dir=home_dir)
         except Exception:
             logger.error("Error running reference calculation")
             raise
         logger.info("Starting R-factor calculation...")
         try:
-            rfaclist = tl.sections.rfactor(sl, rp, 11)
+            rfaclist = section_rfactor(sl, rp, 11)
         except Exception:
             logger.error("Error running rfactor calculation")
             raise
@@ -360,8 +363,7 @@ def fd_optimization(sl, rp):
         if type(rp.BULK_REPEAT) != float or "c" in which:
             vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
             modifyPARAMETERS(rp, "BULK_REPEAT", new=vec_str, comment=comment)
-        tl.files.poscar.writePOSCAR(
-            sl, filename="POSCAR_OUT_" + rp.timestamp, comments="all")
+        writePOSCAR(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
 
     # fetch I(V) data from all, plot together
     best_rfactors = rfactor_lists[np.argmin(known_points[:, 1])]

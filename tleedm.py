@@ -7,12 +7,12 @@ Created on Nov 12 2019
 Master script running the TensErLEED Manager.
 """
 
-import sys
-import time
 import logging
+import multiprocessing
 import os
 import shutil
-import multiprocessing
+import sys
+import time
 
 cd = os.path.realpath(os.path.dirname(__file__))
 # NB: it's necessary to add vpr_path to sys.path so that viperleed
@@ -22,14 +22,14 @@ for import_path in (cd, vpr_path):
     if import_path not in sys.path:
         sys.path.append(import_path)
 
-from viperleed.tleedmlib import Rparams
-from viperleed.tleedmlib.base import CustomLogFormatter
-from viperleed.tleedmlib.sections.run_sections import section_loop
-from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 from viperleed import GLOBALS
+from viperleed.tleedmlib.base import CustomLogFormatter
+from viperleed.tleedmlib.classes import rparams
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS)
 from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.tleedmlib.sections.run_sections import section_loop
+from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 
 logger = logging.getLogger("tleedm")
 
@@ -99,7 +99,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
                          "passed. Execution will stop.")
             cleanup(tmpmanifest)
             return 2
-        rp = Rparams()
+        rp = rparams.Rparams()
     except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)

@@ -8,13 +8,14 @@ Class containing parameters read from the PARAMETERS file, and some parameters
 defined at runtime. Most default values are defined here.
 """
 
-import numpy as np
 import logging
 import os
+from pathlib import Path
 import random
 import shutil
 from timeit import default_timer as timer
-from pathlib import Path
+
+import numpy as np
 
 try:
     import matplotlib.pyplot as plt
@@ -23,13 +24,11 @@ except Exception:
 else:
     plotting = True
 
-import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.files.iodeltas import checkDelta
+import viperleed.tleedmlib as leedbase
 from viperleed.tleedmlib.base import available_cpu_count
-from viperleed.tleedmlib.checksums import (
-    KNOWN_TL_VERSIONS,
-    UnknownTensErLEEDVersionError
-)
+from viperleed.tleedmlib.checksums import (KNOWN_TL_VERSIONS,
+                                           UnknownTensErLEEDVersionError)
+from viperleed.tleedmlib.files.iodeltas import checkDelta
 
 logger = logging.getLogger("tleedm.rparams")
 
@@ -326,7 +325,7 @@ class Rparams:
         """
         # TENSOR_INDEX:
         if self.TENSOR_INDEX is None:
-            self.TENSOR_INDEX = tl.leedbase.getMaxTensorIndex()
+            self.TENSOR_INDEX = leedbase.getMaxTensorIndex()
         # TL_VERSION:
         if self.TL_VERSION == 0.:
             path = os.path.join(self.sourcedir, "tensorleed")

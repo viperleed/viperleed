@@ -8,26 +8,25 @@ Created on Aug 11 2020
 Tensor LEED Manager section Reference Calculation
 """
 
-import os
-import logging
 import copy
+import os
+from pathlib import Path
+import logging
 import shutil
 import subprocess
-from pathlib import Path
-
-import numpy as np
 
 import fortranformat as ff
+import numpy as np
 
-from viperleed.tleedmlib.leedbase import (
-    fortran_compile_batch, getTLEEDdir, getMaxTensorIndex, monitoredPool,
-    copy_compile_log)
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import splitMaxRight
-from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
-import viperleed.tleedmlib.files.beams as beams
-import viperleed.tleedmlib.files.iorefcalc as tl_io
-from viperleed.tleedmlib.files.ivplot import plot_iv
 from viperleed.tleedmlib.checksums import validate_multiple_files
+from viperleed.tleedmlib.files import beams
+from viperleed.tleedmlib.files import iorefcalc as tl_io
+from viperleed.tleedmlib.files.ivplot import plot_iv
+from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
+from viperleed.tleedmlib.sections._sections import TLEEDMSection
+
 
 logger = logging.getLogger("tleedm.refcalc")
 
@@ -151,7 +150,7 @@ def compile_refcalc(comptask):
                    " ".join(list(zip(*compile_list))[1]),
                    comptask.fortran_comp[1]))
     try:
-        fortran_compile_batch(ctasks)
+        leedbase.fortran_compile_batch(ctasks)
     except Exception as e:
         logger.error("Error compiling fortran files: " + str(e))
         return ("Fortran compile error in RefcalcCompileTask "
@@ -359,8 +358,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
 
     energies = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01,
                          rp.THEO_ENERGIES[2])
-    tldir = os.path.abspath(getTLEEDdir(home=rp.sourcedir,
-                                        version=rp.TL_VERSION))
+    tldir = os.path.abspath(
+        leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
+        )
     if not tldir:
         raise RuntimeError("TensErLEED code not found.")
     rp.updateCores()
@@ -489,7 +489,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             r = compile_refcalc(comp_tasks[0])
         except Exception:
             # if something goes wrong copy log file to compile logs
-            copy_compile_log(rp, comp_tasks[0].logfile, comp_tasks[0].compile_log_name)
+            leedbase.copy_compile_log(rp, comp_tasks[0].logfile,
+                                      comp_tasks[0].compile_log_name)
             raise
         finally:
             os.chdir(home)
@@ -516,27 +517,27 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.info("Compiling fortran files...")
         poolsize = min(len(comp_tasks), rp.N_CORES)
         try:
-            monitoredPool(rp, poolsize, compile_refcalc, comp_tasks,
-                          update_from=parent_dir)
+            leedbase.monitoredPool(rp, poolsize, compile_refcalc, comp_tasks,
+                                   update_from=parent_dir)
         except Exception:
             # save log files in case of error:
             for ct in comp_tasks:
-                copy_compile_log(rp, ct.logfile, ct.compile_log_name)
+                leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
             raise
         if rp.STOP:
             return
         # run executions
         logger.info("Running reference calculations...")
         poolsize = min(len(ref_tasks), rp.N_CORES)
-        monitoredPool(rp, poolsize, run_refcalc, ref_tasks,
-                      update_from=parent_dir)
+        leedbase.monitoredPool(rp, poolsize, run_refcalc, ref_tasks,
+                               update_from=parent_dir)
         if rp.STOP:
             return
         logger.info("Reference calculations finished. Processing files...")
 
     # clean up compile folders - AMI: move logs first to compile_logs !
     for ct in comp_tasks:
-        copy_compile_log(rp, ct.logfile, ct.compile_log_name)
+        leedbase.copy_compile_log(rp, ct.logfile, ct.compile_log_name)
         try:
             shutil.rmtree(os.path.join(ct.basedir, ct.foldername))
         except Exception:
@@ -639,7 +640,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     if 1 not in rp.TENSOR_OUTPUT:
         return
     # move and zip tensor files
-    rp.TENSOR_INDEX = getMaxTensorIndex() + 1
+    rp.TENSOR_INDEX = leedbase.getMaxTensorIndex() + 1
     if "Tensors" not in rp.manifest:
         rp.manifest.append("Tensors")
     dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
