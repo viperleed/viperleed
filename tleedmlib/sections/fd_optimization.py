@@ -108,7 +108,8 @@ def apply_scaling(sl, rp, which, scale):
 
 def get_fd_phaseshifts(sl, rp, S_ovl):
     rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
-    (first_line, phaseshifts) = psgen.runPhaseshiftGen(tsl, trp, psgensource=rundgrenpath)
+    (first_line, phaseshifts) = psgen.runPhaseshiftGen(sl, rp, psgensource=rundgrenpath)
+
 
 def fd_optimization(sl, rp):
     """
