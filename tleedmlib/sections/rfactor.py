@@ -3,6 +3,7 @@ Created on Aug 11 2020
 
 @author: Florian Kraushofer
 @author: Alexander M. Imre
+@author: Michele Riva
 
 Tensor LEED Manager section Rfactor
 """
@@ -48,75 +49,10 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):                    
         name = "refcalc"
     else:
         name = "superpos"
-    if (index == 11 and len(rp.refcalc_fdout) == 0) or (
-        index == 12 and len(rp.superpos_specout) == 0
-    ):
-        if index == 11:
-            fn = "refcalc-fd.out"
-        else:
-            fn = "superpos-spec.out"
-        if os.path.isfile(os.path.join(".", fn)):
-            logger.warning(
-                f"R-factor calculation was called without "
-                f"stored spectrum data. Reading from file {fn} in work folder..."
-            )
-            path = os.path.join(".", fn)
-        elif os.path.isfile(os.path.join(".", "OUT", fn)):
-            logger.warning(
-                "R-factor calculation was called without "
-                "stored spectrum data. Reading from file " + fn + " in OUT folder..."
-            )
-            path = os.path.join(".", "OUT", fn)
-        else:
-            path = ""
-            if index == 11:
-                # try getting from Tensors
-                dn = "Tensors_" + str(rp.TENSOR_INDEX).zfill(3)
-                if os.path.isfile(os.path.join(".", "Tensors", dn, fn)):
-                leedbase.getTensors(rp.TENSOR_INDEX, required=False)
-                    logger.warning(
-                        "R-factor calculation was called without "
-                        "stored spectrum data. Reading from file "
-                        + fn
-                        + " in "
-                        + dn
-                        + " folder..."
-                    )
-                    path = os.path.join(".", "Tensors", dn, fn)
-            if not path:
-                logger.error(
-                    "Cannot execute R-factor calculation: no stored "
-                    "spectrum data and no " + fn + " file was "
-                    "found."
-                )
-                raise RuntimeError("No spectrum data found")
-        try:
-            theobeams, theospec = readFdOut(readfile=path)
-            if index == 11:
-                rp.refcalc_fdout = theospec
-            else:
-                rp.superpos_specout = theospec
-            rp.theobeams[name] = theobeams
-        except Exception:
-            logger.error("Failed to read " + path)
-            raise
-        # if we haven't returned, then it was read. check data vs ivbeams:
-        eq = True
-        eps = 1e-3
-        if len(rp.ivbeams) != len(theobeams):
-            eq = False
-        else:
-            eq = all(
-                rp.ivbeams[i].isEqual(theobeams[i], eps=eps)
-                for i in range(0, len(rp.ivbeams))
-            )
-        if not eq:
-            logger.error(
-                "The list of beams read from IVBEAMS is not "
-                "equivalent to the list of beams in " + path + ". R-Factor "
-                "calculation cannot proceed."
-            )
-            raise ValueError("Contradiction in beam sets")
+    _need_spectra = (index == 11 and not len(rp.refcalc_fdout)
+                     or index == 12 and not len(rp.superpos_specout))
+    if _need_spectra:
+        _fetch_and_check_spectra(rp, index, name)
     theobeams = rp.theobeams[name]
     expbeams = rp.expbeams
 
@@ -124,6 +60,59 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):                    
     if not rp.R_FACTOR_LEGACY and _HAS_NEW_R_FACTOR:                            # TODO: we may want to raise some errors if we want to use it but it's not there
         return run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams)
     return run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary)
+
+
+def _fetch_and_check_spectra(rp, index, name):
+    """Look for full-dynamic spectra, then check consistency."""
+    if index == 11:
+        fn = Path("refcalc-fd.out")
+    else:
+        fn = Path("superpos-spec.out")
+    directory = None
+    path = None
+    if fn.is_file():
+        directory = "work"
+        path = fn
+    elif ("OUT" / fn).is_file():
+        directory = "OUT"
+        path = "OUT" / fn
+    elif index == 11:
+        # try getting from Tensors
+        leedbase.getTensors(rp.TENSOR_INDEX, required=False)
+        directory = Path(f"Tensors_{rp.TENSOR_INDEX:03d}")
+        if ("Tensors" / directory / fn).is_file():
+            path = "Tensors" / directory / fn
+
+    if path:
+        logger.warning("R-factor calculation was called without stored "
+                       f"spectrum data. Reading from file {fn} in {directory} "
+                       "folder...")
+    else:
+        logger.error("Cannot execute R-factor calculation: no stored "
+                     f"spectrum data and no {fn} file was found.")
+        raise RuntimeError("No spectrum data found")
+    try:
+        theobeams, theospec = readFdOut(readfile=path)
+    except Exception:
+        logger.error(f"Failed to read {path}")
+        raise
+
+    # if we haven't returned, then it was read. check data vs ivbeams:
+    if index == 11:
+        rp.refcalc_fdout = theospec
+    else:
+        rp.superpos_specout = theospec
+    rp.theobeams[name] = theobeams
+
+    eps = 1e-3
+    consistent = (len(rp.ivbeams) != len(theobeams)
+                  and all(ivbeam.isEqual(theobeam, eps=eps)
+                          for ivbeam, theobeam in zip(rp.ivbeams, theobeams)))
+    if not consistent:
+        logger.error("The list of beams read from IVBEAMS is not equivalent "
+                     f"to the list of beams in {path}. R-Factor calculation "
+                     "cannot proceed.")
+        raise ValueError("Contradiction in beam sets")
 
 
 def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
