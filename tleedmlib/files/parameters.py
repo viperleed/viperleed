@@ -735,6 +735,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             for el in values:
                 if el.lower() not in ptl:
                     message = f"Element {el} not found in periodic table."
+                    rparams.setHaltingLevel(2)
                     raise ParameterError(parameter=param,
                                                message=message)
             if not found:
@@ -744,6 +745,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             ptl = [el.lower() for el in PERIODIC_TABLE]             # TODO: nicer to use the leedbase element getter function and catch exceptions
             if value.lower() not in ptl:
                 message = f"Element {el} not found in periodic table."
+                rparams.setHaltingLevel(1)
                 raise ParameterError(parameter=param,
                                             message=message)
             else:
@@ -763,6 +765,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             _interpret_intpol_deg(rpars, param, value)
         elif param == 'IV_SHIFT_RANGE':
             if len(values) not in (2, 3):
+                rparams.setHaltingLevel(1)
                 raise ParameterNumberOfInputsError(parameter=param)
             try:
                 fl = [float(s) for s in values]
@@ -770,6 +773,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 raise ParameterFloatConversionError(parameter=param)
             if fl[1] < fl[0]:
                 message = "IV_SHIFT_RANGE end energy has to >= start energy."
+                rparams.setHaltingLevel(1)
                 raise ParameterError(param, message)
                 continue
 
@@ -777,11 +781,13 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 rpars.IV_SHIFT_RANGE[i] = fl[i]
             if len(fl) == 3 and fl[2] <= 0:
                 message = "IV_SHIFT_RANGE step has to be positive."
+                rparams.setHaltingLevel(1)
                 raise ParameterError(parameter=param, message=message)
             rpars.IV_SHIFT_RANGE[2] = fl[2]
         elif param == 'LAYER_CUTS':
             # some simple filtering here, but leave as list of strings
             if all(c in right_side for c in "<>"):
+                rparams.setHaltingLevel(1)
                 raise ParameterParseError(param,
                                      'Cannot parse list with both "<" and ">".')
             elif any(c in right_side for c in "<>"):
@@ -800,12 +806,14 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                             float(m.group('cutoff'))
                             values[i] = m.group(0)
                         except Exception:                                       # TODO: catch better; only 1 statement in try.
+                            rparams.setHaltingLevel(1)
                             raise ParameterParseError(param,
                                                       f'Could not parse function {s}')
                 elif not (s == "<" or s == ">"):
                     try:
                         float(s)
                     except Exception:
+                        rparams.setHaltingLevel(1)
                         raise ParameterParseError(param)
             rpars.LAYER_CUTS = values
         elif param == 'LMAX':
@@ -815,8 +823,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             try:
                 il = [int(v) for v in values]
             except ValueError:
+                rparams.setHaltingLevel(1)
                 raise ParameterIntConversionError(param)
             if len(il) > 2:
+                rparams.setHaltingLevel(1)
                 raise ParameterNumberOfInputsError(param)
             if len(il) == 1:
                 if not _min < il[0] <= _max:
@@ -843,10 +853,12 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
         elif param == 'OPTIMIZE':
             if not flags:
                 message = ("Parameter to optimize not defined.")
+                rparams.setHaltingLevel(3)
                 raise ParameterError(param, message)
             which = flags[0].lower()
             if which not in ['theta', 'phi', 'v0i',
                              'a', 'b', 'c', 'ab', 'abc', 's_ovl']:
+                rparams.setHaltingLevel(3)
                 raise ParameterUnknownFlagError(param, f"{which!r}")
             rpars.OPTIMIZE['which'] = which
             if not other_values:
@@ -860,10 +872,12 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             for sl in sublists:
                 if len(sl) != 2:
                     message = "Expected 'flag value' pairs, found " + " ".join(sl)
+                    rparams.setHaltingLevel(2)
                     raise ParameterError(param, message)
                 flag = sl[0].lower()
                 if flag not in ['step', 'convergence',
                                 'minpoints', 'maxpoints', 'maxstep']:
+                    rparams.setHaltingLevel(2)
                     raise ParameterUnknownFlagError(param, f"{flag!r}")
                     rpars.setHaltingLevel(1)
                     continue
@@ -876,6 +890,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 try:
                     rpars.OPTIMIZE[flag] = partype[flag](sl[1])
                 except ValueError as err:
+                    rparams.setHaltingLevel(1)
                     raise ParameterError(param, value_error) from err
         elif param == 'PARABOLA_FIT':
             if value == 'off':
@@ -894,6 +909,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                          'ridge', 'elasticnet', 'none'):
                         rpars.PARABOLA_FIT['type'] = sl[1]
                     else:
+                        rparams.setHaltingLevel(1)
                         raise ParameterError(param, value_error)
                 elif flag in ('alpha', 'mincurv', 'localize'):
                     try:
@@ -903,6 +919,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     if f >= 0:
                         rpars.PARABOLA_FIT[flag] = f
                     else:
+                        rparams.setHaltingLevel(1)
                         raise ParameterError(param, value_error)
         elif param == 'PHASESHIFT_EPS':
             try:
@@ -912,19 +929,23 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 ps_eps_default_dict = rpars.get_default(param)
                 f = ps_eps_default_dict.get(s, None)
                 if f is None:
+                    rparams.setHaltingLevel(1)
                     raise ParameterFloatConversionError(param)
             if 0 < f < 1:
                 rpars.PHASESHIFT_EPS = f
             else:
+                rparams.setHaltingLevel(1)
                 raise ParameterRangeError(param, given_value=f, allowed_range=(0,1))
         elif param == 'PLOT_IV':
             if not flags:
+                rparams.setHaltingLevel(1)
                 raise ParameterNeedsFlagError(param)
             flag = flags[0].lower()
             value = value.lower()
             if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
                             'border', 'borders', 'axes', 'legend', 'legends',
                             'layout', 'overbar', 'overline', 'plot'):
+                rparams.setHaltingLevel(1)
                 raise ParameterUnknownFlagError(param, f"{flag!r}")
             if flag == 'plot':
                 # should it plot?
@@ -940,6 +961,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 elif value in ('bottom', 'b'):
                     rpars.PLOT_IV['axes'] = 'b'
                 else:
+                    rparams.setHaltingLevel(1)
                     raise ParameterParseError(param)
             elif flag in ('color', 'colour', 'colors', 'colours'):
                 rpars.PLOT_IV['colors'] = values
@@ -949,6 +971,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 elif value in ('topright', 'tr'):
                     rpars.PLOT_IV['legend'] = 'tr'
                 else:
+                    rparams.setHaltingLevel(1)
                     raise ParameterParseError(param)
             elif flag in ('overbar', 'overline'):
                 if value.startswith("t"):
@@ -957,21 +980,25 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     rpars.PLOT_IV['overbar'] = False
                 else:
                     message = f"Value for flag {flag} not recognized"
+                    rparams.setHaltingLevel(1)
                     raise ParameterParseError(param, message)
             elif flag in ('perpage', 'layout'):
                 if not other_values:
                     try:
                         i = int(value)
                     except (ValueError, IndexError):
+                        rparams.setHaltingLevel(1)
                         raise ParameterIntConversionError(param, value)
                     if i <= 0:
                         message = "perpage value has to be positive integer."
+                        rparams.setHaltingLevel(1)
                         raise ParameterParseError(param, message)
                     rpars.PLOT_IV['perpage'] = i
                 elif len(values) >= 2:
                     try:
                         il = [int(v) for v in values[:2]]
                     except ValueError:
+                        rparams.setHaltingLevel(1)
                         raise ParameterIntConversionError(param, values[:2])
                     if any(i <= 0 for i in il):
                         message = "perpage values have to be positive integers."
@@ -983,6 +1010,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 try:
                     rl.extend(Section.sequence_from_string(s))
                 except ValueError as err:
+                    rparams.setHaltingLevel(2)
                     raise ParameterValueError(param, s) from err
             if Section.DOMAINS in rl:
                 logger.info('Found domain search.')
@@ -991,6 +1019,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     rl.insert(0, Section.INITIALIZATION)
                 rpars.RUN = [s.value for s in rl]                                # TODO: replace with "rl" to keep Section objects
             else:
+                rparams.setHaltingLevel(3)
                 raise ParameterError(
                     param,
                     "RUN was defined, but no values were read."
@@ -1018,23 +1047,27 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             try:
                 f = float(value)
             except ValueError as err:
+                rparams.setHaltingLevel(1)
                 raise ParameterFloatConversionError(param, value) from err
             if f >= 1:
                 if f - int(f) < 1e-6:
                     rpars.SEARCH_CULL = int(f)
                 else:
                     message = f"{param} value has to be integer if greater than 1."
+                    rparams.setHaltingLevel(1)
                     raise ParameterError(param, message)
             elif f >= 0:
                 rpars.SEARCH_CULL = f
             else:
                 message = f"{param} value has to be non-negative."
+                rparams.setHaltingLevel(1)
                 raise ParameterError(param, message)
             if other_values:
                 next_value = other_values[0].lower()
                 if next_value in ["clone", "genetic", "random"]:
                     rpars.SEARCH_CULL_TYPE = next_value
                 else:
+                    rparams.setHaltingLevel(1)
                     raise ParameterValueError(param, next_value)
         elif param == 'SEARCH_START':
             value = value.lower()
@@ -1047,6 +1080,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             elif value.startswith("cr"):
                 rpars.SEARCH_START = "crandom"
             else:
+                rparams.setHaltingLevel(1)
                 raise ParameterUnknownFlagError(param, value)
         elif param == 'SITE_DEF':
             newdict = {}
@@ -1059,6 +1093,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                         atnums.extend(ir)
                     elif "top(" in sl[i]:
                         if slab is None:
+                            rparams.setHaltingLevel(3)
                             raise ParameterError(
                                 param,
                                 ("SITE_DEF parameter contains a top() "
@@ -1073,6 +1108,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                 atnums.append(at.oriN)
                                 n -= 1
                     else:
+                        rparams.setHaltingLevel(3)
                         raise ParameterError(param, "Problem with SITE_DEF input format")
                 newdict[sl[0]] = atnums
             rpars.SITE_DEF[flags[0]] = newdict
@@ -1082,6 +1118,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     message = (f"{param} parameter appears to be in Wood, "
                                "notation but no slab was passed. Cannot "
                                "calculate bulk unit cell!")
+                    rparams.setHaltingLevel(2)
                     raise ParameterError(param, message)
                 else:
                     setattr(rpars,
@@ -1093,6 +1130,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 sublists = splitSublists(values, ',')
                 if not len(sublists) == 2:
                     message = ("Number of lines in matrix is not equal to 2.")
+                    rparams.setHaltingLevel(2)
                     raise ParameterParseError(param, message)
                 else:
                     write = True
@@ -1102,8 +1140,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                             try:
                                 nl.append([float(s) for s in sl])
                             except ValueError:
+                                rparams.setHaltingLevel(1)
                                 raise ParameterFloatConversionError(param, sl)
                         else:
+                            rparams.setHaltingLevel(2)
                             message = ("Number of columns in matrix is not equal to 2.")
                             raise ParameterParseError(param, message)
                     if write:
@@ -1122,6 +1162,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     try:
                         i = int(v[1])
                     except (ValueError, IndexError):
+                        rparams.setHaltingLevel(2)
                         raise ParameterValueError(param, v)
                     if 'rotation' not in rpars.SYMMETRY_BULK:
                         rpars.SYMMETRY_BULK['rotation'] = []
@@ -1133,6 +1174,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                         raise ParameterParseError(param, message)
                     str_vals = v.split("[")[1].split("]")[0].split()
                     if len(str_vals) != 2:
+                        rparams.setHaltingLevel(2)
                         raise ParameterNumberOfInputsError(
                             param,
                             found_and_expected=(len(str_vals), 2)
@@ -1140,6 +1182,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     try:
                         int_vals = tuple(int(v) for v in str_vals)
                     except (ValueError, IndexError) as err:
+                        rparams.setHaltingLevel(2)
                         raise ParameterValueError(param, v) from err
                     if int_vals[0] < 0:
                         int_vals = (-int_vals[0], -int_vals[1])
@@ -1151,6 +1194,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     try:
                         rpars.SYMMETRY_BULK['group'] = v
                     except ValueError as err:
+                        rparams.setHaltingLevel(2)
                         raise ParameterValueError(param, v) from err
         elif param == 'SYMMETRY_FIX':                                           # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
             group = value.lower()
@@ -1172,6 +1216,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     + r'\[\s*(?P<i1>[-012]+)\s+(?P<i2>[-012]+)\s*\]')
                 m = rgx.match(right_side.lower())
                 if not m:
+                    rparams.setHaltingLevel(2)
                     raise ParameterParseError(param)
                 i1 = i2 = -2
                 group = m.group('group')
@@ -1179,13 +1224,16 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     i1 = int(m.group('i1'))
                     i2 = int(m.group('i2'))
                 except ValueError as err:
+                    rparams.setHaltingLevel(2)
                     raise ParameterParseError(param) from err
                 if (group in ["pm", "pg", "cm", "rcm", "pmg"]
                         and i1 in range(-1, 3) and i2 in range(-1, 3)):
                     rpars.SYMMETRY_FIX = m.group(0)
                 else:
+                    rparams.setHaltingLevel(2)
                     raise ParameterParseError(param)
             else:
+                rparams.setHaltingLevel(2)
                 raise ParameterParseError(param)
         elif param == 'TENSOR_OUTPUT':                                          # TODO: can use setBooleanParameter from top?
             nl = recombineListElements(values, '*')
@@ -1197,6 +1245,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     if v not in (0, 1):
                         message = ("Problem with TENSOR_OUTPUT input format: "
                                    f"Found value {v}, expected 0 or 1.")
+                        rparams.setHaltingLevel(1)
                         raise ParameterParseError(param, message)
                     else:
                         rpars.TENSOR_OUTPUT.append(v)
@@ -1211,10 +1260,12 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                         if v not in (0, 1):
                             message = ("Problem with TENSOR_OUTPUT input format: "
                                     f"Found value {v}, expected 0 or 1.")
+                            rparams.setHaltingLevel(1)
                             raise ParameterParseError(param, message)
                         else:
                             rpars.TENSOR_OUTPUT.extend([v]*r)
                     else:
+                        rparams.setHaltingLevel(1)
                         raise ParameterValueError(param, s)
         elif param == 'THEO_ENERGIES':
             if not other_values:
@@ -1222,15 +1273,18 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 try:
                     f = float(value)
                 except ValueError as err:
+                    rparams.setHaltingLevel(1)
                     raise ParameterFloatConversionError(param, value) from err
                 else:
                     if f > 0:
                         rpars.THEO_ENERGIES = [f, f, 1]
                         continue
                     else:
+                        rparams.setHaltingLevel(2)
                         raise ParameterParseError(param, value)
                 continue
             if len(values) != 3:
+                rparams.setHaltingLevel(1)
                 raise ParameterNumberOfInputsError(param, len(values), 3)
             fl = []
             defined = 0
@@ -1241,6 +1295,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 try:
                     f = float(s)
                 except ValueError as err:
+                    rparams.setHaltingLevel(1)
                     raise ParameterFloatConversionError(param, s) from err
                 else:
                     if f > 0:
@@ -1248,6 +1303,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                         defined += 1
                     else:
                         message = (f"{param} values have to be positive.")
+                        rparams.setHaltingLevel(1)
                         raise ParameterError(param, message)
 
             if len(fl) != 3:
@@ -1269,6 +1325,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                 f'corrected to {fl[0]}')
                 rpars.THEO_ENERGIES = fl
             else:
+                rparams.setHaltingLevel(1)
                 raise ParameterParseError(param)
         elif param == 'V0_REAL':
             if value.lower() == 'rundgren':
