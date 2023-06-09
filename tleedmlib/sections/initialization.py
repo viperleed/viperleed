@@ -19,6 +19,7 @@ from zipfile import ZipFile
 import numpy as np
 
 from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
 from viperleed.tleedmlib import symmetry as tl_symmetry
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import runBeamGen
@@ -55,7 +56,7 @@ def initialization(sl, rp, subdomain=False):
     changecell, mincell = sl.getMinUnitCell(rp)
     transform = np.dot(np.transpose(sl.ucell[:2, :2]),
                        np.linalg.inv(mincell)).round()
-    ws = leedbase.writeWoodsNotation(transform)
+    ws = writeWoodsNotation(transform)
     if changecell and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
                                  np.identity(2)).all():
         if ws:
@@ -195,7 +196,7 @@ def initialization(sl, rp, subdomain=False):
             sl.changeBulkCell(rp, mincell)
             bsl = sl.bulkslab
         if not rp.superlattice_defined:
-            ws = leedbase.writeWoodsNotation(rp.SUPERLATTICE)                   # TODO: replace writeWoodsNotation with guilib functions
+            ws = writeWoodsNotation(rp.SUPERLATTICE)                   # TODO: replace writeWoodsNotation with guilib functions
             superlattice = rp.SUPERLATTICE.astype(int)
             if ws:
                 info = f"= {ws}"
@@ -597,7 +598,7 @@ def init_domains(rp):
                     dp.rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans
-                    ws = leedbase.writeWoodsNotation(trans)
+                    ws = writeWoodsNotation(trans)
                     if ws:
                         ws = f"= {ws}"
                     else:
