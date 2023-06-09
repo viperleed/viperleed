@@ -13,6 +13,7 @@ import logging
 from pathlib import Path
 import re
 import shutil
+from collections import namedtuple
 
 import numpy as np
 
@@ -1523,3 +1524,91 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
     except Exception as err:
         logger.error("modifyPARAMETERS: Failed to write PARAMETERS file.")
         raise err
+
+
+# namedtuple to to store the flags and values of a parameter
+Assignment = namedtuple("Assignment", ["flags", "value",
+                                       "other_values", "right_side"])
+
+class ParameterInterpreter:
+    """Class to interpret parameters from the PARAMETERS file.
+
+    To add a new parameter, add a method with the name 'interpret_<param>'.
+    """
+
+    domains_ignore_params = [
+        'BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
+        'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'SUPERLATTICE',
+        'SYMMETRY_CELL_TRANSFORM', 'TENSOR_INDEX', 'TENSOR_OUTPUT'
+        ]
+    simple_bool = [
+        'LOG_DEBUG', 'LOG_SEARCH', 'PHASESHIFTS_CALC_OLD',
+        'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY',
+        'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
+        'SYMMETRY_FIND_ORI', 'TL_IGNORE_CHECKSUM'
+        ]
+    grouplist = [                                                               # TODO: take from elsewhere
+        "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg", "cmm",
+        "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m", "p6", "p6m"]
+
+    def __init__(self, rpars, slab=None):
+        self.rpars = rpars
+        self.slab = slab
+
+
+        # define order that parameters should be read in
+        self.orderedParams = ["LOG_DEBUG", "RUN"]
+        self.param_names = [p for p in orderedParams if p in rpars.readParams]
+        self.param_names.extend(p for p in _KNOWN_PARAMS
+                        if p in rpars.readParams and p not in param_names)
+
+    def interpret(self, silent=False):
+        self._search_conv_read = False
+        self.loglevel = logger.level
+        self.silent = silent
+        if self.silent:
+            logger.setLevel(logging.ERROR)
+
+        # check if we are doing a domain calculation
+        self._is_domain_calc = 4 in rpars.RUN or rpars.domainParams
+
+
+        for param, assignment in self._get_param_assignemnts(self.rpars):
+            if self._is_doman_calc and param in self.domains_ignore_params:
+                # skip in domain calculation
+                continue
+            try:
+                self._interpret_param(param, assignment)
+            except ParameterError:
+                pass # TODO!!
+
+    def _get_param_assignemnts(self, rpars):
+        """Flatten out the (possibly multiple) assignments read from
+        the PARAMETERS file for each parameter"""
+        flat_params = ((p_name, *flags_and_value)
+                    for p_name in self.param_names
+                    for flags_and_value in rpars.readParams[p_name])
+        for param, flag, right_side in flat_params:
+            values = right_side.split()
+            value, *other_values = values
+            assignment = Assignment(flags, value, other_values, right_side)
+            yield param, assignment
+
+    def _interpret_param(self, param, assignment):
+        _interpreter = getattr(self, f"interpet_{param.lower()}", None)
+        if _interpreter is None:
+            # complain about unknown parameter
+            self.rpars.setHaltingLevel(2)
+            raise ParameterNotRecognizedError(param)
+        _interpreter(assignment)
+
+    ## Methods to interpret individual parameters
+    def _interpret_intpol_deg(self, assignment):
+        param = "INTPOL_DEG"
+        intpol_deg = assignment.value
+        if intpol_deg in self.rpars.get_limits(param):
+            self.rpars.INTPOL_DEG = int(intpol_deg)
+        else:
+            message = ("Only degree 3 and 5 interpolation supported at the "
+                            "moment.")
+            raise ParameterError(parameter=param, message=message)
