@@ -29,6 +29,8 @@ from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
 from viperleed.tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.layer import Layer
+from viperleed.tleedmlib.classes.sitetype import Sitetype
 import viperleed.tleedmlib as tl
 
 logger = logging.getLogger("tleedm.slab")
@@ -376,7 +378,7 @@ class Slab:
         self.sortByZ()
         laynum = 0
         b = True if rparams.N_BULK_LAYERS > 0 else False
-        newlayer = tl.Layer(self, 0, b)
+        newlayer = Layer(self, 0, b)
         self.layers.append(newlayer)
         for atom in self.atlist:
             # only check for new layer if we're not in the top layer already
@@ -385,7 +387,7 @@ class Slab:
                     # if atom is higher than the next cutoff, make a new layer
                     laynum += 1
                     b = True if rparams.N_BULK_LAYERS > laynum else False
-                    newlayer = tl.Layer(self, laynum, b)
+                    newlayer = Layer(self, laynum, b)
                     self.layers.append(newlayer)
                     check = True    # check for empty layer
                     while check:
@@ -397,7 +399,7 @@ class Slab:
                             laynum += 1
                             b = (True if rparams.N_BULK_LAYERS > laynum
                                  else False)
-                            newlayer = tl.Layer(self, laynum, b)
+                            newlayer = Layer(self, laynum, b)
                             self.layers.append(newlayer)
             atom.layer = newlayer
             newlayer.atlist.append(atom)
@@ -473,7 +475,7 @@ class Slab:
                     i += 1
             # now, create sublayers based on sublists:
             for ls in sublists:
-                newsl = tl.Layer(self, 0, sublayer=True)
+                newsl = Layer(self, 0, sublayer=True)
                 subl.append(newsl)
                 newsl.atlist = ls
                 newsl.cartbotz = ls[0].cartpos[2]
@@ -558,7 +560,7 @@ class Slab:
         sl = []
         for el in rp.SITE_DEF:
             for sitename in rp.SITE_DEF[el]:
-                newsite = tl.Sitetype(el, sitename)
+                newsite = Sitetype(el, sitename)
                 sl.append(newsite)
                 for i in rp.SITE_DEF[el][sitename]:
                     try:
@@ -575,7 +577,7 @@ class Slab:
                         logger.error('SITE_DEF: atom number out of bounds.')
                         raise
         for el in self.elements:
-            newsite = tl.Sitetype(el, 'def')
+            newsite = Sitetype(el, 'def')
             found = False
             for at in atlist:
                 if at.el == el and at.site is None:
