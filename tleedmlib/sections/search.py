@@ -241,9 +241,9 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
         for j, sp in enumerate(dom_rp.searchpars):
             if sp.parabolaFit["min"] is not None:
                 parab_inds[j] = sp.parabolaFit["min"]
-        tl_io.writeSearchOutput(dom_slab, dom_rp,
+        tl_io.writeSearchOutput(dom_slab, dom_rp, parab_inds,
                                 silent=True, suffix="_parabola")
-    tl_io.writeSearchOutput(dom_slab, dom_rp, silent=not final)
+    tl_io.writeSearchOutput(dom_slab, dom_rp, best_config, silent=not final)
 
 
 def _check_search_log(search_log_path):
