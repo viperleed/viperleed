@@ -720,7 +720,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                           given_value=i,
                                           allowed_range=(1, 100))
             if 100 % i != 0:
-                message = (f"100 is not divisible by given value {i}.")
+                j = i - 1
+                while 100 % j != 0:
+                    j -= 1
+                message = (f"100 is not divisible by given value {i}. "
+                           f"Consider using {j} instead.")
                 rparams.setHaltingLevel(1)
                 raise ParameterError(parameter=param,message=message)
             else:
