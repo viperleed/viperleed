@@ -40,18 +40,18 @@ extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte*);
 // The next two pins SHOULD POSSIBLY NOT BE CHANGED. Changing these
 // requires picking a different timer/counter module (TC1 or TC3
 // instead of the currently used TC4)
-#define COIL_1_PWM          6      // PWM output, i.e., voltage value; Also A7;  PD7 on Atmega32U4
-#define COIL_1_PWM_REGISTER OCR4D  // WARNING: this is directly related to the choice of COIL_1_PWM
+#define COIL_1_PWM          6   // PWM output, i.e., voltage value; Also A7;  PD7 on Atmega32U4
+#define COIL_1_PWM_REGISTER FAST_PWM_CH_1_REG  // WARNING: this is directly related to the choice of COIL_1_PWM
 
-#define COIL_2_PWM          10     // PWM output, i.e., voltage value; Also A10; PB6 on Atmega32U4
-#define COIL_2_PWM_REGISTER OCR4B  // WARNING: this is directly related to the choice of COIL_2_PWM
+#define COIL_2_PWM          10  // PWM output, i.e., voltage value; Also A10; PB6 on Atmega32U4
+#define COIL_2_PWM_REGISTER FAST_PWM_CH_2_REG  // WARNING: this is directly related to the choice of COIL_2_PWM
 
 // Current direction: positive or negative?
 #define COIL_1_SIGN 18  // Used for INA on shunt; PF7 on ATmega32U4
 #define COIL_2_SIGN 19  // Used for INA on shunt; PF6 on ATmega32U4
 
-#define COIL_1_SPI_CS 11     // For SPI communication; PB7 on ATmega32U4
-#define COIL_2_SPI_CS 12     // For SPI communication; PD6 on ATmega32U4
+#define COIL_1_SPI_CS 11  // For SPI communication; PB7 on ATmega32U4
+#define COIL_2_SPI_CS 12  // For SPI communication; PD6 on ATmega32U4
 
 
 
@@ -82,8 +82,8 @@ class Coil {
         const MotorDriver driver;
 
         // Class constructor
-        Coil(byte pwm, byte _pwm_register, byte sign, byte spi_cs)
-           : driver(spi_cs), pwm_pin(pwm), pwm_register(_pwm_register),
+        Coil(byte pwm, byte _pwm_register_addr, byte sign, byte spi_cs)        // Coil class constructor, including member initializer list
+           : driver(spi_cs), pwm_pin(pwm), pwm_register_addr(_pwm_register_addr), 
              pwm_sign_pin(sign) {};
 
         void setup() {
@@ -94,14 +94,14 @@ class Coil {
 
         byte set_current(double coil_current) {
             return set_signed_pwm_value(coil_current, pwm_sign_pin,
-                                        &pwm_register);
+                                        pwm_register_addr);
         };
 
     private:
         // Once the constructor has been called, 'pwm_pin' will be
         // initialized with the desired coil (COIL_1_PWM, COIL_2_PWM)
         const byte pwm_pin;
-        const byte pwm_register;
+        const byte pwm_register_addr;
         const byte pwm_sign_pin;
 };
 

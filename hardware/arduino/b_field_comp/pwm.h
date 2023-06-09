@@ -10,6 +10,9 @@ Date: 15.05.2023
 #ifndef _VIPERLEED_B_FIELD_PWM
 #define _VIPERLEED_B_FIELD_PWM
 
+#define FAST_PWM_CH_1_REG 0xD2      // Equals the register OCR4D, see sec. 31 Register Summary
+#define FAST_PWM_CH_2_REG 0xD0      // Equals the register OCR4B, see sec. 31 Register Summary
+
 
 // pwm_clock_divider: how many intervals the counters count before
 // rolling over. This essentially sets the frequency of the PWM.
