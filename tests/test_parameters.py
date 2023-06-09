@@ -19,7 +19,8 @@ if os.path.abspath(vpr_path) not in sys.path:
 import viperleed.tleedmlib.files.parameters as parameters
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS,
-                                                  modifyPARAMETERS)
+                                                  ParameterInterpreter,
+                                                  Assignment)
 from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.files.parameter_errors import ParameterError
@@ -91,20 +92,21 @@ class TestIr1002x1OParameters():
 # _interpret_intpol_deg()
 def test_interpret_intpol_deg():
     rpars = Rparams()
-    param = 'INTPOL_DEG'
-
-    for val in rpars.get_limits(param):
-        parameters._interpret_intpol_deg(rpars, param, val)
+    for val in rpars.get_limits('INTPOL_DEG'):
+        interpreter = ParameterInterpreter(rpars, slab=None)
+        interpreter._interpret_intpol_deg(Assignment(value=val))
         assert rpars.INTPOL_DEG == int(val)
     incompatible_values = ['1', 'text']
     for val in incompatible_values:
         with pytest.raises(ParameterError):
-            parameters._interpret_intpol_deg(rpars, param, val)
+                    interpreter = ParameterInterpreter(rpars, slab=None)
+                    interpreter._interpret_intpol_deg(Assignment(value=val))
 
 # _interpret_bulk_repeat()
 class TestInterpretBulkRepeat():
     param = 'BULK_REPEAT'
     rpars = Rparams()
+
     invalid_inputs = ['text', 'y(1.2)', 'z(abc)', '[]']
     valid_inputs = ['c(1.2)', 'z(0.9)']
 
@@ -112,34 +114,37 @@ class TestInterpretBulkRepeat():
         slab = slab_ag100
         for val in self.invalid_inputs:
             with pytest.raises(ParameterError):
-                parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+                interpreter = ParameterInterpreter(self.rpars, slab=None)
+                interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
+
 
     def test__interpret_bulk_repeat_float(self, slab_ag100):
         val = '1.428'
-        slab = slab_ag100
-        parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+        interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
+        interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
         assert self.rpars.BULK_REPEAT == pytest.approx(1.428, rel=1e-4)
 
     def test__interpret_bulk_repeat_c(self, slab_ag100):
         val = 'c(0.1)'
-        slab = slab_ag100
-        parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+        interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
+        interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
         assert self.rpars.BULK_REPEAT == pytest.approx(2.03646, rel=1e-4)
 
     def test__interpret_bulk_repeat_z(self, slab_ag100):
         val = 'c(0.1)'
-        slab = slab_ag100
-        parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+        interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
+        interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
         assert self.rpars.BULK_REPEAT == pytest.approx(2.0364, rel=1e-4)
 
     def test__interpret_bulk_repeat_vector(self, slab_ag100):
         val = '[1.0 2.0 3.0]'
-        slab = slab_ag100
-        parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+        interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
+        interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
         assert self.rpars.BULK_REPEAT == pytest.approx([1.0, 2.0, 3.0], rel=1e-4)
 
 # _interpret_fortran_comp()
 class TestInterpretFortranComp():
+    # TODO: make use of new intepreter class
     param = 'FORTRAN_COMP'
     rpars = Rparams()
 

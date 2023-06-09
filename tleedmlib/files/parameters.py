@@ -13,7 +13,8 @@ import logging
 from pathlib import Path
 import re
 import shutil
-from collections import namedtuple
+from typing import List
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -1016,7 +1017,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             if Section.DOMAINS in rl:
                 logger.info('Found domain search.')
             if rl:
-                if rl[0] is not Section.INITIALIZATION
+                if rl[0] is not Section.INITIALIZATION:
                     rl.insert(0, Section.INITIALIZATION)
                 rpars.RUN = [s.value for s in rl]                                # TODO: replace with "rl" to keep Section objects
             else:
@@ -1526,9 +1527,37 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
         raise err
 
 
-# namedtuple to to store the flags and values of a parameter
-Assignment = namedtuple("Assignment", ["flags", "value",
-                                       "other_values", "right_side"])
+
+@dataclass
+class Assignment:
+    """Class to store the flags and values of a parameter.
+
+    Attributes
+    ----------
+    flags : list of str
+        The flags of the parameter.
+    value : str
+        The value of the parameter.
+    other_values : list of str
+        Other values of the parameter.
+    right_side : str
+        The right-hand side of the parameter assignment.
+    """
+    flags: List[str]
+    value: str
+    other_values: List[str]
+    right_side: str
+
+    def __init__(self,
+                 flags: List[str]=[],
+                 value: str="",
+                 other_values: List[str]=[],
+                 right_side: str=""):
+        self.flags = flags
+        self.value = value
+        self.other_values = other_values
+        self.right_side = right_side
+
 
 class ParameterInterpreter:
     """Class to interpret parameters from the PARAMETERS file.
@@ -1558,7 +1587,9 @@ class ParameterInterpreter:
 
         # define order that parameters should be read in
         self.orderedParams = ["LOG_DEBUG", "RUN"]
-        self.param_names = [p for p in orderedParams if p in rpars.readParams]
+        self.param_names = [p for p
+                            in self.orderedParams
+                            if p in self.rpars.readParams]
         self.param_names.extend(p for p in _KNOWN_PARAMS
                         if p in rpars.readParams and p not in param_names)
 
@@ -1612,3 +1643,38 @@ class ParameterInterpreter:
             message = ("Only degree 3 and 5 interpolation supported at the "
                             "moment.")
             raise ParameterError(parameter=param, message=message)
+
+    def _interpret_bulk_repeat(self, assignment):
+        param = "BULK_REPEAT"
+        # make sure that the slab is defined, otherwise bulk repeat is meaningless
+        if not self.slab:
+            raise ParameterError(parameter=param,
+                                message="No slab defined for bulk repeat.")
+        s = assignment.right_side.lower()
+        # TODO: clean up and de-branch below
+        if "[" not in s:
+            if "(" not in s:
+                try:
+                    self.rpars.BULK_REPEAT = abs(float(assignment.value))
+                except ValueError:
+                    raise ParameterFloatConversionError(parameter=param)
+            else:
+                # regex to match e.g. c(2.0) or z(2.0)
+                m = re.match(r'\s*(c|z)\(\s*(?P<val>[0-9.]+)\s*\)', s)
+                if not m:
+                    raise ParameterParseError(parameter=param)
+                else:
+                    try:
+                        v = abs(float(m.group("val")))
+                    except Exception:
+                        raise ParameterFloatConversionError(parameter=param)
+                    else:
+                        if "z" in s:
+                            self.rpars.BULK_REPEAT = v
+                        else:  # c
+                            self.rpars.BULK_REPEAT = self.slab.ucell[2, 2] * v
+        else:  # vector
+            vec = readVector(s, self.slab.ucell)
+            if vec is None:
+                raise ParameterParseError(parameter=param)
+            self.rpars.BULK_REPEAT = vec
