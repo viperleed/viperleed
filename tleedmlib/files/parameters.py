@@ -332,6 +332,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 v = key
                 break
         else:
+            rparams.setHaltingLevel(1)
             raise ParameterBooleanConversionError(parameter=param)
         if not varname:
             varname = param
@@ -385,6 +386,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     raise
                 v = int(float(value))  # for e.g. '1e6' to int
         except ValueError:
+            rparams.setHaltingLevel(1)
             if type is int:
                 raise ParameterIntegerConversionError(parameter=param)
             else:  # type is float
@@ -415,6 +417,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
         if any(outOfRange[i] and outOfRangeEvent[i] == 'fail'
                for i in range(0, 2)):
             message = f"Value {v} is {outOfRangeStr}."
+            rparams.setHaltingLevel(1)
             raise ParameterError(param, message=message)
 
         for i in range(0, 2):
@@ -646,10 +649,12 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                 )
                             break
                     else:
+                        rparams.setHaltingLevel(1)
                         raise ParameterUnknownFlagError(parameter=param,
                                                         flag=sl[0])
             else:
                 if len(values) != 2:
+                    rparams.setHaltingLevel(1)
                     raise ParameterNumberOfInputsError(
                         parameter=param,
                         found_and_expected=(len(values), 2)
@@ -661,6 +666,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                         outOfRangeEvent=outOfRangeEvent[name]
                         )
             if any(v is None for v in d.values()):
+                rparams.setHaltingLevel(1)
                 raise ParameterParseError(parameter=param)
             # check for negative theta and adjust phi
             if d['THETA'] < 0:
@@ -682,6 +688,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 # TODO: raise in this case?
                 error_message = ("Multiple sources defined for"
                                  f"domain {name}.")
+                rparams.setHaltingLevel(2)
                 raise ParameterError(parameter=param,
                                            message=error_message)
             if not name:  # get unique name
@@ -698,6 +705,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             else:
                 error_message = (f"Value for DOMAIN {name} could not be "
                                  "interpreted as either a path or a .zip file.")
+                rparams.setHaltingLevel(2)
                 raise ParameterError(parameter=param,
                                            message=error_message)
             rpars.DOMAINS.append((name, path))
@@ -705,6 +713,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             try:
                 i = int(value)
             except ValueError:
+                rparams.setHaltingLevel(1)
                 raise ParameterIntConversionError(parameter=param)
             if not (1 <= i <= 100):
                 raise ParameterRangeError(parameter=param,
@@ -712,6 +721,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                           allowed_range=(1, 100))
             if 100 % i != 0:
                 message = (f"100 is not divisible by given value {i}.")
+                rparams.setHaltingLevel(1)
                 raise ParameterError(parameter=param,message=message)
             else:
                 rpars.DOMAIN_STEP = i
