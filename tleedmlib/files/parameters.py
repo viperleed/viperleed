@@ -2,7 +2,9 @@
 """
 Created on Tue Aug 18 16:56:39 2020
 
-@author: Florian Kraushofer, Michele Riva, Alexander Imre
+@author: Florian Kraushofer
+@author: Alexander M. Imre
+@author: Michele Riva
 
 Functions for reading from and writing to the PARAMETERS file
 """
@@ -441,8 +443,10 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             break
         return v
 
-    def setNumericalParameter(rp, param, value, varname=None, type_=float,
-                              range_=(None, None), haltingOnFail=1,
+    def setNumericalParameter(rp, param, value,
+                              varname=None,
+                              type_=float,
+                              range_=(None, None),
                               range_exclude=(False, False),
                               outOfRangeEvent=('fail', 'fail')):
         """
@@ -474,8 +478,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             brought within the range by '%' operation. For 'set', the value
             will be set to the lowest allowed value. The default is
             ('fail', 'fail').
-        haltingOnFail : int, optional
-            What halting level should be set if the 'fail' event is triggered.
 
         Returns
         ----------
@@ -484,8 +486,9 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
 
         """
 
-        v = getNumericalParameter(param=param, value=value, type_=type_,
-                                  range_=range_, haltingOnFail=haltingOnFail,
+        v = getNumericalParameter(param=param, value=value,
+                                  type_=type_,
+                                  range_=range_,
                                   range_exclude=range_exclude,
                                   outOfRangeEvent=outOfRangeEvent)
         if v is None:
@@ -566,7 +569,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                                   range_=(1, 3))
         elif param == 'N_BULK_LAYERS':
             setNumericalParameter(rpars, param, value, type_=int,
-                                  range_=(1, 2), haltingOnFail=2)
+                                  range_=(1, 2))
         elif param == 'R_FACTOR_SMOOTH':
             setNumericalParameter(rpars, param, value, type_=int,
                                   range_=(0, 999))
