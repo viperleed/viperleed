@@ -7,11 +7,7 @@ Created on 2023-06-09
 """
 
 import pytest
-import shutil, tempfile
-import sys
-import os
 from pathlib import Path
-from zipfile import ZipFile
 from copy import deepcopy
 import numpy as np
 
@@ -27,11 +23,13 @@ from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.files.parameter_errors import ParameterError
 
+_FIXTURES_PATH = Path('tests/fixtures/')
+
 @pytest.fixture()
 def ag100_parameters_example():
     # read Ag(100) POSCAR and PARAMETERS files
-    slab = readPOSCAR('tests/fixtures/Ag(100)/initialization/POSCAR')
-    rpars = readPARAMETERS('tests/fixtures/Ag(100)/initialization/PARAMETERS')
+    slab = readPOSCAR(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
+    rpars = readPARAMETERS(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'PARAMETERS')
     # interpret PARAMETERS file
     interpretPARAMETERS(rpars, slab)
     return rpars, slab
@@ -39,7 +37,7 @@ def ag100_parameters_example():
 @pytest.fixture()
 def slab_ag100():
     # read Ag(100) POSCAR
-    return readPOSCAR('tests/fixtures/POSCARs/POSCAR_Ag(100)')
+    return readPOSCAR(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ag(100)')
 
 def test_read_parameters_for_ag100():
     # just check that readPARAMETERS does not crash; not interpreted yet
