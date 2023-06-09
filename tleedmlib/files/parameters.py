@@ -26,7 +26,6 @@ from viperleed.tleedmlib.classes import rparams
 from viperleed.tleedmlib.files.parameter_errors import (
     ParameterError, ParameterValueError, ParameterParseError,
     ParameterIntConversionError, ParameterFloatConversionError,
-    ParameterBooleanConversionError,
     ParameterBooleanConversionError, ParameterNotRecognizedError,
     ParameterNumberOfInputsError, ParameterRangeError,
     ParameterUnknownFlagError, ParameterNeedsFlagError
@@ -1335,6 +1334,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 except (ValueError, IndexError) as err:
                     message = ("Could not parse constants for Rundgren-type "
                                "function.")
+                    rparams.setHaltingLevel(1)
                     raise ParameterError(param, message=message) from err
             else:
                 setTo = re.sub("(?i)EE", "EEV+workfn", right_side)
