@@ -26,6 +26,7 @@ from viperleed.tleedmlib.classes import rparams
 from viperleed.tleedmlib.files.parameter_errors import (
     ParameterError, ParameterValueError, ParameterParseError,
     ParameterIntConversionError, ParameterFloatConversionError,
+    ParameterBooleanConversionError,
     ParameterNumberOfInputsError, ParameterRangeError,
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
@@ -743,32 +744,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             else:
                 setNumericalParameter(rpars, param, value)
         elif param == 'FORTRAN_COMP':
-            if (not flags and value.lower() in ["ifort", "gfortran"]
-                    and not other_values):
-                rpars.getFortranComp(comp=value.lower())
-            elif (flags and flags[0].lower() == "mpi"
-                  and value.lower() in ["mpifort", "mpiifort"]):
-                rpars.getFortranMpiComp(comp=value.lower())
-            else:
-                delim = value[0]     # should be quotation marks                # TODO: is this needed now that we use f-strings?
-                if delim not in ["'", '"']:
-                    message = ("No valid shorthand and not delimited by "
-                               "quotation marks.")
-                    raise ParameterError(parameter=param,
-                                               message=message)
-                else:
-                    setTo = right_side.split(delim)[1]
-                if not flags:
-                    rpars.FORTRAN_COMP[0] = setTo
-                elif flags[0].lower() == "post":
-                    rpars.FORTRAN_COMP[1] = setTo
-                elif flags[0].lower() == "mpi":
-                    rpars.FORTRAN_COMP_MPI[0] = setTo
-                elif flags[0].lower() == "mpipost":
-                    rpars.FORTRAN_COMP_MPI[1] = setTo
-                else:
-                    raise ParameterUnknownFlagError(parameter=param,
-                                                    flag=plist[1])
+            _interpret_fortran_comp(rpars, param, flags, right_side, value, other_values)
         elif param == 'INTPOL_DEG':
             _interpret_intpol_deg(rpars, param, value)
         elif param == 'IV_SHIFT_RANGE':
@@ -1162,7 +1138,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                         rpars.SYMMETRY_BULK['group'] = v
                     except ValueError as err:
                         raise ParameterValueError(param, v) from err
-        elif param == 'SYMMETRY_FIX':
+        elif param == 'SYMMETRY_FIX':                                           # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
             group = value.lower()
             if group.startswith('t'):
                 continue  # same as default, determine symmetry automatically
@@ -1197,7 +1173,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     raise ParameterParseError(param)
             else:
                 raise ParameterParseError(param)
-        elif param == 'TENSOR_OUTPUT':
+        elif param == 'TENSOR_OUTPUT':                                          # TODO: can use setBooleanParameter from top?
             nl = recombineListElements(values, '*')
             for s in nl:
                 s = re.sub(r'[Tt](rue|RUE)?', '1', s)
@@ -1294,6 +1270,37 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 setTo = setTo.rstrip()
             rpars.V0_REAL = setTo
     logger.setLevel(loglevel)
+
+def _interpret_fortran_comp(rpars, param, flags, right_side, value, other_values, skip_check=False):
+    if other_values:
+        message = (f"{param} expects a single values, delimited by quotation marks. "
+                   "Could not intperpret {other_values}.")
+        raise ParameterParseError(param, message=message)
+    if (not flags and value.lower() in ["ifort", "gfortran"]):  # get default compiler flags
+        rpars.getFortranComp(comp=value.lower(), skip_check=skip_check)
+    elif (flags and flags[0].lower() == "mpi"
+                  and value.lower() in ["mpifort", "mpiifort"]):  # get default mpi compiler flags
+        rpars.getFortranMpiComp(comp=value.lower(), skip_check=skip_check)
+    else:  # set custom compiler flags
+        delim = value[0]     # should be quotation marks                # TODO: is this needed now that we use f-strings?
+        if delim not in ["'", '"']:
+            message = ("No valid shorthand and not delimited by "
+                               "quotation marks.")
+            raise ParameterError(parameter=param,
+                                               message=message)
+        else:
+            setTo = right_side.split(delim)[1]
+        if not flags:
+            rpars.FORTRAN_COMP[0] = setTo
+        elif flags[0].lower() == "post":
+            rpars.FORTRAN_COMP[1] = setTo
+        elif flags[0].lower() == "mpi":
+            rpars.FORTRAN_COMP_MPI[0] = setTo
+        elif flags[0].lower() == "mpipost":
+            rpars.FORTRAN_COMP_MPI[1] = setTo
+        else:
+            raise ParameterUnknownFlagError(parameter=param,
+                                                    flag=flags[0])
 
 
 def _interpret_intpol_deg(rpars, param, value):
