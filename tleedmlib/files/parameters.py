@@ -672,32 +672,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                 rpars.THETA = d['THETA']
                 rpars.PHI = d['PHI']
         elif param == 'BULK_REPEAT':
-            s = right_side.lower()
-            if "[" not in s:
-                if "(" not in s:
-                    try:
-                        rpars.BULK_REPEAT = abs(float(value))
-                    except ValueError:
-                        raise ParameterFloatConversionError(parameter=param)
-                else:
-                    m = re.match(r'\s*(c|z)\(\s*(?P<val>[0-9.]+)\s*\)', s)
-                    if not m:
-                        raise ParameterParseError(parameter=param)
-                    else:
-                        try:
-                            v = abs(float(m.group("val")))
-                        except Exception:
-                            raise ParameterFloatConversionError(parameter=param)
-                        else:
-                            if "z" in s:
-                                rpars.BULK_REPEAT = v
-                            else:  # c
-                                rpars.BULK_REPEAT = slab.ucell[2, 2] * v        # TODO: what if slab is None??
-            else:  # vector
-                vec = readVector(s, slab.ucell)                                 # TODO: what if slab is None??
-                if vec is None:
-                    raise ParameterParseError(parameter=param)
-                rpars.BULK_REPEAT = vec
+            _interpret_bulk_repeat(rpars, slab, param, right_side, value)
         elif param == 'DOMAIN':
             # check name
             name = flags[0] if flags else ""
@@ -1328,6 +1303,41 @@ def _interpret_intpol_deg(rpars, param, value):
         message = ("Only degree 3 and 5 interpolation supported at the "
                            "moment.")
         raise ParameterError(parameter=param, message=message)
+
+
+def _interpret_bulk_repeat(rpars, slab, param, right_side, value):
+    # make sure that the slab is defined, otherwise bulk repeat is meaningless
+    if not slab:
+        raise ParameterError(parameter=param,
+                             message="No slab defined for bulk repeat.")
+    s = right_side.lower()
+    if "[" not in s:
+        if "(" not in s:
+            try:
+                rpars.BULK_REPEAT = abs(float(value))
+            except ValueError:
+                raise ParameterFloatConversionError(parameter=param)
+        else:
+            # regex to match e.g. c(2.0) or z(2.0)
+            m = re.match(r'\s*(c|z)\(\s*(?P<val>[0-9.]+)\s*\)', s)
+            if not m:
+                raise ParameterParseError(parameter=param)
+            else:
+                try:
+                    v = abs(float(m.group("val")))
+                except Exception:
+                    raise ParameterFloatConversionError(parameter=param)
+                else:
+                    if "z" in s:
+                        rpars.BULK_REPEAT = v
+                    else:  # c
+                        rpars.BULK_REPEAT = slab.ucell[2, 2] * v
+    else:  # vector
+        vec = readVector(s, slab.ucell)
+        if vec is None:
+            raise ParameterParseError(parameter=param)
+        rpars.BULK_REPEAT = vec
+
 
 def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
                      suppress_ori=False, include_left=False):

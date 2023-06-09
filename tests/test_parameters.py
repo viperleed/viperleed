@@ -36,6 +36,11 @@ def ag100_parameters_example():
     interpretPARAMETERS(rpars, slab)
     return rpars, slab
 
+@pytest.fixture()
+def slab_ag100():
+    # read Ag(100) POSCAR
+    return readPOSCAR('tests/fixtures/POSCARs/POSCAR_Ag(100)')
+
 def test_read_parameters_for_ag100():
     # just check that readPARAMETERS does not crash; not interpreted yet
     filename = 'tests/fixtures/parameters/PARAMETERS_1'
@@ -63,3 +68,41 @@ def test_interpret_intpol_deg():
     for val in incompatible_values:
         with pytest.raises(ParameterError):
             parameters._interpret_intpol_deg(rpars, param, val)
+
+# _interpret_bulk_repeat():
+
+class TestInterpretBulkRepeat():
+    param = 'BULK_REPEAT'
+    rpars = Rparams()
+    invalid_inputs = ['text', 'y(1.2)', 'z(abc)', '[]']
+    valid_inputs = ['c(1.2)', 'z(0.9)']
+
+    def test__interpret_bulk_repeat_invalid(self, slab_ag100):
+        slab = slab_ag100
+        for val in self.invalid_inputs:
+            with pytest.raises(ParameterError):
+                parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+
+    def test__interpret_bulk_repeat_float(self, slab_ag100):
+        val = '1.428'
+        slab = slab_ag100
+        parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+        assert self.rpars.BULK_REPEAT == pytest.approx(1.428, rel=1e-4)
+
+    def test__interpret_bulk_repeat_c(self, slab_ag100):
+        val = 'c(0.1)'
+        slab = slab_ag100
+        parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+        assert self.rpars.BULK_REPEAT == pytest.approx(2.03646, rel=1e-4)
+
+    def test__interpret_bulk_repeat_z(self, slab_ag100):
+        val = 'c(0.1)'
+        slab = slab_ag100
+        parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+        assert self.rpars.BULK_REPEAT == pytest.approx(2.0364, rel=1e-4)
+
+    def test__interpret_bulk_repeat_vector(self, slab_ag100):
+        val = '[1.0 2.0 3.0]'
+        slab = slab_ag100
+        parameters._interpret_bulk_repeat(self.rpars, slab, self.param, val, val)
+        assert self.rpars.BULK_REPEAT == pytest.approx([1.0, 2.0, 3.0], rel=1e-4)
