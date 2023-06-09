@@ -23,37 +23,35 @@ class ParameterUnexpectedInputError(ParameterError):
                          "Encountered unexpected input."
                          "Check parameter syntax.")
 
-class ParameterBooleanConversionError(ParameterError):
+
+# base class for conversion errors
+class ParameterConversionError(ParameterError):
+    '''Raised when a conversion fails'''
+    _type = None
+
+    def __init__(self, parameter, given_value=None):
+        msg = 'Failed to convert '
+        if given_value:
+            msg += f'"{given_value}" to {self._type}.'
+        else:
+            msg = f'input to {self._type}. Check parameter syntax.'
+        super().__init__(parameter, msg)
+
+
+class ParameterBooleanConversionError(ParameterConversionError):
     '''Raised when a boolean conversion fails'''
+    _type = 'boolean'
 
-    def __init__(self, parameter):
-        super().__init__(parameter,
-                         "Failed to convert input to boolean."
-                         "Check parameter syntax.")
 
-class ParameterFloatConversionError(ParameterError):
-    '''Raised when a float conversion fails'''
-
-    def __init__(self, parameter, given_value=None):
-        if given_value:
-            super().__init__(parameter,
-                             f'Failed to convert "{given_value}" to float(s).')
-        else:
-            super().__init__(parameter,
-                            "Failed to convert input to float(s)."
-                            "Check parameter syntax.")
-
-class ParameterIntConversionError(ParameterError):
+class ParameterIntConversionError(ParameterConversionError):
     '''Raised when an int conversion fails'''
+    _type = 'integer'
 
-    def __init__(self, parameter, given_value=None):
-        if given_value:
-            super().__init__(parameter,
-                            f'Failed to convert "{given_value}"to integer(s).')
-        else:
-            super().__init__(parameter,
-                            "Failed to convert input to integer(s)."
-                            "Check parameter syntax.")
+
+class ParameterFloatConversionError(ParameterConversionError):
+    '''Raised when a float conversion fails'''
+    _type = 'float'
+
 
 class ParameterValueError(ParameterError):
     '''Raised when the value is not allowed'''
