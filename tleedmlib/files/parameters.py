@@ -25,6 +25,7 @@ from viperleed.tleedmlib.base import (strip_comments, splitSublists,
 from viperleed.tleedmlib.classes import rparams
 from viperleed.tleedmlib.files.parameter_errors import (
     ParameterError, ParameterValueError, ParameterParseError,
+    ParameterIntConversionError, ParameterFloatConversionError,
     ParameterNumberOfInputsError, ParameterRangeError,
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
@@ -524,6 +525,8 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
         'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'SUPERLATTICE',
         'SYMMETRY_CELL_TRANSFORM', 'TENSOR_INDEX', 'TENSOR_OUTPUT']
     _is_doman_calc = Section.DOMAINS in rpars.RUN or rpars.domainParams
+
+    # iterate over all parameters
     for param, flags, right_side in flat_params:
         if _is_doman_calc and param in domainsIgnoreParams:
             continue
@@ -792,13 +795,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
                     raise ParameterUnknownFlagError(parameter=param,
                                                     flag=plist[1])
         elif param == 'INTPOL_DEG':
-            if value in ('3', '5'):
-                rpars.INTPOL_DEG = int(value)
-            else:
-                message = ("Only degree 3 and 5 interpolation supported at the "
-                           "moment.")
-                raise ParameterError(parameter=param,
-                                             message=message)
+            _interpret_intpol_deg(rpars, param, value)
         elif param == 'IV_SHIFT_RANGE':
             if len(values) not in (2, 3):
                 raise ParameterNumberOfInputsError(parameter=param)
@@ -1323,6 +1320,14 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             rpars.V0_REAL = setTo
     logger.setLevel(loglevel)
 
+
+def _interpret_intpol_deg(rpars, param, value):
+    if value in rpars.get_limits(param):
+        rpars.INTPOL_DEG = int(value)
+    else:
+        message = ("Only degree 3 and 5 interpolation supported at the "
+                           "moment.")
+        raise ParameterError(parameter=param, message=message)
 
 def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
                      suppress_ori=False, include_left=False):

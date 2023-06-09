@@ -55,8 +55,11 @@ DEFAULTS = {
 }
 
 
+# parameter limits
+# either tuple of (min, max) or list of allowed values
 PARAM_LIMITS = {
     'LMAX': (1, 18),
+    'INTPOL_DEG': ['3', '5'],
     }
 
 
