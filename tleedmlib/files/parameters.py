@@ -27,6 +27,7 @@ from viperleed.tleedmlib.files.parameter_errors import (
     ParameterError, ParameterValueError, ParameterParseError,
     ParameterIntConversionError, ParameterFloatConversionError,
     ParameterBooleanConversionError,
+    ParameterBooleanConversionError, ParameterNotRecognizedError,
     ParameterNumberOfInputsError, ParameterRangeError,
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
