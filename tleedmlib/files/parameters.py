@@ -967,14 +967,14 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             rl = []
             for s in values:
                 try:
-                    rl.extend(Section.sequence_from_string(s))
+                    rl.extend(sec.value for sec in Section.sequence_from_string(s))  # TODO: directly use section enum after merging in Micheles changes
                 except ValueError as err:
                     raise ParameterValueError(param, s) from err
             if Section.DOMAINS in rl:
                 logger.info('Found domain search.')
             if rl:
                 if rl[0] is not Section.INITIALIZATION:
-                    rl.insert(0, Section.INITIALIZATION)
+                    rl.insert(0, Section.INITIALIZATION.value) # TODO: directly use section enum after merging in Micheles changes
                 rpars.RUN = rl
             else:
                 raise ParameterError(
