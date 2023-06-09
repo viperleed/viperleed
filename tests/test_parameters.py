@@ -33,25 +33,58 @@ def ag100_parameters_example():
     rpars = readPARAMETERS(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'PARAMETERS')
     # interpret PARAMETERS file
     interpretPARAMETERS(rpars, slab)
-    return rpars, slab
+    return (rpars, slab)
 
 @pytest.fixture()
 def slab_ag100():
     # read Ag(100) POSCAR
     return readPOSCAR(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ag(100)')
 
-def test_read_parameters_for_ag100():
-    # just check that readPARAMETERS does not crash; not interpreted yet
-    filename = 'tests/fixtures/parameters/PARAMETERS_1'
-    rpars = readPARAMETERS(filename)
-    assert rpars
+@pytest.fixture()
+def slab_ir100_2x1_o():
+    # read Ir(100)-(2x1)-O POSCAR
+    return readPOSCAR(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ir(100)-(2x1)-O')
+
+@pytest.fixture()
+def ir100_2x1_o_parameters_example(slab_ir100_2x1_o):
+    slab = slab_ir100_2x1_o
+    rpars = readPARAMETERS(_FIXTURES_PATH / 'parameters' / 'PARAMETERS_Ir(100)-(2x1)-O')
+    interpretPARAMETERS(rpars, slab)
+    return (rpars, slab)
+
+class TestAg100Parameters():
+    def test_read_parameters_for_ag100(self):
+        # just check that readPARAMETERS does not crash; not interpreted yet
+        filename = 'tests/fixtures/parameters/PARAMETERS_1'
+        rpars = readPARAMETERS(filename)
+        assert rpars
 
 
-def test_interpret_parameters_for_ag100(ag100_parameters_example):
-    rpars, slab = ag100_parameters_example
-    # check that the parameters are interpreted correctly based on a few examples
-    assert rpars.V0_IMAG == pytest.approx(5.0)
-    assert rpars.THEO_ENERGIES == pytest.approx([50, 350, 3])
+    def test_interpret_parameters_for_ag100(self, ag100_parameters_example):
+        rpars, slab = ag100_parameters_example
+        # check that the parameters are interpreted correctly based on a few examples
+        assert rpars.V0_IMAG == pytest.approx(5.0)
+        assert rpars.THEO_ENERGIES == pytest.approx([50, 350, 3])
+
+class TestIr1002x1OParameters():
+    # checks reading of parameters:
+    # RUN, THEO_ENERGIES, LMAX, BULK_LIKE_BELOW, SITE_DEF, T_DEBYE, T_EXPERIMENT, VIBR_AMP_SCALE
+    def test_ir100_2x1_o_interpretation(self, ir100_2x1_o_parameters_example):
+        rpars, slab = ir100_2x1_o_parameters_example
+        # check that the parameters are interpreted correctly based on a few examples
+        assert rpars.RUN == [0, 1, 2, 3]
+        assert rpars.THEO_ENERGIES == pytest.approx([49, 700, 3])
+        assert rpars.LMAX == [8, 14]
+        assert rpars.BULK_LIKE_BELOW == pytest.approx(0.35)
+        # check that float assignment works
+        assert rpars.T_DEBYE == pytest.approx(420)
+        assert rpars.T_EXPERIMENT == pytest.approx(100)
+        # check that SITE_DEF assignment works
+        assert rpars.SITE_DEF['Ir']['surf'] == [3,2]
+        assert rpars.SITE_DEF['O']['ads'] == [1]
+        # check that string assignment works for VIBR_AMP_SCALE
+        assert rpars.VIBR_AMP_SCALE[0] == '*surf 1.3'
+
 
 # unit tests for parameter interpretation
 
@@ -160,3 +193,4 @@ class TestInterpretFortranComp():
         value = 'clang'
         with pytest.raises(ParameterError):
             parameters._interpret_fortran_comp(self.rpars, self.param, flags, right_side, value, other_values, skip_check=True)
+
