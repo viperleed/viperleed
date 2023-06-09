@@ -19,10 +19,13 @@ vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
+import viperleed.tleedmlib.files.parameters as parameters
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS,
                                                   modifyPARAMETERS)
 from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.files.parameter_errors import ParameterError
 
 @pytest.fixture()
 def ag100_parameters_example():
@@ -46,3 +49,17 @@ def test_interpret_parameters_for_ag100(ag100_parameters_example):
     assert rpars.V0_IMAG == pytest.approx(5.0)
     assert rpars.THEO_ENERGIES == pytest.approx([50, 350, 3])
 
+# unit tests for parameter interpretation
+
+# _interpret_intpol_deg()
+def test_interpret_intpol_deg():
+    rpars = Rparams()
+    param = 'INTPOL_DEG'
+
+    for val in rpars.get_limits(param):
+        parameters._interpret_intpol_deg(rpars, param, val)
+        assert rpars.INTPOL_DEG == int(val)
+    incompatible_values = ['1', 'text']
+    for val in incompatible_values:
+        with pytest.raises(ParameterError):
+            parameters._interpret_intpol_deg(rpars, param, val)
