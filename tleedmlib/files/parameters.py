@@ -525,7 +525,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
         'BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
         'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'SUPERLATTICE',
         'SYMMETRY_CELL_TRANSFORM', 'TENSOR_INDEX', 'TENSOR_OUTPUT']
-    _is_doman_calc = Section.DOMAINS in rpars.RUN or rpars.domainParams
+    _is_doman_calc = 4 in rpars.RUN or rpars.domainParams
 
     # iterate over all parameters
     for param, flags, right_side in flat_params:
@@ -967,15 +967,15 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             rl = []
             for s in values:
                 try:
-                    rl.extend(sec.value for sec in Section.sequence_from_string(s))  # TODO: directly use section enum after merging in Micheles changes
+                    rl.extend(Section.sequence_from_string(s))
                 except ValueError as err:
                     raise ParameterValueError(param, s) from err
             if Section.DOMAINS in rl:
                 logger.info('Found domain search.')
             if rl:
-                if rl[0] is not Section.INITIALIZATION:
-                    rl.insert(0, Section.INITIALIZATION.value) # TODO: directly use section enum after merging in Micheles changes
-                rpars.RUN = rl
+                if rl[0] is not Section.INITIALIZATION
+                    rl.insert(0, Section.INITIALIZATION)
+                rpars.RUN = [s.value for s in rl]                                # TODO: replace with "rl" to keep Section objects
             else:
                 raise ParameterError(
                     param,
