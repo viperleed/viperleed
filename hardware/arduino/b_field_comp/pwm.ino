@@ -1,5 +1,5 @@
 /*
-Add-on for Arduino Micro for using fast-PWM mode via Timer/counter 4.
+Add-on for Arduino Micro for using fast-PWM mode via Timer/counter4.
 ---------------------
 Author: Michele Riva, Christoph Pfungen
 Date: 15.05.2023
@@ -46,7 +46,7 @@ byte set_pwm_frequency(double freq){
     // Atmega32U4 register names 'OCRnx' contain device number 'n'
     // (where 'n' is Timer/Counter n) and Output Compare unit 'x'
     // (where 'x' is A/B/C)
-    // E.g. OCR4A = Output Compare register on Timer/Counter 4, channel A
+    // E.g. OCR4A = Output Compare register on Timer/Counter4, channel A
 
     // Set PWM frequency to freq (TC4H:OCR4C = 799 gives freq exactly;
     // datasheet formula [Section 15.8.2] off by one for fast PWM mode)
@@ -57,7 +57,7 @@ byte set_pwm_frequency(double freq){
 
 
 byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr){
-    /**Set PWM duty cycle (i.e., average voltage), including sign.
+    /**Set PWM duty cycle (i.e., average voltage), including sign output.
 
     Parameters
     ----------
@@ -66,7 +66,7 @@ byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr
     sign_select_pin : byte
         The Arduino pin that takes care of the sign of this PWM signal.
     tc4_reg_addr : byte*
-        Pointer to the address of the register of the timer/counter 4
+        Address of the specific Timer/Counter4 register
         of Atmega32U4.
 
     Returns

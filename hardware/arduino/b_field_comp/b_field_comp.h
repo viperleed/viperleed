@@ -106,7 +106,7 @@ class Coil {
 };
 
 
-// Create two global instances of CoilClass with respective initializers
+// Create two global instances of class 'Coil' with respective initializers
 Coil coil_1(COIL_1_PWM, COIL_1_PWM_REGISTER, COIL_1_SIGN, COIL_1_SPI_CS);
 Coil coil_2(COIL_2_PWM, COIL_2_PWM_REGISTER, COIL_2_SIGN, COIL_2_SPI_CS);
 
