@@ -24,7 +24,7 @@ except Exception:
 else:
     plotting = True
 
-import viperleed.tleedmlib.leedbase as leedbase
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import available_cpu_count
 from viperleed.tleedmlib.checksums import (KNOWN_TL_VERSIONS,
                                            UnknownTensErLEEDVersionError)
