@@ -1557,6 +1557,7 @@ class Assignment:
         self.value = value
         self.other_values = other_values
         self.right_side = right_side
+        self.all_values = right_side.split()
 
 
 class ParameterInterpreter:
@@ -1612,6 +1613,9 @@ class ParameterInterpreter:
                 self._interpret_param(param, assignment)
             except ParameterError:
                 pass # TODO!!
+
+        # finally set the log level back to what it was
+        logger.setLevel(self.loglevel)
 
     def _get_param_assignemnts(self, rpars):
         """Flatten out the (possibly multiple) assignments read from
@@ -1719,3 +1723,27 @@ class ParameterInterpreter:
             else:
                 raise ParameterUnknownFlagError(parameter=param,
                                                         flag=flags[0])
+    def _interpret_v0_real(self, assignment):
+        param = "V0_REAL"
+        v0r_type = assignment.value.lower()
+        if v0r_type == 'rundgren':
+            rundgren_constants = assignment.other_values
+            if len(rundgren_constants) != 4:
+                message = ("Rundgren-type function expects four constants "
+                            "separated by whitespace.")
+                raise ParameterParseError(param, message)
+            try:
+                setTo = [float(rundgren_constants[i]) for i in range(4)]
+            except (ValueError, IndexError) as err:
+                message = ("Could not parse constants for Rundgren-type "
+                            "function.")
+                self.rpars.setHaltingLevel(1)
+                raise ParameterError(param, message=message) from err
+        else:  # pass specific function to fortran
+            # regex: substitute "EE" with "EEV+workfn"
+            setTo = re.sub("(?i)EE", "EEV+workfn", assignment.right_side)
+        if isinstance(setTo, str):
+            setTo = setTo.rstrip()
+        self.rpars.V0_REAL = setTo
+
+    def _interpret_theo_energies(self, assignment):

@@ -90,7 +90,7 @@ class TestIr1002x1OParameters():
 # unit tests for parameter interpretation
 
 # _interpret_intpol_deg()
-def test_interpret_intpol_deg():
+def test__interpret_intpol_deg():
     rpars = Rparams()
     for val in rpars.get_limits('INTPOL_DEG'):
         interpreter = ParameterInterpreter(rpars, slab=None)
@@ -149,39 +149,64 @@ class TestInterpretFortranComp():
     rpars = Rparams()
     interpreter = ParameterInterpreter(rpars, slab=None)
 
-    def test_fortran_comp_default_intel(self):
+    def test__fortran_comp_default_intel(self):
         assignment = Assignment([], 'ifort', [], '')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'ifort -O2 -I/opt/intel/mkl/include' in self.rpars.FORTRAN_COMP[0]
         assert '-L/opt/intel/mkl/lib/intel64' in self.rpars.FORTRAN_COMP[1]
 
-    def test_fortran_comp_default_gnu(self):
+    def test__fortran_comp_default_gnu(self):
         assignment = Assignment([], 'gfortran', [], '')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'gfortran' in self.rpars.FORTRAN_COMP[0]
         assert '-llapack -lpthread -lblas' in self.rpars.FORTRAN_COMP[1]
 
-    def test_fortran_comp_default_intel_mpi(self):
+    def test__fortran_comp_default_intel_mpi(self):
         assignment = Assignment(['mpi'], 'mpiifort', [], '')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'mpiifort' in self.rpars.FORTRAN_COMP_MPI[0]  # no other flags by default
 
-    def test_fortran_comp_default_gnu_mpi(self):
+    def test__fortran_comp_default_gnu_mpi(self):
         assignment = Assignment(['mpi'], 'mpifort', [], '')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'mpifort -Ofast -no-pie' in self.rpars.FORTRAN_COMP_MPI[0]  # no other flags by default
 
-    def test_fortran_comp_custom_without_flag(self):
+    def test__fortran_comp_custom_without_flag(self):
         assignment = Assignment([], "'ifort -O3 -march=native'", [], "'ifort -O3 -march=native'")
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'ifort -O3 -march=native' in self.rpars.FORTRAN_COMP[0]
 
-    def test_fortran_comp_custom_post_flag(self):
+    def test__fortran_comp_custom_post_flag(self):
         assignment = Assignment(['post'], "'-L/opt/intel/mkl/lib/intel64'", [], "'-L/opt/intel/mkl/lib/intel64'")
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert '-L/opt/intel/mkl/lib/intel64' in self.rpars.FORTRAN_COMP[1]
 
-    def test_fortran_comp_custom_mpi_flag(self):
+    def test__fortran_comp_custom_mpi_flag(self):
         assignment = Assignment(['mpi'], "'mpifort -fallow-argument-mismatch'", [], "'mpifort -fallow-argument-mismatch'")
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'mpifort -fallow-argument-mismatch' in self.rpars.FORTRAN_COMP_MPI[0]
+
+# _interpret_v0_real()
+class TestV0Real():
+    rpars = Rparams()
+    interpreter = ParameterInterpreter(rpars, slab=None)
+
+    def test__interpret_v0_real_rundgren_type(self):
+        assignment = Assignment(value="rundgren", other_values=["1.0", "2.0", "3.0", "4.0"])
+        self.interpreter._interpret_v0_real(assignment)
+        assert self.rpars.V0_REAL == [1.0, 2.0, 3.0, 4.0]
+
+    def test__interpret_v0_real_other_type(self,):
+        assignment = Assignment(value="other", right_side="EE")
+        self.interpreter._interpret_v0_real(assignment)
+        assert self.rpars.V0_REAL == "EEV+workfn"
+
+    def test__interpret_v0_real_invalid_rundgren_constants(self):
+        assignment = Assignment(value="rundgren", other_values=["1.0", "2.0"])
+        with pytest.raises(ParameterError):
+            self.interpreter._interpret_v0_real(assignment)
+
+    def test__interpret_v0_real_value_error(self):
+        assignment = Assignment(value="rundgren", other_values=["1.0", "2.0", "3.0", "four"])
+        with pytest.raises(ParameterError):
+            self.interpreter._interpret_v0_real(assignment)
