@@ -88,6 +88,44 @@ _PARAM_ALIAS = {
 for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
 
+_SIMPLE_BOOL_PARAMS = {
+    'LOG_DEBUG' : (),
+    'LOG_SEARCH' : (),
+    'PHASESHIFTS_CALC_OLD' : (),
+    'PHASESHIFTS_OUT_OLD' : (),
+    'R_FACTOR_LEGACY' : (),
+    'SUPPRESS_EXECUTION' : (),
+    'SYMMETRIZE_INPUT' : (),
+    'SYMMETRY_FIND_ORI' : (),
+    'TL_IGNORE_CHECKSUM' : (),
+    'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'}),
+}
+
+_SIMPLE_NUMERICAL_PARAMS_= {
+    # positive only integers
+    'BULKDOUBLING_MAX' : (int, (1, None)),
+    'N_CORES' : (int, (1, None)),
+    'SEARCH_MAX_GEN' : (int, (1, None)),
+    'TENSOR_INDEX' : (int, (1, None)),
+    # positive only floats
+    'T_DEBYE' : (float, (0, None)),
+    'T_EXPERIMENT' : (float, (0, None)),
+    'V0_IMAG' : (float, (0, None)),
+    'TL_VERSION' : (float, (0, None)),
+    'S_OVL' : (float, (0, None)),
+    # other floats
+    'V0_Z_ONSET' : (float),
+    'ATTENUATION_EPS' : (float, (1e-6,1), (False, True)),
+    'BULKDOUBLING_EPS' : (float, (1e-4, None), (False, False)),
+    'BULK_LIKE_BELOW': (float, (0, 1), (True, True)),
+    'SCREEN_APERTURE' : (float, (0, 180)),
+    # other integers
+    'HALTING' : (int, (1, 3)),
+    'N_BULK_LAYERS' : (int, (1, 2)),
+    'R_FACTOR_SMOOTH' : (int, (0, 999)),
+    'R_FACTOR_TYPE' : (int, (1, 2)),
+}
+
 
 def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
                                   search_convergence_known=True,
@@ -1551,8 +1589,12 @@ class Assignment:
                  flags: str=""):
         self.flags_str = flags
         self.values_str = right_side
-        self.flags, self.flag, self.other_flags = self._unpack_assignment_side(flags)
-        self.values, self.value, self.other_values = self._unpack_assignment_side(right_side)
+        (self.flags,
+         self.flag,
+         self.other_flags) = self._unpack_assignment_side(flags)                # TODO: are there any instances where we can have more than one flag per line?? If not we should raise always in that case!!
+        (self.values,
+         self.value,
+         self.other_values) = self._unpack_assignment_side(right_side)
 
     def _unpack_assignment_side(self, side):
         if isinstance(side, str):
@@ -1586,6 +1628,9 @@ class ParameterInterpreter:
         "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg", "cmm",
         "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m", "p6", "p6m"]
 
+    bool_synonyms = {True: {"T", "true", "yes", "1", "t", "y", "on", "enable", ".true."},
+                     False: {"F", "false", "no", "0", "f", "n", "off", "disable", ".false."}}
+
     def __init__(self, rpars, slab=None):
         self.rpars = rpars
         self.slab = slab
@@ -1599,6 +1644,10 @@ class ParameterInterpreter:
         self.param_names.extend(p for p in _KNOWN_PARAMS
                         if p in rpars.readParams and p not in self.param_names)
 
+        # create methods for interpreting simple parameters
+        self._make_boolean_interpreter_methods()
+        self._make_numerical_interpreter_methods()
+
     def interpret(self, silent=False):
         self._search_conv_read = False
         self.loglevel = logger.level
@@ -1610,7 +1659,7 @@ class ParameterInterpreter:
         self._is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
 
 
-        for param, assignment in self._get_param_assignemnts(self.rpars):
+        for param, assignment in self._get_param_assignments(self.rpars):
             if self._is_domain_calc and param in self.domains_ignore_params:
                 # skip in domain calculation
                 continue
@@ -1622,7 +1671,8 @@ class ParameterInterpreter:
         # finally set the log level back to what it was
         logger.setLevel(self.loglevel)
 
-    def _get_param_assignemnts(self, rpars):
+    # Helper methods for interpret()
+    def _get_param_assignments(self, rpars):
         """Flatten out the (possibly multiple) assignments read from
         the PARAMETERS file for each parameter"""
         flat_params = ((p_name, *flags_and_value)
@@ -1641,6 +1691,188 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(2)
             raise ParameterNotRecognizedError(param)
         _interpreter(assignment)
+
+    # Methods for interpreting simple parameters
+    def _interpret_bool_parameter(self, param, assignment,
+                                  allowed_values={True:{}, False:{}},
+                                  var_name=None):
+        """
+        Generic function for setting a given parameter to a boolean value.
+
+        Parameters
+        ----------
+        param : str
+            The name of the parameter in PARAMETERS
+        assignment : Assignment
+            The assignment of the parameter.
+        addAllowedValues : dict, optional
+            Additional string values which should be interpreted as False or
+            True. E.g. by default, 'f' and 'false' are False, 't' and 'true' are
+            True.
+        var_name : str, optional
+            The variable name in the Rparams class, if it differs from 'param'.
+
+
+        Returns
+        ----------
+        int
+            0 if value was set, 1 otherwise
+
+        """
+        if var_name is None:
+            var_name = param.upper()
+        for option in allowed_values:
+            allowed_values[option].update(self.bool_synonyms[option])
+        # make sure there is no intersection between the two sets
+        if set(allowed_values[True]) & set(allowed_values[False]):
+            raise ValueError("The sets of allowed values for True and False "
+                             " must not overlap.")
+        # check if the value is in the allowed values
+        if assignment.value in allowed_values[True]:
+            setattr(self.rpars, var_name, True)
+        elif assignment.value in allowed_values[False]:
+            setattr(self.rpars, var_name, False)
+        else:
+            # complain about invalid value
+            self.rpars.setHaltingLevel(1)
+            raise  ParameterBooleanConversionError(param, assignment.value)
+
+    def _interpret_numerical_parameter(self,
+                                       param,
+                                       assignment,
+                                       type_,
+                                       range_=(None,None),
+                                       range_exclude=(False, False),
+                                       out_of_range_event='fail',
+                                       var_name=None):
+        """
+        Generic function for setting a given parameter to an integer or float
+        value. Interpretation is done via getNumericalParameter.
+
+        Parameters
+        ----------
+        param : str
+            The name of the parameter in PARAMETERS
+        value : str
+            The value as found in the PARAMETERS file
+        varname : str, optional
+            The variable name in the Rparams class, if it differs from 'param'
+        type_ : int or float, optional
+            Which type the variable must take
+        range_ : tuple, values can be int or float or None, optional
+            Defines upper and lower limits for the value. If either is set to
+            None, only the other one will be interpreted. The default is None
+            for both.
+        range_exclude : tuple (bool, bool), optional
+            Whether the upper and lower limits themselves are allowed values
+            or not. The default is False for both (range is inclusive).
+        out_of_range_event : str 'fail' or 'set', optional
+            What to do if the given value lies outside the range. For 'fail',
+            the value will be ignored. For 'modulo', the value will be
+            brought within the range by '%' operation. For 'set', the value
+            will be set to the lowest allowed value. The default is
+            'fail'.
+
+        Returns
+        ----------
+        int
+            0 if value was set, 1 otherwise
+
+        """
+        if out_of_range_event not in ('fail', 'modulo'):
+            raise ValueError("out_of_range_event must be 'fail' or 'modulo'")
+        if not range_[0] and range_[1] and out_of_range_event == 'modulo':
+            raise ValueError("Cannot use out_of_range_event 'modulo' "
+                                "if either limit is undefined.")
+
+        if type_ not in (int, float):
+            raise ValueError('type_ must be int or float')
+        if type_ is float:
+            try:
+                v = float(assignment.value)
+            except ValueError:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterFloatConversionError(parameter=param)
+        else:  # type_ is int
+            try:
+                v = int(float(assignment.value))  # for e.g. '1e6' to int
+            except ValueError:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterIntConversionError(parameter=param)
+
+        out_of_range = [False, False]
+        if range_[0] is not None and (v < range_[0] or
+                                      (range_exclude[0] and v == range_[0])):
+            out_of_range[0] = True
+        if range_[1] is not None and (v > range_[1] or
+                                      (range_exclude[1] and v == range_[1])):
+            out_of_range[1] = True
+        range_chars = ({False: "[", True: "]"}, {False: "]", True: "["})
+        if all([v is not None for v in range_]):
+            outOfRangeStr = (
+                f'not in range {range_chars[0][range_exclude[0]]}{range_[0]}, '
+                f'{range_[1]}{range_chars[1][range_exclude[1]]}'
+                )
+        elif range_[0] is not None:
+            if range_exclude[0]:
+                outOfRangeStr = f'less than or equal to {range_[0]}'
+            else:
+                outOfRangeStr = f'less than {range_[0]}'
+        else:
+            if range_exclude[1]:
+                outOfRangeStr = f'larger than or equal to {range_[1]}'
+            else:
+                outOfRangeStr = f'larger than {range_[1]}'
+        if any(out_of_range) and out_of_range_event == 'fail':
+            message = f"Value {v} is {outOfRangeStr}."
+            rparams.setHaltingLevel(1)
+            raise ParameterError(param, message=message)
+        if any(out_of_range) and out_of_range_event == 'modulo':
+
+            for i in range(0, 2):
+                if not out_of_range[i]:
+                    continue
+                    setTo = (((v - range_[0]) % (range_[1] - range_[0]))
+                             + range_[0])
+                elif range_exclude[i]:
+                    mult = 1
+                    if i == 1:
+                        mult = -1
+                    if type_ == float:
+                        setTo = range_[i] + mult*1e-4
+                    else:
+                        setTo = range_[i] + mult
+                else:
+                    setTo = range_[i]
+                logger.warning(f'PARAMETERS file: {param}: Value {v} is '
+                            f'{outOfRangeStr}. Value will be set to {setTo}.')
+                v = setTo
+                break
+
+
+        # set the value of parameter
+        if not var_name:
+            var_name = param.upper()
+        setattr(self.rpars, var_name, v)
+
+    def _make_boolean_interpreter_methods(self):
+        for param, properties in _SIMPLE_BOOL_PARAMS.items():
+            method_name = f'_interpret_{param.lower()}'
+            _interpret = lambda assignment: self._interpret_bool_parameter(
+                param,
+                assignment,
+                *properties)
+            setattr(self, method_name, _interpret)
+
+    def _make_numerical_interpreter_methods(self):
+        for param, properties in _SIMPLE_NUMERICAL_PARAMS_.items():
+            method_name = f'_interpret_{param.lower()}'
+            _interpret = lambda assignment: self._interpret_numerical_parameter(
+                param,
+                assignment,
+                *properties)
+            setattr(self, method_name, _interpret)
+
 
     ## Methods to interpret individual parameters
     def _interpret_intpol_deg(self, assignment):
