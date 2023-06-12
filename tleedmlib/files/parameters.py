@@ -61,6 +61,10 @@ _KNOWN_PARAMS = [                                                               
     'V0_Z_ONSET', 'VIBR_AMP_SCALE', 'ZIP_COMPRESSION_LEVEL',
     ]
 
+# parameters that can be optimized in FD optimization
+_OPTIMIZE_OPTIONS = ['theta', 'phi', 'v0i',
+                     'a', 'b', 'c', 'ab', 'abc', 's_ovl']
+
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
 _PARAM_ALIAS = {
     'bulklike': 'BULK_LIKE_BELOW',
@@ -1793,7 +1797,7 @@ class ParameterInterpreter:
                     self.rpars.setHaltingLevel(2)
                     raise ParameterValueError(param, v) from err
 
-    def _intepret_symmetry_fix(self, assignment):                               # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
+    def _interpret_symmetry_fix(self, assignment):                              # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
         param = "SYMMETRY_FIX"
         grouplist = self.grouplist
         group = assignment.value.lower()
@@ -1972,7 +1976,7 @@ class ParameterInterpreter:
             rparams.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, search_start)
 
-    def _interpret_site_def(self, assignment):                                  # TODO: clean up this mess
+    def _interpret_site_def(self, assignment):                                  # TODO: clean up this mess, also write tests
         param = "SITE_DEF"
         newdict = {}
         sublists = splitSublists(assignment.values, ',')
@@ -2026,6 +2030,171 @@ class ParameterInterpreter:
                 param,
                 "RUN was defined, but no values were read."
                 )
+
+    def _interpret_iv_shift_range(self, assignment):
+        param = "IV_SHIFT_RANGE"
+        if len(assignment.values) not in (2, 3):
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(parameter=param)
+        try:
+            fl = [float(s) for s in assignment.values]
+        except ValueError:
+            raise ParameterFloatConversionError(parameter=param)
+        if fl[1] < fl[0]:
+            message = "IV_SHIFT_RANGE end energy has to >= start energy."
+            self.rpars.setHaltingLevel(1)
+            raise ParameterError(param, message)
+            return
+
+        for i in range(0, 2):
+            self.rpars.IV_SHIFT_RANGE[i] = fl[i]
+        if len(fl) == 3 and fl[2] <= 0:
+            message = "IV_SHIFT_RANGE step has to be positive."
+            self.rpars.setHaltingLevel(1)
+            raise ParameterError(parameter=param, message=message)
+        self.rpars.IV_SHIFT_RANGE[2] = fl[2]
+
+    def _interpret_layer_cuts(self, assignment):
+        param = "LAYER_CUTS"
+        # some simple filtering here, but leave as list of strings
+        if all(c in assignment.values_str for c in "<>"):
+            rparams.setHaltingLevel(1)
+            raise ParameterParseError(param,
+                                    'Cannot parse list with both "<" and ">".')
+        elif any(c in assignment.values_str for c in "<>"):
+            newlist = []
+            for s in assignment.values:
+                s = s.replace("<", " < ")
+                s = s.replace(">", " > ")
+                newlist.extend(s.split())
+            assignment.values = newlist                                         # TODO not great that this is done in place
+        rgx = re.compile(r'\s*(dz|dc)\s*\(\s*(?P<cutoff>[0-9.]+)\s*\)')
+        for (i, s) in enumerate(assignment.values):
+            if "dz" in s.lower() or "dc" in s.lower():
+                m = rgx.match(assignment.values_str.lower())
+                if m:
+                    try:
+                        float(m.group('cutoff'))
+                        assignment.values[i] = m.group(0)
+                    except Exception:                                           # TODO: catch better; only 1 statement in try.
+                        rparams.setHaltingLevel(1)
+                        raise ParameterParseError(param,
+                                                  f'Could not parse function {s}')
+            elif not (s == "<" or s == ">"):
+                try:
+                    float(s)
+                except Exception:
+                    rparams.setHaltingLevel(1)
+                    raise ParameterParseError(param)
+        self.rpars.LAYER_CUTS = assignment.values
+
+    def _interpret_lmax(self, assignment):
+        param = "LMAX"
+        _min, _max = self.rpars.get_limits(param)
+
+        values = re.sub(r'[:-]', ' ', assignment.values_str).split()
+        try:
+            lmax_list = [int(v) for v in values]
+        except ValueError:
+            rparams.setHaltingLevel(1)
+            raise ParameterIntConversionError(param)
+        if len(lmax_list) > 2:
+            rparams.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param)
+        if len(lmax_list) == 1:
+            if not _min < lmax_list[0] <= _max:
+                _, lmax_list[0], _ = sorted((_min, lmax_list[0], _max))
+                raise ParameterError(
+                    param,
+                    f"LMAX must be between {_min} and {_max}."
+                )
+            self.rpars.LMAX = [lmax_list[0], lmax_list[0]]
+        elif len(lmax_list) == 2:
+            if lmax_list[1] < lmax_list[0]:
+                lmax_list.reverse()
+            if lmax_list[0] < _min:
+                raise ParameterError(
+                    param,
+                    "LMAX lower bound must be positive."
+                )
+            if lmax_list[1] > _max:
+                raise ParameterError(
+                    param,
+                    f"LMAX values >{_max} are currently not supported."
+                    )
+            self.rpars.LMAX = lmax_list
+
+    def _interpret_optimze(self, assignment):
+        param = "OPTIMIZE"
+        if not assignment.flag:
+            message = ("Parameter to optimize not defined.")
+            rparams.setHaltingLevel(3)
+            raise ParameterError(param, message)
+        which = assignment.flag.lower()
+        if which not in [o.lower() for o in _OPTIMIZE_OPTIONS]:
+            rparams.setHaltingLevel(3)
+            raise ParameterUnknownFlagError(param, f"{which!r}")
+        self.rpars.OPTIMIZE['which'] = which
+        if not assignment.other_values:
+            try:
+                self.rpars.OPTIMIZE['step'] = float(assignment.value)
+            except ValueError:
+                pass   # will be caught below
+            else:
+                return
+        sublists = splitSublists(assignment.values, ',')
+        for sl in sublists:
+            if len(sl) != 2:
+                message = "Expected 'flag value' pairs, found " + " ".join(sl)
+                rparams.setHaltingLevel(2)
+                raise ParameterError(param, message)
+            flag = sl[0].lower()
+            if flag not in ['step', 'convergence',
+                            'minpoints', 'maxpoints', 'maxstep']:
+                self.rpars.setHaltingLevel(2)
+                raise ParameterUnknownFlagError(param, f"{flag!r}")
+            partype = {'step': float, 'convergence': float,
+                        'minpoints': int, 'maxpoints': int,
+                        'maxstep': float}
+            value_error = ('PARAMETERS file: OPTIMIZE: Value '
+                            f'{sl[1]} is not valid for flag {sl[0]}. '
+                            'Value will be ignored.')
+            try:
+                self.rpars.OPTIMIZE[flag] = partype[flag](sl[1])
+            except ValueError as err:
+                rparams.setHaltingLevel(1)
+                raise ParameterError(param, value_error) from err
+
+    def _interpret_parabola_fit(self, assignment):
+        param = "PARABOLA_FIT"
+        if assignment.value.lower() == 'off':
+            self.rpars.PARABOLA_FIT['type'] = 'none'
+            return
+        sublists = splitSublists(assignment.values, ',')
+        for sl in sublists:
+            flag = sl[0].lower()
+            if flag.lower() == 'localise':
+                flag = 'localize'
+            value_error = (f'PARAMETERS file: PARABOLA_FIT: Value {sl[1]} '
+                            f'is not valid for flag {sl[0]}. Value will be '
+                            'ignored.')
+            if flag == 'type':
+                if sl[1].lower() in ('linear', 'linearregression', 'lasso',
+                                        'ridge', 'elasticnet', 'none'):
+                    self.rpars.PARABOLA_FIT['type'] = sl[1]
+                else:
+                    rparams.setHaltingLevel(1)
+                    raise ParameterError(param, value_error)
+            elif flag in ('alpha', 'mincurv', 'localize'):
+                try:
+                    f = float(sl[1])
+                except ValueError:
+                    f = -1
+                if f >= 0:
+                    self.rpars.PARABOLA_FIT[flag] = f
+                else:
+                    rparams.setHaltingLevel(1)
+                    raise ParameterError(param, value_error)
 
     def _interpret_phaseshift_eps(self, assignment):
         param = "PHASESHIFT_EPS"
