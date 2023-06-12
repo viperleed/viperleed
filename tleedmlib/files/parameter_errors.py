@@ -4,10 +4,10 @@ class ParameterError(Exception):
     '''Base class for errors raised during PARAMETERS interpretation'''
 
     def __init__(self, parameter, message):
-        message = f"PARAMETERS file: parameter {str(parameter)}:\n"
+        _message = f"PARAMETERS file: parameter {str(parameter)}:\n"
         if message:
-            message += message + " "  # add space before "input will be ignored"
-        super().__init__(message)
+            _message += message + " "  # add space before "input will be ignored"
+        super().__init__(_message)
 
 class ParameterNotRecognizedError(ParameterError):
     '''Raised when a parameter is not recognized'''
@@ -34,7 +34,7 @@ class ParameterConversionError(ParameterError):
         if given_value:
             msg += f'"{given_value}" to {self._type}.'
         else:
-            msg = f'input to {self._type}. Check parameter syntax.'
+            msg += f'input to {self._type}. Check parameter syntax.'
         super().__init__(parameter, msg)
 
 
