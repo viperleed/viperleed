@@ -1592,7 +1592,7 @@ class ParameterInterpreter:
                             in self.orderedParams
                             if p in self.rpars.readParams]
         self.param_names.extend(p for p in _KNOWN_PARAMS
-                        if p in rpars.readParams and p not in param_names)
+                        if p in rpars.readParams and p not in self.param_names)
 
     def interpret(self, silent=False):
         self._search_conv_read = False
@@ -1602,11 +1602,11 @@ class ParameterInterpreter:
             logger.setLevel(logging.ERROR)
 
         # check if we are doing a domain calculation
-        self._is_domain_calc = 4 in rpars.RUN or rpars.domainParams
+        self._is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
 
 
         for param, assignment in self._get_param_assignemnts(self.rpars):
-            if self._is_doman_calc and param in self.domains_ignore_params:
+            if self._is_domain_calc and param in self.domains_ignore_params:
                 # skip in domain calculation
                 continue
             try:
@@ -1626,7 +1626,7 @@ class ParameterInterpreter:
         for param, flag, right_side in flat_params:
             values = right_side.split()
             value, *other_values = values
-            assignment = Assignment(flags, value, other_values, right_side)
+            assignment = Assignment(flag, value, other_values, right_side)
             yield param, assignment
 
     def _interpret_param(self, param, assignment):
