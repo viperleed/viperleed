@@ -2220,7 +2220,7 @@ class ParameterInterpreter:
                     atnums.extend(ir)
                 elif "top(" in sl[i]:
                     if self.slab is None:
-                        rparams.setHaltingLevel(3)
+                        self.rpars.setHaltingLevel(3)
                         raise ParameterError(
                             param,
                             ("SITE_DEF parameter contains a top() "
@@ -2235,7 +2235,7 @@ class ParameterInterpreter:
                             atnums.append(at.oriN)
                             n -= 1
                 else:
-                    rparams.setHaltingLevel(3)
+                    self.rpars.setHaltingLevel(3)
                     raise ParameterError(param, "Problem with SITE_DEF input format")
             newdict[sl[0]] = atnums
         self.rpars.SITE_DEF[assignment.flags[0]] = newdict
