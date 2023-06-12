@@ -1646,7 +1646,7 @@ class ParameterInterpreter:
 
     def _interpret_bulk_repeat(self, assignment):
         param = "BULK_REPEAT"
-        # make sure that the slab is defined, otherwise bulk repeat is meaningless
+        # make sure that the slab is defined, otherwise bulk repeat is moot
         if not self.slab:
             raise ParameterError(parameter=param,
                                 message="No slab defined for bulk repeat.")
@@ -1678,3 +1678,44 @@ class ParameterInterpreter:
             if vec is None:
                 raise ParameterParseError(parameter=param)
             self.rpars.BULK_REPEAT = vec
+
+    def _interpret_fortran_comp(self, assignment, skip_check=False):
+        param = "FORTRAN_COMP"
+        flags, compiler_str = assignment.flags, assignment.value
+        if assignment.other_values:
+            message = (f"{param} expects a single values, delimited by "
+                       "quotation marks. Could not intperpret "
+                       f"{assignment.other_values}.")
+            raise ParameterParseError(param, supp_message=message)
+        # complain if more than one flag is given
+        if len(flags) > 1:
+            message = (f"Only one flag allowed for {param} per line. "
+                       f"Got {assignment.flags}.")
+            raise ParameterError(param, message)
+        if (not flags and compiler_str.lower() in ["ifort", "gfortran"]):
+            # get default compiler flags
+            self.rpars.getFortranComp(comp=compiler_str.lower(), skip_check=skip_check)
+        elif (flags and flags[0].lower() == "mpi"
+                    and compiler_str.lower() in ["mpifort", "mpiifort"]):
+            # get default mpi compiler flags
+            self.rpars.getFortranMpiComp(comp=compiler_str.lower(),
+                                         skip_check=skip_check)
+        else:  # set custom compiler flags
+            delim = compiler_str[0]     # should be quotation marks                     # TODO: is this needed now that we use f-strings?
+            if delim not in ["'", '"']:
+                message = ("No valid shorthand and not delimited by "
+                                "quotation marks.")
+                raise ParameterError(param, message)
+            else:
+                setTo = assignment.right_side.split(delim)[1]
+            if not flags:
+                self.rpars.FORTRAN_COMP[0] = setTo
+            elif flags[0].lower() == "post":
+                self.rpars.FORTRAN_COMP[1] = setTo
+            elif flags[0].lower() == "mpi":
+                self.rpars.FORTRAN_COMP_MPI[0] = setTo
+            elif flags[0].lower() == "mpipost":
+                self.rpars.FORTRAN_COMP_MPI[1] = setTo
+            else:
+                raise ParameterUnknownFlagError(parameter=param,
+                                                        flag=flags[0])

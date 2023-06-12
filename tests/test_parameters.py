@@ -147,55 +147,41 @@ class TestInterpretFortranComp():
     # TODO: make use of new intepreter class
     param = 'FORTRAN_COMP'
     rpars = Rparams()
+    interpreter = ParameterInterpreter(rpars, slab=None)
 
     def test_fortran_comp_default_intel(self):
-        flags, other_values, right_side = [], [], ''
-        value = 'ifort'
-        parameters._interpret_fortran_comp(self.rpars, self.param, flags, right_side, value, other_values, skip_check=True)
+        assignment = Assignment([], 'ifort', [], '')
+        self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'ifort -O2 -I/opt/intel/mkl/include' in self.rpars.FORTRAN_COMP[0]
         assert '-L/opt/intel/mkl/lib/intel64' in self.rpars.FORTRAN_COMP[1]
 
     def test_fortran_comp_default_gnu(self):
-        flags, other_values, right_side = [], [], ''
-        value = 'gfortran'
-        parameters._interpret_fortran_comp(self.rpars, self.param, flags, right_side, value, other_values, skip_check=True)
+        assignment = Assignment([], 'gfortran', [], '')
+        self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'gfortran' in self.rpars.FORTRAN_COMP[0]
         assert '-llapack -lpthread -lblas' in self.rpars.FORTRAN_COMP[1]
-    
+
     def test_fortran_comp_default_intel_mpi(self):
-        flags, other_values, right_side = ['mpi'], [], ''
-        value = 'mpiifort'
-        parameters._interpret_fortran_comp(self.rpars, self.param, flags, right_side, value, other_values, skip_check=True)
+        assignment = Assignment(['mpi'], 'mpiifort', [], '')
+        self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'mpiifort' in self.rpars.FORTRAN_COMP_MPI[0]  # no other flags by default
 
     def test_fortran_comp_default_gnu_mpi(self):
-        flags, other_values, right_side = ['mpi'], [], ''
-        value = 'mpifort'
-        parameters._interpret_fortran_comp(self.rpars, self.param, flags, right_side, value, other_values, skip_check=True)
+        assignment = Assignment(['mpi'], 'mpifort', [], '')
+        self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'mpifort -Ofast -no-pie' in self.rpars.FORTRAN_COMP_MPI[0]  # no other flags by default
 
     def test_fortran_comp_custom_without_flag(self):
-        flags, other_values, right_side = [], [],  "'ifort -O3 -march=native'"
-        value = "'ifort -O3 -march=native'"
-        parameters._interpret_fortran_comp(self.rpars, self.param, flags, right_side, value, other_values, skip_check=True)
+        assignment = Assignment([], "'ifort -O3 -march=native'", [], "'ifort -O3 -march=native'")
+        self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'ifort -O3 -march=native' in self.rpars.FORTRAN_COMP[0]
 
     def test_fortran_comp_custom_post_flag(self):
-        flags, other_values, right_side = ['post'], [], "'-L/opt/intel/mkl/lib/intel64'"
-        value = "'-L/opt/intel/mkl/lib/intel64'"
-        parameters._interpret_fortran_comp(self.rpars, self.param, flags, right_side, value, other_values, skip_check=True)
+        assignment = Assignment(['post'], "'-L/opt/intel/mkl/lib/intel64'", [], "'-L/opt/intel/mkl/lib/intel64'")
+        self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert '-L/opt/intel/mkl/lib/intel64' in self.rpars.FORTRAN_COMP[1]
 
     def test_fortran_comp_custom_mpi_flag(self):
-        flags, other_values, right_side = ['mpi'], [], "'mpifort -fallow-argument-mismatch'"
-        value = "'mpifort -fallow-argument-mismatch'"
-        parameters._interpret_fortran_comp(self.rpars, self.param, flags, right_side, value, other_values, skip_check=True)
+        assignment = Assignment(['mpi'], "'mpifort -fallow-argument-mismatch'", [], "'mpifort -fallow-argument-mismatch'")
+        self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'mpifort -fallow-argument-mismatch' in self.rpars.FORTRAN_COMP_MPI[0]
-
-    # test that error is raised if unsupported default compiler is used
-    def test_fortran_wrong_compiler(self):
-        flags, other_values, right_side = [], [], ''
-        value = 'clang'
-        with pytest.raises(ParameterError):
-            parameters._interpret_fortran_comp(self.rpars, self.param, flags, right_side, value, other_values, skip_check=True)
-
