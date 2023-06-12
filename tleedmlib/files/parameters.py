@@ -1539,9 +1539,7 @@ class Assignment:
     right_side : str
         The right-hand side of the parameter assignment.
     """
-    flags: List[str]
-    value: str
-    other_values: List[str]
+    flags_str: str
     right_side: str
 
     def __init__(self,
@@ -1549,10 +1547,18 @@ class Assignment:
                  flags: str=""):
         self.flags_str = flags
         self.values_str = right_side
-        self.flags = flags.split()
-        self.values = right_side.split()
-        self.flag, *self.other_flags = self.flags or ("", [])
-        self.value, *self.other_values = self.values or ("", [])
+        self.flags, self.flag, self.other_flags = self._unpack_assignment_side(flags)
+        self.values, self.value, self.other_values = self._unpack_assignment_side(right_side)
+
+    def _unpack_assignment_side(self, side):
+        if isinstance(side, str):
+            parts = side.split()
+        elif isinstance(side, list):
+            parts = side
+        else:
+            raise TypeError
+        first_part, *other_parts = parts or ("", [])
+        return parts, first_part, other_parts
 
 
 class ParameterInterpreter:
@@ -1713,6 +1719,7 @@ class ParameterInterpreter:
             else:
                 raise ParameterUnknownFlagError(parameter=param,
                                                         flag=flags[0])
+
     def _interpret_v0_real(self, assignment):
         param = "V0_REAL"
         v0r_type = assignment.value.lower()
@@ -1895,6 +1902,9 @@ class ParameterInterpreter:
 
     def _interpret_search_beams(self, assignment):
         param = "SEARCH_BEAMS"
+        if assignment.other_values:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param)
         value = assignment.value.lower()
         if value.startswith(('0', 'a')):
             self.rpars.SEARCH_BEAMS = 0
@@ -1965,7 +1975,7 @@ class ParameterInterpreter:
     def _interpret_site_def(self, assignment):                                  # TODO: clean up this mess
         param = "SITE_DEF"
         newdict = {}
-        sublists = splitSublists(assignment.all_values, ',')
+        sublists = splitSublists(assignment.values, ',')
         for sl in sublists:
             atnums = []
             for i in range(1, len(sl)):
@@ -1997,7 +2007,7 @@ class ParameterInterpreter:
     def _interpret_run(self, assignment):                                       # TODO: important param, write tests
         param = "RUN"
         run_list = []
-        for section_str in assignment.all_values:
+        for section_str in assignment.values:
             try:
                 run_list.extend(Section.sequence_from_string(section_str))
             except ValueError as err:
@@ -2111,7 +2121,7 @@ class ParameterInterpreter:
                 self.rpars.PLOT_IV['perpage'] = tuple(il)
 
 def temp_workaround(param, flags, value, other_values, right_side, slab, rpars):
-    assignment = Assignment(flags, value, other_values, right_side)
+    assignment = Assignment(right_side, flags)
     interpreter = ParameterInterpreter(rpars=rpars, slab=slab)
     f = getattr(interpreter, f"_interpret_{param.lower()}")
     f(assignment)
