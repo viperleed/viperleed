@@ -1536,10 +1536,6 @@ class Assignment:
     ----------
     flags : list of str
         The flags of the parameter.
-    value : str
-        The value of the parameter.
-    other_values : list of str
-        Other values of the parameter.
     right_side : str
         The right-hand side of the parameter assignment.
     """
@@ -1549,15 +1545,14 @@ class Assignment:
     right_side: str
 
     def __init__(self,
-                 flags: List[str]=[],
-                 value: str="",
-                 other_values: List[str]=[],
-                 right_side: str=""):
-        self.flags = flags
-        self.value = value
-        self.other_values = other_values
-        self.right_side = right_side
-        self.all_values = right_side.split()
+                 right_side: str="",
+                 flags: str=""):
+        self.flags_str = flags
+        self.values_str = right_side
+        self.flags = flags.split()
+        self.values = right_side.split()
+        self.flag, *self.other_flags = self.flags or ("", [])
+        self.value, *self.other_values = self.values or ("", [])
 
 
 class ParameterInterpreter:
@@ -1654,7 +1649,7 @@ class ParameterInterpreter:
         if not self.slab:
             raise ParameterError(parameter=param,
                                 message="No slab defined for bulk repeat.")
-        s = assignment.right_side.lower()
+        s = assignment.values_str.lower()
         # TODO: clean up and de-branch below
         if "[" not in s:
             if "(" not in s:
@@ -1686,11 +1681,6 @@ class ParameterInterpreter:
     def _interpret_fortran_comp(self, assignment, skip_check=False):
         param = "FORTRAN_COMP"
         flags, compiler_str = assignment.flags, assignment.value
-        if assignment.other_values:
-            message = (f"{param} expects a single values, delimited by "
-                       "quotation marks. Could not intperpret "
-                       f"{assignment.other_values}.")
-            raise ParameterParseError(param, supp_message=message)
         # complain if more than one flag is given
         if len(flags) > 1:
             message = (f"Only one flag allowed for {param} per line. "
@@ -1699,7 +1689,7 @@ class ParameterInterpreter:
         if (not flags and compiler_str.lower() in ["ifort", "gfortran"]):
             # get default compiler flags
             self.rpars.getFortranComp(comp=compiler_str.lower(), skip_check=skip_check)
-        elif (flags and flags[0].lower() == "mpi"
+        elif (flags and assignment.flag.lower() == "mpi"
                     and compiler_str.lower() in ["mpifort", "mpiifort"]):
             # get default mpi compiler flags
             self.rpars.getFortranMpiComp(comp=compiler_str.lower(),
@@ -1711,7 +1701,7 @@ class ParameterInterpreter:
                                 "quotation marks.")
                 raise ParameterError(param, message)
             else:
-                setTo = assignment.right_side.split(delim)[1]
+                setTo = assignment.values_str.split(delim)[1]
             if not flags:
                 self.rpars.FORTRAN_COMP[0] = setTo
             elif flags[0].lower() == "post":
@@ -1741,9 +1731,387 @@ class ParameterInterpreter:
                 raise ParameterError(param, message=message) from err
         else:  # pass specific function to fortran
             # regex: substitute "EE" with "EEV+workfn"
-            setTo = re.sub("(?i)EE", "EEV+workfn", assignment.right_side)
+            setTo = re.sub("(?i)EE", "EEV+workfn", assignment.values_str)
         if isinstance(setTo, str):
             setTo = setTo.rstrip()
         self.rpars.V0_REAL = setTo
 
+    def _interpret_symmetry_bulk(self, assignment):
+        param = "SYMMETRY_BULK"
+        recombined_list = []                                                    # TODO: use ast
+        values = assignment.all_values
+        while values:
+            v = values.pop(0).lower()
+            if "[" in v and "]" in values[0]:
+                v += " " + values.pop(0).lower()
+            recombined_list.append(v)
+        for v in recombined_list:
+            if v.startswith("r"):
+                try:
+                    i = int(v[1])
+                except (ValueError, IndexError):
+                    rparams.setHaltingLevel(2)
+                    raise ParameterValueError(param, v)
+                if 'rotation' not in self.rpars.SYMMETRY_BULK:
+                    self.rpars.SYMMETRY_BULK['rotation'] = []
+                if i not in self.rpars.SYMMETRY_BULK['rotation']:
+                    self.rpars.SYMMETRY_BULK['rotation'].append(i)
+            elif v.startswith("m"):
+                if "[" not in v or "]" not in v:
+                    message = f"Error reading value {v!r}: no direction recognized."
+                    self.rpars.setHaltingLevel(2)
+                    raise ParameterParseError(param, message)
+                str_vals = v.split("[")[1].split("]")[0].split()
+                if len(str_vals) != 2:
+                    self.rpars.setHaltingLevel(2)
+                    raise ParameterNumberOfInputsError(
+                        param,
+                        found_and_expected=(len(str_vals), 2)
+                        )
+                try:
+                    int_vals = tuple(int(v) for v in str_vals)
+                except (ValueError, IndexError) as err:
+                    self.rpars.setHaltingLevel(2)
+                    raise ParameterValueError(param, v) from err
+                if int_vals[0] < 0:
+                    int_vals = (-int_vals[0], -int_vals[1])
+                if 'mirror' not in self.rpars.SYMMETRY_BULK:
+                    self.rpars.SYMMETRY_BULK['mirror'] = []
+                if int_vals in self.rpars.SYMMETRY_BULK['mir']:
+                    self.rpars.SYMMETRY_BULK['mirror'].append(int_vals)
+            else:
+                try:
+                    self.rpars.SYMMETRY_BULK['group'] = v
+                except ValueError as err:
+                    self.rpars.setHaltingLevel(2)
+                    raise ParameterValueError(param, v) from err
+
+    def _intepret_symmetry_fix(self, assignment):                               # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
+        param = "SYMMETRY_FIX"
+        grouplist = self.grouplist
+        group = assignment.value.lower()
+        if group.startswith('t'):
+            return  # same as default, determine symmetry automatically
+        if group.startswith('f'):
+            self.rpars.SYMMETRY_FIX = 'p1'
+            return
+        if group in grouplist and group in ("cm", "pmg"):
+            message = f"For group {group} direction needs to be specified."
+            self.rpars.setHaltingLevel(1)
+            raise ParameterParseError(param, message)
+        if group in grouplist:
+            self.rpars.SYMMETRY_FIX = group
+            return
+        if group.startswith(("pm", "pg", "cm", "rcm", "pmg")):
+            # regex to read
+            rgx = re.compile(
+                r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*'
+                + r'\[\s*(?P<i1>[-012]+)\s+(?P<i2>[-012]+)\s*\]')
+            m = rgx.match(assignment.right_side.lower())
+            if not m:
+                self.rpars.setHaltingLevel(2)
+                raise ParameterParseError(param)
+            i1 = i2 = -2
+            group = m.group('group')
+            try:
+                i1 = int(m.group('i1'))
+                i2 = int(m.group('i2'))
+            except ValueError as err:
+                self.rpars.setHaltingLevel(2)
+                raise ParameterParseError(param) from err
+            if (group in ["pm", "pg", "cm", "rcm", "pmg"]
+                    and i1 in range(-1, 3) and i2 in range(-1, 3)):
+                self.rpars.SYMMETRY_FIX = m.group(0)
+            else:
+                self.rpars.setHaltingLevel(2)
+                raise ParameterParseError(param)
+        else:
+            self.rpars.setHaltingLevel(2)
+            raise ParameterParseError(param)
+
     def _interpret_theo_energies(self, assignment):
+        param = "THEO_ENERGIES"
+        energies = assignment.values
+        if not assignment.other_values:
+            energy = assignment.value
+            # single value input - only one energy requested
+            try:
+                f = float(energy)
+            except ValueError as err:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterFloatConversionError(param, energy) from err
+            else:
+                if f > 0:
+                    self.rpars.THEO_ENERGIES = [f, f, 1]
+                    return
+                else:
+                    self.rpars.setHaltingLevel(2)
+                    raise ParameterParseError(param, energy)
+            return
+        if len(energies) != 3:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param, (len(energies), 3))
+        fl = []
+        defined = 0
+        for val in energies:
+            if val == "_":
+                fl.append(-1)
+                continue  # s in values loop
+            try:
+                f = float(val)
+            except ValueError as err:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterFloatConversionError(param, val) from err
+            else:
+                if f > 0:
+                    fl.append(f)
+                    defined += 1
+                else:
+                    message = (f"{param} values have to be positive.")
+                    self.rpars.setHaltingLevel(1)
+                    raise ParameterError(param, message)
+
+        if len(fl) != 3:
+            raise ParameterNumberOfInputsError(param)
+        if defined < 3:
+            self.rpars.THEO_ENERGIES = fl
+            return
+        if (fl[0] > 0 and fl[1] > fl[0] and fl[2] > 0):
+            if (fl[1] - fl[0]) % fl[2] != 0:
+                # if the max is not hit by the steps exactly,
+                #   correct max up to make it so
+                fl[0] -= fl[2] - (fl[1] - fl[0]) % fl[2]
+                if fl[0] <= 0:
+                    fl[0] = fl[0] % fl[2]
+                    if fl[0] == 0:
+                        fl[0] += fl[2]
+                logger.info('THEO_ENERGIES parameter: '
+                            '(Eto-Efrom)%Estep != 0, Efrom was '
+                            f'corrected to {fl[0]}')
+            self.rpars.THEO_ENERGIES = fl
+        else:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterParseError(param)
+
+    def _interpret_search_beams(self, assignment):
+        param = "SEARCH_BEAMS"
+        value = assignment.value.lower()
+        if value.startswith(('0', 'a')):
+            self.rpars.SEARCH_BEAMS = 0
+        elif value.startswith(('1', 'i')):
+            self.rpars.SEARCH_BEAMS = 1
+        elif value.startswith(('2', 'f')):
+            self.rpars.SEARCH_BEAMS = 2
+        else:
+            raise ParameterValueError(param, value)
+
+    def _interpret_search_convergence(self, assignment):
+        # TODO!! - there is already a function for this at the top
+        raise RuntimeError
+
+    def _interpret_search_cull(self, assignment):
+        param = "SEARCH_CULL"
+        cull_value = assignment.value
+        try:
+            cull_float = float(cull_value)
+        except ValueError as err:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterFloatConversionError(param, cull_value) from err
+        if cull_float >= 1:
+            if cull_float - int(cull_float) < 1e-6:
+                self.rpars.SEARCH_CULL = int(cull_float)
+            else:
+                message = f"{param} value has to be integer if greater than 1."
+                self.rpars.setHaltingLevel(1)
+                raise ParameterError(param, message)
+        elif cull_float >= 0:
+            self.rpars.SEARCH_CULL = cull_float
+        else:
+            message = f"{param} value has to be non-negative."
+            self.rpars.setHaltingLevel(1)
+            raise ParameterError(param, message)
+        if assignment.other_values:
+            next_value = assignment.other_values[0].lower()
+            if next_value in ["clone", "genetic", "random"]:
+                self.rpars.SEARCH_CULL_TYPE = next_value
+            else:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterValueError(param, next_value)
+            if len(assignment.other_values) > 1:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterNumberOfInputsError(param)
+
+    def _interpret_search_start(self, assignment):
+        param = "SEARCH_START"
+        # there should only be one values
+        if assignment.other_values:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param)
+
+        # there are only a few options, so we can just check them all
+        search_start = assignment.value
+        if search_start.startswith("rand"):
+            self.rpars.SEARCH_START = "random"
+        elif search_start.startswith("center"):
+            self.rpars.SEARCH_START = "centered"
+        elif search_start.startswith("control"):
+            self.rpars.SEARCH_START = "control"
+        elif search_start.startswith("crandom"):
+            self.rpars.SEARCH_START = "crandom"
+        else:
+            rparams.setHaltingLevel(1)
+            raise ParameterUnknownFlagError(param, search_start)
+
+    def _interpret_site_def(self, assignment):                                  # TODO: clean up this mess
+        param = "SITE_DEF"
+        newdict = {}
+        sublists = splitSublists(assignment.all_values, ',')
+        for sl in sublists:
+            atnums = []
+            for i in range(1, len(sl)):
+                ir = readIntRange(sl[i])
+                if len(ir) > 0:
+                    atnums.extend(ir)
+                elif "top(" in sl[i]:
+                    if self.slab is None:
+                        rparams.setHaltingLevel(3)
+                        raise ParameterError(
+                            param,
+                            ("SITE_DEF parameter contains a top() "
+                                "function, but no slab was passed.")
+                        )
+                    n = int(sl[i].split('(')[1].split(')')[0])
+                    csatlist = sorted(self.slab.atlist,
+                                        key=lambda atom: atom.pos[2])
+                    while n > 0:
+                        at = csatlist.pop()
+                        if at.el == assignment.flags[0]:
+                            atnums.append(at.oriN)
+                            n -= 1
+                else:
+                    rparams.setHaltingLevel(3)
+                    raise ParameterError(param, "Problem with SITE_DEF input format")
+            newdict[sl[0]] = atnums
+        self.rpars.SITE_DEF[assignment.flags[0]] = newdict
+
+    def _interpret_run(self, assignment):                                       # TODO: important param, write tests
+        param = "RUN"
+        run_list = []
+        for section_str in assignment.all_values:
+            try:
+                run_list.extend(Section.sequence_from_string(section_str))
+            except ValueError as err:
+                rparams.setHaltingLevel(2)
+                raise ParameterValueError(param, section_str) from err
+        if Section.DOMAINS in run_list:
+            logger.info('Found domain search.')
+        if run_list:
+            # insert initialization section if not present
+            if run_list[0] is not Section.INITIALIZATION:
+                run_list.insert(0, Section.INITIALIZATION)
+            self.rpars.RUN = [s.value for s in run_list]                        # TODO: replace with "rl" to keep Section objects
+        else:
+            rparams.setHaltingLevel(3)
+            raise ParameterError(
+                param,
+                "RUN was defined, but no values were read."
+                )
+
+    def _interpret_phaseshift_eps(self, assignment):
+        param = "PHASESHIFT_EPS"
+        ps_eps_value = assignment.value
+        try:
+            ps_eps = float(ps_eps_value)
+        except ValueError:
+            # check if one of default values (e.g. "fine")
+            s = ps_eps_value.lower()[0]
+            ps_eps_default_dict = self.rpars.get_default(param)
+            ps_eps = ps_eps_default_dict.get(s, None)
+            if ps_eps is None:
+                rparams.setHaltingLevel(1)
+                raise ParameterFloatConversionError(param)
+        if 0 < ps_eps < 1:
+            self.rpars.PHASESHIFT_EPS = ps_eps
+        else:
+            rparams.setHaltingLevel(1)
+            raise ParameterRangeError(param,
+                                      given_value=ps_eps, allowed_range=(0,1))
+
+    def _interpret_plot_iv(self, assignment):
+        param = "PLOT_IV"
+        # there should be a flag
+        if not assignment.flags:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNeedsFlagError(param)
+
+        flag = assignment.flags[0].lower()
+        value = assignment.value.lower()
+        if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
+                        'border', 'borders', 'axes', 'legend', 'legends',
+                        'layout', 'overbar', 'overline', 'plot'):
+            self.rpars.setHaltingLevel(1)
+            raise ParameterUnknownFlagError(param, f"{flag!r}")
+        if flag == 'plot':
+            # should it plot?
+            if value in ('true', 't', '1'):
+                    self.rpars.PLOT_IV['plot'] = True
+            elif value in ('false', 'none', 'f', '0'):
+                self.rpars.PLOT_IV['plot'] = False
+        if flag in ('border', 'borders', 'axes'):
+            if value in ('all', 'none'):
+                self.rpars.PLOT_IV['axes'] = value
+            elif value in ('less', 'lb'):
+                self.rpars.PLOT_IV['axes'] = 'lb'
+            elif value in ('bottom', 'b'):
+                self.rpars.PLOT_IV['axes'] = 'b'
+            else:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterParseError(param)
+        elif flag in ('color', 'colour', 'colors', 'colours'):
+            self.rpars.PLOT_IV['colors'] = values
+        elif flag in ('legend', 'legends'):
+            if value in ('all', 'first', 'none'):
+                self.rpars.PLOT_IV['legend'] = value
+            elif value in ('topright', 'tr'):
+                self.rpars.PLOT_IV['legend'] = 'tr'
+            else:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterParseError(param)
+        elif flag in ('overbar', 'overline'):
+            if value.startswith("t"):
+                self.rpars.PLOT_IV['overbar'] = True
+            elif value.startswith("f"):
+                self.rpars.PLOT_IV['overbar'] = False
+            else:
+                message = f"Value for flag {flag} not recognized"
+                self.rpars.setHaltingLevel(1)
+                raise ParameterParseError(param, message)
+        elif flag in ('perpage', 'layout'):
+            if not assignment.other_values:
+                try:
+                    i = int(value)
+                except (ValueError, IndexError):
+                    self.rpars.setHaltingLevel(1)
+                    raise ParameterIntConversionError(param, value)
+                if i <= 0:
+                    message = "perpage value has to be positive integer."
+                    self.rpars.setHaltingLevel(1)
+                    raise ParameterParseError(param, message)
+                self.rpars.PLOT_IV['perpage'] = i
+            elif len(assignment.all_values) >= 2:
+                try:
+                    il = [int(v) for v in assignment.all_values[:2]]
+                except ValueError:
+                    self.rpars.setHaltingLevel(1)
+                    raise ParameterIntConversionError(param,
+                                                      assignment.all_[:2])
+                if any(i <= 0 for i in il):
+                    message = "perpage values have to be positive integers."
+                    raise ParameterParseError(param, message)
+                self.rpars.PLOT_IV['perpage'] = tuple(il)
+
+def temp_workaround(param, flags, value, other_values, right_side, slab, rpars):
+    assignment = Assignment(flags, value, other_values, right_side)
+    interpreter = ParameterInterpreter(rpars=rpars, slab=slab)
+    f = getattr(interpreter, f"_interpret_{param.lower()}")
+    f(assignment)
