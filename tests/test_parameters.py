@@ -23,7 +23,13 @@ from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   Assignment)
 from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.files.parameter_errors import ParameterError
+from viperleed.tleedmlib.files.parameter_errors import (
+    ParameterError, ParameterValueError, ParameterParseError,
+    ParameterIntConversionError, ParameterFloatConversionError,
+    ParameterBooleanConversionError, ParameterNotRecognizedError,
+    ParameterNumberOfInputsError, ParameterRangeError,
+    ParameterUnknownFlagError, ParameterNeedsFlagError
+    )
 
 _FIXTURES_PATH = Path('tests/fixtures/')
 
@@ -56,7 +62,7 @@ def ir100_2x1_o_parameters_example(slab_ir100_2x1_o):
 class TestAg100Parameters():
     def test_read_parameters_for_ag100(self):
         # just check that readPARAMETERS does not crash; not interpreted yet
-        filename = 'tests/fixtures/parameters/PARAMETERS_1'
+        filename = 'tests/fixtures/Ag(100)/initialization/PARAMETERS'
         rpars = readPARAMETERS(filename)
         assert rpars
 
@@ -90,17 +96,20 @@ class TestIr1002x1OParameters():
 # unit tests for parameter interpretation
 
 # _interpret_intpol_deg()
-def test__interpret_intpol_deg():
+class TestIntpolDeg:
     rpars = Rparams()
-    for val in rpars.get_limits('INTPOL_DEG'):
-        interpreter = ParameterInterpreter(rpars, slab=None)
-        interpreter._interpret_intpol_deg(Assignment(value=val))
-        assert rpars.INTPOL_DEG == int(val)
-    incompatible_values = ['1', 'text']
-    for val in incompatible_values:
-        with pytest.raises(ParameterError):
-                    interpreter = ParameterInterpreter(rpars, slab=None)
-                    interpreter._interpret_intpol_deg(Assignment(value=val))
+    def test__interpret_intpol_deg_valid(self):
+        for val in self.rpars.get_limits('INTPOL_DEG'):
+            interpreter = ParameterInterpreter(self.rpars, slab=None)
+            interpreter._interpret_intpol_deg(Assignment(val))
+            assert self.rpars.INTPOL_DEG == int(val)
+
+    def test__interpret_intpol_def_invalid(self):
+        incompatible_values = ['1', 'text']
+        for val in incompatible_values:
+            with pytest.raises(ParameterError):
+                        interpreter = ParameterInterpreter(self.rpars, slab=None)
+                        interpreter._interpret_intpol_deg(Assignment(val))
 
 # _interpret_bulk_repeat()
 class TestInterpretBulkRepeat():
@@ -115,31 +124,31 @@ class TestInterpretBulkRepeat():
         for val in self.invalid_inputs:
             with pytest.raises(ParameterError):
                 interpreter = ParameterInterpreter(self.rpars, slab=None)
-                interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
+                interpreter._interpret_bulk_repeat(Assignment(val))
 
 
     def test__interpret_bulk_repeat_float(self, slab_ag100):
         val = '1.428'
         interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
-        interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
+        interpreter._interpret_bulk_repeat(Assignment(val))
         assert self.rpars.BULK_REPEAT == pytest.approx(1.428, rel=1e-4)
 
     def test__interpret_bulk_repeat_c(self, slab_ag100):
         val = 'c(0.1)'
         interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
-        interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
+        interpreter._interpret_bulk_repeat(Assignment(val))
         assert self.rpars.BULK_REPEAT == pytest.approx(2.03646, rel=1e-4)
 
     def test__interpret_bulk_repeat_z(self, slab_ag100):
         val = 'c(0.1)'
         interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
-        interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
+        interpreter._interpret_bulk_repeat(Assignment(val))
         assert self.rpars.BULK_REPEAT == pytest.approx(2.0364, rel=1e-4)
 
     def test__interpret_bulk_repeat_vector(self, slab_ag100):
         val = '[1.0 2.0 3.0]'
         interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
-        interpreter._interpret_bulk_repeat(Assignment(value=val, right_side=val))
+        interpreter._interpret_bulk_repeat(Assignment(val))
         assert self.rpars.BULK_REPEAT == pytest.approx([1.0, 2.0, 3.0], rel=1e-4)
 
 # _interpret_fortran_comp()
@@ -150,39 +159,39 @@ class TestInterpretFortranComp():
     interpreter = ParameterInterpreter(rpars, slab=None)
 
     def test__fortran_comp_default_intel(self):
-        assignment = Assignment([], 'ifort', [], '')
+        assignment = Assignment('ifort')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'ifort -O2 -I/opt/intel/mkl/include' in self.rpars.FORTRAN_COMP[0]
         assert '-L/opt/intel/mkl/lib/intel64' in self.rpars.FORTRAN_COMP[1]
 
     def test__fortran_comp_default_gnu(self):
-        assignment = Assignment([], 'gfortran', [], '')
+        assignment = Assignment('gfortran')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'gfortran' in self.rpars.FORTRAN_COMP[0]
         assert '-llapack -lpthread -lblas' in self.rpars.FORTRAN_COMP[1]
 
     def test__fortran_comp_default_intel_mpi(self):
-        assignment = Assignment(['mpi'], 'mpiifort', [], '')
+        assignment = Assignment('mpiifort', flags ='mpi')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'mpiifort' in self.rpars.FORTRAN_COMP_MPI[0]  # no other flags by default
 
     def test__fortran_comp_default_gnu_mpi(self):
-        assignment = Assignment(['mpi'], 'mpifort', [], '')
+        assignment = Assignment('mpifort', flags='mpi')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'mpifort -Ofast -no-pie' in self.rpars.FORTRAN_COMP_MPI[0]  # no other flags by default
 
     def test__fortran_comp_custom_without_flag(self):
-        assignment = Assignment([], "'ifort -O3 -march=native'", [], "'ifort -O3 -march=native'")
+        assignment = Assignment("'ifort -O3 -march=native'")
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'ifort -O3 -march=native' in self.rpars.FORTRAN_COMP[0]
 
     def test__fortran_comp_custom_post_flag(self):
-        assignment = Assignment(['post'], "'-L/opt/intel/mkl/lib/intel64'", [], "'-L/opt/intel/mkl/lib/intel64'")
+        assignment = Assignment("'-L/opt/intel/mkl/lib/intel64'", flags='post')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert '-L/opt/intel/mkl/lib/intel64' in self.rpars.FORTRAN_COMP[1]
 
     def test__fortran_comp_custom_mpi_flag(self):
-        assignment = Assignment(['mpi'], "'mpifort -fallow-argument-mismatch'", [], "'mpifort -fallow-argument-mismatch'")
+        assignment = Assignment("'mpifort -fallow-argument-mismatch'", flags='mpi')
         self.interpreter._interpret_fortran_comp(assignment, skip_check=True)
         assert 'mpifort -fallow-argument-mismatch' in self.rpars.FORTRAN_COMP_MPI[0]
 
@@ -192,21 +201,55 @@ class TestV0Real():
     interpreter = ParameterInterpreter(rpars, slab=None)
 
     def test__interpret_v0_real_rundgren_type(self):
-        assignment = Assignment(value="rundgren", other_values=["1.0", "2.0", "3.0", "4.0"])
+        assignment = Assignment("rundgren 1.0 2.0 3.0 4.0")
         self.interpreter._interpret_v0_real(assignment)
         assert self.rpars.V0_REAL == [1.0, 2.0, 3.0, 4.0]
 
     def test__interpret_v0_real_other_type(self,):
-        assignment = Assignment(value="other", right_side="EE")
+        assignment = Assignment("EE")
         self.interpreter._interpret_v0_real(assignment)
         assert self.rpars.V0_REAL == "EEV+workfn"
 
     def test__interpret_v0_real_invalid_rundgren_constants(self):
-        assignment = Assignment(value="rundgren", other_values=["1.0", "2.0"])
+        assignment = Assignment("rundgren 1.0 2.0")
         with pytest.raises(ParameterError):
             self.interpreter._interpret_v0_real(assignment)
 
     def test__interpret_v0_real_value_error(self):
-        assignment = Assignment(value="rundgren", other_values=["1.0", "2.0", "3.0", "four"])
+        assignment = Assignment("rundgren 1.0 2.0 3.0 four")
         with pytest.raises(ParameterError):
             self.interpreter._interpret_v0_real(assignment)
+
+class TestTheoEnergies:
+    rpars = Rparams()
+
+    def test__interpret_theo_energies_single_value(self):
+        interpreter = ParameterInterpreter(self.rpars)
+        assignment = Assignment("1.0")
+        interpreter._interpret_theo_energies(assignment)
+        assert self.rpars.THEO_ENERGIES == [1.0, 1.0, 1]
+
+    def test__interpret_theo_energies_multiple_values(self):
+        interpreter = ParameterInterpreter(self.rpars)
+        assignment = Assignment("1.0 _ 2.0")
+        interpreter._interpret_theo_energies(assignment)
+        assert self.rpars.THEO_ENERGIES == [1.0, -1, 2.0]
+
+    def test__interpret_theo_energies_invalid_float(self):
+        interpreter = ParameterInterpreter(self.rpars)
+        assignment = Assignment("invalid")
+        with pytest.raises(ParameterFloatConversionError):
+            interpreter._interpret_theo_energies(assignment)
+
+    def test__interpret_theo_energies_invalid_positive_value(self):
+        interpreter = ParameterInterpreter(self.rpars)
+        assignment = Assignment("1.0 -2.0 3.0")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_theo_energies(assignment)
+
+    def test__interpret_theo_energies_invalid_number_of_values(self):
+        interpreter = ParameterInterpreter(self.rpars)
+        assignment = Assignment("1.0 2.0")
+        with pytest.raises(ParameterNumberOfInputsError):
+            interpreter._interpret_theo_energies(assignment)
+
