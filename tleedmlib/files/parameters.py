@@ -876,7 +876,7 @@ class ParameterInterpreter:
         for el in assignment.values:
             if el.lower() not in ptl:
                 message = f"Element {el} not found in periodic table."
-                rparams.setHaltingLevel(2)
+                self.rpars.setHaltingLevel(2)
                 raise ParameterError(parameter=param, message=message)
         if not found:                                                           # TODO: this seems very odd; I'll leave it in for now because I'm unsure what the intended behaviour was
             self.rpars.ELEMENT_MIX[assignment.flag.capitalize()] = [
@@ -890,7 +890,7 @@ class ParameterInterpreter:
         el = assignment.value.lower()
         if el not in ptl:
             message = f"Element {el} not found in periodic table."
-            rparams.setHaltingLevel(2)
+            self.rpars.setHaltingLevel(2)
             raise ParameterError(parameter=param, message=message)
         else:
             self.rpars.ELEMENT_RENAME[assignment.flag.capitalize()] = (
@@ -980,7 +980,7 @@ class ParameterInterpreter:
                 try:
                     i = int(v[1])
                 except (ValueError, IndexError):
-                    rparams.setHaltingLevel(2)
+                    self.rpars.setHaltingLevel(2)
                     raise ParameterValueError(param, v)
                 if 'rotation' not in self.rpars.SYMMETRY_BULK:
                     self.rpars.SYMMETRY_BULK['rotation'] = []
@@ -1037,7 +1037,7 @@ class ParameterInterpreter:
             rgx = re.compile(
                 r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*'
                 + r'\[\s*(?P<i1>[-012]+)\s+(?P<i2>[-012]+)\s*\]')
-            m = rgx.match(assignment.right_side.lower())
+            m = rgx.match(assignment.values_str.lower())
             if not m:
                 self.rpars.setHaltingLevel(2)
                 raise ParameterParseError(param)
@@ -1277,7 +1277,7 @@ class ParameterInterpreter:
         elif search_start.startswith("crandom"):
             self.rpars.SEARCH_START = "crandom"
         else:
-            rparams.setHaltingLevel(1)
+            self.rpars.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, search_start)
 
     def _interpret_site_def(self, assignment):                                  # TODO: clean up this mess, also write tests
@@ -1408,7 +1408,7 @@ class ParameterInterpreter:
             try:
                 run_list.extend(Section.sequence_from_string(section_str))
             except ValueError as err:
-                rparams.setHaltingLevel(2)
+                self.rpars.setHaltingLevel(2)
                 raise ParameterValueError(param, section_str) from err
         if Section.DOMAINS in run_list:
             logger.info('Found domain search.')
@@ -1418,7 +1418,7 @@ class ParameterInterpreter:
                 run_list.insert(0, Section.INITIALIZATION)
             self.rpars.RUN = [s.value for s in run_list]                        # TODO: replace with "rl" to keep Section objects
         else:
-            rparams.setHaltingLevel(3)
+            self.rpars.setHaltingLevel(3)
             raise ParameterError(
                 param,
                 "RUN was defined, but no values were read."
@@ -1451,7 +1451,7 @@ class ParameterInterpreter:
         param = "LAYER_CUTS"
         # some simple filtering here, but leave as list of strings
         if all(c in assignment.values_str for c in "<>"):
-            rparams.setHaltingLevel(1)
+            self.rpars.setHaltingLevel(1)
             raise ParameterParseError(param,
                                     'Cannot parse list with both "<" and ">".')
         elif any(c in assignment.values_str for c in "<>"):
@@ -1470,14 +1470,14 @@ class ParameterInterpreter:
                         float(m.group('cutoff'))
                         assignment.values[i] = m.group(0)
                     except Exception:                                           # TODO: catch better; only 1 statement in try.
-                        rparams.setHaltingLevel(1)
+                        self.rpars.setHaltingLevel(1)
                         raise ParameterParseError(param,
                                                   f'Could not parse function {s}')
             elif not (s == "<" or s == ">"):
                 try:
                     float(s)
                 except Exception:
-                    rparams.setHaltingLevel(1)
+                    self.rpars.setHaltingLevel(1)
                     raise ParameterParseError(param)
         self.rpars.LAYER_CUTS = assignment.values
 
@@ -1489,10 +1489,10 @@ class ParameterInterpreter:
         try:
             lmax_list = [int(v) for v in values]
         except ValueError:
-            rparams.setHaltingLevel(1)
+            self.rpars.setHaltingLevel(1)
             raise ParameterIntConversionError(param)
         if len(lmax_list) > 2:
-            rparams.setHaltingLevel(1)
+            self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
         if len(lmax_list) == 1:
             if not _min < lmax_list[0] <= _max:
@@ -1517,15 +1517,15 @@ class ParameterInterpreter:
                     )
             self.rpars.LMAX = lmax_list
 
-    def _interpret_optimze(self, assignment):
+    def _interpret_optimize(self, assignment):
         param = "OPTIMIZE"
         if not assignment.flag:
             message = ("Parameter to optimize not defined.")
-            rparams.setHaltingLevel(3)
+            self.rpars.setHaltingLevel(3)
             raise ParameterError(param, message)
         which = assignment.flag.lower()
         if which not in [o.lower() for o in _OPTIMIZE_OPTIONS]:
-            rparams.setHaltingLevel(3)
+            self.rpars.setHaltingLevel(3)
             raise ParameterUnknownFlagError(param, f"{which!r}")
         self.rpars.OPTIMIZE['which'] = which
         if not assignment.other_values:
@@ -1539,7 +1539,7 @@ class ParameterInterpreter:
         for sl in sublists:
             if len(sl) != 2:
                 message = "Expected 'flag value' pairs, found " + " ".join(sl)
-                rparams.setHaltingLevel(2)
+                self.rpars.setHaltingLevel(2)
                 raise ParameterError(param, message)
             flag = sl[0].lower()
             if flag not in ['step', 'convergence',
@@ -1555,7 +1555,7 @@ class ParameterInterpreter:
             try:
                 self.rpars.OPTIMIZE[flag] = partype[flag](sl[1])
             except ValueError as err:
-                rparams.setHaltingLevel(1)
+                self.rpars.setHaltingLevel(1)
                 raise ParameterError(param, value_error) from err
 
     def _interpret_parabola_fit(self, assignment):
@@ -1576,7 +1576,7 @@ class ParameterInterpreter:
                                         'ridge', 'elasticnet', 'none'):
                     self.rpars.PARABOLA_FIT['type'] = sl[1]
                 else:
-                    rparams.setHaltingLevel(1)
+                    self.rpars.setHaltingLevel(1)
                     raise ParameterError(param, value_error)
             elif flag in ('alpha', 'mincurv', 'localize'):
                 try:
@@ -1586,7 +1586,7 @@ class ParameterInterpreter:
                 if f >= 0:
                     self.rpars.PARABOLA_FIT[flag] = f
                 else:
-                    rparams.setHaltingLevel(1)
+                    self.rpars.setHaltingLevel(1)
                     raise ParameterError(param, value_error)
 
     def _interpret_phaseshift_eps(self, assignment):
@@ -1600,12 +1600,12 @@ class ParameterInterpreter:
             ps_eps_default_dict = self.rpars.get_default(param)
             ps_eps = ps_eps_default_dict.get(s, None)
             if ps_eps is None:
-                rparams.setHaltingLevel(1)
+                self.rpars.setHaltingLevel(1)
                 raise ParameterFloatConversionError(param)
         if 0 < ps_eps < 1:
             self.rpars.PHASESHIFT_EPS = ps_eps
         else:
-            rparams.setHaltingLevel(1)
+            self.rpars.setHaltingLevel(1)
             raise ParameterRangeError(param,
                                       given_value=ps_eps, allowed_range=(0,1))
 
@@ -1705,12 +1705,12 @@ class ParameterInterpreter:
                         )
                         break
                 else:
-                    rparams.setHaltingLevel(1)
+                    self.rpars.setHaltingLevel(1)
                     raise ParameterUnknownFlagError(parameter=param,
                                                     flag=sl[0])
         else:
             if len(assignment.values) != 2:
-                rparams.setHaltingLevel(1)
+                self.rpars.setHaltingLevel(1)
                 raise ParameterNumberOfInputsError(
                     parameter=param,
                     found_and_expected=(len(assignment.values), 2)
@@ -1722,7 +1722,7 @@ class ParameterInterpreter:
                     out_of_range_event=_out_of_range_event[name])
 
         if any(v is None for v in d.values()):
-            rparams.setHaltingLevel(1)
+            self.rpars.setHaltingLevel(1)
             raise ParameterParseError(parameter=param)
         # check for negative theta and adjust phi
         if d['THETA'] < 0:
