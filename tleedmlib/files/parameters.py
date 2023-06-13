@@ -246,35 +246,6 @@ def readPARAMETERS(filename='PARAMETERS'):
     return rpars
 
 
-def interpretPARAMETERS(rpars, slab=None, silent=False):
-    """
-    !!! DEPRECATED !!!
-    Use the ParameterInterpreter class instead.
-    
-    Interprets the string values in an Rparams object, read previously by
-    readPARAMETERS, to fill the parameter variables.
-
-    Parameters
-    ----------
-    rpars : Rparams
-        Object storing parameters for current run. Created previously by
-        readPARAMETERS, and should already contain raw string data.
-    slab : Slab, optional
-        Slab object with elements and atomic position data. If not passed, some
-        parameters will not be interpreted.
-    silent : bool, optional
-        If True, less output will be printed. The default is False.
-    """
-
-    logger.warning("The interpretPARAMETERS function is deprecated and will "
-                    "be removed in a future version. Use the "
-                    "ParameterInterpreter class instead.")
-
-    interpreter = ParameterInterpreter(rpars, slab)
-    interpreter.interpret(silent=silent)
-    return
-
-
 def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
                      suppress_ori=False, include_left=False):
     """
