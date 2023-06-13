@@ -1,8 +1,19 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+"""
+Created June 2023
 
-import numpy as np
+@author: Alexander M. Imre
+@author: Florian Kraushofer
+
+
+Module for reading and writing Woods notation.
+"""
 import re
 import logging
+
+import numpy as np
+
 from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec
 
 logger = logging.getLogger("tleedm.woods_notation")
