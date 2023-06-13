@@ -31,7 +31,7 @@ from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
-from viperleed.tleedmlib.leedbase import reduceUnitCell
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 logger = logging.getLogger("tleedm.slab")
@@ -1172,7 +1172,7 @@ class Slab:
             return False, abst
 
         # Use Minkowski reduction to make mincell high symmetry
-        mincell, _, _ = reduceUnitCell(mincell)
+        mincell, _, _ = leedbase.reduceUnitCell(mincell)
 
         # Cosmetic corrections
         if abs(mincell[0, 0]) < eps and abs(mincell[1, 1]) < eps:
