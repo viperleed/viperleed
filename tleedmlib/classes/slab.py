@@ -24,14 +24,15 @@ try:
 except ImportError:
     has_ase = False
 
-from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
+
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
-import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.leedbase import reduceUnitCell
+from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 logger = logging.getLogger("tleedm.slab")
 
@@ -86,7 +87,7 @@ class SymPlane:
             complist.append(complist[1]+complist[2]-complist[0])
 
         for p in complist:
-            if tl.base.dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
+            if dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
                 return True
         return False
 
@@ -1171,7 +1172,7 @@ class Slab:
             return False, abst
 
         # Use Minkowski reduction to make mincell high symmetry
-        mincell, _, _ = tl.leedbase.reduceUnitCell(mincell)
+        mincell, _, _ = reduceUnitCell(mincell)
 
         # Cosmetic corrections
         if abs(mincell[0, 0]) < eps and abs(mincell[1, 1]) < eps:
