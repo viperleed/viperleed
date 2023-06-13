@@ -1338,15 +1338,14 @@ class ParameterInterpreter:
 
     def _interpret_symmetry_eps(self, assignment):
         param = "SYMMETRY_EPS"
+        self._ensure_no_flags_assignment(param, assignment)
         eps_range = (1e-100, None)
-        if assignment.flags:
-            raise ParameterUnknownFlagError(param)
         if len(assignment.values) not in (1,2):
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
 
         # warning specfic to SYMMETRY_EPS
-        warning_header = "PARAMETERS fiel: SYMMETRY_EPS:\n"
+        warning_header = "PARAMETERS file: SYMMETRY_EPS:\n"
         warning_text = ("This is a very loose constraint and might lead to "
                             "incorrect symmetry detection. Be sure to check "
                             "the output.")
