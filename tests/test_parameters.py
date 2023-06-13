@@ -309,6 +309,7 @@ class TestFilamentWF:
         interpreter = ParameterInterpreter(mock_rparams, slab=None)
         assignment = Assignment("1.0")
         interpreter._interpret_filament_wf(assignment)
+        assert mock_rparams.FILAMENT_WF == pytest.approx(1.0)
 
     def test__interpret_filament_wf_invalid(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams, slab=None)
