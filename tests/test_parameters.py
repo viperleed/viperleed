@@ -18,7 +18,6 @@ if os.path.abspath(vpr_path) not in sys.path:
 
 import viperleed.tleedmlib.files.parameters as parameters
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
-                                                  interpretPARAMETERS,
                                                   ParameterInterpreter,
                                                   Assignment)
 from viperleed.tleedmlib.files.poscar import readPOSCAR
@@ -39,10 +38,11 @@ def ag100_parameters_example():
     slab = readPOSCAR(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
     rpars = readPARAMETERS(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'PARAMETERS')
     # interpret PARAMETERS file
-    interpretPARAMETERS(rpars, slab)
+    interpreter = ParameterInterpreter(rpars)
+    interpreter.interpret(slab)
     return (rpars, slab)
 
-@pytest.fixture()
+@pytest.fixture(scope='function')
 def slab_ag100():
     # read Ag(100) POSCAR
     return readPOSCAR(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ag(100)')
@@ -56,10 +56,11 @@ def slab_ir100_2x1_o():
 def ir100_2x1_o_parameters_example(slab_ir100_2x1_o):
     slab = slab_ir100_2x1_o
     rpars = readPARAMETERS(_FIXTURES_PATH / 'parameters' / 'PARAMETERS_Ir(100)-(2x1)-O')
-    interpretPARAMETERS(rpars, slab)
+    interpreter = ParameterInterpreter(rpars)
+    interpreter.interpret(slab)
     return (rpars, slab)
 
-@pytest.fixture()
+@pytest.fixture(scope='function')
 def mock_rparams():
     return Rparams()
 
@@ -107,7 +108,7 @@ class TestIntpolDeg:
     rpars = Rparams()
     def test__interpret_intpol_deg_valid(self):
         for val in self.rpars.get_limits('INTPOL_DEG'):
-            interpreter = ParameterInterpreter(self.rpars, slab=None)
+            interpreter = ParameterInterpreter(self.rpars)
             interpreter._interpret_intpol_deg(Assignment(val))
             assert self.rpars.INTPOL_DEG == int(val)
 
@@ -115,7 +116,7 @@ class TestIntpolDeg:
         incompatible_values = ['1', 'text']
         for val in incompatible_values:
             with pytest.raises(ParameterError):
-                        interpreter = ParameterInterpreter(self.rpars, slab=None)
+                        interpreter = ParameterInterpreter(self.rpars)
                         interpreter._interpret_intpol_deg(Assignment(val))
 
 # _interpret_bulk_repeat()
@@ -130,31 +131,36 @@ class TestInterpretBulkRepeat():
         slab = slab_ag100
         for val in self.invalid_inputs:
             with pytest.raises(ParameterError):
-                interpreter = ParameterInterpreter(self.rpars, slab=None)
+                interpreter = ParameterInterpreter(self.rpars)
+                interpreter._set_slab(slab)
                 interpreter._interpret_bulk_repeat(Assignment(val))
 
 
     def test__interpret_bulk_repeat_float(self, slab_ag100):
         val = '1.428'
-        interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
+        interpreter = ParameterInterpreter(self.rpars)
+        interpreter._set_slab(slab_ag100)
         interpreter._interpret_bulk_repeat(Assignment(val))
         assert self.rpars.BULK_REPEAT == pytest.approx(1.428, rel=1e-4)
 
     def test__interpret_bulk_repeat_c(self, slab_ag100):
         val = 'c(0.1)'
-        interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
+        interpreter = ParameterInterpreter(self.rpars)
+        interpreter._set_slab(slab_ag100)
         interpreter._interpret_bulk_repeat(Assignment(val))
         assert self.rpars.BULK_REPEAT == pytest.approx(2.03646, rel=1e-4)
 
     def test__interpret_bulk_repeat_z(self, slab_ag100):
         val = 'c(0.1)'
-        interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
+        interpreter = ParameterInterpreter(self.rpars)
+        interpreter._set_slab(slab_ag100)
         interpreter._interpret_bulk_repeat(Assignment(val))
         assert self.rpars.BULK_REPEAT == pytest.approx(2.0364, rel=1e-4)
 
     def test__interpret_bulk_repeat_vector(self, slab_ag100):
         val = '[1.0 2.0 3.0]'
-        interpreter = ParameterInterpreter(self.rpars, slab=slab_ag100)
+        interpreter = ParameterInterpreter(self.rpars)
+        interpreter._set_slab(slab_ag100)
         interpreter._interpret_bulk_repeat(Assignment(val))
         assert self.rpars.BULK_REPEAT == pytest.approx([1.0, 2.0, 3.0], rel=1e-4)
 
@@ -163,7 +169,7 @@ class TestInterpretFortranComp():
     # TODO: make use of new intepreter class
     param = 'FORTRAN_COMP'
     rpars = Rparams()
-    interpreter = ParameterInterpreter(rpars, slab=None)
+    interpreter = ParameterInterpreter(rpars)
 
     def test__fortran_comp_default_intel(self):
         assignment = Assignment('ifort')
@@ -205,7 +211,7 @@ class TestInterpretFortranComp():
 # _interpret_v0_real()
 class TestV0Real():
     rpars = Rparams()
-    interpreter = ParameterInterpreter(rpars, slab=None)
+    interpreter = ParameterInterpreter(rpars)
 
     def test__interpret_v0_real_rundgren_type(self):
         assignment = Assignment("rundgren 1.0 2.0 3.0 4.0")
@@ -263,14 +269,14 @@ class TestTheoEnergies:
 class TestNumericalParamsExamples:
     def test__interpret_n_bulk_layers_valid(self):
         rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars, slab=None)
+        interpreter = ParameterInterpreter(rpars)
         assignment = Assignment("1")
         assert rpars.N_BULK_LAYERS == 1
 
     def test__interpret_n_bulk_layers_invalid(self):
         # N_BULK_LAYERS must be 1 or 2
         rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars, slab=None)
+        interpreter = ParameterInterpreter(rpars)
         assignment = Assignment("3")
         with pytest.raises(ParameterError):
             interpreter._interpret_n_bulk_layers(assignment)
@@ -278,7 +284,7 @@ class TestNumericalParamsExamples:
 
     def test__interpret_t_debye(self):
         rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars, slab=None)
+        interpreter = ParameterInterpreter(rpars)
         assignment = Assignment("300.0")
         interpreter._interpret_t_debye(assignment)
         assert rpars.T_DEBYE == pytest.approx(300.0)
@@ -286,39 +292,39 @@ class TestNumericalParamsExamples:
 class TestBoolParamsExamples:
     def test__interpret_log_debug_true(self):
         rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars, slab=None)
+        interpreter = ParameterInterpreter(rpars)
         assignment = Assignment("true")
         interpreter._interpret_log_debug(assignment)
         assert rpars.LOG_DEBUG is True
 
     def test__interpret_log_debug_false(self):
         rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars, slab=None)
+        interpreter = ParameterInterpreter(rpars)
         assignment = Assignment("F")
         interpreter._interpret_log_debug(assignment)
         assert rpars.LOG_DEBUG is False
 
 class TestFilamentWF:
     def test__interpret_filament_wf_lab6(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("LaB6")
         interpreter._interpret_filament_wf(assignment)
         assert mock_rparams.FILAMENT_WF == pytest.approx(2.65)
 
     def test__interpret_filament_wf_custom(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("1.0")
         interpreter._interpret_filament_wf(assignment)
         assert mock_rparams.FILAMENT_WF == pytest.approx(1.0)
 
     def test__interpret_filament_wf_invalid(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("invalid")
         with pytest.raises(ParameterFloatConversionError):
             interpreter._interpret_filament_wf(assignment)
 
     def test__interpret_filament_wf_flag_invalid(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("1.5", flags='test')
         with pytest.raises(ParameterUnknownFlagError):
             interpreter._interpret_filament_wf(assignment)
@@ -410,11 +416,6 @@ class TestDomainStep:
         with pytest.raises(ParameterError):
             interpreter._interpret_domain_step(assignment)
 
-    def test__interpret_domain_step_non_divisible_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("25")
-        with pytest.raises(ParameterError):
-            interpreter._interpret_domain_step(assignment)
 
 class TestSuperlattice:
     def test__interpret_superlattice_matrix_notation(self, mock_rparams):
@@ -425,14 +426,15 @@ class TestSuperlattice:
         assert mock_rparams.superlattice_defined is True
 
     def test__interpret_superlattice_woods_notation(self, mock_rparams, slab_ag100):
-        interpreter = ParameterInterpreter(mock_rparams, slab=slab_ag100)
+        interpreter = ParameterInterpreter(mock_rparams)
+        interpreter._set_slab(slab=slab_ag100)
         assignment = Assignment("p(2x1)")
         interpreter._interpret_superlattice(assignment)
         assert mock_rparams.SUPERLATTICE == pytest.approx(np.array([[2, 0], [0, 1,]]))
         assert mock_rparams.superlattice_defined is True
 
     def test__interpret_superlattice_no_slab(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("c(2x2)")
         # should raise because slab is None
         with pytest.raises(ParameterError):

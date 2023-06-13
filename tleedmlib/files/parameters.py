@@ -5,6 +5,8 @@ Created on Tue Aug 18 16:56:39 2020
 @author: Florian Kraushofer
 @author: Alexander M. Imre
 @author: Michele Riva
+Initial version by Florian Kraushofer in 2020, major rewrite by Alexander Imre
+in June 2023.
 
 Functions for reading from and writing to the PARAMETERS file
 """
@@ -380,7 +382,6 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
         raise err
 
 
-
 @dataclass
 class Assignment:
     """Class to store the flags and values of a parameter.
@@ -446,11 +447,9 @@ class ParameterInterpreter:
     bool_synonyms = {True: {"true", "yes", "1", "t", "y", "on", "enable", ".true."},
                      False: {"false", "no", "0", "f", "n", "off", "disable", ".false."}}
 
-    def __init__(self, rpars, slab=None):
+    def __init__(self, rpars):
         self.rpars = rpars
-        self.slab = slab
-
-
+        self.slab = None
         # define order that parameters should be read in
         self.orderedParams = ["LOG_DEBUG", "RUN"]
         self.param_names = [p for p
@@ -463,7 +462,11 @@ class ParameterInterpreter:
         self._make_boolean_interpreter_methods()
         self._make_numerical_interpreter_methods()
 
-    def interpret(self, silent=False):
+    def _set_slab(self, slab):
+        self.slab = slab
+
+    def interpret(self, slab, silent=False):
+        self._set_slab(slab)
         self._search_conv_read = False
         self.loglevel = logger.level
         self.silent = silent
