@@ -282,3 +282,18 @@ class TestNumericalParamsExamples:
         assignment = Assignment("300.0")
         interpreter._interpret_t_debye(assignment)
         assert rpars.T_DEBYE == pytest.approx(300.0)
+
+class TestBoolParamsExamples:
+    def test__interpret_log_debug_true(self):
+        rpars = Rparams()
+        interpreter = ParameterInterpreter(rpars, slab=None)
+        assignment = Assignment("true")
+        interpreter._interpret_log_debug(assignment)
+        assert rpars.LOG_DEBUG is True
+
+    def test__interpret_log_debug_false(self):
+        rpars = Rparams()
+        interpreter = ParameterInterpreter(rpars, slab=None)
+        assignment = Assignment("F")
+        interpreter._interpret_log_debug(assignment)
+        assert rpars.LOG_DEBUG is False
