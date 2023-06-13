@@ -416,7 +416,6 @@ class TestDomainStep:
         with pytest.raises(ParameterError):
             interpreter._interpret_domain_step(assignment)
 
-
 class TestSuperlattice:
     def test__interpret_superlattice_matrix_notation(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
@@ -464,3 +463,119 @@ class TestTensorOutput:
         assignment = Assignment("2")
         with pytest.raises(ParameterParseError):
             interpreter._interpret_tensor_output(assignment)
+
+class TestElementRename:
+    def test__interpret_element_rename_valid_assignment(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(flags="X", right_side="H")
+        interpreter._interpret_element_rename(assignment)
+        assert mock_rparams.ELEMENT_RENAME == {"X": "H"}
+
+    def test__interpret_element_rename_invalid_element(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(flags="Uk", right_side="Op")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_element_rename(assignment)
+
+class TestSymmetryFix:
+    def test__interpret_symmetry_fix_auto(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(right_side="t")
+        interpreter._interpret_symmetry_fix(assignment)
+        assert mock_rparams.SYMMETRY_FIX is ''
+
+    def test__interpret_symmetry_fix_p1(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(right_side="f")
+        interpreter._interpret_symmetry_fix(assignment)
+        assert mock_rparams.SYMMETRY_FIX == "p1"
+
+    def test__interpret_symmetry_fix_invalid_group(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(right_side="invalid")
+        with pytest.raises(ParameterParseError):
+            interpreter._interpret_symmetry_fix(assignment)
+
+    def test__interpret_symmetry_fix_direction_required(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(right_side="cm")
+        with pytest.raises(ParameterParseError):
+            interpreter._interpret_symmetry_fix(assignment)
+
+    def test__interpret_symmetry_fix_custom_group_with_direction(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(right_side="cm[1 1]")
+        interpreter._interpret_symmetry_fix(assignment)
+        assert mock_rparams.SYMMETRY_FIX == "cm[1 1]"
+
+    def test__interpret_symmetry_fix_invalid_direction(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(right_side="pmt [0 x]")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_symmetry_fix(assignment)
+
+class TestIVShiftRange:
+    def test__interpret_iv_shift_range_valid_range(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.0 1.0 0.25")
+        interpreter._interpret_iv_shift_range(assignment)
+        assert mock_rparams.IV_SHIFT_RANGE == pytest.approx([0.0, 1.0, 0.25])
+
+    def test__interpret_iv_shift_range_invalid_number_of_inputs(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.0")
+        with pytest.raises(ParameterNumberOfInputsError):
+            interpreter._interpret_iv_shift_range(assignment)
+
+    def test__interpret_iv_shift_range_invalid_float_conversion(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.0 2.0 1.a")
+        with pytest.raises(ParameterFloatConversionError):
+            interpreter._interpret_iv_shift_range(assignment)
+
+    def test__interpret_iv_shift_range_end_energy_less_than_start_energy(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1.0 0.0 0.1")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_iv_shift_range(assignment)
+
+    def test__interpret_iv_shift_range_invalid_step(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.0 1.0 -0.1")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_iv_shift_range(assignment)
+
+class TestOptimize:
+    def test__interpret_optimize_valid_flag_and_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("step 0.1", flags="v0i")
+        interpreter._interpret_optimize(assignment)
+        assert mock_rparams.OPTIMIZE['which'] == 'v0i'
+        assert mock_rparams.OPTIMIZE['step'] == pytest.approx(0.1)
+
+    def test__interpret_optimize_valid_flag_and_value_multiple(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("step 0.1, convergence 1e-6, minpoints 10",flags="theta")
+        interpreter._interpret_optimize(assignment)
+        assert mock_rparams.OPTIMIZE['which'] == 'theta'
+        assert mock_rparams.OPTIMIZE['step'] == pytest.approx(0.1)
+        assert mock_rparams.OPTIMIZE['minpoints'] == pytest.approx(10)
+        assert mock_rparams.OPTIMIZE['convergence'] == pytest.approx(1e-6)
+
+    def test__interpret_optimize_invalid_flag(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("invalid 0.1")
+        with pytest.raises(ParameterUnknownFlagError):
+            interpreter._interpret_optimize(assignment)
+
+    def test__interpret_optimize_invalid_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("step not-a-number")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_optimize(assignment)
+
+    def test__interpret_optimize_invalid_flag(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("step 0.1", flags="invalid")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_optimize(assignment)
