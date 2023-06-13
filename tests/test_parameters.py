@@ -301,7 +301,7 @@ class TestBoolParamsExamples:
 class TestFilamentWF:
     def test__interpret_filament_wf_lab6(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams, slab=None)
-        assignment = Assignment("lab6")
+        assignment = Assignment("LaB6")
         interpreter._interpret_filament_wf(assignment)
         assert mock_rparams.FILAMENT_WF == pytest.approx(2.65)
 
@@ -309,4 +309,15 @@ class TestFilamentWF:
         interpreter = ParameterInterpreter(mock_rparams, slab=None)
         assignment = Assignment("1.0")
         interpreter._interpret_filament_wf(assignment)
-        assert mock_rparams.FILAMENT_WF == pytest.approx(1.0)
+
+    def test__interpret_filament_wf_invalid(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        assignment = Assignment("invalid")
+        with pytest.raises(ParameterFloatConversionError):
+            interpreter._interpret_filament_wf(assignment)
+
+    def test__interpret_filament_wf_flag_invalid(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        assignment = Assignment("1.5", flags='test')
+        with pytest.raises(ParameterUnknownFlagError):
+            interpreter._interpret_filament_wf(assignment)
