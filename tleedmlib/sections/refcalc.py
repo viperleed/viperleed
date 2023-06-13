@@ -25,7 +25,6 @@ from viperleed.tleedmlib.files import beams
 from viperleed.tleedmlib.files import iorefcalc as tl_io
 from viperleed.tleedmlib.files.ivplot import plot_iv
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
-from viperleed.tleedmlib.sections._sections import TLEEDMSection
 
 
 logger = logging.getLogger("tleedm.refcalc")

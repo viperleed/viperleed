@@ -17,7 +17,6 @@ import subprocess
 
 import numpy as np
 
-import viperleed.tleedmlib as tl
 # from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_log
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.checksums import validate_multiple_files
