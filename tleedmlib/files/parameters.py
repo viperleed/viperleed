@@ -1695,7 +1695,8 @@ class ParameterInterpreter:
     # Methods for interpreting simple parameters
     def _interpret_bool_parameter(self, param, assignment,
                                   allowed_values={True:{}, False:{}},
-                                  var_name=None):
+                                  var_name=None,
+                                  return_only=False):
         """
         Generic function for setting a given parameter to a boolean value.
 
@@ -1711,6 +1712,13 @@ class ParameterInterpreter:
             True.
         var_name : str, optional
             The variable name in the Rparams class, if it differs from 'param'.
+        return_only: bool, optional
+            If True, only return the value of the parameter, but do not set it.
+
+        Returns
+        -------
+        bool
+            The value of the parameter.
         """
         if var_name is None:
             var_name = param.upper()
@@ -1723,9 +1731,13 @@ class ParameterInterpreter:
                              " must not overlap.")
         # check if the value is in the allowed values
         if assignment.value.lower() in [o.lower() for o in _bool_synonyms[True]]:
-            setattr(self.rpars, var_name, True)
+            if not return_only:
+                setattr(self.rpars, var_name, True)
+            return True
         elif assignment.value.lower() in [o.lower() for o in _bool_synonyms[False]]:
-            setattr(self.rpars, var_name, False)
+            if not return_only:
+                setattr(self.rpars, var_name, False)
+            return False
         else:
             # complain about invalid value
             self.rpars.setHaltingLevel(1)
@@ -1738,7 +1750,8 @@ class ParameterInterpreter:
                                        range_=(None,None),
                                        range_exclude=(False, False),
                                        out_of_range_event='fail',
-                                       var_name=None):
+                                       var_name=None,
+                                       return_only=False):
         """
         Generic function for setting a given parameter to an integer or float
         value. Interpretation is done via getNumericalParameter.
@@ -1766,18 +1779,20 @@ class ParameterInterpreter:
             brought within the range by '%' operation. For 'set', the value
             will be set to the lowest allowed value. The default is
             'fail'.
+        return_only: bool, optional
+            If True, only return the value of the parameter, but do not set it.
 
         Returns
         ----------
-        int
-            0 if value was set, 1 otherwise
+        int or float
+            set value
 
         """
         if out_of_range_event not in ('fail', 'modulo'):
             raise ValueError("out_of_range_event must be 'fail' or 'modulo'")
-        if not range_[0] and range_[1] and out_of_range_event == 'modulo':
+        if (range_[0] is None or range_[1] is None) and out_of_range_event == 'modulo':
             raise ValueError("Cannot use out_of_range_event 'modulo' "
-                                "if either limit is undefined.")
+                             f"with limits {range_}.")
 
         if type_ not in (int, float):
             raise ValueError('type_ must be int or float')
@@ -1847,7 +1862,9 @@ class ParameterInterpreter:
         # set the value of parameter
         if not var_name:
             var_name = param.upper()
-        setattr(self.rpars, var_name, v)
+        if not return_only:
+            setattr(self.rpars, var_name, v)
+        return v
 
     def _make_boolean_interpreter_methods(self):
         for _param, _properties in _SIMPLE_BOOL_PARAMS.items():
@@ -1878,18 +1895,61 @@ class ParameterInterpreter:
             )
             setattr(self, method_name, _interpret)
 
-    def _ensure_simple_assignment(self, param, assignment):
-        # make sure that the assignment is simple, i.e. no flags and only one value
-        # if not, complain
-        if assignment.flags:
+    # Methods to make sure no extra flags/values are given
+    def _ensure_single_flag_assignment(self, param, assignment):
+        if assignment.other_flags:
             self.rpars.setHaltingLevel(1)
-            raise ParameterUnknownFlagError(param, assignment.flag) # highlight first flag
+            raise ParameterUnknownFlagError(param, assignment.flags_str)
+
+    def _ensure_single_value_assignment(self, param, assignment):
         if assignment.other_values:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param,
                                                (len(assignment.values), 1))
 
+    def _ensure_no_flags_assignment(self, param, assignment):
+        if assignment.flags:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterUnknownFlagError(param, assignment.flag)  # highlight first flag
+
+    def _ensure_simple_assignment(self, param, assignment):
+        # make sure that the assignment is simple, i.e. no flags and only one value
+        # if not, complain
+        self._ensure_no_flags_assignment(param, assignment)
+        self._ensure_single_value_assignment(param, assignment)
+
+    def _ensure_single_flag_and_value_assignment(self, param, assignment):
+        self._ensure_single_flag_assignment(param, assignment)
+        self._ensure_single_value_assignment(param, assignment)
+
     ## Methods to interpret individual parameters
+    def _interpret_average_beams(self, assignment):
+        param = "AVERAGE_BEAMS"
+        self._ensure_no_flags_assignment(param, assignment)
+        right_side = assignment.values_str.lower().strip()
+        # trivial cases
+        if right_side in ['off', 'none', 'false', 'f']:
+            self.rpars.AVERAGE_BEAMS = False
+            return
+        elif right_side.lower() in ['all', 'perpendicular', 'perp']:
+            self.rpars.AVERAGE_BEAMS = (0., 0.)
+            return
+
+        # otherwise, try to parse the value
+        angles = self._parse_incidence_angles(assignment, param, right_side)
+        # set
+        self.rpars.AVERAGE_BEAMS = (angles['THETA'], angles['PHI'])
+
+
+    def _interpret_beam_incidence(self, assignment):
+        param = "BEAM_INCIDENCE"
+        self._ensure_no_flags_assignment(param, assignment)
+        right_side = assignment.values_str.lower().strip()
+        angles = self._parse_incidence_angles(assignment, param, right_side)
+        # set
+        self.rpars.THETA = angles['THETA']
+        self.rpars.PHI = angles['PHI']
+
     def _interpret_intpol_deg(self, assignment):
         param = "INTPOL_DEG"
         intpol_deg = assignment.value
@@ -2595,6 +2655,50 @@ class ParameterInterpreter:
     def _interpret_vibr_amp_scale(self, assignment):
         # this parameter is not interpreted right now
         self.rpars.VIBR_AMP_SCALE.extend(assignment.values_str.split(","))
+
+    # Helper methods
+    def _parse_incidence_angles(self, assignment, param, right_side):
+        range_ = {'THETA': (-90, 90), 'PHI': (0, 360)}
+        _out_of_range_event = {'THETA': 'fail', 'PHI': 'modulo'}
+        d = {'THETA': 0, 'PHI': 0}
+        if ',' in right_side:
+            sublists = splitSublists(assignment.values, ',')
+            for sl in sublists:
+                for name in ['THETA', 'PHI']:
+                    if sl[0].upper() == name:
+                        d[name] = self._interpret_numerical_parameter(
+                            f'{param} {name}', Assignment(sl[1]),
+                            float,
+                            range_=range_[name],
+                            out_of_range_event=_out_of_range_event[name],
+                            return_only=True
+                        )
+                        break
+                else:
+                    rparams.setHaltingLevel(1)
+                    raise ParameterUnknownFlagError(parameter=param,
+                                                    flag=sl[0])
+        else:
+            if len(assignment.values) != 2:
+                rparams.setHaltingLevel(1)
+                raise ParameterNumberOfInputsError(
+                    parameter=param,
+                    found_and_expected=(len(assignment.values), 2)
+                    )
+            for ind, name in enumerate(['THETA', 'PHI']):
+                d[name] = self._interpret_numerical_parameter(
+                    f'{param} {name}', Assignment(assignment.values[ind]),
+                    float, range_=range_[name],
+                    out_of_range_event=_out_of_range_event[name])
+
+        if any(v is None for v in d.values()):
+            rparams.setHaltingLevel(1)
+            raise ParameterParseError(parameter=param)
+        # check for negative theta and adjust phi
+        if d['THETA'] < 0:
+            d['THETA'] = abs(d['THETA'])
+            d['PHI'] = (d['PHI'] + 180) % 360
+        return d
 
 def temp_workaround(param, flags, value, other_values, right_side, slab, rpars):
     assignment = Assignment(right_side, flags)

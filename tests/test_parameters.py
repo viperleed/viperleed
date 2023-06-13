@@ -322,3 +322,42 @@ class TestFilamentWF:
         assignment = Assignment("1.5", flags='test')
         with pytest.raises(ParameterUnknownFlagError):
             interpreter._interpret_filament_wf(assignment)
+
+class TestAverageBeams:
+    def test__interpret_average_beams_off(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("off")
+        interpreter._interpret_average_beams(assignment)
+        assert mock_rparams.AVERAGE_BEAMS is False
+
+    def test__interpret_average_beams_all(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("all")
+        interpreter._interpret_average_beams(assignment)
+        assert mock_rparams.AVERAGE_BEAMS == (0.0, 0.0)
+
+    def test__interpret_average_beams_custom_angles(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("45.0 60.0")
+        interpreter._interpret_average_beams(assignment)
+        assert mock_rparams.AVERAGE_BEAMS == (45.0, 60.0)
+
+    def test__interpret_average_beams_invalid_input(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("invalid input")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_average_beams(assignment)
+
+class TestBeamIncidence:
+    def test__interpret_beam_incidence_custom_angles(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("45.0 60.0")
+        interpreter._interpret_beam_incidence(assignment)
+        assert mock_rparams.THETA == 45.0
+        assert mock_rparams.PHI == 60.0
+
+    def test__interpret_beam_incidence_invalid_input(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("invalid input")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_beam_incidence(assignment)
