@@ -70,14 +70,11 @@ class ParameterValueError(ParameterError):
 class ParameterParseError(ParameterError):
     '''Raised when parsing fails'''
 
-    def __init__(self, parameter, supp_message=None):
-        if supp_message:
-            super().__init__(parameter,
-                             f"Could not parse input. {supp_message}")
-        else:
-            super().__init__(parameter,
-                            "Could not parse input."
-                            "Check parameter syntax.")
+    def __init__(self, parameter, supp_message="Check parameter syntax."):
+
+        super().__init__(parameter,
+                            f"Could not parse input. {supp_message}")
+
 
 
 class ParameterNumberOfInputsError(ParameterError):
