@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+"""
+Created June 2023
+@author: Alexander M. Imre
+@author: Florian Kraushofer
+
+Module for data and functions related to the periodic table and element properties.
+"""
 
 PERIODIC_TABLE = (
     'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na',
@@ -12,6 +19,7 @@ PERIODIC_TABLE = (
     'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs',
     'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og'
     )
+
 
 COVALENT_RADIUS = {
     "H": 0.31, "He": 0.28, "Li": 1.28, "Be": 0.96,
@@ -32,6 +40,7 @@ COVALENT_RADIUS = {
     "Ac": 2.15, "Th": 2.06, "Pa": 2.00, "U": 1.96, "Np": 1.90, "Pu": 1.87,
     "Am": 1.80, "Cm": 1.69}
 # from Cordero et al., 2008 (DOI: 10.1039/B801115J)
+
 
 ATOMIC_MASS = {
     "H": 1.00797, "He": 4.00260, "Li": 6.941, "Be": 9.01218,
@@ -54,6 +63,7 @@ ATOMIC_MASS = {
     "Po": 209, "At": 210, "Rn": 222, "Fr": 223, "Ra": 226.0254, "Ac": 227.0278,
     "Pa": 231.0359, "Th": 232.0381, "Np": 237.0482, "U": 238.029}
 
+
 def get_atomic_number(element):
     """Return atomic number for a given element symbol.
 
@@ -74,11 +84,13 @@ def get_atomic_number(element):
     """
     try:
         # Offset by one because of Python indexing
-        return PERIODIC_TABLE.index(element) + 1
+        _element = element.lower().capitalize()
+        return PERIODIC_TABLE.index(_element) + 1
     except ValueError:
         raise ValueError(
             f"Unknown chemical element {element}"
             ) from None
+
 
 def get_element_symbol(atomic_number):
     """Returns element symbol for given atomic number.
