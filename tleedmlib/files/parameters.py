@@ -572,11 +572,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
         'BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
         'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'SUPERLATTICE',
         'SYMMETRY_CELL_TRANSFORM', 'TENSOR_INDEX', 'TENSOR_OUTPUT']
-    _is_doman_calc = 4 in rpars.RUN or rpars.domainParams
+    _is_domain_calc = 4 in rpars.RUN or rpars.domainParams
 
     # iterate over all parameters
     for param, flags, right_side in flat_params:
-        if _is_doman_calc and param in domainsIgnoreParams:
+        if _is_domain_calc and param in domainsIgnoreParams:
             continue
         values = right_side.split()
         value, *other_values = values                                           # TODO: probably cleaner to use a namedtuple or a simple @dataclass?
@@ -1628,8 +1628,8 @@ class ParameterInterpreter:
         "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg", "cmm",
         "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m", "p6", "p6m"]
 
-    bool_synonyms = {True: {"T", "true", "yes", "1", "t", "y", "on", "enable", ".true."},
-                     False: {"F", "false", "no", "0", "f", "n", "off", "disable", ".false."}}
+    bool_synonyms = {True: {"true", "yes", "1", "t", "y", "on", "enable", ".true."},
+                     False: {"false", "no", "0", "f", "n", "off", "disable", ".false."}}
 
     def __init__(self, rpars, slab=None):
         self.rpars = rpars
@@ -1711,13 +1711,6 @@ class ParameterInterpreter:
             True.
         var_name : str, optional
             The variable name in the Rparams class, if it differs from 'param'.
-
-
-        Returns
-        ----------
-        int
-            0 if value was set, 1 otherwise
-
         """
         if var_name is None:
             var_name = param.upper()
@@ -1826,7 +1819,7 @@ class ParameterInterpreter:
                 outOfRangeStr = f'larger than {range_[1]}'
         if any(out_of_range) and out_of_range_event == 'fail':
             message = f"Value {v} is {outOfRangeStr}."
-            rparams.setHaltingLevel(1)
+            self.rpars.setHaltingLevel(1)
             raise ParameterError(param, message=message)
         if any(out_of_range) and out_of_range_event == 'modulo':
 
