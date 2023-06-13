@@ -59,6 +59,11 @@ def ir100_2x1_o_parameters_example(slab_ir100_2x1_o):
     interpretPARAMETERS(rpars, slab)
     return (rpars, slab)
 
+@pytest.fixture()
+def mock_rparams():
+    return Rparams()
+
+
 class TestAg100Parameters():
     def test_read_parameters_for_ag100(self):
         # just check that readPARAMETERS does not crash; not interpreted yet
@@ -91,6 +96,8 @@ class TestIr1002x1OParameters():
         assert rpars.SITE_DEF['O']['ads'] == [1]
         # check that string assignment works for VIBR_AMP_SCALE
         assert rpars.VIBR_AMP_SCALE[0] == '*surf 1.3'
+        # check that Pendry R factor is selected
+        assert rpars.R_FACTOR_TYPE == 1
 
 
 # unit tests for parameter interpretation
@@ -253,3 +260,25 @@ class TestTheoEnergies:
         with pytest.raises(ParameterNumberOfInputsError):
             interpreter._interpret_theo_energies(assignment)
 
+class TestNumericalParamsExamples:
+    def test__interpret_n_bulk_layers_valid(self):
+        rpars = Rparams()
+        interpreter = ParameterInterpreter(rpars, slab=None)
+        assignment = Assignment("1")
+        assert rpars.N_BULK_LAYERS == 1
+
+    def test__interpret_n_bulk_layers_invalid(self):
+        # N_BULK_LAYERS must be 1 or 2
+        rpars = Rparams()
+        interpreter = ParameterInterpreter(rpars, slab=None)
+        assignment = Assignment("3")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_n_bulk_layers(assignment)
+
+
+    def test__interpret_t_debye(self):
+        rpars = Rparams()
+        interpreter = ParameterInterpreter(rpars, slab=None)
+        assignment = Assignment("300.0")
+        interpreter._interpret_t_debye(assignment)
+        assert rpars.T_DEBYE == pytest.approx(300.0)
