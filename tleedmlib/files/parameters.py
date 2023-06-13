@@ -124,8 +124,13 @@ _SIMPLE_NUMERICAL_PARAMS_= {
     'N_BULK_LAYERS' : (int, (1, 2)),
     'R_FACTOR_SMOOTH' : (int, (0, 999)),
     'R_FACTOR_TYPE' : (int, (1, 2)),
+    'ZIP_COMPRESSION_LEVEL' : (int, (0,9))
 }
 
+_KNOWN_FILAMENT_WORK_FUNCTIONS = {
+    "w": 4.5,
+    "lab6": 2.65,
+}
 
 def _interpret_SEARCH_CONVERGENCE(rpars, flags, values,
                                   search_convergence_known=True,
@@ -1994,6 +1999,89 @@ class ParameterInterpreter:
             if vec is None:
                 raise ParameterParseError(parameter=param)
             self.rpars.BULK_REPEAT = vec
+
+    def _interpret_domain(self, assignment):
+        # sets the domain path and name
+        param = "DOMAIN"
+        # check name
+        name = assignment.flag if assignment.flag else ""
+        names = [n for (n, _) in self.rpars.DOMAINS]
+        if name in names:  # already defined
+            error_message = (f"Multiple sources defined for domain {name}.")
+            self.rpars.setHaltingLevel(3)
+            raise ParameterError(parameter=param, message=error_message)
+        if not name:  # get unique name
+            i = 1
+            while str(i) in names:
+                i += 1
+            name = str(i)
+        # check path
+        right_side = assignment.values_str.strip()
+        if Path(right_side).exists():
+            path = right_side
+        elif Path(right_side).with_suffix(".zip").is_file():
+            path = right_side + ".zip"
+        else:
+            error_message = (f"Value for DOMAIN {name} could not be "
+                             "interpreted as either a path or a .zip file.")
+            self.rpars.setHaltingLevel(3)
+            raise ParameterError(parameter=param, message=error_message)
+        self.rpars.DOMAINS.append((name, path))
+
+    def _interpret_domain_step(self, assignment):
+        param = "DOMAIN_STEP"
+        self._ensure_simple_assignment(param, assignment)
+        try:
+            i = int(assignment.value)
+        except ValueError:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterIntConversionError(parameter=param)
+        if not (1 <= i <= 100):
+            raise ParameterRangeError(parameter=param,
+                                        given_value=i,
+                                        allowed_range=(1, 100))
+        domain_step = self._interpret_numerical_parameter(param, assignment,
+                                            type_=int, range_=(1, 100),
+                                            return_only=True)
+        if 100 % domain_step != 0:
+            j = domain_step - 1
+            while 100 % j != 0:
+                j -= 1
+            message = (f"100 is not divisible by given value {domain_step}. "
+                        f"Consider using {j} instead.")
+            self.rpars.setHaltingLevel(1)
+            raise ParameterError(parameter=param,message=message)
+        else:
+            self.rpars.DOMAIN_STEP = domain_step
+
+    def _interpret_element_mix(self, assignment):                               # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME?
+        param = "ELEMENT_MIX"
+        self._ensure_single_flag_assignment(param, assignment)
+        ptl = [el.lower() for el in PERIODIC_TABLE]                             # TODO: nicer to use the leedbase element getter function and catch exceptions
+        found = False
+        for el in assignment.values:
+            if el.lower() not in ptl:
+                message = f"Element {el} not found in periodic table."
+                rparams.setHaltingLevel(2)
+                raise ParameterError(parameter=param, message=message)
+        if not found:                                                           # TODO: this seems very odd; I'll leave it in for now because I'm unsure what the intended behaviour was
+            self.rpars.ELEMENT_MIX[assignment.flag.capitalize()] = [
+                el.capitalize() for el in assignment.values
+                ]
+
+    def _interpret_element_rename(self, assignment):
+        param = "ELEMENT_RENAME"
+        self._ensure_single_flag_and_value_assignment(param, assignment)
+        ptl = [el.lower() for el in PERIODIC_TABLE]                             # TODO: nicer to use the leedbase element getter function and catch exceptions
+        el = assignment.value.lower()
+        if el not in ptl:
+            message = f"Element {el} not found in periodic table."
+            rparams.setHaltingLevel(2)
+            raise ParameterError(parameter=param, message=message)
+        else:
+            self.rpars.ELEMENT_RENAME[assignment.flag.capitalize()] = (
+                assignment.value.capitalize()
+                )
 
     def _interpret_filament_wf(self, assignment):
         param = "FILAMENT_WF"

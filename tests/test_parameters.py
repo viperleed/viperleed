@@ -361,3 +361,57 @@ class TestBeamIncidence:
         assignment = Assignment("invalid input")
         with pytest.raises(ParameterError):
             interpreter._interpret_beam_incidence(assignment)
+
+class TestDomain:
+    def test__interpret_domain_existing_path(self, mock_rparams, tmp_path):
+        interpreter = ParameterInterpreter(mock_rparams)
+        domain_path = tmp_path / "domain1"
+        domain_path.mkdir()
+        assignment = Assignment(flags="domain1", right_side=str(domain_path))
+        interpreter._interpret_domain(assignment)
+        assert mock_rparams.DOMAINS == [("domain1", str(domain_path))]
+
+    def test__interpret_domain_new_path(self, mock_rparams, tmp_path):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(str(tmp_path))
+        interpreter._interpret_domain(assignment)
+        assert mock_rparams.DOMAINS == [("1", str(tmp_path))]
+
+    def test__interpret_domain_zip_file(self, mock_rparams, tmp_path):
+        zip_file = tmp_path / "domain.zip"
+        zip_file.touch()
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(str(zip_file))
+        interpreter._interpret_domain(assignment)
+        assert mock_rparams.DOMAINS == [("1", str(zip_file))]
+
+    def test__interpret_domain_invalid_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("invalid_path")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_domain(assignment)
+
+class TestDomainStep:
+    def test__interpret_domain_step_valid_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("10")
+        interpreter._interpret_domain_step(assignment)
+        assert mock_rparams.DOMAIN_STEP == 10
+
+    def test__interpret_domain_step_invalid_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("200")
+        with pytest.raises(ParameterRangeError):
+            interpreter._interpret_domain_step(assignment)
+
+    def test__interpret_domain_step_non_integer_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.5")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_domain_step(assignment)
+
+    def test__interpret_domain_step_non_divisible_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("25")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_domain_step(assignment)
