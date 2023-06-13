@@ -667,3 +667,80 @@ class TestSymmetryEps:
         with pytest.raises(ParameterNumberOfInputsError):
             interpreter._interpret_symmetry_eps(assignment)
 
+class TestSearchCull:
+    def test__interpret_search_cull_single_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.5")
+        interpreter._interpret_search_cull(assignment)
+        assert mock_rparams.SEARCH_CULL == 0.5
+
+    def test__interpret_search_cull_integer_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("3")
+        interpreter._interpret_search_cull(assignment)
+        assert mock_rparams.SEARCH_CULL == 3
+
+    def test__interpret_search_cull_float_bigger_one(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1.5")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_search_cull(assignment)
+
+
+    def test__interpret_search_cull_greater_than_one_integer(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("4.0")
+        interpreter._interpret_search_cull(assignment)
+        assert mock_rparams.SEARCH_CULL == pytest.approx(4)
+
+    def test__interpret_search_cull_negative_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("-0.5")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_search_cull(assignment)
+
+    def test__interpret_search_cull_invalid_number_of_inputs(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.5 clone 1.0")
+        with pytest.raises(ParameterNumberOfInputsError):
+            interpreter._interpret_search_cull(assignment)
+
+    def test__interpret_search_cull_invalid_search_cull_type(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.5 test")
+        with pytest.raises(ParameterValueError):
+            interpreter._interpret_search_cull(assignment)
+
+class TestSearchConvergence:
+    def test__interpret_search_convergence_gaussian(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.01 0.9", flags="gaussian")
+        interpreter._interpret_search_convergence(assignment)
+        assert mock_rparams.GAUSSIAN_WIDTH == 0.01
+        assert mock_rparams.GAUSSIAN_WIDTH_SCALING == 0.9
+
+    def test__interpret_search_convergence_gaussian_no_scaling(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.01", flags="gaussian")
+        interpreter._interpret_search_convergence(assignment)
+        assert mock_rparams.GAUSSIAN_WIDTH == 0.01
+        assert mock_rparams.GAUSSIAN_WIDTH_SCALING == 0.5
+
+    def test__interpret_search_convergence_invalid_flag(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(" 0.01 0.9", flags="test")
+        with pytest.raises(ParameterUnknownFlagError):
+            interpreter._interpret_search_convergence(assignment)
+
+    def test__interpret_search_convergence_invalid_number_of_inputs(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.01 0.9 0.5", flags="gaussian")
+        with pytest.raises(ParameterNumberOfInputsError):
+            interpreter._interpret_search_convergence(assignment)
+
+    def test__interpret_search_convergence_invalid_scaling_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.01 -0.5", flags="gaussian")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_search_convergence(assignment)
+
