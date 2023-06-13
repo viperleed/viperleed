@@ -23,7 +23,7 @@ from viperleed.tleedmlib.files.beams import (writeOUTBEAMS, averageBeams,
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
 from viperleed.tleedmlib.files.iosearch import readSDTL_end, readSDTL_blocks
-import viperleed.tleedmlib.files.iosuperpos as tl_io
+from viperleed.tleedmlib.files import iosuperpos as tl_io
 
 logger = logging.getLogger("tleedm.superpos")
 
