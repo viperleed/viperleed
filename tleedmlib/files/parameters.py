@@ -1113,6 +1113,9 @@ class ParameterInterpreter:
         param = "SEARCH_CONVERGENCE"
         search_convergence_known = self.rpars.search_convergence_known
 
+        if len(assignment.values) > 2:
+            raise ParameterNumberOfInputsError(param)
+
         if (not assignment.flags and len(assignment.values) == 1 and
             assignment.value.lower() == 'off' and
             not is_updating):                                                   # TODO: this is the behaviour of updatePARAMETERS. Was skipping this intended there?
@@ -1125,12 +1128,14 @@ class ParameterInterpreter:
             raise ParameterUnknownFlagError(param, f"{assignment.flag!r}")
 
         try:
-            numeric = [float(value) for value in assignment.values[:2]]
+            numeric = [float(value) for value in assignment.values]
         except ValueError as err:
             raise ParameterFloatConversionError(param) from err
 
         _errors = []
         if assignment.flag.lower() == 'gaussian':
+            if len(numeric) == 1:
+                numeric.append(0.5)
             gauss_width, scaling = numeric
             should_update = (not is_updating
                             or gauss_width != self.rpars.searchConvInit["gaussian"])
