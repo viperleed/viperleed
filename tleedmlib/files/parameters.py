@@ -1878,6 +1878,16 @@ class ParameterInterpreter:
             )
             setattr(self, method_name, _interpret)
 
+    def _ensure_simple_assignment(self, param, assignment):
+        # make sure that the assignment is simple, i.e. no flags and only one value
+        # if not, complain
+        if assignment.flags:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterUnknownFlagError(param, assignment.flag) # highlight first flag
+        if assignment.other_values:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param,
+                                               (len(assignment.values), 1))
 
     ## Methods to interpret individual parameters
     def _interpret_intpol_deg(self, assignment):
@@ -1924,6 +1934,16 @@ class ParameterInterpreter:
             if vec is None:
                 raise ParameterParseError(parameter=param)
             self.rpars.BULK_REPEAT = vec
+
+    def _interpret_filament_wf(self, assignment):
+        param = "FILAMENT_WF"
+        self._ensure_simple_assignment(param, assignment)
+        # check common filaments (e.g W), otherwise interpret as float
+        try:
+            self.rpars.FILAMENT_WF = _KNOWN_FILAMENT_WORK_FUNCTIONS[
+                assignment.value.lower()]
+        except KeyError:
+            self._interpret_numerical_parameter(param, assignment, type_=float)
 
     def _interpret_fortran_comp(self, assignment, skip_check=False):
         param = "FORTRAN_COMP"
@@ -2192,6 +2212,21 @@ class ParameterInterpreter:
                 self.rpars.setHaltingLevel(1)
                 raise ParameterNumberOfInputsError(param)
 
+    def _interpret_search_population(self, assignment):
+        param = "SEARCH_POPULATION"
+        try:
+            self._interpret_numerical_parameter(param,
+                                                    assignment,
+                                                    type_=int,
+                                                    range_=(1,None))
+        except ParameterError as err:
+            # reraise
+            raise err
+        else:
+            if self.rpars.SEARCH_POPULATION < 16:
+                logger.warning('SEARCH_POPULATION is very small. A '
+                            'minimum value of 16 is recommended.')
+
     def _interpret_search_start(self, assignment):
         param = "SEARCH_START"
         # there should only be one values
@@ -2244,6 +2279,37 @@ class ParameterInterpreter:
                     raise ParameterError(param, "Problem with SITE_DEF input format")
             newdict[sl[0]] = atnums
         self.rpars.SITE_DEF[assignment.flags[0]] = newdict
+
+    def _interpret_symmetry_eps(self, assignment):
+        param = "SYMMETRY_EPS"
+        eps_range = (1e-100, None)
+        if assignment.flags:
+            raise ParameterUnknownFlagError(param)
+        if len(assignment.values) not in (1,2):
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param)
+
+        # warning specfic to SYMMETRY_EPS
+        warning_header = "PARAMETERS fiel: SYMMETRY_EPS:\n"
+        warning_text = ("This is a very loose constraint and might lead to "
+                            "incorrect symmetry detection. Be sure to check "
+                            "the output.")
+        # interpret first value as SYMMETRY_EPS
+        self._interpret_numerical_parameter(param, assignment, type_=float,
+                                            range_=eps_range)
+        if self.rpars.SYMMETRY_EPS > 1.0:
+            warning_middle = "Given value is greater one Ångström. "
+            logger.warning(warning_header + warning_middle + warning_text)
+        # interpret possible second value as SYMMETRY_EPS_Z
+        if assignment.other_values:
+            z_assignment = Assignment(assignment.other_values)
+            self._interpret_numerical_parameter("SYMMETRY_EPS_Z",
+                                                z_assignment,
+                                                type_=float,
+                                                range_=eps_range)
+            if self.rpars.SYMMETRY_EPS_Z > 1.0:
+                warning_middle = "Given value for z is greater one Ångström. "
+                logger.warning(warning_header + warning_middle + warning_text)
 
     def _interpret_run(self, assignment):                                       # TODO: important param, write tests
         param = "RUN"
@@ -2525,6 +2591,10 @@ class ParameterInterpreter:
                     message = "perpage values have to be positive integers."
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = tuple(il)
+
+    def _interpret_vibr_amp_scale(self, assignment):
+        # this parameter is not interpreted right now
+        self.rpars.VIBR_AMP_SCALE.extend(assignment.values_str.split(","))
 
 def temp_workaround(param, flags, value, other_values, right_side, slab, rpars):
     assignment = Assignment(right_side, flags)

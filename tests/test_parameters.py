@@ -297,3 +297,16 @@ class TestBoolParamsExamples:
         assignment = Assignment("F")
         interpreter._interpret_log_debug(assignment)
         assert rpars.LOG_DEBUG is False
+
+class TestFilamentWF:
+    def test__interpret_filament_wf_lab6(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        assignment = Assignment("lab6")
+        interpreter._interpret_filament_wf(assignment)
+        assert mock_rparams.FILAMENT_WF == pytest.approx(2.65)
+
+    def test__interpret_filament_wf_custom(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        assignment = Assignment("1.0")
+        interpreter._interpret_filament_wf(assignment)
+        assert mock_rparams.FILAMENT_WF == pytest.approx(1.0)
