@@ -27,7 +27,7 @@ from viperleed import GLOBALS
 from viperleed.tleedmlib.base import CustomLogFormatter
 from viperleed.tleedmlib.classes import rparams
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
-                                                  interpretPARAMETERS)
+                                                  ParameterInterpreter)
 from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.sections.run_sections import section_loop
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
@@ -140,7 +140,8 @@ def run_tleedm(system_name="", console_output=True, slab=None,
                 cleanup(tmpmanifest)
                 return 2
     try:
-        interpretPARAMETERS(rp, slab=slab)
+        interpreter = ParameterInterpreter(rp)
+        interpreter.interpret(slab=slab, silent=False)
         if rp.LOG_DEBUG:
             logger.setLevel(logging.DEBUG)
             logger.debug("PARAMETERS file was read successfully")

@@ -27,7 +27,7 @@ from viperleed.tleedmlib.base import rotation_matrix
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
-                                                  interpretPARAMETERS)
+                                                  ParameterInterpreter)
 # for rfactor_from_csv
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
 from viperleed.tleedmlib.files.iorfactor import beamlist_to_array
@@ -285,7 +285,8 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
 
     # Get temporary parameters object
     rparams = readPARAMETERS(parameters_file)
-    interpretPARAMETERS(rparams, slab=slab)
+    interpreter = ParameterInterpreter(rparams)
+    interpreter.interpret(slab=slab, silent=False)
 
     # We are ready to run ViPErLEED! Have fun!
     try:

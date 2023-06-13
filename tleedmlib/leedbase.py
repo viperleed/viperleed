@@ -307,7 +307,8 @@ def getTensorOriStates(sl, path):
         trp = parameters.readPARAMETERS(
             filename=os.path.join(path, "PARAMETERS")
             )
-        parameters.interpretPARAMETERS(trp, slab=tsl, silent=True)
+        param_interpreter = parameters.ParameterInterpreter(trp)
+        param_interpreter.interpret(slab=tsl, silent=True)
         tsl.fullUpdate(trp)
         vibrocc.readVIBROCC(trp, tsl, filename=os.path.join(path, "VIBROCC"),
                             silent=True)
