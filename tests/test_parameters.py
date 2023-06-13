@@ -482,7 +482,7 @@ class TestSymmetryFix:
         interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment(right_side="t")
         interpreter._interpret_symmetry_fix(assignment)
-        assert mock_rparams.SYMMETRY_FIX is ''
+        assert mock_rparams.SYMMETRY_FIX == ''
 
     def test__interpret_symmetry_fix_p1(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
@@ -579,3 +579,91 @@ class TestOptimize:
         assignment = Assignment("step 0.1", flags="invalid")
         with pytest.raises(ParameterError):
             interpreter._interpret_optimize(assignment)
+
+class TestPhaseshiftEps:
+    def test__interpret_phaseshift_eps_valid_float(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.1")
+        interpreter._interpret_phaseshift_eps(assignment)
+        assert mock_rparams.PHASESHIFT_EPS == 0.1
+
+    def test__interpret_phaseshift_eps_invalid(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("invalid")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_phaseshift_eps(assignment)
+
+    def test__interpret_phaseshift_eps_default_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("fine")
+        interpreter._interpret_phaseshift_eps(assignment)
+        assert mock_rparams.PHASESHIFT_EPS == 0.01
+
+
+    def test__interpret_phaseshift_eps_out_of_range(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("-1.0")
+        with pytest.raises(ParameterRangeError):
+            interpreter._interpret_phaseshift_eps(assignment)
+
+        assignment = Assignment("1.5")
+        with pytest.raises(ParameterRangeError):
+            interpreter._interpret_phaseshift_eps(assignment)
+
+class TestLayerCuts:
+    def test__interpret_layer_cuts_simple_values(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.1 0.2 0.3")
+        interpreter._interpret_layer_cuts(assignment)
+        assert mock_rparams.LAYER_CUTS == ["0.1", "0.2", "0.3"]
+
+    def test__interpret_layer_cuts_less_than_greater_than(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("< 0.1 > 0.2")
+        with pytest.raises(ParameterParseError):
+            interpreter._interpret_layer_cuts(assignment)
+
+    def test__interpret_layer_cuts_dz_cutoff(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("dz(1.2)")
+        interpreter._interpret_layer_cuts(assignment)
+        assert mock_rparams.LAYER_CUTS == ["dz(1.2)"]
+
+    def test__interpret_layer_cuts_dc_cutoff(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.15 0.3 < dz(1.2)  ")
+        interpreter._interpret_layer_cuts(assignment)
+        assert mock_rparams.LAYER_CUTS == ["0.15", "0.3", "<", "dz(1.2)"]
+
+    def test__interpret_layer_cuts_invalid_function_format(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("dz(0.1) dc(0.2) invalid(0.3)")
+        with pytest.raises(ParameterParseError):
+            interpreter._interpret_layer_cuts(assignment)
+
+    def test__interpret_layer_cuts_invalid_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.1 invalid 0.3")
+        with pytest.raises(ParameterParseError):
+            interpreter._interpret_layer_cuts(assignment)
+
+class TestSymmetryEps:
+    def test__interpret_symmetry_eps_single_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.1")
+        interpreter._interpret_symmetry_eps(assignment)
+        assert mock_rparams.SYMMETRY_EPS == 0.1
+
+    def test__interpret_symmetry_eps_multiple_values(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.1 0.2")
+        interpreter._interpret_symmetry_eps(assignment)
+        assert mock_rparams.SYMMETRY_EPS == 0.1
+        assert mock_rparams.SYMMETRY_EPS_Z == 0.2
+
+    def test__interpret_symmetry_eps_invalid_number_of_inputs(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.1 0.2 0.3")
+        with pytest.raises(ParameterNumberOfInputsError):
+            interpreter._interpret_symmetry_eps(assignment)
+
