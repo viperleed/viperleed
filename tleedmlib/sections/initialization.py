@@ -671,7 +671,7 @@ def init_domains(rp):
     for dp in rp.domainParams:
         if dp.refcalcRequired:
             continue
-        cmessage = ("Reference calculation required for domain {}: "
+        new_refcalc_msg = ("Reference calculation required for domain {}: "
                     .format(dp.name))
         # check energies
         if (rp.THEO_ENERGIES[0] < dp.rp.THEO_ENERGIES[0] or
@@ -679,26 +679,28 @@ def init_domains(rp):
             rp.THEO_ENERGIES[2] != dp.rp.THEO_ENERGIES[2] or
             (rp.THEO_ENERGIES[0] % rp.THEO_ENERGIES[2]
              != dp.rp.THEO_ENERGIES[0] % dp.rp.THEO_ENERGIES[2])):
-            logger.info(cmessage+"Energy range is mismatched.")
+            logger.info(new_refcalc_msg+"Energy range is mismatched.")
             dp.refcalcRequired = True
             continue
         # check LMAX - should be obsolete since TensErLEED version 1.6
         if rp.LMAX[1] != dp.rp.LMAX[1] and rp.TL_VERSION <= 1.6:
-            logger.info(cmessage+"LMAX is mismatched.")
+            logger.info(new_refcalc_msg+"LMAX is mismatched.")
             dp.refcalcRequired = True
         # check beam incidence
         if rp.THETA != dp.rp.THETA or rp.PHI != dp.rp.PHI:
-            logger.info(cmessage+"BEAM_INCIDENCE is mismatched.")
-            dp.refcalcRequired = True
+            logger.warning("BEAM_INCIDENCE angles are mismatched between "
+                           "domains. If this is not intentional, change "
+                           "domain PARAMETERS files accordingly.")
+            rp.setHaltingLevel(2)
         # check IVBEAMS
         if not dp.rp.fileLoaded["IVBEAMS"]:
-            logger.info(cmessage+"No IVBEAMS file loaded")
+            logger.info(new_refcalc_msg+"No IVBEAMS file loaded")
             dp.refcalcRequired = True
             continue
         if (len(rp.ivbeams) != len(dp.rp.ivbeams)
                 or not all([dp.rp.ivbeams[i].isEqual(rp.ivbeams[i])
                             for i in range(0, len(rp.ivbeams))])):
-            logger.info(cmessage+"IVBEAMS file mismatched with supercell.")
+            logger.info(new_refcalc_msg+"IVBEAMS file mismatched with supercell.")
             dp.refcalcRequired = True
             continue
 
@@ -707,7 +709,7 @@ def init_domains(rp):
         logger.info("The following domains require new reference "
                     "calculations: "+", ".join([d.name for d in rr]))
         for dp in rp.domainParams:
-            for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams",
+            for var in ["THEO_ENERGIES", "N_CORES", "ivbeams",
                         "sourcedir"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
             if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
