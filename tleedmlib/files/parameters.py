@@ -98,7 +98,7 @@ _SIMPLE_BOOL_PARAMS = {
     'SYMMETRIZE_INPUT' : (),
     'SYMMETRY_FIND_ORI' : (),
     'TL_IGNORE_CHECKSUM' : (),
-    'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'}),
+    'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'},),
 }
 
 _SIMPLE_NUMERICAL_PARAMS_= {
@@ -1721,16 +1721,17 @@ class ParameterInterpreter:
         """
         if var_name is None:
             var_name = param.upper()
-        for option in allowed_values:
-            allowed_values[option].update(self.bool_synonyms[option])
+        _bool_synonyms = self.bool_synonyms.copy()
+        for option in allowed_values.keys():
+            _bool_synonyms[option].update(allowed_values[option])
         # make sure there is no intersection between the two sets
         if set(allowed_values[True]) & set(allowed_values[False]):
             raise ValueError("The sets of allowed values for True and False "
                              " must not overlap.")
         # check if the value is in the allowed values
-        if assignment.value in allowed_values[True]:
+        if assignment.value.lower() in [o.lower() for o in _bool_synonyms[True]]:
             setattr(self.rpars, var_name, True)
-        elif assignment.value in allowed_values[False]:
+        elif assignment.value.lower() in [o.lower() for o in _bool_synonyms[False]]:
             setattr(self.rpars, var_name, False)
         else:
             # complain about invalid value
@@ -1856,21 +1857,32 @@ class ParameterInterpreter:
         setattr(self.rpars, var_name, v)
 
     def _make_boolean_interpreter_methods(self):
-        for param, properties in _SIMPLE_BOOL_PARAMS.items():
-            method_name = f'_interpret_{param.lower()}'
-            _interpret = lambda assignment: self._interpret_bool_parameter(
-                param,
-                assignment,
-                *properties)
+        for _param, _properties in _SIMPLE_BOOL_PARAMS.items():
+            method_name = f'_interpret_{_param.lower()}'
+            # NB: it is VERY important to fix the values in lambda here
+            # (i.e. use param=_param etc.) because of how closures work in
+            # Python. Otherwise, the value of param will assigned at call time
+            # and fixed to the same value (last iteration) for all methods.
+            # This could also be done with functools.partial, but that only
+            # supports fixing the leftmost arguments which makes it less nice.
+            _interpret = (
+                lambda assignment,param=_param, properties=_properties:
+                    self._interpret_bool_parameter(param,
+                                                   assignment,
+                                                   *properties)
+            )
             setattr(self, method_name, _interpret)
 
     def _make_numerical_interpreter_methods(self):
-        for param, properties in _SIMPLE_NUMERICAL_PARAMS_.items():
-            method_name = f'_interpret_{param.lower()}'
-            _interpret = lambda assignment: self._interpret_numerical_parameter(
-                param,
-                assignment,
-                *properties)
+        for _param, _properties in _SIMPLE_NUMERICAL_PARAMS_.items():
+            method_name = f'_interpret_{_param.lower()}'
+            # IMPORTANT: see comment in _make_boolean_interpreter_methods
+            _interpret = (
+                lambda assignment,param=_param, properties=_properties:
+                    self._interpret_numerical_parameter(param,
+                                                        assignment,
+                                                        *properties)
+            )
             setattr(self, method_name, _interpret)
 
 
