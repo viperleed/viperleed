@@ -290,7 +290,10 @@ class Rparams:
 
     def get_default(self, param):
         """Return the default value of param."""
-        value = DEFAULTS[param]
+        try:
+            value = DEFAULTS[param]
+        except KeyError as err:
+            raise KeyError(f"No default found for parameter {param}.") from err
         if isinstance(value, tuple):
             value = list(value)
         return value
@@ -581,7 +584,7 @@ class Rparams:
         return
 
     # TODO: eventually, these default values should be moved to some constant or other file
-    def getFortranComp(self, comp="auto", skip_check=False):
+    def getFortranComp(self, comp="auto", skip_check=False):                    # TODO: combine with FortranCompMPI from below; lots of repeated code
         """
         Checks whether ifort or gfortran are present, and sets FORTRAN_COMP
         accordingly.
