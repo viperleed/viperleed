@@ -415,3 +415,50 @@ class TestDomainStep:
         assignment = Assignment("25")
         with pytest.raises(ParameterError):
             interpreter._interpret_domain_step(assignment)
+
+class TestSuperlattice:
+    def test__interpret_superlattice_matrix_notation(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment(flags="M", right_side="2 0, 0 2")
+        interpreter._interpret_superlattice(assignment)
+        assert mock_rparams.SUPERLATTICE == pytest.approx(np.array([[2, 0], [0, 2,]]))
+        assert mock_rparams.superlattice_defined is True
+
+    def test__interpret_superlattice_woods_notation(self, mock_rparams, slab_ag100):
+        interpreter = ParameterInterpreter(mock_rparams, slab=slab_ag100)
+        assignment = Assignment("p(2x1)")
+        interpreter._interpret_superlattice(assignment)
+        assert mock_rparams.SUPERLATTICE == pytest.approx(np.array([[2, 0], [0, 1,]]))
+        assert mock_rparams.superlattice_defined is True
+
+    def test__interpret_superlattice_no_slab(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams, slab=None)
+        assignment = Assignment("c(2x2)")
+        # should raise because slab is None
+        with pytest.raises(ParameterError):
+            interpreter._interpret_superlattice(assignment)
+
+class TestTensorOutput:
+    def test__interpret_tensor_output_single_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("False")
+        interpreter._interpret_tensor_output(assignment)
+        assert mock_rparams.TENSOR_OUTPUT == [0]
+
+    def test__interpret_tensor_output_multiple_values(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0 1 1 0")
+        interpreter._interpret_tensor_output(assignment)
+        assert mock_rparams.TENSOR_OUTPUT == [0, 1, 1, 0]
+
+    def test__interpret_tensor_output_repeated_values(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("2*1 2*0 1")
+        interpreter._interpret_tensor_output(assignment)
+        assert mock_rparams.TENSOR_OUTPUT == [1, 1, 0, 0, 1]
+
+    def test__interpret_tensor_output_invalid_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("2")
+        with pytest.raises(ParameterParseError):
+            interpreter._interpret_tensor_output(assignment)

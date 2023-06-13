@@ -1392,79 +1392,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):                        
             rpars.V0_REAL = setTo
     logger.setLevel(loglevel)
 
-def _interpret_fortran_comp(rpars, param, flags, right_side, value, other_values, skip_check=False):
-    if other_values:
-        message = (f"{param} expects a single values, delimited by quotation marks. "
-                   "Could not intperpret {other_values}.")
-        raise ParameterParseError(param, message=message)
-    if (not flags and value.lower() in ["ifort", "gfortran"]):  # get default compiler flags
-        rpars.getFortranComp(comp=value.lower(), skip_check=skip_check)
-    elif (flags and flags[0].lower() == "mpi"
-                  and value.lower() in ["mpifort", "mpiifort"]):  # get default mpi compiler flags
-        rpars.getFortranMpiComp(comp=value.lower(), skip_check=skip_check)
-    else:  # set custom compiler flags
-        delim = value[0]     # should be quotation marks                # TODO: is this needed now that we use f-strings?
-        if delim not in ["'", '"']:
-            message = ("No valid shorthand and not delimited by "
-                               "quotation marks.")
-            raise ParameterError(parameter=param,
-                                               message=message)
-        else:
-            setTo = right_side.split(delim)[1]
-        if not flags:
-            rpars.FORTRAN_COMP[0] = setTo
-        elif flags[0].lower() == "post":
-            rpars.FORTRAN_COMP[1] = setTo
-        elif flags[0].lower() == "mpi":
-            rpars.FORTRAN_COMP_MPI[0] = setTo
-        elif flags[0].lower() == "mpipost":
-            rpars.FORTRAN_COMP_MPI[1] = setTo
-        else:
-            raise ParameterUnknownFlagError(parameter=param,
-                                                    flag=flags[0])
-
-
-def _interpret_intpol_deg(rpars, param, value):
-    if value in rpars.get_limits(param):
-        rpars.INTPOL_DEG = int(value)
-    else:
-        message = ("Only degree 3 and 5 interpolation supported at the "
-                           "moment.")
-        raise ParameterError(parameter=param, message=message)
-
-
-def _interpret_bulk_repeat(rpars, slab, param, right_side, value):
-    # make sure that the slab is defined, otherwise bulk repeat is meaningless
-    if not slab:
-        raise ParameterError(parameter=param,
-                             message="No slab defined for bulk repeat.")
-    s = right_side.lower()
-    if "[" not in s:
-        if "(" not in s:
-            try:
-                rpars.BULK_REPEAT = abs(float(value))
-            except ValueError:
-                raise ParameterFloatConversionError(parameter=param)
-        else:
-            # regex to match e.g. c(2.0) or z(2.0)
-            m = re.match(r'\s*(c|z)\(\s*(?P<val>[0-9.]+)\s*\)', s)
-            if not m:
-                raise ParameterParseError(parameter=param)
-            else:
-                try:
-                    v = abs(float(m.group("val")))
-                except Exception:
-                    raise ParameterFloatConversionError(parameter=param)
-                else:
-                    if "z" in s:
-                        rpars.BULK_REPEAT = v
-                    else:  # c
-                        rpars.BULK_REPEAT = slab.ucell[2, 2] * v
-    else:  # vector
-        vec = readVector(s, slab.ucell)
-        if vec is None:
-            raise ParameterParseError(parameter=param)
-        rpars.BULK_REPEAT = vec
 
 
 def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
@@ -1957,6 +1884,7 @@ class ParameterInterpreter:
 
     def _interpret_intpol_deg(self, assignment):
         param = "INTPOL_DEG"
+        self._ensure_simple_assignment(param, assignment)
         intpol_deg = assignment.value
         if intpol_deg in self.rpars.get_limits(param):
             self.rpars.INTPOL_DEG = int(intpol_deg)
@@ -2324,9 +2252,79 @@ class ParameterInterpreter:
         else:
             raise ParameterValueError(param, value)
 
-    def _interpret_search_convergence(self, assignment):
-        # TODO!! - there is already a function for this at the top
-        raise RuntimeError
+    def _interpret_search_convergence(self, assignment, is_updating=False):
+        param = "SEARCH_CONVERGENCE"
+        search_convergence_known = self.rpars.search_convergence_known
+
+        if (not assignment.flags and len(assignment.values) == 1 and
+            assignment.value.lower() == 'off' and
+            not is_updating):                                                   # TODO: this is the behaviour of updatePARAMETERS. Was skipping this intended there?
+            self.rpars.GAUSSIAN_WIDTH_SCALING = 1.
+            return
+
+        if not assignment.flags:
+            raise ParameterNeedsFlagError(param)
+        elif assignment.flag.lower() not in ['dgen', 'gaussian']:
+            raise ParameterUnknownFlagError(param, f"{assignment.flag!r}")
+
+        try:
+            numeric = [float(value) for value in assignment.values[:2]]
+        except ValueError as err:
+            raise ParameterFloatConversionError(param) from err
+
+        _errors = []
+        if assignment.flag.lower() == 'gaussian':
+            gauss_width, scaling = numeric
+            should_update = (not is_updating
+                            or gauss_width != self.rpars.searchConvInit["gaussian"])
+            if gauss_width is not None and gauss_width > 0 and should_update:
+                self.rpars.GAUSSIAN_WIDTH = gauss_width
+                if is_updating:
+                    self.rpars.searchConvInit["gaussian"] = gauss_width
+            elif should_update:
+                message = "gaussian width should be a positive number "
+                _errors.append(
+                    ParameterError(param, message=message)
+                    )
+            if scaling is not None and 0 < scaling <= 1:
+                self.rpars.GAUSSIAN_WIDTH_SCALING = scaling
+            elif scaling is not None:
+                _errors.append(
+                    ParameterRangeError(param, scaling, (0, 1))
+                    )
+        elif assignment.flag.lower() == 'dgen':
+            if len(assignment.flags) == 1:
+                target = 'dec'
+            elif assignment.flags[1].lower() in ['dec', 'best', 'all']:
+                target = assignment.flags[1].lower()
+            else:
+                raise ParameterUnknownFlagError(param, f"{assignment.flags[1]!r}")
+            max_dgen, scaling = numeric
+            should_update = (not is_updating
+                            or max_dgen != self.rpars.searchConvInit["dgen"][target])
+            if max_dgen is not None and max_dgen > 0 and should_update:
+                if not search_convergence_known:  # clear default values
+                    self.rpars.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 0}
+                    search_convergence_known = True
+                self.rpars.SEARCH_MAX_DGEN[target] = max_dgen
+                if is_updating:
+                    self.rpars.searchConvInit["dgen"][target] = max_dgen
+            elif should_update:
+                message = "dgen should be a positive number "
+                _errors.append(
+                    ParameterError(param, message=message)
+                    )
+            if scaling is not None and scaling >= 1:
+                self.rpars.SEARCH_MAX_DGEN_SCALING[target] = scaling
+            elif scaling:
+                message = "scaling value cannot be smaller than 1."
+                _errors.append(
+                    ParameterError(param, message=message)
+                    )
+
+        if _errors:
+            raise _errors[0]
+        self.rpars.search_convergence_known = search_convergence_known
 
     def _interpret_search_cull(self, assignment):
         param = "SEARCH_CULL"
@@ -2428,6 +2426,30 @@ class ParameterInterpreter:
             newdict[sl[0]] = atnums
         self.rpars.SITE_DEF[assignment.flags[0]] = newdict
 
+    def _interpret_superlattice(self, assignment):
+        param = "SUPERLATTICE"
+        if 'M' not in assignment.flags:
+            self._ensure_no_flags_assignment(param, assignment)
+            read_result = self._read_woods_notation(param, assignment)
+            setattr(self.rpars, param, read_result)
+            self.rpars.superlattice_defined = True
+        else:
+            matrix = self._read_matrix_notation(param, assignment.values)
+            # write to param
+            setattr(self.rpars, param, matrix)
+            self.rpars.superlattice_defined = True
+
+    def _interpret_symmetry_cell_transform(self, assignment):
+        param = "SYMMETRY_CELL_TRANSFORM"
+        if 'M' not in assignment.flags:
+            self._ensure_no_flags_assignment(param, assignment)
+            read_result = self._read_woods_notation(param, assignment)
+            setattr(self.rpars, param, read_result)
+        else:
+            matrix = self._read_matrix_notation(param, assignment.values)
+            # write to param
+            setattr(self.rpars, param, matrix)
+
     def _interpret_symmetry_eps(self, assignment):
         param = "SYMMETRY_EPS"
         eps_range = (1e-100, None)
@@ -2458,6 +2480,40 @@ class ParameterInterpreter:
             if self.rpars.SYMMETRY_EPS_Z > 1.0:
                 warning_middle = "Given value for z is greater one Ångström. "
                 logger.warning(warning_header + warning_middle + warning_text)
+
+    def _interpret_tensor_output(self, assignment):
+        param = "TENSOR_OUTPUT"
+        nl = recombineListElements(assignment.values, '*')
+        for s in nl:
+            s = re.sub(r'[Tt](rue|RUE)?', '1', s)
+            s = re.sub(r'[Ff](alse|ALSE)?', '0', s)
+            try:
+                v = int(s)
+                if v not in (0, 1):
+                    message = ("Problem with TENSOR_OUTPUT input format: "
+                                f"Found value {v}, expected 0 or 1.")
+                    self.rpars.setHaltingLevel(1)
+                    raise ParameterParseError(param, message)
+                else:
+                    self.rpars.TENSOR_OUTPUT.append(v)
+            except ValueError:
+                if '*' in s:
+                    sl = s.split('*')
+                    try:
+                        r = int(sl[0])
+                        v = int(sl[1])
+                    except ValueError as err:
+                        raise ParameterIntConversionError(param, sl) from err
+                    if v not in (0, 1):
+                        message = ("Problem with TENSOR_OUTPUT input format: "
+                                f"Found value {v}, expected 0 or 1.")
+                        self.rpars.setHaltingLevel(1)
+                        raise ParameterParseError(param, message)
+                    else:
+                        self.rpars.TENSOR_OUTPUT.extend([v]*r)
+                else:
+                    self.rpars.setHaltingLevel(1)
+                    raise ParameterValueError(param, s)
 
     def _interpret_run(self, assignment):                                       # TODO: important param, write tests
         param = "RUN"
@@ -2787,6 +2843,38 @@ class ParameterInterpreter:
             d['THETA'] = abs(d['THETA'])
             d['PHI'] = (d['PHI'] + 180) % 360
         return d
+
+    def _read_woods_notation(self, param, assignment):
+        if self.slab is None:
+            message = (f"{param} parameter appears to be in Wood, "
+                            "notation but no slab was passed. Cannot "
+                            "calculate bulk unit cell!")
+            self.rpars.setHaltingLevel(2)
+            raise ParameterError(param, message)
+        read_result = readWoodsNotation(assignment.values_str, self.slab.ucell)
+        return read_result
+
+    def _read_matrix_notation(self, param, values):
+        sublists = splitSublists(values, ',')
+        if not len(sublists) == 2:
+            message = ("Number of lines in matrix is not equal to 2.")
+            self.rpars.setHaltingLevel(2)
+            raise ParameterParseError(param, message)
+        nl = []
+        for sl in sublists:
+            if len(sl) == 2:
+                try:
+                    nl.append([float(s) for s in sl])
+                except ValueError:
+                    self.rpars.setHaltingLevel(1)
+                    raise ParameterFloatConversionError(param, sl)
+            else:
+                self.rpars.setHaltingLevel(2)
+                message = ("Number of columns in matrix is not equal to 2.")
+                raise ParameterParseError(param, message)
+        matrix = np.array(nl, dtype=float)
+        return matrix
+
 
 def temp_workaround(param, flags, value, other_values, right_side, slab, rpars):
     assignment = Assignment(right_side, flags)
