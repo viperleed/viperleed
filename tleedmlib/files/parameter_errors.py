@@ -9,11 +9,13 @@ class ParameterError(Exception):
             _message += message + " "  # add space before "input will be ignored"
         super().__init__(_message)
 
+
 class ParameterNotRecognizedError(ParameterError):
     '''Raised when a parameter is not recognized'''
 
     def __init__(self, parameter):
         super().__init__(parameter, "Parameter not recognized.")
+
 
 class ParameterUnexpectedInputError(ParameterError):
     '''Raised when unexpected input is encountered'''
@@ -64,6 +66,7 @@ class ParameterValueError(ParameterError):
             super().__init__(parameter,
                              "Could not interpret given value.")
 
+
 class ParameterParseError(ParameterError):
     '''Raised when parsing fails'''
 
@@ -75,6 +78,7 @@ class ParameterParseError(ParameterError):
             super().__init__(parameter,
                             "Could not parse input."
                             "Check parameter syntax.")
+
 
 class ParameterNumberOfInputsError(ParameterError):
     '''Raised when the number of inputs is unexpected'''
@@ -97,12 +101,14 @@ class ParameterRangeError(ParameterError):
                    f"{allowed_range[1]}).")
         super().__init__(parameter, message)
 
+
 class ParameterUnknownFlagError(ParameterError):
     '''Raised when an unknown flag is encountered'''
 
     def __init__(self, parameter, flag):
         super().__init__(parameter,
                          f"Unknown flag '{flag}' encountered.")
+
 
 class ParameterNeedsFlagError(ParameterError):
     '''Raised when a flag is needed but not given'''
