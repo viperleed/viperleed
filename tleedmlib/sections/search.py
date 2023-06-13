@@ -728,16 +728,13 @@ def search(sl, rp):
         else:
             hashname = ""
 
+        randname = "MPIrandom_.o" if usempi else "random_.o"
         if rp.TL_VERSION <= 1.73:
-            if usempi:  # these are short C scripts - use pre-compiled versions
-                randnamefrom = "MPIrandom_.o"
-            else:
-                randnamefrom = "random_.o"
-            randname = "random_.o"
+            # these are short C scripts - use pre-compiled versions
 
-            # try to copy random lib object file
+            # try to copy randomizer lib object file
             try:
-                shutil.copy2(libpath / randnamefrom, randname)
+                shutil.copy2(libpath / randname, randname)
             except FileNotFoundError:
                 logger.error("Could not find required random_.o object file. "
                              "You may have forgotten to compile random_.c.")
@@ -784,7 +781,7 @@ def search(sl, rp):
         )
     to_link = "search.o lib.search.o restrict.o"
     if rp.TL_VERSION <= 1.73:
-        to_link += " random_.o"                                                 # TODO: correct? How about the MPI version?
+        to_link += f" {randname}"
     if hashname:
         to_link += " intarr_hashing.o"
     ctasks.append((f"{fcomp[0]} -o {searchname}", to_link, fcomp[1]))
