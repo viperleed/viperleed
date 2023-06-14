@@ -183,7 +183,8 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
             continue
         values = value_str.rstrip().split()
         if not values:
-            continue                                                            # TODO: shouldn't we complain?
+            # don't complain *again* in updatePARAMETERS
+            continue
         if param == 'SEARCH_CONVERGENCE':
             interpreter = ParameterInterpreter(rp)
             interpreter._set_slab(rp.slab)
