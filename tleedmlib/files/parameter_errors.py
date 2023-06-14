@@ -71,9 +71,8 @@ class ParameterParseError(ParameterError):
     '''Raised when parsing fails'''
 
     def __init__(self, parameter, supp_message="Check parameter syntax."):
-
         super().__init__(parameter,
-                            f"Could not parse input. {supp_message}")
+                         f"Could not parse input. {supp_message}")
 
 
 
@@ -88,6 +87,7 @@ class ParameterNumberOfInputsError(ParameterError):
         else:
             super().__init__(parameter,
                             "Unexpected number of inputs.")
+
 
 class ParameterRangeError(ParameterError):
     '''Raised when the value is not in the allowed range'''

@@ -3,7 +3,7 @@
 Created on Thu Mar 18 10:28:52 2021
 
 @author: Florian Kraushofer
-author: Alexander M. Imre
+@author: Alexander M. Imre
 
 TensErLEED Manager section Error calculation
 """

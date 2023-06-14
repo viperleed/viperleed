@@ -17,7 +17,6 @@ import subprocess
 
 import numpy as np
 
-# from viperleed.tleedmlib.leedbase import monitoredPool, copy_compile_log
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.checksums import validate_multiple_files
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS

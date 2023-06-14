@@ -24,14 +24,13 @@ try:
 except ImportError:
     has_ase = False
 
-
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
-from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 logger = logging.getLogger("tleedm.slab")

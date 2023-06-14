@@ -300,7 +300,10 @@ class Rparams:
 
     def get_limits(self, param):
         """Return the smallest and largest acceptable values of param."""
-        return PARAM_LIMITS[param]
+        try:
+            return PARAM_LIMITS[param]
+        except KeyError as err:
+            raise KeyError(f"No limits found for parameter {param}.") from err
 
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and
