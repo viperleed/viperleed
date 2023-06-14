@@ -374,11 +374,10 @@ def _get_expbeams(rp):                                                          
         rp.EXPBEAMS_INPUT_FILE = rp.get_defaults("EXPBEAMS_INPUT_FILE")
         return
 
-    enrange = rp.THEO_ENERGIES[:2] if len(rp.THEO_ENERGIES) else []
     err_msg = f"Error while reading file {rp.EXPBEAMS_INPUT_FILE}"
     try:
         rp.expbeams = tl_beams.readOUTBEAMS(filename=rp.EXPBEAMS_INPUT_FILE,
-                                            enrange=enrange)
+                                            enrange=rp.THEO_ENERGIES[:2])
     except Exception:                                                           # TODO: catch better
         logger.error(f"{err_msg}.", exc_info=True)
         return
