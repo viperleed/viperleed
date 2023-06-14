@@ -105,21 +105,14 @@ def run_section(index, sl, rp):
         if filename == "EXPBEAMS":
             er = rp.THEO_ENERGIES[:2]
             try:
-                rp.expbeams = readOUTBEAMS("EXPBEAMS.csv", enrange=er)
-                if len(rp.expbeams) > 0:
-                    rp.fileLoaded["EXPBEAMS"] = True
-            except FileNotFoundError:
-                try:
-                    # try without the .csv extension
-                    rp.expbeams = readOUTBEAMS("EXPBEAMS", enrange=er)
-                    if len(rp.expbeams) > 0:
-                        rp.fileLoaded["EXPBEAMS"] = True
-                except Exception:
-                    logger.error("Error while reading required file "
-                                 "EXPBEAMS.csv", exc_info=rp.LOG_DEBUG)
-            except Exception as e:
-                logger.error("Error while reading required file EXPBEAMS",
+                rp.expbeams = readOUTBEAMS(rp.EXPBEAMS_INPUT_FILE, enrange=er)
+            except Exception as e:  # e.g. FileNotFoundError
+                # do NOT raise, as we can run until Deltas without EXPBEAMS
+                logger.error("Error while reading required file "
+                             f"{rp.EXPBEAMS_INPUT_FILE}",
                              exc_info=(type(e) != FileNotFoundError))
+            if len(rp.expbeams) > 0:
+                rp.fileLoaded["EXPBEAMS"] = True
             if index != 0:
                 checkEXPBEAMS(sl, rp)
         elif filename == "IVBEAMS":
