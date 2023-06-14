@@ -40,9 +40,13 @@ def rfactor(sl, rp, index, for_error=False, only_vary=None):                    
         logger.info("Only one theoretical energy found: Cannot "
                     "calculate a meaningful R-Factor. Stopping...")
         return []
-    if for_error and rp.best_v0r is None:                                       # TODO: error out?? For now we keep going as if the error did not occur
-        logger.error("Cannot calculate R-factor for error without a stored"
-                     "V0r value. Execute a normal R-factor calculation first.")
+    if for_error and rp.best_v0r is None:
+        # Cannot proceed with planned section
+        err_msg = ("Cannot calculate R-factor for error without a stored"
+                   "V0r value. Execute a normal R-factor calculation first.")
+        rp.setHaltingLevel(3)
+        logger.error(err_msg)
+        raise RuntimeError(err_msg)
 
     # Both refcalc (11) and superpos should work fine with new R-factor
     if index == 11:
