@@ -109,7 +109,7 @@ def _fetch_and_check_spectra(rp, index, name):
     rp.theobeams[name] = theobeams
 
     eps = 1e-3
-    consistent = (len(rp.ivbeams) != len(theobeams)
+    consistent = (len(rp.ivbeams) == len(theobeams)
                   and all(ivbeam.isEqual(theobeam, eps=eps)
                           for ivbeam, theobeam in zip(rp.ivbeams, theobeams)))
     if not consistent:
