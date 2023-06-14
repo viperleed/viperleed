@@ -23,7 +23,7 @@ from viperleed.tleedmlib import symmetry as tl_symmetry
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import runBeamGen
 from viperleed.tleedmlib.classes.slab import Slab
-from viperleed.tleedmlib.classes.rparams import DomainParameters, DEFAULTS
+from viperleed.tleedmlib.classes.rparams import DomainParameters
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
 from viperleed.tleedmlib.files import patterninfo, phaseshifts, poscar, vibrocc
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
@@ -370,9 +370,9 @@ def _get_expbeams(rp):                                                          
     try:
         rp.EXPBEAMS_INPUT_FILE = exp_files_provided[0]
     except IndexError:
-        rp.EXPBEAMS_INPUT_FILE = DEFAULTS["EXPBEAMS_INPUT_FILE"]  # reset the default
+        # reset the default
+        rp.EXPBEAMS_INPUT_FILE = rp.get_defaults("EXPBEAMS_INPUT_FILE")
         return
-
 
     enrange = rp.THEO_ENERGIES[:2] if len(rp.THEO_ENERGIES) else []
     err_msg = f"Error while reading file {rp.EXPBEAMS_INPUT_FILE}"
