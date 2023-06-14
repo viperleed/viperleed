@@ -293,7 +293,7 @@ class Rparams:
         try:
             value = DEFAULTS[param]
         except KeyError as err:
-            raise KeyError(f"No default found for parameter {param}.") from err
+            raise ValueError(f"No default found for parameter {param}.") from err
         if isinstance(value, tuple):
             value = list(value)
         return value
@@ -303,7 +303,7 @@ class Rparams:
         try:
             return PARAM_LIMITS[param]
         except KeyError as err:
-            raise KeyError(f"No limits found for parameter {param}.") from err
+            raise ValueError(f"No limits found for parameter {param}.") from err
 
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and
