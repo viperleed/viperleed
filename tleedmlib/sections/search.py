@@ -671,7 +671,6 @@ def search(sl, rp):
 
     # check for mpirun, decide whether to use parallelization
     usempi = True
-    _find_compiler = None
     if rp.N_CORES == 1:
         logger.warning(
             "The N_CORES parameter is set to 1. The search will be run "
@@ -684,6 +683,7 @@ def search(sl, rp):
             "mpirun is not present. Search will be compiled and executed "
             "without parallelization. This will be much slower!")
 
+    _find_compiler = None
     if usempi and not rp.FORTRAN_COMP_MPI[0]:
         _find_compiler = rp.getFortranMpiComp
     elif not rp.FORTRAN_COMP[0]:
