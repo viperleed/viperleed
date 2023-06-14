@@ -43,6 +43,10 @@ logger = logging.getLogger("tleedm.rparams")
 # in the relevant places
 DEFAULTS = {
     'EXPBEAMS_INPUT_FILE' : None,
+    'FILAMENT_WF' :{
+        "lab6": 2.65, # this is the default if nothing is given
+        "w": 4.5,
+    },
     'PHASESHIFT_EPS': {
         'r': 0.1,
         'n': 0.05,
@@ -50,11 +54,11 @@ DEFAULTS = {
         'e': 0.001,
     },
     'ZIP_COMPRESSION_LEVEL': 2,
-    'SEARCH_EVAL_TIME':  60, # time interval between reads of SD.TL, TODO: should be dynamic?
+    'SEARCH_EVAL_TIME':  60, # time interval between reads of SD.TL,            # TODO: should be dynamic?
     'RUN': (0, 1, 2, 3),
 }
 
-
+                                                                                # TODO: fill dict of parameter limits here (e.g. LMAX etc.)
 # parameter limits
 # either tuple of (min, max) or list of allowed values
 PARAM_LIMITS = {
@@ -146,7 +150,7 @@ class Rparams:
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
         self.EXPBEAMS_INPUT_FILE = DEFAULTS["EXPBEAMS_INPUT_FILE"]
-        self.FILAMENT_WF = 2.65   # work function of emitting cathode
+        self.FILAMENT_WF = DEFAULTS["FILAMENT_WF"]["lab6"]   # work function of emitting cathode
         self.FORTRAN_COMP = ["", ""]      # before files, after files
         self.FORTRAN_COMP_MPI = ["", ""]  # before files, after files
         self.GAUSSIAN_WIDTH = 0.5

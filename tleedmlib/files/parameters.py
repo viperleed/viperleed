@@ -39,8 +39,6 @@ from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
 logger = logging.getLogger("tleedm.files.parameters")
 
-# TODO: fill dict of parameter limits here (e.g. LMAX etc.)
-# TODO: change module level globals to ALL_CAPS everywhere
 
 # list of allowed parameters
 _KNOWN_PARAMS = [                                                               # TODO: IntEnum?
@@ -63,9 +61,11 @@ _KNOWN_PARAMS = [                                                               
     'V0_Z_ONSET', 'VIBR_AMP_SCALE', 'ZIP_COMPRESSION_LEVEL',
     ]
 
+
 # parameters that can be optimized in FD optimization
 _OPTIMIZE_OPTIONS = ['theta', 'phi', 'v0i',
                      'a', 'b', 'c', 'ab', 'abc', 's_ovl']
+
 
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
 _PARAM_ALIAS = {
@@ -90,6 +90,9 @@ _PARAM_ALIAS = {
 for p in _KNOWN_PARAMS:
     _PARAM_ALIAS[p.lower().replace("_", "")] = p
 
+# Bool parameters for which to create _interpret...() methods automatically.
+# key is parameter name, value is tuple of parameter that should be passed to
+# _make_boolean_interpreter_methods()
 _SIMPLE_BOOL_PARAMS = {
     'LOG_DEBUG' : (),
     'LOG_SEARCH' : (),
@@ -103,6 +106,10 @@ _SIMPLE_BOOL_PARAMS = {
     'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'},),
 }
 
+
+# Numerical parameters for which to create _interpret...() methods automatically
+# key is parameter name, value is tuple of parameter that should be passed to
+# _make_numerical_interpreter_methods()
 _SIMPLE_NUMERICAL_PARAMS_= {
     # positive only integers
     'BULKDOUBLING_MAX' : (int, (1, None)),
@@ -129,11 +136,6 @@ _SIMPLE_NUMERICAL_PARAMS_= {
     'ZIP_COMPRESSION_LEVEL' : (int, (0,9))
 }
 
-_KNOWN_FILAMENT_WORK_FUNCTIONS = {
-    "w": 4.5,
-    "lab6": 2.65,
-}
-
 
 def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
     """
@@ -157,9 +159,9 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
     try:
         with open(update_from / filename, 'r') as rf:
             lines = rf.readlines()
-    except FileNotFoundError as err:
+    except FileNotFoundError:
         logger.error("updatePARAMETERS routine: PARAMETERS file not found.")
-        raise err
+        raise
 
     for line in lines:
         line = strip_comments(line)
@@ -895,9 +897,9 @@ class ParameterInterpreter:
         param = "FILAMENT_WF"
         self._ensure_simple_assignment(param, assignment)
         # check common filaments (e.g W), otherwise interpret as float
+        known_filaments = self.rp.get_default(param)
         try:
-            self.rpars.FILAMENT_WF = _KNOWN_FILAMENT_WORK_FUNCTIONS[
-                assignment.value.lower()]
+            self.rpars.FILAMENT_WF = known_filaments[assignment.value.lower()]
         except KeyError:
             self._interpret_numerical_parameter(param, assignment, type_=float)
 
