@@ -169,9 +169,10 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
             if line.upper().startswith(param):
                 if not re.match(fr"\s*{param}\s*=\s*[Ff](alse)?", line):
                     rp.STOP = True
+                    continue  # if need to STOP, we don't need continue interpreting the line
         if "=" not in line:                                                     # TODO: perhaps we should rather look at the first entry of a .split() and see if, by chance, it is a valid parameter. Then warn and continue reading.
             continue  # ignore all lines that don't have an "=" sign at all
-        param, value = line.split('=', maxsplit=1)
+        param, value_str = line.split('=', maxsplit=1)
         if param:
             # get rid of spaces and check the leftmost entry.
             param, *flags = param.split()
@@ -180,13 +181,15 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
             param = _PARAM_ALIAS[param_alias]
         if param not in _KNOWN_PARAMS:
             continue
-        values = value.rstrip().split()
+        values = value_str.rstrip().split()
         if not values:
             continue                                                            # TODO: shouldn't we complain?
         if param == 'SEARCH_CONVERGENCE':
-            # Previously we would pass if a line was not interpretable, but
-            # new behaviour is to raise an error.
-            _interpret_SEARCH_CONVERGENCE(rp, flags, values, is_updating=True)
+            interpreter = ParameterInterpreter(rp)
+            interpreter._set_slab(rp.slab)
+            new_assignment = Assignment(value_str)
+            interpreter._interpret_search_convergence(assignment=new_assignment,
+                                                      is_updating=True)
 
 
 def readPARAMETERS(filename='PARAMETERS'):
