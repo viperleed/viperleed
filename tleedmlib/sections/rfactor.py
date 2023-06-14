@@ -570,9 +570,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     logger.info("With inner potential shift of {:.2f} eV: "
                 "R = {:.4f}\n".format(v0rshift, rfac))
     rp.best_v0r = v0rshift
-    dir_list = [Path()]
-    if Path("OUT").is_dir():
-        dir_list.append(Path("OUT"))
+    dir_list = [Path(), Path("OUT")]
     for dir_name in dir_list:
         for f_name in dir_name.glob(f"R_OUT_{rp.timestamp}*"):
             if not f_name.is_file():
