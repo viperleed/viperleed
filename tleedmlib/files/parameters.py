@@ -76,7 +76,7 @@ _PARAM_ALIAS = {
     'fortrancompiler': 'FORTRAN_COMP',
     'fdoptimize': 'OPTIMIZE',
     'fdoptimization': 'OPTIMIZE',
-    'log_debug' : 'LOG_LEVEL',
+    'logdebug' : 'LOG_LEVEL',
     'plotrfactor': 'PLOT_IV',
     'plotrfactors': 'PLOT_IV',
     'ignorechecksum': 'TL_IGNORE_CHECKSUM',
