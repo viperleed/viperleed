@@ -434,12 +434,7 @@ class ParameterInterpreter:
         'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'SUPERLATTICE',
         'SYMMETRY_CELL_TRANSFORM', 'TENSOR_INDEX', 'TENSOR_OUTPUT'
         ]
-    simple_bool = [
-        'LOG_DEBUG', 'LOG_SEARCH', 'PHASESHIFTS_CALC_OLD',
-        'PHASESHIFTS_OUT_OLD', 'R_FACTOR_LEGACY',
-        'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
-        'SYMMETRY_FIND_ORI', 'TL_IGNORE_CHECKSUM'
-        ]
+
     grouplist = [                                                               # TODO: take from elsewhere
         "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg", "cmm",
         "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m", "p6", "p6m"]
@@ -477,7 +472,11 @@ class ParameterInterpreter:
         self._is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
 
 
-        for param, assignment in self._get_param_assignments(self.rpars):
+        for param, assignment in self._get_param_assignments(self.rpars):#
+
+            # check if we are doing a domain calculation                        # TODO: this is a logical error! We may not know if we are doing a domain calc before yet. If a parameter is specified that should be ignored (e.g. BULK_REPEAT) prior to RUN this may crash!
+            self._is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
+
             if self._is_domain_calc and param in self.domains_ignore_params:
                 # skip in domain calculation
                 continue
