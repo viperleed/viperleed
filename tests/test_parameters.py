@@ -289,20 +289,27 @@ class TestNumericalParamsExamples:
         interpreter._interpret_t_debye(assignment)
         assert rpars.T_DEBYE == pytest.approx(300.0)
 
-class TestBoolParamsExamples:
+class TestLogLevel:
     def test__interpret_log_debug_true(self):
         rpars = Rparams()
         interpreter = ParameterInterpreter(rpars)
         assignment = Assignment("true")
-        interpreter._interpret_log_debug(assignment)
-        assert rpars.LOG_DEBUG is True
+        interpreter._interpret_log_level(assignment)
+        assert rpars.LOG_LEVEL <= 10
 
     def test__interpret_log_debug_false(self):
         rpars = Rparams()
         interpreter = ParameterInterpreter(rpars)
         assignment = Assignment("F")
-        interpreter._interpret_log_debug(assignment)
-        assert rpars.LOG_DEBUG is False
+        interpreter._interpret_log_level(assignment)
+        assert rpars.LOG_LEVEL >= 20
+
+    def test__interpret_log_debug_int(self):
+        rpars = Rparams()
+        interpreter = ParameterInterpreter(rpars)
+        assignment = Assignment("3")
+        interpreter._interpret_log_level(assignment)
+        assert rpars.LOG_LEVEL == 3
 
 class TestFilamentWF:
     def test__interpret_filament_wf_lab6(self, mock_rparams):

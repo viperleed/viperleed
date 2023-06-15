@@ -556,14 +556,15 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         try:
             rfaclist = tl_io.readROUTSHORT()
         except Exception:
-            logger.error("Error reading ROUTSHORT file", exc_info=rp.LOG_DEBUG)
+            logger.error("Error reading ROUTSHORT file",
+                         exc_info=rp.LOG_LEVEL<=10)
             rp.setHaltingLevel(2)
         return rfaclist
 
     try:
         (rfac, r_int, r_frac), v0rshift, rfaclist = tl_io.readROUT()
     except Exception:  # TODO catch correct exception
-        logger.error("Error reading ROUT file", exc_info=rp.LOG_DEBUG)
+        logger.error("Error reading ROUT file", exc_info=rp.LOG_LEVEL<=10)
         rp.setHaltingLevel(2)
         return []
 

@@ -47,7 +47,7 @@ _KNOWN_PARAMS = [                                                               
     'DOMAIN_STEP', 'ELEMENT_MIX',
     'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 'INTPOL_DEG',
     'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
-    'LOG_DEBUG', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'OPTIMIZE',
+    'LOG_LEVEL', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'OPTIMIZE',
     'PARABOLA_FIT', 'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD',
     'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH',
     'R_FACTOR_TYPE', 'S_OVL', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
@@ -76,6 +76,7 @@ _PARAM_ALIAS = {
     'fortrancompiler': 'FORTRAN_COMP',
     'fdoptimize': 'OPTIMIZE',
     'fdoptimization': 'OPTIMIZE',
+    'log_debug' : 'LOG_LEVEL',
     'plotrfactor': 'PLOT_IV',
     'plotrfactors': 'PLOT_IV',
     'ignorechecksum': 'TL_IGNORE_CHECKSUM',
@@ -94,7 +95,6 @@ for p in _KNOWN_PARAMS:
 # key is parameter name, value is tuple of parameter that should be passed to
 # _make_boolean_interpreter_methods()
 _SIMPLE_BOOL_PARAMS = {
-    'LOG_DEBUG' : (),
     'LOG_SEARCH' : (),
     'PHASESHIFTS_CALC_OLD' : (),
     'PHASESHIFTS_OUT_OLD' : (),
@@ -443,8 +443,8 @@ class ParameterInterpreter:
     def __init__(self, rpars):
         self.rpars = rpars
         self.slab = None
-        # define order that parameters should be read in
-        self.orderedParams = ["LOG_DEBUG", "RUN"]
+        # define order that parameters should be read in                        # TODO: I think domain should be in here too
+        self.orderedParams = ["LOG_LEVEL", "RUN"]
         self.param_names = [p for p
                             in self.orderedParams
                             if p in self.rpars.readParams]
@@ -482,6 +482,7 @@ class ParameterInterpreter:
                 self._interpret_param(param, assignment)
             except ParameterError as err:
                 raise err
+            logger.log(2, f"Successfully interpreted parameter {param}")
 
         # finally set the log level back to what it was
         logger.setLevel(self.loglevel)
@@ -939,6 +940,30 @@ class ParameterInterpreter:
             else:
                 raise ParameterUnknownFlagError(parameter=param,
                                                         flag=flags[0])
+
+    def _interpret_log_level(self, assignment):
+        param = "LOG_LEVEL"
+        self._ensure_simple_assignment(param, assignment)  # one value, no flags
+        # try to interpret as bool
+        log_debug = None
+        try:
+            log_debug = self._interpret_bool_parameter(param, assignment,
+                                                       return_only=True)
+        except ParameterError:
+            pass
+        if log_debug is not None:
+            self.rpars.LOG_LEVEL = 10 if log_debug else 20
+            return
+        # otherwise interpret as int
+        try:
+            log_level = self._interpret_numerical_parameter(param,
+                                                            assignment,
+                                                            int,
+                                                            range_=(0, 50),
+                                                            return_only=True)
+        except ParameterError as err:
+            raise ParameterValueError(param) from err
+        self.rpars.LOG_LEVEL = log_level
 
     def _interpret_v0_real(self, assignment):
         param = "V0_REAL"

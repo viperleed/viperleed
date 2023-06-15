@@ -161,7 +161,7 @@ class Rparams:
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True
         self.LMAX = [0, 0]    # minimum and maximum LMAX
-        self.LOG_DEBUG = False
+        self.LOG_LEVEL = 20
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores

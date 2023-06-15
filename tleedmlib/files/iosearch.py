@@ -1073,7 +1073,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         writePOSCAR(tmpslab, filename=fn, comments="all", silent=silent)
     except Exception:
         logger.error("Exception occured while writing POSCAR_OUT" + suffix,
-                     exc_info=rp.LOG_DEBUG)
+                     exc_info=rp.LOG_LEVEL<=10)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.makeSymBaseSlab(rp)
@@ -1083,12 +1083,12 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         except Exception:
             logger.warning(
                 "Exception occured while writing POSCAR_OUT_mincell" + suffix,
-                exc_info=rp.LOG_DEBUG)
+                exc_info=rp.LOG_LEVEL<=10)
     fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
     try:
         writeVIBROCC(sl, rp, filename=fn, silent=silent)
     except Exception:
         logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
-                     exc_info=rp.LOG_DEBUG)
+                     exc_info=rp.LOG_LEVEL<=10)
         rp.setHaltingLevel(2)
     return

@@ -119,7 +119,7 @@ def processSearchResults(sl, rp, search_log_path, final=True):
             _err = "Error while writing search output"
             if name:
                 _err += f" for domain {name}"
-            logger.error(_err, exc_info=rp.LOG_DEBUG)
+            logger.error(_err, exc_info=rp.LOG_LEVEL<=10)
             rp.setHaltingLevel(2)
             raise
         finally:
@@ -1044,7 +1044,7 @@ def search(sl, rp):
                         except Exception:
                             logger.warning("Parabolic fit of R-factor "
                                            "data failed",
-                                           exc_info=rp.LOG_DEBUG)
+                                           exc_info=rp.LOG_LEVEL<=10)
                     if len(gens) > 1:
                         try:
                             searchpdf.writeSearchProgressPdf(
@@ -1053,12 +1053,12 @@ def search(sl, rp):
                                 )
                         except Exception:
                             logger.warning("Error writing Search-progress.pdf",
-                                           exc_info=rp.LOG_DEBUG)
+                                           exc_info=rp.LOG_LEVEL<=10)
                         try:
                             searchpdf.writeSearchReportPdf(rp)
                         except Exception:
                             logger.warning("Error writing Search-report.pdf",
-                                           exc_info=rp.LOG_DEBUG)
+                                           exc_info=rp.LOG_LEVEL<=10)
                     if (len(gens) > 1 and os.path.isfile("SD.TL")
                             and (repeat or checkrepeat or not stop)):
                         try:

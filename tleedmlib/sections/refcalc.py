@@ -422,7 +422,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             param = tl_io.writePARAM(sl, rp, lmax=lm)
         except Exception:
             logger.error("Exception during writePARAM: ",
-                         exc_info=rp.LOG_DEBUG)
+                         exc_info=rp.LOG_LEVEL<=10)
             raise
         comp_tasks.append(RefcalcCompileTask(param, lm, rp.FORTRAN_COMP,
                                              tldir, basedir=rp.workdir))
@@ -614,7 +614,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                                 which="amp_imag")
         except Exception:
             logger.error("Error writing complex amplitudes after reference "
-                         "calculation.", exc_info=rp.LOG_DEBUG)
+                         "calculation.", exc_info=rp.LOG_LEVEL<=10)
     try:
         plot_iv(theobeams_norm, "THEOBEAMS.pdf", formatting=rp.PLOT_IV)
     except Exception:
@@ -778,7 +778,7 @@ def refcalc_domains(rp):
         beams.writeOUTBEAMS(theobeams_norm, filename="THEOBEAMS_norm.csv")
     except Exception:
         logger.error("Error writing THEOBEAMS after reference calculation.",
-                     exc_info=rp.LOG_DEBUG)
+                     exc_info=rp.LOG_LEVEL<=10)
     try:
         rp.superpos_specout = beams.writeFdOut(rp.theobeams["refcalc"],
                                                rp.beamlist,
@@ -786,4 +786,4 @@ def refcalc_domains(rp):
                                                header=rp.systemName)
     except Exception:
         logger.error("Error writing averaged refcalc-fd.out for R-factor "
-                     "calculation.", exc_info=rp.LOG_DEBUG)
+                     "calculation.", exc_info=rp.LOG_LEVEL<=10)
