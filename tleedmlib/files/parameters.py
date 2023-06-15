@@ -374,9 +374,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     silent : bool, optional
         If True, less output will be printed. The default is False.
     """
-    logger.warning("The interpretPARAMETERS function is deprecated and will "
-                    "be removed in a future version. Use the "
-                    "ParameterInterpreter class instead.")
+
     interpreter = ParameterInterpreter(rpars)
     interpreter.interpret(slab=slab, silent=silent)
     return
