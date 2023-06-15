@@ -1674,9 +1674,9 @@ class ParameterInterpreter:
                     self.rpars.setHaltingLevel(1)
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = i
-            elif len(assignment.all_values) >= 2:
+            elif len(assignment.values) >= 2:
                 try:
-                    il = [int(v) for v in assignment.all_values[:2]]
+                    il = [int(v) for v in assignment.values[:2]]
                 except ValueError:
                     self.rpars.setHaltingLevel(1)
                     raise ParameterIntConversionError(param,
