@@ -1644,7 +1644,7 @@ class ParameterInterpreter:
                 self.rpars.setHaltingLevel(1)
                 raise ParameterParseError(param)
         elif flag in ('color', 'colour', 'colors', 'colours'):
-            self.rpars.PLOT_IV['colors'] = values
+            self.rpars.PLOT_IV['colors'] = assignment.values
         elif flag in ('legend', 'legends'):
             if value in ('all', 'first', 'none'):
                 self.rpars.PLOT_IV['legend'] = value
