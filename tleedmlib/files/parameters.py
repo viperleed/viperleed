@@ -123,7 +123,7 @@ _SIMPLE_NUMERICAL_PARAMS_= {
     'TL_VERSION' : (float, (0, None)),
     'S_OVL' : (float, (0, None)),
     # other floats
-    'V0_Z_ONSET' : (float),
+    'V0_Z_ONSET' : (float,),
     'ATTENUATION_EPS' : (float, (1e-6,1), (False, True)),
     'BULKDOUBLING_EPS' : (float, (1e-4, None), (False, False)),
     'BULK_LIKE_BELOW': (float, (0, 1), (True, True)),
