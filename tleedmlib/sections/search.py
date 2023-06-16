@@ -65,16 +65,6 @@ def processSearchResults(sl, rp, search_log_path, final=True):
     -------
     None
     """
-    # get the last block from SD.TL:
-    try:
-        lines = tl_io.readSDTL_end(n_expect=rp.SEARCH_POPULATION)
-    except FileNotFoundError:
-        logger.error("Could not process Search results: SD.TL file not "
-                     "found.")
-        raise
-    except Exception:
-        logger.error("Failed to get last block from SD.TL file.")
-        raise
     # read search log if available and check for errors:
     if search_log_path is not None:
         gen_err_msg = ("Execution will continue, but TensErLEED errors "
@@ -87,16 +77,20 @@ def processSearchResults(sl, rp, search_log_path, final=True):
         except OSError:
             logger.error(f"Could not read search logfile {search_log_path}. "
                          f"{gen_err_msg}")
-    # read the block
-    sdtlContent = tl_io.readSDTL_blocks("\n".join(lines),
-                                        whichR=rp.SEARCH_BEAMS, logInfo=final,
-                                        n_expect=rp.SEARCH_POPULATION)
-    if not sdtlContent:
+    # get the last block from SD.TL:
+    try:
+        sdtl_content = tl_io.repeat_fetch_SDTL_last_block(which_beams=rp.SEARCH_BEAMS,
+                                           expected_params=rp.SEARCH_POPULATION,
+                                           final=final)
+    except tl_io.SearchIOEmptyFileError as err:
         if final:
             logger.error("No data found in SD.TL file!")
             rp.setHaltingLevel(2)
-        raise RuntimeError("No data in SD.TL")
-    (generation, rfacs, configs) = sdtlContent[0]
+        raise RuntimeError("No data in SD.TL") from err
+    except tl_io.SearchIORaceConditionError:
+        return  # if we can't find a block, we also can't store it.
+
+    (generation, rfacs, configs) = sdtl_content[0]
     # collect equal entries
     pops = []  # tuples (rfactor, list of parameter indices)
     popcount = []   # how often a given population is there
@@ -108,7 +102,7 @@ def processSearchResults(sl, rp, search_log_path, final=True):
             pops.append((rfacs[i], configs[i]))
             popcount.append(1)
         dparlist.append(configs[i])
-    writeControlChem = False
+    writeControlChem = False                                                    # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
     if not os.path.isfile("control.chem"):
         writeControlChem = True
     else:
@@ -150,7 +144,7 @@ def processSearchResults(sl, rp, search_log_path, final=True):
     if writeControlChem:
         try:
             with open("control.chem", "w") as wf:
-                wf.write(output)
+                wf.write(output)                                                # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
         except Exception:
             logger.error("Failed to write control.chem")
             rp.setHaltingLevel(1)
