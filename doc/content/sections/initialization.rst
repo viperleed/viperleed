@@ -7,23 +7,16 @@ Initialization
 
 The Initialization is the first section of tleedm that is run. It is 
 **always** inserted at the beginning of any tleedm calculation, even if
-not explicitly specified via the :ref:`RUN parameter<run>`. To test out 
-symmetry recognition, phaseshift generation, etc. the initialization
-can be invoked without a subsequent calculation by specifying 
-``RUN = 0``.
+not explicitly specified via the :ref:`RUN parameter<run>`.
+To test out symmetry recognition, phaseshift generation, etc. the initialization can be invoked without a subsequent calculation by specifying ``RUN = 0``.
 
-A large number of tasks and checks will be performed during 
-initialization.
-The major steps are listed below in the order they are performed by 
-ViPErLEED.
+A large number of tasks and checks will be performed during initialization.
+The major steps are listed below in order of execution.
 
-.. note:: 
+.. note::
     The structure from the :ref:`POSCAR file<poscar>` and the settings 
-    from the :ref:`PARAMETERS file<parameters>` are actually read and 
-    interpreted **before** the initialization.
-    This is important for the :ref:`ASE API<aseapi>`
-    where structure and settings may be passed programmatically to 
-    tleedm.
+    from the :ref:`PARAMETERS file<parameters>` are read and interpreted **before** the initialization.
+    This is important for the :ref:`ASE API<aseapi>` where structure and settings can be passed programmatically to tleedm in the form of ASE atoms objects.
 
 1.  Check whether a :ref:`domain calculation<domain_calculation>` is being 
     performed.
@@ -51,7 +44,7 @@ ViPErLEED.
     :ref:`PatternInfo.tld<patterninfo>`, and 
     :ref:`IVBEAMS<ivbeams>` files.
 #.  Create the directory ``original_imputs`` in which all files used to 
-    start the calculation are stored. This way, even if e.g. the 
-    PARAMETERS file is altered by the user during the run, it is possible
-    to look up the used settings.
+    start the calculation are stored.
+    This way it is possible to look up the used settings, even if, for example, the 
+    PARAMETERS file was altered by the user during the run.
     

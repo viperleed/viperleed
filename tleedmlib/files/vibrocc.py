@@ -167,6 +167,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                                     'VIBROCC file: Error reading value '
                                     + sl[1] + ' at parameter ' + param)
                                 raise
+        # Search Offsets
         if mode == 3:
             try:
                 ind = int(plist[1])
@@ -195,8 +196,8 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                 logger.error('VIBROCC file: Flag not recognized: '+param)
                 continue
             s = line.split("=")[1]
-            subls = s.split(",")
-            for li in subls:
+            sub_lists = s.split(",")
+            for li in sub_lists:
                 ll = li.split()
                 if (len(ll) != 4 and om == 1) or (len(ll) != 2 and om != 1):
                     logger.error('VIBROCC file: Wrong number of values in '

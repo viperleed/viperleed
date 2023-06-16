@@ -120,8 +120,9 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
         ylims = (min(points[:, 1]), max(points[:, 1]))   # data range y
         namePos = ((xlims[1] + xlims[0])*0.5,
                    ylims[1] - 0.1*(ylims[1] - ylims[0]))
-        ax.annotate("Minimum at {:.4f}\nR = {:.4f}".format(p_min, p_r),
-                    namePos, fontsize=10, ha="center")
+        if coefs[2] > 0:
+            ax.annotate("Minimum at {:.4f}\nR = {:.4f}".format(p_min, p_r),
+                        namePos, fontsize=10, ha="center")
     ax.plot(points[:, 0], points[:, 1], 'o', c='darkslategray')
     fig.tight_layout()
 

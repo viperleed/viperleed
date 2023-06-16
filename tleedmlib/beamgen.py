@@ -8,10 +8,11 @@ Created on Mon Aug 17 15:24:16 2020
 import os
 import logging
 import subprocess
-import numpy as np
 from pathlib import Path
 
-from viperleed import fortranformat as ff
+import fortranformat as ff
+import numpy as np
+
 
 from viperleed.tleedmlib.leedbase import (HARTREE_TO_EV,
                                 BOHR_TO_ANGSTROM,

@@ -25,10 +25,10 @@ To set up a ViPErLEED calculation, first create a source directory (in this exam
 
 The minimum information required to start a :ref:`reference calculation<ref-calc>` is contained in three files:
 
--   :ref:`EXPBEAMS<expbeams>`: This file contains the experimentally measured LEED-:math:`I(V)` curves in CSV format.
-    Unless specified otherwise in :ref:`PARAMETERS<parameters>`, ViPErLEED will also use the information in the :ref:`EXPBEAMS.csv file<expbeams>` to set energy ranges (:ref:`THEO_ENERGIES<theo_energies>`) and choose which beams should be written to the output file (:ref:`file IVBEAMS<ivbeams>`).
+-   :ref:`EXPBEAMS<expbeams>`: This file contains the experimentally measured LEED-:math:`I(V)` curves in :term:`CSV` format.
+    Unless specified otherwise in :ref:`PARAMETERS<parameters>`, ViPErLEED will use the information in the :ref:`EXPBEAMS.csv file<expbeams>` to set energy ranges (:ref:`THEO_ENERGIES<theo_energies>`) and choose which beams should be written to the output file (:ref:`file IVBEAMS<ivbeams>`).
     Alternatively, you can also provide the :ref:`IVBEAMS file<ivbeams>` directly.
--   :ref:`POSCAR<poscar>`: This file contains the reference surface structure.
+-   :ref:`POSCAR<poscar>`: This file contains the structure for the :ref:`reference calculation<ref-calc>`.
     ViPErLEED will determine the applicable symmetry from the :ref:`POSCAR file<poscar>`. See also the :ref:`symmetry settings<symmetry_settings>` and :ref:`input-structure settings<input_structure_settings>`.
 -   :ref:`PARAMETERS<parameters>`: This file contains the settings for the calculation (see :ref:`the list of parameters<paramname>`).
     If no :ref:`VIBROCC file<viboccin>` is given, :ref:`PARAMETERS<parameters>` needs to contain values for :ref:`T_EXPERIMENT<t_experiment>` and :ref:`T_DEBYE<t_debye>`.
@@ -82,7 +82,7 @@ The script first loads the required Intel compilers and :term:`conda` distributi
 
 .. literalinclude :: /_static/example_job_script.txt
    :language: bash
-   :caption: Example submission script for the 
+   :caption: Example submission script for the job script.
 
 .. _dir_organization_output:
 
@@ -90,8 +90,8 @@ Output organization
 ===================
 
 A large number of files are created in the directory that tleedm is executed in.
-The :ref:`job script<job_script>` defines the path to a ``work`` directory (typically just a subdirectory of the source directory ``my_surface``) that will be used during the calculation.
-ViPErLEED will  copy input files there, execute tleedm, and then copy the relevant output files back to the data directory.
+The :ref:`job script<job_script>` usually defines the path to a ``work`` directory (typically just a subdirectory of the source directory ``my_surface``) that will be used during the calculation.
+ViPErLEED will copy input files there, execute tleedm, and then copy the relevant output files back to the data directory.
 For this purpose, tleedm also creates a :ref:`manifest` file that lists the relevant output files which will be copied back.
 
 The directory tree after a run may look something like this:
@@ -136,4 +136,5 @@ These files are stored in the ``SUPP`` subfolder.
 If a :ref:`refercence calculation<ref-calc>` is run with :ref:`Tensor output<toutput>`, a ``Tensors`` directory will be created that stores the :ref:`tensor files<tensorszip>`.
 Similarly, if a :ref:`delta-amplitudes<sec_deltas>` calculation is run, a ``Deltas`` directory will be created that contains the resulting :ref:`delta files<deltaszip>`.
 
-In case of automated multiple search runs (which can be specified in the :ref:`DISPLACEMENTS<DISPLACEMENTS>` file), tleedm creates a ``workhistory`` directory and moves a snapshot of all input and output files that may be relevant and may get overwritten into a subfolder there.
+In case of automated multiple search runs (which can be specified in the :ref:`DISPLACEMENTS<DISPLACEMENTS>` file), tleedm creates a ``workhistory`` directory.
+A snapshot of all input and output files that may be relevant and may get overwritten will be moved into a subfolder of ``workhistory``.

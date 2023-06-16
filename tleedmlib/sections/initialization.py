@@ -3,7 +3,7 @@
 """
 Created on Aug 11 2020
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 
 Tensor LEED Manager section Initialization
 """
@@ -14,10 +14,13 @@ import logging
 import copy
 import numpy as np
 from pathlib import Path
+from zipfile import ZipFile
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import generate_beamlist
+from viperleed.tleedmlib.sections._sections import (ALL_INPUT_FILES, 
+                                                    EXPBEAMS_NAMES)
 from viperleed.tleedmlib.psgen import (runPhaseshiftGen, runPhaseshiftGen_old)
 from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC
@@ -33,30 +36,44 @@ from viperleed.tleedmlib.files.patterninfo import writePatternInfo
 
 logger = logging.getLogger("tleedm.initialization")
 
+ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
+
 
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
+        # check if multiple experimental input files were provided and warn if so
+        exp_files_provided = (os.path.isfile(fn) for fn in EXPBEAMS_NAMES)
+        if sum(exp_files_provided) > 1:
+            logger.warning("Multiple files with experimental I(V) curves "
+                           "were provided. "
+                           "Check if the root directory contains the correct "
+                           "files. "
+                           "ViPErLEED will preferentially use 'EXPBEAMS.csv'.")
+            rp.setHaltingLevel(1)
         # check for experimental beams:
-        expbeamsname = ""
-        for fn in ["EXPBEAMS.csv", "EXPBEAMS"]:
+        expbeams_name = ""
+        for fn in EXPBEAMS_NAMES:
             if os.path.isfile(fn):
-                expbeamsname = fn
+                expbeams_name = fn
+                rp.EXPBEAMS_INPUT_FILE = fn  # store which file name was used
                 break
-        if expbeamsname:
+        if expbeams_name:  # experimental beams provided
             if len(rp.THEO_ENERGIES) == 0:
                 er = []
             else:
                 er = rp.THEO_ENERGIES[:2]
             if not rp.fileLoaded["EXPBEAMS"]:
                 try:
-                    rp.expbeams = readOUTBEAMS(filename=fn, enrange=er)
+                    rp.expbeams = readOUTBEAMS(filename=expbeams_name, enrange=er)
                     if len(rp.expbeams) > 0:
                         rp.fileLoaded["EXPBEAMS"] = True
                     else:
-                        logger.error("Error reading "+fn+": No data was read.")
+                        logger.error(f"Error reading {expbeams_name}: "
+                                     "No data was read.")
                 except Exception:
-                    logger.error("Error while reading file "+fn, exc_info=True)
+                    logger.error(f"Error while reading file {expbeams_name}.",
+                                 exc_info=True)
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
@@ -389,13 +406,13 @@ def init_domains(rp):
         rp.setHaltingLevel(3)
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
-    home = os.getcwd()
+    home = Path(os.getcwd())
     for (name, path) in rp.DOMAINS:
         # determine the target path
-        target = os.path.abspath("Domain_"+name)
+        target = Path(os.path.abspath("Domain_"+name))
         dp = tl.DomainParameters(target, home, name)
         if os.path.isdir(target):
-            logger.warning("Folder "+target+" already exists. "
+            logger.warning(f"Folder {target} already exists. "
                            "Contents may get overwritten.")
         else:
             os.mkdir(target)
@@ -411,16 +428,14 @@ def init_domains(rp):
                     tensorIndex = 0
                     logger.warning("Error fetching Tensors: " + str(e))
             if tensorIndex != 0:
-                tensorDir = os.path.join(target, "Tensors",
-                                         "Tensors_"+str(tensorIndex).zfill(3))
+                tensorDir = target / "Tensors" / ("Tensors_"+str(tensorIndex).zfill(3))
                 for file in (checkFiles + ["IVBEAMS"]):
-                    if os.path.isfile(os.path.join(tensorDir, file)):
-                        shutil.copy2(os.path.join(tensorDir, file),
-                                     os.path.join(target, file))
+                    if os.path.isfile(tensorDir / file):
+                        shutil.copy2(tensorDir / file, target / file)
                     else:
-                        logger.warning("Input file {} is missing in Tensors "
+                        logger.warning(f"Input file {file} is missing in Tensors "
                                        "directory. A new reference "
-                                       "calculation is required.".format(file))
+                                       "calculation is required.")
                         tensorIndex = 0
                         break
             if tensorIndex != 0:
@@ -452,23 +467,21 @@ def init_domains(rp):
                 tensorIndex = tl.leedbase.getMaxTensorIndex(target)
             except Exception:
                 tensorIndex = 0
-            tensorDir = os.path.join(target, "Tensors",
-                                     "Tensors_"+str(tensorIndex+1).zfill(3))
+            tensorDir = target / "Tensors" / ("Tensors_"+str(tensorIndex+1).zfill(3))
             try:
-                os.makedirs(os.path.join(target, "Tensors", tensorDir),
-                            exist_ok=True)
+                os.makedirs(target / "Tensors" / tensorDir, exist_ok=True)
             except Exception:
                 raise
             try:
-                shutil.unpack_archive(path, tensorDir)
+                with ZipFile(path, 'r') as zip_ref:
+                    zip_ref.extractall(tensorDir)  # TODO: maybe it would be nicer to read directly from the zip file
             except Exception:
                 logger.error("Failed to unpack Tensors for domain {} from "
                              "file {}".format(name, path))
                 raise RuntimeError("Error getting domain input files")
             for file in (checkFiles + ["IVBEAMS"]):
-                if os.path.isfile(os.path.join(tensorDir, file)):
-                    shutil.copy2(os.path.join(tensorDir, file),
-                                 os.path.join(target, file))
+                if os.path.isfile(tensorDir / file):
+                    shutil.copy2(tensorDir / file, target / file)
                 else:
                     logger.error("Required file {} for domain {} not found in "
                                  "Tensor directory {}".format(file, name,
@@ -728,42 +741,44 @@ def preserve_original_input(rp, init_logger, path=""):
     """
     Creates directory original_inputs and copies input files there for preservation.
     """
-    # Folder name "original_inputs" hardcoded. If changed, change also in cleanup.py !
-    folder_name = "original_inputs"
     if not path:
         path = "."
 
     # makes orig_inputs directory
     try:
-        orig_inputs_path = os.path.join(path, folder_name)
+        orig_inputs_path = Path(path) / ORIGINAL_INPUTS_DIR_NAME
         os.makedirs(orig_inputs_path, exist_ok=True)
     except Exception:
-        logger.warning("Could not create directory {}".format(folder_name))
-        rp.setHaltingLevel(1)
+        raise RuntimeError("Could not create directory "
+                           f"{ORIGINAL_INPUTS_DIR_NAME}. "
+                           "Check disk permissions.")
+
+    # make sure the correct version of EXPBEAMS is stored (if used)
+    files_to_preserve = ALL_INPUT_FILES.copy()
+    files_to_preserve.remove('EXPBEAMS')
+    if rp.EXPBEAMS_INPUT_FILE:
+        files_to_preserve.add(rp.EXPBEAMS_INPUT_FILE)
 
     # copy all files to orig_inputs that were used as original input
-    # !!! TODO: rp.fileLoaded contains only files that were needed so far,
-    #  and EXPBEAMS is missing the .csv extension -> probably better to list
-    #  all input files explicitly here
-    for file in rp.fileLoaded:
-        if rp.fileLoaded[file]:
-            # copy to original input
+    for file in files_to_preserve:
+        # save under name EXPBEAMS.csv
+        if os.path.isfile(file):
             try:
-                if file == "EXPBEAMS": file += ".csv" # file is called EXPBEAMS.csv
-                if os.path.isfile(file):
-                    shutil.copy2(os.path.join(path, file), orig_inputs_path)
-                else:
-                    raise FileNotFoundError
-            except Exception:
-                init_logger.warning("Could not copy file {} to ".format(file)
-                                    + folder_name)
+                shutil.copy2(Path(path) / file, orig_inputs_path)
+            except OSError:
+                init_logger.warning(f"Could not copy file {file} to "
+                                    f"{ORIGINAL_INPUTS_DIR_NAME}.")
                 rp.setHaltingLevel(1)
+        else:
+            init_logger.warning(f"Could not find file {file}. "
+                                    "It will not be stored in "
+                                    f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            rp.setHaltingLevel(1)
     return
 
 
 
 def make_compile_logs_dir(rp):
-
     """
     Creates directory compile_logs in which logs from compilation will be saved.
     """

@@ -2,7 +2,7 @@
 """
 Created on Fri Jun  4 16:03:36 2021
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 
 Cleanup functions, to be used between sections or before/after tleedm
 execution.
@@ -15,8 +15,11 @@ import os
 from pathlib import Path                                                     # TODO: use everywhere
 import shutil
 import re
+from zipfile import ZipFile, ZIP_DEFLATED
 
 from viperleed.tleedmlib.base import get_elapsed_time_str
+from viperleed.tleedmlib.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
+
 
 # files to go in SUPP
 _SUPP_FILES = ("AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
@@ -29,7 +32,7 @@ _SUPP_FILES = ("AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
                "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
                "restrict.f", "Phaseshifts_plots.pdf")
 
-_SUPP_DIRS = ("original_inputs", "compile_logs")
+_SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
 
 # files to go in OUT
 _OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
@@ -39,7 +42,8 @@ _OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
              "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
              "superpos-spec.out", "Rfactor_plots_superpos.pdf",
              "Rfactor_analysis_refcalc.pdf",
-             "Rfactor_analysis_superpos.pdf", "Errors.csv", "Errors.pdf",
+             "Rfactor_analysis_superpos.pdf",
+             "Errors_summary.csv", "Errors.zip", "Errors.pdf",
              "FD_Optimization.csv", "FD_Optimization.pdf",
              "FD_Optimization_beams.pdf", "Complex_amplitudes_imag.csv",
              "Complex_amplitudes_real.csv")
@@ -110,7 +114,8 @@ def prerun_clean(rp, logname=""):
 
 
 def organize_workdir(tensor_index, delete_unzipped=False,
-                     tensors=True, deltas=True, workdir=""):
+                     tensors=True, deltas=True, workdir=Path(),
+                     compression_level=2):
     """Reorganize files in workdir into SUPP, OUT, Tensors and Deltas.
 
     Tensors and Deltas folders are zipped and moved over. All other
@@ -126,9 +131,12 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     tensors, deltas : bool, optional
         Whether the Tensor/Delta files contain new information
         and should be saved. The default is True.
-    workdir : str, optional
+    workdir : pathlike, optional
         The path to work folder that contains the files to be
         reorganized. The default is "".
+    compression_level : int
+        Compression level to be applied for ZIP archives of Tensors and
+        Deltas. Default is 2.
 
     Returns
     -------
@@ -141,7 +149,8 @@ def organize_workdir(tensor_index, delete_unzipped=False,
         outfiles.update(path.glob(pattern))
 
     _collect_deltas(tensor_index, path)
-    _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path)
+    _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
+                            compression_level)
     _organize_supp_out(path, outfiles)
 
 def _organize_supp_out(path, outfiles):
@@ -191,7 +200,8 @@ def _organize_supp_out(path, outfiles):
                              exc_info=True)
 
 
-def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path):
+def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
+                            compression_level):
     # If there are unzipped Tensors or Deltas directories, zip them:
     for folder in ["Tensors", "Deltas"]:
         todo = tensors if folder == "Tensors" else deltas
@@ -210,8 +220,14 @@ def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path):
             delete = delete_unzipped
             if todo:
                 logger.info(f"Packing {_dir.name}.zip...")
+                _dir_path = Path(_dir)
+                move_to_archive = _dir_path.glob('*')
+                arch_name = _dir_path.with_suffix(".zip")
                 try:
-                    shutil.make_archive(_dir, "zip", _dir)
+                    with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
+                        compresslevel=compression_level) as archive:
+                        for fname in move_to_archive:
+                            archive.write(fname, fname.relative_to(_dir))
                 except OSError:
                     logger.error(f"Error packing {_dir.name}.zip file: ",
                                     exc_info=True)
@@ -314,18 +330,22 @@ def move_oldruns(rp, prerun=False):
                 dirname += sectionabbrv[ind]
         rp.lastOldruns = rp.runHistory[:]
         dirname += "_" + rp.timestamp
-    dirpath = os.path.join(".", "workhistory", dirname)
+
+    # make workhistory directory
+    work_hist_path = Path(".") / "workhistory" / dirname
     try:
-        os.mkdir(dirpath)
+        os.mkdir(work_hist_path)
     except Exception:
         logger.error("Error creating workhistory subfolder: ", exc_info=True)
         raise
     if not prerun:
         organize_workdir(rp.TENSOR_INDEX, delete_unzipped=False,
-                         tensors=False, deltas=False)
+                         tensors=False, deltas=False,
+                         compression_level=rp.ZIP_COMPRESSION_LEVEL)
         for dp in rp.domainParams:
             organize_workdir(dp.rp.TENSOR_INDEX, delete_unzipped=False,
-                             tensors=False, deltas=False)
+                             tensors=False, deltas=False,
+                             compression_level=rp.ZIP_COMPRESSION_LEVEL)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     (f.endswith(".log") or f in _OUTFILES or f in _SUPP_FILES)
@@ -339,23 +359,21 @@ def move_oldruns(rp, prerun=False):
     for f in filelist:
         try:
             if not prerun or f in iofiles:
-                shutil.copy2(f, os.path.join(dirpath, f))
+                shutil.copy2(f, work_hist_path / f)
             else:
-                shutil.move(f, os.path.join(dirpath, f))
+                shutil.move(f, work_hist_path / f)
         except Exception:
-            logger.warning("Error copying "+f+" to "
-                           + os.path.join(dirpath, f)
-                           + ". File may get overwritten.")
+            logger.warning(f"Error copying {f} to {work_hist_path / f}."
+                           " File may get overwritten.")
     for d in dirlist:
         try:
             if not prerun:
-                shutil.copytree(d, os.path.join(dirpath, d))
+                shutil.copytree(d, work_hist_path / d)
             else:
-                shutil.move(d, os.path.join(dirpath, d))
+                shutil.move(d, work_hist_path / d)
         except Exception:
-            logger.warning("Error copying "+d+" to "
-                           + os.path.join(dirpath, d)
-                           + ". Files in directory may get overwritten.")
+            logger.warning(f"Error copying {d} to {work_hist_path / d}."
+                           " Files in directory may get overwritten.")
     return
 
 
@@ -384,9 +402,11 @@ def cleanup(manifest, rp=None):
         history = []
         to_sort = [{"newTensors": False, "newDeltas": False, "tind": 0,
                     "path": ""}]
+        compress_level = 2
     else:
         history = rp.runHistory
         rp.closePdfReportFigs()
+        compress_level = rp.ZIP_COMPRESSION_LEVEL
         if not rp.domainParams:
             to_sort = [{"newTensors": ("Tensors" in rp.manifest),
                         "newDeltas": ("Deltas" in rp.manifest),
@@ -403,7 +423,8 @@ def cleanup(manifest, rp=None):
         try:
             organize_workdir(d["tind"], delete_unzipped=True,
                              tensors=d["newTensors"],
-                             deltas=d["newDeltas"], workdir=d["path"])
+                             deltas=d["newDeltas"], workdir=d["path"],
+                             compression_level=compress_level)
         except Exception:
             logger.warning("Error sorting files to SUPP/OUT folders: ",
                            exc_info=True)

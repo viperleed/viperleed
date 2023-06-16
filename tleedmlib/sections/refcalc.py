@@ -16,9 +16,9 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
-from pathlib import Path
 
-from viperleed import fortranformat as ff
+import fortranformat as ff
+
 from viperleed.tleedmlib.leedbase import (
     fortran_compile_batch, getTLEEDdir, getMaxTensorIndex, monitoredPool,
     copy_compile_log, HARTREE_TO_EV)
@@ -43,12 +43,12 @@ class RefcalcCompileTask():
     track of the folder that the compiled file is in afterwards."""
 
     def __init__(self, param, lmax, fortran_comp, sourcedir,
-                 basedir=os.getcwd()):
+                 basedir=Path()):
         self.param = param
         self.lmax = lmax
         self.fortran_comp = fortran_comp
-        self.sourcedir = sourcedir  # where the fortran files are
-        self.basedir = basedir    # where the calculation is based
+        self.sourcedir = Path(sourcedir)  # where the fortran files are
+        self.basedir = Path(basedir)      # where the calculation is based
         self.foldername = "refcalc-compile_LMAX{}".format(lmax)
         self.exename = "refcalc-{}".format(lmax)
 
@@ -57,7 +57,7 @@ class RefcalcCompileTask():
             
     @property
     def logfile(self):
-        return Path(self.basedir) / self.foldername / "fortran-compile.log"
+        return self.basedir / self.foldername / "fortran-compile.log"
         
     @property
     def compile_log_name(self):
@@ -76,7 +76,7 @@ class RefcalcCompileTask():
         _muftin = Path("muftin.f")
         muftinname =_muftin if _muftin.is_file() else None
         if any(f is None for f in (srcname, lib_tleed)):
-            raise RuntimeError("Source files missing in {sourcedir}")       # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
+            raise RuntimeError(f"Source files missing in {sourcedir}")       # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
         return lib_tleed, srcname, globalname, muftinname
 
     def copy_source_files_to_local(self):
@@ -297,7 +297,7 @@ def edit_fin_energy_lmax(runtask):
     return fin
 
 
-def refcalc(sl, rp, subdomain=False, parent_dir=""):
+def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     """Main function to execute the reference calculation segment."""
     if rp.domainParams:
         refcalc_domains(rp)
@@ -475,7 +475,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
         ref_tasks.append(RefcalcRunTask(fin, -1, ct, logname,
                                         single_threaded=True,
                                         tl_version=rp.TL_VERSION))    
-    
+
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
         # @issue #43: this could be a class method
@@ -677,10 +677,28 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
                          suppress_ori=True)
         modifyPARAMETERS(rp, "LMAX", new="{}-{}".format(*rp.LMAX),
                          path=os.path.join("Tensors", dn), suppress_ori=True)
+
+    # remove references to Deltas from old tensors
+    _reinitialize_deltas(rp, sl)
+
+    return
+
+
+def _reinitialize_deltas(param, slab):
+    """Removes references to deltas from previous tensors.
+    Delete old delta files in main work folder, if necessary.
+    (there should not be any, unless there was an error)
+    Also empty all atom.deltasGenerated because they would refer to
+    previous tensors.
+
+    Parameters
+    ----------
+    param : Rparam
+    slab : Slab
+    """
     # delete old delta files in main work folder, if necessary
-    #   (there should not be any, unless there was an error)
-    for df in [f for f in os.listdir(".") if f.startswith("DEL_") and
-               os.path.isfile(os.path.join(".", f))]:
+    for df in [f for f in os.listdir(param.workdir) if f.startswith("DEL_") and
+               os.path.isfile(param.workdir / f)]:
         try:
             os.remove(df)
         except Exception:
@@ -688,7 +706,10 @@ def refcalc(sl, rp, subdomain=False, parent_dir=""):
                 "Error deleting old Delta file in work directory. This may "
                 "cause the delta file to incorrectly be labelled as belonging "
                 "with the new set of tensors.")
-    return
+
+    # empty atom.deltasGenerated
+    for at in slab.atlist:
+        at.deltasGenerated = []
 
 
 def runDomainRefcalc(dp):

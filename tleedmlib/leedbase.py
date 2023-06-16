@@ -19,6 +19,7 @@ import multiprocessing
 import time
 from pathlib import Path
 from quicktions import Fraction
+from zipfile import ZipFile
 
 from viperleed.guilib import get_equivalent_beams
 from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec
@@ -148,7 +149,7 @@ def get_element_symbol(atomic_number):
             f"Invalid atomic number {atomic_number}."
             ) from None
 
-def monitoredPool(rp, poolsize, function, tasks, update_from=""):
+def monitoredPool(rp, poolsize, function, tasks, update_from=Path()):
     """
     The 'function' and 'tasks' arguments are passed on to a multiprocessing
     pool of size 'poolsize' with apply_async. While waiting for the pool to
@@ -166,7 +167,7 @@ def monitoredPool(rp, poolsize, function, tasks, update_from=""):
     tasks : list of arguments
         treated like the arguments of pool.map, i.e. each element is passed on
         in a seperate call of 'function' via multiprocessing.Pool.apply_async
-    update_from : str
+    update_from : pathlike
         directory from which PARAMETERS should be read for updates
 
     Returns
@@ -274,13 +275,14 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
-def getTLEEDdir(home="", version=0.):
+def getTLEEDdir(home=Path(), version=0.):
     """Finds directories in the 'tensorleed' folder that have names starting
     with 'TensErLEED', then picks the one with the highest version number.
     Returnsa relative path to that directory, eg
     './tensorleed/TensErLEED-v1.6'."""
-    sd = os.path.join(home, 'tensorleed')
-    ls = [dn for dn in os.listdir(sd) if (os.path.isdir(os.path.join(sd, dn))
+    _home = Path(home)
+    sd = _home / 'tensorleed'
+    ls = [dn for dn in os.listdir(sd) if (os.path.isdir(sd / dn)
                                           and dn.startswith('TensErLEED'))]
     highest = 0.0
     founddir = ''
@@ -298,9 +300,9 @@ def getTLEEDdir(home="", version=0.):
     if founddir != '':
         if version != 0 and f != version:
             logger.error("getTLEEDdir: Could not find requested "
-                         "TensErLEED version {}".format(version))
+                         f"TensErLEED version {version}")
             return ''
-        return os.path.join(sd, dn)
+        return sd / dn
     else:
         return ''
 
@@ -346,13 +348,14 @@ def getTensors(index, basedir=".", targetdir=".", required=True):
         basedir = os.path.dirname(basedir)
     if not os.path.isdir(os.path.join(basedir, "Tensors", dn)):
         if os.path.isfile(os.path.join(basedir, "Tensors", dn+".zip")):
+            logger.info("Unpacking {}.zip...".format(dn))
+            os.makedirs(os.path.join(targetdir, "Tensors", dn),
+                        exist_ok=True)
+            zip_path = (Path(basedir) / "Tensors" / dn).with_suffix(".zip")
+            unpack_path = (Path(targetdir) / "Tensors" / dn)
             try:
-                logger.info("Unpacking {}.zip...".format(dn))
-                os.makedirs(os.path.join(targetdir, "Tensors", dn),
-                            exist_ok=True)
-                shutil.unpack_archive(os.path.join(basedir, "Tensors",
-                                                   dn+".zip"),
-                                      os.path.join(targetdir, "Tensors", dn))
+                with ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(unpack_path)  # TODO: maybe it would be nicer to read directly from the zip file
             except Exception:
                 logger.error("Failed to unpack {}.zip".format(dn))
                 raise
@@ -377,21 +380,23 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
     basedir is the directory in which the Delta directory is based.
     targetdir is the directory to which the Tensor files should be moved."""
     dn = "Deltas_"+str(index).zfill(3)
-    if os.path.isdir(os.path.join(basedir, "Deltas", dn)):
-        for f in [f for f in os.listdir(os.path.join(basedir, "Deltas", dn))
-                  if (os.path.isfile(os.path.join(basedir, "Deltas", dn, f))
+    _basedir, _targetdir = Path(basedir), Path(targetdir)
+    zip_path=(_basedir / "Deltas" / dn).with_suffix(".zip")
+    if os.path.isdir(_basedir / "Deltas" / dn):
+        for f in [f for f in os.listdir(_basedir / "Deltas" / dn)
+                  if (os.path.isfile(_basedir / "Deltas" / dn / f)
                       and f.startswith("DEL_"))]:
             try:
-                shutil.copy2(os.path.join(basedir, "Deltas", dn, f), targetdir)
+                shutil.copy2(_basedir / "Deltas" / dn / f, targetdir)
             except Exception:
                 logger.error("Could not copy existing delta files to "
                              "work directory")
                 raise
-    elif os.path.isfile(os.path.join(basedir, "Deltas", dn+".zip")):
+    elif os.path.isfile(zip_path):
+        logger.info("Unpacking {}.zip...".format(dn))
         try:
-            logger.info("Unpacking {}.zip...".format(dn))
-            shutil.unpack_archive(os.path.join(basedir, "Deltas", dn+".zip"),
-                                  targetdir)
+            with ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(_targetdir)  # TODO: maybe it would be nicer to read directly from the zip file
         except Exception:
             logger.error("Failed to unpack {}.zip".format(dn))
             raise

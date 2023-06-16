@@ -14,6 +14,7 @@ import os
 import random
 import shutil
 from timeit import default_timer as timer
+from pathlib import Path
 
 try:
     import matplotlib.pyplot as plt
@@ -38,12 +39,15 @@ logger = logging.getLogger("tleedm.rparams")
 
 
 DEFAULTS = {
+    'EXPBEAMS_INPUT_FILE' : None,
     'PHASESHIFT_EPS': {
         'r': 0.1,
         'n': 0.05,
         'f': 0.01, # this is the default if nothing is given
         'e': 0.001,
-    }
+    },
+    'ZIP_COMPRESSION_LEVEL': 2,
+    'SEARCH_EVAL_TIME':  60, # time interval between reads of SD.TL, TODO: should be dynamic?
 }
 
 class SearchPar:
@@ -101,8 +105,8 @@ class DomainParameters:
     """Stores workdir, slab and runparams objects for each domain"""
 
     def __init__(self, workdir, homedir, name):
-        self.workdir = workdir  # path to sub-directory for domain calculation
-        self.homedir = homedir  # path to main tleedm working directory
+        self.workdir = Path(workdir)  # path to sub-directory for domain calculation
+        self.homedir = Path(homedir)  # path to main tleedm working directory
         self.name = name        # domain name as defined by user
         self.sl = None
         self.rp = None
@@ -128,6 +132,7 @@ class Rparams:
         self.DOMAIN_STEP = 1      # area step in percent for domain search
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
+        self.EXPBEAMS_INPUT_FILE = DEFAULTS["EXPBEAMS_INPUT_FILE"]
         self.FILAMENT_WF = 2.65   # work function of emitting cathode
         self.FORTRAN_COMP = ["", ""]      # before files, after files
         self.FORTRAN_COMP_MPI = ["", ""]  # before files, after files
@@ -198,14 +203,17 @@ class Rparams:
         self.V0_REAL = "default"   # 'default' will read from PHASESHIFTS
         self.V0_Z_ONSET = 1.0
         self.VIBR_AMP_SCALE = []   # read as list of strings, interpret later
+        self.ZIP_COMPRESSION_LEVEL = DEFAULTS['ZIP_COMPRESSION_LEVEL']
 
         # RUN VARIABLES
         self.starttime = timer()
         self.sourcedir = os.getcwd()  # where to find 'tensorleed'
-        self.workdir = os.getcwd()  # MAIN WORK DIRECTORY; where to find input
+        self.workdir = Path(os.getcwd())  # MAIN WORK DIRECTORY; where to find input
         self.compile_logs_dir = None
         self.searchConvInit = {
             "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
+        self.searchEvalTime = DEFAULTS['SEARCH_EVAL_TIME']  # time interval for reading SD.TL
+        self.output_interval = None # changed in updateDerivedParams
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
         self.searchStartInit = None
         # script progress tracking
@@ -339,7 +347,7 @@ class Rparams:
             self.TL_VERSION = highest
             if highest > 0.:
                 logger.debug("Detected TensErLEED version " + namestr)
-        
+
         # TL_VERSION_STR
         # try simple conversion to string
         self.TL_VERSION_STR = f"{self.TL_VERSION:.2f}"
@@ -354,7 +362,7 @@ class Rparams:
                 "Consider editing KNOWN_TL_VERSIONS global in checksums.py "
                 "or setting TL_IGNORE_CHECKSUM = True."
             )
-        
+
         # SEARCH_CONVERGENCE:
         if self.searchConvInit["gaussian"] is None:
             self.searchConvInit["gaussian"] = self.GAUSSIAN_WIDTH
@@ -364,6 +372,10 @@ class Rparams:
                                               1 / self.GAUSSIAN_WIDTH_SCALING)
             if self.searchConvInit["dgen"][k] is None:
                 self.searchConvInit["dgen"][k] = self.SEARCH_MAX_DGEN[k]
+        if self.output_interval is None:
+            # set output interval to SEARCH_CONVERGENCE dgen, but cap at 1000
+            use_dgen = min(dgen for dgen in self.searchConvInit["dgen"].values() if dgen > 0) or 1000
+            self.output_interval = int(min(use_dgen or 1000, 1000))  # default to 1000 if all dgen are 0 (default)
         if self.searchStartInit is None:
             self.searchStartInit = self.SEARCH_START
         # Phaseshifts-based:

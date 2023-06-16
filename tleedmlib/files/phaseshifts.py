@@ -11,8 +11,9 @@ import logging
 import numpy as np
 import os
 from itertools import combinations
+from pathlib import Path
 
-from viperleed import fortranformat as ff
+import fortranformat as ff
 
 
 from viperleed.tleedmlib.leedbase import HARTREE_TO_EV
@@ -484,8 +485,9 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
     return may_have_wrong_phaseshifts
 
 
-def writePHASESHIFTS(firstline, phaseshifts, filename='PHASESHIFTS'):
+def writePHASESHIFTS(firstline, phaseshifts, file_path=Path()/'PHASESHIFTS'):
     """Takes phaseshift data and writes it to a PHASESHIFTS file."""
+    _file_path = Path(file_path)
     output = firstline
     if output[-1] != "\n":
         output += "\n"
@@ -496,9 +498,9 @@ def writePHASESHIFTS(firstline, phaseshifts, filename='PHASESHIFTS'):
         for block in enps:
             output += f74x10.write(block)+"\n"
     try:
-        with open(filename, 'w') as wf:
+        with open(_file_path, 'w') as wf:
             wf.write(output)
-        logger.debug("Wrote to "+filename+" successfully.")
+        logger.debug(f"Wrote to {_file_path} successfully.")
     except Exception:
         logger.error("Exception while writing PHASESHIFTS file: ",
                      exc_info=True)

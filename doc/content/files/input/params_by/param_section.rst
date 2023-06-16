@@ -3,11 +3,8 @@
 List of parameters by section
 =============================
 
-This page lists parameters for ViPErLEED by which section of 
-ViPErLEED/TensErLEED they are (most) relevant for. Parameters may occur 
-multiple times, and not all parameters are listed.
-See the :ref:`main PARAMETERS page<PARAMETERS>`  for a complete 
-alphabetical list and other groupings.
+This page lists parameters for ViPErLEED by which section of ViPErLEED/TensErLEED they are (most) relevant for. Parameters may occur multiple times, and not all parameters are listed.
+See the :ref:`main PARAMETERS page<PARAMETERS>` for a complete alphabetical list and other groupings.
 
 .. note::
     While all parameters have a default value, parameters marked with a 

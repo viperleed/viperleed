@@ -8,7 +8,7 @@ The delta amplitude calculation (called with :ref:`RUN = 2<run>`) is the
 second part of a :ref:`Tensor LEED<tensor_leed>` calculation as implemented 
 in ViPErLEED.
 It requires a :ref:`refercence calculation<ref-calc>` to be completed 
-beforehand and create the :ref:`tensor files<tensorszip>` which are stored.
+beforehand and the :ref:`tensor files<tensorszip>` to be stored.
 
 In the delta calculation, these :ref:`tensor files<tensorszip>`, i.e. the
 tensor quantities :math:`T^{ref}_{i;l,m;l',m'}` (see :ref:`tensor leed<tensor_leed>`),
@@ -29,7 +29,7 @@ in the ``Deltas`` directory) already contains some of the requested amplitudes, 
 computation will be skipped and a message will be put in the log accordingly.
 
 As for the :ref:`refercence Calculation<ref-calc>`, ViPErLEED will then move the needed TensErLEED source files to a temporary directory and compile them **at run-time**.
-The input files (based on the :ref:`DISPLACEMENTS fil<displacements>` and the system symmetry) will be written in the format expected by TensErLEED and calculations for each atom will be executed independently.
+The input files (based on the :ref:`DISPLACEMENTS file<displacements>` and the system symmetry) will be written in the format expected by TensErLEED and calculations for each atom will be executed independently.
 Again, the parameter :ref:`N_CORES<ncores>` determines how many processes are run concurrently.
 
 Once finished, ViPErLEED will pack the resulting :ref:`delta files<deltaszip>` into a ``.zip`` archive in the ``Deltas`` directory.

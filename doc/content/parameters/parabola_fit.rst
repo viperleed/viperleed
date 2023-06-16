@@ -50,15 +50,17 @@ alpha
 
 The prefactor for the penalty term of the ridge, lasso, and elastic net methods (see above). If linear regression is used, alpha will remain unused. Note that all methods listed above become ordinary linear regression for ``alpha = 0``.
 
-localize
---------
 
-**TODO** Comment this section out?
+..
+   This section is commented out for now, because the feature is unused.
 
-**CURRENTLY NOT ACTIVE - best way to do something like this needs to be discussed.** Currently, the RR value ``RR = 8 * V0i / enrange`` is calculated, where V0i is the imaginary part of the inner potential and enrange the total energy range of all beams. Points farther than 3*RR from the best known R-factor are discarded. Maybe a reasonable 'localize' parameter would be to re-define this prefactor to RR, i.e. influence the R-cutoff.
+   localize
+   --------
 
-**Acceptable values**: ]0, 1[, or 0 to deactivate.
+   **CURRENTLY NOT ACTIVE - best way to do something like this needs to be discussed.** Currently, the RR value ``RR = 8 * V0i / enrange`` is calculated, where V0i is the imaginary part of the inner potential and enrange the total energy range of all beams. Points farther than 3*RR from the best known R-factor are discarded. Maybe a reasonable 'localize' parameter would be to re-define this prefactor to RR, i.e. influence the R-cutoff.
 
-Limits which points on the R-factor landscape should be used for the fit. An interval centered around the best known configuration is placed on each displacements range, and only configurations that fall into this intervall *for every parameter* are used for the fit. The value defines the fraction of the displacement range that should be used. For example, if you set ``localize`` to 0.25, then one quarter of the parameter space for each parameter, or (1/4^N) of the parameter space (for N independent parameters), will be used.
+   **Acceptable values**: ]0, 1[, or 0 to deactivate.
 
-If the R-factor landscape is rough, the ``localize`` flag can prevent points far from the mininum to affect the fit by only using points close to the global minimum. However, this requires that the best known configuration (identified by the search) is already close to the true global minimum.
+   Limits which points on the R-factor landscape should be used for the fit. An interval centered around the best known configuration is placed on each displacements range, and only configurations that fall into this intervall *for every parameter* are used for the fit. The value defines the fraction of the displacement range that should be used. For example, if you set ``localize`` to 0.25, then one quarter of the parameter space for each parameter, or (1/4^N) of the parameter space (for N independent parameters), will be used.
+
+   If the R-factor landscape is rough, the ``localize`` flag can prevent points far from the mininum to affect the fit by only using points close to the global minimum. However, this requires that the best known configuration (identified by the search) is already close to the true global minimum.

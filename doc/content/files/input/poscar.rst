@@ -14,7 +14,8 @@ parameters for mapping between POSCAR element names and chemical
 elements.
 
 The POSCAR file format is the same as used in VASP input, and can be 
-exported directly from VESTA (File -> Export Data -> file type 'VASP (POSCAR;*.vasp)' -> Fractional coordinates). The atoms in the POSCAR file are ordered by element, but otherwise, their order does not matter. In the data lines containing coordinates, only the first three columns are read by ViPErLEED, so anything to the right will be ignored. POSCAR files with "Cartesian" coordiantes will be accepted, but ViPErLEED uses fractional ("Direct") coordinates in all output files, so it is recommended to follow this convention in the input as well.
+exported directly from VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011` (File -> Export Data -> file type 'VASP (POSCAR;*.vasp)' -> Fractional coordinates).
+The atoms in the POSCAR file are ordered by element, but otherwise, their order does not matter. In the data lines containing coordinates, only the first three columns are read by ViPErLEED, so anything to the right will be ignored. POSCAR files with "Cartesian" coordiantes will be accepted, but ViPErLEED uses fractional ("Direct") coordinates in all output files, so it is recommended to follow this convention in the input as well.
 
 **See also:** `POSCAR in the VASP wiki <https://www.vasp.at/wiki/index.php/POSCAR>`__
 
@@ -52,9 +53,10 @@ The POSCAR file contains the following **comment lines** after initialization:
    correct symmetry. See also the :ref:`list of planegroups below<planegroups>`,
    or |click|.
 
-and for each atom:
+The atoms are then listed one per line, grouped by element.
+For each atom the following information is given:
 
--  **N**: Consecutive numbering of the atoms. Same as atom number in VESTA. Atom numbering is conserved from the original POSCAR. This numbering convention is applied everywhere in TLEEDM.
+-  **N**: Consecutive numbering of the atoms. Same as atom number in VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011`. Atom numbering is conserved from the original POSCAR. This numbering convention is applied everywhere in TLEEDM.
 -  **SiteLabel**: ``element_sitetype``, as determined from :ref:`SITE_DEF<SITEDEF>`.
 -  **Layer**: The layer that the atom is in, as determined from :ref:`LAYER_CUTS<CTRUNC>`.
 -  **Linking**: Progressive label that indicates which atoms are related to one another by the symmetry **Group**. When one of the atoms from an equivalence group is moved via the :ref:`DISPLACEMENTS<DISPLACEMENTS>`, its equivalent ones will be also moved such that the symmetry is conserved (see the :ref:`DISPLACEMENTS<DISPLACEMENTS>`  file for further details).
@@ -65,7 +67,8 @@ and for each atom:
 POSCAR_oricell
 --------------
 
-A separate **POSCAR_oricell** file is created (see SUPP folder), which contains comments and corrections of atomic positions, but with the same orientation and position of the unit cell as in the original POSCAR. This can be used for direct comparison (e.g., in VESTA) with the original file, and can be useful to judge whether the :ref:`SYMMETRY_EPS<SYMPREC>`  value chosen is appropriate.
+A separate **POSCAR_oricell** file is created (see SUPP folder), which contains comments and corrections of atomic positions, but with the same orientation and position of the unit cell as in the original POSCAR.
+This can be used for direct comparison (e.g., in VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011`) with the original file, and can be useful to judge whether the :ref:`SYMMETRY_EPS<SYMPREC>`  value chosen is appropriate.
 
 .. _poscar_bulk:
 
@@ -98,7 +101,7 @@ After executing a search, a POSCAR_OUT file will be produced in the OUT folder. 
 Overview of Planegroups
 -----------------------
 
-**TODO** We may want to make this it's own page.
+**TODO Alex, Florian** We may want to make this it's own page.
 
 .. figure:: /_static/planegroups.pdf
     :alt: Overview of planegroups and possible symmetry operations.

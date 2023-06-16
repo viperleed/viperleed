@@ -172,10 +172,16 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         return 0
 
     rp.updateDerivedParams()
+    logger.info(f"ViPErLEED is using TensErLEED version {rp.TL_VERSION_STR}.")
 
     prerun_clean(rp, logname)
+    exit_code = section_loop(rp, slab)
 
-    return section_loop(rp, slab)
+    # Finalize logging - if not done, will break unit testing
+    logger.handlers.clear()
+    logging.shutdown()
+
+    return exit_code
 
 
 if __name__ == "__main__":

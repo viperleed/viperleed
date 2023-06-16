@@ -3,7 +3,7 @@
 """
 Created on Aug 11 2020
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander M. Imre, Michele Riva
 
 Tensor LEED Manager section Search
 """
@@ -41,7 +41,7 @@ from viperleed.tleedmlib.files.searchpdf import (
 logger = logging.getLogger("tleedm.search")
 
 
-def processSearchResults(sl, rp, final=True):
+def processSearchResults(sl, rp, search_log_path, final=True):
     """
     Looks at the final block in the SD.TL file and gets the data from the
     best structure in into the slab.
@@ -52,6 +52,10 @@ def processSearchResults(sl, rp, final=True):
         The Slab object to be modified
     rp : Rparams
         Run parameters.
+    search_log_path : Pathlike or None
+        Path to the search log. Will be checked for TensErLEED errors
+        messages. If None, assumes search was not logged and skips
+        checks.
     final : bool, optional
         Defines whether this is the final interpretation that *must* work and
         should go into the log, or if this will be repeated anyway. The
@@ -60,28 +64,33 @@ def processSearchResults(sl, rp, final=True):
     Returns
     -------
     None
-
     """
+    # read search log if available and check for errors:
+    if search_log_path is not None:
+        gen_err_msg = ("Execution will continue, but TensErLEED errors "
+                      "related to the search may not be detected "
+                      "properly.")
+        try:
+            with open(search_log_path, "r") as search_log:
+                log_content = search_log.read()
+            check_search_log_content(log_content)  # may raise RuntimeError
+        except OSError:
+            logger.error(f"Could not read search logfile {search_log_path}. "
+                         f"{gen_err_msg}")
     # get the last block from SD.TL:
     try:
-        lines = tl_io.readSDTL_end(n_expect=rp.SEARCH_POPULATION)
-    except FileNotFoundError:
-        logger.error("Could not process Search results: SD.TL file not "
-                     "found.")
-        raise
-    except Exception:
-        logger.error("Failed to get last block from SD.TL file.")
-        raise
-    # read the block
-    sdtlContent = tl_io.readSDTL_blocks("\n".join(lines),
-                                        whichR=rp.SEARCH_BEAMS, logInfo=final,
-                                        n_expect=rp.SEARCH_POPULATION)
-    if not sdtlContent:
+        sdtl_content = tl_io.repeat_fetch_SDTL_last_block(which_beams=rp.SEARCH_BEAMS,
+                                           expected_params=rp.SEARCH_POPULATION,
+                                           final=final)
+    except tl_io.SearchIOEmptyFileError as err:
         if final:
             logger.error("No data found in SD.TL file!")
             rp.setHaltingLevel(2)
-        raise RuntimeError("No data in SD.TL")
-    (generation, rfacs, configs) = sdtlContent[0]
+        raise RuntimeError("No data in SD.TL") from err
+    except tl_io.SearchIORaceConditionError:
+        return  # if we can't find a block, we also can't store it.
+
+    (generation, rfacs, configs) = sdtl_content[0]
     # collect equal entries
     pops = []  # tuples (rfactor, list of parameter indices)
     popcount = []   # how often a given population is there
@@ -93,7 +102,7 @@ def processSearchResults(sl, rp, final=True):
             pops.append((rfacs[i], configs[i]))
             popcount.append(1)
         dparlist.append(configs[i])
-    writeControlChem = False
+    writeControlChem = False                                                    # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
     if not os.path.isfile("control.chem"):
         writeControlChem = True
     else:
@@ -135,7 +144,7 @@ def processSearchResults(sl, rp, final=True):
     if writeControlChem:
         try:
             with open("control.chem", "w") as wf:
-                wf.write(output)
+                wf.write(output)                                                # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
         except Exception:
             logger.error("Failed to write control.chem")
             rp.setHaltingLevel(1)
@@ -208,6 +217,36 @@ def processSearchResults(sl, rp, final=True):
             finally:
                 os.chdir(home)
     return
+
+
+def check_search_log_content(log_content):
+    """Checks the search log content for fatal TensErLEED error
+    messages.
+
+    Parameters
+    ----------
+    log_content : str
+        Contents of the search log.
+
+    Raises
+    ------
+    RuntimeError
+        If an error message is found in the search log file that
+        corresponds to a fatal TensErLEED error.
+    """
+    # check for TensErLEED termination due to uphysically high amplitude values
+    if ("MAX. INTENS. IN THEOR. BEAM" in log_content
+        and "IS SUSPECT" in log_content
+        and "****** STOP PROGRAM ******" in log_content):
+        logger.error(
+            "TensErLEED stopped due to an unphysically high beam amplitude.\n"
+            "This is often caused by scatterers with very small distances "
+            "as a result of very large displacements used in DISPLACEMENTS. "
+            "Check your input files and consider decreasing "
+            "the DISPLACEMENTS ranges."
+        )
+        raise RuntimeError("TensErLEED Error encountered in search. "
+                        "Execution cannot proceed.")
 
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
@@ -534,7 +573,7 @@ def search(sl, rp):
     if rp.domainParams:
         initToDo = [(dp.rp, dp.sl, dp.workdir) for dp in rp.domainParams]
     else:
-        initToDo = [(rp, sl, ".")]
+        initToDo = [(rp, sl, rp.workdir)]
     for (rpt, slt, path) in initToDo:
         # read DISPLACEMENTS block
         if not rpt.disp_block_read:
@@ -553,7 +592,8 @@ def search(sl, rp):
     rp.updateCores()
     # generate rf.info
     try:
-        rfinfo = tl_io.writeRfInfo(sl, rp, filename="rf.info")
+        rf_info_path = rp.workdir / "rf.info"
+        rf_info_content = tl_io.writeRfInfo(sl, rp, file_path=rf_info_path)
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
@@ -628,14 +668,14 @@ def search(sl, rp):
                                         version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
-        srcpath = os.path.join(tldir, 'src')
+        srcpath = tldir / 'src'
         if usempi:
             srcname = [f for f in os.listdir(srcpath)
                        if f.startswith('search.mpi')][0]
         else:
             srcname = [f for f in os.listdir(srcpath)
                        if f.startswith('search') and 'mpi' not in f][0]
-        shutil.copy2(os.path.join(srcpath, srcname), srcname)
+        shutil.copy2(srcpath / srcname, srcname)
         libpath = Path(tldir, 'lib')
         libpattern = "lib.search"
         if usempi and rp.TL_VERSION <= 1.73:
@@ -669,7 +709,7 @@ def search(sl, rp):
                 raise
 
         globalname = "GLOBAL"
-        shutil.copy2(os.path.join(srcpath, globalname), globalname)
+        shutil.copy2(srcpath / globalname, globalname)
     except Exception:
         logger.error("Error getting TensErLEED files for search: ")
         raise
@@ -718,8 +758,10 @@ def search(sl, rp):
     logger.debug("Compiled fortran files successfully")
     # run
     if rp.LOG_SEARCH:
-        searchlogname = searchname+".log"
-        logger.info("Search log will be written to file "+searchlogname)
+        search_log_path = (rp.workdir / searchname).with_suffix(".log")
+        logger.info(f"Search log will be written to file {search_log_path}.")
+    else:
+        search_log_path = None
     # if there is an old SD.TL file, it needs to be removed
     if os.path.isfile("SD.TL"):
         try:
@@ -755,6 +797,7 @@ def search(sl, rp):
     repeat = True
     first = True
     genOffset = 0
+    last_debug_write_gen = 0
     gens = []  # generation numbers in SD.TL, but continuous if search restarts
     markers = []
     rfaclist = []
@@ -781,42 +824,53 @@ def search(sl, rp):
                        os.path.join(".", searchname)]
         else:
             command = os.path.join('.', searchname)
+        # if LOG_SEARCH -> log search
+        if search_log_path:
+            log_exists = os.path.isfile(search_log_path)
+            search_log_f = open(search_log_path, "a")
+            if log_exists:  # log file existed before
+                search_log_f.write("\n\n-------\nRESTARTING\n-------\n\n")
+        else:
+            search_log_f = subprocess.DEVNULL
+        # NB: log file may be open and must be closed!
+        # Create search process
+        logger.debug(f'Starting search process with command "{" ".join(command)}".')
         try:
-            if not rp.LOG_SEARCH:
-                proc = subprocess.Popen(
-                    command, encoding="ascii",
-                    stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
-                    preexec_fn=os.setsid)
-            else:
-                logExists = os.path.isfile(searchlogname)
-                with open(searchlogname, "a") as log:
-                    if logExists:
-                        log.write("\n\n-------\nRESTARTING\n-------\n\n")
-                    proc = subprocess.Popen(
-                        command, encoding="ascii",
-                        stdout=log, stderr=log,
-                        preexec_fn=os.setsid)
-            pgid = os.getpgid(proc.pid)
-        except Exception:
+            proc = subprocess.Popen(
+                command, encoding="ascii",
+                stdout=search_log_f,       # if LOG_SEARCH is False, this is DEVNULL
+                stderr=subprocess.STDOUT,  # pipe to whatever stdout is
+                preexec_fn=os.setsid
+            )
+        except OSError:  # This should not fail unless the shell is very broken.
             logger.error("Error starting search. Check SD.TL file.")
+            if search_log_path:
+                search_log_f.close()
             raise
+        else:
+            pgid = os.getpgid(proc.pid)
         if proc is None:
             logger.error("Error starting search subprocess... Stopping.")
-            raise RuntimeError("Error running search")
+            if search_log_path:
+                search_log_f.close()
+            raise RuntimeError("Error running search."
+                               f'Could not start process using "{command}".')
         # FEED INPUT
         try:
-            proc.communicate(input=rfinfo, timeout=0.1)
+            proc.communicate(input=rf_info_content, timeout=0.2)
         except subprocess.TimeoutExpired:
             pass  # started successfully; monitoring below
-        except Exception:
-            logger.error("Error starting search. Check SD.TL file.")
+        except (OSError, subprocess.SubprocessError):
+            logger.error("Error feeding input to search process. "
+                         "Check files SD.TL and rf.info.")
+
         # MONITOR SEARCH
         searchStartTime = timer()
-        printt = searchStartTime
+        last_debug_print_time = searchStartTime
         filepos = 0
         timestep = 1  # time step to check files
         # !!! evaluation time could be higher - keep low only for debugging; TODO
-        evaluationTime = 60  # how often should SD.TL be evaluated
+        evaluationTime = rp.searchEvalTime  # how often should SD.TL be evaluated
         lastEval = 0  # last evaluation time (s), counting from searchStartTime
         comment = ""
         sdtlGenNum = 0
@@ -881,15 +935,6 @@ def search(sl, rp):
                         gens.append(gen + genOffset)
                         sdtlGenNum = gen
                         rfaclist.append(np.array(rfacs))
-                        if gen % 1000 == 0:
-                            speed = 1000*(timer() - absstarttime)/gens[-1]
-                            logger.debug(
-                                "R = {:.4f} (Generation {}, {:.1f} s "
-                                "since last, {:.1f} s/kG overall)".format(
-                                    min(rfacs), gens[-1], timer() - printt,
-                                    speed))
-                            printt = timer()
-                            check_datafiles = True
                         dgen = {}
                         for k in ["dec", "best", "all"]:
                             dgen[k] = gens[-1] - realLastConfigGen[k]
@@ -920,6 +965,21 @@ def search(sl, rp):
                                         o[k], dgen[k],
                                         int(rp.SEARCH_MAX_DGEN[k])))
                                 break
+                    # decide to write debug info
+                    # will only write once per SD.TL read
+                    time_since_print = timer() - last_debug_print_time
+                    current_gen = gens[-1] if gens else 0
+                    if (current_gen - last_debug_write_gen > rp.output_interval):
+                        speed = 1000*(timer() - absstarttime)/current_gen # in s/kG
+                        logger.debug(
+                            f"R = {min(rfacs)} (Generation {current_gen}, "
+                            f"{time_since_print:.3f} s since "
+                            f"gen. {last_debug_write_gen}, "
+                            f"{speed:.1f} s/kG overall)"
+                        )
+                        last_debug_print_time = timer()
+                        last_debug_write_gen = current_gen
+                        check_datafiles = True
                     if len(newData) > 0:
                         lastconfig = newData[-1][2]
                     if (check_datafiles and not (stop and repeat)
@@ -966,7 +1026,7 @@ def search(sl, rp):
                     if (len(gens) > 1 and os.path.isfile("SD.TL")
                             and (repeat or checkrepeat or not stop)):
                         try:
-                            processSearchResults(sl, rp, final=False)
+                            processSearchResults(sl, rp, search_log_path, final=False)
                         except Exception as e: # too general
                             logger.warning("Failed to update POSCAR_OUT "
                                            "and VIBROCC_OUT: " + str(e))
@@ -996,14 +1056,15 @@ def search(sl, rp):
                                         "criteria are defined, not all are "
                                         "met. Search continues.")
                         if repeat:
-                            if rp.GAUSSIAN_WIDTH == 0.0001:
+                            if rp.GAUSSIAN_WIDTH <= 0.0001:
                                 logger.info(
                                     "GAUSSIAN_WIDTH cannot be reduced "
                                     "further, continuing search...")
                             else:
-                                rp.GAUSSIAN_WIDTH *= rp.GAUSSIAN_WIDTH_SCALING
-                                if rp.GAUSSIAN_WIDTH < 0.0001:
-                                    rp.GAUSSIAN_WIDTH = 0.0001
+                                rp.GAUSSIAN_WIDTH = max(
+                                    rp.GAUSSIAN_WIDTH * rp.GAUSSIAN_WIDTH_SCALING,
+                                    0.0001
+                                )
                                 logger.info(
                                     "Reducing GAUSSIAN_WIDTH parameter to {} "
                                     "and restarting search..."
@@ -1013,7 +1074,7 @@ def search(sl, rp):
                             for k in ["dec", "best", "all"]:
                                 rp.SEARCH_MAX_DGEN[k] *= (
                                             rp.SEARCH_MAX_DGEN_SCALING[k])
-                                realLastConfigGen[k] = gens[-1]
+                                realLastConfigGen[k] = gens[-1] if gens else 0
         except KeyboardInterrupt:
             if not os.path.isfile("SD.TL"):
                 # try saving by waiting for SD.TL to be created...
@@ -1035,6 +1096,10 @@ def search(sl, rp):
             logger.error("Error during search. Check SD.TL file.")
             kill_process(proc, default_pgid=pgid)
             raise
+        finally:
+            # close open input and log files
+            if search_log_path:
+                search_log_f.close()
         if repeat:
             rp.SEARCH_START = "control"
             if gens:
@@ -1089,7 +1154,7 @@ def search(sl, rp):
                            exc_info=True)
     # process SD.TL to get POSCAR_OUT, VIBROCC_OUT
     try:
-        processSearchResults(sl, rp)
+        processSearchResults(sl, rp, search_log_path)
     except FileNotFoundError:
         logger.error("Cannot interpret search results without SD.TL file.")
         rp.setHaltingLevel(2)

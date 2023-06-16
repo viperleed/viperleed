@@ -15,10 +15,10 @@ The three main segments, following the logic of calculations using the Tensor LE
    This calculation is based on the tensors and a 
    :ref:`set of parameter variations specified by the user<DISPLACEMENTS>`, 
    produces :ref:`"Delta files"<Deltaszip>`.
-   The output of this step are the Delta files.
 #. :ref:`Search<sec_search>`: Using the :ref:`Delta files<Deltaszip>`  to vary the theoretical beams, looks for a set of parameters such that the :ref:`R-factor<r-factor_calculation>` between the theoretical beams and :ref:`a given set of experimental beams<EXPBEAMS>` is minimized.
 
-Which of these segments should be executed must be specified using the :ref:`RUN<RUN>`  parameter, using the segment numbers in the list above. Besides these main three segments, there are also the following minor segments, which during normal ViPErLEED execution will be inserted automatically where appropriate:
+Which of these segments should be executed must be specified using the :ref:`RUN<RUN>`  parameter, using the segment numbers in the list above.
+Besides these main three segments, there are also the following minor segments, which will be inserted automatically during normal ViPErLEED execution when appropriate:
 
 -  :ref:`Initialization<initialization>`: Always runs at the beginning; reads and checks input files, runs symmetry search, generates derivative input files if appropriate.
 -  :ref:`Superpos calculation<super_pos>`: Automatically runs after the search. Generates a set of theoretical beams based on the Tensor LEED approximation,
@@ -28,7 +28,7 @@ Which of these segments should be executed must be specified using the :ref:`RUN
 Further specialized segments include:
 
 -  :ref:`Error calculations<error_calculation>`: Based on a given reference structure (i.e. after a reference calculation has been run), calculate one-dimensional error curves for variation of a single parameter. Effectively, this calculates delta amplitudes for variations of a single parameter, and outputs the R-factor for every single configuration along that axis.
--  :ref:`Full-dynamic optimization<fdoptimization>`: Optimize parameters that cannot be varied during the search, like :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`, :ref:`V0_IMAG<v0_imag>`  or unit cell scaling. This is achieved by performing multiple full-dynamic (i.e. "reference") calculations (without Tensor output). Behavior is controlled by the :ref:`OPTIMIZE<OPTIMIZE>`  parameter.
+-  :ref:`Full-dynamic optimization<fdoptimization>`: Optimize parameters that cannot be varied during the search, like :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`, :ref:`V0_IMAG<v0_imag>`  or unit cell scaling. This is achieved by performing multiple full-dynamic (i.e. "reference") calculations (without Tensor output). The behavior is controlled by the :ref:`OPTIMIZE<OPTIMIZE>` parameter.
 
 The pages listed above cover normal operation, in which the theoretical beams correspond to only one surface structure. If multiple structures coexist on the sample, the same segments need to be executed, but their behavior is somewhat different, as described here:
 

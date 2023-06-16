@@ -9,7 +9,7 @@ Two (sometimes overlapping) categories exist:
 -  Elements as defined in the :ref:`POSCAR file<POSCAR>` (here often 
    referred to as "POSCAR elements"): These do *not* need to be chemical
    elements, but can in principle have arbitrary names. [#]_
--  Chemical elements, as they appear on the periodic table:
+-  Chemical elements, as they appear in the periodic table:
    If the POSCAR elements do not already have names of chemical 
    elements, these need to be specified by the
    :ref:`ELEMENT_MIX<ELSPLIT>`  and/or :ref:`ELEMENT_RENAME<ELDEF>` 
@@ -25,8 +25,8 @@ the POSCAR elements and chemical elements don't overlap. For example, if
 your POSCAR contains atoms labelled ``La``, but in reality, your 
 material contains some mixture of ``La`` and ``Sr`` in those sites, you 
 could rename ``La`` to ``A`` in the POSCAR, then use 
-``ELEMENT_MIX A = La Sr`` to specify that these atoms are actually split
-between ``La`` and ``Sr``. If you do not do this, but simply use 
+``ELEMENT_MIX A = La Sr`` to specify that these atoms are actually either
+``La`` or ``Sr``. If you do not do this, but simply use 
 ``ELEMENT_MIX La = La Sr``, you produce an **element name collision**, 
 meaning that in your later input (e.g. in the :ref:`VIBROCC<VIBOCCIN>` 
 and :ref:`DISPLACEMENTS<DISPLACEMENTS>`  files), there will be no clear 
@@ -57,4 +57,4 @@ in :ref:`OCC_DELTA<OCCDELTA>`  blocks in the
 .. [#] Mind the fact that `VESTA <https://jp-minerals.org/vesta/en/>`__ 
        will only read in the first 2 characters of the names in a POSCAR
        file, so ``Atom1`` and ``Atom2`` will both appear as species 
-       ``At`` in VESTA.
+       ``At`` in VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011`.

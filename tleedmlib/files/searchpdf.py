@@ -193,7 +193,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     rfp.plot(gens, rfacsMean, label="Mean")
     (x, y, s, c) = list(zip(*rp.rfacscatter))
     rfp.scatter(x, y, s=s, c=c)
-    scatcol = {"all": "black", "dec": "tab:green", "best": "tab:red"}
+    scatcol = {"all": "black", "dec": "tab:blue", "best": "tab:red"}
     labels = {"all": "Changes to any", "dec": "Changes in best 10%",
               "best": "Changes to best"}
     sizes = {"all": 4, "dec": 5, "best": 6}

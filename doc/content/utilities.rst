@@ -9,7 +9,8 @@ Proper embedding of these into a shared interface is pending; the following list
 -  :ref:`Bookkeeper<bookkeeper>`: Helper utility for the TensErLEED Manager tleedm. Sorts files from previous runs into a "history" folder, and keeps track in the history.info file.
 -  :ref:`Combine-POSCAR, POSCAR_get_bulk_repeat<poscar_combine_repeat>`: Very simple POSCAR editing scripts.
 -  :ref:`ModifyPhaseshifts<modify_phaseshifts>`: Simple utility for taking an existing PHASESHIFTS file and duplicating and/or re-arranging blocks.
--  :ref:`AUXEXPBEAMS_TO_EXPBEAMS<aux_to_exp>`: Transforms :ref:`AUXEXPBEAMS<AUXEXPBEAMS>`  format files (input for TensErLEED) to :ref:`EXPBEAMS.csv<EXPBEAMS>`  format. **TODO** usage (how to call it)
+-  :ref:`AUXEXPBEAMS_TO_EXPBEAMS<aux_to_exp>`: Transforms :ref:`AUXEXPBEAMS<AUXEXPBEAMS>`  format files (input for TensErLEED) to :ref:`EXPBEAMS.csv<EXPBEAMS>`  format.
+   **TODO Alex, Florian** usage (how to call it)
 
 .. toctree:: 
     utilities/bookkeeper

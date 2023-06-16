@@ -1,7 +1,7 @@
-C  Utility for the generation of VHT style beam lists 
+C  Utility for the generation of VHT style beam lists
 C  for use with TensErLEED ref-calc.f v1.7 .
 C  VB, 14.04.00, modified wrt field dimensions and input formats by LH, 11.03.2020
-C  removed input of symmetry-code (set fix to SSYM=1), 
+C  removed input of symmetry-code (set fix to SSYM=1),
 C  because not usable in TensorLEED routines, LH 11.03.2020
 C
 C  Program includes possible
@@ -11,7 +11,7 @@ C  improvement are inclusion of beamgen into ref-calc.f and the use of
 C  symmetry in its full-dynamic part, expanding the symmetrised beam list
 C  into the full one for all calculations that involve off-normal incidence
 C  later.
-C  
+C
 
 C  PROGRAM BEAMGEN_U
 C
@@ -91,7 +91,7 @@ C  SUPERLATTICE
       DO 10 I=1,2
 10    READ(5,200)(LATMAT(I,J),J=1,2)
       CALL IMPRT(LATMAT,2,2,6HLATMAT)
-200   FORMAT(10I4)
+200   FORMAT(10I4)  ! Also change error condition and message at L136 and following!
 C  SSYM - CODE NUMBER DESCRIBING THE OVERALL SURFACE SYMMETRY
       SSYM=1
       WRITE(6,201)SSYM
@@ -133,6 +133,14 @@ C    THIS NO. APPLIES BEFORE SYMMETRIZATION
       IOFF=0
       DO 50 IBS=1,KNBS
       IM=KNB(IBS)
+	  if (IM.gt.9999) then  ! Write to stderr
+          write(0, *) "### ERROR ### Fortran beamgen.v.1.7 "
+          write(0, *) "# Too many beams for format I4: KNB(IBS)= ", IM
+          write(0, *) "# If you want to have this many, change format "
+          write(0, *) "# specifier at label 200"
+          write(0, *) "#############"
+          STOP
+	  endif
       WRITE(7,200)IM
       DO 40 II=1,IM
       IJ=II+IOFF

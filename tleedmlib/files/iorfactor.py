@@ -10,8 +10,9 @@ Functions for reading and writing files relevant to the rfactor calculation
 import logging
 import re
 import numpy as np
-from viperleed import fortranformat as ff
 import os
+
+import fortranformat as ff
 
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.leedbase import getBeamCorrespondence, getYfunc
@@ -65,7 +66,7 @@ def readROUT(filename="ROUT"):
         i += 1
         line = lines[-i]
     if line == "":
-        return 0, 0, []
+        return (0, 0, 0), 0, []
     rfac = 0
     rfac_int = -1
     rfac_frac = -1
@@ -191,13 +192,13 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
                  + real_iv_shift[1]) + 0.01
-    step = min(expEnergies[1]-expEnergies[0],
-               theoEnergies[1]-theoEnergies[0])
+    # chose energy step width
     if rp.IV_SHIFT_RANGE[2] > 0:
         vincr = rp.IV_SHIFT_RANGE[2]
-        # step = min(step, vincr)
     else:
-        vincr = step
+        min_used_energy_step = min(expEnergies[1]-expEnergies[0],
+            theoEnergies[1]-theoEnergies[0])
+        vincr = min_used_energy_step
     # find correspondence experimental to theoretical beams:
     beamcorr = getBeamCorrespondence(sl, rp)
     # integer & fractional beams
@@ -218,7 +219,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     output = " &NL1\n"
     output += (" EMIN=" + f72.write([minen]).rjust(9) + ",\n")
     output += (" EMAX=" + f72.write([maxen]).rjust(9) + ",\n")
-    output += (" EINCR=" + f72.write([step]).rjust(8) + ",\n")
+    output += (" EINCR=" + f72.write([vincr]).rjust(8) + ",\n")  # interpolation step width
     output += " LIMFIL=      1,\n"  # number of consecutive input files
     output += " IPR=         0,\n"  # output formatting
     output += (" VI=" + f72.write([rp.V0_IMAG]).rjust(11) + ",\n")
@@ -591,7 +592,7 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
         axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical',
                     color=plotcolors[0], linewidth=0.75)
         axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental",
-                    color=plotcolors[0], linewidth=0.75)
+                    color=plotcolors[1], linewidth=0.75)
     axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black",
                 linewidth=0.5)
     axs[1].fill_between(dy[:, 0], dy[:, 1], 0., facecolor='grey',

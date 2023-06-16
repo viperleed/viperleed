@@ -109,7 +109,7 @@ def main():
 
     # copy input files to work directory
     for file in ["PARAMETERS", "VIBROCC", "IVBEAMS", "DISPLACEMENTS", "POSCAR",
-                 "PHASESHIFTS", "EXPBEAMS.csv"]:
+                 "PHASESHIFTS", "EXPBEAMS.csv", "EXPBEAMS"]:
         try:
             shutil.copy2(file, os.path.join(work_path, file))
         except FileNotFoundError:

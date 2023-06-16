@@ -475,9 +475,9 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         tldir = getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
-        libpath = os.path.join(tldir, "lib")
+        libpath = tldir / "lib"
         libname = [f for f in os.listdir(libpath) if f.startswith("rfacsb")][0]
-        srcpath = os.path.join(tldir, "src")
+        srcpath = tldir / "src"
         srcname = [f for f in os.listdir(srcpath) if f.startswith("rfactor.")][0]
         shutil.copy2(os.path.join(libpath, libname), libname)
         shutil.copy2(os.path.join(srcpath, srcname), srcname)
@@ -542,7 +542,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
             )
     except Exception:
         logger.error(
-            "Error during R-factor calculation. Also check " "R-factor log file."
+            "Error during R-factor calculation. Also check R-factor log file."
         )
         raise
     logger.info("Finished R-factor calculation. Processing files...")
@@ -551,12 +551,12 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         os.rename("WEXPEL", "rfactor-WEXPEL")
     except OSError:
         logger.warning(
-            "Failed to rename R-factor input file WEXPEL to " "rfactor-WEXPEL"
+            "Failed to rename R-factor input file WEXPEL to rfactor-WEXPEL"
         )
     try:
         os.rename("PARAM", "rfactor-PARAM")
     except OSError:
-        logger.warning("Failed to rename R-factor input file PARAM to " "rfactor-PARAM")
+        logger.warning("Failed to rename R-factor input file PARAM to rfactor-PARAM")
     if not os.path.isfile(os.path.join(".", "ROUT")):
         logger.error("No ROUT file was found after R-Factor calculation!")
         rp.setHaltingLevel(2)
@@ -576,6 +576,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     except Exception:  # TODO catch correct exception
         logger.error("Error reading ROUT file", exc_info=rp.LOG_DEBUG)
         rp.setHaltingLevel(2)
+        rfaclist = []
     else:
         logger.info(
             "With inner potential shift of {:.2f} eV: "

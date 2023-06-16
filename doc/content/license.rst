@@ -6,4 +6,4 @@ License Information
 
 :term:`ViPErLEED` is released as open-source under the GPL v3 license.
 
-**TODO** More information
+**TODO Alex, Michele, Michael, Ulli** License information!! also in LICENSE.md in main directory

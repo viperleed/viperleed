@@ -15,4 +15,4 @@ SEARCH_MAX_DGEN defines a convergence criterion for the search. If SEARCH_MAX_DG
 
    SEARCH_MAX_DGEN = 2000
 
-**ToDo: This is only a very naive convergence parameter, others might be better.**
+**ToDo - move comment: This is only a very naive convergence parameter, others might be better.**

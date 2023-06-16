@@ -68,11 +68,11 @@ The goal of any :term:`LEED-I(V)` calculation is the calculation of energy-depen
 These intensity curves [often referred to as :math:`I(V)` curves or spectra]  are very sensitive to the precise position and vibrational amplitudes of each atom in the surface unit cell.
 For more details consult works that cover the basics of :term:`LEED` and :term:`LEED-I(V)`, e.g.
 Chapter 4 in :cite:t:`fausterSurfacePhysicsFundamentals2020,fausterOberflachenphysikGrundlagenUnd2013` or the overview by :cite:t:`heinzElectronBasedMethods2013`.
-In ViPErLEED, these calculations are performed by the TensErLEED manager :term:`tleedm`,
-a Python package that is based on, and as a comprehensive feature extension to :term:`TensErLEED`.
+In ViPErLEED, these calculations are performed by the TensErLEED manager :term:`tleedm`.
+tleedm is a Python package that acts as a comprehensive wrapper and feature extension to :term:`TensErLEED`.
 
 TensErLEED is used for the calculation of diffraction intensities of surface slabs (see also :ref:`reference calculation<ref-calc>`) and structure optimization using the :ref:`tensor LEED approach<tensor_leed>`.
-For computational details please have a look at the ViPErLEED paper (**TODO**) and the original work describing TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`.
+For computational details please have a look at the ViPErLEED paper (**TODO**) and the original work describing TensErLEED by Blum, and Heinz :cite:p:`blumFastLEEDIntensity2001a`.
 
 
 .. Table of contents in LaTeX pdf called Contents

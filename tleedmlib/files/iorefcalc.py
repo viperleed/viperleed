@@ -11,7 +11,8 @@ import numpy as np
 import logging
 import os
 import copy
-from viperleed import fortranformat as ff
+
+import fortranformat as ff
 
 import viperleed.tleedmlib as tl
 from viperleed.tleedmlib.base import splitMaxRight
@@ -132,7 +133,7 @@ def readFdOut(readfile="fd.out", for_error=False, ampfile="amp.out"):
     Beam objects. If 'ampfile' is set, will attempt to read complex amplitudes
     from the given file as well."""
 
-    def parse_data(lines, which, filename, theobeams):
+    def parse_data(lines, which, filename, theobeams, nbeams):
         out_str = ""
         blocks = []
         for line in lines:
@@ -206,7 +207,7 @@ def readFdOut(readfile="fd.out", for_error=False, ampfile="amp.out"):
     for beam in theobeams:
         beam.label = beam.getLabel(lwidth=mw)[0]
 
-    fdout += parse_data(filelines[i-1:], "fd", readfile, theobeams)
+    fdout += parse_data(filelines[i-1:], "fd", readfile, theobeams ,nbeams)
 
     if ampfile and os.path.isfile(ampfile):
         with open(ampfile, 'r') as rf:
@@ -217,7 +218,7 @@ def readFdOut(readfile="fd.out", for_error=False, ampfile="amp.out"):
                            "match " + readfile)
             return theobeams, fdout
         # now read the rest
-        parse_data(amplines[nbeams+2:], "amp", ampfile, theobeams)
+        parse_data(amplines[nbeams+2:], "amp", ampfile, theobeams, nbeams)
     return theobeams, fdout
 
 
