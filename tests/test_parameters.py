@@ -119,6 +119,58 @@ class TestIntpolDeg:
                         interpreter = ParameterInterpreter(self.rpars)
                         interpreter._interpret_intpol_deg(Assignment(val))
 
+
+class TestInterpretNumericalParameter:
+    def test_interpret_numerical_parameter_float(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.01")
+        result = interpreter._interpret_numerical_parameter("TEST_PARAM",
+                                                            assignment, float)
+        assert result == pytest.approx(0.01)
+        assert mock_rparams.TEST_PARAM == pytest.approx(0.01)
+
+    def test_interpret_numerical_parameter_int(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("100")
+        result = interpreter._interpret_numerical_parameter("TEST_PARAM",
+                                                            assignment, int)
+        assert result == 100
+        assert mock_rparams.TEST_PARAM == 100
+
+    def test_interpret_numerical_parameter_float_out_of_range(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("-0.5")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_numerical_parameter("TEST_PARAM",
+                                                       assignment,
+                                                       float,
+                                                       range_=(0, 1))
+
+    def test_interpret_numerical_parameter_float_out_of_range_event_modulo(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("2.5")
+        result = interpreter._interpret_numerical_parameter("TEST_PARAM",
+                                                            assignment,
+                                                            float, range_=(0, 2),
+                                                            out_of_range_event='modulo')
+        assert result == pytest.approx(0.5)
+        assert mock_rparams.TEST_PARAM == pytest.approx(0.5)
+
+    def test_interpret_numerical_parameter_int_out_of_range(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("-5")
+        with pytest.raises(ParameterError):
+            interpreter._interpret_numerical_parameter("TEST_PARAM", assignment, int, range_=(0, 10))
+
+    def test_interpret_numerical_parameter_int_out_of_range_event_modulo(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("12")
+        result = interpreter._interpret_numerical_parameter("TEST_PARAM", assignment, int, range_=(0, 10), out_of_range_event='modulo')
+        assert result == 2
+        assert mock_rparams.TEST_PARAM == 2
+
+
+
 # _interpret_bulk_repeat()
 class TestInterpretBulkRepeat():
     param = 'BULK_REPEAT'
