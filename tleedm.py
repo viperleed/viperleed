@@ -28,6 +28,7 @@ from viperleed.tleedmlib.base import CustomLogFormatter
 from viperleed.tleedmlib.classes import rparams
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS)
+from viperleed.tleedmlib.files.parameter_errors import ParameterError
 from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.sections.run_sections import section_loop
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
@@ -142,14 +143,15 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     try:
         # interpret the PARAMETERS file
         interpretPARAMETERS(rp, slab=slab, silent=False)
-    except Exception:
+    except ParameterError:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
         return 2
-    else:
-        # set logging level
-        logger.setLevel(rp.LOG_LEVEL)
-        logger.debug("PARAMETERS file was read successfully")
+
+    # set logging level
+    logger.setLevel(rp.LOG_LEVEL)
+    logger.debug("PARAMETERS file was read successfully")
+
     rp.timestamp = timestamp
     rp.manifest = tmpmanifest
     for p in preset_params:

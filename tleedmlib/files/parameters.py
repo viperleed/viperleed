@@ -1278,9 +1278,9 @@ class ParameterInterpreter:
                                                     assignment,
                                                     type_=int,
                                                     range_=(1,None))
-        except ParameterError as err:
+        except ParameterError:
             # reraise
-            raise err
+            raise
         else:
             if self.rpars.SEARCH_POPULATION < 16:
                 logger.warning('SEARCH_POPULATION is very small. A '
