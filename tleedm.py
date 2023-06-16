@@ -140,13 +140,16 @@ def run_tleedm(system_name="", console_output=True, slab=None,
                 cleanup(tmpmanifest)
                 return 2
     try:
+        # interpret the PARAMETERS file
         interpretPARAMETERS(rp, slab=slab, silent=False)
-        logger.setLevel(rp.LOG_LEVEL)
-        logger.debug("PARAMETERS file was read successfully")
     except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
         return 2
+    else:
+        # set logging level
+        logger.setLevel(rp.LOG_LEVEL)
+        logger.debug("PARAMETERS file was read successfully")
     rp.timestamp = timestamp
     rp.manifest = tmpmanifest
     for p in preset_params:
