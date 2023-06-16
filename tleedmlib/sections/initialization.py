@@ -304,7 +304,7 @@ def initialization(sl, rp, subdomain=False):
     try:
         phaseshifts.plot_phaseshifts(sl, rp)
     except Exception:
-        logger.warning("Failed to plot phaseshifts", exc_info=rp.LOG_LEVEL<=10)
+        logger.warning("Failed to plot phaseshifts", exc_info=rp.is_debug_mode)
 
     # generate beamlist
     logger.info("Generating BEAMLIST...")

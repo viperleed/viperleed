@@ -141,9 +141,8 @@ def run_tleedm(system_name="", console_output=True, slab=None,
                 return 2
     try:
         interpretPARAMETERS(rp, slab=slab, silent=False)
-        if rp.LOG_LEVEL > 10:
-            logger.setLevel(logging.DEBUG)
-            logger.debug("PARAMETERS file was read successfully")
+        logger.setLevel(rp.LOG_LEVEL)
+        logger.debug("PARAMETERS file was read successfully")
     except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)

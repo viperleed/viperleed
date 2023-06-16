@@ -952,7 +952,7 @@ class ParameterInterpreter:
         except ParameterError:
             pass
         if log_debug is not None:
-            self.rpars.LOG_LEVEL = 10 if log_debug else 20
+            self.rpars.LOG_LEVEL = logging.DEBUG if log_debug else logging.INFO
             return
         # otherwise interpret as int
         try:

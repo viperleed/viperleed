@@ -220,7 +220,7 @@ def superpos_domains(rp, configs):
                                          header=rp.systemName)
     except Exception:
         logger.error("Error writing averaged superpos-spec.out for R-factor "
-                     "calculation.", exc_info=rp.LOG_LEVEL<=10)
+                     "calculation.", exc_info=rp.is_debug_mode)
 
 
 def _best_config_from_sdtl(rp):                                                 # TODO: more doc
@@ -271,4 +271,4 @@ def _write_fitbeams(rp):                                                        
         writeOUTBEAMS(theobeams_norm, filename="FITBEAMS_norm.csv")
     except Exception:
         logger.error("Error writing FITBEAMS after superpos calculation.",
-                     exc_info=rp.LOG_LEVEL<=10)
+                     exc_info=rp.is_debug_mode)

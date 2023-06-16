@@ -47,6 +47,7 @@ DEFAULTS = {
         "lab6": 2.65, # this is the default if nothing is given
         "w": 4.5,
     },
+    'LOG_LEVEL' : logging.INFO,
     'PHASESHIFT_EPS': {
         'r': 0.1,
         'n': 0.05,
@@ -161,7 +162,7 @@ class Rparams:
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True
         self.LMAX = [0, 0]    # minimum and maximum LMAX
-        self.LOG_LEVEL = 20
+        self.LOG_LEVEL = DEFAULTS["LOG_LEVEL"]
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
@@ -291,6 +292,10 @@ class Rparams:
         # (name, gens, min, max, mean) for each search
         self.lastParScatterFigs = {}
         # complete figures for each search, with search names as keys
+
+    @property
+    def is_debug_mode(self):
+        return self.LOG_LEVEL < logging.INFO
 
     def get_default(self, param):
         """Return the default value of param."""
