@@ -91,9 +91,9 @@ for known_param in _KNOWN_PARAMS:
     _PARAM_ALIAS[known_param.lower().replace('_', '')] = known_param
 
 
-# Bool parameters for which to create _interpret...() methods automatically.
-# key is parameter name, value is tuple of parameter that should be passed to
-# _make_boolean_interpreter_methods()
+# Bool parameters for which to create interpret...() methods automatically.
+# key is parameter name, value is tuple of keyword arguments that should be
+# passed to interpret_bool_parameter, in order.
 _SIMPLE_BOOL_PARAMS = {
     'LOG_SEARCH' : (),
     'PHASESHIFTS_CALC_OLD' : (),
@@ -104,7 +104,7 @@ _SIMPLE_BOOL_PARAMS = {
     'SYMMETRY_FIND_ORI' : (),
     'TL_IGNORE_CHECKSUM' : (),
     'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'},),
-}
+    }
 
 
 # Numerical parameters for which to create _interpret...() methods automatically
@@ -565,56 +565,67 @@ class ParameterInterpreter:
             if p in self.rpars.readParams and p not in self.param_names
             )
 
-    # Methods for interpreting simple parameters
+    # ---------- Methods for interpreting simple parameters -----------
     def interpret_bool_parameter(self, param, assignment,
-                                  allowed_values={True:{}, False:{}},
-                                  var_name=None,
-                                  return_only=False):
-        """
-        Generic function for setting a given parameter to a boolean value.
+                                 allowed_values=None,
+                                 var_name=None, return_only=False):
+        """Set a parameter to a boolean value.
 
         Parameters
         ----------
         param : str
-            The name of the parameter in PARAMETERS
+            The name of the parameter in PARAMETERS.
         assignment : Assignment
-            The assignment of the parameter.
-        addAllowedValues : dict, optional
-            Additional string values which should be interpreted as False or
-            True. E.g. by default, 'f' and 'false' are False, 't' and 'true' are
-            True.
+            The assignment of the parameter, read from PARAMETERS.
+        allowed_values : dict, optional
+            Additional string values which should be interpreted as
+            False or True. E.g. by default, 'f' and 'false' are False,
+            't' and 'true' are True. Keys should be True and False,
+            values are Sequences of acceptable strings.
         var_name : str, optional
-            The variable name in the Rparams class, if it differs from 'param'.
+            The variable name in the Rparams class, if it differs
+            from 'param'.
         return_only: bool, optional
-            If True, only return the value of the parameter, but do not set it.
+            If True, only return the value of the parameter, but do
+            not set it.
 
         Returns
         -------
-        bool
+        value : bool
             The value of the parameter.
         """
         if var_name is None:
             var_name = param.upper()
+        if allowed_values is None:
+            allowed_values = {}
+
         _bool_synonyms = self.bool_synonyms.copy()
-        for option in allowed_values.keys():
-            _bool_synonyms[option].update(allowed_values[option])
-        # make sure there is no intersection between the two sets
-        if set(allowed_values[True]) & set(allowed_values[False]):
-            raise ValueError("The sets of allowed values for True and False "
-                             " must not overlap.")
-        # check if the value is in the allowed values
-        if assignment.value.lower() in [o.lower() for o in _bool_synonyms[True]]:
-            if not return_only:
-                setattr(self.rpars, var_name, True)
-            return True
-        elif assignment.value.lower() in [o.lower() for o in _bool_synonyms[False]]:
-            if not return_only:
-                setattr(self.rpars, var_name, False)
-            return False
-        else:
-            # complain about invalid value
+        for option, values in allowed_values.items():
+            try:
+                _bool_synonyms[option].update(v.lower() for v in values)
+            except KeyError:
+                raise ValueError(f'Unexpected {option=} '
+                                 'in allowed_values') from None
+
+        # Make sure there is no intersection between the two sets
+        if (allowed_values
+                and set(allowed_values[True]) & set(allowed_values[False])):
+            raise ValueError('The sets of allowed values for '
+                             'True and False must not overlap.')
+
+        # Check if the value is in the allowed ones
+        str_value = assignment.value.lower()
+        try:
+            value = next(bool_ for bool_, synonyms in _bool_synonyms.items()
+                         if str_value in synonyms)
+        except StopIteration:  # Value is invalid
             self.rpars.setHaltingLevel(1)
-            raise  ParameterBooleanConversionError(param, assignment.value)
+            raise ParameterBooleanConversionError(param,
+                                                  assignment.value) from None
+
+        if not return_only:
+            setattr(self.rpars, var_name, value)
+        return value
 
     def interpret_numerical_parameter(self,
                                        param,
