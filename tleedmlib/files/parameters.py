@@ -488,9 +488,9 @@ class ParameterInterpreter:
         self._slab = None
 
         # define order that parameters should be read in                        # TODO: I think domain should be in here too
-        self.orderedParams = ["LOG_LEVEL", "RUN"]
+        orderedParams = ["LOG_LEVEL", "RUN"]
         self.param_names = [p for p
-                            in self.orderedParams
+                            in orderedParams
                             if p in self.rpars.readParams]
         self.param_names.extend(p for p in _KNOWN_PARAMS
                         if p in rpars.readParams and p not in self.param_names)
@@ -517,8 +517,9 @@ class ParameterInterpreter:
         """Interpret all known parameters using slab."""
         self.slab = slab
         self._search_conv_read = False
-        self.loglevel = logger.level
         self.silent = silent
+
+        _backup_log_level = logger.level
         if self.silent:
             logger.setLevel(logging.ERROR)
 
@@ -538,7 +539,7 @@ class ParameterInterpreter:
             logger.log(2, f"Successfully interpreted parameter {param}")
 
         # finally set the log level back to what it was
-        logger.setLevel(self.loglevel)
+        logger.setLevel(_backup_log_level)
 
     # ----------------  Helper methods for interpret() ----------------
     def _get_param_assignments(self):
