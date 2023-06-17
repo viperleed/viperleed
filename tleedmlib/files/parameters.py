@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-"""
+"""Module parameters of viperleed.tleedmlib.
+
 Created on Tue Aug 18 16:56:39 2020
 
 @author: Florian Kraushofer
 @author: Alexander M. Imre
 @author: Michele Riva
-Initial version by Florian Kraushofer in 2020, major rewrite by Alexander Imre
-in June 2023.
 
-Functions for reading from and writing to the PARAMETERS file
+Initial version by Florian Kraushofer in 2020, major rewrite by
+Alexander Imre & Michele Riva in June 2023.
+
+Functions for reading from and writing to the PARAMETERS file.
 """
 
 from collections.abc import Sequence
