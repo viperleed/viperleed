@@ -11,12 +11,12 @@ in June 2023.
 Functions for reading from and writing to the PARAMETERS file
 """
 
+from collections import Sequence
+from dataclasses import dataclass, field
 import logging
 from pathlib import Path
 import re
 import shutil
-from typing import List
-from dataclasses import dataclass
 
 import numpy as np
 
@@ -163,6 +163,8 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
         logger.error('updatePARAMETERS routine: PARAMETERS file not found.')
         raise
 
+    interpreter = ParameterInterpreter(rp)
+    interpreter.slab = rp.slab
     for line in lines:
         line = strip_comments(line)
         for param in ['SEARCH_KILL', 'STOP']:  # SEARCH_KILL is legacy name
@@ -186,9 +188,8 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
             # don't complain *again* in updatePARAMETERS
             continue
         if param == 'SEARCH_CONVERGENCE':
-            interpreter = ParameterInterpreter(rp)
-            interpreter._set_slab(rp.slab)
-            new_assignment = Assignment(value_str)
+            new_assignment = Assignment(values_str=value_str,
+                                        parameter=param)
             interpreter._interpret_search_convergence(assignment=new_assignment,
                                                       is_updating=True)
 
@@ -372,7 +373,6 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         parameters will not be interpreted.
     silent : bool, optional
         If True, less output will be printed. The default is False.
-    """
 
     Raises
     ------
@@ -381,48 +381,84 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     """
     interpreter = ParameterInterpreter(rpars)
     interpreter.interpret(slab=slab, silent=silent)
-    return
 
 
-@dataclass
+@dataclass(frozen=True)
 class Assignment:
     """Class to store the flags and values of a parameter.
 
     Attributes
     ----------
-    flags : list of str
-        The flags of the parameter.
-    right_side : str
-        The right-hand side of the parameter assignment.
+    values_str : str
+        The right-hand side of the parameter assignment. Can also be
+        passed as a tuple of strings upon instantiation. In this case
+        elements will be joined.
+    flags_str : str
+        The left-hand side of the parameter assignment, excluding the
+        parameter itself. Can also be passed as a tuple of strings upon
+        instantiation. In this case elements will be joined.
     parameter : str
+        The PARAMETER this assignment corresponds to.
+    flags : tuple
+        The flags of the parameter as a tuple of strings.
+        This is automatically generated from the string
+        arguments given at instantiation.
+    values : tuple
+        The values of the parameter as a tuple of strings.
+        This is automatically generated from the string
+        arguments given at instantiation.
     """
-    flags_str: str
-    right_side: str
+    values_str: str
     parameter: str
+    flags_str: str = ''
+    flags: tuple = field(init=False)
+    values: tuple = field(init=False)
 
-    def __init__(self,
-                 right_side: str="",
-                 flags: str="",
-                 parameter: str="",):
-        self.flags_str = flags
-        self.values_str = right_side
-        self.parameter = parameter
-        (self.flags,
-         self.flag,
-         self.other_flags) = self._unpack_assignment_side(flags)                # TODO: are there any instances where we can have more than one flag per line?? If not we should raise always in that case!!
-        (self.values,
-         self.value,
-         self.other_values) = self._unpack_assignment_side(right_side)
+    def __post_init__(self):
+        """Split out left- and right-hand sides into flags and values."""
+        flags = self._unpack_assignment_side(self.flags_str)                # TODO: are there any instances where we can have more than one flag per line?? If not we should raise always in that case!!
+        values = self._unpack_assignment_side(self.values_str)
+
+        object.__setattr__(self, 'flags', flags)
+        object.__setattr__(self, 'values', values)
+
+        # Make sure values_str and flags_str are actually strings:
+        # we also accept Sequence of strings at __init__
+        if not isinstance(self.value_str, str)
+            object.__setattr__(self, 'values_str', " ".join(self.value_str))
+        if not isinstance(self.flags_str, str)
+            object.__setattr__(self, 'values_str', " ".join(self.flags_str))
+
+    @property
+    def flag(self):
+        """Return the leftmost flag as a string."""
+        return self.flags[1] if self.flags else ''
+
+    @property
+    def value(self):
+        """Return the leftmost value as a string."""
+        return self.values[1] if self.values else ''
+
+    @property
+    def other_flags(self):
+        """Return all the flags except for the first one."""
+        return self.flags[1:]
+
+    @property
+    def other_values(self):
+        """Return all the values except for the first one (as strings)."""
+        return self.values[1:]
 
     def _unpack_assignment_side(self, side):
+        """Split the side left or right of the equal into bits."""
         if isinstance(side, str):
-            parts = side.split()
-        elif isinstance(side, list):
-            parts = side
-        else:
-            raise TypeError
-        first_part, *other_parts = parts or ("", [])
-        return parts, first_part, other_parts
+            return tuple(side.split())
+        if isinstance(side, Sequence):
+            return tuple(side)
+        raise TypeError
+
+
+_BELOW_DEBUG = 2
 
 
 class ParameterInterpreter:
@@ -475,13 +511,10 @@ class ParameterInterpreter:
         # check if we are doing a domain calculation
         self._is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
 
-
-        for param, assignment in self._get_param_assignments(self.rpars):#
-
-            # check if we are doing a domain calculation                        # TODO: this is a logical error! We may not know if we are doing a domain calc before yet. If a parameter is specified that should be ignored (e.g. BULK_REPEAT) prior to RUN this may crash!
-            self._is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
-
-            if self._is_domain_calc and param in self.domains_ignore_params:
+        for param, assignment in self._get_param_assignments():
+            # Check if we are doing a domain calculation                        # TODO: this is a logical error! We may not know if we are doing a domain calc before yet. If a parameter is specified that should be ignored (e.g. BULK_REPEAT) prior to RUN this may crash!
+            _is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
+            if _is_domain_calc and param in self.domains_ignore_params:
                 # skip in domain calculation
                 continue
             try:
@@ -493,16 +526,17 @@ class ParameterInterpreter:
         # finally set the log level back to what it was
         logger.setLevel(self.loglevel)
 
-    # Helper methods for interpret()
-    def _get_param_assignments(self, rpars):
-        """Flatten out the (possibly multiple) assignments read from
-        the PARAMETERS file for each parameter"""
-        flat_params = ((p_name, *flags_and_value)
-                    for p_name in self.param_names
-                    for flags_and_value in rpars.readParams[p_name])
+    # ----------------  Helper methods for interpret() ----------------
+    def _get_param_assignments(self):
+        """Yield parameters and assignments for each PARAMETER read."""
+        flat_params = (
+            (p_name, *flags_and_value)
+            for p_name in self.param_names
+            for flags_and_value in self.rpars.readParams[p_name]
+            )
         for param, flags, right_side in flat_params:
-            assignment = Assignment(right_side=right_side,
-                                    flags=flags,
+            assignment = Assignment(values_str=right_side,                      # TODO: use directly in readPARAMETERS
+                                    flags_str=flags,
                                     parameter=param)
             yield param, assignment
 
@@ -1395,7 +1429,7 @@ class ParameterInterpreter:
             logger.warning(warning_header + warning_middle + warning_text)
         # interpret possible second value as SYMMETRY_EPS_Z
         if assignment.other_values:
-            z_assignment = Assignment(assignment.other_values)
+            z_assignment = Assignment(assignment.other_values, param)
             self._interpret_numerical_parameter("SYMMETRY_EPS_Z",
                                                 z_assignment,
                                                 type_=float,
@@ -1486,26 +1520,27 @@ class ParameterInterpreter:
 
     def _interpret_layer_cuts(self, assignment):
         param = "LAYER_CUTS"
+        layer_cuts = assignment.values
         # some simple filtering here, but leave as list of strings
         if all(c in assignment.values_str for c in '<>'):
             self.rpars.setHaltingLevel(1)
             raise ParameterParseError(param,
                                     'Cannot parse list with both "<" and ">".')
-        elif any(c in assignment.values_str for c in "<>"):
-            newlist = []
+        if any(c in assignment.values_str for c in '<>'):
+            layer_cuts = []
             for s in assignment.values:
-                s = s.replace("<", " < ")
-                s = s.replace(">", " > ")
-                newlist.extend(s.split())
-            assignment.values = newlist                                         # TODO not great that this is done in place
+                s = s.replace('<', ' < ')
+                s = s.replace('>', ' > ')
+                layer_cuts.extend(s.split())
+
         rgx = re.compile(r'\s*(dz|dc)\s*\(\s*(?P<cutoff>[0-9.]+)\s*\)')
-        for (i, s) in enumerate(assignment.values):
-            if "dz" in s.lower() or "dc" in s.lower():
+        for (i, s) in enumerate(layer_cuts):
+            if 'dz' in s.lower() or 'dc' in s.lower():
                 m = rgx.match(assignment.values_str.lower())
                 if m:
                     try:
                         float(m.group('cutoff'))
-                        assignment.values[i] = m.group(0)
+                        layer_cuts[i] = m.group(0)
                     except Exception:                                           # TODO: catch better; only 1 statement in try.
                         self.rpars.setHaltingLevel(1)
                         raise ParameterParseError(param,
@@ -1516,7 +1551,7 @@ class ParameterInterpreter:
                 except Exception:
                     self.rpars.setHaltingLevel(1)
                     raise ParameterParseError(param)
-        self.rpars.LAYER_CUTS = assignment.values
+        self.rpars.LAYER_CUTS = layer_cuts
 
     def _interpret_lmax(self, assignment):
         param = "LMAX"
@@ -1734,7 +1769,7 @@ class ParameterInterpreter:
                 for name in ['THETA', 'PHI']:
                     if sl[0].upper() == name:
                         d[name] = self._interpret_numerical_parameter(
-                            f'{param} {name}', Assignment(sl[1]),
+                            f'{param} {name}', Assignment(sl[1], param),        # TODO: tries to assign an attribute with white spaces??
                             float,
                             range_=range_[name],
                             out_of_range_event=_out_of_range_event[name],
@@ -1754,7 +1789,7 @@ class ParameterInterpreter:
                     )
             for ind, name in enumerate(['THETA', 'PHI']):
                 d[name] = self._interpret_numerical_parameter(
-                    f'{param} {name}', Assignment(assignment.values[ind]),
+                    f'{param} {name}', Assignment(assignment.values[ind], param),  # TODO: tries to assign an attribute with white spaces??
                     float, range_=range_[name],
                     out_of_range_event=_out_of_range_event[name])
 
