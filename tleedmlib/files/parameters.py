@@ -564,9 +564,9 @@ class Assignment:
         # Make sure values_str and flags_str are actually strings:
         # we also accept Sequence of strings at __init__
         if not isinstance(self.values_str, str):
-            object.__setattr__(self, 'values_str', " ".join(self.values_str))
+            object.__setattr__(self, 'values_str', ' '.join(self.values_str))
         if not isinstance(self.flags_str, str):
-            object.__setattr__(self, 'flags_str', " ".join(self.flags_str))
+            object.__setattr__(self, 'flags_str', ' '.join(self.flags_str))
 
     @property
     def flag(self):
@@ -988,7 +988,7 @@ class ParameterInterpreter:
 
         # Otherwise, try to parse the value
         angles = self._parse_incidence_angles(assignment, param, right_side)
-        self.rpars.AVERAGE_BEAMS = (angles['THETA'], angles['PHI'])
+        self.rpars.AVERAGE_BEAMS = angles['THETA'], angles['PHI']
 
     def interpret_beam_incidence(self, assignment):
         """Assign parameter BEAM_INCIDENCE."""
@@ -996,9 +996,7 @@ class ParameterInterpreter:
         self._ensure_no_flags_assignment(param, assignment)
         right_side = assignment.values_str.lower().strip()
         angles = self._parse_incidence_angles(assignment, param, right_side)
-        # set
-        self.rpars.THETA = angles['THETA']
-        self.rpars.PHI = angles['PHI']
+        self.rpars.THETA, self.rpars.PHI = angles['THETA'], angles['PHI']
 
     def interpret_intpol_deg(self, assignment):
         """Assign parameter INTPOL_DEG."""
@@ -1053,12 +1051,12 @@ class ParameterInterpreter:
         param = 'DOMAIN'
         # Check name
         name = assignment.flag
-        names = [n for (n, _) in self.rpars.DOMAINS]
-        if name in names:  # already defined
+        names = [n for n, _ in self.rpars.DOMAINS]
+        if name in names:  # Already defined
             error_message = f'Multiple sources defined for domain {name}.'
             self.rpars.setHaltingLevel(3)
             raise ParameterError(parameter=param, message=error_message)
-        if not name:  # get unique name
+        if not name:  # Get unique name                                         # TODO: used in several other places
             i = 1
             while str(i) in names:
                 i += 1
@@ -1240,11 +1238,11 @@ class ParameterInterpreter:
         values = assignment.all_values
         while values:
             v = values.pop(0).lower()
-            if "[" in v and "]" in values[0]:
-                v += " " + values.pop(0).lower()
+            if '[' in v and ']' in values[0]:
+                v += ' ' + values.pop(0).lower()
             recombined_list.append(v)
         for v in recombined_list:
-            if v.startswith("r"):
+            if v.startswith('r'):                                               # Problem: how about "rcm[1 0]"?
                 try:
                     i = int(v[1])
                 except (ValueError, IndexError):
@@ -1254,12 +1252,12 @@ class ParameterInterpreter:
                     self.rpars.SYMMETRY_BULK['rotation'] = []
                 if i not in self.rpars.SYMMETRY_BULK['rotation']:
                     self.rpars.SYMMETRY_BULK['rotation'].append(i)
-            elif v.startswith("m"):
-                if "[" not in v or "]" not in v:
-                    message = f"Error reading value {v!r}: no direction recognized."
+            elif v.startswith('m'):
+                if '[' not in v or ']' not in v:
+                    message = f'Error reading value {v!r}: no direction recognized.'
                     self.rpars.setHaltingLevel(2)
                     raise ParameterParseError(param, message)
-                str_vals = v.split("[")[1].split("]")[0].split()
+                str_vals = v.split('[')[1].split(']')[0].split()
                 if len(str_vals) != 2:
                     self.rpars.setHaltingLevel(2)
                     raise ParameterNumberOfInputsError(
@@ -1279,7 +1277,7 @@ class ParameterInterpreter:
                     self.rpars.SYMMETRY_BULK['mirror'].append(int_vals)
             else:
                 try:
-                    self.rpars.SYMMETRY_BULK['group'] = v
+                    self.rpars.SYMMETRY_BULK['group'] = v                       # This can never error out
                 except ValueError as err:
                     self.rpars.setHaltingLevel(2)
                     raise ParameterValueError(param, v) from err
