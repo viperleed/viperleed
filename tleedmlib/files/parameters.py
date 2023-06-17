@@ -631,10 +631,6 @@ class ParameterInterpreter:
         self._search_conv_read = False
         self.silent = False
 
-        # create methods for interpreting simple parameters
-        self._make_boolean_interpreter_methods()
-        self._make_numerical_interpreter_methods()
-
     @property
     def slab(self):
         """Return the slab currently used for interpretation (or None)."""
@@ -889,36 +885,64 @@ class ParameterInterpreter:
             setattr(self.rpars, var_name, v)
         return v
 
-    def _make_boolean_interpreter_methods(self):
-        for _param, _properties in _SIMPLE_BOOL_PARAMS.items():
-            method_name = f'_interpret_{_param.lower()}'
-            # NB: it is VERY important to fix the values in lambda here
-            # (i.e. use param=_param etc.) because of how closures work in
-            # Python. Otherwise, the value of param will assigned at call time
-            # and fixed to the same value (last iteration) for all methods.
-            # This could also be done with functools.partial, but that only
-            # supports fixing the leftmost arguments which makes it less nice.
-            _interpret = (
-                lambda assignment,param=_param, properties=_properties:
-                    self._interpret_bool_parameter(param,
-                                                   assignment,
-                                                   *properties)
-            )
-            setattr(self, method_name, _interpret)
+    @classmethod
+    def _make_methods(cls, wrapped, kwargs_names, new_methods_info):
+        """Dynamically add methods for this class.
 
-    def _make_numerical_interpreter_methods(self):
-        for _param, _properties in _SIMPLE_NUMERICAL_PARAMS_.items():
-            method_name = f'_interpret_{_param.lower()}'
-            # IMPORTANT: see comment in _make_boolean_interpreter_methods
-            _interpret = (
-                lambda assignment,param=_param, properties=_properties:
-                    self._interpret_numerical_parameter(param,
-                                                        assignment,
-                                                        *properties)
-            )
-            setattr(self, method_name, _interpret)
+        Parameters
+        ----------
+        wrapped : callable
+            The callable that will be wrapped to create methods.
+            The a call to new_method(*args, **kwargs) becomes a
+            wrapped(param, *args, **wrapped_kwargs, **kwargs)
+            call, where param and wrapped_kwargs are generated
+            here using kwargs_names and new_methods_info.
+        kwargs_names : Sequence
+            Names (str) of the keyword arguments that may be
+            replaced. At most len(kwargs_names) keyword arguments
+            will be given to wrapped.
+        new_methods_info : dict
+            Keys are names of the parameters for which methods are to
+            be generated. They are used as the the first positional
+            argument to wrapped. Also, the new methods will be
+            named "interpret_<key>". Values are sequences of the
+            values of keyword arguments to be passed on to wrapped,
+            in the same order.
 
-    # Methods to make sure no extra flags/values are given
+        Raises
+        ------
+        TypeError
+            If too many keyword argument values are given in any of
+            the new_methods_info
+        """
+        for param, kwargs_values in new_methods_info.items():
+            method_name = f'interpret_{param.lower()}'
+            if not isinstance(kwargs_values, Sequence):
+                kwargs_values = (kwargs_values,)
+            if len(kwargs_values) > len(kwargs_names):
+                raise TypeError(
+                    f'Too many keyword arguments for {method_name}. '
+                    f'Expected at most values for {kwargs_names}'
+                    )
+            kwargs = dict(zip(kwargs_names, kwargs_values))
+            method = partialmethod(wrapped, param, **kwargs)
+            setattr(cls, method_name, method)
+
+    @classmethod
+    def make_boolean_interpreter_methods(cls):
+        """Dynamically generate bool-setting methods."""
+        cls._make_methods(cls.interpret_bool_parameter,
+                          ('allowed_values',),
+                          _SIMPLE_BOOL_PARAMS)
+
+    @classmethod
+    def make_numerical_interpreter_methods(cls):
+        """Dynamically generate int/float-setting methods."""
+        cls._make_methods(cls.interpret_numerical_parameter,
+                          ('type_', 'range_', 'range_exclude'),
+                          _SIMPLE_NUMERICAL_PARAMS)
+
+    # ----- Methods to make sure no extra flags/values are given ------
     def _ensure_single_flag_assignment(self, param, assignment):
         """Raise if assignment contains multiple flags."""
         if assignment.other_flags:
@@ -2011,3 +2035,10 @@ class ParameterInterpreter:
         matrix = np.array(nl, dtype=float)
         return matrix
 
+
+# Dynamically produce methods for the 'simple parameters' listed above
+# Notice that we should do this only once right here, not for each
+# instance separately. Calling the methods again is possible, and
+# would simply override the bindings.
+ParameterInterpreter.make_boolean_interpreter_methods()
+ParameterInterpreter.make_numerical_interpreter_methods()
