@@ -1050,7 +1050,7 @@ class ParameterInterpreter:                                                     
         """Assign parameter ELEMENT_RENAME."""
         param = 'ELEMENT_RENAME'
         self._ensure_single_flag_and_value_assignment(param, assignment)
-        self._ensure_chemical_elements(param, (assignment.value,))
+        self._ensure_chemical_elements(param, assignment.values)
 
         self.rpars.ELEMENT_RENAME[assignment.flag.lower().capitalize()] = (
             assignment.value.lower().capitalize()
