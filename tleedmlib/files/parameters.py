@@ -22,7 +22,6 @@ import numpy as np
 
 
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
-from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.base import (strip_comments, splitSublists,
                                       readVector, readIntRange,
                                       recombineListElements)
@@ -34,37 +33,37 @@ from viperleed.tleedmlib.files.parameter_errors import (
     ParameterNumberOfInputsError, ParameterRangeError,
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
+from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
 
-logger = logging.getLogger("tleedm.files.parameters")
+logger = logging.getLogger('tleedm.files.parameters')
 
 
 # list of allowed parameters
-_KNOWN_PARAMS = [                                                               # TODO: IntEnum?
+_KNOWN_PARAMS = (                                                               # TODO: IntEnum?
     'ATTENUATION_EPS', 'AVERAGE_BEAMS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'BULKDOUBLING_MAX', 'BULK_LIKE_BELOW', 'BULK_REPEAT', 'DOMAIN',
-    'DOMAIN_STEP', 'ELEMENT_MIX',
-    'ELEMENT_RENAME', 'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 'INTPOL_DEG',
-    'IV_SHIFT_RANGE', 'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX',
-    'LOG_LEVEL', 'LOG_SEARCH', 'N_BULK_LAYERS', 'N_CORES', 'OPTIMIZE',
-    'PARABOLA_FIT', 'PHASESHIFT_EPS', 'PHASESHIFTS_CALC_OLD',
-    'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN', 'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH',
-    'R_FACTOR_TYPE', 'S_OVL', 'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE',
-    'SEARCH_CULL', 'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START',
-    'SITE_DEF', 'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT',
-    'SYMMETRY_BULK',
+    'DOMAIN_STEP', 'ELEMENT_MIX', 'ELEMENT_RENAME', 'FILAMENT_WF',
+    'FORTRAN_COMP', 'HALTING', 'INTPOL_DEG', 'IV_SHIFT_RANGE', 'LAYER_CUTS',
+    'LAYER_STACK_VERTICAL', 'LMAX', 'LOG_LEVEL', 'LOG_SEARCH', 'N_BULK_LAYERS',
+    'N_CORES', 'OPTIMIZE', 'PARABOLA_FIT', 'PHASESHIFT_EPS',
+    'PHASESHIFTS_CALC_OLD', 'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN',
+    'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH', 'R_FACTOR_TYPE', 'S_OVL',
+    'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE', 'SEARCH_CULL',
+    'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START', 'SITE_DEF',
+    'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT', 'SYMMETRY_BULK',
     'SYMMETRY_CELL_TRANSFORM', 'SYMMETRY_EPS', 'SYMMETRY_FIND_ORI',
     'SYMMETRY_FIX', 'TENSOR_INDEX', 'TENSOR_OUTPUT', 'THEO_ENERGIES',
     'TL_VERSION', 'TL_IGNORE_CHECKSUM',
     'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
     'V0_Z_ONSET', 'VIBR_AMP_SCALE', 'ZIP_COMPRESSION_LEVEL',
-    ]
+    )
 
 
 # parameters that can be optimized in FD optimization
-_OPTIMIZE_OPTIONS = ['theta', 'phi', 'v0i',
-                     'a', 'b', 'c', 'ab', 'abc', 's_ovl']
+_OPTIMIZE_OPTIONS = set('theta', 'phi', 'v0i',
+                        'a', 'b', 'c', 'ab', 'abc', 's_ovl')
 
 
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
@@ -88,8 +87,9 @@ _PARAM_ALIAS = {
     }
 
 
-for p in _KNOWN_PARAMS:
-    _PARAM_ALIAS[p.lower().replace("_", "")] = p
+for known_param in _KNOWN_PARAMS:
+    _PARAM_ALIAS[known_param.lower().replace('_', '')] = known_param
+
 
 # Bool parameters for which to create _interpret...() methods automatically.
 # key is parameter name, value is tuple of parameter that should be passed to
@@ -137,7 +137,7 @@ _SIMPLE_NUMERICAL_PARAMS_= {
 }
 
 
-def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
+def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
     """
     Reads PARAMETERS file again, but ignores everything not concerning the
     search or STOP. Updates the given Rparams object accordingly.
@@ -157,26 +157,26 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=""):
     """
     update_from = Path(update_from)
     try:
-        with open(update_from / filename, 'r') as rf:
+        with open(update_from / filename, 'r', encoding='utf-8') as rf:
             lines = rf.readlines()
     except FileNotFoundError:
-        logger.error("updatePARAMETERS routine: PARAMETERS file not found.")
+        logger.error('updatePARAMETERS routine: PARAMETERS file not found.')
         raise
 
     for line in lines:
         line = strip_comments(line)
-        for param in ["SEARCH_KILL", "STOP"]:  # SEARCH_KILL is legacy name
+        for param in ['SEARCH_KILL', 'STOP']:  # SEARCH_KILL is legacy name
             if line.upper().startswith(param):
-                if not re.match(fr"\s*{param}\s*=\s*[Ff](alse)?", line):
+                if not re.match(fr'\s*{param}\s*=\s*[Ff](alse)?', line):
                     rp.STOP = True
                     continue  # if need to STOP, we don't need continue interpreting the line
-        if "=" not in line:                                                     # TODO: perhaps we should rather look at the first entry of a .split() and see if, by chance, it is a valid parameter. Then warn and continue reading.
-            continue  # ignore all lines that don't have an "=" sign at all
+        if '=' not in line:                                                     # TODO: perhaps we should rather look at the first entry of a .split() and see if, by chance, it is a valid parameter. Then warn and continue reading.
+            continue  # ignore all lines that don't have an '=' sign at all
         param, value_str = line.split('=', maxsplit=1)
         if param:
             # get rid of spaces and check the leftmost entry.
-            param, *flags = param.split()
-        param_alias = param.lower().replace("_", "")
+            param, *_ = param.split()
+        param_alias = param.lower().replace('_', '')
         if param not in _KNOWN_PARAMS and param_alias in _PARAM_ALIAS:
             param = _PARAM_ALIAS[param_alias]
         if param not in _KNOWN_PARAMS:
@@ -211,17 +211,17 @@ def readPARAMETERS(filename='PARAMETERS'):
     """
     filename = Path(filename).resolve()
     try:
-        rf = filename.open('r')
+        rf = filename.open('r', encoding='utf-8')
     except FileNotFoundError as err:
-        logger.error("PARAMETERS file not found.")
+        logger.error('PARAMETERS file not found.')
         raise err
     # read PARAMETERS:
     rpars = rparams.Rparams()
     for line in rf:
         line = strip_comments(line)
-        for param in ["STOP", "SEARCH_KILL"]:
+        for param in ['STOP', 'SEARCH_KILL']:
             if (line.upper().startswith(param)
-                    and not re.match(fr"\s*{param}\s*=\s*[Ff](alse)?", line)):
+                    and not re.match(fr'\s*{param}\s*=\s*[Ff](alse)?', line)):
                 logger.warning(
                     f'PARAMETERS file: {param} was set at start of '
                     f'program. Modifying PARAMETERS to disable {param}; '
@@ -230,16 +230,16 @@ def readPARAMETERS(filename='PARAMETERS'):
                 modifyPARAMETERS(rpars, param, comment='Disabled at program '
                                  'start', path=filename.parent,
                                  suppress_ori=True)
-        if "=" not in line:
-            continue     # ignore all lines that don't have an "=" sign at all
-        param, value = line.split('=', maxsplit=1)  # parameter at left of "="
+        if '=' not in line:
+            continue     # ignore all lines that don't have an '=' sign at all
+        param, value = line.split('=', maxsplit=1)  # parameter at left of '='
         if not param:
             continue
         # get rid of spaces and check the leftmost entry.
         param, *flags = param.split()
         if (param not in _KNOWN_PARAMS and
-                param.lower().replace("_", "") in _PARAM_ALIAS):
-            param = _PARAM_ALIAS[param.lower().replace("_", "")]
+                param.lower().replace('_', '') in _PARAM_ALIAS):
+            param = _PARAM_ALIAS[param.lower().replace('_', '')]
         if param not in _KNOWN_PARAMS:
             raise ParameterNotRecognizedError(parameter=param)
         value = value.strip()
@@ -252,7 +252,7 @@ def readPARAMETERS(filename='PARAMETERS'):
     return rpars
 
 
-def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
+def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
                      suppress_ori=False, include_left=False):
     """
     Looks for 'modpar' in the PARAMETERS file, comments that line out, and
@@ -269,7 +269,7 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
         will be commented out without replacement.
     comment : str, optional
         A comment to be added in the new line in PARAMETERS.
-    path : str or path-like, optional
+    path : str or Path, optional
         Where to find the PARAMETERS file that should be modified.
         Default is an empty string, i.e., the current directory.
     suppress_ori : bool, optional
@@ -284,60 +284,60 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
     None.
     """
     _path = Path(path)
-    file = _path / "PARAMETERS"
-    oriname = f"PARAMETERS_ori_{rp.timestamp}"
+    file = _path / 'PARAMETERS'
+    oriname = f'PARAMETERS_ori_{rp.timestamp}'
     ori = _path / oriname
     if oriname not in rp.manifest and not suppress_ori and file.is_file():
         try:
             shutil.copy2(file, ori)
         except Exception:
             logger.error(
-                "modifyPARAMETERS: Could not copy PARAMETERS file "
-                "to PARAMETERS_ori. Proceeding, original file will be lost.")
+                'modifyPARAMETERS: Could not copy PARAMETERS file '
+                'to PARAMETERS_ori. Proceeding, original file will be lost.')
         rp.manifest.append(oriname)
-    if "PARAMETERS" not in rp.manifest and _path == Path():
-        rp.manifest.append("PARAMETERS")
-    output = ""
+    if 'PARAMETERS' not in rp.manifest and _path == Path():
+        rp.manifest.append('PARAMETERS')
+    output = ''
     headerPrinted = False
 
     try:
-        with open(file, "r") as rf:
+        with open(file, 'r', encoding='utf-8') as rf:
             plines = rf.readlines()
     except FileNotFoundError:
         plines = []
     except Exception as err:
-        logger.error("Error reading PARAMETERS file.")
+        logger.error('Error reading PARAMETERS file.')
         raise err
     found = False
     for line in plines:
-        if "! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #" in line:
+        if '! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #' in line:
             headerPrinted = True
         valid = False
-        param = ""
+        param = ''
         stripped_line = strip_comments(line)
-        if "=" in stripped_line:
-            # Parameter is defined left of "="
+        if '=' in stripped_line:
+            # Parameter is defined left of '='
             param, *_ = stripped_line.split('=')
             if param:
                 valid = True
                 param, *_ = param.split()
         else:
-            for p in ["STOP", "SEARCH_KILL"]:
+            for p in ['STOP', 'SEARCH_KILL']:
                 if stripped_line.upper().startswith(p):
                     valid = True
                     param = p
         if valid and param == modpar:
             found = True
-            if new and f"{modpar} = {new.strip()}" == stripped_line:
+            if new and f'{modpar} = {new.strip()}' == stripped_line:
                 output += line
             elif new:
-                output += f"!{line[:-1]} ! line automatically changed to:\n"
+                output += f'!{line[:-1]} ! line automatically changed to:\n'
                 if not include_left:
-                    output += f"{modpar} = "
-                output += f"{new} ! {comment}\n"
+                    output += f'{modpar} = '
+                output += f'{new} ! {comment}\n'
             else:
-                comment = comment or "line commented out automatically"
-                output += f"!{line.rstrip():<34} ! {comment}\n"
+                comment = comment or 'line commented out automatically'
+                output += f'!{line.rstrip():<34} ! {comment}\n'
         else:
             output += line
     if new and not found:
@@ -348,21 +348,20 @@ def modifyPARAMETERS(rp, modpar, new="", comment="", path="",
 ! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #
 ! ######################################################
 """
-        output += f"\n{modpar} = {new}"
+        output += f'\n{modpar} = {new}'
         if comment:
-            output += f" ! {comment}"
+            output += f' ! {comment}'
     try:
-        with open(file, "w") as wf:
+        with open(file, 'w', encoding='utf-8') as wf:
             wf.write(output)
-    except Exception as err:
-        logger.error("modifyPARAMETERS: Failed to write PARAMETERS file.")
-        raise err
+    except Exception:
+        logger.error('modifyPARAMETERS: Failed to write PARAMETERS file.')
+        raise
 
 
 def interpretPARAMETERS(rpars, slab=None, silent=False):
-    """
-    Interprets the string values in an Rparams object, read previously by
-    readPARAMETERS, to fill the parameter variables.
+    """Interpret rpars.readParams to actual values.
+
     Parameters
     ----------
     rpars : Rparams
@@ -375,6 +374,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
         If True, less output will be printed. The default is False.
     """
 
+    Raises
+    ------
+    ParameterError
+        If any parameter interpretation fails.
+    """
     interpreter = ParameterInterpreter(rpars)
     interpreter.interpret(slab=slab, silent=silent)
     return
@@ -427,18 +431,20 @@ class ParameterInterpreter:
     To add a new parameter, add a method with the name 'interpret_<param>'.
     """
 
-    domains_ignore_params = [
+    domains_ignore_params = {
         'BULK_REPEAT', 'ELEMENT_MIX', 'ELEMENT_RENAME',
         'LAYER_CUTS', 'N_BULK_LAYERS', 'SITE_DEF', 'SUPERLATTICE',
         'SYMMETRY_CELL_TRANSFORM', 'TENSOR_INDEX', 'TENSOR_OUTPUT'
-        ]
+        }
 
     grouplist = [                                                               # TODO: take from elsewhere
-        "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg", "cmm",
-        "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m", "p6", "p6m"]
+        'p1', 'p2', 'pm', 'pg', 'cm', 'rcm', 'pmm', 'pmg', 'pgg', 'cmm',
+        'rcmm', 'p4', 'p4m', 'p4g', 'p3', 'p3m1', 'p31m', 'p6', 'p6m']
 
-    bool_synonyms = {True: {"true", "yes", "1", "t", "y", "on", "enable", ".true."},
-                     False: {"false", "no", "0", "f", "n", "off", "disable", ".false."}}
+    bool_synonyms = {
+        True: {'true', 'yes', '1', 't', 'y', 'on', 'enable', '.true.'},
+        False: {'false', 'no', '0', 'f', 'n', 'off', 'disable', '.false.'}
+        }
 
     def __init__(self, rpars):
         self.rpars = rpars
@@ -503,7 +509,7 @@ class ParameterInterpreter:
     def _interpret_param(self, param, assignment):
         _interpreter = getattr(self, f"_interpret_{param.lower()}", None)
         if _interpreter is None:
-            # complain about unknown parameter
+            # Complain about unknown parameter
             self.rpars.setHaltingLevel(2)
             raise ParameterNotRecognizedError(param)
         _interpreter(assignment)
@@ -713,28 +719,31 @@ class ParameterInterpreter:
 
     # Methods to make sure no extra flags/values are given
     def _ensure_single_flag_assignment(self, param, assignment):
+        """Raise if assignment contains multiple flags."""
         if assignment.other_flags:
             self.rpars.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, assignment.flags_str)
 
     def _ensure_single_value_assignment(self, param, assignment):
+        """Raise if assignment contains multiple values."""
         if assignment.other_values:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param,
                                                (len(assignment.values), 1))
 
     def _ensure_no_flags_assignment(self, param, assignment):
+        """Raise if assignment contains any flag."""
         if assignment.flags:
             self.rpars.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, assignment.flag)  # highlight first flag
 
     def _ensure_simple_assignment(self, param, assignment):
-        # make sure that the assignment is simple, i.e. no flags and only one value
-        # if not, complain
+        """Raise if assignment is not simple (i.e., one value, no flags)."""
         self._ensure_no_flags_assignment(param, assignment)
         self._ensure_single_value_assignment(param, assignment)
 
     def _ensure_single_flag_and_value_assignment(self, param, assignment):
+        """Raise if assignment does not have a single flag--value pair."""
         self._ensure_single_flag_assignment(param, assignment)
         self._ensure_single_value_assignment(param, assignment)
 
@@ -747,11 +756,11 @@ class ParameterInterpreter:
         if right_side in ['off', 'none', 'false', 'f']:
             self.rpars.AVERAGE_BEAMS = False
             return
-        elif right_side.lower() in ['all', 'perpendicular', 'perp']:
+        if right_side.lower() in ['all', 'perpendicular', 'perp']:
             self.rpars.AVERAGE_BEAMS = (0., 0.)
             return
 
-        # otherwise, try to parse the value
+        # Otherwise, try to parse the value
         angles = self._parse_incidence_angles(assignment, param, right_side)
         # set
         self.rpars.AVERAGE_BEAMS = (angles['THETA'], angles['PHI'])
@@ -819,7 +828,7 @@ class ParameterInterpreter:
         name = assignment.flag if assignment.flag else ""
         names = [n for (n, _) in self.rpars.DOMAINS]
         if name in names:  # already defined
-            error_message = (f"Multiple sources defined for domain {name}.")
+            error_message = f'Multiple sources defined for domain {name}.'
             self.rpars.setHaltingLevel(3)
             raise ParameterError(parameter=param, message=error_message)
         if not name:  # get unique name
@@ -827,15 +836,16 @@ class ParameterInterpreter:
             while str(i) in names:
                 i += 1
             name = str(i)
-        # check path
+
+        # Check path
         right_side = assignment.values_str.strip()
         if Path(right_side).exists():
             path = right_side
-        elif Path(right_side).with_suffix(".zip").is_file():
-            path = right_side + ".zip"
+        elif Path(right_side).with_suffix('.zip').is_file():
+            path = right_side + '.zip'
         else:
-            error_message = (f"Value for DOMAIN {name} could not be "
-                             "interpreted as either a path or a .zip file.")
+            error_message = (f'Value for DOMAIN {name} could not be '
+                             'interpreted as either a path or a .zip file.')
             self.rpars.setHaltingLevel(3)
             raise ParameterError(parameter=param, message=error_message)
         self.rpars.DOMAINS.append((name, path))
@@ -859,8 +869,8 @@ class ParameterInterpreter:
             j = domain_step - 1
             while 100 % j != 0:
                 j -= 1
-            message = (f"100 is not divisible by given value {domain_step}. "
-                        f"Consider using {j} instead.")
+            message = (f'100 is not divisible by given value {domain_step}. '
+                       f'Consider using {j} instead.')
             self.rpars.setHaltingLevel(1)
             raise ParameterError(parameter=param,message=message)
         else:
@@ -971,8 +981,8 @@ class ParameterInterpreter:
         if v0r_type == 'rundgren':
             rundgren_constants = assignment.other_values
             if len(rundgren_constants) != 4:
-                message = ("Rundgren-type function expects four constants "
-                            "separated by whitespace.")
+                message = ('Rundgren-type function expects four constants '
+                           'separated by whitespace.')
                 raise ParameterParseError(param, message)
             try:
                 setTo = [float(rundgren_constants[i]) for i in range(4)]
@@ -1054,7 +1064,7 @@ class ParameterInterpreter:
         if group in grouplist:
             self.rpars.SYMMETRY_FIX = group
             return
-        if group.startswith(("pm", "pg", "cm", "rcm", "pmg")):
+        if group.startswith(('pm', 'pg', 'cm', 'rcm', 'pmg')):
             # regex to read
             rgx = re.compile(
                 r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*'
@@ -1071,7 +1081,7 @@ class ParameterInterpreter:
             except ValueError as err:
                 self.rpars.setHaltingLevel(2)
                 raise ParameterParseError(param) from err
-            if (group in ["pm", "pg", "cm", "rcm", "pmg"]
+            if (group in ['pm', 'pg', 'cm', 'rcm', 'pmg']
                     and i1 in range(-1, 3) and i2 in range(-1, 3)):
                 self.rpars.SYMMETRY_FIX = m.group(0)
             else:
@@ -1103,10 +1113,11 @@ class ParameterInterpreter:
         if len(energies) != 3:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param, (len(energies), 3))
+
         fl = []
         defined = 0
         for val in energies:
-            if val == "_":
+            if val == '_':
                 fl.append(-1)
                 continue  # s in values loop
             try:
@@ -1119,7 +1130,7 @@ class ParameterInterpreter:
                     fl.append(f)
                     defined += 1
                 else:
-                    message = (f"{param} values have to be positive.")
+                    message = f'{param} values have to be positive.'
                     self.rpars.setHaltingLevel(1)
                     raise ParameterError(param, message)
 
@@ -1176,7 +1187,7 @@ class ParameterInterpreter:
         if not assignment.flags:
             raise ParameterNeedsFlagError(param)
         elif assignment.flag.lower() not in ['dgen', 'gaussian']:
-            raise ParameterUnknownFlagError(param, f"{assignment.flag!r}")
+            raise ParameterUnknownFlagError(param, f'{assignment.flag!r}')
 
         try:
             numeric = [float(value) for value in assignment.values]
@@ -1189,13 +1200,13 @@ class ParameterInterpreter:
                 numeric.append(0.5)
             gauss_width, scaling = numeric
             should_update = (not is_updating
-                            or gauss_width != self.rpars.searchConvInit["gaussian"])
+                             or gauss_width != self.rpars.searchConvInit['gaussian'])
             if gauss_width is not None and gauss_width > 0 and should_update:
                 self.rpars.GAUSSIAN_WIDTH = gauss_width
                 if is_updating:
-                    self.rpars.searchConvInit["gaussian"] = gauss_width
+                    self.rpars.searchConvInit['gaussian'] = gauss_width
             elif should_update:
-                message = "gaussian width should be a positive number "
+                message = 'gaussian width should be a positive number '
                 _errors.append(
                     ParameterError(param, message=message)
                     )
@@ -1211,26 +1222,26 @@ class ParameterInterpreter:
             elif assignment.flags[1].lower() in ['dec', 'best', 'all']:
                 target = assignment.flags[1].lower()
             else:
-                raise ParameterUnknownFlagError(param, f"{assignment.flags[1]!r}")
+                raise ParameterUnknownFlagError(param, f'{assignment.flags[1]!r}')
             max_dgen, scaling = numeric
             should_update = (not is_updating
-                            or max_dgen != self.rpars.searchConvInit["dgen"][target])
+                             or max_dgen != self.rpars.searchConvInit['dgen'][target])
             if max_dgen is not None and max_dgen > 0 and should_update:
                 if not search_convergence_known:  # clear default values
-                    self.rpars.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 0}
+                    self.rpars.SEARCH_MAX_DGEN = {'all': 0, 'best': 0, 'dec': 0}
                     search_convergence_known = True
                 self.rpars.SEARCH_MAX_DGEN[target] = max_dgen
                 if is_updating:
-                    self.rpars.searchConvInit["dgen"][target] = max_dgen
+                    self.rpars.searchConvInit['dgen'][target] = max_dgen
             elif should_update:
-                message = "dgen should be a positive number "
+                message = 'dgen should be a positive number '
                 _errors.append(
                     ParameterError(param, message=message)
                     )
             if scaling is not None and scaling >= 1:
                 self.rpars.SEARCH_MAX_DGEN_SCALING[target] = scaling
             elif scaling:
-                message = "scaling value cannot be smaller than 1."
+                message = 'scaling value cannot be smaller than 1.'
                 _errors.append(
                     ParameterError(param, message=message)
                     )
@@ -1251,18 +1262,18 @@ class ParameterInterpreter:
             if cull_float - int(cull_float) < 1e-6:
                 self.rpars.SEARCH_CULL = int(cull_float)
             else:
-                message = f"{param} value has to be integer if greater than 1."
+                message = f'{param} value has to be integer if greater than 1.'
                 self.rpars.setHaltingLevel(1)
                 raise ParameterError(param, message)
         elif cull_float >= 0:
             self.rpars.SEARCH_CULL = cull_float
         else:
-            message = f"{param} value has to be non-negative."
+            message = f'{param} value has to be non-negative.'
             self.rpars.setHaltingLevel(1)
             raise ParameterError(param, message)
         if assignment.other_values:
             next_value = assignment.other_values[0].lower()
-            if next_value in ["clone", "genetic", "random"]:
+            if next_value in ['clone', 'genetic', 'random']:
                 self.rpars.SEARCH_CULL_TYPE = next_value
             else:
                 self.rpars.setHaltingLevel(1)
@@ -1295,14 +1306,14 @@ class ParameterInterpreter:
 
         # there are only a few options, so we can just check them all
         search_start = assignment.value
-        if search_start.startswith("rand"):
-            self.rpars.SEARCH_START = "random"
-        elif search_start.startswith("center"):
-            self.rpars.SEARCH_START = "centered"
-        elif search_start.startswith("control"):
-            self.rpars.SEARCH_START = "control"
-        elif search_start.startswith("crandom"):
-            self.rpars.SEARCH_START = "crandom"
+        if search_start.startswith('rand'):
+            self.rpars.SEARCH_START = 'random'
+        elif search_start.startswith('center'):
+            self.rpars.SEARCH_START = 'centered'
+        elif search_start.startswith('control'):
+            self.rpars.SEARCH_START = 'control'
+        elif search_start.startswith('crandom'):
+            self.rpars.SEARCH_START = 'crandom'
         else:
             self.rpars.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, search_start)
@@ -1317,7 +1328,7 @@ class ParameterInterpreter:
                 ir = readIntRange(sl[i])
                 if len(ir) > 0:
                     atnums.extend(ir)
-                elif "top(" in sl[i]:
+                elif 'top(' in sl[i]:
                     if self.slab is None:
                         self.rpars.setHaltingLevel(3)
                         raise ParameterError(
@@ -1335,7 +1346,7 @@ class ParameterInterpreter:
                             n -= 1
                 else:
                     self.rpars.setHaltingLevel(3)
-                    raise ParameterError(param, "Problem with SITE_DEF input format")
+                    raise ParameterError(param, 'Problem with SITE_DEF input format')
             newdict[sl[0]] = atnums
         self.rpars.SITE_DEF[assignment.flags[0]] = newdict
 
@@ -1402,8 +1413,8 @@ class ParameterInterpreter:
             try:
                 v = int(s)
                 if v not in (0, 1):
-                    message = ("Problem with TENSOR_OUTPUT input format: "
-                                f"Found value {v}, expected 0 or 1.")
+                    message = ('Problem with TENSOR_OUTPUT input format: '
+                               f'Found value {v}, expected 0 or 1.')
                     self.rpars.setHaltingLevel(1)
                     raise ParameterParseError(param, message)
                 else:
@@ -1417,8 +1428,8 @@ class ParameterInterpreter:
                     except ValueError as err:
                         raise ParameterIntConversionError(param, sl) from err
                     if v not in (0, 1):
-                        message = ("Problem with TENSOR_OUTPUT input format: "
-                                f"Found value {v}, expected 0 or 1.")
+                        message = ('Problem with TENSOR_OUTPUT input format: '
+                                   f'Found value {v}, expected 0 or 1.')
                         self.rpars.setHaltingLevel(1)
                         raise ParameterParseError(param, message)
                     else:
@@ -1447,7 +1458,7 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(3)
             raise ParameterError(
                 param,
-                "RUN was defined, but no values were read."
+                'RUN was defined, but no values were read.'
                 )
 
     def _interpret_iv_shift_range(self, assignment):
@@ -1460,7 +1471,7 @@ class ParameterInterpreter:
         except ValueError:
             raise ParameterFloatConversionError(parameter=param)
         if fl[1] < fl[0]:
-            message = "IV_SHIFT_RANGE end energy has to >= start energy."
+            message = 'IV_SHIFT_RANGE end energy has to >= start energy.'
             self.rpars.setHaltingLevel(1)
             raise ParameterError(param, message)
             return
@@ -1468,7 +1479,7 @@ class ParameterInterpreter:
         for i in range(0, 2):
             self.rpars.IV_SHIFT_RANGE[i] = fl[i]
         if len(fl) == 3 and fl[2] <= 0:
-            message = "IV_SHIFT_RANGE step has to be positive."
+            message = 'IV_SHIFT_RANGE step has to be positive.'
             self.rpars.setHaltingLevel(1)
             raise ParameterError(parameter=param, message=message)
         self.rpars.IV_SHIFT_RANGE[2] = fl[2]
@@ -1476,7 +1487,7 @@ class ParameterInterpreter:
     def _interpret_layer_cuts(self, assignment):
         param = "LAYER_CUTS"
         # some simple filtering here, but leave as list of strings
-        if all(c in assignment.values_str for c in "<>"):
+        if all(c in assignment.values_str for c in '<>'):
             self.rpars.setHaltingLevel(1)
             raise ParameterParseError(param,
                                     'Cannot parse list with both "<" and ">".')
@@ -1499,7 +1510,7 @@ class ParameterInterpreter:
                         self.rpars.setHaltingLevel(1)
                         raise ParameterParseError(param,
                                                   f'Could not parse function {s}')
-            elif not (s == "<" or s == ">"):
+            elif s != '<' and s != '>':
                 try:
                     float(s)
                 except Exception:
@@ -1525,7 +1536,7 @@ class ParameterInterpreter:
                 _, lmax_list[0], _ = sorted((_min, lmax_list[0], _max))
                 raise ParameterError(
                     param,
-                    f"LMAX must be between {_min} and {_max}."
+                    f'LMAX must be between {_min} and {_max}.'
                 )
             self.rpars.LMAX = [lmax_list[0], lmax_list[0]]
         elif len(lmax_list) == 2:
@@ -1534,25 +1545,25 @@ class ParameterInterpreter:
             if lmax_list[0] < _min:
                 raise ParameterError(
                     param,
-                    "LMAX lower bound must be positive."
+                    'LMAX lower bound must be positive.'
                 )
             if lmax_list[1] > _max:
                 raise ParameterError(
                     param,
-                    f"LMAX values >{_max} are currently not supported."
+                    f'LMAX values >{_max} are currently not supported.'
                     )
             self.rpars.LMAX = lmax_list
 
     def _interpret_optimize(self, assignment):
         param = "OPTIMIZE"
         if not assignment.flag:
-            message = ("Parameter to optimize not defined.")
+            message = 'Parameter to optimize not defined.'
             self.rpars.setHaltingLevel(3)
             raise ParameterError(param, message)
         which = assignment.flag.lower()
-        if which not in [o.lower() for o in _OPTIMIZE_OPTIONS]:
+        if which not in _OPTIMIZE_OPTIONS:
             self.rpars.setHaltingLevel(3)
-            raise ParameterUnknownFlagError(param, f"{which!r}")
+            raise ParameterUnknownFlagError(param, f'{which!r}')
         self.rpars.OPTIMIZE['which'] = which
         if not assignment.other_values:
             try:
@@ -1564,14 +1575,14 @@ class ParameterInterpreter:
         sublists = splitSublists(assignment.values, ',')
         for sl in sublists:
             if len(sl) != 2:
-                message = "Expected 'flag value' pairs, found " + " ".join(sl)
+                message = 'Expected "flag value" pairs, found ' + ' '.join(sl)
                 self.rpars.setHaltingLevel(2)
                 raise ParameterError(param, message)
             flag = sl[0].lower()
             if flag not in ['step', 'convergence',
                             'minpoints', 'maxpoints', 'maxstep']:
                 self.rpars.setHaltingLevel(2)
-                raise ParameterUnknownFlagError(param, f"{flag!r}")
+                raise ParameterUnknownFlagError(param, f'{flag!r}')
             partype = {'step': float, 'convergence': float,
                         'minpoints': int, 'maxpoints': int,
                         'maxstep': float}
@@ -1621,7 +1632,7 @@ class ParameterInterpreter:
         try:
             ps_eps = float(ps_eps_value)
         except ValueError:
-            # check if one of default values (e.g. "fine")
+            # check if one of default values (e.g. 'fine')
             s = ps_eps_value.lower()[0]
             ps_eps_default_dict = self.rpars.get_default(param)
             ps_eps = ps_eps_default_dict.get(s, None)
@@ -1648,11 +1659,11 @@ class ParameterInterpreter:
                         'border', 'borders', 'axes', 'legend', 'legends',
                         'layout', 'overbar', 'overline', 'plot'):
             self.rpars.setHaltingLevel(1)
-            raise ParameterUnknownFlagError(param, f"{flag!r}")
+            raise ParameterUnknownFlagError(param, f'{flag!r}')
         if flag == 'plot':
             # should it plot?
             if value in ('true', 't', '1'):
-                    self.rpars.PLOT_IV['plot'] = True
+                self.rpars.PLOT_IV['plot'] = True
             elif value in ('false', 'none', 'f', '0'):
                 self.rpars.PLOT_IV['plot'] = False
         if flag in ('border', 'borders', 'axes'):
@@ -1676,12 +1687,12 @@ class ParameterInterpreter:
                 self.rpars.setHaltingLevel(1)
                 raise ParameterParseError(param)
         elif flag in ('overbar', 'overline'):
-            if value.startswith("t"):
+            if value.startswith('t'):
                 self.rpars.PLOT_IV['overbar'] = True
-            elif value.startswith("f"):
+            elif value.startswith('f'):
                 self.rpars.PLOT_IV['overbar'] = False
             else:
-                message = f"Value for flag {flag} not recognized"
+                message = f'Value for flag {flag} not recognized'
                 self.rpars.setHaltingLevel(1)
                 raise ParameterParseError(param, message)
         elif flag in ('perpage', 'layout'):
@@ -1692,7 +1703,7 @@ class ParameterInterpreter:
                     self.rpars.setHaltingLevel(1)
                     raise ParameterIntConversionError(param, value)
                 if i <= 0:
-                    message = "perpage value has to be positive integer."
+                    message = 'perpage value has to be positive integer.'
                     self.rpars.setHaltingLevel(1)
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = i
@@ -1704,13 +1715,13 @@ class ParameterInterpreter:
                     raise ParameterIntConversionError(param,
                                                       assignment.all_[:2])
                 if any(i <= 0 for i in il):
-                    message = "perpage values have to be positive integers."
+                    message = 'perpage values have to be positive integers.'
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = tuple(il)
 
     def _interpret_vibr_amp_scale(self, assignment):
         # this parameter is not interpreted right now
-        self.rpars.VIBR_AMP_SCALE.extend(assignment.values_str.split(","))
+        self.rpars.VIBR_AMP_SCALE.extend(assignment.values_str.split(','))
 
     # Helper methods
     def _parse_incidence_angles(self, assignment, param, right_side):
@@ -1728,7 +1739,7 @@ class ParameterInterpreter:
                             range_=range_[name],
                             out_of_range_event=_out_of_range_event[name],
                             return_only=True
-                        )
+                            )
                         break
                 else:
                     self.rpars.setHaltingLevel(1)
@@ -1758,9 +1769,9 @@ class ParameterInterpreter:
 
     def _read_woods_notation(self, param, assignment):
         if self.slab is None:
-            message = (f"{param} parameter appears to be in Wood, "
-                            "notation but no slab was passed. Cannot "
-                            "calculate bulk unit cell!")
+            message = (f'{param} parameter appears to be in Wood, '
+                       'notation but no slab was passed. Cannot '
+                       'calculate bulk unit cell!')
             self.rpars.setHaltingLevel(2)
             raise ParameterError(param, message)
         read_result = readWoodsNotation(assignment.values_str, self.slab.ucell)
@@ -1768,8 +1779,8 @@ class ParameterInterpreter:
 
     def _read_matrix_notation(self, param, values):
         sublists = splitSublists(values, ',')
-        if not len(sublists) == 2:
-            message = ("Number of lines in matrix is not equal to 2.")
+        if len(sublists) != 2:
+            message = 'Number of lines in matrix is not equal to 2.'
             self.rpars.setHaltingLevel(2)
             raise ParameterParseError(param, message)
         nl = []
@@ -1782,7 +1793,7 @@ class ParameterInterpreter:
                     raise ParameterFloatConversionError(param, sl)
             else:
                 self.rpars.setHaltingLevel(2)
-                message = ("Number of columns in matrix is not equal to 2.")
+                message = 'Number of columns in matrix is not equal to 2.'
                 raise ParameterParseError(param, message)
         matrix = np.array(nl, dtype=float)
         return matrix

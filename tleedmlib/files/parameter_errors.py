@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 class ParameterError(Exception):
-    '''Base class for errors raised during PARAMETERS interpretation'''
+    """Base class for errors raised during PARAMETERS interpretation"""
 
     def __init__(self, parameter, message):
         _message = f"PARAMETERS file: parameter {str(parameter)}:\n"
@@ -11,14 +11,14 @@ class ParameterError(Exception):
 
 
 class ParameterNotRecognizedError(ParameterError):
-    '''Raised when a parameter is not recognized'''
+    """Raised when a parameter is not recognized"""
 
     def __init__(self, parameter):
         super().__init__(parameter, "Parameter not recognized.")
 
 
 class ParameterUnexpectedInputError(ParameterError):
-    '''Raised when unexpected input is encountered'''
+    """Raised when unexpected input is encountered"""
 
     def __init__(self, parameter):
         super().__init__(parameter,
@@ -28,7 +28,7 @@ class ParameterUnexpectedInputError(ParameterError):
 
 # base class for conversion errors
 class ParameterConversionError(ParameterError):
-    '''Raised when a conversion fails'''
+    """Raised when a conversion fails"""
     _type = None
 
     def __init__(self, parameter, given_value=None):
@@ -41,22 +41,22 @@ class ParameterConversionError(ParameterError):
 
 
 class ParameterBooleanConversionError(ParameterConversionError):
-    '''Raised when a boolean conversion fails'''
+    """Raised when a boolean conversion fails"""
     _type = 'boolean'
 
 
 class ParameterIntConversionError(ParameterConversionError):
-    '''Raised when an int conversion fails'''
+    """Raised when an int conversion fails"""
     _type = 'integer'
 
 
 class ParameterFloatConversionError(ParameterConversionError):
-    '''Raised when a float conversion fails'''
+    """Raised when a float conversion fails"""
     _type = 'float'
 
 
 class ParameterValueError(ParameterError):
-    '''Raised when the value is not allowed'''
+    """Raised when the value is not allowed"""
 
     def __init__(self, parameter, given_value=None):
         if given_value:
@@ -68,7 +68,7 @@ class ParameterValueError(ParameterError):
 
 
 class ParameterParseError(ParameterError):
-    '''Raised when parsing fails'''
+    """Raised when parsing fails"""
 
     def __init__(self, parameter, supp_message="Check parameter syntax."):
         super().__init__(parameter,
@@ -77,7 +77,7 @@ class ParameterParseError(ParameterError):
 
 
 class ParameterNumberOfInputsError(ParameterError):
-    '''Raised when the number of inputs is unexpected'''
+    """Raised when the number of inputs is unexpected"""
 
     def __init__(self, parameter, found_and_expected=None):
         if found_and_expected:
@@ -90,7 +90,7 @@ class ParameterNumberOfInputsError(ParameterError):
 
 
 class ParameterRangeError(ParameterError):
-    '''Raised when the value is not in the allowed range'''
+    """Raised when the value is not in the allowed range"""
 
     def __init__(self, parameter, given_value, allowed_range):
         message = (f"Value {given_value} is outside allowed range "
@@ -100,7 +100,7 @@ class ParameterRangeError(ParameterError):
 
 
 class ParameterUnknownFlagError(ParameterError):
-    '''Raised when an unknown flag is encountered'''
+    """Raised when an unknown flag is encountered"""
 
     def __init__(self, parameter, flag):
         super().__init__(parameter,
@@ -108,7 +108,7 @@ class ParameterUnknownFlagError(ParameterError):
 
 
 class ParameterNeedsFlagError(ParameterError):
-    '''Raised when a flag is needed but not given'''
+    """Raised when a flag is needed but not given"""
 
     def __init__(self, parameter):
         super().__init__(parameter,
