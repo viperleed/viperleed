@@ -495,6 +495,10 @@ class ParameterInterpreter:
         self.param_names.extend(p for p in _KNOWN_PARAMS
                         if p in rpars.readParams and p not in self.param_names)
 
+        # Some flags
+        self._search_conv_read = False
+        self.silent = False
+
         # create methods for interpreting simple parameters
         self._make_boolean_interpreter_methods()
         self._make_numerical_interpreter_methods()
