@@ -1089,39 +1089,45 @@ class ParameterInterpreter:
         """Assign parameter FORTRAN_COMP."""
         param = 'FORTRAN_COMP'
 
-        flags, compiler_str = assignment.flags, assignment.value
-        # complain if more than one flag is given
-        if len(flags) > 1:
-            message = (f"Only one flag allowed for {param} per line. "
-                       f"Got {assignment.flags}.")
+        flag, compiler_str = assignment.flag.lower(), assignment.value
+        # Complain if more than one flag is given at a time
+        if assignment.other_flags:
+            message = (f'Only one flag allowed for {param} per line. '
+                       f'Got {assignment.flags}.')
             raise ParameterError(param, message)
-        if (not flags and compiler_str.lower() in ["ifort", "gfortran"]):
-            # get default compiler flags
-            self.rpars.getFortranComp(comp=compiler_str.lower(), skip_check=skip_check)
-        elif (flags and assignment.flag.lower() == "mpi"
-                    and compiler_str.lower() in ["mpifort", "mpiifort"]):
-            # get default mpi compiler flags
+
+        # (1) Default (i.e., non-MPI) compiler flags
+        if not flag and compiler_str.lower() in ['ifort', 'gfortran']:
+            self.rpars.getFortranComp(comp=compiler_str.lower(),
+                                      skip_check=skip_check)
+            return
+
+        # (2) MPI compiler flags
+        if flag == 'mpi' and compiler_str.lower() in ['mpifort', 'mpiifort']:
             self.rpars.getFortranMpiComp(comp=compiler_str.lower(),
                                          skip_check=skip_check)
-        else:  # set custom compiler flags
-            delim = compiler_str[0]     # should be quotation marks                     # TODO: is this needed now that we use f-strings?
-            if delim not in ["'", '"']:
-                message = ("No valid shorthand and not delimited by "
-                                "quotation marks.")
-                raise ParameterError(param, message)
-            else:
-                setTo = assignment.values_str.split(delim)[1]
-            if not flags:
-                self.rpars.FORTRAN_COMP[0] = setTo
-            elif flags[0].lower() == "post":
-                self.rpars.FORTRAN_COMP[1] = setTo
-            elif flags[0].lower() == "mpi":
-                self.rpars.FORTRAN_COMP_MPI[0] = setTo
-            elif flags[0].lower() == "mpipost":
-                self.rpars.FORTRAN_COMP_MPI[1] = setTo
-            else:
-                raise ParameterUnknownFlagError(parameter=param,
-                                                        flag=flags[0])
+            return
+
+        # (3) Custom compiler flags or full compilation string.
+        #     Both need quotation marks                                         # TODO: is this needed now that we use f-strings?
+        if not compiler_str.startswith(("'", '"')):
+            message = ('No valid shorthand and not delimited '
+                       'by quotation marks.')
+            raise ParameterError(param, message)
+
+        delim = assignment.values_str[0]
+        _, compiler_str, _ = assignment.values_str.split(delim, maxsplit=2)
+        if not flag:
+            self.rpars.FORTRAN_COMP[0] = compiler_str
+        elif flag == 'post':
+            self.rpars.FORTRAN_COMP[1] = compiler_str
+        elif flag == 'mpi':
+            self.rpars.FORTRAN_COMP_MPI[0] = compiler_str
+        elif flag == 'mpipost':
+            self.rpars.FORTRAN_COMP_MPI[1] = compiler_str
+        else:
+            raise ParameterUnknownFlagError(parameter=param,
+                                            flag=assignment.flag)
 
     def interpret_log_level(self, assignment):
         """Assign parameter LOG_LEVEL."""
