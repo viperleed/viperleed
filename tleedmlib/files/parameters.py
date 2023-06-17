@@ -483,8 +483,10 @@ class ParameterInterpreter:
         }
 
     def __init__(self, rpars):
+        """Initialize interpreter instance from an Rparams."""
         self.rpars = rpars
-        self.slab = None
+        self._slab = None
+
         # define order that parameters should be read in                        # TODO: I think domain should be in here too
         self.orderedParams = ["LOG_LEVEL", "RUN"]
         self.param_names = [p for p
@@ -497,11 +499,19 @@ class ParameterInterpreter:
         self._make_boolean_interpreter_methods()
         self._make_numerical_interpreter_methods()
 
-    def _set_slab(self, slab):
-        self.slab = slab
+    @property
+    def slab(self):
+        """Return the slab currently used for interpretation (or None)."""
+        return self._slab
+
+    @slab.setter
+    def slab(self, slab):
+        """Set the slab to be used for interpretation."""
+        self._slab = slab
 
     def interpret(self, slab, silent=False):
-        self._set_slab(slab)
+        """Interpret all known parameters using slab."""
+        self.slab = slab
         self._search_conv_read = False
         self.loglevel = logger.level
         self.silent = silent
