@@ -1161,10 +1161,10 @@ class ParameterInterpreter:
                            'separated by whitespace.')
                 raise ParameterParseError(param, message)
             try:
-                setTo = [float(rundgren_constants[i]) for i in range(4)]
-            except (ValueError, IndexError) as err:
-                message = ("Could not parse constants for Rundgren-type "
-                            "function.")
+                self.rpars.V0_REAL = [float(c) for c in rundgren_constants]
+            except ValueError as err:
+                message = (f'Could not parse constants {rundgren_constants} '
+                           'for Rundgren-type function.')
                 self.rpars.setHaltingLevel(1)
                 raise ParameterError(param, message=message) from err
             return
