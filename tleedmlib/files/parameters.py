@@ -190,8 +190,8 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
         if param == 'SEARCH_CONVERGENCE':
             new_assignment = Assignment(values_str=value_str,
                                         parameter=param)
-            interpreter._interpret_search_convergence(assignment=new_assignment,
-                                                      is_updating=True)
+            interpreter.interpret_search_convergence(assignment=new_assignment,
+                                                     is_updating=True)
 
 
 def readPARAMETERS(filename='PARAMETERS'):
@@ -547,12 +547,13 @@ class ParameterInterpreter:
             yield param, assignment
 
     def _interpret_param(self, param, assignment):
-        _interpreter = getattr(self, f"_interpret_{param.lower()}", None)
-        if _interpreter is None:
+        """Interpret the value of a single PARAMETER if known, or complain."""
+        interpreter = getattr(self, f'interpret_{param.lower()}', None)
+        if interpreter is None:
             # Complain about unknown parameter
             self.rpars.setHaltingLevel(2)
             raise ParameterNotRecognizedError(param)
-        _interpreter(assignment)
+        interpreter(assignment)
 
     def _update_param_order(self):
         """Define order in which parameters should be read."""
@@ -565,7 +566,7 @@ class ParameterInterpreter:
             )
 
     # Methods for interpreting simple parameters
-    def _interpret_bool_parameter(self, param, assignment,
+    def interpret_bool_parameter(self, param, assignment,
                                   allowed_values={True:{}, False:{}},
                                   var_name=None,
                                   return_only=False):
@@ -615,7 +616,7 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(1)
             raise  ParameterBooleanConversionError(param, assignment.value)
 
-    def _interpret_numerical_parameter(self,
+    def interpret_numerical_parameter(self,
                                        param,
                                        assignment,
                                        type_,
@@ -797,9 +798,10 @@ class ParameterInterpreter:
         self._ensure_single_flag_assignment(param, assignment)
         self._ensure_single_value_assignment(param, assignment)
 
-    ## Methods to interpret individual parameters
-    def _interpret_average_beams(self, assignment):
-        param = "AVERAGE_BEAMS"
+    # ----------- Methods to interpret individual parameters ----------
+    def interpret_average_beams(self, assignment):                              # TODO: not nice to have multiple types for this. May make sense to make it its own class with some helpers. Otherwise one has to do a bunch of isinstance checks when using it
+        """Assign parameter AVERAGE_BEAMS."""
+        param = 'AVERAGE_BEAMS'
         self._ensure_no_flags_assignment(param, assignment)
         right_side = assignment.values_str.lower().strip()
         # trivial cases
@@ -812,12 +814,11 @@ class ParameterInterpreter:
 
         # Otherwise, try to parse the value
         angles = self._parse_incidence_angles(assignment, param, right_side)
-        # set
         self.rpars.AVERAGE_BEAMS = (angles['THETA'], angles['PHI'])
 
-
-    def _interpret_beam_incidence(self, assignment):
-        param = "BEAM_INCIDENCE"
+    def interpret_beam_incidence(self, assignment):
+        """Assign parameter BEAM_INCIDENCE."""
+        param = 'BEAM_INCIDENCE'
         self._ensure_no_flags_assignment(param, assignment)
         right_side = assignment.values_str.lower().strip()
         angles = self._parse_incidence_angles(assignment, param, right_side)
@@ -825,8 +826,9 @@ class ParameterInterpreter:
         self.rpars.THETA = angles['THETA']
         self.rpars.PHI = angles['PHI']
 
-    def _interpret_intpol_deg(self, assignment):
-        param = "INTPOL_DEG"
+    def interpret_intpol_deg(self, assignment):
+        """Assign parameter INTPOL_DEG."""
+        param = 'INTPOL_DEG'
         self._ensure_simple_assignment(param, assignment)
         intpol_deg = assignment.value
         if intpol_deg in self.rpars.get_limits(param):
@@ -836,8 +838,9 @@ class ParameterInterpreter:
                             "moment.")
             raise ParameterError(parameter=param, message=message)
 
-    def _interpret_bulk_repeat(self, assignment):
-        param = "BULK_REPEAT"
+    def interpret_bulk_repeat(self, assignment):
+        """Assign parameter BULK_REPEAT."""
+        param = 'BULK_REPEAT'
         # make sure that the slab is defined, otherwise bulk repeat is moot
         if not self.slab:
             raise ParameterError(parameter=param,
@@ -871,11 +874,11 @@ class ParameterInterpreter:
                 raise ParameterParseError(parameter=param)
             self.rpars.BULK_REPEAT = vec
 
-    def _interpret_domain(self, assignment):
-        # sets the domain path and name
-        param = "DOMAIN"
-        # check name
-        name = assignment.flag if assignment.flag else ""
+    def interpret_domain(self, assignment):
+        """Set the domain path and name."""
+        param = 'DOMAIN'
+        # Check name
+        name = assignment.flag
         names = [n for (n, _) in self.rpars.DOMAINS]
         if name in names:  # already defined
             error_message = f'Multiple sources defined for domain {name}.'
@@ -900,8 +903,9 @@ class ParameterInterpreter:
             raise ParameterError(parameter=param, message=error_message)
         self.rpars.DOMAINS.append((name, path))
 
-    def _interpret_domain_step(self, assignment):
-        param = "DOMAIN_STEP"
+    def interpret_domain_step(self, assignment):
+        """Assign parameter DOMAIN_STEP."""
+        param = 'DOMAIN_STEP'
         self._ensure_simple_assignment(param, assignment)
         try:
             i = int(assignment.value)
@@ -912,7 +916,7 @@ class ParameterInterpreter:
             raise ParameterRangeError(parameter=param,
                                         given_value=i,
                                         allowed_range=(1, 100))
-        domain_step = self._interpret_numerical_parameter(param, assignment,
+        domain_step = self.interpret_numerical_parameter(param, assignment,
                                             type_=int, range_=(1, 100),
                                             return_only=True)
         if 100 % domain_step != 0:
@@ -926,8 +930,9 @@ class ParameterInterpreter:
         else:
             self.rpars.DOMAIN_STEP = domain_step
 
-    def _interpret_element_mix(self, assignment):                               # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME?
-        param = "ELEMENT_MIX"
+    def interpret_element_mix(self, assignment):                                # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME? We should perhaps have a call to a checker after all parameters are read in?
+        """Assign parameter ELEMENT_MIX."""
+        param = 'ELEMENT_MIX'
         self._ensure_single_flag_assignment(param, assignment)
         ptl = [el.lower() for el in PERIODIC_TABLE]                             # TODO: nicer to use the leedbase element getter function and catch exceptions
         found = False
@@ -941,8 +946,9 @@ class ParameterInterpreter:
                 el.capitalize() for el in assignment.values
                 ]
 
-    def _interpret_element_rename(self, assignment):
-        param = "ELEMENT_RENAME"
+    def interpret_element_rename(self, assignment):
+        """Assign parameter ELEMENT_RENAME."""
+        param = 'ELEMENT_RENAME'
         self._ensure_single_flag_and_value_assignment(param, assignment)
         ptl = [el.lower() for el in PERIODIC_TABLE]                             # TODO: nicer to use the leedbase element getter function and catch exceptions
         el = assignment.value.lower()
@@ -955,18 +961,21 @@ class ParameterInterpreter:
                 assignment.value.capitalize()
                 )
 
-    def _interpret_filament_wf(self, assignment):
-        param = "FILAMENT_WF"
+    def interpret_filament_wf(self, assignment):
+        """Assign parameter FILAMENT_WF."""
+        param = 'FILAMENT_WF'
         self._ensure_simple_assignment(param, assignment)
         # check common filaments (e.g W), otherwise interpret as float
         known_filaments = self.rpars.get_default(param)
         try:
             self.rpars.FILAMENT_WF = known_filaments[assignment.value.lower()]
         except KeyError:
-            self._interpret_numerical_parameter(param, assignment, type_=float)
+            self.interpret_numerical_parameter(param, assignment, type_=float)
 
-    def _interpret_fortran_comp(self, assignment, skip_check=False):
-        param = "FORTRAN_COMP"
+    def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
+        """Assign parameter FORTRAN_COMP."""
+        param = 'FORTRAN_COMP'
+
         flags, compiler_str = assignment.flags, assignment.value
         # complain if more than one flag is given
         if len(flags) > 1:
@@ -1001,14 +1010,15 @@ class ParameterInterpreter:
                 raise ParameterUnknownFlagError(parameter=param,
                                                         flag=flags[0])
 
-    def _interpret_log_level(self, assignment):
-        param = "LOG_LEVEL"
+    def interpret_log_level(self, assignment):
+        """Assign parameter LOG_LEVEL."""
+        param = 'LOG_LEVEL'
         self._ensure_simple_assignment(param, assignment)  # one value, no flags
         # try to interpret as bool
         log_debug = None
         try:
-            log_debug = self._interpret_bool_parameter(param, assignment,
-                                                       return_only=True)
+            log_debug = self.interpret_bool_parameter(param, assignment,
+                                                      return_only=True)
         except ParameterError:
             pass
         if log_debug is not None:
@@ -1016,7 +1026,7 @@ class ParameterInterpreter:
             return
         # otherwise interpret as int
         try:
-            log_level = self._interpret_numerical_parameter(param,
+            log_level = self.interpret_numerical_parameter(param,
                                                             assignment,
                                                             int,
                                                             range_=(0, 50),
@@ -1025,8 +1035,9 @@ class ParameterInterpreter:
             raise ParameterValueError(param) from err
         self.rpars.LOG_LEVEL = log_level
 
-    def _interpret_v0_real(self, assignment):
-        param = "V0_REAL"
+    def interpret_v0_real(self, assignment):
+        """Assign parameter V0_REAL."""
+        param = 'V0_REAL'
         v0r_type = assignment.value.lower()
         if v0r_type == 'rundgren':
             rundgren_constants = assignment.other_values
@@ -1048,8 +1059,9 @@ class ParameterInterpreter:
             setTo = setTo.rstrip()
         self.rpars.V0_REAL = setTo
 
-    def _interpret_symmetry_bulk(self, assignment):
-        param = "SYMMETRY_BULK"
+    def interpret_symmetry_bulk(self, assignment):
+        """Assign parameter SYMMETRY_BULK."""
+        param = 'SYMMETRY_BULK'
         recombined_list = []                                                    # TODO: use ast
         values = assignment.all_values
         while values:
@@ -1098,20 +1110,19 @@ class ParameterInterpreter:
                     self.rpars.setHaltingLevel(2)
                     raise ParameterValueError(param, v) from err
 
-    def _interpret_symmetry_fix(self, assignment):                              # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
-        param = "SYMMETRY_FIX"
-        grouplist = self.grouplist
+    def interpret_symmetry_fix(self, assignment):                               # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
+        param = 'SYMMETRY_FIX'
         group = assignment.value.lower()
         if group.startswith('t'):
             return  # same as default, determine symmetry automatically
         if group.startswith('f'):
             self.rpars.SYMMETRY_FIX = 'p1'
             return
-        if group in grouplist and group in ("cm", "pmg"):
-            message = f"For group {group} direction needs to be specified."
+        if group in self.grouplist and group in ('cm', 'pmg'):
+            message = f'For group {group} direction needs to be specified.'
             self.rpars.setHaltingLevel(1)
             raise ParameterParseError(param, message)
-        if group in grouplist:
+        if group in self.grouplist:
             self.rpars.SYMMETRY_FIX = group
             return
         if group.startswith(('pm', 'pg', 'cm', 'rcm', 'pmg')):
@@ -1141,8 +1152,9 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(2)
             raise ParameterParseError(param)
 
-    def _interpret_theo_energies(self, assignment):
-        param = "THEO_ENERGIES"
+    def interpret_theo_energies(self, assignment):
+        """Assign parameter THEO_ENERGIES."""
+        param = 'THEO_ENERGIES'
         energies = assignment.values
         if not assignment.other_values:
             energy = assignment.value
@@ -1206,8 +1218,8 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(1)
             raise ParameterParseError(param)
 
-    def _interpret_search_beams(self, assignment):
-        param = "SEARCH_BEAMS"
+    def interpret_search_beams(self, assignment):
+        param = 'SEARCH_BEAMS'
         if assignment.other_values:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
@@ -1221,8 +1233,8 @@ class ParameterInterpreter:
         else:
             raise ParameterValueError(param, value)
 
-    def _interpret_search_convergence(self, assignment, is_updating=False):
-        param = "SEARCH_CONVERGENCE"
+    def interpret_search_convergence(self, assignment, is_updating=False):
+        param = 'SEARCH_CONVERGENCE'
         search_convergence_known = self.rpars.search_convergence_known
 
         if len(assignment.values) > 2:
@@ -1300,8 +1312,8 @@ class ParameterInterpreter:
             raise _errors[0]
         self.rpars.search_convergence_known = search_convergence_known
 
-    def _interpret_search_cull(self, assignment):
-        param = "SEARCH_CULL"
+    def interpret_search_cull(self, assignment):
+        param = 'SEARCH_CULL'
         cull_value = assignment.value
         try:
             cull_float = float(cull_value)
@@ -1332,10 +1344,10 @@ class ParameterInterpreter:
                 self.rpars.setHaltingLevel(1)
                 raise ParameterNumberOfInputsError(param)
 
-    def _interpret_search_population(self, assignment):
-        param = "SEARCH_POPULATION"
+    def interpret_search_population(self, assignment):
+        param = 'SEARCH_POPULATION'
         try:
-            self._interpret_numerical_parameter(param,
+            self.interpret_numerical_parameter(param,
                                                     assignment,
                                                     type_=int,
                                                     range_=(1,None))
@@ -1347,8 +1359,8 @@ class ParameterInterpreter:
                 logger.warning('SEARCH_POPULATION is very small. A '
                             'minimum value of 16 is recommended.')
 
-    def _interpret_search_start(self, assignment):
-        param = "SEARCH_START"
+    def interpret_search_start(self, assignment):
+        param = 'SEARCH_START'
         # there should only be one values
         if assignment.other_values:
             self.rpars.setHaltingLevel(1)
@@ -1368,8 +1380,8 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, search_start)
 
-    def _interpret_site_def(self, assignment):                                  # TODO: clean up this mess, also write tests
-        param = "SITE_DEF"
+    def interpret_site_def(self, assignment):                                  # TODO: clean up this mess, also write tests
+        param = 'SITE_DEF'
         newdict = {}
         sublists = splitSublists(assignment.values, ',')
         for sl in sublists:
@@ -1383,8 +1395,8 @@ class ParameterInterpreter:
                         self.rpars.setHaltingLevel(3)
                         raise ParameterError(
                             param,
-                            ("SITE_DEF parameter contains a top() "
-                                "function, but no slab was passed.")
+                            ('SITE_DEF parameter contains a top() '
+                             'function, but no slab was passed.')
                         )
                     n = int(sl[i].split('(')[1].split(')')[0])
                     csatlist = sorted(self.slab.atlist,
@@ -1400,8 +1412,8 @@ class ParameterInterpreter:
             newdict[sl[0]] = atnums
         self.rpars.SITE_DEF[assignment.flags[0]] = newdict
 
-    def _interpret_superlattice(self, assignment):
-        param = "SUPERLATTICE"
+    def interpret_superlattice(self, assignment):
+        param = 'SUPERLATTICE'
         if 'M' not in assignment.flags:
             self._ensure_no_flags_assignment(param, assignment)
             read_result = self._read_woods_notation(param, assignment)
@@ -1413,8 +1425,8 @@ class ParameterInterpreter:
             setattr(self.rpars, param, matrix)
             self.rpars.superlattice_defined = True
 
-    def _interpret_symmetry_cell_transform(self, assignment):
-        param = "SYMMETRY_CELL_TRANSFORM"
+    def interpret_symmetry_cell_transform(self, assignment):
+        param = 'SYMMETRY_CELL_TRANSFORM'
         if 'M' not in assignment.flags:
             self._ensure_no_flags_assignment(param, assignment)
             read_result = self._read_woods_notation(param, assignment)
@@ -1424,8 +1436,8 @@ class ParameterInterpreter:
             # write to param
             setattr(self.rpars, param, matrix)
 
-    def _interpret_symmetry_eps(self, assignment):
-        param = "SYMMETRY_EPS"
+    def interpret_symmetry_eps(self, assignment):
+        param = 'SYMMETRY_EPS'
         self._ensure_no_flags_assignment(param, assignment)
         eps_range = (1e-100, None)
         if len(assignment.values) not in (1,2):
@@ -1438,7 +1450,7 @@ class ParameterInterpreter:
                             "incorrect symmetry detection. Be sure to check "
                             "the output.")
         # interpret first value as SYMMETRY_EPS
-        self._interpret_numerical_parameter(param, assignment, type_=float,
+        self.interpret_numerical_parameter(param, assignment, type_=float,
                                             range_=eps_range)
         if self.rpars.SYMMETRY_EPS > 1.0:
             warning_middle = "Given value is greater one Ångström. "
@@ -1446,7 +1458,7 @@ class ParameterInterpreter:
         # interpret possible second value as SYMMETRY_EPS_Z
         if assignment.other_values:
             z_assignment = Assignment(assignment.other_values, param)
-            self._interpret_numerical_parameter("SYMMETRY_EPS_Z",
+            self.interpret_numerical_parameter("SYMMETRY_EPS_Z",
                                                 z_assignment,
                                                 type_=float,
                                                 range_=eps_range)
@@ -1454,8 +1466,8 @@ class ParameterInterpreter:
                 warning_middle = "Given value for z is greater one Ångström. "
                 logger.warning(warning_header + warning_middle + warning_text)
 
-    def _interpret_tensor_output(self, assignment):
-        param = "TENSOR_OUTPUT"
+    def interpret_tensor_output(self, assignment):
+        param = 'TENSOR_OUTPUT'
         nl = recombineListElements(assignment.values, '*')
         for s in nl:
             s = re.sub(r'[Tt](rue|RUE)?', '1', s)
@@ -1488,8 +1500,8 @@ class ParameterInterpreter:
                     self.rpars.setHaltingLevel(1)
                     raise ParameterValueError(param, s)
 
-    def _interpret_run(self, assignment):                                       # TODO: important param, write tests
-        param = "RUN"
+    def interpret_run(self, assignment):                                       # TODO: important param, write tests
+        param = 'RUN'
         run_list = []
         for section_str in assignment.values:
             try:
@@ -1511,8 +1523,8 @@ class ParameterInterpreter:
                 'RUN was defined, but no values were read.'
                 )
 
-    def _interpret_iv_shift_range(self, assignment):
-        param = "IV_SHIFT_RANGE"
+    def interpret_iv_shift_range(self, assignment):
+        param = 'IV_SHIFT_RANGE'
         if len(assignment.values) not in (2, 3):
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(parameter=param)
@@ -1534,9 +1546,9 @@ class ParameterInterpreter:
             raise ParameterError(parameter=param, message=message)
         self.rpars.IV_SHIFT_RANGE[2] = fl[2]
 
-    def _interpret_layer_cuts(self, assignment):
-        param = "LAYER_CUTS"
-        layer_cuts = assignment.values
+    def interpret_layer_cuts(self, assignment):
+        param = 'LAYER_CUTS'
+        layer_cuts = list(assignment.values)
         # some simple filtering here, but leave as list of strings
         if all(c in assignment.values_str for c in '<>'):
             self.rpars.setHaltingLevel(1)
@@ -1569,8 +1581,8 @@ class ParameterInterpreter:
                     raise ParameterParseError(param)
         self.rpars.LAYER_CUTS = layer_cuts
 
-    def _interpret_lmax(self, assignment):
-        param = "LMAX"
+    def interpret_lmax(self, assignment):
+        param = 'LMAX'
         _min, _max = self.rpars.get_limits(param)
 
         values = re.sub(r'[:-]', ' ', assignment.values_str).split()
@@ -1605,8 +1617,8 @@ class ParameterInterpreter:
                     )
             self.rpars.LMAX = lmax_list
 
-    def _interpret_optimize(self, assignment):
-        param = "OPTIMIZE"
+    def interpret_optimize(self, assignment):
+        param = 'OPTIMIZE'
         if not assignment.flag:
             message = 'Parameter to optimize not defined.'
             self.rpars.setHaltingLevel(3)
@@ -1646,8 +1658,8 @@ class ParameterInterpreter:
                 self.rpars.setHaltingLevel(1)
                 raise ParameterError(param, value_error) from err
 
-    def _interpret_parabola_fit(self, assignment):
-        param = "PARABOLA_FIT"
+    def interpret_parabola_fit(self, assignment):
+        param = 'PARABOLA_FIT'
         if assignment.value.lower() == 'off':
             self.rpars.PARABOLA_FIT['type'] = 'none'
             return
@@ -1677,8 +1689,8 @@ class ParameterInterpreter:
                     self.rpars.setHaltingLevel(1)
                     raise ParameterError(param, value_error)
 
-    def _interpret_phaseshift_eps(self, assignment):
-        param = "PHASESHIFT_EPS"
+    def interpret_phaseshift_eps(self, assignment):
+        param = 'PHASESHIFT_EPS'
         ps_eps_value = assignment.value
         try:
             ps_eps = float(ps_eps_value)
@@ -1697,8 +1709,8 @@ class ParameterInterpreter:
             raise ParameterRangeError(param,
                                       given_value=ps_eps, allowed_range=(0,1))
 
-    def _interpret_plot_iv(self, assignment):
-        param = "PLOT_IV"
+    def interpret_plot_iv(self, assignment):
+        param = 'PLOT_IV'
         # there should be a flag
         if not assignment.flags:
             self.rpars.setHaltingLevel(1)
@@ -1770,7 +1782,7 @@ class ParameterInterpreter:
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = tuple(il)
 
-    def _interpret_vibr_amp_scale(self, assignment):
+    def interpret_vibr_amp_scale(self, assignment):
         # this parameter is not interpreted right now
         self.rpars.VIBR_AMP_SCALE.extend(assignment.values_str.split(','))
 
@@ -1784,7 +1796,7 @@ class ParameterInterpreter:
             for sl in sublists:
                 for name in ['THETA', 'PHI']:
                     if sl[0].upper() == name:
-                        d[name] = self._interpret_numerical_parameter(
+                        d[name] = self.interpret_numerical_parameter(
                             f'{param} {name}', Assignment(sl[1], param),        # TODO: tries to assign an attribute with white spaces??
                             float,
                             range_=range_[name],
@@ -1804,7 +1816,7 @@ class ParameterInterpreter:
                     found_and_expected=(len(assignment.values), 2)
                     )
             for ind, name in enumerate(['THETA', 'PHI']):
-                d[name] = self._interpret_numerical_parameter(
+                d[name] = self.interpret_numerical_parameter(
                     f'{param} {name}', Assignment(assignment.values[ind], param),  # TODO: tries to assign an attribute with white spaces??
                     float, range_=range_[name],
                     out_of_range_event=_out_of_range_event[name])
