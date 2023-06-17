@@ -952,10 +952,9 @@ class ParameterInterpreter:
         intpol_deg = assignment.value
         if intpol_deg in self.rpars.get_limits(param):
             self.rpars.INTPOL_DEG = int(intpol_deg)
-        else:
-            message = ("Only degree 3 and 5 interpolation supported at the "
-                            "moment.")
-            raise ParameterError(parameter=param, message=message)
+            return
+        message = 'Only degree 3 and 5 interpolation supported at the moment.'
+        raise ParameterError(parameter=param, message=message)
 
     def interpret_bulk_repeat(self, assignment):
         """Assign parameter BULK_REPEAT."""
@@ -1051,8 +1050,8 @@ class ParameterInterpreter:
                        f'Consider using {j} instead.')
             self.rpars.setHaltingLevel(1)
             raise ParameterError(parameter=param,message=message)
-        else:
-            self.rpars.DOMAIN_STEP = domain_step
+
+        self.rpars.DOMAIN_STEP = domain_step
 
     def interpret_element_mix(self, assignment):                                # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME? We should perhaps have a call to a checker after all parameters are read in?
         """Assign parameter ELEMENT_MIX."""
@@ -1137,18 +1136,20 @@ class ParameterInterpreter:
     def interpret_log_level(self, assignment):
         """Assign parameter LOG_LEVEL."""
         param = 'LOG_LEVEL'
-        self._ensure_simple_assignment(param, assignment)  # one value, no flags
-        # try to interpret as bool
-        log_debug = None
+        self._ensure_simple_assignment(param, assignment)
+
+        # Try to interpret as bool. This is the way
+        # the previous LOG_DEBUG used to work
         try:
             log_debug = self.interpret_bool_parameter(param, assignment,
                                                       return_only=True)
         except ParameterError:
             pass
-        if log_debug is not None:
+        else:
             self.rpars.LOG_LEVEL = logging.DEBUG if log_debug else logging.INFO
             return
-        # otherwise interpret as int
+
+        # Otherwise interpret as int
         try:
             log_level = self.interpret_numerical_parameter(
                 param, assignment,
@@ -1176,12 +1177,12 @@ class ParameterInterpreter:
                             "function.")
                 self.rpars.setHaltingLevel(1)
                 raise ParameterError(param, message=message) from err
-        else:  # pass specific function to fortran
-            # regex: substitute "EE" with "EEV+workfn"
-            setTo = re.sub("(?i)EE", "EEV+workfn", assignment.values_str)
-        if isinstance(setTo, str):
-            setTo = setTo.rstrip()
-        self.rpars.V0_REAL = setTo
+            return
+
+        # Pass a specific function to FORTRAN, but replace
+        # 'EE' with 'EEV+workfn' to get the energies right
+        v0_real = re.sub('(?i)EE', 'EEV+workfn', assignment.values_str)
+        self.rpars.V0_REAL = v0_real.rstrip()
 
     def interpret_symmetry_bulk(self, assignment):
         """Assign parameter SYMMETRY_BULK."""
@@ -1562,17 +1563,17 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
 
-        # warning specfic to SYMMETRY_EPS
-        warning_header = "PARAMETERS file: SYMMETRY_EPS:\n"
-        warning_text = ("This is a very loose constraint and might lead to "
-                            "incorrect symmetry detection. Be sure to check "
-                            "the output.")
+        # warning specific to SYMMETRY_EPS
+        warning_str = ('PARAMETERS file: SYMMETRY_EPS:\n'
+                       'Given value {}is greater than one Ångström. This is a '
+                       'very loose constraint and might lead to incorrect '
+                       'symmetry detection. Be sure to check the output.')
+
         # interpret first value as SYMMETRY_EPS
         bounds = NumericBounds(type_=float, range_=(1e-100, None))
         self.interpret_numerical_parameter(param, assignment, bounds=bounds)
         if self.rpars.SYMMETRY_EPS > 1.0:
-            warning_middle = "Given value is greater one Ångström. "
-            logger.warning(warning_header + warning_middle + warning_text)
+            logger.warning(warning_str.format(''))
         # interpret possible second value as SYMMETRY_EPS_Z
         if assignment.other_values:
             z_assignment = Assignment(assignment.other_values, param)
@@ -1580,8 +1581,7 @@ class ParameterInterpreter:
                                                z_assignment,
                                                bounds=bounds)
             if self.rpars.SYMMETRY_EPS_Z > 1.0:
-                warning_middle = "Given value for z is greater one Ångström. "
-                logger.warning(warning_header + warning_middle + warning_text)
+                logger.warning(warning_str.format('for z '))
 
     def interpret_tensor_output(self, assignment):
         param = 'TENSOR_OUTPUT'
@@ -1935,10 +1935,10 @@ class ParameterInterpreter:
                     parameter=param,
                     found_and_expected=(len(assignment.values), 2)
                     )
-            for ind, name in enumerate(['THETA', 'PHI']):
+            for value, name in zip(assignment.values, ('THETA', 'PHI')):
                 d[name] = self.interpret_numerical_parameter(
                     f'{param} {name}',
-                    Assignment(assignment.values[ind], param),
+                    Assignment(value, param),
                     bounds=bounds[name],
                     return_only=True
                     )
