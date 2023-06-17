@@ -959,38 +959,40 @@ class ParameterInterpreter:
     def interpret_bulk_repeat(self, assignment):
         """Assign parameter BULK_REPEAT."""
         param = 'BULK_REPEAT'
-        # make sure that the slab is defined, otherwise bulk repeat is moot
-        if not self.slab:
+
+        if not self.slab:  # BULK_REPEAT is moot without a slab
             raise ParameterError(parameter=param,
-                                message="No slab defined for bulk repeat.")
-        s = assignment.values_str.lower()
-        # TODO: clean up and de-branch below
-        if "[" not in s:
-            if "(" not in s:
-                try:
-                    self.rpars.BULK_REPEAT = abs(float(assignment.value))
-                except ValueError:
-                    raise ParameterFloatConversionError(parameter=param)
-            else:
-                # regex to match e.g. c(2.0) or z(2.0)
-                m = re.match(r'\s*(c|z)\(\s*(?P<val>[0-9.]+)\s*\)', s)
-                if not m:
-                    raise ParameterParseError(parameter=param)
-                else:
-                    try:
-                        v = abs(float(m.group("val")))
-                    except Exception:
-                        raise ParameterFloatConversionError(parameter=param)
-                    else:
-                        if "z" in s:
-                            self.rpars.BULK_REPEAT = v
-                        else:  # c
-                            self.rpars.BULK_REPEAT = self.slab.ucell[2, 2] * v
-        else:  # vector
-            vec = readVector(s, self.slab.ucell)
+                                 message='No slab defined for bulk repeat.')
+
+        bulk_repeat_str = assignment.values_str.lower()
+        # (1) Vector
+        if '[' in bulk_repeat_str:
+            vec = readVector(bulk_repeat_str, self.slab.ucell)
             if vec is None:
                 raise ParameterParseError(parameter=param)
             self.rpars.BULK_REPEAT = vec
+            return
+
+        # (2) Z distance
+        if '(' not in bulk_repeat_str:
+            try:
+                self.rpars.BULK_REPEAT = abs(float(assignment.value))
+            except ValueError:
+                raise ParameterFloatConversionError(parameter=param) from None
+            return
+
+        # (3) C or Z distance. Should match, e.g. c(2.0) or z(2.0)
+        match = re.match(r'\s*(c|z)\(\s*(?P<val>[0-9.]+)\s*\)',
+                         bulk_repeat_str)
+        if not match:
+            raise ParameterParseError(parameter=param)
+        try:
+            val = abs(float(match.group('val')))
+        except ValueError:
+            raise ParameterFloatConversionError(parameter=param) from None
+
+        val = self.slab.ucell[2, 2] * val if 'c' in bulk_repeat_str else val
+        self.rpars.BULK_REPEAT = val
 
     def interpret_domain(self, assignment):
         """Set the domain path and name."""
