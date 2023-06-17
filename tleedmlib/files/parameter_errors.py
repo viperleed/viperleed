@@ -92,10 +92,12 @@ class ParameterNumberOfInputsError(ParameterError):
 class ParameterRangeError(ParameterError):
     """Raised when the value is not in the allowed range"""
 
-    def __init__(self, parameter, given_value, allowed_range):
-        message = (f"Value {given_value} is outside allowed range "
-                   f"({allowed_range[0]} <= {parameter} <= "
-                   f"{allowed_range[1]}).")
+    def __init__(self, parameter, given_value=None,
+                 allowed_range=None, message=None):
+        if given_value is not None and allowed_range is not None:
+            message = (f"Value {given_value} is outside allowed range "
+                       f"({allowed_range[0]} <= {parameter} <= "
+                       f"{allowed_range[1]}).")
         super().__init__(parameter, message)
 
 
