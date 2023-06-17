@@ -21,8 +21,6 @@ import shutil
 
 import numpy as np
 
-
-from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
 from viperleed.tleedmlib.base import (strip_comments, splitSublists,
                                       readVector, readIntRange,
                                       recombineListElements)
@@ -35,6 +33,7 @@ from viperleed.tleedmlib.files.parameter_errors import (
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
+from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
 
@@ -1059,32 +1058,21 @@ class ParameterInterpreter:
         """Assign parameter ELEMENT_MIX."""
         param = 'ELEMENT_MIX'
         self._ensure_single_flag_assignment(param, assignment)
-        ptl = [el.lower() for el in PERIODIC_TABLE]                             # TODO: nicer to use the leedbase element getter function and catch exceptions
-        found = False
-        for el in assignment.values:
-            if el.lower() not in ptl:
-                message = f"Element {el} not found in periodic table."
-                self.rpars.setHaltingLevel(2)
-                raise ParameterError(parameter=param, message=message)
-        if not found:                                                           # TODO: this seems very odd; I'll leave it in for now because I'm unsure what the intended behaviour was
-            self.rpars.ELEMENT_MIX[assignment.flag.capitalize()] = [
-                el.capitalize() for el in assignment.values
-                ]
+        self._ensure_chemical_elements(param, assignment.values)
+
+        element = assignment.flag.lower().capitalize()
+        self.rpars.ELEMENT_MIX[element] = [el.lower().capitalize()
+                                           for el in assignment.values]
 
     def interpret_element_rename(self, assignment):
         """Assign parameter ELEMENT_RENAME."""
         param = 'ELEMENT_RENAME'
         self._ensure_single_flag_and_value_assignment(param, assignment)
-        ptl = [el.lower() for el in PERIODIC_TABLE]                             # TODO: nicer to use the leedbase element getter function and catch exceptions
-        el = assignment.value.lower()
-        if el not in ptl:
-            message = f"Element {el} not found in periodic table."
-            self.rpars.setHaltingLevel(2)
-            raise ParameterError(parameter=param, message=message)
-        else:
-            self.rpars.ELEMENT_RENAME[assignment.flag.capitalize()] = (
-                assignment.value.capitalize()
-                )
+        self._ensure_chemical_elements(param, (assignment.value,))
+
+        self.rpars.ELEMENT_RENAME[assignment.flag.lower().capitalize()] = (
+            assignment.value.lower().capitalize()
+            )
 
     def interpret_filament_wf(self, assignment):
         """Assign parameter FILAMENT_WF."""
@@ -1905,7 +1893,21 @@ class ParameterInterpreter:
         # this parameter is not interpreted right now
         self.rpars.VIBR_AMP_SCALE.extend(assignment.values_str.split(','))
 
-    # Helper methods
+    # ------------------------ Helper methods -------------------------
+    def _ensure_chemical_elements(self, param, elements):
+        """Raise unless all entries are valid chemical elements."""
+        invalid = []
+        for element in elements:
+            try:
+                _ = periodic_table.get_atomic_number(element)
+            except ValueError:
+                invalid.append(element)
+
+        if invalid:
+            message = f'Element(s) {invalid} not found in periodic table.'
+            self.rpars.setHaltingLevel(2)
+            raise ParameterError(parameter=param, message=message)
+
     def _parse_incidence_angles(self, assignment, param, right_side):
         bounds = {
             'THETA': NumericBounds(type_=float, range_=(-90, 90),
