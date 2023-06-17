@@ -1937,9 +1937,10 @@ class ParameterInterpreter:
                     )
             for ind, name in enumerate(['THETA', 'PHI']):
                 d[name] = self.interpret_numerical_parameter(
-                    f'{param} {name}',                                          # TODO: tries to assign an attribute with white spaces??
+                    f'{param} {name}',
                     Assignment(assignment.values[ind], param),
-                    bounds=bounds[name]
+                    bounds=bounds[name],
+                    return_only=True
                     )
 
         if any(v is None for v in d.values()):
