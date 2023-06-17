@@ -1017,15 +1017,6 @@ class ParameterInterpreter:                                                     
         """Assign parameter DOMAIN_STEP."""
         param = 'DOMAIN_STEP'
         self._ensure_simple_assignment(param, assignment)
-        try:
-            i = int(assignment.value)
-        except ValueError:
-            self.rpars.setHaltingLevel(1)
-            raise ParameterIntConversionError(parameter=param)
-        if not (1 <= i <= 100):
-            raise ParameterRangeError(parameter=param,
-                                        given_value=i,
-                                        allowed_range=(1, 100))
         domain_step = self.interpret_numerical_parameter(
             param, assignment,
             bounds=NumericBounds(type_=int, range_=(1, 100)),
