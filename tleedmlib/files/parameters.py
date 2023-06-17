@@ -247,34 +247,36 @@ class NumericBounds:
 _POSITIVE_INT = NumericBounds(type_=int, range_=(1, None))
 _POSITIVE_FLOAT = NumericBounds(type_=float, range_=(0, None))
 
-# Numerical parameters for which to create _interpret...() methods automatically
-# key is parameter name, value is tuple of parameter that should be passed to
-# _make_numerical_interpreter_methods()
-_SIMPLE_NUMERICAL_PARAMS_= {
-    # positive only integers
-    'BULKDOUBLING_MAX' : (int, (1, None)),
-    'N_CORES' : (int, (1, None)),
-    'SEARCH_MAX_GEN' : (int, (1, None)),
-    'TENSOR_INDEX' : (int, (1, None)),
-    # positive only floats
-    'T_DEBYE' : (float, (0, None)),
-    'T_EXPERIMENT' : (float, (0, None)),
-    'V0_IMAG' : (float, (0, None)),
-    'TL_VERSION' : (float, (0, None)),
-    'S_OVL' : (float, (0, None)),
-    # other floats
-    'V0_Z_ONSET' : (float,),
-    'ATTENUATION_EPS' : (float, (1e-6,1), (False, True)),
-    'BULKDOUBLING_EPS' : (float, (1e-4, None), (False, False)),
-    'BULK_LIKE_BELOW': (float, (0, 1), (True, True)),
-    'SCREEN_APERTURE' : (float, (0, 180)),
-    # other integers
-    'HALTING' : (int, (1, 3)),
-    'N_BULK_LAYERS' : (int, (1, 2)),
-    'R_FACTOR_SMOOTH' : (int, (0, 999)),
-    'R_FACTOR_TYPE' : (int, (1, 2)),
-    'ZIP_COMPRESSION_LEVEL' : (int, (0,9))
-}
+
+# Numerical parameters for which to create interpret...() methods
+# automatically. Key is parameter name, value is a NumericBounds
+_SIMPLE_NUMERICAL_PARAMS = {
+    # Positive-only integers
+    'BULKDOUBLING_MAX' : _POSITIVE_INT,
+    'N_CORES' : _POSITIVE_INT,
+    'SEARCH_MAX_GEN' : _POSITIVE_INT,
+    'TENSOR_INDEX' : _POSITIVE_INT,
+    # Positive-only floats
+    'T_DEBYE' : _POSITIVE_FLOAT,
+    'T_EXPERIMENT' : _POSITIVE_FLOAT,
+    'V0_IMAG' : _POSITIVE_FLOAT,
+    'TL_VERSION' : _POSITIVE_FLOAT,
+    'S_OVL' : _POSITIVE_FLOAT,
+    # Other floats
+    'V0_Z_ONSET' : NumericBounds(),
+    'ATTENUATION_EPS' : NumericBounds(range_=(1e-6, 1),
+                                      accept_limits=(True, False)),
+    'BULKDOUBLING_EPS' : NumericBounds(range_=(1e-4, None)),
+    'BULK_LIKE_BELOW': NumericBounds(range_=(0, 1),
+                                     accept_limits=(False, False)),
+    'SCREEN_APERTURE' : NumericBounds(range_=(0, 180)),
+    # Other integers
+    'HALTING' : NumericBounds(type_=int, range_=(1, 3)),
+    'N_BULK_LAYERS' : NumericBounds(type_=int, range_=(1, 2)),
+    'R_FACTOR_SMOOTH' : NumericBounds(type_=int, range_=(0, 999)),
+    'R_FACTOR_TYPE' : NumericBounds(type_=int, range_=(1, 2)),
+    'ZIP_COMPRESSION_LEVEL' : NumericBounds(type_=int, range_=(0, 9))
+    }
 
 
 def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
@@ -763,128 +765,72 @@ class ParameterInterpreter:
             setattr(self.rpars, var_name, value)
         return value
 
-    def interpret_numerical_parameter(self,
-                                       param,
-                                       assignment,
-                                       type_,
-                                       range_=(None,None),
-                                       range_exclude=(False, False),
-                                       out_of_range_event='fail',
-                                       var_name=None,
-                                       return_only=False):
-        """
-        Generic function for setting a given parameter to an integer or float
-        value. Interpretation is done via getNumericalParameter.
+    def interpret_numerical_parameter(self, param, assignment,
+                                      var_name=None, return_only=False,         # I don't understand the need for var_name. We already have param. Also, we could make param into a keyword, as we have .parameter in Assignment.
+                                      bounds=NumericBounds()):                  # TODO: ideally one could default to actually using the limits known from self.rpars.get_limits!
+        """Set a parameter to a numeric (int or float) value.
 
         Parameters
         ----------
         param : str
             The name of the parameter in PARAMETERS
-        value : str
-            The value as found in the PARAMETERS file
-        varname : str, optional
-            The variable name in the Rparams class, if it differs from 'param'
-        type_ : int or float, optional
-            Which type the variable must take
-        range_ : tuple, values can be int or float or None, optional
-            Defines upper and lower limits for the value. If either is set to
-            None, only the other one will be interpreted. The default is None
-            for both.
-        range_exclude : tuple (bool, bool), optional
-            Whether the upper and lower limits themselves are allowed values
-            or not. The default is False for both (range is inclusive).
-        out_of_range_event : str 'fail' or 'set', optional
-            What to do if the given value lies outside the range. For 'fail',
-            the value will be ignored. For 'modulo', the value will be
-            brought within the range by '%' operation. For 'set', the value
-            will be set to the lowest allowed value. The default is
-            'fail'.
+        assignment : Assignment
+            The assignment of the parameter, read from PARAMETERS.
+        var_name : str, optional
+            The variable name in the Rparams class, if it differs from
+            'param'. Default is None.
         return_only: bool, optional
-            If True, only return the value of the parameter, but do not set it.
+            If True, only return the value of the parameter, but do not
+            set it.
+        bounds : NumericBounds, optional
+            Acceptable limits for value, and what to do in case an
+            out-of-bounds value is given. Defaults is an unbounded
+            float.
 
         Returns
         ----------
-        int or float
-            set value
+        value : int or float
+            The interpreted value.
 
+        Raises
+        ------
+        ParameterFloatConversionError
+            When conversion of a float-type value to float fails.
+        ParameterIntConversionError
+            When conversion of a int-type value to int fails.
+        ParameterRangeError
+            When a the value falls outside the constraints of bounds.
         """
-        if out_of_range_event not in ('fail', 'modulo'):
-            raise ValueError("out_of_range_event must be 'fail' or 'modulo'")
-        if (range_[0] is None or range_[1] is None) and out_of_range_event == 'modulo':
-            raise ValueError("Cannot use out_of_range_event 'modulo' "
-                             f"with limits {range_}.")
-
-        if type_ not in (int, float):
-            raise ValueError('type_ must be int or float')
-        if type_ is float:
-            try:
-                v = float(assignment.value)
-            except ValueError:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterFloatConversionError(parameter=param)
-        else:  # type_ is int
-            try:
-                v = int(float(assignment.value))  # for e.g. '1e6' to int
-            except ValueError:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterIntConversionError(parameter=param)
-
-        out_of_range = [False, False]
-        if range_[0] is not None and (v < range_[0] or
-                                      (range_exclude[0] and v == range_[0])):
-            out_of_range[0] = True
-        if range_[1] is not None and (v > range_[1] or
-                                      (range_exclude[1] and v == range_[1])):
-            out_of_range[1] = True
-        range_chars = ({False: "[", True: "]"}, {False: "]", True: "["})
-        if all([v is not None for v in range_]):
-            outOfRangeStr = (
-                f'not in range {range_chars[0][range_exclude[0]]}{range_[0]}, '
-                f'{range_[1]}{range_chars[1][range_exclude[1]]}'
-                )
-        elif range_[0] is not None:
-            if range_exclude[0]:
-                outOfRangeStr = f'less than or equal to {range_[0]}'
-            else:
-                outOfRangeStr = f'less than {range_[0]}'
-        else:
-            if range_exclude[1]:
-                outOfRangeStr = f'larger than or equal to {range_[1]}'
-            else:
-                outOfRangeStr = f'larger than {range_[1]}'
-        if any(out_of_range) and out_of_range_event == 'fail':
-            message = f"Value {v} is {outOfRangeStr}."
+        type_ = bounds.type_
+        try:
+            # The inner float is necessary for, e.g., 1e6 as int
+            value = type_(float(assignment.value))
+        except ValueError:
             self.rpars.setHaltingLevel(1)
-            raise ParameterError(param, message=message)
-        if any(out_of_range) and out_of_range_event == 'modulo':
+            if type_ is float:
+                exc = ParameterFloatConversionError
+            else:
+                exc = ParameterIntConversionError
+            raise exc(parameter=param) from None
 
-            for i in range(0, 2):
-                if not out_of_range[i]:
-                    continue
-                    setTo = (((v - range_[0]) % (range_[1] - range_[0]))
-                             + range_[0])
-                elif range_exclude[i]:
-                    mult = 1
-                    if i == 1:
-                        mult = -1
-                    if type_ == float:
-                        setTo = range_[i] + mult*1e-4
-                    else:
-                        setTo = range_[i] + mult
-                else:
-                    setTo = range_[i]
-                logger.warning(f'PARAMETERS file: {param}: Value {v} is '
-                            f'{outOfRangeStr}. Value will be set to {setTo}.')
-                v = setTo
-                break
+        in_range = all(bounds.is_in_range(value))
+        if not in_range and bounds.fail:
+            self.rpars.setHaltingLevel(1)
+            out_of_range = bounds.format_out_of_range(value)
+            raise ParameterRangeError(param, message=out_of_range)
 
+        if not in_range:
+            in_range_value = bounds.make_in_range(value)
+            out_of_range = bounds.format_out_of_range(value)
+            logger.warning(f'PARAMETERS file: {param}: {out_of_range}. '
+                           f'Value will be set to {in_range_value}.')
+            value = in_range_value
 
-        # set the value of parameter
-        if not var_name:
+        if var_name is None:
             var_name = param.upper()
         if not return_only:
-            setattr(self.rpars, var_name, v)
-        return v
+            setattr(self.rpars, var_name, value)
+        return value
 
     @classmethod
     def _make_methods(cls, wrapped, kwargs_names, new_methods_info):
@@ -940,7 +886,7 @@ class ParameterInterpreter:
     def make_numerical_interpreter_methods(cls):
         """Dynamically generate int/float-setting methods."""
         cls._make_methods(cls.interpret_numerical_parameter,
-                          ('type_', 'range_', 'range_exclude'),
+                          ('bounds',),
                           _SIMPLE_NUMERICAL_PARAMS)
 
     # ----- Methods to make sure no extra flags/values are given ------
@@ -1089,9 +1035,14 @@ class ParameterInterpreter:
             raise ParameterRangeError(parameter=param,
                                         given_value=i,
                                         allowed_range=(1, 100))
-        domain_step = self.interpret_numerical_parameter(param, assignment,
-                                            type_=int, range_=(1, 100),
-                                            return_only=True)
+        domain_step = self.interpret_numerical_parameter(
+            param, assignment,
+            bounds=NumericBounds(type_=int, range_=(1, 100)),
+            return_only=True
+            )
+
+        # pylint: disable=compare-to-zero
+        # Seems clearer this way than having "if 100 % domain_step"
         if 100 % domain_step != 0:
             j = domain_step - 1
             while 100 % j != 0:
@@ -1143,7 +1094,7 @@ class ParameterInterpreter:
         try:
             self.rpars.FILAMENT_WF = known_filaments[assignment.value.lower()]
         except KeyError:
-            self.interpret_numerical_parameter(param, assignment, type_=float)
+            self.interpret_numerical_parameter(param, assignment)
 
     def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
         """Assign parameter FORTRAN_COMP."""
@@ -1199,13 +1150,13 @@ class ParameterInterpreter:
             return
         # otherwise interpret as int
         try:
-            log_level = self.interpret_numerical_parameter(param,
-                                                            assignment,
-                                                            int,
-                                                            range_=(0, 50),
-                                                            return_only=True)
-        except ParameterError as err:
-            raise ParameterValueError(param) from err
+            log_level = self.interpret_numerical_parameter(
+                param, assignment,
+                bounds=NumericBounds(type_=int, range_=(0, 50)),
+                return_only=True
+                )
+        except ParameterError as exc:
+            raise ParameterValueError(param) from exc
         self.rpars.LOG_LEVEL = log_level
 
     def interpret_v0_real(self, assignment):
@@ -1519,18 +1470,13 @@ class ParameterInterpreter:
 
     def interpret_search_population(self, assignment):
         param = 'SEARCH_POPULATION'
-        try:
-            self.interpret_numerical_parameter(param,
-                                                    assignment,
-                                                    type_=int,
-                                                    range_=(1,None))
-        except ParameterError:
-            # reraise
-            raise
-        else:
-            if self.rpars.SEARCH_POPULATION < 16:
-                logger.warning('SEARCH_POPULATION is very small. A '
-                            'minimum value of 16 is recommended.')
+        self.interpret_numerical_parameter(
+            param, assignment,
+            bounds=NumericBounds(type_=int, range_=(1, None))
+            )
+        if self.rpars.SEARCH_POPULATION < 16:
+            logger.warning('SEARCH_POPULATION is very small. A '
+                        'minimum value of 16 is recommended.')
 
     def interpret_search_start(self, assignment):
         param = 'SEARCH_START'
@@ -1612,8 +1558,7 @@ class ParameterInterpreter:
     def interpret_symmetry_eps(self, assignment):
         param = 'SYMMETRY_EPS'
         self._ensure_no_flags_assignment(param, assignment)
-        eps_range = (1e-100, None)
-        if len(assignment.values) not in (1,2):
+        if len(assignment.values) not in (1, 2):
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
 
@@ -1623,18 +1568,17 @@ class ParameterInterpreter:
                             "incorrect symmetry detection. Be sure to check "
                             "the output.")
         # interpret first value as SYMMETRY_EPS
-        self.interpret_numerical_parameter(param, assignment, type_=float,
-                                            range_=eps_range)
+        bounds = NumericBounds(type_=float, range_=(1e-100, None))
+        self.interpret_numerical_parameter(param, assignment, bounds=bounds)
         if self.rpars.SYMMETRY_EPS > 1.0:
             warning_middle = "Given value is greater one Ångström. "
             logger.warning(warning_header + warning_middle + warning_text)
         # interpret possible second value as SYMMETRY_EPS_Z
         if assignment.other_values:
             z_assignment = Assignment(assignment.other_values, param)
-            self.interpret_numerical_parameter("SYMMETRY_EPS_Z",
-                                                z_assignment,
-                                                type_=float,
-                                                range_=eps_range)
+            self.interpret_numerical_parameter('SYMMETRY_EPS_Z',
+                                               z_assignment,
+                                               bounds=bounds)
             if self.rpars.SYMMETRY_EPS_Z > 1.0:
                 warning_middle = "Given value for z is greater one Ångström. "
                 logger.warning(warning_header + warning_middle + warning_text)
@@ -1961,8 +1905,12 @@ class ParameterInterpreter:
 
     # Helper methods
     def _parse_incidence_angles(self, assignment, param, right_side):
-        range_ = {'THETA': (-90, 90), 'PHI': (0, 360)}
-        _out_of_range_event = {'THETA': 'fail', 'PHI': 'modulo'}
+        bounds = {
+            'THETA': NumericBounds(type_=float, range_=(-90, 90),
+                                   out_of_range_event='fail'),
+            'PHI': NumericBounds(type_=float, range_=(0, 360),
+                                 out_of_range_event='modulo')
+            }
         d = {'THETA': 0, 'PHI': 0}
         if ',' in right_side:
             sublists = splitSublists(assignment.values, ',')
@@ -1970,10 +1918,9 @@ class ParameterInterpreter:
                 for name in ['THETA', 'PHI']:
                     if sl[0].upper() == name:
                         d[name] = self.interpret_numerical_parameter(
-                            f'{param} {name}', Assignment(sl[1], param),        # TODO: tries to assign an attribute with white spaces??
-                            float,
-                            range_=range_[name],
-                            out_of_range_event=_out_of_range_event[name],
+                            f'{param} {name}',
+                            Assignment(sl[1], param),
+                            bounds=bounds[name],
                             return_only=True
                             )
                         break
@@ -1990,9 +1937,10 @@ class ParameterInterpreter:
                     )
             for ind, name in enumerate(['THETA', 'PHI']):
                 d[name] = self.interpret_numerical_parameter(
-                    f'{param} {name}', Assignment(assignment.values[ind], param),  # TODO: tries to assign an attribute with white spaces??
-                    float, range_=range_[name],
-                    out_of_range_event=_out_of_range_event[name])
+                    f'{param} {name}',                                          # TODO: tries to assign an attribute with white spaces??
+                    Assignment(assignment.values[ind], param),
+                    bounds=bounds[name]
+                    )
 
         if any(v is None for v in d.values()):
             self.rpars.setHaltingLevel(1)
