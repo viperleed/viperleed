@@ -532,11 +532,10 @@ class ParameterInterpreter:
             if _is_domain_calc and param in self.domains_ignore_params:
                 # skip in domain calculation
                 continue
-            try:
-                self._interpret_param(param, assignment)
-            except ParameterError as err:
-                raise err
-            logger.log(2, f"Successfully interpreted parameter {param}")
+
+            self._interpret_param(param, assignment)
+            logger.log(_BELOW_DEBUG,
+                       f'Successfully interpreted parameter {param}')
 
         # finally set the log level back to what it was
         logger.setLevel(_backup_log_level)
