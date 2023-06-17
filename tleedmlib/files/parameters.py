@@ -62,8 +62,8 @@ _KNOWN_PARAMS = (                                                               
 
 
 # parameters that can be optimized in FD optimization
-_OPTIMIZE_OPTIONS = set('theta', 'phi', 'v0i',
-                        'a', 'b', 'c', 'ab', 'abc', 's_ovl')
+_OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i',
+                     'a', 'b', 'c', 'ab', 'abc', 's_ovl'}
 
 
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
@@ -432,12 +432,12 @@ class Assignment:
     @property
     def flag(self):
         """Return the leftmost flag as a string."""
-        return self.flags[1] if self.flags else ''
+        return self.flags[0] if self.flags else ''
 
     @property
     def value(self):
         """Return the leftmost value as a string."""
-        return self.values[1] if self.values else ''
+        return self.values[0] if self.values else ''
 
     @property
     def other_flags(self):
