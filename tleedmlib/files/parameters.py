@@ -13,6 +13,7 @@ Functions for reading from and writing to the PARAMETERS file
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from functools import partialmethod
 import logging
 from pathlib import Path
 import re
