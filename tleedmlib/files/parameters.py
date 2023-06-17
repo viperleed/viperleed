@@ -943,7 +943,7 @@ class ParameterInterpreter:
         param = "FILAMENT_WF"
         self._ensure_simple_assignment(param, assignment)
         # check common filaments (e.g W), otherwise interpret as float
-        known_filaments = self.rp.get_default(param)
+        known_filaments = self.rpars.get_default(param)
         try:
             self.rpars.FILAMENT_WF = known_filaments[assignment.value.lower()]
         except KeyError:
