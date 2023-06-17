@@ -11,7 +11,7 @@ in June 2023.
 Functions for reading from and writing to the PARAMETERS file
 """
 
-from collections import Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 import logging
 from pathlib import Path
@@ -424,10 +424,10 @@ class Assignment:
 
         # Make sure values_str and flags_str are actually strings:
         # we also accept Sequence of strings at __init__
-        if not isinstance(self.value_str, str)
-            object.__setattr__(self, 'values_str', " ".join(self.value_str))
-        if not isinstance(self.flags_str, str)
-            object.__setattr__(self, 'values_str', " ".join(self.flags_str))
+        if not isinstance(self.values_str, str):
+            object.__setattr__(self, 'values_str', " ".join(self.values_str))
+        if not isinstance(self.flags_str, str):
+            object.__setattr__(self, 'flags_str', " ".join(self.flags_str))
 
     @property
     def flag(self):
