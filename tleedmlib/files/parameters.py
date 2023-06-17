@@ -486,14 +486,7 @@ class ParameterInterpreter:
         """Initialize interpreter instance from an Rparams."""
         self.rpars = rpars
         self._slab = None
-
-        # define order that parameters should be read in                        # TODO: I think domain should be in here too
-        orderedParams = ["LOG_LEVEL", "RUN"]
-        self.param_names = [p for p
-                            in orderedParams
-                            if p in self.rpars.readParams]
-        self.param_names.extend(p for p in _KNOWN_PARAMS
-                        if p in rpars.readParams and p not in self.param_names)
+        self.param_names = []  # In precedence order
 
         # Some flags
         self._search_conv_read = False
@@ -523,8 +516,7 @@ class ParameterInterpreter:
         if self.silent:
             logger.setLevel(logging.ERROR)
 
-        # check if we are doing a domain calculation
-        self._is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
+        self._update_param_order()
 
         for param, assignment in self._get_param_assignments():
             # Check if we are doing a domain calculation                        # TODO: this is a logical error! We may not know if we are doing a domain calc before yet. If a parameter is specified that should be ignored (e.g. BULK_REPEAT) prior to RUN this may crash!
@@ -561,6 +553,16 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(2)
             raise ParameterNotRecognizedError(param)
         _interpreter(assignment)
+
+    def _update_param_order(self):
+        """Define order in which parameters should be read."""
+        ordered_params = 'LOG_LEVEL', 'RUN'                                     # TODO: I think DOMAIN should be in here too
+        self.param_names = [p for p in ordered_params
+                            if p in self.rpars.readParams]
+        self.param_names.extend(
+            p for p in _KNOWN_PARAMS
+            if p in self.rpars.readParams and p not in self.param_names
+            )
 
     # Methods for interpreting simple parameters
     def _interpret_bool_parameter(self, param, assignment,
