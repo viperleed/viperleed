@@ -32,10 +32,7 @@ from viperleed.tleedmlib.files.iodeltas import checkDelta
 
 logger = logging.getLogger("tleedm.rparams")
 
-###############################################
-#                CLASSES                      #
-###############################################
-
+NO_VALUE = object()  # For Rparams
 
 # Notice that the defaults in here that may be mutated during execution
 # are saved as immutable types to prevent inadvertent modification of
@@ -56,7 +53,8 @@ DEFAULTS = {
         },
     'RUN': (0, 1, 2, 3),
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
-    'THEO_ENERGIES': (-1, -1, -1),
+    'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
+    'THEO_ENERGIES - no experiments': (20, 800, 3),
     'ZIP_COMPRESSION_LEVEL': 2,
     }
 
@@ -67,6 +65,11 @@ PARAM_LIMITS = {
     'LMAX': (1, 18),
     'INTPOL_DEG': ['3', '5'],
     }
+
+
+###############################################
+#                CLASSES                      #
+###############################################
 
 
 class SearchPar:
@@ -210,8 +213,9 @@ class Rparams:
         self.SYMMETRY_BULK = {}   # keys: group, rotation, mirror
         self.TENSOR_INDEX = None  # default: pick highest in Tensors folder
         self.TENSOR_OUTPUT = []  # per layer: write Tensor output? (0/1)
+        # THEO_ENERGIES: the default values without experimental
+        # beams is set in section INIT via self.initTheoEnergies
         self.THEO_ENERGIES = self.get_default('THEO_ENERGIES')
-        # default: [20, 800, 2], initialized in section INIT
         self.THETA = 0.0        # from BEAM_INCIDENCE
         self.TL_IGNORE_CHECKSUM = True
         self.TL_VERSION = 0.    # requested TensErLEED version
@@ -297,6 +301,10 @@ class Rparams:
     @property
     def is_debug_mode(self):
         return self.LOG_LEVEL < logging.INFO
+
+    @property
+    def no_value(self):
+        return NO_VALUE
 
     def get_default(self, param):
         """Return the default value of param."""
@@ -420,9 +428,9 @@ class Rparams:
         if self.fileLoaded["PHASESHIFTS"]:
             # get highest required energy index
             hi = len(self.phaseshifts)-1
-            if self.THEO_ENERGIES[1] > 0:
+            if self.THEO_ENERGIES[1] is not NO_VALUE:
                 for i in range(0, len(self.phaseshifts)):
-                    if (self.phaseshifts[i][0]*27.211396
+                    if (self.phaseshifts[i][0]*27.211396                        # TODO: use HARTREE
                             > self.THEO_ENERGIES[1]):
                         hi = i
                         break
@@ -566,7 +574,7 @@ class Rparams:
         None.
 
         """
-        if -1 not in self.THEO_ENERGIES:
+        if NO_VALUE not in self.THEO_ENERGIES:
             return
         info = False
         if self.fileLoaded["EXPBEAMS"]:
@@ -578,12 +586,12 @@ class Rparams:
                 if max(beam.intens) > maxen:
                     maxen = max(beam.intens)
             values = [minen - 3, maxen + 3, 3]
-            if -1 in self.THEO_ENERGIES[:2]:
+            if NO_VALUE in self.THEO_ENERGIES[:2]:
                 info = True
         else:
-            values = [20, 800, 3]
+            values = list(DEFAULTS['THEO_ENERGIES - no experiments'])
         for i in range(0, 3):
-            if self.THEO_ENERGIES[i] == -1:
+            if self.THEO_ENERGIES[i] is NO_VALUE:
                 self.THEO_ENERGIES[i] = values[i]
         if info:
             logger.debug(
@@ -594,7 +602,6 @@ class Rparams:
              % self.THEO_ENERGIES[2])
         if d != 0:
             self.THEO_ENERGIES[1] += (self.THEO_ENERGIES[2] - d)
-        return
 
     # TODO: eventually, these default values should be moved to some constant or other file
     def getFortranComp(self, comp="auto", skip_check=False):                    # TODO: combine with FortranCompMPI from below; lots of repeated code

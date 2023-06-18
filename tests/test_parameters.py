@@ -358,7 +358,7 @@ class TestTheoEnergies:
         interpreter = ParameterInterpreter(self.rpars)
         assignment = Assignment("1.0 _ 2.0", "THEO_ENERGIES")
         interpreter.interpret_theo_energies(assignment)
-        assert self.rpars.THEO_ENERGIES == [1.0, -1, 2.0]
+        assert self.rpars.THEO_ENERGIES == [1.0, self.rpars.no_value, 2.0]
 
     def test_interpret_theo_energies_invalid_float(self):
         interpreter = ParameterInterpreter(self.rpars)

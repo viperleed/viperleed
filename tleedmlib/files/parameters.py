@@ -1903,10 +1903,10 @@ class ParameterInterpreter:                                                     
             The assignment for the parameter, Used only for error
             reporting.
         energies : Sequence
-            Elements are strings. The energies that should be
-            parsed. If accept_underscore is True, they may also
-            contain single underscore characters, which will
-            be replaced with -1.
+            The energies that should be parsed. Elements are
+            strings. If accept_underscore is True, they may
+            also contain single underscore characters, which
+            will be replaced with an Rparams.NO_VALUE.
         accept_underscore : bool, optional
             Whether the energy range should accept underscores in
             the fields to signify "default value"
@@ -1927,9 +1927,13 @@ class ParameterInterpreter:                                                     
         """
         energies_str = ",".join(energies)
         if accept_underscore:
-            energies_str = energies_str.replace('_', '-1')
+            # We have to replace '_' with something that AST can
+            # handle. 'None' seems easy enough. We replace it
+            # again further down when converting the rest to float
+            energies_str = energies_str.replace('_', 'None')
         try:
-            return [float(v) for v in ast.literal_eval(energies_str)]
+            return [float(v) if v is not None else self.rpars.no_value
+                    for v in ast.literal_eval(energies_str)]
         except (SyntaxError, ValueError, TypeError,
                 MemoryError, RecursionError) as exc:
             self.rpars.setHaltingLevel(1)
