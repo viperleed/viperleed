@@ -674,8 +674,14 @@ class TestIVShiftRange:
 
     def test_interpret_iv_shift_range_invalid_float_conversion(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.0 2.0 1.a", "IV_SHIFT_RANGE")
+        assignment = Assignment("0.0 2.0 ()", "IV_SHIFT_RANGE")
         with pytest.raises(ParameterFloatConversionError):
+            interpreter.interpret_iv_shift_range(assignment)
+
+    def test_interpret_iv_shift_range_invalid_parse(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.0 2.0 1.a", "IV_SHIFT_RANGE")
+        with pytest.raises(ParameterParseError):
             interpreter.interpret_iv_shift_range(assignment)
 
     def test_interpret_iv_shift_range_end_energy_less_than_start_energy(self, mock_rparams):

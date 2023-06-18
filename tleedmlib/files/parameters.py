@@ -1123,27 +1123,38 @@ class ParameterInterpreter:                                                     
         message = 'Only degree 3 and 5 interpolation supported at the moment.'
         raise ParameterError(parameter=param, message=message)
 
-    def interpret_iv_shift_range(self, assignment):
+    def interpret_iv_shift_range(self, assignment):                             # TODO: would be very convenient to have a simple EnergyRange (namedtuple or dataclass) to use for this and THEO_ENERGIES. Then we could have .start, .stop, .step instead of indices.
+        """Assign parameter IV_SHIFT_RANGE."""
         param = 'IV_SHIFT_RANGE'
         if len(assignment.values) not in (2, 3):
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(parameter=param)
-        try:
-            fl = [float(s) for s in assignment.values]
-        except ValueError:
-            raise ParameterFloatConversionError(parameter=param) from None
-        if fl[1] < fl[0]:
-            message = 'IV_SHIFT_RANGE end energy has to >= start energy.'       # TODO: Very pedantic. We could just swap them?
+        iv_range = self._parse_energy_range(param, assignment,
+                                            assignment.values,
+                                            accept_underscore=True)             # TODO: @amimre this behaviour change needs to go in the doc
+        # Interpret underscores as defaults                                     # TODO: @amimre this behaviour change needs to go in the doc
+        _no_value = self.rpars.no_value
+        _defaults = self.rpars.get_default(param)
+        for i, (bound, default) in enumerate(zip(iv_range, _defaults)):
+            if bound is _no_value:
+                iv_range[i] = default
+
+        if len(iv_range) == 3:
+            start, stop, step = iv_range
+        else:
+            start, stop, step = *iv_range, _no_value
+
+        if step is not _no_value and (stop - start) * step < 0:
+            message = (f"Inconsistent {param} step. Cannot shift from "
+                       f"{start:.2f} to {stop:.2f} with {step=:.2f}")
             self.rpars.setHaltingLevel(1)
             raise ParameterError(param, message)
 
-        for i in range(0, 2):
-            self.rpars.IV_SHIFT_RANGE[i] = fl[i]
-        if len(fl) == 3 and fl[2] <= 0:
-            message = 'IV_SHIFT_RANGE step has to be positive.'                 # TODO: Very pedantic. We could just take its opposite. Perhaps only if the limits were swapped?
-            self.rpars.setHaltingLevel(1)
-            raise ParameterError(parameter=param, message=message)
-        self.rpars.IV_SHIFT_RANGE[2] = fl[2]
+        if stop < start:
+            start, stop = stop, start
+            step = step if step is _no_value else -step
+
+        self.rpars.IV_SHIFT_RANGE = [start, stop, step]
 
     def interpret_layer_cuts(self, assignment):
         param = 'LAYER_CUTS'

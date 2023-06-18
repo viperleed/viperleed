@@ -293,11 +293,11 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
                  + rp.IV_SHIFT_RANGE[1]) + 0.01
     step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
-    if rp.IV_SHIFT_RANGE[2] > 0:
+    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
+        vincr = step
+    else:
         vincr = rp.IV_SHIFT_RANGE[2]
         # step = min(step, vincr)
-    else:
-        vincr = step
     # find correspondence experimental to theoretical beams:
     beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams

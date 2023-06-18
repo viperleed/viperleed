@@ -156,10 +156,11 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         )  # TODO: should this be + or - ? I think + ...
     else:
         maxen = min(max(exp_energies), rp.THEO_ENERGIES[1])
+        
     intpol_step = min(
         exp_energies[1] - exp_energies[0], theo_energies[1] - theo_energies[0]
-    )
-    if rp.IV_SHIFT_RANGE[2] > 0:
+        )
+    if rp.IV_SHIFT_RANGE[2] is not rp.no_value:
         intpol_step = min(intpol_step, rp.IV_SHIFT_RANGE[2])
 
     out_grid = np.arange(minen, maxen + intpol_step, intpol_step)

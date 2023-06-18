@@ -44,6 +44,7 @@ DEFAULTS = {
         "lab6": 2.65,  # This is the default if nothing is given
         "w": 4.5,
         },
+    'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: init from data
     'LOG_LEVEL' : logging.INFO,
     'PHASESHIFT_EPS': {
         'r': 0.1,
@@ -162,7 +163,7 @@ class Rparams:
         self.GAUSSIAN_WIDTH_SCALING = 0.5
         self.HALTING = 2    # 2: major concerns, 1: minor warnings, 0: always
         self.INTPOL_DEG = 3 # Degree of interpolation spline used in R-factor calculation
-        self.IV_SHIFT_RANGE = [-3, 3, -1]  # step of -1: init from data
+        self.IV_SHIFT_RANGE = self.get_default('IV_SHIFT_RANGE')
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True
         self.LMAX = [0, 0]    # minimum and maximum LMAX

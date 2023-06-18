@@ -194,12 +194,12 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
                  + real_iv_shift[1]) + 0.01
     # chose energy step width
-    if rp.IV_SHIFT_RANGE[2] > 0:
-        vincr = rp.IV_SHIFT_RANGE[2]
-    else:
+    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
         min_used_energy_step = min(expEnergies[1]-expEnergies[0],
             theoEnergies[1]-theoEnergies[0])
         vincr = min_used_energy_step
+    else:
+        vincr = rp.IV_SHIFT_RANGE[2]
     # find correspondence experimental to theoretical beams:
     beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
@@ -301,10 +301,10 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
     expEnergies.sort()
     minen = min(min(expEnergies), min(theoEnergies))
     maxen = max(max(expEnergies), max(theoEnergies))
-    if rp.IV_SHIFT_RANGE[2] > 0:
-        step = rp.IV_SHIFT_RANGE[2]
-    else:
+    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
         step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
+    else:
+        step = rp.IV_SHIFT_RANGE[2]
     ngrid = int(np.ceil(((maxen-minen)/step)*1.1))
     n_var = 1
     if for_error:
