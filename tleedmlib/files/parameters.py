@@ -1060,12 +1060,12 @@ class ParameterInterpreter:                                                     
         """Assign parameter FILAMENT_WF."""
         param = 'FILAMENT_WF'
         self._ensure_simple_assignment(param, assignment)
-        # check common filaments (e.g W), otherwise interpret as float
+        # Check common filaments (e.g., W), otherwise assume a float
         known_filaments = self.rpars.get_default(param)
         try:
             self.rpars.FILAMENT_WF = known_filaments[assignment.value.lower()]
         except KeyError:
-            self.interpret_numerical_parameter(param, assignment)
+            self.interpret_numerical_parameter(param, assignment)               # TODO: bounds? We probably want a _POSITIVE_FLOAT
 
     def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
         """Assign parameter FORTRAN_COMP."""
@@ -1130,17 +1130,16 @@ class ParameterInterpreter:                                                     
         try:
             fl = [float(s) for s in assignment.values]
         except ValueError:
-            raise ParameterFloatConversionError(parameter=param)
+            raise ParameterFloatConversionError(parameter=param) from None
         if fl[1] < fl[0]:
-            message = 'IV_SHIFT_RANGE end energy has to >= start energy.'
+            message = 'IV_SHIFT_RANGE end energy has to >= start energy.'       # TODO: Very pedantic. We could just swap them?
             self.rpars.setHaltingLevel(1)
             raise ParameterError(param, message)
-            return
 
         for i in range(0, 2):
             self.rpars.IV_SHIFT_RANGE[i] = fl[i]
         if len(fl) == 3 and fl[2] <= 0:
-            message = 'IV_SHIFT_RANGE step has to be positive.'
+            message = 'IV_SHIFT_RANGE step has to be positive.'                 # TODO: Very pedantic. We could just take its opposite. Perhaps only if the limits were swapped?
             self.rpars.setHaltingLevel(1)
             raise ParameterError(parameter=param, message=message)
         self.rpars.IV_SHIFT_RANGE[2] = fl[2]
