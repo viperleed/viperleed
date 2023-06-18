@@ -43,25 +43,26 @@ logger = logging.getLogger("tleedm.rparams")
 # in the relevant places
 DEFAULTS = {
     'EXPBEAMS_INPUT_FILE' : None,
-    'FILAMENT_WF' :{
-        "lab6": 2.65, # this is the default if nothing is given
+    'FILAMENT_WF': {
+        "lab6": 2.65,  # This is the default if nothing is given
         "w": 4.5,
-    },
+        },
     'LOG_LEVEL' : logging.INFO,
     'PHASESHIFT_EPS': {
         'r': 0.1,
         'n': 0.05,
-        'f': 0.01, # this is the default if nothing is given
+        'f': 0.01,  # This is the default if nothing is given
         'e': 0.001,
-    },
-    'ZIP_COMPRESSION_LEVEL': 2,
-    'SEARCH_EVAL_TIME':  60, # time interval between reads of SD.TL,            # TODO: should be dynamic?
+        },
     'RUN': (0, 1, 2, 3),
-}
+    'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
+    'THEO_ENERGIES': (-1, -1, -1),
+    'ZIP_COMPRESSION_LEVEL': 2,
+    }
 
                                                                                 # TODO: fill dict of parameter limits here (e.g. LMAX etc.)
 # parameter limits
-# either tuple of (min, max) or list of allowed values
+# either tuple of (min, max) or list of allowed values                          # TODO: allowed would be cleaner as set. It's not great that things are mixed though. Would be better to have a separate global
 PARAM_LIMITS = {
     'LMAX': (1, 18),
     'INTPOL_DEG': ['3', '5'],
@@ -209,7 +210,7 @@ class Rparams:
         self.SYMMETRY_BULK = {}   # keys: group, rotation, mirror
         self.TENSOR_INDEX = None  # default: pick highest in Tensors folder
         self.TENSOR_OUTPUT = []  # per layer: write Tensor output? (0/1)
-        self.THEO_ENERGIES = [-1, -1, -1]
+        self.THEO_ENERGIES = self.get_default('THEO_ENERGIES')
         # default: [20, 800, 2], initialized in section INIT
         self.THETA = 0.0        # from BEAM_INCIDENCE
         self.TL_IGNORE_CHECKSUM = True
@@ -392,7 +393,7 @@ class Rparams:
             # try again without trailing zero
             if self.TL_VERSION_STR.endswith('0'):
                 self.TL_VERSION_STR = self.TL_VERSION_STR[:-1]
-        if (self.TL_VERSION_STR not in KNOWN_TL_VERSIONS 
+        if (self.TL_VERSION_STR not in KNOWN_TL_VERSIONS
                 and not self.TL_IGNORE_CHECKSUM):
             raise UnknownTensErLEEDVersionError(
                 f"Unrecognized TensErLEED version: {self.TL_VERSION_STR}. "
