@@ -363,7 +363,7 @@ class TestTheoEnergies:
     def test_interpret_theo_energies_invalid_float(self):
         interpreter = ParameterInterpreter(self.rpars)
         assignment = Assignment("invalid", "THEO_ENERGIES")
-        with pytest.raises(ParameterFloatConversionError):
+        with pytest.raises(ParameterParseError):
             interpreter.interpret_theo_energies(assignment)
 
     def test_interpret_theo_energies_invalid_positive_value(self):

@@ -13,6 +13,7 @@ Alexander Imre & Michele Riva in June 2023.
 Functions for reading from and writing to the PARAMETERS file.
 """
 
+import ast
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from functools import partialmethod
@@ -1797,68 +1798,57 @@ class ParameterInterpreter:                                                     
                     raise ParameterValueError(param, s)
 
     def interpret_theo_energies(self, assignment):
-        """Assign parameter THEO_ENERGIES."""
+        """Assign parameter THEO_ENERGIES. Correct start if inappropriate."""
         param = 'THEO_ENERGIES'
         energies = assignment.values
-        if not assignment.other_values:
-            # Single value input - only one energy requested
-            energy_str = assignment.value
-            try:
-                energy = float(energy_str)
-            except ValueError as err:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterFloatConversionError(param, energy_str) from err
-            if energy > 0:
-                self.rpars.THEO_ENERGIES = [energy, energy, 1]
-                return
-            self.rpars.setHaltingLevel(2)
-            raise ParameterParseError(param, energy)
 
-        if len(energies) != 3:
-            self.rpars.setHaltingLevel(1)
-            raise ParameterNumberOfInputsError(param, (len(energies), 3))
-
-        fl = []
-        defined = 0
-        for val in energies:
-            if val == '_':
-                fl.append(-1)
-                continue  # s in values loop
-            try:
-                f = float(val)
-            except ValueError as err:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterFloatConversionError(param, val) from err
-            else:
-                if f > 0:
-                    fl.append(f)
-                    defined += 1
-                else:
-                    message = f'{param} values have to be positive.'
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterError(param, message)
-
-        if len(fl) != 3:
-            raise ParameterNumberOfInputsError(param)
-        if defined < 3:
-            self.rpars.THEO_ENERGIES = fl
+        # (1) Single value input: treat as default if it is a single
+        # underscore, otherwise as a request for a single energy
+        if not assignment.other_values and assignment.value == '_':
+            self.rpars.THEO_ENERGIES = self.rpars.get_default(param)
             return
-        if (fl[0] > 0 and fl[1] > fl[0] and fl[2] > 0):
-            if (fl[1] - fl[0]) % fl[2] != 0:
-                # if the max is not hit by the steps exactly,
-                #   correct max up to make it so
-                fl[0] -= fl[2] - (fl[1] - fl[0]) % fl[2]
-                if fl[0] <= 0:
-                    fl[0] = fl[0] % fl[2]
-                    if fl[0] == 0:
-                        fl[0] += fl[2]
-                logger.info('THEO_ENERGIES parameter: '
-                            '(Eto-Efrom)%Estep != 0, Efrom was '
-                            f'corrected to {fl[0]}')
-            self.rpars.THEO_ENERGIES = fl
-        else:
+        if not assignment.other_values:
+            energies = (assignment.value, assignment.value, "1")
+
+        # (2) Three values. Any can be an "_" meaning "default".
+        # Internally, we store those as "-1". The others should
+        # be positive floats.
+        theo_energies = self._parse_energy_range(param, assignment, energies,
+                                                 accept_underscore=True)
+        non_defaults = [v for v, s in zip(theo_energies, energies) if s != '_']
+        if not all(e > 0 for e in non_defaults):
+            message = f'{param} values have to be positive.'
             self.rpars.setHaltingLevel(1)
-            raise ParameterParseError(param)
+            raise ParameterRangeError(param, message)
+
+        if len(theo_energies) != 3:
+            raise ParameterNumberOfInputsError(param)
+        if len(non_defaults) < 3:
+            self.rpars.THEO_ENERGIES = theo_energies
+            return
+
+        start, stop, step = theo_energies
+        if stop < start:
+            message = f'maximum {param} value should be >= than the minimum.'
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param)
+
+        # If the max is not hit by the steps exactly, correct
+        # the lower bound down so that this is the case
+        # pylint: disable=compare-to-zero  # Clearer this way
+        if (stop - start) % step == 0:
+            self.rpars.THEO_ENERGIES = theo_energies
+            return
+        # pylint: enable=compare-to-zero
+
+        start -= step - (stop - start) % step
+        if start < 0:
+            start = start % step
+        if not start:
+            start = step
+        logger.info('THEO_ENERGIES parameter: (Eto - Efrom) % Estep != 0, '
+                    f'Efrom was corrected to {start}')
+        self.rpars.THEO_ENERGIES = [start, stop, step]
 
     def interpret_v0_real(self, assignment):
         """Assign parameter V0_REAL."""
@@ -1902,6 +1892,54 @@ class ParameterInterpreter:                                                     
             message = f'Element(s) {invalid} not found in periodic table.'
             self.rpars.setHaltingLevel(2)
             raise ParameterError(parameter=param, message=message)
+
+    def _parse_energy_range(self, param, assignment,
+                            energies, accept_underscore=True):
+        """Return a tuple of floats for energies.
+
+        Parameters
+        ----------
+        param : str
+            The parameter to be assigned. Used only for error reporting
+        assignment : Assignment
+            The assignment for the parameter, Used only for error
+            reporting.
+        energies : Sequence
+            Elements are strings. The energies that should be
+            parsed. If accept_underscore is True, they may also
+            contain single underscore characters, which will
+            be replaced with -1.
+        accept_underscore : bool, optional
+            Whether the energy range should accept underscores in
+            the fields to signify "default value"
+
+        Returns
+        -------
+        float_energies : list
+            The energies as a list of floats
+
+        Raises
+        ------
+        ParameterFloatConversionError
+            If conversion to float fails for some of the inputs
+        ParameterParseError
+            If other parsing errors occur (typically a malformed
+            input that cannot be converted to a simple tuple of
+            of numbers).
+        """
+        energies_str = ",".join(energies)
+        if accept_underscore:
+            energies_str = energies_str.replace('_', '-1')
+        try:
+            return [float(v) for v in ast.literal_eval(energies_str)]
+        except (SyntaxError, ValueError, TypeError,
+                MemoryError, RecursionError) as exc:
+            self.rpars.setHaltingLevel(1)
+            if 'float' in exc.args[0]:
+                new_exc = ParameterFloatConversionError
+            else:  # Some other weird input
+                new_exc = ParameterParseError
+            raise new_exc(param, assignment.values_str) from exc
 
     def _parse_incidence_angles(self, assignment, param, right_side):
         bounds = {
