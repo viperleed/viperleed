@@ -1924,6 +1924,9 @@ class ParameterInterpreter:                                                     
             If other parsing errors occur (typically a malformed
             input that cannot be converted to a simple tuple of
             of numbers).
+        ParameterRangeError
+            In case there are at least 3 entries and the last
+            entry (interpreted as a step size) is zero.
         """
         energies_str = ",".join(energies)
         if accept_underscore:
@@ -1932,8 +1935,8 @@ class ParameterInterpreter:                                                     
             # again further down when converting the rest to float
             energies_str = energies_str.replace('_', 'None')
         try:
-            return [float(v) if v is not None else self.rpars.no_value
-                    for v in ast.literal_eval(energies_str)]
+            enrange = [float(v) if v is not None else self.rpars.no_value
+                       for v in ast.literal_eval(energies_str)]
         except (SyntaxError, ValueError, TypeError,
                 MemoryError, RecursionError) as exc:
             self.rpars.setHaltingLevel(1)
@@ -1942,6 +1945,18 @@ class ParameterInterpreter:                                                     
             else:  # Some other weird input
                 new_exc = ParameterParseError
             raise new_exc(param, assignment.values_str) from exc
+
+        # Make sure step, the last one, is NOT ZERO
+        if len(enrange) < 3:
+            return enrange
+        try:
+            1 / enrange[-1]
+        except ZeroDivisionError:
+            message = 'Step cannot be zero'
+            raise ParameterRangeError(param, message=message) from None
+        except TypeError:  # It's a NO_VALUE
+            pass
+        return enrange
 
     def _parse_incidence_angles(self, assignment, param, right_side):
         bounds = {
