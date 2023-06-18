@@ -1408,28 +1408,26 @@ class ParameterInterpreter:                                                     
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = tuple(il)
 
-    def interpret_run(self, assignment):                                       # TODO: important param, write tests
+    def interpret_run(self, assignment):                                        # TODO: important param, write tests
+        """Assign parameter RUN, inserting an initialization if needed."""
         param = 'RUN'
-        run_list = []
+        segments = []
         for section_str in assignment.values:
             try:
-                run_list.extend(Section.sequence_from_string(section_str))
-            except ValueError as err:
+                segments.extend(Section.sequence_from_string(section_str))
+            except ValueError as exc:
                 self.rpars.setHaltingLevel(2)
-                raise ParameterValueError(param, section_str) from err
-        if Section.DOMAINS in run_list:
+                raise ParameterValueError(param, section_str) from exc
+        if Section.DOMAINS in segments:
             logger.info('Found domain search.')
-        if run_list:
-            # insert initialization section if not present
-            if run_list[0] is not Section.INITIALIZATION:
-                run_list.insert(0, Section.INITIALIZATION)
-            self.rpars.RUN = [s.value for s in run_list]                        # TODO: replace with "rl" to keep Section objects
-        else:
+        if not segments:
             self.rpars.setHaltingLevel(3)
-            raise ParameterError(
-                param,
-                'RUN was defined, but no values were read.'
-                )
+            raise ParameterError(param,
+                                 'RUN was defined, but no values were read.')
+        # Insert initialization section if not present
+        if segments[0] is not Section.INITIALIZATION:
+            segments.insert(0, Section.INITIALIZATION)
+        self.rpars.RUN = [s.value for s in segments]                            # TODO: replace with "segments" to keep Section objects
 
     def interpret_search_beams(self, assignment):
         param = 'SEARCH_BEAMS'
