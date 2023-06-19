@@ -1664,7 +1664,7 @@ class ParameterInterpreter:                                                     
                                 re.IGNORECASE)
         for token, *directions in _mirror_re.findall(unrecognized):
             # All matches of mirrors are acceptable
-            unrecognized = unrecognized.sub(tokentoken, '')
+            unrecognized = unrecognized.replace(tokentoken, '')
             direction = tuple(int(v) for v in directions)
             if direction[0] < 0:
                 direction = -direction[0], -direction[1]
@@ -1672,7 +1672,7 @@ class ParameterInterpreter:                                                     
 
         _rotation_re = re.compile(r'(\s+r([2346]))', re.IGNORECASE)
         for token, order in _rotation_re.findall(unrecognized):
-            unrecognized = unrecognized.sub(token, '')
+            unrecognized = unrecognized.replace(token, '')
             self.rpars.SYMMETRY_BULK['rotation'].add(int(order))
 
         _group_re = re.compile(                                                 # TODO: For now borrowed from guilib. Eventually will try to instantiate a PlaneGroup
@@ -1682,7 +1682,7 @@ class ParameterInterpreter:                                                     
         for token, group in _group_re.findall(unrecognized):
             if group not in self.grouplist:
                 continue
-            unrecognized = unrecognized.sub(token, '')
+            unrecognized = unrecognized.replace(token, '')
             if 'group' in self.rpars.SYMMETRY_BULK:
                 message = 'Only one symmetry group can be given.'
                 raise ParameterValueError(param, message=message)
