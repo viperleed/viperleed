@@ -62,7 +62,7 @@ class ParameterValueError(ParameterError):
         if message is None:
             message = 'Could not interpret '
             message += f'"{given_value}".' if given_value else 'given_value.'
-        super().__init__(parameter, message
+        super().__init__(parameter, message)
 
 
 class ParameterParseError(ParameterError):
