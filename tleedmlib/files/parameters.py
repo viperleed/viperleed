@@ -1071,13 +1071,9 @@ class ParameterInterpreter:                                                     
     def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
         """Assign parameter FORTRAN_COMP."""
         param = 'FORTRAN_COMP'
+        self._ensure_single_flag_assignment(param, assignment)
 
         flag, compiler_str = assignment.flag.lower(), assignment.value
-        # Complain if more than one flag is given at a time
-        if assignment.other_flags:
-            message = (f'Only one flag allowed for {param} per line. '
-                       f'Got {assignment.flags}.')
-            raise ParameterError(param, message)
 
         # (1) Default (i.e., non-MPI) compiler flags
         if not flag and compiler_str.lower() in ['ifort', 'gfortran']:
