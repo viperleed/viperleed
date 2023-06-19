@@ -49,6 +49,7 @@ and a scaling factor applied whenever partial convergence is reached.
 **Syntax:**
 
 ::
+
    ! initialize with=0.1, scale factor=0.3 whenever partial convergence is reached
    SEARCH_CONVERGENCE gaussian = 0.1 0.3
 
