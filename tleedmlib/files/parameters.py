@@ -1662,31 +1662,31 @@ class ParameterInterpreter:                                                     
 
         _mirror_re = re.compile(r'(\s+m\[\s*(-?[012])\s*,?\s*(-?[012])\])',
                                 re.IGNORECASE)
-        for match, *directions in _mirror_re.finditer(unrecognized):
+        for token, *directions in _mirror_re.findall(unrecognized):
             # All matches of mirrors are acceptable
-            unrecognized = unrecognized.sub(match, '')
+            unrecognized = unrecognized.sub(tokentoken, '')
             direction = tuple(int(v) for v in directions)
             if direction[0] < 0:
                 direction = -direction[0], -direction[1]
             self.rpars.SYMMETRY_BULK['mirror'].add(direction)
 
         _rotation_re = re.compile(r'(\s+r([2346]))', re.IGNORECASE)
-        for match, order in _rotation_re.finditer(unrecognized):
-            unrecognized = unrecognized.sub(match, '')
+        for token, order in _rotation_re.findall(unrecognized):
+            unrecognized = unrecognized.sub(token, '')
             self.rpars.SYMMETRY_BULK['rotation'].add(int(order))
 
         _group_re = re.compile(                                                 # TODO: For now borrowed from guilib. Eventually will try to instantiate a PlaneGroup
             r'(\s*([a-z]{2,})\s*(?:\[\s*-?[012]\s*-?[012]\s*\])?)',
             re.IGNORECASE
             )
-        for match, group in _group_re.finditer(unrecognized):
+        for token, group in _group_re.findall(unrecognized):
             if group not in self.grouplist:
                 continue
-            unrecognized = unrecognized.sub(match, '')
+            unrecognized = unrecognized.sub(token, '')
             if 'group' in self.rpars.SYMMETRY_BULK:
                 message = 'Only one symmetry group can be given.'
                 raise ParameterValueError(param, message=message)               # TODO: @alex, correct exception?
-            self.rpars.SYMMETRY_BULK['group'].add(match.strip().lower())
+            self.rpars.SYMMETRY_BULK['group'].add(token.strip().lower())
             break
         else:
             message = 'Need to specify exactly one symmetry group.'
