@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import random
 import shutil
+import time
 
 import fortranformat as ff
 import numpy as np
