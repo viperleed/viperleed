@@ -1133,8 +1133,8 @@ class ParameterInterpreter:                                                     
             raise ParameterNumberOfInputsError(parameter=param)
         iv_range = self._parse_energy_range(param, assignment,
                                             assignment.values,
-                                            accept_underscore=True)             # TODO: @amimre this behaviour change needs to go in the doc
-        # Interpret underscores as defaults                                     # TODO: @amimre this behaviour change needs to go in the doc
+                                            accept_underscore=True)
+        # Interpret underscores as defaults
         _no_value = self.rpars.no_value
         _defaults = self.rpars.get_default(param)
         for i, (bound, default) in enumerate(zip(iv_range, _defaults)):
