@@ -307,8 +307,9 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
         logger.error('updatePARAMETERS routine: PARAMETERS file not found.')
         raise
 
+    # note no slab is given to the interpreter.
+    # Slab is not needed for STOP, SEARCH_KILL and SEARCH_CONVERGENCE
     interpreter = ParameterInterpreter(rp)
-    interpreter.slab = rp.slab
     for line in lines:
         line = strip_comments(line)
         for param in ['SEARCH_KILL', 'STOP']:  # SEARCH_KILL is legacy name
