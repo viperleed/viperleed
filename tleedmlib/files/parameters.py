@@ -1685,12 +1685,12 @@ class ParameterInterpreter:                                                     
             unrecognized = unrecognized.sub(token, '')
             if 'group' in self.rpars.SYMMETRY_BULK:
                 message = 'Only one symmetry group can be given.'
-                raise ParameterValueError(param, message=message)               # TODO: @alex, correct exception?
-            self.rpars.SYMMETRY_BULK['group'].add(token.strip().lower())
+                raise ParameterValueError(param, message=message)
+            self.rpars.SYMMETRY_BULK['group'].add(match.strip().lower())
             break
         else:
             message = 'Need to specify exactly one symmetry group.'
-            raise ParameterValueError(param, message=message)                   # TODO: @alex, correct exception?
+            raise ParameterValueError(param, message=message)
 
         if unrecognized:
             self.rpars.setHaltingLevel(2)
@@ -1701,7 +1701,7 @@ class ParameterInterpreter:                                                     
             if 'r' in unrecognized:
                 message += ('Syntax for rotations is rN; N must be '
                             '2, 3, 4, or 6')
-            raise ParameterValueError(param, message=message)                   # TODO: @alex, correct exception?
+            raise ParameterValueError(param, message=message)
 
     def interpret_symmetry_cell_transform(self, assignment):
         param = 'SYMMETRY_CELL_TRANSFORM'

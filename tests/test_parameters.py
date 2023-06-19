@@ -126,7 +126,7 @@ class TestIntpolDeg:
                         interpreter.interpret_intpol_deg(Assignment(val, ''))
 
 
-class TestInterpretNumericalParameter:
+class TestNumericalParameter:
     def test_interpret_numerical_parameter_float(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("0.01", 'TEST_PARAM')
@@ -229,7 +229,55 @@ class TestInterpretNumericalParameter:
         assert mock_rparams.TEST_PARAM == 2
 
 
-class TestInterpretBulkRepeat():
+class TestSymmetryBulk:
+    def test_interpret_symmetry_bulk_mirror(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("m[1 0] m[0 -1]", "SYMMETRY_BULK")
+        interpreter.interpret_symmetry_bulk(assignment)
+        assert mock_rparams.SYMMETRY_BULK == {
+            'mirror': {(1, 0), (0, -1)},
+            'rotation': set()
+        }
+
+    def test_interpret_symmetry_bulk_rotation(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("r2 r4", "SYMMETRY_BULK")
+        interpreter.interpret_symmetry_bulk(assignment)
+        assert mock_rparams.SYMMETRY_BULK == {
+            'mirror': set(),
+            'rotation': {2, 4}
+        }
+
+    def test_interpret_symmetry_bulk_group(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("pmm", "SYMMETRY_BULK")
+        interpreter.interpret_symmetry_bulk(assignment)
+        assert mock_rparams.SYMMETRY_BULK == {
+            'mirror': set(),
+            'rotation': set(),
+            'group': {'pmm'}
+        }
+
+    def test_interpret_symmetry_bulk_invalid_syntax(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("invalid_syntax", "SYMMETRY_BULK")
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_symmetry_bulk(assignment)
+
+    def test_interpret_symmetry_bulk_multiple_groups(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("pmm pg", "SYMMETRY_BULK")
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_symmetry_bulk(assignment)
+
+    def test_interpret_symmetry_bulk_missing_group(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("", "SYMMETRY_BULK")
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_symmetry_bulk(assignment)
+
+
+class TestBulkRepeat():
     param = 'BULK_REPEAT'
     rpars = Rparams()
 
@@ -274,7 +322,7 @@ class TestInterpretBulkRepeat():
         assert self.rpars.BULK_REPEAT == pytest.approx([1.0, 2.0, 3.0], rel=1e-4)
 
 
-class TestInterpretFortranComp():
+class TestFortranComp():
     # TODO: make use of new intepreter class
     param = 'FORTRAN_COMP'
     rpars = Rparams()
