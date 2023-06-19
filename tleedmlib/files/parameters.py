@@ -572,6 +572,8 @@ class Assignment:
             object.__setattr__(self, 'values_str', ' '.join(self.values_str))
         if not isinstance(self.flags_str, str):
             object.__setattr__(self, 'flags_str', ' '.join(self.flags_str))
+        if not self.parameter:
+            raise ValueError("parameter must be a non-empty string")
 
     @property
     def flag(self):

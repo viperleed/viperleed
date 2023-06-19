@@ -131,8 +131,7 @@ class TestNumericalParameter:
         interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("0.01", 'TEST_PARAM')
         bounds = NumericBounds()
-        result = interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                           assignment,
+        result = interpreter.interpret_numerical_parameter(assignment,
                                                            bounds=bounds)
         assert result == pytest.approx(0.01)
         assert mock_rparams.TEST_PARAM == pytest.approx(0.01)
@@ -141,8 +140,7 @@ class TestNumericalParameter:
         interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("100", 'TEST_PARAM')
         bounds = NumericBounds(type_=int)
-        result = interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                           assignment,
+        result = interpreter.interpret_numerical_parameter(assignment,
                                                            bounds=bounds)
         assert result == 100
         assert mock_rparams.TEST_PARAM == 100
@@ -151,8 +149,7 @@ class TestNumericalParameter:
         interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("100", 'TEST_PARAM')
         bounds = NumericBounds(type_=int, range_=(0, 100))
-        result = interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                           assignment,
+        result = interpreter.interpret_numerical_parameter(assignment,
                                                            bounds=bounds)
         assert result == 100
         assert mock_rparams.TEST_PARAM == 100
@@ -163,8 +160,7 @@ class TestNumericalParameter:
         bounds = NumericBounds(type_=int, range_=(0, 100),
                                accept_limits=(False, False))
         with pytest.raises(ParameterError):
-            interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                      assignment,
+            interpreter.interpret_numerical_parameter(assignment,
                                                       bounds=bounds)
 
     def test_interpret_numerical_parameter_float_out_of_range(self, mock_rparams):
@@ -172,16 +168,14 @@ class TestNumericalParameter:
         assignment = Assignment("-0.5", 'TEST_PARAM')
         bounds = NumericBounds(type_=float, range_=(0, 1))
         with pytest.raises(ParameterError):
-            interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                      assignment,
+            interpreter.interpret_numerical_parameter(assignment,
                                                       bounds=bounds)
 
     def test_interpret_numerical_parameter_float_at_bound_ok(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("-0.5", 'TEST_PARAM')
         bounds = NumericBounds(type_=float, range_=(-0.5, 1))
-        result = interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                           assignment,
+        result = interpreter.interpret_numerical_parameter(assignment,
                                                            bounds=bounds)
         assert result == -0.5
         assert mock_rparams.TEST_PARAM == -0.5
@@ -192,8 +186,7 @@ class TestNumericalParameter:
         bounds = NumericBounds(type_=float, range_=(-0.5, 1),
                                accept_limits=(False, False))
         with pytest.raises(ParameterError):
-            interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                      assignment,
+            interpreter.interpret_numerical_parameter(assignment,
                                                       bounds=bounds)
 
     def test_interpret_numerical_parameter_float_out_of_range_event_modulo(self, mock_rparams):
@@ -201,8 +194,7 @@ class TestNumericalParameter:
         assignment = Assignment("2.5", 'TEST_PARAM')
         bounds = NumericBounds(type_=float, range_=(0, 2),
                                out_of_range_event='modulo')
-        result = interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                           assignment,
+        result = interpreter.interpret_numerical_parameter(assignment,
                                                            bounds=bounds)
         assert result == pytest.approx(0.5)
         assert mock_rparams.TEST_PARAM == pytest.approx(0.5)
@@ -212,18 +204,16 @@ class TestNumericalParameter:
         assignment = Assignment("-5", 'TEST_PARAM')
         bounds = NumericBounds(type_=int, range_=(0, 10))
         with pytest.raises(ParameterError):
-            interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                      assignment,
+            interpreter.interpret_numerical_parameter(assignment,
                                                       bounds=bounds)
 
     def test_interpret_numerical_parameter_int_out_of_range_event_modulo(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("12", '')
+        assignment = Assignment("12", 'TEST_PARAM')
         bounds = NumericBounds(type_=int,
                                range_=(0, 10),
                                out_of_range_event='modulo')
-        result = interpreter.interpret_numerical_parameter("TEST_PARAM",
-                                                           assignment,
+        result = interpreter.interpret_numerical_parameter(assignment,
                                                            bounds=bounds)
         assert result == 2
         assert mock_rparams.TEST_PARAM == 2
