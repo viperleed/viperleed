@@ -161,7 +161,10 @@ def repeat_fetch_SDTL_last_block(which_beams,
         content = _fetch_SDTL_last_block(which_beams,
                                          expected_params,
                                          print_info)
-        n_search_params_found = len(content[0][2])
+        try:  # try again if content is not complete
+            n_search_params_found = len(content[0][2])
+        except IndexError:
+            continue
         if n_search_params_found == expected_params:
             logger.debug("Read complete block from SD.TL file after "
                          f"{repeat+1} read attempt(s).")
