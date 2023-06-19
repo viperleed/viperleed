@@ -156,6 +156,7 @@ def repeat_fetch_SDTL_last_block(which_beams,
                                  max_repeats=2000,
                                  wait_time=5):
     print_info = final
+    content = None
     for repeat in range(max_repeats):
         content = _fetch_SDTL_last_block(which_beams,
                                          expected_params,
