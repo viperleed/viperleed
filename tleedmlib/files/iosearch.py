@@ -19,6 +19,7 @@ import numpy as np
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import BackwardsReader, readIntLine
+
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.files.poscar import writePOSCAR
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
@@ -26,6 +27,16 @@ from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
 
 logger = logging.getLogger("tleedm.files.iosearch")
 
+class SearchIORaceConditionError(Exception):
+    """Raised if reading of control.chem does not return the expected number
+    of lines"""
+    def __init__(self, message):
+        super().__init__(message)
+
+class SearchIOEmptyFileError(Exception):
+    """Raised if file read for the search has no content"""
+    def __init__(self, message):
+        super().__init__(message)
 
 def readSDTL_next(filename="SD.TL", offset=0):
     """
@@ -138,6 +149,57 @@ def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0):
         else:
             logger.warning("A block in SD.TL was read but not understood.")
     return returnList
+
+
+def repeat_fetch_SDTL_last_block(which_beams,
+                                 expected_params,
+                                 final,
+                                 max_repeats=2000,
+                                 wait_time=5):
+    print_info = final
+    content = None
+    for repeat in range(max_repeats):
+        content = _fetch_SDTL_last_block(which_beams,
+                                         expected_params,
+                                         print_info)
+        try:  # try again if content is not complete
+            n_search_params_found = len(content[0][2])
+        except IndexError:
+            continue
+        if n_search_params_found == expected_params:
+            logger.debug("Read complete block from SD.TL file after "
+                         f"{repeat+1} read attempt(s).")
+            return content
+        elif n_search_params_found >= expected_params:
+            raise RuntimeError(f"Expected a maximum of {expected_params} "
+                               f"parameters in SD.TL, but found "
+                               "{n_search_params_found}.")
+        # wait and try again
+        time.sleep(wait_time/1000)
+        print_info = False
+    if not content:
+        raise SearchIOEmptyFileError("No data found in SD.TL file.")
+    # if we get here, we have exceeded the maximum number of repeats
+    raise SearchIORaceConditionError(f"Could not read complete block from "
+                                     "SD.TL file.")
+
+def _fetch_SDTL_last_block(which_beams, n_expect, final=False):
+    try:
+        lines = readSDTL_end(n_expect=n_expect)
+    except FileNotFoundError:
+        logger.error("Could not process Search results: SD.TL file not "
+                     "found.")
+        raise
+    except Exception:
+        logger.error("Failed to get last block from SD.TL file.")
+        raise
+    # check if the last block contains the expected number of lines
+    lines_str = "\n".join(lines)
+    sdtl_content = readSDTL_blocks("\n".join(lines),
+                                   whichR=which_beams,
+                                   logInfo=final,
+                                   n_expect=n_expect)
+    return sdtl_content
 
 
 def readSDTL_end(filename="SD.TL", n_expect=0):
@@ -749,26 +811,35 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             rp.SEARCH_START = "random"
             rp.setHaltingLevel(2)
     if rp.SEARCH_START == "control":
-        # try reading control
+        # try reading control.chem
+        # length = population +1 for header; +1 for empty line at the end
+        control_chem_expected_length = rp.SEARCH_POPULATION + 2
         try:
-            with open(controlpath, "r") as rf:
-                controllines = rf.readlines()
-        except Exception:
-            logger.error("Error reading control.chem file. Defaulting to "
-                         "random starting configuration.")
-            rp.SEARCH_START = "random"
-            rp.setHaltingLevel(2)
-        if len(controllines) < rp.SEARCH_POPULATION + 2:
+            controllines = _read_control_chem(controlpath,
+                                              control_chem_expected_length)
+        except SearchIORaceConditionError:
+            # Could not read last generation from control.chem
+            # use backup from SD.TL instead
             if not rp.controlChemBackup:
-                logger.error("Information in control.chem is incomplete. "
+                logger.error("Information in control.chem is incomplete "
+                             "and no SD.TL data is stored. "
                              "Defaulting to random starting configuration.")
                 rp.SEARCH_START = "random"
                 rp.setHaltingLevel(2)
             else:
-                logger.debug("Information in control.chem is incomplete. "
-                             "Loading from stored data...")
+                logger.debug("Failed to read current configuration from "
+                             "control.chem. "
+                             "Loading last known configuraiton from stored "
+                             "SD.TL data instead...")
                 controllines = [s+"\n"
                                 for s in rp.controlChemBackup.split("\n")]
+            pass
+        except OSError:
+            logger.error("Error reading control.chem file. Defaulting to "
+                         "random starting configuration.")
+            rp.SEARCH_START = "random"
+            rp.setHaltingLevel(2)
+
     if rp.SEARCH_START == "random":
         output += (formatter['int'].write([0]).ljust(16) +
                    "Certain start position (1) or random configuration (0)\n")
@@ -923,6 +994,63 @@ C  end restrictions
                  "restrict.f")
     return None
 
+def _read_control_chem(control_chem_path,
+                       expected_lines,
+                       max_repeats=2000,
+                       sleep_time=5):
+    """
+    Read the content of the control.chem file located at the specified path and
+    return its lines.
+
+    Parameters
+    ----------
+    control_chem_path : path-like
+        The path to the control.chem file.
+    expected_lines : int
+        The expected number of lines in the control.chem file.
+    max_repeats : int, optional
+        The maximum number of repetitions to read the file before giving up.
+        Defaults is 1000.
+    sleep_time : int, optional
+        The time in milliseconds to sleep between each attempt. Default is 1.
+
+    Returns
+    -------
+    list of str
+        The lines of the control.chem file.
+
+    Raises
+    ------
+    ValueError
+        If max_repeats is less than 1 or sleep_time is less than 0.
+    RuntimeError
+        If the number of lines in the control.chem file exceeds the
+        expected_lines. This should not happen and indicates that expected_lines
+        was set incorrectly.
+    SearchIORaceConditionError
+        If the complete control.chem file could not be read after the
+        maximum number of repetitions.
+
+    """
+    if max_repeats < 1:
+        raise ValueError("max_repeats must be >= 1")
+    if sleep_time < 0:
+        raise ValueError("sleep_time must be >= 0 ms")
+    _control_chem_path = Path(control_chem_path)
+    for repeat in range(max_repeats):
+        with open(_control_chem_path, "r") as rf:
+            control_lines = rf.readlines()
+        n_control_lines = len(control_lines)
+        if n_control_lines == expected_lines:
+            logger.debug(f"Read complete control.chem file after {repeat+1} "
+                         "read attempt(s).")
+            return control_lines
+        elif n_control_lines > expected_lines:
+            raise RuntimeError(f"Expected at maximum {expected_lines} lines "
+                               "in control.chem, but found {n_control_lines}.")
+        time.sleep(sleep_time/1000)  # in milliseconds
+    raise SearchIORaceConditionError("Could not read complete "
+                                     "control.chem file")
 
 def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     """

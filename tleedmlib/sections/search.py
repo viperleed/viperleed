@@ -65,37 +65,34 @@ def processSearchResults(sl, rp, search_log_path, final=True):
     """
     # get the last block from SD.TL:
     try:
-        lines = tl_io.readSDTL_end(n_expect=rp.SEARCH_POPULATION)
-    except FileNotFoundError:
-        logger.error("Could not process Search results: SD.TL file not found.")
-        raise
-    except Exception:
-        logger.error("Failed to get last block from SD.TL file.")
-        raise
-
-    # Read search log if available, and check for errors
-    _check_search_log(search_log_path)
-
-    # Read the block
-    sdtl_content = tl_io.readSDTL_blocks("\n".join(lines),
-                                         whichR=rp.SEARCH_BEAMS,
-                                         logInfo=final,
-                                         n_expect=rp.SEARCH_POPULATION)
-    if not sdtl_content:
+        sdtl_content = tl_io.repeat_fetch_SDTL_last_block(which_beams=rp.SEARCH_BEAMS,
+                                           expected_params=rp.SEARCH_POPULATION,
+                                           final=final)
+    except tl_io.SearchIOEmptyFileError as err:
         if final:
             logger.error("No data found in SD.TL file!")
             rp.setHaltingLevel(2)
-        raise RuntimeError("No data in SD.TL")
-
+        raise RuntimeError("No data in SD.TL") from err
+    except tl_io.SearchIORaceConditionError:
+        return  # if we can't find a block, we also can't store it.
+      
+    # Read search log if available, and check for errors
+    _check_search_log(search_log_path)
+    
+    
     (generation, rfactors, configs), *_ = sdtl_content
 
     assert len(rfactors) == len(configs)                                        # TODO: catch and complain. Previous version would pick only the first len(rfactors) configs, but the two should hopefully be the same length.
+    writeControlChem = False                                                    # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
+    if not os.path.isfile("control.chem"):
+        writeControlChem = True
     _write_control_chem(rp, generation, configs)
 
     # Collect populations by (r-factor, parameter indices) pairs
     populations = Counter(zip(rfactors, configs))
     if final:
         _write_info_to_log(rp, populations)
+
 
     # Pick only the best configuration (possibly for multiple
     # domains): it is the one with the highest R factor, i.e.,
@@ -164,10 +161,9 @@ def _write_control_chem(rp, generation, configs):
     rp.controlChemBackup = "".join(lines)
     if not _write_file:
         return
-
     try:
         with _ctrl_chem_p.open("w", encoding="utf-8") as control_chem:
-            control_chem.writelines(lines)
+            control_chem.writelines(lines)                                      # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
     except Exception:
         logger.error("Failed to write control.chem")
         rp.setHaltingLevel(1)
@@ -747,7 +743,8 @@ def search(sl, rp):
         raise
 
     # Validate TensErLEED input files
-    if not rp.TL_IGNORE_CHECKSUM:
+    if not rp.TL_IGNORE
+    SUM:
         files_to_check = (lib_file,
                           src_file,
                           srcpath / globalname,
