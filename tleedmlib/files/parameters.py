@@ -1664,7 +1664,7 @@ class ParameterInterpreter:                                                     
                                 re.IGNORECASE)
         for token, *directions in _mirror_re.findall(unrecognized):
             # All matches of mirrors are acceptable
-            unrecognized = unrecognized.replace(tokentoken, '')
+            unrecognized = unrecognized.replace(token, '')
             direction = tuple(int(v) for v in directions)
             if direction[0] < 0:
                 direction = -direction[0], -direction[1]
