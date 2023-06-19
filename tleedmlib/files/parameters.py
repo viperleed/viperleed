@@ -1658,7 +1658,7 @@ class ParameterInterpreter:                                                     
             'mirror': set(),
             'rotation': set()
             }
-        unrecognized = assignment.value_str
+        unrecognized = assignment.values_str
 
         _mirror_re = re.compile(r'(\s+m\[\s*(-?[012])\s*,?\s*(-?[012])\])',
                                 re.IGNORECASE)
