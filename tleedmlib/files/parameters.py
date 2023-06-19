@@ -706,15 +706,13 @@ class ParameterInterpreter:                                                     
             )
 
     # ---------- Methods for interpreting simple parameters -----------
-    def interpret_bool_parameter(self, param, assignment,
+    def interpret_bool_parameter(self, assignment,
                                  allowed_values=None,
-                                 var_name=None, return_only=False):
+                                 param=None, return_only=False):
         """Set a parameter to a boolean value.
 
         Parameters
         ----------
-        param : str
-            The name of the parameter in PARAMETERS.
         assignment : Assignment
             The assignment of the parameter, read from PARAMETERS.
         allowed_values : dict, optional
@@ -722,20 +720,19 @@ class ParameterInterpreter:                                                     
             False or True. E.g. by default, 'f' and 'false' are False,
             't' and 'true' are True. Keys should be True and False,
             values are Sequences of acceptable strings.
-        var_name : str, optional
-            The variable name in the Rparams class, if it differs
-            from 'param'.
+        param : str, optional
+            The name of the parameter in PARAMETERS, if it differs
+            from assignment.parameter. Also used as attribute name
+            for self.rpars. Default is None.
         return_only: bool, optional
             If True, only return the value of the parameter, but do
-            not set it.
+            not set it. Default is False.
 
         Returns
         -------
         value : bool
             The value of the parameter.
         """
-        if var_name is None:
-            var_name = param.upper()
         if allowed_values is None:
             allowed_values = {}
 
@@ -760,15 +757,16 @@ class ParameterInterpreter:                                                     
                          if str_value in synonyms)
         except StopIteration:  # Value is invalid
             self.rpars.setHaltingLevel(1)
-            raise ParameterBooleanConversionError(param,
+            raise ParameterBooleanConversionError(assignemnt.parameter,
                                                   assignment.value) from None
 
+        param = assignment.parameter if param is not None else param
         if not return_only:
-            setattr(self.rpars, var_name, value)
+            setattr(self.rpars, param.upper(), value)
         return value
 
-    def interpret_numerical_parameter(self, param, assignment,
-                                      var_name=None, return_only=False,         # I don't understand the need for var_name. We already have param. Also, we could make param into a keyword, as we have .parameter in Assignment.
+    def interpret_numerical_parameter(self, assignment,
+                                      param=None, return_only=False,
                                       bounds=NumericBounds()):                  # TODO: ideally one could default to actually using the limits known from self.rpars.get_limits!
         """Set a parameter to a numeric (int or float) value.
 
@@ -778,15 +776,16 @@ class ParameterInterpreter:                                                     
             The name of the parameter in PARAMETERS
         assignment : Assignment
             The assignment of the parameter, read from PARAMETERS.
-        var_name : str, optional
-            The variable name in the Rparams class, if it differs from
-            'param'. Default is None.
+        param : str, optional
+            The name of the parameter in PARAMETERS, if it differs
+            from assignment.parameter. Also used as attribute name
+            for self.rpars. Default is None.
         return_only: bool, optional
             If True, only return the value of the parameter, but do not
-            set it.
+            set it. Default is False.
         bounds : NumericBounds, optional
             Acceptable limits for value, and what to do in case an
-            out-of-bounds value is given. Defaults is an unbounded
+            out-of-bounds value is given. Default is an unbounded
             float.
 
         Returns
@@ -813,25 +812,26 @@ class ParameterInterpreter:                                                     
                 exc = ParameterFloatConversionError
             else:
                 exc = ParameterIntConversionError
-            raise exc(parameter=param) from None
+            raise exc(parameter=assignment.parameter) from None
 
         in_range = all(bounds.is_in_range(value))
         if not in_range and bounds.fail:
             self.rpars.setHaltingLevel(1)
             out_of_range = bounds.format_out_of_range(value)
-            raise ParameterRangeError(param, message=out_of_range)
+            raise ParameterRangeError(assignment.parameter,
+                                      message=out_of_range)
 
         if not in_range:
             in_range_value = bounds.make_in_range(value)
             out_of_range = bounds.format_out_of_range(value)
-            logger.warning(f'PARAMETERS file: {param}: {out_of_range}. '
+            logger.warning(f'PARAMETERS file: {assignment.parameter}: '
+                           f'{out_of_range}. '
                            f'Value will be set to {in_range_value}.')
             value = in_range_value
 
-        if var_name is None:
-            var_name = param.upper()
+        param = assignment.parameter if param is not None else param
         if not return_only:
-            setattr(self.rpars, var_name, value)
+            setattr(self.rpars, param.upper(), value)
         return value
 
     @classmethod
@@ -843,9 +843,9 @@ class ParameterInterpreter:                                                     
         wrapped : callable
             The callable that will be wrapped to create methods.
             The a call to new_method(*args, **kwargs) becomes a
-            wrapped(param, *args, **wrapped_kwargs, **kwargs)
-            call, where param and wrapped_kwargs are generated
-            here using kwargs_names and new_methods_info.
+            wrapped(*args, **wrapped_kwargs, **kwargs) call,
+            where wrapped_kwargs is generated here using
+            kwargs_names and new_methods_info.
         kwargs_names : Sequence
             Names (str) of the keyword arguments that may be
             replaced. At most len(kwargs_names) keyword arguments
@@ -874,7 +874,8 @@ class ParameterInterpreter:                                                     
                     f'Expected at most values for {kwargs_names}'
                     )
             kwargs = dict(zip(kwargs_names, kwargs_values))
-            method = partialmethod(wrapped, param, **kwargs)
+            kwargs['param'] = param
+            method = partialmethod(wrapped, **kwargs)
             setattr(cls, method_name, method)
 
     @classmethod
@@ -1021,7 +1022,7 @@ class ParameterInterpreter:                                                     
         param = 'DOMAIN_STEP'
         self._ensure_simple_assignment(param, assignment)
         domain_step = self.interpret_numerical_parameter(
-            param, assignment,
+            assignment,
             bounds=NumericBounds(type_=int, range_=(1, 100)),
             return_only=True
             )
@@ -1068,7 +1069,7 @@ class ParameterInterpreter:                                                     
         try:
             self.rpars.FILAMENT_WF = known_filaments[assignment.value.lower()]
         except KeyError:
-            self.interpret_numerical_parameter(param, assignment)               # TODO: bounds? We probably want a _POSITIVE_FLOAT
+            self.interpret_numerical_parameter(assignment)                      # TODO: bounds? We probably want a _POSITIVE_FLOAT
 
     def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
         """Assign parameter FORTRAN_COMP."""
@@ -1237,7 +1238,7 @@ class ParameterInterpreter:                                                     
         # Try to interpret as bool. This is the way
         # the previous LOG_DEBUG used to work
         try:
-            log_debug = self.interpret_bool_parameter(param, assignment,
+            log_debug = self.interpret_bool_parameter(assignment,
                                                       return_only=True)
         except ParameterError:
             pass
@@ -1248,7 +1249,7 @@ class ParameterInterpreter:                                                     
         # Otherwise interpret as int
         try:
             log_level = self.interpret_numerical_parameter(
-                param, assignment,
+                assignment,
                 bounds=NumericBounds(type_=int, range_=(0, 50)),
                 return_only=True
                 )
@@ -1571,7 +1572,7 @@ class ParameterInterpreter:                                                     
     def interpret_search_population(self, assignment):
         param = 'SEARCH_POPULATION'
         self.interpret_numerical_parameter(
-            param, assignment,
+            assignment,
             bounds=NumericBounds(type_=int, range_=(1, None))
             )
         if self.rpars.SEARCH_POPULATION < 16:
@@ -1728,14 +1729,14 @@ class ParameterInterpreter:                                                     
 
         # interpret first value as SYMMETRY_EPS
         bounds = NumericBounds(type_=float, range_=(1e-100, None))
-        self.interpret_numerical_parameter(param, assignment, bounds=bounds)
+        self.interpret_numerical_parameter(assignment, bounds=bounds)
         if self.rpars.SYMMETRY_EPS > 1.0:
             logger.warning(warning_str.format(''))
         # interpret possible second value as SYMMETRY_EPS_Z
         if assignment.other_values:
             z_assignment = Assignment(assignment.other_values, param)
-            self.interpret_numerical_parameter('SYMMETRY_EPS_Z',
-                                               z_assignment,
+            self.interpret_numerical_parameter(z_assignment,
+                                               param='SYMMETRY_EPS_Z',
                                                bounds=bounds)
             if self.rpars.SYMMETRY_EPS_Z > 1.0:
                 logger.warning(warning_str.format('for z '))
@@ -1993,8 +1994,8 @@ class ParameterInterpreter:                                                     
                 for name in ['THETA', 'PHI']:
                     if sl[0].upper() == name:
                         d[name] = self.interpret_numerical_parameter(
-                            f'{param} {name}',
                             Assignment(sl[1], param),
+                            param=f'{param} {name}',
                             bounds=bounds[name],
                             return_only=True
                             )
@@ -2012,8 +2013,8 @@ class ParameterInterpreter:                                                     
                     )
             for value, name in zip(assignment.values, ('THETA', 'PHI')):
                 d[name] = self.interpret_numerical_parameter(
-                    f'{param} {name}',
                     Assignment(value, param),
+                    param=f'{param} {name}',
                     bounds=bounds[name],
                     return_only=True
                     )
