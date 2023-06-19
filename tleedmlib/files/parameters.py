@@ -892,11 +892,13 @@ class ParameterInterpreter:                                                     
                           _SIMPLE_NUMERICAL_PARAMS)
 
     # ----- Methods to make sure no extra flags/values are given ------
-    def _ensure_single_flag_assignment(self, param, assignment):
+    def _ensure_single_flag_assignment(self, param, assignment, message=None):
         """Raise if assignment contains multiple flags."""
+        if message is None:
+            message = assignment.flags_str
         if assignment.other_flags:
             self.rpars.setHaltingLevel(1)
-            raise ParameterUnknownFlagError(param, assignment.flags_str)
+            raise ParameterUnknownFlagError(param, message)
 
     def _ensure_single_value_assignment(self, param, assignment):
         """Raise if assignment contains multiple values."""
@@ -1071,7 +1073,11 @@ class ParameterInterpreter:                                                     
     def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
         """Assign parameter FORTRAN_COMP."""
         param = 'FORTRAN_COMP'
-        self._ensure_single_flag_assignment(param, assignment)
+        message = (f'Only one flag allowed for {param} per line. '
+                   f'Got {assignment.flags}.')
+        self._ensure_single_flag_assignment(param,
+                                            assignment,
+                                            message=message)
 
         flag, compiler_str = assignment.flag.lower(), assignment.value
 
