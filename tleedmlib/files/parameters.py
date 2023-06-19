@@ -1686,9 +1686,9 @@ class ParameterInterpreter:                                                     
             if 'group' in self.rpars.SYMMETRY_BULK:
                 message = 'Only one symmetry group can be given.'
                 raise ParameterValueError(param, message=message)
-            self.rpars.SYMMETRY_BULK['group'].add(match.strip().lower())
-            break
-        else:
+            self.rpars.SYMMETRY_BULK['group'] = token.strip().lower()
+
+        if 'group' not in self.rpars.SYMMETRY_BULK:
             message = 'Need to specify exactly one symmetry group.'
             raise ParameterValueError(param, message=message)
 
