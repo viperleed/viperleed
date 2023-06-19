@@ -346,36 +346,64 @@ class TestV0Real():
 
 
 class TestTheoEnergies:
-    rpars = Rparams()
+    def test_interpret_theo_energies_single_value_default(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("_", "THEO_ENERGIES")
+        interpreter.interpret_theo_energies(assignment)
+        assert mock_rparams.THEO_ENERGIES == pytest.approx(mock_rparams.get_default("THEO_ENERGIES"))
 
-    def test_interpret_theo_energies_single_value(self):
-        interpreter = ParameterInterpreter(self.rpars)
+    def test_interpret_theo_energies_single_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("1.0", "THEO_ENERGIES")
         interpreter.interpret_theo_energies(assignment)
-        assert self.rpars.THEO_ENERGIES == [1.0, 1.0, 1]
+        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, 1.0, 1.0])
 
-    def test_interpret_theo_energies_multiple_values(self):
-        interpreter = ParameterInterpreter(self.rpars)
+    def test_interpret_theo_energies_three_values_all_default(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("_ _ _", "THEO_ENERGIES")
+        interpreter.interpret_theo_energies(assignment)
+        assert mock_rparams.THEO_ENERGIES == pytest.approx(mock_rparams.get_default("THEO_ENERGIES"))
+
+    def test_interpret_theo_energies_three_values_partial_default(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("1.0 _ 2.0", "THEO_ENERGIES")
         interpreter.interpret_theo_energies(assignment)
-        assert self.rpars.THEO_ENERGIES == [1.0, self.rpars.no_value, 2.0]
+        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, mock_rparams.get_default("THEO_ENERGIES")[1], 2.0])
 
-    def test_interpret_theo_energies_invalid_float(self):
-        interpreter = ParameterInterpreter(self.rpars)
-        assignment = Assignment("invalid", "THEO_ENERGIES")
-        with pytest.raises(ParameterParseError):
+    def test_interpret_theo_energies_three_values_positive_floats(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1.0 2.0 0.5", "THEO_ENERGIES")
+        interpreter.interpret_theo_energies(assignment)
+        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, 2.0, 0.5])
+
+    def test_interpret_theo_energies_two_defaults(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1.0 _ _", "THEO_ENERGIES")
+        interpreter.interpret_theo_energies(assignment)
+        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, mock_rparams.get_default("THEO_ENERGIES")[1], mock_rparams.get_default("THEO_ENERGIES")[2]])
+
+    def test_interpret_theo_energies_three_values_negative_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1.0 -2.0 0.5", "THEO_ENERGIES")
+        with pytest.raises(ParameterRangeError):
             interpreter.interpret_theo_energies(assignment)
 
-    def test_interpret_theo_energies_invalid_positive_value(self):
-        interpreter = ParameterInterpreter(self.rpars)
-        assignment = Assignment("1.0 -2.0 3.0", "THEO_ENERGIES")
-        with pytest.raises(ParameterError):
+    def test_interpret_theo_energies_three_values_invalid_range(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("2.0 1.0 0.5", "THEO_ENERGIES")
+        with pytest.raises(ParameterValueError):
             interpreter.interpret_theo_energies(assignment)
 
-    def test_interpret_theo_energies_invalid_number_of_values(self):
-        interpreter = ParameterInterpreter(self.rpars)
-        assignment = Assignment("1.0 2.0", "THEO_ENERGIES")
-        with pytest.raises(ParameterNumberOfInputsError):
+    def test_interpret_theo_energies_three_values_range_correction(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1.0 2.5 0.5", "THEO_ENERGIES")
+        interpreter.interpret_theo_energies(assignment)
+        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, 2.5, 0.5])
+
+    def test_interpret_theo_energies_three_values_out_of_range_start(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("-0.5 2.0 0.5", "THEO_ENERGIES")
+        with pytest.raises(ParameterRangeError):
             interpreter.interpret_theo_energies(assignment)
 
 
