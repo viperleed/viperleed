@@ -834,6 +834,49 @@ class TestLayerCuts:
             interpreter.interpret_layer_cuts(assignment)
 
 
+class TestRun:
+    def test_interpret_run_single_section(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1", "RUN")
+        interpreter.interpret_run(assignment)
+        assert mock_rparams.RUN == [0, 1]
+
+    def test_interpret_run_multiple_sections(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1 2 3", "RUN")
+        interpreter.interpret_run(assignment)
+        assert mock_rparams.RUN == [0, 1, 2, 3]
+
+    def test_interpret_run_range(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1-3", "RUN")
+        interpreter.interpret_run(assignment)
+        assert mock_rparams.RUN == [0, 1, 2, 3]
+
+    def test_interpret_run_invalid_section(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("invalid", "RUN")
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_run(assignment)
+
+    def test_interpret_run_empty(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("", "RUN")
+        with pytest.raises(ParameterError):
+            interpreter.interpret_run(assignment)
+
+    def test_interpret_run_invalid_syntax_underscore(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1 _ 2", "RUN")
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_run(assignment)
+
+    def test_interpret_run_invalid_syntax_section(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("1, x", "RUN")
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_run(assignment)
+
 class TestSymmetryEps:
     def test_interpret_symmetry_eps_single_value(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
