@@ -1421,7 +1421,7 @@ class ParameterInterpreter:                                                     
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = tuple(il)
 
-    def interpret_run(self, assignment):                                        # TODO: important param, write tests
+    def interpret_run(self, assignment):
         """Assign parameter RUN, inserting an initialization if needed."""
         param = 'RUN'
         segments = []
