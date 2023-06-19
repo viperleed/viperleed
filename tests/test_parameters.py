@@ -110,20 +110,20 @@ class TestIr1002x1OParameters():
 
 
 class TestIntpolDeg:
-    rpars = Rparams()
-    def test_interpret_intpol_deg_valid(self):
+    def test_interpret_intpol_deg_valid(self, mock_rparams):
         param = 'INTPOL_DEG'
-        for val in self.rpars.get_limits(param):
-            interpreter = ParameterInterpreter(self.rpars)
+        for val in mock_rparams.get_limits(param):
+            interpreter = ParameterInterpreter(mock_rparams)
             interpreter.interpret_intpol_deg(Assignment(val, param))
-            assert self.rpars.INTPOL_DEG == int(val)
+            assert mock_rparams.INTPOL_DEG == int(val)
 
-    def test_interpret_intpol_def_invalid(self):
+    def test_interpret_intpol_def_invalid(self, mock_rparams):
         incompatible_values = ['1', 'text']
         for val in incompatible_values:
+            interpreter = ParameterInterpreter(mock_rparams)
+            assignment = Assignment(val, 'INTPOL_DEG')
             with pytest.raises(ParameterError):
-                        interpreter = ParameterInterpreter(self.rpars)
-                        interpreter.interpret_intpol_deg(Assignment(val, ''))
+                        interpreter.interpret_intpol_deg(assignment)
 
 
 class TestNumericalParameter:
