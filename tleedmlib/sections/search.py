@@ -743,8 +743,7 @@ def search(sl, rp):
         raise
 
     # Validate TensErLEED input files
-    if not rp.TL_IGNORE
-    SUM:
+    if not rp.TL_IGNORE_CHECKSUM:
         files_to_check = (lib_file,
                           src_file,
                           srcpath / globalname,
