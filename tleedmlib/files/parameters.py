@@ -1676,7 +1676,7 @@ class ParameterInterpreter:                                                     
             self.rpars.SYMMETRY_BULK['rotation'].add(int(order))
 
         _group_re = re.compile(                                                 # TODO: For now borrowed from guilib. Eventually will try to instantiate a PlaneGroup
-            r'(\s*([a-z]{2,})\s*(?:\[\s*-?[012]\s*-?[012]\s*\])?)',
+            r'(\s*(\w+)\s*(?:\[\s*-?[012]\s*-?[012]\s*\])?)',
             re.IGNORECASE
             )
         for token, group in _group_re.findall(unrecognized):

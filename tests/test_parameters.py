@@ -232,30 +232,32 @@ class TestNumericalParameter:
 class TestSymmetryBulk:
     def test_interpret_symmetry_bulk_mirror(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("m[1 0] m[0 -1]", "SYMMETRY_BULK")
+        assignment = Assignment("p2 m[0 1]", "SYMMETRY_BULK")
         interpreter.interpret_symmetry_bulk(assignment)
         assert mock_rparams.SYMMETRY_BULK == {
-            'mirror': {(1, 0), (0, -1)},
-            'rotation': set()
+            'mirror': {(0, 1)},
+            'rotation': set(),
+            'group': 'p2'
         }
 
-    def test_interpret_symmetry_bulk_rotation(self, mock_rparams):
+    def test_interpret_symmetry_cm_rot4(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("r2 r4", "SYMMETRY_BULK")
+        assignment = Assignment("cm[1 1] r4", "SYMMETRY_BULK")
         interpreter.interpret_symmetry_bulk(assignment)
         assert mock_rparams.SYMMETRY_BULK == {
             'mirror': set(),
-            'rotation': {2, 4}
+            'rotation': {4},
+            'group': 'cm[1 1]'
         }
 
-    def test_interpret_symmetry_bulk_group(self, mock_rparams):
+    def test_interpret_symmetry_bulk_pmm(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("pmm", "SYMMETRY_BULK")
         interpreter.interpret_symmetry_bulk(assignment)
         assert mock_rparams.SYMMETRY_BULK == {
             'mirror': set(),
             'rotation': set(),
-            'group': {'pmm'}
+            'group': 'pmm',
         }
 
     def test_interpret_symmetry_bulk_invalid_syntax(self, mock_rparams):
