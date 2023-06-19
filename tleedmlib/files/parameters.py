@@ -1639,54 +1639,62 @@ class ParameterInterpreter:                                                     
             self.rpars.superlattice_defined = True
 
     def interpret_symmetry_bulk(self, assignment):
+        """Assign parameter SYMMETRY_BULK."""
         param = 'SYMMETRY_BULK'
-        recombined_list = []                                                    # TODO: use ast
-        values = assignment.all_values
-        while values:
-            v = values.pop(0).lower()
-            if '[' in v and ']' in values[0]:
-                v += ' ' + values.pop(0).lower()
-            recombined_list.append(v)
-        for v in recombined_list:
-            if v.startswith('r'):                                               # Problem: how about "rcm[1 0]"?
-                try:
-                    i = int(v[1])
-                except (ValueError, IndexError):
-                    self.rpars.setHaltingLevel(2)
-                    raise ParameterValueError(param, v)
-                if 'rotation' not in self.rpars.SYMMETRY_BULK:
-                    self.rpars.SYMMETRY_BULK['rotation'] = []
-                if i not in self.rpars.SYMMETRY_BULK['rotation']:
-                    self.rpars.SYMMETRY_BULK['rotation'].append(i)
-            elif v.startswith('m'):
-                if '[' not in v or ']' not in v:
-                    message = f'Error reading value {v!r}: no direction recognized.'
-                    self.rpars.setHaltingLevel(2)
-                    raise ParameterParseError(param, message)
-                str_vals = v.split('[')[1].split(']')[0].split()
-                if len(str_vals) != 2:
-                    self.rpars.setHaltingLevel(2)
-                    raise ParameterNumberOfInputsError(
-                        param,
-                        found_and_expected=(len(str_vals), 2)
-                        )
-                try:
-                    int_vals = tuple(int(v) for v in str_vals)
-                except (ValueError, IndexError) as err:
-                    self.rpars.setHaltingLevel(2)
-                    raise ParameterValueError(param, v) from err
-                if int_vals[0] < 0:
-                    int_vals = (-int_vals[0], -int_vals[1])
-                if 'mirror' not in self.rpars.SYMMETRY_BULK:
-                    self.rpars.SYMMETRY_BULK['mirror'] = []
-                if int_vals in self.rpars.SYMMETRY_BULK['mir']:
-                    self.rpars.SYMMETRY_BULK['mirror'].append(int_vals)
-            else:
-                try:
-                    self.rpars.SYMMETRY_BULK['group'] = v                       # This can never error out
-                except ValueError as err:
-                    self.rpars.setHaltingLevel(2)
-                    raise ParameterValueError(param, v) from err
+
+        # We accept mirrors with syntax "m[a b]", rotations with
+        # syntax "rN" and plane groups. Here we only check that
+        # the syntax is OK. We defer the complaints about invalid
+        # plane group, directions, or rotation orders, to when we
+        # know more about the slab
+        self.rpars.SYMMETRY_BULK = {  # 'group' added below
+            'mirror': set(),
+            'rotation': set()
+            }
+        unrecognized = assignment.value_str
+
+        _mirror_re = re.compile(r'(\s+m\[\s*(-?[012])\s*,?\s*(-?[012])\])',
+                                re.IGNORECASE)
+        for match, *directions in _mirror_re.finditer(unrecognized):
+            # All matches of mirrors are acceptable
+            unrecognized = unrecognized.sub(match, '')
+            direction = tuple(int(v) for v in directions)
+            if direction[0] < 0:
+                direction = -direction[0], -direction[1]
+            self.rpars.SYMMETRY_BULK['mirror'].add(direction)
+
+        _rotation_re = re.compile(r'(\s+r([2346]))', re.IGNORECASE)
+        for match, order in _rotation_re.finditer(unrecognized):
+            unrecognized = unrecognized.sub(match, '')
+            self.rpars.SYMMETRY_BULK['rotation'].add(int(order))
+
+        _group_re = re.compile(                                                 # TODO: For now borrowed from guilib. Eventually will try to instantiate a PlaneGroup
+            r'(\s*([a-z]{2,})\s*(?:\[\s*-?[012]\s*-?[012]\s*\])?)',
+            re.IGNORECASE
+            )
+        for match, group in _group_re.finditer(unrecognized):
+            if group not in self.grouplist:
+                continue
+            unrecognized = unrecognized.sub(match, '')
+            if 'group' in self.rpars.SYMMETRY_BULK:
+                message = 'Only one symmetry group can be given.'
+                raise ParameterValueError(param, message=message)               # TODO: @alex, correct exception?
+            self.rpars.SYMMETRY_BULK['group'].add(match.strip().lower())
+            break
+        else:
+            message = 'Need to specify exactly one symmetry group.'
+            raise ParameterValueError(param, message=message)                   # TODO: @alex, correct exception?
+
+        if unrecognized:
+            self.rpars.setHaltingLevel(2)
+            message = f'Could not recognize {unrecognized!r}: '
+            if 'm' in unrecognized:
+                message += ('Syntax for mirrors is "m[n1 n2]"; '
+                            'n1 and n2 must be 0, +-1, or +-2; ')
+            if 'r' in unrecognized:
+                message += ('Syntax for rotations is rN; N must be '
+                            '2, 3, 4, or 6')
+            raise ParameterValueError(param, message=message)                   # TODO: @alex, correct exception?
 
     def interpret_symmetry_cell_transform(self, assignment):
         param = 'SYMMETRY_CELL_TRANSFORM'

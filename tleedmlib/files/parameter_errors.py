@@ -58,13 +58,11 @@ class ParameterFloatConversionError(ParameterConversionError):
 class ParameterValueError(ParameterError):
     """Raised when the value is not allowed"""
 
-    def __init__(self, parameter, given_value=None):
-        if given_value:
-            super().__init__(parameter,
-                             f'Could not interpret "{given_value}".')
-        else:
-            super().__init__(parameter,
-                             "Could not interpret given value.")
+    def __init__(self, parameter, given_value=None, message=None):
+        if message is None:
+            message = 'Could not interpret '
+            message += f'"{given_value}".' if given_value else 'given_value.'
+        super().__init__(parameter, message
 
 
 class ParameterParseError(ParameterError):
