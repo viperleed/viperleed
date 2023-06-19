@@ -892,11 +892,13 @@ class ParameterInterpreter:                                                     
                           _SIMPLE_NUMERICAL_PARAMS)
 
     # ----- Methods to make sure no extra flags/values are given ------
-    def _ensure_single_flag_assignment(self, param, assignment):
+    def _ensure_single_flag_assignment(self, param, assignment, message=None):
         """Raise if assignment contains multiple flags."""
+        if message is None:
+            message = assignment.flags_str
         if assignment.other_flags:
             self.rpars.setHaltingLevel(1)
-            raise ParameterUnknownFlagError(param, assignment.flags_str)
+            raise ParameterUnknownFlagError(param, message)
 
     def _ensure_single_value_assignment(self, param, assignment):
         """Raise if assignment contains multiple values."""
@@ -1071,7 +1073,11 @@ class ParameterInterpreter:                                                     
     def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
         """Assign parameter FORTRAN_COMP."""
         param = 'FORTRAN_COMP'
-        self._ensure_single_flag_assignment(param, assignment)
+        message = (f'Only one flag allowed for {param} per line. '
+                   f'Got {assignment.flags}.')
+        self._ensure_single_flag_assignment(param,
+                                            assignment,
+                                            message=message)
 
         flag, compiler_str = assignment.flag.lower(), assignment.value
 
@@ -1127,8 +1133,8 @@ class ParameterInterpreter:                                                     
             raise ParameterNumberOfInputsError(parameter=param)
         iv_range = self._parse_energy_range(param, assignment,
                                             assignment.values,
-                                            accept_underscore=True)             # TODO: @amimre this behaviour change needs to go in the doc
-        # Interpret underscores as defaults                                     # TODO: @amimre this behaviour change needs to go in the doc
+                                            accept_underscore=True)
+        # Interpret underscores as defaults
         _no_value = self.rpars.no_value
         _defaults = self.rpars.get_default(param)
         for i, (bound, default) in enumerate(zip(iv_range, _defaults)):
@@ -1415,7 +1421,7 @@ class ParameterInterpreter:                                                     
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = tuple(il)
 
-    def interpret_run(self, assignment):                                        # TODO: important param, write tests
+    def interpret_run(self, assignment):
         """Assign parameter RUN, inserting an initialization if needed."""
         param = 'RUN'
         segments = []
