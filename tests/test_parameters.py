@@ -126,7 +126,7 @@ class TestIntpolDeg:
                         interpreter.interpret_intpol_deg(Assignment(val, ''))
 
 
-class TestInterpretNumericalParameter:
+class TestNumericalParameter:
     def test_interpret_numerical_parameter_float(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("0.01", 'TEST_PARAM')
@@ -229,7 +229,7 @@ class TestInterpretNumericalParameter:
         assert mock_rparams.TEST_PARAM == 2
 
 
-class TestInterpretSymmetryBulk:
+class TestSymmetryBulk:
     def test_interpret_symmetry_bulk_mirror(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
         assignment = Assignment("m[1 0] m[0 -1]", "SYMMETRY_BULK")
@@ -277,7 +277,7 @@ class TestInterpretSymmetryBulk:
             interpreter.interpret_symmetry_bulk(assignment)
 
 
-class TestInterpretBulkRepeat():
+class TestBulkRepeat():
     param = 'BULK_REPEAT'
     rpars = Rparams()
 
@@ -322,7 +322,7 @@ class TestInterpretBulkRepeat():
         assert self.rpars.BULK_REPEAT == pytest.approx([1.0, 2.0, 3.0], rel=1e-4)
 
 
-class TestInterpretFortranComp():
+class TestFortranComp():
     # TODO: make use of new intepreter class
     param = 'FORTRAN_COMP'
     rpars = Rparams()
