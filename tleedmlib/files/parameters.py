@@ -757,10 +757,10 @@ class ParameterInterpreter:                                                     
                          if str_value in synonyms)
         except StopIteration:  # Value is invalid
             self.rpars.setHaltingLevel(1)
-            raise ParameterBooleanConversionError(assignemnt.parameter,
+            raise ParameterBooleanConversionError(assignment.parameter,
                                                   assignment.value) from None
 
-        param = assignment.parameter if param is not None else param
+        param = param or assignment.parameter
         if not return_only:
             setattr(self.rpars, param.upper(), value)
         return value
@@ -829,7 +829,7 @@ class ParameterInterpreter:                                                     
                            f'Value will be set to {in_range_value}.')
             value = in_range_value
 
-        param = assignment.parameter if param is not None else param
+        param = param or assignment.parameter
         if not return_only:
             setattr(self.rpars, param.upper(), value)
         return value
