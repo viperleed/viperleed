@@ -938,6 +938,56 @@ class TestSymmetryEps:
             interpreter.interpret_symmetry_eps(assignment)
 
 
+class TestSearchBeams():
+    def test_interpret_search_beams_zero(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment('0', parameter='SEARCH_BEAMS')
+        interpreter.interpret_search_beams(assignment)
+        assert mock_rparams.SEARCH_BEAMS == 0
+
+    def test_interpret_search_beams_alternative_zero(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment('A', parameter='SEARCH_BEAMS')
+        interpreter.interpret_search_beams(assignment)
+        assert mock_rparams.SEARCH_BEAMS == 0
+
+    def test_interpret_search_beams_one(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment('1', parameter='SEARCH_BEAMS')
+        interpreter.interpret_search_beams(assignment)
+        assert mock_rparams.SEARCH_BEAMS == 1
+
+    def test_interpret_search_beams_alternative_one(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment('I', parameter='SEARCH_BEAMS')
+        interpreter.interpret_search_beams(assignment)
+        assert mock_rparams.SEARCH_BEAMS == 1
+
+    def test_interpret_search_beams_two(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment('2', parameter='SEARCH_BEAMS')
+        interpreter.interpret_search_beams(assignment)
+        assert mock_rparams.SEARCH_BEAMS == 2
+
+    def test_interpret_search_beams_alternative_two(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment('F', parameter='SEARCH_BEAMS')
+        interpreter.interpret_search_beams(assignment)
+        assert mock_rparams.SEARCH_BEAMS == 2
+
+    def test_interpret_search_beams_invalid_value(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment('3', parameter='SEARCH_BEAMS')
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_search_beams(assignment)
+
+    def test_interpret_search_beams_multiple_values(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment('0 1', parameter='SEARCH_BEAMS')
+        with pytest.raises(ParameterError):
+            interpreter.interpret_search_beams(assignment)
+
+
 class TestSearchCull:
     def test_interpret_search_cull_single_value(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)

@@ -1447,10 +1447,9 @@ class ParameterInterpreter:                                                     
         self.rpars.RUN = [s.value for s in segments]                            # TODO: replace with "segments" to keep Section objects
 
     def interpret_search_beams(self, assignment):
+        """Assign parameter SEARCH_BEAMS."""
         param = 'SEARCH_BEAMS'
-        if assignment.other_values:
-            self.rpars.setHaltingLevel(1)
-            raise ParameterNumberOfInputsError(param)
+        self._ensure_simple_assignment(param, assignment)
         value = assignment.value.lower()
         if value.startswith(('0', 'a')):
             self.rpars.SEARCH_BEAMS = 0
