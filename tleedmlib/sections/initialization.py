@@ -487,11 +487,13 @@ def init_domains(rp):
             logger.info(f"Reading input files for domain {name}")
             try:
                 dp.sl = poscar.readPOSCAR()
-                dp.rp = parameters.readPARAMETERS()
+                dp.rp = parameters.readPARAMETERS()                             # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 dp.rp.workdir = home
                 dp.rp.sourcedir = rp.sourcedir
                 dp.rp.timestamp = rp.timestamp
-                parameters.interpretPARAMETERS(dp.rp, slab=dp.sl, silent=True)
+                interpret_domain_params_silent = rp.LOG_LEVEL > logging.DEBUG
+                parameters.interpretPARAMETERS(dp.rp, slab=dp.sl,
+                                               silent=interpret_domain_params_silent)
                 dp.sl.fullUpdate(dp.rp)   # gets PARAMETERS data into slab
                 dp.rp.fileLoaded["POSCAR"] = True
                 dp.rp.updateDerivedParams()
