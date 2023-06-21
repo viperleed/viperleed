@@ -6,20 +6,21 @@ major rework Sep-Nov 2021
 @author: Florian Kraushofer & Alexander M. Imre
 """
 import copy
-import os
-import numpy as np
 import logging
+import os
 import random
-import subprocess
 import re
 import shutil
-
-import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.files.parameters import PARAM_LIMITS
+import subprocess
 
 import fortranformat as ff
+import numpy as np
+
+from viperleed.tleedmlib.classes.sitetype import Atom_type
+from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
 
 logger = logging.getLogger("tleedm.psgen")
+
 
 ###############################################
 #                 GLOBALS                     #
@@ -63,7 +64,7 @@ def runPhaseshiftGen_old(sl, rp,
     psgensource = os.path.join(rp.sourcedir, psgensource)
     excosource = os.path.join(shortpath, excosource)
 
-    _, lmax = PARAM_LIMITS['LMAX']
+    _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.addBulkLayers(rp)
     outvals = {}
     # dict containing lists of values to output: outvals[energy][block][L]
@@ -206,7 +207,7 @@ def runPhaseshiftGen_old(sl, rp,
 
     output += (str(len(nsl.atlist))+"  "+str(len(nsl.atlist))
                + "                  #AtomTypes,#OccupiedAtomTypes\n")
-    ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]
+    ptl = [el.lower() for el in PERIODIC_TABLE]
 
     chemels = {}
     chemelspaths = {}
@@ -238,7 +239,7 @@ def runPhaseshiftGen_old(sl, rp,
             if at in subatlists[(site, el)]:
                 chemel = chemels[el]
                 chgdenpath = chemelspaths[el]
-        output += ("1 "+str(tl.leedbase.PERIODIC_TABLE.index(chemel)+1)
+        output += ("1 "+str(PERIODIC_TABLE.index(chemel)+1)
                    + ".  0.  0.  '"+chgdenpath+"'\n")
         ol = ""
         for j in range(0, 3):
@@ -692,13 +693,11 @@ def make_atom_types(rp, sl, additional_layers):
                     NN_dist = NN_dict[at]
                     if not new_bulk:
                         if (site, el, new_bulk) not in atom_types.keys():
-                            atom_types[(site, el, new_bulk)] = tl.classes.sitetype.Atom_type(el, str(site),
-                                                                                             new_bulk)
+                            atom_types[(site, el, new_bulk)] = Atom_type(el, str(site), new_bulk)
                         atom_types[(site, el, new_bulk)].add_atom(atom, NN_dist)
                     else:
                         if (site, el, new_bulk) not in atom_types_in_bulk.keys():
-                            atom_types_in_bulk[(site, el, new_bulk)] = tl.classes.sitetype.Atom_type(el, str(site),
-                                                                                                     new_bulk)
+                            atom_types_in_bulk[(site, el, new_bulk)] = Atom_type(el, str(site), new_bulk)
                         atom_types_in_bulk[(site, el, new_bulk)].add_atom(atom, NN_dist)
                     al.remove(atom)
                     reqats -= 1
@@ -712,13 +711,11 @@ def make_atom_types(rp, sl, additional_layers):
                     NN_dist = NN_dict[atom]
                     if not new_bulk:
                         if (atom.site, atom.el, new_bulk) not in atom_types.keys():
-                            atom_types[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el,
-                                                                                                       str(atom.site),
-                                                                                                       new_bulk)
+                            atom_types[(atom.site, atom.el, new_bulk)] = Atom_type(atom.el, str(atom.site), new_bulk)
                         atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom, NN_dist)
                     else:
                         if (atom.site, atom.el, new_bulk) not in atom_types_in_bulk.keys():
-                            atom_types_in_bulk[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el,
+                            atom_types_in_bulk[(atom.site, atom.el, new_bulk)] = Atom_type(atom.el,
                                                                                                                str(atom.site),
                                                                                                                new_bulk)
                         atom_types_in_bulk[(atom.site, atom.el, new_bulk)].add_atom(atom, NN_dist)
@@ -738,7 +735,7 @@ def make_atom_types(rp, sl, additional_layers):
             NN_dist = atom_types_in_bulk[(site, el, new_bulk)].smallest_NN_dist
             layer = estimate_bulk_layer(atom, nsl, max_z_sl, additional_layers)
             if (site, el, layer) not in types_to_add.keys():
-                types_to_add[(site, el, layer)] = tl.classes.sitetype.Atom_type(el, str(site), new_bulk, layer)
+                types_to_add[(site, el, layer)] = Atom_type(el, str(site), new_bulk, layer)
             types_to_add[(site, el, layer)].add_atom(atom, NN_dist)
 
     # Finally, add the new bulk to atom_types
@@ -844,7 +841,7 @@ def organize_atoms_by_types(newbulkats, nsl, sl, rp, additional_layers):
         if atom not in new_bulk_atoms:
             new_bulk = False
             if (atom.site, atom.el, new_bulk) not in atom_types.keys():
-                atom_types[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+                atom_types[(atom.site, atom.el, new_bulk)] = Atom_type(atom.el, str(atom.site), new_bulk)
                 atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
             else:
                 atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
@@ -865,7 +862,7 @@ def organize_atoms_by_types(newbulkats, nsl, sl, rp, additional_layers):
         new_bulk = True
         for atom in atoms_add:
             if (atom.site, atom.el) not in types_to_add.keys():
-                types_to_add[(atom.site, atom.el)] = tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+                types_to_add[(atom.site, atom.el)] = Atom_type(atom.el, str(atom.site), new_bulk)
                 types_to_add[(atom.site, atom.el)].add_atom(atom)
             else:
                 types_to_add[(atom.site, atom.el)].add_atom(atom)
@@ -904,8 +901,7 @@ def organize_atoms_by_sublayers(newbulkats, nsl):
         for atom in sublayer.atlist:
             new_bulk = True if atom in newbulkats else False
             if (sublayer_id, atom.site, atom.el, new_bulk) not in atom_types.keys():
-                atom_types[(sublayer_id, atom.site, atom.el, new_bulk)] = \
-                    tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+                atom_types[(sublayer_id, atom.site, atom.el, new_bulk)] = Atom_type(atom.el, str(atom.site), new_bulk)
             atom_types[(sublayer_id, atom.site, atom.el, new_bulk)].add_atom(atom)
     # We need to go through all this trouble of making Atom types, since we need to group the atoms into sublayers, but
     # we can't mix elements (which could otherwise happen if we have mixed occupation)

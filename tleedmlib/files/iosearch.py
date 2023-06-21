@@ -9,20 +9,22 @@ Functions for reading, processing and writing files relevant to the search
 
 import copy
 import logging
+import os
+from pathlib import Path
 import random
 import shutil
 import time
-import os
-from pathlib import Path
 
-import numpy as np
 import fortranformat as ff
+import numpy as np
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import BackwardsReader, readIntLine
 
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.files.poscar import writePOSCAR
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
-from viperleed.tleedmlib.base import BackwardsReader, readIntLine
-from viperleed.tleedmlib.leedbase import getBeamCorrespondence
+
 
 logger = logging.getLogger("tleedm.files.iosearch")
 
@@ -354,13 +356,13 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
                  + rp.IV_SHIFT_RANGE[1]) + 0.01
     step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
-    if rp.IV_SHIFT_RANGE[2] > 0:
+    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
+        vincr = step
+    else:
         vincr = rp.IV_SHIFT_RANGE[2]
         # step = min(step, vincr)
-    else:
-        vincr = step
     # find correspondence experimental to theoretical beams:
-    beamcorr = getBeamCorrespondence(sl, rp)
+    beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for beam in rp.expbeams:
@@ -1200,7 +1202,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         writePOSCAR(tmpslab, filename=fn, comments="all", silent=silent)
     except Exception:
         logger.error("Exception occured while writing POSCAR_OUT" + suffix,
-                     exc_info=rp.LOG_DEBUG)
+                     exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.makeSymBaseSlab(rp)
@@ -1210,12 +1212,12 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         except Exception:
             logger.warning(
                 "Exception occured while writing POSCAR_OUT_mincell" + suffix,
-                exc_info=rp.LOG_DEBUG)
+                exc_info=rp.is_debug_mode)
     fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
     try:
         writeVIBROCC(sl, rp, filename=fn, silent=silent)
     except Exception:
         logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
-                     exc_info=rp.LOG_DEBUG)
+                     exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     return

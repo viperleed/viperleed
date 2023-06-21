@@ -8,18 +8,21 @@ Created on Oct 22 2021
 Tensor LEED Manager section Full-dynamic Optimization
 """
 
-import os
-import logging
 import copy
-import shutil
+import logging
+import os
 from pathlib import Path
+import shutil
+
 import numpy as np
 from numpy.polynomial import Polynomial
 
-import viperleed.tleedmlib as tl
-import viperleed.tleedmlib.files.iofdopt as tl_io
-import viperleed.tleedmlib.psgen as psgen
+from viperleed.tleedmlib import psgen
+from viperleed.tleedmlib.files import iofdopt as tl_io
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
+from viperleed.tleedmlib.files.poscar import writePOSCAR
+from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
+from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 
 
 logger = logging.getLogger("tleedm.fdopt")
@@ -68,13 +71,13 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
                 raise
         logger.info("Starting full-dynamic calculation")
         try:
-            tl.sections.refcalc(sl, rp, parent_dir=home_dir)
+            section_refcalc(sl, rp, parent_dir=home_dir)
         except Exception:
             logger.error("Error running reference calculation")
             raise
         logger.info("Starting R-factor calculation...")
         try:
-            rfaclist = tl.sections.rfactor(sl, rp, 11)
+            rfaclist = section_rfactor(sl, rp, 11)
         except Exception:
             logger.error("Error running rfactor calculation")
             raise
@@ -105,7 +108,8 @@ def apply_scaling(sl, rp, which, scale):
 
 def get_fd_phaseshifts(sl, rp, S_ovl):
     rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
-    (first_line, phaseshifts) = psgen.runPhaseshiftGen(tsl, trp, psgensource=rundgrenpath)
+    (first_line, phaseshifts) = psgen.runPhaseshiftGen(sl, rp, psgensource=rundgrenpath)
+
 
 def fd_optimization(sl, rp):
     """
@@ -221,7 +225,7 @@ def fd_optimization(sl, rp):
                 x = max(x, current_scope[0] - rp.OPTIMIZE["maxstep"])
                 if which == "v0i":
                     x = max(0, x)
-                if which in ["a", "b", "ab", "c", "abc"]:
+                if which in "abc":
                     x = max(0.1, x)   # shouldn't happen, just in case
                 if which == "S_ovl":
                     x = min(1, x)
@@ -296,13 +300,13 @@ def fd_optimization(sl, rp):
             apply_scaling(tsl, trp, which, x)
 
         # create subfolder and calculate there
-        if type(x) == int:
-            dname = which + "_{}".format(x)
+        if isinstance(x, int):
+            dname = f"{which}_{x}"
         else:
-            dname = which + "_{:.4f}".format(x)
+            dname = f"{which}_{x:.4f}"
         workdir = rp.workdir / dname
         tmpdirs.append(workdir)
-        logger.info("STARTING CALCULATION AT {} = {:.4f}".format(which, x))
+        logger.info(f"STARTING CALCULATION AT {which} = {x:.4f}")
         r, rfaclist = get_fd_r(tsl, trp, work_dir=workdir, home_dir=rp.workdir)
         known_points = np.append(known_points, np.array([[x, r]]), 0)
         rfactor_lists.append(rfaclist)
@@ -318,8 +322,8 @@ def fd_optimization(sl, rp):
     parabola = Polynomial.fit(known_points[:, 0], known_points[:, 1], 2)
     coefs = parabola.convert(domain=[-1, 1]).coef
     new_min = -0.5*coefs[1] / coefs[2]
-    logger.info("Optimization of {}: Predicted minimum at {:.4f}, R = {:.4f}"
-                .format(which, new_min, parabola(new_min)))
+    logger.info(f"Optimization of {which}: Predicted minimum at "
+                f"{new_min:.4f}, R = {parabola(new_min):.4f}")
     current_best = known_points[np.argmin(known_points, 0)[1]]
     if (round(parabola(new_min), 4) > round(current_best[1], 4)
             and current_best[0] != known_points[-1, 0]):
@@ -338,39 +342,33 @@ def fd_optimization(sl, rp):
     comment = "Found by full-dynamic optimization"
     if which == "v0i":
         rp.V0_IMAG = new_min
-        modifyPARAMETERS(rp, "V0_IMAG", new="{:.4f}".format(new_min),
-                         comment=comment)
+        modifyPARAMETERS(rp, "V0_IMAG", new=f"{new_min:.4f}", comment=comment)
     elif which in ("theta", "phi"):
-        if which == "theta":
-            rp.THETA = new_min
-        else:
-            rp.PHI = new_min
+        setattr(rp, which.upper(), new_min)
         if rp.THETA < 0:
             rp.THETA = abs(rp.THETA)
             rp.PHI += 180
         rp.PHI = rp.PHI % 360
-        modifyPARAMETERS(rp, "BEAM_INCIDENCE", new=("THETA {:.4f}, PHI {:.4f}"
-                                                    .format(rp.THETA, rp.PHI)),
+        modifyPARAMETERS(rp, "BEAM_INCIDENCE",
+                         new=f"THETA {rp.THETA:.4f}, PHI {rp.PHI:.4f}",
                          comment=comment)
     elif which == "S_ovl":
         rp.S_ovl = new_min
-        modifyPARAMETERS(rp, "S_OVL", "{:.4f}".format(new_min), comment=comment)
+        modifyPARAMETERS(rp, "S_OVL", f"{new_min:.4f}", comment=comment)
     else:       # geometry: x is a scaling factor for the unit cell
         apply_scaling(sl, rp, which, new_min)
-        if type(rp.BULK_REPEAT) != float or "c" in which:
+        if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
             vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
             modifyPARAMETERS(rp, "BULK_REPEAT", new=vec_str, comment=comment)
-        tl.files.poscar.writePOSCAR(
-            sl, filename="POSCAR_OUT_" + rp.timestamp, comments="all")
+        writePOSCAR(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
 
     # fetch I(V) data from all, plot together
     best_rfactors = rfactor_lists[np.argmin(known_points[:, 1])]
     try:
         tl_io.write_fd_opt_beams_pdf(rp, known_points, which, tmpdirs,
                                      best_rfactors)
-    except Exception as e:
-        logger.warning("Failed to plot I(V) curves from optimization: "
-                       + str(e))
+    except Exception as exc:
+        logger.warning(f"Failed to plot I(V) curves from optimization: {exc}")
 
     # clean up tmpdirs
     # for path in tmpdirs:
@@ -379,4 +377,3 @@ def fd_optimization(sl, rp):
     #     except Exception as e:
     #         logger.warning("Failed to delete temporary directory {}: "
     #                        .format(path) + str(e))
-    return
