@@ -271,7 +271,7 @@ def section_loop(rp, sl):
                         exc_info=True
                         )
             run_section(sec, sl, rp)
-            if rp.domainParams and sl is None:
+            if rp.domainParams and sl is None:                                  # is there any point in allowing sl to be None?
                 sl = rp.pseudoSlab
             if rp.domainParams:
                 rp.setHaltingLevel(max(dp.rp.halt for dp in rp.domainParams))
