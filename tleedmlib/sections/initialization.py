@@ -612,14 +612,13 @@ def init_domains(rp):
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
-    rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
-    rp.pseudoSlab = Slab()
+    rp.pseudoSlab = Slab()                                                      # Do we really still need this pseudo-slab?
     rp.pseudoSlab.ucell = largestDomain.sl.ucell.copy()
     rp.pseudoSlab.bulkslab = Slab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
     # run beamgen for the whole system
     logger.info("Generating BEAMLIST...")
-    generate_beamlist(rp.pseudoSlab,
+    generate_beamlist(copy.deepcopy(largestDomain.sl),
                       rp,
                       domains=True,
                       beamlist_name='BEAMLIST')
