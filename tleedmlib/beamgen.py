@@ -2,7 +2,8 @@
 """
 Created on Mon Aug 17 15:24:16 2020
 
-@author: Florian Kraushofer, Alexander Imre
+@author: Florian Kraushofer
+@author: Alexander Imre
 """
 
 import os
@@ -208,7 +209,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         all_energies.append(energies)
     beamlist_content = make_beamlist_string(all_indices_arr, all_energies)
     max_energy = max((np.max(energies) for energies in all_energies))
-    logger.debug(f"Highest energy considered in BEAMLIST={max_energy}")
+    logger.debug(f"Highest energy considered in BEAMLIST: {max_energy:.2f}eV")
 
     # write to file
     write_file_path = Path(beamlist_name)
