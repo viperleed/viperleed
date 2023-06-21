@@ -8,13 +8,14 @@ Class containing parameters read from the PARAMETERS file, and some parameters
 defined at runtime. Most default values are defined here.
 """
 
-import numpy as np
 import logging
 import os
+from pathlib import Path
 import random
 import shutil
 from timeit import default_timer as timer
-from pathlib import Path
+
+import numpy as np
 
 try:
     import matplotlib.pyplot as plt
@@ -23,32 +24,56 @@ except Exception:
 else:
     plotting = True
 
-from viperleed.tleedmlib.files.iodeltas import checkDelta
-from viperleed.tleedmlib.leedbase import getMaxTensorIndex, HARTREE_TO_EV
+
+from viperleed.tleedmlib import leedbase
+
 from viperleed.tleedmlib.base import available_cpu_count
-from viperleed.tleedmlib.checksums import (
-    KNOWN_TL_VERSIONS,
-    UnknownTensErLEEDVersionError
-)
+from viperleed.tleedmlib.checksums import (KNOWN_TL_VERSIONS,
+                                           UnknownTensErLEEDVersionError)
+from viperleed.tleedmlib.files.iodeltas import checkDelta
 
 logger = logging.getLogger("tleedm.rparams")
+
+NO_VALUE = object()  # For Rparams
+
+# Notice that the defaults in here that may be mutated during execution
+# are saved as immutable types to prevent inadvertent modification of
+# this global, and are rather converted to their mutable equivalent
+# in the relevant places
+DEFAULTS = {
+    'EXPBEAMS_INPUT_FILE' : None,
+    'FILAMENT_WF': {
+        "lab6": 2.65,  # This is the default if nothing is given
+        "w": 4.5,
+        },
+    'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: init from data
+    'LOG_LEVEL' : logging.INFO,
+    'PHASESHIFT_EPS': {
+        'r': 0.1,
+        'n': 0.05,
+        'f': 0.01,  # This is the default if nothing is given
+        'e': 0.001,
+        },
+    'RUN': (0, 1, 2, 3),
+    'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
+    'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
+    'THEO_ENERGIES - no experiments': (20, 800, 3),
+    'ZIP_COMPRESSION_LEVEL': 2,
+    }
+
+                                                                                # TODO: fill dict of parameter limits here (e.g. LMAX etc.)
+# parameter limits
+# either tuple of (min, max) or list of allowed values                          # TODO: allowed would be cleaner as set. It's not great that things are mixed though. Would be better to have a separate global
+PARAM_LIMITS = {
+    'LMAX': (1, 18),
+    'INTPOL_DEG': ['3', '5'],
+    }
+
 
 ###############################################
 #                CLASSES                      #
 ###############################################
 
-
-DEFAULTS = {
-    'EXPBEAMS_INPUT_FILE' : None,
-    'PHASESHIFT_EPS': {
-        'r': 0.1,
-        'n': 0.05,
-        'f': 0.01, # this is the default if nothing is given
-        'e': 0.001,
-    },
-    'ZIP_COMPRESSION_LEVEL': 2,
-    'SEARCH_EVAL_TIME':  60, # time interval between reads of SD.TL, TODO: should be dynamic?
-}
 
 class SearchPar:
     """Stores properties of ONE parameter of the search, i.e. what variation
@@ -133,18 +158,18 @@ class Rparams:
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
         self.EXPBEAMS_INPUT_FILE = DEFAULTS["EXPBEAMS_INPUT_FILE"]
-        self.FILAMENT_WF = 2.65   # work function of emitting cathode
+        self.FILAMENT_WF = DEFAULTS["FILAMENT_WF"]["lab6"]   # work function of emitting cathode
         self.FORTRAN_COMP = ["", ""]      # before files, after files
         self.FORTRAN_COMP_MPI = ["", ""]  # before files, after files
         self.GAUSSIAN_WIDTH = 0.5
         self.GAUSSIAN_WIDTH_SCALING = 0.5
         self.HALTING = 2    # 2: major concerns, 1: minor warnings, 0: always
         self.INTPOL_DEG = 3 # Degree of interpolation spline used in R-factor calculation
-        self.IV_SHIFT_RANGE = [-3, 3, -1]  # step of -1: init from data
+        self.IV_SHIFT_RANGE = self.get_default('IV_SHIFT_RANGE')
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True
         self.LMAX = [0, 0]    # minimum and maximum LMAX
-        self.LOG_DEBUG = False
+        self.LOG_LEVEL = DEFAULTS["LOG_LEVEL"]
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
@@ -159,7 +184,7 @@ class Rparams:
         self.PHI = 0.0           # from BEAM_INCIDENCE
         self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [],
                         'legend': 'all', 'overbar': False, 'perpage': 2}
-        self.RUN = [0, 1, 2, 3]        # what segments should be run
+        self.RUN = self.get_default('RUN')        # what segments should be run
         self.R_FACTOR_LEGACY = True # use old runtime-compiled R-factor calculation
         self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
         self.R_FACTOR_SMOOTH = 0
@@ -191,8 +216,9 @@ class Rparams:
         self.SYMMETRY_BULK = {}   # keys: group, rotation, mirror
         self.TENSOR_INDEX = None  # default: pick highest in Tensors folder
         self.TENSOR_OUTPUT = []  # per layer: write Tensor output? (0/1)
-        self.THEO_ENERGIES = [-1, -1, -1]
-        # default: [20, 800, 2], initialized in section INIT
+        # THEO_ENERGIES: the default values without experimental
+        # beams is set in section INIT via self.initTheoEnergies
+        self.THEO_ENERGIES = self.get_default('THEO_ENERGIES')
         self.THETA = 0.0        # from BEAM_INCIDENCE
         self.TL_IGNORE_CHECKSUM = True
         self.TL_VERSION = 0.    # requested TensErLEED version
@@ -216,6 +242,7 @@ class Rparams:
         self.output_interval = None # changed in updateDerivedParams
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
         self.searchStartInit = None
+        self.search_convergence_known = False  # used by parameter.py
         # script progress tracking
         self.halt = 0
         self.systemName = ""
@@ -274,8 +301,30 @@ class Rparams:
         self.lastParScatterFigs = {}
         # complete figures for each search, with search names as keys
 
+    @property
+    def is_debug_mode(self):
+        return self.LOG_LEVEL < logging.INFO
+
+    @property
+    def no_value(self):
+        return NO_VALUE
+
     def get_default(self, param):
-        return DEFAULTS[param]
+        """Return the default value of param."""
+        try:
+            value = DEFAULTS[param]
+        except KeyError as err:
+            raise ValueError(f"No default found for parameter {param}.") from err
+        if isinstance(value, tuple):
+            value = list(value)
+        return value
+
+    def get_limits(self, param):
+        """Return the smallest and largest acceptable values of param."""
+        try:
+            return PARAM_LIMITS[param]
+        except KeyError as err:
+            raise ValueError(f"No limits found for parameter {param}.") from err
 
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and
@@ -326,7 +375,7 @@ class Rparams:
         """
         # TENSOR_INDEX:
         if self.TENSOR_INDEX is None:
-            self.TENSOR_INDEX = getMaxTensorIndex()
+            self.TENSOR_INDEX = leedbase.getMaxTensorIndex()
         # TL_VERSION:
         if self.TL_VERSION == 0.:
             path = os.path.join(self.sourcedir, "tensorleed")
@@ -355,7 +404,7 @@ class Rparams:
             # try again without trailing zero
             if self.TL_VERSION_STR.endswith('0'):
                 self.TL_VERSION_STR = self.TL_VERSION_STR[:-1]
-        if (self.TL_VERSION_STR not in KNOWN_TL_VERSIONS 
+        if (self.TL_VERSION_STR not in KNOWN_TL_VERSIONS
                 and not self.TL_IGNORE_CHECKSUM):
             raise UnknownTensErLEEDVersionError(
                 f"Unrecognized TensErLEED version: {self.TL_VERSION_STR}. "
@@ -382,9 +431,9 @@ class Rparams:
         if self.fileLoaded["PHASESHIFTS"]:
             # get highest required energy index
             hi = len(self.phaseshifts)-1
-            if self.THEO_ENERGIES[1] > 0:
+            if self.THEO_ENERGIES[1] is not NO_VALUE:
                 for i in range(0, len(self.phaseshifts)):
-                    if (self.phaseshifts[i][0]*HARTREE_TO_EV
+                    if (self.phaseshifts[i][0]*leedbase.HARTREE_TO_EV
                             > self.THEO_ENERGIES[1]):
                         hi = i
                         break
@@ -528,7 +577,7 @@ class Rparams:
         None.
 
         """
-        if -1 not in self.THEO_ENERGIES:
+        if NO_VALUE not in self.THEO_ENERGIES:
             return
         info = False
         if self.fileLoaded["EXPBEAMS"]:
@@ -540,12 +589,12 @@ class Rparams:
                 if max(beam.intens) > maxen:
                     maxen = max(beam.intens)
             values = [minen - 3, maxen + 3, 3]
-            if -1 in self.THEO_ENERGIES[:2]:
+            if NO_VALUE in self.THEO_ENERGIES[:2]:
                 info = True
         else:
-            values = [20, 800, 3]
+            values = list(DEFAULTS['THEO_ENERGIES - no experiments'])
         for i in range(0, 3):
-            if self.THEO_ENERGIES[i] == -1:
+            if self.THEO_ENERGIES[i] is NO_VALUE:
                 self.THEO_ENERGIES[i] = values[i]
         if info:
             logger.debug(
@@ -556,9 +605,9 @@ class Rparams:
              % self.THEO_ENERGIES[2])
         if d != 0:
             self.THEO_ENERGIES[1] += (self.THEO_ENERGIES[2] - d)
-        return
 
-    def getFortranComp(self, comp="auto"):
+    # TODO: eventually, these default values should be moved to some constant or other file
+    def getFortranComp(self, comp="auto", skip_check=False):                    # TODO: combine with FortranCompMPI from below; lots of repeated code
         """
         Checks whether ifort or gfortran are present, and sets FORTRAN_COMP
         accordingly.
@@ -568,7 +617,8 @@ class Rparams:
         comp : str, optional
             'auto' (default): will check ifort first, then gfortran.
             'ifort' or 'gfortran': only that compiler will be checked.
-
+        skip_check : bool, optional
+            If True, will not check if the compiler is present. Default False.
         Raises
         ------
         RuntimeError
@@ -590,10 +640,13 @@ class Rparams:
             logger.error("Rparams.getFortranComp: requested compiler is not "
                          "supported.")
             raise RuntimeError("Fortran compiler not supported.")
-        for c in check:
-            if shutil.which(c, os.X_OK) is not None:
-                found = c
-                break
+        if not skip_check:
+            for c in check:
+                if shutil.which(c, os.X_OK) is not None:
+                    found = c
+                    break
+        else:
+            found = check[0]
         if found == "":
             if comp == "auto":
                 logger.error("Rparams.getFortranComp: No fortran compiler "
@@ -613,7 +666,7 @@ class Rparams:
             logger.debug("Using fortran compiler: gfortran")
         return
 
-    def getFortranMpiComp(self, comp="auto"):
+    def getFortranMpiComp(self, comp="auto", skip_check=False):
         """
         Checks whether mpiifort or mpifort are present, and sets FORTRAN_COMP
         mpi accordingly.
@@ -623,6 +676,8 @@ class Rparams:
         comp : str, optional
             'auto' (default): will check mpiifort first, then mpifort.
             'mpiifort' or 'mpifort': only that compiler will be checked.
+        skip_check : bool, optional
+            If True, will not check if the compiler is present. Default False.
 
         Raises
         ------
@@ -645,10 +700,13 @@ class Rparams:
             logger.error("Rparams.getFortranMpiComp: requested compiler is "
                          "not supported.")
             raise RuntimeError("Fortran MPI compiler not supported.")
-        for c in check:
-            if shutil.which(c, os.X_OK) is not None:
-                found = c
-                break
+        if not skip_check:
+            for c in check:
+                if shutil.which(c, os.X_OK) is not None:
+                    found = c
+                    break
+        else:
+            found = check[0]
         if found == "":
             if comp == "auto":
                 logger.error("Rparams.getFortranMpiComp: No fortran compiler "

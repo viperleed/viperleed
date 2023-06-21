@@ -7,16 +7,13 @@ Created on Tue Aug 18 17:20:43 2020
 Functions for reading and writing the PHASESHIFTS file
 """
 
-import logging
-import numpy as np
-import os
 from itertools import combinations
+import logging
+import os
 from pathlib import Path
 
 import fortranformat as ff
-
-
-from viperleed.tleedmlib.leedbase import HARTREE_TO_EV
+import numpy as np
 
 from viperleed.tleedmlib.leedbase import (get_atomic_number,
                                           get_element_symbol,
@@ -32,6 +29,7 @@ else:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     _CAN_PLOT = True
+
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
 

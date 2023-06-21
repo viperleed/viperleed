@@ -24,11 +24,14 @@ try:
 except ImportError:
     has_ase = False
 
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
 from viperleed.tleedmlib.classes.atom import Atom
-import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.classes.layer import Layer
+from viperleed.tleedmlib.classes.sitetype import Sitetype
+from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 logger = logging.getLogger("tleedm.slab")
 
@@ -83,7 +86,7 @@ class SymPlane:
             complist.append(complist[1]+complist[2]-complist[0])
 
         for p in complist:
-            if tl.base.dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
+            if dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
                 return True
         return False
 
@@ -416,7 +419,7 @@ class Slab:
         self.sortByZ()
         laynum = 0
         b = True if rparams.N_BULK_LAYERS > 0 else False
-        newlayer = tl.Layer(self, 0, b)
+        newlayer = Layer(self, 0, b)
         self.layers.append(newlayer)
         for atom in self.atlist:
             # only check for new layer if we're not in the top layer already
@@ -425,7 +428,7 @@ class Slab:
                     # if atom is higher than the next cutoff, make a new layer
                     laynum += 1
                     b = True if rparams.N_BULK_LAYERS > laynum else False
-                    newlayer = tl.Layer(self, laynum, b)
+                    newlayer = Layer(self, laynum, b)
                     self.layers.append(newlayer)
                     check = True    # check for empty layer
                     while check:
@@ -437,7 +440,7 @@ class Slab:
                             laynum += 1
                             b = (True if rparams.N_BULK_LAYERS > laynum
                                  else False)
-                            newlayer = tl.Layer(self, laynum, b)
+                            newlayer = Layer(self, laynum, b)
                             self.layers.append(newlayer)
             atom.layer = newlayer
             newlayer.atlist.append(atom)
@@ -513,7 +516,7 @@ class Slab:
                     i += 1
             # now, create sublayers based on sublists:
             for ls in sublists:
-                newsl = tl.Layer(self, 0, sublayer=True)
+                newsl = Layer(self, 0, sublayer=True)
                 subl.append(newsl)
                 newsl.atlist = ls
                 newsl.cartbotz = ls[0].cartpos[2]
@@ -598,7 +601,7 @@ class Slab:
         sl = []
         for el in rp.SITE_DEF:
             for sitename in rp.SITE_DEF[el]:
-                newsite = tl.Sitetype(el, sitename)
+                newsite = Sitetype(el, sitename)
                 sl.append(newsite)
                 for i in rp.SITE_DEF[el][sitename]:
                     try:
@@ -615,7 +618,7 @@ class Slab:
                         logger.error('SITE_DEF: atom number out of bounds.')
                         raise
         for el in self.elements:
-            newsite = tl.Sitetype(el, 'def')
+            newsite = Sitetype(el, 'def')
             found = False
             for at in atlist:
                 if at.el == el and at.site is None:
@@ -1209,7 +1212,7 @@ class Slab:
             return False, abst
 
         # Use Minkowski reduction to make mincell high symmetry
-        mincell, _, _ = tl.leedbase.reduceUnitCell(mincell)
+        mincell, _, _ = leedbase.reduceUnitCell(mincell)
 
         # Cosmetic corrections
         if abs(mincell[0, 0]) < eps and abs(mincell[1, 1]) < eps:
@@ -1709,8 +1712,8 @@ class Slab:
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a set."""
 
-        _PTL = set(el.lower() for el in tl.leedbase.PERIODIC_TABLE)
-        _RADII = tl.leedbase.COVALENT_RADIUS
+        _PTL = set(el.lower() for el in PERIODIC_TABLE)
+        _RADII = COVALENT_RADIUS
 
         atoms = copy.deepcopy(self.atlist)
         # run from top to bottom of slab

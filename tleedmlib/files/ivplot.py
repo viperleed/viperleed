@@ -6,21 +6,22 @@ Created on Mon Oct 25 18:47:39 2021
 """
 
 import logging
+
 import numpy as np
 
 try:
     import matplotlib
+except Exception:
+    plotting = False
+else:
+    plotting = True
     matplotlib.rcParams.update({'figure.max_open_warning': 0})
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
-except Exception:
-    plotting = False
-else:
-    plotting = True
 
-import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.classes.beam import Beam
 
 logger = logging.getLogger("tleedm.files.ivplot")
 
@@ -33,7 +34,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
     Parameters
     ----------
     data : list of datasets, or single dataset
-        dataset : list of tl.Beam or of np.ndarray objects
+        dataset : list of Beam or of np.ndarray objects
             contains I(V) data per beam
         All datasets must contain the same beams in the same order, but beams
         can be empty
@@ -44,7 +45,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
     labels : kwarg, list of str
         Labels for the individual beams, e.g. (h|k) as strings. Must be same
         length as number of beams. If labels are not passed and at least one
-        dataset is of type tl.Beam, labels will be generated from that dataset.
+        dataset is of type Beam, labels will be generated from that dataset.
     annotations : kwarg, list of str
         Additional information to print for each beam, for example the
         R-factor. Must be same length as the number of beams.
@@ -98,7 +99,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
             raise TypeError(
                 "Expected data as a list or tuple, found "
                 + str(type(dataset[0])))
-        if type(dataset[0]) not in (tl.Beam, np.ndarray):
+        if type(dataset[0]) not in (Beam, np.ndarray):
             raise TypeError(
                 "Expected data as a list of tleedmlib Beams or numpy arrays, "
                 "found " + str(type(dataset[0])))
