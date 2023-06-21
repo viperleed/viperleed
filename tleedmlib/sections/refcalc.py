@@ -18,7 +18,6 @@ import subprocess
 import fortranformat as ff
 import numpy as np
 
-
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.checksums import validate_multiple_files
@@ -149,6 +148,7 @@ def compile_refcalc(comptask):
                    " ".join(list(zip(*compile_list))[1]),
                    comptask.fortran_comp[1]))
     try:
+        leedbase.fortran_compile_batch(ctasks)
     except Exception as e:
         logger.error("Error compiling fortran files: " + str(e))
         return ("Fortran compile error in RefcalcCompileTask "

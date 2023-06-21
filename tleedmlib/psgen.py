@@ -17,7 +17,7 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.tleedmlib.classes.sitetype import Atom_type
-from viperleed.tleedmlib.files.parameters import PARAM_LIMITS
+from viperleed.tleedmlib.classes.rparams import PARAM_LIMITS
 from viperleed.tleedmlib.leedbase import EV_TO_HARTREE
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
 

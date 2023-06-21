@@ -15,9 +15,9 @@ from pathlib import Path
 import fortranformat as ff
 import numpy as np
 
-from viperleed.tleedmlib.leedbase import (get_atomic_number,
-                                          get_element_symbol,
-                                          HARTREE_TO_EV)
+from viperleed.tleedmlib.leedbase import HARTREE_TO_EV
+from viperleed.tleedmlib.periodic_table import (get_atomic_number,
+                                                get_element_symbol)
 
 try:
     import matplotlib
