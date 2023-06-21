@@ -71,7 +71,8 @@ def readSDTL_next(filename="SD.TL", offset=0):
         return (offset, "")     # return old offset, no content
 
 
-def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0):
+def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0,
+                    suppress_warnings=False):
     """
     Attempts to interpret a given string as one or more blocks of an SD.TL
     file.
@@ -139,16 +140,19 @@ def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0):
         if dpars:
             configs.append(tuple(dpars))
         if not all([len(dp) == len(configs[0]) for dp in configs]):
-            logger.warning("A line in SD.TL contains fewer values than "
-                           "the others. Skipping SD.TL block.")
+            if not suppress_warnings:
+                logger.warning("A line in SD.TL contains fewer values than "
+                            "the others. Skipping SD.TL block.")
             continue
         if gen != 0 and len(rfacs) > 0 and len(configs) > 0:
             returnList.append((gen, rfacs, tuple(configs)))
         elif len(configs) < n_expect:
-            logger.warning("A block in SD.TL contains fewer configurations "
-                           "than expected.")
+            if not suppress_warnings:
+                logger.warning("A block in SD.TL contains fewer configurations "
+                            "than expected.")
         else:
-            logger.warning("A block in SD.TL was read but not understood.")
+            if not suppress_warnings:
+                logger.warning("A block in SD.TL was read but not understood.")
     return returnList
 
 
@@ -184,7 +188,7 @@ def repeat_fetch_SDTL_last_block(which_beams,
     raise SearchIORaceConditionError(f"Could not read complete block from "
                                      "SD.TL file.")
 
-def _fetch_SDTL_last_block(which_beams, n_expect, final=False):
+def _fetch_SDTL_last_block(which_beams, n_expect, print_info=False):
     try:
         lines = readSDTL_end(n_expect=n_expect)
     except FileNotFoundError:
@@ -198,8 +202,9 @@ def _fetch_SDTL_last_block(which_beams, n_expect, final=False):
     lines_str = "\n".join(lines)
     sdtl_content = readSDTL_blocks("\n".join(lines),
                                    whichR=which_beams,
-                                   logInfo=final,
-                                   n_expect=n_expect)
+                                   logInfo=print_info,
+                                   n_expect=n_expect,
+                                   suppress_warnings=not print_info)
     return sdtl_content
 
 
