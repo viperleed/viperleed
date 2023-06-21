@@ -63,6 +63,9 @@ def processSearchResults(sl, rp, search_log_path, final=True):
     -------
     None.
     """
+    # Read search log if available, and check for errors
+    _check_search_log(search_log_path)
+
     # get the last block from SD.TL:
     try:
         sdtl_content = tl_io.repeat_fetch_SDTL_last_block(which_beams=rp.SEARCH_BEAMS,
@@ -75,11 +78,7 @@ def processSearchResults(sl, rp, search_log_path, final=True):
         raise RuntimeError("No data in SD.TL") from err
     except tl_io.SearchIORaceConditionError:
         return  # if we can't find a block, we also can't store it.
-      
-    # Read search log if available, and check for errors
-    _check_search_log(search_log_path)
-    
-    
+
     (generation, rfactors, configs), *_ = sdtl_content
 
     assert len(rfactors) == len(configs)                                        # TODO: catch and complain. Previous version would pick only the first len(rfactors) configs, but the two should hopefully be the same length.
@@ -270,6 +269,8 @@ def _check_search_log(search_log_path):
                      "to the search may not be detected properly.")
         return
 
+    gen_err_msg = ("TensErLEED Error encountered in search. "
+                   "Execution cannot proceed.")
     # (1) unreasonably high amplitude values:
     if ("MAX. INTENS. IN THEOR. BEAM" in log_content
             and "IS SUSPECT" in log_content
@@ -281,8 +282,17 @@ def _check_search_log(search_log_path):
             "Check your input files and consider decreasing "
             "the DISPLACEMENTS ranges."
             )
-        raise RuntimeError("TensErLEED Error encountered in search. "
-                           "Execution cannot proceed.")
+        raise RuntimeError(gen_err_msg) from None
+    # (2) SIGBUS signal
+    elif ("received signal SIGBUS" in log_content
+          and "undefined portion of a memory object" in log_content):
+        logger.error(
+            "TensErLEED search stopped due to a SIGBUS signal. "
+            "This may be caused by a compiler error. "
+            "If you are using gfortran, consider lowering the optimization "
+            "level to '-O1' or '-O0' using the FORTRAN_COMP parameter."
+        )
+        raise RuntimeError(gen_err_msg) from None
 
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
