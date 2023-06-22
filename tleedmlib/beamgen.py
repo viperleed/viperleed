@@ -18,6 +18,7 @@ import numpy as np
 from viperleed.tleedmlib.leedbase import (HARTREE_TO_EV,
                                 BOHR_TO_ANGSTROM,
                                 ANGSTROM_TO_BOHR)
+from viperleed.tleedmlib import symmetry
 from viperleed.guilib.base import get_equivalent_beams, BeamIndex
 
 logger = logging.getLogger("tleedm.beamgen")
@@ -151,6 +152,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     """
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
+        symmetry.findSymmetry(sl.bulkslab, rp)
 
     e_max = rp.THEO_ENERGIES[1]
     surf_ucell = sl.surface_vectors
@@ -180,8 +182,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     equivalent_beams = get_equivalent_beams(leedParameters, domains=0)
     # strip away symmetry group information
     beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
-    subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw)
-    # TODO: create test case to check that len(subset_classes) == np.linalg.det(rp.SUPERLATTICE)
+    subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw) # TODO: create test case to check that len(subset_classes) == np.linalg.det(rp.SUPERLATTICE)
 
     # sort beams into scattering subsets
     beam_subsets = [[] for set in range(len(subset_classes))]

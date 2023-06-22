@@ -16,10 +16,12 @@ vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
+from viperleed.tests.helpers import ag100_parameters_example
 from viperleed.tleedmlib.beamgen import get_beam_scattering_subsets
+from viperleed.tleedmlib.beamgen import make_beamlist_string
+from viperleed.tleedmlib.beamgen import generate_beamlist
 
 _FIXTURES_PATH = Path('tests/fixtures/')
-
 
 class TestBeamScatteringSubsets:
     def test_get_beam_scattering_subsets_integer_only(self):
@@ -40,3 +42,12 @@ class TestBeamScatteringSubsets:
         subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw)
         assert subset_classes == expected_subset_classes
         assert reduced_indices == expected_reduced_indices
+
+
+
+def test_generate_beamlist(tmp_path, ag100_parameters_example):
+    rp, sl = ag100_parameters_example
+    beamlist_path = tmp_path / 'BEAMLIST'
+    sl.createLayers(rp)
+    generate_beamlist(sl, rp, beamlist_name = beamlist_path)
+    assert beamlist_path.exists()
