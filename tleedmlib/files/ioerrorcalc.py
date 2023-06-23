@@ -24,9 +24,9 @@ try:
     # import matplotlib.ticker as plticker
     plt.style.use('viperleed/tleedmlib/tleedm.mplstyle')
 except Exception:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
 
 logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)
@@ -298,8 +298,8 @@ def make_errors_figs(errors):
     filename : str, optional
         Path of file to be written, by default "Errors.pdf"
     """
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "error plotting.")
         return

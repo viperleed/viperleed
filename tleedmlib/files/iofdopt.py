@@ -21,9 +21,9 @@ try:
     plt.style.use('viperleed.tleedm')
     from matplotlib import cm
 except Exception:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
 
 from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
@@ -94,8 +94,8 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
 
     """
 
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "error plotting.")
         return
@@ -175,8 +175,8 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
 
     """
 
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "error plotting.")
         return

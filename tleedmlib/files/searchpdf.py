@@ -22,9 +22,9 @@ try:
     import matplotlib.pyplot as plt
     plt.style.use('viperleed.tleedm')
 except Exception:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
 
 
 def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
@@ -65,8 +65,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     None.
 
     """
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         return None
 
     markers = markers or []
@@ -482,8 +482,8 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
     None.
 
     """
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         return None
     allmin = []
     allmax = []

@@ -12,9 +12,9 @@ import numpy as np
 try:
     import matplotlib
 except Exception:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
     matplotlib.rcParams.update({'figure.max_open_warning': 0})
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
@@ -82,8 +82,8 @@ def plot_iv(data, filename, labels=[], annotations=[],
     None
 
     '''
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "R-factor plotting.")
         return
