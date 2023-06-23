@@ -293,6 +293,17 @@ def _check_search_log(search_log_path):
             "level to '-O1' or '-O0' using the FORTRAN_COMP parameter."
         )
         raise RuntimeError(gen_err_msg) from None
+    # (3) different V0_IMAG between Deltas and Search
+    elif ("Average optical potential value in rf.info is incorrect:" 
+          in log_content):
+        logger.error(
+            "TensErLEED search stopped because stored Delta files were "
+            "calculated with a different imaginary inner potential "
+            "(optical potential) than requested in PARAMETERS. "
+            "Make sure to use the same value for V0_IMAG for Delta-Amplitudes "
+            "and structure search."
+        )
+        raise RuntimeError(gen_err_msg) from None
 
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
@@ -883,8 +894,8 @@ def search(sl, rp):
         try:
             proc = subprocess.Popen(
                 command, encoding="ascii",
-                stdout=search_log_f,       # if LOG_SEARCH is False, this is DEVNULL
-                stderr=subprocess.STDOUT,  # pipe to whatever stdout is
+                stdout=search_log_f,  # if LOG_SEARCH is False, this is DEVNULL
+                stderr=search_log_f,  # same as above
                 preexec_fn=os.setsid                                            # TODO: setsid only POSIX; os comments suggest NOT TO USE THIS as it is unsafe against deadlocks. Suggestion is to use start_new_session keyword [UNIX only!] instead of setsid. For a Windows solution see https://stackoverflow.com/questions/47016723. Probably even better: do not use python subprocess, but QProcess (which can run with its own event loop, and has a .kill(), or perhaps .terminate()). QProcess may have some issues with OpenMPI v<=1.7 due to a bug there (see www.qtcentre.org/threads/19636-Qprocess-and-mpi-not-finishing).
                 )
         except OSError:  # This should not fail unless the shell is very broken.
