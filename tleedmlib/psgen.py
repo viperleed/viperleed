@@ -3,7 +3,8 @@
 Created on Mon Aug 17 15:32:12 2020
 major rework Sep-Nov 2021
 
-@author: Florian Kraushofer & Alexander M. Imre
+@author: Florian Kraushofer
+@author: Alexander M. Imre
 """
 import copy
 import logging
