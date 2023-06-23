@@ -25,6 +25,7 @@ else:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
+    plt.style.use('viperleed.tleedm')
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS

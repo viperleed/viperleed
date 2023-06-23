@@ -18,8 +18,8 @@ try:
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
+    plt.style.use('viperleed.tleedm')
     from matplotlib import cm
-    matplotlib.rcParams["mathtext.default"] = "regular"
 except Exception:
     plotting = False
 else:

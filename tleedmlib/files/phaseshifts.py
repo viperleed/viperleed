@@ -15,6 +15,7 @@ from pathlib import Path
 import fortranformat as ff
 import numpy as np
 
+import viperleed
 from viperleed.tleedmlib.periodic_table import (get_atomic_number,
                                                 get_element_symbol)
 
@@ -27,6 +28,7 @@ else:
     matplotlib.use('Agg')
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
+    plt.style.use('viperleed.tleedm')
     _CAN_PLOT = True
 
 

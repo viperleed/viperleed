@@ -22,7 +22,7 @@ try:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     # import matplotlib.ticker as plticker
-    matplotlib.rcParams["mathtext.default"] = "regular"
+    plt.style.use('viperleed/tleedmlib/tleedm.mplstyle')
 except Exception:
     plotting = False
 else:
