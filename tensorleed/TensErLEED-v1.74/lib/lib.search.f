@@ -115,7 +115,7 @@ C  CHECK FOR TOO HIGH THEOR. INTENS.
 29    FORMAT(1H ,///,29H MAX. INTENS. IN THEOR. BEAM ,1I5,12H IS SUSPECT
      1(,1E13.5,29H)- ****** STOP PROGRAM ******)
 
-      write(8,29)IB,AM
+      write(0,29)IB,AM
 
       STOP                                      
 28    CONTINUE                                  
@@ -627,7 +627,7 @@ C If parameter is dependent on another, we can skip everything
          GOTO 1855
        ENDIF
 
-C      write(8,*) "PARAMETER",IPARAM,"IN POP",IPOP,"started"
+C      write(6,*) "PARAMETER",IPARAM,"IN POP",IPOP,"started"                    ! changed from 8 (control.chem) to 6 (stdout)
 
         ! probably width of gaussian
       IF(ABS(WIDT(IPARAM)-1).LE.1E-4) THEN
@@ -635,7 +635,7 @@ C      write(8,*) "PARAMETER",IPARAM,"IN POP",IPOP,"started"
       ELSE
       width=2.*(RMUT/(NPAR*WIDT(IPARAM)))
       ENDIF
-c      WRITE(8,*) 'width=',width
+c      WRITE(6,*) 'width=',width
 
 
 !  VARST = variable step
@@ -643,7 +643,7 @@ c      WRITE(8,*) 'width=',width
 
       DO IPVAL=1,VARST(IPARAM)
 
-c      write(8,*) "start probability of",IPVAL
+c      write(6,*) "start probability of",IPVAL                                  ! changed from 8 (control.chem) to 6 (stdout)
 
       MKSQR=(FLOAT(IPVAL)-FLOAT(PARIND(IPARAM,IPOP)))
       FMKSQR=MKSQR*MKSQR
@@ -661,7 +661,7 @@ C  open up parameter space completely if r-factor is not good enough
       ! in sea_rcd, only used there, but needs variable dimensions
       WSK(IPVAL)=exp(-0.5*FMKSQR/((width*width)*HELP))
 
-c      write(8,*)"probability of value",IPVAL," is",WSK(IPVAL)
+c      write(6,*)"probability of value",IPVAL," is",WSK(IPVAL)                  ! changed from 8 (control.chem) to 6 (stdout)
 
       END DO
       CONTINUE
@@ -690,16 +690,16 @@ C  grid point.
 
       DO 1853 IPVAL=1,VARST(IPARAM)
          WSK(IPVAL)=WSK(IPVAL)*NormG/MKSUM + BACKGROUND
-c         write(8,*)"probability of value",IPVAL," is",WSK(IPVAL)
+c         write(6,*)"probability of value",IPVAL," is",WSK(IPVAL)               ! changed from 8 (control.chem) to 6 (stdout)
  1853 CONTINUE
 
-c      write(8,*) "distribution normalised"
+c      write(6,*) "distribution normalised"                                     ! changed from 8 (control.chem) to 6 (stdout)
 
 C  Determination of new random number; AMI: changed to Fortran intrinsic
 
       FMKRN=scaled_random()
 
-C      write(8,*)"random",FMKRN
+C      write(6,*)"random",FMKRN                                                 ! changed from 8 (control.chem) to 6 (stdout)
 
 C Determination of new parameter
 
@@ -708,7 +708,7 @@ C Determination of new parameter
       DO 1854 IPVAL=1,VARST(IPARAM)
       MKHELP2=MKHELP2+WSK(IPVAL)*1000.
 
-C      write(8,*) "random",FMKRN," between",MKHELP1," ",MKHELP2,"?"
+C      write(6,*) "random",FMKRN," between",MKHELP1," ",MKHELP2,"?"             ! changed from 8 (control.chem) to 6 (stdout)
 
       IF ( MKHELP1 .LE. FMKRN) THEN
       IF ( MKHELP2 .GE. FMKRN) THEN
@@ -1098,11 +1098,11 @@ C --- Schleife ueber alle Domaenen
           READ(21,'(I5)') FILREL(IDOM,IPLACE)
           READ(21,'(I5)') NFIL(IDOM,IPLACE)
 
-          if (NFIL(IDOM,IPLACE).gt.NFILES) then
-            write(8,*) "Parameter MNFILES smaller than number of ",
+          if (NFIL(IDOM,IPLACE).gt.NFILES) then                                 ! AMI: this is an error message and is sent to stderr (0)
+            write(0,*) "Parameter MNFILES smaller than number of ",
      +                 "delta amplitude storage files required for"
-            write(8,*) "site no. ",IPLACE," in domain no. ", IDOM,"."
-            write(8,*) "Please correct."
+            write(0,*) "site no. ",IPLACE," in domain no. ", IDOM,"."
+            write(0,*) "Please correct."
             stop
           end if
 
@@ -1146,7 +1146,7 @@ CVB  error check for MNCONCS done here instead of CheckVal for the sake
 C    of clarity
 
           IF (NCONC.gt.MNCONCS) THEN
-            write(8,*) "Parameter MNCONCS too small!"
+            write(0,*) "Parameter MNCONCS too small!"                           ! AMI: this is an error message and is sent to stderr (0)
             STOP
           END IF
 
@@ -1350,10 +1350,10 @@ C  THE NUMBER OF CURVES AVERAGED TOGETHER CHANGES)
       READ(12,35)NEE(IB),FAC
 35    FORMAT(1I4,1E13.4)
 
-      IF (NEE(IB).gt.MNDATA) THEN
-        write(8,*) "Exp. beam no. ",IB," contains more data points",
+      IF (NEE(IB).gt.MNDATA) THEN                                               ! AMI: this is an error message and is sent to stderr (0)
+        write(0,*) "Exp. beam no. ",IB," contains more data points",
      +             " than dimension MNDATA allows for!"
-        write(8,*) "Please correct!"
+        write(0,*) "Please correct!"
         STOP
       END IF
 
@@ -1514,7 +1514,7 @@ C  TOO FEW ENERGY VALUES FOR INTERPOLATION. THIS BEAM WILL BE SKIPPED
 C  FROM NOW ON
 9     NE(IB)=0                                                           200480
 C     WRITE(6,6)                                                         230480
-C     WRITE(8,6)
+C     WRITE(0,6) ! AMI: this is an error message and is sent to stderr (0)
 6     FORMAT(59H*** IN PRESENT BEAM TOO FEW ENERGY VALUES FOR INTERPOLAT 230480
      1ION)
       GO TO 60
@@ -2337,7 +2337,7 @@ C  open current delta amplitude file
 
           ELSE
 
-            write(8,*) 'Illegal format for file ',
+            write(0,*) 'Illegal format for file ',                              ! AMI: this is an error message and is sent to stderr (0)
      +           INFILE(IDOM,IPLACE,IFILE)
             STOP
 
@@ -2398,7 +2398,7 @@ C  NT0 is a known quantity here so it must be kept!
 
             IF ((CHECK.gt.1.0e-09).or.(INT0.ne.NT0)) THEN
 
-              WRITE(8,*) 'Improper file combination!'
+              WRITE(0,*) 'Improper file combination!'                           ! AMI: this is an error message and is sent to stderr (0)
               STOP
 
             END IF
@@ -2423,14 +2423,15 @@ C  note AID is not read correctly!!
 
             GO TO 110
 
- 100        write(8,*) "Error reading v1.7 style output beam list",
+            ! AMI: this is an error message and is sent to stderr (0)
+ 100        write(0,*) "Error reading v1.7 style output beam list",
      +                 " from delta amplitude file. Trying pre-v1.7"
-            write(8,*) "format instead ..."
+            write(0,*) "format instead ..."
             
             READ(CNTFIL,'(10F7.4)') 
      +      ((PQFEX(I,J), I=1,2), J=1,NT0)
-
-            write(8,*) "Read may have been successful. Check",
+            ! AMI: this is a warning message and is sent to stderr (0)
+            write(0,*) "Read may have been successful. Check",
      +                 " carefully, anyhow!"
 
  110        CONTINUE
@@ -2502,7 +2503,7 @@ C  if energy is within range save it in array ESMK
 
             ELSE IF (IDATT.gt.NDATT) THEN
 
-              write(8,*) 'Insufficient dimension MNDATT!!'
+              write(0,*) 'Insufficient dimension MNDATT!!'                      ! AMI: this is an error message and is sent to stderr (0)
 
               STOP
 
@@ -2522,7 +2523,7 @@ C  check validity of read energy
 
                 IF (CHECK.gt.1.E-4) THEN
 
-                  write(8,*) 'Illegal energy read in input file',
+                  write(0,*) 'Illegal energy read in input file',               ! AMI: this is an error message and is sent to stderr (0)
      +            CNTFIL
 
                   STOP
@@ -3022,38 +3023,38 @@ C  files.
 
       IF (NBTD.ne.MNBTD) THEN
 
-        write(8,*) 'NBTD in WEXPEL or MNBTD wrong!'
+        write(0,*) 'NBTD in WEXPEL or MNBTD wrong!'                             ! AMI: this is an error message and is sent to stderr (0)
         STOP
 
       ELSE IF (NBED.ne.MNBED) THEN
 
-        write(8,*) 'NBED in WEXPEL or MNBED wrong!'
+        write(0,*) 'NBED in WEXPEL or MNBED wrong!'                             ! AMI: this is an error message and is sent to stderr (0)
         STOP
 
       END IF
 
-      IF (PNUM.NE.MNPRMK) THEN
+      IF (PNUM.NE.MNPRMK) THEN                                                  ! AMI: this is an error message and is sent to stderr (0)
 
-         write(8,'("PNUM:",I3,"MNPRMK:",I5)') PNUM, MNPRMK
+         write(0,'("PNUM:",I3,"MNPRMK:",I5)') PNUM, MNPRMK
 
-         write(8,*) "par.no    varst"
+         write(0,*) "par.no    varst"
          DO 50 IPARAM=1,PNUM,1
-           write(8,*) IPARAM, VARST(IPARAM)
+           write(0,*) IPARAM, VARST(IPARAM)
  50      CONTINUE
 
-         WRITE(8,*) 'Parameter MNPRMK wrong!'
+         WRITE(0,*) 'Parameter MNPRMK wrong!'
          STOP
       ENDIF
 
       if (NDOM .ne. MNDOM) then
-        write(8,*) 'Parameter MNDOM wrong!'
+        write(0,*) 'Parameter MNDOM wrong!'
         stop
       end if
 
       do 100 IDOM = 1, NDOM
         if (NPLACES(IDOM) .gt. MNPLACES) then
-           write(8,'("NPLACES:",I3,"MNPLACES:",I3)') NPLACES,MNPLACES
-           WRITE(8,*) 'Parameter MNPLACES wrong !'
+           write(0,'("NPLACES:",I3,"MNPLACES:",I3)') NPLACES,MNPLACES
+           WRITE(0,*) 'Parameter MNPLACES wrong !'
            STOP
         end if
   100 continue
@@ -3068,19 +3069,19 @@ C  check consistency of inner potential values from READRF and ReadFile
 
       VPIAV = VPIAV/REAL(DATTNO)
 
-      IF ((ABS(VI)-ABS(VPIAV)*HARTREE).gt.1.0e-04) THEN
+      IF ((ABS(VI)-ABS(VPIAV)*HARTREE).gt.1.0e-04) THEN                         ! AMI: this is an error message and is sent to stderr (0)
 
-        write(8,*)
+        write(0,*)
      +  "Average optical potential value in rf.info is incorrect:"
-        write(8,*)
+        write(0,*)
      +  "rf.info: ",VI," eV, true average: ",ABS(VPIAV)*HARTREE," eV."
         STOP
 
       END IF
 
-c      IF ((ABS(V0RR)-ABS(VV)*HARTREE).gt.1.0e-04) THEN
+c      IF ((ABS(V0RR)-ABS(VV)*HARTREE).gt.1.0e-04) THEN                         ! AMI: this is an error message and is sent to stderr (0)
 c
-c        write(8,*) 'Inner potential value in WEXPEL file is incorrect!'
+c        write(0,*) 'Inner potential value in WEXPEL file is incorrect!'
 c        STOP
 c
 c      END IF
