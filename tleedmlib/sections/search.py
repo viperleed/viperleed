@@ -868,7 +868,7 @@ def search(sl, rp):
             command = ["mpirun", "-n", str(rp.N_CORES),
                        os.path.join(".", searchname)]
         else:
-            command = os.path.join('.', searchname)
+            command = [os.path.join('.', searchname),]
         # if LOG_SEARCH -> log search
         if search_log_path:
             log_exists = search_log_path.is_file()
