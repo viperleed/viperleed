@@ -18,11 +18,12 @@ from timeit import default_timer as timer
 import numpy as np
 
 try:
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt                                             # TODO: we should make a general PLOTTING parameter to turn plotting on/off. If plotting is enabled but we can't import matplotlib, we should rather raise an error.
 except Exception:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
+    plt.style.use('viperleed.tleedm')
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import available_cpu_count
@@ -879,8 +880,8 @@ class Rparams:
         None.
 
         """
-        global plotting
-        if not plotting:
+        global _CAN_PLOT
+        if not _CAN_PLOT:
             return
 
         for searchname in self.lastParScatterFigs:
