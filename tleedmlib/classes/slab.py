@@ -262,7 +262,7 @@ class Slab:
         ValueError
             If the Slab was not assigned a unit cell.
         """
-        if self.ucell == np.array([]):
+        if np.array_equal(self.ucell, np.array([])):
             raise ValueError("Slab does not have a unit cell defined.")
         return self.ucell[:2, :2].T
 
