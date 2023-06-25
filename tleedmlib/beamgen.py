@@ -249,27 +249,29 @@ def make_beamlist_string(all_indices, all_energies):
     """
     # set up Fortran format as was used by beamgen
     beamlist_format = ff.FortranRecordWriter(
-        "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"  # beamgen v1.7 had I5, beamgen v3 had I4 for some reason
+        "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"
+        # beamgen v1.7 had I5, beamgen v3 had I4 for some reason
         )
-    line_nr = 0
+    beam_nr = 1
     content = ""
     for indices, energies in zip(all_indices, all_energies):
         n_beams = indices.shape[0]
-        if not energies.shape == (n_beams,) or not indices.shape == (n_beams, 2):
+        if not energies.shape == (n_beams,) or not indices.shape == (n_beams,
+                                                                     2):
             raise ValueError(
                 f"Incompatible size of indices (shape={indices.shape})"
                 f"and energies (shape={energies.shape}).")
 
         # first line contains number of beams
-        content += ff.FortranRecordWriter('10I3').write([n_beams]) + '\n' # TODO: why limit to 999 beams?
-        line_nr += 1
+        content += ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
+        # TODO: why limit to 999 beams?
 
         # iterate over all beams and format lines
-        for nr, ((beam_h, beam_k), energy) in enumerate(zip(indices, energies)):
-            # nr+1 because of Fortran indices starting at 1
-            line = beamlist_format.write([beam_h, beam_k, 1, 1, energy,line_nr])
+        for (beam_h, beam_k), energy in zip(indices, energies):
+            line = beamlist_format.write([beam_h, beam_k, 1, 1, energy,
+                                          beam_nr])
             content += line + '\n'
-            line_nr += 1
+            beam_nr += 1
 
     return content
 
