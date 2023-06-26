@@ -29,7 +29,7 @@ Date: 16.05.2023
 
 
 // Tell the compiler that 'set_signed_pwm_value' is declared in another file
-// (i.e., pwm.ino). This is necessary for the CoilClass declaration below
+// (i.e., pwm.ino). This is necessary for the Coil class declaration below
 extern byte set_signed_pwm_value(double, byte, byte*);
 
 // Same for the TLE7209 functions used in the driver
@@ -47,11 +47,11 @@ extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte*);
 #define COIL_2_PWM_REGISTER FAST_PWM_CH_2_REG  // WARNING: this is directly related to the choice of COIL_2_PWM
 
 // Current direction: positive or negative?
-#define COIL_1_SIGN 18  // Used for INA on shunt; PF7 on ATmega32U4
-#define COIL_2_SIGN 19  // Used for INA on shunt; PF6 on ATmega32U4
+#define COIL_1_SIGN             18  // Used for INA on shunt; PF7 on ATmega32U4
+#define COIL_2_SIGN             19  // Used for INA on shunt; PF6 on ATmega32U4
 
-#define COIL_1_SPI_CS 11  // For SPI communication; PB7 on ATmega32U4
-#define COIL_2_SPI_CS 12  // For SPI communication; PD6 on ATmega32U4
+#define COIL_1_SPI_CS           11  // For SPI communication; PB7 on ATmega32U4
+#define COIL_2_SPI_CS           12  // For SPI communication; PD6 on ATmega32U4
 
 
 
@@ -62,11 +62,11 @@ class MotorDriver{
         void setup() {
             setChipSelectHigh(spi_cs_pin);
         };
-        
+
         TLE7209_Error get_version(byte* version){
             return TLE7209readIDandVersion(spi_cs_pin, version);
         };
-        
+
         TLE7209_Error get_diagnostic_info(byte* info){
             return TLE7209readDiagnosticRegister(spi_cs_pin, info);
         };
@@ -89,6 +89,9 @@ class Coil {
         void setup() {
             pinMode(pwm_pin, OUTPUT);
             pinMode(pwm_sign_pin, OUTPUT);
+
+            // Reset the TLE7209 to clear any previous error condition
+            driver.reset();
             driver.setup();
         };
 

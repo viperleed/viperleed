@@ -20,10 +20,10 @@ void setup()
 {
     #if DEBUG
         Serial.setTimeout(100);
-        Serial.begin(9600);           // opens serial port, sets data rate to 9600 bps
+        Serial.begin(9600);           // Opens serial port, sets data rate to 9600 bps
     #endif
 
-    set_pwm_frequency(20);            // kHz
+    set_pwm_frequency(20);            // Frequency in kHz
 
     coil_1.set_current(0.625);
     coil_2.set_current(0.25);
@@ -59,6 +59,8 @@ void loop()
         - Call '.set_current' method and adjust current as needed
         - Check return code, transmit error message over serial console
         - Integrate ADC readout from INA214 and current shunt
+        - Periodically monitor the DIA_REG for short-circuit, overcurrent/-temperature (one single pin to route on the PCB!)
+
     */
     // set_coil_current(double coil_current, uint8_t coil)
 }
