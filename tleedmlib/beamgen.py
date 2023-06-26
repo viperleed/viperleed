@@ -266,8 +266,8 @@ def make_beamlist_string(all_indices, all_energies):
         # TODO: why limit to 999 beams?
 
         # iterate over all beams and format lines
-        for (beam_h, beam_k), energy in zip(indices, energies):
-            line = beamlist_format.write([beam_h, beam_k, 1, 1, energy,
+        for beam_hk, energy in zip(indices, energies):
+            line = beamlist_format.write([*beam_hk, 1, 1, energy,
                                           beam_nr])
             content += line + '\n'
             beam_nr += 1
@@ -303,10 +303,10 @@ def get_beam_scattering_subsets(beam_indices_raw):
 
     Returns
     -------
-    tuple
+    subset_classes : list
         A tuple containing the unique first Brillouin zone beam indices
         for the beam subsets. The length gives the number of subsets.
-    list
+    reduced_indices : list
         A list of corresponding reduced indices for beam indices_raw.
     """
 
@@ -315,6 +315,6 @@ def get_beam_scattering_subsets(beam_indices_raw):
 
     # sort order of subsets by |(h_red, k_red)|^2
     by_h_k_red = lambda index: index[0]**2 + index[1]**2
-    subset_classes = tuple(sorted(subset_classes, key= by_h_k_red))
+    subset_classes = sorted(subset_classes, key= by_h_k_red)
 
     return subset_classes, reduced_indices
