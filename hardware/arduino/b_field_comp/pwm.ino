@@ -149,7 +149,7 @@ void set_pwm_polarity(byte polarity){
     set when TCNT = 0x000; Enable PWM output channels B and D
     This part essentially selects whether we output "high" or
     "low" when the counter reaches the threshold. This can be
-    used for flipping the signal.
+    used for flipping the signal.                                               // TODO: comment change 'flipping' -> 'inverting' after test on hardware
     For more info, see Atmega32U4 datasheet, section 15.12.1
     **/
     TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0));   // Clear <COM4D1:COM4D0>
