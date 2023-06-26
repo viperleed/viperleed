@@ -105,6 +105,7 @@ class Coil {
             // Reset the TLE7209 to clear any previous error condition
             driver.reset();
             driver.setup();
+            set_current(0.0);
         };
 
         byte set_current(double coil_current) {
