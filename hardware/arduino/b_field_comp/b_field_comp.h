@@ -33,6 +33,7 @@ Date: 16.05.2023
 extern byte set_signed_pwm_value(double, byte, byte*);
 
 // Same for the TLE7209 functions used in the driver
+extern void TLE7209reset(byte);
 extern TLE7209_Error TLE7209readIDandVersion(byte, byte*);
 extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte*);
 
@@ -61,6 +62,9 @@ class MotorDriver{
         
         void setup() {
             setChipSelectHigh(spi_cs_pin);
+
+        void reset() {
+            TLE7209reset(disable_pin);
         };
 
         TLE7209_Error get_version(byte* version){

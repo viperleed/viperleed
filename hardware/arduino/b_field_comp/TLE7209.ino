@@ -30,6 +30,16 @@ void TLE7209endIO(byte chipSelectPin) {
 }
 
 
+/** Reset the TLE7209 after a fault condition occurred.**/
+void TLE7209reset(byte disable_pin) {
+    digitalWrite(disable_pin, LOW);
+    delayMicroseconds(20);
+    digitalWrite(disable_pin, HIGH);
+    delayMicroseconds(20);
+    digitalWrite(disable_pin, LOW);
+}
+
+
 TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){
     /**Generic SPI routine to read a register from the TLE7209.
 
