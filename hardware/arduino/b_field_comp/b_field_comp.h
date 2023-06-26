@@ -41,11 +41,13 @@ extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte*);
 // The next two pins SHOULD POSSIBLY NOT BE CHANGED. Changing these
 // requires picking a different timer/counter module (TC1 or TC3
 // instead of the currently used TC4)
-#define COIL_1_PWM          6   // PWM output, i.e., voltage value; Also A7;  PD7 on Atmega32U4
-#define COIL_1_PWM_REGISTER FAST_PWM_CH_1_REG  // WARNING: this is directly related to the choice of COIL_1_PWM
+#define COIL_1_PWM               6   // PWM output 1, i.e., voltage value; Also A7;  PD7 on Atmega32U4                          //  DO NOT CHANGE (OC4D PWM output)
+#define COIL_1_DISABLE          21   // Could later on be an alias of signal "COIL_1_SIGN"
+#define COIL_1_PWM_REGISTER     FAST_PWM_CH_1_REG  // WARNING: this is directly related to the choice of COIL_1_PWM
 
-#define COIL_2_PWM          10  // PWM output, i.e., voltage value; Also A10; PB6 on Atmega32U4
-#define COIL_2_PWM_REGISTER FAST_PWM_CH_2_REG  // WARNING: this is directly related to the choice of COIL_2_PWM
+#define COIL_2_PWM              10   // PWM output 1, i.e., voltage value; Also A10; PB6 on Atmega32U4                          //  DO NOT CHANGE (OC4B PWM output)
+#define COIL_2_DISABLE          22   // Could later on be an alias of signal "COIL_2_SIGN"
+#define COIL_2_PWM_REGISTER     FAST_PWM_CH_2_REG  // WARNING: this is directly related to the choice of COIL_2_PWM
 
 // Current direction: positive or negative?
 #define COIL_1_SIGN             18  // Used for INA on shunt; PF7 on ATmega32U4
@@ -58,10 +60,14 @@ extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte*);
 
 class MotorDriver{
     public:
-        MotorDriver(byte chip_select_pin) : spi_cs_pin(chip_select_pin) {};
-        
+        MotorDriver(byte chip_select_pin, byte _disable_pin)
+        : spi_cs_pin(chip_select_pin), disable_pin(_disable_pin) {};
+
         void setup() {
             setChipSelectHigh(spi_cs_pin);
+            pinMode(disable_pin, OUTPUT);    // Use for TLE7209 disable pin 'DIS'
+            digitalWrite(disable_pin, LOW);  // 'DIS' == 0: Activate TLE7209 output drivers
+        };
 
         void reset() {
             TLE7209reset(disable_pin);
@@ -77,17 +83,19 @@ class MotorDriver{
 
     private:
         const byte spi_cs_pin;
+        const byte disable_pin;
 };
-
 
 
 class Coil {
     public:
         const MotorDriver driver;
 
-        // Class constructor
-        Coil(byte pwm, byte _pwm_register_addr, byte sign, byte spi_cs)        // Coil class constructor, including member initializer list
-           : driver(spi_cs), pwm_pin(pwm), pwm_register_addr(_pwm_register_addr), 
+        // Class constructor, including member initializer list
+        Coil(byte pwm, byte _pwm_register_addr,
+             byte sign, byte spi_cs, byte disable)
+           : driver(spi_cs, disable), pwm_pin(pwm),
+             pwm_register_addr(_pwm_register_addr),
              pwm_sign_pin(sign) {};
 
         void setup() {
@@ -114,8 +122,8 @@ class Coil {
 
 
 // Create two global instances of class 'Coil' with respective initializers
-Coil coil_1(COIL_1_PWM, COIL_1_PWM_REGISTER, COIL_1_SIGN, COIL_1_SPI_CS);
-Coil coil_2(COIL_2_PWM, COIL_2_PWM_REGISTER, COIL_2_SIGN, COIL_2_SPI_CS);
+Coil coil_1(COIL_1_PWM, COIL_1_PWM_REGISTER, COIL_1_SIGN, COIL_1_SPI_CS, COIL_1_DISABLE);
+Coil coil_2(COIL_2_PWM, COIL_2_PWM_REGISTER, COIL_2_SIGN, COIL_2_SPI_CS, COIL_2_DISABLE);
 
 
 #endif   // _VIPERLEED_B_FIELD_COMP
