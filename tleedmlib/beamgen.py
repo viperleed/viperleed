@@ -6,20 +6,19 @@ Created on Mon Aug 17 15:24:16 2020
 @author: Alexander Imre
 """
 
-import os
 import logging
-import subprocess
+import os
 from pathlib import Path
+import subprocess
 
 import fortranformat as ff
 import numpy as np
 
-
+from viperleed.guilib.base import get_equivalent_beams, BeamIndex
+from viperleed.tleedmlib import symmetry
 from viperleed.tleedmlib.leedbase import (HARTREE_TO_EV,
                                 BOHR_TO_ANGSTROM,
                                 ANGSTROM_TO_BOHR)
-from viperleed.tleedmlib import symmetry
-from viperleed.guilib.base import get_equivalent_beams, BeamIndex
 
 logger = logging.getLogger("tleedm.beamgen")
 
