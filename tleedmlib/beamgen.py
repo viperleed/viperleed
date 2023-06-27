@@ -162,7 +162,9 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     else:
         d_min = min([dp.sl.getMinLayerSpacing() for dp in rp.domainParams])*0.7
 
-    conv_crit = rp.ATTENUATION_EPS  # convergence criterion for refcalc
+    # convergence criterion for refcalc;
+    # beams are propagated between layers if relative change is larger than this
+    conv_crit = rp.ATTENUATION_EPS
     # effective cutoff energy to use (scale to correct units)
     e_max_eff = (e_max +
                  (np.log(conv_crit)/(d_min*ANGSTROM_TO_BOHR))**2
@@ -208,7 +210,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         all_indices_arr.append(indices_arr)
         all_energies.append(energies)
     beamlist_content = make_beamlist_string(all_indices_arr, all_energies)
-    max_energy = max((np.max(energies) for energies in all_energies))
+    max_energy = np.max(all_energies)
     logger.debug(f"Highest energy considered in BEAMLIST: {max_energy:.2f}eV")
 
     # write to file
