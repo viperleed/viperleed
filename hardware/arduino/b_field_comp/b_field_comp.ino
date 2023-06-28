@@ -47,10 +47,10 @@ void loop()
         Serial.println("Heartbeat\n");
     #endif
 
-    errcode = coil_1.driver.get_version(&byteRead);
+    errcode = coil_2.driver.get_version(&byteRead);
     delayMicroseconds(50);
 
-    byteRead = coil_1.driver.get_diagnostic_info(&byteRead);
+    byteRead = coil_2.driver.get_diagnostic_info(&byteRead);
     delayMicroseconds(50);
 
 
