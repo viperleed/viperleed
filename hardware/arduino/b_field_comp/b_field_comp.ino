@@ -25,11 +25,11 @@ void setup()
 
     set_pwm_frequency(20);            // Frequency in kHz
 
-    coil_1.set_current(0.625);
-    coil_2.set_current(0.25);
-
     coil_1.setup();                    // Define PD7 and PB6 as output (used for PWM)
     coil_2.setup();
+
+    coil_1.set_current(0.2);
+    coil_2.set_current(0.1);
 
     SPI.begin();                      // Initializes the SPI bus (SCK and MOSI as OUTPUT)
     pinMode(MISO, INPUT);             // MISO = pin PB3
