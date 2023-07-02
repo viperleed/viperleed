@@ -27,6 +27,7 @@ uint16_t pwm_period;
                                 // register OCR4C and from the choice of a
                                 // value of 1 in set_pwm_clock_prescaler
 enum TC4_PWM_CHANNEL { TC4_PWM_CH_A, TC4_PWM_CH_B, TC4_PWM_CH_D };
+
 const uint16_t TC4_CLK_PRESCALER[] = { 0, 1, 2, 4, 8, 16, 32, 64, 128, 256,
                                        512, 1024, 2048, 4096, 8192, 16384};
 
