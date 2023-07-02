@@ -14,10 +14,10 @@ Date: 15.05.2023
 #define FAST_PWM_CH_2_REG 0xD0      // Equals the address of register OCR4B, see sec. 31 Register Summary
    
 
-// pwm_clock_divider: how many intervals the counters count before
-// rolling over. This essentially sets the frequency of the PWM.
-// 'uint16_t' is sufficient because TC4H:OCR4C is 10 bits wide.
-uint16_t pwm_clock_divider;  // Use set_pwm_frequency for setting!
+// 'pwm_period': How many Timer/Counter4 clock ticks until TCNT4 rolls over.
+// This essentially sets the frequency of the PWM. 'uint16_t' is sufficient 
+// because TC4H:OCR4C is 10 bits wide. Initialized inside 'set_pwm_frequency'.
+uint16_t pwm_period;
 
 #define POSITIVE_CURRENT  1
 #define NEGATIVE_CURRENT -1

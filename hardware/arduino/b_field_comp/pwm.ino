@@ -30,9 +30,6 @@ byte set_pwm_frequency(double freq){
     **/
     if (freq < PWM_MIN_FREQ || freq > F_CLK_T4) return 1;
 
-    // How many times freq fits in F_CLK_T4. Notice the -1: the PWM
-    // counter will reset when it counts 'pwm_clock_divider+1' intervals
-    pwm_clock_divider = F_CLK_T4 / freq - 1;
 
     set_pwm_polarity(POSITIVE_CURRENT);
     set_pwm_threshold_channels();
@@ -50,7 +47,6 @@ byte set_pwm_frequency(double freq){
 
     // Set PWM frequency to freq (TC4H:OCR4C = 799 gives freq exactly;
     // datasheet formula [Section 15.8.2] off by one for fast PWM mode)
-    set_ten_bit_value(pwm_clock_divider, &OCR4C);
     return 0;
 }
 
@@ -76,7 +72,6 @@ byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr
     if (value < -1 || value > 1) return 2;                                      // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
 
     set_current_sign(value, sign_select_pin);
-    set_ten_bit_value(pwm_clock_divider * value, tc4_reg_addr);
     return 0;
   // Notice that the 'coil_current', i.e. the time-averaged value of the signal
   // from the PWM, is exactly the same as the duty cycle of the PWM itself.
