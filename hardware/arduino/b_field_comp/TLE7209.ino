@@ -40,7 +40,7 @@ void TLE7209reset(byte disable_pin) {
 }
 
 
-TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){
+TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data) {
     /**Generic SPI routine to read a register from the TLE7209.
 
     Parameters
@@ -66,7 +66,7 @@ TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){
     // Check verification byte
     uint8_t transmit_ok = bytesRead >> 8;
     transmit_ok &= 0b00111111; // The highest two bits are not relevant
-    if(transmit_ok != TLE7209_SPI_TRANSMISSION_OK){
+    if(transmit_ok != TLE7209_SPI_TRANSMISSION_OK) {
         #if DEBUG
             Serial.println("Verification byte: TRANS_F is set and/or wrong bit toggle sequence detected\n");
         #endif
@@ -80,7 +80,7 @@ TLE7209_Error readTLE7209(byte chipSelectPin, byte request, byte *data){
 
 
 // Perform two transfers back-to-back (READ_ID, READ_VER)
-TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
+TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version) {
     /**Read device ID and chip revision from the TLE7209.
 
     Parameters
@@ -102,7 +102,7 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
     TLE7209_Error errcode = TLE7209_NoError;
     errcode = readTLE7209(chipSelectPin, TLE7209_READ_IDENTIFIER, &deviceID);
 
-    if(errcode){
+    if(errcode) {
         #if DEBUG
             Serial.println("TLE7209readIDandVersion() failed");
         #endif
@@ -110,7 +110,7 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
     }
 
     // Chip ID is fixed, check if match
-    if(deviceID != TLE7209_DEFAULT_DEVICE_ID){
+    if(deviceID != TLE7209_DEFAULT_DEVICE_ID) {
         #if DEBUG
             Serial.println("Wrong Device ID detected\n");
         #endif
@@ -123,7 +123,7 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version){
 
 
 TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
-                                            byte *diagnostics){
+                                            byte *diagnostics) {
     /**Read device ID and chip revision from the TLE7209.
 
     Parameters
@@ -146,7 +146,7 @@ TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
     errcode = readTLE7209(chipSelectPin,
                           TLE7209_READ_DIAG_REGISTER,
                           diagnostics);
-    if(errcode){
+    if(errcode) {
         #if DEBUG
             Serial.println("TLE7209readDiagnosticRegister() failed");
         #endif
@@ -156,7 +156,7 @@ TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
     // All bits except the MSB are set to 1 when no error occurred;
     // The MSB is just for info: mask out the MSB, then check against
     // the no-error condition
-    if ((*diagnostics & TLE7209_ALL_ERROR_BITS) != TLE7209_ALL_ERROR_BITS){
+    if ((*diagnostics & TLE7209_ALL_ERROR_BITS) != TLE7209_ALL_ERROR_BITS) {
         #if DEBUG
             Serial.println("DIA_REG: several bits set\n");
         #endif

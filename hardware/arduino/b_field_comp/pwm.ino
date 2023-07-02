@@ -1,12 +1,12 @@
 /*
-Add-on for Arduino Micro for using fast-PWM mode via Timer/counter4.
+ViPErLEED - Driver for using fast-PWM mode via Timer/Counter4.
 ---------------------
 Author: Michele Riva, Christoph Pfungen
 Date: 15.05.2023
 ---------------------
 */
 
-#include <Arduino.h>        // for interrupts()/noInterrupts()
+#include <Arduino.h>        // For interrupts()/noInterrupts()
 #include "pwm.h"
 
 
@@ -55,8 +55,7 @@ byte set_pwm_frequency(double freq){
 }
 
 
-
-byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr){
+byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr) {
     /**Set PWM duty cycle (i.e., average voltage), including sign output.
 
     Parameters
@@ -66,8 +65,7 @@ byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr
     sign_select_pin : byte
         The Arduino pin that takes care of the sign of this PWM signal.
     tc4_reg_addr : byte*
-        Address of the specific Timer/Counter4 register
-        of Atmega32U4.
+        Address of the specific Timer/Counter4 register.
 
     Returns
     -------
@@ -77,19 +75,20 @@ byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr
     **/
     if (value < -1 || value > 1) return 2;                                      // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
 
-    // Notice that the value, i.e., the time-averaged value of the
-    // signal from the PWM, is exactly the same as the duty cycle of
-    // the PWM itself.
-    // Set PWM duty cycle for channel at `_reg_addr`:
-    //    `duty_cycle` == `value` = TC4H:`_register` / TC4H:OCR4C
     set_current_sign(value, sign_select_pin);
     set_ten_bit_value(pwm_clock_divider * value, tc4_reg_addr);
     return 0;
+  // Notice that the 'coil_current', i.e. the time-averaged value of the signal
+  // from the PWM, is exactly the same as the duty cycle of the PWM itself.
+  // First, set or clear an I/O pin depending on the current direction;
+  // Then set the PWM duty cycle for 'COIL_1' or 'COIL_2' at 'tc4_reg_addr':
+  // The duty cycle is the desired ON time in percent, i.e. 'coil_current'
+  // times the PWM period measured in TC4 clock ticks.
 }
 
 
 
-void set_current_sign(double sign, byte sign_select_pin){
+void set_current_sign(double value, byte sign_select_pin) {
     /**Set digital I/O pin according to current direction in a coil.
 
     Parameters
@@ -99,7 +98,7 @@ void set_current_sign(double sign, byte sign_select_pin){
     sign_select_pin : byte
         Which I/O pin to use as a sign indicator
     **/
-    if (sign < 0){
+    if (value < 0){
         set_pwm_polarity(NEGATIVE_CURRENT);
         digitalWrite(sign_select_pin, HIGH);                                    // TODO: check if this is the right way (test on coil)
     }
@@ -111,13 +110,13 @@ void set_current_sign(double sign, byte sign_select_pin){
 
 
 void set_ten_bit_value(uint16_t ten_bits_value, volatile uint8_t *REGISTER){
-    /**Write 10-Bit value to Timer/Counter4 register.
+    /**Write 10-bit value to Timer/Counter4 register.
 
     Parameters
     ----------
     ten_bits_value : uint16_t
-        10-Bit value to be written
     REGISTER : uint8_t *
+        10-bit value to be written
         Address of register to be written to
 
     Notes
@@ -135,7 +134,7 @@ void set_ten_bit_value(uint16_t ten_bits_value, volatile uint8_t *REGISTER){
 }
 
 
-void set_pwm_polarity(byte polarity){
+void set_pwm_polarity(byte polarity) {
     /**Set PWM polarity.
 
     Parameters
@@ -145,15 +144,15 @@ void set_pwm_polarity(byte polarity){
 
     Notes
     -----
-    Pins OC4B, OC4BD: cleared on compare match (TCNT = OCR4B/D),
-    set when TCNT = 0x000; Enable PWM output channels B and D
-    This part essentially selects whether we output "high" or
-    "low" when the counter reaches the threshold. This can be
-    used for flipping the signal.                                               // TODO: comment change 'flipping' -> 'inverting' after test on hardware
-    For more info, see Atmega32U4 datasheet, section 15.12.1
+    Pins OC4A/B/D: cleared on compare match (TCNT4 == OCR4A/B/D), set when
+    TCNT4 = 0x000; Connect the Waveform Outputs OCW4A/B/D to Output Compare
+    pins OC4A/B/D.
+    This function essentially selects whether we output "high" or "low" when
+    TCNT4 reaches the threshold. This can be used for inverting the signal.
+    For more info see Atmega32U4 datasheet, section 15.12.1
     **/
-    TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0));   // Clear <COM4D1:COM4D0>
-    TCCR4A &= ~((1 << COM4B1) | (1 << COM4B0));   // Clear <COM4B1:COM4B0>
+    TCCR4A &= ~((1 << COM4B1) | (1 << COM4B0));     // Clear <COM4B1:COM4B0>
+    TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0));     // Clear <COM4D1:COM4D0>
 
     // Set duty cycle polarity: for positive currents, we reset to
     // zero when the count goes above the threshold; for negative
@@ -163,8 +162,9 @@ void set_pwm_polarity(byte polarity){
     else
         polarity = 1;
 
-    // For both channels B and D, activate only the non-inverting
-    // output; set where switch occurs depending on polarity
+    // For channels A, B and D, route the Waveform Outputs OCW4A/B/D to the
+    // non-inverting Output Compare pins OC4A/B/D; 
+    // Set where pin toggle occurs depending on polarity:
     TCCR4A |= (1 << COM4B1) | (polarity << COM4B0);
     TCCR4C |= (1 << COM4D1) | (polarity << COM4D0);
 }
@@ -180,14 +180,15 @@ void set_pwm_clock_prescaler(){
     Notes
     -----
     - Set Timer/Counter4 prescaler to 1;
-    - Timer/Counter4 clock frequency = system clock frequency / 1
-      (f_clk_T4 = 16 MHz).
-      Notice that we should not divide it further: the faster the
-      counter, the better our resolution. With 16 MHz input and 20
-      kHz output one gets ~ 16 MHz / 20 kHz = 800 steps of resolution
-    - IMPORTANT: Should one decide to use a different clock divider,
-      the value of the PWM_MIN_FREQ should be changed accordingly!
+    - TC4 clock frequency = CPU clock frequency / TC4 clock prescaler
+      Notice that we should divide the CPU clock by the smallest amount 
+      possible: the faster the TC4 counter, the better the PWM resolution.
+      For example, with a 16 MHz CPU clock and 20 kHz output we get 16 MHz
+      divided by 20 kHz = 800 steps of resolution (9.64 bits)
+
     **/
+    // NOTE: Power-on-reset should zero the entire register, but it seems
+    // some chip revisions don't do that properly.
     // Clear entire register except MSbit 'PWM4X'
     TCCR4B &= ~((1 << PSR4)
                 | (1 << DTPS41)
@@ -209,10 +210,10 @@ void set_pwm_threshold_channels(){
 
     Notes
     -----
-    Make OCR4B/D the registers whose values will be
+    OCR4A/B/D are the registers whose values will be
     used to determine the duty cycle of the PWM. I.e.,
-    when the corresponding counter TCNT4 reaches the
-    values in these registers pins OC4B/D will toggle
+    when the TC4 counter register TCNT4 reaches the
+    values in these registers pins OC4A/B/D will toggle
     More info: see Atmega32U4 datasheet, section 15.8.2
     **/
     TCCR4A |= (1 << PWM4B);
@@ -236,7 +237,7 @@ void set_fast_pwm_mode(){
 
 
 // !!! USE AT YOUR OWN RISK !!!
-void use_pwm_enhanced_mode(){
+void use_pwm_enhanced_mode() {
     /**Enable Enhanced PWM Mode on Timer/Counter4.
 
     Returns
