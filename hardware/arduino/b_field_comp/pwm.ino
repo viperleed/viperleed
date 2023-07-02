@@ -28,26 +28,42 @@ byte set_pwm_frequency(double f_pwm) {
         1 freq out-of-range
 
     **/
-    if (freq < PWM_MIN_FREQ || freq > F_CLK_T4) return 1;
+  double pwm_resolution;
+  double f_clk_t4;
+  uint16_t clk_ps;
+  
+  if (f_pwm < F_PWM_MIN || f_pwm > F_PWM_MAX) return 1;
 
+  // Calculate the TC4 clock prescaler: Use the smallest possible prescaler
+  // which will result in the highest achievable PWM resolution, i.e. make
+  // OCR4C as large as possible. Note: Some TC4 registers such as OCR4C are
+  // extended to 10 bits by adding two bits in TC4H (datasheet sec. 15.2.2).
+  // Relevant formulae: 
+  // f_OC4nx_pwm = f_clk_T4 / (N + 1), where N ... value of OCR4C
+  // res_pwm = log2(OCR4C + 1), in bits. See datasheet sec. 15.8.
+  
+  // For a given CPU and PWM frequency, choose a clock prescaler that keeps
+  // the PWM resolution as close as possible to the maximum of 10 bits.
+  // Iterate through the available TC4 prescaler values:
+  for(uint8_t i = 0; i < 16; i++)
+  {
+    f_clk_t4 = F_CPU_CLK / TC4_CLK_PRESCALER[i];
+    pwm_resolution = log2(f_clk_t4 / f_pwm);
+    clk_ps = TC4_CLK_PRESCALER[i];
 
-    set_pwm_polarity(POSITIVE_CURRENT);
-    set_pwm_threshold_channels();
-    set_fast_pwm_mode();
-    set_pwm_clock_prescaler();
+    //Serial.print(clk_ps,DEC); Serial.print(": "); Serial.println(pwm_resolution,3);
 
-    // Don't use "enhanced mode". Seems functional
-    // only for certain chip revisions.
-    // use_pwm_enhanced_mode();
+    // Jump out of the loop if we have found the best prescaler value
+    if(pwm_resolution <= 10.0) break;
+  }
+  set_pwm_clock_prescaler(clk_ps);
 
-    // Atmega32U4 register names 'OCRnx' contain device number 'n'
-    // (where 'n' is Timer/Counter n) and Output Compare unit 'x'
-    // (where 'x' is A/B/C)
-    // E.g. OCR4A = Output Compare register on Timer/Counter4, channel A
+  // Don't use "enhanced mode". Functional only for certain chip revisions.
+  // use_pwm_enhanced_mode();
 
-    // Set PWM frequency to freq (TC4H:OCR4C = 799 gives freq exactly;
-    // datasheet formula [Section 15.8.2] off by one for fast PWM mode)
-    return 0;
+  // The PWM period (= 1 / f_pwm) is defined in terms of TC4 clock ticks:
+  pwm_period = f_clk_t4 / f_pwm - 1;  
+  set_ten_bit_value(pwm_period, &OCR4C);
 }
 
 
