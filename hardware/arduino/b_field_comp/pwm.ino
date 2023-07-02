@@ -255,8 +255,28 @@ void enable_pwm_channel(TC4_PWM_CHANNEL channel, bool enable) {
     values in these registers pins OC4A/B/D will toggle
     More info: see Atmega32U4 datasheet, section 15.8.2
     **/
-    TCCR4A |= (1 << PWM4B);
-    TCCR4C |= (1 << PWM4D);
+    switch (channel) {
+      case TC4_PWM_CH_A: 
+        if(enable)
+          TCCR4A |= 1 << PWM4A; 
+        else
+          TCCR4A &= ~(1 << PWM4A);
+        break;
+
+      case TC4_PWM_CH_B: 
+        if(enable)
+          TCCR4A |= 1 << PWM4B;
+        else
+          TCCR4A &= ~(1 << PWM4B);    
+        break;
+
+      case TC4_PWM_CH_D: 
+        if(enable)
+          TCCR4C |= 1 << PWM4D; 
+        else
+          TCCR4C &= ~(1 << PWM4D); 
+        break;
+    }
 }
 
 
