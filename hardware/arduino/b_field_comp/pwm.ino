@@ -235,8 +235,8 @@ void set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
 }
 
 
-void set_pwm_threshold_channels(){
-    /**Enable PWM output on Timer/Counter4 channels B and D.
+void enable_pwm_channel(TC4_PWM_CHANNEL channel, bool enable) {
+    /**Enable/disable PWM output on TC4 channels A, B or D.
 
     Parameters
     ----------
