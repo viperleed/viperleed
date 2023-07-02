@@ -88,7 +88,7 @@ void set_current_sign(double value, byte sign_select_pin) {
 
     Parameters
     ----------
-    sign : byte
+    value : double
         Coil current direction: Either positive or negative
     sign_select_pin : byte
         Which I/O pin to use as a sign indicator
