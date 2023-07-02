@@ -92,8 +92,8 @@ class Coil {
         const MotorDriver driver;
 
         // Class constructor, including member initializer list
-        Coil(byte pwm, byte _pwm_register_addr,
-             byte sign, byte spi_cs, byte disable)
+        Coil(byte pwm, byte sign, byte spi_cs, byte disable, 
+             byte _pwm_register_addr)
            : driver(spi_cs, disable), pwm_pin(pwm),
              pwm_register_addr(_pwm_register_addr),
              pwm_sign_pin(sign) {};
@@ -123,8 +123,8 @@ class Coil {
 
 
 // Create two global instances of class 'Coil' with respective initializers
-Coil coil_1(COIL_1_PWM, COIL_1_PWM_REGISTER, COIL_1_SIGN, COIL_1_SPI_CS, COIL_1_DISABLE);
-Coil coil_2(COIL_2_PWM, COIL_2_PWM_REGISTER, COIL_2_SIGN, COIL_2_SPI_CS, COIL_2_DISABLE);
+Coil coil_1(COIL_1_PWM, COIL_1_SIGN, COIL_1_SPI_CS, COIL_1_DISABLE, COIL_1_PWM_REGISTER);
+Coil coil_2(COIL_2_PWM, COIL_2_SIGN, COIL_2_SPI_CS, COIL_2_DISABLE, COIL_2_PWM_REGISTER);
 
 
 #endif   // _VIPERLEED_B_FIELD_COMP
