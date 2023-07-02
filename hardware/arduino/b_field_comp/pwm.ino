@@ -163,6 +163,7 @@ void set_pwm_polarity(byte polarity) {
     TCNT4 reaches the threshold. This can be used for inverting the signal.
     For more info see Atmega32U4 datasheet, section 15.12.1
     **/
+    TCCR4A &= ~((1 << COM4A1) | (1 << COM4A0));     // Clear <COM4A1:COM4A0>
     TCCR4A &= ~((1 << COM4B1) | (1 << COM4B0));     // Clear <COM4B1:COM4B0>
     TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0));     // Clear <COM4D1:COM4D0>
 
@@ -177,6 +178,7 @@ void set_pwm_polarity(byte polarity) {
     // For channels A, B and D, route the Waveform Outputs OCW4A/B/D to the
     // non-inverting Output Compare pins OC4A/B/D; 
     // Set where pin toggle occurs depending on polarity:
+    TCCR4A |= (1 << COM4A1) | (polarity << COM4A0);
     TCCR4A |= (1 << COM4B1) | (polarity << COM4B0);
     TCCR4C |= (1 << COM4D1) | (polarity << COM4D0);
 }
