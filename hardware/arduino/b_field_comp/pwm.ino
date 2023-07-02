@@ -105,14 +105,14 @@ void set_current_sign(double value, byte sign_select_pin) {
 }
 
 
-void set_ten_bit_value(uint16_t ten_bits_value, volatile uint8_t *REGISTER){
+void set_ten_bit_value(uint16_t ten_bit_value, volatile uint8_t *reg) {
     /**Write 10-bit value to Timer/Counter4 register.
 
     Parameters
     ----------
-    ten_bits_value : uint16_t
-    REGISTER : uint8_t *
+    ten_bit_value : uint16_t
         10-bit value to be written
+    reg : uint8_t *
         Address of register to be written to
 
     Notes
@@ -124,8 +124,8 @@ void set_ten_bit_value(uint16_t ten_bits_value, volatile uint8_t *REGISTER){
     datasheet, section 15.11.
     **/
     noInterrupts();  // Ensure nothing bothers setting two registers
-    TC4H = ten_bits_value >> 8;
-    *REGISTER = ten_bits_value & 255;
+    TC4H = ten_bit_value >> 8;
+    *reg = ten_bit_value & 255;
     interrupts();
 }
 
