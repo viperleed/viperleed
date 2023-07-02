@@ -10,7 +10,7 @@ Date: 15.05.2023
 #include "pwm.h"
 
 
-byte set_pwm_frequency(double freq){
+byte set_pwm_frequency(double f_pwm) {
     /**Set PWM frequency, using the 10-bit Timer/Counter4.
 
     Parameters
