@@ -15,11 +15,11 @@ byte set_pwm_frequency(double f_pwm) {
 
     Parameters
     ----------
-    freq : double
-        PWM output frequency in kilohertz. Minimum: 15.625 Hz.
-        Notice that the resolution of the PWM (i.e., of the
-        average current) scales with freq. There can only be
-        F_CLK_T4 / freq - 1 individual steps.
+    f_pwm : double
+        PWM output frequency in Hz.
+        Notice that the resolution of the PWM (i.e., of the average current)
+        scales with PWM frequency. The PWM frequency is shared across all 
+        three available Timer/Counter4 channels A, B and D.
 
     Returns
     -------
@@ -222,9 +222,12 @@ void set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
 void set_pwm_threshold_channels(){
     /**Enable PWM output on Timer/Counter4 channels B and D.
 
-    Returns
-    -------
-    Nothing
+    Parameters
+    ----------
+    channel : TC4_PWM_CHANNEL
+        Selects the TC4 channel to enable/disable
+    enable : bool
+        Enable or disable the channel
 
     Notes
     -----
