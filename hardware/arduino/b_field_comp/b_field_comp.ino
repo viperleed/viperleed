@@ -21,7 +21,10 @@ void setup()
         delay(2000);                  // The IDE needs some time to connect to the Serial Monitor
     #endif
 
-    set_pwm_frequency(20);            // Frequency in kHz
+    set_pwm_frequency(20000);
+    enable_fast_pwm_mode();
+    enable_pwm_channel(TC4_PWM_CH_D, true);         // Enable PWM on OC4D/Pin 6 ('COIL_1_PWM')
+    enable_pwm_channel(TC4_PWM_CH_B, true);         // Enable PWM on OC4B/Pin 10 ('COIL_2_PWM')    
 
     coil_1.setup();                                 // Define PD7 and PB6 as output (used for PWM)
     coil_2.setup();                                 // The setup method also sets the current to 0
