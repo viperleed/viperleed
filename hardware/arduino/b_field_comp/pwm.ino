@@ -10,6 +10,51 @@ Date: 15.05.2023
 #include "pwm.h"
 
 
+/**
+Quick Start Guide to Timer/Counter4
+===================================
+This section is intended as a concise introduction to the PWM waveform
+generation using the Timer/Counter4, subsequently abbreviated as TC4.
+
+TC4 can be used in 8-bit or 10-bit operation, depending on whether the user 
+also programs the two high bits inside shared register TC4H (cf. datasheet 
+sec. 15.2.2). For example, in order to perform the 10-bit write 0x31F to 
+register 0CR4C, first program TC4H with 0x3, then write 0x1F to OCR4C.
+
+TC4 contains three independant Output Compare Units A/B/D which constantly
+compare their register values OCR4A/B/D with monotonically increasing or
+decreasing Counter register TCNT4. If a match occurs, Output Compare pins
+OC4A/B/D will be set or cleared depending on the Compare Output Mode settings 
+COM4x1:0, where x = Output Compare Unit A/B/D. COM4x1:0 can thus be used to 
+invert the  PWM signal, see 'set_pwm_polarity'. Also, the COM4x1:0 bits control 
+the connection to the inverted/non-inverted Output Compare pins /OC4x vs OC4x.
+
+While registers OCR4A/B/D are used to control the PWM duty cycle, OCR4C is used
+to set the PWM base frequency, and implicitly also the PWM resolution. The 
+relevant formulae are also given in the datasheet sec. 15.8. For TC4 operated
+in Fast PWM Mode the PWM frequency and resolution is determined by
+
+(1)   f_PWM = f_clk_T4 / (OCR4C + 1)
+
+(2)   f_clk_T4 = F_CPU_CLK / TC4_prescaler
+
+(3)   res_PWM = log2(OCR4C + 1) = log2(f_clk_T4 / f_PWM)
+
+Again, OCR4C can be operated like a 10-bit register in conjunction with TC4H.
+Every time TCNT4 has a match with OCR4C, TCNT4 is reset to zero and begins to
+count up/down again until another match occurs. The TC4 frequency 'f_clk_T4' 
+is derived from the CPU clock 'F_CPU_CLK' divided by the TC4 prescaler settings
+CS43:40 contained in register TCCR4B. Equation (3) shows that the user wants to
+stay as close to the maximum value of OCR4C as possible, in order to achieve 
+the highest possible PWM resolution. Therefore, 'set_pwm_frequency' will first
+determine the TC4 prescaler value which will allow for the highest possible
+10-bit value inside TC4H:OCR4C which in turn will provide the best possible PWM
+resolution. If a value smaller than three is written to OCR4C, that value will
+be replaced with three in order to prevent too high a PWM output frequency.
+
+Note: The 11-bit Enhanced PWM Mode is not working up to some chip revision.
+**/
+
 byte set_pwm_frequency(double f_pwm) {
     /**Set PWM frequency, using the 10-bit Timer/Counter4.
 
