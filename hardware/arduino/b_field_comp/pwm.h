@@ -23,9 +23,10 @@ uint16_t pwm_period;
 #define NEGATIVE_CURRENT -1
 
 #define F_CLK_T4     16000      // Timer/Counter4 clock = 16 MHz
-#define PWM_MIN_FREQ 15.625     // Value comes from maximum value for
                                 // register OCR4C and from the choice of a
                                 // value of 1 in set_pwm_clock_prescaler
+#define F_PWM_MIN (F_CPU_CLK / (16384 * 1024.0))          // F_PWM_MIN = 0.954 Hz
+#define F_PWM_MAX (F_CPU_CLK / (1 * 4.0))                 // F_PWM_MAX = 4 MHz
 enum TC4_PWM_CHANNEL { TC4_PWM_CH_A, TC4_PWM_CH_B, TC4_PWM_CH_D };
 
 const uint16_t TC4_CLK_PRESCALER[] = { 0, 1, 2, 4, 8, 16, 32, 64, 128, 256,
