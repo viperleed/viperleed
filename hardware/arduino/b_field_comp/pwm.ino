@@ -313,3 +313,8 @@ void use_pwm_enhanced_mode() {
     // Enable Enhanced Compare/PWM mode (ENHC4 = 1)
     TCCR4E |= 1 << ENHC4;
 }
+// TODO: Move to somewhere else?
+double log2(double val)
+{
+   return log(val) / log(2);
+}
