@@ -242,8 +242,8 @@ void set_pwm_threshold_channels(){
 }
 
 
-void set_fast_pwm_mode(){
-    /**Enable Fast PWM Mode on Timer/Counter4.
+void enable_fast_pwm_mode() {
+    /**Enable Fast PWM Mode on TC4.
 
     Returns
     -------
