@@ -166,12 +166,13 @@ void set_pwm_polarity(byte polarity) {
 }
 
 
-void set_pwm_clock_prescaler(){
+void set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
     /**Set PWM clock prescaler.
 
-    Returns
-    -------
-    Nothing
+    Parameters
+    ----------
+    tc4_clock_prescaler : uint16_t
+        Sets the requested TC4 clock prescaler
 
     Notes
     -----
@@ -183,6 +184,7 @@ void set_pwm_clock_prescaler(){
       divided by 20 kHz = 800 steps of resolution (9.64 bits)
 
     **/
+    uint8_t ps_select;
     // NOTE: Power-on-reset should zero the entire register, but it seems
     // some chip revisions don't do that properly.
     // Clear entire register except MSbit 'PWM4X'
@@ -193,7 +195,27 @@ void set_pwm_clock_prescaler(){
                 | (1 << CS42)
                 | (1 << CS41)
                 | (1 << CS40));
-    TCCR4B |= (0 << CS43) | (0 << CS42) | (0 << CS41) | (1 << CS40);
+
+    // Convert the TC4 clock prescaler value to the respective 
+    // prescaler select entry, see ATmega32U4 datasheet table 15-14
+    switch(tc4_clock_prescaler) {
+      case 1: ps_select = 1; break;
+      case 2: ps_select = 2; break;
+      case 4: ps_select = 3; break;
+      case 8: ps_select = 4; break;
+      case 16: ps_select = 5; break;
+      case 32: ps_select = 6; break;
+      case 64: ps_select = 7; break;
+      case 128: ps_select = 8; break;
+      case 256: ps_select = 9; break;
+      case 512: ps_select = 10; break;
+      case 1024: ps_select = 11; break;
+      case 2048: ps_select = 12; break;
+      case 4096: ps_select = 13; break;
+      case 8192: ps_select = 14; break;
+      case 16384: ps_select = 15; break;  
+    }
+    TCCR4B |= ps_select;
 }
 
 
