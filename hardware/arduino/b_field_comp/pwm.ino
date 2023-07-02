@@ -69,7 +69,7 @@ byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr
         0 for no error
         2 for coil_current out-of-range
     **/
-    if (value < -1 || value > 1) return 2;                                      // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
+    if (value < -1.0 || value > 1.0) return 2;                                      // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
 
     set_current_sign(value, sign_select_pin);
     return 0;
