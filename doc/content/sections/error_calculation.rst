@@ -52,6 +52,5 @@ The results of the error calculation will be output into the files :ref:`Errors.
        can be strongly correlated :cite:p:`blumSegregationOrderingFe12001`.
        In such a case, the increase of the R factor when changing one of 
        these parameters is not a good indication for the error of that parameter.
-
-
-**TODO - Florian** : Are there any cases where this is not possible? (e.g., mixed atoms with different displacements)
+    -  Simultaneous geometrical/vibrational variation of multiple chemical elements occupying the same site is possible, and the displacement ranges for the different elements may differ.
+       However, all displacement ranges must have the same length.

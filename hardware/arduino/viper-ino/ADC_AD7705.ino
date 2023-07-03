@@ -153,6 +153,7 @@ int32_t AD7705getCalibrationRegister(byte chipSelectPin, byte channel,
     return result;
 }
 
+// TODO: why is this returning stuff? Should be void.
 /** Sets the value in an AD7705 offset or gain calibration register.
  *  'theRegister' must be AD7705_REG_OFFSET or AD7705_REG_GAIN.
  *  This function can be called to restore the result of a previous self-calibration */

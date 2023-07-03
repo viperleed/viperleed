@@ -13,7 +13,6 @@ import copy
 import re
 import itertools
 from numbers import Real
-from typing import Sequence
 
 import numpy as np
 import scipy.spatial as sps
@@ -25,11 +24,14 @@ try:
 except ImportError:
     has_ase = False
 
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
 from viperleed.tleedmlib.classes.atom import Atom
-import viperleed.tleedmlib as tl
+from viperleed.tleedmlib.classes.layer import Layer
+from viperleed.tleedmlib.classes.sitetype import Sitetype
+from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 logger = logging.getLogger("tleedm.slab")
 
@@ -84,7 +86,7 @@ class SymPlane:
             complist.append(complist[1]+complist[2]-complist[0])
 
         for p in complist:
-            if tl.base.dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
+            if dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
                 return True
         return False
 
@@ -242,6 +244,47 @@ class Slab:
                     bulkAtsRenumbered.append(bat)
             at.oriN = i+1
 
+    @property
+    def surface_vectors(self):
+        """Returns the real space surface lattice vectors (a, b) as an
+        array.
+
+        This is the same array one would get from the bulk surface
+        unit cell and the superlattice matrix.
+
+        Returns
+        -------
+        np.ndarray, shape=(2, 2)
+            Array of *real space* lattice vectors *as rows*.
+
+        Raises
+        ------
+        ValueError
+            If the Slab was not assigned a unit cell.
+        """
+        if np.array_equal(self.ucell, np.array([])):
+            raise ValueError("Slab does not have a unit cell defined.")
+        return self.ucell[:2, :2].T
+
+    @property
+    def reciprocal_vectors(self):
+        """ Returns the reciprocal lattice vectors as an array.
+
+        Reciprocal vectors are defined by
+        $a_i \dot$ b_j = 2\pi\delta_{ij}$.
+        We need to transpose here again, because of swap row <-> col
+        when going between real and reciprocal space.
+        TensErLEED always does this calculation explicitly and 
+        normalizes to area, but here the inverse already contains a
+        factor of 1/det.
+
+        Returns
+        -------
+        np.ndarray, shape=(2, 2)
+            Array of *reciprocal* lattice vectors *as rows*.
+        """
+        return (2*np.pi*np.linalg.inv(self.surface_vectors).T)
+
     def fullUpdate(self, rparams):
         """readPOSCAR initializes the slab with information from POSCAR;
         fullUpdate re-initializes the atom list, then uses the information
@@ -376,7 +419,7 @@ class Slab:
         self.sortByZ()
         laynum = 0
         b = True if rparams.N_BULK_LAYERS > 0 else False
-        newlayer = tl.Layer(self, 0, b)
+        newlayer = Layer(self, 0, b)
         self.layers.append(newlayer)
         for atom in self.atlist:
             # only check for new layer if we're not in the top layer already
@@ -385,7 +428,7 @@ class Slab:
                     # if atom is higher than the next cutoff, make a new layer
                     laynum += 1
                     b = True if rparams.N_BULK_LAYERS > laynum else False
-                    newlayer = tl.Layer(self, laynum, b)
+                    newlayer = Layer(self, laynum, b)
                     self.layers.append(newlayer)
                     check = True    # check for empty layer
                     while check:
@@ -397,7 +440,7 @@ class Slab:
                             laynum += 1
                             b = (True if rparams.N_BULK_LAYERS > laynum
                                  else False)
-                            newlayer = tl.Layer(self, laynum, b)
+                            newlayer = Layer(self, laynum, b)
                             self.layers.append(newlayer)
             atom.layer = newlayer
             newlayer.atlist.append(atom)
@@ -473,7 +516,7 @@ class Slab:
                     i += 1
             # now, create sublayers based on sublists:
             for ls in sublists:
-                newsl = tl.Layer(self, 0, sublayer=True)
+                newsl = Layer(self, 0, sublayer=True)
                 subl.append(newsl)
                 newsl.atlist = ls
                 newsl.cartbotz = ls[0].cartpos[2]
@@ -558,7 +601,7 @@ class Slab:
         sl = []
         for el in rp.SITE_DEF:
             for sitename in rp.SITE_DEF[el]:
-                newsite = tl.Sitetype(el, sitename)
+                newsite = Sitetype(el, sitename)
                 sl.append(newsite)
                 for i in rp.SITE_DEF[el][sitename]:
                     try:
@@ -575,7 +618,7 @@ class Slab:
                         logger.error('SITE_DEF: atom number out of bounds.')
                         raise
         for el in self.elements:
-            newsite = tl.Sitetype(el, 'def')
+            newsite = Sitetype(el, 'def')
             found = False
             for at in atlist:
                 if at.el == el and at.site is None:
@@ -1169,7 +1212,7 @@ class Slab:
             return False, abst
 
         # Use Minkowski reduction to make mincell high symmetry
-        mincell, _, _ = tl.leedbase.reduceUnitCell(mincell)
+        mincell, _, _ = leedbase.reduceUnitCell(mincell)
 
         # Cosmetic corrections
         if abs(mincell[0, 0]) < eps and abs(mincell[1, 1]) < eps:
@@ -1400,7 +1443,7 @@ class Slab:
             ts.ucell[:, 2] = ts.ucell[:, 2] * cfact
             bulkc[2] = -bulkc[2]
             original_atoms = ts.atlist[:] # all atoms before adding layers
-            
+
             # split bulkc into parts parallel and orthogonal to unit cell c
             # this allows to keep the same ucell and shift correctly the new bulk layers
             c_direction = ts.ucell[:, 2] / np.dot(ts.ucell[:, 2], ts.ucell[:, 2])
@@ -1535,7 +1578,7 @@ class Slab:
             err_txt = "Less than two layers detected. Check POSCAR and consider modifying LAYER_CUTS."
             logger.error(err_txt)
             raise RuntimeError(err_txt)
-            
+
         # construct bulk slab
         bsl = copy.deepcopy(self)
         bsl.resetSymmetry()
@@ -1562,7 +1605,7 @@ class Slab:
             if  abs(zdiff) < 1e-5:
                 err_txt = "Unable to detect bulk interlayer vector. Check POSCAR and consider explicitly setting BULK_REPEAT."
                 logger.error(err_txt)
-                raise RuntimeError(err_txt)   
+                raise RuntimeError(err_txt)
             bulkc = cvec * zdiff / cvec[2]
         bsl.ucell[:, 2] = bulkc
         # reduce dimensions in xy
@@ -1668,10 +1711,10 @@ class Slab:
 
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a set."""
-        
-        _PTL = set(el.lower() for el in tl.leedbase.PERIODIC_TABLE)
-        _RADII = tl.leedbase.COVALENT_RADIUS
-        
+
+        _PTL = set(el.lower() for el in PERIODIC_TABLE)
+        _RADII = COVALENT_RADIUS
+
         atoms = copy.deepcopy(self.atlist)
         # run from top to bottom of slab
         atoms.sort(key=lambda atom: -atom.pos[2])
@@ -1775,122 +1818,141 @@ class Slab:
         return NN_dict
 
     def apply_matrix_transformation(self, trafo_matrix):
-        """Applies an orthogonal transformation to the unit cell and all atoms.
-        
-        The transformation is described by an orthogonal transfomation matrix
-        (O) which is applied to both the unit cell and all atomic positions.
-        
-        This transformation is essentially equivalent to a change of basis.
-        The transformation of the unit cell (U) is applied as U' = OUO^T.
-        Fractional and cartesian atomic positions (v) are transformed as Ov.
-        This method can be used to switch indices, rotate the slab, etc..
-        
+        """Apply an orthogonal transformation to the unit cell and all atoms.
+
+        The transformation is given as an orthogonal transformation
+        matrix (O) which is applied to BOTH the unit cell and all
+        Cartesian atomic coordinates. The unit cell (U, unit vectors
+        as columns) is transformed to U' = O @ U. Atomic coordinates
+        (v, as column vectors) are transformed to v' = O @ v. This
+        transformation is essentially equivalent to a change of basis.
+
+        This method differs from  `rotateUnitCell`, `rotateAtoms`, and
+        `mirror` in that the latter two only cause a rotation of the
+        atoms, but not of the unit cell, whereas the former rotates the
+        unit cell but not the atoms. Here both unit cell and atoms are
+        transformed.
+
+        If the transformation is an out-of-plane rotation/mirror (i.e.,
+        it changes the z components of unit vectors), layers, bulkslab,
+        and sublayers are discarded and will need to be recalculated.
+        Otherwise, the same coordinate transform is also applied to
+        the `bulkslab`, if present.
+
         Parameters
         ----------
         trafo_matrix : Sequence
-                trafo_matrix must be an orthogonal 3-by-3 matrix.
-                Contains the transformation matrix (O) describing
-                the applied transformation.
-        
+            `trafo_matrix` must be an orthogonal 3-by-3 matrix.
+            Contains the transformation matrix (O) describing
+            the applied transformation.
+
         Raises
         ------
         ValueError
-            If trafo_matrix is not 3-by-3 or not orthogonal.
-        
+            If `trafo_matrix` is not 3-by-3 or not orthogonal.
+
         Examples
         --------
+        Apply a rotation by 90 deg around the z axis to the unit cell
+        (in positive direction, i.e. clockwise when looking along z)
         >>> theta = np.pi/2
         >>> rot_mat = [[np.cos(theta), -np.sin(theta), 0],
                        [np.sin(theta),  np.cos(theta), 0],
                        [0, 0, 1]]
         >>> slab.apply_matrix_transformation(rot_mat)
-                
-            Applies a rotation by 90 deg around the z axis to the unit cell.
-            (In positive direction, i.e. clockwise looking along z)
-            
-        >>> swap_b_c = [[1, 0, 0],
-                        [0, 0, 1],
-                        [0, 1, 0]]
-        >>> slab.apply_matrix_transformation(swap_b_c)
-                
-            Applies a transformation that switches the unit cell vectors b
-            and c in a non-handedness-conserving manner.
         """
         trafo_matrix = np.asarray(trafo_matrix)
         if trafo_matrix.shape != (3, 3):
-            raise ValueError(
-                "apply_matrix_transformation: not a 3-by-3 matrix"
-            )
-        
+            raise ValueError("apply_matrix_transformation: "
+                             "not a 3-by-3 matrix")
         if not np.allclose(np.linalg.inv(trafo_matrix), trafo_matrix.T):
             raise ValueError("apply_matrix_transformation: matrix is not "
-                             "orthogonal. Consider unsing apply_scaling.")
-        
-        self.ucell = trafo_matrix.dot(self.ucell).dot(trafo_matrix.T)
-        for atom in self.atlist:
-            atom.pos = trafo_matrix.dot(atom.pos)
-        self.getCartesianCoordinates(updateOrigin=True)
-        self.collapseFractionalCoordinates()
-    
-    def apply_scaling(self, scaling):
-        """Applies a scaling along the unit cell vectors.
-        
-        This can be used to apply an isotropic scaling in all directions
-        or to strech/compress along unit cell vectors in order to change
-        lattice constants in some direction. To apply other (orthogonal)
-        transformations (e.g. rotation, flipping), use apply_matrix_transformation.
-        
+                             "orthogonal. Consider using apply_scaling.")
+
+        # Determine whether trafo_matrix will change
+        # the z component of the unit vectors
+        changes_z = not np.allclose(trafo_matrix[2], (0, 0, 1))
+
+        self.ucell = trafo_matrix.dot(self.ucell)
+        self.ucell[abs(self.ucell) < 1e-5] = 0.
+        self.getCartesianCoordinates(updateOrigin=changes_z)
+
+        # Update also 'layers', sublayers and bulkslab: if the
+        # transformation touched 'z' we invalidate everything
+        if changes_z:
+            self.layers.clear()
+            self.sublayers.clear()
+            self.bulkslab = None
+        elif self.bulkslab:
+            self.bulkslab.apply_matrix_transformation(trafo_matrix)
+
+    def apply_scaling(self, *scaling):
+        """Rescale the unit-cell vectors.
+
+        This can be used to stretch/compress along unit cell vectors
+        in order to change lattice constants in some direction or to
+        apply an isotropic scaling in all directions. To apply other
+        (orthogonal) transformations (e.g., rotation, flipping), use
+        `apply_matrix_transformation`.
+
+        The same scaling is also applied to `bulkslab`, if this slab
+        has one.
+
         Parameters
         ----------
-        scaling : Real, Sequence
-            If the scaling is given as a number or a list containing one item, an
-            isotropic scaling will be applied to the unit cell and atom positions.
-            If a list with 3 entries is provided, the scaling will be applied along
-            the unit cell vector in the given order.
-        
+        *scaling : Sequence
+            If only one number, an isotropic scaling is applied to
+            the unit cell and atom positions. If a sequence with
+            three entries, the scaling will be applied along the
+            unit-cell vectors in the given order.
+
+        Returns
+        -------
+        scaling_matrix : numpy.ndarray
+            The matrix used for scaling the unit vectors.
+
         Raises
         ------
         TypeError
-            If scaling is not a real number nor a sequence
+            If `scaling` has neither 1 nor three elements, or
+            any of the elements is not a number.
         ValueError
-            If scaling is a Sequence with length different than 1 or 3,
-            or if scaling would make the unit cell singular (i.e., reduce
-            the length of a unit vecotr to zero).
-        
+            If `scaling` would make the unit cell singular
+            (i.e., reduce the length of a unit vector to zero)
+
         Examples
         ----------
+        Stretch the unit cell by a factor of 2 along a, b and c.
+        This doubles the lattice constant and increases the volume
+        8-fold:
         >>> slab.apply_scaling(2)
-        
-            Streches the unit cell by a factor of two along a, b and c. This doubles
-            the lattice constant and increases the volume 8-fold. 
-        >>> slab.apply_scaling([1,1,1/3])
-        
-            Compresses the unit cell by a factor of 3 along c.
-        """
-        if isinstance(scaling, Real):
-            scaling = (scaling,)*3
-        elif isinstance(scaling, (np.ndarray, Sequence)):
-            if (len(scaling) not in (1, 3)
-                    or len(np.shape(scaling)) != 1):
-                raise ValueError(
-                    "Slab.apply_scaling: only 1-, or 3-sequences allowed"
-                    )
-            if len(scaling) == 1:
-                scaling = (scaling[0],)*3
-        else:
-            raise TypeError(
-                f"Slab.apply_scaling: invalid type {type(scaling)}. "
-                f"Expected number or Sequence."
-            )
-        
-        if any(abs(s) < 1e-5 for s in scaling):
-            raise ValueError("Slab.apply_scaling: cannot reduce unit"
-                             "vector(s) to zero length")
-        scaling_mat = np.diag(scaling)
 
-        # Apply to unit cell (basis). Notice the inverted order, because the
-        # unit cell is stored with unit vectors as columns (i.e., a = ucell[:, 0])
-        self.ucell = self.ucell.dot(scaling_mat)
-            
-        self.getCartesianCoordinates(updateOrigin=True) # update cartesian values
-        
+        Compresses the unit cell by a factor of 3 along c:
+        >>> slab.apply_scaling(1, 1, 1/3)
+        """
+        if len(scaling) not in (1, 3):
+            raise TypeError(f"{type(self).__name__}.apply_scaling: "
+                            "invalid number of arguments. Expected "
+                            f"one or three, got {len(scaling)}.")
+        if not all(isinstance(s, Real) for s in scaling):
+            raise TypeError(f"{type(self).__name__}.apply_scaling: "
+                            f"invalid scaling factor. Expected one "
+                            "or three numbers.")
+        if len(scaling) == 1:
+            scaling *= 3
+        if any(abs(s) < 1e-5 for s in scaling):
+            raise ValueError(f"{type(self).__name__}.apply_scaling: cannot "
+                             "reduce unit vector(s) to zero length")
+
+        # Apply to unit cell (basis). Notice the inverted order,
+        # because the unit cell is stored with unit vectors as
+        # columns (i.e., a = ucell[:, 0])
+        scaling_matrix = np.diag(scaling)
+        self.ucell = self.ucell.dot(scaling_matrix)
+        self.getCartesianCoordinates(updateOrigin=scaling[2] != 1)
+
+        try:
+            self.bulkslab.apply_scaling(*scaling)
+        except AttributeError:
+            pass
+        return scaling_matrix

@@ -8,26 +8,29 @@ Functions for reading and writing files relevant to the rfactor calculation
 """
 
 import logging
-import re
-import numpy as np
-from viperleed import fortranformat as ff
 import os
+import re
 
-from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
-from viperleed.tleedmlib.leedbase import getBeamCorrespondence, getYfunc
-from viperleed.tleedmlib.files.ivplot import plot_iv
+import fortranformat as ff
+import numpy as np
 
 try:
     import matplotlib
+except ImportError:
+    _CAN_PLOT = False
+else:
+    _CAN_PLOT = True
     matplotlib.rcParams.update({'figure.max_open_warning': 0})
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
-except Exception:
-    plotting = False
-else:
-    plotting = True
+    plt.style.use('viperleed.tleedm')
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
+from viperleed.tleedmlib.files.ivplot import plot_iv
+
 
 logger = logging.getLogger("tleedm.files.iorfactor")
 
@@ -65,7 +68,7 @@ def readROUT(filename="ROUT"):
         i += 1
         line = lines[-i]
     if line == "":
-        return 0, 0, []
+        return (0, 0, 0), 0, []
     rfac = 0
     rfac_int = -1
     rfac_frac = -1
@@ -191,15 +194,15 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
                  + real_iv_shift[1]) + 0.01
-    step = min(expEnergies[1]-expEnergies[0],
-               theoEnergies[1]-theoEnergies[0])
-    if rp.IV_SHIFT_RANGE[2] > 0:
-        vincr = rp.IV_SHIFT_RANGE[2]
-        # step = min(step, vincr)
+    # chose energy step width
+    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
+        min_used_energy_step = min(expEnergies[1]-expEnergies[0],
+            theoEnergies[1]-theoEnergies[0])
+        vincr = min_used_energy_step
     else:
-        vincr = step
+        vincr = rp.IV_SHIFT_RANGE[2]
     # find correspondence experimental to theoretical beams:
-    beamcorr = getBeamCorrespondence(sl, rp)
+    beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for (i, beam) in enumerate(rp.expbeams):
@@ -218,7 +221,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     output = " &NL1\n"
     output += (" EMIN=" + f72.write([minen]).rjust(9) + ",\n")
     output += (" EMAX=" + f72.write([maxen]).rjust(9) + ",\n")
-    output += (" EINCR=" + f72.write([step]).rjust(8) + ",\n")
+    output += (" EINCR=" + f72.write([vincr]).rjust(8) + ",\n")  # interpolation step width
     output += " LIMFIL=      1,\n"  # number of consecutive input files
     output += " IPR=         0,\n"  # output formatting
     output += (" VI=" + f72.write([rp.V0_IMAG]).rjust(11) + ",\n")
@@ -299,10 +302,10 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
     expEnergies.sort()
     minen = min(min(expEnergies), min(theoEnergies))
     maxen = max(max(expEnergies), max(theoEnergies))
-    if rp.IV_SHIFT_RANGE[2] > 0:
-        step = rp.IV_SHIFT_RANGE[2]
-    else:
+    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
         step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
+    else:
+        step = rp.IV_SHIFT_RANGE[2]
     ngrid = int(np.ceil(((maxen-minen)/step)*1.1))
     n_var = 1
     if for_error:
@@ -448,8 +451,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
     '''
 
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "R-factor plotting.")
         return
@@ -480,11 +483,12 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
             if len(exp) == 0:
                 continue
-            ytheo = getYfunc(theo, v0i)
-            yexp = getYfunc(exp, v0i)
+            ytheo = leedbase.getYfunc(theo, v0i)
+            yexp = leedbase.getYfunc(exp, v0i)
 
-            plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, rfact, theo, xlims, yexp, ylims,
-                          ytheo, v0i)
+            plot_analysis(exp, figs, figsize, name, namePos, oritick,
+                          plotcolors, rPos, rfact, theo, xlims, yexp,
+                          ylims, ytheo, v0i)
 
         for fig in figs:
             pdf.savefig(fig)
@@ -591,7 +595,7 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
         axs[1].plot(ytheo[:, 0], ytheo[:, 1], label='Theoretical',
                     color=plotcolors[0], linewidth=0.75)
         axs[1].plot(yexp[:, 0], yexp[:, 1], label="Experimental",
-                    color=plotcolors[0], linewidth=0.75)
+                    color=plotcolors[1], linewidth=0.75)
     axs[1].plot(dy[:, 0], dy[:, 1], label="\u0394Y", color="black",
                 linewidth=0.5)
     axs[1].fill_between(dy[:, 0], dy[:, 1], 0., facecolor='grey',
@@ -612,8 +616,8 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
                         analysisFile='', v0i = 0., formatting=None):
 
     # after applying the V0r shift outside, the id_start and n_E_beams should be same for experiment and theory
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "R-factor plotting.")
         return
