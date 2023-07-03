@@ -180,6 +180,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         'screenAperture': 180,  # all beams, since this is for internal calculation
     }
     # use **only** beams from domain specified in rp.SUPERLATTICE
+    # beams come pre-sorted from get_equivalent_beams()
     equivalent_beams = get_equivalent_beams(leedParameters, domains=0)
     # strip away symmetry group information
     beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
@@ -201,10 +202,6 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         # calculate cutoff energy for each beam
         energies = (np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2, axis=1)
                     /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2)  # scale to correct units
-
-        # sort beams by energy (same as sorting by |G|)
-        sorting_order = np.argsort(energies)
-        energies, indices_arr = energies[sorting_order], indices_arr[sorting_order]
 
         # generate file contents for beam subset
         all_indices_arr.append(indices_arr)
