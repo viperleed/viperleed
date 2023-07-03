@@ -21,7 +21,7 @@ import numpy as np
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib import symmetry as tl_symmetry
 from viperleed.tleedmlib.base import angle, rotation_matrix
-from viperleed.tleedmlib.beamgen import generate_beamlist
+from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.classes.rparams import DomainParameters
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
@@ -308,7 +308,7 @@ def initialization(sl, rp, subdomain=False):
 
     # generate beamlist
     logger.info("Generating BEAMLIST...")
-    generate_beamlist(sl, rp, beamlist_name="BEAMLIST")
+    calc_and_write_beamlist(sl, rp, beamlist_name="BEAMLIST")
 
     try:
         rp.beamlist = tl_beams.readBEAMLIST()
@@ -618,7 +618,7 @@ def init_domains(rp):
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
     # run beamgen for the whole system
     logger.info("Generating BEAMLIST...")
-    generate_beamlist(copy.deepcopy(largestDomain.sl),
+    calc_and_write_beamlist(copy.deepcopy(largestDomain.sl),
                       rp,
                       domains=True,
                       beamlist_name='BEAMLIST')

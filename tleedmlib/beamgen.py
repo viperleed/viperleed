@@ -110,7 +110,7 @@ def runBeamGen(sl, rp, beamgensource='', domains=False):
     return
 
 
-def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
+def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     """Calculates and writes the contents for the file BEAMLIST.
 
     BEAMLIST contains a list of all diffraction beams that will be used 
