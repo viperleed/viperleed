@@ -15,10 +15,11 @@ It is possible to make the beam voltage accessible for read out in the ErLEED el
 
 .. warning::
     The modifications described below **will** void any warranty unless you explicitly get a permission by the supplier.
-    The ViPErLEED developers take no responsibility for any malfunction of that may occur as a result of modifications to the LEED electronics.
+    The ViPErLEED developers take no responsibility for any malfunctions that may occur as a result of modifications to the LEED electronics.
 
 
-**TODO Michele, Michael, Alex: Details on which versions numbers are supported; why we perform the modifications, warnings etc.**
+**TODO Michele, Michael, Alex: Details on which versions numbers are supported; warnings etc.**
+**TODO: maybe add a schematic circuit diagram of the circuit built in this guide.**
 
 Required Components
 ===================
@@ -27,7 +28,7 @@ Before you start with the modifications, make sure you have all required compone
 
 
 For the beam HV pin:
-    - 2 330 :math:`\Omega` resistors,
+    - 2 equal resistors (between 200 and 500 :math:`\Omega`) with large power rating,
     - **TODO: name of pin component**
     - a short shrink tube (~1.5 cm),
 
@@ -37,7 +38,7 @@ For the beam HV port:
 
 
 Additionally, you will need the following tools to perform the modifications:
-    - a suitable set of Phillips and flat head screw drivers,
+    - a suitable set of Phillips and flat-head screw drivers,
     - a soldering iron and solder,
     - tweezers,
     - cable clippers,
@@ -59,7 +60,7 @@ Opening up the electronics
 
 .. important::
     Before starting the modifications described below, turn off and completely disconnect all plugs from the control unit.
-    **Disconnect the power cable** and wait 10 minutes before proceeding with opening the unit to allow all capacitors to fully discharge.
+    **Disconnect the power cable** and wait 5 minutes before proceeding with opening the unit to allow all capacitors to fully discharge.
 
 
 To start, we need to open up the electronics.
@@ -95,6 +96,8 @@ Ultimately, you should be able to remove and tilt back the back plate of the uni
 
     Removing the back plate of the control unit.
 
+
+.. _section_beam_hv_pin:
 
 Beam HV pin
 ===========
@@ -191,7 +194,7 @@ Since the filament is essentially a short circuit, a negligible current will pas
 To directly access the filament, we can conveniently place the new pin right next to the high-voltage diodes next to the filament port.
 The exact location is shown in :numref:`fig_pin_location_zoomed_out` and :numref:`fig_pin_location_zoomed_in`.
 
-Using a long needle, form two hooks with "feet" of the beam HV pin made in the last step.
+Using a long needle, form two hooks with the remaining wires of the resistors used to make the beam HV pin in step :ref:`section_beam_hv_pin`.
 The hooks should tightly loop around the connections of the diodes to the circuit board.
 Once securely placed, solder both wires to the side of the diodes, while being careful not to heat the diodes directly.
 
@@ -232,5 +235,6 @@ Reassembly
 
 At this point, the modification is complete and you can reassemble the control unit.
 Plug in all connectors on the motherboard and make sure they are securely connected, including the newly placed beam HV pin.
+Make sure to connect back the protective-earth connector to the chassis.
 We also highly recommend you replace all cable ties that you cut during disassembly.
 Finally, screw the back plate and the cover plate back on.
