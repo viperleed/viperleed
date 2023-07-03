@@ -7,23 +7,21 @@ Created on Mon Aug 17 15:24:16 2020
 """
 
 import logging
-import os
 from pathlib import Path
-import subprocess
 
-import fortranformat as ff
 import numpy as np
+import fortranformat as ff
 
 from viperleed.guilib.base import get_equivalent_beams, BeamIndex
 from viperleed.tleedmlib import symmetry
 from viperleed.tleedmlib.leedbase import (HARTREE_TO_EV,
-                                BOHR_TO_ANGSTROM,
-                                ANGSTROM_TO_BOHR)
+                                          BOHR_TO_ANGSTROM,
+                                          ANGSTROM_TO_BOHR)
 
-logger = logging.getLogger("tleedm.beamgen")
+logger = logging.getLogger('tleedm.beamgen')
 
 
-def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
+def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     """Calculates and writes the contents for the file BEAMLIST.
 
     BEAMLIST contains a list of all diffraction beams that will be used 
@@ -54,7 +52,7 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     ----------
     sl : Slab
         Slab object.
-    rp : Rparams.
+    rp : Rparams
         Run parameters.
     domains : bool, optional
         Flag to indicate if performing a domain calculation,
@@ -73,7 +71,7 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     if not domains:
         d_min = sl.getMinLayerSpacing() * 0.7
     else:
-        d_min = min([dp.sl.getMinLayerSpacing() for dp in rp.domainParams])*0.7
+        d_min = min((dp.sl.getMinLayerSpacing() for dp in rp.domainParams))*0.7
 
     # convergence criterion for refcalc;
     # beams are propagated between layers if relative change is larger than this
@@ -84,17 +82,17 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
                  / 2 *HARTREE_TO_EV)
 
     # use guilib to generate list of beams
-    leedParameters = {
+    leed_parameters = {
         'eMax': e_max_eff,
         'surfBasis': surf_ucell,
         'SUPERLATTICE': rp.SUPERLATTICE,
         'surfGroup': sl.foundplanegroup,
         'bulkGroup': sl.bulkslab.foundplanegroup,
-        'screenAperture': 180,  # all beams, since this is for internal calculation
+        'screenAperture': 180,  # all beams, because internal calculation
     }
     # use **only** beams from domain specified in rp.SUPERLATTICE
     # beams come pre-sorted from get_equivalent_beams()
-    equivalent_beams = get_equivalent_beams(leedParameters, domains=0)
+    equivalent_beams = get_equivalent_beams(leed_parameters, domains=0)
     # strip away symmetry group information
     beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
     subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw) # TODO: create test case to check that len(subset_classes) == np.linalg.det(rp.SUPERLATTICE)
@@ -107,13 +105,14 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
 
     all_energies = []
     all_indices_arr = []
-    beamlist_content = ""
+    beamlist_content = ''
     # for every subset calculate energies, sort and generate partial string
     for beam_indices in beam_subsets:
         # convert to float array
-        indices_arr = np.array(beam_indices, dtype="float64")
+        indices_arr = np.array(beam_indices, dtype='float64')
         # calculate cutoff energy for each beam
-        energies = (np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2, axis=1)
+        energies = (np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2,
+                           axis=1)
                     /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2)  # scale to correct units
 
         # generate file contents for beam subset
@@ -123,19 +122,18 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
                                             all_energies,
                                             rp.TL_VERSION)
     max_energy = np.max(all_energies)
-    logger.debug(f"Highest energy considered in BEAMLIST: {max_energy:.2f}eV")
+    logger.debug(f'Highest energy considered in BEAMLIST: {max_energy:.2f}eV')
 
     # write to file
     write_file_path = Path(beamlist_name)
     try:
-        with open(write_file_path, 'w') as file:
+        with open(write_file_path, 'w', encoding='utf-8') as file:
             file.write(beamlist_content)
     except Exception:
-        logger.error(f"Unable to write file {beamlist_name}")
+        logger.error(f'Unable to write file {beamlist_name}')
         raise
 
-    logger.debug("Wrote to BEAMLIST successfully.")
-    return
+    logger.debug('Wrote to BEAMLIST successfully.')
 
 
 def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
@@ -176,14 +174,14 @@ def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
             "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"
             )
     beam_nr = 1
-    content = ""
+    content = ''
     for indices, energies in zip(all_indices, all_energies):
         n_beams = indices.shape[0]
         if not energies.shape == (n_beams,) or not indices.shape == (n_beams,
                                                                      2):
             raise ValueError(
-                f"Incompatible size of indices (shape={indices.shape})"
-                f"and energies (shape={energies.shape}).")
+                f'Incompatible size of indices (shape={indices.shape})'
+                f'and energies (shape={energies.shape}).')
 
         # first line contains number of beams
         content += ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
@@ -222,7 +220,7 @@ def get_beam_scattering_subsets(beam_indices_raw):
 
     Parameters
     ----------
-    beam_indices_raw : [BeamIndex]
+    beam_indices_raw : list(BeamIndex)
         List of beam indices.
 
     Returns
@@ -238,7 +236,7 @@ def get_beam_scattering_subsets(beam_indices_raw):
     subset_classes = set(reduced_indices)
 
     # sort order of subsets by |(h_red, k_red)|^2
-    by_h_k_red = lambda index: index[0]**2 + index[1]**2
-    subset_classes = sorted(subset_classes, key= by_h_k_red)
+    subset_classes = sorted(subset_classes,
+                            key= lambda index: index[0]**2 + index[1]**2)
 
     return subset_classes, reduced_indices
