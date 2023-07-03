@@ -26,7 +26,7 @@ _FIXTURES_PATH = Path('tests/fixtures/')
 class TestBeamScatteringSubsets:
     def test_get_beam_scattering_subsets_integer_only(self):
         beam_indices_raw = [(0, 0), (1, 0), (2, 1), (1, 5)]
-        expected_subset_classes = ((0, 0),)
+        expected_subset_classes = [(0, 0),]
         expected_reduced_indices = [(0, 0), (0, 0), (0, 0), (0, 0)]
 
         subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw)
@@ -36,7 +36,7 @@ class TestBeamScatteringSubsets:
 
     def test_get_beam_scattering_subsets_fractional(self):
         beam_indices_raw = [(0, 0), (1, 0), (1/2, 1/2), (1, 1/5)]
-        expected_subset_classes = ((0, 0),(0, 1/5), (1/2, 1/2)) # sorted by |k| !
+        expected_subset_classes = [(0, 0),(0, 1/5), (1/2, 1/2)] # sorted by |k| !
         expected_reduced_indices = [(0, 0), (0, 0), (1/2, 1/2), (0, 1/5)]
 
         subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw)

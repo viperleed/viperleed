@@ -32,6 +32,6 @@ def ag100_parameters_example():
     # interpret PARAMETERS file
     interpreter = parameters.ParameterInterpreter(rpars)
     interpreter.interpret(slab)
-    symmetry.findSymmetry(sl, rp)
-    symmetry.findBulkSymmetry(sl, rp)
+    symmetry.findSymmetry(slab, rpars)
+    symmetry.findBulkSymmetry(slab, rpars)
     return (rpars, slab)
