@@ -21,7 +21,7 @@ import numpy as np
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib import symmetry as tl_symmetry
 from viperleed.tleedmlib.base import angle, rotation_matrix
-from viperleed.tleedmlib.beamgen import runBeamGen
+from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.classes.rparams import DomainParameters
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
@@ -308,13 +308,8 @@ def initialization(sl, rp, subdomain=False):
 
     # generate beamlist
     logger.info("Generating BEAMLIST...")
-    try:
-        bgenpath = os.path.join('tensorleed', 'beamgen3.out')
-        runBeamGen(sl, rp, beamgensource=bgenpath)
-        # this does NOT read the resulting file!
-    except Exception:
-        logger.error("Exception occurred while calling beamgen.")
-        raise
+    calc_and_write_beamlist(sl, rp, beamlist_name="BEAMLIST")
+
     try:
         rp.beamlist = tl_beams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
@@ -617,20 +612,16 @@ def init_domains(rp):
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
-    rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
-    rp.pseudoSlab = Slab()
+    rp.pseudoSlab = Slab()                                                      # Do we really still need this pseudo-slab?
     rp.pseudoSlab.ucell = largestDomain.sl.ucell.copy()
     rp.pseudoSlab.bulkslab = Slab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
     # run beamgen for the whole system
     logger.info("Generating BEAMLIST...")
-    try:
-        bgenpath = os.path.join('tensorleed', 'beamgen3.out')
-        runBeamGen(rp.pseudoSlab, rp, beamgensource=bgenpath, domains=True)
-        # this does NOT read the resulting file!
-    except Exception:
-        logger.error("Exception occurred while calling beamgen.")
-        raise
+    calc_and_write_beamlist(copy.deepcopy(largestDomain.sl),
+                      rp,
+                      domains=True,
+                      beamlist_name='BEAMLIST')
     try:
         rp.beamlist = tl_beams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True

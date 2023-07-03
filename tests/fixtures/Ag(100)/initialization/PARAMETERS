@@ -16,7 +16,7 @@ SUPERLATTICE (1x1)
 
 ! ####### PARAMETERS FOR REFCALC #######
 
-V0_IMAG bulk = 5.0
+V0_IMAG = 5.0
 LMAX = 8-12
 
 T_DEBYE = 330                      ! create VIBROCC

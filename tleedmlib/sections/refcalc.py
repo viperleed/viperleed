@@ -376,7 +376,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     if single_threaded or rp.LMAX[0] == rp.LMAX[1] or rp.TL_VERSION <= 1.6:
         which_lmax = set([rp.LMAX[1]])
     else:    # find appropriate LMAX per energy
-        ps_en = [(i, ps[0]*27.211396) for (i, ps) in enumerate(rp.phaseshifts)] # TODO: use HARTREE_TO_EV
+        ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV) for (i, ps) in enumerate(rp.phaseshifts)]
         lmax = {}  # lmax as a function of energy
         warn_small = True
         warn_large = True

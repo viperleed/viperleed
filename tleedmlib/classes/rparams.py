@@ -25,7 +25,9 @@ else:
     _CAN_PLOT = True
     plt.style.use('viperleed.tleedm')
 
+
 from viperleed.tleedmlib import leedbase
+
 from viperleed.tleedmlib.base import available_cpu_count
 from viperleed.tleedmlib.checksums import (KNOWN_TL_VERSIONS,
                                            UnknownTensErLEEDVersionError)
@@ -432,7 +434,7 @@ class Rparams:
             hi = len(self.phaseshifts)-1
             if self.THEO_ENERGIES[1] is not NO_VALUE:
                 for i in range(0, len(self.phaseshifts)):
-                    if (self.phaseshifts[i][0]*27.211396                        # TODO: use HARTREE
+                    if (self.phaseshifts[i][0]*leedbase.HARTREE_TO_EV
                             > self.THEO_ENERGIES[1]):
                         hi = i
                         break

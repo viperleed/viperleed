@@ -2,7 +2,7 @@
 """
 Created on Tue Aug 18 17:20:43 2020
 
-@author: Florian Kraushofer
+@author: Florian Kraushofer, Alexander Imre
 
 Functions for reading and writing the PHASESHIFTS file
 """
@@ -16,6 +16,7 @@ import fortranformat as ff
 import numpy as np
 
 import viperleed
+from viperleed.tleedmlib.leedbase import HARTREE_TO_EV
 from viperleed.tleedmlib.periodic_table import (get_atomic_number,
                                                 get_element_symbol)
 
@@ -33,7 +34,7 @@ else:
 
 
 logger = logging.getLogger("tleedm.files.phaseshifts")
-_HARTREE_TO_EV = 27.211396
+
 
 def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
                     ignoreEnRange=False):
@@ -308,11 +309,13 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
 def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen):
     """Check that the energy range of phaseshifts is large enough for rp."""
     checkfail = False
+
     er = np.arange(rp.THEO_ENERGIES[0],
                    rp.THEO_ENERGIES[1] + 1e-4,
                    rp.THEO_ENERGIES[2])
-    psmin = round(phaseshifts[0][0] * _HARTREE_TO_EV, 2)
-    psmax = round(phaseshifts[-1][0] * _HARTREE_TO_EV, 2)
+    psmin = round(phaseshifts[0][0] * HARTREE_TO_EV, 2)
+    psmax = round(phaseshifts[-1][0] * HARTREE_TO_EV, 2)
+
     if rp.V0_REAL == "default" or isinstance(rp.V0_REAL, list):
         if isinstance(rp.V0_REAL, list):
             c = rp.V0_REAL
@@ -539,7 +542,7 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         ps_labels.extend([cel + " in " + s.label + " site"
                           for cel in chemelList
                           for s in sl.sitelist if s.el == el])
-    energies = np.array([ps[0]*_HARTREE_TO_EV for ps in rp.phaseshifts])
+    energies = np.array([ps[0]*HARTREE_TO_EV for ps in rp.phaseshifts])
     ps_vals = np.array([ps[1] for ps in rp.phaseshifts])
 
     figsize = (7, 4)

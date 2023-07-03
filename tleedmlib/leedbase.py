@@ -30,7 +30,15 @@ from viperleed.tleedmlib.base import cosvec
 # which could potentially be split off somewhere else 
 from viperleed.tleedmlib.files import parameters, poscar, vibrocc
 
+
+# constants for conversion Angstrom and eV <-> atomic units
+HARTREE_TO_EV = 27.211396
+EV_TO_HARTREE = 1/HARTREE_TO_EV
+BOHR_TO_ANGSTROM = 0.529177210903
+ANGSTROM_TO_BOHR = 1/BOHR_TO_ANGSTROM
+
 logger = logging.getLogger("tleedm.leedbase")
+
 
 ###############################################
 #                FUNCTIONS                    #
