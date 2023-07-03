@@ -7,14 +7,16 @@ Created on Wed Aug 19 11:55:15 2020
 Functions for reading and writing files relevant to the reference calculation
 """
 
-import numpy as np
+import copy
 import logging
 import os
-import copy
-from viperleed import fortranformat as ff
 
-import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.base import splitMaxRight
+import fortranformat as ff
+import numpy as np
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import fortranContLine, lcm, splitMaxRight
+from viperleed.tleedmlib.classes.beam import Beam
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
 logger = logging.getLogger("tleedm.files.iorefcalc")
@@ -198,7 +200,7 @@ def readFdOut(readfile="fd.out", for_error=False, ampfile="amp.out"):
         elif i == 2:
             nbeams = int(llist[0])
         else:
-            theobeams.append(tl.Beam((float(llist[1]), float(llist[2]))))
+            theobeams.append(Beam((float(llist[1]), float(llist[2]))))
         i += 1
 
     # re-label the beams to get the correct number of characters and formatting
@@ -248,7 +250,7 @@ def writePARAM(sl, rp, lmax=-1):
     if m[1, 1] != 0:      # m[1] not parallel to a_bulk
         if m[0, 1] != 0:  # m[0] not parallel to a_bulk
             # find basis in which m[0] is parallel to a_bulk
-            f = tl.base.lcm(abs(int(m[0, 1])), abs(int(m[1, 1])))
+            f = lcm(abs(int(m[0, 1])), abs(int(m[1, 1])))
             m[0] *= f/m[0, 1]
             m[1] *= f/m[1, 1]
             m[0] -= m[1]*np.sign(m[0, 1])*np.sign(m[1, 1])
@@ -734,7 +736,7 @@ C  set real part of inner potential
                  "EEV+workfn+({:.2f}))))".format(*rp.V0_REAL))
     else:
         oline = "      VV = "+rp.V0_REAL
-    output += tl.base.fortranContLine(oline) + "\n"
+    output += fortranContLine(oline) + "\n"
     output += """
       write(6,*) workfn, EEV
       write(6,*) VV
@@ -747,15 +749,15 @@ c  set imaginary part of inner potential - energy independent value used here
 
 """
     oline = "      VPI = "+str(rp.V0_IMAG)
-    output += tl.base.fortranContLine(oline) + "\n"
+    output += fortranContLine(oline) + "\n"
     output += """
 C  set substrate / overlayer imaginary part of inner potential
 
 """
     oline = "      VPIS = "+str(rp.V0_IMAG)
-    output += tl.base.fortranContLine(oline) + "\n"
+    output += fortranContLine(oline) + "\n"
     oline = "      VPIO = "+str(rp.V0_IMAG)
-    output += tl.base.fortranContLine(oline) + "\n"
+    output += fortranContLine(oline) + "\n"
     output += """
       return
       end"""

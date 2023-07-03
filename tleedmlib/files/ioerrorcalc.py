@@ -22,11 +22,11 @@ try:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     # import matplotlib.ticker as plticker
-    matplotlib.rcParams["mathtext.default"] = "regular"
+    plt.style.use('viperleed/tleedmlib/tleedm.mplstyle')
 except Exception:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
 
 logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)
@@ -48,7 +48,7 @@ def extract_var_r(errors):
 def write_errors_summary_csv(summary_content, summary_path,
                              summary_fname="Errors_summary.csv"):
     try:
-        with open(summary_path/summary_fname, "w") as wf:
+        with open(summary_path/summary_fname, "w", encoding="utf-8") as wf:
             wf.write(summary_content)
     except Exception as err:
         logger.error("Failed to write error calculation summary "
@@ -298,8 +298,8 @@ def make_errors_figs(errors):
     filename : str, optional
         Path of file to be written, by default "Errors.pdf"
     """
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "error plotting.")
         return

@@ -9,9 +9,10 @@ Functions for reading and writing files relevant to the delta calculation
 
 import logging
 import numpy as np
-from viperleed import fortranformat as ff
 import os
 import shutil
+
+import fortranformat as ff
 
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
@@ -289,13 +290,13 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         ol = f74x3.write([disp[2], disp[0], disp[1]])
         din += ol.ljust(29)+"CDISP(z,x,y) - z pointing towards bulk\n"
         # TODO: should we allow this if e.g. HALTING = 1 and just warn instead?
-        if any([abs(d) >= 1. for d in disp]):
+        if any([abs(d) > 1. for d in disp]):
             logger.error(
                 "Displacements for delta amplitudes have to be smaller than "
                 "one Angstrom! Larger displacements are not reasonable "
                 "within the tensor LEED approximation.\n"
                 "Found displacement {} for {}.".format(disp, atom))
-            raise ValueError("Excessive displacements (>=1A) detected.")
+            raise ValueError("Excessive displacements (>1A) detected.")
     din += (
         """-------------------------------------------------------------------
 --- vibrational displacements of atomic site in question        ---

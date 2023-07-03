@@ -7,23 +7,37 @@ Created on Wed Aug 19 13:35:50 2020
 Functions for reading, processing and writing files relevant to the search
 """
 
-import logging
-import numpy as np
-from viperleed import fortranformat as ff
 import copy
+import logging
 import os
+from pathlib import Path
 import random
 import shutil
-from pathlib import Path
+import time
+
+import fortranformat as ff
+import numpy as np
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import BackwardsReader, readIntLine
 
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.files.poscar import writePOSCAR
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
-from viperleed.tleedmlib.base import BackwardsReader, readIntLine
-from viperleed.tleedmlib.leedbase import getBeamCorrespondence
+
 
 logger = logging.getLogger("tleedm.files.iosearch")
 
+class SearchIORaceConditionError(Exception):
+    """Raised if reading of control.chem does not return the expected number
+    of lines"""
+    def __init__(self, message):
+        super().__init__(message)
+
+class SearchIOEmptyFileError(Exception):
+    """Raised if file read for the search has no content"""
+    def __init__(self, message):
+        super().__init__(message)
 
 def readSDTL_next(filename="SD.TL", offset=0):
     """
@@ -57,7 +71,8 @@ def readSDTL_next(filename="SD.TL", offset=0):
         return (offset, "")     # return old offset, no content
 
 
-def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0):
+def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0,
+                    suppress_warnings=False):
     """
     Attempts to interpret a given string as one or more blocks of an SD.TL
     file.
@@ -125,17 +140,72 @@ def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0):
         if dpars:
             configs.append(tuple(dpars))
         if not all([len(dp) == len(configs[0]) for dp in configs]):
-            logger.warning("A line in SD.TL contains fewer values than "
-                           "the others. Skipping SD.TL block.")
+            if not suppress_warnings:
+                logger.warning("A line in SD.TL contains fewer values than "
+                            "the others. Skipping SD.TL block.")
             continue
         if gen != 0 and len(rfacs) > 0 and len(configs) > 0:
             returnList.append((gen, rfacs, tuple(configs)))
         elif len(configs) < n_expect:
-            logger.warning("A block in SD.TL contains fewer configurations "
-                           "than expected.")
+            if not suppress_warnings:
+                logger.warning("A block in SD.TL contains fewer configurations "
+                            "than expected.")
         else:
-            logger.warning("A block in SD.TL was read but not understood.")
+            if not suppress_warnings:
+                logger.warning("A block in SD.TL was read but not understood.")
     return returnList
+
+
+def repeat_fetch_SDTL_last_block(which_beams,
+                                 expected_params,
+                                 final,
+                                 max_repeats=2000,
+                                 wait_time=5):
+    print_info = final
+    content = None
+    for repeat in range(max_repeats):
+        content = _fetch_SDTL_last_block(which_beams,
+                                         expected_params,
+                                         print_info)
+        try:  # try again if content is not complete
+            n_search_params_found = len(content[0][2])
+        except IndexError:
+            continue
+        if n_search_params_found == expected_params:
+            logger.debug("Read complete block from SD.TL file after "
+                         f"{repeat+1} read attempt(s).")
+            return content
+        elif n_search_params_found >= expected_params:
+            raise RuntimeError(f"Expected a maximum of {expected_params} "
+                               f"parameters in SD.TL, but found "
+                               "{n_search_params_found}.")
+        # wait and try again
+        time.sleep(wait_time/1000)
+        print_info = False
+    if not content:
+        raise SearchIOEmptyFileError("No data found in SD.TL file.")
+    # if we get here, we have exceeded the maximum number of repeats
+    raise SearchIORaceConditionError(f"Could not read complete block from "
+                                     "SD.TL file.")
+
+def _fetch_SDTL_last_block(which_beams, n_expect, print_info=False):
+    try:
+        lines = readSDTL_end(n_expect=n_expect)
+    except FileNotFoundError:
+        logger.error("Could not process Search results: SD.TL file not "
+                     "found.")
+        raise
+    except Exception:
+        logger.error("Failed to get last block from SD.TL file.")
+        raise
+    # check if the last block contains the expected number of lines
+    lines_str = "\n".join(lines)
+    sdtl_content = readSDTL_blocks("\n".join(lines),
+                                   whichR=which_beams,
+                                   logInfo=print_info,
+                                   n_expect=n_expect,
+                                   suppress_warnings=not print_info)
+    return sdtl_content
 
 
 def readSDTL_end(filename="SD.TL", n_expect=0):
@@ -267,9 +337,9 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         equivalent beams.
     rp : Rparams
         Run parameters.
-    filename : pathlike or str
-        Path to or name of the output file. If str uses
-        Path(rp.workdir)/filename. The default is "rf.info".
+    file_path : pathlike or str
+        Pathlike to or name of the output file. If str uses
+        rp.workdir /filename. The default is "rf.info".
 
     Returns
     -------
@@ -291,13 +361,13 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
                  + rp.IV_SHIFT_RANGE[1]) + 0.01
     step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
-    if rp.IV_SHIFT_RANGE[2] > 0:
+    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
+        vincr = step
+    else:
         vincr = rp.IV_SHIFT_RANGE[2]
         # step = min(step, vincr)
-    else:
-        vincr = step
     # find correspondence experimental to theoretical beams:
-    beamcorr = getBeamCorrespondence(sl, rp)
+    beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for beam in rp.expbeams:
@@ -352,7 +422,7 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     output += auxexpbeams
 
     if isinstance(file_path, str):
-        _file_path = Path(rp.workdir) / file_path
+        _file_path = rp.workdir / file_path
     else:
         _file_path = file_path
     try:
@@ -440,19 +510,19 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
                 else:
                     at.disp_occ[el] = [v + at.offset_occ[el]
                                        for v in at.disp_occ[el]]
-                    del at.disp_occ[el]
-            for (d, o) in [(at.disp_geo, at.offset_geo),
+                    del at.disp_occ[el] # TODO: why? we write and then delete? Should be offset_occ? If yes, loop should go over .copy
+            for (disp, offset) in [(at.disp_geo, at.offset_geo),
                            (at.disp_vib, at.offset_vib),
                            (at.disp_geo, at.disp_geo_offset)]:
                 dl = []
-                for el in o:
-                    if el not in d:
-                        d[el] = copy.copy(d["all"])
-                    d[el] = [v + o[el] for v in d[el]]
+                for el in offset:
+                    if el not in disp:
+                        disp[el] = copy.copy(disp["all"])
+                    disp[el] = [v + offset[el] for v in disp[el]]
                     dl.append(el)
                 for el in dl:
-                    if o != at.disp_geo_offset:
-                        del o[el]
+                    if offset != at.disp_geo_offset:
+                        del offset[el]
             at.disp_geo_offset = {"all": [np.array([0., 0., 0.])]}
 
     # PARAM
@@ -601,7 +671,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 + "No. of different files for Atom no. {}\n".format(i+1))
             for (j, deltafile) in enumerate(at.deltasGenerated):
                 name = deltafile
-                if frompath:  # need to get the file
+                if frompath:  # need to get the file; if True frompath is Path
                     name = "D{}_".format(k+1) + deltafile
                     if len(name) > 15:
                         un = 1
@@ -610,11 +680,11 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                         name = "D{}_DEL_{}".format(k+1, un)
                         uniquenames.append(name)
                     try:
-                        shutil.copy2(os.path.join(frompath, deltafile), name)
+                        shutil.copy2(frompath / deltafile, name)
                     except Exception:
                         logger.error("Error getting Delta file {} for search"
                                      .format(os.path.relpath(
-                                         os.path.join(frompath, deltafile))))
+                                         frompath / deltafile)))
                         raise
                 output += "****Information about file {}:\n".format(j+1)
                 output += (name.ljust(16) + "Name of file {} (max. 15 "
@@ -630,11 +700,11 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 else:
                     # geo0 = True
                     vib0 = True
-                    for (mode, d) in [(1, at.disp_geo), (2, at.disp_vib)]:
-                        if el in d:
-                            dl = d[el]
+                    for (mode, disp) in [(1, at.disp_geo), (2, at.disp_vib)]:
+                        if el in disp:
+                            dl = disp[el]
                         else:
-                            dl = d["all"]
+                            dl = disp["all"]
                         if mode == 1:
                             geo = len(dl)
                             # if geo == 1 and np.linalg.norm(dl[0]) >= 1e-4:
@@ -747,26 +817,35 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             rp.SEARCH_START = "random"
             rp.setHaltingLevel(2)
     if rp.SEARCH_START == "control":
-        # try reading control
+        # try reading control.chem
+        # length = population +1 for header; +1 for empty line at the end
+        control_chem_expected_length = rp.SEARCH_POPULATION + 2
         try:
-            with open(controlpath, "r") as rf:
-                controllines = rf.readlines()
-        except Exception:
-            logger.error("Error reading control.chem file. Defaulting to "
-                         "random starting configuration.")
-            rp.SEARCH_START = "random"
-            rp.setHaltingLevel(2)
-        if len(controllines) < rp.SEARCH_POPULATION + 2:
+            controllines = _read_control_chem(controlpath,
+                                              control_chem_expected_length)
+        except SearchIORaceConditionError:
+            # Could not read last generation from control.chem
+            # use backup from SD.TL instead
             if not rp.controlChemBackup:
-                logger.error("Information in control.chem is incomplete. "
+                logger.error("Information in control.chem is incomplete "
+                             "and no SD.TL data is stored. "
                              "Defaulting to random starting configuration.")
                 rp.SEARCH_START = "random"
                 rp.setHaltingLevel(2)
             else:
-                logger.debug("Information in control.chem is incomplete. "
-                             "Loading from stored data...")
+                logger.debug("Failed to read current configuration from "
+                             "control.chem. "
+                             "Loading last known configuraiton from stored "
+                             "SD.TL data instead...")
                 controllines = [s+"\n"
                                 for s in rp.controlChemBackup.split("\n")]
+            pass
+        except OSError:
+            logger.error("Error reading control.chem file. Defaulting to "
+                         "random starting configuration.")
+            rp.SEARCH_START = "random"
+            rp.setHaltingLevel(2)
+
     if rp.SEARCH_START == "random":
         output += (formatter['int'].write([0]).ljust(16) +
                    "Certain start position (1) or random configuration (0)\n")
@@ -921,6 +1000,63 @@ C  end restrictions
                  "restrict.f")
     return None
 
+def _read_control_chem(control_chem_path,
+                       expected_lines,
+                       max_repeats=2000,
+                       sleep_time=5):
+    """
+    Read the content of the control.chem file located at the specified path and
+    return its lines.
+
+    Parameters
+    ----------
+    control_chem_path : path-like
+        The path to the control.chem file.
+    expected_lines : int
+        The expected number of lines in the control.chem file.
+    max_repeats : int, optional
+        The maximum number of repetitions to read the file before giving up.
+        Defaults is 1000.
+    sleep_time : int, optional
+        The time in milliseconds to sleep between each attempt. Default is 1.
+
+    Returns
+    -------
+    list of str
+        The lines of the control.chem file.
+
+    Raises
+    ------
+    ValueError
+        If max_repeats is less than 1 or sleep_time is less than 0.
+    RuntimeError
+        If the number of lines in the control.chem file exceeds the
+        expected_lines. This should not happen and indicates that expected_lines
+        was set incorrectly.
+    SearchIORaceConditionError
+        If the complete control.chem file could not be read after the
+        maximum number of repetitions.
+
+    """
+    if max_repeats < 1:
+        raise ValueError("max_repeats must be >= 1")
+    if sleep_time < 0:
+        raise ValueError("sleep_time must be >= 0 ms")
+    _control_chem_path = Path(control_chem_path)
+    for repeat in range(max_repeats):
+        with open(_control_chem_path, "r") as rf:
+            control_lines = rf.readlines()
+        n_control_lines = len(control_lines)
+        if n_control_lines == expected_lines:
+            logger.debug(f"Read complete control.chem file after {repeat+1} "
+                         "read attempt(s).")
+            return control_lines
+        elif n_control_lines > expected_lines:
+            raise RuntimeError(f"Expected at maximum {expected_lines} lines "
+                               "in control.chem, but found {n_control_lines}.")
+        time.sleep(sleep_time/1000)  # in milliseconds
+    raise SearchIORaceConditionError("Could not read complete "
+                                     "control.chem file")
 
 def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     """
@@ -1071,7 +1207,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         writePOSCAR(tmpslab, filename=fn, comments="all", silent=silent)
     except Exception:
         logger.error("Exception occured while writing POSCAR_OUT" + suffix,
-                     exc_info=rp.LOG_DEBUG)
+                     exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         tmpslab = sl.makeSymBaseSlab(rp)
@@ -1081,12 +1217,12 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         except Exception:
             logger.warning(
                 "Exception occured while writing POSCAR_OUT_mincell" + suffix,
-                exc_info=rp.LOG_DEBUG)
+                exc_info=rp.is_debug_mode)
     fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
     try:
         writeVIBROCC(sl, rp, filename=fn, silent=silent)
     except Exception:
         logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
-                     exc_info=rp.LOG_DEBUG)
+                     exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     return
