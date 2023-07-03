@@ -118,7 +118,7 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
         # convert to float array
         indices_arr = np.array(beam_indices, dtype='float64')
         # calculate cutoff energy for each beam and scale to correct units
-        energies = (np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2,
+        energies = (np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2,       # TODO: we could probably remove the energies from BEAMLIST completely. It seems they are not used in TensErLEED (see subroutine READIN in lib.tleed.f). Would need to remove it from here, and readBEAMLIST in beams.py.
                            axis=1)
                     /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2) 
 
