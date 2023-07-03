@@ -206,7 +206,9 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
         # generate file contents for beam subset
         all_indices_arr.append(indices_arr)
         all_energies.append(energies)
-    beamlist_content = make_beamlist_string(all_indices_arr, all_energies)
+    beamlist_content = make_beamlist_string(all_indices_arr,
+                                            all_energies,
+                                            rp.TL_VERSION)
     max_energy = np.max(all_energies)
     logger.debug(f"Highest energy considered in BEAMLIST: {max_energy:.2f}eV")
 
@@ -223,7 +225,7 @@ def generate_beamlist(sl, rp, domains=False, beamlist_name="BEAMLIST"):
     return
 
 
-def make_beamlist_string(all_indices, all_energies):
+def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
     """Creates contents for file BEAMLIST for each beamset in the format
     used be the legacy beamgen scripts by U. Loeffler and R. Doell.
 
@@ -245,11 +247,18 @@ def make_beamlist_string(all_indices, all_energies):
     ValueError
         If indices and energies have incompatible shapes.
     """
-    # set up Fortran format as was used by beamgen
-    beamlist_format = ff.FortranRecordWriter(
-        "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"
-        # beamgen v1.7 had I5, beamgen v3 had I4 for some reason
-        )
+    # Set up Fortran format as was used by beamgen.
+    # TensErLEED v1.7 and higher used beamgen v1.7; earlier versions used v3
+    # This matters because the format changed slightly:
+    # beamgen v1.7 had I5, beamgen v3 had I4 for some reason
+    if tl_version >= 1.7:
+        beamlist_format = ff.FortranRecordWriter(
+            "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I4"
+            )
+    else:
+        beamlist_format = ff.FortranRecordWriter(
+            "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"
+            )
     beam_nr = 1
     content = ""
     for indices, energies in zip(all_indices, all_energies):
