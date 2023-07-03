@@ -19,7 +19,7 @@ generation using the Timer/Counter4, subsequently abbreviated as TC4.
 TC4 can be used in 8-bit or 10-bit operation, depending on whether the user 
 also programs the two high bits inside shared register TC4H (cf. datasheet 
 sec. 15.2.2). For example, in order to perform the 10-bit write 0x31F to 
-register 0CR4C, first program TC4H with 0x3, then write 0x1F to OCR4C.
+register TC4H:OCR4C, first program TC4H with 0x3, then write 0x1F to OCR4C.
 
 TC4 contains three independant Output Compare Units A/B/D which constantly
 compare their register values OCR4A/B/D with monotonically increasing or
@@ -32,7 +32,8 @@ the connection to the inverted/non-inverted Output Compare pins /OC4x vs OC4x.
 While registers OCR4A/B/D are used to control the PWM duty cycle, OCR4C is used
 to set the PWM base frequency, and implicitly also the PWM resolution. The 
 relevant formulae are also given in the datasheet sec. 15.8. For TC4 operated
-in Fast PWM Mode the PWM frequency and resolution is determined by
+in Fast PWM Mode the PWM frequency, TC4 clock frequency and PWM resolution are
+determined as follows:
 
 (1)   f_PWM = f_clk_T4 / (OCR4C + 1)
 
@@ -40,17 +41,25 @@ in Fast PWM Mode the PWM frequency and resolution is determined by
 
 (3)   res_PWM = log2(OCR4C + 1) = log2(f_clk_T4 / f_PWM)
 
-Again, OCR4C can be operated like a 10-bit register in conjunction with TC4H.
 Every time TCNT4 has a match with OCR4C, TCNT4 is reset to zero and begins to
-count up/down again until another match occurs. The TC4 frequency 'f_clk_T4' 
+count up or down again until another match occurs. The TC4 frequency 'f_clk_T4'
 is derived from the CPU clock 'F_CPU_CLK' divided by the TC4 prescaler settings
 CS43:40 contained in register TCCR4B. Equation (3) shows that the user wants to
 stay as close to the maximum value of OCR4C as possible, in order to achieve 
 the highest possible PWM resolution. Therefore, 'set_pwm_frequency' will first
 determine the TC4 prescaler value which will allow for the highest possible
 10-bit value inside TC4H:OCR4C which in turn will provide the best possible PWM
-resolution. If a value smaller than three is written to OCR4C, that value will
-be replaced with three in order to prevent too high a PWM output frequency.
+resolution. If a value smaller than three is written to OCR4C, the hardware will
+replace that value with three in order to prevent too high a PWM frequency.
+
+The ATmega32U4 includes the following Timer/Counter modules:
+- 8-bit Timer/Counter0
+- 16-bit Timers/Counters (TC1 and TC3)
+- 10-bit High Speed Timer/Counter4
+
+In contrast to the other TC modules, TC4 can be operated with up to 64 MHz if
+the supply voltage is higher than 4V. This firmware does not make use of this 
+feature.
 
 Note: The 11-bit Enhanced PWM Mode is not working up to some chip revision.
 **/
