@@ -8,7 +8,7 @@ Creates the BEAMLIST file for TensErLEED calculations.
 @author: Florian Kraushofer
 
 Original version by Florian Kraushofer (2020) was a wrapper for the fortran
-beamgen script by Uli Löffler et al. Complete refactro by Alexander Imre (2023)
+beamgen script by Uli Löffler et al. Complete refactor by Alexander Imre (2023)
 that removes the dependency on the fortran script and instead accomplishes the
 same in python. This is more flexible and allows for more accurate calculations.
 """
