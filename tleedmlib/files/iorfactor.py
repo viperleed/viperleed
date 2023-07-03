@@ -17,14 +17,15 @@ import numpy as np
 try:
     import matplotlib
 except ImportError:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
     matplotlib.rcParams.update({'figure.max_open_warning': 0})
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
+    plt.style.use('viperleed.tleedm')
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
@@ -450,8 +451,8 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
 
     '''
 
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "R-factor plotting.")
         return
@@ -615,8 +616,8 @@ def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
                         analysisFile='', v0i = 0., formatting=None):
 
     # after applying the V0r shift outside, the id_start and n_E_beams should be same for experiment and theory
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "R-factor plotting.")
         return

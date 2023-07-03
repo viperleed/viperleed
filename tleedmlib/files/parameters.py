@@ -711,7 +711,8 @@ class ParameterInterpreter:                                                     
     # ---------- Methods for interpreting simple parameters -----------
     def interpret_bool_parameter(self, assignment,
                                  allowed_values=None,
-                                 param=None, return_only=False):
+                                 param=None, return_only=False,
+                                 no_flags=False):
         """Set a parameter to a boolean value.
 
         Parameters
@@ -730,14 +731,23 @@ class ParameterInterpreter:                                                     
         return_only: bool, optional
             If True, only return the value of the parameter, but do
             not set it. Default is False.
+        no_flags : bool, optional
+            If True, complain if assignment has flags. Default is False.
 
         Returns
         -------
         value : bool
             The value of the parameter.
+
+        Raises
+        ------
+        ParameterUnknownFlagError
+            When assignment has flags but no_flag is True.
         """
         if allowed_values is None:
             allowed_values = {}
+        if no_flags:
+            self._ensure_no_flags_assignment(param, assignment)
 
         _bool_synonyms = self.bool_synonyms.copy()
         for option, values in allowed_values.items():
@@ -770,7 +780,8 @@ class ParameterInterpreter:                                                     
 
     def interpret_numerical_parameter(self, assignment,
                                       param=None, return_only=False,
-                                      bounds=NumericBounds()):                  # TODO: ideally one could default to actually using the limits known from self.rpars.get_limits!
+                                      bounds=NumericBounds(),
+                                      no_flags=False):                  # TODO: ideally one could default to actually using the limits known from self.rpars.get_limits!
         """Set a parameter to a numeric (int or float) value.
 
         Parameters
@@ -790,6 +801,8 @@ class ParameterInterpreter:                                                     
             Acceptable limits for value, and what to do in case an
             out-of-bounds value is given. Default is an unbounded
             float.
+        no_flags : bool, optional
+            If True, complain if assignment has flags. Default is False.
 
         Returns
         ----------
@@ -804,7 +817,11 @@ class ParameterInterpreter:                                                     
             When conversion of a int-type value to int fails.
         ParameterRangeError
             When a the value falls outside the constraints of bounds.
+        ParameterUnknownFlagError
+            When assignment has flags but no_flag is True.
         """
+        if no_flags:
+            self._ensure_no_flags_assignment(param, assignment)
         type_ = bounds.type_
         try:
             # The inner float is necessary for, e.g., 1e6 as int
@@ -878,6 +895,7 @@ class ParameterInterpreter:                                                     
                     )
             kwargs = dict(zip(kwargs_names, kwargs_values))
             kwargs['param'] = param
+            kwargs['no_flags'] = True  # no flags for simple parameters
             method = partialmethod(wrapped, **kwargs)
             setattr(cls, method_name, method)
 
