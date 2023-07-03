@@ -110,10 +110,10 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     for beam_indices in beam_subsets:
         # convert to float array
         indices_arr = np.array(beam_indices, dtype='float64')
-        # calculate cutoff energy for each beam
+        # calculate cutoff energy for each beam and scale to correct units
         energies = (np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2,
                            axis=1)
-                    /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2)  # scale to correct units
+                    /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2) 
 
         # generate file contents for beam subset
         all_indices_arr.append(indices_arr)
