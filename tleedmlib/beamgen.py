@@ -236,6 +236,9 @@ def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
         the number of beams in each subset.
     all_energies : np.ndarray, shape=(n_beams_subset,)
         Lower cutoff energies for the beams.
+    tl_version : float, optional
+        Version of TensErLEED, by default 1.7. To be taken from
+        Rparams.TL_VERSION. This values decides the format of the output string.
 
     Returns
     -------
