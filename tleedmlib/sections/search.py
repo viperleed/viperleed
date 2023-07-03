@@ -67,10 +67,11 @@ def processSearchResults(sl, rp, search_log_path, final=True):
     _check_search_log(search_log_path)
 
     # get the last block from SD.TL:
+    wait_time = 5 if not final else 20
     try:
         sdtl_content = tl_io.repeat_fetch_SDTL_last_block(which_beams=rp.SEARCH_BEAMS,
                                            expected_params=rp.SEARCH_POPULATION,
-                                           final=final)
+                                           final=final, wait_time=wait_time)
     except tl_io.SearchIOEmptyFileError as err:
         if final:
             logger.error("No data found in SD.TL file!")
