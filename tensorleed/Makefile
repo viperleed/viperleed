@@ -11,11 +11,11 @@ INTEL_FFLAGS := -O3
 INTEL_CFLAGS := -O3
 
 
-intel: beamgen_source/beamgen.v1.7.f eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasisss.f90
+intel: eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasisss.f90
 	$(intel_fcomp) eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasisss.f90 -o EEASiSSS.x $(INTEL_FFLAGS)
 
 
-gcc: beamgen_source/beamgen.v1.7.f eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasisss.f90
+gcc: eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasisss.f90
 	$(gcc_fcomp) eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasisss.f90 -o EEASiSSS.x $(GCC_FFLAGS)
         
 clean: 
