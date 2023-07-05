@@ -105,6 +105,7 @@ def run_section(index, sl, rp):
         if filename == "EXPBEAMS":
             enrange = [-1 if e is rp.no_value else e
                        for e in rp.THEO_ENERGIES[:2]]
+            initialization._get_expbeams(rp)
             try:
                 rp.expbeams = readOUTBEAMS(rp.EXPBEAMS_INPUT_FILE,
                                            enrange=enrange)
