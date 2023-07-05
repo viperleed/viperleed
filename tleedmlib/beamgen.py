@@ -128,7 +128,8 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     beamlist_content = make_beamlist_string(all_indices_arr,
                                             all_energies,
                                             rp.TL_VERSION)
-    max_energy = np.max(all_energies)
+    # get highest energy considered; groups may have different shapes
+    max_energy = max(np.max(group) for group in all_energies)
     logger.debug(f'Highest energy considered in BEAMLIST: {max_energy:.2f}eV')
 
     # write to file
