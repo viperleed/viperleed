@@ -100,6 +100,10 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     # use **only** beams from domain specified in rp.SUPERLATTICE
     # beams come pre-sorted from get_equivalent_beams()
     equivalent_beams = get_equivalent_beams(leed_parameters, domains=0)
+
+    # log beamgroups for debugging if loglevel is very low
+    logger.log(level=2, msg = _log_beamgroups(equivalent_beams))
+
     # strip away symmetry group information
     beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
     subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw) # TODO: create test case to check that len(subset_classes) == np.linalg.det(rp.SUPERLATTICE)
@@ -142,6 +146,16 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
         raise
 
     logger.debug('Wrote to BEAMLIST successfully.')
+
+
+def _log_beamgroups(equivalent_beams):
+    log_msg = 'Equivalent beams:\n'
+    log_msg += '(   h     |   k     ),group\n'
+    for beam in equivalent_beams:
+        index = BeamIndex(beam[0])
+        line = f'{index.__format__("(4,4)s")}, {beam[1]:4},\n'
+        log_msg += line
+    return log_msg
 
 
 def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
