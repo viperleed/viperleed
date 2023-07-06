@@ -828,7 +828,7 @@ void calibrateADCsAtAllGains(){
         // Remember which channels we have calibrated
         for (int iADC=0; iADC < N_MAX_ADCS_ON_PCB; iADC++) {
             byte channel = iADC==0 ? adc0Channel : adc1Channel;
-            calibratedChannels[iADC][channel] = true;  // TODO: perhaps should onlz set to true only for the ADCs that are present. Think what are the consequences.
+            calibratedChannels[iADC][channel] = true;  // TODO: perhaps should only set to true only for the ADCs that are present. Think what are the consequences.
         }
 
         // Set gains to the lowest value, and load the
@@ -974,6 +974,8 @@ void setVoltageWaitAndTrigger(){
         voltage output can be considered stable
     STATE_MEASURE_ADCS
         Successfully finished, accessed via triggerMeasurements()
+    STATE_IDLE
+        If PC_SET_VOLTAGE_ONLY was received and voltage is set
     **/
     uint16_t dacValue;
 
@@ -1893,6 +1895,7 @@ void measureADCsRipple(){
 }
 
 
+/** Handler of STATE_CHANGE_MEASUREMENT_MODE */
 void changeMeasurementMode() {
     /**
     Sets the measurement mode either to continous or single measurement.
@@ -1977,6 +1980,7 @@ bool hardwareNotKnown(){
 }
 
 
+/** Handler of STATE_SET_SERIAL_NR */
 void setSerialNr() {
    /**
     Writes the assigned serial number to the EEPROM.
@@ -2000,6 +2004,8 @@ void setSerialNr() {
     STATE_ERROR : ERROR_TIMEOUT
         If more than 5s pass between the PC_SET_SERIAL_NR message
         and the receipt of data.
+    STATE_SET_SERIAL_NR (stays)
+        While waiting for data from the PC
     STATE_IDLE
         Successfully finished
     **/
