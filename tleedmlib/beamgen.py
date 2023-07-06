@@ -101,8 +101,10 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     # beams come pre-sorted from get_equivalent_beams()
     equivalent_beams = get_equivalent_beams(leed_parameters, domains=0)
 
-    # log beamgroups for debugging if loglevel is very low
-    logger.log(level=2, msg = _log_beamgroups(equivalent_beams))
+    # log beamgroups for debugging if loglevel is low enough
+    beamgroups_verbose, beamgroups_vverbose = _log_beamgroups(equivalent_beams)
+    logger.log(level=5, msg = beamgroups_verbose)
+    logger.log(level=1, msg = beamgroups_vverbose)
 
     # strip away symmetry group information
     beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
@@ -149,13 +151,19 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
 
 
 def _log_beamgroups(equivalent_beams):
-    log_msg = 'Equivalent beams:\n'
-    log_msg += '(   h     |   k     ),group\n'
+    """Creates log message for beamgroups."""
+    full_log_msg = 'Equivalent beams:\n'
+    full_log_msg += '(   h     |   k     ),group\n'
     for beam in equivalent_beams:
         index = BeamIndex(beam[0])
         line = f'{index.__format__("(4,4)s")}, {beam[1]:4},\n'
-        log_msg += line
-    return log_msg
+        full_log_msg += line
+    # split log message into two parts
+    # fist 12 lines are intended for loglevel verbose
+    # the rest only at very verbose
+    log_msg_v = '\n'.join(full_log_msg.split('\n')[:15])
+    log_msg_vv = '\n'.join(full_log_msg.split('\n')[15:])
+    return log_msg_v, log_msg_vv
 
 
 def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
