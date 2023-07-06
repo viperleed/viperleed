@@ -94,7 +94,11 @@ class CustomLogFormatter(logging.Formatter):
     }
 
     def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
+        # debug log format for everything at DEBUG level or lower
+        if record.levelno < logging.DEBUG:
+            log_fmt = self.FORMATS.get(logging.DEBUG)
+        else:
+            log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
 
