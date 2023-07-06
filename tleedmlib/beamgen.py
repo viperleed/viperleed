@@ -153,7 +153,7 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
 def _log_beamgroups(equivalent_beams):
     """Creates log message for beamgroups."""
     full_log_msg = 'Equivalent beams:\n'
-    full_log_msg += '(   h     |   k     ),group\n'
+    full_log_msg += '(   h     |   k     ),group,\n'
     for beam in equivalent_beams:
         index = BeamIndex(beam[0])
         line = f'{index.__format__("(4,4)s")}, {beam[1]:4},\n'

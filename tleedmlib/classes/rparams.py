@@ -47,7 +47,14 @@ DEFAULTS = {
         "w": 4.5,
         },
     'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: init from data
-    'LOG_LEVEL' : logging.INFO,
+    'LOG_LEVEL' : {
+        NO_VALUE: logging.INFO,
+        'debug': logging.DEBUG,
+        'v' : 5,
+        'verbose' : 5,
+        'vv' : 1,
+        'vverbose' : 1,
+    },
     'PHASESHIFT_EPS': {
         'r': 0.1,
         'n': 0.05,
@@ -169,7 +176,7 @@ class Rparams:
         self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
         self.LAYER_STACK_VERTICAL = True
         self.LMAX = [0, 0]    # minimum and maximum LMAX
-        self.LOG_LEVEL = DEFAULTS["LOG_LEVEL"]
+        self.LOG_LEVEL = DEFAULTS["LOG_LEVEL"][NO_VALUE]
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
