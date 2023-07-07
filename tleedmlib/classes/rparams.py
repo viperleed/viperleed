@@ -34,7 +34,7 @@ else:
 
 logger = logging.getLogger("tleedm.rparams")
 
-NO_VALUE = object()  # For Rparams
+NO_VALUE = None  # This needs to be a singleton, so "is NO_VALUE" works
 
 # Notice that the defaults in here that may be mutated during execution
 # are saved as immutable types to prevent inadvertent modification of
