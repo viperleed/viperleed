@@ -19,7 +19,29 @@ It is possible to make the beam voltage accessible for read out in the ErLEED el
 
 
 **TODO Michele, Michael, Alex: Details on which versions numbers are supported; warnings etc.**
-**TODO: maybe add a schematic circuit diagram of the circuit built in this guide.**
+
+In order to make the beam voltage accessible, we need to measure the average potential at the filament.
+We can do this by adding a voltage divider with two equal resistors in parallel to the filament.
+The output of the voltage divider is then connected to a new port on the back of the control unit.
+A schematic of the circuit is shown in :numref:`fig_ebeam_circuit`.
+
+.. _fig_ebeam_circuit:
+.. figure:: /_static/hardware/ErLEED_modification/upgrade_ebeam_circuit.svg
+    :align: center
+
+    Schematic of the modifications to the ErLEED electronics to enable beam voltage read-out.
+
+:math:`F+` and :math:`F-` are the potentials at either end of the filament :math:`R_{\mathrm{fil}}`.
+They relate to the real electron energy :math:`E` and the filament voltage :math:`\Delta V_{\mathrm{fil}}` as
+
+.. math::
+    F+ = E + \frac{\Delta V_{\mathrm{fil}}}{2}, \quad F- = E - \frac{\Delta V_{\mathrm{fil}}}{2}.
+
+.. important::
+
+    Always disconnect the BEAM HV plug when measuring the beam current :math:`I_0`.
+    Otherwise, the current drawn by the voltage measurement will distort the current measurement.
+    The current from the ViPErLEED interface electronics :math:`I_{\mathrm{ViPErLEED}}` is ~6.25 :math:'\mu'A/100eV.
 
 Required Components
 ===================
@@ -38,6 +60,7 @@ For the beam HV port:
 
 
 Additionally, you will need the following tools to perform the modifications:
+    - a suitable anti-static electronics workbench,
     - a suitable set of Phillips and flat-head screw drivers,
     - a soldering iron and solder,
     - tweezers,
@@ -52,6 +75,26 @@ Additionally, you will need the following tools to perform the modifications:
     :align: center
 
     Components for the beam HV pin.
+
+The two resistors should be of equal value and have a large power rating but they do not need to be precision resistors.
+The measured beam voltage relates to the real electron energy (:math:`E`) as
+
+.. math::
+    \text{BEAM HV} = E (1 + \frac{R}{2R_{\mathrm{ViPErLEED}}}) + \frac{\epsilon}{4}\Delta V_{\mathrm{fil}}.
+
+Here, :math:`\epsilon` is the relative difference between the two resistors in the voltage divider.
+Thus a 1% difference in the resistors at 20 V filament voltage will result in a 50 meV offset in the energy calibration.
+
+Furthermore, the smaller :math:`R` is relative to :math:`R_{\mathrm{ViPErLEED}}`, the smaller the gain error of the energy calibration will be.
+With a 330 :math:`\Omega` resistor, the gain error is about :math:`~1\times 10^{-5}`, or 0.1 eV at 1000 eV.
+However, the resistors should not be chose too small as the additional current :math:`I_{\mathrm{extra}}` drawn by the voltage divider is
+
+.. math::
+    I_{\mathrm{extra}} = \frac{\Delta V_{\mathrm{fil}}}{2R} = I_{\mathrm{fil}} \frac{R_{\mathrm{fil}}}{2R}.
+
+when the BEAM HV plug is disconnected.
+This equates to about 30 mA with 20 V filament voltage and a 330 :math:`\Omega` resistor, i.e. ~0.6 W.
+
 
 **TODO Michele, Michael: names/numbers of HV connector components & hole-punch machine**
 
