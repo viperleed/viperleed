@@ -458,7 +458,7 @@ void encodeAndSend(byte singleByte){
 void encodeAndSend(byte *byteArray, byte numBytesBeforeEncoding){
 /*
  * Prepares message before sending it to the PC. Changes every
- * byte which happens to have the same value as a MSG_START, an MSG_END or
+ * byte which happens to have the same value as a MSG_START, and MSG_END or
  * a MSG_SPECIAL_BYTE to two bytes with a leading "MSG_SPECIAL_BYTE" and
  * a following "byte - MSG_SPECIAL_BYTE."
  *
@@ -518,14 +518,14 @@ void debugMsg(const char *message, ...){  // can be a format string
     va_start(args, message);
 
     byte n_chars;
-    char buffer[255];  // PC_DEBUG + max 253 characters + '\0' at end
+    char _buffer[255];  // PC_DEBUG + max 253 characters + '\0' at end
 
-    buffer[0] = PC_DEBUG;
+    _buffer[0] = PC_DEBUG;
     n_chars = 1;  // the PC_DEBUG
-    n_chars += vsnprintf(buffer+n_chars, 255-n_chars, message, args);
+    n_chars += vsnprintf(_buffer+n_chars, 255-n_chars, message, args);
     va_end(args);
 
-    encodeAndSend(buffer, MIN(n_chars, 255));
+    encodeAndSend(_buffer, MIN(n_chars, 255));
 }
 
 
@@ -932,7 +932,8 @@ void setVoltageWaitAndTrigger(){
     Then, wait the prescribed amount of time for the voltage to be stable,
     and trigger the ADCs for a measurement. This may be repeated multiple
     times to allow for multiple voltage steps at once. Triggering occurs
-    only after all steps are completed.
+    only after all steps are completed and only if takeMeasurements is
+    true.
 
     For each step, we need 4 bytes from the data_received[] buffer.
     Their meaning is:
@@ -1072,6 +1073,8 @@ void measureADCs(){
 
     Goes to state
     -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_MEASURE_ADCS
     STATE_ERROR : ERROR_TIMEOUT
         If it takes longer than 5s between the beginning of the state
         and completing the number of measurements that need to be averaged
@@ -1428,7 +1431,163 @@ void reset(){
 }
 
 
+/** Handler of STATE_CHANGE_MEASUREMENT_MODE */
+void changeMeasurementMode() {
+    /**
+    Sets the measurement mode either to continous or single measurement.
+    To achieve this the continuousMeasurement boolean is set to true or false.
+    If the arduino is ordered to do continuous measurements it will set
+    numMeasurementsToDo = 1.
 
+    Reads
+    -----
+    data_received
+
+    Writes
+    ------
+    continuousMeasurement
+
+    Msg to PC
+    ---------
+    PC_OK
+
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_CHANGE_MEASUREMENT_MODE
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_CHANGE_MEAS_MODE message
+        and the receipt of data
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If the message is not at least 2 bytes long, or if the received data
+        does not describe on or off.
+    STATE_CHANGE_MEASUREMENT_MODE (stays)
+        While waiting for data from the PC
+    STATE_IDLE
+        Successfully finished
+  **/
+    int continuous_mode;
+    if (currentState != STATE_CHANGE_MEASUREMENT_MODE){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+    if (not newMessage and waitingForDataFromPC){  // waiting for data from the PC
+        checkIfTimedOut();
+        return;
+    }
+
+    // Data has arrived
+    waitingForDataFromPC = false;
+    newMessage = false;
+
+    if (msgLength < 2){
+        raise(ERROR_MSG_DATA_INVALID);
+        return;
+    }
+
+    continuous_mode = data_received[0];
+    // Note that data_received[1] is currently unused
+    // but necessary in order to not confuse this data
+    // message with a command.
+
+    if (continuous_mode == 1){
+        continuousMeasurement = true;
+        numMeasurementsToDo = 1;
+    }
+    if (continuous_mode == 0) {
+        continuousMeasurement = false;
+    }
+    if (continuous_mode != 1 and continuous_mode != 0) {
+      raise(ERROR_MSG_DATA_INVALID);
+      return;
+    }
+
+    encodeAndSend(PC_OK);
+    currentState = STATE_IDLE;
+}
+
+
+bool hardwareNotKnown(){
+    if(hardwareNeverChecked){
+        raise(ERROR_HARDWARE_UNKNOWN);
+        return true;
+    }
+    return false;
+}
+
+
+/** Handler of STATE_SET_SERIAL_NR */
+void setSerialNr() {
+   /**
+    Writes the assigned serial number to the EEPROM.
+
+    Reads
+    -----
+    data_received
+
+    Msg to PC
+    ---------
+    PC_OK
+
+    Goes to state
+    -------------
+    STATE_ERROR : ERROR_RUNTIME
+        If this function is not called within STATE_SET_SERIAL_NR
+    STATE_ERROR : ERROR_MSG_DATA_INVALID
+        If the sent serial number is not 4 bytes long or if the
+        sent data contains bytes that do not match the decimal
+        ASCII representation of a capital letter or a number.
+    STATE_ERROR : ERROR_TIMEOUT
+        If more than 5s pass between the PC_SET_SERIAL_NR message
+        and the receipt of data.
+    STATE_SET_SERIAL_NR (stays)
+        While waiting for data from the PC
+    STATE_IDLE
+        Successfully finished
+    **/
+    if (currentState != STATE_SET_SERIAL_NR){
+        raise(ERROR_RUNTIME);
+        return;
+    }
+
+    if (not newMessage){  // waiting for data from the PC
+        checkIfTimedOut();
+        return;
+    }
+
+    // Data has arrived
+    waitingForDataFromPC = false;
+    newMessage = false;
+
+    // Check that we got 4 bytes for the serial number.
+    if (msgLength != 4){
+        raise(ERROR_MSG_DATA_INVALID);
+        return;
+    }
+
+    // Check if address only contains allowed values.
+    int address = 0;
+    byte tmp_char;
+    while(address <= 3){
+      tmp_char = data_received[address];
+      if (not ((tmp_char > 47 and tmp_char < 58)
+                || (tmp_char > 64 and tmp_char < 91))){
+        raise(ERROR_MSG_DATA_INVALID);
+        return;
+      }
+      address += 1;
+    }
+
+    address = 0;
+    while(address <= 3){
+      EEPROM.update(address, data_received[address]);
+      address += 1;
+    }
+    // Serial number is stored on EEPROM bytes with addresses 0 to 3.
+
+    encodeAndSend(PC_OK);
+    currentState = STATE_IDLE;
+}
 
 
 
@@ -1895,163 +2054,6 @@ void measureADCsRipple(){
 }
 
 
-/** Handler of STATE_CHANGE_MEASUREMENT_MODE */
-void changeMeasurementMode() {
-    /**
-    Sets the measurement mode either to continous or single measurement.
-    To achieve this the continuousMeasurement boolean is set to true or false.
-    If the arduino is ordered to do continuous measurements it will set
-    numMeasurementsToDo = 1.
-
-    Reads
-    -----
-    data_received
-
-    Writes
-    ------
-    continuousMeasurement
-
-    Msg to PC
-    ---------
-    PC_OK
-
-    Goes to state
-    -------------
-    STATE_ERROR : ERROR_RUNTIME
-        If this function is not called within STATE_CHANGE_MEASUREMENT_MODE
-    STATE_ERROR : ERROR_TIMEOUT
-        If more than 5s pass between the PC_CHANGE_MEAS_MODE message
-        and the receipt of data
-    STATE_ERROR : ERROR_MSG_DATA_INVALID
-        If the message is not at least 2 bytes long, or if the received data
-        does not describe on or off.
-    STATE_CHANGE_MEASUREMENT_MODE (stays)
-        While waiting for data from the PC
-    STATE_IDLE
-        Successfully finished
-  **/
-    int continuous_mode;
-    if (currentState != STATE_CHANGE_MEASUREMENT_MODE){
-        raise(ERROR_RUNTIME);
-        return;
-    }
-    if (not newMessage and waitingForDataFromPC){  // waiting for data from the PC
-        checkIfTimedOut();
-        return;
-    }
-
-    // Data has arrived
-    waitingForDataFromPC = false;
-    newMessage = false;
-
-    if (msgLength < 2){
-        raise(ERROR_MSG_DATA_INVALID);
-        return;
-    }
-
-    continuous_mode = data_received[0];
-    // Note that data_received[1] is currently unused
-    // but necessary in order to not confuse this data
-    // message with a command.
-
-    if (continuous_mode == 1){
-        continuousMeasurement = true;
-        numMeasurementsToDo = 1;
-    }
-    if (continuous_mode == 0) {
-        continuousMeasurement = false;
-    }
-    if (continuous_mode != 1 and continuous_mode != 0) {
-      raise(ERROR_MSG_DATA_INVALID);
-      return;
-    }
-
-    encodeAndSend(PC_OK);
-    currentState = STATE_IDLE;
-}
-
-
-bool hardwareNotKnown(){
-    if(hardwareNeverChecked){
-        raise(ERROR_HARDWARE_UNKNOWN);
-        return true;
-    }
-    return false;
-}
-
-
-/** Handler of STATE_SET_SERIAL_NR */
-void setSerialNr() {
-   /**
-    Writes the assigned serial number to the EEPROM.
-
-    Reads
-    -----
-    data_received
-
-    Msg to PC
-    ---------
-    PC_OK
-
-    Goes to state
-    -------------
-    STATE_ERROR : ERROR_RUNTIME
-        If this function is not called within STATE_SET_SERIAL_NR
-    STATE_ERROR : ERROR_MSG_DATA_INVALID
-        If the sent serial number is not 4 bytes long or if the
-        sent data contains bytes that do not match the decimal
-        ASCII representation of a capital letter or a number.
-    STATE_ERROR : ERROR_TIMEOUT
-        If more than 5s pass between the PC_SET_SERIAL_NR message
-        and the receipt of data.
-    STATE_SET_SERIAL_NR (stays)
-        While waiting for data from the PC
-    STATE_IDLE
-        Successfully finished
-    **/
-    if (currentState != STATE_SET_SERIAL_NR){
-        raise(ERROR_RUNTIME);
-        return;
-    }
-
-    if (not newMessage){  // waiting for data from the PC
-        checkIfTimedOut();
-        return;
-    }
-
-    // Data has arrived
-    waitingForDataFromPC = false;
-    newMessage = false;
-
-    // Check that we got 4 bytes for the serial number.
-    if (msgLength != 4){
-        raise(ERROR_MSG_DATA_INVALID);
-        return;
-    }
-
-    // Check if address only contains allowed values.
-    int address = 0;
-    byte tmp_char;
-    while(address <= 3){
-      tmp_char = data_received[address];
-      if (not ((tmp_char > 47 and tmp_char < 58)
-                || (tmp_char > 64 and tmp_char < 91))){
-        raise(ERROR_MSG_DATA_INVALID);
-        return;
-      }
-      address += 1;
-    }
-
-    address = 0;
-    while(address <= 3){
-      EEPROM.update(address, data_received[address]);
-      address += 1;
-    }
-    // Serial number is stored on EEPROM bytes with addresses 0 to 3.
-
-    encodeAndSend(PC_OK);
-    currentState = STATE_IDLE;
-}
 
 /** -------------------------- ARDUINO UTILITIES --------------------------- **/
 
