@@ -38,6 +38,7 @@ void setup()
 void loop()
 {
     uint8_t byteRead;
+    uint32_t adc_median_val = 0;
     TLE7209_Error errcode = TLE7209_NoError;
 
     delay(1000);
@@ -53,6 +54,12 @@ void loop()
     delayMicroseconds(50);
 
 
+    for(int i = 0; i < 10; i++) {
+        adc_median_val += analogReadMedian(COIL_2_ADC_INPUT);
+    }
+    Serial.print("Current ADC reading: "); Serial.println(adc_median_val / 10);
+    adc_median_val = 0;
+    // TODO: Take the average of the median (e.g. 10 samples)
     /*
     TODO:
         - Call '.set_current' method and adjust current as needed
