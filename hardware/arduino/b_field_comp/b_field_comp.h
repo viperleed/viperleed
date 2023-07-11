@@ -31,6 +31,7 @@ Date: 16.05.2023
 // Tell the compiler that 'set_signed_pwm_value' is declared in another file
 // (i.e., pwm.ino). This is necessary for the 'Coil' class declaration below
 extern byte set_signed_pwm_value(double, byte, byte*);
+extern void enable_pwm_channel(TC4_PWM_CHANNEL, bool);
 
 // Same for the TLE7209 functions used in the driver
 extern void TLE7209reset(byte);
