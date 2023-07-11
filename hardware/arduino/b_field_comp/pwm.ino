@@ -304,10 +304,10 @@ void enable_pwm_channel(TC4_PWM_CHANNEL channel, bool enable) {
 
     Notes
     -----
-    OCR4A/B/D are the registers whose values will be
-    used to determine the duty cycle of the PWM. I.e.,
-    when the TC4 counter register TCNT4 reaches the
-    values in these registers pins OC4A/B/D will toggle
+    The register values of OCR4A/B/D will determine
+    the duty cycle of the PWM: When the TC4 counter 
+    register TCNT4 reaches the values in these registers,
+    pins OC4A/B/D will toggle.
     More info: see Atmega32U4 datasheet, section 15.8.2
     **/
     switch (channel) {
