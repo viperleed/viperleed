@@ -93,11 +93,13 @@ class Coil {
         const MotorDriver driver;
 
         // Class constructor, including member initializer list
-        Coil(byte pwm, byte sign, byte spi_cs, byte disable,
-             byte _pwm_register_addr)
+        // Assign 'tc4_reg_addr', 'tc4_channel' at the earliest possible time;
+        Coil(byte pwm, byte sign, byte spi_cs, byte disable)             
            : driver(spi_cs, disable), pwm_pin(pwm),
-             pwm_register_addr(_pwm_register_addr),
-             pwm_sign_pin(sign) {};
+             pwm_sign_pin(sign) {
+            tc4_reg_addr = pin_to_tc4_reg_addr(pwm_pin);
+            tc4_pwm_channel = pin_to_tc4_channel(pwm_pin);
+        };
 
         void setup() {
             pinMode(pwm_pin, OUTPUT);
@@ -122,16 +124,17 @@ class Coil {
             return last_current_setpoint; 
         }
     private:
+        byte tc4_reg_addr;
+        TC4_PWM_CHANNEL tc4_pwm_channel;       
         const byte pwm_pin;
-        const byte pwm_register_addr;
         const byte pwm_sign_pin;
         double last_current_setpoint;
 };
 
 
 // Create two global instances of class 'Coil' with respective initializers
-Coil coil_1(COIL_1_PWM, COIL_1_SIGN, COIL_1_SPI_CS, COIL_1_DISABLE, COIL_1_PWM_REGISTER);
-Coil coil_2(COIL_2_PWM, COIL_2_SIGN, COIL_2_SPI_CS, COIL_2_DISABLE, COIL_2_PWM_REGISTER);
+Coil coil_1(COIL_1_PWM, COIL_1_SIGN, COIL_1_SPI_CS, COIL_1_DISABLE);
+Coil coil_2(COIL_2_PWM, COIL_2_SIGN, COIL_2_SPI_CS, COIL_2_DISABLE);
 
 
 #endif   // _VIPERLEED_B_FIELD_COMP
