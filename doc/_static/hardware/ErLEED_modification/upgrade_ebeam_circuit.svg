@@ -2,12 +2,12 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="210mm"
-   height="297mm"
-   viewBox="0 0 210 297"
+   width="117.01248mm"
+   height="56.962002mm"
+   viewBox="-1 -1 78.008319 37.974667"
    version="1.1"
    id="svg1"
-   inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
+   inkscape:version="1.3-beta (cedbd6c6ff, 2023-05-28)"
    sodipodi:docname="upgrade_ebeam_circuit.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -21,32 +21,32 @@
      borderopacity="1.0"
      inkscape:showpageshadow="2"
      inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
+     inkscape:pagecheckerboard="false"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showguides="false"
-     inkscape:zoom="1.8940301"
-     inkscape:cx="238.90856"
-     inkscape:cy="305.69737"
+     inkscape:zoom="1"
+     inkscape:cx="290.5"
+     inkscape:cy="119.5"
      inkscape:window-width="1680"
      inkscape:window-height="987"
      inkscape:window-x="-8"
      inkscape:window-y="17"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="layer2"
      showgrid="false">
     <sodipodi:guide
-       position="24.083388,242.41561"
+       position="-2.030188,16.471061"
        orientation="1,0"
        id="guide56"
        inkscape:locked="false" />
     <sodipodi:guide
-       position="103.13745,236.69686"
+       position="50.672518,12.658562"
        orientation="1,0"
        id="guide71"
        inkscape:locked="false" />
     <sodipodi:guide
-       position="63.606297,205.58507"
+       position="24.318417,-8.0826309"
        orientation="1,0"
        id="guide77"
        inkscape:locked="false" />
@@ -56,14 +56,14 @@
     <rect
        x="195"
        y="458"
-       width="298.78701"
-       height="43.707106"
+       width="298.78702"
+       height="43.707108"
        id="rect69" />
     <rect
        x="127.98633"
-       y="352.13918"
-       width="160.15969"
-       height="47.729708"
+       y="352.13919"
+       width="160.15968"
+       height="47.72971"
        id="rect68" />
     <marker
        style="overflow:visible"
@@ -73,8 +73,8 @@
        orient="auto-start-reverse"
        inkscape:stockid="Triangle arrow"
        markerWidth="5.3244081"
-       markerHeight="6.15538509"
-       viewBox="0 0 5.3244081 6.15538509"
+       markerHeight="6.155385"
+       viewBox="0 0 5.3244081 6.1553851"
        inkscape:isstock="true"
        inkscape:collect="always"
        preserveAspectRatio="xMidYMid">
@@ -92,8 +92,8 @@
        orient="auto-start-reverse"
        inkscape:stockid="Triangle arrow"
        markerWidth="5.3244081"
-       markerHeight="6.15538509"
-       viewBox="0 0 5.3244081 6.15538509"
+       markerHeight="6.155385"
+       viewBox="0 0 5.3244081 6.1553851"
        inkscape:isstock="true"
        inkscape:collect="always"
        preserveAspectRatio="xMidYMid">
@@ -126,16 +126,17 @@
     <rect
        x="195"
        y="458"
-       width="298.78701"
+       width="298.78702"
        height="150.70711"
        id="rect74" />
   </defs>
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
-     id="layer1">
+     id="layer1"
+     transform="translate(-27.12867,-24.328486)">
     <rect
-       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.264583;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;stroke-dasharray:0.79374898,0.79374898;stroke-dashoffset:0.63499918;stroke-opacity:1"
+       style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.264583;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;stroke-dasharray:0.793749, 0.793749;stroke-dashoffset:0.634999;stroke-opacity:1"
        id="rect78"
        width="8.6967888"
        height="24.817469"
@@ -195,7 +196,7 @@
        y="34.291878"
        id="text13"><tspan
          sodipodi:role="line"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';stroke-width:0.264583;fill:#0064ff;fill-opacity:1"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';fill:#0064ff;fill-opacity:1;stroke-width:0.264583"
          x="51.595261"
          y="34.291878"
          id="tspan14">R</tspan></text>
@@ -206,7 +207,7 @@
        y="45.695168"
        id="text15"><tspan
          sodipodi:role="line"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';stroke-width:0.264583;fill:#0064ff;fill-opacity:1"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';fill:#0064ff;fill-opacity:1;stroke-width:0.264583"
          x="51.595261"
          y="45.695168"
          id="tspan15">R</tspan></text>
@@ -278,7 +279,7 @@
        y="40.165104"
        id="text29"><tspan
          sodipodi:role="line"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';stroke-width:0.264583;fill:#0064ff;fill-opacity:1"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';fill:#0064ff;fill-opacity:1;stroke-width:0.264583"
          x="66.527901"
          y="40.165104"
          id="tspan29">Beam HV</tspan></text>
@@ -289,7 +290,7 @@
        y="33.955906"
        id="text30"><tspan
          sodipodi:role="line"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';stroke-width:0.264583;fill:#0064ff;fill-opacity:1"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';fill:#0064ff;fill-opacity:1;stroke-width:0.264583"
          x="42.226582"
          y="33.955906"
          id="tspan30">I<tspan
@@ -336,12 +337,12 @@
        y="26.472712"
        id="text40"><tspan
          sodipodi:role="line"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';text-align:center;baseline-shift:baseline;text-anchor:middle;stroke-width:0.264583;fill:#0064ff;fill-opacity:1"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';text-align:center;baseline-shift:baseline;text-anchor:middle;fill:#0064ff;fill-opacity:1;stroke-width:0.264583"
          x="52.806061"
          y="26.472712"
          id="tspan77">Modification of your</tspan><tspan
          sodipodi:role="line"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';text-align:center;baseline-shift:baseline;text-anchor:middle;stroke-width:0.264583;fill:#0064ff;fill-opacity:1"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';text-align:center;baseline-shift:baseline;text-anchor:middle;fill:#0064ff;fill-opacity:1;stroke-width:0.264583"
          x="52.806061"
          y="30.000486"
          id="tspan78">LEED electronics</tspan></text>
@@ -362,10 +363,29 @@
              id="tspan43" /></tspan></tspan></text>
     <text
        xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:2.82222px;line-height:1.25;font-family:sans-serif;white-space:pre;inline-size:72.3127;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="24.083387"
+       y="83.206436"
+       id="text61" />
+    <text
+       xml:space="preserve"
+       transform="scale(0.26458333)"
+       id="text68"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.6667px;line-height:1.25;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';text-align:justify;white-space:pre;shape-inside:url(#rect68);display:inline;fill:#000000;fill-opacity:1;stroke:none" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Text"
+     style="display:none"
+     transform="translate(-3.877857)">
+    <text
+       xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:2.82222px;line-height:1.5;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
        x="24.083387"
        y="128.42299"
-       id="text44"><tspan
+       id="text44"
+       transform="translate(-23.250813,-24.328486)"><tspan
          sodipodi:role="line"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;line-height:1.5;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';stroke-width:0.264583"
          x="24.083387"
@@ -395,7 +415,7 @@
    style="font-size:65%;baseline-shift:sub"
    id="tspan87">0</tspan> is dominated by the energy ramp.</tspan></text>
     <g
-       transform="matrix(0.282222,0,0,0.282222,33.608321,67.806963)"
+       transform="matrix(0.28222199,0,0,0.28222199,10.357508,43.478477)"
        ns41:version="1.8.2"
        ns41:texconverter="xelatex"
        ns41:pdfconverter="inkscape"
@@ -846,147 +866,132 @@
     </g>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:2.82222px;line-height:1.25;font-family:sans-serif;white-space:pre;inline-size:72.3127;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="24.083387"
-       y="83.206436"
-       id="text61" />
-    <text
-       xml:space="preserve"
-       transform="scale(0.26458333)"
-       id="text68"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.6667px;line-height:1.25;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';text-align:justify;white-space:pre;shape-inside:url(#rect68);display:inline;fill:#000000;fill-opacity:1;stroke:none" />
-    <text
-       xml:space="preserve"
-       transform="matrix(0.26458333,0,0,0.26458333,-27.510361,-44.383854)"
+       transform="matrix(0.26458333,0,0,0.26458333,-50.761174,-68.712341)"
        id="text69"
        style="font-style:normal;font-weight:normal;font-size:10.6667px;line-height:1.25;font-family:sans-serif;text-align:justify;white-space:pre;shape-inside:url(#rect69);display:inline;fill:#000000;fill-opacity:1;stroke:none"
        x="0"
        y="0"><tspan
          x="195"
          y="467.43753"
-         id="tspan1007"><tspan
+         id="tspan79"><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan995">where </tspan><tspan
+           id="tspan71">where </tspan><tspan
            dx="2.1625869"
            style="font-style:italic"
-           id="tspan997">ε</tspan><tspan
+           id="tspan72">ε</tspan><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan999"> </tspan><tspan
+           id="tspan73"> </tspan><tspan
            dx="2.1625907 0 0 2.1625869 0 0 0 2.1625907 0 0 0 0 0 0 0 0 2.1625869 0 0 0 0 0 0 0 0 0 0 2.1625869 0 0 0 0 0 0 0 2.1625869 0 0 0 2.1625869"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1001">is the relative difference between the two </tspan><tspan
+           id="tspan74">is the relative difference between the two </tspan><tspan
            dx="2.1625717"
            style="font-style:italic"
-           id="tspan1003">R</tspan><tspan
+           id="tspan75">R</tspan><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1005"> </tspan></tspan><tspan
+           id="tspan76"> </tspan></tspan><tspan
          x="195"
          y="480.7709"
-         id="tspan1011"><tspan
+         id="tspan82"><tspan
            dx="0 0 0 0 0 0 0 0 0 0 0 0.54684138 0 0.54684901 0 0 0.54684138 0 0 0 0 0 0 0 0 0 0 0.54683375 0 0 0 0.54683375 0 0 0.54684901 0 0.54684901 0 0 0 0 0 0 0.54684901 0 0 0 0.54684901"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1009">resistors. A 1% difference and 20 V across the filament </tspan></tspan><tspan
+           id="tspan81">resistors. A 1% difference and 20 V across the filament </tspan></tspan><tspan
          x="195"
          y="494.10428"
-         id="tspan1015"><tspan
+         id="tspan84"><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1013">cause a 50 meV offset in the energy calibration.</tspan></tspan></text>
+           id="tspan83">cause a 50 meV offset in the energy calibration.</tspan></tspan></text>
     <text
        xml:space="preserve"
-       transform="matrix(0.26458333,0,0,0.26458333,-27.510361,-31.551562)"
+       transform="matrix(0.26458333,0,0,0.26458333,-50.761174,-55.880047)"
        id="text74"
        style="font-style:normal;font-weight:normal;font-size:10.6667px;line-height:1.25;font-family:sans-serif;text-align:justify;white-space:pre;shape-inside:url(#rect74);display:inline;fill:#000000;fill-opacity:1;stroke:none"
        x="0"
        y="0"><tspan
          x="195"
          y="467.43753"
-         id="tspan1029"><tspan
+         id="tspan103"><tspan
            dx="0 0 0 0 0.73590732"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1017">The smaller </tspan><tspan
+           id="tspan95">The smaller </tspan><tspan
            dx="0.73590541"
            style="font-style:italic"
-           id="tspan1019">R</tspan><tspan
+           id="tspan96">R</tspan><tspan
            dx="0 0.73590541 0 0 0 0 0 0 0 0 0.73590541"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1021"> relative to </tspan><tspan
+           id="tspan98"> relative to </tspan><tspan
            dx="0.73590541"
            style="font-style:italic"
-           id="tspan1023">R</tspan><tspan
+           id="tspan100">R</tspan><tspan
            style="font-size:65%;baseline-shift:sub"
-           id="tspan1025">ViPErLEED</tspan><tspan
+           id="tspan101">ViPErLEED</tspan><tspan
            dx="0 0 0.73590541 0 0 0 0.73590541 0 0 0 0 0 0 0 0.73590541 0 0 0 0.73592067"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1027">, the smaller the gain </tspan></tspan><tspan
+           id="tspan102">, the smaller the gain </tspan></tspan><tspan
          x="195"
          y="480.7709"
-         id="tspan1037"><tspan
+         id="tspan107"><tspan
            dx="0 0 0 0 0 0 0.76768184 0 0 0.76768184 0 0 0 0.76768184 0 0 0 0 0 0 0.76768184 0 0 0 0 0 0 0 0 0 0 0 0 0.76767421 0 0 0 0 0.76768947"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1031">error of the energy calibration: with 330 </tspan><tspan
+           id="tspan104">error of the energy calibration: with 330 </tspan><tspan
            dx="0.76767421"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1033">Ω, </tspan><tspan
+           id="tspan105">Ω, </tspan><tspan
            dx="0.76768947 0 0 0 0.76768947 0 0 0 0 0 0.76767421"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1035">the error is </tspan></tspan><tspan
+           id="tspan106">the error is </tspan></tspan><tspan
          x="195"
          y="494.10428"
-         id="tspan1045"><tspan
+         id="tspan111"><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1039">~1×10</tspan><tspan
+           id="tspan108">~1×10</tspan><tspan
            style="font-size:65%;baseline-shift:super"
-           id="tspan1041">−5</tspan><tspan
+           id="tspan109">−5</tspan><tspan
            dx="0 0 4.4112368 0 0 4.4112368 0 0 0 4.4112444 0 0 4.4112368 0 0 4.4112368 0 0 0 0 4.4112444 0 0 0 4.4112368 0 0 0 0 0 0 0 0 4.4112368 0 0 4.4112368"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1043">, or 0.1 eV at 1000 eV. However, do not </tspan></tspan><tspan
+           id="tspan110">, or 0.1 eV at 1000 eV. However, do not </tspan></tspan><tspan
          x="195"
          y="507.43765"
-         id="tspan1053"><tspan
+         id="tspan115"><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1047">choose </tspan><tspan
+           id="tspan112">choose </tspan><tspan
            style="font-style:italic"
-           id="tspan1049">R</tspan><tspan
+           id="tspan113">R</tspan><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1051"> too small, as
-</tspan></tspan><tspan
+           id="tspan114"> too small, as&#10;</tspan></tspan><tspan
          x="195"
          y="520.77103"
-         id="tspan1057"><tspan
+         id="tspan117"><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1055">
-</tspan></tspan><tspan
+           id="tspan116">&#10;</tspan></tspan><tspan
          x="195"
          y="534.1044"
-         id="tspan1061"><tspan
+         id="tspan119"><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1059">
-</tspan></tspan><tspan
+           id="tspan118">&#10;</tspan></tspan><tspan
          x="195"
          y="547.43777"
-         id="tspan1065"><tspan
+         id="tspan121"><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1063">
-</tspan></tspan><tspan
+           id="tspan120">&#10;</tspan></tspan><tspan
          x="195"
          y="560.77115"
-         id="tspan1069"><tspan
+         id="tspan123"><tspan
            dx="0 0 0 0 0 0.23538852 0 0 0 0 0.23539042 0 0 0.23538661 0 0 0.23538661 0 0 0 0 0 0 0 0 0 0 0 0 0.23538661 0 0 0 0 0.23538661 0 0 0.23538661 0 0 0 0 0.23538661 0 0 0.23540187 0 0.23537135"
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1067">when Beam HV is disconnected (~30 mA with 20 V and </tspan></tspan><tspan
+           id="tspan122">when Beam HV is disconnected (~30 mA with 20 V and </tspan></tspan><tspan
          x="195"
          y="574.10452"
-         id="tspan1079"><tspan
+         id="tspan128"><tspan
            style="font-style:italic"
-           id="tspan1071">R</tspan><tspan
+           id="tspan124">R</tspan><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1073"> = 330 </tspan><tspan
+           id="tspan125"> = 330 </tspan><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1075">Ω, </tspan><tspan
+           id="tspan126">Ω, </tspan><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan1077">i.e., ~0.3 W).</tspan></tspan></text>
+           id="tspan127">i.e., ~0.3 W).</tspan></tspan></text>
     <g
-       transform="matrix(0.282222,0,0,0.282222,50.712852,105.53862)"
+       transform="matrix(0.28222199,0,0,0.28222199,27.462039,81.210135)"
        ns41:version="1.8.2"
        ns41:texconverter="xelatex"
        ns41:pdfconverter="inkscape"
@@ -1291,7 +1296,8 @@
        style="font-style:normal;font-weight:normal;font-size:2.82222px;line-height:1.25;font-family:sans-serif;baseline-shift:baseline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
        x="39.276558"
        y="61.394775"
-       id="text80"><tspan
+       id="text80"
+       transform="translate(-23.250813,-24.328486)"><tspan
          sodipodi:role="line"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222px;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';text-align:center;baseline-shift:baseline;text-anchor:middle;stroke-width:0.264583"
          x="39.276558"
