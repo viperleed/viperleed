@@ -21,8 +21,6 @@ void setup()
         delay(2000);                  // The IDE needs some time to connect to the Serial Monitor
     #endif
 
-    enable_pwm_channel(TC4_PWM_CH_D, true);         // Enable PWM on OC4D/PD7/Pin 6 ('COIL_1_PWM')
-    enable_pwm_channel(TC4_PWM_CH_B, true);         // Enable PWM on OC4B/PB6/Pin 10 ('COIL_2_PWM')    
     set_pwm_frequency(20000);                       // Also enable Fast PWM mode on Timer/Counter4
 
     coil_1.setup();                                 // Define PWM output pins, enable PWM channels

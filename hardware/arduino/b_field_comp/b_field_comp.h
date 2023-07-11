@@ -107,6 +107,7 @@ class Coil {
             driver.reset();
             driver.setup();
             set_current(0.0);            
+            enable_pwm_channel(tc4_pwm_channel, true);      
         };
 
         byte set_current(double coil_current) {
