@@ -88,6 +88,7 @@ byte set_pwm_frequency(double f_pwm) {
   
   if (f_pwm < F_PWM_MIN || f_pwm > F_PWM_MAX) return 1;
 
+  enable_fast_pwm_mode();
   // Calculate the TC4 clock prescaler: Use the smallest possible prescaler
   // which will result in the highest achievable PWM resolution, i.e. make
   // OCR4C as large as possible. Note: Some TC4 registers such as OCR4C are

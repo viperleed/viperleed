@@ -22,7 +22,6 @@ void setup()
     #endif
 
     set_pwm_frequency(20000);
-    enable_fast_pwm_mode();
     enable_pwm_channel(TC4_PWM_CH_D, true);         // Enable PWM on OC4D/PD7/Pin 6 ('COIL_1_PWM')
     enable_pwm_channel(TC4_PWM_CH_B, true);         // Enable PWM on OC4B/PB6/Pin 10 ('COIL_2_PWM')    
 
