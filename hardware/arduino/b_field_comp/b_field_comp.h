@@ -49,6 +49,7 @@ extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte *);
 #define COIL_2_PWM              10   // PWM output 1, i.e., voltage value; Also A10; PB6 on Atmega32U4                          //  DO NOT CHANGE (OC4B PWM output)
 #define COIL_2_DISABLE          22   // Could later on be an alias of signal "COIL_2_SIGN"
 #define COIL_2_PWM_REGISTER     FAST_PWM_CH_2_REG  // WARNING: this is directly related to the choice of COIL_2_PWM
+#define COIL_2_ADC_INPUT        23
 
 // Current direction: positive or negative?
 #define COIL_1_SIGN             18  // Used for INA on shunt; PF7 on ATmega32U4
