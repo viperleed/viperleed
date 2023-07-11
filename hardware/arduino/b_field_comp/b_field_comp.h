@@ -111,14 +111,19 @@ class Coil {
         byte set_current(double coil_current) {
             return set_signed_pwm_value(coil_current, pwm_sign_pin,
                                         pwm_register_addr);
+            last_current_setpoint = coil_current;
         };
 
+        double get_current() {
+            return last_current_setpoint; 
+        }
     private:
         // Once the constructor has been called, 'pwm_pin' will be
         // initialized with the desired coil (COIL_1_PWM, COIL_2_PWM)
         const byte pwm_pin;
         const byte pwm_register_addr;
         const byte pwm_sign_pin;
+        double last_current_setpoint;
 };
 
 
