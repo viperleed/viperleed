@@ -137,19 +137,19 @@ byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr
     -------
     error_code : byte
         0 for no error
-        2 for coil_current out-of-range
+        2 for 'value' (aka coil current) out-of-range
     **/
     if (value < -1.0 || value > 1.0) return 2;                                      // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
 
-  // Notice that the 'coil_current', i.e. the time-averaged value of the signal
-  // from the PWM, is exactly the same as the duty cycle of the PWM itself.
-  // First, set or clear an I/O pin depending on the current direction;
-  // Then set the PWM duty cycle for 'COIL_1' or 'COIL_2' at 'tc4_reg_addr':
-  // The duty cycle is the desired ON time in percent, i.e. 'coil_current'
-  // times the PWM period measured in TC4 clock ticks.
   set_current_sign(value, sign_select_pin);
   set_ten_bit_value(value * pwm_period, tc4_reg_addr);
   return 0;
+    // Notice that the 'coil_current', i.e. the time-averaged value of the signal
+    // from the PWM, is exactly the same as the duty cycle of the PWM itself.
+    // First, set or clear an I/O pin depending on the current direction;
+    // Then set the PWM duty cycle for 'COIL_1' or 'COIL_2' at 'tc4_reg_addr':
+    // The duty cycle is the desired ON time in percent, i.e. 'coil_current'
+    // times the PWM period measured in TC4 clock ticks.
 }
 
 

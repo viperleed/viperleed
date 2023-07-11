@@ -26,7 +26,7 @@ void setup()
     enable_pwm_channel(TC4_PWM_CH_D, true);         // Enable PWM on OC4D/PD7/Pin 6 ('COIL_1_PWM')
     enable_pwm_channel(TC4_PWM_CH_B, true);         // Enable PWM on OC4B/PB6/Pin 10 ('COIL_2_PWM')    
 
-    coil_1.setup();                                 // Define PD7 and PB6 as output (used for PWM)
+    coil_1.setup();                                 // Define PWM output pins, enable PWM channels
     coil_2.setup();                                 // The setup method also sets the current to 0
 
     coil_1.set_current(0.625);                      // Make sure to call .set_current *after* .setup

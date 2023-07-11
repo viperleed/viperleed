@@ -29,7 +29,7 @@ Date: 16.05.2023
 
 
 // Tell the compiler that 'set_signed_pwm_value' is declared in another file
-// (i.e., pwm.ino). This is necessary for the Coil class declaration below
+// (i.e., pwm.ino). This is necessary for the 'Coil' class declaration below
 extern byte set_signed_pwm_value(double, byte, byte*);
 
 // Same for the TLE7209 functions used in the driver
@@ -39,7 +39,7 @@ extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte *);
 
 
 // The pins belonging to 'COIL_1_PWM' and 'COIL_2_PWM' should not be changed.
-// Changing these may require choosing a different timer/counter module, e.g.
+// Changing these may require choosing a different Timer/Counter module, e.g.
 // TC1 or TC3 instead of the currently used TC4.
 #define COIL_1_PWM               6   // PWM output 1, i.e., voltage value; Also A7;  PD7 on Atmega32U4                          //  DO NOT CHANGE (OC4D PWM output)
 #define COIL_1_DISABLE          21   // Could later on be an alias of signal "COIL_1_SIGN"
