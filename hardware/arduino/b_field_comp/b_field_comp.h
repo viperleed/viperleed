@@ -109,8 +109,10 @@ class Coil {
         };
 
         byte set_current(double coil_current) {
-            return set_signed_pwm_value(coil_current, pwm_sign_pin,
-                                        pwm_register_addr);
+            byte err = set_signed_pwm_value(coil_current, pwm_sign_pin,
+                                        tc4_reg_addr);
+            if(err)
+                return err;
             last_current_setpoint = coil_current;
         };
 
