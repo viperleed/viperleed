@@ -31,6 +31,7 @@ void setup()
 
     SPI.begin();                                    // Initialize the SPI bus (SCK and MOSI as OUTPUT)
     pinMode(MISO, INPUT);                           // MISO = pin PB3
+    analogReference(INTERNAL);                      // Also enable 2.56 bandgap reference on Aref
 }
 
 

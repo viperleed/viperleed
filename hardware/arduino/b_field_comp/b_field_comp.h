@@ -122,8 +122,6 @@ class Coil {
             return last_current_setpoint; 
         }
     private:
-        // Once the constructor has been called, 'pwm_pin' will be
-        // initialized with the desired coil (COIL_1_PWM, COIL_2_PWM)
         const byte pwm_pin;
         const byte pwm_register_addr;
         const byte pwm_sign_pin;
