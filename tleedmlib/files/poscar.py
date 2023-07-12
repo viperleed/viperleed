@@ -5,6 +5,7 @@ Created on Tue Aug 18 17:27:46 2020
 
 @author: Florian Kraushofer
 @author: Michele Riva (refactor on 2023-01-16)
+@author: Alexander M. Imre
 
 Functions for reading and writing POSCAR files. Also defines the
 POSCARError specific exception, as well as some subclasses.
@@ -564,5 +565,5 @@ class POSCARWriter(AbstractContextManager):
                 _free_dir = 'locked'
             else:
                 _free_dir = 'free'
-            line += f"{_free_dir:>12}
+            line += f"{_free_dir:>12}"
             yield line
