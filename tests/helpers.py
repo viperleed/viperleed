@@ -35,7 +35,7 @@ _EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
                                 ("POSCAR_36C_cm", 36,'cm', 0),
                                 ("POSCAR_Fe3O4_SCV", 83, 'cmm', 50)]            #TODO: Phaseshift generation fails. Why? @Fkraushofer (worked in fkpCurie:Florian_OldLocalTests/Fe3O4-001-SCV/history/t000.r013_211220-133452)
 
-_EXAMPLE_POSCARs = [example[0] for example in _EXAMPLE_POSCAR_EXPECTATIONS]
+_EXAMPLE_POSCARs = [file.name for file in _POSCARs_PATH.glob('POSCAR*')]
 
 
 @pytest.fixture()
