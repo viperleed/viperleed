@@ -22,7 +22,7 @@ try:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     # import matplotlib.ticker as plticker
-    plt.style.use('viperleed/tleedmlib/tleedm.mplstyle')
+    plt.style.use('viperleed.tleedm')
 except Exception:
     _CAN_PLOT = False
 else:
