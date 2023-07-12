@@ -97,11 +97,15 @@ class R_Error():
             unphysical.
         """
         if self.r_type != 1:
-            raise ValueError("Var(R) can only be calculated when using the ")
+            raise ValueError("Var(R) can only be calculated when using the "
+                             "Pendry R-factor.")
         if not isinstance(v0i, float) and isinstance(energy_range, float):
             raise ValueError("v0i and energy_range must be float values.")
         if v0i<= 0 or energy_range <= 0:
             raise ValueError("v0i and energy range must be positive ")
+        if not self.rfacs:
+            raise ValueError("Cannot calculate variance of R-factor without "
+                             "stored R-factors.")
         self.var_r = np.sqrt(8*np.abs(v0i) / energy_range) * self.get_r_min
 
 
