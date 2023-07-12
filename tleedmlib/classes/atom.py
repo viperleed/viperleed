@@ -142,7 +142,7 @@ class Atom:
             self.dispInitialized = True
             self.disp_vib = {"all": [0.]}
             self.disp_geo = {"all": [np.zeros(3)]}
-            self.disp_occ = {"all": [1.0]}
+            self.disp_occ = {}
             self.disp_center_index = {"vib": {"all": 0},
                                       "geo": {"all": 0},
                                       "occ": {}}
