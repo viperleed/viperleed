@@ -848,10 +848,10 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 if subl[0].capitalize() in sl.chemelem:
                     targetel = subl[0]
                 else:
-                    logger.warning('DISPLACEMENTS file: '+subl[0]+' not '
+                    logger.error('DISPLACEMENTS file: '+subl[0]+' not '         # TODO: This should probably raise an exception
                                    'found in element list. No assignment '
                                    'will be made.')
-                    rp.setHaltingLevel(1)
+                    rp.setHaltingLevel(2)
                     continue
                 for (at, _) in targetAtEls:
                     if targetel in at.disp_occ:
