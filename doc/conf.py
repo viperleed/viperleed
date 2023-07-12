@@ -12,7 +12,7 @@ import sphinx_rtd_theme
 project = 'ViPErLEED'
 copyright = f'{datetime.date.today().year}, ViPErLEED-developers'
 author = 'ViPErLEED-developers'
-release = '0.9.0'
+release = '0.10.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

@@ -285,7 +285,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
 
     # Get temporary parameters object
     rparams = readPARAMETERS(parameters_file)
-    interpretPARAMETERS(rparams, slab=slab)
+    interpretPARAMETERS(rparams, slab=slab, silent=False)
 
     # We are ready to run ViPErLEED! Have fun!
     try:

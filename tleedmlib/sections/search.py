@@ -3,48 +3,46 @@
 """
 Created on Aug 11 2020
 
-@author: Florian Kraushofer, Alexander M. Imre, Michele Riva
+@author: Florian Kraushofer
+@author: Alexander M. Imre
+@author: Michele Riva
 
 Tensor LEED Manager section Search
 """
 
-import os
-import sys
+from collections import Counter
+import copy
 import logging
+import os
+from pathlib import Path
+import re
 import shutil
+import signal
 import subprocess
+import sys
 import time
 from timeit import default_timer as timer
-import numpy as np
-import signal
-import re
-import copy
-from pathlib import Path
 
+import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 import scipy
 
-from viperleed.tleedmlib.leedbase import copy_compile_log
-
-import viperleed.tleedmlib.files.iosearch as tl_io
-import viperleed.tleedmlib as tl
-# from tleedmlib.polynomialfeatures_no_interaction import PolyFeatNoMix
-from viperleed.tleedmlib.leedbase import fortran_compile_batch
-from viperleed.tleedmlib.files.parameters import updatePARAMETERS
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.checksums import validate_multiple_files
+from viperleed.tleedmlib.classes.rparams import SearchPar
+from viperleed.tleedmlib.files import iosearch as tl_io
+from viperleed.tleedmlib.files import searchpdf
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
-from viperleed.tleedmlib.files.searchpdf import (
-    writeSearchProgressPdf, writeSearchReportPdf)
+from viperleed.tleedmlib.files.parameters import updatePARAMETERS
+
 
 logger = logging.getLogger("tleedm.search")
 
 
 def processSearchResults(sl, rp, search_log_path, final=True):
-    """
-    Looks at the final block in the SD.TL file and gets the data from the
-    best structure in into the slab.
+    """Read the best structure from the last block of 'SD.TL' into a slab.
 
     Parameters
     ----------
@@ -63,196 +61,250 @@ def processSearchResults(sl, rp, search_log_path, final=True):
 
     Returns
     -------
-    None
+    None.
     """
+    # Read search log if available, and check for errors
+    _check_search_log(search_log_path)
+
     # get the last block from SD.TL:
+    wait_time = 5 if not final else 20
     try:
-        lines = tl_io.readSDTL_end(n_expect=rp.SEARCH_POPULATION)
-    except FileNotFoundError:
-        logger.error("Could not process Search results: SD.TL file not "
-                     "found.")
-        raise
-    except Exception:
-        logger.error("Failed to get last block from SD.TL file.")
-        raise
-    # read search log if available and check for errors:
-    if search_log_path is not None:
-        gen_err_msg = ("Execution will continue, but TensErLEED errors "
-                      "related to the search may not be detected "
-                      "properly.")
-        try:
-            with open(search_log_path, "r") as search_log:
-                log_content = search_log.read()
-            check_search_log_content(log_content)  # may raise RuntimeError
-        except OSError:
-            logger.error(f"Could not read search logfile {search_log_path}. "
-                         f"{gen_err_msg}")
-    # read the block
-    sdtlContent = tl_io.readSDTL_blocks("\n".join(lines),
-                                        whichR=rp.SEARCH_BEAMS, logInfo=final,
-                                        n_expect=rp.SEARCH_POPULATION)
-    if not sdtlContent:
+        sdtl_content = tl_io.repeat_fetch_SDTL_last_block(which_beams=rp.SEARCH_BEAMS,
+                                           expected_params=rp.SEARCH_POPULATION,
+                                           final=final, wait_time=wait_time)
+    except tl_io.SearchIOEmptyFileError as err:
         if final:
             logger.error("No data found in SD.TL file!")
             rp.setHaltingLevel(2)
-        raise RuntimeError("No data in SD.TL")
-    (generation, rfacs, configs) = sdtlContent[0]
-    # collect equal entries
-    pops = []  # tuples (rfactor, list of parameter indices)
-    popcount = []   # how often a given population is there
-    dparlist = []   # for control.chem
-    for i in range(0, len(rfacs)):
-        if (rfacs[i], configs[i]) in pops:
-            popcount[pops.index((rfacs[i], configs[i]))] += 1
-        else:
-            pops.append((rfacs[i], configs[i]))
-            popcount.append(1)
-        dparlist.append(configs[i])
-    writeControlChem = False
+        raise RuntimeError("No data in SD.TL") from err
+    except tl_io.SearchIORaceConditionError:
+        return  # if we can't find a block, we also can't store it.
+
+    (generation, rfactors, configs), *_ = sdtl_content
+
+    assert len(rfactors) == len(configs)                                        # TODO: catch and complain. Previous version would pick only the first len(rfactors) configs, but the two should hopefully be the same length.
+    writeControlChem = False                                                    # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
     if not os.path.isfile("control.chem"):
         writeControlChem = True
+    _write_control_chem(rp, generation, configs)
+
+    # Collect populations by (r-factor, parameter indices) pairs
+    populations = Counter(zip(rfactors, configs))
+    if final:
+        _write_info_to_log(rp, populations)
+
+
+    # Pick only the best configuration (possibly for multiple
+    # domains): it is the one with the highest R factor, i.e.,
+    # the first one. best_doms is a list of pairs (domain_area,
+    # domain_parameters) for each domain under variation
+    best_doms = configs[0]
+    if rp.domainParams:
+        doms_info = ((dp.sl, dp.rp, dp.workdir, dp.name)
+                     for dp in rp.domainParams)
     else:
+        doms_info = ((sl, rp, Path.cwd(), ""),)
+
+    # Finally write out the best structures
+    home = Path.cwd()
+    for (*dom_info, work, name), (_, dom_config) in zip(doms_info, best_doms):
+        os.chdir(work)
+        try:
+            _store_and_write_best_structure(rp, *dom_info,
+                                            dom_config, final)
+        except Exception:                                                       # TODO: catch better
+            _err = "Error while writing search output"
+            if name:
+                _err += f" for domain {name}"
+            logger.error(_err, exc_info=rp.is_debug_mode)
+            rp.setHaltingLevel(2)
+            raise
+        finally:
+            os.chdir(home)
+
+
+def _write_control_chem(rp, generation, configs):
+    """Store information in configs in rp, and write it to file if needed."""
+    _ctrl_chem_p = Path("control.chem")
+    _write_file = not _ctrl_chem_p.is_file()
+    if not _write_file:
         # check file, which generation
         try:
-            with open("control.chem", "r") as rf:
-                rf.readline()  # first line is empty.
-                s = rf.readline()
-                s = s.split("No.")[-1].split(":")[0]
-                if int(s) != generation:
-                    writeControlChem = True
-                if len(rf.readlines()) < rp.SEARCH_POPULATION:
-                    writeControlChem = True
-        except Exception:
+            with _ctrl_chem_p.open("r", encoding="utf-8") as control_chem:
+                _, header, *other_lines = control_chem
+        except (OSError, ValueError):
             # try overwriting, just to be safe
-            writeControlChem = True
-    # write backup file
-    output = ("\nParameters of generation No." + str(generation).rjust(6)
-              + ":\n")
-    if rp.domainParams:
-        astep = rp.DOMAIN_STEP
-    else:
-        astep = 100
+            _write_file = True
+        else:
+            try:
+                gen_nr = int(header.split("No.")[-1].split(":")[0])
+            except (IndexError, ValueError):
+                _write_file = True
+            else:
+                _write_file = (gen_nr != generation
+                               or len(other_lines) < rp.SEARCH_POPULATION)
+
+    # Prepare lines to store as backup, and perhaps write to file
+    lines = ["\n",  # Starts with one empty line
+             f"Parameters of generation No.{generation:>6d}:\n"]
+    astep = rp.DOMAIN_STEP if rp.domainParams else 100
     if rp.TL_VERSION < 1.7:
         ctrl_width = 3
     else:
         ctrl_width = 4
-    for dpars in dparlist:
-        ol = ""
-        areapars = []
-        for (percent, l) in dpars:
-            for ind in l:
-                ol += str(ind).rjust(ctrl_width)
-            areapars.append(int(percent/astep)+1)
-        for ap in areapars:
-            ol += str(ap).rjust(ctrl_width)
-        output += ol + "\n"
-    rp.controlChemBackup = output
-    if writeControlChem:
-        try:
-            with open("control.chem", "w") as wf:
-                wf.write(output)
-        except Exception:
-            logger.error("Failed to write control.chem")
-            rp.setHaltingLevel(1)
+    for dom_pars in configs:
+        areapars = (int(percent/astep) + 1 for percent, _ in dom_pars)
+        lines.append(
+            "".join(f"{i:>{ctrl_width}d}" for _, par in dom_pars for i in par)
+            + "".join(f"{a:>{ctrl_width}d}" for a in areapars) + "\n"
+            )
+    rp.controlChemBackup = "".join(lines)
+    if not _write_file:
+        return
+    try:
+        with _ctrl_chem_p.open("w", encoding="utf-8") as control_chem:
+            control_chem.writelines(lines)                                      # TODO: I don't think we should do this at all. We might mess with the fortran subprocess that is trying to write to the file.
+    except Exception:
+        logger.error("Failed to write control.chem")
+        rp.setHaltingLevel(1)
 
-    # info for log:
-    maxpop = max(popcount)
-    if final:
-        if len(pops) == 1:
-            logger.info("All trial structures converged to the same "
-                        "configuration (R = {:.4f})".format(pops[0][0]))
-        elif any([v > rp.SEARCH_POPULATION/2 for v in popcount]):
-            info = ("The search outcome is dominated by one configuration "
-                    "(population {} of {}, R = {:.4f})\n".format(
-                        maxpop, rp.SEARCH_POPULATION,
-                        pops[popcount.index(maxpop)][0]))
-        else:
-            info = ("The search outcome is not dominated by any "
-                    "configuration. The best result has population {} (of {})"
-                    ", R = {:.4f}\n".format(popcount[0], rp.SEARCH_POPULATION,
-                                            pops[0][0]))
-        if len(pops) > 1:
-            info += ("The best configurations are:\nPOP       R |")
-            if rp.domainParams:
-                info += " area |"
-            info += " PARAMETERS\n"
-            for i in range(0, min(5, len(pops))):
-                for (j, (percent, pars)) in enumerate(pops[i][1]):
-                    if j == 0:
-                        info += "{:>3}  {:.4f} |".format(popcount[i],
-                                                         pops[i][0])
-                    else:
-                        info += "            |"
-                    if rp.domainParams:
-                        info += " {:>3}% |".format(percent)
-                    for v in pars:
-                        info += "{:>3}".format(v)
-                    info += "\n"
-            logger.info(info)
-    # now writeSearchOutput:
-    if not rp.domainParams:
-        # the order here matters, as the final write operation will store the
-        #  new states (for later searches)
-        if any(sp.parabolaFit["min"] for sp in rp.searchpars):
-            parab_inds = list(pops[0][1][0][1])
-            for i, sp in enumerate(rp.searchpars):
-                if sp.parabolaFit["min"] is not None:
-                    parab_inds[i] = sp.parabolaFit["min"]
-            tl_io.writeSearchOutput(sl, rp, parab_inds, silent=True,
-                                    suffix="_parabola")
-        tl_io.writeSearchOutput(sl, rp, pops[0][1][0][1], silent=(not final))
+
+def _write_info_to_log(rp, pops):
+    """Write information about populations to the current logger."""
+    (most_common_r, _), n_most_common = pops.most_common(1)[0]
+    if n_most_common == rp.SEARCH_POPULATION:
+        logger.info("All trial structures converged to the same "
+                    f"configuration (R = {most_common_r:.4f})")
+        return
+
+    (best_r, _), n_best = next(iter(pops.items()))
+    # if any(v > rp.SEARCH_POPULATION / 2 for v in popcount):                   # TODO: used to be like this, but I think the current one is the same.
+    if n_most_common > rp.SEARCH_POPULATION / 2:
+        info = ("The search outcome is dominated by one configuration "
+                f"(population {n_most_common} of {rp.SEARCH_POPULATION}, "
+                f"R = {most_common_r:.4f})\n")
     else:
-        home = os.getcwd()
-        for (i, dp) in enumerate(rp.domainParams):
-            try:
-                os.chdir(dp.workdir)
-                if any(sp.parabolaFit["min"] for sp in rp.searchpars):
-                    parab_inds = list(pops[0][1][i][1])
-                    for j, sp in enumerate(dp.rp.searchpars):
-                        if sp.parabolaFit["min"] is not None:
-                            parab_inds[j] = sp.parabolaFit["min"]
-                    tl_io.writeSearchOutput(dp.sl, dp.rp, parab_inds, silent=True,
-                                            suffix="_parabola")
-                tl_io.writeSearchOutput(dp.sl, dp.rp, pops[0][1][i][1],
-                                        silent=(not final))
-            except Exception:
-                logger.error("Error while writing search output for domain {}"
-                             .format(dp.name), exc_info=rp.LOG_DEBUG)
-                rp.setHaltingLevel(2)
-                raise
-            finally:
-                os.chdir(home)
-    return
+        info = ("The search outcome is not dominated by any "
+                "configuration. The best result has population "
+                f"{n_best} (of {rp.SEARCH_POPULATION}), "
+                f"R = {best_r:.4f}\n")
+    # if len(pops) > 1:                                                         # TODO: what follows used to be done only in this case, but I think it should already be covered by the first "if n_most_common == rp.SEARCH_POPULATION"
+    info += ("The best configurations are:\nPOP       R |")
+    if rp.domainParams:
+        info += " area |"
+    info += " PARAMETERS\n"
+    for (pop_r, pop_pars), n_pops in pops.most_common(5):
+        info += f"{n_pops:>3}  {pop_r:.4f} |"
+        for j, (percent, pars) in enumerate(pop_pars):
+            if j:
+                info += "            |"
+            if rp.domainParams:
+                info += f" {percent:>3}% |"
+            info += "".join(f"{v:>3}" for v in pars) + "\n"
+    logger.info(info)
 
 
-def check_search_log_content(log_content):
-    """Checks the search log content for fatal TensErLEED error
-    messages.
+def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
+    """Modify dom_slab to the parameters in best_config. Write it out.
+
+    If there is a predicted optimum for the parameters (via parabola
+    fit), POSCAR_OUT and VIBROCC_OUT files are also written for this
+    predicted optimum. However, `dom_slab` will always contain the
+    configuration passed via `best_config` at the end of this call.
 
     Parameters
     ----------
-    log_content : str
-        Contents of the search log.
+    rp : Rparams
+        The PARAMETERS for the whole calculation.
+    dom_slab : Slab
+        The slab of the domain to be modified, and used to write
+        POSCAR_OUT and VIBROCC_OUT files.
+    dom_rp : Rparams
+        The PARAMETERS for this specific domain to be written out.
+    best_config : Sequence
+        The indices of the optimal parameters to be used for this
+        domain's configuration.
+
+    Returns
+    -------
+    None.
+    """
+    # The order here matters, as the final write operation
+    # will store the new states (e.g., for later searches)
+    # in dom_slab, its atoms, and its sites.
+    if any(sp.parabolaFit["min"] for sp in rp.searchpars):
+        parab_inds = list(best_config)
+        for j, sp in enumerate(dom_rp.searchpars):
+            if sp.parabolaFit["min"] is not None:
+                parab_inds[j] = sp.parabolaFit["min"]
+        tl_io.writeSearchOutput(dom_slab, dom_rp, parab_inds,
+                                silent=True, suffix="_parabola")
+    tl_io.writeSearchOutput(dom_slab, dom_rp, best_config, silent=not final)
+
+
+def _check_search_log(search_log_path):
+    """Check the file at `search_log_path` for fatal TensErLEED errors.
+
+    Parameters
+    ----------
+    search_log_path : str or Path or None
+        Path to the log file. No checking is performed if None.
 
     Raises
     ------
-    RuntimeError
+    OSError
+        When failing to open or read a non-None `search_log_path`.
+    RuntimeError                                                                # TODO: would be nice to raise a nicer error. Some TensErLEEDExecutionError perhaps?
         If an error message is found in the search log file that
         corresponds to a fatal TensErLEED error.
     """
-    # check for TensErLEED termination due to uphysically high amplitude values
+    if search_log_path is None:
+        return
+
+    try:
+        with open(search_log_path, "r", encoding="utf-8") as search_log:
+            log_content = search_log.read()
+    except OSError:
+        logger.error(f"Could not read search logfile {search_log_path}. "
+                     "Execution will continue, but TensErLEED errors related "
+                     "to the search may not be detected properly.")
+        return
+
+    gen_err_msg = ("TensErLEED Error encountered in search. "
+                   "Execution cannot proceed.")
+    # (1) unreasonably high amplitude values:
     if ("MAX. INTENS. IN THEOR. BEAM" in log_content
-        and "IS SUSPECT" in log_content
-        and "****** STOP PROGRAM ******" in log_content):
+            and "IS SUSPECT" in log_content
+            and "****** STOP PROGRAM ******" in log_content):
         logger.error(
-            "TensErLEED stopped due to an unphysically high beam amplitude.\n"
+            "TensErLEED stopped due to an unreasonably high beam amplitude.\n"
             "This is often caused by scatterers with very small distances "
             "as a result of very large displacements used in DISPLACEMENTS. "
             "Check your input files and consider decreasing "
             "the DISPLACEMENTS ranges."
+            )
+        raise RuntimeError(gen_err_msg) from None
+    # (2) SIGBUS signal
+    elif ("received signal SIGBUS" in log_content
+          and "undefined portion of a memory object" in log_content):
+        logger.error(
+            "TensErLEED search stopped due to a SIGBUS signal. "
+            "This may be caused by a compiler error. "
+            "If you are using gfortran, consider lowering the optimization "
+            "level to '-O1' or '-O0' using the FORTRAN_COMP parameter."
         )
-        raise RuntimeError("TensErLEED Error encountered in search. "
-                        "Execution cannot proceed.")
+        raise RuntimeError(gen_err_msg) from None
+    # (3) different V0_IMAG between Deltas and Search
+    elif ("Average optical potential value in rf.info is incorrect:" 
+          in log_content):
+        logger.error(
+            "TensErLEED search stopped because stored Delta files were "
+            "calculated with a different imaginary inner potential "
+            "(optical potential) than requested in PARAMETERS. "
+            "Make sure to use the same value for V0_IMAG for Delta-Amplitudes "
+            "and structure search."
+        )
+        raise RuntimeError(gen_err_msg) from None
 
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
@@ -339,7 +391,7 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     # read data
     r_cutoff = 1.0
     if datafiles:
-        varR = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())*r_best
+        varR = np.sqrt(8*abs(rp.V0_IMAG) / rp.total_energy_range())*r_best
         rc = np.array((tl_io.readDataChem(
             rp, datafiles,
             cutoff=r_best + r_cutoff * varR,
@@ -357,7 +409,7 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
         sps = [sp for sp in rp.searchpars if sp.el != "vac" and
                sp.mode != "dom" and sp.steps*localizeFactor >= 3 and
                sp.linkedTo is None and sp.restrictTo is None]
-        indep_pars = np.array([*np.array([*np.array(configs, dtype=object)],
+        indep_pars = np.array([*np.array([*np.array(configs, dtype=object)],    # TODO: pylint complains about too-many-function-args. I don't understand the line
                                          dtype=object)
                                .reshape(-1, 1, 2)[:, 0, 1]])
         indep_pars = np.delete(indep_pars, [i for i in
@@ -366,7 +418,7 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     else:
         # first the percentages:
         sps = [sp for sp in rp.searchpars if sp.mode == "dom"]
-        reshaped = (np.array([*np.array(configs, dtype=object)], dtype=object)
+        reshaped = (np.array([*np.array(configs, dtype=object)], dtype=object)  # TODO: pylint complains about too-many-function-args. I don't understand the line
                     .reshape(-1, len(rp.domainParams), 2))
         indep_pars = reshaped[:, :, 0].astype(int)  # contains the percentages
         # then the 'real' parameters:
@@ -388,13 +440,13 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     alpha = kwargs["alpha"]
     if which_regression == 'lasso':
         polyreg = make_pipeline(PolynomialFeatures(degree=2),
-                                Lasso(alpha=alpha, normalize=True))
+                                Lasso(alpha=alpha, normalize=True))             # TODO: incorrect keyword normalize
     elif which_regression == 'ridge':
         polyreg = make_pipeline(PolynomialFeatures(degree=2),
-                                Ridge(alpha=alpha, normalize=True))
+                                Ridge(alpha=alpha, normalize=True))             # TODO: incorrect keyword normalize
     elif which_regression == 'elasticnet':
         polyreg = make_pipeline(PolynomialFeatures(degree=2),
-                                ElasticNet(alpha=alpha, normalize=True))
+                                ElasticNet(alpha=alpha, normalize=True))        # TODO: incorrect keyword normalize
     else:
         if which_regression not in ('linearregression', 'linear'):
             logger.warning("Regression model {} not found, parabola fit "
@@ -404,7 +456,7 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
         polyreg = make_pipeline(PolynomialFeatures(degree=2),
                                 LinearRegression())
     xmin = np.copy(indep_pars[np.argmin(rfacs), :])
-    rr = np.sqrt(8*np.abs(rp.V0_IMAG) / rp.total_energy_range())
+    rr = np.sqrt(8*abs(rp.V0_IMAG) / rp.total_energy_range())
     ip_tofit = np.copy(indep_pars)
     rf_tofit = np.copy(rfacs)
     # throw out high R-factors - TODO: perhaps also throw out highest X% ?
@@ -463,7 +515,7 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     #             base[i] = max(base[i], 1 + r)
     #             base[i] = min(base[i], sps[i].steps - r)
     #         dist_norm = np.array([1/(sp.steps-1) for sp in sps])
-    #         dist = np.abs(dist_norm*(ip_tofit - base))
+    #         dist = abs(dist_norm*(ip_tofit - base))
     #         maxdist = np.max(dist, 1)
     #         # dist = np.linalg.norm(dist_norm*(indep_pars - base), axis=1)
     #         # cutoff = np.percentile(dist, 30)
@@ -517,11 +569,11 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
         sp.parabolaFit["err_co"] = err_co[i]
         sp.parabolaFit["err_unco"] = err_unco[i]
         best_config[sps_original.index(sp)] = parab_min.x[i] + xmin[i]
-    for sp in [sp for sp in rp.searchpars if type(sp.linkedTo) == tl.SearchPar
-               or type(sp.restrictTo) == tl.SearchPar]:
-        if type(sp.linkedTo) == tl.SearchPar:
+    for sp in [sp for sp in rp.searchpars if isinstance(sp.linkedTo, SearchPar)
+               or isinstance(sp.restrictTo, SearchPar)]:
+        if isinstance(sp.linkedTo, SearchPar):
             sp.parabolaFit = copy.copy(sp.linkedTo.parabolaFit)
-        elif type(sp.restrictTo) == tl.SearchPar:
+        elif isinstance(sp.restrictTo, SearchPar):
             sp.parabolaFit = copy.copy(sp.restrictTo.parabolaFit)
     return (best_config, predictR)
 
@@ -554,7 +606,7 @@ def search(sl, rp):
         will instead try to terminate the default_pgid, if passed."""
         # determine pgid
         try:
-            pgid = os.getpgid(proc.pid)
+            pgid = os.getpgid(proc.pid)                                         # TODO: only UNIX!
         except ProcessLookupError:
             pgid = default_pgid
         # kill main process
@@ -566,14 +618,13 @@ def search(sl, rp):
         if pgid is not None:
             # kill children
             try:
-                os.killpg(pgid, signal.SIGTERM)
+                os.killpg(pgid, signal.SIGTERM)                                 # TODO: only UNIX
                 if os.name == "nt":
                     os.waitpid(pgid)
                 else:
                     os.waitpid(-pgid, 0)
             except (ProcessLookupError, ChildProcessError):
                 pass  # already dead or no children
-        return
 
     rp.searchResultConfig = None
     if rp.domainParams:
@@ -593,8 +644,8 @@ def search(sl, rp):
                              "files were generated. Cannot execute search.")
                 raise RuntimeError("Delta calculations was not run for "
                                    "current tensors.")
-            tl.leedbase.getDeltas(rpt.TENSOR_INDEX, basedir=path,
-                                  targetdir=path, required=True)
+            leedbase.getDeltas(rpt.TENSOR_INDEX, basedir=path,
+                               targetdir=path, required=True)
     rp.updateCores()
     # generate rf.info
     try:
@@ -615,26 +666,27 @@ def search(sl, rp):
         os.remove("control.chem")
     except FileNotFoundError:
         pass
-    if rp.indyPars == 0:  # never for calculations with domains # !!! CHECK
+    if not rp.indyPars:  # never for calculations with domains                  # !!! CHECK
         logger.info("Found nothing to vary in search. Will proceed "
                     "directly to writing output and starting SUPERPOS.")
-        rp.searchResultConfig = [(100, [1] * (len(rp.searchpars))-1)]
+        this_domain_pars = [1] * len(rp.searchpars)                             # TODO: Used to be "[1] * (len) - 1" --> TypeError
         for (i, sp) in enumerate(rp.searchpars):
-            if type(sp.restrictTo) == int:
-                rp.searchResultsConfig[i] = sp.restrictTo
-            elif type(sp.restrictTo) == tl.SearchPar:
-                rp.searchResultsConfig[i] = (rp.searchpars.index(
-                                                    sp.restrictTo) + 1)
-            elif type(sp.linkedTo) == tl.SearchPar:
-                rp.searchResultsConfig[i] = (rp.searchpars.index(
-                                                    sp.linkedTo) + 1)
+            if isinstance(sp.restrictTo, int):
+                this_domain_pars[i] = sp.restrictTo
+            elif isinstance(sp.restrictTo, SearchPar):
+                this_domain_pars[i] = rp.searchpars.index(sp.restrictTo) + 1
+            elif isinstance(sp.linkedTo, SearchPar):
+                this_domain_pars[i] = rp.searchpars.index(sp.linkedTo) + 1
+        rp.searchResultConfig = ((100, this_domain_pars),)                      # TODO: Used to assign straight to rp.searchResultConfig[i] -> IndexError as there was only a single element.
         tl_io.writeSearchOutput(sl, rp)
         return None
+
     if rp.SUPPRESS_EXECUTION:
         logger.warning("SUPPRESS_EXECUTION parameter is on. Search "
                        "will not proceed. Stopping...")
         rp.setHaltingLevel(3)
         return None
+
     # check for mpirun, decide whether to use parallelization
     usempi = True
     if rp.N_CORES == 1:
@@ -648,70 +700,62 @@ def search(sl, rp):
         logger.warning(
             "mpirun is not present. Search will be compiled and executed "
             "without parallelization. This will be much slower!")
-        if rp.FORTRAN_COMP[0] == "":
-            try:
-                rp.getFortranComp()
-            except Exception:
-                logger.error("No fortran compiler found, cancelling...")
-                raise RuntimeError("Fortran compile error")
-    if usempi:
-        if rp.FORTRAN_COMP_MPI[0] == "":
-            try:
-                rp.getFortranMpiComp()
-            except Exception:
-                logger.error("No fortran mpi compiler found, cancelling...")
-                raise RuntimeError("Fortran compile error")
-    else:
-        if rp.FORTRAN_COMP[0] == "":
-            try:
-                rp.getFortranComp()
-            except Exception:
-                logger.error("No fortran compiler found, cancelling...")
-                raise RuntimeError("Fortran compile error")
+
+    _find_compiler = None
+    if usempi and not rp.FORTRAN_COMP_MPI[0]:
+        _find_compiler = rp.getFortranMpiComp
+    elif not rp.FORTRAN_COMP[0]:
+        _find_compiler = rp.getFortranComp
+
+    if _find_compiler:
+        try:
+            _find_compiler()
+        except Exception as exc:
+            _mpi = 'mpi ' if usempi else ''
+            logger.error(f"No fortran {_mpi}compiler found, cancelling...")
+            raise FileNotFoundError("Fortran compile error") from exc
     # get fortran files
     try:
-        tldir = tl.leedbase.getTLEEDdir(home=rp.sourcedir,
-                                        version=rp.TL_VERSION)
+        tldir = leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         if not tldir:
             raise RuntimeError("TensErLEED code not found.")
         srcpath = tldir / 'src'
         if usempi:
-            srcname = [f for f in os.listdir(srcpath)
-                       if f.startswith('search.mpi')][0]
+            src_file = next(srcpath.glob('search.mpi*'), None)
         else:
-            srcname = [f for f in os.listdir(srcpath)
-                       if f.startswith('search') and 'mpi' not in f][0]
-        shutil.copy2(srcpath / srcname, srcname)
+            src_files = (f for f in srcpath.glob('search*')
+                         if 'mpi' not in f.name)
+            src_file = next(src_files, None)
+        if src_file is None:
+            raise FileNotFoundError(f"No Fortran source for search in {tldir}")
+        shutil.copy2(src_file, src_file.name)
         libpath = Path(tldir, 'lib')
         libpattern = "lib.search"
         if usempi and rp.TL_VERSION <= 1.73:
             libpattern += ".mpi"
-        libname = next(libpath.glob(libpattern + "*"), None).name
-        if libname is None:
-            raise RuntimeError(f"File {libpattern}.f not found.")
+        lib_file = next(libpath.glob(libpattern + "*"), None)
+        if lib_file is None:
+            raise FileNotFoundError(f"File {libpattern}.f not found.")
+
         # copy to work dir
-        shutil.copy2(os.path.join(libpath, libname), libname)
-        hashing_files = [f for f in os.listdir(libpath)
-                         if f.startswith('intarr_hashing')
-                         and f.endswith('.f90')]
-        if hashing_files:
-            hashname = hashing_files[0]
-            shutil.copy2(os.path.join(libpath, hashname), hashname)
+        shutil.copy2(lib_file, lib_file.name)
+        hashing_file = next(libpath.glob("intarr_hashing*.f90"), None)
+        if hashing_file:
+            hashname = hashing_file.name
+            shutil.copy2(hashing_file, hashname)
         else:
             hashname = ""
-        if rp.TL_VERSION <= 1.73:
-            if usempi:  # these are short C scripts - use pre-compiled versions
-                randnamefrom = "MPIrandom_.o"
-            else:
-                randnamefrom = "random_.o"
-            randname = "random_.o"
 
-            # try to copy random lib object file
+        randname = "MPIrandom_.o" if usempi else "random_.o"
+        if rp.TL_VERSION <= 1.73:
+            # these are short C scripts - use pre-compiled versions
+
+            # try to copy randomizer lib object file
             try:
-                shutil.copy2(os.path.join(libpath, randnamefrom), randname)
+                shutil.copy2(libpath / randname, randname)
             except FileNotFoundError:
-                logger.error("Could not find required random_.o object file."
-                             " You may have forgotten to compile random_.c.")
+                logger.error("Could not find required random_.o object file. "
+                             "You may have forgotten to compile random_.c.")
                 raise
 
         globalname = "GLOBAL"
@@ -719,17 +763,18 @@ def search(sl, rp):
     except Exception:
         logger.error("Error getting TensErLEED files for search: ")
         raise
+
     # Validate TensErLEED input files
     if not rp.TL_IGNORE_CHECKSUM:
-        files_to_check = (Path(libpath) / libname,
-                          Path(srcpath) / srcname,
-                          Path(srcpath) / globalname,
-                          Path(libpath) / hashname
-                          )
-        validate_multiple_files(files_to_check, logger, "search", rp.TL_VERSION_STR)
+        files_to_check = (lib_file,
+                          src_file,
+                          srcpath / globalname,
+                          hashing_file)
+        validate_multiple_files(files_to_check, logger,
+                                "search", rp.TL_VERSION_STR)
 
     # compile fortran files
-    searchname = "search-"+rp.timestamp
+    searchname = f"search-{rp.timestamp}"
     if usempi:
         fcomp = rp.FORTRAN_COMP_MPI
     else:
@@ -737,28 +782,33 @@ def search(sl, rp):
     logger.info("Compiling fortran input files...")
     # compile
     # compile task could be inherited from general CompileTask (issue #43)
-    ctasks = [(fcomp[0]+" -o lib.search.o -c", libname, fcomp[1])]
+    ctasks = [(f"{fcomp[0]} -o lib.search.o -c", lib_file.name, fcomp[1])]
     if hashname:
-        ctasks.append((fcomp[0]+" -c", hashname, fcomp[1]))
-    ctasks.append((fcomp[0]+" -o restrict.o -c", "restrict.f", fcomp[1]))
+        ctasks.append((f"{fcomp[0]} -c", hashname, fcomp[1]))
+    ctasks.append((f"{fcomp[0]} -o restrict.o -c", "restrict.f", fcomp[1]))
     format_tag = ""
-    if any([f.endswith('.f90') for f in (libname, srcname, hashname)]):
+    _fixed_format = any(f.endswith('.f90')
+                        for f in (lib_file.name, src_file.name, hashname))
+    if _fixed_format:
         format_tag = "-fixed"
-        if any([s in fcomp[0] for s in ("gfortran", "mpifort")]):
+        if any(s in fcomp[0] for s in ("gfortran", "mpifort")):
             # assume that mpifort also uses gfortran
             format_tag = "--fixed-form"  # different formatting string
-    ctasks.append((fcomp[0]+" -o search.o -c "+format_tag, srcname, fcomp[1]))
+    ctasks.append(
+        (f"{fcomp[0]} -o search.o -c {format_tag}", src_file.name, fcomp[1])
+        )
     to_link = "search.o lib.search.o restrict.o"
     if rp.TL_VERSION <= 1.73:
-        to_link += " random_.o"
+        to_link += f" {randname}"
     if hashname:
         to_link += " intarr_hashing.o"
-    ctasks.append((fcomp[0] + " -o " + searchname, to_link, fcomp[1]))
+    ctasks.append((f"{fcomp[0]} -o {searchname}", to_link, fcomp[1]))
     compile_log = "compile-search.log"
     try:
-        fortran_compile_batch(ctasks, logname=compile_log)
+        leedbase.fortran_compile_batch(ctasks, logname=compile_log)
     except Exception:
-        copy_compile_log(rp, Path(compile_log), log_name="search-compile")
+        leedbase.copy_compile_log(rp, Path(compile_log),
+                                  log_name="search-compile")
         logger.error("Error compiling fortran files: ", exc_info=True)
         raise
     logger.debug("Compiled fortran files successfully")
@@ -772,44 +822,47 @@ def search(sl, rp):
     if os.path.isfile("SD.TL"):
         try:
             os.remove("SD.TL")
-        except Exception:
+        except OSError:
             logger.warning("Failed to delete old SD.TL file. This may "
                            "cause errors in the interpretation of search "
                            "progress.")
     # same for old data.chem
-    for fn in [f for f in os.listdir() if re.match(r'data\d+\.chem$',
-                                                   f.lower())]:
+    _datachem_re = re.compile(r'data\d+\.chem$', re.IGNORECASE)
+    for file in Path().glob("*"):
+        if not _datachem_re.match(file.name):
+            continue
         try:
-            os.remove(fn)
-        except Exception:
-            logger.warning("Failed to delete old {} file. This may cause "
-                           "errors in the parabola fit.".format(fn))
+            file.unlink()
+        except OSError:
+            logger.warning(f"Failed to delete old {file} file. This "
+                           "may cause errors in the parabola fit.")
     # get config size
     config_size = (
         sys.getsizeof((1., tuple()))
-        + sys.getsizeof(tuple([tuple()] * max(1, len(rp.domainParams))))
-        + sys.getsizeof((1, tuple())))
+        + sys.getsizeof((tuple(),) * max(1, len(rp.domainParams)))
+        + sys.getsizeof((1, tuple()))
+        )
     if rp.domainParams:
         config_size += sum(
-            [sys.getsizeof(tuple([0] * len(dp.rp.searchpars)))
-             + sys.getsizeof(1) * len(dp.rp.searchpars)
-             for dp in rp.domainParams])
+            sys.getsizeof((0,) * len(dp.rp.searchpars))
+            + sys.getsizeof(1) * len(dp.rp.searchpars)
+            for dp in rp.domainParams
+            )
     else:
-        config_size += (sys.getsizeof(tuple([0] * len(rp.searchpars)))
+        config_size += (sys.getsizeof((0,) * len(rp.searchpars))
                         + sys.getsizeof(1) * len(rp.searchpars))
     max_memory_parab = 1e9   # maximum memory in bytes to use on parabola fit
     max_read_configs = int(max_memory_parab / config_size)
     # start search process
     repeat = True
-    first = True
     genOffset = 0
     last_debug_write_gen = 0
     gens = []  # generation numbers in SD.TL, but continuous if search restarts
     markers = []
     rfaclist = []
-    parab_x0 = None     # starting guess for parabola
-    rfac_predict = []  # tuples (gen, r) from parabola fit
-    realLastConfig = {"all": [], "best": [], "dec": []}
+    parab_x0 = None     # starting guess for parabola                           # TODO: would be nicer to incorporate it into a ParabolaFit class
+    rfac_predict = []  # tuples (gen, r) from parabola fit                      # TODO: would be nicer to incorporate it into a ParabolaFit class
+    realLastConfig = {"all": [], "best": [], "dec": []}                         # TODO: would be nicer with a SearchConfigurationTracker class that has an .update
     realLastConfigGen = {"all": 0, "best": 0, "dec": 0}
     convergedConfig = {"all": None, "best": None, "dec": None}
     lastconfig = None
@@ -817,11 +870,9 @@ def search(sl, rp):
     absstarttime = timer()
     tried_repeat = False        # if SD.TL is not written, try restarting
     pgid = None
-    while repeat:
-        if first:
-            logger.info("Starting search. See files Search-progress.pdf "
-                        "and SD.TL for progress information.")
-            first = False
+    logger.info("Starting search. See files Search-progress.pdf "
+                "and SD.TL for progress information.")
+    while repeat:                                                               # TODO: all this mess would be nicer to handle with a state machine approach. This would at least help readability on the various ways things are handled
         repeat = False
         interrupted = False
         proc = None
@@ -829,11 +880,11 @@ def search(sl, rp):
             command = ["mpirun", "-n", str(rp.N_CORES),
                        os.path.join(".", searchname)]
         else:
-            command = os.path.join('.', searchname)
+            command = [os.path.join('.', searchname),]
         # if LOG_SEARCH -> log search
         if search_log_path:
-            log_exists = os.path.isfile(search_log_path)
-            search_log_f = open(search_log_path, "a")
+            log_exists = search_log_path.is_file()
+            search_log_f = search_log_path.open("a")
             if log_exists:  # log file existed before
                 search_log_f.write("\n\n-------\nRESTARTING\n-------\n\n")
         else:
@@ -844,17 +895,17 @@ def search(sl, rp):
         try:
             proc = subprocess.Popen(
                 command, encoding="ascii",
-                stdout=search_log_f,       # if LOG_SEARCH is False, this is DEVNULL
-                stderr=subprocess.STDOUT,  # pipe to whatever stdout is
-                preexec_fn=os.setsid
-            )
+                stdout=search_log_f,  # if LOG_SEARCH is False, this is DEVNULL
+                stderr=search_log_f,  # same as above
+                preexec_fn=os.setsid                                            # TODO: setsid only POSIX; os comments suggest NOT TO USE THIS as it is unsafe against deadlocks. Suggestion is to use start_new_session keyword [UNIX only!] instead of setsid. For a Windows solution see https://stackoverflow.com/questions/47016723. Probably even better: do not use python subprocess, but QProcess (which can run with its own event loop, and has a .kill(), or perhaps .terminate()). QProcess may have some issues with OpenMPI v<=1.7 due to a bug there (see www.qtcentre.org/threads/19636-Qprocess-and-mpi-not-finishing).
+                )
         except OSError:  # This should not fail unless the shell is very broken.
             logger.error("Error starting search. Check SD.TL file.")
             if search_log_path:
                 search_log_f.close()
             raise
         else:
-            pgid = os.getpgid(proc.pid)
+            pgid = os.getpgid(proc.pid)                                         # TODO: getpgid only POSIX
         if proc is None:
             logger.error("Error starting search subprocess... Stopping.")
             if search_log_path:
@@ -876,16 +927,16 @@ def search(sl, rp):
         filepos = 0
         timestep = 1  # time step to check files
         # !!! evaluation time could be higher - keep low only for debugging; TODO
-        evaluationTime = rp.searchEvalTime  # how often should SD.TL be evaluated
+        evaluationTime = rp.searchEvalTime  # how often should SD.TL be evaluated # TODO: would be nicer with a QTimer, or even a QFileSystemWatcher
         lastEval = 0  # last evaluation time (s), counting from searchStartTime
         comment = ""
         sdtlGenNum = 0
         gaussianWidthOri = rp.GAUSSIAN_WIDTH
         check_datafiles = False
         try:
-            while proc.poll() is None:
+            while proc.poll() is None:  # proc is running
                 time.sleep(timestep)
-                updatePARAMETERS(rp)
+                updatePARAMETERS(rp)                                            # TODO: Would be way nicer with a QFileSystemWatcher
                 # check convergence criteria
                 stop = False
                 checkrepeat = True
@@ -898,14 +949,13 @@ def search(sl, rp):
                         logger.warning("SD.TL file not found. Trying to "
                                        "wait, maximum 5 minutes...")
                         i = 0
-                        while not os.path.isfile("SD.TL") and not i >= 300:
+                        while not os.path.isfile("SD.TL") and i < 300:
                             time.sleep(1)
                             i += 1
                 if rp.GAUSSIAN_WIDTH != gaussianWidthOri:
                     stop = True
                     repeat = True
-                    comment = ("GAUSSIAN_WIDTH = {}"
-                               .format(rp.GAUSSIAN_WIDTH))
+                    comment = f"GAUSSIAN_WIDTH = {rp.GAUSSIAN_WIDTH}"
                     logger.info("GAUSSIAN_WIDTH parameter changed. "
                                 "Search will restart.")
                 t = timer() - searchStartTime
@@ -920,13 +970,14 @@ def search(sl, rp):
                                 content, whichR=rp.SEARCH_BEAMS,
                                 n_expect=rp.SEARCH_POPULATION
                             )
-                    elif t >= 900 and rp.HALTING < 3:
+                    elif t >= 900 and rp.HALTING < 3:                           # TODO: nicer with a QTimer timeout
                         stop = True
                         if tried_repeat:
                             logger.warning(
                                 "No SD.TL file was written for 15 minutes "
                                 "after restarting the search. Search will "
-                                "stop.")
+                                "stop."
+                                )
                             repeat = False
                             rp.setHaltingLevel(2)
                         else:
@@ -936,13 +987,14 @@ def search(sl, rp):
                                 "No SD.TL file was written for 15 minutes "
                                 "after the search started. Trying to restart. "
                                 "You can suppress this behaviour by setting "
-                                "the HALTING parameter to 3.")
-                    for (gen, rfacs, configs) in newData:
+                                "the HALTING parameter to 3."
+                                )
+                    for gen, rfacs, configs in newData:
                         gens.append(gen + genOffset)
                         sdtlGenNum = gen
                         rfaclist.append(np.array(rfacs))
                         dgen = {}
-                        for k in ["dec", "best", "all"]:
+                        for k in ["dec", "best", "all"]:                        # TODO: would be nicer with a SearchConfigurationTracker class that has an .update
                             dgen[k] = gens[-1] - realLastConfigGen[k]
                         if configs != realLastConfig["all"]:
                             realLastConfig["all"] = configs
@@ -957,19 +1009,19 @@ def search(sl, rp):
                             realLastConfigGen["best"] = gens[-1]
                         for k in ["dec", "best", "all"]:
                             if (rp.SEARCH_MAX_DGEN[k] > 0
-                                    and len(gens) > 1 and not stop
+                                    and len(gens) > 1
+                                    and not stop
                                     and rp.GAUSSIAN_WIDTH_SCALING != 1
-                                    and (dgen[k] >= rp.SEARCH_MAX_DGEN[k])):
+                                    and dgen[k] >= rp.SEARCH_MAX_DGEN[k]):
                                 stop = True
                                 o = {"all": "all structures",
                                      "best": "best structure",
                                      "dec": "best 10% of structures"}
                                 logger.info(
                                     "Search convergence criterion reached: "
-                                    "max. generations without change ({}): "
-                                    "{}/{}.".format(
-                                        o[k], dgen[k],
-                                        int(rp.SEARCH_MAX_DGEN[k])))
+                                    f"max. generations without change ({o[k]})"
+                                    f": {dgen[k]}/{rp.SEARCH_MAX_DGEN[k]:d}."
+                                    )
                                 break
                     # decide to write debug info
                     # will only write once per SD.TL read
@@ -982,12 +1034,12 @@ def search(sl, rp):
                             f"{time_since_print:.3f} s since "
                             f"gen. {last_debug_write_gen}, "
                             f"{speed:.1f} s/kG overall)"
-                        )
+                            )
                         last_debug_print_time = timer()
                         last_debug_write_gen = current_gen
                         check_datafiles = True
-                    if len(newData) > 0:
-                        lastconfig = newData[-1][2]
+                    if newData:
+                        _, _, lastconfig = newData[-1]
                     if (check_datafiles and not (stop and repeat)
                             and rp.PARABOLA_FIT["type"] != "none"):
                         check_datafiles = False
@@ -999,43 +1051,40 @@ def search(sl, rp):
                             parab_x0 = None
                         try:
                             parab_x0, predictR = parabolaFit(
-                                rp, datafiles, min(rfacs), x0=parab_x0,
-                                max_configs=max_read_configs)
+                                rp, datafiles, min(rfacs), x0=parab_x0,         # TODO: is rfacs correct here? may be undefined if the loop before does not run
+                                max_configs=max_read_configs
+                                )
                             if predictR is not None:
                                 if not rfac_predict:
                                     logger.debug("Starting parabola fits "
                                                  "to R-factor data.")
                                 rfac_predict.append((gens[-1], predictR))
-                        except KeyboardInterrupt:
-                            raise
                         except Exception:
                             logger.warning("Parabolic fit of R-factor "
                                            "data failed",
-                                           exc_info=rp.LOG_DEBUG)
+                                           exc_info=rp.is_debug_mode)
                     if len(gens) > 1:
                         try:
-                            writeSearchProgressPdf(
+                            searchpdf.writeSearchProgressPdf(
                                 rp, gens, rfaclist, lastconfig,
-                                markers=markers, rfac_predict=rfac_predict)
-                        except KeyboardInterrupt:
-                            raise
+                                markers=markers, rfac_predict=rfac_predict
+                                )
                         except Exception:
                             logger.warning("Error writing Search-progress.pdf",
-                                           exc_info=rp.LOG_DEBUG)
+                                           exc_info=rp.is_debug_mode)
                         try:
-                            writeSearchReportPdf(rp)
-                        except KeyboardInterrupt:
-                            raise
+                            searchpdf.writeSearchReportPdf(rp)
                         except Exception:
                             logger.warning("Error writing Search-report.pdf",
-                                           exc_info=rp.LOG_DEBUG)
+                                           exc_info=rp.is_debug_mode)
                     if (len(gens) > 1 and os.path.isfile("SD.TL")
                             and (repeat or checkrepeat or not stop)):
                         try:
-                            processSearchResults(sl, rp, search_log_path, final=False)
-                        except Exception as e: # too general
+                            processSearchResults(sl, rp, search_log_path,
+                                                 final=False)
+                        except Exception as exc:                                # TODO: too general
                             logger.warning("Failed to update POSCAR_OUT "
-                                           "and VIBROCC_OUT: " + str(e))
+                                           f"and VIBROCC_OUT: {exc}")
                 if stop:
                     logger.info("Stopping search...")
                     kill_process(proc, default_pgid=pgid)
@@ -1081,14 +1130,14 @@ def search(sl, rp):
                                 rp.SEARCH_MAX_DGEN[k] *= (
                                             rp.SEARCH_MAX_DGEN_SCALING[k])
                                 realLastConfigGen[k] = gens[-1] if gens else 0
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:                                               # TODO: would probably be nicer to install a custom signal handler for SIGINT, CTRL_C_EVENT, and CTRL_BREAK_EVENT, then place back the previous handler when done processing.
             if not os.path.isfile("SD.TL"):
                 # try saving by waiting for SD.TL to be created...
                 logger.warning("SD.TL file not found. Trying to wait, "
                                "interrupt again to override...")
                 try:
                     i = 0
-                    while not os.path.isfile("SD.TL") and not i >= 60:
+                    while not os.path.isfile("SD.TL") and i < 60:
                         time.sleep(1)
                         i += 1
                 except KeyboardInterrupt:
@@ -1148,13 +1197,14 @@ def search(sl, rp):
     # write pdf one more time
     if len(gens) > 1:
         try:
-            writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
-                                   markers=markers, rfac_predict=rfac_predict)
+            searchpdf.writeSearchProgressPdf(rp, gens, rfaclist, lastconfig,
+                                             markers=markers,
+                                             rfac_predict=rfac_predict)
         except Exception:
             logger.warning("Error writing Search-progress.pdf",
                            exc_info=True)
         try:
-            writeSearchReportPdf(rp)
+            searchpdf.writeSearchReportPdf(rp)
         except Exception:
             logger.warning("Error writing Search-report.pdf",
                            exc_info=True)
@@ -1189,4 +1239,3 @@ def search(sl, rp):
                        "search-rf.info")
     if lastconfig is not None:
         rp.searchResultConfig = lastconfig
-    return

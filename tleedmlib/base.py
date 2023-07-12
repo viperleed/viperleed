@@ -7,14 +7,15 @@ Created on Jun 13 2019
 Contains generic functions used in the TensErLEED scripts.
 """
 
+import itertools
 import logging
-import numpy as np
-import re
-import subprocess
 import multiprocessing
 import os
+import re
+import subprocess
+
+import numpy as np
 import scipy.spatial as sps
-import itertools
 
 logger = logging.getLogger("tleedm.base")
 
@@ -23,26 +24,7 @@ logger = logging.getLogger("tleedm.base")
 #                 CLASSES                     #
 ###############################################
 
-class CustomLogFormatter(logging.Formatter):
-    """Logging Formatter for level-dependent message formatting"""
-    FORMATS = {
-        logging.DEBUG: "dbg: %(msg)s",
-        logging.INFO: "%(msg)s",
-        logging.WARNING: "# WARNING: %(msg)s",
-        logging.ERROR: "### ERROR ### in %(module)s:%(funcName)s:%(lineno)s\n"
-                       "# %(msg)s \n#############",
-        logging.CRITICAL: "### CRITICAL ### in %(module)s:%(funcName)s:"
-                          "%(lineno)s\n# %(msg)s \n################",
-        "DEFAULT": "%(msg)s",
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
-
-
-class BackwardsReader:
+class BackwardsReader:                                                          # TODO: maybe better to give it __enter__ and __exit__?
     """Simple class for reading a large file in reverse without having to read
     the entire file to memory.
     From http://code.activestate.com/recipes/120686/, adapted for python 3 and
@@ -58,12 +40,12 @@ class BackwardsReader:
                 # read from end of file
                 self.f.seek(-self.blksize * self.blkcount, 2)
                 self.data = ((self.f.read(self.blksize).decode(self.encoding))
-                             + line).split("\n")
+                             + line).splitlines()
             except IOError:    # can't seek before the beginning of the file
                 self.f.seek(0)
                 self.data = (((self.f.read(self.size - (self.blksize
                                                         * (self.blkcount-1))))
-                              .decode(self.encoding) + line).split("\n"))
+                              .decode(self.encoding) + line).splitlines())
 
         if len(self.data) == 0:
             return ""
@@ -91,11 +73,34 @@ class BackwardsReader:
             # read from end of file
             self.f.seek(-self.blksize * self.blkcount, 2)
         self.data = ((self.f.read(self.blksize))
-                     .decode(self.encoding).split("\n"))
+                     .decode(self.encoding).splitlines())
         # strip the last item if it's empty... a byproduct of the last line
         # having a newline at the end of it
         if not self.data[-1]:
             self.data.pop()
+
+
+class CustomLogFormatter(logging.Formatter):
+    """Logging Formatter for level-dependent message formatting"""
+    FORMATS = {
+        logging.DEBUG: "dbg: %(msg)s",
+        logging.INFO: "%(msg)s",
+        logging.WARNING: "# WARNING: %(msg)s",
+        logging.ERROR: "### ERROR ### in %(module)s:%(funcName)s:%(lineno)s\n"
+                       "# %(msg)s \n#############",
+        logging.CRITICAL: "### CRITICAL ### in %(module)s:%(funcName)s:"
+                          "%(lineno)s\n# %(msg)s \n################",
+        "DEFAULT": "%(msg)s",
+    }
+
+    def format(self, record):
+        # debug log format for everything at DEBUG level or lower
+        if record.levelno < logging.DEBUG:
+            log_fmt = self.FORMATS.get(logging.DEBUG)
+        else:
+            log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
 
 
 ###############################################
@@ -106,7 +111,7 @@ def rotation_matrix(angle, dim=2):
     """Returns a (2x2) matrix for in-plane rotation of the given rotation
     angle. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
     if dim < 2:
-        raise ValueError("Dimension matrix needs at least dimension 2")
+        raise ValueError("Rotation matrix needs at least dimension 2")
     m = np.eye(dim, dtype=float)
     m[:2, :2] = np.array([[np.cos(angle), -np.sin(angle)],
                           [np.sin(angle), np.cos(angle)]])
@@ -164,19 +169,16 @@ def readIntRange(s):
         try:
             out.append(int(ss))
         except ValueError:
-            if "-" in ss:
-                spl = ss.split("-")
-                try:
-                    out.extend(list(range(int(spl[0]), int(spl[1])+1)))
-                except (ValueError, IndexError):
-                    return []
-            elif ":" in ss:
-                spl = ss.split(":")
-                try:
-                    out.extend(list(range(int(spl[0]), int(spl[1])+1)))
-                except (ValueError, IndexError):
-                    return []
-    return list(set(out))
+            try:
+                start, stop = split_string_range(ss)
+            except ValueError:
+                return []
+
+            try:
+                out.extend(range(int(start), int(stop)+1))
+            except ValueError:
+                return []
+    return list(dict.fromkeys(out))  # Like set, but keep order
 
 
 def split_string_range(range_string):
@@ -197,9 +199,10 @@ def range_to_str(il):
     For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
     will be ignored."""
     if not all(isinstance(v, int) for v in il):
-        t = [type(v) for v in il if type(v) is not int]
-        raise TypeError("range_to_str: expected list of int, found type "
-                        + str(t[0].__name__))
+        t = next(type(v) for v in il if not isinstance(v, int))
+        raise TypeError(
+            f"range_to_str: expected list of int, found type {t.__name__}"
+            )
     sl = sorted(il, reverse=True)
     prev = sl.pop()
     rmin = prev
@@ -212,13 +215,13 @@ def range_to_str(il):
             prev = v
             continue
         if prev != rmin:
-            out += "-{}, {}".format(prev, v)
+            out += f"-{prev}, {v}"
         else:
-            out += ", {}".format(v)
+            out += f", {v}"
         prev = v
         rmin = v
     if prev != rmin:
-        out += "-{}".format(prev)
+        out += f"-{prev}"
     return out
 
 
@@ -239,14 +242,13 @@ def readVector(s, ucell=None, defRelaltive=False):
     if "abc" in s:
         if ucell is None:
             return None
-        uct = ucell.transpose()
-        vec = (v1*uct[0] + v2*uct[1] + v3*uct[2])
-    else:  # xyz
-        vec = np.array([v1, v2, v3])
-    return vec
+        uct = ucell.T
+        return np.dot((v1, v2, v3), ucell.T)
+    # xyz
+    return np.array([v1, v2, v3])
 
 
-def readIntLine(line, width=3):
+def readIntLine(line, width=3):                                                 # TODO: Probably better ways with list comprehension
     """
     Reads an (arbitrary length) line of integers with fixed width. Will try
     to interpret everything as integers until the line ends.
@@ -261,16 +263,12 @@ def readIntLine(line, width=3):
     Returns
     -------
     Tuple of integers
-
     """
     line = line.rstrip()
     out = []
-    try:
-        while len(line) > 0:
-            out.append(int(line[:width]))
-            line = line[width:]
-    except (ValueError, IndexError):
-        raise
+    while line:
+        chunk, line = line[:width], line[width:]
+        out.append(int(chunk))
     return tuple(out)
 
 
@@ -294,7 +292,7 @@ def cosvec(x, y):
     return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 
-def dict_equal(d1, d2):
+def dict_equal(d1, d2):                                                         # TODO: d1 == d2 works the same
     """
     Checks whether two dictionaries are equal, i.e. contain the same set of
     keys with the same values
@@ -310,7 +308,6 @@ def dict_equal(d1, d2):
     -------
     bool
         True if all keys and values match, False otherwise
-
     """
     if len({k: d1[k] for k in d1 if k in d2 and d1[k] == d2[k]})-len(d1) == 0:
         return True
@@ -389,10 +386,7 @@ def parseMathSqrt(s):
 
 def angle(v1, v2):
     """Returns the angle between two 2D vectors"""
-    # angle = np.arctan2(v2[1],v2[0]) - np.arctan2(v1[1],v1[0])
-    # if abs(angle) > np.pi:
-    #     angle += -np.sign(angle) * 2*np.pi
-    # return angle
+    # Use cross product for sine, dot product for cosine
     return np.arctan2(v1[0]*v2[1] - v1[1]*v2[0], v1[0]*v2[0] + v1[1]*v2[1])
 
 
@@ -412,21 +406,28 @@ def dist_from_line(p1, p2, r):
     -------
     float
         The distance.
-
     """
-
     if len(p1) == 2:
         return (abs((p2[1] - p1[1]) * r[0] - (p2[0] - p1[0]) * r[1]
                     + p2[0] * p1[1] - p2[1] * p1[0])
                 / np.sqrt((p2[1] - p1[1])**2 + (p2[0] - p1[0])**2))
-    elif len(p1) == 3:
+    if len(p1) == 3:
         return (np.linalg.norm(np.cross((r - p1), (p2 - p1)))
                 / np.linalg.norm(p2 - p1))
-    else:
-        raise ValueError("Vector dimensions have to be either 2 or 3.")
+    raise ValueError("Vector dimensions have to be either 2 or 3.")
 
 
-def readToExc(llist):
+def strip_comments(line):
+    """Return the part of line to the left of comments."""
+    for comment_char in "!#%":
+        try:
+            line, *_ = line.split(comment_char)
+        except ValueError:  # Nothing left to split
+            return ''
+    return line.strip()
+
+
+def readToExc(llist):                                                           # TODO: unused; could be an iterator
     """For reading PARAMETERS files; takes a list, returns elements until the
     first one that starts with an exclamation mark."""
     read = True
@@ -440,7 +441,7 @@ def readToExc(llist):
     return newlist
 
 
-def splitSublists(llist, sep):
+def splitSublists(llist, sep):                                                  # TODO: could be an iterator
     """Takes a list and a separator, splits strings in the list by the
     separator, returns results as list of lists"""
     newlist = []
@@ -609,7 +610,7 @@ def available_cpu_count():
     return -1
 
 
-def make_unique_list(w_duplicates):
+def make_unique_list(w_duplicates):                                             # TODO: better function in guilib.helpers
     """Helper function to remove duplicates from list. Does same as creating a set but preservers order.
 
     Args:
