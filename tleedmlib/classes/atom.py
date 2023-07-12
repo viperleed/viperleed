@@ -190,8 +190,6 @@ class Atom:
             del self.offset_vib[el]
 
         # vibrational offsets from VIBROCC
-        if el not in self.disp_occ:
-            self.disp_occ[el] = copy.copy(self.disp_occ['all'])
         if el in self.offset_occ:
             occ_offset = self.offset_occ[el]
             final_occ_steps = [occ_step + occ_offset for occ_step in self.disp_occ[el]]
