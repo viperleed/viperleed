@@ -15,6 +15,7 @@ if os.path.abspath(vpr_path) not in sys.path:
 import viperleed
 import viperleed.tleedmlib
 from viperleed.tleedm import run_tleedm
+from viperleed.tests.helpers import slab_and_expectations, slab_pg_rp
 
 from tleedmlib.files.poscar import readPOSCAR
 from viperleed import tleedmlib as tl
@@ -31,14 +32,6 @@ TENSERLEED_TEST_VERSIONS = ('1.71', '1.72', '1.73', '1.74')
 
 AG_100_DISPLACEMENTS_NAMES = ['DISPLACEMENTS_z', 'DISPLACEMENTS_vib', 'DISPLACEMENTS_z+vib']
 AG_100_DELTAS_NAMES = ['Deltas_z.zip', 'Deltas_vib.zip', 'Deltas_z+vib.zip']
-
-_EXAMPLE_POSCARs = [("POSCAR_Ag(100)", 6, 'p4m', 0),
-                    ("POSCAR_STO(100)-4x1", 136, 'pm', 0),
-                    ("POSCAR_TiO2", 540, 'pmm', -1),
-                    ("POSCAR_diamond", 96, 'pm', 89),
-                    ("POSCAR_36C_p6m", 36, 'p6m', 0),
-                    ("POSCAR_36C_cm", 36,'cm', 0),
-                    ("POSCAR_Fe3O4_SCV", 83, 'cmm', 50)]  #TODO: Phaseshift generation fails. Why? @Fkraushofer (worked in fkpCurie:Florian_OldLocalTests/Fe3O4-001-SCV/history/t000.r013_211220-133452)
 
 class BaseTleedmFilesSetup():
     def __init__(self, surface_dir, tmp_test_path, required_files=(), copy_dirs=()):
@@ -237,23 +230,6 @@ class TestSearchAg100(TestSetup):
         assert search_files_ag100.expected_file_exists(expected_file)
 
 
-@pytest.fixture(scope="function", params=_EXAMPLE_POSCARs)
-def slab_and_expectations(request):
-    filename, expected_n_atoms, expected_pg, offset_at = request.param
-    file_path = Path(__file__).parent / "fixtures" / "POSCARs" / filename
-    pos_slab = readPOSCAR(str(file_path))
-    return (pos_slab, expected_n_atoms, expected_pg, offset_at)
-
-@pytest.fixture(scope="function")
-def slab_pg_rp(slab_and_expectations):
-    slab, *_ = slab_and_expectations
-    rp = tl.Rparams()
-    slab.fullUpdate(rp)
-    pg = findSymmetry(slab, rp, output=False)
-    enforceSymmetry(slab, rp)
-    return slab, pg, rp
-
-
 class TestPOSCARRead:
     def test_read_in_atoms(self, slab_and_expectations):
         slab, *_ = slab_and_expectations
@@ -264,7 +240,7 @@ class TestPOSCARRead:
         assert len(slab.atlist) == expected_n_atoms
 
 
-class TestPOSCARSymmetry(TestPOSCARRead):
+class TestPOSCARSymmetry(TestPOSCARRead):                                       # TODO: this should probably be moved to a separate file (e.g. test_symmetry.py)
     def test_any_pg_found(self, slab_pg_rp):
         _, slab_pg, _ = slab_pg_rp
         assert slab_pg != 'unknown'
