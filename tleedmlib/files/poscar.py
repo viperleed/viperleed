@@ -560,7 +560,7 @@ class POSCARWriter(AbstractContextManager):
             if atom.layer.isBulk:
                 _free_dir = 'bulk'
             elif isinstance(atom.freedir, np.ndarray):
-                _free_dir = atom.freedir
+                _free_dir = str(atom.freedir)  # has to be made into a string
             elif atom.freedir == 0:
                 _free_dir = 'locked'
             else:
