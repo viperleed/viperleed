@@ -38,6 +38,11 @@ extern void TLE7209reset(byte);
 extern TLE7209_Error TLE7209readIDandVersion(byte, byte *);
 extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte *);
 
+// If register names on the ATmega32U4 should change, 
+// the assignments below would have to change accordingly.
+uint8_t pin_to_tc4_reg_addr(uint8_t);
+uint8_t pin_to_tc4_channel(uint8_t);
+
 
 // The pins belonging to 'COIL_1_PWM' and 'COIL_2_PWM' should not be changed.
 // Changing these may require choosing a different Timer/Counter module, e.g.
@@ -115,13 +120,13 @@ class Coil {
 
         byte set_current(double coil_current) {
             byte err = set_signed_pwm_value(coil_current, pwm_sign_pin,
-                                        tc4_reg_addr);
+                                            tc4_reg_addr);
             if(err)
                 return err;
             last_current_setpoint = coil_current;
         };
 
-        double get_current() {
+        double get_current() {                                                  // TODO: Return measured value from INA (no avg, just median)
             return last_current_setpoint; 
         }
     private:

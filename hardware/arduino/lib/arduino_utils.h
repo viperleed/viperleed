@@ -25,28 +25,6 @@ void setChipSelectHigh(byte ioPin) {
 }
 
 
-// If register names on the ATmega32U4 should change, 
-// the assignments below would have to change accordingly.
-uint8_t pin_to_tc4_reg_addr(uint8_t pwm_pin) {
-    switch(pwm_pin) {
-      case  6: return _SFR_ADDR(OCR4D);
-      case 10: return _SFR_ADDR(OCR4B);
-      case 13: return _SFR_ADDR(OCR4A);
-    }
-}
-
-
-// If pin definitions on the ATmega32U4 should change, 
-// the assignments below would have to change accordingly.
-uint8_t pin_to_tc4_channel(uint8_t pwm_pin) {
-    switch(pwm_pin) {
-      case  6: return TC4_PWM_CH_D;
-      case 10: return TC4_PWM_CH_B;
-      case 13: return TC4_PWM_CH_A;
-    }
-}
-
-
 uint16_t bigger16(uint16_t a, uint16_t b) {
   return (a > b) ? a : b;
 }

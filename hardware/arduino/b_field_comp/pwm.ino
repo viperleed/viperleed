@@ -371,7 +371,30 @@ void use_pwm_enhanced_mode() {
     // Enable Enhanced Compare/PWM mode (ENHC4 = 1)
     TCCR4E |= 1 << ENHC4;
 }
-// TODO: Move to somewhere else?
+
+
+uint8_t pin_to_tc4_reg_addr(uint8_t pwm_pin) {
+    switch(pwm_pin) {
+      case  6: return _SFR_ADDR(OCR4D);
+      case 10: return _SFR_ADDR(OCR4B);
+      case 13: return _SFR_ADDR(OCR4A);
+      default: return 0;                                                       // Change to more descriptive error
+    }
+}
+
+
+// If pin definitions on the ATmega32U4 should change, 
+// the assignments below would have to change accordingly.
+uint8_t pin_to_tc4_channel(uint8_t pwm_pin) {
+    switch(pwm_pin) {
+      case  6: return TC4_PWM_CH_D;
+      case 10: return TC4_PWM_CH_B;
+      case 13: return TC4_PWM_CH_A;
+      default: return 0;                                                       // Change to more descriptive error
+    }
+}
+
+
 double log2(double val)
 {
    return log(val) / log(2);
