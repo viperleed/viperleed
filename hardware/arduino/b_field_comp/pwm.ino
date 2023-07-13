@@ -119,6 +119,8 @@ byte set_pwm_frequency(double f_pwm) {
   // The PWM period (= 1 / f_pwm) is defined in terms of TC4 clock ticks:
   pwm_period = f_clk_t4 / f_pwm - 1;  
   set_ten_bit_value(pwm_period, &OCR4C);
+
+  set_pwm_polarity(POSITIVE_CURRENT);                                          // Possibly rename function, and corresponding defines
 }
 
 
@@ -142,7 +144,7 @@ byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr
     **/
     if (value < -1.0 || value > 1.0) return 2;                                      // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
 
-    set_current_sign(value, sign_select_pin);
+    value = set_current_sign(value, sign_select_pin);
 
     // Notice that the 'coil_current', i.e. the time-averaged value of the signal
     // from the PWM, is exactly the same as the duty cycle of the PWM itself.
@@ -152,13 +154,14 @@ byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr
     // times the PWM period measured in TC4 clock ticks.
     // Also note it is sufficient to simply pass 'abs(value)' to program the 
     // duty cycle because we set the current direction with 'set_pwm_polarity'.
-    set_ten_bit_value(abs(value) * pwm_period, tc4_reg_addr);
+
+    set_ten_bit_value((uint16_t)(value * pwm_period), tc4_reg_addr);
     return 0;
 }
 
 
 
-void set_current_sign(double value, byte sign_select_pin) {
+double set_current_sign(double value, byte sign_select_pin) {
     /**Set digital I/O pin according to current direction in a coil.
 
     Parameters
@@ -169,13 +172,11 @@ void set_current_sign(double value, byte sign_select_pin) {
         Which I/O pin to use as a sign indicator
     **/
     if (value < 0){
-        set_pwm_polarity(NEGATIVE_CURRENT);
         digitalWrite(sign_select_pin, HIGH);                                    // TODO: check if this is the right way (test on coil)
-    }
-    else {
-        set_pwm_polarity(POSITIVE_CURRENT);
-        digitalWrite(sign_select_pin, LOW);
-    }
+        return value + 1;
+    } 
+    digitalWrite(sign_select_pin, LOW);
+    return value;
 }
 
 
@@ -204,6 +205,8 @@ void set_ten_bit_value(uint16_t ten_bit_value, volatile uint8_t *reg) {
 }
 
 
+// TODO: rename and do not use POSITIVE_CURRENT / NEGATIVE_CURRENT 
+// Only setup registers
 void set_pwm_polarity(byte polarity) {
     /**Set PWM polarity.
 
