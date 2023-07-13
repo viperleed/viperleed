@@ -16,6 +16,7 @@ vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
+from viperleed.tleedmlib import symmetry
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   ParameterInterpreter,
                                                   Assignment, NumericBounds)
@@ -28,7 +29,8 @@ from viperleed.tleedmlib.files.poscar import (readPOSCAR,
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tests.helpers import (ag100_parameters_example,
                                      example_poscars,
-                                     slab_and_expectations)
+                                     slab_and_expectations,
+                                     slab_pg_rp)
 
 
 class Test_readPOSCAR:
@@ -65,3 +67,21 @@ class Test_writePOSCAR:
         # read the written POSCAR and check that the number of atoms is correct
         written_slab = readPOSCAR(tmp_path / 'POSCAR')
         assert len(written_slab.atlist) == expected_n_atoms
+
+    def test_writePOSCAR_slab_with_symmetry(self, slab_pg_rp, tmp_path):
+        slab, *_ = slab_pg_rp
+        writePOSCAR(slab, tmp_path / 'POSCAR')
+        assert (tmp_path / 'POSCAR').exists()
+
+    def test_writePOSCAR_with_symmetry_n_atoms(self, slab_pg_rp, tmp_path):
+        slab, *_ = slab_pg_rp
+        writePOSCAR(slab, tmp_path / 'POSCAR')
+        written_slab = readPOSCAR(tmp_path / 'POSCAR')
+        assert len(written_slab.atlist) == len(slab.atlist)
+
+    def test_writePOSCAR_with_symmetry_pg(self, slab_pg_rp, tmp_path):
+        slab, pg, rp = slab_pg_rp
+        writePOSCAR(slab, tmp_path / 'POSCAR')
+        written_slab = readPOSCAR(tmp_path / 'POSCAR')
+        written_pg = symmetry.findSymmetry(written_slab, rp)
+        assert written_pg == pg
