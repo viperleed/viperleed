@@ -173,7 +173,6 @@ class Slab:
 
         self.ucell = np.array([])
         self.poscar_scaling = 1.
-        self.elements = []
         self.chemelem = []
         self.n_per_elem = {}
         self.last_element_mix = None
@@ -212,12 +211,18 @@ class Slab:
         # initialize from ase_atoms
         self.ucell = np.transpose(ase_atoms.cell[:])
         elems = [v.capitalize() for v in ase_atoms.get_chemical_symbols()]
-        self.elements = make_unique_list(elems)
-        self.n_per_elem = {k: elems.count(k) for k in self.elements}
+        tmp_elements = make_unique_list(elems)
+        self.n_per_elem = {k: elems.count(k) for k in tmp_elements}
         for i, (el, pos) in enumerate(zip(elems,
                                           ase_atoms.get_scaled_positions())):
             self.atlist.append(Atom(el, pos, i+1, self))
         self.getCartesianCoordinates()
+
+    @property
+    def elements(self):
+        """List of elements in the slab in order as read from POSCAR."""
+        atom_elements = [at.el.capitalize() for at in self.atlist]
+        return list(set(atom_elements))
 
     def resetSymmetry(self):
         """Sets all symmetry information back to default values."""
@@ -637,7 +642,7 @@ class Slab:
         if botToTop:
             self.atlist.reverse()
 
-    def sort_by_element(self):
+    def sort_by_element(self):                                                  # TODO: this could be simplified using sets
         """Sorts atlist by elements, preserving the element order from the
         original POSCAR"""
         # unfortunately, simply calling the sort function by element does not
@@ -661,7 +666,8 @@ class Slab:
             try:
                 i = tmpElList.index(el)
             except ValueError:
-                logger.error("Unexpected point encountered in Slab.sort_by_element: "
+                logger.error("Unexpected point encountered "
+                             "in Slab.sort_by_element: "
                              "Could not find element in element list")
             else:
                 sortedlist.extend(isoLists[i])
