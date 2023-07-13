@@ -566,4 +566,4 @@ class POSCARWriter(AbstractContextManager):
             else:
                 _free_dir = 'free'
             line += f"{_free_dir:>12}"
-            yield line
+            yield line + '\n'
