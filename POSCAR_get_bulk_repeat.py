@@ -157,7 +157,7 @@ def main():
 
     # create POSCAR with reduced size
     newsl = copy.deepcopy(sl)
-    newsl.sortByZ()
+    newsl.sort_by_z()
     topBulkAt = [at for at in newsl.atlist if at.pos[2] <= cut][-1]
     botSlabAt = [at for at in newsl.atlist if at.pos[2] > cut][0]
     fracRepeat = np.dot(np.linalg.inv(newsl.ucell), newC)

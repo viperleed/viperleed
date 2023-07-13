@@ -105,7 +105,7 @@ def findBulkSymmetry(sl, rp):
     rotsfound = []
     glidesfound = []
     ts = copy.deepcopy(sl)
-    ts.sortByZ()
+    ts.sort_by_z()
     ts.collapseCartesianCoordinates()
     ts.createSublayers(epsz)
     # optimize C vector
@@ -248,7 +248,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         if len(ts.sublayers) < 2:
             ts = ts.doubleBulkSlab()
     ts.projectCToZ()
-    ts.sortByZ()
+    ts.sort_by_z()
 
     bigslab = copy.deepcopy(ts)
     # will have atoms duplicated and shifted to 4 unit cells

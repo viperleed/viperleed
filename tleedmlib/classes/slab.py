@@ -173,7 +173,6 @@ class Slab:
 
         self.ucell = np.array([])
         self.poscar_scaling = 1.
-        self.elements = []
         self.chemelem = []
         self.n_per_elem = {}
         self.last_element_mix = None
@@ -212,12 +211,18 @@ class Slab:
         # initialize from ase_atoms
         self.ucell = np.transpose(ase_atoms.cell[:])
         elems = [v.capitalize() for v in ase_atoms.get_chemical_symbols()]
-        self.elements = make_unique_list(elems)
-        self.n_per_elem = {k: elems.count(k) for k in self.elements}
+        tmp_elements = make_unique_list(elems)
+        self.n_per_elem = {k: elems.count(k) for k in tmp_elements}
         for i, (el, pos) in enumerate(zip(elems,
                                           ase_atoms.get_scaled_positions())):
             self.atlist.append(Atom(el, pos, i+1, self))
         self.getCartesianCoordinates()
+
+    @property
+    def elements(self):
+        """List of elements in the slab in order as read from POSCAR."""
+        atom_elements = [at.el.capitalize() for at in self.atlist]
+        return list(set(atom_elements))
 
     def resetSymmetry(self):
         """Sets all symmetry information back to default values."""
@@ -233,7 +238,7 @@ class Slab:
         is defined, also updates the numbers there to keep the two consistent.
         """
         self.sortOriginal()
-        self.sortByEl()
+        self.sort_by_element()
         bulkAtsRenumbered = []
         for (i, at) in enumerate(self.atlist):
             if self.bulkslab is not None:
@@ -416,7 +421,7 @@ class Slab:
         ct.sort()
         self.layers = []
         tmplist = self.atlist[:]
-        self.sortByZ()
+        self.sort_by_z()
         laynum = 0
         b = True if rparams.N_BULK_LAYERS > 0 else False
         newlayer = Layer(self, 0, b)
@@ -467,7 +472,7 @@ class Slab:
     def createSublayers(self, eps=0.001):
         """Sorts the atoms in the slab into sublayers, sorted by element and Z
         coordinate."""
-        self.sortByZ()
+        self.sort_by_z()
         subl = []  # will be a list of sublayers, using the Layer class
         for el in self.elements:
             sublists = [[a for a in self.atlist if a.el == el]]
@@ -631,13 +636,13 @@ class Slab:
         self.sitelist = sl
         self.sites_initialized = True
 
-    def sortByZ(self, botToTop=False):
+    def sort_by_z(self, botToTop=False):
         """Sorts atlist by z coordinate"""
         self.atlist.sort(key=lambda atom: atom.pos[2])
         if botToTop:
             self.atlist.reverse()
 
-    def sortByEl(self):
+    def sort_by_element(self):                                                  # TODO: this could be simplified using sets
         """Sorts atlist by elements, preserving the element order from the
         original POSCAR"""
         # unfortunately, simply calling the sort function by element does not
@@ -661,7 +666,8 @@ class Slab:
             try:
                 i = tmpElList.index(el)
             except ValueError:
-                logger.error("Unexpected point encountered in Slab.sortByEl: "
+                logger.error("Unexpected point encountered "
+                             "in Slab.sort_by_element: "
                              "Could not find element in element list")
             else:
                 sortedlist.extend(isoLists[i])
@@ -1161,7 +1167,7 @@ class Slab:
         # Create a test slab: C projected to Z
         ts = copy.deepcopy(self)
         ts.projectCToZ()
-        ts.sortByZ()
+        ts.sort_by_z()
         ts.createSublayers(epsz)
 
         # Use the lowest-occupancy sublayer (the one
