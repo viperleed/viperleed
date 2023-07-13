@@ -13,7 +13,7 @@ Date: 09.02.2022
 #include <stdarg.h>
 
 #include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
-#include "arduino_utils.h"  // from ../lib; for setChipSelectHigh
+#include "arduino_utils.h"  // from ../lib; for setChipSelectHigh, getMedian16, bigger16, biggest16
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
