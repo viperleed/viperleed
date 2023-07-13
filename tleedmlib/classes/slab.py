@@ -35,6 +35,11 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 logger = logging.getLogger("tleedm.slab")
 
+class SlabError(Exception):
+    """A generic exception related to a Slab object."""
+
+class InvalidUnitCellError(SlabError):
+    """Exception raised when the unit cell of a slab is inappropriate."""
 
 class SymPlane:
     """Candidate plane for a symmetry operation. 'ty' pre-defines a type
@@ -223,6 +228,13 @@ class Slab:
         """List of elements in the slab in order as read from POSCAR."""
         atom_elements = [at.el.capitalize() for at in self.atlist]
         return list(set(atom_elements))
+    
+    def check_a_b_out_of_plane(self):
+        if any(self.ucell[2, :2]):
+            _err = ("Unit cell a and b vectors must not "
+                    "have an out-of-surface (Z) component!")
+            logger.error(_err)
+            raise InvalidUnitCellError(_err)
 
     def resetSymmetry(self):
         """Sets all symmetry information back to default values."""

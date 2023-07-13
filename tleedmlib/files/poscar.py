@@ -32,8 +32,7 @@ class POSCARSyntaxError(POSCARError):
     """An exceptions for syntax errors in POSCAR files."""
 
 
-class InvalidUnitCellError(POSCARError):
-    """Exception raised when the unit cell of a POSCAR is inappropriate."""
+
 
 
 def readPOSCAR(filename='POSCAR'):
@@ -67,8 +66,6 @@ def readPOSCAR(filename='POSCAR'):
         inconsistent with the one specifying the atom counts.
     POSCARSyntaxError
         If no (or too few) atomic coordinate is read.
-    InvalidUnitCellError
-        If the a and b unit vectors have non-negligible z component.
     """
     filepath = Path(filename)
     if not filepath.is_file():
@@ -427,11 +424,6 @@ class POSCARReader(AbstractContextManager):
 
         slab.ucell_ori = slab.ucell.copy()
         slab.ucell[abs(slab.ucell) < self.ucell_eps] = 0.                       # TODO: was done only in x,y. OK to do all?
-        if any(slab.ucell[2, :2]):
-            _err = ("Unit cell a and b vectors must not "
-                    "have an out-of-surface (Z) component!")
-            _LOGGER.error(_err)
-            raise InvalidUnitCellError(_err)
 
 
 class POSCARWriter(AbstractContextManager):
