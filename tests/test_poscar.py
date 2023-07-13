@@ -1,36 +1,34 @@
-"""Test module file/poscar.
+"""Test module poscar.
 
 Created on 2023-07-12
 
 @author: Alexander M. Imre
-
 """
 
-import pytest
 from pathlib import Path
-import os, sys
-from copy import deepcopy
-import numpy as np
-
+import os
+import sys
 from unittest.mock import mock_open, patch
+
+import pytest
 
 vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
-import viperleed.tleedmlib.files.parameters as parameters
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   ParameterInterpreter,
                                                   Assignment, NumericBounds)
-from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR, ensure_away_from_c_edges,POSCARReader, POSCARSyntaxError, InvalidUnitCellError
+from viperleed.tleedmlib.files.poscar import (readPOSCAR,
+                                              writePOSCAR,
+                                              ensure_away_from_c_edges,
+                                              POSCARReader,
+                                              POSCARSyntaxError,
+                                              InvalidUnitCellError)
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tests.helpers import (ag100_parameters_example,
-                                     _FIXTURES_PATH,
-                                     _POSCARs_PATH,
-                                     _EXAMPLE_POSCARs,
                                      example_poscars,
-                                     slab_and_expectations,
-)
+                                     slab_and_expectations)
 
 
 class Test_readPOSCAR:
@@ -45,6 +43,7 @@ class Test_readPOSCAR:
     def test_readPOSCAR_slab_n_atom_correct(self, slab_and_expectations):
         slab, expected_n_atoms, *_ = slab_and_expectations
         assert len(slab.atlist) == expected_n_atoms
+
 
 class Test_writePOSCAR:
     # TODO: Test that the written POSCAR is the same as the read one.

@@ -518,7 +518,7 @@ class POSCARWriter(AbstractContextManager):
 
         if slab.planegroup != slab.foundplanegroup.split('[')[0]:
             line += ' (found '
-            if '[' in slab.foundplanegroup and comments == 'nodir':
+            if '[' in slab.foundplanegroup and self.comments == 'nodir':
                 line += slab.foundplanegroup.split('[')[0]
             else:
                 line += slab.foundplanegroup
