@@ -369,6 +369,7 @@ class Slab:
         automatically detected bulk layer cuts. Returns the cuts as a sorted
         list of floats."""
         # first interpret LAYER_CUTS parameter - can be a list of strings
+        self.check_a_b_out_of_plane()
         ct = []
         rgx = re.compile(r'\s*(dz|dc)\s*\(\s*(?P<cutoff>[0-9.]+)\s*\)')
         al = self.atlist[:]
@@ -876,6 +877,7 @@ class Slab:
             True if translation symmetric, else False.
 
         """
+        self.check_a_b_out_of_plane()
         if len(tv) == 2:  # two-dimensional displacement. append zero for z
             tv = np.append(tv, 0.)
         uc = np.copy(self.ucell)
@@ -939,6 +941,7 @@ class Slab:
     def isBulkTransformSymmetric(self, matrix, sldisp, eps):
         """Evalues whether the slab is self-equivalent under a given symmetry
         operation, and subsequent translation by a given number of sublayers"""
+        self.check_a_b_out_of_plane()
         uc = self.ucell
         uct = np.transpose(uc)
         releps = [eps / np.linalg.norm(uct[j]) for j in range(0, 3)]
