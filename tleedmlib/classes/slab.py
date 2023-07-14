@@ -226,9 +226,8 @@ class Slab:
     @property
     def elements(self):
         """List of elements in the slab in order as read from POSCAR."""
-        atom_elements = [at.el.capitalize() for at in self.atlist]
-        return list(set(atom_elements))
-    
+        return tuple(self.n_per_elem.keys())
+
     def check_a_b_out_of_plane(self):
         if any(self.ucell[2, :2]):
             _err = ("Unit cell a and b vectors must not "
