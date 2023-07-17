@@ -65,9 +65,9 @@ Additionally, you will need the following tools to perform the modifications:
     - a soldering iron and solder,
     - tweezers,
     - cable clippers,
-    - **TODO: name of hole punch machine**
     - a cable tie cutter,
-    - a heat gun for shrink tubes.
+    - a heat gun for shrink tubes,
+    - a sheet metal hole punch machine or a drill with a suitable drill bit.
 
 .. _fig_resistors_1:
 .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_1.png
@@ -187,7 +187,7 @@ Finally, cut off protruding wires (see :numref:`fig_resistors_4`) from the resis
 
 To read out the beam voltage during operation, we need access to the new pin from the outside.
 For this, there needs to be a connection from the pin on the motherboard to the backside of the chassis.
-To make the connection cable, take the **TODO cable specifications**, strip off ~0.5 cm of the insulation on both side, and solder the **TODO name of female pin part** to the cable.
+To make the connection, take the new cable, strip off ~0.5 cm of the insulation on both side, and solder the female pin plug to the cable.
 You should be able to firmly connect the cable to the pin as shown in :numref:`fig_resistors_cable_attached`.
 
 .. _fig_resistors_cable_attached:
@@ -214,10 +214,6 @@ Secure the coaxial connector in place by tightening the nut that came with it on
 Finally, re-attach the mains and screen plugs if you had to remove them.
 At this point, we highly recommend labeling the newly fashioned port appropriately (e.g., "Beam HV").
 
-
-**TODO Michele: How is this port & machine called?**
-
-
 .. _fig_new_port_location:
 .. figure:: /_static/hardware/ErLEED_modification/new_port_location.svg
     :width: 75%
@@ -234,7 +230,7 @@ Next, you need to place the custom pin on the motherboard.
 The pin is intended to read out the potential applied to the electron beam in the LEED setup.
 To do this, we can measure the voltage at the filament where the electrons originate.
 By placing a voltage divider with two equal resistors parallel to the filament, we can get a reference potential (see the schematic circuit diagram in :numref:`fig_ebeam_circuit`).
-Since the filament is essentially a short circuit, a negligible current will pass through the parallel resistors.
+Since the filament is essentially a short circuit, a negligible current (~20 mA) will pass through the parallel resistors.
 
 To directly access the filament, we can conveniently place the new pin right next to the high-voltage diodes next to the filament port.
 The exact location is shown in :numref:`fig_pin_location_zoomed_out` and :numref:`fig_pin_location_zoomed_in`.
