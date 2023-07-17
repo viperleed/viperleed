@@ -17,9 +17,6 @@ It is possible to make the beam voltage accessible for read out in the ErLEED el
     The modifications described below **will** void any warranty unless you explicitly get a permission by the supplier.
     The ViPErLEED developers take no responsibility for any malfunctions that may occur as a result of modifications to the LEED electronics.
 
-
-**TODO Michele, Michael, Alex: Details on which versions numbers are supported; warnings etc.**
-
 In order to make the beam voltage accessible, we need to measure the average potential at the filament.
 We can do this by adding a voltage divider with two equal resistors in parallel to the filament.
 The output of the voltage divider is then connected to a new port on the back of the control unit.
@@ -94,9 +91,6 @@ However, the resistors should not be chosen too small as the additional current 
 
 when the BEAM HV plug is disconnected.
 This equates to about 30 mA with 20 V filament voltage and a 330 :math:`\Omega` resistor, i.e. ~0.6 W.
-
-
-**TODO Michele, Michael: names/numbers of HV connector components & hole-punch machine**
 
 Opening up the electronics
 ==========================
