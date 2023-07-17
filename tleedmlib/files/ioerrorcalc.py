@@ -22,7 +22,7 @@ try:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     # import matplotlib.ticker as plticker
-    plt.style.use('viperleed/tleedmlib/tleedm.mplstyle')
+    plt.style.use('viperleed.tleedm')
 except Exception:
     _CAN_PLOT = False
 else:
@@ -289,7 +289,7 @@ def format_col_content(content):
 
 
 def make_errors_figs(errors):
-    """Creates and writes Errors.pdf.
+    """Creates figures for Errors.pdf.
 
     Parameters
     ----------
@@ -494,6 +494,7 @@ def make_errors_figs(errors):
         fig.tight_layout(rect=(0, 0, 1, 0.965))
         fig.suptitle(titles[mode])
         figs.append(fig)
+    logger.log(1, f'Number of error figures: {len(figs)}')
     return figs
 
 
@@ -540,6 +541,9 @@ def draw_error(axis, bound, error, r_interval):
         ha='center', va='top', fontsize=4.5)
 
 def write_errors_pdf(figs, filename="Errors.pdf"):
+    """Writes a list of figures to a pdf file."""
+    if not figs:
+        raise ValueError("No figures to write.")
     try:
         pdf = PdfPages(filename)
         for fig in figs:

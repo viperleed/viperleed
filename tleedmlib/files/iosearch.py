@@ -71,8 +71,7 @@ def readSDTL_next(filename="SD.TL", offset=0):
         return (offset, "")     # return old offset, no content
 
 
-def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0,
-                    suppress_warnings=False):
+def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
     """
     Attempts to interpret a given string as one or more blocks of an SD.TL
     file.
@@ -83,8 +82,9 @@ def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0,
         A block of data as read from SD.TL.
     whichR : int, optional
         Which r-factor values to use (average / integer / fractional)
-    logInfo : bool, optional
-        Whether some basic information should be printed to logger.info
+    print_info : bool, optional
+        Whether some basic information should be printed to logger.info and
+        logger.warning. The default is False.
     n_expect : int, optional
         Number of configurations expected per block. If a block contains
         fewer, it will be ignored.
@@ -105,12 +105,13 @@ def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0,
         gen = 0
         try:
             gen = int(block[:13])
-            if logInfo:
+            if print_info:
                 logger.info("Reading search results from SD.TL, "
                             "generation {}".format(gen))
         except ValueError:
-            logger.warning("While reading SD.TL, could not interpret "
-                           "generation number "+block[:13])
+            if print_info:
+                logger.warning("While reading SD.TL, could not interpret "
+                            "generation number "+block[:13])
         lines = block.split("\n")
         rfacs = []
         configs = []
@@ -127,31 +128,33 @@ def readSDTL_blocks(content, whichR=0, logInfo=False, n_expect=0,
                         rav = float(line.split("|")[2 + whichR])  # average R
                         rfacs.append(rav)
                     except ValueError:
-                        logger.error("Could not read R-factor in SD.TL line:\n"
-                                     + line)
+                        if print_info:
+                            logger.error("Could not read R-factor in SD.TL line:\n"
+                                        + line)
                 try:
                     percent = int(line.split("|")[-2].strip()[:-1])
                     valstring = line.split("|")[-1].rstrip()
                     pars = readIntLine(valstring, width=4)
                     dpars.append((percent, pars))
                 except ValueError:
-                    logger.error("Could not read values in SD.TL line:\n"
-                                 + line)
+                    if print_info:
+                        logger.error("Could not read values in SD.TL line:\n"
+                                    + line)
         if dpars:
             configs.append(tuple(dpars))
         if not all([len(dp) == len(configs[0]) for dp in configs]):
-            if not suppress_warnings:
+            if print_info:
                 logger.warning("A line in SD.TL contains fewer values than "
                             "the others. Skipping SD.TL block.")
             continue
         if gen != 0 and len(rfacs) > 0 and len(configs) > 0:
             returnList.append((gen, rfacs, tuple(configs)))
         elif len(configs) < n_expect:
-            if not suppress_warnings:
+            if print_info:
                 logger.warning("A block in SD.TL contains fewer configurations "
                             "than expected.")
         else:
-            if not suppress_warnings:
+            if print_info:
                 logger.warning("A block in SD.TL was read but not understood.")
     return returnList
 
@@ -202,9 +205,8 @@ def _fetch_SDTL_last_block(which_beams, n_expect, print_info=False):
     lines_str = "\n".join(lines)
     sdtl_content = readSDTL_blocks("\n".join(lines),
                                    whichR=which_beams,
-                                   logInfo=print_info,
-                                   n_expect=n_expect,
-                                   suppress_warnings=not print_info)
+                                   print_info=print_info,
+                                   n_expect=n_expect)
     return sdtl_content
 
 

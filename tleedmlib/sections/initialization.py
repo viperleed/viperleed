@@ -366,7 +366,7 @@ def _get_expbeams(rp):                                                          
         rp.EXPBEAMS_INPUT_FILE = exp_files_provided[0]
     except IndexError:
         # reset the default
-        rp.EXPBEAMS_INPUT_FILE = rp.get_defaults("EXPBEAMS_INPUT_FILE")
+        rp.EXPBEAMS_INPUT_FILE = rp.get_default("EXPBEAMS_INPUT_FILE")
         return
 
     err_msg = f"Error while reading file {rp.EXPBEAMS_INPUT_FILE}"

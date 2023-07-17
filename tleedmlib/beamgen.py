@@ -100,6 +100,12 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     # use **only** beams from domain specified in rp.SUPERLATTICE
     # beams come pre-sorted from get_equivalent_beams()
     equivalent_beams = get_equivalent_beams(leed_parameters, domains=0)
+
+    # log beamgroups for debugging if loglevel is low enough
+    beamgroups_verbose, beamgroups_vverbose = _log_beamgroups(equivalent_beams)
+    logger.log(level=5, msg = beamgroups_verbose)
+    logger.log(level=1, msg = beamgroups_vverbose)
+
     # strip away symmetry group information
     beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
     subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw) # TODO: create test case to check that len(subset_classes) == np.linalg.det(rp.SUPERLATTICE)
@@ -128,7 +134,8 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     beamlist_content = make_beamlist_string(all_indices_arr,
                                             all_energies,
                                             rp.TL_VERSION)
-    max_energy = np.max(all_energies)
+    # get highest energy considered; groups may have different shapes
+    max_energy = max(np.max(group) for group in all_energies)
     logger.debug(f'Highest energy considered in BEAMLIST: {max_energy:.2f}eV')
 
     # write to file
@@ -141,6 +148,22 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
         raise
 
     logger.debug('Wrote to BEAMLIST successfully.')
+
+
+def _log_beamgroups(equivalent_beams):
+    """Creates log message for beamgroups."""
+    full_log_msg = 'Equivalent beams:\n'
+    full_log_msg += '(   h     |   k     ),group,\n'
+    for beam in equivalent_beams:
+        index = BeamIndex(beam[0])
+        line = f'{index.__format__("(4,4)s")}, {beam[1]:4},\n'
+        full_log_msg += line
+    # split log message into two parts
+    # fist 12 lines are intended for loglevel verbose
+    # the rest only at very verbose
+    log_msg_v = '\n'.join(full_log_msg.split('\n')[:15])
+    log_msg_vv = '\n'.join(full_log_msg.split('\n')[15:])
+    return log_msg_v, log_msg_vv
 
 
 def make_beamlist_string(all_indices, all_energies, tl_version=1.7):

@@ -113,7 +113,7 @@ def main():
         if el in bulk.elements:
             slab.n_per_elem[el] += bulk.n_per_elem[el]
 
-    slab.sortByEl()
+    slab.sort_by_element()
 
     try:
         writePOSCAR(slab, reorder=False)

@@ -1267,6 +1267,13 @@ class ParameterInterpreter:                                                     
             self.rpars.LOG_LEVEL = logging.DEBUG if log_debug else logging.INFO
             return
 
+        # Try to interpret as string (e.g. 'verbose', 'vv')
+        if assignment.values_str.lower() in self.rpars.get_default(param):
+            self.rpars.LOG_LEVEL = (
+                self.rpars.get_default(param)[assignment.values_str.lower()]
+                )
+            return
+
         # Otherwise interpret as int
         try:
             log_level = self.interpret_numerical_parameter(
