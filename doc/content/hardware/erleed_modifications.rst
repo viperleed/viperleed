@@ -51,7 +51,7 @@ Before you start with the modifications, make sure you have all required compone
 
 For the beam HV pin:
     - 2 equal resistors (between 200 and 500 :math:`\Omega`) with ~1 W power rating, tolerance :math:`\leq 1\%`,
-    - **TODO: name of pin component**
+    - male and female plug pins (e.g., Vogt part no. 1365a.61 and 1361.61),
     - a short shrink tube (~1.5 cm),
 
 For the beam HV port:
@@ -118,8 +118,6 @@ Start to open up the electronics unit by removing all screws that hold the cover
     :align: center
 
     ErLEED control unit with cover plate removed.
-
-**TODO Alex: rename "Power Plug" to "Mains supply" in previous figure**
 
 Removing the back plate
 =======================
