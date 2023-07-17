@@ -146,44 +146,21 @@ Beam HV pin
 ===========
 
 In the following steps, you will build and place a simple pin connector which allows reading out the beam potential.
-A suitable pin can easily be improvised from two 330 :math:`\Omega` resistors, a (?) and a short shrink tube as shown in :numref:`fig_resistors_1`.
+A suitable pin can easily be improvised from two 330 :math:`\Omega` resistors, a male plug pin and a short shrink tube as shown in :numref:`fig_resistors_1`.
 
 
-First, bend the wires of the resistors around the (?) as shown in :numref:`fig_resistors_1`.
-Then, place the (?) in the loop and solder it in place and repeat the procedure with the second resistor (see :numref:`fig_resistors_3` and :numref:`fig_resistors_4`).
+First, bend the wires of the resistors around the male plug pin as shown in :numref:`fig_resistors_1`.
+Then, place the pin in the loop and solder it in place and repeat the procedure with the second resistor (see :numref:`fig_pin_from_resistors` b and c).
 Make sure the soldered spot is stable and the connection across both resistors and to the pin is intact.
 Finally, cut off protruding wires (see :numref:`fig_resistors_4`) from the resistors and place a shrink tube over the resistors and soldered spot (see :numref:`fig_resistors_5`).
 
-
-.. list-table::
-    :align: center
+.. _fig_pin_from_resistors:
+.. figure:: /_static/hardware/ErLEED_modification/resistors/pin_from_resistors.svg
     :width: 100%
+    :align: center
 
-    * - .. _fig_resistors_2:
-  
-        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_2.png
+    Steps to fashion the new pin. (a) Bending resistor wire around the pin. (b) Two resistors soldered to the pin. (c) Protruding wires removed. (d) Finished connector with shrink tube.
 
-            Bending resistor wire around the pin.
-
-      - .. _fig_resistors_3:
-
-        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_3.png
-
-            Two resistors soldered to the pin.
-
-      - .. _fig_resistors_4:
-
-        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_4.png
-
-            Protruding wires removed.
-
-      - .. _fig_resistors_5:
-
-        .. figure:: /_static/hardware/ErLEED_modification/resistors/resistors_5.png
-
-            Finished connector with shrink tube.
-
-**TODO Alex: merge the four panels above into a single figure with panels (a)--(d), cropping the panels similarly. Move the captions to a single one.**
 
 To read out the beam voltage during operation, we need access to the new pin from the outside.
 For this, there needs to be a connection from the pin on the motherboard to the backside of the chassis.
