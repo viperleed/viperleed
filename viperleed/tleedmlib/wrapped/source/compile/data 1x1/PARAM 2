@@ -1,0 +1,18 @@
+
+C  MNBED  : number of beams in experimental spectra before averaging
+C  MNBTD  : number of beams in theoretical spectra before averaging
+
+      PARAMETER (MNBED = 23, MNBTD = 23)
+
+C  MNET   : number of energies in theoretical beam at time of reading in
+C  MNGP  : greater equal number of grid points in energy working grid (ie after
+C           interpolation)
+C  MNS    : number of geometries including those, that are skipped
+
+      PARAMETER (MNET = 184, MNGP = 2861)
+      PARAMETER (MNS = 1)
+
+C  MNGAP  : number of gaps in the experimental spectra (NOTE: if there are no
+C           gaps in the spectra set MNGAP to 1 to avoid zero-sized arrays)
+
+      PARAMETER (MNGAP = 1)
