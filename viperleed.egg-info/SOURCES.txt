@@ -1,0 +1,268 @@
+LICENSE.md
+README.md
+pyproject.toml
+calculations/00_notebooks/process_poscar_blocks.py
+calculations/01_Ag_ex/init/bookkeeper.py
+calculations/01_Ag_ex/init/job.py
+calculations/01_Ag_ex/init_LMAX=18/bookkeeper.py
+calculations/01_Ag_ex/init_LMAX=18/job.py
+calculations/01_Ag_ex/init_PS001vsLMAX18/bookkeeper.py
+calculations/01_Ag_ex/init_PS001vsLMAX18/job.py
+calculations/01_Ag_ex/init_PS_005vsLMAX18/bookkeeper.py
+calculations/01_Ag_ex/init_PS_005vsLMAX18/job.py
+calculations/01_Ag_ex/init_PS_01vsLMAX18/bookkeeper.py
+calculations/01_Ag_ex/init_PS_01vsLMAX18/job.py
+calculations/01_Ag_ex/init_PS_EPS=001/bookkeeper.py
+calculations/01_Ag_ex/init_PS_EPS=001/job.py
+calculations/01_Ag_ex/init_PS_EPS=005/bookkeeper.py
+calculations/01_Ag_ex/init_PS_EPS=005/job.py
+calculations/01_Ag_ex/init_PS_EPS=01/bookkeeper.py
+calculations/01_Ag_ex/init_PS_EPS=01/job.py
+calculations/01_Ag_ex/init_input/bookkeeper.py
+calculations/01_Ag_ex/init_input/job.py
+calculations/1x1_CuD/bookkeeper.py
+calculations/1x1_CuD/job.py
+calculations/Ag(100)_for_tests/job.py
+calculations/AlO_symmetry/job.py
+calculations/Cu111_tobi/bookkeeper.py
+calculations/Cu111_tobi/job.py
+calculations/Cu2O_test/bookkeeper.py
+calculations/Cu2O_test/job.py
+calculations/Cu_Te_p3m1_to_cm/job.py
+calculations/Delta_Tests/delta_intensities_2022_12_15.py
+calculations/Delta_Tests/Delta_Tests/search_funcs 2.py
+calculations/Delta_Tests/Delta_Tests/search_funcs.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/FortranRecordReader 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/FortranRecordReader.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/FortranRecordWriter 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/FortranRecordWriter.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/__init__ 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/__init__.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_edit_descriptors 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_edit_descriptors.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_exceptions 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_exceptions.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_input 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_input.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_lexer 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_lexer.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_misc 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_misc.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_output 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_output.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_parser 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/_parser.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/config 2.py
+calculations/Delta_Tests/Delta_Tests/fortranformat/config.py
+calculations/Fe2O3-(1x1)_doc/bookkeeper.py
+calculations/Fe2O3-(1x1)_doc/job.py
+calculations/Fe2O3-1x1_new-dataset/job 2.py
+calculations/Fe2O3-1x1_new-dataset/job.py
+calculations/Fe2O3_1x1_doc_example/bookkeeper.py
+calculations/Fe2O3_1x1_doc_example/job.py
+calculations/Fe2O3_PS_EPS_benchmark/LMAX=18/bookkeeper.py
+calculations/Fe2O3_PS_EPS_benchmark/LMAX=18/job.py
+calculations/Fe2O3_PS_EPS_benchmark/PS_EPS_001/bookkeeper.py
+calculations/Fe2O3_PS_EPS_benchmark/PS_EPS_001/job.py
+calculations/Fe2O3_PS_EPS_benchmark/PS_EPS_005/bookkeeper.py
+calculations/Fe2O3_PS_EPS_benchmark/PS_EPS_005/job.py
+calculations/Fe2O3_PS_EPS_benchmark/PS_EPS_01/bookkeeper.py
+calculations/Fe2O3_PS_EPS_benchmark/PS_EPS_01/job.py
+calculations/Fe2O3_PS_EPS_benchmark/inputs/bookkeeper.py
+calculations/Fe2O3_PS_EPS_benchmark/inputs/job.py
+calculations/FeO_phaseshifts/produce_phaseshifts 2.py
+calculations/FeO_phaseshifts/produce_phaseshifts.py
+calculations/Hematite_new/bookkeeper.py
+calculations/Hematite_new/job.py
+calculations/Hematite_test/bookkeeper.py
+calculations/Hematite_test/job.py
+calculations/Hf_Ir_test/job.py
+calculations/Ir100_c10x2_1BL_CoO/job.py
+calculations/Lutz_s7/job.py
+calculations/Max_bug_domains/job.py
+calculations/Max_bug_domains/Domain1/job.py
+calculations/Max_bug_domains/Domain2/job.py
+calculations/NoSbVibVary/job.py
+calculations/NoSbVibVary/Domain1/job.py
+calculations/NoSbVibVary/Domain2/job.py
+calculations/Pt(110)_Ralf/get_x_niter.py
+calculations/Rundgren_STO_Test/job 2.py
+calculations/Rundgren_STO_Test/job.py
+calculations/Sb_Si111/job.py
+calculations/Te_Ir_symmetry_test/bookkeeper 2.py
+calculations/Te_Ir_symmetry_test/bookkeeper.py
+calculations/Te_Ir_symmetry_test/job 2.py
+calculations/Te_Ir_symmetry_test/job.py
+calculations/TiC_1x1_stoic/bookkeeper.py
+calculations/TiC_1x1_stoic/job.py
+calculations/archive/Cu(111)_FD_S/job 2.py
+calculations/archive/Cu(111)_FD_S/job.py
+calculations/archive/Cu(111)_from_scratch/bookkeeper.py
+calculations/archive/Cu(111)_from_scratch/job 2.py
+calculations/archive/Cu(111)_from_scratch/job.py
+calculations/archive/Cu(111)_old_PS/job 2.py
+calculations/archive/Cu(111)_old_PS/job.py
+calculations/archive/Cu_test/bookkeeper 2.py
+calculations/archive/Cu_test/bookkeeper.py
+calculations/archive/Cu_test/job.py
+calculations/archive/Hematite_mixed_occ/job 2.py
+calculations/archive/Hematite_mixed_occ/job.py
+calculations/archive/Ir_2x1_O/job 2.py
+calculations/archive/Ir_2x1_O/job.py
+calculations/archive/Ir_2x2_O/job 2.py
+calculations/archive/Ir_2x2_O/job.py
+calculations/archive/LMAX/job 2.py
+calculations/archive/LMAX/job.py
+calculations/archive/Lutz_auxbeams/job.py
+calculations/archive/Lutz_bug_Sept/job.py
+calculations/archive/PS_S_opt/job 2.py
+calculations/archive/PS_S_opt/job.py
+calculations/archive/test_code/tleedm_from_ase 2.py
+calculations/archive/test_code/tleedm_from_ase.py
+calculations/hematite_make_slab/job.py
+calculations/new_search/delta_amplitudes.py
+calculations/new_search/lib_math.py
+calculations/new_search/lib_phaseshifts.py
+calculations/new_search/lib_tensors.py
+calculations/new_search/test_new_search.py
+calculations/new_search/fortranformat/FortranRecordReader.py
+calculations/new_search/fortranformat/FortranRecordWriter.py
+calculations/new_search/fortranformat/__init__.py
+calculations/new_search/fortranformat/_edit_descriptors.py
+calculations/new_search/fortranformat/_exceptions.py
+calculations/new_search/fortranformat/_input.py
+calculations/new_search/fortranformat/_lexer.py
+calculations/new_search/fortranformat/_misc.py
+calculations/new_search/fortranformat/_output.py
+calculations/new_search/fortranformat/_parser.py
+calculations/new_search/fortranformat/config.py
+calculations/new_search_Cu/bookkeeper 2.py
+calculations/new_search_Cu/bookkeeper.py
+calculations/new_search_Cu/job 2.py
+calculations/phaseshift_inputs/Cu(111)/viperleed_input/bookkeeper.py
+calculations/phaseshift_inputs/Cu(111)/viperleed_input/job.py
+calculations/phaseshift_inputs/Fe2O3(012)/viperleed_input/job.py
+calculations/quicktest/bookkeeper.py
+calculations/quicktest/job.py
+calculations/quicktest_old/job.py
+calculations/sq3xsq3_pyramid/job.py
+tests/test_beamgen.py
+tests/test_parameters.py
+tests/test_poscar.py
+tests/test_r_error.py
+tests/test_sections.py
+tests/test_viperleed_from_ase.py
+viperleed/__init__.py
+viperleed/gui.py
+viperleed/tleedm.py
+viperleed/tleedm_from_ase.py
+viperleed/viperleed_from_ase.py
+viperleed.egg-info/PKG-INFO
+viperleed.egg-info/SOURCES.txt
+viperleed.egg-info/dependency_links.txt
+viperleed.egg-info/requires.txt
+viperleed.egg-info/top_level.txt
+viperleed/guilib/__init__.py
+viperleed/guilib/base.py
+viperleed/guilib/basewidgets.py
+viperleed/guilib/decorators.py
+viperleed/guilib/helpers.py
+viperleed/guilib/widgetdecorators.py
+viperleed/guilib/widgetslib.py
+viperleed/guilib/leedsim/__init__.py
+viperleed/guilib/leedsim/dialogbulk3dsym.py
+viperleed/guilib/leedsim/exportcsv.py
+viperleed/guilib/leedsim/exportcsvdialog.py
+viperleed/guilib/leedsim/leedparameters.py
+viperleed/guilib/leedsim/mainwindow.py
+viperleed/guilib/leedsim/newfiledialog.py
+viperleed/guilib/leedsim/widgets.py
+viperleed/guilib/leedsim/classes/__init__.py
+viperleed/guilib/leedsim/classes/beams.py
+viperleed/guilib/leedsim/classes/leedpattern.py
+viperleed/guilib/leedsim/classes/oldleedpatterns.py
+viperleed/guilib/leedsim/classes/realspace.py
+viperleed/guilib/leedsim/classes/symdomains.py
+viperleed/guilib/leedsim/classes/woods.py
+viperleed/guilib/leedsim/tests/__init__.py
+viperleed/guilib/leedsim/tests/__test_classes.py
+viperleed/guilib/leedsim/tests/test_realspace.py
+viperleed/guilib/measure/__init__.py
+viperleed/guilib/measure/controller.py
+viperleed/guilib/tests/__init__.py
+viperleed/guilib/tests/__test_base.py
+viperleed/guilib/tests/test_lattice.py
+viperleed/guilib/tests/test_planegroup.py
+viperleed/hardware/arduino/upload-sketch.py
+viperleed/hardware/arduino/temp-python-control/LeedControl_VoltRamp.py
+viperleed/hardware/arduino/temp-python-control/Camera_libraries/camera.py
+viperleed/hardware/arduino/temp-python-control/Camera_libraries/tisgrabber.py
+viperleed/hardware/arduino/temp-python-control/drivers/__init__.py
+viperleed/hardware/arduino/temp-python-control/drivers/imagingsource.py
+viperleed/tensorleed/eeasisss_new/atlib/charge_density_check.py
+viperleed/tleedmlib/__init__.py
+viperleed/tleedmlib/base.py
+viperleed/tleedmlib/beamgen.py
+viperleed/tleedmlib/checksums.py
+viperleed/tleedmlib/leedbase.py
+viperleed/tleedmlib/periodic_table.py
+viperleed/tleedmlib/psgen.py
+viperleed/tleedmlib/symmetry.py
+viperleed/tleedmlib/classes/__init__.py
+viperleed/tleedmlib/classes/atom.py
+viperleed/tleedmlib/classes/beam.py
+viperleed/tleedmlib/classes/layer.py
+viperleed/tleedmlib/classes/r_error.py
+viperleed/tleedmlib/classes/rparams.py
+viperleed/tleedmlib/classes/sitetype.py
+viperleed/tleedmlib/classes/slab.py
+viperleed/tleedmlib/files/__init__.py
+viperleed/tleedmlib/files/beams.py
+viperleed/tleedmlib/files/delta_intensities.py
+viperleed/tleedmlib/files/displacements.py
+viperleed/tleedmlib/files/iodeltas.py
+viperleed/tleedmlib/files/ioerrorcalc.py
+viperleed/tleedmlib/files/iofdopt.py
+viperleed/tleedmlib/files/iorefcalc.py
+viperleed/tleedmlib/files/iorfactor.py
+viperleed/tleedmlib/files/iosearch.py
+viperleed/tleedmlib/files/iosuperpos.py
+viperleed/tleedmlib/files/ivplot.py
+viperleed/tleedmlib/files/new_search.py
+viperleed/tleedmlib/files/parameter_errors.py
+viperleed/tleedmlib/files/parameters.py
+viperleed/tleedmlib/files/patterninfo.py
+viperleed/tleedmlib/files/phaseshifts.py
+viperleed/tleedmlib/files/poscar.py
+viperleed/tleedmlib/files/searchpdf.py
+viperleed/tleedmlib/files/vibrocc.py
+viperleed/tleedmlib/files/woods_notation.py
+viperleed/tleedmlib/sections/__init__.py
+viperleed/tleedmlib/sections/_sections.py
+viperleed/tleedmlib/sections/cleanup.py
+viperleed/tleedmlib/sections/deltas.py
+viperleed/tleedmlib/sections/errorcalc.py
+viperleed/tleedmlib/sections/fd_optimization.py
+viperleed/tleedmlib/sections/initialization.py
+viperleed/tleedmlib/sections/refcalc.py
+viperleed/tleedmlib/sections/rfactor.py
+viperleed/tleedmlib/sections/run_sections.py
+viperleed/tleedmlib/sections/search.py
+viperleed/tleedmlib/sections/superpos.py
+viperleed/tleedmlib/wrapped/__init__.py
+viperleed/tleedmlib/wrapped/error_codes.py
+viperleed/tleedmlib/wrapped/source/compile/test.py
+viperleed/tleedmlib/wrapped/source/interpolation_benchmarks/interpol_5th_order_kernel 2.py
+viperleed/tleedmlib/wrapped/source/interpolation_benchmarks/interpol_5th_order_kernel.py
+viperleed/tleedmlib/wrapped/source/interpolation_benchmarks/interpolation_perf 2.py
+viperleed/tleedmlib/wrapped/source/interpolation_benchmarks/interpolation_perf.py
+viperleed/tleedmlib/wrapped/source/interpolation_benchmarks/interpolation_plot 2.py
+viperleed/tleedmlib/wrapped/source/interpolation_benchmarks/interpolation_plot.py
+viperleed/tleedmlib/wrapped/source/rfactor/rfactor_example.py
+viperleed/tleedmlib/wrapped/source/smoothing/smoothing_example.py
+viperleed/tleedmlib/wrapped/source/wrapf2py/rf_test 2.py
+viperleed/tleedmlib/wrapped/source/wrapf2py/rf_test.py
+viperleed/utilities/ModifyPhaseshifts.py
+viperleed/utilities/bookkeeper.py
+viperleed/utilities/recompile_parts.py
+viperleed/utilities/magnetometer_test/sensorlog.py

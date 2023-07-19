@@ -3,10 +3,12 @@
 Created on Nov 12 2019
 
 @author: Florian Kraushofer
+@author: Alexander Imre
 
 Master script running the TensErLEED Manager.
 """
 
+import argparse
 import logging
 import multiprocessing
 import os
@@ -32,6 +34,7 @@ from viperleed.tleedmlib.files.parameter_errors import ParameterError
 from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.sections.run_sections import section_loop
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
+from viperleed.utilities.bookkeeper import bookkeeper
 
 logger = logging.getLogger("tleedm")
 
@@ -189,5 +192,96 @@ def run_tleedm(system_name="", console_output=True, slab=None,
 
 
 if __name__ == "__main__":
-    multiprocessing.freeze_support()
-    run_tleedm()
+    multiprocessing.freeze_support() # needed for Windows
+    
+    # parse command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-w", "--work",
+        help=("specify execution work directory"),
+        type=str)
+    parser.add_argument(
+        "--delete_workdir",
+        help=("delete work directory after execution"),
+        type=bool)
+    args, bookie_args = parser.parse_known_args()
+    sys.argv = sys.argv[:1] + bookie_args
+
+    # run bookkeeper # TODO: make this optional
+    print("Running bookkeeper...")
+    bookkeeper()
+    
+    if args.work:
+        work_path = Path(args.work)
+    else:
+        work_path = Path.cwd() / "work"
+    delete_workdir = args.delete_workdir
+
+
+    # create work directory if necessary
+    os.makedirs(work_path, exist_ok=True)
+
+    all_tensors = False                                                         # TODO: is there any need for this?
+    # !!! TODO: it would be nice if all_tensors automatically checked PARAMETERS
+
+    # copy Tensors and Deltas to work directory
+    if all_tensors:
+        try:
+            shutil.copytree("Tensors", os.path.join(work_path, "Tensors"),
+                            dirs_exist_ok=True)
+        except FileNotFoundError:
+            pass
+        try:
+            shutil.copytree("Deltas", os.path.join(work_path, "Deltas"),
+                            dirs_exist_ok=True)
+        except FileNotFoundError:
+            pass
+    else:
+        tensor_num = viperleed.tleedmlib.leedbase.getMaxTensorIndex(
+            zip_only=True)
+        if tensor_num > 0:
+            os.makedirs(os.path.join(work_path, "Tensors"), exist_ok=True)
+            tensorfile = os.path.join("Tensors", "Tensors_{:03d}.zip"
+                                      .format(tensor_num))
+            shutil.copy2(tensorfile, os.path.join(work_path, tensorfile))
+            deltafile = os.path.join("Deltas", "Deltas_{:03d}.zip"
+                                     .format(tensor_num))
+            if os.path.isfile(deltafile):
+                os.makedirs(os.path.join(work_path, "Deltas"), exist_ok=True)
+                shutil.copy2(deltafile, os.path.join(work_path, deltafile))
+
+    # copy input files to work directory
+    for file in ["PARAMETERS", "VIBROCC", "IVBEAMS", "DISPLACEMENTS", "POSCAR", # TODO: replace with list from _sections
+                 "PHASESHIFTS", "EXPBEAMS.csv", "EXPBEAMS"]:
+        try:
+            shutil.copy2(file, os.path.join(work_path, file))
+        except FileNotFoundError:
+            pass
+
+    # go to work directory, execute there
+    home = os.path.abspath(".")
+    os.chdir(work_path)
+    run_tleedm(source=os.path.join(vpr_path, "viperleed"))
+
+    # copy back everything listed in manifest
+    manifest = []
+    if os.path.isfile("manifest"):
+        with open("manifest", "r") as rf:
+            manifest = [s.strip() for s in rf.readlines()]
+    for p in manifest:
+        try:
+            if os.path.isfile(p):
+                shutil.copy2(p, os.path.join(home, p))
+            elif os.path.isdir(p):
+                shutil.copytree(p, os.path.join(home, p), dirs_exist_ok=True)
+        except Exception as e:
+            print("Error copying " + p + " to home directory: " + str(e))
+
+    # go back, clean up if requested
+    os.chdir(home)
+    if delete_workdir:
+        try:
+            shutil.rmtree(work_path)
+        except Exception as e:
+            print("Error deleting work directory: " + str(e))
+
