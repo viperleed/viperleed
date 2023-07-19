@@ -226,10 +226,7 @@ class Slab:
     @property
     def elements(self):
         """List of elements in the slab in order as read from POSCAR."""
-        # NB: cannot use tuple(self.n_per_elem.keys()), because n_per_elem
-        # calls this property in turn
-        atom_elements = [at.el.capitalize() for at in self.atlist]
-        return list(set(atom_elements))
+        return self.n_per_elem.keys()
 
     def check_a_b_out_of_plane(self):
         if any(self.ucell[2, :2]):
@@ -595,16 +592,13 @@ class Slab:
 
     def updateElementCount(self):
         """Updates the number of atoms per element."""
-        self.n_per_elem = {}
-        del_elems = []
+        updated_n_per_element = {}
         for el in self.elements:
             n = len([at for at in self.atlist if at.el == el])
             if n > 0:
-                self.n_per_elem[el] = n
-            else:
-                del_elems.append(el)
-        for el in del_elems:
-            self.elements.remove(el)
+                updated_n_per_element[el] = n
+        self.n_per_elem = updated_n_per_element
+
 
     def updateAtomNumbers(self):
         """Updates atom oriN - should not happen normally, but necessary if
