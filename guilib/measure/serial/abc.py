@@ -17,7 +17,6 @@ Graphical User Interface.
 """
 # Python standard modules
 from abc import abstractmethod
-import time
 from configparser import NoSectionError, NoOptionError
 
 # Non-standard modules
@@ -188,8 +187,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
 
         self.__open = False
-
-        self.time_stamp = None
 
         if self.__init_errors:
             self.__init_err_timer.start(20)
@@ -764,7 +761,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             emit_error(self, ExtraSerialErrors.PORT_NOT_OPEN)
             return
 
-        sent_command = message
         all_messages = (message, *other_messages)
         if not self.is_message_supported(all_messages):
             return
@@ -792,8 +788,6 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             encoded_messages += encoded
         self.port.write(encoded_messages)
 
-        if self.is_measure_command(sent_command):
-            self.time_stamp = time.perf_counter()
         if not _requires_response:
             self.busy = False
 
@@ -1054,7 +1048,3 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             self.error_occurred.emit(error)
         self.__init_errors = []
 
-    @abstractmethod
-    def is_measure_command(self, command):                                      # TODO: not nice. Better say what this is used for (keep track of the time the message was sent).
-        """Return whether command causes the unit to return measurements."""
-        return False

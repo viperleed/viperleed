@@ -18,11 +18,13 @@ from collections.abc import Sequence
 from time import localtime, strftime
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
+import time
 
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.classes.datapoints import DataPoints
+from viperleed.guilib.measure.classes.datapoints import (DataPoints,
+                                                         QuantityInfo)
 from viperleed.guilib.measure.classes.settings import (
     ViPErLEEDSettings, SystemSettings, NoSettingsError, NotASequenceError
     )
@@ -515,6 +517,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         primary = self.primary_controller
         about_to_trigger = primary.about_to_trigger
+        base.safe_disconnect(about_to_trigger, self.__store_primary_time_stamp)
         for ctrl in self.controllers:
             # Make sure no controller can be triggered for
             # measurement during the whole preparation
@@ -669,8 +672,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         try:
             self.primary_controller.measure_now()
         except AttributeError:
-            # Not a MeasureControllerABC
-            pass
+            self.primary_controller.time_stamp = time.perf_counter()
+
         self.primary_controller.about_to_trigger.emit()
 
     @abstractmethod
@@ -831,7 +834,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
     def __connect_primary_controller(self):
         """Connect signals of the primary controller."""
         primary = self.primary_controller
+        about_to_trigger = primary.about_to_trigger
         base.safe_connect(self._request_stop_primary, primary.stop,
+                          type=_UNIQUE)
+        base.safe_connect(about_to_trigger, self.__store_primary_time_stamp,
                           type=_UNIQUE)
         self._connect_controller(primary)
 
@@ -870,11 +876,13 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
     def __disconnect_primary_controller(self):
         """Disconnect port and signals of the primary controller."""
         primary = self.primary_controller
+        about_to_trigger = primary.about_to_trigger
         if primary is None:
             return
         base.safe_disconnect(self._request_stop_primary, primary.stop)
+        base.safe_disconnect(about_to_trigger, self.__store_primary_time_stamp)
         for ctrl in self.secondary_controllers:
-            base.safe_disconnect(primary.about_to_trigger, ctrl.measure_now)
+            base.safe_disconnect(about_to_trigger, ctrl.measure_now)
         self._disconnect_controller(primary)
 
     def __disconnect_secondary_controllers(self):
@@ -1247,6 +1255,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         None.
         """
         controller = self.sender()
+        # Remove the time stamp for measurements coming from
+        # the primary controller as it was already added in
+        # __store_primary_time_stamp.
+        if controller is self.primary_controller:
+            data.pop(QuantityInfo.TIMESTAMPS)
         self.data_points.add_data(data, controller)
 
         # Don't even try to go to the next energy if we haven't
@@ -1413,3 +1426,23 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             raise RuntimeError(f"No config file '{configname}' in "
                                f"folder {self.settings.base_dir}") from None
         return device_cfg
+
+    def __store_primary_time_stamp(self):
+        """Append primary controller time stamp to data points.
+
+        This method stores the time stamp of the primary
+        controller in the datapoints when it is about to
+        trigger. This is necessary to ensure that even
+        non-measuring primary controller correctly store
+        their time stamps.
+
+        Returns
+        -------
+        None.
+        """
+        primary = self.primary_controller
+        dummy_dict = {QuantityInfo.TIMESTAMPS: []}
+        dummy_dict[QuantityInfo.TIMESTAMPS].append(
+            primary.time_stamp + primary.time_to_trigger / 1000
+            )
+        self.data_points.add_data(dummy_dict, primary)

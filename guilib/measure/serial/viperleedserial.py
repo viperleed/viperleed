@@ -752,10 +752,3 @@ class ViPErLEEDSerial(SerialABC):
         info['firmware'] = firmware_version
         return info
 
-    def is_measure_command(self, command):
-        """Return whether command causes the unit to return measurements."""
-        pc_set_voltage = self.port_settings.get('available_commands',
-                                                'PC_SET_VOLTAGE')
-        pc_measure_only = self.port_settings.get('available_commands',
-                                                 'PC_MEASURE_ONLY')
-        return command in (pc_set_voltage, pc_measure_only)

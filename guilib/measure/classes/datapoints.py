@@ -477,7 +477,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         if err:
             return
 
-        start = self[0][QuantityInfo.TIMESTAMPS][self.primary_controller][0]    # TODO: if primary does not measure, we may never have anything in here (IndexError)!
+        start = self[0][QuantityInfo.TIMESTAMPS][self.primary_controller][0]
         for ctrl, timestamps in self[-1][QuantityInfo.TIMESTAMPS].items():
             if not ctrl.measures():
                 # No times needed for a non-measuring controller
