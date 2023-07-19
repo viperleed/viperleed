@@ -425,7 +425,9 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
             or [site.el]   # Only one element
             )
     # get atomic numbers from element symbols
-    atomic_numbers = tuple(get_atomic_number(el)
+    real_el = lambda el: (rp.ELEMENT_RENAME[el] if el in rp.ELEMENT_RENAME
+                          else el)
+    atomic_numbers = tuple(get_atomic_number(real_el(el))
                            for el in element_mix)
 
     # Get phaseshifts at highest LMAX that are larger than eps
