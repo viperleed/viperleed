@@ -25,6 +25,7 @@ for import_path in (str(cd), str(vpr_path)):
     if import_path not in sys.path:
         sys.path.append(import_path)
 
+import viperleed
 from viperleed import GLOBALS
 from viperleed.tleedmlib.base import CustomLogFormatter
 from viperleed.tleedmlib.classes import rparams
