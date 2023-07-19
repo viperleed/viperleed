@@ -190,17 +190,14 @@ def runPhaseshiftGen_old(sl, rp,
     output = ''
     output += "STRUCTURE:\n"
     output += rp.systemName+" "+rp.timestamp+"\n"
-#    if bulk:
-#        output += ("'b'  1.00 16      BulkOrSlab('b' or 's'), "
-#                  "LatticeConstant(Angstroms), nshell\n")
-#    else:
+
     output += ("'s'  1.00 16      BulkOrSlab('b' or 's'), "
                "LatticeConstant(Angstroms), nshell\n")
-    uct = nsl.ucell.transpose()
+    # write transposed unit cell matrix
     for i in range(0, 3):
         ol = ''
         for j in range(0, 3):
-            s = str(round(uct[i, j], 4))+' '
+            s = str(round(nsl.ucell.transpose()[i, j], 4))+' '
             ol += s.ljust(8)
         if i == 0:
             ol += '      CoordinatesOfUnitCell(LCunits)\n'
@@ -264,7 +261,7 @@ def runPhaseshiftGen_old(sl, rp,
     output += "'n' |dataflow: print_RhoPot? 'yes'/'no'\n"
     output += "'n' |dataflow: print_PSvsE? 'yes'/'no'\n"
     output += "'n' |dataflow: print_WaveFunction? 'yes'/'no'\n"
-    
+
     # Energy step used for phaseshift calculation eeasisss.
     # Does not need to match theory energy step as phaseshifts will be interpolated anyways.
     ps_energy_step = max(1.0, round(float(rp.THEO_ENERGIES[2]), 0))
