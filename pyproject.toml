@@ -7,14 +7,14 @@ build-backend = "setuptools.build_meta"
 name = "viperleed"
 version = "0.10.0"
 requires-python = ">=3.7"
-dynamic = ["version"]
 readme = "README.md"
 dependencies = [
+    "fortranformat",
     "numpy",
     "wrapt",
     "quicktions",
     "scipy",
-    "sklearn",
+    "scikit-learn",
     "matplotlib",
     "psutil",
 ]
