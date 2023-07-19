@@ -228,7 +228,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # trigger an attempt to send the next message in
         # __unsent_messages. Each element of unsent_messages is
         # a tuple whose first element is the command and its associated
-        # data, and with second element the timeout parameter.
+        # data, and the second element is the timeout parameter.
         self.__unsent_messages = []
         if self.serial:
             self.serial.serial_busy.connect(self.send_unsent_messages,
@@ -381,7 +381,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         This is usually used as the settle time for the first energy
         in a measurement. In fact, setting the first energy normally
         requires a larger-than-usual energy step. This usually also
-        implies that energy (and I0) take longer to settle.
+        implies that the energy (and I0) takes longer to settle.
 
         Returns
         -------
@@ -769,17 +769,17 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         handler.add_section('measurement_settings')
         info = (
             ('i0_settle_time', 'I<sub>0</sub> settle time',
-             "<nobr>The time interval required for the I<sub>0</sub> "
+             "<nobr>The time intervally required for the I<sub>0</sub> "
              "current</nobr> to reach a stable value after a new energy "
              "has been set. This should be calibrated for a typical step "
              "size (e.g., 0.5 eV)."),
             ('hv_settle_time', 'Energy settle time',
-             "<nobr>The time interval required for the true beam "
+             "<nobr>The time intervally required for the true beam "
              "energy</nobr> to reach a stable value after a new "
              "energy has been set. This should be calibrated for "
              "a typical step size (e.g., 0.5 eV)."),
             ('first_settle_time', 'First-energy settle time',
-             "<nobr>The time interval required for the true beam energy</nobr>"
+             "<nobr>The time intervally required for the true beam energy</nobr>"
              " to reach a stable value when the first energy of a ramp is set."
              " This is usually significantly longer than the one used during"
              " a ramp, as setting the first energy requires a large step.")

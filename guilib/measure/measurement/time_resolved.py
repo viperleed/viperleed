@@ -356,8 +356,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         same checks as in super()._ready_for_next_measurement(), i.e.,
         decides whether we should go to the next step or if the whole
         loop is over. It is needed in continuous mode so we can
-        wait the acknowledgment from the primary controller that it
-        has been in fact stopped at the end of an energy step.
+        wait for the acknowledgment from the primary controller that
+        it has been in fact stopped at the end of an energy step.
 
         Returns
         -------

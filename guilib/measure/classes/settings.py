@@ -540,7 +540,7 @@ class ViPErLEEDSettings(ConfigParser):
     # pylint: enable=too-many-branches,too-many-statements
 
     def _write_section(self, fp, section_name, section_items, delimiter):
-        """Write a single section to the specified `fp'."""
+        """Write a single section to the specified 'fp'."""
         # Header
         fp.write(f"[{section_name}]\n")
 
@@ -568,7 +568,7 @@ class ViPErLEEDSettings(ConfigParser):
         Parameters
         ----------
         line : str
-            The line to be checked an stored
+            The line to be checked and stored
         sectname : str or None
             The name of the section where the comment appeared.
             None if the line appears before any section header.

@@ -429,7 +429,7 @@ def safe_connect(signal, slot, **kwargs):
     for arg in kwargs:
         if arg not in ("type", "no_receiver_check"):
             raise TypeError("safe_connect got an unexpected "
-                            f"keyord argument {arg!r}")
+                            f"keyword argument {arg!r}")
     try:
         signal.connect(slot, **kwargs)
     except TypeError:
@@ -606,7 +606,7 @@ class Version:
         return NotImplemented
 
     def __iter__(self):
-        """Return an iterabel version of self."""
+        """Return an iterable version of self."""
         return iter(self._parts)
 
     def __lt__(self, other):
@@ -677,7 +677,7 @@ class Version:
         return major, minor, patch
 
 
-_RESULT_UNKOWN = object()
+_RESULT_UNKNOWN = object()
 
 class QMainThreadDispatcher(qtc.QObject):
     """Class to always execute a function in the main GUI thread.
@@ -736,7 +736,7 @@ class QMainThreadDispatcher(qtc.QObject):
         None.
         """
         self.func, self.args, self.kwargs = func, args, kwargs
-        self.__result = _RESULT_UNKOWN
+        self.__result = _RESULT_UNKNOWN
         super().__init__()
 
         if self.thread().currentThread() != qtw.qApp.thread():
@@ -749,7 +749,7 @@ class QMainThreadDispatcher(qtc.QObject):
     @property
     def has_result(self):
         """Return whether the function call has already returned."""
-        return self.__result is _RESULT_UNKOWN
+        return self.__result is _RESULT_UNKNOWN
 
     @property
     def result(self):
@@ -758,7 +758,7 @@ class QMainThreadDispatcher(qtc.QObject):
 
     def __call__(self, *args, **kwargs):
         """Call func(*args, **kwargs)."""
-        self.__result = _RESULT_UNKOWN
+        self.__result = _RESULT_UNKNOWN
         if args:
             self.args = args
         if kwargs:
@@ -774,5 +774,5 @@ class QMainThreadDispatcher(qtc.QObject):
 
     def moveToThread(self, new_thread):  # pylint: disable=invalid-name
         """Change thread affinity of self to new_thread."""
-        self.__result = _RESULT_UNKOWN
+        self.__result = _RESULT_UNKNOWN
         super().moveToThread(new_thread)

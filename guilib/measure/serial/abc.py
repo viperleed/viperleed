@@ -313,7 +313,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
     def port(self, port_name):
         """Create a new QSerialPort with name port_name.
 
-        Port settings should should already exist.
+        Port settings should already exist.
 
         Parameters
         ----------
@@ -701,7 +701,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         """Process data received into human-understandable information.
 
         This method is called every time one (or more) messages
-        arrive on the serial line, unless there currently is an
+        arrive at the serial line, unless there currently is an
         error message that has not yet been handled. Override
         identify_error() to handle errors.
 

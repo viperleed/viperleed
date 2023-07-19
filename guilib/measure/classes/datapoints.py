@@ -47,7 +47,7 @@ class DataErrors(ViPErLEEDErrorEnum):
     INVALID_MEASUREMENT = (400,
                            "The returned data dictionary contained a key "
                            "that was not specified in the DataPoints class.")
-    UNKOWN_QUANTITIES = (401,
+    UNKNOWN_QUANTITIES = (401,
                          "Unknown quantity/quantities {} will be ignored")
     NO_DATA_FOR_CONTROLLER = (402,
                               "Controller at {} did not return any data. "
@@ -601,7 +601,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         energies : list
             One element per each energy step, i.e.,
             len(energies) == len(self). Notice that energies
-            may be longer then the data extracted if the last
+            may be longer than the data extracted if the last
             step underway is not finished yet.
         """
         # Keep only the quantities that were measured
@@ -758,7 +758,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
          invalid) = self.__make_column_header_map(first_row)
 
         if invalid:
-            emit_error(self, DataErrors.UNKOWN_QUANTITIES,
+            emit_error(self, DataErrors.UNKNOWN_QUANTITIES,
                        ", ".join(invalid))
 
         _egy = QuantityInfo.ENERGY
@@ -948,7 +948,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
         -------
         RuntimeError
             If the headers do not contain a valid energy column,
-            or they contains no valid data.
+            or they contain no valid data.
         """
         # All column headers, except for the "energy" one are
         # expected to be of the form "quantity(measuring_device_id)".

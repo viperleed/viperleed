@@ -73,7 +73,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         # Seems a pylint bug
 
         # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actualy need it.
+        # and it is unclear whether we will actually need it.
         fallback = 5.0
         if not self.settings:
             return fallback
@@ -95,7 +95,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         # Seems a pylint bug
 
         # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actualy need it.
+        # and it is unclear whether we will actually need it.
         fallback = 1000
         if not self.settings:
             return fallback

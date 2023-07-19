@@ -395,7 +395,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         else:
             base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
                             'measurement_settings/step_profile',
-                            f'Unkown profile shape {shape}')
+                            f'Unknown profile shape {shape}')
             values = tuple()
         return values
 
@@ -1076,7 +1076,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         # For now, check that the port name is in the settings.                 # TODO: add getting port name from device list
         # Later on, this check will only happen if the unique name
-        # of the controller in the settings file that I was passed
+        # of the controller in the settings file that was passed
         # is not found in the device list.
         invalid = config.has_settings(('controller', 'port_name'))
         if invalid:
@@ -1097,12 +1097,12 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         except ValueError:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'controller/controller_class',
-                            f'Unkown class {cls_name} in {config.last_file}')
+                            f'Unknown class {cls_name} in {config.last_file}')
             raise RuntimeError from None
 
         if isinstance(measurements, str):
             # Only one quantity, with no brackets or no comma
-            meassurements = (measurements,)
+            measurements = (measurements,)
 
         if not isinstance(measurements, Sequence):
             section = ('primary_controller' if is_primary
@@ -1315,7 +1315,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             base.safe_disconnect(ctrl.controller_busy,
                                  self.__check_preparation_finished)
             # Force all controllers to busy, such that ._finalize()
-            # is called for all when they turn "not busy" any more
+            # is called for all when they turn "not busy" anymore
             ctrl.busy = True
             base.safe_connect(ctrl.controller_busy, self._finalize,
                               type=_UNIQUE)

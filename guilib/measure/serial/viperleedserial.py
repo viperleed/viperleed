@@ -60,7 +60,7 @@ class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
                            "error code that has not been added to the "
                            "ViPErLEEDHardwareError enum.Enum yet.")
     ERROR_ERROR_SLIPPED_THROUGH = (11,
-                                   "For some reason and error identifier "
+                                   "For some reason an error identifier "
                                    "ended up in the unprocessed messages.")
     ERROR_MSG_RCVD_INVALID = (12,
                               "Received message length does not fit "
@@ -575,7 +575,7 @@ class ViPErLEEDSerial(SerialABC):
         last_cmd = self.__last_request_sent
 
         # The following check catches data that is received
-        # from setting up a connection to the micro controller.
+        # from setting up a connection to the microcontroller.
         if (last_cmd == pc_configuration
                 and len(self.unprocessed_messages) != 1):
             self.unprocessed_messages = []
@@ -692,7 +692,7 @@ class ViPErLEEDSerial(SerialABC):
                 and 'relay', corresponding to the hardware having
                 access to the devices; Values for 'i0_range' and
                 'aux_range' are the strings '0 -- 2.5 V' or
-                '0 -- 10 V'; a human readable (numbers and letters)
+                '0 -- 10 V'; a human-readable (numbers and letters)
                 serial number as str for 'serial_nr', and a string
                 of the form '<major>.<minor>' for 'firmware'.
 

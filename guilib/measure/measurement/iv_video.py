@@ -39,7 +39,7 @@ class IVVideo(MeasurementABC):
         # Seems a pylint bug
 
         # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actualy need it.
+        # and it is unclear whether we will actually need it.
         fallback = 0.5
         if not self.settings:
             return fallback
@@ -60,7 +60,7 @@ class IVVideo(MeasurementABC):
         # Seems a pylint bug
 
         # Eventually, this will be an attribute of an energy generator,
-        # and it is unclear whether we will actualy need it.
+        # and it is unclear whether we will actually need it.
         fallback = 0
         if not self.settings:
             return fallback
