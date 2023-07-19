@@ -226,7 +226,10 @@ class Slab:
     @property
     def elements(self):
         """List of elements in the slab in order as read from POSCAR."""
-        return tuple(self.n_per_elem.keys())
+        # NB: cannot use tuple(self.n_per_elem.keys()), because n_per_elem
+        # calls this property in turn
+        atom_elements = [at.el.capitalize() for at in self.atlist]
+        return list(set(atom_elements))
 
     def check_a_b_out_of_plane(self):
         if any(self.ucell[2, :2]):
