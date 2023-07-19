@@ -1737,7 +1737,7 @@ class Slab:
         atoms.sort(key=lambda atom: -atom.pos[2])
         covered = set()
         surfats = set()
-        for atom in atoms:
+        for atom in atoms:                                                      # TODO: make this radius into an Atom property
             if atom.el in rp.ELEMENT_MIX:
                 # radius as weighted average
                 totalocc = 0.0
@@ -1760,9 +1760,11 @@ class Slab:
                 else:
                     r /= totalocc
             else:
-                if atom.el.lower() in _PTL:
-                    r = _RADII[atom.el.capitalize()]
-                else:
+                # radius of atom
+                chemical_element = rp.ELEMENT_RENAME.get(atom.el, atom.el)
+                try:
+                    r = _RADII[chemical_element.capitalize()]
+                except KeyError:
                     logger.error("Error identifying surface atoms: Could not "
                                  f"identify {atom.el} as a chemical element.")
                     rp.setHaltingLevel(2)
