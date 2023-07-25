@@ -18,6 +18,7 @@ from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
+from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure import hardwarebase as base
 
 
@@ -434,7 +435,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             # Recalculate the times in the last data point, in case
             # secondary controllers returned more data in the meantime
             # Notice that we do not allow any errors to be emitted at
-            # this point, since we may end up in an infinite loop
+            # this point, since we may end up in an infinite loop.
             self.data_points.calculate_times(complain=False)
         super()._finalize()
 
@@ -501,7 +502,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         -------
         None.
         """
-        self.data_points.add_data(data, self.sender())
+        controller = self.sender()
+        if controller is self.primary_controller:
+            data.pop(QuantityInfo.TIMESTAMPS)
+        self.data_points.add_data(data, controller)
 
     def __prepare_continuous_mode(self):
         """Adjust the preparations to fit continuous mode.
