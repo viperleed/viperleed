@@ -206,15 +206,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "-w", "--work",
         help=("specify execution work directory"),
-        type=str)
+        type=str
+        )
     parser.add_argument(
         "--delete_workdir",
         help=("delete work directory after execution"),
-        action='store_true')
+        action='store_true'
+        )
     parser.add_argument(
         "-v", "--verbose",
         help=("increase output verbosity and print debug messages"),
-        action='store_true')
+        action='store_true'
+        )
     parser.add_argument(
         "-vv", "--very_verbose",
         help=("increase output verbosity and prints more debug messages"),
@@ -289,12 +292,12 @@ if __name__ == "__main__":
     # copy input files to work directory
     for file in ALL_INPUT_FILES:
         try:
-            shutil.copy2(file, os.path.join(work_path, file))
+            shutil.copy2(file, work_path / file)
         except FileNotFoundError:
             pass
 
     # go to work directory, execute there
-    home = os.path.abspath(".")
+    cwd = Path.cwd()
     os.chdir(work_path)
     run_tleedm(source=os.path.join(vpr_path, "viperleed"),
                override_log_level=override_log_level)
@@ -307,17 +310,16 @@ if __name__ == "__main__":
     for p in manifest:
         try:
             if os.path.isfile(p):
-                shutil.copy2(p, os.path.join(home, p))
+                shutil.copy2(p, cwd / p)
             elif os.path.isdir(p):
-                shutil.copytree(p, os.path.join(home, p), dirs_exist_ok=True)
+                shutil.copytree(p, cwd / p, dirs_exist_ok=True)
         except Exception as e:
             print(f"Error copying {p} to home directory: {str(e)}")
 
     # go back, clean up if requested
-    os.chdir(home)
+    os.chdir(cwd)
     if delete_workdir:
         try:
             shutil.rmtree(work_path)
         except Exception as e:
             print("Error deleting work directory: " + str(e))
-
