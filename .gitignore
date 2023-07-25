@@ -51,3 +51,4 @@ tensorleed/eeasisss_new/eeasisss
 tensorleed/eeasisss_new/Fortran_quicktests
 *.plist
 *.mod
+**/_lint
