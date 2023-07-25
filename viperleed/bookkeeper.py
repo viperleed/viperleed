@@ -2,7 +2,8 @@
 """
 Created on Thu Jan 30 11:12:30 2020
 
-@author: Florian Kraushofer, Alexander Imre
+@author: Florian Kraushofer
+@author: Alexander M. Imre
 """
 
 import os
@@ -12,8 +13,8 @@ import argparse
 import shutil
 from pathlib import Path
 
-_INPUT_FILES = ["POSCAR", "PHASESHIFTS", "PARAMETERS", "IVBEAMS",
-                 "DISPLACEMENTS", "VIBROCC", "EXPBEAMS.csv", "EXPBEAMS"]
+from viperleed.tleedmlib.sections._sections import ALL_INPUT_FILES
+
 
 def translate_timestamp(s):
     """Takes a timestamp YYMMDD-hhmmss and translates it to format DD.MM.YY
@@ -23,6 +24,7 @@ def translate_timestamp(s):
         return s
     return "{}.{}.{} {}:{}:{}".format(s[4:6], s[2:4], s[0:2],
                                       s[7:9], s[9:11], s[11:13])
+
 
 def store_input_files_to_history(root_path, history_path):
     """Finds and copies input files to history.
@@ -48,7 +50,7 @@ def store_input_files_to_history(root_path, history_path):
     files_in_dir =  (f for f in Path(input_origin_path).iterdir()
                      if f.is_file())
     files_to_copy = (file for file in files_in_dir
-                     if file.name in _INPUT_FILES)
+                     if file.name in ALL_INPUT_FILES)
     # copy files to history
     for file in files_to_copy:
         try:
@@ -56,9 +58,10 @@ def store_input_files_to_history(root_path, history_path):
         except OSError as error_msg:
             print(f"Failed to copy file {file} to history: {error_msg}")
 
+
 def bookkeeper():
     history_name = "history"  # name of history folder in home dir
-    workhistname = "workhistory"  # name of history folder in work dir
+    work_history_name = "workhistory"  # name of history folder in work dir
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c", "--cont",
@@ -97,11 +100,11 @@ def bookkeeper():
     if len(files_to_move) == 0:
         found = False
         # check workhist folder:
-        if os.path.isdir(workhistname):
-            workhistdirs = [d for d in os.listdir(workhistname) if
-                            os.path.isdir(os.path.join(workhistname, d))
+        if os.path.isdir(work_history_name):
+            work_history_dirs = [d for d in os.listdir(work_history_name) if
+                            os.path.isdir(os.path.join(work_history_name, d))
                             and d.startswith("r") and not ("previous" in d)]
-            if len(workhistdirs) > 0:
+            if len(work_history_dirs) > 0:
                 found = True
         if not found:
             print("Bookkeeper: Found nothing to do. Exiting...")
@@ -114,7 +117,7 @@ def bookkeeper():
             print("Error creating history folder.")
             raise
     # figure out the number of the tensor
-    tnum = 0
+    tensor_number = 0
     if os.path.isdir("Tensors"):
         indlist = []
         rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
@@ -125,7 +128,7 @@ def bookkeeper():
             if m.span()[1] == 15:  # exact match
                 indlist.append(int(m.group(0)[-7:-4]))
         if indlist:
-            tnum = max(indlist)
+            tensor_number = max(indlist)
     # figure out the number of the run
     dl = [n for n in os.listdir(history_name)
           if os.path.isdir(os.path.join(history_name, n))]
@@ -143,13 +146,13 @@ def bookkeeper():
                     maxnums[t] = max(maxnums[t], i)
             except (ValueError, IndexError):
                 pass
-    if tnum not in maxnums:
+    if tensor_number not in maxnums:
         num = 1  # Tensor is new - if discard: delete
         if args.discard:
             tensorfile = os.path.join("Tensors", "Tensors_{:03d}.zip"
-                                      .format(tnum))
+                                      .format(tensor_number))
             deltafile = os.path.join("Deltas", "Deltas_{:03d}.zip"
-                                     .format(tnum))
+                                     .format(tensor_number))
             for f in (tensorfile, deltafile):
                 if os.path.isfile(f):
                     try:
@@ -157,15 +160,15 @@ def bookkeeper():
                     except Exception:
                         print("Failed to discard file " + f)
     else:
-        num = maxnums[tnum] + 1
+        num = maxnums[tensor_number] + 1
     # find old timestamp, if possible
-    oldlogfiles = sorted([f for f in os.listdir() if os.path.isfile(f) and
-                          f.endswith(".log") and f.startswith("tleedm-")])
+    old_log_files = sorted([f for f in os.listdir() if os.path.isfile(f) and
+                            f.endswith(".log") and f.startswith("tleedm-")])
     lastLogLines = []
-    if len(oldlogfiles) > 0:
-        oldTimeStamp = oldlogfiles[-1][7:20]
+    if len(old_log_files) > 0:
+        oldTimeStamp = old_log_files[-1][7:20]
         try:
-            with open(oldlogfiles[-1], "r") as rf:
+            with open(old_log_files[-1], "r") as rf:
                 lastLogLines = rf.readlines()
         except Exception:
             pass
@@ -174,25 +177,25 @@ def bookkeeper():
         oldTimeStamp = "moved-" + timestamp
     if not args.discard:
         # get dirname
-        dirname = "t{:03d}.r{:03d}_".format(tnum, num) + oldTimeStamp
+        dirname = "t{:03d}.r{:03d}_".format(tensor_number, num) + oldTimeStamp
         if args.name:
             dirname += "_" + args.name
-        tdir = os.path.join(history_name, dirname)
-        if os.path.isdir(tdir):
-            tdir2 = tdir+"_moved-"+timestamp
-            print("Error: Target directory " + tdir + " already exists. Will "
-                  "use " + tdir2 + " instead.")
-            tdir = tdir2
-            dirname = os.path.basename(tdir)
+        tensor_dir = os.path.join(history_name, dirname)
+        if os.path.isdir(tensor_dir):
+            tensor_dir_2 = tensor_dir+"_moved-"+timestamp
+            print(f"Error: Target directory {tensor_dir} already exists. Will "
+                  "use {tensor_dir_2} instead.")
+            tensor_dir = tensor_dir_2
+            dirname = os.path.basename(tensor_dir)
         try:
-            os.mkdir(tdir)
+            os.mkdir(tensor_dir)
         except Exception:
-            print("Error: Could not create target directory " + tdir
+            print("Error: Could not create target directory " + tensor_dir
                   + "\n Stopping...")
             raise 1
         # copy (or discard) files
         cwd_path = Path(".")
-        store_input_files_to_history(cwd_path, tdir)
+        store_input_files_to_history(cwd_path, tensor_dir)
 
     # if CONT, check for POSCAR_OUT / VIBROCC_OUT
     if args.cont and not args.discard:
@@ -229,7 +232,7 @@ def bookkeeper():
     for f in files_to_move:
         if not args.discard:
             try:
-                shutil.move(f, os.path.join(tdir, f))
+                shutil.move(f, os.path.join(tensor_dir, f))
             except Exception:
                 print("Error: Failed to move "+f)
         else:  # delete instead
@@ -246,7 +249,7 @@ def bookkeeper():
     for log_file in logs_to_move:
         if not args.discard:
             try:
-                supp_path = os.path.join(tdir, 'SUPP')
+                supp_path = os.path.join(tensor_dir, 'SUPP')
                 shutil.move(log_file, os.path.join(supp_path, log_file))
             except Exception:
                 print("Error: Failed to move " + log_file)
@@ -257,21 +260,21 @@ def bookkeeper():
                 print("Failed to discard file " + log_file)
 
     # if there is a workhist folder, go through it and move contents as well
-    tensornums = {tnum}
-    if os.path.isdir(workhistname) and not args.discard:
-        workhistprev = [d for d in os.listdir(workhistname) if
-                        os.path.isdir(os.path.join(workhistname, d))
+    tensornums = {tensor_number}
+    if os.path.isdir(work_history_name) and not args.discard:
+        workhistprev = [d for d in os.listdir(work_history_name) if
+                        os.path.isdir(os.path.join(work_history_name, d))
                         and rgx.match(d) and ("previous" in d)]
         for d in workhistprev:
             try:
-                shutil.rmtree(os.path.join(workhistname, d))
+                shutil.rmtree(os.path.join(work_history_name, d))
             except Exception:
-                print("Failed to delete "+d+" directory from "+workhistname)
-        workhistdirs = [d for d in os.listdir(workhistname) if
-                        os.path.isdir(os.path.join(workhistname, d))
+                print("Failed to delete "+d+" directory from "+work_history_name)
+        work_history_dirs = [d for d in os.listdir(work_history_name) if
+                        os.path.isdir(os.path.join(work_history_name, d))
                         and rgx.match(d) and not ("previous" in d)
                         and oldTimeStamp in d]
-        for d in workhistdirs:
+        for d in work_history_dirs:
             try:
                 tnum2 = int(d[1:4])
                 snum = int(d[6:9])
@@ -285,30 +288,30 @@ def bookkeeper():
                 newname = ("t{:03d}.r{:03d}.{:03d}".format(tnum2, num, snum)
                            + d[9:])
                 try:
-                    shutil.move(os.path.join(workhistname, d),
+                    shutil.move(os.path.join(work_history_name, d),
                                 os.path.join(history_name, newname))
                 except Exception:
                     print("Error: Failed to move "
-                          + os.path.join(workhistname, d))
+                          + os.path.join(work_history_name, d))
                 tensornums.add(tnum2)
-    if os.path.isdir(workhistname):
-        if len(os.listdir(workhistname)) == 0 or args.discard:
+    if os.path.isdir(work_history_name):
+        if len(os.listdir(work_history_name)) == 0 or args.discard:
             try:
-                shutil.rmtree(workhistname)
+                shutil.rmtree(work_history_name)
             except Exception as e:
                 if args.discard:
                     print(f"Failed to discard workhistory folder: {e}")
                 else:
-                    print(f"Failed to delete empty {workhistname} directory: "
+                    print(f"Failed to delete empty {work_history_name} directory: "
                           f"{str(e)}")
     if args.discard:  # all done
         return 0
     jobnums = []
-    for tnum in tensornums:
-        if tnum not in maxnums:
+    for tensor_number in tensornums:
+        if tensor_number not in maxnums:
             jobnums.append(1)
         else:
-            jobnums.append(maxnums[tnum] + 1)
+            jobnums.append(maxnums[tensor_number] + 1)
     # look for notes file
     notes_name = ""
     notes = ""

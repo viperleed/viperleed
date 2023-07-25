@@ -37,7 +37,7 @@ from viperleed.tleedmlib.leedbase import getMaxTensorIndex
 from viperleed.tleedmlib.sections.run_sections import section_loop
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 from viperleed.tleedmlib.sections._sections import ALL_INPUT_FILES
-from viperleed.utilities.bookkeeper import bookkeeper
+from viperleed.bookkeeper import bookkeeper
 
 logger = logging.getLogger("tleedm")
 
