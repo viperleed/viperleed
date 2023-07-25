@@ -243,6 +243,7 @@ if __name__ == "__main__":
         work_path = Path(args.work)
     else:
         work_path = Path.cwd() / "work"
+    work_path = work_path.resolve()
     delete_workdir = args.delete_workdir
 
     if sum([args.verbose, args.very_verbose, args.very_very_verbose]) > 1:
@@ -297,7 +298,7 @@ if __name__ == "__main__":
             pass
 
     # go to work directory, execute there
-    cwd = Path.cwd()
+    cwd = Path.cwd().resolve()
     os.chdir(work_path)
     run_tleedm(source=os.path.join(vpr_path, "viperleed"),
                override_log_level=override_log_level)
@@ -307,14 +308,14 @@ if __name__ == "__main__":
     if os.path.isfile("manifest"):
         with open("manifest", "r") as rf:
             manifest = [s.strip() for s in rf.readlines()]
-    for p in manifest:
+    for _path in manifest:
         try:
-            if os.path.isfile(p):
-                shutil.copy2(p, cwd / p)
-            elif os.path.isdir(p):
-                shutil.copytree(p, cwd / p, dirs_exist_ok=True)
+            if os.path.isfile(_path):
+                shutil.copy2(_path, cwd / _path)
+            elif os.path.isdir(_path):
+                shutil.copytree(_path, cwd / _path, dirs_exist_ok=True)
         except Exception as e:
-            print(f"Error copying {p} to home directory: {str(e)}")
+            print(f"Error copying {_path} to home directory: {str(e)}")
 
     # go back, clean up if requested
     os.chdir(cwd)
@@ -322,4 +323,4 @@ if __name__ == "__main__":
         try:
             shutil.rmtree(work_path)
         except Exception as e:
-            print("Error deleting work directory: " + str(e))
+            print("Error deleting work directory: {str(e)}")
