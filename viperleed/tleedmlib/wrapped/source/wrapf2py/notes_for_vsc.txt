@@ -1,4 +1,0 @@
-
-
-f2py -c --f90flags="-g -Og -fbacktrace -fcheck=all -fPIC" rfactor.pyf rfactor.f90 -I ../interpolation/interpolation.f90 -llapack
-

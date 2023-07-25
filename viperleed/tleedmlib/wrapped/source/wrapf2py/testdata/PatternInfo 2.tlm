@@ -1,6 +1,0 @@
-eMax = 803.00
-surfBasis = [[5.0355000496, 0.0], [0.0, 5.4267997742]]
-superlattice = [[1, 0], [0, 1]]
-surfGroup = pg[0 1]
-bulkGroup = pg[0 1]
-bulk3Dsym = None
