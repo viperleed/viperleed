@@ -33,8 +33,10 @@ from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS)
 from viperleed.tleedmlib.files.parameter_errors import ParameterError
 from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.tleedmlib.leedbase import getMaxTensorIndex
 from viperleed.tleedmlib.sections.run_sections import section_loop
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
+from viperleed.tleedmlib.sections._sections import ALL_INPUT_FILES
 from viperleed.utilities.bookkeeper import bookkeeper
 
 logger = logging.getLogger("tleedm")
@@ -194,7 +196,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
 
 if __name__ == "__main__":
     multiprocessing.freeze_support() # needed for Windows
-    
+
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -211,7 +213,7 @@ if __name__ == "__main__":
     # run bookkeeper # TODO: make this optional
     print("Running bookkeeper...")
     bookkeeper()
-    
+
     if args.work:
         work_path = Path(args.work)
     else:
@@ -238,22 +240,20 @@ if __name__ == "__main__":
         except FileNotFoundError:
             pass
     else:
-        tensor_num = viperleed.tleedmlib.leedbase.getMaxTensorIndex(
-            zip_only=True)
+        tensor_num = getMaxTensorIndex(zip_only=True)
         if tensor_num > 0:
             os.makedirs(os.path.join(work_path, "Tensors"), exist_ok=True)
-            tensorfile = os.path.join("Tensors", "Tensors_{:03d}.zip"
+            tensor_file = os.path.join("Tensors", "Tensors_{:03d}.zip"
                                       .format(tensor_num))
-            shutil.copy2(tensorfile, os.path.join(work_path, tensorfile))
-            deltafile = os.path.join("Deltas", "Deltas_{:03d}.zip"
+            shutil.copy2(tensor_file, os.path.join(work_path, tensor_file))
+            delta_file = os.path.join("Deltas", "Deltas_{:03d}.zip"
                                      .format(tensor_num))
-            if os.path.isfile(deltafile):
+            if os.path.isfile(delta_file):
                 os.makedirs(os.path.join(work_path, "Deltas"), exist_ok=True)
-                shutil.copy2(deltafile, os.path.join(work_path, deltafile))
+                shutil.copy2(delta_file, os.path.join(work_path, delta_file))
 
     # copy input files to work directory
-    for file in ["PARAMETERS", "VIBROCC", "IVBEAMS", "DISPLACEMENTS", "POSCAR", # TODO: replace with list from _sections
-                 "PHASESHIFTS", "EXPBEAMS.csv", "EXPBEAMS"]:
+    for file in ALL_INPUT_FILES:
         try:
             shutil.copy2(file, os.path.join(work_path, file))
         except FileNotFoundError:
@@ -276,7 +276,7 @@ if __name__ == "__main__":
             elif os.path.isdir(p):
                 shutil.copytree(p, os.path.join(home, p), dirs_exist_ok=True)
         except Exception as e:
-            print("Error copying " + p + " to home directory: " + str(e))
+            print(f"Error copying {p} to home directory: {str(e)}")
 
     # go back, clean up if requested
     os.chdir(home)
