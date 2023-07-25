@@ -43,7 +43,8 @@ logger = logging.getLogger("tleedm")
 
 
 def run_tleedm(system_name="", console_output=True, slab=None,
-               preset_params={}, source="."):
+               preset_params={}, source=".",
+               override_log_level=None):
     """
     Runs the TensErLEED Manager. By default, a PARAMETERS and a POSCAR file
     are expected, but can be replaced by passing the 'slab' and/or
@@ -155,6 +156,9 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         return 2
 
     # set logging level
+    if override_log_level is not None:
+        rp.LOG_LEVEL = override_log_level
+        logger.info("Overriding log level to {str(override_log_level)}.")
     logger.setLevel(rp.LOG_LEVEL)
     logger.debug("PARAMETERS file was read successfully")
 
@@ -206,7 +210,25 @@ if __name__ == "__main__":
     parser.add_argument(
         "--delete_workdir",
         help=("delete work directory after execution"),
-        type=bool)
+        action='store_true')
+    parser.add_argument(
+        "-v", "--verbose",
+        help=("increase output verbosity and print debug messages"),
+        action='store_true')
+    parser.add_argument(
+        "-vv", "--very_verbose",
+        help=("increase output verbosity and prints more debug messages"),
+        action='store_true'
+    )
+    parser.add_argument(
+        "-vvv", "--very_very_verbose",
+        help=("maximum output verbosity and even more debug messages"),
+        action='store_true'
+    )
+    parser.add_argument(
+        "--version",
+        help=("print version information and exit"),
+    )
     args, bookie_args = parser.parse_known_args()
     sys.argv = sys.argv[:1] + bookie_args
 
@@ -220,6 +242,18 @@ if __name__ == "__main__":
         work_path = Path.cwd() / "work"
     delete_workdir = args.delete_workdir
 
+    if sum([args.verbose, args.very_verbose, args.very_very_verbose]) > 1:
+        # only one verbosity level can be chosen
+        logger.error("Only one verbosity level can be chosen. Stopping ")
+        sys.exit(2)
+    elif args.very_very_verbose:
+        override_log_level = 1
+    elif args.very_verbose:
+        override_log_level = 10
+    elif args.verbose:
+        override_log_level = logging.DEBUG
+    else:
+        override_log_level = None
 
     # create work directory if necessary
     os.makedirs(work_path, exist_ok=True)
@@ -262,7 +296,8 @@ if __name__ == "__main__":
     # go to work directory, execute there
     home = os.path.abspath(".")
     os.chdir(work_path)
-    run_tleedm(source=os.path.join(vpr_path, "viperleed"))
+    run_tleedm(source=os.path.join(vpr_path, "viperleed"),
+               override_log_level=override_log_level)
 
     # copy back everything listed in manifest
     manifest = []
