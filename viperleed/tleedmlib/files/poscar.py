@@ -32,9 +32,6 @@ class POSCARSyntaxError(POSCARError):
     """An exceptions for syntax errors in POSCAR files."""
 
 
-
-
-
 def readPOSCAR(filename='POSCAR'):
     """Return a Slab with the contents of a POSCAR file.
 
