@@ -81,25 +81,25 @@ def prerun_clean(rp, logname=""):
     for d in [".", os.path.join(".", "OUT")]:
         if os.path.isdir(d):
             for s in ["POSCAR_OUT", "VIBROCC_OUT", "R_OUT"]:
-                for f in [fn for fn in os.listdir(d) if fn.startswith(s)]:
+                for file in [fn for fn in os.listdir(d) if fn.startswith(s)]:
                     try:
-                        os.remove(os.path.join(d, f))
+                        os.remove(os.path.join(d, file))
                     except Exception:
                         logger.debug("Failed to delete file {}"
-                                     .format(os.path.join(d, f)))
+                                     .format(os.path.join(d, file)))
     # clean up old executable files:
     for fn in ["refcalc", "rfactor", "search", "superpos"]:
         p = re.compile(fn+r'-\d{6}-\d{6}')
-        for f in [f for f in os.listdir()
+        for file in [f for f in os.listdir()
                   if len(f) == len(fn) + 14 and p.match(f)]:
             try:
-                os.remove(f)
+                os.remove(file)
             except Exception:
-                logger.debug("Failed to delete file {}".format(f))
+                logger.debug(f"Failed to delete file {file}")
     # see if there are old logfiles
-    oldlogs = [f for f in os.listdir() if os.path.isfile(f) and
+    old_logs = [f for f in os.listdir() if os.path.isfile(f) and
                f.endswith(".log") and f != logname]
-    if len(oldlogs) > 0:
+    if len(old_logs) > 0:
         try:
             move_oldruns(rp, prerun=True)
         except Exception:
