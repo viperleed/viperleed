@@ -132,7 +132,7 @@ def bookkeeper():
     # figure out the number of the run
     dl = [n for n in os.listdir(history_name)
           if os.path.isdir(os.path.join(history_name, n))]
-    maxnums = {}  # max. job number per tensor number
+    max_nums = {}  # max. job number per tensor number
     rgx = re.compile(r't[0-9]{3}.r[0-9]{3}_')
     for d in dl:
         m = rgx.match(d)
@@ -140,27 +140,27 @@ def bookkeeper():
             try:
                 t = int(d[1:4])
                 i = int(d[6:9])
-                if t not in maxnums:
-                    maxnums[t] = i
+                if t not in max_nums:
+                    max_nums[t] = i
                 else:
-                    maxnums[t] = max(maxnums[t], i)
+                    max_nums[t] = max(max_nums[t], i)
             except (ValueError, IndexError):
                 pass
-    if tensor_number not in maxnums:
+    if tensor_number not in max_nums:
         num = 1  # Tensor is new - if discard: delete
         if args.discard:
-            tensorfile = os.path.join("Tensors", "Tensors_{:03d}.zip"
+            tensor_file = os.path.join("Tensors", "Tensors_{:03d}.zip"
                                       .format(tensor_number))
-            deltafile = os.path.join("Deltas", "Deltas_{:03d}.zip"
+            delta_file = os.path.join("Deltas", "Deltas_{:03d}.zip"
                                      .format(tensor_number))
-            for f in (tensorfile, deltafile):
+            for f in (tensor_file, delta_file):
                 if os.path.isfile(f):
                     try:
                         os.remove(f)
                     except Exception:
                         print("Failed to discard file " + f)
     else:
-        num = maxnums[tensor_number] + 1
+        num = max_nums[tensor_number] + 1
     # find old timestamp, if possible
     old_log_files = sorted([f for f in os.listdir() if os.path.isfile(f) and
                             f.endswith(".log") and f.startswith("tleedm-")])
@@ -200,12 +200,12 @@ def bookkeeper():
     # if CONT, check for POSCAR_OUT / VIBROCC_OUT
     if args.cont and not args.discard:
         if os.path.isdir("OUT"):
-            fout = sorted([f for f in os.listdir("OUT")
+            file_out = sorted([f for f in os.listdir("OUT")
                            if os.path.isfile(os.path.join("OUT", f))
                            and f.startswith("POSCAR_OUT_")
                            and "parabola" not in f])
-            if len(fout) > 0:
-                path = os.path.join("OUT", fout[-1])
+            if len(file_out) > 0:
+                path = os.path.join("OUT", file_out[-1])
                 try:
                     shutil.copy2(path, "POSCAR")
                 except Exception:
@@ -213,12 +213,12 @@ def bookkeeper():
             else:
                 print("Error: Flag --cont was set, but no POSCAR_OUT was "
                       "found in OUT.")
-            fout = sorted([f for f in os.listdir("OUT")
+            file_out = sorted([f for f in os.listdir("OUT")
                            if os.path.isfile(os.path.join("OUT", f))
                            and f.startswith("VIBROCC_OUT_")
                            and "parabola" not in f])
-            if len(fout) > 0:
-                path = os.path.join("OUT", fout[-1])
+            if len(file_out) > 0:
+                path = os.path.join("OUT", file_out[-1])
                 try:
                     shutil.copy2(path, "VIBROCC")
                 except Exception:
@@ -260,12 +260,12 @@ def bookkeeper():
                 print("Failed to discard file " + log_file)
 
     # if there is a workhist folder, go through it and move contents as well
-    tensornums = {tensor_number}
+    tensor_nums = {tensor_number}
     if os.path.isdir(work_history_name) and not args.discard:
-        workhistprev = [d for d in os.listdir(work_history_name) if
+        work_hist_prev = [d for d in os.listdir(work_history_name) if
                         os.path.isdir(os.path.join(work_history_name, d))
                         and rgx.match(d) and ("previous" in d)]
-        for d in workhistprev:
+        for d in work_hist_prev:
             try:
                 shutil.rmtree(os.path.join(work_history_name, d))
             except Exception:
@@ -276,16 +276,16 @@ def bookkeeper():
                         and oldTimeStamp in d]
         for d in work_history_dirs:
             try:
-                tnum2 = int(d[1:4])
-                snum = int(d[6:9])
+                tensor_num_2 = int(d[1:4])
+                search_num = int(d[6:9])
             except (ValueError, IndexError):
                 pass
             else:
-                if tnum2 not in maxnums:
+                if tensor_num_2 not in max_nums:
                     num = 1
                 else:
-                    num = maxnums[tnum2] + 1
-                newname = ("t{:03d}.r{:03d}.{:03d}".format(tnum2, num, snum)
+                    num = max_nums[tensor_num_2] + 1
+                newname = (f"t{tensor_num_2:03d}.r{num:03d}.{search_num:03d}"
                            + d[9:])
                 try:
                     shutil.move(os.path.join(work_history_name, d),
@@ -293,7 +293,7 @@ def bookkeeper():
                 except Exception:
                     print("Error: Failed to move "
                           + os.path.join(work_history_name, d))
-                tensornums.add(tnum2)
+                tensor_nums.add(tensor_num_2)
     if os.path.isdir(work_history_name):
         if len(os.listdir(work_history_name)) == 0 or args.discard:
             try:
@@ -306,12 +306,12 @@ def bookkeeper():
                           f"{str(e)}")
     if args.discard:  # all done
         return 0
-    jobnums = []
-    for tensor_number in tensornums:
-        if tensor_number not in maxnums:
-            jobnums.append(1)
+    job_nums = []
+    for tensor_number in tensor_nums:
+        if tensor_number not in max_nums:
+            job_nums.append(1)
         else:
-            jobnums.append(maxnums[tensor_number] + 1)
+            job_nums.append(max_nums[tensor_number] + 1)
     # look for notes file
     notes_name = ""
     notes = ""
@@ -337,25 +337,25 @@ def bookkeeper():
     hi = ""
     if os.path.isfile("history.info"):
         hi += "\n\n"
-    if tensornums == {0}:
+    if tensor_nums == {0}:
         hi += "# TENSORS ".ljust(spacing) + "None\n"
     else:
-        hi += "# TENSORS ".ljust(spacing) + str(tensornums)[1:-1] + "\n"
-    hi += "# JOB ID ".ljust(spacing) + str(jobnums)[1:-1] + "\n"
+        hi += "# TENSORS ".ljust(spacing) + str(tensor_nums)[1:-1] + "\n"
+    hi += "# JOB ID ".ljust(spacing) + str(job_nums)[1:-1] + "\n"
     if args.name:
         hi += "# JOB NAME " + args.name + "\n"
     if len(lastLogLines) > 0:
         # try to read what was executed
-        runinfo = ""
+        run_info = ""
         i = len(lastLogLines) - 1
         while i > 0:
             if lastLogLines[i].startswith("Executed segments: "):
-                runinfo = (lastLogLines[i].split("Executed segments: ")[1]
+                run_info = (lastLogLines[i].split("Executed segments: ")[1]
                            .strip())
                 break
             i -= 1
-        if runinfo:
-            hi += "# RUN ".ljust(spacing) + runinfo + "\n"
+        if run_info:
+            hi += "# RUN ".ljust(spacing) + run_info + "\n"
         # now try to read final R-factors
         for j in range(i+1, len(lastLogLines)):
             line = lastLogLines[j]
