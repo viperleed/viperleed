@@ -12,7 +12,6 @@ if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
 
-import viperleed.tleedmlib
 from viperleed.tests.helpers import (slab_and_expectations,
                                      slab_pg_rp,
                                      INPUTS_ORIGIN,
@@ -22,10 +21,16 @@ from viperleed.tests.helpers import (slab_and_expectations,
                                      TENSORLEED_PATH,
                                      POSCAR_PATHS)
 
-from tleedmlib.files.poscar import readPOSCAR
-from viperleed import tleedmlib as tl
-from tleedmlib.symmetry import findSymmetry, enforceSymmetry
-from tleedmlib.psgen import runPhaseshiftGen_old
+from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
+from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.tleedmlib.files.vibrocc import readVIBROCC
+from viperleed.tleedmlib.symmetry import findSymmetry, enforceSymmetry
+from viperleed.tleedmlib.psgen import runPhaseshiftGen_old
+from viperleed.tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.classes.slab import Slab
+
+
 
 
 
@@ -181,12 +186,12 @@ class TestPOSCARSymmetry(TestPOSCARRead):                                       
 
 @pytest.fixture(scope='function')
 def manual_slab_3_atoms():
-    slab = tl.Slab()
+    slab = Slab()
     slab.ucell = np.diag([3., 4., 5.])
     positions = (np.array([-0.25, 0, 0]),
                  np.array([0.00, 0, 0]),
                  np.array([0.25, 0, 0]))
-    slab.atlist = [tl.Atom('C', pos, i+1, slab)
+    slab.atlist = [Atom('C', pos, i+1, slab)
                    for i, pos in enumerate(positions)]
     param = tl.Rparams()
     slab.fullUpdate(param)
@@ -195,11 +200,11 @@ def manual_slab_3_atoms():
 
 @pytest.fixture()
 def manual_slab_1_atom_trigonal():
-    slab = tl.Slab()
+    slab = Slab()
     slab.ucell = np.array([[ 1, 0, 0],
                            [-2, 3, 0],
                            [ 1, 2, 3]],dtype=float)
-    slab.atlist = [tl.Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab),]  # "random" position
+    slab.atlist = [Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab),]  # "random" position
     param = tl.Rparams()
     slab.fullUpdate(param)
     return slab
@@ -312,10 +317,7 @@ def test_bulk_symmetry_thin(fixture, request):
     findBulkSymmetry(bulk, param)
     assert bulk.bulk_screws == [4]
     assert len(bulk.bulk_glides) == 2
-    
-from tleedmlib.classes import atom
-from tleedmlib.files.vibrocc import readVIBROCC
-from tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
+
 
 @pytest.fixture(scope="function")
 def atom_with_disp_and_offset():
@@ -330,7 +332,7 @@ def atom_with_disp_and_offset():
 @pytest.fixture()
 def ag100_slab_param():
     slab = readPOSCAR(POSCAR_PATHS / "POSCAR_Ag(100)")
-    param = tl.Rparams()
+    param = Rparams()
     param.N_BULK_LAYERS = 1
     slab.fullUpdate(param)
     return slab, param
