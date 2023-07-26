@@ -3,6 +3,7 @@
 Created on 2023-02-28
 
 @author: Michele Riva
+@author: Alexander M. Imre
 
 Contains some useful general definitions that can be used when creating
 or running tests.
@@ -138,6 +139,23 @@ def ag100_parameters_example():
     symmetry.findSymmetry(slab, rpars)
     symmetry.findBulkSymmetry(slab, rpars)
     return (rpars, slab)
+
+
+@pytest.fixture()
+def ag100_rename_ax(request, tmp_path):
+    dir = INPUTS_ORIGIN / "Ag(100)_el_rename"
+    run = [0,] # only initialization
+    files = BaseTleedmFilesSetup(surface_dir=dir,
+                                tmp_test_path=tmp_path,
+                                required_files=["PHASESHIFTS",],
+                                copy_dirs=["initialization"])
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.73,
+                                })
+    return files
+
 
 @pytest.fixture(scope="function", params=_EXAMPLE_POSCARs)
 def example_poscars(request):

@@ -16,31 +16,7 @@ if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
 
-from viperleed.tests.helpers import (ag100_parameters_example,
-                                     BaseTleedmFilesSetup,
-                                     SOURCE_STR,
-                                     TestSetup,
-                                     init_files,  # fixtures must be imported explicitly!
-                                     INPUTS_ORIGIN
-                                     )
-
-@pytest.fixture()
-def ag100_rename_ax(request, tmp_path):
-    dir = INPUTS_ORIGIN / "Ag(100)_el_rename"
-    run = [0,] # only initialization
-    files = BaseTleedmFilesSetup(surface_dir=dir,
-                                tmp_test_path=tmp_path,
-                                required_files=["PHASESHIFTS",],
-                                copy_dirs=["initialization"])
-    files.run_tleedm_from_setup(source=SOURCE_STR,
-                                preset_params={
-                                    "RUN":run,
-                                    "TL_VERSION":1.73,
-                                })
-    return files
-
-
-class TestInitialization(TestSetup):
+class TestInitialization():
     def test_exit_code_0(self, init_files):
         """Test if initialization gives exit code 0."""
         assert init_files.exit_code == 0
