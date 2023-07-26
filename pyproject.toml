@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "viperleed"
-version = "0.10.0"
+dynamic = ["version"]
 requires-python = ">=3.7"
 readme = "README.md"
 dependencies = [
@@ -29,8 +29,19 @@ hardware = [
 ]
 dev = [
     "line_profiler",
+    "pytest",
     "sphinx"
 ]
 
+[tools.setuptools.dynamic]
+version = {attr = "viperleed.__version__"}
+
+
 [tool.setuptools.packages.find]
-exclude = ["tests*", "doc*", "dist", "container", "calculations", "environments"]
+exclude = [
+    "tests",
+    "doc",
+    "dist",
+    "calculations",
+    "environments"
+]
