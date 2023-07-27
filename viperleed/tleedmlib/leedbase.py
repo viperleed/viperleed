@@ -207,8 +207,8 @@ def getTLEEDdir(home=Path(), version=None):
     if all(np.isnan(version_numbers)):
         raise RuntimeError("Could not find any TensErLEED version.")
     highest_tl_version_dir = tl_version_dirs[np.nanargmax(version_numbers)]
-    logger.log(1, f"getTLEEDdir: highest TensErLEED version is "
-               {highest_tl_version_dir.name}")
+    logger.log(1, "getTLEEDdir: highest TensErLEED version is "
+               f"{highest_tl_version_dir.name}")
     return highest_tl_version_dir
 
 
