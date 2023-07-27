@@ -224,11 +224,6 @@ if __name__ == "__main__":
         action='store_true'
     )
     parser.add_argument(
-        "-vvv", "--very_very_verbose",
-        help=("maximum output verbosity and even more debug messages"),
-        action='store_true'
-    )
-    parser.add_argument(
         "--version",
         help=("print version information and exit"),
     )
@@ -246,16 +241,14 @@ if __name__ == "__main__":
     work_path = work_path.resolve()
     delete_workdir = args.delete_workdir
 
-    if sum([args.verbose, args.very_verbose, args.very_very_verbose]) > 1:
+    if sum([args.verbose, args.very_verbose]) > 1:
         # only one verbosity level can be chosen
         logger.error("Only one verbosity level can be chosen. Stopping ")
         sys.exit(2)
-    elif args.very_very_verbose:
-        override_log_level = 1
     elif args.very_verbose:
-        override_log_level = 10
+        override_log_level = 1
     elif args.verbose:
-        override_log_level = logging.DEBUG
+        override_log_level = 5
     else:
         override_log_level = None
 
