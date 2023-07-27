@@ -22,11 +22,6 @@ from viperleed.tleedmlib.files.poscar import (readPOSCAR,
                                               POSCARReader,
                                               POSCARSyntaxError)
 from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tests.helpers import (ag100_parameters_example,
-                                     example_poscars,
-                                     slab_and_expectations,
-                                     slab_pg_rp)
-
 
 class Test_readPOSCAR:
     def test_readPOSCAR_slab_exists(self, example_poscars):

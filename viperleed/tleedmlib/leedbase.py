@@ -3,6 +3,7 @@
 Created on Jun 13 2019
 
 @author: Florian Kraushofer
+@author: Alexander M. Imre
 
 Contains LEED- and TLEEDM-specific functions used throughout the tleedm module
 """
@@ -170,36 +171,45 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
-def getTLEEDdir(home=Path(), version=0.):
+def _version_from_dirname(dirname):
+    try:
+        return float(dirname.split('v')[-1])
+    except Exception:
+        logger.debug("Could not parse version number "
+                     f"for directory {dirname}")
+        return np.nan
+
+
+def getTLEEDdir(home=Path(), version=None):
     """Finds directories in the 'tensorleed' folder that have names starting
     with 'TensErLEED', then picks the one with the highest version number.
-    Returnsa relative path to that directory, eg
+    Returns an absolute path to that directory, eg
     './tensorleed/TensErLEED-v1.6'."""
     _home = Path(home)
-    sd = _home / 'tensorleed'
-    ls = [dn for dn in os.listdir(sd) if (os.path.isdir(sd / dn)
-                                          and dn.startswith('TensErLEED'))]
-    highest = 0.0
-    founddir = ''
-    for dn in ls:
-        try:
-            f = float(dn.split('v')[-1])
-            if f == version:
-                founddir = dn
-                break
-            if f > highest:
-                highest = f
-                founddir = dn
-        except Exception:
-            pass
-    if founddir != '':
-        if version != 0 and f != version:
-            logger.error("getTLEEDdir: Could not find requested "
-                         f"TensErLEED version {version}")
-            return ''
-        return sd / dn
-    else:
-        return ''
+    source_dir = (_home / 'tensorleed').resolve()
+    tl_version_dirs = [dir.resolve() for dir in source_dir.iterdir()
+                       if ((source_dir / dir).is_dir()
+                       and dir.name.startswith('TensErLEED'))]
+    logger.log(1, f"getTLEEDdir: available TensErLEED directories: "
+                 f"{[d.name for d in tl_version_dirs]}")
+    if not tl_version_dirs:
+        raise FileNotFoundError("Could not find any TensErLEED directory.")
+    if version:
+        logger.log(5, f"getTLEEDdir: Looking for TensErLEED version {version}")
+        for tl_dir in tl_version_dirs:
+            if np.isclose(version, _version_from_dirname(tl_dir.name)):
+                return tl_dir
+        # if we get here, we didn't find the requested version
+        raise RuntimeError("Could not find requested TensErLEED version "
+                           f"{version}.")
+    # if no version is specified, return the highest version
+    version_numbers = [_version_from_dirname(d.name) for d in tl_version_dirs]
+    if all(np.isnan(version_numbers)):
+        raise RuntimeError("Could not find any TensErLEED version.")
+    highest_tl_version_dir = tl_version_dirs[np.nanargmax(version_numbers)]
+    logger.log(1, f"getTLEEDdir: highest TensErLEED version is "
+               {highest_tl_version_dir.name}")
+    return highest_tl_version_dir
 
 
 def getMaxTensorIndex(home=".", zip_only=False):
@@ -208,7 +218,8 @@ def getMaxTensorIndex(home=".", zip_only=False):
     returns that value, or zero if there is no Tensors folder or no valid
     Tensors zip file. zip_only looks only for zip files, ignoring directories.
     """
-    if not os.path.isdir(os.path.join(home, "Tensors")):
+    tensor_dir = (Path(home) / "Tensors").resolve()
+    if not tensor_dir.is_dir():
         return 0
     indlist = []
     rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
@@ -221,8 +232,7 @@ def getMaxTensorIndex(home=".", zip_only=False):
     if not zip_only:
         rgx = re.compile(r'Tensors_[0-9]{3}')
         for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
-                  if (os.path.isdir(os.path.join(home, "Tensors", f))
-                      and rgx.match(f))]:
+                  if ((tensor_dir / f).is_dir() and rgx.match(f))]:
             m = rgx.match(f)
             if m.span()[1] == 11:  # exact match
                 indlist.append(int(m.group(0)[-3:]))
@@ -231,39 +241,40 @@ def getMaxTensorIndex(home=".", zip_only=False):
     return 0
 
 
-def getTensors(index, basedir=".", targetdir=".", required=True):
+def getTensors(index, base_dir=".", target_dir=".", required=True):
     """Fetches Tensor files from Tensors or archive with specified tensor
     index. If required is set True, an error will be printed if no Tensor
     files are found.
-    basedir is the directory in which the Tensor directory is based.
-    targetdir is the directory to which the Tensor files should be moved."""
+    base_dir is the directory in which the Tensor directory is based.
+    target_dir is the directory to which the Tensor files should be moved."""
     dn = "Tensors_"+str(index).zfill(3)
-    if (os.path.basename(basedir) == "Tensors"
-            and not os.path.isdir(os.path.join(basedir, "Tensors"))):
-        basedir = os.path.dirname(basedir)
-    if not os.path.isdir(os.path.join(basedir, "Tensors", dn)):
-        if os.path.isfile(os.path.join(basedir, "Tensors", dn+".zip")):
-            logger.info("Unpacking {}.zip...".format(dn))
-            os.makedirs(os.path.join(targetdir, "Tensors", dn),
-                        exist_ok=True)
-            zip_path = (Path(basedir) / "Tensors" / dn).with_suffix(".zip")
-            unpack_path = (Path(targetdir) / "Tensors" / dn)
+    tensor_dir = (Path(base_dir) / "Tensors").resolve()
+    unpack_path = (Path(target_dir) / "Tensors" / dn).resolve()
+    zip_path = (tensor_dir / dn).with_suffix(".zip")
+    
+    if (os.path.basename(base_dir) == "Tensors"
+            and not tensor_dir.is_dir()):
+        base_dir = os.path.dirname(base_dir)
+    if not (tensor_dir / dn).is_dir():
+        if (tensor_dir / dn).with_suffix(".zip").is_file():
+            logger.info(f"Unpacking {dn}.zip...")
+            os.makedirs(unpack_path, exist_ok=True)
             try:
                 with ZipFile(zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(unpack_path)  # TODO: maybe it would be nicer to read directly from the zip file
+                    zip_ref.extractall(unpack_path)                             # TODO: maybe it would be nicer to read directly from the zip file
             except Exception:
-                logger.error("Failed to unpack {}.zip".format(dn))
+                logger.error(f"Failed to unpack {dn}.zip")
                 raise
         else:
             logger.error("Tensors not found")
             raise RuntimeError("Tensors not found")
-    elif basedir != targetdir:
+    elif base_dir != target_dir:
         try:
-            os.makedirs(os.path.join(targetdir, "Tensors", dn), exist_ok=True)
-            for file in os.path.listdir(os.path.join(basedir, "Tensors", dn)):
-                shutil.copy2(file, os.path.join(targetdir, "Tensors", dn))
+            os.makedirs(unpack_path, exist_ok=True)
+            for file in os.path.listdir(os.path.join(base_dir, "Tensors", dn)):
+                shutil.copy2(file, unpack_path)
         except Exception:
-            logger.error("Failed to move Tensors from {}".format(dn))
+            logger.error("Failed to move Tensors from {dn}")
             raise
     return None
 
@@ -275,7 +286,7 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
     basedir is the directory in which the Delta directory is based.
     targetdir is the directory to which the Tensor files should be moved."""
     dn = "Deltas_"+str(index).zfill(3)
-    _basedir, _targetdir = Path(basedir), Path(targetdir)
+    _basedir, _targetdir = Path(basedir).resolve(), Path(targetdir).resolve()
     zip_path=(_basedir / "Deltas" / dn).with_suffix(".zip")
     if os.path.isdir(_basedir / "Deltas" / dn):
         for f in [f for f in os.listdir(_basedir / "Deltas" / dn)
@@ -288,12 +299,12 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
                              "work directory")
                 raise
     elif os.path.isfile(zip_path):
-        logger.info("Unpacking {}.zip...".format(dn))
+        logger.info(f"Unpacking {dn}.zip...")
         try:
             with ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(_targetdir)  # TODO: maybe it would be nicer to read directly from the zip file
+                zip_ref.extractall(_targetdir)                                  # TODO: maybe it would be nicer to read directly from the zip file
         except Exception:
-            logger.error("Failed to unpack {}.zip".format(dn))
+            logger.error(f"Failed to unpack {dn}.zip")
             raise
     elif required:
         logger.error("Deltas not found")
@@ -305,20 +316,18 @@ def getTensorOriStates(sl, path):
     """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the
     original state of the atoms and sites, and stores them in the given
     slab's atom/site oriState variables."""
+    _path = Path(path).resolve()
     for fn in ["POSCAR", "PARAMETERS", "VIBROCC"]:
-        if not os.path.isfile(os.path.join(path, fn)):
+        if not (_path / fn).is_file():
             logger.error("File "+fn+" is missing in "+path)
             raise RuntimeError("Could not check Tensors: File missing")
     dn = os.path.basename(path)
     try:
-        tsl = poscar.readPOSCAR(os.path.join(path, "POSCAR"))
-        trp = parameters.readPARAMETERS(
-            filename=os.path.join(path, "PARAMETERS")
-            )
+        tsl = poscar.readPOSCAR(_path / "POSCAR")
+        trp = parameters.readPARAMETERS(filename=_path / "PARAMETERS")
         parameters.interpretPARAMETERS(trp, slab =tsl, silent=True)
         tsl.fullUpdate(trp)
-        vibrocc.readVIBROCC(trp, tsl, filename=os.path.join(path, "VIBROCC"),
-                            silent=True)
+        vibrocc.readVIBROCC(trp, tsl, filename=_path / "VIBROCC", silent=True)
         tsl.fullUpdate(trp)
     except Exception:
         logger.error("Error checking Tensors: Error while reading "
@@ -412,23 +421,22 @@ def fortran_compile(pre="", filename="", post="",
         logger.error("Error compiling "+filename)
         raise
     if r.returncode not in (0, 1):
-        raise RuntimeError("Fortran compiler subprocess returned {}"
-                           .format(r.returncode))
+            raise RuntimeError("Fortran compiler subprocess returned "
+                               f"{r.returncode}.")
     if r.returncode == 1 and "-mcmodel=medium" not in fc:
         mcmodel = False
         with open(logname, "r") as log:
             if "relocation truncated to fit:" in log.read():
                 mcmodel = True
-                logger.warning("Compiling file {} failed, likely due to "
-                               "missing '-mcmodel=medium' flag."
-                               .format(filename))
+                logger.warning(f"Compiling file {filename} failed, likely due to "
+                               "missing '-mcmodel=medium' flag.")
         if not mcmodel:
-            raise RuntimeError("Fortran compiler subprocess returned {}"
-                               .format(r.returncode))
+            raise RuntimeError("Fortran compiler subprocess returned "
+                               f"{r.returncode}.")
         return "mcmodel"
     if r.returncode != 0:
-        raise RuntimeError("Fortran compiler subprocess returned {}"
-                           .format(r.returncode))
+            raise RuntimeError("Fortran compiler subprocess returned "
+                               f"{r.returncode}.")
     return None
 
 
