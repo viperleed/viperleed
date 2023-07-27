@@ -171,6 +171,15 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
+def _version_from_dirname(dirname):
+    try:
+        return float(dirname.split('v')[-1])
+    except Exception:
+        logger.debug("Could not parse version number "
+                     f"for directory {dirname}")
+        return np.nan
+
+
 def getTLEEDdir(home=Path(), version=None):
     """Finds directories in the 'tensorleed' folder that have names starting
     with 'TensErLEED', then picks the one with the highest version number.
@@ -201,15 +210,6 @@ def getTLEEDdir(home=Path(), version=None):
     logger.log(1, f"getTLEEDdir: highest TensErLEED version is "
                {highest_tl_version_dir.name}")
     return highest_tl_version_dir
-
-
-def _version_from_dirname(dirname):
-    try:
-        return float(dirname.split('v')[-1])
-    except Exception:
-        logger.debug("Could not parse version number "
-                     f"for directory {dirname}")
-        return np.nan
 
 
 def getMaxTensorIndex(home=".", zip_only=False):
