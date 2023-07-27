@@ -198,9 +198,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     return exit_code
 
 
-if __name__ == "__main__":
-    multiprocessing.freeze_support() # needed for Windows
-
+def _parse_command_line_argumenmts():
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -227,8 +225,24 @@ if __name__ == "__main__":
         "--version",
         help=("print version information and exit"),
     )
+    parser.add_argument(
+        "--tensorleed", "-t",
+        help="specify path to TensErLEED source code",
+        type=str
+        )
     args, bookie_args = parser.parse_known_args()
+    return args, bookie_args
+
+
+def main():
+    multiprocessing.freeze_support() # needed for Windows
+
+    args, bookie_args = _parse_command_line_argumenmts()
     sys.argv = sys.argv[:1] + bookie_args
+
+    if args.version:
+        print("ViPErLEED version " + GLOBALS["version"])
+        return 0
 
     # run bookkeeper # TODO: make this optional
     print("Running bookkeeper...")
@@ -317,3 +331,7 @@ if __name__ == "__main__":
             shutil.rmtree(work_path)
         except Exception as e:
             print("Error deleting work directory: {str(e)}")
+
+
+if __name__ == "__main__":
+    main()
