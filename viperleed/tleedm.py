@@ -81,11 +81,11 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     os.umask(0)
     # start logger, write to file:
     timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
-    logname = 'tleedm-'+timestamp+'.log'
+    log_name = 'tleedm-'+timestamp+'.log'
     logger = logging.getLogger("tleedm")
     logger.setLevel(logging.INFO)
     logFormatter = CustomLogFormatter()
-    fileHandler = logging.FileHandler(logname, mode="w")
+    fileHandler = logging.FileHandler(log_name, mode="w")
     fileHandler.setFormatter(logFormatter)
     logger.addHandler(fileHandler)
     if console_output:
@@ -93,25 +93,25 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         consoleHandler.setFormatter(logFormatter)
         logger.addHandler(consoleHandler)
 
-    logger.info("Starting new log: " + logname + "\nTime of execution (UTC): "
+    logger.info("Starting new log: " + log_name + "\nTime of execution (UTC): "
                 + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     logger.info("This is ViPErLEED version " + GLOBALS["version"] + "\n")
     logger.info("! THIS VERSION IS A PRE-RELEASE NOT MEANT FOR PUBLIC "
                 "DISTRIBUTION !\n")
 
-    tmpmanifest = ["SUPP", "OUT", logname]
+    tmp_manifest = ["SUPP", "OUT", log_name]
     try:
         rp = readPARAMETERS()
     except FileNotFoundError:
         if not preset_params:
             logger.error("No PARAMETERS file found, and no preset parameters "
                          "passed. Execution will stop.")
-            cleanup(tmpmanifest)
+            cleanup(tmp_manifest)
             return 2
         rp = rparams.Rparams()
     except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
-        cleanup(tmpmanifest)
+        cleanup(tmp_manifest)
         return 2
 
     # check if this is going to be a domain search
@@ -122,37 +122,37 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     if domains:  # no POSCAR in main folder for domain searches
         slab = None
     elif slab is None:
-        poscarfile = Path("POSCAR")
-        if poscarfile.is_file():
+        poscar_file = Path("POSCAR")
+        if poscar_file.is_file():
             logger.info("Reading structure from file POSCAR")
             try:
-                slab = readPOSCAR(filename=str(poscarfile.resolve()))
+                slab = readPOSCAR(filename=str(poscar_file.resolve()))
             except Exception:
                 logger.error("Exception while reading POSCAR", exc_info=True)
-                cleanup(tmpmanifest)
+                cleanup(tmp_manifest)
                 return 2
         else:
             logger.error("POSCAR not found. Stopping execution...")
-            cleanup(tmpmanifest)
+            cleanup(tmp_manifest)
             return 2
 
         if not slab.preprocessed:
             logger.info("The POSCAR file will be processed and overwritten. "
                         "Copying the original POSCAR to POSCAR_user...")
             try:
-                shutil.copy2(poscarfile, "POSCAR_user")
-                tmpmanifest.append("POSCAR_user")
+                shutil.copy2(poscar_file, "POSCAR_user")
+                tmp_manifest.append("POSCAR_user")
             except Exception:
                 logger.error("Failed to copy POSCAR to POSCAR_user. Stopping "
                              "execution...")
-                cleanup(tmpmanifest)
+                cleanup(tmp_manifest)
                 return 2
     try:
         # interpret the PARAMETERS file
         interpretPARAMETERS(rp, slab=slab, silent=False)
     except ParameterError:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
-        cleanup(tmpmanifest)
+        cleanup(tmp_manifest)
         return 2
 
     # set logging level
@@ -163,7 +163,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     logger.debug("PARAMETERS file was read successfully")
 
     rp.timestamp = timestamp
-    rp.manifest = tmpmanifest
+    rp.manifest = tmp_manifest
     for p in preset_params:
         try:
             setattr(rp, p, preset_params[p])
@@ -188,7 +188,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     rp.updateDerivedParams()
     logger.info(f"ViPErLEED is using TensErLEED version {rp.TL_VERSION_STR}.")
 
-    prerun_clean(rp, logname)
+    prerun_clean(rp, log_name)
     exit_code = section_loop(rp, slab)
 
     # Finalize logging - if not done, will break unit testing
@@ -198,7 +198,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     return exit_code
 
 
-def _parse_command_line_argumenmts():
+def _parse_command_line_arguments():
     # parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -234,10 +234,28 @@ def _parse_command_line_argumenmts():
     return args, bookie_args
 
 
+def _tensorleed_path(args):
+    # if tensorleed arg is given, use that
+    if args.tensorleed:
+        tensorleed_path = Path(args.tensorleed)
+    # else check environment variable $VIPERLEED_TENSORLEED
+    try:
+        tensorleed_path = Path(os.environ["VIPERLEED_TENSORLEED"])
+    except KeyError:
+        # environment variable not set
+        raise RuntimeError(
+            "TensErLEED path not specified.\n"
+            "Please either pass a path to the TensErLEED source code with "
+            "the --tensorleed argument, or set the environment variable "
+            "$VIPERLEED_TENSORLEED."
+        )
+    return tensorleed_path
+
+
 def main():
     multiprocessing.freeze_support() # needed for Windows
 
-    args, bookie_args = _parse_command_line_argumenmts()
+    args, bookie_args = _parse_command_line_arguments()
     sys.argv = sys.argv[:1] + bookie_args
 
     if args.version:
