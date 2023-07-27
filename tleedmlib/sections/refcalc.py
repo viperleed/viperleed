@@ -361,8 +361,6 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     tldir = os.path.abspath(
         leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
         )
-    if not tldir:
-        raise RuntimeError("TensErLEED code not found.")
     rp.updateCores()
     single_threaded = (rp.N_CORES <= 1)
     if rp.FORTRAN_COMP[0] == "":

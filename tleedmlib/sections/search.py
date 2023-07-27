@@ -717,8 +717,6 @@ def search(sl, rp):
     # get fortran files
     try:
         tldir = leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
-        if not tldir:
-            raise RuntimeError("TensErLEED code not found.")
         srcpath = tldir / 'src'
         if usempi:
             src_file = next(srcpath.glob('search.mpi*'), None)

@@ -96,8 +96,6 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     # Get FORTRAN files                                                         # TODO: use CompileTask subclass (Issue #43)
     try:
         tldir = leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
-        if not tldir:
-            raise RuntimeError("TensErLEED code not found.")
         src_dir = tldir / 'src'
         src_path = next(f for f in src_dir.glob('superpos*'))                   # TODO: StopIteration; Probably also want *.f* in the glob?
         shutil.copy2(src_path, src_path.name)

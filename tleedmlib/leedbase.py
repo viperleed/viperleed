@@ -171,36 +171,43 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
-def getTLEEDdir(home=Path(), version=0.):
+def getTLEEDdir(home=Path(), version=None):
     """Finds directories in the 'tensorleed' folder that have names starting
     with 'TensErLEED', then picks the one with the highest version number.
-    Returnsa relative path to that directory, eg
+    Returns a relative path to that directory, eg
     './tensorleed/TensErLEED-v1.6'."""
     _home = Path(home)
-    sd = _home / 'tensorleed'
-    ls = [dn for dn in os.listdir(sd) if (os.path.isdir(sd / dn)
-                                          and dn.startswith('TensErLEED'))]
-    highest = 0.0
-    founddir = ''
-    for dn in ls:
-        try:
-            f = float(dn.split('v')[-1])
-            if f == version:
-                founddir = dn
-                break
-            if f > highest:
-                highest = f
-                founddir = dn
-        except Exception:
-            pass
-    if founddir != '':
-        if version != 0 and f != version:
-            logger.error("getTLEEDdir: Could not find requested "
-                         f"TensErLEED version {version}")
-            return ''
-        return sd / dn
-    else:
-        return ''
+    source_dir = (_home / 'tensorleed').resolve()
+    tl_version_dirs = [dir.resolve() for dir in source_dir.iterdir()
+                       if ((source_dir / dir).is_dir()
+                       and dir.name.startswith('TensErLEED'))]
+    logger.log(1, f"getTLEEDdir: available TensErLEED directories: "
+                 f"{[d.name for d in tl_version_dirs]}")
+    if not tl_version_dirs:
+        raise FileNotFoundError("Could not find any TensErLEED directory.")
+    if version:
+        logger.log(5, f"getTLEEDdir: Looking for TensErLEED version {version}")
+        for tl_dir in tl_version_dirs:
+            if np.isclose(version, _version_from_dirname(tl_dir.name)):
+                return tl_dir
+        # if we get here, we didn't find the requested version
+        raise RuntimeError("Could not find requested TensErLEED version "
+                           f"{version}.")
+    # if no version is specified, return the highest version
+    version_numbers = [_version_from_dirname(d.name) for d in tl_version_dirs]
+    if all(np.isnan(version_numbers)):
+        raise RuntimeError("Could not find any TensErLEED version.")
+    highest_tl_version_dir = tl_version_dirs[np.nanargmax(version_numbers)]
+    return highest_tl_version_dir
+
+
+def _version_from_dirname(dirname):
+    try:
+        return float(dirname.split('v')[-1])
+    except Exception:
+        logger.debug("Could not parse version number "
+                     f"for directory {dirname}")
+        return np.nan
 
 
 def getMaxTensorIndex(home=".", zip_only=False):

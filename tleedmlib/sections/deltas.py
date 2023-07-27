@@ -493,10 +493,7 @@ def deltas(sl, rp, subdomain=False):
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    tl_path = leedbase.getTLEEDdir(os.path.abspath(rp.sourcedir),
-                                   version=rp.TL_VERSION)
-    if not tl_path:
-        raise RuntimeError("TensErLEED code not found.")
+    tl_path = leedbase.getTLEEDdir(rp.sourcedir, version=rp.TL_VERSION)
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
         ct.sourcedir = tl_path
