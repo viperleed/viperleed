@@ -20,4 +20,3 @@ class TestDeltasAg100():
 
     def test_deltas_zip_created(self, delta_files_ag100):
         assert delta_files_ag100.expected_file_exists(Path("Deltas") / "Deltas_001.zip")
-
