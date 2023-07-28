@@ -11,7 +11,7 @@ import pytest
 class TestSearchAg100():
     def test_exit_code_0(self, search_files_ag100):
         assert search_files_ag100.exit_code == 0
-        
+
     @pytest.mark.parametrize('expected_file', ('search.steu',))
     def test_search_input_exist(self, search_files_ag100, expected_file):
         assert search_files_ag100.expected_file_exists(expected_file)

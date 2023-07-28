@@ -266,7 +266,7 @@ def refcalc_files(request, tmp_path_factory, scope="session"):
     files.run_tleedm_from_setup(source=SOURCE_STR,
                                 preset_params={
                                     "RUN":run,
-                                    "TL_VERSION":1.73,
+                                    "TL_VERSION":1.74,
                                 })
     return files
 
@@ -289,7 +289,7 @@ def delta_files_ag100(request, tmp_path_factory, scope="session"):
     files.run_tleedm_from_setup(source=SOURCE_STR,
                                 preset_params={
                                     "RUN":run,
-                                    "TL_VERSION":1.73,
+                                    "TL_VERSION":1.74,
                                 })
     return files
 
@@ -315,6 +315,6 @@ def search_files_ag100(request, tmp_path_factory, scope="session"):
     files.run_tleedm_from_setup(source=SOURCE_STR,
                                 preset_params={
                                     "RUN":run,
-                                    "TL_VERSION":1.73,
+                                    "TL_VERSION":1.74,
                                 })
     return files
