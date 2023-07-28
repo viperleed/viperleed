@@ -42,7 +42,7 @@ from viperleed.bookkeeper import bookkeeper
 logger = logging.getLogger("tleedm")
 
 
-def run_tleedm(system_name="", console_output=True, slab=None,
+def run_tleedm(system_name=None, console_output=True, slab=None,
                preset_params={}, source=".",
                override_log_level=None):
     """
@@ -193,10 +193,12 @@ def run_tleedm(system_name="", console_output=True, slab=None,
                        "This may cause errors.")
         rp.source_dir = _source
 
-    rp.systemName = system_name
-    if not rp.systemName:
-        # use name of parent folder
-        rp.systemName = str(Path.cwd().parent.name)
+    if system_name is not None:
+        rp.systemName = system_name
+    else:
+        logger.info('No system name specified. Using name "unknown".')
+        rp.systemName = "unknown"
+
     # check if halting condition is already in effect:
     if rp.halt >= rp.HALTING:
         logger.info("Halting execution...")
@@ -238,6 +240,11 @@ def _parse_command_line_arguments():
         "-vv", "--very_verbose",
         help=("increase output verbosity and prints more debug messages"),
         action='store_true'
+    )
+    parser.add_argument(
+        "--name", "-n",
+        help = "specify system name",
+        type=str
     )
     parser.add_argument(
         "--version",
@@ -291,6 +298,7 @@ def main():
     work_path = work_path.resolve()
     delete_workdir = args.delete_workdir
 
+    # verbosity flags
     if sum([args.verbose, args.very_verbose]) > 1:
         # only one verbosity level can be chosen
         logger.error("Only one verbosity level can be chosen. Stopping ")
@@ -301,6 +309,16 @@ def main():
         override_log_level = 5
     else:
         override_log_level = None
+
+    # system name flag
+    if args.name:
+        _system_name = args.name
+    else:
+        # use name of parent directory
+        _system_name = Path.cwd().resolve().parent.name
+        logger.info("No system name specified. Using name of parent directory: "
+                    f"{_system_name}")
+
 
     # create work directory if necessary
     os.makedirs(work_path, exist_ok=True)
@@ -343,8 +361,11 @@ def main():
     # go to work directory, execute there
     cwd = Path.cwd().resolve()
     os.chdir(work_path)
-    run_tleedm(source=os.path.join(vpr_path, "viperleed"),
-               override_log_level=override_log_level)
+    run_tleedm(
+        system_name=_system_name,
+        source=os.path.join(vpr_path, "viperleed"),
+        override_log_level=override_log_level
+    )
 
     # copy back everything listed in manifest
     manifest = []
