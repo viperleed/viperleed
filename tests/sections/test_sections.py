@@ -18,7 +18,7 @@ from viperleed.tleedmlib.symmetry import findSymmetry, enforceSymmetry
 from viperleed.tleedmlib.psgen import runPhaseshiftGen_old
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.classes.slab import Slab, SymPlane
 
 
 
@@ -103,9 +103,9 @@ class TestSlabTransforms:
     def test_mirror(self, manual_slab_3_atoms):
         slab = manual_slab_3_atoms
         mirrored_slab = deepcopy(slab)
-        symplane = tl.classes.slab.SymPlane(pos=(0,0),
-                                            dr=np.array([0,1]),
-                                            abt=slab.ucell.T[:2,:2])
+        symplane = SymPlane(pos=(0,0),
+                            dr=np.array([0,1]),
+                            abt=slab.ucell.T[:2,:2])
         mirrored_slab.mirror(symplane)
         mirrored_slab.collapseCartesianCoordinates()
         assert all(at.isSameXY(mir_at.cartpos[:2])

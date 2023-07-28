@@ -107,7 +107,7 @@ def manual_slab_3_atoms():
                  np.array([0.25, 0, 0]))
     slab.atlist = [Atom('C', pos, i+1, slab)
                    for i, pos in enumerate(positions)]
-    param = tl.Rparams()
+    param = Rparams()
     slab.fullUpdate(param)
     return slab
 
@@ -119,28 +119,30 @@ def manual_slab_1_atom_trigonal():
                            [-2, 3, 0],
                            [ 1, 2, 3]],dtype=float)
     slab.atlist = [Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab),]  # "random" position
-    param = tl.Rparams()
+    param = Rparams()
     slab.fullUpdate(param)
     return slab
 
 @pytest.fixture()
-def run_phaseshift(slab_pg_rp, tmp_path_factory):
+def run_phaseshift(slab_pg_rp, tensorleed_path, tmp_path_factory):
     slab, _,  param = slab_pg_rp
     param.workdir = tmp_path_factory.mktemp(basename="phaseshifts", numbered=True)
     # run EEASISSS
-    firstline, phaseshift = runPhaseshiftGen_old(slab,
-                                                 param,
-                                                 psgensource = TENSORLEED_PATH/'EEASiSSS.x',
-                                                 excosource=TENSORLEED_PATH/'seSernelius',
-                                                 atdenssource=TENSORLEED_PATH/'atom_density_files')
+    firstline, phaseshift = runPhaseshiftGen_old(
+        slab,
+        param,
+        psgensource =tensorleed_path/'EEASiSSS.x',
+        excosource=tensorleed_path/'seSernelius',
+        atdenssource=tensorleed_path/'atom_density_files'
+    )
     return param, slab, firstline, phaseshift
 
 @pytest.fixture()
-def fe3o4_bulk_slab():
+def fe3o4_bulk_slab(poscar_path):
     file_name = "POSCAR_Fe3O4_(001)_cod1010369"
-    file_path = POSCAR_PATHS / file_name
+    file_path = poscar_path(file_name)
     slab = readPOSCAR(str(file_path))
-    param = tl.Rparams()
+    param = Rparams()
     param.LAYER_CUTS = [0.1, 0.2, '<', 'dz(1.0)']
     param.N_BULK_LAYERS = 2
     param.SYMMETRY_EPS =0.3
@@ -157,8 +159,8 @@ def fe3o4_thick_bulk_slab(fe3o4_bulk_slab):
     return slab, thick_bulk, param
 
 @pytest.fixture(scope="function")
-def atom_with_disp_and_offset():
-    slab = readPOSCAR(POSCAR_PATHS / "POSCAR_STO(100)-4x1")
+def atom_with_disp_and_offset(poscar_path):
+    slab = readPOSCAR(poscar_path("POSCAR_STO(100)-4x1"))
     atom = slab.atlist[0]
     el = atom.el
     atom.disp_geo[el] = [-0.2, 0.0, 0.2]
@@ -167,18 +169,18 @@ def atom_with_disp_and_offset():
     return atom
 
 @pytest.fixture()
-def ag100_slab_param():
-    slab = readPOSCAR(POSCAR_PATHS / "POSCAR_Ag(100)")
+def ag100_slab_param(poscars_path):
+    slab = readPOSCAR(poscars_path /"POSCAR_Ag(100)")
     param = Rparams()
     param.N_BULK_LAYERS = 1
     slab.fullUpdate(param)
     return slab, param
 
 @pytest.fixture()
-def ag100_slab_with_displacements_and_offsets(ag100_slab_param):
+def ag100_slab_with_displacements_and_offsets(ag100_slab_param, inputs_path):
     slab, param = ag100_slab_param
-    vibrocc_path = INPUTS_ORIGIN / "Ag(100)" / "mergeDisp" / "VIBROCC"
-    displacements_path = INPUTS_ORIGIN / "Ag(100)" / "mergeDisp" / "DISPLACEMENTS_mixed"
+    vibrocc_path = inputs_path / "Ag(100)" / "mergeDisp" / "VIBROCC"
+    displacements_path = inputs_path / "Ag(100)" / "mergeDisp" / "DISPLACEMENTS_mixed"
     readVIBROCC(param, slab, str(vibrocc_path))
     readDISPLACEMENTS(param, str(displacements_path))
     readDISPLACEMENTS_block(param, slab, param.disp_blocks[param.search_index])

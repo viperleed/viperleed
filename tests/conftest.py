@@ -53,6 +53,23 @@ ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 POSCAR_PATHS = INPUTS_ORIGIN / "POSCARs"
 
+
+@pytest.fixture
+def poscars_path():
+    """Return the path to a POSCAR file."""
+    return POSCAR_PATHS
+
+@pytest.fixture
+def inputs_path():
+    """Return the path to an input file."""
+    return INPUTS_ORIGIN
+
+@pytest.fixture
+def tensorleed_path():
+    """Return the path to the tensorleed executable."""
+    return TENSORLEED_PATH  
+
+
 @pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
 def init_files(request, tmp_path_factory, scope="function"):
     surface_name = request.param
