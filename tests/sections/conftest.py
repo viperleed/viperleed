@@ -17,14 +17,9 @@ if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
 
-from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
+
 from viperleed.tleedmlib.files.poscar import readPOSCAR
-from viperleed.tleedmlib.files.vibrocc import readVIBROCC
-from viperleed.tleedmlib.symmetry import findSymmetry, enforceSymmetry
-from viperleed.tleedmlib.psgen import runPhaseshiftGen_old
-from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.classes.slab import Slab
 
 
 TENSERLEED_TEST_VERSIONS = ('1.71', '1.72', '1.73', '1.74')
@@ -98,44 +93,7 @@ def search_files_ag100(request, tmp_path_factory, scope="session"):
                                 })
     return files
 
-@pytest.fixture(scope='function')
-def manual_slab_3_atoms():
-    slab = Slab()
-    slab.ucell = np.diag([3., 4., 5.])
-    positions = (np.array([-0.25, 0, 0]),
-                 np.array([0.00, 0, 0]),
-                 np.array([0.25, 0, 0]))
-    slab.atlist = [Atom('C', pos, i+1, slab)
-                   for i, pos in enumerate(positions)]
-    param = Rparams()
-    slab.fullUpdate(param)
-    return slab
 
-
-@pytest.fixture()
-def manual_slab_1_atom_trigonal():
-    slab = Slab()
-    slab.ucell = np.array([[ 1, 0, 0],
-                           [-2, 3, 0],
-                           [ 1, 2, 3]],dtype=float)
-    slab.atlist = [Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab),]  # "random" position
-    param = Rparams()
-    slab.fullUpdate(param)
-    return slab
-
-@pytest.fixture()
-def run_phaseshift(slab_pg_rp, tensorleed_path, tmp_path_factory):
-    slab, _,  param = slab_pg_rp
-    param.workdir = tmp_path_factory.mktemp(basename="phaseshifts", numbered=True)
-    # run EEASISSS
-    firstline, phaseshift = runPhaseshiftGen_old(
-        slab,
-        param,
-        psgensource =tensorleed_path/'EEASiSSS.x',
-        excosource=tensorleed_path/'seSernelius',
-        atdenssource=tensorleed_path/'atom_density_files'
-    )
-    return param, slab, firstline, phaseshift
 
 @pytest.fixture()
 def fe3o4_bulk_slab(poscar_path):
@@ -152,36 +110,9 @@ def fe3o4_bulk_slab(poscar_path):
     bulk_slab = slab.makeBulkSlab(param)
     return slab, bulk_slab, param
 
+
 @pytest.fixture()
 def fe3o4_thick_bulk_slab(fe3o4_bulk_slab):
     slab, thin_bulk, param = fe3o4_bulk_slab
     thick_bulk = thin_bulk.doubleBulkSlab()
     return slab, thick_bulk, param
-
-@pytest.fixture(scope="function")
-def atom_with_disp_and_offset(poscar_path):
-    slab = readPOSCAR(poscar_path("POSCAR_STO(100)-4x1"))
-    atom = slab.atlist[0]
-    el = atom.el
-    atom.disp_geo[el] = [-0.2, 0.0, 0.2]
-    atom.disp_vib[el] = [-0.1, 0.0, 0.1]
-    atom.disp_occ[el] = [0.7, 0.8, 0.9, 1.0]
-    return atom
-
-@pytest.fixture()
-def ag100_slab_param(poscars_path):
-    slab = readPOSCAR(poscars_path /"POSCAR_Ag(100)")
-    param = Rparams()
-    param.N_BULK_LAYERS = 1
-    slab.fullUpdate(param)
-    return slab, param
-
-@pytest.fixture()
-def ag100_slab_with_displacements_and_offsets(ag100_slab_param, inputs_path):
-    slab, param = ag100_slab_param
-    vibrocc_path = inputs_path / "Ag(100)" / "mergeDisp" / "VIBROCC"
-    displacements_path = inputs_path / "Ag(100)" / "mergeDisp" / "DISPLACEMENTS_mixed"
-    readVIBROCC(param, slab, str(vibrocc_path))
-    readDISPLACEMENTS(param, str(displacements_path))
-    readDISPLACEMENTS_block(param, slab, param.disp_blocks[param.search_index])
-    return slab, param

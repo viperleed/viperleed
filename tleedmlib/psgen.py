@@ -72,6 +72,7 @@ def runPhaseshiftGen_old(sl, rp,
 
     psgensource = rp.source_dir / psgensource
     excosource = shortpath / excosource
+    excosource = excosource.resolve()
 
     _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.addBulkLayers(rp)
@@ -227,7 +228,7 @@ def runPhaseshiftGen_old(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        subpath = os.path.join(atdenssource, chemel, "chgden"+chemel)
+        subpath = Path(atdenssource) / chemel / (f"chgden{chemel}")
         chgdenrelpath = shortpath / subpath
         if manual_copy:
             os.makedirs(os.path.join(os.path.dirname(subpath)), exist_ok=True)
@@ -235,7 +236,7 @@ def runPhaseshiftGen_old(sl, rp,
         # if os.name == 'nt':     # windows - replace the backslashes.
         #     chgdenrelpath = chgdenrelpath.replace('/', '\\')
         chemels[el] = chemel
-        chemelspaths[el] = chgdenrelpath
+        chemelspaths[el] = chgdenrelpath.resolve()
 
     nsl.sort_by_z(botToTop=True)
     for at in nsl.atlist:
