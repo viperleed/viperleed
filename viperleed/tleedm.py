@@ -42,8 +42,11 @@ from viperleed.bookkeeper import bookkeeper
 logger = logging.getLogger("tleedm")
 
 
-def run_tleedm(system_name=None, console_output=True, slab=None,
-               preset_params={}, source=".",
+def run_tleedm(system_name=None,
+               console_output=True,
+               slab=None,
+               preset_params={},
+               source=Path(),
                override_log_level=None):
     """
     Runs the TensErLEED Manager. By default, a PARAMETERS and a POSCAR file
@@ -259,7 +262,7 @@ def _parse_command_line_arguments():
     return args, bookie_args
 
 
-def _tensorleed_path(args):
+def _interpret_tensorleed_path_flag(args):
     # if tensorleed arg is given, use that
     if args.tensorleed:
         tensorleed_path = Path(args.tensorleed)
@@ -297,6 +300,9 @@ def main():
         work_path = Path.cwd() / "work"
     work_path = work_path.resolve()
     delete_workdir = args.delete_workdir
+
+    # tensorleed source directory
+    _tensorleed_path = _interpret_tensorleed_path_flag(args)
 
     # verbosity flags
     if sum([args.verbose, args.very_verbose]) > 1:
@@ -363,7 +369,7 @@ def main():
     os.chdir(work_path)
     run_tleedm(
         system_name=_system_name,
-        source=os.path.join(vpr_path, "viperleed"),
+        source=_tensorleed_path,
         override_log_level=override_log_level
     )
 
