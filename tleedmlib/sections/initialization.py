@@ -275,8 +275,8 @@ def initialization(sl, rp, subdomain=False):
                     + rp.phaseshifts_firstline[36:]
                     )
     if newpsGen:
-        rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
-        serneliuspath = os.path.join('tensorleed', 'seSernelius')
+        rundgrenpath = 'EEASiSSS.x'
+        serneliuspath = 'seSernelius'
         logger.info("Generating phaseshifts data... ")
         ps_gen, kwargs = runPhaseshiftGen, {}
         if rp.PHASESHIFTS_CALC_OLD:
