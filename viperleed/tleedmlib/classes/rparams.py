@@ -240,7 +240,7 @@ class Rparams:
 
         # RUN VARIABLES
         self.starttime = timer()
-        self.sourcedir = os.getcwd()  # where to find 'tensorleed'
+        self.source_dir = None  # where to find 'tensorleed'
         self.workdir = Path(os.getcwd())  # MAIN WORK DIRECTORY; where to find input
         self.compile_logs_dir = None
         self.searchConvInit = {
@@ -384,11 +384,14 @@ class Rparams:
         if self.TENSOR_INDEX is None:
             self.TENSOR_INDEX = leedbase.getMaxTensorIndex()
         # TL_VERSION:
+        if self.source_dir is None:
+            raise RuntimeError("Cannot determine highest TensErLEED version "
+                               "without specifying a source directory.")
         if self.TL_VERSION == 0.:
-            path = os.path.join(self.sourcedir, "tensorleed")
-            ls = [dn for dn in os.listdir(path)
-                  if (os.path.isdir(os.path.join(path, dn))
-                      and dn.startswith("TensErLEED"))]
+                               # TODO: use functionality from leedbase and refactor; use pathlib
+            ls = [dn for dn in list(self.source_dir.iterdir())
+                  if ((self.source_dir / dn).is_dir()
+                  and dn.startswith("TensErLEED"))]
             highest = 0.0
             namestr = ""
             for dn in ls:

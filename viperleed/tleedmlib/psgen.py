@@ -13,6 +13,7 @@ import random
 import re
 import shutil
 import subprocess
+from pathlib import Path
 
 import fortranformat as ff
 import numpy as np
@@ -51,21 +52,23 @@ def runPhaseshiftGen_old(sl, rp,
                              atdenssource=os.path.join('tensorleed',
                                                        'atom_density_files'))
     '''
-    shortpath = rp.sourcedir
-    if len(os.path.relpath(rp.sourcedir)) < len(shortpath):
-        shortpath = os.path.relpath(rp.sourcedir)
+    if rp.source_dir is None:
+        raise RuntimeError("No source tensorleed source directory specified")
+    shortpath = rp.source_dir
+    if len(os.path.relpath(rp.source_dir)) < len(shortpath):
+        shortpath = rp.source_dir.relative_to(Path.cwd())
 
     if len(shortpath) > 62:
         # too long - need to copy stuff here
         manual_copy = True
         os.makedirs("tensorleed", exist_ok=True)
-        shutil.copy2(os.path.join(shortpath, excosource), excosource)
-        shortpath = "."
+        shutil.copy2(shortpath / excosource, excosource)
+        shortpath = Path(".")
     else:
         manual_copy = False
 
-    psgensource = os.path.join(rp.sourcedir, psgensource)
-    excosource = os.path.join(shortpath, excosource)
+    psgensource = rp.source_dir / psgensource
+    excosource = shortpath / excosource
 
     _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.addBulkLayers(rp)
@@ -222,10 +225,10 @@ def runPhaseshiftGen_old(sl, rp,
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
         subpath = os.path.join(atdenssource, chemel, "chgden"+chemel)
-        chgdenrelpath = os.path.join(shortpath, subpath)
+        chgdenrelpath = shortpath / subpath
         if manual_copy:
             os.makedirs(os.path.join(os.path.dirname(subpath)), exist_ok=True)
-            shutil.copy2(os.path.join(rp.sourcedir, subpath), subpath)
+            shutil.copy2(rp.source_dir / subpath, subpath)
         # if os.name == 'nt':     # windows - replace the backslashes.
         #     chgdenrelpath = chgdenrelpath.replace('/', '\\')
         chemels[el] = chemel
@@ -524,16 +527,16 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     ###############################################
 
     psgensource = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    psgensource = os.path.join(rp.sourcedir, psgensource) # otherwise the location would not be known
+    psgensource = os.path.join(rp.source_dir, psgensource) # otherwise the location would not be known
     atlib_dir = os.path.join('tensorleed', 'eeasisss_new', 'atlib/') # atom density files, by Sernelius
-    atlib_dir = os.path.join(rp.sourcedir, atlib_dir)
+    atlib_dir = os.path.join(rp.source_dir, atlib_dir)
     outdir_path = os.path.join(".",ps_outdir+"/")
     # create directory for individual phaseshift files if not yet present
     os.makedirs(outdir_path, exist_ok=True)
 
     # execution of EEASISSS requires the executable eeasisss to be copied to work directory
     eeasisss_exec_path = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    eeasisss_exec_path = os.path.join(rp.sourcedir, eeasisss_exec_path)
+    eeasisss_exec_path = os.path.join(rp.source_dir, eeasisss_exec_path)
     try:
         shutil.copy2(eeasisss_exec_path, rp.workdir)
     except Exception:

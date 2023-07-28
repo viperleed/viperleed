@@ -33,7 +33,7 @@ logger = logging.getLogger("tleedm.refcalc")
 # CompileTask subclasses would need a class-level list of
 # glob patterns for retrieving source files. Probably allowing
 # a special "{__sourcedir__}" format specifier to be formatted
-# with .format(__sourcedir__=self.sourcedir) before globbing.
+# with .format(__sourcedir__=self.source_dir) before globbing.
 # Similar considerations regarding the base names for foldername
 # and exename.
 class RefcalcCompileTask():
@@ -45,8 +45,8 @@ class RefcalcCompileTask():
         self.param = param
         self.lmax = lmax
         self.fortran_comp = fortran_comp
-        self.sourcedir = Path(sourcedir)  # where the fortran files are
-        self.basedir = Path(basedir)      # where the calculation is based
+        self.source_dir = Path(sourcedir).resolve()  # where the fortran files are
+        self.basedir = Path(basedir)  # where the calculation is based
         self.foldername = "refcalc-compile_LMAX{}".format(lmax)
         self.exename = "refcalc-{}".format(lmax)
 
@@ -64,7 +64,7 @@ class RefcalcCompileTask():
 
     def get_source_files(self):
         """Return a tuple of source files needed for running a refcalc."""
-        sourcedir = Path(self.sourcedir).resolve()
+        sourcedir = Path(self.source_dir).resolve()
         libpath = sourcedir / 'lib'
         srcpath = sourcedir / 'src'
         lib_tleed = next(libpath.glob('lib.tleed*'), None)
@@ -358,9 +358,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
 
     energies = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01,         # TODO: use better arange
                          rp.THEO_ENERGIES[2])
-    tldir = os.path.abspath(
-        leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
-        )
+    tl_path = leedbase.getTLEEDdir(tensorleed_path=rp.source_dir, version=rp.TL_VERSION)
     rp.updateCores()
     single_threaded = (rp.N_CORES <= 1)
     if rp.FORTRAN_COMP[0] == "":
@@ -423,7 +421,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                          exc_info=rp.is_debug_mode)
             raise
         comp_tasks.append(RefcalcCompileTask(param, lm, rp.FORTRAN_COMP,
-                                             tldir, basedir=rp.workdir))
+                                             tl_path, basedir=rp.workdir))
         collect_param += f"### PARAM file for LMAX = {lm} ###\n\n{param}\n\n"
     try:
         with open("refcalc-PARAM", "w") as wf:
