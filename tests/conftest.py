@@ -58,6 +58,11 @@ ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 POSCAR_PATHS = INPUTS_ORIGIN / "POSCARs"
 
+TENSERLEED_TEST_VERSIONS = ('1.72', '1.73', '1.74')
+
+AG_100_DISPLACEMENTS_NAMES = ['DISPLACEMENTS_z', 'DISPLACEMENTS_vib', 'DISPLACEMENTS_z+vib']
+AG_100_DELTAS_NAMES = ['Deltas_z.zip', 'Deltas_vib.zip', 'Deltas_z+vib.zip']
+
 
 @pytest.fixture
 def poscars_path():
@@ -246,3 +251,70 @@ def ag100_slab_with_displacements_and_offsets(ag100_slab_param, inputs_path):
     readDISPLACEMENTS(param, str(displacements_path))
     readDISPLACEMENTS_block(param, slab, param.disp_blocks[param.search_index])
     return slab, param
+
+
+@pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
+def refcalc_files(request, tmp_path_factory, scope="session"):
+    surface_name = request.param
+    tmp_dir_name = f'{surface_name}_refcalc'
+    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
+    run = [0, 1] # initialization and refcalc
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=["PHASESHIFTS",],
+                                copy_dirs=["initialization"])
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.73,
+                                })
+    return files
+
+@pytest.fixture(params=AG_100_DISPLACEMENTS_NAMES, ids=AG_100_DISPLACEMENTS_NAMES)
+def delta_files_ag100(request, tmp_path_factory, scope="session"):
+    displacements_name = request.param
+    surface_name = 'Ag(100)'
+    tmp_dir_name = tmp_dir_name = f'{surface_name}_deltas_{displacements_name}'
+    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
+    run = [0, 2] # init and deltas
+    required_files = ["PHASESHIFTS",]
+    copy_dirs=["initialization", "deltas"]
+    # correct DISPLACEMENTS
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=required_files,
+                                copy_dirs=copy_dirs)
+    disp_source = files.inputs_path / "displacements" / displacements_name
+    files.copy_displacements(displacements_path=disp_source)
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.73,
+                                })
+    return files
+
+
+@pytest.fixture(params=list(zip(AG_100_DISPLACEMENTS_NAMES, AG_100_DELTAS_NAMES)),
+                ids=AG_100_DISPLACEMENTS_NAMES)
+def search_files_ag100(request, tmp_path_factory, scope="session"):
+    surface_name = 'Ag(100)'
+    displacements_name, deltas_name = request.param
+    tmp_dir_name = tmp_dir_name = f'{surface_name}_search_{displacements_name}'
+    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
+    run = [0, 3] # init and search
+    required_files = []
+    copy_dirs=["initialization", "deltas", "search"]
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=required_files,
+                                copy_dirs=copy_dirs)
+    disp_source = files.inputs_path / "displacements" / displacements_name
+    deltas_source = files.inputs_path / "search" / "Deltas" / deltas_name
+    files.copy_displacements(disp_source)
+    files.copy_deltas(deltas_source)
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.73,
+                                })
+    return files

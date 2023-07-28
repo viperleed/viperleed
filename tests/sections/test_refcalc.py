@@ -9,5 +9,5 @@ import pytest
 
 
 @pytest.mark.parametrize('expected_file', (('THEOBEAMS.csv',)))
-def test_refcalc_files_present(self, refcalc_files, expected_file):
+def test_refcalc_files_present(refcalc_files, expected_file):
     assert refcalc_files.expected_file_exists(expected_file)
