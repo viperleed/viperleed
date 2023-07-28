@@ -35,10 +35,9 @@ angst_to_bohr = 1.8897259886
 bohr_to_angst = 0.529177249
 
 def runPhaseshiftGen_old(sl, rp,
-                     psgensource=os.path.join('tensorleed', 'EEASiSSS.x'),
-                     excosource=os.path.join('tensorleed', 'seSernelius'),
-                     atdenssource=os.path.join('tensorleed',
-                                               'atom_density_files')):
+                     psgensource='EEASiSSS.x',
+                     excosource='seSernelius',
+                     atdenssource='atom_density_files'):
     """Creates required input for EEASiSSS.x, then runs it. Reads the output
     files and extracts information for PHASESHIFTS file, then returns that
     information (without writing PHASESHIFTS)."""
@@ -47,18 +46,22 @@ def runPhaseshiftGen_old(sl, rp,
     '''
     if test_new:
         runPhaseshiftGen_new(sl, rp,
-                             psgensource=os.path.join('tensorleed', 'EEASiSSS.x'),
-                             excosource=os.path.join('tensorleed', 'seSernelius'),
-                             atdenssource=os.path.join('tensorleed',
-                                                       'atom_density_files'))
+                            psgensource='EEASiSSS.x',
+                            excosource='seSernelius',
+                            atdenssource='atom_density_files')
     '''
     if rp.source_dir is None:
         raise RuntimeError("No source tensorleed source directory specified")
     shortpath = rp.source_dir
-    if len(os.path.relpath(rp.source_dir)) < len(shortpath):
-        shortpath = rp.source_dir.relative_to(Path.cwd())
+    try:
+        rel_path = rp.source_dir.resolve().relative_to(Path.cwd().resolve())
+    except ValueError:
+        # Path.relative_to() can raise ValueError if not on same drive
+        rel_path = rp.source_dir
+    if len(str(rel_path)) < len(str(shortpath)):
+        shortpath = rel_path
 
-    if len(shortpath) > 62:
+    if len(str(shortpath)) > 62:
         # too long - need to copy stuff here
         manual_copy = True
         os.makedirs("tensorleed", exist_ok=True)
@@ -69,6 +72,7 @@ def runPhaseshiftGen_old(sl, rp,
 
     psgensource = rp.source_dir / psgensource
     excosource = shortpath / excosource
+    excosource = excosource.resolve()
 
     _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.addBulkLayers(rp)
@@ -224,7 +228,7 @@ def runPhaseshiftGen_old(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        subpath = os.path.join(atdenssource, chemel, "chgden"+chemel)
+        subpath = Path(atdenssource) / chemel / (f"chgden{chemel}")
         chgdenrelpath = shortpath / subpath
         if manual_copy:
             os.makedirs(os.path.join(os.path.dirname(subpath)), exist_ok=True)
@@ -232,7 +236,7 @@ def runPhaseshiftGen_old(sl, rp,
         # if os.name == 'nt':     # windows - replace the backslashes.
         #     chgdenrelpath = chgdenrelpath.replace('/', '\\')
         chemels[el] = chemel
-        chemelspaths[el] = chgdenrelpath
+        chemelspaths[el] = chgdenrelpath.resolve()
 
     nsl.sort_by_z(botToTop=True)
     for at in nsl.atlist:
@@ -243,14 +247,14 @@ def runPhaseshiftGen_old(sl, rp,
                 chemel = chemels[el]
                 chgdenpath = chemelspaths[el]
         output += ("1 "+str(PERIODIC_TABLE.index(chemel)+1)
-                   + ".  0.  0.  '"+chgdenpath+"'\n")
+                   + ".  0.  0.  '"+str(chgdenpath)+"'\n")
         ol = ""
         for j in range(0, 3):
             # ol += str(round(realcartpos[j],4))+" "
             ol += str(round(at.cartpos[j], 4))+" "
         output += ol + "     Coordinates(LCunits)\n"
     output += "SCATTERING: \n"
-    output += "'"+excosource+"' |exchange-correlation file\n"
+    output += "'"+str(excosource)+"' |exchange-correlation file\n"
     output += str(lmax)+"  |lmax\n"
     output += "'r' |SelectCalculation: 'relativistic'/'nonrelativistic'\n"
     output += "'p' |SelectOutput: 'phaseshift'/'sigma'/'dataflow'\n"

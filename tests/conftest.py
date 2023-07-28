@@ -23,6 +23,7 @@ import shutil
 from zipfile import ZipFile
 
 import pytest
+import numpy as np
 
 vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
@@ -30,8 +31,12 @@ if os.path.abspath(vpr_path) not in sys.path:
 
 from viperleed.tleedm import run_tleedm
 from viperleed.tleedmlib import symmetry
+from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.files import parameters, poscar
+from viperleed.tleedmlib.files.vibrocc import readVIBROCC
+from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
 
 
 _FIXTURES_PATH = Path('tests/fixtures/')
@@ -42,8 +47,8 @@ _EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
                                 ("POSCAR_TiO2", 540, 'pmm', -1),
                                 ("POSCAR_diamond", 96, 'pm', 89),
                                 ("POSCAR_36C_p6m", 36, 'p6m', 0),
-                                ("POSCAR_36C_cm", 36,'cm', 0),
-                                ("POSCAR_Fe3O4_SCV", 83, 'cmm', 50)]            #TODO: Phaseshift generation fails. Why? @Fkraushofer (worked in fkpCurie:Florian_OldLocalTests/Fe3O4-001-SCV/history/t000.r013_211220-133452)
+                                ("POSCAR_36C_cm", 36,'cm', 0),]
+                               #("POSCAR_Fe3O4_SCV", 83, 'cmm', 50)]            #TODO: Phaseshift generation fails. Why? @Fkraushofer (worked in fkpCurie:Florian_OldLocalTests/Fe3O4-001-SCV/history/t000.r013_211220-133452)
 
 _EXAMPLE_POSCARs = [file.name for file in _POSCARs_PATH.glob('POSCAR*')]
 
@@ -52,6 +57,28 @@ TENSORLEED_PATH = Path(vpr_path) / "viperleed" / "tensorleed"
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 POSCAR_PATHS = INPUTS_ORIGIN / "POSCARs"
+
+TENSERLEED_TEST_VERSIONS = ('1.72', '1.73', '1.74')
+
+AG_100_DISPLACEMENTS_NAMES = ['DISPLACEMENTS_z', 'DISPLACEMENTS_vib', 'DISPLACEMENTS_z+vib']
+AG_100_DELTAS_NAMES = ['Deltas_z.zip', 'Deltas_vib.zip', 'Deltas_z+vib.zip']
+
+
+@pytest.fixture
+def poscars_path():
+    """Return the path to a POSCAR file."""
+    return POSCAR_PATHS
+
+@pytest.fixture
+def inputs_path():
+    """Return the path to an input file."""
+    return INPUTS_ORIGIN
+
+@pytest.fixture
+def tensorleed_path():
+    """Return the path to the tensorleed executable."""
+    return TENSORLEED_PATH  
+
 
 @pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
 def init_files(request, tmp_path_factory, scope="function"):
@@ -178,3 +205,116 @@ def slab_pg_rp(slab_and_expectations):
     pg = symmetry.findSymmetry(slab, rp, output=False)
     symmetry.enforceSymmetry(slab, rp)
     return slab, pg, rp
+
+
+@pytest.fixture(scope='function')
+def manual_slab_3_atoms():
+    slab = Slab()
+    slab.ucell = np.diag([3., 4., 5.])
+    positions = (np.array([-0.25, 0, 0]),
+                 np.array([0.00, 0, 0]),
+                 np.array([0.25, 0, 0]))
+    slab.atlist = [Atom('C', pos, i+1, slab)
+                   for i, pos in enumerate(positions)]
+    param = Rparams()
+    slab.fullUpdate(param)
+    return slab
+
+
+@pytest.fixture()
+def manual_slab_1_atom_trigonal():
+    slab = Slab()
+    slab.ucell = np.array([[ 1, 0, 0],
+                           [-2, 3, 0],
+                           [ 1, 2, 3]],dtype=float)
+    slab.atlist = [Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab),]  # "random" position
+    param = Rparams()
+    slab.fullUpdate(param)
+    return slab
+
+
+@pytest.fixture()
+def ag100_slab_param(poscars_path):
+    slab = poscar.readPOSCAR(poscars_path /"POSCAR_Ag(100)")
+    param = Rparams()
+    param.N_BULK_LAYERS = 1
+    slab.fullUpdate(param)
+    return slab, param
+
+
+@pytest.fixture()
+def ag100_slab_with_displacements_and_offsets(ag100_slab_param, inputs_path):
+    slab, param = ag100_slab_param
+    vibrocc_path = inputs_path / "Ag(100)" / "mergeDisp" / "VIBROCC"
+    displacements_path = inputs_path / "Ag(100)" / "mergeDisp" / "DISPLACEMENTS_mixed"
+    readVIBROCC(param, slab, str(vibrocc_path))
+    readDISPLACEMENTS(param, str(displacements_path))
+    readDISPLACEMENTS_block(param, slab, param.disp_blocks[param.search_index])
+    return slab, param
+
+
+@pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
+def refcalc_files(request, tmp_path_factory, scope="session"):
+    surface_name = request.param
+    tmp_dir_name = f'{surface_name}_refcalc'
+    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
+    run = [0, 1] # initialization and refcalc
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=["PHASESHIFTS",],
+                                copy_dirs=["initialization"])
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.74,
+                                })
+    return files
+
+@pytest.fixture(params=AG_100_DISPLACEMENTS_NAMES, ids=AG_100_DISPLACEMENTS_NAMES)
+def delta_files_ag100(request, tmp_path_factory, scope="session"):
+    displacements_name = request.param
+    surface_name = 'Ag(100)'
+    tmp_dir_name = tmp_dir_name = f'{surface_name}_deltas_{displacements_name}'
+    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
+    run = [0, 2] # init and deltas
+    required_files = ["PHASESHIFTS",]
+    copy_dirs=["initialization", "deltas"]
+    # correct DISPLACEMENTS
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=required_files,
+                                copy_dirs=copy_dirs)
+    disp_source = files.inputs_path / "displacements" / displacements_name
+    files.copy_displacements(displacements_path=disp_source)
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.74,
+                                })
+    return files
+
+
+@pytest.fixture(params=list(zip(AG_100_DISPLACEMENTS_NAMES, AG_100_DELTAS_NAMES)),
+                ids=AG_100_DISPLACEMENTS_NAMES)
+def search_files_ag100(request, tmp_path_factory, scope="session"):
+    surface_name = 'Ag(100)'
+    displacements_name, deltas_name = request.param
+    tmp_dir_name = tmp_dir_name = f'{surface_name}_search_{displacements_name}'
+    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
+    run = [0, 3] # init and search
+    required_files = []
+    copy_dirs=["initialization", "deltas", "search"]
+    files = BaseTleedmFilesSetup(surface_dir=surface_name,
+                                tmp_test_path=tmp_path,
+                                required_files=required_files,
+                                copy_dirs=copy_dirs)
+    disp_source = files.inputs_path / "displacements" / displacements_name
+    deltas_source = files.inputs_path / "search" / "Deltas" / deltas_name
+    files.copy_displacements(disp_source)
+    files.copy_deltas(deltas_source)
+    files.run_tleedm_from_setup(source=SOURCE_STR,
+                                preset_params={
+                                    "RUN":run,
+                                    "TL_VERSION":1.74,
+                                })
+    return files
