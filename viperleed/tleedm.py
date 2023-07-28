@@ -174,8 +174,26 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         slab.fullUpdate(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
 
+    # set source directory
+    _source = Path(source).resolve()
+    if not _source.is_dir():
+        logger.warning(f"tensorleed directory {source} not found.")
+    if _source.name == "tensorleed":
+        rp.source_dir = _source
+    elif _source.parent.name == "tensorleed":
+        logger.warning(f"tensorleed directory found in {_source.parent}, "
+                       "using that instead of {_source}.")
+        rp.source_dir = _source.parent
+    elif (_source / "tensorleed").is_dir():
+        logger.warning(f"tensorleed directory found in {_source}, using that "
+                       "instead of {_source}.")
+        rp.source_dir = _source / "tensorleed"
+    else:
+        logger.warning(f"Could not find a tensorleed directory at {_source}. "
+                       "This may cause errors.")
+        rp.source_dir = _source
+
     rp.systemName = system_name
-    rp.sourcedir = str(Path(source).resolve())                                  # TODO: use Path instead of str
     if not rp.systemName:
         # use name of parent folder
         rp.systemName = str(Path.cwd().parent.name)
