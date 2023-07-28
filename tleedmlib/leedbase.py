@@ -180,13 +180,14 @@ def _version_from_dirname(dirname):
         return np.nan
 
 
-def getTLEEDdir(home=Path(), version=None):
+def getTLEEDdir(tensorleed_path, version=None):
     """Finds directories in the 'tensorleed' folder that have names starting
     with 'TensErLEED', then picks the one with the highest version number.
     Returns an absolute path to that directory, eg
     './tensorleed/TensErLEED-v1.6'."""
-    _home = Path(home)
-    source_dir = (_home / 'tensorleed').resolve()
+    if tensorleed_path is None:
+        raise RuntimeError("tensorleed_path is None")
+    source_dir = tensorleed_path.resolve()
     tl_version_dirs = [dir.resolve() for dir in source_dir.iterdir()
                        if ((source_dir / dir).is_dir()
                        and dir.name.startswith('TensErLEED'))]
