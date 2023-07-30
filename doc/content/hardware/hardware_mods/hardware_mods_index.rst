@@ -8,4 +8,5 @@ Improvements to commercial LEED electronics
    :maxdepth: 1
 
    ErLEED Modification<erleed_modifications>
+   SpectaLEED Modification<spectaleed_modifications>
 
