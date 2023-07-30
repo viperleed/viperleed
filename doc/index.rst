@@ -137,6 +137,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
    Overview<content/hardware/hardware_index>
    Improvements to commercial LEED electronics<content/hardware/hardware_mods/hardware_mods_index>
+   Calibration and modification of commercial LEED optics<content/hardware/optics_calib_and_mod/optics_calibs_and_mods_index>
 
 .. raw:: latex
 
