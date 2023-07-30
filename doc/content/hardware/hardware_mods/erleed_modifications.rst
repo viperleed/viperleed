@@ -144,9 +144,10 @@ A suitable pin can easily be improvised from two 330 :math:`\Omega` resistors, a
 
 
 First, bend the wires of the resistors around the male plug pin as shown in :numref:`fig_resistors_1`.
-Then, place the pin in the loop and solder it in place and repeat the procedure with the second resistor (see :numref:`fig_pin_from_resistors` b and c).
+Then, place the pin in the loop and solder it in place. Repeat the procedure with the second resistor (see :numref:`fig_pin_from_resistors` b and c).
 Make sure the soldered spot is stable and the connection across both resistors and to the pin is intact.
 Finally, cut off protruding wires (see :numref:`fig_pin_from_resistors` c) from the resistors and place a shrink tube over the resistors and soldered spot (see :numref:`fig_pin_from_resistors` d).
+It is a good idea to check at this stage that the two resistors still have approximately the same resistance as before. It is sometimes possible to overheat the resistors while soldering or applying a shrinking tube.
 
 .. _fig_pin_from_resistors:
 .. figure:: /_static/hardware/ErLEED_modification/resistors/pin_from_resistors.svg
