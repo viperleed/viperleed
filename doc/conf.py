@@ -22,6 +22,7 @@ extensions = [
 #              'sphinx.ext.napoleon'        # for Numpy docstrings ?
               'sphinx.ext.extlinks',
               'sphinx.ext.mathjax',
+              'sphinx.ext.todo',
               'sphinx.ext.viewcode',
               'sphinx.ext.intersphinx',
               'sphinx_rtd_theme',
@@ -45,6 +46,8 @@ bibtex_bibfiles = ['references.bib']
 bibtex_default_style = 'unsrt' # use numbers
 bibtex_reference_style = 'label' # use numbers in text too
 
+# For TODO boxes. Can be changed to False for 'production' docs
+todo_include_todos = True
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
