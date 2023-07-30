@@ -58,7 +58,7 @@ For the beam HV port:
 
 Additionally, you will need the following tools to perform the modifications:
     - a suitable anti-static electronics workbench,
-    - a suitable set of Phillips and flat-head screw drivers,
+    - a suitable set of Phillips, Pozi, and flat-head screwdrivers,
     - a soldering iron and solder,
     - tweezers,
     - cable clippers,
@@ -97,7 +97,7 @@ Opening up the electronics
 
 .. important::
     Before starting the modifications described below, turn off and completely disconnect all plugs from the control unit.
-    **Disconnect the power cable** and wait 5 min before proceeding with opening the unit to allow all capacitors to fully discharge.
+    **Disconnect the mains (power) cable** and wait 5 min before proceeding with opening the unit to allow all capacitors to fully discharge.
 
 
 To start, we need to open up the electronics.

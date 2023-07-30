@@ -82,13 +82,13 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
    .. toctree::
       :caption: Contents
 
-.. toctree:: 
+.. toctree::
 
    Getting started<content/getting_started>
    ViPErLEED segments<content/work_segments>
    ASE Interface<content/aseapi>
 
-.. toctree:: 
+.. toctree::
    :maxdepth: 2
    :caption: Files
 
@@ -99,7 +99,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
 .. only:: html
 
-   .. toctree:: 
+   .. toctree::
       :maxdepth: 1
       :caption: Parameters
 
@@ -108,13 +108,13 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
       Overview by Topic<content/files/input/params_by/param_topics>
 
 
-.. toctree:: 
+.. toctree::
    :hidden:
 
    content/param_toc
 
 
-.. toctree:: 
+.. toctree::
    :maxdepth: 1
    :caption: Utilities
 
@@ -122,7 +122,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
 
 
-.. toctree:: 
+.. toctree::
    :maxdepth: 1
    :caption: References
 
@@ -131,11 +131,12 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
    License<content/license>
 
 
-.. toctree:: 
+.. toctree::
    :maxdepth: 1
    :caption: Hardware
 
    Overview<content/hardware/hardware_index>
+   Improvements to commercial LEED electronics<content/hardware/hardware_mods/hardware_mods_index>
 
 .. raw:: latex
 
