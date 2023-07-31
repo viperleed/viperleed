@@ -73,6 +73,7 @@ html_css_files = [
 
 # -- Options for LaTeX output ------------------------------------------------
 # https://www.sphinx-doc.org/en/master/latex.html
+latex_engine = 'xelatex'
 nb_output_stderr = "remove-warn" # remove matplotlib user warnings
 latex_show_urls = 'inline'
 latex_show_pagerefs = False # show page numbers
