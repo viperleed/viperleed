@@ -10,13 +10,13 @@ requires-python = ">=3.7"
 readme = "README.md"
 dependencies = [
     "fortranformat",
-    "numpy",
-    "wrapt",
-    "quicktions",
-    "scipy",
-    "scikit-learn",
     "matplotlib",
+    "numpy",
     "psutil",
+    "quicktions",
+    "scikit-learn",
+    "scipy",
+    "wrapt",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +32,8 @@ hardware = [
 dev = [
     "line_profiler",
     "pytest",
+]
+doc = [
     "sphinx",
     "sphinxcontrib-bibtex",
     "sphinx_rtd_theme",

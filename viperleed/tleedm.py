@@ -8,11 +8,11 @@ Created on Nov 12 2019
 Master script running the TensErLEED Manager.
 """
 
+from pathlib import Path
 import argparse
 import logging
 import multiprocessing
 import os
-from pathlib import Path
 import shutil
 import sys
 import time
@@ -27,17 +27,17 @@ for import_path in (str(cd), str(vpr_path)):
 
 import viperleed
 from viperleed import GLOBALS
+from viperleed.bookkeeper import bookkeeper
 from viperleed.tleedmlib.base import CustomLogFormatter
 from viperleed.tleedmlib.classes import rparams
+from viperleed.tleedmlib.files.parameter_errors import ParameterError
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS)
-from viperleed.tleedmlib.files.parameter_errors import ParameterError
 from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.leedbase import getMaxTensorIndex
-from viperleed.tleedmlib.sections.run_sections import section_loop
-from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 from viperleed.tleedmlib.sections._sections import ALL_INPUT_FILES
-from viperleed.bookkeeper import bookkeeper
+from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
+from viperleed.tleedmlib.sections.run_sections import section_loop
 
 logger = logging.getLogger("tleedm")
 
