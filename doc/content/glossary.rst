@@ -109,3 +109,7 @@ Glossary
     Scienta Omicron
       Scienta Omicron GmbH; an international company producing instruments for surface science and nanotechnology.
       See the `company homepage <https://scientaomicron.com/en>`__.
+
+    SpectaLEED
+      The product name of a series of :term:`LEED` setups produced and distributed by the :term:`Scienta Omicron` company.
+      See also the product page for `SpectaLEED <https://pdf.directindustry.com/pdf/scienta-omicron/spectaleed/20757-76118.html>`__.

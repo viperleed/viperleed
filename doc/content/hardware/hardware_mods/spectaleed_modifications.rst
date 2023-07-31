@@ -7,7 +7,7 @@ Omicron SpectaLEED/NG LEED Modification Guide
 .. todo::
     Add a TL;DR for each section
 
-The :term:`SpectaLEED` LEED/Auger optics produced by :term:`Omicron` is among the most common optics used in surface science laboratories. It is controlled by the NG LEED (or NG LEED S) electronics. The ViPErLEED electronics are designed (and tested) to work with the NG LEED (S) electronics.
+The :term:`SpectaLEED<SpectaLEED>` LEED/Auger optics produced by :term:`Omicron<Scienta Omicron>` is among the most common optics used in surface science laboratories. It is controlled by the NG LEED (or NG LEED S) electronics. The ViPErLEED electronics are designed (and tested) to work with the NG LEED (S) electronics.
 At variance with the :term:`ErLEED` electronics, the NG LEED (S) requires deeper modifications of the circuitry to allow reasonable LEED-:math:`I(V)` measurements. In the following sections, five main categories of modifications are described:
 
 #. Modifications that are necessary for a :ref:`reliable measurement<ngleed_i0_mod_mandatory>` of :math:`I_0`
