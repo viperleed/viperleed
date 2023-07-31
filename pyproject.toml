@@ -30,7 +30,11 @@ hardware = [
 dev = [
     "line_profiler",
     "pytest",
-    "sphinx"
+    "sphinx",
+    "sphinxcontrib-bibtex",
+    "sphinx_rtd_theme",
+    "sphinxcontrib-spelling",
+    "sphinxcontrib-svg2pdfconverter",
 ]
 
 [tools.setuptools.dynamic]
