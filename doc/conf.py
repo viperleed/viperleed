@@ -27,6 +27,7 @@ extensions = [
               'sphinx.ext.intersphinx',
               'sphinx_rtd_theme',
               'sphinxcontrib.bibtex',       # to use .bib files for bibliography
+              'sphinxcontrib.inkscapeconverter', # for SVG images
               'sphinxcontrib.spelling',     # spell checking for the docs ;)
               'myst_nb',                    # for including Jupyter notebooks
               ]
