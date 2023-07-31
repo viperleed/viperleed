@@ -73,9 +73,9 @@ with the message length is also not counted (so 1 more byte).
    +-------------+------------+-------------+-------------+-------------+
    |             |            | dacS        | (meas.      | 3\ :math:   |
    |             |            | ettlingTime | ready)      | `\times`\ 4 |
-   |             |            | MSB,        | :math:`3\t  |             |
-   |             |            | dacS        | imes`\ data |             |
-   |             |            | ettlingTime |             |             |
+   |             |            | MSB,        | :math:      |             |
+   |             |            | dacS        | `3\times`\  |             |
+   |             |            | ettlingTime | data        |             |
    |             |            | LSB         |             |             |
    +-------------+------------+-------------+-------------+-------------+
    | ``PC_MEA    | —          | —           | (starting)  | 1           |
@@ -83,8 +83,9 @@ with the message length is also not counted (so 1 more byte).
    +-------------+------------+-------------+-------------+-------------+
    |             |            |             | (meas.      | 3\ :math:   |
    |             |            |             | ready)      | `\times`\ 4 |
-   |             |            |             | :math:`3\t  |             |
-   |             |            |             | imes`\ data |             |
+   |             |            |             | :math:      |             |
+   |             |            |             | `3\times`\  |             |
+   |             |            |             | data        |             |
    +-------------+------------+-------------+-------------+-------------+
    | `           | 1          | set meas.   | (done)      | 1           |
    | `PC_CHANGE_ |            | mode        | ``PC_OK``   |             |
