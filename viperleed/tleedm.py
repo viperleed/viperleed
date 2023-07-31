@@ -230,6 +230,12 @@ def _parse_command_line_arguments():
         type=str
         )
     parser.add_argument(
+        "--all-tensors",
+        help=("Copy all Tensors to the work directory. Required if using "
+              "the TENSORS parameter to calculate from old tensors."),
+        action='store_true'
+        )
+    parser.add_argument(
         "--delete_workdir",
         help=("delete work directory after execution"),
         action='store_true'
@@ -329,7 +335,7 @@ def main():
     # create work directory if necessary
     os.makedirs(work_path, exist_ok=True)
 
-    all_tensors = False                                                         # TODO: is there any need for this?
+    all_tensors = args.all_tensors                                              # TODO: is there any need for this?
     # !!! TODO: it would be nice if all_tensors automatically checked PARAMETERS
 
     # copy Tensors and Deltas to work directory
