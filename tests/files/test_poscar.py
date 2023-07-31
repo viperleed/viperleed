@@ -8,7 +8,6 @@ Created on 2023-07-12
 from pathlib import Path
 import os
 import sys
-from unittest.mock import mock_open, patch
 
 import pytest
 
@@ -17,21 +16,12 @@ if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
 from viperleed.tleedmlib import symmetry
-from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
-                                                  ParameterInterpreter,
-                                                  Assignment, NumericBounds)
 from viperleed.tleedmlib.files.poscar import (readPOSCAR,
                                               writePOSCAR,
                                               ensure_away_from_c_edges,
                                               POSCARReader,
-                                              POSCARSyntaxError,
-                                              InvalidUnitCellError)
+                                              POSCARSyntaxError)
 from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tests.helpers import (ag100_parameters_example,
-                                     example_poscars,
-                                     slab_and_expectations,
-                                     slab_pg_rp)
-
 
 class Test_readPOSCAR:
     def test_readPOSCAR_slab_exists(self, example_poscars):

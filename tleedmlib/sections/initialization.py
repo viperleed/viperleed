@@ -275,8 +275,8 @@ def initialization(sl, rp, subdomain=False):
                     + rp.phaseshifts_firstline[36:]
                     )
     if newpsGen:
-        rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
-        serneliuspath = os.path.join('tensorleed', 'seSernelius')
+        rundgrenpath = 'EEASiSSS.x'
+        serneliuspath = 'seSernelius'
         logger.info("Generating phaseshifts data... ")
         ps_gen, kwargs = runPhaseshiftGen, {}
         if rp.PHASESHIFTS_CALC_OLD:
@@ -484,7 +484,7 @@ def init_domains(rp):
                 dp.sl = poscar.readPOSCAR()
                 dp.rp = parameters.readPARAMETERS()                             # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 dp.rp.workdir = home
-                dp.rp.sourcedir = rp.sourcedir
+                dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
                 interpret_domain_params_silent = rp.LOG_LEVEL > logging.DEBUG
                 parameters.interpretPARAMETERS(dp.rp, slab=dp.sl,

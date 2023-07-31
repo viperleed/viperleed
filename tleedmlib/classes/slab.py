@@ -592,16 +592,13 @@ class Slab:
 
     def updateElementCount(self):
         """Updates the number of atoms per element."""
-        self.n_per_elem = {}
-        del_elems = []
+        updated_n_per_element = {}
         for el in self.elements:
             n = len([at for at in self.atlist if at.el == el])
             if n > 0:
-                self.n_per_elem[el] = n
-            else:
-                del_elems.append(el)
-        for el in del_elems:
-            self.elements.remove(el)
+                updated_n_per_element[el] = n
+        self.n_per_elem = updated_n_per_element
+
 
     def updateAtomNumbers(self):
         """Updates atom oriN - should not happen normally, but necessary if
@@ -1740,7 +1737,7 @@ class Slab:
         atoms.sort(key=lambda atom: -atom.pos[2])
         covered = set()
         surfats = set()
-        for atom in atoms:
+        for atom in atoms:                                                      # TODO: make this radius into an Atom property
             if atom.el in rp.ELEMENT_MIX:
                 # radius as weighted average
                 totalocc = 0.0
@@ -1763,9 +1760,11 @@ class Slab:
                 else:
                     r /= totalocc
             else:
-                if atom.el.lower() in _PTL:
-                    r = _RADII[atom.el.capitalize()]
-                else:
+                # radius of atom
+                chemical_element = rp.ELEMENT_RENAME.get(atom.el, atom.el)
+                try:
+                    r = _RADII[chemical_element.capitalize()]
+                except KeyError:
                     logger.error("Error identifying surface atoms: Could not "
                                  f"identify {atom.el} as a chemical element.")
                     rp.setHaltingLevel(2)

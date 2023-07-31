@@ -339,7 +339,7 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                     'amplitude defined for an unknown element, which will be '
                     'dropped (' + el + ').')
                 rp.setHaltingLevel(1)
-                dl.append[el]
+                dl.append(el)
         for el in dl:
             site.vibamp.pop(el, None)
         dl = []
@@ -350,7 +350,7 @@ def checkVIBROCC(rp, slab, generate=False, silent=False):
                     'defined for an unknown element, which will be dropped ('
                     + el + ').')
                 rp.setHaltingLevel(1)
-                dl.append[el]
+                dl.append(el)
         for el in dl:
             site.occ.pop(el, None)
     if not silent:

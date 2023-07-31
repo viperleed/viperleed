@@ -716,9 +716,7 @@ def search(sl, rp):
             raise FileNotFoundError("Fortran compile error") from exc
     # get fortran files
     try:
-        tldir = leedbase.getTLEEDdir(home=rp.sourcedir, version=rp.TL_VERSION)
-        if not tldir:
-            raise RuntimeError("TensErLEED code not found.")
+        tldir = leedbase.getTLEEDdir(tensorleed_path=rp.source_dir, version=rp.TL_VERSION)
         srcpath = tldir / 'src'
         if usempi:
             src_file = next(srcpath.glob('search.mpi*'), None)
@@ -729,7 +727,7 @@ def search(sl, rp):
         if src_file is None:
             raise FileNotFoundError(f"No Fortran source for search in {tldir}")
         shutil.copy2(src_file, src_file.name)
-        libpath = Path(tldir, 'lib')
+        libpath = tldir / 'lib'
         libpattern = "lib.search"
         if usempi and rp.TL_VERSION <= 1.73:
             libpattern += ".mpi"

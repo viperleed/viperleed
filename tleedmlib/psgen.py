@@ -13,6 +13,7 @@ import random
 import re
 import shutil
 import subprocess
+from pathlib import Path
 
 import fortranformat as ff
 import numpy as np
@@ -34,10 +35,9 @@ angst_to_bohr = 1.8897259886
 bohr_to_angst = 0.529177249
 
 def runPhaseshiftGen_old(sl, rp,
-                     psgensource=os.path.join('tensorleed', 'EEASiSSS.x'),
-                     excosource=os.path.join('tensorleed', 'seSernelius'),
-                     atdenssource=os.path.join('tensorleed',
-                                               'atom_density_files')):
+                     psgensource='EEASiSSS.x',
+                     excosource='seSernelius',
+                     atdenssource='atom_density_files'):
     """Creates required input for EEASiSSS.x, then runs it. Reads the output
     files and extracts information for PHASESHIFTS file, then returns that
     information (without writing PHASESHIFTS)."""
@@ -46,26 +46,33 @@ def runPhaseshiftGen_old(sl, rp,
     '''
     if test_new:
         runPhaseshiftGen_new(sl, rp,
-                             psgensource=os.path.join('tensorleed', 'EEASiSSS.x'),
-                             excosource=os.path.join('tensorleed', 'seSernelius'),
-                             atdenssource=os.path.join('tensorleed',
-                                                       'atom_density_files'))
+                            psgensource='EEASiSSS.x',
+                            excosource='seSernelius',
+                            atdenssource='atom_density_files')
     '''
-    shortpath = rp.sourcedir
-    if len(os.path.relpath(rp.sourcedir)) < len(shortpath):
-        shortpath = os.path.relpath(rp.sourcedir)
+    if rp.source_dir is None:
+        raise RuntimeError("No source tensorleed source directory specified")
+    shortpath = rp.source_dir
+    try:
+        rel_path = rp.source_dir.resolve().relative_to(Path.cwd().resolve())
+    except ValueError:
+        # Path.relative_to() can raise ValueError if not on same drive
+        rel_path = rp.source_dir
+    if len(str(rel_path)) < len(str(shortpath)):
+        shortpath = rel_path
 
-    if len(shortpath) > 62:
+    if len(str(shortpath)) > 62:
         # too long - need to copy stuff here
         manual_copy = True
         os.makedirs("tensorleed", exist_ok=True)
-        shutil.copy2(os.path.join(shortpath, excosource), excosource)
-        shortpath = "."
+        shutil.copy2(shortpath / excosource, excosource)
+        shortpath = Path(".")
     else:
         manual_copy = False
 
-    psgensource = os.path.join(rp.sourcedir, psgensource)
-    excosource = os.path.join(shortpath, excosource)
+    psgensource = rp.source_dir / psgensource
+    excosource = shortpath / excosource
+    excosource = excosource.resolve()
 
     _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.addBulkLayers(rp)
@@ -91,28 +98,28 @@ def runPhaseshiftGen_old(sl, rp,
                 blocks.append((site, el))
         else:
             blocks.append((site, site.el))
-    scsize = 1 # Supercell size
+    supercell_size = 1 # Supercell size
     if len(rp.ELEMENT_MIX) > 0:
         minnum = -1
         for (site, el) in [(site, el) for (site, el) in blocks if site.el
                            in rp.ELEMENT_MIX and (site.occ[el] > 0. or
                                                   el in site.mixedEls)]:
             al = [at for at in nsl.atlist if at.site == site]
-            atcount = len(al)*site.occ[el]
-            if minnum < 0 or (minnum > atcount >= 0):
-                minnum = atcount
+            atom_count = len(al)*site.occ[el]
+            if minnum < 0 or (minnum > atom_count >= 0):
+                minnum = atom_count
         # we want at least 2 atoms of each element in each site type:
         if 0 < minnum < 2.0:
-            scsize = int(np.ceil(2.0/minnum))
+            supercell_size = int(np.ceil(2.0/minnum))
         elif minnum == 0:
-            scsize = 100  # large number, will be decreased below
-    if scsize > 1:  # some checks to make sure it doesn't get too large
+            supercell_size = 100  # large number, will be decreased below
+    if supercell_size > 1:  # some checks to make sure it doesn't get too large
         maxcells = 20  # upper limit on supercell size
         maxats = 500   # upper limit on atoms in supercell
-        if scsize > maxcells:
-            scsize = maxcells
+        if supercell_size > maxcells:
+            supercell_size = maxcells
             # don't warn - this is a large unit cell either way.
-        if len(nsl.atlist) * scsize > maxats:
+        if len(nsl.atlist) * supercell_size > maxats:
             logger.debug(
                 "Phaseshift generation: Given element "
                 "concentrations would require a very large supercell. "
@@ -126,14 +133,14 @@ def runPhaseshiftGen_old(sl, rp,
                 els = len([el for el in rp.ELEMENT_MIX[site.el]
                            if site.occ[el] > 0.])
                 minsize = max(minsize, int(np.ceil(2*els / ats)))
-            scsize = max(minsize, int(maxats / len(nsl.atlist)))
+            supercell_size = max(minsize, int(maxats / len(nsl.atlist)))
 
     subatlists = {}     # atlist per block tuple
-    if scsize > 1:  # construct supercell to get enough atoms
-        xsize = int(np.ceil(np.sqrt(scsize)))  # if scsize is not prime, try
-        while scsize % xsize != 0:             # making it close to square
+    if supercell_size > 1:  # construct supercell to get enough atoms
+        xsize = int(np.ceil(np.sqrt(supercell_size)))  # if scsize is not prime, try
+        while supercell_size % xsize != 0:             # making it close to square
             xsize += 1
-        ysize = int(scsize / xsize)
+        ysize = int(supercell_size / xsize)
         cpatlist = nsl.atlist[:]
         for at in cpatlist:
             for i in range(0, xsize):
@@ -190,17 +197,14 @@ def runPhaseshiftGen_old(sl, rp,
     output = ''
     output += "STRUCTURE:\n"
     output += rp.systemName+" "+rp.timestamp+"\n"
-#    if bulk:
-#        output += ("'b'  1.00 16      BulkOrSlab('b' or 's'), "
-#                  "LatticeConstant(Angstroms), nshell\n")
-#    else:
+
     output += ("'s'  1.00 16      BulkOrSlab('b' or 's'), "
                "LatticeConstant(Angstroms), nshell\n")
-    uct = nsl.ucell.transpose()
+    # write transposed unit cell matrix
     for i in range(0, 3):
         ol = ''
         for j in range(0, 3):
-            s = str(round(uct[i, j], 4))+' '
+            s = str(round(nsl.ucell.transpose()[i, j], 4))+' '
             ol += s.ljust(8)
         if i == 0:
             ol += '      CoordinatesOfUnitCell(LCunits)\n'
@@ -224,15 +228,15 @@ def runPhaseshiftGen_old(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        subpath = os.path.join(atdenssource, chemel, "chgden"+chemel)
-        chgdenrelpath = os.path.join(shortpath, subpath)
+        subpath = Path(atdenssource) / chemel / (f"chgden{chemel}")
+        chgdenrelpath = shortpath / subpath
         if manual_copy:
             os.makedirs(os.path.join(os.path.dirname(subpath)), exist_ok=True)
-            shutil.copy2(os.path.join(rp.sourcedir, subpath), subpath)
+            shutil.copy2(rp.source_dir / subpath, subpath)
         # if os.name == 'nt':     # windows - replace the backslashes.
         #     chgdenrelpath = chgdenrelpath.replace('/', '\\')
         chemels[el] = chemel
-        chemelspaths[el] = chgdenrelpath
+        chemelspaths[el] = chgdenrelpath.resolve()
 
     nsl.sort_by_z(botToTop=True)
     for at in nsl.atlist:
@@ -243,14 +247,14 @@ def runPhaseshiftGen_old(sl, rp,
                 chemel = chemels[el]
                 chgdenpath = chemelspaths[el]
         output += ("1 "+str(PERIODIC_TABLE.index(chemel)+1)
-                   + ".  0.  0.  '"+chgdenpath+"'\n")
+                   + ".  0.  0.  '"+str(chgdenpath)+"'\n")
         ol = ""
         for j in range(0, 3):
             # ol += str(round(realcartpos[j],4))+" "
             ol += str(round(at.cartpos[j], 4))+" "
         output += ol + "     Coordinates(LCunits)\n"
     output += "SCATTERING: \n"
-    output += "'"+excosource+"' |exchange-correlation file\n"
+    output += "'"+str(excosource)+"' |exchange-correlation file\n"
     output += str(lmax)+"  |lmax\n"
     output += "'r' |SelectCalculation: 'relativistic'/'nonrelativistic'\n"
     output += "'p' |SelectOutput: 'phaseshift'/'sigma'/'dataflow'\n"
@@ -264,7 +268,7 @@ def runPhaseshiftGen_old(sl, rp,
     output += "'n' |dataflow: print_RhoPot? 'yes'/'no'\n"
     output += "'n' |dataflow: print_PSvsE? 'yes'/'no'\n"
     output += "'n' |dataflow: print_WaveFunction? 'yes'/'no'\n"
-    
+
     # Energy step used for phaseshift calculation eeasisss.
     # Does not need to match theory energy step as phaseshifts will be interpolated anyways.
     ps_energy_step = max(1.0, round(float(rp.THEO_ENERGIES[2]), 0))
@@ -527,16 +531,16 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     ###############################################
 
     psgensource = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    psgensource = os.path.join(rp.sourcedir, psgensource) # otherwise the location would not be known
+    psgensource = os.path.join(rp.source_dir, psgensource) # otherwise the location would not be known
     atlib_dir = os.path.join('tensorleed', 'eeasisss_new', 'atlib/') # atom density files, by Sernelius
-    atlib_dir = os.path.join(rp.sourcedir, atlib_dir)
+    atlib_dir = os.path.join(rp.source_dir, atlib_dir)
     outdir_path = os.path.join(".",ps_outdir+"/")
     # create directory for individual phaseshift files if not yet present
     os.makedirs(outdir_path, exist_ok=True)
 
     # execution of EEASISSS requires the executable eeasisss to be copied to work directory
     eeasisss_exec_path = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    eeasisss_exec_path = os.path.join(rp.sourcedir, eeasisss_exec_path)
+    eeasisss_exec_path = os.path.join(rp.source_dir, eeasisss_exec_path)
     try:
         shutil.copy2(eeasisss_exec_path, rp.workdir)
     except Exception:

@@ -31,13 +31,13 @@ class DeltaCompileTask():
     """Stores information for a worker to compile a delta file, and keeps
     track of the folder that the compiled file is in afterwards."""
 
-    def __init__(self, param, hash_, index):
+    def __init__(self, param, hash_, source_dir, index):
         self.param = param
         self.hash = hash_
         self.foldername = "Delta_Compile_{}".format(index)
         self.exename = "delta-{}".format(index)
         self.fortran_comp = ["", ""]
-        self.sourcedir = Path()  # where the fortran files are
+        self.source_dir = Path(source_dir).resolve()  # where the fortran files are
         self.basedir = Path()    # where the calculation is based
 
         if os.name == 'nt':
@@ -45,15 +45,14 @@ class DeltaCompileTask():
 
     def get_source_files(self):
         """Return files needed for a delta-amplitude compilation."""
-        sourcedir = Path(self.sourcedir).resolve()
-        srcpath = sourcedir / 'src'
+        srcpath = self.source_dir / 'src'
         srcname = next(srcpath.glob('delta*'), None)
-        libpath = sourcedir / 'lib'
+        libpath = self.source_dir / 'lib'
         lib_tleed = next(libpath.glob('lib.tleed*'), None)
         lib_delta = next(libpath.glob('lib.delta*'), None)
         globalname = srcpath / "GLOBAL"
         if any(f is None for f in (srcname, lib_tleed, lib_delta)):
-            raise RuntimeError("Source files missing in {sourcedir}")          # TODO: use a better custom exception in CompileTask (e.g., MissingSourceFileError)
+            raise RuntimeError("Source files missing in {self.source_dir}")     # TODO: use a better custom exception in CompileTask (e.g., MissingSourceFileError)
         return srcname, lib_tleed, lib_delta, globalname
 
     def copy_source_files_to_local(self):
@@ -412,6 +411,8 @@ def deltas(sl, rp, subdomain=False):
     deltaCompTasks = []  # keep track of what versions to compile
     deltaRunTasks = []   # which deltas to run
     tensordir = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
+    tl_path = leedbase.getTLEEDdir(tensorleed_path=rp.source_dir,
+                                   version=rp.TL_VERSION)
     for (at, el) in atElTodo:
         din, din_short, param = tl_io.generateDeltaInput(
             at, el, sl, rp, dbasic, auxbeams, phaseshifts)
@@ -424,7 +425,7 @@ def deltas(sl, rp, subdomain=False):
                 break
         if not found:
             index = len(deltaCompTasks)
-            ct = DeltaCompileTask(param, h, index)
+            ct = DeltaCompileTask(param, h,tl_path, index)
             deltaCompTasks.append(ct)
             rt = DeltaRunTask(ct)
         deltaRunTasks.append(rt)
@@ -493,13 +494,9 @@ def deltas(sl, rp, subdomain=False):
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    tl_path = leedbase.getTLEEDdir(os.path.abspath(rp.sourcedir),
-                                   version=rp.TL_VERSION)
-    if not tl_path:
-        raise RuntimeError("TensErLEED code not found.")
+    
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
-        ct.sourcedir = tl_path
         ct.basedir = os.getcwd()
 
     if subdomain:   # actual calculations done in deltas_domains
