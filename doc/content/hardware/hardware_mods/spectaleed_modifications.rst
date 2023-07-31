@@ -280,7 +280,7 @@ As you have the rear panel open, consider also the modifications described in :r
 Reducing noise on :math:`I_0`
 =============================
 
-This modification of the NG LEED unit is strongly suggested for users with a microchannel-plate LEED, where significantly lower electron currents are used (:math:`I_0 \approx 1-30\,\mathrm{nA}`). Users with a standard LEED will normally have beam currents in the µA range and should most likely not need to modify their unit. The modifications described in this section should be considered a second-order improvement of those in :ref:`ngleed_i0_mod_mandatory`.
+This modification of the NG LEED unit is strongly suggested for users with a microchannel-plate LEED, where significantly lower electron currents are used (:math:`I_0 \approx 1-30\,\mathrm{nA}`). Users with a standard LEED will normally have beam currents in the microampere range and should most likely not need to modify their unit. The modifications described in this section should be considered a second-order improvement of those in :ref:`ngleed_i0_mod_mandatory`.
 
 Once the modifications in :ref:`ngleed_i0_mod_mandatory` have been carried out (with the exception of the modification of the range of :math:`I_{0,\mathrm{offset}}` adjustment), the next-worst source of noise on :math:`I_0` has to do with the generation of the high voltages. A more detailed description of how high voltages are generated in the HV modules can be found in :ref:`ngleed_faster_beam`. In short, each high-voltage module generates its voltage with a `Voltage multiplier <https://en.wikipedia.org/wiki/Voltage_multiplier>`_ fed by a transformer. The transformer separates the 'high-voltage' from the 'low-voltage' areas of each module. :numref:`fig_ngleed_beam_high_and_low_voltage` shows, for example the ``BEAM`` board --- which, as mentioned below, is one of the few where no modification is needed.
 
@@ -381,7 +381,7 @@ The positioning of the mains (i.e., power) fuse box and cables in the NG LEED is
 .. figure:: /_static/hardware/SpectaLEED_modification/mains_shielding.svg
     :align: center
 
-    Addition of a metallic shielding surrounding the mains fuse box and cables. Dimensions in mm.
+    Addition of a metallic shielding surrounding the mains fuse box and cables. Dimensions in millimetres.
 
 You can improve the shielding by adding a simple grounded metal plate between the mains fuse box and the high-voltage connector, as shown in :numref:`fig_ngleed_shield_mains`. An aluminium plate bent into an 'L' shape with the rough dimensions in the top panel of :numref:`fig_ngleed_shield_mains` should fit in between the fuse box and the high-voltage connector. It can be held in place using the nuts of two existing screws --- the rightmost fuse-box mounting screw, and an (unused) hex stud next to the high-voltage connector ---, as indicated in the bottom-right panel of :numref:`fig_ngleed_shield_mains`.
 
