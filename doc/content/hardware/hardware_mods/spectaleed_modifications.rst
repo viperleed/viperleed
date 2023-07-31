@@ -441,15 +441,13 @@ Before you start with the modifications, make sure you have all required compone
 
     Top panels: position of the components that should be replaced in the PI regulator circuit (blue) and in the supply for the HV transformer (white). The insets show detailed view of the same components. Bottom: schematic circuit diagrams of the two functional blocks.
 
-**TODO**: figure is missing x axis label
-
 :numref:`fig_ngleed_beam_board_response_time` can be used as a guide to identify the location of the components that will be replaced. As can be seen in the bottom-left part of :numref:`fig_ngleed_beam_board_response_time`, the PI regulator takes the desired value of the beam energy (BEAM_SET) and subtracts the down-scaled version of the current energy (BEAM_MON) to generate the control voltage
 
 .. math:: V_\mathrm{PI} = - K_\mathrm{p} e(t) - \frac{1}{T_\mathrm{int}}\int_0^t e(\tau) \mathrm{d}\tau.
 
 The error signal is given by
 
-.. math:: e = \mathrm{BEAM\_SET} - \mathrm{BEAM\_MON}
+.. math:: e = \mathrm{BEAM\_SET} - \mathrm{BEAM\_MON}.
 
 It contributes to the PI output voltage via the proportional term :math:`K_\mathrm{p} = R_{35} / R_{39}`, and via its time integral, scaled by the integral time constant :math:`T_\mathrm{int} = C_{32} R_{39}`. (In these relations, the nominal ~0.2% difference between :math:`R_{39}` and :math:`R_{37} + R_{38}` is neglected.) The correct choice of proportional gain and integral time constant is critical for the stability of the regulated system. The two values should be chosen to match the system to be controlled. We have found by experimenting that the factory default for the integral time constant of the PI regulator (:math:`T_\mathrm{int} = 10\,\mathrm{ms})` is not ideal. Reducing :math:`C_{32}` --- and the integral time --- by roughly a factor of two (:math:`C_{32}=470\,\mathrm{nF}`) gives a stability improvement. Effectively this makes the feedback faster, and increases the weight of the integral component in :math:`V_\mathrm{PI}`.
 
