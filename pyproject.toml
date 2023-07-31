@@ -22,7 +22,9 @@ dependencies = [
 [project.optional-dependencies]
 GUI = [
     "PyQt5",
-    "mplcairo"
+]
+GUI_optional = [
+    "mplcairo",
 ]
 hardware = [
     "requests"
