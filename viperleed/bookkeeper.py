@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+ViPErLEED bookkeeper module.
+
 Created on Thu Jan 30 11:12:30 2020
 
 @author: Florian Kraushofer
@@ -149,16 +151,14 @@ def bookkeeper():
     if tensor_number not in max_nums:
         num = 1  # Tensor is new - if discard: delete
         if args.discard:
-            tensor_file = os.path.join("Tensors", "Tensors_{:03d}.zip"
-                                      .format(tensor_number))
-            delta_file = os.path.join("Deltas", "Deltas_{:03d}.zip"
-                                     .format(tensor_number))
+            tensor_file = Path("Tensors") / "Tensors_{tensor_number:03d}.zip"
+            delta_file = Path("Deltas") / "Deltas_{tensor_number:03d}.zip"
             for f in (tensor_file, delta_file):
                 if os.path.isfile(f):
                     try:
                         os.remove(f)
                     except Exception:
-                        print("Failed to discard file " + f)
+                        print(f"Failed to discard file {f}")
     else:
         num = max_nums[tensor_number] + 1
     # find old timestamp, if possible
@@ -166,7 +166,7 @@ def bookkeeper():
                             f.endswith(".log") and f.startswith("tleedm-")])
     lastLogLines = []
     if len(old_log_files) > 0:
-        oldTimeStamp = old_log_files[-1][7:20]
+        old_timestamp = old_log_files[-1][7:20]
         try:
             with open(old_log_files[-1], "r") as rf:
                 lastLogLines = rf.readlines()
@@ -174,10 +174,10 @@ def bookkeeper():
             pass
     else:
         timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
-        oldTimeStamp = "moved-" + timestamp
+        old_timestamp = "moved-" + timestamp
     if not args.discard:
         # get dirname
-        dirname = "t{:03d}.r{:03d}_".format(tensor_number, num) + oldTimeStamp
+        dirname = f"t{tensor_number:03d}.r{num:03d}_{old_timestamp}"
         if args.name:
             dirname += "_" + args.name
         tensor_dir = os.path.join(history_name, dirname)
@@ -269,11 +269,12 @@ def bookkeeper():
             try:
                 shutil.rmtree(os.path.join(work_history_name, d))
             except Exception:
-                print("Failed to delete "+d+" directory from "+work_history_name)
+                print(f"Failed to delete {d} directory from "
+                      f"{work_history_name}")
         work_history_dirs = [d for d in os.listdir(work_history_name) if
                         os.path.isdir(os.path.join(work_history_name, d))
                         and rgx.match(d) and not ("previous" in d)
-                        and oldTimeStamp in d]
+                        and old_timestamp in d]
         for d in work_history_dirs:
             try:
                 tensor_num_2 = int(d[1:4])
@@ -302,8 +303,8 @@ def bookkeeper():
                 if args.discard:
                     print(f"Failed to discard workhistory folder: {e}")
                 else:
-                    print(f"Failed to delete empty {work_history_name} directory: "
-                          f"{str(e)}")
+                    print(f"Failed to delete empty {work_history_name} "
+                          f"directory: {str(e)}")
     if args.discard:  # all done
         return 0
     job_nums = []
@@ -368,7 +369,7 @@ def bookkeeper():
                 if t:
                     hi += t + line.split(":", maxsplit=1)[1].strip() + "\n"
 
-    hi += "# TIME ".ljust(spacing) + translate_timestamp(oldTimeStamp) + "\n"
+    hi += "# TIME ".ljust(spacing) + translate_timestamp(old_timestamp) + "\n"
     hi += "# FOLDER ".ljust(spacing) + dirname + "\n"
     hi += "Notes: " + notes + "\n"
     hi += "\n###########\n"
