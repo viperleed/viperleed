@@ -234,6 +234,9 @@ def initialization(sl, rp, subdomain=False):
     except Exception:
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
 
+    # Check for an ambiguous angle phi
+    _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1)
+
     # check whether PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
     # True: new phaseshifts need to be generated/written
@@ -771,3 +774,20 @@ def make_compile_logs_dir(rp):
     except OSError:
         logger.warning(f"Could not create directory {rp.compile_logs_dir}")
         rp.setHaltingLevel(1)
+
+
+def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
+    """Check if phi is ambiguous and warn if so."""
+    angle_between_first_uc_vec_and_x = sl.angle_between_ucell_and_coord_sys
+    if angle_between_first_uc_vec_and_x > angle_eps and rp.THETA > angle_eps:
+        logger.info(
+            f"Detected non-zero angle theta ({rp.THETA:.2f})° and"
+            f"an angle of {angle_between_first_uc_vec_and_x:.2f}° "
+            "between the first unit cell vector and the x direction of "
+            "the coordinate system in the POSCAR file.\n"
+            "Make sure the angle phi is interpreted correctly: "
+            f"Phi is {rp.PHI:.2f}° from x, which is "
+            f"{(rp.PHI+ angle_between_first_uc_vec_and_x):.2f}° from a.\n"
+            "See the ViPErLEED documentation for the parameter BEAM_INCDIDENCE "
+            "for details."
+            )

@@ -4,8 +4,14 @@ BEAM_INCIDENCE
 ==============
 
 BEAM_INCIDENCE defines the incidence angles (in degrees) of the electron beam on the surface.
-The polar angle ``theta`` is measured from the surface normal, the azimuthal angle ``phi`` is positive counterclockwise with ``phi=0`` **corresponding to the positive x axis.
-TODO: Perhaps more intuitive if we take as relative to a1??**, as defined in the :ref:`POSCAR<POSCAR>`  file.
+The polar angle ``theta`` is measured from the surface normal, the azimuthal angle ``phi`` is positive counterclockwise when looking at the solid from vacuum, with ``phi=0`` **corresponding to the positive x axis**, as defined in the :ref:`POSCAR<POSCAR>` file.
+See also the diagram shown in :numref:`fig_theta_and_phi`.
+ViPErLEED considers the incident wave vector to be in direction from the electron gun towards the surface, i.e. 
+
+.. math::
+   \vec{k} = |\vec{k}|(-\cos(\phi)\sin(\theta)\hat{u}_x - \sin(\phi)\sin(\theta)\hat{u}_y - \cos(\theta) \hat{u}_z) .
+
+
 
 **Default**: BEAM_INCIDENCE = THETA 0, PHI 0
 
@@ -22,6 +28,12 @@ TODO: Perhaps more intuitive if we take as relative to a1??**, as defined in the
 Notice that if the flags THETA and PHI are not specified, only the first two floats are considered:
 the first is taken as the tilt angle theta, the second as the azimuth phi.
 
+.. _fig_theta_and_phi:
+.. figure:: /_static/theta_and_phi.svg
+   :width: 300px
+   :align: center
+
+   Definition of angles ``theta`` (:math:`\theta`) and ``phi`` (:math:`\phi`) relative to the coordinate system of the :ref:`POSCAR<POSCAR>` file.
 
 .. hint::
    -  In general, unless the experiment was performed at large off-normal incidence (>2°), keeping the default value should lead to the correct optimized geometry, but the R factor will be worse than for an experiment at normal incidence. In case the incidence angle is significantly off, one needs to measure a simple system (clean, unreconstructed metal) with the same experimental settings, to determine first the correct angle of incidence to be used for more complicated situations.
