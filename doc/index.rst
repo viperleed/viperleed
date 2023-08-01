@@ -123,21 +123,19 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
 
 .. toctree::
-   :maxdepth: 1
-   :caption: References
-
-   References<references>
-   Glossary<content/glossary>
-   License<content/license>
-
-
-.. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Hardware
 
    Overview<content/hardware/hardware_index>
    Improvements to commercial LEED electronics<content/hardware/hardware_mods/hardware_mods_index>
    Calibration and modification of commercial LEED optics<content/hardware/optics_calib_and_mod/optics_calibs_and_mods_index>
+
+.. toctree::
+   :maxdepth: 1
+   :caption: References
+   References<references>
+   Glossary<content/glossary>
+   License<content/license>
 
 .. raw:: latex
 
