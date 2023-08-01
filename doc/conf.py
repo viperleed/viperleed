@@ -90,13 +90,14 @@ latex_elements = {
     \usepackage{braket}
     \usepackage[overlay,absolute]{textpos}% for header in PDF screen version
     \usepackage{everypage}
-    \usepackage{newunicodechar}
-    \newunicodechar{α}{$\alpha$}
-    \newunicodechar{Δ}{$\Delta$}
-    
+    \hypersetup{allcolors=blue}
+
     \textblockorigin{28mm}{16.5mm} % position x,y wrt top-left corner of page
     %\setlength{\TPHorizModule}{\pdfpagewidth} % text block width = page width
     \setlength{\TPHorizModule}{\textwidth} % text block width = text width
     \newlength{\chapterNameLength}%
+
+    % set title colors to black (otherwise they are blue; defined in sphinx.sty)
+    \sphinxDeclareColorOption{TitleColor}{{rgb}{0.0,0.0,0.0}}
     '''
     }

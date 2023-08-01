@@ -133,6 +133,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 .. toctree::
    :maxdepth: 1
    :caption: References
+
    References<references>
    Glossary<content/glossary>
    License<content/license>
