@@ -4,8 +4,6 @@
 Omicron SpectaLEED/NG LEED Modification Guide
 #############################################
 
-.. todo::
-    Add a TL;DR for each section
 
 The :term:`SpectaLEED<SpectaLEED>` LEED/Auger optics produced by :term:`Omicron<Scienta Omicron>` is among the most common optics used in surface science laboratories. It is controlled by the NG LEED (or NG LEED S) electronics. The ViPErLEED electronics are designed (and tested) to work with the NG LEED (S) electronics.
 At variance with the :term:`ErLEED` electronics, the NG LEED (S) requires deeper modifications of the circuitry to allow reasonable LEED-:math:`I(V)` measurements. In the following sections, five main categories of modifications are described:
@@ -35,6 +33,15 @@ The modification described in :ref:`ngleed_suppressor_range` are **strongly sugg
 
 Overview of NG LEED unit
 ========================
+
+.. admonition:: TL;DR
+
+    To open the LEED unit and access the electronics, follow these steps:
+
+        * Make sure to disconnect the unit from the mains voltage and wait 5 minutes for the capacitors to discharge.
+        * Open the chassis as shown in :numref:`fig_ngleed_new_overview`.
+        * Remove the desired module(s) as shown in :numref:`fig_ngleed_remove_hv_cables`.
+        * If necessary, remove the rear panel as shown in :numref:`fig_ngleed_rear_panel_tilted`.
 
 :numref:`fig_ngleed_old_overview` and :numref:`fig_ngleed_new_overview` show an overview of the **older** and **newer** versions of the NG LEED electronics, respectively. The two versions can be told apart from the different appearance of the rear \[:numref:`fig_ngleed_old_overview`\ (a), :numref:`fig_ngleed_new_overview`\ (a)\] and front \[:numref:`fig_ngleed_old_overview`\ (c), :numref:`fig_ngleed_new_overview`\ (c)\] panels.
 
@@ -115,6 +122,25 @@ The rear panel can be simply removed by loosening the six screws holding it on t
 
 Making :math:`I_0` measurements possible
 ========================================
+
+
+.. admonition:: TL;DR
+
+    The :math:`I_0` output provided by the unmodified LEED electronics is next to meaningless. Some modifications are necessary to make it usable:.
+
+      * On the BEAM HV module (see :numref:`fig_ngleed_i0_beam_module_mod`):
+
+        * Cut the trace and inset a 1 kΩ resistor between HV_GND and the non-inverting input of U4.
+        * Remove trimmer R43.
+        * Replace U4 with OPA627.
+        * Add a 1 nF capacitor on the feedback of U3.
+
+      * On the E0 BUFFER board (see :numref:`fig_ngleed_i0_control_and_buffer`):
+
+        * Add two 10 nF capacitors in parallel to resistors R7 and R8.
+        * Consider replacing R1 and R2 as described in :ref:`ngleed_i0_modify_e0_buffer`.
+
+      * On the BNC output, ensure that the 1 µF capacitor is not connected (see :numref:`fig_ngleed_i0_rear`).
 
 .. _i0_instability:
 
@@ -280,6 +306,14 @@ As you have the rear panel open, consider also the modifications described in :r
 Reducing noise on :math:`I_0`
 =============================
 
+.. admonition:: TL;DR
+
+    These modification are recommended for users with a microchannel-plate LEED to reduce the noise on :math:`I_0`.
+
+      * On the ``ANODE``, ``FILAMENT``, ``L1/3``, and ``L2`` boards rewire the guard ring from ``HV_GND`` to ``GND``. as shown in :numref:`fig_swap_hvguard_on_boards`.
+      * Rewire the HV plug as shown in :numref:`fig_ngleed_hv_plug`.
+      * Add a shield to the mains supply cable as shown in :numref:`fig_ngleed_shield_mains`.
+
 This modification of the NG LEED unit is strongly suggested for users with a microchannel-plate LEED, where significantly lower electron currents are used (:math:`I_0 \approx 1-30\,\mathrm{nA}`). Users with a standard LEED will normally have beam currents in the microampere range and should most likely not need to modify their unit. The modifications described in this section should be considered a second-order improvement of those in :ref:`ngleed_i0_mod_mandatory`.
 
 Once the modifications in :ref:`ngleed_i0_mod_mandatory` have been carried out (with the exception of the modification of the range of :math:`I_{0,\mathrm{offset}}` adjustment), the next-worst source of noise on :math:`I_0` has to do with the generation of the high voltages. A more detailed description of how high voltages are generated in the HV modules can be found in :ref:`ngleed_faster_beam`. In short, each high-voltage module generates its voltage with a `Voltage multiplier <https://en.wikipedia.org/wiki/Voltage_multiplier>`_ fed by a transformer. The transformer separates the 'high-voltage' from the 'low-voltage' areas of each module. :numref:`fig_ngleed_beam_high_and_low_voltage` shows, for example the ``BEAM`` board --- which, as mentioned below, is one of the few where no modification is needed.
@@ -397,6 +431,12 @@ After you have mounted the plate, make sure you take precautions to prevent cont
 Improving the beam-energy time response
 =======================================
 
+.. admonition:: TL;DR
+
+    These modifications are **not** strictly necessary, but they can improve the time response of the beam energy and :math:`I_0`. This enables faster LEED-:math:`I(V)` measurements:
+
+      * On the ``BEAM HV`` board replace capacitors C32 and C40 with two 470 mF capacitors and C23 with a 470 µF electrolytic capacitor.
+
 The speed at which the beam energy is changed from one value to the next, and, particularly, the time it takes to stabilize a new value of the energy determines how quick a LEED-:math:`I(V)` measurement can be. In fact, a LEED optics is primarily a capacitive load for the controlling electronics: a step in energy requires adjusting the voltages of (at least) filament and lenses accordingly by (dis)charging them. Also, the shielded cables carrying the voltages to the optics are a primarily capacitive load. In turn, this means that the effect of stepping the energy has even more important consequences on the stabilization of the :math:`I_0` current, to which all (dis)charging currents contribute. (The current through a capacitive load is proportional to the time derivative of the voltage across it.)
 
 .. _fig_ngleed_hv_i0_relaxation:
@@ -464,6 +504,14 @@ The reactivity of the feedback around the LT1074 step-down converter depends on 
 
 Modifying the ``SUPPRESSOR`` range
 ==================================
+
+.. admonition:: TL;DR
+
+    The factory rage of the ``SUPPRESSOR`` dial is not ideal. This can be improved as follows:
+
+      * Adjust potentiometer R24 as described in :ref:`ngleed_suppressor_feedback` and shown in :numref:`fig_ngleed_suppressor_feedback`.
+      * Add a 1 kΩ resistor in parallel to R125, as shown in :numref:`fig_ngleed_suppressor`.
+
 
 Every LEED setup uses (at least one) grid to repel inelastically scattered electrons. The grid is biased at a voltage that is normally slightly smaller (in absolute value) than the beam energy. For LEED-:math:`I(V)` measurements we have found that the optimal retarding voltage is between 80% and 95% of the beam energy. NG LEED units have a design fault for what concerns the range of retarding voltages that can be accessed. On our unit, the factory range was between 81% and 111% of the beam energy. These values are close to the ones specified by design (80--110%). Setting the suppressor voltage to energies larger than the beam energy makes no sense: there are no electrons going through anyway. This means that:
 
@@ -541,7 +589,8 @@ This check may be more interesting for those that use their SpectaLEED setup als
 
     \(a\) Suggested contacts on the ``CONTROL`` board on which to measure the feedback signal for the ``RETARD`` HV module: ``RETARD_MON`` on the lower lead of R25, ground on the lower lead of R26. (b) Potentiometer that is used to set the feedback gain to 1/200. (c) Circuit diagram of the portion of the ``RETARD`` HV module that is responsible for feeding back the high-voltage output to the input of the PI regulator. An inverted version of the same signal goes to the ``CONTROL`` board as ``RETARD_MON``.
 
-**TODO**: the PI regulator label has glitch in the figure
+
+.. todo:: the PI regulator label has glitch in the figure
 
 :numref:`fig_ngleed_suppressor_feedback` can be used as a guide to check the correctness of the feedback gain. The diagram in :numref:`fig_ngleed_suppressor_feedback`\ (c) shows the feedback portion of the circuit of the ``RETARD`` HV module: The ``RETARD_HV`` high-voltage output is low-pass filtered (cutoff ~340 Hz) and scaled by a factor :math:`\approx-4.3\times10^{-3}` with the first inverting feedback stage around op-amp U9. The second inverting stage around U6 is used to adjust the overall gain to :math:`5\times10^{-3} = 1/200`. This is accomplished by adjusting potentiometer R24. The location of this potentiometer on the ``RETARD`` HV module is shown in :numref:`fig_ngleed_suppressor_feedback`\ (b). Notice that, should adjustments be needed, they can be performed without removing the ``RETARD`` HV module.
 
