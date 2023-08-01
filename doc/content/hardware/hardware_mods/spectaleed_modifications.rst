@@ -61,7 +61,7 @@ The rear panel \[:numref:`fig_ngleed_old_overview`\ (a), :numref:`fig_ngleed_new
 
 * The high-voltage plug providing the voltages to the ``FILAMENT``, ``ANODE``, suppressor (sometimes referred to as ``RETARD`` inside the units), ``WEHNELT``, and lenses (``L1/3`` and ``L2``). All these voltages depend on the ``BEAM`` energy.
 * The SHV port for the ``SCREEN`` voltage and, only in the newer version, the one for monitoring the beam energy at high voltages. See :ref:`ngleed_beamhv_port` for instructions on how to add this **important** port also on the older NG LEED units.
-* The programming input switch and port; switching to "external" --- by pulling on the lever, then flipping it --- deactivates the "beam energy" potentiometer knob on the front panel. The energy is set externally via an analog input at the ``BEAM ENERGY PROGRAM INPUT`` connector (the 5-way circular connector, **not to be confused** with the ``PROGRAMMING INPUT`` BNC that is used only for Auger). This is how ViPErLEED can control the beam energy. See **TODO** for instructions on how to prepare a suitable control cable.
+* The programming input switch and port; switching to "external" --- by pulling on the lever, then flipping it --- deactivates the "beam energy" potentiometer knob on the front panel. The energy is set externally via an analog input at the ``BEAM ENERGY PROGRAM INPUT`` connector (the 5-way circular connector, **not to be confused** with the ``PROGRAMMING INPUT`` BNC that is used only for Auger). This is how ViPErLEED can control the beam energy. See :ref:`ngleed_control_cable` for instructions on how to prepare a suitable control cable.
 * The :math:`I_0` BNC. See :ref:`ngleed_i0_mod_mandatory` for the relevant modifications.
 * Other connectors not relevant for LEED-:math:`I(V)` measurements. Notice that the :math:`E_0` monitor is **not** the beam energy at high voltage, but a version downscaled to 0--10 V. This port should **not** be used instead of the high-voltage version, as it can (and will) have non-zero offset and non-unity gain.
 
@@ -589,9 +589,6 @@ This check may be more interesting for those that use their SpectaLEED setup als
 
     \(a\) Suggested contacts on the ``CONTROL`` board on which to measure the feedback signal for the ``RETARD`` HV module: ``RETARD_MON`` on the lower lead of R25, ground on the lower lead of R26. (b) Potentiometer that is used to set the feedback gain to 1/200. (c) Circuit diagram of the portion of the ``RETARD`` HV module that is responsible for feeding back the high-voltage output to the input of the PI regulator. An inverted version of the same signal goes to the ``CONTROL`` board as ``RETARD_MON``.
 
-
-.. todo:: the PI regulator label has glitch in the figure
-
 :numref:`fig_ngleed_suppressor_feedback` can be used as a guide to check the correctness of the feedback gain. The diagram in :numref:`fig_ngleed_suppressor_feedback`\ (c) shows the feedback portion of the circuit of the ``RETARD`` HV module: The ``RETARD_HV`` high-voltage output is low-pass filtered (cutoff ~340 Hz) and scaled by a factor :math:`\approx-4.3\times10^{-3}` with the first inverting feedback stage around op-amp U9. The second inverting stage around U6 is used to adjust the overall gain to :math:`5\times10^{-3} = 1/200`. This is accomplished by adjusting potentiometer R24. The location of this potentiometer on the ``RETARD`` HV module is shown in :numref:`fig_ngleed_suppressor_feedback`\ (b). Notice that, should adjustments be needed, they can be performed without removing the ``RETARD`` HV module.
 
 The output of stage U6 is added (with an essentially one-to-one ratio) to the ``RETARD_SET`` setpoint voltage, and fed to the PI regulator (:math:`K_\mathrm{P} = 1`, :math:`T_\mathrm{int} = 22\,\mathrm{ms}`) that generates the control signal for the transformer and HV cascade, which in turn produce the high-voltage output (see also :numref:`fig_ngleed_beam_board_flow` for the block diagram of HV modules).
@@ -650,5 +647,18 @@ This section is only specific to the **older** versions of the NG LEED control u
 Preparing a cable for controlling the LEED energy
 =================================================
 
-.. todo::
-    Cable for program input. If I recall correctly, the manual is somewhat funky about what is what.
+Before proceeding, make sure you have all the necessary components and tools:
+
+    - **Depending on your unit**: one 5-pole male DIN-connector plug with 45° contacts (e.g., RS 491-011) **or** one 3-pole male DIN-connector plug with 90° contacts (e.g., RS 786-3439). Take a look at the ``BEAM ENERGY PROGRAMMING INPUT`` socket, right under the ``INTERNAL/EXTERNAL`` switch;
+    - one cable-mount male BNC connector (e.g., RS 112-1669 \[50 Ω\] or 112-1675 \[75 Ω\]); **TODO @Michael: which connector do we mount on the ViPErLEED box?**
+    - one coaxial cable suitable for the BNC connector above. Typically RG58 (e.g., RS 176-2081 or 240-8087) for 50 Ω connectors, RG59 (e.g., RS 393-024) for 75 Ω connectors. Length: 1--2 m. The ViPErLEED interface box should be close the the NG LEED to reduce as much as possible the capacitive load on the unit;
+    - soldering iron and solder;
+    - insulation-stripping tools for coaxial cable.
+
+.. _fig_ngleed_program_cable:
+.. figure:: /_static/hardware/SpectaLEED_modification/beam_egy_cable.svg
+    :align: center
+    
+    Schematic connections needed for the cable between the ViPErLEED interface box and the NG LEED unit in order to control the beam energy for LEED-:math:`I(V)`.
+
+In order to control the LEED unit to perform LEED-:math:`I(V)` measurements, the ViPErLEED interface box generates a 0--10 V signal at the ``OUT 0--10 V`` BNC connector. **TODO: ref to section where we explain the box** This signal needs to be brought to the NG LEED unit that will nominally generate a 0--1000 V electron beam energy. You can use a simple coaxial cable assembled as suggested in :numref:`fig_ngleed_program_cable`. Notice that some NG LEED units may have a 5-pole DIN connector instead of the 3-pole one mentioned in the manual.
