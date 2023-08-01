@@ -777,9 +777,8 @@ def make_compile_logs_dir(rp):
 
 
 def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
-    # warn if angle phi may be not determined
-
-    angle_between_first_uc_vec_and_x = sl.get_angle_between_ucell_and_coord_sys
+    """Check if phi is ambiguous and warn if so."""
+    angle_between_first_uc_vec_and_x = sl.angle_between_ucell_and_coord_sys
     if angle_between_first_uc_vec_and_x > angle_eps and rp.THETA > angle_eps:
         logger.info(
             f"Detected non-zero angle theta ({rp.THETA:.2f})° and"
@@ -788,7 +787,7 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
             "the coordinate system in the POSCAR file.\n"
             "Make sure the angle phi is interpreted correctly: "
             f"Phi is {rp.PHI:.2f}° from x, which is "
-            f"{(rp.PHI+ angle_between_first_uc_vec_and_x):.2f}° from x.\n"
-            "See the ViPErLEED documentation on BEAM_INCDIDENCE for "
-            "details"
+            f"{(rp.PHI+ angle_between_first_uc_vec_and_x):.2f}° from a.\n"
+            "See the ViPErLEED documentation for the parameter BEAM_INCDIDENCE "
+            "for details."
             )

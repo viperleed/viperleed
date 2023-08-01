@@ -1977,9 +1977,8 @@ class Slab:
         return scaling_matrix
 
     @property
-    def get_angle_between_ucell_and_coord_sys(self):
-        """Returns angle between first Slab unit cell vector and
-        Cartesian coordinate system.
+    def angle_between_ucell_and_coord_sys(self):
+        """Return angle between first unit cell vector and coordinate system.
 
         Returns
         -------
