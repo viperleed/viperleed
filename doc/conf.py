@@ -26,6 +26,7 @@ extensions = [
               'sphinx.ext.intersphinx',
               'sphinx_rtd_theme',
               'sphinxcontrib.bibtex',       # to use .bib files for bibliography
+              'sphinxcontrib.inkscapeconverter', # for SVG images
               'sphinxcontrib.spelling',     # spell checking for the docs ;)
               'myst_nb',                    # for including Jupyter notebooks
               ]
@@ -73,9 +74,11 @@ html_css_files = [
 
 # -- Options for LaTeX output ------------------------------------------------
 # https://www.sphinx-doc.org/en/master/latex.html
+latex_engine = 'xelatex'
 nb_output_stderr = "remove-warn" # remove matplotlib user warnings
 latex_show_urls = 'inline'
 latex_show_pagerefs = False # show page numbers
+inkscape_converter_args = ['--export-area-page']
 latex_elements = {
     'papersize': 'a4paper',
     'passoptionstopackages': r'\PassOptionsToPackage{svgnames}{xcolor}',

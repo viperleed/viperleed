@@ -65,6 +65,8 @@ DEFAULTS = {
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
     'THEO_ENERGIES - no experiments': (20, 800, 3),
+    'THETA': 0,   # perpendicular incidence
+    'PHI': 0,     # not needed in case of perpendicular incidence
     'ZIP_COMPRESSION_LEVEL': 2,
     }
 
@@ -80,7 +82,6 @@ PARAM_LIMITS = {
 ###############################################
 #                CLASSES                      #
 ###############################################
-
 
 class SearchPar:
     """Stores properties of ONE parameter of the search, i.e. what variation
@@ -188,7 +189,7 @@ class Rparams:
         self.PHASESHIFT_EPS = DEFAULTS['PHASESHIFT_EPS']['f'] # changed in updateDerivedParams
         self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
         self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
-        self.PHI = 0.0           # from BEAM_INCIDENCE
+        self.PHI = DEFAULTS['PHI']           # from BEAM_INCIDENCE
         self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [],
                         'legend': 'all', 'overbar': False, 'perpage': 2}
         self.RUN = self.get_default('RUN')        # what segments should be run
@@ -226,7 +227,7 @@ class Rparams:
         # THEO_ENERGIES: the default values without experimental
         # beams is set in section INIT via self.initTheoEnergies
         self.THEO_ENERGIES = self.get_default('THEO_ENERGIES')
-        self.THETA = 0.0        # from BEAM_INCIDENCE
+        self.THETA = DEFAULTS['THETA']        # from BEAM_INCIDENCE
         self.TL_IGNORE_CHECKSUM = True
         self.TL_VERSION = 0.    # requested TensErLEED version
         self.TL_VERSION_STR = None  # TODO: replace with Version class once available
