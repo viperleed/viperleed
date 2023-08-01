@@ -5,9 +5,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "viperleed"
-dynamic = ["version"]
+dynamic = [
+    "version",
+    "readme",
+    ]
 requires-python = ">=3.7"
-readme = "README.md"
 dependencies = [
     "fortranformat",
     "matplotlib",
@@ -42,8 +44,9 @@ doc = [
     "sphinxcontrib-svg2pdfconverter",
 ]
 
-[tools.setuptools.dynamic]
+[tool.setuptools.dynamic]
 version = {attr = "viperleed.__version__"}
+readme = {file = "README.md"}
 
 
 [tool.setuptools.packages.find]
