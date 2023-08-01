@@ -7,19 +7,19 @@ Created on Wed Aug 19 13:58:39 2020
 Functions for determining and setting slab symmetry
 """
 
-import logging
 import copy
 import itertools
+import logging
 import re
+
 import numpy as np
 import scipy.spatial as sps
 
-
-import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.base import (angle,
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import (addUnequalPoints, angle, dist_from_line,
                                       rotation_matrix_order, rotation_matrix)
 from viperleed.tleedmlib.classes.slab import SymPlane
-from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
+from viperleed.tleedmlib.files import parameters
 
 logger = logging.getLogger("tleedm.symmetry")
 
@@ -105,7 +105,7 @@ def findBulkSymmetry(sl, rp):
     rotsfound = []
     glidesfound = []
     ts = copy.deepcopy(sl)
-    ts.sortByZ()
+    ts.sort_by_z()
     ts.collapseCartesianCoordinates()
     ts.createSublayers(epsz)
     # optimize C vector
@@ -173,16 +173,16 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
 #        usurf = np.array([[1,0],[0,1]])
     if rp.SYMMETRY_FIX != "p1":
-        abst, usurf, celltype = tl.leedbase.reduceUnitCell(abst)
+        abst, usurf, celltype = leedbase.reduceUnitCell(abst)
     else:
         # if symmetry is switched off, don't try to change the cell.
-        celltype, usurf = tl.leedbase.checkLattice(abst)
+        celltype, usurf = leedbase.checkLattice(abst)
     # usurf tracks unit cell changes
     # reduce bulk unit cell
     if not bulk:
         abbt = np.dot(np.linalg.inv(rp.SUPERLATTICE), abst)
         # bulk ab unit cell, transposed
-        abbt, ubulk, _ = tl.leedbase.reduceUnitCell(abbt)
+        abbt, ubulk, _ = leedbase.reduceUnitCell(abbt)
         # ubulk tracks unit cell changes
     utr = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 1]])
     utr[:2, :2] = usurf
@@ -208,7 +208,8 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                                                    np.linalg.inv(ubulk)))
             newsl = ("SUPERLATTICE M = {:.0f} {:.0f}, {:.0f} {:.0f}"
                      .format(*[x for y in rp.SUPERLATTICE for x in y]))
-            modifyPARAMETERS(rp, "SUPERLATTICE", newsl, include_left=True)
+            parameters.modifyPARAMETERS(rp, "SUPERLATTICE", newsl,
+                                        include_left=True)
         # MODIFY SYMMETRY_FIX PARAMETER
         if "[" in rp.SYMMETRY_FIX and not bulk:
             rgx = re.compile(r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*\[\s*'
@@ -221,7 +222,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             newdir = np.dot(np.linalg.inv(newab), cartdir)
             newdir = newdir / min(newdir)
             s = (targetsym+"[{:.0f} {:.0f}]".format(newdir[0], newdir[1]))
-            modifyPARAMETERS(rp, "SYMMETRY_FIX", s)
+            parameters.modifyPARAMETERS(rp, "SYMMETRY_FIX", s)
         # MODIFY UNIT CELL
         sl.getCartesianCoordinates()
         sl.ucell_mod.append(('rmul', utr.T))
@@ -233,7 +234,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
 
     # check cell type again
     abst = sl.ucell[:2, :2].T
-    celltype, _ = tl.leedbase.checkLattice(abst)
+    celltype, _ = leedbase.checkLattice(abst)
     sl.celltype = celltype
     if output:
         logger.info("Found unit cell type: "+celltype)
@@ -247,7 +248,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         if len(ts.sublayers) < 2:
             ts = ts.doubleBulkSlab()
     ts.projectCToZ()
-    ts.sortByZ()
+    ts.sort_by_z()
 
     bigslab = copy.deepcopy(ts)
     # will have atoms duplicated and shifted to 4 unit cells
@@ -288,8 +289,8 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         pl = [at.cartpos[0:2] for at in lowocclayer.atlist]
         symposlist, hexsymposlist = getSymPosLists(sl, rp, pl, output)
 
-    comsymposlist = tl.base.addUnequalPoints(symposlist, hexsymposlist, eps,
-                                             uniqueLists=True)
+    comsymposlist = addUnequalPoints(symposlist, hexsymposlist, eps,
+                                     uniqueLists=True)
 
     # we're done with the bigger slab, actually testing symmetry operations
     #   can be done just on the basic one.
@@ -441,7 +442,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             # shift to closest point on oriplane
             shiftv = (np.array([oriplane.dir[1], -oriplane.dir[0]])
                       * oriplane.distanceFromOrigin(abst))
-            if tl.base.dist_from_line(
+            if dist_from_line(
                     oriplane.pos, oriplane.pos+oriplane.dir, shiftv) > eps:
                 shiftv = -1*shiftv
             for at in sl.atlist:
@@ -1212,14 +1213,13 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         # then if not locked yet, check planes
         if not at.freedir == 0:
             for pl in lockplanes:
-                d = tl.base.dist_from_line(
-                    pl.pos, pl.pos+pl.dir, at.cartpos[:2])
+                d = dist_from_line(pl.pos, pl.pos+pl.dir, at.cartpos[:2])
                 if d < eps:
                     at.freedir = pl.par
                     if not nomove:  # shift atom onto plane
                         shiftv = np.array([pl.dir[1], -pl.dir[0]]) * d
-                        if (tl.base.dist_from_line(pl.pos, pl.pos+pl.dir,
-                                                   at.cartpos[:2] + shiftv)
+                        if (dist_from_line(pl.pos, pl.pos+pl.dir,
+                                           at.cartpos[:2] + shiftv)
                                 > d * 1.1):
                             shiftv = -1 * shiftv
                         at.cartpos[:2] += shiftv
@@ -1330,8 +1330,10 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             if rp.THETA != 0:
                 logger.debug("Modifying BEAM_INCIDENCE parameter")
                 rp.PHI += np.degrees(ang)
-                modifyPARAMETERS(rp, "BEAM_INCIDENCE",
-                                 "{:.3f} {:.3f}".format(rp.THETA, rp.PHI))
+                parameters.modifyPARAMETERS(
+                    rp, "BEAM_INCIDENCE",
+                    "{:.3f} {:.3f}".format(rp.THETA, rp.PHI)
+                    )
     return
 
 

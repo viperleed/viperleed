@@ -3,22 +3,28 @@
 Created on Mon Aug 17 15:32:12 2020
 major rework Sep-Nov 2021
 
-@author: Florian Kraushofer & Alexander M. Imre
+@author: Florian Kraushofer
+@author: Alexander M. Imre
 """
 import copy
-import os
-import numpy as np
 import logging
+import os
 import random
-import subprocess
 import re
 import shutil
+import subprocess
+from pathlib import Path
 
-import viperleed.tleedmlib as tl
-from viperleed import fortranformat as ff
-from viperleed.tleedmlib.files.parameters import PARAM_LIMITS
+import fortranformat as ff
+import numpy as np
+
+from viperleed.tleedmlib.classes.sitetype import Atom_type
+from viperleed.tleedmlib.classes.rparams import PARAM_LIMITS
+from viperleed.tleedmlib.leedbase import EV_TO_HARTREE
+from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
 
 logger = logging.getLogger("tleedm.psgen")
+
 
 ###############################################
 #                 GLOBALS                     #
@@ -29,10 +35,9 @@ angst_to_bohr = 1.8897259886
 bohr_to_angst = 0.529177249
 
 def runPhaseshiftGen_old(sl, rp,
-                     psgensource=os.path.join('tensorleed', 'EEASiSSS.x'),
-                     excosource=os.path.join('tensorleed', 'seSernelius'),
-                     atdenssource=os.path.join('tensorleed',
-                                               'atom_density_files')):
+                     psgensource='EEASiSSS.x',
+                     excosource='seSernelius',
+                     atdenssource='atom_density_files'):
     """Creates required input for EEASiSSS.x, then runs it. Reads the output
     files and extracts information for PHASESHIFTS file, then returns that
     information (without writing PHASESHIFTS)."""
@@ -41,28 +46,35 @@ def runPhaseshiftGen_old(sl, rp,
     '''
     if test_new:
         runPhaseshiftGen_new(sl, rp,
-                             psgensource=os.path.join('tensorleed', 'EEASiSSS.x'),
-                             excosource=os.path.join('tensorleed', 'seSernelius'),
-                             atdenssource=os.path.join('tensorleed',
-                                                       'atom_density_files'))
+                            psgensource='EEASiSSS.x',
+                            excosource='seSernelius',
+                            atdenssource='atom_density_files')
     '''
-    shortpath = rp.sourcedir
-    if len(os.path.relpath(rp.sourcedir)) < len(shortpath):
-        shortpath = os.path.relpath(rp.sourcedir)
+    if rp.source_dir is None:
+        raise RuntimeError("No source tensorleed source directory specified")
+    shortpath = rp.source_dir
+    try:
+        rel_path = rp.source_dir.resolve().relative_to(Path.cwd().resolve())
+    except ValueError:
+        # Path.relative_to() can raise ValueError if not on same drive
+        rel_path = rp.source_dir
+    if len(str(rel_path)) < len(str(shortpath)):
+        shortpath = rel_path
 
-    if len(shortpath) > 62:
+    if len(str(shortpath)) > 62:
         # too long - need to copy stuff here
         manual_copy = True
         os.makedirs("tensorleed", exist_ok=True)
-        shutil.copy2(os.path.join(shortpath, excosource), excosource)
-        shortpath = "."
+        shutil.copy2(shortpath / excosource, excosource)
+        shortpath = Path(".")
     else:
         manual_copy = False
 
-    psgensource = os.path.join(rp.sourcedir, psgensource)
-    excosource = os.path.join(shortpath, excosource)
+    psgensource = rp.source_dir / psgensource
+    excosource = shortpath / excosource
+    excosource = excosource.resolve()
 
-    _, lmax = PARAM_LIMITS['LMAX']
+    _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.addBulkLayers(rp)
     outvals = {}
     # dict containing lists of values to output: outvals[energy][block][L]
@@ -86,28 +98,28 @@ def runPhaseshiftGen_old(sl, rp,
                 blocks.append((site, el))
         else:
             blocks.append((site, site.el))
-    scsize = 1 # Supercell size
+    supercell_size = 1 # Supercell size
     if len(rp.ELEMENT_MIX) > 0:
         minnum = -1
         for (site, el) in [(site, el) for (site, el) in blocks if site.el
                            in rp.ELEMENT_MIX and (site.occ[el] > 0. or
                                                   el in site.mixedEls)]:
             al = [at for at in nsl.atlist if at.site == site]
-            atcount = len(al)*site.occ[el]
-            if minnum < 0 or (minnum > atcount >= 0):
-                minnum = atcount
+            atom_count = len(al)*site.occ[el]
+            if minnum < 0 or (minnum > atom_count >= 0):
+                minnum = atom_count
         # we want at least 2 atoms of each element in each site type:
         if 0 < minnum < 2.0:
-            scsize = int(np.ceil(2.0/minnum))
+            supercell_size = int(np.ceil(2.0/minnum))
         elif minnum == 0:
-            scsize = 100  # large number, will be decreased below
-    if scsize > 1:  # some checks to make sure it doesn't get too large
+            supercell_size = 100  # large number, will be decreased below
+    if supercell_size > 1:  # some checks to make sure it doesn't get too large
         maxcells = 20  # upper limit on supercell size
         maxats = 500   # upper limit on atoms in supercell
-        if scsize > maxcells:
-            scsize = maxcells
+        if supercell_size > maxcells:
+            supercell_size = maxcells
             # don't warn - this is a large unit cell either way.
-        if len(nsl.atlist) * scsize > maxats:
+        if len(nsl.atlist) * supercell_size > maxats:
             logger.debug(
                 "Phaseshift generation: Given element "
                 "concentrations would require a very large supercell. "
@@ -121,14 +133,14 @@ def runPhaseshiftGen_old(sl, rp,
                 els = len([el for el in rp.ELEMENT_MIX[site.el]
                            if site.occ[el] > 0.])
                 minsize = max(minsize, int(np.ceil(2*els / ats)))
-            scsize = max(minsize, int(maxats / len(nsl.atlist)))
+            supercell_size = max(minsize, int(maxats / len(nsl.atlist)))
 
     subatlists = {}     # atlist per block tuple
-    if scsize > 1:  # construct supercell to get enough atoms
-        xsize = int(np.ceil(np.sqrt(scsize)))  # if scsize is not prime, try
-        while scsize % xsize != 0:             # making it close to square
+    if supercell_size > 1:  # construct supercell to get enough atoms
+        xsize = int(np.ceil(np.sqrt(supercell_size)))  # if scsize is not prime, try
+        while supercell_size % xsize != 0:             # making it close to square
             xsize += 1
-        ysize = int(scsize / xsize)
+        ysize = int(supercell_size / xsize)
         cpatlist = nsl.atlist[:]
         for at in cpatlist:
             for i in range(0, xsize):
@@ -185,17 +197,14 @@ def runPhaseshiftGen_old(sl, rp,
     output = ''
     output += "STRUCTURE:\n"
     output += rp.systemName+" "+rp.timestamp+"\n"
-#    if bulk:
-#        output += ("'b'  1.00 16      BulkOrSlab('b' or 's'), "
-#                  "LatticeConstant(Angstroms), nshell\n")
-#    else:
+
     output += ("'s'  1.00 16      BulkOrSlab('b' or 's'), "
                "LatticeConstant(Angstroms), nshell\n")
-    uct = nsl.ucell.transpose()
+    # write transposed unit cell matrix
     for i in range(0, 3):
         ol = ''
         for j in range(0, 3):
-            s = str(round(uct[i, j], 4))+' '
+            s = str(round(nsl.ucell.transpose()[i, j], 4))+' '
             ol += s.ljust(8)
         if i == 0:
             ol += '      CoordinatesOfUnitCell(LCunits)\n'
@@ -205,7 +214,7 @@ def runPhaseshiftGen_old(sl, rp,
 
     output += (str(len(nsl.atlist))+"  "+str(len(nsl.atlist))
                + "                  #AtomTypes,#OccupiedAtomTypes\n")
-    ptl = [el.lower() for el in tl.leedbase.PERIODIC_TABLE]
+    ptl = [el.lower() for el in PERIODIC_TABLE]
 
     chemels = {}
     chemelspaths = {}
@@ -219,17 +228,17 @@ def runPhaseshiftGen_old(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        subpath = os.path.join(atdenssource, chemel, "chgden"+chemel)
-        chgdenrelpath = os.path.join(shortpath, subpath)
+        subpath = Path(atdenssource) / chemel / (f"chgden{chemel}")
+        chgdenrelpath = shortpath / subpath
         if manual_copy:
             os.makedirs(os.path.join(os.path.dirname(subpath)), exist_ok=True)
-            shutil.copy2(os.path.join(rp.sourcedir, subpath), subpath)
+            shutil.copy2(rp.source_dir / subpath, subpath)
         # if os.name == 'nt':     # windows - replace the backslashes.
         #     chgdenrelpath = chgdenrelpath.replace('/', '\\')
         chemels[el] = chemel
-        chemelspaths[el] = chgdenrelpath
+        chemelspaths[el] = chgdenrelpath.resolve()
 
-    nsl.sortByZ(botToTop=True)
+    nsl.sort_by_z(botToTop=True)
     for at in nsl.atlist:
         # realcartpos = np.dot(nsl.ucell, at.pos)
         # use the "real" cartesian system, with Z going up
@@ -237,15 +246,15 @@ def runPhaseshiftGen_old(sl, rp,
             if at in subatlists[(site, el)]:
                 chemel = chemels[el]
                 chgdenpath = chemelspaths[el]
-        output += ("1 "+str(tl.leedbase.PERIODIC_TABLE.index(chemel)+1)
-                   + ".  0.  0.  '"+chgdenpath+"'\n")
+        output += ("1 "+str(PERIODIC_TABLE.index(chemel)+1)
+                   + ".  0.  0.  '"+str(chgdenpath)+"'\n")
         ol = ""
         for j in range(0, 3):
             # ol += str(round(realcartpos[j],4))+" "
             ol += str(round(at.cartpos[j], 4))+" "
         output += ol + "     Coordinates(LCunits)\n"
     output += "SCATTERING: \n"
-    output += "'"+excosource+"' |exchange-correlation file\n"
+    output += "'"+str(excosource)+"' |exchange-correlation file\n"
     output += str(lmax)+"  |lmax\n"
     output += "'r' |SelectCalculation: 'relativistic'/'nonrelativistic'\n"
     output += "'p' |SelectOutput: 'phaseshift'/'sigma'/'dataflow'\n"
@@ -259,7 +268,7 @@ def runPhaseshiftGen_old(sl, rp,
     output += "'n' |dataflow: print_RhoPot? 'yes'/'no'\n"
     output += "'n' |dataflow: print_PSvsE? 'yes'/'no'\n"
     output += "'n' |dataflow: print_WaveFunction? 'yes'/'no'\n"
-    
+
     # Energy step used for phaseshift calculation eeasisss.
     # Does not need to match theory energy step as phaseshifts will be interpolated anyways.
     ps_energy_step = max(1.0, round(float(rp.THEO_ENERGIES[2]), 0))
@@ -274,13 +283,13 @@ def runPhaseshiftGen_old(sl, rp,
     output += "1.d-04    ! NMeps,  simplex epsilon.\n"
     output += "0.125d0 | NMepsit, epsilon iteration, eps=eps*epsit.\n"
 #    outfilename = 'eeasisss-input-bulk' if bulk else 'eeasisss-input-slab'
-    outfilename = 'eeasisss-input'
+    eeasisss_input_path = rp.workdir / 'eeasisss-input'
     try:
-        with open(outfilename, 'w') as wf:
+        with open(eeasisss_input_path, 'w') as wf:
             wf.write(output)
     except Exception:
         logger.error("Phaseshift data generation: Failed to write "
-                     + outfilename + ". Proceeding with execution...")
+                     f"{eeasisss_input_path}. Proceeding with execution...")
     # if os.name == 'nt':
     #     logger.error("Phaseshift generation is currently not "
     #                  "supported on Windows. Use a linux shell to run "
@@ -289,13 +298,36 @@ def runPhaseshiftGen_old(sl, rp,
     #                            "supported on Windows.")
     # else:
 
-    ##################################
-    ps_output = subprocess.run(psgensource, input=output, encoding='ascii', capture_output=True) # RUNS phaseshift programm
+    phaseshifts_log_name = f"phaseshifts-{rp.timestamp}"
+    phaseshifts_log_path = (rp.workdir / phaseshifts_log_name).with_suffix(".log")
 
-    logger.debug(f"EEASISSS output: \n{ps_output}")
+    # RUNS phaseshift programm
+    ps_output = subprocess.run(psgensource,
+                               cwd=rp.workdir,
+                               input=output,
+                               encoding='ascii',
+                               capture_output=True)
+
+    # Write EEASISSS output to log file
+    try:
+        with open(phaseshifts_log_path, 'w') as wf:
+            wf.writelines([
+                f"Output of EEASISSS called with args '{ps_output.args}'",
+                f"Exit code: {ps_output.returncode}",
+                "stdout:",
+                f"{ps_output.stdout}",
+                "stderr:",
+                f"{ps_output.stderr}",
+            ])
+    except OSError:
+        logger.error("Could not write EEASISSS stdout/stderr to log file. "
+                     "Execution will proceed, but this may indicate a permission "
+                     "error.")
+    else:
+        logger.debug(f"EEASISSS stdout/stderr saved to {phaseshifts_log_path}.")
 
     # go through all the files that were generated by EEASiSSS and read
-    filelist = [filename for filename in os.listdir('.') if
+    filelist = [filename for filename in os.listdir(rp.workdir) if
                 filename.startswith('PS.r.')]
     rgx = re.compile(r'PS\.r\.[0-9]+\.[0-9]+')
     remlist = []
@@ -325,7 +357,7 @@ def runPhaseshiftGen_old(sl, rp,
     for (i, filename) in enumerate(filelist):
         # if bulk or wsl.atlist[i].site not in bulksites:
         if nsl.atlist[i] not in newbulkats: # only atoms that were not added in the new bulk
-            psfile = open(filename, 'r')
+            psfile = open(rp.workdir/filename, 'r')
             reade = -1.
             pslist = []
             ps_of_e = {}
@@ -349,7 +381,7 @@ def runPhaseshiftGen_old(sl, rp,
             ps_of_e[reade] = pslist
             psfile.close()
             atoms_phaseshifts[i] = ps_of_e
-        os.remove(os.path.join('.', filename))
+        os.remove(os.path.join(rp.workdir, filename))
     for (site, el) in blocks:   # does the averaging over atoms of same element
         writeblock = False
         pssum = None
@@ -429,7 +461,7 @@ def runPhaseshiftGen_old(sl, rp,
     for en in outvalsSorted:
         if len(outvalsSorted[en]) == outvalLength:
             # drop energies where phaseshift was not calculated for all sites
-            phaseshifts.append((en/27.211396, outvalsSorted[en])) # conversion eV to Hartree
+            phaseshifts.append((en*EV_TO_HARTREE, outvalsSorted[en])) # conversion eV to Hartree
     if firstline == "":
         logger.error("Could not find first line for PHASESHIFTS file "
                      "(should contain MUFTIN parameters).")
@@ -442,6 +474,7 @@ def runPhaseshiftGen_old(sl, rp,
         # remove the "PS.r.**.**"
         firstline = re.sub(r"PS\.r\.[0-9]+\.[0-9]+", "", firstline)
     return (firstline, phaseshifts)
+
 
 def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_new', 'eeas')):
     """
@@ -498,18 +531,18 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     ###############################################
 
     psgensource = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    psgensource = os.path.join(rp.sourcedir, psgensource) # otherwise the location would not be known
+    psgensource = os.path.join(rp.source_dir, psgensource) # otherwise the location would not be known
     atlib_dir = os.path.join('tensorleed', 'eeasisss_new', 'atlib/') # atom density files, by Sernelius
-    atlib_dir = os.path.join(rp.sourcedir, atlib_dir)
+    atlib_dir = os.path.join(rp.source_dir, atlib_dir)
     outdir_path = os.path.join(".",ps_outdir+"/")
     # create directory for individual phaseshift files if not yet present
     os.makedirs(outdir_path, exist_ok=True)
 
     # execution of EEASISSS requires the executable eeasisss to be copied to work directory
     eeasisss_exec_path = os.path.join('tensorleed', 'eeasisss_new', 'eeasisss')
-    eeasisss_exec_path = os.path.join(rp.sourcedir, eeasisss_exec_path)
+    eeasisss_exec_path = os.path.join(rp.source_dir, eeasisss_exec_path)
     try:
-        shutil.copy2(eeasisss_exec_path, ".")
+        shutil.copy2(eeasisss_exec_path, rp.workdir)
     except Exception:
         logger.error("Could not copy file eeasisss required by EEASISSS. Phaseshift generation will fail if not present.")
         rp.setHaltinglevel(2)
@@ -667,13 +700,11 @@ def make_atom_types(rp, sl, additional_layers):
                     NN_dist = NN_dict[at]
                     if not new_bulk:
                         if (site, el, new_bulk) not in atom_types.keys():
-                            atom_types[(site, el, new_bulk)] = tl.classes.sitetype.Atom_type(el, str(site),
-                                                                                             new_bulk)
+                            atom_types[(site, el, new_bulk)] = Atom_type(el, str(site), new_bulk)
                         atom_types[(site, el, new_bulk)].add_atom(atom, NN_dist)
                     else:
                         if (site, el, new_bulk) not in atom_types_in_bulk.keys():
-                            atom_types_in_bulk[(site, el, new_bulk)] = tl.classes.sitetype.Atom_type(el, str(site),
-                                                                                                     new_bulk)
+                            atom_types_in_bulk[(site, el, new_bulk)] = Atom_type(el, str(site), new_bulk)
                         atom_types_in_bulk[(site, el, new_bulk)].add_atom(atom, NN_dist)
                     al.remove(atom)
                     reqats -= 1
@@ -687,13 +718,11 @@ def make_atom_types(rp, sl, additional_layers):
                     NN_dist = NN_dict[atom]
                     if not new_bulk:
                         if (atom.site, atom.el, new_bulk) not in atom_types.keys():
-                            atom_types[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el,
-                                                                                                       str(atom.site),
-                                                                                                       new_bulk)
+                            atom_types[(atom.site, atom.el, new_bulk)] = Atom_type(atom.el, str(atom.site), new_bulk)
                         atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom, NN_dist)
                     else:
                         if (atom.site, atom.el, new_bulk) not in atom_types_in_bulk.keys():
-                            atom_types_in_bulk[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el,
+                            atom_types_in_bulk[(atom.site, atom.el, new_bulk)] = Atom_type(atom.el,
                                                                                                                str(atom.site),
                                                                                                                new_bulk)
                         atom_types_in_bulk[(atom.site, atom.el, new_bulk)].add_atom(atom, NN_dist)
@@ -713,7 +742,7 @@ def make_atom_types(rp, sl, additional_layers):
             NN_dist = atom_types_in_bulk[(site, el, new_bulk)].smallest_NN_dist
             layer = estimate_bulk_layer(atom, nsl, max_z_sl, additional_layers)
             if (site, el, layer) not in types_to_add.keys():
-                types_to_add[(site, el, layer)] = tl.classes.sitetype.Atom_type(el, str(site), new_bulk, layer)
+                types_to_add[(site, el, layer)] = Atom_type(el, str(site), new_bulk, layer)
             types_to_add[(site, el, layer)].add_atom(atom, NN_dist)
 
     # Finally, add the new bulk to atom_types
@@ -819,7 +848,7 @@ def organize_atoms_by_types(newbulkats, nsl, sl, rp, additional_layers):
         if atom not in new_bulk_atoms:
             new_bulk = False
             if (atom.site, atom.el, new_bulk) not in atom_types.keys():
-                atom_types[(atom.site, atom.el, new_bulk)] = tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+                atom_types[(atom.site, atom.el, new_bulk)] = Atom_type(atom.el, str(atom.site), new_bulk)
                 atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
             else:
                 atom_types[(atom.site, atom.el, new_bulk)].add_atom(atom)
@@ -840,7 +869,7 @@ def organize_atoms_by_types(newbulkats, nsl, sl, rp, additional_layers):
         new_bulk = True
         for atom in atoms_add:
             if (atom.site, atom.el) not in types_to_add.keys():
-                types_to_add[(atom.site, atom.el)] = tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+                types_to_add[(atom.site, atom.el)] = Atom_type(atom.el, str(atom.site), new_bulk)
                 types_to_add[(atom.site, atom.el)].add_atom(atom)
             else:
                 types_to_add[(atom.site, atom.el)].add_atom(atom)
@@ -879,8 +908,7 @@ def organize_atoms_by_sublayers(newbulkats, nsl):
         for atom in sublayer.atlist:
             new_bulk = True if atom in newbulkats else False
             if (sublayer_id, atom.site, atom.el, new_bulk) not in atom_types.keys():
-                atom_types[(sublayer_id, atom.site, atom.el, new_bulk)] = \
-                    tl.classes.sitetype.Atom_type(atom.el, str(atom.site), new_bulk)
+                atom_types[(sublayer_id, atom.site, atom.el, new_bulk)] = Atom_type(atom.el, str(atom.site), new_bulk)
             atom_types[(sublayer_id, atom.site, atom.el, new_bulk)].add_atom(atom)
     # We need to go through all this trouble of making Atom types, since we need to group the atoms into sublayers, but
     # we can't mix elements (which could otherwise happen if we have mixed occupation)
@@ -1041,7 +1069,7 @@ def convert_eeasisss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
                     label = cel + '_in_' + site.label
                     ps.append(phaseshift_averages[(label, cel)][j,:].tolist())
 
-        energy_hartree= energy[j]/27.211396 # conversion from eV to Hartree
+        energy_hartree= energy[j]*EV_TO_HARTREE # conversion from eV to Hartree
         phaseshifts.append([energy_hartree,ps])
 
     # format into old output format – int at beginning of line is skipped in old version too!

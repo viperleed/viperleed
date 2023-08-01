@@ -314,7 +314,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             grouplist = [
                 "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg",
                 "cmm", "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m",
-                "p6", "p6m"]
+                "p6", "p6m"]  # TODO: use guilib or put as const in leedbase
             targetsym = ""
             if s[0] == "t":
                 # True - go to highest symmetry
@@ -654,6 +654,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             drange = [offval]
         if mode == 1:
             if dr.strip() == "offset":
+                # No direction
                 if offval != 0.:
                     logger.warning('DISPLACEMENTS file: cannot assign '
                                    'geo offset : no direction given: '+pside)
@@ -847,10 +848,10 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 if subl[0].capitalize() in sl.chemelem:
                     targetel = subl[0]
                 else:
-                    logger.warning('DISPLACEMENTS file: '+subl[0]+' not '
+                    logger.error('DISPLACEMENTS file: '+subl[0]+' not '         # TODO: This should probably raise an exception
                                    'found in element list. No assignment '
                                    'will be made.')
-                    rp.setHaltingLevel(1)
+                    rp.setHaltingLevel(2)
                     continue
                 for (at, _) in targetAtEls:
                     if targetel in at.disp_occ:

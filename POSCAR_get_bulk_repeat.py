@@ -13,6 +13,7 @@ import copy
 import numpy as np
 
 from tleedmlib.files.poscar import readPOSCAR, writePOSCAR
+from tleedmlib.files.woods_notation import writeWoodsNotation
 import tleedmlib as tl
 
 
@@ -88,7 +89,7 @@ def main():
         sl.changeBulkCell(rp, mincell)
         bsl = sl.bulkslab
     if not rp.superlattice_defined:
-        ws = tl.leedbase.writeWoodsNotation(rp.SUPERLATTICE)
+        ws = writeWoodsNotation(rp.SUPERLATTICE)
         # !!! replace the writeWoodsNotation from baselib with
         #   the one from guilib
         si = rp.SUPERLATTICE.astype(int)
@@ -156,7 +157,7 @@ def main():
 
     # create POSCAR with reduced size
     newsl = copy.deepcopy(sl)
-    newsl.sortByZ()
+    newsl.sort_by_z()
     topBulkAt = [at for at in newsl.atlist if at.pos[2] <= cut][-1]
     botSlabAt = [at for at in newsl.atlist if at.pos[2] > cut][0]
     fracRepeat = np.dot(np.linalg.inv(newsl.ucell), newC)

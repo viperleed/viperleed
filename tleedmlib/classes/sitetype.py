@@ -9,10 +9,12 @@ Class storing properties of a site
 
 import logging
 import re
+
 import numpy as np
 
-import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.leedbase import COVALENT_RADIUS
+from viperleed.tleedmlib.periodic_table import (PERIODIC_TABLE,
+                                                COVALENT_RADIUS,
+                                                ATOMIC_MASS)
 
 logger = logging.getLogger("tleedm.sitetype")
 
@@ -37,8 +39,8 @@ class Sitetype:
         """Checks whether two sites are equivalent, i.e. have the same label
         and the same values for vibrational amplitudes and occupations."""
         if (self.label == site2.label
-                and tl.base.dict_equal(self.vibamp, site2.vibamp)
-                and tl.base.dict_equal(self.occ, site2.occ)):
+                and self.vibamp == site2.vibamp
+                and self.occ == site2.occ):
             return True
         return False
 
@@ -54,12 +56,12 @@ class Sitetype:
             el = rp.ELEMENT_RENAME[chemel].capitalize()
         else:
             el = chemel.capitalize()
-        if el not in tl.leedbase.PERIODIC_TABLE:
+        if el not in PERIODIC_TABLE:
             logger.error(
                 "Cannot generate default vibrational amplitude for site "
                 + self.label + ": Element " + el + " not recognized.")
             raise ValueError("Element " + el + " not recognized.")
-        if el not in tl.leedbase.ATOMIC_MASS:
+        if el not in ATOMIC_MASS:
             logger.error(
                 "Cannot generate default vibrational amplitude for site "
                 + self.label + ": Element" + el + " atomic mass unknown.")
@@ -87,7 +89,7 @@ class Sitetype:
         self.vibamp[chemel] = round(
             scaling * (np.sqrt(np.sqrt(1+16*((rp.T_EXPERIMENT
                                               / rp.T_DEBYE)**2))
-                               * 109.15 / (tl.leedbase.ATOMIC_MASS[el]
+                               * 109.15 / (ATOMIC_MASS[el]
                                            * rp.T_DEBYE))), 3)
         return
 
@@ -106,7 +108,7 @@ class Atom_type(Sitetype):
         self.bulk_layer = layer
 
         try:
-            self.atomic_number = tl.leedbase.PERIODIC_TABLE.index(el.capitalize())+1
+            self.atomic_number = PERIODIC_TABLE.index(el.capitalize())+1
         except ValueError:
             logger.error('Invalid element symbol during Atom type assignment')
             raise ValueError('Invalid element symbol: ' + el.capitalize())
@@ -122,8 +124,8 @@ class Atom_type(Sitetype):
         """Checks whether two sites are equivalent, i.e. have the same label
         and the same values for vibrational amplitudes and occupations."""
         if (self.label == site2.label
-                and tl.base.dict_equal(self.vibamp, site2.vibamp)
-                and tl.base.dict_equal(self.occ, site2.occ)
+                and self.vibamp == site2.vibamp
+                and self.occ == site2.occ
                 and self.el == site2.el
                 and self.new_bulk == site2.new_bulk):
             return True

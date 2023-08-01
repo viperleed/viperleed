@@ -10,7 +10,7 @@ Functions for writing files relevant to the superpos calculation
 import logging
 import numpy as np
 
-from viperleed import fortranformat as ff
+import fortranformat as ff
 
 logger = logging.getLogger("tleedm.files.iosuperpos")
 

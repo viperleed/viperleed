@@ -22,11 +22,11 @@ try:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     # import matplotlib.ticker as plticker
-    matplotlib.rcParams["mathtext.default"] = "regular"
+    plt.style.use('viperleed.tleedm')
 except Exception:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
 
 logger = logging.getLogger("tleedm.files.ioerrorcalc")
 logger.setLevel(logging.INFO)
@@ -48,7 +48,7 @@ def extract_var_r(errors):
 def write_errors_summary_csv(summary_content, summary_path,
                              summary_fname="Errors_summary.csv"):
     try:
-        with open(summary_path/summary_fname, "w") as wf:
+        with open(summary_path/summary_fname, "w", encoding="utf-8") as wf:
             wf.write(summary_content)
     except Exception as err:
         logger.error("Failed to write error calculation summary "
@@ -289,7 +289,7 @@ def format_col_content(content):
 
 
 def make_errors_figs(errors):
-    """Creates and writes Errors.pdf.
+    """Creates figures for Errors.pdf.
 
     Parameters
     ----------
@@ -298,8 +298,8 @@ def make_errors_figs(errors):
     filename : str, optional
         Path of file to be written, by default "Errors.pdf"
     """
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "error plotting.")
         return
@@ -494,6 +494,7 @@ def make_errors_figs(errors):
         fig.tight_layout(rect=(0, 0, 1, 0.965))
         fig.suptitle(titles[mode])
         figs.append(fig)
+    logger.log(1, f'Number of error figures: {len(figs)}')
     return figs
 
 
@@ -540,6 +541,9 @@ def draw_error(axis, bound, error, r_interval):
         ha='center', va='top', fontsize=4.5)
 
 def write_errors_pdf(figs, filename="Errors.pdf"):
+    """Writes a list of figures to a pdf file."""
+    if not figs:
+        raise ValueError("No figures to write.")
     try:
         pdf = PdfPages(filename)
         for fig in figs:

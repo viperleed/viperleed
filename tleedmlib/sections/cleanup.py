@@ -18,6 +18,7 @@ import re
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from viperleed.tleedmlib.base import get_elapsed_time_str
+from viperleed.tleedmlib.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
 
 
 # files to go in SUPP
@@ -31,7 +32,7 @@ _SUPP_FILES = ("AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
                "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
                "restrict.f", "Phaseshifts_plots.pdf")
 
-_SUPP_DIRS = ("original_inputs", "compile_logs")
+_SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
 
 # files to go in OUT
 _OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
@@ -80,25 +81,25 @@ def prerun_clean(rp, logname=""):
     for d in [".", os.path.join(".", "OUT")]:
         if os.path.isdir(d):
             for s in ["POSCAR_OUT", "VIBROCC_OUT", "R_OUT"]:
-                for f in [fn for fn in os.listdir(d) if fn.startswith(s)]:
+                for file in [fn for fn in os.listdir(d) if fn.startswith(s)]:
                     try:
-                        os.remove(os.path.join(d, f))
+                        os.remove(os.path.join(d, file))
                     except Exception:
                         logger.debug("Failed to delete file {}"
-                                     .format(os.path.join(d, f)))
+                                     .format(os.path.join(d, file)))
     # clean up old executable files:
     for fn in ["refcalc", "rfactor", "search", "superpos"]:
         p = re.compile(fn+r'-\d{6}-\d{6}')
-        for f in [f for f in os.listdir()
+        for file in [f for f in os.listdir()
                   if len(f) == len(fn) + 14 and p.match(f)]:
             try:
-                os.remove(f)
+                os.remove(file)
             except Exception:
-                logger.debug("Failed to delete file {}".format(f))
+                logger.debug(f"Failed to delete file {file}")
     # see if there are old logfiles
-    oldlogs = [f for f in os.listdir() if os.path.isfile(f) and
+    old_logs = [f for f in os.listdir() if os.path.isfile(f) and
                f.endswith(".log") and f != logname]
-    if len(oldlogs) > 0:
+    if len(old_logs) > 0:
         try:
             move_oldruns(rp, prerun=True)
         except Exception:
@@ -113,7 +114,7 @@ def prerun_clean(rp, logname=""):
 
 
 def organize_workdir(tensor_index, delete_unzipped=False,
-                     tensors=True, deltas=True, workdir="",
+                     tensors=True, deltas=True, workdir=Path(),
                      compression_level=2):
     """Reorganize files in workdir into SUPP, OUT, Tensors and Deltas.
 
@@ -130,7 +131,7 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     tensors, deltas : bool, optional
         Whether the Tensor/Delta files contain new information
         and should be saved. The default is True.
-    workdir : str, optional
+    workdir : pathlike, optional
         The path to work folder that contains the files to be
         reorganized. The default is "".
     compression_level : int
@@ -329,9 +330,11 @@ def move_oldruns(rp, prerun=False):
                 dirname += sectionabbrv[ind]
         rp.lastOldruns = rp.runHistory[:]
         dirname += "_" + rp.timestamp
-    dirpath = os.path.join(".", "workhistory", dirname)
+
+    # make workhistory directory
+    work_hist_path = Path(".") / "workhistory" / dirname
     try:
-        os.mkdir(dirpath)
+        os.mkdir(work_hist_path)
     except Exception:
         logger.error("Error creating workhistory subfolder: ", exc_info=True)
         raise
@@ -356,23 +359,21 @@ def move_oldruns(rp, prerun=False):
     for f in filelist:
         try:
             if not prerun or f in iofiles:
-                shutil.copy2(f, os.path.join(dirpath, f))
+                shutil.copy2(f, work_hist_path / f)
             else:
-                shutil.move(f, os.path.join(dirpath, f))
+                shutil.move(f, work_hist_path / f)
         except Exception:
-            logger.warning("Error copying "+f+" to "
-                           + os.path.join(dirpath, f)
-                           + ". File may get overwritten.")
+            logger.warning(f"Error copying {f} to {work_hist_path / f}."
+                           " File may get overwritten.")
     for d in dirlist:
         try:
             if not prerun:
-                shutil.copytree(d, os.path.join(dirpath, d))
+                shutil.copytree(d, work_hist_path / d)
             else:
-                shutil.move(d, os.path.join(dirpath, d))
+                shutil.move(d, work_hist_path / d)
         except Exception:
-            logger.warning("Error copying "+d+" to "
-                           + os.path.join(dirpath, d)
-                           + ". Files in directory may get overwritten.")
+            logger.warning(f"Error copying {d} to {work_hist_path / d}."
+                           " Files in directory may get overwritten.")
     return
 
 
