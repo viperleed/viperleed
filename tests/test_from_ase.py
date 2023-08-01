@@ -1,4 +1,4 @@
-"""Run tests for functionality in viperleed_from_ase.
+"""Run tests for functionality in from_ase.
 
 Created on 2023-02-23
 
@@ -6,7 +6,7 @@ Created on 2023-02-23
 @author: Michele Riva
 
 Define fixtures and test cases appropriate for the functionality
-available in the viperleed_from_ase module of viperleed.
+available in the from_ase module of viperleed.
 """
 
 from io import StringIO
@@ -25,7 +25,7 @@ if VPR_PATH not in sys.path:
 # Unfortunately no way to do this the correct way till we have
 # an installable version of viperleed. The reason is the VPR_PATH
 # bit above.
-from viperleed import viperleed_from_ase as vpr_ase
+from viperleed import from_ase as vpr_ase
 from viperleed.tleedmlib.base import angle
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.files import poscar
