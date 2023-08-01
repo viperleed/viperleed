@@ -17,12 +17,10 @@ utilities/recompile_parts.log
 
 # built docs
 doc/_build/
+doc/_static/hardware/SpectaLEED_modification/datasheets
 
 # Ignore testing folder
 calculations/
-
-# sphinx build directory
-doc/_build
 
 # files from docs spell checker
 *.spelling 
