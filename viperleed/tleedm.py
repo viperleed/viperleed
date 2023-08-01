@@ -17,17 +17,9 @@ import shutil
 import sys
 import time
 
-# NB: it's necessary to add vpr_path to sys.path so that viperleed
-#     can be loaded correctly at the top-level package
-cd = Path(__file__).resolve().parent
-vpr_path = cd.parent
-for import_path in (str(cd), str(vpr_path)):
-    if import_path not in sys.path:
-        sys.path.append(import_path)
-
 import viperleed
 from viperleed import GLOBALS
-from viperleed.bookkeeper import bookkeeper
+from viperleed.bookkeeper import bookkeeper, BookkeeperMode
 from viperleed.tleedmlib.base import CustomLogFormatter
 from viperleed.tleedmlib.classes import rparams
 from viperleed.tleedmlib.files.parameter_errors import ParameterError
@@ -256,6 +248,10 @@ def _parse_command_line_arguments():
         type=str
     )
     parser.add_argument(
+        "--no_cont"
+        help="Do not overwrite POSCAR with the new structure after a search.",
+        action='store_true'
+    parser.add_argument(
         "--version",
         help=("print version information and exit"),
     )
@@ -264,7 +260,25 @@ def _parse_command_line_arguments():
         help="specify path to TensErLEED source code",
         type=str
         )
-    args, bookie_args = parser.parse_known_args()
+    parser.add_argument(                                                        #TODO: implement (for cont at end; warn if called with --no_cont)
+        "-j", "--job_name",
+        help=("defines a name for the current run. Will be appended to the name
+              "of the history folder that is created, and is logged in "
+              "history.info. Passed along to the bookkeeper."),
+        type=str)
+    parser.add_argument(                                                        # TODO: implement
+        "--history_name",
+        help=("defines the name of the history folder that is created/used. "
+              "Passed along to the bookkeeper. Default is 'history'."),
+        type=str,
+        default="history")
+    parser.add_argument(                                                        # TODO: implement
+        "--work_history_name",
+        help=("defines the name of the workhistory folder that is created/used. "
+              "Passed along to the bookkeeper. Default is 'workhistory'."),
+        type=str,
+        default="workhistory")
+    args, _ = parser.parse_known_args()
     return args, bookie_args
 
 
@@ -289,23 +303,18 @@ def _interpret_tensorleed_path_flag(args):
 def main():
     multiprocessing.freeze_support() # needed for Windows
 
-    args, bookie_args = _parse_command_line_arguments()
+    args = _parse_command_line_arguments()
     sys.argv = sys.argv[:1] + bookie_args
 
     if args.version:
         print("ViPErLEED version " + GLOBALS["version"])
         return 0
 
-    # run bookkeeper # TODO: make this optional
-    print("Running bookkeeper...")
-    bookkeeper()
-
     if args.work:
         work_path = Path(args.work)
     else:
         work_path = Path.cwd() / "work"
     work_path = work_path.resolve()
-    delete_workdir = args.delete_workdir
 
     # tensorleed source directory
     _tensorleed_path = _interpret_tensorleed_path_flag(args)
@@ -330,6 +339,14 @@ def main():
         _system_name = Path.cwd().resolve().parent.name
         logger.info("No system name specified. Using name of parent directory: "
                     f"{_system_name}")
+
+
+    print("Running bookkeeper...")
+    # NB: job_name is None, because this is cleanup for the previous run
+    bookkeeper(mode=BookkeeperMode.DEFAULT,
+               job_name=None,
+               history_name=args.history_name,
+               work_history_name=args.work_history_name)
 
 
     # create work directory if necessary
@@ -395,7 +412,18 @@ def main():
 
     # go back, clean up if requested
     os.chdir(cwd)
-    if delete_workdir:
+
+    # call bookkeeper again to clean up unless --no_cont is set
+    if not args.no_cont:
+        bookkeeper(
+            mode=BookkeeperMode.CONT,
+            job_name=args.job_name,
+            history_name=args.history_name,
+            work_history_name=args.work_history_name
+        )
+
+    # delete work directory if requested
+    if args.delete_workdir:
         try:
             shutil.rmtree(work_path)
         except Exception as e:

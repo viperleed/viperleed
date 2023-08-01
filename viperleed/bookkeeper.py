@@ -8,17 +8,23 @@ Created on Thu Jan 30 11:12:30 2020
 @author: Alexander M. Imre
 """
 
+from enum import Enum, auto
+from pathlib import Path
+import argparse
 import os
 import re
-import time
-import argparse
 import shutil
-from pathlib import Path
+import time
 
 from viperleed.tleedmlib.sections._sections import ALL_INPUT_FILES
 
+class BookkeeperMode(Enum):
+    DEFAULT = 'default'  # store last run, but do not overwrite POSCAR, VIBROCC
+    CONT = 'cont'        # store last run and overwrite POSCAR, VIBROCC from OUT
+    DISCARD = 'discard'  # discard previous run as if it never happened
 
-def translate_timestamp(s):
+
+def _translate_timestamp(s):
     """Takes a timestamp YYMMDD-hhmmss and translates it to format DD.MM.YY
     hh:mm:ss"""
     if len(s) != 13:
@@ -61,32 +67,20 @@ def store_input_files_to_history(root_path, history_path):
             print(f"Failed to copy file {file} to history: {error_msg}")
 
 
-def bookkeeper():
-    history_name = "history"  # name of history folder in home dir
-    work_history_name = "workhistory"  # name of history folder in work dir
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-c", "--cont",
-        help=("overwrite POSCAR and VIBROCC with POSCAR_OUT and VIBROCC_OUT "
-              "from the OUT folder, if present."),
-        action="store_true")
-    parser.add_argument(
-        "-d", "--discard",
-        help=("discard all results from the last run, as if it had not "
-              "happened, and do not add anything to history or history.info. "
-              "Note that this will not necessarily restore modified input "
-              "files in the main folder."),
-        action="store_true")
-    parser.add_argument(
-        "-n", "--name",
-        help=("defines a string to be appended to the name of the history "
-              "folder that is created, and is logged in history.info"),
-        type=str)
-    args = parser.parse_args()
-    if args.cont and args.discard:
-        print("Bookkeeper ERROR: Flags --cont and --discard are incompatible."
-              "Bookkeeper will stop.")
-        return 1
+def bookkeeper(mode,
+               job_name=None,
+               history_name="history",
+               work_history_name="workhistory",):
+
+    # convert mode to enum if necessary
+    _mode = BookkeeperMode(mode)
+
+    # get paths for history and workhistory
+    history_path = Path(history_name).resolve()
+    work_history_path = Path(work_history_name).resolve()
+    tensors_path = Path("Tensors").resolve()
+    deltas_path = Path("Deltas").resolve()
+
     # make list of stuff to move
     files_to_move = [d for d in os.listdir() if os.path.isdir(d)
               and (d == "OUT" or d == "SUPP")]
@@ -112,7 +106,7 @@ def bookkeeper():
             print("Bookkeeper: Found nothing to do. Exiting...")
             return 1
     # check whether history folder is there. If not, make one
-    if not os.path.isdir(history_name):
+    if not history_path.is_dir():
         try:
             os.mkdir(history_name)
         except Exception:
@@ -120,11 +114,11 @@ def bookkeeper():
             raise
     # figure out the number of the tensor
     tensor_number = 0
-    if os.path.isdir("Tensors"):
+    if tensors_path.is_dir():
         indlist = []
         rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
         for f in [f for f in os.listdir("Tensors")
-                  if (os.path.isfile(os.path.join("Tensors", f))
+                  if ((tensors_path / f).is_file()
                       and rgx.match(f))]:
             m = rgx.match(f)
             if m.span()[1] == 15:  # exact match
@@ -150,9 +144,9 @@ def bookkeeper():
                 pass
     if tensor_number not in max_nums:
         num = 1  # Tensor is new - if discard: delete
-        if args.discard:
-            tensor_file = Path("Tensors") / "Tensors_{tensor_number:03d}.zip"
-            delta_file = Path("Deltas") / "Deltas_{tensor_number:03d}.zip"
+        if _mode is BookkeeperMode.DISCARD:
+            tensor_file = tensors_path / "Tensors_{tensor_number:03d}.zip"
+            delta_file = deltas_path / "Deltas_{tensor_number:03d}.zip"
             for f in (tensor_file, delta_file):
                 if os.path.isfile(f):
                     try:
@@ -175,11 +169,11 @@ def bookkeeper():
     else:
         timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
         old_timestamp = "moved-" + timestamp
-    if not args.discard:
+    if _mode is not BookkeeperMode.DISCARD:
         # get dirname
         dirname = f"t{tensor_number:03d}.r{num:03d}_{old_timestamp}"
-        if args.name:
-            dirname += "_" + args.name
+        if job_name is not None:
+            dirname += "_" + job_name
         tensor_dir = os.path.join(history_name, dirname)
         if os.path.isdir(tensor_dir):
             tensor_dir_2 = tensor_dir+"_moved-"+timestamp
@@ -198,7 +192,7 @@ def bookkeeper():
         store_input_files_to_history(cwd_path, tensor_dir)
 
     # if CONT, check for POSCAR_OUT / VIBROCC_OUT
-    if args.cont and not args.discard:
+    if _mode is BookkeeperMode.CONT:
         if os.path.isdir("OUT"):
             file_out = sorted([f for f in os.listdir("OUT")
                            if os.path.isfile(os.path.join("OUT", f))
@@ -230,7 +224,7 @@ def bookkeeper():
             print("Error: Flag --cont was set, but no OUT folder exists.")
     # move old stuff
     for f in files_to_move:
-        if not args.discard:
+        if _mode is not BookkeeperMode.DISCARD:
             try:
                 shutil.move(f, os.path.join(tensor_dir, f))
             except Exception:
@@ -247,7 +241,7 @@ def bookkeeper():
                 print("Failed to discard directory " + f)
     # move log files to SUPP (except for general log tleedm....log)
     for log_file in logs_to_move:
-        if not args.discard:
+        if _mode is not BookkeeperMode.DISCARD:
             try:
                 supp_path = os.path.join(tensor_dir, 'SUPP')
                 shutil.move(log_file, os.path.join(supp_path, log_file))
@@ -261,7 +255,7 @@ def bookkeeper():
 
     # if there is a workhist folder, go through it and move contents as well
     tensor_nums = {tensor_number}
-    if os.path.isdir(work_history_name) and not args.discard:
+    if os.path.isdir(work_history_name) and _mode is not BookkeeperMode.DISCARD:
         work_hist_prev = [d for d in os.listdir(work_history_name) if
                         os.path.isdir(os.path.join(work_history_name, d))
                         and rgx.match(d) and ("previous" in d)]
@@ -296,16 +290,17 @@ def bookkeeper():
                           + os.path.join(work_history_name, d))
                 tensor_nums.add(tensor_num_2)
     if os.path.isdir(work_history_name):
-        if len(os.listdir(work_history_name)) == 0 or args.discard:
+        if (len(os.listdir(work_history_name)) == 0
+            or _mode is BookkeeperMode.DISCARD):
             try:
                 shutil.rmtree(work_history_name)
             except Exception as e:
-                if args.discard:
+                if _mode is BookkeeperMode.DISCARD:
                     print(f"Failed to discard workhistory folder: {e}")
                 else:
                     print(f"Failed to delete empty {work_history_name} "
                           f"directory: {str(e)}")
-    if args.discard:  # all done
+    if _mode is BookkeeperMode.DISCARD:  # all done
         return 0
     job_nums = []
     for tensor_number in tensor_nums:
@@ -331,20 +326,20 @@ def bookkeeper():
             with open(notes_name, 'w'):
                 pass
         except Exception:
-            print("Error: Failed to clear the " + notes_name + " file after "
+            print(f"Error: Failed to clear the {notes_name} file after "
                   "reading.")
     # write history.info
     spacing = 12
-    hi = ""
+    hist = ""
     if os.path.isfile("history.info"):
-        hi += "\n\n"
+        hist += "\n\n"
     if tensor_nums == {0}:
-        hi += "# TENSORS ".ljust(spacing) + "None\n"
+        hist += "# TENSORS ".ljust(spacing) + "None\n"
     else:
-        hi += "# TENSORS ".ljust(spacing) + str(tensor_nums)[1:-1] + "\n"
-    hi += "# JOB ID ".ljust(spacing) + str(job_nums)[1:-1] + "\n"
-    if args.name:
-        hi += "# JOB NAME " + args.name + "\n"
+        hist += "# TENSORS ".ljust(spacing) + str(tensor_nums)[1:-1] + "\n"
+    hist += "# JOB ID ".ljust(spacing) + str(job_nums)[1:-1] + "\n"
+    if job_name is not None:
+        hist += f"# JOB NAME {job_name} \n"
     if len(lastLogLines) > 0:
         # try to read what was executed
         run_info = ""
@@ -356,7 +351,7 @@ def bookkeeper():
                 break
             i -= 1
         if run_info:
-            hi += "# RUN ".ljust(spacing) + run_info + "\n"
+            hist += "# RUN ".ljust(spacing) + run_info + "\n"
         # now try to read final R-factors
         for j in range(i+1, len(lastLogLines)):
             line = lastLogLines[j]
@@ -367,19 +362,69 @@ def bookkeeper():
                 elif "superpos" in line:
                     t = "# R SUPER ".ljust(spacing)
                 if t:
-                    hi += t + line.split(":", maxsplit=1)[1].strip() + "\n"
+                    hist += t + line.split(":", maxsplit=1)[1].strip() + "\n"
 
-    hi += "# TIME ".ljust(spacing) + translate_timestamp(old_timestamp) + "\n"
-    hi += "# FOLDER ".ljust(spacing) + dirname + "\n"
-    hi += "Notes: " + notes + "\n"
-    hi += "\n###########\n"
+    hist += "# TIME ".ljust(spacing) + f"{_translate_timestamp(old_timestamp)} \n"
+    hist += "# FOLDER ".ljust(spacing) + f"{dirname} \n"
+    hist += f"Notes: {notes}\n"
+    hist += "\n###########\n"
     try:
         with open("history.info", "a") as wf:
-            wf.write(hi)
+            wf.write(hist)
     except Exception:
         print("Error: Failed to append to history.info file.")
     return 0
 
+def _bookkeeper_cli_options():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c", "--cont",
+        help=("overwrite POSCAR and VIBROCC with POSCAR_OUT and VIBROCC_OUT "
+              "from the OUT folder, if present."),
+        action="store_true")
+    parser.add_argument(
+        "-d", "--discard",
+        help=("discard all results from the last run, as if it had not "
+              "happened, and do not add anything to history or history.info. "
+              "Note that this will not necessarily restore modified input "
+              "files in the main folder."),
+        action="store_true")
+    parser.add_argument(
+        "-j", "--job_name",
+        help=("defines a string to be appended to the name of the history "
+              "folder that is created, and is logged in history.info"),
+        type=str)
+    parser.add_argument(
+        "--history_name",
+        help=("defines the name of the history folder that is created/used. "
+              "Default is 'history'"),
+        type=str,
+        default="history")
+    parser.add_argument(
+        "--work_history_name",
+        help=("defines the name of the workhistory folder that is created/used. "
+              "Default is 'workhistory'"),
+        type=str,
+        default="workhistory")
+    return parser.parse_args()
+
 
 if __name__ == '__main__':
-    bookkeeper()
+    # parse command line arguments
+
+    args = _bookkeeper_cli_options()
+
+    # select mode
+    if args.cont and args.discard:
+        raise RuntimeError("Flags --cont and --discard are incompatible.")
+    elif args.cont:
+        mode = BookkeeperMode.CONT
+    elif args.discard:
+        mode = BookkeeperMode.DISCARD
+    else:   # default
+        mode = BookkeeperMode.DEFAULT
+
+    bookkeeper(mode,
+               job_name=args.job_name,
+               history_name=args.history_name,
+               work_history_name=args.work_history_name,)
