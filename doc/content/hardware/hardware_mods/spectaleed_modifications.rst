@@ -38,7 +38,7 @@ Overview of NG LEED unit
 
     To open the LEED unit and access the electronics, follow these steps:
 
-        * Make sure to disconnect the unit from the mains voltage and wait 5 minutes for the capacitors to discharge.
+        * Make sure to disconnect the unit from the mains voltage and wait 5 min for the capacitors to discharge.
         * Open the chassis as shown in :numref:`fig_ngleed_new_overview`.
         * Remove the desired module(s) as shown in :numref:`fig_ngleed_remove_hv_cables`.
         * If necessary, remove the rear panel as shown in :numref:`fig_ngleed_rear_panel_tilted`.
@@ -130,17 +130,17 @@ Making :math:`I_0` measurements possible
 
       * On the BEAM HV module (see :numref:`fig_ngleed_i0_beam_module_mod`):
 
-        * Cut the trace and inset a 1 kΩ resistor between HV_GND and the non-inverting input of U4.
+        * Cut the trace and insert a 1 kΩ resistor between ``HV_GND`` and the inverting input of U4.
         * Remove trimmer R43.
         * Replace U4 with OPA627.
-        * Add a 1 nF capacitor on the feedback of U3.
+        * Add a 1 nF (or 10 nF) capacitor on the feedback of U3.
 
       * On the E0 BUFFER board (see :numref:`fig_ngleed_i0_control_and_buffer`):
 
-        * Add two 10 nF capacitors in parallel to resistors R7 and R8.
+        * Add two 10 nF capacitors in parallel to resistors R7 and R8.
         * Consider replacing R1 and R2 as described in :ref:`ngleed_i0_modify_e0_buffer`.
 
-      * On the BNC output, ensure that the 1 µF capacitor is not connected (see :numref:`fig_ngleed_i0_rear`).
+      * On the BNC output, ensure that the 1 µF capacitor is not connected (see :numref:`fig_ngleed_i0_rear`).
 
 .. _i0_instability:
 
@@ -310,8 +310,8 @@ Reducing noise on :math:`I_0`
 
     These modification are recommended for users with a microchannel-plate LEED to reduce the noise on :math:`I_0`.
 
-      * On the ``ANODE``, ``FILAMENT``, ``L1/3``, and ``L2`` boards rewire the guard ring from ``HV_GND`` to ``GND``. as shown in :numref:`fig_swap_hvguard_on_boards`.
-      * Rewire the HV plug as shown in :numref:`fig_ngleed_hv_plug`.
+      * On the ``ANODE``, ``FILAMENT``, ``L1/3``, and ``L2`` boards rewire the guard ring from ``HV_GND`` to ``GND``, as shown in :numref:`fig_swap_hvguard_on_boards`.
+      * Rewire the HV connector as shown in :numref:`fig_ngleed_hv_plug`.
       * Add a shield to the mains supply cable as shown in :numref:`fig_ngleed_shield_mains`.
 
 This modification of the NG LEED unit is strongly suggested for users with a microchannel-plate LEED, where significantly lower electron currents are used (:math:`I_0 \approx 1-30\,\mathrm{nA}`). Users with a standard LEED will normally have beam currents in the microampere range and should most likely not need to modify their unit. The modifications described in this section should be considered a second-order improvement of those in :ref:`ngleed_i0_mod_mandatory`.
@@ -433,9 +433,9 @@ Improving the beam-energy time response
 
 .. admonition:: TL;DR
 
-    These modifications are **not** strictly necessary, but they can improve the time response of the beam energy and :math:`I_0`. This enables faster LEED-:math:`I(V)` measurements:
+    These modifications are **not** strictly necessary, but they can improve the time response of the beam energy and :math:`I_0`. They are **strongly suggested** for MCP-LEED setups. This enables faster LEED-:math:`I(V)` measurements:
 
-      * On the ``BEAM HV`` board replace capacitors C32 and C40 with two 470 mF capacitors and C23 with a 470 µF electrolytic capacitor.
+      * On the ``BEAM HV`` board replace capacitors C32 and C40 with two 470 nF capacitors and C23 with a 470 µF electrolytic capacitor.
 
 The speed at which the beam energy is changed from one value to the next, and, particularly, the time it takes to stabilize a new value of the energy determines how quick a LEED-:math:`I(V)` measurement can be. In fact, a LEED optics is primarily a capacitive load for the controlling electronics: a step in energy requires adjusting the voltages of (at least) filament and lenses accordingly by (dis)charging them. Also, the shielded cables carrying the voltages to the optics are a primarily capacitive load. In turn, this means that the effect of stepping the energy has even more important consequences on the stabilization of the :math:`I_0` current, to which all (dis)charging currents contribute. (The current through a capacitive load is proportional to the time derivative of the voltage across it.)
 
@@ -510,7 +510,7 @@ Modifying the ``SUPPRESSOR`` range
     The factory rage of the ``SUPPRESSOR`` dial is not ideal. This can be improved as follows:
 
       * Adjust potentiometer R24 as described in :ref:`ngleed_suppressor_feedback` and shown in :numref:`fig_ngleed_suppressor_feedback`.
-      * Add a 1 kΩ resistor in parallel to R125, as shown in :numref:`fig_ngleed_suppressor`.
+      * Add a 100 kΩ resistor in parallel to R125, as shown in :numref:`fig_ngleed_suppressor`.
 
 
 Every LEED setup uses (at least one) grid to repel inelastically scattered electrons. The grid is biased at a voltage that is normally slightly smaller (in absolute value) than the beam energy. For LEED-:math:`I(V)` measurements we have found that the optimal retarding voltage is between 80% and 95% of the beam energy. NG LEED units have a design fault for what concerns the range of retarding voltages that can be accessed. On our unit, the factory range was between 81% and 111% of the beam energy. These values are close to the ones specified by design (80--110%). Setting the suppressor voltage to energies larger than the beam energy makes no sense: there are no electrons going through anyway. This means that:
