@@ -12,12 +12,6 @@ import os
 import sys
 
 cd = os.path.realpath(os.path.dirname(__file__))
-# NB: it's necessary to add vpr_path to sys.path so that viperleed
-#     can be loaded correctly at the top-level package
-vpr_path = os.path.realpath(os.path.join(cd, '..', '..'))
-for import_path in (cd, vpr_path):
-    if import_path not in sys.path:
-        sys.path.append(import_path)
 
 from viperleed.tleedmlib.files.phaseshifts import (readPHASESHIFTS,
                                                    writePHASESHIFTS)

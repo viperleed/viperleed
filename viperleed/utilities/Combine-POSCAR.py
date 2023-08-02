@@ -12,11 +12,11 @@ functionality.
 import time
 import logging
 import copy
-# import tleedmlib as tl
+
 import numpy as np
 from timeit import default_timer as timer
 
-from tleedmlib.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
 
 ###############################################
 #                  MAIN                       #
