@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['../utilities/bookkeeper.py'],
+a = Analysis(['../viperleed/bookkeeper.py'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -22,7 +22,7 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='bookkeeper',
+          name='viperleed.bookkeeper',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
