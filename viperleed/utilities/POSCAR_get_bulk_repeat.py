@@ -12,9 +12,9 @@ the appropriate N_BULK_LAYERS and BULK_REPEAT values.
 import copy
 import numpy as np
 
-from tleedmlib.files.poscar import readPOSCAR, writePOSCAR
-from tleedmlib.files.woods_notation import writeWoodsNotation
-import tleedmlib as tl
+from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
 
 
 def main():
@@ -33,7 +33,7 @@ def main():
         if filename == "":
             filename = "POSCAR"
         try:
-            sl = readPOSCAR(filename=filename)
+            slab = readPOSCAR(filename=filename)
         except FileNotFoundError:
             print("File "+filename+" not found.")
             filename = ""
@@ -72,22 +72,22 @@ def main():
                 if eps < 0:
                     print("Value has to be greater than zero.")
 
-    rp = tl.Rparams()
+    rp = Rparams()
     rp.LAYER_CUTS = [cut]
     rp.N_BULK_LAYERS = 1
     rp.SYMMETRY_EPS = eps
     rp.SYMMETRY_EPS_Z = eps
-    sl.fullUpdate(rp)
+    slab.fullUpdate(rp)
 
-    sl.bulkslab = sl.makeBulkSlab(rp)
-    bsl = sl.bulkslab
+    slab.bulkslab = slab.makeBulkSlab(rp)
+    bsl = slab.bulkslab
     bsl.createSublayers(eps)
 
     print("Checking bulk unit cell...")
     changecell, mincell = bsl.getMinUnitCell(rp)
     if changecell:
-        sl.changeBulkCell(rp, mincell)
-        bsl = sl.bulkslab
+        slab.changeBulkCell(rp, mincell)
+        bsl = slab.bulkslab
     if not rp.superlattice_defined:
         ws = writeWoodsNotation(rp.SUPERLATTICE)
         # !!! replace the writeWoodsNotation from baselib with
@@ -156,7 +156,7 @@ def main():
         print("Exception occurred while writing POSCAR_bulk")
 
     # create POSCAR with reduced size
-    newsl = copy.deepcopy(sl)
+    newsl = copy.deepcopy(slab)
     newsl.sort_by_z()
     topBulkAt = [at for at in newsl.atlist if at.pos[2] <= cut][-1]
     botSlabAt = [at for at in newsl.atlist if at.pos[2] > cut][0]
