@@ -263,7 +263,7 @@ def _parse_command_line_arguments():
         )
     parser.add_argument(                                                        #TODO: implement (for cont at end; warn if called with --no_cont)
         "-j", "--job_name",
-        help=("defines a name for the current run. Will be appended to the name
+        help=("defines a name for the current run. Will be appended to the name "
               "of the history folder that is created, and is logged in "
               "history.info. Passed along to the bookkeeper."),
         type=str)
