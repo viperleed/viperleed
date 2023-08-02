@@ -24,7 +24,7 @@ MOCK_OUT_CONTENT = "This is a test output file."
 # Define the fixtures needed for testing
 
 @pytest.fixture(scope="function")
-def temp_dir(tmp_path):
+def bookkeeper_mock_dir(tmp_path):
     """Creates a temporary directory for testing."""
     work_path = tmp_path / "work"
     OUT_path = tmp_path / "OUT"
@@ -62,13 +62,13 @@ def temp_dir(tmp_path):
 
 
 def test_bookkeeper_mode_enum():
-    assert BookkeeperMode.DEFAULT == BookkeeperMode('default')
-    assert BookkeeperMode.CONT == BookkeeperMode('cont')
-    assert BookkeeperMode.DISCARD == BookkeeperMode('discard')
+    assert BookkeeperMode.DEFAULT is BookkeeperMode('default')
+    assert BookkeeperMode.CONT is BookkeeperMode('cont')
+    assert BookkeeperMode.DISCARD is BookkeeperMode('discard')
 
 
-def test_store_input_files_to_history(tmp_path, temp_dir):
-    inputs_path = temp_dir / "work" / "original_inputs"
+def test_store_input_files_to_history(tmp_path, bookkeeper_mock_dir):
+    inputs_path = bookkeeper_mock_dir / "work" / "original_inputs"
     history_path = tmp_path / "history"
     history_path.mkdir(parents=True, exist_ok=True)
     store_input_files_to_history(inputs_path, history_path)
@@ -78,13 +78,13 @@ def test_store_input_files_to_history(tmp_path, temp_dir):
         assert MOCK_ORIG_CONTENT in hist_file_content
 
 
-def test_bookkeeper_default_mode(temp_dir):
-    os.chdir(temp_dir)
+def test_bookkeeper_default_mode(bookkeeper_mock_dir):
+    os.chdir(bookkeeper_mock_dir)
     bookkeeper(mode=BookkeeperMode.DEFAULT)
-    hist_path = temp_dir / "history"
+    hist_path = bookkeeper_mock_dir / "history"
     hist_path_run = hist_path / f't000.r001_{MOCK_TIMESTAMP}'
     assert (hist_path).exists()
-    assert (temp_dir / "history.info").exists()
+    assert (bookkeeper_mock_dir / "history.info").exists()
     assert (hist_path_run).is_dir()
     # out stored in history
     for file in MOCK_FILES:
@@ -93,45 +93,45 @@ def test_bookkeeper_default_mode(temp_dir):
         assert MOCK_OUT_CONTENT in hist_content
     # original not overwritten
     for file in MOCK_FILES:
-        input_content = (temp_dir / file).read_text()
+        input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_INPUT_CONTENT in input_content
 
 
-def test_bookkeeper_cont_mode(temp_dir):
-    os.chdir(temp_dir)
+def test_bookkeeper_cont_mode(bookkeeper_mock_dir):
+    os.chdir(bookkeeper_mock_dir)
     bookkeeper(mode=BookkeeperMode.CONT)
-    hist_path = temp_dir / "history"
+    hist_path = bookkeeper_mock_dir / "history"
     hist_path_run = hist_path / f't000.r001_{MOCK_TIMESTAMP}'
     assert (hist_path).exists()
     # make sure input was overwritten
     for file in MOCK_FILES:
-        input_content = (temp_dir / file).read_text()
+        input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_OUT_CONTENT in input_content
 
 
-def test_bookkeeper_discard_mode(temp_dir):
-    os.chdir(temp_dir)
+def test_bookkeeper_discard_mode(bookkeeper_mock_dir):
+    os.chdir(bookkeeper_mock_dir)
     bookkeeper(mode=BookkeeperMode.DISCARD)
-    hist_path = temp_dir / "history"
+    hist_path = bookkeeper_mock_dir / "history"
     hist_path_run = hist_path / f't000.r001_{MOCK_TIMESTAMP}'
     assert not (hist_path_run).is_dir()
     # original not overwritten
     for file in MOCK_FILES:
-        input_content = (temp_dir / file).read_text()
+        input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_INPUT_CONTENT in input_content
 
 
-def test_bookkeeper_with_job_name(temp_dir):
-    os.chdir(temp_dir)
+def test_bookkeeper_with_job_name(bookkeeper_mock_dir):
+    os.chdir(bookkeeper_mock_dir)
     bookkeeper(mode="default", job_name="test_job")
-    assert (temp_dir / "history" / f"t000.r001_{MOCK_TIMESTAMP}_test_job").exists()
+    assert (bookkeeper_mock_dir / "history" / f"t000.r001_{MOCK_TIMESTAMP}_test_job").exists()
 
 
-def test_bookkeeper_with_existing_history_and_alt_name(temp_dir):
-    os.chdir(temp_dir)
+def test_bookkeeper_with_existing_history_and_alt_name(bookkeeper_mock_dir):
+    os.chdir(bookkeeper_mock_dir)
     # Create some existing history folders
-    Path(temp_dir / "history_alt_name" / "t001.r001_20xxxx-xxxxxx").mkdir(parents=True, exist_ok=True)
-    Path(temp_dir / "history_alt_name" / "t002.r002_20xxxx-xxxxxx").mkdir(parents=True, exist_ok=True)
-    (temp_dir / 'Tensors' / 'Tensors_003.zip').touch()
+    Path(bookkeeper_mock_dir / "history_alt_name" / "t001.r001_20xxxx-xxxxxx").mkdir(parents=True, exist_ok=True)
+    Path(bookkeeper_mock_dir / "history_alt_name" / "t002.r002_20xxxx-xxxxxx").mkdir(parents=True, exist_ok=True)
+    (bookkeeper_mock_dir / 'Tensors' / 'Tensors_003.zip').touch()
     bookkeeper(mode="default", history_name="history_alt_name")
-    assert (temp_dir / "history_alt_name" / f"t003.r001_{MOCK_TIMESTAMP}").exists()
+    assert (bookkeeper_mock_dir / "history_alt_name" / f"t003.r001_{MOCK_TIMESTAMP}").exists()
