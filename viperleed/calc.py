@@ -249,9 +249,10 @@ def _parse_command_line_arguments():
         type=str
     )
     parser.add_argument(
-        "--no_cont"
+        "--no_cont",
         help="Do not overwrite POSCAR with the new structure after a search.",
         action='store_true'
+    )
     parser.add_argument(
         "--version",
         help=("print version information and exit"),
