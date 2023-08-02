@@ -24,11 +24,11 @@ from viperleed.lib.classes.slab import Slab
 
 
 @pytest.fixture()
-def run_phaseshift(slab_pg_rp, tensorleed_path, tmp_path_factory):
+def run_phaseshift(slab_pg_rp, source_path, tmp_path_factory):
     slab, _,  param = slab_pg_rp
     param.workdir = tmp_path_factory.mktemp(basename="phaseshifts",
                                             numbered=True)
-    param.source_dir = tensorleed_path
+    param.source_dir = source_path
     param.THEO_ENERGIES = [10, 500, 3]
     # run EEASISSS
     firstline, phaseshift = runPhaseshiftGen_old(
