@@ -24,7 +24,7 @@ import numpy as np
 
 # for run_from_ase
 import viperleed
-from viperleed.tleedm import run_tleedm
+from viperleed.calc import run_tleedm
 from viperleed.lib.base import rotation_matrix
 from viperleed.lib.classes.slab import Slab
 from viperleed.lib.files import poscar
@@ -34,10 +34,10 @@ from viperleed.lib.files.parameters import (readPARAMETERS,
 from viperleed.lib.files.beams import readOUTBEAMS
 from viperleed.lib.files.iorfactor import beamlist_to_array
 from viperleed.lib.files.ivplot import plot_iv  # for plot_iv_from_csv
-from viperleed.lib.wrapped.error_codes import check_ierr
+from viperleed.extensions.error_codes import check_ierr
 
 try:
-    from viperleed.lib.wrapped.rfactor import r_factor_new as rf          # TODO: pylint complains if not compiled
+    from viperleed.extensions.rfactor import r_factor_new as rf          # TODO: pylint complains if not compiled
 except ImportError:
     _HAS_NEW_RFACTOR = False
 else:

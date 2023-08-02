@@ -29,7 +29,7 @@ vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
-from viperleed.tleedm import run_tleedm
+from viperleed.calc import run_tleedm
 from viperleed.lib import symmetry
 from viperleed.lib.classes.atom import Atom
 from viperleed.lib.classes.rparams import Rparams

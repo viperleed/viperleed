@@ -17,10 +17,6 @@ import ase.build
 import numpy as np
 import pytest
 
-VPR_PATH = str(Path(__file__).resolve().parents[2])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
 # pylint: disable=wrong-import-position
 # Unfortunately no way to do this the correct way till we have
 # an installable version of viperleed. The reason is the VPR_PATH
