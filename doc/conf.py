@@ -105,7 +105,7 @@ latex_elements = {
 
     % set title colors to black (otherwise they are blue; defined in sphinx.sty)
     \sphinxDeclareColorOption{TitleColor}{{rgb}{0.0,0.0,0.0}}
-    
+
     % Allow section numbering down to sub-subsection
     \setcounter{secnumdepth}{3}
     '''
