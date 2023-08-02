@@ -281,7 +281,7 @@ def _parse_command_line_arguments():
         type=str,
         default="workhistory")
     args, _ = parser.parse_known_args()
-    return args, bookie_args
+    return args
 
 
 def _interpret_tensorleed_path_flag(args):
@@ -306,7 +306,6 @@ def main():
     multiprocessing.freeze_support() # needed for Windows
 
     args = _parse_command_line_arguments()
-    sys.argv = sys.argv[:1] + bookie_args
 
     if args.version:
         print("ViPErLEED version " + GLOBALS["version"])
