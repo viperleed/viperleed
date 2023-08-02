@@ -12,11 +12,6 @@ from pathlib import Path
 from copy import deepcopy
 import numpy as np
 
-vpr_path = str(Path(__file__).parent.parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
-
-
 from viperleed.lib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
 from viperleed.lib.files.poscar import readPOSCAR
 from viperleed.lib.files.vibrocc import readVIBROCC

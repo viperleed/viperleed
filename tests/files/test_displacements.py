@@ -8,6 +8,7 @@ Created on 2023-07-28
 import pytest
 import numpy as np
 
+
 class Test_readDISPLACEMENTS:
     def test_read_DISPLACEMENTS_geo(self, ag100_slab_with_displacements_and_offsets):
         slab, param = ag100_slab_with_displacements_and_offsets

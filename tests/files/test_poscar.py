@@ -11,10 +11,6 @@ import sys
 
 import pytest
 
-vpr_path = str(Path(__file__).parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
-
 from viperleed.lib import symmetry
 from viperleed.lib.files.poscar import (readPOSCAR,
                                               writePOSCAR,

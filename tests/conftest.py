@@ -25,10 +25,6 @@ from zipfile import ZipFile
 import pytest
 import numpy as np
 
-vpr_path = str(Path(__file__).parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
-
 from viperleed.calc import run_tleedm
 from viperleed.lib import symmetry
 from viperleed.lib.classes.atom import Atom
@@ -52,8 +48,7 @@ _EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
 
 _EXAMPLE_POSCARs = [file.name for file in _POSCARs_PATH.glob('POSCAR*')]
 
-SOURCE_STR = str(Path(vpr_path) / "viperleed")
-TENSORLEED_PATH = Path(vpr_path) / "viperleed" / "tensorleed"
+SOURCE_STR = str(Path(__file__)/ ".." / ".." / "viperleed-tensorleed" / "tensorleed")
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
 POSCAR_PATHS = INPUTS_ORIGIN / "POSCARs"
@@ -75,9 +70,9 @@ def inputs_path():
     return INPUTS_ORIGIN
 
 @pytest.fixture
-def tensorleed_path():
+def source_path():
     """Return the path to the tensorleed executable."""
-    return TENSORLEED_PATH  
+    return Path(SOURCE_STR)
 
 
 @pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])

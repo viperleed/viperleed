@@ -12,10 +12,6 @@ import os, sys
 from copy import deepcopy
 import numpy as np
 
-vpr_path = str(Path(__file__).parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
-
 import viperleed.lib.files.parameters as parameters
 from viperleed.lib.files.parameters import (readPARAMETERS,
                                                   ParameterInterpreter,
