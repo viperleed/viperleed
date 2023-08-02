@@ -308,7 +308,7 @@ def main():
     args = _parse_command_line_arguments()
 
     if args.version:
-        print("ViPErLEED version " + GLOBALS["version"])
+        print(f"ViPErLEED version {GLOBALS['version']}")
         return 0
 
     if args.work:
@@ -372,11 +372,10 @@ def main():
         tensor_num = getMaxTensorIndex(zip_only=True)
         if tensor_num > 0:
             os.makedirs(os.path.join(work_path, "Tensors"), exist_ok=True)
-            tensor_file = os.path.join("Tensors", "Tensors_{:03d}.zip"
-                                      .format(tensor_num))
+            tensor_file = os.path.join("Tensors",
+                                       f"Tensors_{tensor_num:03d}.zip")
             shutil.copy2(tensor_file, os.path.join(work_path, tensor_file))
-            delta_file = os.path.join("Deltas", "Deltas_{:03d}.zip"
-                                     .format(tensor_num))
+            delta_file = os.path.join("Deltas", f"Deltas_{tensor_num:03d}.zip")
             if os.path.isfile(delta_file):
                 os.makedirs(os.path.join(work_path, "Deltas"), exist_ok=True)
                 shutil.copy2(delta_file, os.path.join(work_path, delta_file))
@@ -408,8 +407,8 @@ def main():
                 shutil.copy2(_path, cwd / _path)
             elif os.path.isdir(_path):
                 shutil.copytree(_path, cwd / _path, dirs_exist_ok=True)
-        except Exception as e:
-            print(f"Error copying {_path} to home directory: {str(e)}")
+        except Exception as exception:
+            print(f"Error copying {_path} to home directory: {str(exception)}")
 
     # go back, clean up if requested
     os.chdir(cwd)
@@ -427,8 +426,8 @@ def main():
     if args.delete_workdir:
         try:
             shutil.rmtree(work_path)
-        except Exception as e:
-            print("Error deleting work directory: {str(e)}")
+        except OSError as error:
+            print(f"Error deleting work directory: {str(error)}")
 
 
 if __name__ == "__main__":
