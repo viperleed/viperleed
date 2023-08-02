@@ -16,7 +16,7 @@ import copy
 import numpy as np
 from timeit import default_timer as timer
 
-from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.lib.files.poscar import readPOSCAR, writePOSCAR
 
 ###############################################
 #                  MAIN                       #

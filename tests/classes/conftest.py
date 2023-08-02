@@ -15,7 +15,7 @@ if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
 
-from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.lib.files.poscar import readPOSCAR
 
 
 @pytest.fixture(scope="function")

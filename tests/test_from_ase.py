@@ -26,10 +26,10 @@ if VPR_PATH not in sys.path:
 # an installable version of viperleed. The reason is the VPR_PATH
 # bit above.
 from viperleed import from_ase as vpr_ase
-from viperleed.tleedmlib.base import angle
-from viperleed.tleedmlib.classes.slab import Slab
-from viperleed.tleedmlib.files import poscar
-from viperleed.tleedmlib.files.beams import readOUTBEAMS
+from viperleed.lib.base import angle
+from viperleed.lib.classes.slab import Slab
+from viperleed.lib.files import poscar
+from viperleed.lib.files.beams import readOUTBEAMS
 # pylint: enable=wrong-import-position
 
 

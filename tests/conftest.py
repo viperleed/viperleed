@@ -30,13 +30,13 @@ if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
 from viperleed.tleedm import run_tleedm
-from viperleed.tleedmlib import symmetry
-from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.classes.slab import Slab
-from viperleed.tleedmlib.files import parameters, poscar
-from viperleed.tleedmlib.files.vibrocc import readVIBROCC
-from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
+from viperleed.lib import symmetry
+from viperleed.lib.classes.atom import Atom
+from viperleed.lib.classes.rparams import Rparams
+from viperleed.lib.classes.slab import Slab
+from viperleed.lib.files import parameters, poscar
+from viperleed.lib.files.vibrocc import readVIBROCC
+from viperleed.lib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
 
 
 _FIXTURES_PATH = Path('tests/fixtures/')

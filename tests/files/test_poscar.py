@@ -15,13 +15,13 @@ vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
-from viperleed.tleedmlib import symmetry
-from viperleed.tleedmlib.files.poscar import (readPOSCAR,
+from viperleed.lib import symmetry
+from viperleed.lib.files.poscar import (readPOSCAR,
                                               writePOSCAR,
                                               ensure_away_from_c_edges,
                                               POSCARReader,
                                               POSCARSyntaxError)
-from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.lib.classes.rparams import Rparams
 
 class Test_readPOSCAR:
     def test_readPOSCAR_slab_exists(self, example_poscars):

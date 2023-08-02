@@ -18,8 +18,8 @@ if os.path.abspath(vpr_path) not in sys.path:
 
 
 
-from viperleed.tleedmlib.files.poscar import readPOSCAR
-from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.lib.files.poscar import readPOSCAR
+from viperleed.lib.classes.rparams import Rparams
 
 
 

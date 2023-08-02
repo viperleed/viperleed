@@ -12,11 +12,11 @@ if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
 
-from viperleed import tleedmlib
-import viperleed.tleedmlib
+from viperleed import lib
+import viperleed.lib
 
 
-from viperleed.tleedmlib.classes.r_error import get_n_zero_crossings,get_zero_crossing
+from viperleed.lib.classes.r_error import get_n_zero_crossings,get_zero_crossing
 
 @pytest.mark.parametrize('x_arr,n_crossings', ((np.array([-1, 1, -1]),2 ),
                                                (np.array([0, 0, 0]), 1),

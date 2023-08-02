@@ -16,13 +16,13 @@ vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
-import viperleed.tleedmlib.files.parameters as parameters
-from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
+import viperleed.lib.files.parameters as parameters
+from viperleed.lib.files.parameters import (readPARAMETERS,
                                                   ParameterInterpreter,
                                                   Assignment, NumericBounds)
-from viperleed.tleedmlib.files.poscar import readPOSCAR
-from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.files.parameter_errors import (
+from viperleed.lib.files.poscar import readPOSCAR
+from viperleed.lib.classes.rparams import Rparams
+from viperleed.lib.files.parameter_errors import (
     ParameterError, ParameterValueError, ParameterParseError,
     ParameterIntConversionError, ParameterFloatConversionError,
     ParameterBooleanConversionError, ParameterNotRecognizedError,

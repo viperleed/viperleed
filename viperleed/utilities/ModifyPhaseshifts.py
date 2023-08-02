@@ -13,7 +13,7 @@ import sys
 
 cd = os.path.realpath(os.path.dirname(__file__))
 
-from viperleed.tleedmlib.files.phaseshifts import (readPHASESHIFTS,
+from viperleed.lib.files.phaseshifts import (readPHASESHIFTS,
                                                    writePHASESHIFTS)
 
 

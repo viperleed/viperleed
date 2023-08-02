@@ -16,9 +16,9 @@ vpr_path = str(Path(__file__).parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
-from viperleed.tleedmlib.beamgen import get_beam_scattering_subsets
-from viperleed.tleedmlib.beamgen import make_beamlist_string
-from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
+from viperleed.lib.beamgen import get_beam_scattering_subsets
+from viperleed.lib.beamgen import make_beamlist_string
+from viperleed.lib.beamgen import calc_and_write_beamlist
 
 _FIXTURES_PATH = Path('tests/fixtures/')
 

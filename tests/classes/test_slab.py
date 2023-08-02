@@ -17,8 +17,8 @@ if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
 
-from viperleed.tleedmlib.classes.slab import SymPlane
-from viperleed.tleedmlib.symmetry import findBulkSymmetry
+from viperleed.lib.classes.slab import SymPlane
+from viperleed.lib.symmetry import findBulkSymmetry
 
 
 class TestSlabTransforms:
