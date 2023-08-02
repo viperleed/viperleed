@@ -14,14 +14,14 @@ At variance with the :term:`ErLEED` electronics, the NG LEED (S) requires deeper
 #. Modification of the :ref:`range<ngleed_suppressor_range>` of the ``SUPPRESSOR`` voltage
 #. Modifications needed to :ref:`access the beam energy at high voltage<ngleed_beamhv_port>` (only needed for older units)
 
-In addition, you will also need to :ref:`prepare a control cable  in order to allow ViPErLEED to set the LEED energy<ngleed_control_cable>`.
+In addition, you will also need to :ref:`prepare a control cable in order to allow ViPErLEED to set the LEED energy<ngleed_control_cable>`.
 
 .. note::
-    The modifications described in :ref:`ngleed_i0_mod_mandatory` are **necessary** in order to be able to measure the beam current :math:`I_0` with a Omicron NG LEED (S) electronics. Without the modifications in :ref:`ngleed_i0_mod_mandatory` the :math:`I_0` signal that can be measured at the rear panel is **meaningless**.
+    The modifications described in :secref:`ngleed_i0_mod_mandatory` are **necessary** in order to be able to measure the beam current :math:`I_0` with a Omicron NG LEED (S) electronics. Without the modifications in :secref:`ngleed_i0_mod_mandatory` the :math:`I_0` signal that can be measured at the rear panel is **meaningless**.
 
-The modifications described in :ref:`ngleed_improve_noise` and :ref:`ngleed_faster_beam` are optional, but **strongly recommended** for users with a microchannel-plate (**MCP**) LEED optics, as the small beam currents are strongly affected by noise (:ref:`ngleed_improve_noise`) and the slow response times whenever the beam energy is ramped (:ref:`ngleed_faster_beam`).
+The modifications described in :secref:`ngleed_improve_noise` and :secref:`ngleed_faster_beam` are optional, but **strongly recommended** for users with a microchannel-plate (**MCP**) LEED optics, as the small beam currents are strongly affected by noise (:secref:`ngleed_improve_noise`) and the slow response times whenever the beam energy is ramped (:secref:`ngleed_faster_beam`).
 
-The modification described in :ref:`ngleed_suppressor_range` are **strongly suggested** for all users.
+The modification described in :secref:`ngleed_suppressor_range` are **strongly suggested** for all users.
 
 .. warning::
     The modifications described below **will** void any warranty unless you explicitly get a permission by the supplier.
@@ -60,9 +60,9 @@ Overview of NG LEED unit
 The rear panel \[:numref:`fig_ngleed_old_overview`\ (a), :numref:`fig_ngleed_new_overview`\ (a)\] houses:
 
 * The high-voltage plug providing the voltages to the ``FILAMENT``, ``ANODE``, suppressor (sometimes referred to as ``RETARD`` inside the units), ``WEHNELT``, and lenses (``L1/3`` and ``L2``). All these voltages depend on the ``BEAM`` energy.
-* The SHV port for the ``SCREEN`` voltage and, only in the newer version, the one for monitoring the beam energy at high voltages. See :ref:`ngleed_beamhv_port` for instructions on how to add this **important** port also on the older NG LEED units.
-* The programming input switch and port; switching to "external" --- by pulling on the lever, then flipping it --- deactivates the "beam energy" potentiometer knob on the front panel. The energy is set externally via an analog input at the ``BEAM ENERGY PROGRAM INPUT`` connector (the 5-way circular connector, **not to be confused** with the ``PROGRAMMING INPUT`` BNC that is used only for Auger). This is how ViPErLEED can control the beam energy. See :ref:`ngleed_control_cable` for instructions on how to prepare a suitable control cable.
-* The :math:`I_0` BNC. See :ref:`ngleed_i0_mod_mandatory` for the relevant modifications.
+* The SHV port for the ``SCREEN`` voltage and, only in the newer version, the one for monitoring the beam energy at high voltages. See :secref:`ngleed_beamhv_port` for instructions on how to add this **important** port also on the older NG LEED units.
+* The programming input switch and port; switching to "external" --- by pulling on the lever, then flipping it --- deactivates the "beam energy" potentiometer knob on the front panel. The energy is set externally via an analog input at the ``BEAM ENERGY PROGRAM INPUT`` connector (the 5-way circular connector, **not to be confused** with the ``PROGRAMMING INPUT`` BNC that is used only for Auger). This is how ViPErLEED can control the beam energy. See :secref:`ngleed_control_cable` for instructions on how to prepare a suitable control cable.
+* The :math:`I_0` BNC. See :secref:`ngleed_i0_mod_mandatory` for the relevant modifications.
 * Other connectors not relevant for LEED-:math:`I(V)` measurements. Notice that the :math:`E_0` monitor is **not** the beam energy at high voltage, but a version downscaled to 0--10 V. This port should **not** be used instead of the high-voltage version, as it can (and will) have non-zero offset and non-unity gain.
 
 .. important::
@@ -138,7 +138,7 @@ Making :math:`I_0` measurements possible
       * On the E0 BUFFER board (see :numref:`fig_ngleed_i0_control_and_buffer`):
 
         * Add two 10 nF capacitors in parallel to resistors R7 and R8.
-        * Consider replacing R1 and R2 as described in :ref:`ngleed_i0_modify_e0_buffer`.
+        * Consider replacing R1 and R2 as described in :secref:`ngleed_i0_modify_e0_buffer`.
 
       * On the BNC output, ensure that the 1 µF capacitor is not connected (see :numref:`fig_ngleed_i0_rear`).
 
@@ -157,7 +157,7 @@ The NG LEED electronics provides an analog 0--10 V output BNC on the rear panel
 
 The measurement of :math:`I_0` is performed in the following manner: all HV modules that generate voltages for the electron gun (i.e., ``BEAM``, ``FILAMENT``, ``ANODE``, ``WEHNELT``, ``L1/3``, and ``L2``) are floating. Their reference potential is ``HV_GND`` (at times also referred to as ``HV_GUARD`). This means that the net current drawn from ``HV_GND`` contains all the contributions of all the electron-gun currents, and, in particular, the total number of electrons that leave the electron gun (i.e., those emitted by the ``FILAMENT``, minus those collected back at ``ANODE``, ``WEHNELT``, and lenses).
 
-In :numref:`fig_ngleed_i0_circuit_beam_module_original`, the operational amplifier U4 holds ``HV_GND`` at the same potential as ``GND`` via the feedback, and acts as an inverting transimpedance amplifier for the :math:`I_0` current (with a gain of −100 kΩ = −1 × 10⁵ V⁠/⁠A). Together with the inverting buffer around U3, this corresponds to a gain of 1 × 10⁵ V⁠/⁠A, or 0.1 V⁠/⁠µA. The output of U3 is then amplified by another factor of 10 (on the ``CONTROL`` board, see :numref:`fig_ngleed_i0_control_and_buffer`), giving the overall 1 V/µA gain mentioned before. (Two more unity-gain stages follow --- see :ref:`ngleed_i0_modify_e0_buffer`.)
+In :numref:`fig_ngleed_i0_circuit_beam_module_original`, the operational amplifier U4 holds ``HV_GND`` at the same potential as ``GND`` via the feedback, and acts as an inverting transimpedance amplifier for the :math:`I_0` current (with a gain of −100 kΩ = −1 × 10⁵ V⁠/⁠A). Together with the inverting buffer around U3, this corresponds to a gain of 1 × 10⁵ V⁠/⁠A, or 0.1 V⁠/⁠µA. The output of U3 is then amplified by another factor of 10 (on the ``CONTROL`` board, see :numref:`fig_ngleed_i0_control_and_buffer`), giving the overall 1 V/µA gain mentioned before. (Two more unity-gain stages follow --- see :secref:`ngleed_i0_modify_e0_buffer`.)
 
 .. _warn_swapped_components:
 .. warning::
@@ -204,7 +204,7 @@ Before you start with the modifications, make sure you have all required compone
 Modifying the ``BEAM`` HV module
 --------------------------------
 
-Open up the electronics as described in :ref:`ngleed_opening`, then extract the ``BEAM`` HV board following the instructions in :ref:`ngleed_extract_hv_board`. The top panel in :numref:`fig_ngleed_i0_beam_module_mod` shows the region of the ``BEAM`` high-voltage module where the circuit in :numref:`fig_ngleed_i0_circuit_beam_module_mod` can be found.
+Open up the electronics as described in :secref:`ngleed_opening`, then extract the ``BEAM`` HV board following the instructions in :secref:`ngleed_extract_hv_board`. The top panel in :numref:`fig_ngleed_i0_beam_module_mod` shows the region of the ``BEAM`` high-voltage module where the circuit in :numref:`fig_ngleed_i0_circuit_beam_module_mod` can be found.
 
 .. _fig_ngleed_i0_beam_module_mod:
 .. figure:: /_static/hardware/SpectaLEED_modification/i0_beam_board_mod.svg
@@ -212,7 +212,7 @@ Open up the electronics as described in :ref:`ngleed_opening`, then extract the 
 
     Overview of the ``BEAM`` high-voltage module (top) indicating the area where the circuit for :math:`I_0` measurement is located. A close-up view of the same area is shown in the bottom panels.
 
-In order to insert the 1 kΩ resistor needed for stabilization of the amplifier (see :ref:`i0_instability` and :numref:`fig_ngleed_i0_circuit_beam_module_mod` for details) you will need to **cut** the thick track on the back of the board that connects ``HV_GND`` to the inverting input of U4. Before you proceed, make sure you understand the circuit, and take especially note of the :ref:`warning <warn_swapped_components>` in the previous section: cross check which components are actually connected to ``HV_GND`` and which ones to the inverting input of U4 (pin 2).
+In order to insert the 1 kΩ resistor needed for stabilization of the amplifier (see :secref:`i0_instability` and :numref:`fig_ngleed_i0_circuit_beam_module_mod` for details) you will need to **cut** the thick track on the back of the board that connects ``HV_GND`` to the inverting input of U4. Before you proceed, make sure you understand the circuit, and take especially note of the :ref:`warning <warn_swapped_components>` in the previous section: cross check which components are actually connected to ``HV_GND`` and which ones to the inverting input of U4 (pin 2).
 
 To interrupt the track, cut two segments across it using the blade knife. Cut as deep as needed to pass through the copper layer of the track: you will normally need a few passes. Additionally, cut a bit the board next to the track and parallel to it in order to separate the insulation above the track from the surroundings. Then, with the help of the tip of the knife (or some other sharp tool), remove the section of the track  between the two cuts. You should be able to lift away both the copper and the insulation above it. Tweezers or a small nose plier can help stripping the track off. Cross-check with a multimeter that the whole track has been removed by measuring the resistance (and not just using the continuity beeper!). You can see the cut track in the bottom-left panel of :numref:`fig_ngleed_i0_beam_module_mod`.
 
@@ -226,7 +226,7 @@ To interrupt the track, cut two segments across it using the blade knife. Cut as
 
 Since you already have the ``BEAM`` HV module out, it is worth performing a few more modifications that significantly improve the quality of the measurement of :math:`I_0`. Refer to the schematics in :numref:`fig_ngleed_i0_circuit_beam_module_mod`.
 
-Replace the somewhat basic LF411 op-amp with the much better performing OPA627(BP) op-amp. The `OPA627BP <https://www.ti.com/lit/ds/symlink/opa627.pdf>`_ has: larger DC gain, larger unity-gain bandwidth, a factor of 10 less noise, almost a factor of 10 better input offset voltage, and a factor of 50 better input bias and offset currents. The OPA627 op-amp is a drop-in replacement for the LF411 with the exact same pinout. Before extracting the LF411, make sure to clearly note down the direction of the chip, i.e., which pin is the first one. Replacing the LF411 with the OPA627 op-amp also means you can (and **should**!) get rid of the R43 trimmer. The trimmer should probably not have been there in the first place, according to the datasheets of both `LF411 <https://www.jameco.com/jameco/products/prodds/835500.pdf>`_ and `OPA627BP <https://www.ti.com/lit/ds/symlink/opa627.pdf>`_. Trimming of the offset of :math:`I_0` is performed with a dedicated circuit on the ``E0 BUFFER`` board. See :ref:`ngleed_i0_modify_e0_buffer` for further details.
+Replace the somewhat basic LF411 op-amp with the much better performing OPA627(BP) op-amp. The `OPA627BP <https://www.ti.com/lit/ds/symlink/opa627.pdf>`_ has: larger DC gain, larger unity-gain bandwidth, a factor of 10 less noise, almost a factor of 10 better input offset voltage, and a factor of 50 better input bias and offset currents. The OPA627 op-amp is a drop-in replacement for the LF411 with the exact same pinout. Before extracting the LF411, make sure to clearly note down the direction of the chip, i.e., which pin is the first one. Replacing the LF411 with the OPA627 op-amp also means you can (and **should**!) get rid of the R43 trimmer. The trimmer should probably not have been there in the first place, according to the datasheets of both `LF411 <https://www.jameco.com/jameco/products/prodds/835500.pdf>`_ and `OPA627BP <https://www.ti.com/lit/ds/symlink/opa627.pdf>`_. Trimming of the offset of :math:`I_0` is performed with a dedicated circuit on the ``E0 BUFFER`` board. See :secref:`ngleed_i0_modify_e0_buffer` for further details.
 
 As an additional precaution, as well as an improvement of the noise level on the :math:`I_0` output, install an extra capacitor in parallel to the feedback resistor of the second amplification stage (U3; see :numref:`fig_ngleed_i0_circuit_beam_module_mod`). This capacitor will improve the rejection of high-frequency interference signals, for example those that couple in from the switching power supply of the NG LEED. You can choose the value of the feedback capacitor for a ~1.6 kHz cutoff frequency. The value of the capacitor depends on the value of the feedback resistor of U3. As :ref:`mentioned earlier <warn_swapped_components>`, our instrument differed from the 'official' schematics: we have a 100 kΩ resistor rather than a 10 kΩ one (and the 10 kΩ is on the feedback of U4). 1.6 kHz cutoff corresponds to a 1 nF capacitor in parallel to 100 kΩ, or to 10 nF in parallel to 10 kΩ. You can solder the capacitor around the leads of the feedback resistor, after having shaped its leads as two hooks, similar to :numref:`fig_bent_resistors`. The bottom-right panel of :numref:`fig_ngleed_i0_beam_module_mod` shows the capacitor mounted in parallel to R15 which, :ref:`for our instrument <warn_swapped_components>`, acts as the feedback resistor of U3.
 
@@ -240,7 +240,7 @@ As an additional precaution, as well as an improvement of the noise level on the
 
 .. note::
 
-    While you have the ``BEAM`` HV module unmounted, consider looking also into the modifications described in :ref:`ngleed_faster_beam`. They are especially suggested for users with a microchannel-plate LEED.
+    While you have the ``BEAM`` HV module unmounted, consider looking also into the modifications described in :secref:`ngleed_faster_beam`. They are especially suggested for users with a microchannel-plate LEED.
 
 .. _ngleed_i0_modify_e0_buffer:
 
@@ -255,13 +255,13 @@ The :math:`I_0` output of the ``BEAM`` HV module is further processed in two add
 
     Location, functionality and modifications of the two stages that process the :math:`I_0` voltage output produced on the ``BEAM`` HV module. Location of the (a) ``E0 BUFFER`` and (b) ``CONTROL`` boards within the chassis. (c) ``E0 BUFFER`` board removed for the modifications. (d) Circuit diagram of the relevant part of the ``E0 BUFFER`` board, including the suggested modifications.
 
-The transimpedance-amplified :math:`I_0` signal generated on the ``BEAM`` HV module reaches the ``CONTROL`` board (via the motherboard) through the wide ribbon cable on the right side of :numref:`fig_ngleed_i0_control_and_buffer`\ (b). There, it is amplified by an additional factor of 10 with a non-inverting configuration around one of the op-amps in U24 \[see inset of :numref:`fig_ngleed_i0_control_and_buffer`\ (b)\]. As mentioned at the beginning of section :ref:`i0_instability`, this extra amplification stage is necessary because the gain on the ``BEAM`` HV module is 0.1 V/µA, while the unit is designed for an overall gain of 1 V/µA.
+The transimpedance-amplified :math:`I_0` signal generated on the ``BEAM`` HV module reaches the ``CONTROL`` board (via the motherboard) through the wide ribbon cable on the right side of :numref:`fig_ngleed_i0_control_and_buffer`\ (b). There, it is amplified by an additional factor of 10 with a non-inverting configuration around one of the op-amps in U24 \[see inset of :numref:`fig_ngleed_i0_control_and_buffer`\ (b)\]. As mentioned at the beginning of section :secref:`i0_instability`, this extra amplification stage is necessary because the gain on the ``BEAM`` HV module is 0.1 V/µA, while the unit is designed for an overall gain of 1 V/µA.
 
 As can be seen in :numref:`fig_ngleed_i0_control_and_buffer`\ (b), the ``CONTROL`` board is found right behind the front panel of the NG LEED unit. We decided to not modify this amplification stage, but you can choose to add a capacitor in parallel to the 18 kΩ feedback resistor R131 in case you experience excessive noise. You should be able to solder it after removing the few cables around (i.e., the ribbon cable and the connector for the ``SUPPRESSOR`` setpoint): there should be no need to remove the whole board. In the Bode diagram of :numref:`fig_bode_i0_mod_overall`, the green curve includes the contribution of this amplification stage in the unmodified state. It is a pure gain stage with the expected pole at 100 kHz, given the ~1 MHz unity-gain bandwidth of the `AD704 <https://www.analog.com/media/en/technical-documentation/data-sheets/AD704.pdf>`_ op-amp.
 
 The last processing stage occurs on the ``E0 BUFFER`` board \[visible in :numref:`fig_ngleed_i0_control_and_buffer`\ (a)\], mounted on the side panel of the chassis, and, unfortunately, very close to the switching power supply \[top left in :numref:`fig_ngleed_i0_control_and_buffer`\ (a)\] as well as the high-voltage supplies --- in the region of the large heat sink on the motherboard. The :math:`I_0` signal reaches the ``E0 BUFFER`` board through the thinner ribbon cable of the ``CONTROL`` board \[left in :numref:`fig_ngleed_i0_control_and_buffer`\ (b)\]. After the processing on the ``E0 BUFFER`` board, the :math:`I_0` signal travels along the long ribbon cable toward the output BNC on the rear panel. As the ribbon cables are unshielded, they can easily pick up high-frequency noise: they are not the ideal choice for cables passing next to the switching power supplies. You can improve this by twisting them around, as visible in :numref:`fig_ngleed_i0_control_and_buffer`\ (a), and by adding an iron core around (at least) the short one --- which passes right above the high-voltage transformer. You will need to untie the long ribbon cable from the support bars in order to twist it all the way toward the rear panel. Use cable ties to keep it together.
 
-The primary role of the processing of :math:`I_0` in the ``E0 BUFFER`` board is offset compensation. Offsets arise because of non-idealities of the op-amps, but should be almost negligible after the modifications described in this guide, especially the replacement of the LF411 op-amp suggested in :ref:`ngleed_i0_beam_module`. The offset correction happens in the first (inverting) unity-gain stage of the ``E0 BUFFER`` board, as visible in :numref:`fig_ngleed_i0_control_and_buffer`\ (d). U1.B adds a correction current :math:`I_\mathrm{correction}` to the the :math:`I_0` signal coming from the ``CONTROL`` board. The circuit in the bottom part of :numref:`fig_ngleed_i0_control_and_buffer`\ (d) generates the correction from a 10 V reference:
+The primary role of the processing of :math:`I_0` in the ``E0 BUFFER`` board is offset compensation. Offsets arise because of non-idealities of the op-amps, but should be almost negligible after the modifications described in this guide, especially the replacement of the LF411 op-amp suggested in :secref:`ngleed_i0_beam_module`. The offset correction happens in the first (inverting) unity-gain stage of the ``E0 BUFFER`` board, as visible in :numref:`fig_ngleed_i0_control_and_buffer`\ (d). U1.B adds a correction current :math:`I_\mathrm{correction}` to the the :math:`I_0` signal coming from the ``CONTROL`` board. The circuit in the bottom part of :numref:`fig_ngleed_i0_control_and_buffer`\ (d) generates the correction from a 10 V reference:
 
 .. math::
     I_\mathrm{correction} = \frac{10\,\mathrm{V}}{R_1} \left(1 - \frac{R_1}{R_2} x\right),
@@ -286,7 +286,7 @@ Aside from modifying the range of offset adjustment, you should also use the two
 Checking the BNC output
 -----------------------
 
-Another major design fault exists in the NG LEED unit. According to the official schematics, a 1 µF capacitor should be present at the output BNC between the signal (center) and ground (shell). This is visible in :numref:`fig_ngleed_i0_rear`. This is problematic, as the very large capacitor is essentially on the output of stage U1.A of the ``E0 BUFFER`` board. See schematics in :numref:`fig_ngleed_i0_control_and_buffer`\ (d). The problem is very similar to the one that causes instability of the first transimpedance stage on the ``BEAM`` HV module (solved in :ref:`ngleed_i0_beam_module`): the 200 Ω output impedance of the AD704 op-amp, in series with the capacitor, introduces a pole in the feedback factor that reduces the phase margin and can make U1.A unstable. The `datasheet of AD704 <https://www.analog.com/media/en/technical-documentation/data-sheets/AD704.pdf>`_ indeed indicates that the op-amp can drive at most a 10 nF capacitive load. In principle, the addition of the 10 nF capacitor in parallel to the feedback resistor of U1.A --- described in :ref:`ngleed_i0_modify_e0_buffer` --- should maintain the phase margin large enough for stability. Nevertheless, we advise to **remove** the 1 µF capacitor.
+Another major design fault exists in the NG LEED unit. According to the official schematics, a 1 µF capacitor should be present at the output BNC between the signal (center) and ground (shell). This is visible in :numref:`fig_ngleed_i0_rear`. This is problematic, as the very large capacitor is essentially on the output of stage U1.A of the ``E0 BUFFER`` board. See schematics in :numref:`fig_ngleed_i0_control_and_buffer`\ (d). The problem is very similar to the one that causes instability of the first transimpedance stage on the ``BEAM`` HV module (solved in :secref:`ngleed_i0_beam_module`): the 200 Ω output impedance of the AD704 op-amp, in series with the capacitor, introduces a pole in the feedback factor that reduces the phase margin and can make U1.A unstable. The `datasheet of AD704 <https://www.analog.com/media/en/technical-documentation/data-sheets/AD704.pdf>`_ indeed indicates that the op-amp can drive at most a 10 nF capacitive load. In principle, the addition of the 10 nF capacitor in parallel to the feedback resistor of U1.A --- described in :secref:`ngleed_i0_modify_e0_buffer` --- should maintain the phase margin large enough for stability. Nevertheless, we advise to **remove** the 1 µF capacitor.
 
 .. _fig_ngleed_i0_rear:
 .. figure:: /_static/hardware/SpectaLEED_modification/i0_rear_panel.svg
@@ -294,12 +294,12 @@ Another major design fault exists in the NG LEED unit. According to the official
 
     Location of the :math:`I_0` BNC output on the rear panel of the NG LEED unit.
 
-For this purpose, open up the rear panel of the unit, as described in :ref:`ngleed_remove_rear`. The incriminated capacitor can be seen in the right panel of :numref:`fig_ngleed_i0_rear`. It is not necessary to fully remove the capacitor: it's enough to unsolder its lead that is connected to the center conductor of the BNC.
+For this purpose, open up the rear panel of the unit, as described in :secref:`ngleed_remove_rear`. The incriminated capacitor can be seen in the right panel of :numref:`fig_ngleed_i0_rear`. It is not necessary to fully remove the capacitor: it's enough to unsolder its lead that is connected to the center conductor of the BNC.
 
 .. note ::
     On our unit, while the capacitor was present, there has clearly been a (lucky) manufacturing error: Both leads of the capacitor were soldered to the stainless steel wire connected to the shell of the BNC plug --- i.e., the capacitor was connected between ground and... ground. This meant that, for our unit, there was no need to unsolder the capacitor lead. Cross check that your unit indeed has the problem before unsoldering.
 
-As you have the rear panel open, consider also the modifications described in :ref:`ngleed_rewire_hv_plug` and :ref:`ngleed_shield_mains`, especially suggested for users with a microchannel-plate LEED.
+As you have the rear panel open, consider also the modifications described in :secref:`ngleed_rewire_hv_plug` and :secref:`ngleed_shield_mains`, especially suggested for users with a microchannel-plate LEED.
 
 .. _ngleed_improve_noise:
 
@@ -314,9 +314,9 @@ Reducing noise on :math:`I_0`
       * Rewire the HV connector as shown in :numref:`fig_ngleed_hv_plug`.
       * Add a shield to the mains supply cable as shown in :numref:`fig_ngleed_shield_mains`.
 
-This modification of the NG LEED unit is strongly suggested for users with a microchannel-plate LEED, where significantly lower electron currents are used (:math:`I_0 \approx 1-30\,\mathrm{nA}`). Users with a standard LEED will normally have beam currents in the microampere range and should most likely not need to modify their unit. The modifications described in this section should be considered a second-order improvement of those in :ref:`ngleed_i0_mod_mandatory`.
+This modification of the NG LEED unit is strongly suggested for users with a microchannel-plate LEED, where significantly lower electron currents are used (:math:`I_0 \approx 1-30\,\mathrm{nA}`). Users with a standard LEED will normally have beam currents in the microampere range and should most likely not need to modify their unit. The modifications described in this section should be considered a second-order improvement of those in :secref:`ngleed_i0_mod_mandatory`.
 
-Once the modifications in :ref:`ngleed_i0_mod_mandatory` have been carried out (with the exception of the modification of the range of :math:`I_{0,\mathrm{offset}}` adjustment), the next-worst source of noise on :math:`I_0` has to do with the generation of the high voltages. A more detailed description of how high voltages are generated in the HV modules can be found in :ref:`ngleed_faster_beam`. In short, each high-voltage module generates its voltage with a `Voltage multiplier <https://en.wikipedia.org/wiki/Voltage_multiplier>`_ fed by a transformer. The transformer separates the 'high-voltage' from the 'low-voltage' areas of each module. :numref:`fig_ngleed_beam_high_and_low_voltage` shows, for example the ``BEAM`` board --- which, as mentioned below, is one of the few where no modification is needed.
+Once the modifications in :secref:`ngleed_i0_mod_mandatory` have been carried out (with the exception of the modification of the range of :math:`I_{0,\mathrm{offset}}` adjustment), the next-worst source of noise on :math:`I_0` has to do with the generation of the high voltages. A more detailed description of how high voltages are generated in the HV modules can be found in :secref:`ngleed_faster_beam`. In short, each high-voltage module generates its voltage with a `Voltage multiplier <https://en.wikipedia.org/wiki/Voltage_multiplier>`_ fed by a transformer. The transformer separates the 'high-voltage' from the 'low-voltage' areas of each module. :numref:`fig_ngleed_beam_high_and_low_voltage` shows, for example the ``BEAM`` board --- which, as mentioned below, is one of the few where no modification is needed.
 
 .. _fig_ngleed_beam_high_and_low_voltage:
 .. figure:: /_static/hardware/SpectaLEED_modification/beam_board_high_and_low_voltage.svg
@@ -326,13 +326,13 @@ Once the modifications in :ref:`ngleed_i0_mod_mandatory` have been carried out (
 
 The low-voltage area is also surrounded by a guard ring, i.e., a relatively thick track held at ground that shields the low-voltage from the high-voltage side. Several boards (``ANODE``, ``FILAMENT``, ``L1/3``, ``L2``, and ``WEHNELT``) have also an optoinsulator module allowing communication between the two sides of the board. On all boards except for ``ANODE``, the optoinsulator is located in a smaller PCB mounted perpendicular to the module (not shown). The guard ring also shields the low-voltage side of the optoinsulator parts.
 
-Importantly, the guard ring is also connected to the low-voltage side of the electrostatic shield of the transformer. (The high-voltage side is also shielded separately.) The main purpose of shielding is to attenuate as much as possible the common-mode noise between the two sides of the transformer: the shield on each side picks up the noise from the respective winding. It is then important to make sure that each shield is connected to the **correct ground**. Unfortunately this is done **incorrectly** in most of the boards of the NG LEED unit. The low-voltage shield (and guard ring) on ``ANODE``, ``FILAMENT``, ``L1/3`` and ``L2`` HV modules is connected to ``HV_GND`` rather than to power ``GND``. This means that ``HV_GND`` picks up noise from the low-voltage windings of each of these transformers. As discussed in :ref:`i0_instability`, :math:`I_0` is measured as the total current flowing from ``HV_GND`` to ``GND``. The noise picked up by ``HV_GND`` is then present also on :math:`I_0`.
+Importantly, the guard ring is also connected to the low-voltage side of the electrostatic shield of the transformer. (The high-voltage side is also shielded separately.) The main purpose of shielding is to attenuate as much as possible the common-mode noise between the two sides of the transformer: the shield on each side picks up the noise from the respective winding. It is then important to make sure that each shield is connected to the **correct ground**. Unfortunately this is done **incorrectly** in most of the boards of the NG LEED unit. The low-voltage shield (and guard ring) on ``ANODE``, ``FILAMENT``, ``L1/3`` and ``L2`` HV modules is connected to ``HV_GND`` rather than to power ``GND``. This means that ``HV_GND`` picks up noise from the low-voltage windings of each of these transformers. As discussed in :secref:`i0_instability`, :math:`I_0` is measured as the total current flowing from ``HV_GND`` to ``GND``. The noise picked up by ``HV_GND`` is then present also on :math:`I_0`.
 
-The solution is to **reconnect** the guard ring and transformer shields of all the improperly connected boards. Follow the instructions in :ref:`rewire_guard_rings`.
+The solution is to **reconnect** the guard ring and transformer shields of all the improperly connected boards. Follow the instructions in :secref:`rewire_guard_rings`.
 
-Other poor design decisions can be fixed by :ref:`ngleed_rewire_hv_plug`, where components that are supposed to be on ``HV_GND`` are on ``GND`` instead.
+Other poor design decisions can be fixed by :secref:`ngleed_rewire_hv_plug`, where components that are supposed to be on ``HV_GND`` are on ``GND`` instead.
 
-:ref:`ngleed_shield_mains` also helps reducing the noise on :math:`I_0` by adding a metallic plate between the mains input and the ribbon cable that carries :math:`I_0` to the rear panel.
+:secref:`ngleed_shield_mains` also helps reducing the noise on :math:`I_0` by adding a metallic plate between the mains input and the ribbon cable that carries :math:`I_0` to the rear panel.
 
 .. todo::
     @Michael: I'm not quite sure which one of these is also supposed to help with the dielectric relaxation that I haven't mentioned yet.
@@ -348,7 +348,7 @@ Before you start with the modifications, make sure you have all required compone
     - a sharp blade (e.g., a paper cutter),
     - a multimeter.
 
-Additionally, for the modifications in :ref:`ngleed_rewire_hv_plug`:
+Additionally, for the modifications in :secref:`ngleed_rewire_hv_plug`:
 
     - two UF4002 diodes,
     - insulated wire (e.g., 0.25 mm²) and means to strip its insulation at the ends,
@@ -356,7 +356,7 @@ Additionally, for the modifications in :ref:`ngleed_rewire_hv_plug`:
     - double-sided tape or other means to glue the sheet,
     - wire cutter.
 
-Finally, for the modification in :ref:`ngleed_shield_mains`:
+Finally, for the modification in :secref:`ngleed_shield_mains`:
 
     - aluminium (or other high-conductivity material) sheet metal,
     - metal-working tools (e.g., file, saw, drill).
@@ -366,9 +366,9 @@ Finally, for the modification in :ref:`ngleed_shield_mains`:
 Rewiring the low-voltage guard
 ------------------------------
 
-The following boards need rewiring and should be removed as described in :ref:`ngleed_extract_hv_board`: ``ANODE``, ``FILAMENT``, ``L1/3``, ``L2``. The ``WEHNELT`` module is also incorrectly wired, but there is no transformer on it, so it should not contribute to the noise on :math:`I_0`. As most boards look very similar to one another, we suggest to proceed with one board at a time in oder not to confuse which board is which.
+The following boards need rewiring and should be removed as described in :secref:`ngleed_extract_hv_board`: ``ANODE``, ``FILAMENT``, ``L1/3``, ``L2``. The ``WEHNELT`` module is also incorrectly wired, but there is no transformer on it, so it should not contribute to the noise on :math:`I_0`. As most boards look very similar to one another, we suggest to proceed with one board at a time in oder not to confuse which board is which.
 
-:numref:`fig_swap_hvguard_on_boards` shows, for each board, suggestions of where the connections should be interrupted by **cutting** the relevant tracks and where they can be reconnected to the correct ground lines. For tips on how to cut tracks, see :ref:`ngleed_i0_beam_module`.
+:numref:`fig_swap_hvguard_on_boards` shows, for each board, suggestions of where the connections should be interrupted by **cutting** the relevant tracks and where they can be reconnected to the correct ground lines. For tips on how to cut tracks, see :secref:`ngleed_i0_beam_module`.
 
 .. _fig_swap_hvguard_on_boards:
 .. figure:: /_static/hardware/SpectaLEED_modification/swap_hvguard_boards.svg
@@ -378,7 +378,7 @@ The following boards need rewiring and should be removed as described in :ref:`n
 
 On all boards, the track to be cut (i.e., ``HV_GND``) is the one connected to the **first** pair of pins of the low-voltage connector. The next pair of pins of the same connector is on ``GND``, i.e., where the guard ring and transformer shields should be connected to.
 
-The easiest way to reconnect the guard ring is by stripping away a narrow bit of insulation from it (and, in some cases, also from the track to which to connect). It should be enough to scratch away the insulation by pressing strongly against the track with a small flat screwdriver, then sliding it along the track while applying pressure. Usually a single pass is enough. **Be careful not to damage the copper connection underneath the insulation**. It is now very easy to join the exposed copper of the stripped track to ``GND``. You can use the remainder of the leads of one of the discrete components that you have used in :ref:`ngleed_i0_mod_mandatory` and solder it in place. There is no need to add insulation, as the track is at ground. Use :numref:`fig_swap_hvguard_on_boards` and a multimeter to identify the correct spot.
+The easiest way to reconnect the guard ring is by stripping away a narrow bit of insulation from it (and, in some cases, also from the track to which to connect). It should be enough to scratch away the insulation by pressing strongly against the track with a small flat screwdriver, then sliding it along the track while applying pressure. Usually a single pass is enough. **Be careful not to damage the copper connection underneath the insulation**. It is now very easy to join the exposed copper of the stripped track to ``GND``. You can use the remainder of the leads of one of the discrete components that you have used in :secref:`ngleed_i0_mod_mandatory` and solder it in place. There is no need to add insulation, as the track is at ground. Use :numref:`fig_swap_hvguard_on_boards` and a multimeter to identify the correct spot.
 
 .. _ngleed_rewire_hv_plug:
 
@@ -399,7 +399,7 @@ The 1 nF capacitors are ``GND``\ ed together via the stainless-steel wire surro
 
 The newly created four ends of the wire can be bent outwards in order to install two antiparallel diodes between the two grounds. The diodes will act as a transient-voltage suppressor. They are not strictly needed, but useful as they also make the assembly sturdier. They can be prepared as the 'flat-mounted' resistors in :numref:`fig_bent_resistors`: the cut-and-bent ends of the stainless-steel wire can be inserted in the hoops and securely soldered in place. As you solder the cathode of diode D2, also add an insulated wire in the top hoop. You can then connect the other end of this wire to ``HV_GND``: use the rightmost small pin at the very bottom of the high-voltage connector, labelled '1F' in the schematics of :numref:`fig_ngleed_hv_plug`.
 
-As a result of cutting the wire, the top part of the construction is only supported by the six capacitors. The bottom part, instead, is soldered to (and grounded by) the slug protruding from the shell at the bottom of the connector. To prevent inadvertent contact between the wire and the chassis --- which would render :math:`I_0` measurements impossible --- it is a good idea to (i) add an extra **insulated** support, and (ii) glue (e.g., with double-sided tape) a thin insulating sheet underneath the ``HV_GND``-connected portion of the wire. For the support, you can solder a short piece of insulated wire to one of the the solder slugs at the top of the connector (see the top-left panel of :numref:`fig_ngleed_hv_plug`). Before you glue the insulating foil, consider the modification in :ref:`ngleed_shield_mains`, as the mains plug is quite close.
+As a result of cutting the wire, the top part of the construction is only supported by the six capacitors. The bottom part, instead, is soldered to (and grounded by) the slug protruding from the shell at the bottom of the connector. To prevent inadvertent contact between the wire and the chassis --- which would render :math:`I_0` measurements impossible --- it is a good idea to (i) add an extra **insulated** support, and (ii) glue (e.g., with double-sided tape) a thin insulating sheet underneath the ``HV_GND``-connected portion of the wire. For the support, you can solder a short piece of insulated wire to one of the the solder slugs at the top of the connector (see the top-left panel of :numref:`fig_ngleed_hv_plug`). Before you glue the insulating foil, consider the modification in :secref:`ngleed_shield_mains`, as the mains plug is quite close.
 
 .. _ngleed_shield_mains:
 
@@ -424,7 +424,7 @@ It is a good idea to drill/file the mounting holes with a bit of clearance. This
     - The space between the fuse box and the HV connector is quite tight;
     - There are two protective earth (yellow--green) wires and one ``HV_GND`` cable that should reach the high-voltage connector passing on top of the motherboard edge. You will need to leave ~2 mm clearance between the shield plate and the motherboard to avoid damaging the wires.
 
-After you have mounted the plate, make sure you take precautions to prevent contact of the stainless steel wire --- modified in :ref:`ngleed_rewire_hv_plug` --- with the plate. For example, add a small pad of insulating sheet under diode D2 in :numref:`fig_ngleed_hv_plug`.
+After you have mounted the plate, make sure you take precautions to prevent contact of the stainless steel wire --- modified in :secref:`ngleed_rewire_hv_plug` --- with the plate. For example, add a small pad of insulating sheet under diode D2 in :numref:`fig_ngleed_hv_plug`.
 
 .. _ngleed_faster_beam:
 
@@ -466,7 +466,7 @@ The modifications in this section aim at mitigating the effects visible in :numr
 In order to improve the time response of the beam energy, we will modify the PI regulator as well as the circuit for the supply of the transformer.
 
 Before you start with the modifications, make sure you have all required components and tools:
-    - the ``BEAM`` HV module, removed following the instructions in :ref:`ngleed_extract_hv_board`,
+    - the ``BEAM`` HV module, removed following the instructions in :secref:`ngleed_extract_hv_board`,
     - two 470 nF capacitors (e.g., film capacitors),
     - one 470 µF electrolytic capacitor rated for at least 25 V and with **large maximum ripple current** (e.g., RS 725-8168).
     - a suitable anti-static electronics workbench,
@@ -509,7 +509,7 @@ Modifying the ``SUPPRESSOR`` range
 
     The factory rage of the ``SUPPRESSOR`` dial is not ideal. This can be improved as follows:
 
-      * Adjust potentiometer R24 as described in :ref:`ngleed_suppressor_feedback` and shown in :numref:`fig_ngleed_suppressor_feedback`.
+      * Adjust potentiometer R24 as described in :secref:`ngleed_suppressor_feedback` and shown in :numref:`fig_ngleed_suppressor_feedback`.
       * Add a 100 kΩ resistor in parallel to R125, as shown in :numref:`fig_ngleed_suppressor`.
 
 
@@ -519,13 +519,13 @@ Every LEED setup uses (at least one) grid to repel inelastically scattered elect
 #. At least part of the good range of suppressor voltages is outside the accessible range. On our unit, the 'best-looking' settings used to be very close to where the potentiometer switches on. (In the off position, the retarding voltage is set to 0% of the beam energy);
 #. It is hard to control the actual voltage because of the large sensitivity of the setting to the potentiometer position.
 
-We can fix all of this very simply, as described in :ref:`ngleed_suppressor_setpoint`. A few preliminary checks are described in :ref:`ngleed_suppressor_front_panel` and :ref:`ngleed_suppressor_feedback`.
+We can fix all of this very simply, as described in :secref:`ngleed_suppressor_setpoint`. A few preliminary checks are described in :secref:`ngleed_suppressor_front_panel` and :secref:`ngleed_suppressor_feedback`.
 
-The ``RETARD`` HV module works conceptually identically to all other HV modules in the NG LEED unit. As described in :ref:`ngleed_faster_beam` (especially :numref:`fig_ngleed_beam_board_flow`), the high-voltage is generated in a closed-loop configuration: a scaled version of the high-voltage output is subtracted from the 0--10 V setpoint and fed to a PI regulator, which generates the control signal for the portion of the circuit that drives the HV transformer. The primary difference between the ``BEAM`` and ``RETARD`` HV modules is in the range of accessible voltages. The ``BEAM`` HV module generates up to 1000 V in LEED mode and up to 3500 V in Auger mode. The ``RETARD`` HV module has a nominal maximum output of 2000 V, irrespective of the mode. The different maximum outputs are realized in a very simple manner. With reference to :numref:`fig_ngleed_beam_board_flow`, it is enough to change the gain of the feedback in order to modify the maximum output voltage. As already mentioned in :ref:`ngleed_faster_beam`, in LEED mode the DC feedback gain of the ``BEAM`` HV module is :math:`G_\mathrm{feedback}^\mathrm{BEAM, LEED}=1/100`, giving an output voltage
+The ``RETARD`` HV module works conceptually identically to all other HV modules in the NG LEED unit. As described in :secref:`ngleed_faster_beam` (especially :numref:`fig_ngleed_beam_board_flow`), the high-voltage is generated in a closed-loop configuration: a scaled version of the high-voltage output is subtracted from the 0--10 V setpoint and fed to a PI regulator, which generates the control signal for the portion of the circuit that drives the HV transformer. The primary difference between the ``BEAM`` and ``RETARD`` HV modules is in the range of accessible voltages. The ``BEAM`` HV module generates up to 1000 V in LEED mode and up to 3500 V in Auger mode. The ``RETARD`` HV module has a nominal maximum output of 2000 V, irrespective of the mode. The different maximum outputs are realized in a very simple manner. With reference to :numref:`fig_ngleed_beam_board_flow`, it is enough to change the gain of the feedback in order to modify the maximum output voltage. As already mentioned in :secref:`ngleed_faster_beam`, in LEED mode the DC feedback gain of the ``BEAM`` HV module is :math:`G_\mathrm{feedback}^\mathrm{BEAM, LEED}=1/100`, giving an output voltage
 
 .. math:: V_\mathrm{HV,max}^\mathrm{BEAM, LEED} = -\frac{V_\mathrm{setpoint, max}}{G_\mathrm{feedback}^\mathrm{BEAM, LEED}} = -\frac{10\,\mathrm{V}}{0.01} = -1000\,\mathrm{V}.
 
-In Auger mode, :math:`G_\mathrm{feedback}^\mathrm{BEAM, Auger}=1/350`, so that :math:`V_\mathrm{HV,max}^\mathrm{BEAM, Auger}=-3500\,\mathrm{V}`. In the ``RETARD`` HV module, the DC feedback gain is fixed to :math:`G_\mathrm{feedback}^\mathrm{RETARD}\approx 1/200`, giving :math:`V_\mathrm{HV,max}^\mathrm{RETARD}\approx-2000\,\mathrm{V}` at :math:`V_\mathrm{setpoint}=10\,\mathrm{V}`. See :ref:`ngleed_suppressor_feedback` for more details on this feedback gain.
+In Auger mode, :math:`G_\mathrm{feedback}^\mathrm{BEAM, Auger}=1/350`, so that :math:`V_\mathrm{HV,max}^\mathrm{BEAM, Auger}=-3500\,\mathrm{V}`. In the ``RETARD`` HV module, the DC feedback gain is fixed to :math:`G_\mathrm{feedback}^\mathrm{RETARD}\approx 1/200`, giving :math:`V_\mathrm{HV,max}^\mathrm{RETARD}\approx-2000\,\mathrm{V}` at :math:`V_\mathrm{setpoint}=10\,\mathrm{V}`. See :secref:`ngleed_suppressor_feedback` for more details on this feedback gain.
 
 .. _ngleed_suppressor_front_panel:
 
@@ -562,7 +562,7 @@ We strongly advise using two multimeters, prepared to measure the low- and high-
 .. warning::
     Most multimeters are rated at max 1000 V with proper cabling. It is a good idea **not to exceed 500 V** to limit the risk of damaging the multimeter (and yourself).
 
-As visible in :numref:`fig_ngleed_suppressor_check_display`\ (a), the ``RET_MON`` signal coming from the ``RETARD`` HV module is downscaled by roughly a factor of 5 using R25, R26, and R27. As ``RET_MON`` is roughly 1/200 of the high-voltage output (for more details see :ref:`ngleed_suppressor_feedback`), "Suppressor low-V" should be 500 mV when the high-voltage output is −500 V. The R27 potentiometer can be adjusted so that this is the case.
+As visible in :numref:`fig_ngleed_suppressor_check_display`\ (a), the ``RET_MON`` signal coming from the ``RETARD`` HV module is downscaled by roughly a factor of 5 using R25, R26, and R27. As ``RET_MON`` is roughly 1/200 of the high-voltage output (for more details see :secref:`ngleed_suppressor_feedback`), "Suppressor low-V" should be 500 mV when the high-voltage output is −500 V. The R27 potentiometer can be adjusted so that this is the case.
 
 .. note::
     On our unit there was no need to modify the R27 potentiometer, so there is a good chance it has been correctly factory-adjusted on other units too.
@@ -581,7 +581,7 @@ Before proceeding, make sure you have all the necessary tools:
     - a suitable anti-static electronics workbench,
     - a suitable set of Phillips, Pozi, and flat-head screwdrivers.
 
-This check may be more interesting for those that use their SpectaLEED setup also as a retarding-field analyser for Auger spectroscopy. There, the retarding voltage determines the accurateness of the energy scale. In practice, as explained at the end of the introduction to :ref:`ngleed_suppressor_range`, checking the correctness of the feedback gain equals to ensuring that the high-voltage output range is the nominal 0 to −2000 V.
+This check may be more interesting for those that use their SpectaLEED setup also as a retarding-field analyser for Auger spectroscopy. There, the retarding voltage determines the accurateness of the energy scale. In practice, as explained at the end of the introduction to :secref:`ngleed_suppressor_range`, checking the correctness of the feedback gain equals to ensuring that the high-voltage output range is the nominal 0 to −2000 V.
 
 .. _fig_ngleed_suppressor_feedback:
 .. figure:: /_static/hardware/SpectaLEED_modification/suppressor_feedback.svg
@@ -593,12 +593,12 @@ This check may be more interesting for those that use their SpectaLEED setup als
 
 The output of stage U6 is added (with an essentially one-to-one ratio) to the ``RETARD_SET`` setpoint voltage, and fed to the PI regulator (:math:`K_\mathrm{P} = 1`, :math:`T_\mathrm{int} = 22\,\mathrm{ms}`) that generates the control signal for the transformer and HV cascade, which in turn produce the high-voltage output (see also :numref:`fig_ngleed_beam_board_flow` for the block diagram of HV modules).
 
-The output of U6 is also accessible on the ``CONTROL`` board, as stage U7 produces an inverted version that is used for the front-panel reading, labelled ``RETARD_MON`` in :numref:`fig_ngleed_suppressor_feedback`\ (c). As such, it is easy to verify the correctness of the feedback gain by measuring at the same time the ``RETARD_MON`` signal on the ``CONTROL`` board and the high-voltage output at the HV connector. For the high-voltage part, follow the indications in :ref:`ngleed_suppressor_front_panel`. ``RETARD_MON`` can be measured as indicated in :numref:`fig_ngleed_suppressor_feedback`\ (a): it is the voltage on the bottom lead of R25 relative to ground (bottom lead of R26). See :numref:`fig_ngleed_suppressor_check_display`\ (c) for the circuit diagram of the relevant ``CONTROL`` board section.
+The output of U6 is also accessible on the ``CONTROL`` board, as stage U7 produces an inverted version that is used for the front-panel reading, labelled ``RETARD_MON`` in :numref:`fig_ngleed_suppressor_feedback`\ (c). As such, it is easy to verify the correctness of the feedback gain by measuring at the same time the ``RETARD_MON`` signal on the ``CONTROL`` board and the high-voltage output at the HV connector. For the high-voltage part, follow the indications in :secref:`ngleed_suppressor_front_panel`. ``RETARD_MON`` can be measured as indicated in :numref:`fig_ngleed_suppressor_feedback`\ (a): it is the voltage on the bottom lead of R25 relative to ground (bottom lead of R26). See :numref:`fig_ngleed_suppressor_check_display`\ (c) for the circuit diagram of the relevant ``CONTROL`` board section.
 
 Since the correct gain is 1/200, expect ~2.5 V with −500 V on the output. There probably is not much point in changing the position of the R24 potentiometer if your gain is somewhat close to 1/200. On our unit, we deemed acceptable a feedback voltage of 2.482 V with −500 V on the output. This corresponds to a gain error of 0.7%, or to a maximum output voltage of −2014 V.
 
 .. note::
-    If you modify the gain of the feedback, keep in mind that, as described in :ref:`ngleed_suppressor_front_panel`, the same signal also produces the values shown on the front-panel display. It is then important to :ref:`re-adjust also the front-panel reading<ngleed_suppressor_front_panel>`.
+    If you modify the gain of the feedback, keep in mind that, as described in :secref:`ngleed_suppressor_front_panel`, the same signal also produces the values shown on the front-panel display. It is then important to :ref:`re-adjust also the front-panel reading<ngleed_suppressor_front_panel>`.
 
 .. _ngleed_suppressor_setpoint:
 
@@ -628,7 +628,7 @@ Before proceeding, make sure you have all the necessary components and tools:
 
 where :math:`x` is the fractional position of the front-panel potentiometer, and :math:`R_{125}` is in kilo-ohms in the last relation.
 
-As mentioned in the introductory part of :ref:`ngleed_suppressor_range` and described in detail in :ref:`ngleed_suppressor_feedback`, the ``RETARD`` HV module has twice the gain of the ``BEAM`` module (in LEED mode). This means that :math:`V_\mathrm{RETARD\_SET} = 5\,\mathrm{V}` gives −1 kV suppressor, or 100% retarding voltage. With the factory value of R125 (27 kΩ), the ``SUPPRESSOR`` knob gives :math:`V_\mathrm{RETARD\_SET}` between 4.03 V and 5.52 V, corresponding to the 80.6--110.4% range of retarding voltages mentioned earlier.
+As mentioned in the introductory part of :secref:`ngleed_suppressor_range` and described in detail in :secref:`ngleed_suppressor_feedback`, the ``RETARD`` HV module has twice the gain of the ``BEAM`` module (in LEED mode). This means that :math:`V_\mathrm{RETARD\_SET} = 5\,\mathrm{V}` gives −1 kV suppressor, or 100% retarding voltage. With the factory value of R125 (27 kΩ), the ``SUPPRESSOR`` knob gives :math:`V_\mathrm{RETARD\_SET}` between 4.03 V and 5.52 V, corresponding to the 80.6--110.4% range of retarding voltages mentioned earlier.
 
 Modifying the range, is then merely a matter of modifying the R125 resistor: 20 kΩ should give a maximum suppressor retardation of exactly 100% if the ratio of the gains of the ``RETARD`` and ``BEAM`` HV modules is exactly 2. However, replacing R125 is tricky as it requires removing the whole ``CONTROL`` board --- including the potentiometers on the front panel. It is significantly easier to add a 100 kΩ resistor in parallel to R125. This gives an equivalent resistance of :math:`27\mathrm{k}\parallel100\mathrm{k}=21.3\mathrm{k}`, and a theoretical 69.4--102% suppressor range. Using a 100 kΩ resistor has also the advantage of leaving a little room in case :ref:`the feedback gain is a little off<ngleed_suppressor_feedback>`. See :numref:`fig_bent_resistors` for suggestions on how to prepare the new resistor.
 

@@ -123,7 +123,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Hardware
 
    Overview<content/hardware/hardware_index>

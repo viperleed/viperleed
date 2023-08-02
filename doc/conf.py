@@ -7,7 +7,12 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 import datetime
+import sys
+from pathlib import Path
+
 import sphinx_rtd_theme
+
+sys.path.append(str(Path('./_ext').resolve()))
 
 project = 'ViPErLEED'
 copyright = f'{datetime.date.today().year}, ViPErLEED-developers'
@@ -30,6 +35,7 @@ extensions = [
               'sphinxcontrib.inkscapeconverter', # for SVG images
               'sphinxcontrib.spelling',     # spell checking for the docs ;)
               'myst_nb',                    # for including Jupyter notebooks
+              'secref',
               ]
 
 source_suffix = '.rst'
@@ -99,5 +105,8 @@ latex_elements = {
 
     % set title colors to black (otherwise they are blue; defined in sphinx.sty)
     \sphinxDeclareColorOption{TitleColor}{{rgb}{0.0,0.0,0.0}}
+    
+    % Allow section numbering down to sub-subsection
+    \setcounter{secnumdepth}{3}
     '''
     }
