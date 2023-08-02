@@ -1,7 +1,9 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """A collection of functions that run ViPErLEED from a provided ASE object.
 
-@Author: Alexander M. Imre, Michele Riva
+@author: Alexander M. Imre
+@author: Michele Riva
 based on tleedm_from_ase.py by Florian Kraushofer
 
 Requires viperleed to be in the system path (or on PYTHONPATH).
