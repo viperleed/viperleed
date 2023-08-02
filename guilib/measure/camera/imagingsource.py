@@ -380,6 +380,18 @@ class ImagingSourceCamera(abc.CameraABC):
         pixel_max : int
             Maximum intensity for a pixel
         """
+        # TODO: here something is still incorrect: The right way to             # TODO: Probably the better way would be to have a CameraCalibrationTask that actually detects these limits from the camera by acquiring a very short dark frame and a somewhat long illuminated frame. The advantage: I would get rid of all the sensor crap, which also needs updating when new models come up.
+        # do it is:
+        # MAX_BIT = 8*n_bytes
+        # if MAX_BIT <= DYN_RANGE --> has_zero_minimum = True
+        # MIN_BIT = 0 if has_zero_minimum else MAX_BIT - DYN_RANGE
+        # DELTA = 1 if has_zero_minimum else 0
+        # PX_MIN = 2**MIN_BIT - DELTA
+        # PX_MAX = 2**MAX_BIT - 2**(MAX_BIT - DYN_RANGE) + 2**MIN_BIT - 1
+
+        # For 16-bit with 12-bit range and has_zero_minimum
+        # this gives px_max = 2**16 - 2**4 + 2**0 - 1 = 65520
+
         *_, n_bytes, _ = self.image_info
         min_bit = 8*n_bytes - self.driver.dynamic_range
         if n_bytes == 1 or self.has_zero_minimum:
