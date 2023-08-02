@@ -135,5 +135,3 @@ def test_bookkeeper_with_existing_history_and_alt_name(temp_dir):
     (temp_dir / 'Tensors' / 'Tensors_003.zip').touch()
     bookkeeper(mode="default", history_name="history_alt_name")
     assert (temp_dir / "history_alt_name" / f"t003.r001_{MOCK_TIMESTAMP}").exists()
-
-
