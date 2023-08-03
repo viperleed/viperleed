@@ -10,7 +10,7 @@ import sys
 import os
 from pathlib import Path
 
-from viperleed.lib.files.poscar import readPOSCAR
+from viperleed.calc.files.poscar import readPOSCAR
 
 
 @pytest.fixture(scope="function")

@@ -7,11 +7,11 @@ from zipfile import ZipFile
 from copy import deepcopy
 import numpy as np
 
-from viperleed import lib
-import viperleed.lib
+from viperleed import calc
+import viperleed.calc
 
 
-from viperleed.lib.classes.r_error import get_n_zero_crossings,get_zero_crossing
+from viperleed.calc.classes.r_error import get_n_zero_crossings,get_zero_crossing
 
 @pytest.mark.parametrize('x_arr,n_crossings', ((np.array([-1, 1, -1]),2 ),
                                                (np.array([0, 0, 0]), 1),

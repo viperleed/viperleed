@@ -12,8 +12,8 @@ from pathlib import Path
 from copy import deepcopy
 import numpy as np
 
-from viperleed.lib.classes.slab import SymPlane
-from viperleed.lib.symmetry import findBulkSymmetry
+from viperleed.calc.classes.slab import SymPlane
+from viperleed.calc.symmetry import findBulkSymmetry
 
 
 class TestSlabTransforms:

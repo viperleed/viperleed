@@ -26,13 +26,13 @@ import pytest
 import numpy as np
 
 from viperleed.calc import run_tleedm
-from viperleed.lib import symmetry
-from viperleed.lib.classes.atom import Atom
-from viperleed.lib.classes.rparams import Rparams
-from viperleed.lib.classes.slab import Slab
-from viperleed.lib.files import parameters, poscar
-from viperleed.lib.files.vibrocc import readVIBROCC
-from viperleed.lib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
+from viperleed.calc import symmetry
+from viperleed.calc.classes.atom import Atom
+from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.slab import Slab
+from viperleed.calc.files import parameters, poscar
+from viperleed.calc.files.vibrocc import readVIBROCC
+from viperleed.calc.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
 
 
 _FIXTURES_PATH = Path('tests/fixtures/')

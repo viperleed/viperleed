@@ -13,7 +13,7 @@ import sys
 
 cd = os.path.realpath(os.path.dirname(__file__))
 
-from viperleed.lib.files.beams import readAUXEXPBEAMS, writeOUTBEAMS
+from viperleed.calc.files.beams import readAUXEXPBEAMS, writeOUTBEAMS
 
 
 def main():

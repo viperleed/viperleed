@@ -11,13 +11,13 @@ import sys
 
 import pytest
 
-from viperleed.lib import symmetry
-from viperleed.lib.files.poscar import (readPOSCAR,
+from viperleed.calc import symmetry
+from viperleed.calc.files.poscar import (readPOSCAR,
                                               writePOSCAR,
                                               ensure_away_from_c_edges,
                                               POSCARReader,
                                               POSCARSyntaxError)
-from viperleed.lib.classes.rparams import Rparams
+from viperleed.calc.classes.rparams import Rparams
 
 class Test_readPOSCAR:
     def test_readPOSCAR_slab_exists(self, example_poscars):

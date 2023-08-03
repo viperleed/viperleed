@@ -20,6 +20,6 @@ for path in [tests_path, base_path]:
 import pytest
 import numpy as np
 
-import viperleed.lib.base
+import viperleed.calc.base
 from test_planegroup import *
 from test_lattice import *

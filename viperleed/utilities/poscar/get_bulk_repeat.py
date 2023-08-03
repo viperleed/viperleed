@@ -13,9 +13,9 @@ the appropriate N_BULK_LAYERS and BULK_REPEAT values.
 import copy
 import numpy as np
 
-from viperleed.lib.classes.rparams import Rparams
-from viperleed.lib.files.poscar import readPOSCAR, writePOSCAR
-from viperleed.lib.files.woods_notation import writeWoodsNotation
+from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files.woods_notation import writeWoodsNotation
 
 
 def main():

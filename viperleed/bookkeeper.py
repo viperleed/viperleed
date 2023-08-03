@@ -16,7 +16,7 @@ import re
 import shutil
 import time
 
-from viperleed.lib.sections._sections import ALL_INPUT_FILES
+from viperleed.calc.sections._sections import ALL_INPUT_FILES
 
 class BookkeeperMode(Enum):
     DEFAULT = 'default'  # store last run, but do not overwrite POSCAR, VIBROCC

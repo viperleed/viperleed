@@ -13,14 +13,14 @@ from copy import deepcopy
 import numpy as np
 
 
-from viperleed.lib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
-from viperleed.lib.files.poscar import readPOSCAR
-from viperleed.lib.files.vibrocc import readVIBROCC
-from viperleed.lib.symmetry import findSymmetry, enforceSymmetry
-from viperleed.lib.psgen import runPhaseshiftGen_old
-from viperleed.lib.classes.atom import Atom
-from viperleed.lib.classes.rparams import Rparams
-from viperleed.lib.classes.slab import Slab
+from viperleed.calc.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
+from viperleed.calc.files.poscar import readPOSCAR
+from viperleed.calc.files.vibrocc import readVIBROCC
+from viperleed.calc.symmetry import findSymmetry, enforceSymmetry
+from viperleed.calc.psgen import runPhaseshiftGen_old
+from viperleed.calc.classes.atom import Atom
+from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.slab import Slab
 
 
 @pytest.fixture()

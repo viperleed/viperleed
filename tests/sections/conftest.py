@@ -12,8 +12,8 @@ from pathlib import Path
 from copy import deepcopy
 import numpy as np
 
-from viperleed.lib.files.poscar import readPOSCAR
-from viperleed.lib.classes.rparams import Rparams
+from viperleed.calc.files.poscar import readPOSCAR
+from viperleed.calc.classes.rparams import Rparams
 
 
 @pytest.fixture()

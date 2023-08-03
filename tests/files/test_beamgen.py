@@ -12,9 +12,9 @@ import os, sys
 from copy import deepcopy
 import numpy as np
 
-from viperleed.lib.beamgen import get_beam_scattering_subsets
-from viperleed.lib.beamgen import make_beamlist_string
-from viperleed.lib.beamgen import calc_and_write_beamlist
+from viperleed.calc.beamgen import get_beam_scattering_subsets
+from viperleed.calc.beamgen import make_beamlist_string
+from viperleed.calc.beamgen import calc_and_write_beamlist
 
 _FIXTURES_PATH = Path('tests/fixtures/')
 

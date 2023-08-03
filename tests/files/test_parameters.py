@@ -12,13 +12,13 @@ import os, sys
 from copy import deepcopy
 import numpy as np
 
-import viperleed.lib.files.parameters as parameters
-from viperleed.lib.files.parameters import (readPARAMETERS,
+import viperleed.calc.files.parameters as parameters
+from viperleed.calc.files.parameters import (readPARAMETERS,
                                                   ParameterInterpreter,
                                                   Assignment, NumericBounds)
-from viperleed.lib.files.poscar import readPOSCAR
-from viperleed.lib.classes.rparams import Rparams
-from viperleed.lib.files.parameter_errors import (
+from viperleed.calc.files.poscar import readPOSCAR
+from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.files.parameter_errors import (
     ParameterError, ParameterValueError, ParameterParseError,
     ParameterIntConversionError, ParameterFloatConversionError,
     ParameterBooleanConversionError, ParameterNotRecognizedError,
