@@ -1,11 +1,11 @@
-Minimum python 3.8
+Minimum python 3.7
 
 # required
 numpy
 wrapt
 quicktions
 scipy
-sklearn
+scikit-learn
 matplotlib
 psutil  # on linux, requires sudo apt install pythonxx.xx-dev to build
 PyQt5
