@@ -324,7 +324,7 @@ def main():
     if sum([args.verbose, args.very_verbose]) > 1:
         # only one verbosity level can be chosen
         logger.error("Only one verbosity level can be chosen. Stopping ")
-        sys.exit(2)
+        return 2
     elif args.very_verbose:
         override_log_level = 1
     elif args.verbose:
