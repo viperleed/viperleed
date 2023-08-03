@@ -805,12 +805,10 @@ class CameraViewer(qtw.QScrollArea):
 
         # Now construct a QRegion mask. We will use it as
         # a clipping region for filling with solid red
-        saturation_arr = np.uint8(255)*saturation_arr
+        saturation_arr = np.packbits(saturation_arr, axis=1, bitorder='little')
         mask = qtg.QImage(saturation_arr, width, height,
                           saturation_arr.strides[0],
-                          qtg.QImage.Format_Grayscale8)
-        mask = mask.convertToFormat(mask.Format_Mono)
-        mask.invertPixels()
+                          qtg.QImage.Format_MonoLSB))
         return qtg.QRegion(qtg.QBitmap.fromImage(mask))
 
     def __make_settings_dialog(self):
