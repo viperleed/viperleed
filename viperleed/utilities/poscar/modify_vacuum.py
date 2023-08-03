@@ -25,7 +25,7 @@ for import_path in (cd, vpr_path):
         sys.path.append(import_path)
 
 from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
-from viperleed.utilities import default_cli_parser
+from viperleed.utilities.poscar import default_cli_parser
 
 
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
