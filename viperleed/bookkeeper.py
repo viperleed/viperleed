@@ -129,7 +129,7 @@ def bookkeeper(mode,
             tensor_number = max(indlist)
     # figure out the number of the run
     dir_list = [d.name for d in history_path.iterdir()
-                if (history_path / d).is_dir]
+                if (history_path / d).is_dir()]
     max_nums = {}  # max. job number per tensor number
     rgx = re.compile(r't[0-9]{3}.r[0-9]{3}_')
     for dir in dir_list:
