@@ -11,6 +11,7 @@ Functions for reading and writing POSCAR files. Also defines the
 POSCARError specific exception, as well as some subclasses.
 """
 
+from io import TextIOBase
 from collections import defaultdict
 from contextlib import AbstractContextManager
 import logging
@@ -64,10 +65,13 @@ def readPOSCAR(filename='POSCAR'):
     POSCARSyntaxError
         If no (or too few) atomic coordinate is read.
     """
-    filepath = Path(filename)
-    if not filepath.is_file():
-        _LOGGER.error("POSCAR not found.")
-        raise FileNotFoundError(f"POSCAR file at {filepath} not found.")
+    if isinstance(filename, TextIOBase):
+        filepath = filename
+    else:
+        filepath = Path(filename)
+        if not filepath.is_file():
+            _LOGGER.error("POSCAR not found.")
+            raise FileNotFoundError(f"POSCAR file at {filepath} not found.")
 
     with POSCARReader(filepath) as poscar:
         return poscar.read()
@@ -187,20 +191,27 @@ class POSCARReader(AbstractContextManager):
             are shifted, if possible.
         """
         super().__init__()
-        self.filename = Path(filename)
+        if isinstance(filename, TextIOBase):
+            self.filename = filename
+        else:
+            self.filename = Path(filename)
         self.file_object = None
         self.ucell_eps = ucell_eps
         self.min_frac_dist = min_frac_dist
 
     def __enter__(self):
         """Enter context."""
-        self.file_object = self.filename.open('r', encoding='utf-8')
+        if not isinstance(self.filename, TextIOBase):
+            self.file_object = self.filename.open('r', encoding='utf-8')
+        else:
+            self.file_object = self.filename
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Close file object when exiting."""
-        self.file_object.close()
-        super().__exit__(exc_type, exc_val, exc_tb)
+        if not isinstance(self.filename, TextIOBase):
+            self.file_object.close()
+            super().__exit__(exc_type, exc_val, exc_tb)
 
     def read(self):
         """Return a slab with info read from file."""
@@ -431,7 +442,10 @@ class POSCARWriter(AbstractContextManager):
     def __init__(self, filename, comments='none', relax_info=None):
         """Initialize instance."""
         super().__init__()
-        self.filename = Path(filename)
+        if isinstance(filename, TextIOBase):
+            self.filename = filename
+        else:
+            self.filename = Path(filename)
         self.comments = comments
         self.file_object = None
         self.slab = None
@@ -439,23 +453,31 @@ class POSCARWriter(AbstractContextManager):
         if self.comments == 'relax':
             self._check_relax_info()
 
-        # Take header line from existing POSCAR, or use a dummy header
-        poscar = Path('POSCAR')
-        if poscar.is_file():
-            with poscar.open('r', encoding='utf-8') as _file:
-                self.header = _file.readline()
+        if not isinstance(self.filename, TextIOBase):
+            # Take header line from existing POSCAR, or use a dummy header
+            poscar = Path('POSCAR')
+            if poscar.is_file():
+                with poscar.open('r', encoding='utf-8') as _file:
+                    self.header = _file.readline()
+            else:
+                self.header = 'unknown'
+            if not self.header.endswith('\n'):
+                self.header += '\n'
         else:
-            self.header = 'unknown'
-        if not self.header.endswith('\n'):
-            self.header += '\n'
+            self.header = '\n'
 
     def __enter__(self):
         """Enter context."""
-        self.file_object = self.filename.open('w', encoding='utf-8')
+        if isinstance(self.filename, TextIOBase):
+            self.file_object = self.filename
+        else:
+            self.file_object = self.filename.open('w', encoding='utf-8')
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Close file object when exiting."""
+        if isinstance(self.filename, TextIOBase):
+            return
         self.file_object.close()
         super().__exit__(exc_type, exc_val, exc_tb)
 

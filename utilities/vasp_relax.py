@@ -13,11 +13,19 @@ Created on 2023-08-02
 
 import argparse
 import logging
-from copy import deepcopy
-from pathlib import Path
-from warnings import warn
+import sys
+import os
 
-from viperleed.lib.files.poscar import readPOSCAR, writePOSCAR
+cd = os.path.realpath(os.path.dirname(__file__))
+# NB: it's necessary to add vpr_path to sys.path so that viperleed
+#     can be loaded correctly at the top-level package
+vpr_path = os.path.realpath(os.path.join(cd, '..', '..'))
+for import_path in (cd, vpr_path):
+    if import_path not in sys.path:
+        sys.path.append(import_path)
+
+from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.utilities import default_cli_parser
 
 # TODO: add an option to add a mirror image to the slab, so that the slab is
 #       symmetric with respect to the center of the slab. This could be useful
@@ -26,63 +34,12 @@ from viperleed.lib.files.poscar import readPOSCAR, writePOSCAR
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
 
 
-def prepare_for_vasp_relaxation(slab, vacuum_gap_size):
-    """_summary_
-
-    Parameters
-    ----------
-    slab : Slab
-        slab to prepare for relaxation
-    vacuum_gap_size : float
-        size of the vacuum gap to add on top of the slab in Angstroms
-
-    Returns
-    -------
-    Slab
-        the slab with the vacuum gap added on top
-    """
-    processed_slab = deepcopy(slab)
-    processed_slab.check_a_b_out_of_plane()
-    processed_slab.getCartesianCoordinates()
-    top_atom_z = max([at.cartpos[2] for at in processed_slab.atlist])
-    old_c_z = processed_slab.ucell[2, 2]
-    new_c_z = top_atom_z + vacuum_gap_size
-    processed_slab.ucell[2, 2] = new_c_z
-    processed_slab.getFractionalCoordinates()
-    processed_slab.collapseFractionalCoordinates()
-    return processed_slab
-
-
 def _parse_command_line_arguments():
-    parser = argparse.ArgumentParser()
+    parser = default_cli_parser()
     parser.add_argument(
         "above_c",
         help=("Specify above which c fraction to relax the slab."),
         type=float,
-    )
-    parser.add_argument(
-        "-i", "--input",
-        help=("specify input file"),
-        type=str,
-        default="POSCAR"
-        )
-    parser.add_argument(
-        "-o", "--output",
-        help=("specify output file"),
-        type=str,
-        default="POSCAR_for_relaxation"
-        )
-    parser.add_argument(
-        "-v", "--verbose",
-        help=("increase output verbosity"),
-        action="store_true"
-    )
-    parser.add_argument(
-        "--vacuum",
-        help=("Specify how much vacuum to add on top of the slab in Å, "
-              "measured from the topmost atom. Default is 20 Å."),
-        type=float,
-        default=20.0,
     )
     parser.add_argument(
         "--reorder",
@@ -105,47 +62,26 @@ def main():
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
-    logger.info("ViPErLEED utility: Preparing slab for VASP relaxation\n")
-
-    input_path = Path(args.input).resolve()
-    output_path = Path(args.output).resolve()
-
-    logger.debug(f"Input file: {input_path}")
-    logger.debug(f"Output file: {output_path}")
-
-    if not input_path.is_file():
-        raise FileNotFoundError(f"Input file {input_path} not found.")
-    if output_path.is_file():
-        raise FileExistsError(f"Output file {output_path} already exists.")
+    logger.debug("ViPErLEED utility: Preparing slab for VASP relaxation\n")
 
     above_c = args.above_c
     if above_c <= 0 or above_c >= 1:
         raise ValueError("c fraction has to be in range [0,1], but was "
                          f"{above_c}.")
+    logger.debug(f"Relaxing above c fraction {above_c}.")
 
-    if args.vacuum <= 0:
-        raise ValueError("Vacuum gap has to be positive, but was "
-                         f"{args.vacuum}.")
-    if args.vacuum < 15:
-        logger.warn("Vacuum gap is less than 15 Å. This may lead to "
-                    "interactions between the slab and its periodic images. "
-                    "Consider increasing the vacuum gap.")
+    # read the POSCAR file from stdin
+    slab = readPOSCAR(sys.stdin)
+
+    if slab.vacuum_gap < 10:
+        logger.warning("Gap between top and bottom of slab is less than 10 Å. "
+                       "This may result in interaction between the slabs.")
 
     c_only = not args.all_directions
-    if not c_only:
-        logger.warn("Relaxing all directions may break the slab symmetry. "
-                    "Use with caution.")
 
-    # read the POSCAR file
-    slab = readPOSCAR(input_path)
-
-    # TODO: process the slab
-    processed_slab = prepare_for_vasp_relaxation(slab, args.vacuum)
-
-
-    # TODO: write the output file
-    writePOSCAR(slab=processed_slab,
-                filename=output_path,
+    # write the output file
+    writePOSCAR(slab=slab,
+                filename=sys.stdout,
                 reorder=args.reorder,
                 comments='relax',
                 relax_info={"above_c": above_c,
@@ -153,5 +89,7 @@ def main():
                 silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
-    logger.addHandler(logging.StreamHandler())
+    # if executed from the terminal, send all logs to stderr because stdout is
+    # used for piping out the POSCAR file
+    logger.addHandler(logging.StreamHandler(sys.stderr))
     main()

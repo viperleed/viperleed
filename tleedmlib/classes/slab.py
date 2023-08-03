@@ -228,6 +228,16 @@ class Slab:
         """List of elements in the slab in order as read from POSCAR."""
         return tuple(self.n_per_elem.keys())
 
+    @property
+    def thickness(self):
+        top_atom_z = max([at.cartpos[2] for at in self.atlist])
+        bottom_atom_z = min([at.cartpos[2] for at in self.atlist])
+        return top_atom_z - bottom_atom_z
+
+    @property
+    def vacuum_gap(self):
+        return self.ucell[2, 2] - self.thickness
+
     def check_a_b_out_of_plane(self):
         if any(self.ucell[2, :2]):
             _err = ("Unit cell a and b vectors must not "
