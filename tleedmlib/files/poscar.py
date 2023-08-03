@@ -11,6 +11,7 @@ Functions for reading and writing POSCAR files. Also defines the
 POSCARError specific exception, as well as some subclasses.
 """
 
+from io import TextIOBase
 from collections import defaultdict
 from contextlib import AbstractContextManager
 import logging
@@ -64,17 +65,20 @@ def readPOSCAR(filename='POSCAR'):
     POSCARSyntaxError
         If no (or too few) atomic coordinate is read.
     """
-    filepath = Path(filename)
-    if not filepath.is_file():
-        _LOGGER.error("POSCAR not found.")
-        raise FileNotFoundError(f"POSCAR file at {filepath} not found.")
+    if isinstance(filename, TextIOBase):
+        filepath = filename
+    else:
+        filepath = Path(filename)
+        if not filepath.is_file():
+            _LOGGER.error("POSCAR not found.")
+            raise FileNotFoundError(f"POSCAR file at {filepath} not found.")
 
     with POSCARReader(filepath) as poscar:
         return poscar.read()
 
 
 def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
-                silent=False):
+                silent=False, relax_info=None):
     """Write a POSCAR-style file from a slab.
 
     If a file named 'POSCAR' exists in the current folder, its first,
@@ -99,6 +103,7 @@ def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
           to a or b (meant to be used with POSCAR_oricell)
         - 'bulk' is like 'none' but writes the space group
           (meant to be used with POSCAR_bulk).
+        - 'relax'
     silent : bool, optional
         If True, will print less to log.
 
@@ -112,12 +117,13 @@ def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
     slab.sort_by_element()   # this is the minimum that has to happen
 
     try:  # pylint: disable=too-many-try-statements
-        with POSCARWriter(filename, comments) as poscar:
+        with POSCARWriter(filename, comments, relax_info) as poscar:
             poscar.write(slab)
     except OSError:
         _LOGGER.error(f"Failed to write {filename}")
         raise
     if not silent:
+        _LOGGER.log(1, f"writePOSCAR() comments: {comments}")
         _LOGGER.debug(f"Wrote to {filename} successfully")
 
 
@@ -185,20 +191,27 @@ class POSCARReader(AbstractContextManager):
             are shifted, if possible.
         """
         super().__init__()
-        self.filename = Path(filename)
+        if isinstance(filename, TextIOBase):
+            self.filename = filename
+        else:
+            self.filename = Path(filename)
         self.file_object = None
         self.ucell_eps = ucell_eps
         self.min_frac_dist = min_frac_dist
 
     def __enter__(self):
         """Enter context."""
-        self.file_object = self.filename.open('r', encoding='utf-8')
+        if not isinstance(self.filename, TextIOBase):
+            self.file_object = self.filename.open('r', encoding='utf-8')
+        else:
+            self.file_object = self.filename
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Close file object when exiting."""
-        self.file_object.close()
-        super().__exit__(exc_type, exc_val, exc_tb)
+        if not isinstance(self.filename, TextIOBase):
+            self.file_object.close()
+            super().__exit__(exc_type, exc_val, exc_tb)
 
     def read(self):
         """Return a slab with info read from file."""
@@ -426,31 +439,45 @@ class POSCARReader(AbstractContextManager):
 class POSCARWriter(AbstractContextManager):
     """A context manager for writing a slab to POSCAR."""
 
-    def __init__(self, filename, comments='none'):
+    def __init__(self, filename, comments='none', relax_info=None):
         """Initialize instance."""
         super().__init__()
-        self.filename = Path(filename)
+        if isinstance(filename, TextIOBase):
+            self.filename = filename
+        else:
+            self.filename = Path(filename)
         self.comments = comments
         self.file_object = None
         self.slab = None
+        self.relax_info = relax_info
+        if self.comments == 'relax':
+            self._check_relax_info()
 
-        # Take header line from existing POSCAR, or use a dummy header
-        poscar = Path('POSCAR')
-        if poscar.is_file():
-            with poscar.open('r', encoding='utf-8') as _file:
-                self.header = _file.readline()
+        if not isinstance(self.filename, TextIOBase):
+            # Take header line from existing POSCAR, or use a dummy header
+            poscar = Path('POSCAR')
+            if poscar.is_file():
+                with poscar.open('r', encoding='utf-8') as _file:
+                    self.header = _file.readline()
+            else:
+                self.header = 'unknown'
+            if not self.header.endswith('\n'):
+                self.header += '\n'
         else:
-            self.header = 'unknown'
-        if not self.header.endswith('\n'):
-            self.header += '\n'
+            self.header = '\n'
 
     def __enter__(self):
         """Enter context."""
-        self.file_object = self.filename.open('w', encoding='utf-8')
+        if isinstance(self.filename, TextIOBase):
+            self.file_object = self.filename
+        else:
+            self.file_object = self.filename.open('w', encoding='utf-8')
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Close file object when exiting."""
+        if isinstance(self.filename, TextIOBase):
+            return
         self.file_object.close()
         super().__exit__(exc_type, exc_val, exc_tb)
 
@@ -467,6 +494,8 @@ class POSCARWriter(AbstractContextManager):
         self.file_object.writelines(self._get_scaling(slab))
         self.file_object.writelines(self._get_unit_cell(slab))
         self.file_object.writelines(self._get_elements_and_numbers(slab))
+        if self.comments == 'relax':
+            self.file_object.writelines("Selective dynamics\n")
         self.file_object.writelines(self._get_cartesian_and_group_line(slab))
         self.file_object.writelines(self._get_atom_coordinates(slab))
 
@@ -487,6 +516,21 @@ class POSCARWriter(AbstractContextManager):
         """Yield the two lines of chemical species and their counts."""
         yield ''.join(f'{el:>5}' for el in slab.elements) + '\n'
         yield ''.join(f'{n:>5}' for n in slab.n_per_elem.values()) + '\n'
+
+    def _check_relax_info(self):
+        if self.relax_info is None and self.comments == 'relax':
+            raise ValueError("Specified comments='relax' but missing "
+                             "relaxation_info.")
+        if self.relax_info is not None and self.comments != 'relax':
+            _LOGGER.warning("Specified relaxation_info but comments is not"
+                           "'relax'.")
+        if (self.relax_info is not None
+            and (self.relax_info['above_c'] <= 0.0
+            or self.relax_info['above_c'] >= 1.0)):
+            raise ValueError("Invalid relaxation_info: above_c must be in range"
+                             "[0,1].")
+        self.above_c = self.relax_info['above_c']
+        self.relax_c_only = self.relax_info['c_only']
 
     def _get_cartesian_and_group_line(self, slab):
         """Yield the line for "Direct", group and other column headers."""
@@ -530,6 +574,15 @@ class POSCARWriter(AbstractContextManager):
             if self.comments in ('none', 'bulk'):
                 # Only coordinates
                 yield line + '\n'
+                continue
+            if self.comments == 'relax':
+                if atom.pos[2] <= self.above_c:
+                    relax_pos_flags = "   F   F   F"
+                elif atom.pos[2] > self.above_c and self.relax_c_only:
+                    relax_pos_flags = "   F   F   T"
+                else:
+                    relax_pos_flags = "   T   T   T"
+                yield line + relax_pos_flags + '\n'
                 continue
 
             line += (f"{i+1:>5}"                           # N
