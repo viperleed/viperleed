@@ -79,6 +79,8 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 # TODO: speed up import time by picking more specific module parts
 # BUG: PathSelector looks weird on Linux
 # BUG: system settings: folder renamed with small/capital not detected as change
+# Bug: Low priority bug, about section can be opened multiple times. Use
+#       same window in measure and simulation GUI.
 
 #   C A M E R A   &  C O.
 # BUG: camera with short exposure consumes an insane amount of memory. Is there a leak?
@@ -86,6 +88,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      to maximum on the 265 when setting a ROI without bad pixels and with properties
 #      open.
 # BUG: camera lost with viewer & settings open --> cannot open again after power-up
+# TODO: Limit frame rate in live view (lag when pixels are saturated)
 # TODO: complain if camera lost in live view
 # TODO: bad pixels finder top progress bar should scale better, with actual
 #       duration of tasks
