@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""ViPErLEED utility: Preparing POSCAR for VASP relaxation
+"""ViPErLEED utility: Modify vacuum gap
 
-This utility takes a slab in POSCAR format as used by ViPErLEED and prepares it 
-for relaxation in VASP. This includes adding a vacuum gap on top of the slab,
-writing the "Selective dynamics" flags, and giving logical flags for each atom.
+This utility takes a slab in POSCAR format and modified the vacuum gap.
+
 
 Created on 2023-08-03
 
@@ -14,7 +13,6 @@ Created on 2023-08-03
 from copy import deepcopy
 import logging
 import sys
-import os
 
 
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
@@ -86,7 +84,7 @@ def _parse_command_line_arguments():
     )
     parser.add_argument(
         "-a", "--absolute",
-        help=("If set, the value given to --vacuum is the absolute size"
+        help=("If set, the value given to vacuum is the absolute size"
               "of the vacuum gap, else it is the amount of vacuum to add or"
               "remove from the slab."),
         action = "store_true"

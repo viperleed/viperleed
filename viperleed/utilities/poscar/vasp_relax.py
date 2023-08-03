@@ -34,12 +34,6 @@ def _parse_command_line_arguments():
         type=float,
     )
     parser.add_argument(
-        "--reorder",
-        help=("Reorder the atoms in the slab by z coordinate."
-              "Atoms will always be sorted by original-element order."),
-        action="store_true"
-    )
-    parser.add_argument(
         "--all_directions",
         help=("Relax all directions, not just the c direction."),
         action="store_true"
@@ -74,7 +68,6 @@ def main():
     # write the output file
     writePOSCAR(slab=slab,
                 filename=sys.stdout,
-                reorder=args.reorder,
                 comments='relax',
                 relax_info={"above_c": above_c,
                             "c_only": c_only},
