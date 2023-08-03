@@ -20,13 +20,13 @@ from viperleed.utilities.poscar import default_cli_parser
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
 
 def _parse_command_line_arguments():
-    parser = default_cli_parser()
+    parser, args, unparsed_args = default_cli_parser()
     parser.add_argument(
         "c",
         help="delete all atoms below this c fraction",
         type=float,
     )
-    args, _ = parser.parse_known_args()
+    parser.parse_args(args=unparsed_args, namespace=args)
     return args
 
 
@@ -60,7 +60,4 @@ def main():
                 silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
-    # if executed from the terminal, send all logs to stderr because stdout is
-    # used for piping out the POSCAR file
-    logger.addHandler(logging.StreamHandler(sys.stderr))
     main()

@@ -23,8 +23,8 @@ logger = logging.getLogger("viperleed.utilities.poscar.project_c_to_z")
 
 
 def _parse_command_line_arguments():
-    parser = default_cli_parser()
-    args, _ = parser.parse_known_args()
+    parser, args, unparsed_args = default_cli_parser()
+    parser.parse_args(args=unparsed_args, namespace=args)
     return args
 
 
@@ -49,7 +49,4 @@ def main():
                 silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
-    # if executed from the terminal, send all logs to stderr because stdout is
-    # used for piping out the POSCAR file
-    logger.addHandler(logging.StreamHandler(sys.stderr))
     main()

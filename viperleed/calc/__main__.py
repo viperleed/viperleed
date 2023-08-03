@@ -97,7 +97,7 @@ def _parse_command_line_arguments():
               "Passed along to the bookkeeper. Default is 'workhistory'."),
         type=str,
         default="workhistory")
-    args, _ = parser.parse_known_args()
+    parser.parse_args(args=unparsed_args, namespace=args)
     return args
 
 
