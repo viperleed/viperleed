@@ -12,11 +12,11 @@ from copy import deepcopy
 import logging
 import sys
 
-import numpy as np
 from scipy.spatial.distance import cdist
+import numpy as np
 
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
-from viperleed.utilities.poscar import default_cli_parser
+
 
 
 logger = logging.getLogger("viperleed.utilities.poscar.merge")
@@ -39,8 +39,8 @@ def merge_slabs(slabs, check_collisions=True, eps=1e-5):
 
     return merged_slab
 
-def _parse_command_line_arguments():
-    parser, args, unparsed_args = default_cli_parser()
+def add_cli_parser_arguments(parser):
+
     parser.add_argument(
         "files",
         nargs="+",
@@ -57,12 +57,15 @@ def _parse_command_line_arguments():
         help="do not check for collisions between atoms in different slabs",
         action="store_true",
     )
-    parser.parse_args(args=unparsed_args, namespace=args)
-    return args
 
 
-def main():
-    args = _parse_command_line_arguments()
+
+def main(args=None):
+    if args is None:
+        parser = argparse.ArgumentParser()
+        add_verbose_option(parser)
+        add_cli_parser_arguments(parser)
+        args = parser.parse_args()
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)

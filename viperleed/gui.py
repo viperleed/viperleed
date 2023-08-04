@@ -104,9 +104,11 @@ def gui_main():
 
     sys.exit(app.exec_())
 
-
-if __name__ == '__main__':
+def main(args=None):
     if is_commandline_mode():
         commandline_main()
     else:
         gui_main()
+
+if __name__ == '__main__':
+    main()

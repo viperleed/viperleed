@@ -7,31 +7,32 @@ Created on 2023-08-03
 @author: Alexander M. Imre
 based on work by Florian Kraushofer
 """
-
+import argparse
 from copy import deepcopy
 import logging
 import sys
 
-
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
-from viperleed.utilities.poscar import default_cli_parser
-
+from viperleed.utilities.poscar import add_verbose_option
 
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
 
-def _parse_command_line_arguments():
-    parser, args, unparsed_args = default_cli_parser()
+
+def add_cli_parser_arguments(parser):
     parser.add_argument(
         "c",
         help="delete all atoms below this c fraction",
         type=float,
     )
-    parser.parse_args(args=unparsed_args, namespace=args)
-    return args
 
 
-def main():
-    args = _parse_command_line_arguments()
+def main(args=None):
+    if args is None:
+        parser = argparse.ArgumentParser()
+        add_verbose_option(parser)
+        add_cli_parser_arguments(parser)
+        args = parser.parse_args()
+
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)

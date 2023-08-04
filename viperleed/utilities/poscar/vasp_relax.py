@@ -10,14 +10,13 @@ Created on 2023-08-02
 
 @author: Alexander M. Imre
 """
-
 import argparse
 import logging
 import sys
 import os
 
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
-from viperleed.utilities.poscar import default_cli_parser
+
 
 # TODO: add an option to add a mirror image to the slab, so that the slab is
 #       symmetric with respect to the center of the slab. This could be useful
@@ -26,8 +25,8 @@ from viperleed.utilities.poscar import default_cli_parser
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
 
 
-def _parse_command_line_arguments():
-    parser, args, unparsed_args = default_cli_parser()
+def add_cli_parser_arguments(parser):
+
     parser.add_argument(
         "above_c",
         help=("Specify above which c fraction to relax the slab."),
@@ -38,12 +37,15 @@ def _parse_command_line_arguments():
         help=("Relax all directions, not just the c direction."),
         action="store_true"
     )
-    parser.parse_args(args=unparsed_args, namespace=args)
-    return args
 
 
-def main():
-    args = _parse_command_line_arguments()
+
+def main(args=None):
+    if args is None:
+        parser = argparse.ArgumentParser()
+        add_verbose_option(parser)
+        add_cli_parser_arguments(parser)
+        args = parser.parse_args()
 
     logger.debug("ViPErLEED utility: Preparing slab for VASP relaxation\n")
 

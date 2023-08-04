@@ -31,18 +31,16 @@ from viperleed.calc.sections.run_sections import section_loop
 logger = logging.getLogger("tleedm")
 
 
-def _parse_command_line_arguments():
-    # parse command line arguments
-    parser = argparse.ArgumentParser()
+def add_calc_parser_arguments(parser):
     parser.add_argument(
         "-w", "--work",
         help=("specify execution work directory"),
         type=str
-        )
+    )
     parser.add_argument(
         "--all-tensors",
         help=("Copy all Tensors to the work directory. Required if using "
-              "the TENSORS parameter to calculate from old tensors."),
+            "the TENSORS parameter to calculate from old tensors."),
         action='store_true'
         )
     parser.add_argument(
@@ -71,10 +69,6 @@ def _parse_command_line_arguments():
         action='store_true'
     )
     parser.add_argument(
-        "--version",
-        help=("print version information and exit"),
-    )
-    parser.add_argument(
         "--tensorleed", "-t",
         help="specify path to TensErLEED source code",
         type=str
@@ -82,23 +76,21 @@ def _parse_command_line_arguments():
     parser.add_argument(                                                        #TODO: implement (for cont at end; warn if called with --no_cont)
         "-j", "--job_name",
         help=("defines a name for the current run. Will be appended to the name "
-              "of the history folder that is created, and is logged in "
-              "history.info. Passed along to the bookkeeper."),
+            "of the history folder that is created, and is logged in "
+            "history.info. Passed along to the bookkeeper."),
         type=str)
     parser.add_argument(
         "--history_name",
         help=("defines the name of the history folder that is created/used. "
-              "Passed along to the bookkeeper. Default is 'history'."),
+            "Passed along to the bookkeeper. Default is 'history'."),
         type=str,
         default="history")
     parser.add_argument(
         "--work_history_name",
         help=("defines the name of the workhistory folder that is created/used. "
-              "Passed along to the bookkeeper. Default is 'workhistory'."),
+            "Passed along to the bookkeeper. Default is 'workhistory'."),
         type=str,
         default="workhistory")
-    parser.parse_args(args=unparsed_args, namespace=args)
-    return args
 
 
 def _interpret_tensorleed_path_flag(args):
@@ -119,14 +111,13 @@ def _interpret_tensorleed_path_flag(args):
     return tensorleed_path
 
 
-def main():
+def main(args=None):
+    if args is None:
+        parser = argparse.ArgumentParser()
+        add_calc_parser_arguments(parser)
+        args = parser.parse_args()
+
     multiprocessing.freeze_support() # needed for Windows
-
-    args = _parse_command_line_arguments()
-
-    if args.version:
-        print(f"ViPErLEED version {GLOBALS['version']}")
-        return 0
 
     if args.work:
         work_path = Path(args.work)
@@ -248,4 +239,5 @@ def main():
 
 
 # run main() if this file is called directly
-main()
+if __name__ == "__main__":
+    main()

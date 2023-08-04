@@ -8,22 +8,19 @@ Created on 2023-08-03
 
 @author: Alexander M. Imre
 """
-
 from copy import deepcopy
 import logging
 import sys
 
-
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.calc import symmetry
 from viperleed.calc.classes import rparams
-from viperleed.utilities.poscar import default_cli_parser
-from viperleed.utilities.poscar import poscar_utility_logger as logger
+from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.guilib.base import PlaneGroup
+from viperleed.utilities.poscar import poscar_utility_logger as logger
 
 
-def _parse_command_line_arguments():
-    parser, args, unparsed_args = default_cli_parser()
+def add_cli_parser_arguments(parser):
+
     parser.add_argument(
         "-e", "--symmetry-eps",
         help=("Epsilon for symmetry detection in Å. Default: 0.1Å"),
@@ -43,12 +40,14 @@ def _parse_command_line_arguments():
               "and manually lower the symmetry."),
         type=str,
     )
-    parser.parse_args(args=unparsed_args, namespace=args)
-    return args
 
 
-def main():
-    args = _parse_command_line_arguments()
+def main(args=None):
+    if args is None:
+        parser = argparse.ArgumentParser()
+        add_verbose_option(parser)
+        add_cli_parser_arguments(parser)
+        args = parser.parse_args()
 
     logger.info("ViPErLEED utility: find symmetry\n")
 

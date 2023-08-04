@@ -13,18 +13,15 @@ from copy import deepcopy
 import logging
 import sys
 
-
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.calc import symmetry
 from viperleed.calc.classes import rparams
-from viperleed.utilities.poscar import default_cli_parser
-
+from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
 
 
-def _parse_command_line_arguments():
-    parser, args, unparsed_args = default_cli_parser()
+def add_cli_parser_arguments(parser):
+
     parser.add_argument(
         "-e", "--symmetry-eps",
         help=("Epsilon for symmetry detection in Å. Default: 0.1Å"),
@@ -37,12 +34,14 @@ def _parse_command_line_arguments():
               "the value of --symmetry-eps is used."),
         type=float,
     )
-    parser.parse_args(args=unparsed_args, namespace=args)
-    return args
 
 
-def main():
-    args = _parse_command_line_arguments()
+def main(args=None):
+    if args is None:
+        parser = argparse.ArgumentParser()
+        add_verbose_option(parser)
+        add_cli_parser_arguments(parser)
+        args = parser.parse_args()
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)

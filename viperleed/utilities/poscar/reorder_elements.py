@@ -16,13 +16,12 @@ import numpy as np
 
 import viperleed.calc.periodic_table as periodic_table
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
-from viperleed.utilities.poscar import default_cli_parser
 
 logger = logging.getLogger("viperleed.utilities.poscar.reorder_elements")
 
 
-def _parse_command_line_arguments():
-    parser, args, unparsed_args = default_cli_parser()
+def add_cli_parser_arguments(parser):
+
     parser.add_argument(
         "-a", "--alphabetical",
         help="Sort elements alphabetically",
@@ -39,12 +38,14 @@ def _parse_command_line_arguments():
              "elements in the desired order."),
         type=str,
     )
-    parser.parse_args(args=unparsed_args, namespace=args)
-    return args
 
 
-def main():
-    args = _parse_command_line_arguments()
+def main(args=None):
+    if args is None:
+        parser = argparse.ArgumentParser()
+        add_verbose_option(parser)
+        add_cli_parser_arguments(parser)
+        args = parser.parse_args()
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)

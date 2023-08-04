@@ -23,6 +23,9 @@ from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 #                  MAIN                       #
 ###############################################
 
+def add_cli_parser_arguments(parser):
+    pass
+
 
 def cleanup(consoleHandler):
     logging.getLogger().removeHandler(consoleHandler)

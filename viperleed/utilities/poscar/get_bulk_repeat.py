@@ -18,6 +18,10 @@ from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.calc.files.woods_notation import writeWoodsNotation
 
 
+def add_cli_parser_arguments(parser):
+    pass
+
+
 def main():
     # print some info
     print("This utility reads a POSCAR file with arbitrary thickness and "

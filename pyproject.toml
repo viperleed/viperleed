@@ -21,6 +21,9 @@ dependencies = [
     "wrapt",
 ]
 
+[project.scripts]
+"viperleed" = "viperleed.__main__:main"
+
 [project.optional-dependencies]
 GUI = [
     "PyQt5",

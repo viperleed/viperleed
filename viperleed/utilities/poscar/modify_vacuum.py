@@ -14,10 +14,7 @@ from copy import deepcopy
 import logging
 import sys
 
-
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
-from viperleed.utilities.poscar import default_cli_parser
-
 
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
 
@@ -74,8 +71,8 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
     return processed_slab
 
 
-def _parse_command_line_arguments():
-    parser, args, unparsed_args = default_cli_parser()
+def add_cli_parser_arguments(parser):
+
     parser.add_argument(
         "vacuum",
         help=("Add vacuum on top of the slab. Value in Å. Default is 0 Å."),
@@ -89,12 +86,15 @@ def _parse_command_line_arguments():
               "remove from the slab."),
         action = "store_true"
     )
-    parser.parse_args(args=unparsed_args, namespace=args)
-    return args
 
 
-def main():
-    args = _parse_command_line_arguments()
+
+def main(args=None):
+    if args is None:
+        parser = argparse.ArgumentParser()
+        add_verbose_option(parser)
+        add_cli_parser_arguments(parser)
+        args = parser.parse_args()
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)
