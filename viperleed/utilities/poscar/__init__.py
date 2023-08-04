@@ -16,14 +16,21 @@ def default_cli_parser():
     poscar_utility_logger.addHandler(logging.StreamHandler(sys.stderr))
 
     # always have a verbose option
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument(
-        "--verbose", "-v",
+        "-v", "--verbose",
         help=("increase output verbosity"),
         action="store_true",
     )
 
     args, unknown_args = parser.parse_known_args()
+
+    # re add the help option
+    parser.add_argument(
+        '-h', '--help',
+        action='help', default=argparse.SUPPRESS,
+        help='show this help message and exit'
+    )
 
     # verbose option shows debug messages and stacktrace on error
     if args.verbose:
