@@ -119,7 +119,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
    :caption: Utilities
 
    Utilities<content/utilities>
-
+   POSCAR utilities<content/utilities/poscar_utils>
 
 
 .. toctree:: 
