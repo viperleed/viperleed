@@ -22,7 +22,7 @@ def add_cli_parser_arguments(parser):
     pass
 
 
-def main():
+def main(args=None):
     # print some info
     print("This utility reads a POSCAR file with arbitrary thickness and "
           "orientation of the bulk, requiring only an input where the bulk "

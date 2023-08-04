@@ -32,7 +32,7 @@ def cleanup(consoleHandler):
     logging.shutdown()
 
 
-def main():
+def main(args=None):
     # start logger, write to file:
     logname = 'Combine-POSCAR.log'
     logging.basicConfig(level=logging.DEBUG, filename=logname, filemode='w',

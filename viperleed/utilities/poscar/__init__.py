@@ -16,7 +16,6 @@ POSCAR_UTILITIES = [module.name for module in
                     if (not module.ispkg and
                         module.name != '__main__' and
                         module.name != 'poscar')]
-print(POSCAR_UTILITIES)
 
 poscar_utility_logger = logging.getLogger("viperleed.utilities.poscar")
 
