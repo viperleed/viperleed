@@ -6,7 +6,6 @@ Created on 2023-08-03
 
 @author: Alexander M. Imre
 """
-
 import argparse
 import logging
 import sys
@@ -16,6 +15,7 @@ import numpy as np
 
 import viperleed.calc.periodic_table as periodic_table
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.utilities.poscar import add_verbose_option
 
 logger = logging.getLogger("viperleed.utilities.poscar.reorder_elements")
 

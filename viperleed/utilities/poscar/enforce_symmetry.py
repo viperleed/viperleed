@@ -8,6 +8,7 @@ Created on 2023-08-03
 
 @author: Alexander M. Imre
 """
+import argparse
 from copy import deepcopy
 import logging
 import sys
@@ -16,11 +17,11 @@ from viperleed.calc import symmetry
 from viperleed.calc.classes import rparams
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.guilib.base import PlaneGroup
+from viperleed.utilities.poscar import add_verbose_option
 from viperleed.utilities.poscar import poscar_utility_logger as logger
 
 
 def add_cli_parser_arguments(parser):
-
     parser.add_argument(
         "-e", "--symmetry-eps",
         help=("Epsilon for symmetry detection in Å. Default: 0.1Å"),

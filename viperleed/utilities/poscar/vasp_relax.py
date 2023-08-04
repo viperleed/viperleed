@@ -16,6 +16,7 @@ import sys
 import os
 
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.utilities.poscar import add_verbose_option
 
 
 # TODO: add an option to add a mirror image to the slab, so that the slab is

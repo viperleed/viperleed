@@ -15,6 +15,7 @@ import os
 import sys
 
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.utilities.poscar import add_verbose_option
 
 logger = logging.getLogger("viperleed.utilities.poscar.project_c_to_z")
 

@@ -12,6 +12,7 @@ import sys
 import os
 
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.utilities.poscar import add_verbose_option
 
 logger = logging.getLogger("viperleed.utilities.poscar.sort_by_z")
 
