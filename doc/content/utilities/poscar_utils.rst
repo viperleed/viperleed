@@ -8,6 +8,20 @@ All POSCAR utilities support the following options:
 - ``-h``, ``--help``: print help message with the available options
 - ``-v``, ``--verbose``: increase output verbosity
 
+.. hint::
+
+    Most ViPErLEED POSCAR utilities read from ``stdin`` and write to ``stdout``.
+    This means that you can easily use them in a pipeline, e.g.:
+
+    .. code-block:: console
+
+        $ cat POSCAR | viperleed poscar delete_above C | viperleed poscar enforce_symmetry >POSCAR_OUT
+
+
+.. tip::
+
+    If you find these utilities useful, consider adding an alias to your ``.bashrc`` so you don't have to type ``viperleed poscar`` every time.
+
 .. _poscar_utils_attach_bulk:
 
 attach_bulk
@@ -32,6 +46,7 @@ This can also be useful to quickly check the number of atoms above a certain hei
 **Additional Options**
 
 - ``c`` (required): the fraction of the :math:`\vec{c}` above which to delete atoms
+
 
 .. _poscar_utils_delete_below:
 
