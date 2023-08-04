@@ -53,18 +53,12 @@ def add_cli_parser_arguments(parser):
         default=1e-6,
     )
     parser.add_argument(
-        "--eps-collision"
+        "--eps-collision",
         help=("minimum distance between atoms in different before a collision "
               "is detected"),
         type=float,
         default=1e-3
     )
-    parser.add_argument(
-        "--no-check-collisions",
-        help="do not check for collisions between atoms in different slabs",
-        action="store_true",
-    )
-
 
 
 def main(args=None):
