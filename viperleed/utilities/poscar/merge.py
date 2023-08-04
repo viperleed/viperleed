@@ -7,7 +7,7 @@ Created on 2023-08-03
 @author: Alexander M. Imre
 based on work by Florian Kraushofer
 """
-
+import argparse
 from copy import deepcopy
 import logging
 import sys
@@ -16,7 +16,7 @@ from scipy.spatial.distance import cdist
 import numpy as np
 
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
-
+from viperleed.utilities.poscar import add_verbose_option
 
 
 logger = logging.getLogger("viperleed.utilities.poscar.merge")
@@ -46,14 +46,21 @@ def add_cli_parser_arguments(parser):
         nargs="+",
     )
     parser.add_argument(
-        "--eps",
+        "--eps-cell",
         help=("maximum element-wise allowed difference in lattice parameters "
               "between the unit cells of the POSCAR files to be merged"),
         type=float,
         default=1e-6,
     )
     parser.add_argument(
-        "--no_check_collisions",
+        "--eps-collision"
+        help=("minimum distance between atoms in different before a collision "
+              "is detected"),
+        type=float,
+        default=1e-3
+    )
+    parser.add_argument(
+        "--no-check-collisions",
         help="do not check for collisions between atoms in different slabs",
         action="store_true",
     )
@@ -82,14 +89,14 @@ def main(args=None):
 
     # check that all slabs have the same lattice parameters
     for slab in slabs[1:]:
-        if not np.allclose(slab.ucell, slabs[0].ucell, atol=args.eps):
+        if not np.allclose(slab.ucell, slabs[0].ucell, atol=args.eps_cell):
             raise RuntimeError("Files do not have the same unit cell. Use "
                                "--eps to increase tolerance.")
 
     # merge the slabs
     merged_slab = merge_slabs(slabs,
-                              check_collisions=not args.no_check_collisions,
-                              eps=args.eps)
+                              check_collisions=True,
+                              eps=args.eps_collision)
 
     # write the output file
     writePOSCAR(slab=merged_slab,
