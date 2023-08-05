@@ -49,7 +49,7 @@ SPISettings TLE7209_SPI_SETTING(TLE7209_SPI_BAUD, MSBFIRST, TLE7209_SPIMODE);
 
 // TLE7209 error codes
 enum TLE7209_Error {
-    TLE7209_NoError = 0,
+    TLE7209_NoError,
     TLE7209_TransmissionError,
     TLE7209_InvalidDeviceId,
     TLE7209_DiagnosticsError,
