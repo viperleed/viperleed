@@ -40,6 +40,15 @@ extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte *);
 
 // If register names on the ATmega32U4 should change, 
 // the assignments below would have to change accordingly.
+// Generic error codes
+enum error_t {
+    NoError,
+    OutOfRange,
+    InvalidIOPin,
+    InvalidChannel,
+    InvalidPrescaler,
+    NotImplemented,
+};
 uint8_t pin_to_tc4_reg_addr(uint8_t);
 uint8_t pin_to_tc4_channel(uint8_t);
 
