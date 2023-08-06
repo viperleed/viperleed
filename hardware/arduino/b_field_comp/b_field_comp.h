@@ -51,10 +51,10 @@ uint8_t pin_to_tc4_channel(uint8_t);
 // TC1 or TC3 instead of the currently used TC4.
 #define COIL_1_PWM               6   // PWM output 1, i.e., voltage value; Also A7;  PD7 on Atmega32U4                          //  DO NOT CHANGE (OC4D PWM output)
 #define COIL_1_DISABLE          21   // Could later on be an alias of signal "COIL_1_SIGN"
+#define COIL_1_ADC_INPUT        23
 
 #define COIL_2_PWM              10   // PWM output 1, i.e., voltage value; Also A10; PB6 on Atmega32U4                          //  DO NOT CHANGE (OC4B PWM output)
 #define COIL_2_DISABLE          22   // Could later on be an alias of signal "COIL_2_SIGN"
-#define COIL_2_ADC_INPUT        23
 
 // Current direction: positive or negative?
 #define COIL_1_SIGN             18  // Used for INA on shunt; PF7 on ATmega32U4
