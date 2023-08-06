@@ -44,8 +44,8 @@ determined as follows:
 Every time TCNT4 has a match with OCR4C, TCNT4 is reset to zero and begins to
 count up or down again until another match occurs. The TC4 frequency 'f_clk_T4'
 is derived from the CPU clock 'F_CPU_CLK' divided by the TC4 prescaler settings
-CS43:40 contained in register TCCR4B. Equation (3) shows that the user wants to
-stay as close to the maximum value of OCR4C as possible, in order to achieve 
+CS43:40 contained in register TCCR4B. Equation (3) shows that the user may want 
+to stay as close to the maximum value of OCR4C as possible, in order to achieve 
 the highest possible PWM resolution. Therefore, 'set_pwm_frequency' will first
 determine the TC4 prescaler value which will allow for the highest possible
 10-bit value inside TC4H:OCR4C which in turn will provide the best possible PWM
@@ -58,7 +58,7 @@ The ATmega32U4 includes the following Timer/Counter modules:
 - 10-bit High Speed Timer/Counter4
 
 In contrast to the other TC modules, TC4 can be operated with up to 64 MHz if
-the supply voltage is higher than 4V. This firmware does not make use of this 
+the supply voltage is higher than 4V. The firmware does not make use of this 
 feature.
 
 Note: The 11-bit Enhanced PWM Mode is not working up to some chip revision.
@@ -113,8 +113,8 @@ byte set_pwm_frequency(double f_pwm) {
   }
   set_pwm_clock_prescaler(clk_ps);
 
-  // Don't use "enhanced mode". Functional only for certain chip revisions.
-  // use_pwm_enhanced_mode();
+  // Do not use "enhanced mode". Functional only for certain chip revisions.
+  // enable_pwm_enhanced_mode();
 
   // The PWM period (= 1 / f_pwm) is defined in terms of TC4 clock ticks:
   pwm_period = f_clk_t4 / f_pwm - 1;  
@@ -150,7 +150,7 @@ byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr
     // from the PWM, is exactly the same as the duty cycle of the PWM itself.
     // First, set or clear an I/O pin depending on the current direction;
     // Then set the PWM duty cycle for 'COIL_1' or 'COIL_2' at 'tc4_reg_addr':
-    // The duty cycle is the desired ON time in percent, i.e. 'coil_current'
+    // The duty cycle is the desired 'on' time in percent, i.e. 'coil_current'
     // times the PWM period measured in TC4 clock ticks.
     // Also note it is sufficient to simply pass 'abs(value)' to program the 
     // duty cycle because we set the current direction with 'set_pwm_polarity'.
@@ -212,8 +212,8 @@ void set_pwm_polarity(byte polarity) {
 
     Parameters
     ----------
-    polarity : byte
-        Sets the requested counter polarity
+    io_pin : byte
+        Physical pin which will output PWM-generated waveform 'OCW4x'
 
     Notes
     -----
@@ -255,13 +255,11 @@ void set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
 
     Notes
     -----
-    - Set Timer/Counter4 prescaler to 1;
-    - TC4 clock frequency = CPU clock frequency / TC4 clock prescaler
-      Notice that we should divide the CPU clock by the smallest amount 
-      possible: the faster the TC4 counter, the better the PWM resolution.
-      For example, with a 16 MHz CPU clock and 20 kHz output we get 16 MHz
-      divided by 20 kHz = 800 steps of resolution (9.64 bits)
-
+    TC4 clock frequency = CPU clock frequency / TC4 clock prescaler
+    Notice that we should divide the CPU clock by the smallest amount 
+    possible: the faster the TC4 counter, the better the PWM resolution.
+    For example, a 16 MHz CPU clock and 20 kHz PWM yields 800 steps in
+    the interval [0,799]. This corresponds to a resolution of 9.64 bits.
     **/
     uint8_t ps_select;
     // NOTE: Power-on-reset should zero the entire register, but it seems

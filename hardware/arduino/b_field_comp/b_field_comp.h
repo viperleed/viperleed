@@ -97,7 +97,7 @@ class Coil {
         const MotorDriver driver;
 
         // Class constructor, including member initializer list
-        // Assign 'tc4_reg_addr', 'tc4_channel' at the earliest possible time;
+        // Assign 'tc4_reg_addr', 'tc4_pwm_channel' at the earliest possible time
         Coil(byte pwm, byte sign, byte spi_cs, byte disable)             
            : driver(spi_cs, disable), pwm_pin(pwm),
              pwm_sign_pin(sign) {
