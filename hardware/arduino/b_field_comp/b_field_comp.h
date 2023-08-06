@@ -37,12 +37,15 @@ enum error_t {
     InvalidPrescaler,
     NotImplemented,
 };
+
 // Forward declarations
 error_t set_signed_pwm_value(double, byte, byte *);
 error_t enable_pwm_channel(TC4_PWM_CHANNEL, bool);
+
 void TLE7209reset(byte);
 TLE7209_Error TLE7209readIDandVersion(byte, byte *);
 TLE7209_Error TLE7209readDiagnosticRegister(byte, byte *);
+
 uint8_t pin_to_tc4_reg_addr(uint8_t);
 TC4_PWM_CHANNEL pin_to_tc4_channel(uint8_t);
 
