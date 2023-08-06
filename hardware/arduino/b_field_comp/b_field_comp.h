@@ -30,13 +30,8 @@ Date: 16.05.2023
 
 // Tell the compiler that 'set_signed_pwm_value' is declared in another file
 // (i.e., pwm.ino). This is necessary for the 'Coil' class declaration below
-extern byte set_signed_pwm_value(double, byte, byte*);
-extern void enable_pwm_channel(TC4_PWM_CHANNEL, bool);
 
 // Same for the TLE7209 functions used in the driver
-extern void TLE7209reset(byte);
-extern TLE7209_Error TLE7209readIDandVersion(byte, byte *);
-extern TLE7209_Error TLE7209readDiagnosticRegister(byte, byte *);
 
 // If register names on the ATmega32U4 should change, 
 // the assignments below would have to change accordingly.
@@ -49,6 +44,11 @@ enum error_t {
     InvalidPrescaler,
     NotImplemented,
 };
+error_t set_signed_pwm_value(double, byte, byte *);
+error_t enable_pwm_channel(TC4_PWM_CHANNEL, bool);
+void TLE7209reset(byte);
+TLE7209_Error TLE7209readIDandVersion(byte, byte *);
+TLE7209_Error TLE7209readDiagnosticRegister(byte, byte *);
 uint8_t pin_to_tc4_reg_addr(uint8_t);
 uint8_t pin_to_tc4_channel(uint8_t);
 
