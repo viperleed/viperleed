@@ -128,7 +128,7 @@ class Coil {
         };
 
         double get_current() {                                                  // TODO: Return measured value from INA (no avg, just median)
-            return last_current_setpoint; 
+            
         }
     private:
         byte tc4_reg_addr;
