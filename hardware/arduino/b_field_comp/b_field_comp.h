@@ -44,6 +44,7 @@ TLE7209_Error TLE7209readIDandVersion(byte, byte *);
 TLE7209_Error TLE7209readDiagnosticRegister(byte, byte *);
 uint8_t pin_to_tc4_reg_addr(uint8_t);
 uint8_t pin_to_tc4_channel(uint8_t);
+TC4_PWM_CHANNEL pin_to_tc4_channel(uint8_t);
 
 
 // The pins belonging to 'COIL_1_PWM' and 'COIL_2_PWM' should not be changed.
