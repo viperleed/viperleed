@@ -28,13 +28,6 @@ Date: 16.05.2023
 #include "arduino_utils.h"  // for setChipSelectHigh
 
 
-// Tell the compiler that 'set_signed_pwm_value' is declared in another file
-// (i.e., pwm.ino). This is necessary for the 'Coil' class declaration below
-
-// Same for the TLE7209 functions used in the driver
-
-// If register names on the ATmega32U4 should change, 
-// the assignments below would have to change accordingly.
 // Generic error codes
 enum error_t {
     NoError,
