@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-=================
+'''=================
     ViPErLEED
 =================
-"""
+'''
 from argparse import ArgumentParser
 
 from viperleed import GLOBALS
@@ -20,7 +19,9 @@ from viperleed.utilities.poscar.__main__ import main as poscar_main
 
 
 def main():
-    viperleed_parser = ArgumentParser(prog="viperleed")
+    """ViPErLEED main function; defines command line interface.
+    """
+    viperleed_parser = ArgumentParser(prog='viperleed')
     viperleed_parser.add_argument(
         '--version',
         help='print version number',
@@ -31,26 +32,26 @@ def main():
     subparsers = viperleed_parser.add_subparsers()
 
     # viperleed bookkeeper
-    parser_bookkeeper = subparsers.add_parser("bookkeeper")
+    parser_bookkeeper = subparsers.add_parser('bookkeeper')
     bookkeeper_cli_options(parser_bookkeeper)
     parser_bookkeeper.set_defaults(func=bookkeeper_main)
 
     # viperleed calc
-    parser_calc = subparsers.add_parser("calc",)
+    parser_calc = subparsers.add_parser('calc',)
     add_calc_parser_arguments(parser_calc)
     parser_calc.set_defaults(func=main_calc)
 
     # viperleed gui
-    parser_gui = subparsers.add_parser("gui")
+    parser_gui = subparsers.add_parser('gui')
     parser_gui.set_defaults(func=gui_main)
 
     # viperleed utilities
-    parser_util = subparsers.add_parser("util")
+    parser_util = subparsers.add_parser('util')
     add_util_parser_arguments(parser_util)
     parser_util.set_defaults(func=utilities_main)
 
     # viperleed poscar utilities
-    parser_poscar = subparsers.add_parser("poscar")
+    parser_poscar = subparsers.add_parser('poscar')
     add_poscar_parser_arguments(parser_poscar)
     parser_poscar.set_defaults(func=poscar_main)
 
@@ -58,5 +59,5 @@ def main():
     args.func(args)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

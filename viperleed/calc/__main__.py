@@ -16,17 +16,11 @@ import logging
 import multiprocessing
 import os
 import shutil
-import sys
 
-import viperleed
-from viperleed import GLOBALS
 from viperleed.bookkeeper import bookkeeper, BookkeeperMode
 from viperleed.calc import run_tleedm
-from viperleed.calc.classes import rparams
 from viperleed.calc.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
-from viperleed.calc.sections.cleanup import prerun_clean, cleanup
-from viperleed.calc.sections.run_sections import section_loop
 
 logger = logging.getLogger("tleedm")
 
@@ -41,22 +35,22 @@ def add_calc_parser_arguments(parser):
         "--all-tensors",
         help=("Copy all Tensors to the work directory. Required if using "
             "the TENSORS parameter to calculate from old tensors."),
-        action='store_true'
+        action="store_true"
         )
     parser.add_argument(
         "--delete_workdir",
         help=("delete work directory after execution"),
-        action='store_true'
+        action="store_true"
         )
     parser.add_argument(
         "-v", "--verbose",
         help=("increase output verbosity and print debug messages"),
-        action='store_true'
+        action="store_true"
         )
     parser.add_argument(
         "-vv", "--very_verbose",
         help=("increase output verbosity and prints more debug messages"),
-        action='store_true'
+        action="store_true"
     )
     parser.add_argument(
         "--name", "-n",
@@ -100,14 +94,14 @@ def _interpret_tensorleed_path_flag(args):
     # else check environment variable $VIPERLEED_TENSORLEED
     try:
         tensorleed_path = Path(os.environ["VIPERLEED_TENSORLEED"])
-    except KeyError:
+    except KeyError as err:
         # environment variable not set
         raise RuntimeError(
             "TensErLEED path not specified.\n"
             "Please either pass a path to the TensErLEED source code with "
             "the --tensorleed argument, or set the environment variable "
             "$VIPERLEED_TENSORLEED."
-        )
+        ) from err
     return tensorleed_path
 
 
