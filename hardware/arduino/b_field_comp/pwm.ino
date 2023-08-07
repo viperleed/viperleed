@@ -225,7 +225,6 @@ error_t connect_pwm_output(byte io_pin) {
 }
 
 
-void set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
   // Calculate the TC4 clock prescaler: Use the smallest possible prescaler
   // which will result in the highest achievable PWM resolution, i.e. make
   // OCR4C as large as possible. Note: Some TC4 registers including OCR4C are
@@ -252,6 +251,7 @@ void set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
     }
     return clk_ps;
   }
+error_t set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
     /**Set PWM clock prescaler.
 
     Parameters
