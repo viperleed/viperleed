@@ -126,7 +126,7 @@ error_t set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_a
     -------
     error_code : byte
         0 for no error
-        2 for 'value' (aka coil current) out-of-range
+        1 for 'value' (aka coil current) out-of-range
     **/
 
     if (value < -1.0 || value > 1.0) 
