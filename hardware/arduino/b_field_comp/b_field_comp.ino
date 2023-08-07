@@ -17,8 +17,8 @@ void setup()
 {
     #if DEBUG
         Serial.setTimeout(100);
-        Serial.begin(9600);           // Open serial port, set data rate to 9600 bps
-        delay(2000);                  // The IDE needs some time to connect to the Serial Monitor
+        Serial.begin(9600);                         // Open serial port, set data rate to 9600 bps
+        delay(2000);                                // The IDE needs some time to connect to the Serial Monitor
     #endif
     
     tc4_sfr_reset();                                // Make sure the TC4 registers are reset on startup
