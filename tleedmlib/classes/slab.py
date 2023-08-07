@@ -176,7 +176,7 @@ class Slab:
     def __init__(self, ase_atoms=None):
         global has_ase
 
-        self.ucell = np.array([])
+        self.ucell = None
         self.poscar_scaling = 1.
         self.chemelem = []
         self.n_per_elem = {}
@@ -2001,7 +2001,7 @@ class Slab:
         ValueError
             If the unit cell was not initialized.
         """
-        if not self.ucell:
+        if self.ucell is None:
             raise ValueError("Slab unit cell not initialized.")
 
         a1_x, a1_y = self.ucell[0,0], self.ucell[1,0]
