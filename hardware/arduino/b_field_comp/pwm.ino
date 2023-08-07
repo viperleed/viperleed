@@ -82,11 +82,12 @@ error_t set_pwm_frequency(double f_pwm) {
         1 for requested pwm frequency out-of-range
 
     **/
-  if (f_pwm < F_PWM_MIN || f_pwm > F_PWM_MAX) return 1;
 
     double f_clk_t4;
     uint16_t clk_ps;
   
+    if (f_pwm < F_PWM_MIN || f_pwm > F_PWM_MAX)
+        return OutOfRange;
 
     enable_fast_pwm_mode();  
  
@@ -126,8 +127,9 @@ error_t set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_a
         0 for no error
         2 for 'value' (aka coil current) out-of-range
     **/
-    if (value < -1.0 || value > 1.0) return 2;                                      // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
 
+    if (value < -1.0 || value > 1.0) 
+        return OutOfRange;
  
     value = set_current_sign(value, sign_select_pin);
      
