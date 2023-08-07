@@ -276,17 +276,6 @@ error_t set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
     For example, a 16 MHz CPU clock and 20 kHz PWM yields 800 steps in
     the interval [0,799]. This corresponds to a resolution of 9.64 bits.
     **/
-    uint8_t ps_select;
-    // NOTE: Power-on-reset should zero the entire register, but it seems
-    // some chip revisions don't do that properly.
-    // Clear entire register except MSbit 'PWM4X'
-    TCCR4B &= ~((1 << PSR4)
-                | (1 << DTPS41)
-                | (1 << DTPS40)
-                | (1 << CS43)
-                | (1 << CS42)
-                | (1 << CS41)
-                | (1 << CS40));
 
  
     // Convert the TC4 clock prescaler value to the respective 
