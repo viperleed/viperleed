@@ -1,15 +1,7 @@
 import pytest
-import shutil, tempfile
-import sys
-import os
-from pathlib import Path
-from zipfile import ZipFile
 from copy import deepcopy
+
 import numpy as np
-
-from viperleed import calc
-import viperleed.calc
-
 
 from viperleed.calc.classes.r_error import get_n_zero_crossings,get_zero_crossing
 

@@ -7,8 +7,6 @@ Created on 2023-07-26
 
 import pytest
 import sys
-import os
-from pathlib import Path
 
 from viperleed.calc.files.poscar import readPOSCAR
 

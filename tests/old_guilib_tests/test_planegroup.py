@@ -18,7 +18,7 @@ for path in [tests_path, base_path]:
 import pytest
 import numpy as np
 
-import viperleed.calc.base
+import viperleed.guilib.base as base
 
 def test_planegroup_p2():
     g = base.PlaneGroup('p2')
