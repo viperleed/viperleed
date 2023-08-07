@@ -217,7 +217,7 @@ def runPhaseshiftGen_old(sl, rp,
     ptl = [el.lower() for el in PERIODIC_TABLE]
 
     chemels = {}
-    chemelspaths = {}
+    chem_el_paths = {}
     for (site, el) in blocks:
         if el in rp.ELEMENT_RENAME:
             chemel = rp.ELEMENT_RENAME[el]
@@ -228,15 +228,13 @@ def runPhaseshiftGen_old(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        subpath = Path(atdenssource) / chemel / (f"chgden{chemel}")
-        chgdenrelpath = shortpath / subpath
-        if len(str((rp.source_dir / subpath).resolve())) >= 80:
-            os.makedirs(os.path.join(os.path.dirname(subpath)), exist_ok=True)
-            shutil.copy2(rp.source_dir / subpath, subpath)
-        # if os.name == 'nt':     # windows - replace the backslashes.
-        #     chgdenrelpath = chgdenrelpath.replace('/', '\\')
+        el_charge_density_path = (Path(atdenssource) / chemel /
+                                  (f"chgden{chemel}"))
+        charge_density_short_path = rp.workdir / el_charge_density_path
+        shutil.copy2(el_charge_density_path, charge_density_short_path)
+        chem_el_paths[el] = charge_density_short_path
         chemels[el] = chemel
-        chemelspaths[el] = chgdenrelpath
+        chgdenrelpath = shortpath / subpath
 
     nsl.sort_by_z(botToTop=True)
     for at in nsl.atlist:
@@ -245,7 +243,7 @@ def runPhaseshiftGen_old(sl, rp,
         for (site, el) in blocks:
             if at in subatlists[(site, el)]:
                 chemel = chemels[el]
-                chgdenpath = chemelspaths[el]
+                chgdenpath = chem_el_paths[el]
         output += ("1 "+str(PERIODIC_TABLE.index(chemel)+1)
                    + ".  0.  0.  '"+str(chgdenpath)+"'\n")
         ol = ""
