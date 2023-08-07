@@ -230,13 +230,13 @@ def runPhaseshiftGen_old(sl, rp,
             raise
         subpath = Path(atdenssource) / chemel / (f"chgden{chemel}")
         chgdenrelpath = shortpath / subpath
-        if manual_copy:
+        if len(str((rp.source_dir / subpath).resolve())) >= 80:
             os.makedirs(os.path.join(os.path.dirname(subpath)), exist_ok=True)
             shutil.copy2(rp.source_dir / subpath, subpath)
         # if os.name == 'nt':     # windows - replace the backslashes.
         #     chgdenrelpath = chgdenrelpath.replace('/', '\\')
         chemels[el] = chemel
-        chemelspaths[el] = chgdenrelpath.resolve()
+        chemelspaths[el] = chgdenrelpath
 
     nsl.sort_by_z(botToTop=True)
     for at in nsl.atlist:
