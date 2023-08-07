@@ -370,7 +370,7 @@ void enable_fast_pwm_mode() {
 
 
 // !!! USE AT YOUR OWN RISK !!!
-void use_pwm_enhanced_mode() {
+void enable_pwm_enhanced_mode() {
     /**Enable Enhanced PWM Mode on Timer/Counter4.
 
     Returns
