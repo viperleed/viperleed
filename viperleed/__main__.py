@@ -8,6 +8,8 @@
 from argparse import ArgumentParser
 
 from viperleed import GLOBALS
+from viperleed.bookkeeper import bookkeeper_cli_options
+from viperleed.bookkeeper import main as bookkeeper_main
 from viperleed.calc.__main__ import add_calc_parser_arguments
 from viperleed.calc.__main__ import main as main_calc
 from viperleed.gui import main as gui_main                                      # TODO: gui arguments
@@ -27,6 +29,11 @@ def main():
     )
     # get subparsers
     subparsers = viperleed_parser.add_subparsers()
+
+    # viperleed bookkeeper
+    parser_bookkeeper = subparsers.add_parser("bookkeeper")
+    bookkeeper_cli_options(parser_bookkeeper)
+    parser_bookkeeper.set_defaults(func=bookkeeper_main)
 
     # viperleed calc
     parser_calc = subparsers.add_parser("calc",)

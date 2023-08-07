@@ -378,8 +378,7 @@ def bookkeeper(mode,
         print("Error: Failed to append to history.info file.")
     return 0
 
-def _bookkeeper_cli_options():
-    parser = argparse.ArgumentParser()
+def bookkeeper_cli_options(parser):
     parser.add_argument(
         "-c", "--cont",
         help=("overwrite POSCAR and VIBROCC with POSCAR_OUT and VIBROCC_OUT "
@@ -409,13 +408,13 @@ def _bookkeeper_cli_options():
               "Default is 'workhistory'"),
         type=str,
         default="workhistory")
-    return parser.parse_args()
 
 
-if __name__ == '__main__':
-    # parse command line arguments
-
-    args = _bookkeeper_cli_options()
+def main(args=None):
+    if args is None:
+        parser = argparse.ArgumentParser()
+        bookkeeper_cli_options(parser)
+        args = parser.parse_args()
 
     # select mode
     if args.cont and args.discard:
@@ -431,3 +430,7 @@ if __name__ == '__main__':
                job_name=args.job_name,
                history_name=args.history_name,
                work_history_name=args.work_history_name,)
+
+
+if __name__ == '__main__':
+    main()
