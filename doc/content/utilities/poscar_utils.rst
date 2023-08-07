@@ -27,6 +27,19 @@ All POSCAR utilities support the following options:
 attach_bulk
 ===========
 
+Interactive script that takes a slab POSCAR and adds a bulk POSCAR on the bottom, rescaling the unit cell.
+
+**Usage**
+
+.. code-block:: console
+
+    $ viperleed poscar attach_bulk
+
+**Additional Options**
+
+None.
+
+
 .. _poscar_utils_delete_above:
 
 delete_above
@@ -133,6 +146,18 @@ This utility uses the same algorithm for symmetry detection as is used in ViPErL
 
 get_bulk_repeat
 ===============
+
+Interactive script that reads a POSCAR file, asks at what c value the bulk starts, then automatically reduces the size of the POSCAR to non-redundant bulk layers only, and outputs the appropriate :ref:`N_BULK_LAYERS<blay>` and :ref:`BULK_REPEAT` values.
+
+**Usage**
+
+.. code-block:: console
+
+    $ viperleed poscar get_bulk_repeat
+
+**Additional Options**
+
+None.
 
 .. _poscar_utils_merge:
 
