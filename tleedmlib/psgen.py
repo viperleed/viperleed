@@ -228,13 +228,14 @@ def runPhaseshiftGen_old(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        el_charge_density_path = (Path(atdenssource) / chemel /
+        el_charge_density_path = (rp.sourcedir / atdenssource / chemel /
                                   (f"chgden{chemel}"))
-        charge_density_short_path = rp.workdir / el_charge_density_path
+        charge_density_short_path = (rp.workdir / el_charge_density_path
+                                     ).relative_to(rp.workdir)
         shutil.copy2(el_charge_density_path, charge_density_short_path)
         chem_el_paths[el] = charge_density_short_path
         chemels[el] = chemel
-        chgdenrelpath = shortpath / subpath
+        chgdenrelpath = charge_density_short_path
 
     nsl.sort_by_z(botToTop=True)
     for at in nsl.atlist:
