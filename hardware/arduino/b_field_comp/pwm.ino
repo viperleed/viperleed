@@ -396,6 +396,23 @@ uint8_t pin_to_tc4_channel(uint8_t pwm_pin) {
 }
 
 
+// Some special function registers belonging to
+// Timer/Counter4 are not properly zero'ed on POR
+void tc4_sfr_reset() {
+    TCCR4A = 0;
+    TCCR4B = 0;
+    TCCR4C = 0;
+    TCCR4D = 0;
+    TCCR4E = 0;
+    OCR4A = 0;
+    OCR4B = 0;
+    OCR4C = 0;
+    OCR4D = 0;
+    TIMSK4 = 0;
+    DT4 = 0;
+} 
+
+
 double log2(double val)
 {
    return log(val) / log(2);
