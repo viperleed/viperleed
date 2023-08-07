@@ -307,6 +307,7 @@ error_t set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
       case 4096: ps_select = 13; break;
       case 8192: ps_select = 14; break;
       case 16384: ps_select = 15; break;  
+      default: return InvalidPrescaler;
     }
     TCCR4B |= ps_select;
     return NoError;
@@ -358,6 +359,7 @@ error_t enable_pwm_channel(TC4_PWM_CHANNEL channel, bool enable) {
         else
           TCCR4C &= ~(1 << PWM4D); 
         break;
+      default: return InvalidChannel;
     }
     return NoError;
 }
