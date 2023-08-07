@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 """ViPErLEED utility: Preparing POSCAR for VASP relaxation
 
-This utility takes a slab in POSCAR format as used by ViPErLEED and prepares it 
-for relaxation in VASP. This includes adding a vacuum gap on top of the slab,
-writing the "Selective dynamics" flags, and giving logical flags for each atom.
+This utility takes a slab in POSCAR format as used by ViPErLEED and prepares it
+for relaxation in VASP. This includes writing the "Selective dynamics" flags
+and giving logical flags for each atom that specify along which direction to
+relax.
 
 Created on 2023-08-02
 

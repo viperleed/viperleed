@@ -174,7 +174,7 @@ Rescales the unit cell dimensions of the POSCAR file by the specified factor.
 **Additional Options**
 
 - ``scaling``: (required) One or three scaling factors for the unit cell.
-  If three values are given, the scaling factors are applied to the a, b, and c vector, respectively.
+  If three values are given, the scaling factors are applied to the :math:`\vec{a}`, :math:`\vec{b}`, and :math:`\vec{c}` vector, respectively.
   If only one value is given, an isotropic scaling is applied.
 
 .. _poscar_utils_sort_by_z:
@@ -201,7 +201,7 @@ None
 strip_comments
 ==============
 
-Strips all comments from the POSCAR file (e.g. :ref:`SITE_DEFs<sitedef>` information added by ViPErLEED).
+Strips all comments from the POSCAR file (e.g. :ref:`SITE_DEF<sitedef>` information added by ViPErLEED).
 
 **Usage**
 
