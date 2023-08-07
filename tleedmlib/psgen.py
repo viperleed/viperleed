@@ -228,7 +228,7 @@ def runPhaseshiftGen_old(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        el_charge_density_path = (rp.sourcedir / atdenssource / chemel /
+        el_charge_density_path = (rp.source_dir / atdenssource / chemel /
                                   (f"chgden{chemel}"))
         charge_density_short_path = (rp.workdir / el_charge_density_path
                                      ).relative_to(rp.workdir)
