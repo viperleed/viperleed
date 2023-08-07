@@ -89,10 +89,45 @@ Same as :ref:`poscar_utils_delete_above` and :ref:`poscar_utils_delete_below`, b
 enforce_symmetry
 ================
 
+Finds the planegroup of the POSCAR file and enforces it by moving atoms to symmetric positions.
+
+Symmetry detection works the same as the :ref:`find_symmetry<poscar_utils_find_symmetry>` utility but here a symmetrized POSCAR file is returned.
+
+**Usage**
+
+.. code-block:: console
+
+    $ viperleed poscar enforce_symmetry <POSCAR_IN >POSCAR_OUT
+
+**Additional Options**
+
+- ``-e``, ``--symmetry-eps``: Epsilon for in-plane symmetry detection in Å. Behaves like :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file. Default: 0.1Å
+- ``--symmetry-eps-z``: Epsilon for out-of-plane symmetry detection in Å. Behaves like the second argument of :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file.
+  If not provided, the value of ``--symmetry-eps`` is used.
+- ``--planegroup``: Planegroup to enforce.
+  Default: detected automatically from the slab.
+  Use this option to override the automatic detection and manually lower the symmetry.
+
 .. _poscar_utils_find_symmetry:
 
 find_symmetry
 =============
+
+Finds the planegroup of the POSCAR file and prints it to ``stdout``.
+This utility uses the same algorithm for symmetry detection as is used in ViPErLEED calculations.
+
+**Usage**
+
+.. code-block:: console
+
+    $ viperleed poscar find_symmetry <POSCAR_IN
+
+**Additional Options**
+
+- ``-e``, ``--symmetry-eps``: Epsilon for in-plane symmetry detection in Å. Behaves like :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file. Default: 0.1Å
+- ``--symmetry-eps-z``: Epsilon for out-of-plane symmetry detection in Å. Behaves like the second argument of :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file.
+  If not provided, the value of ``--symmetry-eps`` is used.
+
 
 .. _poscar_utils_get_bulk_repeat:
 
@@ -202,6 +237,7 @@ strip_comments
 ==============
 
 Strips all comments from the POSCAR file (e.g. :ref:`SITE_DEF<sitedef>` information added by ViPErLEED).
+This can also be used to strip ion velocities from a VASP POSCAR file.
 
 **Usage**
 
@@ -218,3 +254,26 @@ None
 vasp_relax
 ==========
 
+Formats the POSCAR file for use with :term:`VASP`.
+
+It can often be useful to "pre-relax" a surface structure with :term:`DFT` calculations before performing LEED-I(V) analysis.
+This utilities facilitates this by formatting the POSCAR file for relaxation with :term:`VASP`.
+The vasp_relax utility adds the following information to the POSCAR file:
+
+- the tag ``Selective dynamics``, which indicates to VASP that selected ion positions are allowed to move
+- three boolean flags (`T`, `F`) for each atom indicating whether the atom is allowed to move along the :math:`\vec{a}`, :math:`\vec{b}`, and :math:`\vec{c}` unit cell vectors, respectively
+
+In general, it can be useful to optimize the positions of the topmost layers of atoms, while keeping the positions of the atoms in the bulk fixed.
+The ``above_c``value should be chosen such that bulk atoms are not allowed to move to prevent the bulk lattice parameters from changing.
+
+**Usage**
+
+.. code-block:: console
+
+    $ viperleed poscar vasp_relax 0.20 <POSCAR_IN >POSCAR_OUT
+    $ viperleed poscar vasp_relax 0.35 --all_directions <POSCAR_IN >POSCAR_OUT
+
+**Additional Options**
+
+- ``above_c``: (required) the fraction of the :math:`\vec{c}` vector above which to allow atoms to move
+- ``--all_directions``: allow all atoms to move along all three unit cell vectors (default: only allow movement along :math:`\vec{c}`)

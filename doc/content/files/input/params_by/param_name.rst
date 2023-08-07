@@ -111,7 +111,7 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`SYMMETRY_CELL_TRANSFORM<SYMMETRY_CELL_TRANSFORM>` | Relationship between a supercell and the primitive surface unit cell (only relevant for :ref:`domain calculations<domain_calculation>`) |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`SYMMETRY_EPS<SYMPREC>`                            | Error tolerance during symmetry search                                                                                                  |
+  | :ref:`SYMMETRY_EPS<sym_eps>`                            | Error tolerance during symmetry search                                                                                                  |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`SYMMETRY_FIX<ISYM>`                               | Manually set a symmetry, or turn symmetry off                                                                                           |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+

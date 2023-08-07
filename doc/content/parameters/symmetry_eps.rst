@@ -1,4 +1,4 @@
-.. _symprec:
+.. _sym_eps:
 
 SYMMETRY_EPS
 ============

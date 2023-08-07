@@ -36,7 +36,7 @@ are listed in the table below.
   The symmetry group of your input slab is detected from the atomic 
   coordinates in your input 
   :ref:`POSCAR<POSCAR>` (see also the parameter 
-  :ref:`SYMMETRY_EPS<SYMPREC>`), and written to the POSCAR header after 
+  :ref:`SYMMETRY_EPS<sym_eps>`), and written to the POSCAR header after 
   initialization.
 
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
