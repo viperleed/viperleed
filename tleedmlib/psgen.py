@@ -230,8 +230,8 @@ def runPhaseshiftGen_old(sl, rp,
             raise
         el_charge_density_path = (rp.source_dir / atdenssource / chemel /
                                   (f"chgden{chemel}"))
-        charge_density_short_path = (rp.workdir / el_charge_density_path
-                                     ).relative_to(rp.workdir)
+        charge_density_short_path = (rp.workdir / atdenssource / chemel /
+                                    (f"chgden{chemel}")).relative_to(rp.workdir)
         shutil.copy2(el_charge_density_path, charge_density_short_path)
         chem_el_paths[el] = charge_density_short_path
         chemels[el] = chemel
