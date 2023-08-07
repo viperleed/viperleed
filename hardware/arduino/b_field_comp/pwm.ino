@@ -64,8 +64,8 @@ feature.
 Note: The 11-bit Enhanced PWM Mode is not working up to some chip revision.
 **/
 
-byte set_pwm_frequency(double f_pwm) {
-    /**Set PWM frequency, using the 10-bit Timer/Counter4.
+error_t set_pwm_frequency(double f_pwm) {
+    /**Set PWM frequency, using 10-bit Timer/Counter4.
 
     Parameters
     ----------
@@ -125,7 +125,7 @@ byte set_pwm_frequency(double f_pwm) {
 }
 
 
-byte set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr) {
+error_t set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_addr) {
     /**Set PWM duty cycle (i.e., average voltage), including sign output.
 
     Parameters
@@ -290,7 +290,7 @@ void set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
 }
 
 
-void enable_pwm_channel(TC4_PWM_CHANNEL channel, bool enable) {
+error_t enable_pwm_channel(TC4_PWM_CHANNEL channel, bool enable) {
     /**Enable/disable PWM output on TC4 channels A, B or D.
 
     Parameters
@@ -380,7 +380,7 @@ uint8_t pin_to_tc4_reg_addr(uint8_t pwm_pin) {
 
 // If pin definitions on the ATmega32U4 should change, 
 // the assignments below would have to change accordingly.
-uint8_t pin_to_tc4_channel(uint8_t pwm_pin) {
+TC4_PWM_CHANNEL pin_to_tc4_channel(uint8_t pwm_pin) {
     switch(pwm_pin) {
       case  6: return TC4_PWM_CH_D;
       case 10: return TC4_PWM_CH_B;
