@@ -120,7 +120,8 @@ byte set_pwm_frequency(double f_pwm) {
   pwm_period = f_clk_t4 / f_pwm - 1;  
   set_ten_bit_value(pwm_period, &OCR4C);
 
-  set_pwm_polarity(POSITIVE_CURRENT);                                          // Possibly rename function, and corresponding defines
+    connect_pwm_output(COIL_1_PWM);
+    connect_pwm_output(COIL_2_PWM);
 }
 
 
@@ -205,43 +206,36 @@ void set_ten_bit_value(uint16_t ten_bit_value, volatile uint8_t *reg) {
 }
 
 
-// TODO: rename and do not use POSITIVE_CURRENT / NEGATIVE_CURRENT 
-// Only setup registers
-void set_pwm_polarity(byte polarity) {
-    /**Set PWM polarity.
+error_t connect_pwm_output(byte io_pin) {
+    /**Connect internal Waveform Output 'OCW4x' to 'io_pin'.
 
     Parameters
     ----------
     io_pin : byte
         Physical pin which will output PWM-generated waveform 'OCW4x'
 
+    Returns
+    -------
+    error_code : error_t
+        0 for no error
+        2 for invalid I/O pin
+
     Notes
     -----
     Pins OC4A/B/D: cleared on compare match (TCNT4 == OCR4A/B/D), set when
     TCNT4 = 0x000; Connect the Waveform Outputs OCW4A/B/D to Output Compare
-    pins OC4A/B/D.
-    This function essentially selects whether we output "high" or "low" when
-    TCNT4 reaches the threshold. This can be used for inverting the signal.
-    For more info see Atmega32U4 datasheet, section 15.12.1
+    pins OC4A/B/D. For more info see Atmega32U4 datasheet, section 15.12.1
     **/
-    TCCR4A &= ~((1 << COM4A1) | (1 << COM4A0));     // Clear <COM4A1:COM4A0>
-    TCCR4A &= ~((1 << COM4B1) | (1 << COM4B0));     // Clear <COM4B1:COM4B0>
-    TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0));     // Clear <COM4D1:COM4D0>
-
-    // Set duty cycle polarity: for positive currents, we reset to
-    // zero when the count goes above the threshold; for negative
-    // currents, we set to one when the count goes above threshold
-    if (polarity == POSITIVE_CURRENT)
-        polarity = 0;
-    else
-        polarity = 1;
-
-    // For channels A, B and D, route the Waveform Outputs OCW4A/B/D to the
-    // non-inverting Output Compare pins OC4A/B/D; 
-    // Set where pin toggle occurs depending on polarity:
-    TCCR4A |= (1 << COM4A1) | (polarity << COM4A0);
-    TCCR4A |= (1 << COM4B1) | (polarity << COM4B0);
-    TCCR4C |= (1 << COM4D1) | (polarity << COM4D0);
+    
+    // Route the Timer/Counter4 Waveform Outputs OCW4A/B/D to the non-inverting
+    // Output Compare pins OC4A/B/D: 
+    switch(io_pin) {
+      case  6: TCCR4C |= (1 << COM4D1) | (0 << COM4D0); break;
+      case 10: TCCR4A |= (1 << COM4B1) | (0 << COM4B0); break;
+      case 13: TCCR4A |= (1 << COM4A1) | (0 << COM4A0); break;
+      default: return InvalidIOPin;
+    }    
+    return NoError;
 }
 
 

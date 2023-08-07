@@ -17,9 +17,6 @@ Date: 15.05.2023
 // because TC4H:OCR4C is 10 bits wide. Initialized inside 'set_pwm_frequency'.
 uint16_t pwm_period;
 
-#define POSITIVE_CURRENT  1
-#define NEGATIVE_CURRENT -1
-
 #define F_CPU_CLK 16e6                                    // Arduino Micro CPU clock = 16 MHz
 #define F_PWM_MIN (F_CPU_CLK / (16384 * 1024.0))          // F_PWM_MIN = 0.954 Hz
 #define F_PWM_MAX (F_CPU_CLK / (1 * 4.0))                 // F_PWM_MAX = 4 MHz
