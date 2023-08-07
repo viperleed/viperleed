@@ -106,6 +106,7 @@ error_t set_pwm_frequency(double f_pwm) {
     connect_pwm_output(COIL_1_PWM);
     connect_pwm_output(COIL_2_PWM);
 
+    return NoError;
 }
 
 
@@ -308,6 +309,7 @@ error_t set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
       case 16384: ps_select = 15; break;  
     }
     TCCR4B |= ps_select;
+    return NoError;
 }
 
 
@@ -357,6 +359,7 @@ error_t enable_pwm_channel(TC4_PWM_CHANNEL channel, bool enable) {
           TCCR4C &= ~(1 << PWM4D); 
         break;
     }
+    return NoError;
 }
 
 
