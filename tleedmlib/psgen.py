@@ -229,9 +229,10 @@ def runPhaseshiftGen_old(sl, rp,
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
         el_charge_density_path = (rp.source_dir / atdenssource / chemel /
-                                  (f"chgden{chemel}"))
+                                  (f"chgden{chemel}")).reslove()
         charge_density_short_path = (rp.workdir / atdenssource / chemel /
                                     (f"chgden{chemel}")).relative_to(rp.workdir)
+        os.makedirs(charge_density_short_path.parent, exist_ok=True)
         shutil.copy2(el_charge_density_path, charge_density_short_path)
         chem_el_paths[el] = charge_density_short_path
         chemels[el] = chemel
