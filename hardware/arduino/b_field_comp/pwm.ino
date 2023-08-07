@@ -82,7 +82,6 @@ error_t set_pwm_frequency(double f_pwm) {
         1 freq out-of-range
 
     **/
-  double pwm_resolution;
   double f_clk_t4;
   uint16_t clk_ps;
   
@@ -97,21 +96,8 @@ error_t set_pwm_frequency(double f_pwm) {
   // f_OC4nx_pwm = f_clk_T4 / (N + 1), where N ... value of OCR4C
   // res_pwm = log2(OCR4C + 1), in bits. See datasheet sec. 15.8.
   
-  // For a given CPU and PWM frequency, choose a clock prescaler that keeps
-  // the PWM resolution as close as possible to the maximum of 10 bits.
-  // Iterate through the available TC4 prescaler values:
-  for(uint8_t i = 0; i < 16; i++)
-  {
-    f_clk_t4 = F_CPU_CLK / TC4_CLK_PRESCALER[i];
-    pwm_resolution = log2(f_clk_t4 / f_pwm);
-    clk_ps = TC4_CLK_PRESCALER[i];
-
-    //Serial.print(clk_ps,DEC); Serial.print(": "); Serial.println(pwm_resolution,3);
-
-    // Jump out of the loop if we have found the best prescaler value
-    if(pwm_resolution <= 10.0) break;
-  }
   set_pwm_clock_prescaler(clk_ps);
+    clk_ps = find_optimum_prescaler(f_pwm);
 
   // Do not use "enhanced mode". Functional only for certain chip revisions.
   // enable_pwm_enhanced_mode();
@@ -240,6 +226,32 @@ error_t connect_pwm_output(byte io_pin) {
 
 
 void set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
+  // Calculate the TC4 clock prescaler: Use the smallest possible prescaler
+  // which will result in the highest achievable PWM resolution, i.e. make
+  // OCR4C as large as possible. Note: Some TC4 registers including OCR4C are
+  // extended to 10 bits by adding two bits in TC4H (datasheet sec. 15.2.2).
+  // Relevant formulae: 
+  // f_OC4x_pwm = f_clk_T4 / (N + 1), where N ... value of OCR4C
+  // res_pwm = log2(OCR4C + 1), in bits. See datasheet sec. 15.8.
+  uint16_t find_optimum_prescaler(double f_pwm) {
+    double pwm_resolution;
+    double f_clk_t4;
+    uint16_t clk_ps;
+
+    // For a given CPU and PWM frequency, choose a clock prescaler that keeps
+    // the PWM resolution as close as possible to the maximum of 10 bits.
+    // Iterate through the available TC4 prescaler values:
+    for(uint8_t i = 0; i < 15; i++)
+    {
+      f_clk_t4 = F_CPU_CLK / TC4_CLK_PRESCALER[i];
+      pwm_resolution = log2(f_clk_t4 / f_pwm);
+      clk_ps = TC4_CLK_PRESCALER[i];
+
+      // Jump out of the loop if we have found the best prescaler value
+      if(pwm_resolution <= 10.0) break;
+    }
+    return clk_ps;
+  }
     /**Set PWM clock prescaler.
 
     Parameters
