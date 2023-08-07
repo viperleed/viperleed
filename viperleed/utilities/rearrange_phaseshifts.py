@@ -15,7 +15,7 @@ import sys
 cd = os.path.realpath(os.path.dirname(__file__))
 
 from viperleed.calc.files.phaseshifts import (readPHASESHIFTS,
-                                                   writePHASESHIFTS)
+                                              writePHASESHIFTS)
 
 
 ###############################################
@@ -47,7 +47,7 @@ def main():
                         None, None, readfile=filename, check=False)
                     print("Phaseshifts file read successfully.")
                 except FileNotFoundError:
-                    print(filename+" not found.")
+                    print(f"{filename} not found.")
                     filename = ""
                 except Exception:
                     print("Exception while reading phaseshifts file: ")
@@ -99,9 +99,9 @@ def main():
     # write new file
     try:
         timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
-        fn = "PHASESHIFTS_mod_"+timestamp
+        fn = f"PHASESHIFTS_mod_{timestamp}"
         writePHASESHIFTS(firstline, ps, filename=fn)
-        print("Wrote new phaseshifts file as "+fn)
+        print(f"Wrote new phaseshifts file as {fn}")
     except Exception:
         print("Error writing new phaseshifts file.")
         return 1
