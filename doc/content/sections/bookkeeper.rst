@@ -4,11 +4,11 @@ Bookkeeper
 ==========
 
 The bookkeeper is a small application made to run in between executions 
-of the TensErLEED Manager tleedm. Its purpose is to collect input and 
-output files from the previous tleedm run and store them in a "history" 
+of ViPErLEED calculations. Its purpose is to collect input and 
+output files from the previous run and store them in a "history" 
 subfolder for future reference.
 
-The bookkeeper can safely be run multiple times. If no new tleedm output 
+The bookkeeper can safely be run multiple times. If no new output 
 is detected, it will simply exit without doing anything.
 
 The bookkeeper may be called with the following arguments:
