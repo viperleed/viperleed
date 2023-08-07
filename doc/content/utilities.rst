@@ -19,5 +19,6 @@ These are installed as part of the Python package, and can be called from the co
 
 .. toctree::
    :hidden:
-    utilities/rearrange_phaseshifts
-    utilities/aux_to_exp
+
+   utilities/rearrange_phaseshifts
+   utilities/aux_to_exp

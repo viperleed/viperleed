@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "viperleed"
 dynamic = [
-    "version",
     "readme",
+    "version",
     ]
 requires-python = ">=3.7"
 dependencies = [
@@ -40,9 +40,9 @@ dev = [
 ]
 doc = [
     "myst-nb",
+    "sphinx_rtd_theme",
     "sphinx",
     "sphinxcontrib-bibtex",
-    "sphinx_rtd_theme",
     "sphinxcontrib-spelling",
     "sphinxcontrib-svg2pdfconverter",
 ]

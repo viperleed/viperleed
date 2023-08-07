@@ -9,22 +9,24 @@
 import datetime
 import sphinx_rtd_theme
 
+import viperleed
+
 project = 'ViPErLEED'
 copyright = f'{datetime.date.today().year}, ViPErLEED-developers'
 author = 'ViPErLEED-developers'
-release = '0.10.0'
+release = viperleed.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-              'sphinx.ext.autodoc',
-#              'sphinx.ext.napoleon'        # for Numpy docstrings ?
+              'sphinx.ext.autodoc',        # for API documentation from docstrings
+              'sphinx.ext.napoleon',        # for Numpy docstrings
               'sphinx.ext.extlinks',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
-              'sphinx.ext.intersphinx',
-              'sphinx_rtd_theme',
+              'sphinx.ext.intersphinx',     # for linking to other docs
+              'sphinx_rtd_theme',           # HTML theme
               'sphinxcontrib.bibtex',       # to use .bib files for bibliography
               'sphinxcontrib.inkscapeconverter', # for SVG images
               'sphinxcontrib.spelling',     # spell checking for the docs ;)
