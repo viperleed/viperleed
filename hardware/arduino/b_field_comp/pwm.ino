@@ -71,43 +71,40 @@ error_t set_pwm_frequency(double f_pwm) {
     ----------
     f_pwm : double
         PWM output frequency in Hz.
-        Notice that the resolution of the PWM (i.e., of the average current)
-        scales with PWM frequency. The PWM frequency is shared across all 
-        three available Timer/Counter4 channels A, B and D.
+        Notice that the resolution of the PWM scales with PWM frequency.
+        The PWM frequency is shared across all three available Timer/Counter4
+        channels A, B and D.
 
     Returns
     -------
     error_code : byte
-        0 for no-error
-        1 freq out-of-range
+        0 for no error
+        1 for requested pwm frequency out-of-range
 
     **/
-  double f_clk_t4;
-  uint16_t clk_ps;
-  
   if (f_pwm < F_PWM_MIN || f_pwm > F_PWM_MAX) return 1;
 
-  enable_fast_pwm_mode();
-  // Calculate the TC4 clock prescaler: Use the smallest possible prescaler
-  // which will result in the highest achievable PWM resolution, i.e. make
-  // OCR4C as large as possible. Note: Some TC4 registers such as OCR4C are
-  // extended to 10 bits by adding two bits in TC4H (datasheet sec. 15.2.2).
-  // Relevant formulae: 
-  // f_OC4nx_pwm = f_clk_T4 / (N + 1), where N ... value of OCR4C
-  // res_pwm = log2(OCR4C + 1), in bits. See datasheet sec. 15.8.
+    double f_clk_t4;
+    uint16_t clk_ps;
   
-  set_pwm_clock_prescaler(clk_ps);
+
+    enable_fast_pwm_mode();  
+ 
     clk_ps = find_optimum_prescaler(f_pwm);
+    set_pwm_clock_prescaler(clk_ps);
 
-  // Do not use "enhanced mode". Functional only for certain chip revisions.
-  // enable_pwm_enhanced_mode();
+    // Do not use "enhanced mode". Functional only for certain chip revisions.
+    // enable_pwm_enhanced_mode();
 
-  // The PWM period (= 1 / f_pwm) is defined in terms of TC4 clock ticks:
-  pwm_period = f_clk_t4 / f_pwm - 1;  
-  set_ten_bit_value(pwm_period, &OCR4C);
+    f_clk_t4 = F_CPU_CLK / clk_ps;
+
+    // The PWM period (= 1 / f_pwm) is defined in terms of TC4 clock ticks:
+    pwm_period = f_clk_t4 / f_pwm - 1;
+    set_ten_bit_value(pwm_period, &OCR4C);
 
     connect_pwm_output(COIL_1_PWM);
     connect_pwm_output(COIL_2_PWM);
+
 }
 
 
@@ -131,8 +128,9 @@ error_t set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_a
     **/
     if (value < -1.0 || value > 1.0) return 2;                                      // TODO: could make these return values into error codes, similar to the driver codes, or use a bunch of defines
 
+ 
     value = set_current_sign(value, sign_select_pin);
-
+     
     // Notice that the 'coil_current', i.e. the time-averaged value of the signal
     // from the PWM, is exactly the same as the duty cycle of the PWM itself.
     // First, set or clear an I/O pin depending on the current direction;
@@ -147,7 +145,6 @@ error_t set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_a
 }
 
 
-
 double set_current_sign(double value, byte sign_select_pin) {
     /**Set digital I/O pin according to current direction in a coil.
 
@@ -158,8 +155,8 @@ double set_current_sign(double value, byte sign_select_pin) {
     sign_select_pin : byte
         Which I/O pin to use as a sign indicator
     **/
-    if (value < 0){
-        digitalWrite(sign_select_pin, HIGH);                                    // TODO: check if this is the right way (test on coil)
+    if (value < 0) {
+        digitalWrite(sign_select_pin, HIGH);
         return value + 1;
     } 
     digitalWrite(sign_select_pin, LOW);
@@ -185,10 +182,11 @@ void set_ten_bit_value(uint16_t ten_bit_value, volatile uint8_t *reg) {
     are written in the desired register. More info: Atmega32U4
     datasheet, section 15.11.
     **/
+
     noInterrupts();  // Ensure nothing bothers setting two registers
     TC4H = ten_bit_value >> 8;
     *reg = ten_bit_value & 255;
-    interrupts();
+    interrupts(); 
 }
 
 
@@ -251,6 +249,8 @@ error_t connect_pwm_output(byte io_pin) {
     }
     return clk_ps;
   }
+
+
 error_t set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
     /**Set PWM clock prescaler.
 
@@ -259,9 +259,15 @@ error_t set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
     tc4_clock_prescaler : uint16_t
         Sets the requested TC4 clock prescaler
 
+    Returns
+    -------
+    error_code : error_t
+        0 for no error
+        4 for invalid clock prescaler
+
     Notes
     -----
-    TC4 clock frequency = CPU clock frequency / TC4 clock prescaler
+    TC4 clock frequency = CPU clock frequency / TC4 clock prescaler.
     Notice that we should divide the CPU clock by the smallest amount 
     possible: the faster the TC4 counter, the better the PWM resolution.
     For example, a 16 MHz CPU clock and 20 kHz PWM yields 800 steps in
@@ -279,6 +285,7 @@ error_t set_pwm_clock_prescaler(uint16_t tc4_clock_prescaler) {
                 | (1 << CS41)
                 | (1 << CS40));
 
+ 
     // Convert the TC4 clock prescaler value to the respective 
     // prescaler select entry, see ATmega32U4 datasheet table 15-14
     switch(tc4_clock_prescaler) {
@@ -311,6 +318,12 @@ error_t enable_pwm_channel(TC4_PWM_CHANNEL channel, bool enable) {
         Selects the TC4 channel to enable/disable
     enable : bool
         Enable or disable the channel
+
+    Returns
+    -------
+    error_code : error_t
+        0 for no error
+        3 for invalid TC4 channel
 
     Notes
     -----
