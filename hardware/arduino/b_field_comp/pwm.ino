@@ -142,8 +142,8 @@ error_t set_signed_pwm_value(double value, byte sign_select_pin, byte *tc4_reg_a
     // times the PWM period measured in TC4 clock ticks.
     // Also note it is sufficient to simply pass 'abs(value)' to program the 
     // duty cycle because we set the current direction with 'set_pwm_polarity'.
+    set_ten_bit_value((uint16_t)round(value * (pwm_period)), tc4_reg_addr);
 
-    set_ten_bit_value((uint16_t)(value * pwm_period), tc4_reg_addr);
     return 0;
 }
 
