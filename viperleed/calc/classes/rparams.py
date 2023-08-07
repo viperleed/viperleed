@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Jun 13 2019
+"""Class containing parameters and values used during the ViPErLEED calculation.
 
-@author: Florian Kraushofer
-
-Class containing parameters read from the PARAMETERS file, and some parameters
+Most parameters are read from the PARAMETERS file, though some are
 defined at runtime. Most default values are defined here.
+
+Created on Jun 13 2019
 """
 
 import logging
@@ -31,6 +30,10 @@ except Exception:
 else:
     _CAN_PLOT = True
     plt.style.use('viperleed.tleedm')
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
 
 logger = logging.getLogger("tleedm.rparams")
 

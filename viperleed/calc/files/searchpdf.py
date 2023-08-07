@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
+"""Functions for writing the SearchProgress.pdf and SearchReport.pdf files.
 """
-Created on Wed Aug 19 13:43:36 2020
-
-@author: Florian Kraushofer
-
-Functions for writing the SearchProgress.pdf and SearchReport.pdf files.
-"""
-
 import numpy as np
 import logging
 from matplotlib.markers import MarkerStyle
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.searchpdf")
 logger.setLevel(logging.INFO)

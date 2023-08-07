@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 19 13:58:39 2020
-
-@author: Florian Kraushofer
-
-Functions for determining and setting slab symmetry
+"""Functions for determining and setting slab symmetry.
 """
 
 import copy
@@ -20,6 +15,9 @@ from viperleed.calc.base import (addUnequalPoints, angle, dist_from_line,
                                       rotation_matrix_order, rotation_matrix)
 from viperleed.calc.classes.slab import SymPlane
 from viperleed.calc.files import parameters
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",]
+__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.symmetry")
 

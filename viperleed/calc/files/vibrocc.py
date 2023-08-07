@@ -6,12 +6,15 @@ Created on Wed Aug 19 10:36:53 2020
 
 Functions for reading and writing the VIBROCC file
 """
-
 import logging
 import numpy as np
 import re
 
 from viperleed.calc.base import splitSublists, readToExc
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2023-06"
 
 logger = logging.getLogger("tleedm.files.vibrocc")
 
@@ -100,12 +103,12 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
             try:
                 llist = line.split('=')[1].split()
             except IndexError:
-                logger.warning('VIBROCC file: ' + param + ' appears to have '
+                logger.warning(f'VIBROCC file: {param} appears to have '
                                'no value')
                 rp.setHaltingLevel(1)
                 continue
             if not llist:
-                logger.warning('VIBROCC file: ' + param + ' appears to have '
+                logger.warning(f'VIBROCC file: {param} appears to have '
                                'no value')
                 rp.setHaltingLevel(1)
                 continue

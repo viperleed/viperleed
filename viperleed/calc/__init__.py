@@ -1,9 +1,5 @@
 """Package calc of viperleed.
 
-@author: Florian Kraushofer (@fkrausofer)
-@author: Michele Riva (@michele-riva)
-@author: Alexander M. Imre (@amimre)
-
 This package contains all the main functionality of the TensErLEED
 manager part of ViPErLEED (tleedm), i.e., the part of ViPErLEED
 dedicated to the calculation of theoretical I(V) curves as well
@@ -44,7 +40,6 @@ sections:
 wrapped:
     Python extensions written in FORTRAN
 """
-
 from pathlib import Path
 import logging
 import os
@@ -64,6 +59,10 @@ from viperleed.calc.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import prerun_clean, cleanup
 from viperleed.calc.sections.run_sections import section_loop
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
 
 logger = logging.getLogger("tleedm")
 

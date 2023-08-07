@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 17 15:32:12 2020
-major rework Sep-Nov 2021
-
-@author: Florian Kraushofer
-@author: Alexander M. Imre
+"""Generate input files for EEASiSSS.x and run it.
 """
 import copy
 import logging
@@ -22,6 +17,10 @@ from viperleed.calc.classes.sitetype import Atom_type
 from viperleed.calc.classes.rparams import PARAM_LIMITS
 from viperleed.calc.leedbase import EV_TO_HARTREE
 from viperleed.calc.periodic_table import PERIODIC_TABLE
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2020-08-17"
 
 logger = logging.getLogger("tleedm.psgen")
 

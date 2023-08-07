@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
-"""
+"""Class storing position and other properties of individual atoms.
+
 Created on Jun 13 2019
-
-@author: Florian Kraushofer
-
-Class storing position and other properties of individual atoms (to be used
-with Slab, Layer, etc)
 """
 
 import logging
 import numpy as np
 import copy
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
 
 logger = logging.getLogger("tleedm.atom")
 

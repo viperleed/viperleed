@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Functions for writing output from full-dynamic optimization.
 """
-Created on Mon Oct 25 16:37:23 2021
-
-@author: fkrau
-
-Functions for writing output from full-dynamic optimization
-"""
-
 import numpy as np
 import logging
 import copy
@@ -27,6 +21,9 @@ else:
 
 from viperleed.calc.files.iorfactor import read_rfactor_columns
 from viperleed.calc.files.ivplot import plot_iv
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)"]
+__created__ = "2021-10-25"
 
 logger = logging.getLogger("tleedm.files.iofdout")
 logger.setLevel(logging.INFO)

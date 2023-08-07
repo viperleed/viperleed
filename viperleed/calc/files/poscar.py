@@ -1,14 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Module poscar of viperleed.tleedmlib.files.
+"""Functions for reading and writing POSCAR files.
 
-Created on Tue Aug 18 17:27:46 2020
-
-@author: Florian Kraushofer
-@author: Michele Riva (refactor on 2023-01-16)
-@author: Alexander M. Imre
-
-Functions for reading and writing POSCAR files. Also defines the
-POSCARError specific exception, as well as some subclasses.
+Also defines the POSCARError specific exception, as well as some subclasses.
 """
 
 from io import TextIOBase
@@ -21,6 +14,10 @@ import numpy as np
 
 from viperleed.calc.classes import atom as tl_atom, slab as tl_slab
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Michele Riva (@michele-riva)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2023-06"
 
 _LOGGER = logging.getLogger("tleedm.files.poscar")
 

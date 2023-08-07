@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-"""
+"""Class storing properties and data of a diffraction beam.
+
 Created on Tue Dec  3 13:39:04 2019
-
-@author: Florian Kraushofer
-
-Class storing properties and data of a beam
 """
+import math
+
 import numpy as np
 from quicktions import Fraction
-import math
+
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
 
 
 class Beam:

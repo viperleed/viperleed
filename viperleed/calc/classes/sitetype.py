@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+"""Class storing properties of a site.
+
 Created on Jun 13 2019
-
-@author: Florian Kraushofer
-
-Class storing properties of a site
 """
 
 import logging
@@ -15,6 +12,8 @@ import numpy as np
 from viperleed.calc.periodic_table import (PERIODIC_TABLE,
                                                 COVALENT_RADIUS,
                                                 ATOMIC_MASS)
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)"]
 
 logger = logging.getLogger("tleedm.sitetype")
 

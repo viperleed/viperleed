@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 19 13:35:50 2020
-
-@author: Florian Kraushofer
-
-Functions for reading, processing and writing files relevant to the search
+"""Functions for reading, processing and writing files relevant to the search.
 """
 
 import copy
@@ -25,6 +20,9 @@ from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.poscar import writePOSCAR
 from viperleed.calc.files.vibrocc import writeVIBROCC
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "19.08.2020"
 
 logger = logging.getLogger("tleedm.files.iosearch")
 

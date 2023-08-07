@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Module beamgen of viperleed.tleedmlib.
-
-Creates the BEAMLIST file for TensErLEED calculations.
-
-@author: Alexander Imre
-@author: Florian Kraushofer
+"""Creates the BEAMLIST file for TensErLEED calculations.
 
 Original version by Florian Kraushofer (2020) was a wrapper for the fortran
 beamgen script by Uli Löffler et al. Complete refactor by Alexander Imre (2023)
@@ -24,6 +18,9 @@ from viperleed.calc import symmetry
 from viperleed.calc.leedbase import (HARTREE_TO_EV,
                                           BOHR_TO_ANGSTROM,
                                           ANGSTROM_TO_BOHR)
+
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Florian Kraushofer (@fkraushofer)"]
 
 logger = logging.getLogger('tleedm.beamgen')
 

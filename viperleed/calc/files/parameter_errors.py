@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+"""Classes for errors raised during PARAMETERS interpretation.
+"""
+
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
+__created__ = "2023-06"
 
 class ParameterError(Exception):
     """Base class for errors raised during PARAMETERS interpretation"""

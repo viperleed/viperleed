@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
+"""Functions for reading and interpreting the DISPLACEMENTS file.
 """
-Created on Wed Aug 19 10:45:24 2020
-
-@author: Florian Kraushofer
-
-Functions for reading and interpreting the DISPLACEMENTS file
-"""
-
 import logging
 import re
 import numpy as np
 
 from viperleed.calc.base import readIntRange, splitSublists
 from viperleed.calc.symmetry import setSymmetry, enforceSymmetry
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.displacements")
 

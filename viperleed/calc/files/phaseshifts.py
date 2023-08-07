@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Aug 18 17:20:43 2020
-
-@author: Florian Kraushofer, Alexander Imre
-
-Functions for reading and writing the PHASESHIFTS file
+"""Functions for reading and writing the PHASESHIFTS file
 """
 
 from itertools import combinations
@@ -31,6 +26,10 @@ else:
     import matplotlib.pyplot as plt
     plt.style.use('viperleed.tleedm')
     _CAN_PLOT = True
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2020-08-18"
 
 
 logger = logging.getLogger("tleedm.files.phaseshifts")

@@ -1,13 +1,6 @@
 # -*- coding: utf-8 -*-
+"""LEED-specific functions used throughout the viperleed calc package.
 """
-Created on Jun 13 2019
-
-@author: Florian Kraushofer
-@author: Alexander M. Imre
-
-Contains LEED- and TLEEDM-specific functions used throughout the tleedm module
-"""
-
 import copy
 import logging
 import multiprocessing
@@ -31,6 +24,9 @@ from viperleed.calc.base import cosvec
 # which could potentially be split off somewhere else 
 from viperleed.calc.files import parameters, poscar, vibrocc
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2019-06-13"
 
 # constants for conversion Angstrom and eV <-> atomic units
 HARTREE_TO_EV = 27.211396

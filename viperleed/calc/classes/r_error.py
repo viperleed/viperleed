@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
-"""
+"""Data structures and functions for storing and manipulating errors curves.
+
 Created on Jan 12 2023
-
-@author: Alexander M. Imre, Florian Kraushofer
-
-Data structure for storing and manipulating errors curves for the error
-calc after they have been calculated.
 """
-
 import numpy as np
 import copy
 import logging
 
 from viperleed.calc.base import range_to_str
+
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Florian Kraushofer (@fkraushofer)"]
 
 logger = logging.getLogger("tleedm.classes.r_error")
 

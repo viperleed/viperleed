@@ -1,16 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module parameters of viperleed.tleedmlib.
-
-Created on Tue Aug 18 16:56:39 2020
-
-@author: Florian Kraushofer
-@author: Alexander M. Imre
-@author: Michele Riva
-
-Initial version by Florian Kraushofer in 2020, major rewrite by
-Alexander Imre & Michele Riva in June 2023.
-
-Functions for reading from and writing to the PARAMETERS file.
+"""Functions for reading from and writing to the PARAMETERS file.
 """
 
 import ast
@@ -39,6 +28,10 @@ from viperleed.calc.files.woods_notation import readWoodsNotation
 from viperleed.calc import periodic_table
 from viperleed.calc.sections._sections import TLEEDMSection as Section
 
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Florian Kraushofer (@fkraushofer)",
+               "Michele Riva (@michele-riva)"]
+__created__ = "2020-08-18"
 
 logger = logging.getLogger('tleedm.files.parameters')
 

@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 19 11:55:15 2020
-
-@author: Florian Kraushofer
-
-Functions for reading and writing files relevant to the reference calculation
+"""Functions for reading and writing files relevant to the reference calculation
 """
 
 import copy
@@ -18,6 +13,9 @@ from viperleed.calc import leedbase
 from viperleed.calc.base import fortranContLine, lcm, splitMaxRight
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",]
+__created__ = "19.08.2020"
 
 logger = logging.getLogger("tleedm.files.iorefcalc")
 

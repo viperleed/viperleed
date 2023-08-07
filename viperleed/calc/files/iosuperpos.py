@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 19 13:47:08 2020
-
-@author: Florian Kraushofer
-
-Functions for writing files relevant to the superpos calculation
+"""Functions for writing files relevant to the superpos calculation.
 """
 
 import logging
 import numpy as np
 
 import fortranformat as ff
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+                "Alexander M. Imre (@amimre)"]
+__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.iosuperpos")
 

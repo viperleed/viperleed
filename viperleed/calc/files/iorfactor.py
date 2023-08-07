@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 19 12:17:56 2020
-
-@author: Florian Kraushofer
-
-Functions for reading and writing files relevant to the rfactor calculation
+"""Functions for reading and writing files relevant to the rfactor calculation.
 """
 
 import logging
@@ -31,6 +26,9 @@ from viperleed.calc import leedbase
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.iorfactor")
 

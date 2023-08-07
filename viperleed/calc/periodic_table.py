@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
+"""Data and functions related to the periodic table and element properties.
 """
-Created June 2023
-@author: Alexander M. Imre
-@author: Florian Kraushofer
 
-Module for data and functions related to the periodic table and element properties.
-"""
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Florian Kraushofer (@fkraushofer)"]
+__created__ = "2023-06"
 
 PERIODIC_TABLE = (
     'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na',

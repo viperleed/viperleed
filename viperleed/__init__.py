@@ -4,6 +4,9 @@
 """
 
 __version__ = '0.10.0'
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Florian Kraushofer (@fkraushofer)",
+               "Michele Riva (@michele-riva)"]
 
 GLOBALS = {
     'USE_GUI': None,

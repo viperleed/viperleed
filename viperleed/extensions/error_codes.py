@@ -1,10 +1,9 @@
+"""Error codes for the rfactor and interpolation.
 """
-Error codes for the rfactor and interpolation
-
-"""
-
 import warnings
 import logging
+
+__authors__ = ["Alexander M. Imre (@amimre)",]
 
 error_codes = {
     # Negative values correspond to warnings and non-fatal errors

@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module checksums of viperleed.tleedmlib.
-
-@author: Alexander M. Imre
+"""Checksums for TensErLEED Fortran source code files.
 
 Contains basic information about TensErLEED files and code to check
 their checksums before run time compilation. This is supposed to help
@@ -21,6 +19,9 @@ import ast
 from pathlib import Path
 import argparse
 from warnings import warn
+
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
 
 # TensErLEED Versions
 KNOWN_TL_VERSIONS = (

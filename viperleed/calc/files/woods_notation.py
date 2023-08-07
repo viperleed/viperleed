@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
-"""
-Created June 2023
-
-@author: Alexander M. Imre
-@author: Florian Kraushofer
-
-
-Module for reading and writing Woods notation.
+"""Module for reading and writing Woods notation.
 """
 import re
 import logging
@@ -15,6 +7,10 @@ import logging
 import numpy as np
 
 from viperleed.calc.base import parseMathSqrt, angle, cosvec
+
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Florian Kraushofer (@fkraushofer)"]
+__created__ = "2023-06"
 
 logger = logging.getLogger("tleedm.woods_notation")
 

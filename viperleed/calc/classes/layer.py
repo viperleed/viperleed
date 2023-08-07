@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
+"""Class storing position and atom list of a layer.
+
 Created on Jun 13 2019
-
-@author: Florian Kraushofer
-
-Class storing position and atom list of a layer
 """
 
 import numpy as np
-# from tleedmlib import DEFAULT
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",]
 
 class Layer:
     """To be used with Slab; has origin, atoms (a subset of the ones in slab),

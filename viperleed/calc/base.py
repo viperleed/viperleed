@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Contains generic functions used in the TensErLEED scripts.
 """
-Created on Jun 13 2019
-
-@author: Florian Kraushofer
-
-Contains generic functions used in the TensErLEED scripts.
-"""
-
 import itertools
 import logging
 import multiprocessing
@@ -16,6 +10,11 @@ import subprocess
 
 import numpy as np
 import scipy.spatial as sps
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
+__created__ = "2019-06-13"
 
 logger = logging.getLogger("tleedm.base")
 

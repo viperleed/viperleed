@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
+"""Class accumulating atoms and layers into a slab object.
+
+Slab objects are read from POSCAR files or ASE objects, and have knowledge of
+their unit cell, atoms, layers and symmetries. They can be manipulated in 
+various ways.
+
 Created on Jun 13 2019
-
-@author: Florian Kraushofer
-
-Class accumulating atoms and layers, listing their elements and various other
-properties. Includes functions for manipulation of those properties.
 """
 
 import logging
@@ -32,6 +32,10 @@ from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.layer import Layer
 from viperleed.calc.classes.sitetype import Sitetype
 from viperleed.calc.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
 
 logger = logging.getLogger("tleedm.slab")
 

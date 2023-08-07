@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
+"""Functions for reading and writing PatternInfo.tlm
 """
-Created on Wed Aug 19 10:23:21 2020
-
-@author: Florian Kraushofer
-
-Functions for reading and writing PatternInfo.tlm
-"""
-
 import logging
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)"]
+__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.patterninfo")
 

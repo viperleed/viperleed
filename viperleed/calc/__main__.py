@@ -3,13 +3,8 @@
 # -*- coding: utf-8 -*-
 """__main__.py of ViPErLEED (viperleed) calc
 
-@author: Alexander M. Imre (@amimre)
-@author: Florian Kraushofer (@fkrausofer)
-@author: Michele Riva (@michele-riva)
-
 See viperleed.calc.__init__.py for more information.
 """
-
 from pathlib import Path
 import argparse
 import logging
@@ -21,6 +16,10 @@ from viperleed.bookkeeper import bookkeeper, BookkeeperMode
 from viperleed.calc import run_tleedm
 from viperleed.calc.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
 
 logger = logging.getLogger("tleedm")
 

@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 19 09:44:38 2020
+"""Functions for reading and writing beams files.
 
-@author: Florian Kraushofer
-
-Functions for reading and writing beams files: BEAMLIST, IVBEAMS, EXPBEAMS,
-AUXEXPBEAMS
+This includes: BEAMLIST, IVBEAMS, EXPBEAMS and AUXEXPBEAMS.
 """
 
 import copy
@@ -21,6 +17,10 @@ from viperleed.guilib import project_to_first_domain
 from viperleed.calc import leedbase
 from viperleed.calc.base import parseMathSqrt
 from viperleed.calc.classes.beam import Beam
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.beams")
 

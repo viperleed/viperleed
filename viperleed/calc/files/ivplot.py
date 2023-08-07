@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 25 18:47:39 2021
-
-@author: fkrau
+"""Functions for producing plots of I(V) curves.
 """
 
 import logging
@@ -23,6 +20,10 @@ else:
     plt.style.use('viperleed.tleedm')
 
 from viperleed.calc.classes.beam import Beam
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2021-10-25"
 
 logger = logging.getLogger("tleedm.files.ivplot")
 
