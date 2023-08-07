@@ -1,16 +1,15 @@
 """Module _sections of viperleed.tleedmlib.sections.
 
-Created: 2023-01-23
-Author: Michele Riva
-
 Defines an enumeration of calculation sections.
 """
-
 from enum import Enum
 from itertools import chain
 
 from viperleed.calc.base import split_string_range, readIntRange
 
+__authors__ = ["Michele Riva (@michele-riva)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2023-01-23"
 
 _ALIASES = {  # Exact match first, then check .startswith
     'INITIALIZATION': ('ini', 'init', 'initialisation'),

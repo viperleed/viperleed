@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Jun  4 16:02:20 2021
-
-@author: Florian Kraushofer
-@author: Michele Riva
-
-Wrapper functions for running a section, and section loop for tleedm.
+"""Wrapper functions for running a section, and section loop for viperleed.calc.
 """
 
 import logging
@@ -31,6 +25,11 @@ from viperleed.calc.files.parameters import (modifyPARAMETERS,
 from viperleed.calc.files.phaseshifts import readPHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC, writeVIBROCC
 
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
+__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.sections.run_sections")
 

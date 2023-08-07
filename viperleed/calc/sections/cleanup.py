@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Jun  4 16:03:36 2021
-
-@author: Florian Kraushofer, Alexander Imre
-
-Cleanup functions, to be used between sections or before/after tleedm
-execution.
+"""Cleanup functions, to be used between sections or before/after execution.
 """
 
 import time
@@ -20,6 +14,9 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from viperleed.calc.base import get_elapsed_time_str
 from viperleed.calc.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2021-06-04"
 
 # files to go in SUPP
 _SUPP_FILES = ("AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",

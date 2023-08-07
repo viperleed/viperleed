@@ -1,32 +1,23 @@
 # -*- coding: utf-8 -*-
-
+"""Section Search.
 """
-Created on Aug 11 2020
-
-@author: Florian Kraushofer
-@author: Alexander M. Imre
-@author: Michele Riva
-
-Tensor LEED Manager section Search
-"""
-
 from collections import Counter
+from pathlib import Path
+from timeit import default_timer as timer
 import copy
 import logging
 import os
-from pathlib import Path
 import re
 import shutil
 import signal
 import subprocess
 import sys
 import time
-from timeit import default_timer as timer
 
-import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures
+import numpy as np
 import scipy
 
 from viperleed.calc import leedbase
@@ -37,6 +28,10 @@ from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.files.parameters import updatePARAMETERS
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
+__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.search")
 

@@ -1,13 +1,6 @@
 # -*- coding: utf-8 -*-
-
+"""Section Full-dynamic Optimization.
 """
-Created on Oct 22 2021
-
-@author: Florian Kraushofer
-
-Tensor LEED Manager section Full-dynamic Optimization
-"""
-
 import copy
 import logging
 import os
@@ -24,7 +17,8 @@ from viperleed.calc.files.poscar import writePOSCAR
 from viperleed.calc.sections.refcalc import refcalc as section_refcalc
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 
-
+__authors__ = ["Florian Kraushofer (@fkraushofer)"]
+__created__ = "2021-10-22"
 logger = logging.getLogger("tleedm.fdopt")
 
 

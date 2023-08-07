@@ -1,13 +1,6 @@
 # -*- coding: utf-8 -*-
-
+"""Section Delta Amplitudes.
 """
-Created on Aug 11 2020
-
-@author: Florian Kraushofer
-
-Tensor LEED Manager section Delta Amplitudes
-"""
-
 import hashlib
 import logging
 import os
@@ -22,6 +15,10 @@ from viperleed.calc.checksums import validate_multiple_files
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 import viperleed.calc.files.iodeltas as tl_io
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.deltas")
 

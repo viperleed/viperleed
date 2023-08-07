@@ -1,18 +1,10 @@
 # -*- coding: utf-8 -*-
-
+"""Section Superpos.
 """
-Created on Aug 11 2020
-
-@author: Florian Kraushofer
-@author: Michele Riva
-
-Tensor LEED Manager section Superpos
-"""
-
+from pathlib import Path
 import copy
 import logging
 import os
-from pathlib import Path
 import shutil
 import subprocess
 
@@ -20,10 +12,14 @@ from viperleed.calc import leedbase
 from viperleed.calc.checksums import validate_multiple_files
 from viperleed.calc.files.beams import (writeOUTBEAMS, averageBeams,
                                              writeFdOut)
+from viperleed.calc.files import iosuperpos as tl_io
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.files.iorefcalc import readFdOut
 from viperleed.calc.files.iosearch import readSDTL_end, readSDTL_blocks
-from viperleed.calc.files import iosuperpos as tl_io
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Michael Riva (@michele-riva)"]
+__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.superpos")
 

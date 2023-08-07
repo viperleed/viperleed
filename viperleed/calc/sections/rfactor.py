@@ -1,11 +1,4 @@
-"""
-Created on Aug 11 2020
-
-@author: Florian Kraushofer
-@author: Alexander M. Imre
-@author: Michele Riva
-
-Tensor LEED Manager section Rfactor
+"""Section Rfactor.
 """
 
 import logging
@@ -29,6 +22,10 @@ else:
     from viperleed.calc.wrapped.error_codes import check_ierr
     _HAS_NEW_R_FACTOR = True
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
+__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.rfactor")
 

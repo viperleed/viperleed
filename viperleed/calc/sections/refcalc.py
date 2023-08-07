@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
-Created on Aug 11 2020
-
-@author: Florian Kraushofer
-
-Tensor LEED Manager section Reference Calculation
+"""Section Reference Calculation.
 """
 
 import copy
@@ -26,6 +21,9 @@ from viperleed.calc.files import iorefcalc as tl_io
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.files.parameters import modifyPARAMETERS
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.refcalc")
 

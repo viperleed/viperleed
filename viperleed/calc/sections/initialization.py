@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Aug 11 2020
-
-@author: Florian Kraushofer
-@author: Alexander M. Imre
-@author: Michele Riva
-
-Tensor LEED Manager section Initialization
+"""Section Initialization.
 """
 
 import copy
@@ -31,6 +24,10 @@ from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections._sections import (ALL_INPUT_FILES,
                                                     EXPBEAMS_NAMES)
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
+__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.initialization")
 

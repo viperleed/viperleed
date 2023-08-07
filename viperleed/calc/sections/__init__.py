@@ -1,12 +1,8 @@
-"""Package section of viperleed.tleedmlib.
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
-@author: Alexander M. Imre (@amimre)
+"""Package section of viperleed.calc.
 
 This package contains the main functionality that runs the various
 logically different parts of TensErLEED, and takes care of using the
-output produced by TensErLEED to modify all the python objects used
+output produced by TensErLEED to modify all the pPthon objects used
 for managing the state of a calculation.
 
 Modules
@@ -42,3 +38,7 @@ superpos:
     of configuration that are displaced with respect to the one in
     refcalc
 """
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)"]
