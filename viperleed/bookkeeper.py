@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ViPErLEED bookkeeper module.
-
-Created on Thu Jan 30 11:12:30 2020
-
-@author: Florian Kraushofer
-@author: Alexander M. Imre
 """
 
 from enum import Enum
@@ -17,6 +12,10 @@ import shutil
 import time
 
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
+
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2020-01-30"
 
 class BookkeeperMode(Enum):
     DEFAULT = 'default'  # store last run, but do not overwrite POSCAR, VIBROCC

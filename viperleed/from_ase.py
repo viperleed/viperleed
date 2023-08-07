@@ -1,14 +1,6 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """A collection of functions that run ViPErLEED from a provided ASE object.
-
-@author: Alexander M. Imre
-@author: Michele Riva
-based on tleedm_from_ase.py by Florian Kraushofer
-
-Requires viperleed to be in the system path (or on PYTHONPATH).
 """
-
 from collections import defaultdict
 from dataclasses import dataclass, FrozenInstanceError
 from io import StringIO
@@ -42,6 +34,10 @@ except ImportError:
     _HAS_NEW_RFACTOR = False
 else:
     _HAS_NEW_RFACTOR = True
+
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Michele Riva (@michele-riva)",
+               "Florian Kraushofer (@fkraushofer)"]
 
 _LOGGER = logging.getLogger()
 _INPUT_FILES = (
