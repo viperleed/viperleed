@@ -17,7 +17,7 @@ import numpy as np
 # for run_from_ase
 import viperleed
 from viperleed.calc import run_tleedm
-from viperleed.calc.base import rotation_matrix
+from viperleed.calc.lib.base import rotation_matrix
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.files import poscar
 from viperleed.calc.files.parameters import (readPARAMETERS,

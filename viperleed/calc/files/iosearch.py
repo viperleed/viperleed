@@ -13,8 +13,8 @@ import time
 import fortranformat as ff
 import numpy as np
 
-from viperleed.calc import leedbase
-from viperleed.calc.base import BackwardsReader, readIntLine
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import BackwardsReader, readIntLine
 
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.poscar import writePOSCAR

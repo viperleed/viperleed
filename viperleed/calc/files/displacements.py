@@ -5,8 +5,8 @@ import logging
 import re
 import numpy as np
 
-from viperleed.calc.base import readIntRange, splitSublists
-from viperleed.calc.symmetry import setSymmetry, enforceSymmetry
+from viperleed.calc.lib.base import readIntRange, splitSublists
+from viperleed.calc.lib.symmetry import setSymmetry, enforceSymmetry
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]

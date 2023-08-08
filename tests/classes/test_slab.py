@@ -13,7 +13,7 @@ from copy import deepcopy
 import numpy as np
 
 from viperleed.calc.classes.slab import SymPlane
-from viperleed.calc.symmetry import findBulkSymmetry
+from viperleed.calc.lib.symmetry import findBulkSymmetry
 
 
 class TestSlabTransforms:

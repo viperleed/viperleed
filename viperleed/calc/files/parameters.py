@@ -13,7 +13,7 @@ import shutil
 
 import numpy as np
 
-from viperleed.calc.base import (strip_comments, splitSublists,
+from viperleed.calc.lib.base import (strip_comments, splitSublists,
                                       readVector, readIntRange,
                                       recombineListElements)
 from viperleed.calc.classes import rparams
@@ -25,7 +25,7 @@ from viperleed.calc.files.parameter_errors import (
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
 from viperleed.calc.files.woods_notation import readWoodsNotation
-from viperleed.calc import periodic_table
+from viperleed.calc.lib import periodic_table
 from viperleed.calc.sections._sections import TLEEDMSection as Section
 
 __authors__ = ["Alexander M. Imre (@amimre)",

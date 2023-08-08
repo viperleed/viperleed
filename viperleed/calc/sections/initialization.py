@@ -11,16 +11,16 @@ from zipfile import ZipFile
 
 import numpy as np
 
-from viperleed.calc import leedbase
-from viperleed.calc import symmetry as tl_symmetry
-from viperleed.calc.base import angle, rotation_matrix
-from viperleed.calc.beamgen import calc_and_write_beamlist
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib import symmetry as tl_symmetry
+from viperleed.calc.lib.base import angle, rotation_matrix
+from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.rparams import DomainParameters
 from viperleed.calc.files import beams as tl_beams, parameters
 from viperleed.calc.files import patterninfo, phaseshifts, poscar, vibrocc
 from viperleed.calc.files.woods_notation import writeWoodsNotation
-from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
+from viperleed.calc.files.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections._sections import (ALL_INPUT_FILES,
                                                     EXPBEAMS_NAMES)
 
@@ -342,7 +342,7 @@ def initialization(sl, rp, subdomain=False):
     make_compile_logs_dir(rp)
 
     # At the end of initialization preserve the original input files
-    preserve_original_input(rp, logger)
+    _preserve_original_input(rp, logger)
     return
 
 
@@ -725,8 +725,8 @@ def init_domains(rp):
         rp.RUN.remove(4)
 
 
-def preserve_original_input(rp, init_logger, path=""):
-    """Create original_inputs directory and copy there the input files."""
+def _preserve_original_input(rp, init_logger, path=""):
+    """Create original_inputs directory and copies the input files there."""
     path = Path(path)
     orig_inputs_path = path / ORIGINAL_INPUTS_DIR_NAME
     try:

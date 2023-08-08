@@ -24,14 +24,14 @@ try:
 except ImportError:
     has_ase = False
 
-from viperleed.calc import leedbase
-from viperleed.calc.base import (angle, rotation_matrix_order,
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.layer import Layer
 from viperleed.calc.classes.sitetype import Sitetype
-from viperleed.calc.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
+from viperleed.calc.lib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)",

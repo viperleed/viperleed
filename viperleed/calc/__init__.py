@@ -48,13 +48,13 @@ import time
 
 import viperleed
 from viperleed import GLOBALS
-from viperleed.calc.base import CustomLogFormatter
+from viperleed.calc.lib.base import CustomLogFormatter
 from viperleed.calc.classes import rparams
 from viperleed.calc.files.parameter_errors import ParameterError
 from viperleed.calc.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS)
 from viperleed.calc.files.poscar import readPOSCAR
-from viperleed.calc.leedbase import getMaxTensorIndex
+from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import prerun_clean, cleanup
 from viperleed.calc.sections.run_sections import section_loop

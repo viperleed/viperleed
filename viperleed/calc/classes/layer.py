@@ -1,16 +1,23 @@
 # -*- coding: utf-8 -*-
-"""Class storing position and atom list of a layer.
-
-Created on Jun 13 2019
-"""
-
 import numpy as np
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",]
+__created__ = "2019-06-13"
 
 class Layer:
-    """To be used with Slab; has origin, atoms (a subset of the ones in slab),
-    and a number. Sublayers also use the "Layer" class."""
+    """Class storing position and atom list of a layer.
+
+    To be used with Slab; has origin, atoms (a subset of the ones in slab),
+    and a number. Sublayers also use the "Layer" class.
+
+    During the ViPErLEED and TensErLEED calculation, every Slab is be separated
+    into layers by cutting the crystal parallel to the surface plane. The way
+    this separation is preformed is primarily controlled by the
+    :ref:`LAYER_CUTS parameter<ctrunc>` parameter (which is evaluated to to a
+    :class:`viperleed.calc.classes.rparams.Rparams` attribute).
+    While this separation is in principle arbitrary, it can strongly affect the
+    execution time of the calculation.
+"""
 
     def __init__(self, slab, num, isBulk=False, sublayer=False):
         self.slab = slab

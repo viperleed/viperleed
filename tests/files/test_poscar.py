@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-from viperleed.calc import symmetry
+from viperleed.calc.lib import symmetry
 from viperleed.calc.files.poscar import (readPOSCAR,
                                               writePOSCAR,
                                               ensure_away_from_c_edges,

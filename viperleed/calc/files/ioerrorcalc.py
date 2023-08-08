@@ -7,7 +7,7 @@ import re
 from scipy import interpolate
 from zipfile import ZipFile, ZIP_DEFLATED
 
-from viperleed.calc.base import range_to_str, max_diff
+from viperleed.calc.lib.base import range_to_str, max_diff
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]

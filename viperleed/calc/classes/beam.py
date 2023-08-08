@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Class storing properties and data of a diffraction beam.
-
-Created on Tue Dec  3 13:39:04 2019
-"""
 import math
 
 import numpy as np
 from quicktions import Fraction
 
-
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]
+__created__ = "2019-12-03"
 
 
 class Beam:
-    """
-    Stores h,k, and can story intensity over energy.
+    """Class storing properties and data of a diffraction beam.
+
+    Stores h,k, and can store intensity over energy.
 
     Attributes
     ----------

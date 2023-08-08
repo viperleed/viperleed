@@ -9,7 +9,7 @@ import os
 
 import numpy as np
 
-import viperleed.calc.files.periodic_table as periodic_table
+import viperleed.calc.lib.periodic_table as periodic_table
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.utilities.poscar import add_verbose_option
 

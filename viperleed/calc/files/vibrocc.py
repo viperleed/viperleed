@@ -10,7 +10,7 @@ import logging
 import numpy as np
 import re
 
-from viperleed.calc.base import splitSublists, readToExc
+from viperleed.calc.lib.base import splitSublists, readToExc
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]

@@ -20,8 +20,8 @@ from sklearn.preprocessing import PolynomialFeatures
 import numpy as np
 import scipy
 
-from viperleed.calc import leedbase
-from viperleed.calc.checksums import validate_multiple_files
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.classes.rparams import SearchPar
 from viperleed.calc.files import iosearch as tl_io
 from viperleed.calc.files import searchpdf

@@ -10,7 +10,7 @@ import shutil
 import numpy as np
 from numpy.polynomial import Polynomial
 
-from viperleed.calc import psgen
+from viperleed.calc.files import psgen
 from viperleed.calc.files import iofdopt as tl_io
 from viperleed.calc.files.parameters import modifyPARAMETERS
 from viperleed.calc.files.poscar import writePOSCAR

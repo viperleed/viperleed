@@ -7,7 +7,7 @@ from copy import deepcopy
 import logging
 import sys
 
-from viperleed.calc import symmetry
+from viperleed.calc.lib import symmetry
 from viperleed.calc.classes import rparams
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.utilities.poscar import add_verbose_option

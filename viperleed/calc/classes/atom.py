@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Class storing position and other properties of individual atoms.
-
-Created on Jun 13 2019
-"""
-
 import logging
 import numpy as np
 import copy
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]
+__created__ = "2019-06-13"
 
 logger = logging.getLogger("tleedm.atom")
 
 
 class Atom:
-    """To be used for Slab; each atom has an element and a position.
+    """Class storing position and other properties of individual atoms.
+
+    To be used for Slab; each atom has an element and a position.
 
     Attributes
     ----------

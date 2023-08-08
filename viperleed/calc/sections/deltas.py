@@ -10,8 +10,8 @@ import subprocess
 
 import numpy as np
 
-from viperleed.calc import leedbase
-from viperleed.calc.checksums import validate_multiple_files
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 import viperleed.calc.files.iodeltas as tl_io

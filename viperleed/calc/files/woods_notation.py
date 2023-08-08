@@ -6,7 +6,7 @@ import logging
 
 import numpy as np
 
-from viperleed.calc.base import parseMathSqrt, angle, cosvec
+from viperleed.calc.lib.base import parseMathSqrt, angle, cosvec
 
 __authors__ = ["Alexander M. Imre (@amimre)",
                "Florian Kraushofer (@fkraushofer)"]

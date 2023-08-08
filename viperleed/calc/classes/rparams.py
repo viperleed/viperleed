@@ -3,8 +3,6 @@
 
 Most parameters are read from the PARAMETERS file, though some are
 defined at runtime. Most default values are defined here.
-
-Created on Jun 13 2019
 """
 
 import logging
@@ -17,9 +15,9 @@ from timeit import default_timer as timer
 import numpy as np
 
 import viperleed
-from viperleed.calc import leedbase
-from viperleed.calc.base import available_cpu_count
-from viperleed.calc.checksums import (KNOWN_TL_VERSIONS,
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import available_cpu_count
+from viperleed.calc.lib.checksums import (KNOWN_TL_VERSIONS,
                                            UnknownTensErLEEDVersionError)
 from viperleed.calc.files.iodeltas import checkDelta
 
@@ -34,6 +32,7 @@ else:
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)",
                "Michele Riva (@michele-riva)"]
+__created__ = "2019-06-13"
 
 logger = logging.getLogger("tleedm.rparams")
 

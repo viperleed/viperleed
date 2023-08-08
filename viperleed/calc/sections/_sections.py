@@ -5,7 +5,7 @@ Defines an enumeration of calculation sections.
 from enum import Enum
 from itertools import chain
 
-from viperleed.calc.base import split_string_range, readIntRange
+from viperleed.calc.lib.base import split_string_range, readIntRange
 
 __authors__ = ["Michele Riva (@michele-riva)",
                "Alexander M. Imre (@amimre)"]

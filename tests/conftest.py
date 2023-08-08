@@ -26,7 +26,7 @@ import pytest
 import numpy as np
 
 from viperleed.calc import run_tleedm
-from viperleed.calc import symmetry
+from viperleed.calc.lib import symmetry
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.classes.slab import Slab

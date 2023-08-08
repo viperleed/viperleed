@@ -22,7 +22,7 @@ else:
     import matplotlib.ticker as plticker
     plt.style.use('viperleed.tleedm')
 
-from viperleed.calc import leedbase
+from viperleed.calc.lib import leedbase
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 

@@ -11,7 +11,7 @@ import shutil
 import re
 from zipfile import ZipFile, ZIP_DEFLATED
 
-from viperleed.calc.base import get_elapsed_time_str
+from viperleed.calc.lib.base import get_elapsed_time_str
 from viperleed.calc.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",

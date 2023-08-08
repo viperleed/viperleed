@@ -16,7 +16,7 @@ import numpy as np
 from viperleed.calc.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
 from viperleed.calc.files.poscar import readPOSCAR
 from viperleed.calc.files.vibrocc import readVIBROCC
-from viperleed.calc.symmetry import findSymmetry, enforceSymmetry
+from viperleed.calc.lib.symmetry import findSymmetry, enforceSymmetry
 from viperleed.calc.files.psgen import runPhaseshiftGen_old
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.rparams import Rparams

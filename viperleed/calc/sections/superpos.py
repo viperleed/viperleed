@@ -8,8 +8,8 @@ import os
 import shutil
 import subprocess
 
-from viperleed.calc import leedbase
-from viperleed.calc.checksums import validate_multiple_files
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.files.beams import (writeOUTBEAMS, averageBeams,
                                              writeFdOut)
 from viperleed.calc.files import iosuperpos as tl_io

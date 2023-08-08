@@ -17,7 +17,7 @@ import psutil
 from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
-from viperleed.calc.base import cosvec
+from viperleed.calc.lib.base import cosvec
 
 # The following imports are potentially the cause of ciclic
 # imports. They are used exclusively as part of getTensorOriStates

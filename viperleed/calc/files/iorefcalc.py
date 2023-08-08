@@ -9,8 +9,8 @@ import os
 import fortranformat as ff
 import numpy as np
 
-from viperleed.calc import leedbase
-from viperleed.calc.base import fortranContLine, lcm, splitMaxRight
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import fortranContLine, lcm, splitMaxRight
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
 

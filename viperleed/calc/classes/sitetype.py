@@ -1,24 +1,22 @@
 # -*- coding: utf-8 -*-
-"""Class storing properties of a site.
-
-Created on Jun 13 2019
-"""
-
 import logging
 import re
 
 import numpy as np
 
-from viperleed.calc.periodic_table import (PERIODIC_TABLE,
+from viperleed.calc.lib.periodic_table import (PERIODIC_TABLE,
                                                 COVALENT_RADIUS,
                                                 ATOMIC_MASS)
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)"]
+__authors__ = ["Florian Kraushofer (@fkraushofer)",]
+__created__ = "2019-06-13"
 
 logger = logging.getLogger("tleedm.sitetype")
 
 class Sitetype:
-    """Site types are identified by (main) element and name, and store
+    """Class storing properties of a site.
+
+    Site types are identified by (main) element and name, and store
     vibrational amplitude and occupation"""
 
     def __init__(self, el, name):

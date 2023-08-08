@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
 """Data structures and functions for storing and manipulating errors curves.
-
-Created on Jan 12 2023
 """
 import numpy as np
 import copy
 import logging
 
-from viperleed.calc.base import range_to_str
+from viperleed.calc.lib.base import range_to_str
 
 __authors__ = ["Alexander M. Imre (@amimre)",
                "Florian Kraushofer (@fkraushofer)"]
+__created__ = "2023-01-12"
 
 logger = logging.getLogger("tleedm.classes.r_error")
 
 
 class R_Error():
-    """
-    Data structure for storing errors after they have been calculated.
+    """Data structure for storing errors after they have been calculated.
+
     Stores the displacements that led to the R-factors even if they are
     modified later. Displacements are stored for one atom only, the other are
     linked.
@@ -200,7 +199,7 @@ class R_Error():
 
 def get_n_zero_crossings(x_arr):
     """Counts and returns the number of zero crossings in input.
-    
+
     x_arr must be discrete numerical data. This function counts the
     number of times the zero line is crossed when going through the
     input values in order, e.g. x_arr=[-3, 1 , 1, -5, -2] would return
@@ -222,9 +221,8 @@ def get_n_zero_crossings(x_arr):
 
 
 def get_zero_crossing(x_arr, y_arr, eps=1e-6):
-    """Computes and returns the x_value where the provided dataset
-    crosses the zero line.
-    
+    """Computes and returns the x_value where the provided dataset crosses zero.
+
     x_arr and y_arr are sets of x and y values respectively. This
     function first checks in between which points the zero line is
     crossed. It then performs a linear interpolation between those two
