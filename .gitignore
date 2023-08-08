@@ -21,6 +21,9 @@ doc/_build/
 # Ignore testing folder
 calculations/
 
+# pytest caches
+**/.pytest_cache
+
 # sphinx build directory
 doc/_build
 
