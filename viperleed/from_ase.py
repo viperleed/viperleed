@@ -460,7 +460,7 @@ def _write_poscar(slab, exec_path):                                             
     poscar.writePOSCAR(slab, poscar_path)
 
 
-def rfactor_from_csv(
+def rfactor_from_csv(                                                           ## TODO: add kwarg for mapping for averaging
     beams_files,
     v0i,
     beams_file_is_content=(False, False),
@@ -468,7 +468,7 @@ def rfactor_from_csv(
     intpol_deg=5,
     intpol_step=0.5,
     return_beam_arrays = False,
-):  ## TODO: add kwarg for mapping for averaging
+):
     """Compute the Pendry R-factor between two CSV files (in ViPErLEED format).
 
     Read in two CSV files containing LEED-I(V) spectra and compute the mutual
