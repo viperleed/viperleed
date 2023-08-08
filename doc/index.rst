@@ -86,7 +86,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
    Getting started<content/getting_started>
    ViPErLEED segments<content/work_segments>
-   ASE Interface<content/aseapi>
+   API<content/api>
 
 .. toctree:: 
    :maxdepth: 2
