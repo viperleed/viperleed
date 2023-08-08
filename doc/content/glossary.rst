@@ -6,6 +6,9 @@ Glossary
 
 .. glossary::
 
+    API
+      Application Programming Interface
+
     LEED
       Low energy electron diffraction
 
