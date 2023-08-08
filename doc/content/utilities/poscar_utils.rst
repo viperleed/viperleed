@@ -319,7 +319,7 @@ The vasp_relax utility adds the following information to the POSCAR file:
 - three boolean flags (`T`, `F`) for each atom indicating whether the atom is allowed to move along the :math:`\vec{a}`, :math:`\vec{b}`, and :math:`\vec{c}` unit cell vectors, respectively
 
 In general, it can be useful to optimize the positions of the topmost layers of atoms, while keeping the positions of the atoms in the bulk fixed.
-The ``above_c``value should be chosen such that bulk atoms are not allowed to move to prevent the bulk lattice parameters from changing.
+The ``above_c`` value should be chosen such that bulk atoms are not allowed to move to prevent the bulk lattice parameters from changing.
 
 **Usage**
 
