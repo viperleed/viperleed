@@ -190,10 +190,39 @@ This can also be used to check if atoms from different slabs (with the same unit
 modify_vacuum
 =============
 
+Modifies the vacuum spacing of a POSCAR file.
+
+While most :term:`DFT` codes use periodic boundary conditions along the z direction, in LEED calculations the symmetry has to be broken in order to simulate a surface.
+This utility allows to modify the vacuum spacing of a POSCAR file by adding or removing vacuum around the slab.
+
+**Usage**
+
+.. code-block:: console
+
+    $ viperleed poscar modify_vacuum 10 <POSCAR_IN >POSCAR_OUT # add 10 Å of vacuum
+
+**Additional Options**
+
+- ``vacuum`` (required): Add or remove this amount of vacuum in Å.
+  If the flag ``--absolute`` is set, the total vacuum spacing (measured from topmost to bottommost atom) will be set to this value.
+- ``--absolute``: see above.
+
 .. _poscar_utils_project_c_to_z:
 
 project_c_to_z
 ==============
+
+Projects the :math:`\vec{c}` vector of the POSCAR file onto the :math:`\vec{z}` axis.
+
+**Usage**
+
+.. code-block:: console
+
+    $ viperleed poscar project_c_to_z <POSCAR_IN >POSCAR_OUT
+
+**Additional Options**
+
+None.
 
 .. _poscar_utils_reorder_elements:
 
