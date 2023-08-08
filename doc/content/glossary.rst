@@ -9,6 +9,9 @@ Glossary
     API
       Application Programming Interface
 
+    ASE
+      Atomic Simulation Environment. See the `ASE homepage <https://wiki.fysik.dtu.dk/ase/>`__.
+
     LEED
       Low energy electron diffraction
 
