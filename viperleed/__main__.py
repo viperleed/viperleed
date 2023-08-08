@@ -7,8 +7,8 @@
 from argparse import ArgumentParser
 
 from viperleed import GLOBALS
-from viperleed.bookkeeper import bookkeeper_cli_options
-from viperleed.bookkeeper import main as bookkeeper_main
+from viperleed.calc.bookkeeper import bookkeeper_cli_options
+from viperleed.calc.bookkeeper import main as bookkeeper_main
 from viperleed.calc.__main__ import add_calc_parser_arguments
 from viperleed.calc.__main__ import main as main_calc
 from viperleed.gui import main as gui_main                                      # TODO: gui arguments

@@ -11,7 +11,7 @@ import pytest
 from enum import Enum
 from pathlib import Path
 
-from viperleed.bookkeeper import bookkeeper, BookkeeperMode, store_input_files_to_history
+from viperleed.calc.bookkeeper import bookkeeper, BookkeeperMode, store_input_files_to_history
 
 MOCK_TIMESTAMP = "010203-040506"
 MOCK_LOG_FILE = f"tleedm-{MOCK_TIMESTAMP}.log"
