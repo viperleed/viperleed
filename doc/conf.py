@@ -21,6 +21,7 @@ release = viperleed.__version__
 
 extensions = [
               'sphinx.ext.autodoc',        # for API documentation from docstrings
+              'sphinx.ext.autosummary',
               'sphinx.ext.napoleon',        # for Numpy docstrings
               'sphinx.ext.extlinks',
               'sphinx.ext.mathjax',
