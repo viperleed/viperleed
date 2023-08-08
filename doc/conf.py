@@ -20,19 +20,19 @@ release = viperleed.__version__
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-              'sphinx.ext.autodoc',        # for API documentation from docstrings
-              'sphinx.ext.autosummary',
-              'sphinx.ext.napoleon',        # for Numpy docstrings
+              'myst_nb',                    # for including Jupyter notebooks
+              'sphinx_rtd_theme',           # HTML theme
+              'sphinx.ext.autodoc',         # for API documentation from docstrings
+              'sphinx.ext.autosummary',     # for API documentation from docstrings
               'sphinx.ext.extlinks',
+              'sphinx.ext.intersphinx',     # for linking to other docs
               'sphinx.ext.mathjax',
+              'sphinx.ext.napoleon',        # for Numpy style docstrings
               'sphinx.ext.todo',            # for TODOs
               'sphinx.ext.viewcode',
-              'sphinx.ext.intersphinx',     # for linking to other docs
-              'sphinx_rtd_theme',           # HTML theme
               'sphinxcontrib.bibtex',       # to use .bib files for bibliography
               'sphinxcontrib.inkscapeconverter', # for SVG images
               'sphinxcontrib.spelling',     # spell checking for the docs ;)
-              'myst_nb',                    # for including Jupyter notebooks
               ]
 
 source_suffix = '.rst'
