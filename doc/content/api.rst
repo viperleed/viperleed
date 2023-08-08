@@ -36,6 +36,6 @@ Here is a simple example of how to use the API to find the plane group of a slab
     ASE Interface<api/aseapi>
     Classes<api/classes>
     Files<api/files>
-    Symmetry<api/symmetry>
+    Libraries<api/libraries>
     Sections<api/sections>
     Errors<api/errors>

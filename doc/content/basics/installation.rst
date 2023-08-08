@@ -4,14 +4,19 @@
 Installation
 ============
 
-
-
-Below, we provide a short guide on how to install all required components of tleedm.
+Below, we provide a short guide on how to install all required components of ViPErLEED.
 
 **TODO**: Tleedm refactor so we can install it!!!
 
 Python
 ======
+
+ViPErLEED (expect for the Spottracker ImageJ Plugin) is a Python package and requires a working Python installation.
+
+.. note::
+
+    ViPErLEED requires Python 3.7 or newer, though we recommend using the latest available Python version.
+
 
 **TODO !!! - needs package refactor first**
 

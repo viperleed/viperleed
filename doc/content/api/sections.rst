@@ -3,19 +3,20 @@
 Sections
 ========
 
-.. currentmodule:: viperleed.calc.sections
+.. currentmodule:: viperleed.calc
 
 .. autosummary::
     :toctree: sections
     :recursive:
 
-    cleanup
-    deltas
-    errorcalc
-    fd_optimization
-    initialization
-    refcalc
-    rfactor
-    run_sections
-    search
-    superpos
+    bookkeeper
+    sections.cleanup
+    sections.deltas
+    sections.errorcalc
+    sections.fd_optimization
+    sections.initialization
+    sections.refcalc
+    sections.rfactor
+    sections.run_sections
+    sections.search
+    sections.superpos
