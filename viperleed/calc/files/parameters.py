@@ -24,7 +24,7 @@ from viperleed.calc.files.parameter_errors import (
     ParameterNumberOfInputsError, ParameterRangeError,
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
-from viperleed.calc.files.woods_notation import readWoodsNotation
+from viperleed.calc.lib.woods_notation import readWoodsNotation
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.sections._sections import TLEEDMSection as Section
 

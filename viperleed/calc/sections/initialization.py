@@ -19,7 +19,7 @@ from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.rparams import DomainParameters
 from viperleed.calc.files import beams as tl_beams, parameters
 from viperleed.calc.files import patterninfo, phaseshifts, poscar, vibrocc
-from viperleed.calc.files.woods_notation import writeWoodsNotation
+from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.files.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections._sections import (ALL_INPUT_FILES,
                                                     EXPBEAMS_NAMES)

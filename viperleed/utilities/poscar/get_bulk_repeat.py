@@ -12,7 +12,7 @@ import numpy as np
 
 from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
-from viperleed.calc.files.woods_notation import writeWoodsNotation
+from viperleed.calc.lib.woods_notation import writeWoodsNotation
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]
