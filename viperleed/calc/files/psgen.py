@@ -15,8 +15,8 @@ import numpy as np
 
 from viperleed.calc.classes.sitetype import Atom_type
 from viperleed.calc.classes.rparams import PARAM_LIMITS
-from viperleed.calc.leedbase import EV_TO_HARTREE
-from viperleed.calc.periodic_table import PERIODIC_TABLE
+from viperleed.calc.lib.leedbase import EV_TO_HARTREE
+from viperleed.calc.files.periodic_table import PERIODIC_TABLE
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]

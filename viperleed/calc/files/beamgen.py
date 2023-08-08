@@ -14,8 +14,8 @@ import numpy as np
 import fortranformat as ff
 
 from viperleed.guilib.base import get_equivalent_beams, BeamIndex
-from viperleed.calc import symmetry
-from viperleed.calc.leedbase import (HARTREE_TO_EV,
+from viperleed.calc.lib import symmetry
+from viperleed.calc.lib.leedbase import (HARTREE_TO_EV,
                                           BOHR_TO_ANGSTROM,
                                           ANGSTROM_TO_BOHR)
 
