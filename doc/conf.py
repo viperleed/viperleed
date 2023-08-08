@@ -25,6 +25,7 @@ extensions = [
               'sphinx.ext.napoleon',        # for Numpy docstrings
               'sphinx.ext.extlinks',
               'sphinx.ext.mathjax',
+              'sphinx.ext.todo',            # for TODOs
               'sphinx.ext.viewcode',
               'sphinx.ext.intersphinx',     # for linking to other docs
               'sphinx_rtd_theme',           # HTML theme
