@@ -6,10 +6,6 @@ This utility takes a slab in POSCAR format as used by ViPErLEED and prepares it
 for relaxation in VASP. This includes writing the "Selective dynamics" flags
 and giving logical flags for each atom that specify along which direction to
 relax.
-
-Created on 2023-08-02
-
-@author: Alexander M. Imre
 """
 import argparse
 import logging
@@ -23,6 +19,9 @@ from viperleed.utilities.poscar import add_verbose_option
 # TODO: add an option to add a mirror image to the slab, so that the slab is
 #       symmetric with respect to the center of the slab. This could be useful
 #       when dealing with a polar surface.
+
+__authors__ = ["Alexander M. Imre (@amimre)",]
+__created__ = "2023-08-02"
 
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
 

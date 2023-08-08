@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ViPErLEED utility: Find Symmetry
-
-
-
-Created on 2023-08-03
-
-@author: Alexander M. Imre
 """
 import argparse
 from copy import deepcopy
@@ -17,6 +11,9 @@ from viperleed.calc import symmetry
 from viperleed.calc.classes import rparams
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.utilities.poscar import add_verbose_option
+
+__authors__ = ["Alexander M. Imre (@amimre)",]
+__created__ = "2023-08-03"
 
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
 

@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Dec 16 17:45 2019
-
-@author: Florian Kraushofer
+"""ViPErLEED utility: Get bulk repeat
 
 Reads a POSCAR file, asks at what c value the bulk starts, then automatically
 reduces the size of the POSCAR to non-redundant bulk layers only, and outputs
@@ -17,6 +14,9 @@ from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.calc.files.woods_notation import writeWoodsNotation
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",
+               "Alexander M. Imre (@amimre)"]
+__created__ = "2019-12-16"
 
 def add_cli_parser_arguments(parser):
     pass

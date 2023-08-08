@@ -5,6 +5,8 @@
 from viperleed.utilities.poscar.__main__ import main as poscar_main
 from viperleed.utilities.poscar.__main__ import add_poscar_parser_arguments
 
+__authors__ = ["Alexander M. Imre (@amimre)",]
+
 def add_util_parser_arguments(parser):
     subparsers = parser.add_subparsers()
 

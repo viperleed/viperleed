@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ViPErLEED utility: Delete atoms above a certain height
-
-Created on 2023-08-03
-
-@author: Alexander M. Imre
-based on work by Florian Kraushofer
 """
 from copy import deepcopy
 import argparse
@@ -15,6 +10,9 @@ import sys
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.utilities.poscar import add_verbose_option
 
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Florian Kraushofer (@fkraushofer)"]
+__created__ = "2023-08-03"
 
 logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
 

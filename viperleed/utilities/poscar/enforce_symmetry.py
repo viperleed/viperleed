@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""ViPErLEED utility: Find Symmetry
-
-
-
-Created on 2023-08-03
-
-@author: Alexander M. Imre
+"""ViPErLEED utility: Enforce Symmetry
 """
 import argparse
 from copy import deepcopy
@@ -20,6 +14,8 @@ from viperleed.guilib.base import PlaneGroup
 from viperleed.utilities.poscar import add_verbose_option
 from viperleed.utilities.poscar import poscar_utility_logger as logger
 
+__authors__ = ["Alexander M. Imre (@amimre)",]
+__created__ = "2023-08-03"
 
 def add_cli_parser_arguments(parser):
     parser.add_argument(

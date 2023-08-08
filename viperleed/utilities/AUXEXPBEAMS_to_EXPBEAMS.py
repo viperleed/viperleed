@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Dec 16 17:45 2019
-
-@author: Florian Kraushofer
+"""ViPErLEED utility to convert AUXEXPBEAMS to EXPBEAMS.
 
 Reads an AUXEXPBEAMS file and writes the contents in EXPBEAMS.csv format.
 """
-
 import os
 import sys
 
@@ -15,6 +11,8 @@ cd = os.path.realpath(os.path.dirname(__file__))
 
 from viperleed.calc.files.beams import readAUXEXPBEAMS, writeOUTBEAMS
 
+__authors__ = ["Florian Kraushofer (@fkraushofer)",]
+__created__ = "2019-12-16"
 
 def main():
     # print some info

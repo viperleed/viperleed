@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ViPErLEED utility: Delete atoms between a certain c fraction
-
-Created on 2023-08-03
-
-@author: Alexander M. Imre
-based on work by Florian Kraushofer
 """
 import argparse
 from copy import deepcopy
@@ -14,6 +9,10 @@ import sys
 
 from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
 from viperleed.utilities.poscar import add_verbose_option
+
+__authors__ = ["Alexander M. Imre (@amimre)",
+               "Florian Kraushofer (@fkraushofer)"]
+__created__ = "2023-08-03"
 
 logger = logging.getLogger("viperleed.utilities.poscar.delete_between")
 
