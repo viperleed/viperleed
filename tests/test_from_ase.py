@@ -21,7 +21,7 @@ import pytest
 # Unfortunately no way to do this the correct way till we have
 # an installable version of viperleed. The reason is the VPR_PATH
 # bit above.
-from viperleed import from_ase as vpr_ase
+from viperleed.calc import from_ase as vpr_ase
 from viperleed.calc.lib.base import angle
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.files import poscar
