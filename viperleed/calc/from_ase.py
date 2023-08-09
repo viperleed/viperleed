@@ -232,14 +232,14 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
     for swapping unit-cell vectors. Have a look at the matrices
     provided as part of this module (use as the `orthogonal_matrix`
     attribute of a SlabTransform):
-        rot_mat_x(theta) : Rotation matrix around x by theta (deg)
-        rot_mat_z(theta) : Rotation matrix around z by theta (deg)
-        rot_mat_axis(axis, theta): Rotation around axis by theta (deg)
-        flip_c_mat : Mirror matrix that flips the cell along c
+    -  rot_mat_x(theta) : Rotation matrix around x by theta (deg)
+    -  rot_mat_z(theta) : Rotation matrix around z by theta (deg)
+    -  rot_mat_axis(axis, theta): Rotation around axis by theta (deg)
+    -  flip_c_mat : Mirror matrix that flips the cell along c
     and the special SlabTransform objects:
-        swap_a_b : Swap vectors a & b (changes handedness)
-        swap_b_c : Swap vectors b & c (changes handedness)
-        swap_c_a : Swap vectors c & a (changes handedness)
+    -  swap_a_b : Swap vectors a & b (changes handedness)
+    -  swap_b_c : Swap vectors b & c (changes handedness)
+    -  swap_c_a : Swap vectors c & a (changes handedness)
     For applying multiple operations, the order does matter. You
     can: (i) Combine multiple orthogonal transformation matrices
     via matrix multiplication (@ symbol or np.dot) into a single
