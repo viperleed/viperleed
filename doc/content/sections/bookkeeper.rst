@@ -3,19 +3,24 @@
 Bookkeeper
 ==========
 
-The bookkeeper is a small application made to run in between executions 
-of ViPErLEED calculations. Its purpose is to collect input and 
-output files from the previous run and store them in a "history" 
-subfolder for future reference.
+The bookkeeper is a utility that runs in between executions of ViPErLEED calculations to clean up directory and keep track of the history of a calculation.
+Its purpose is to collect input and output files from the previous run and store them in a "history" subfolder for future reference.
 
-The bookkeeper can safely be run multiple times. If no new output 
-is detected, it will simply exit without doing anything.
+See :ref:`cli_bookkeeper` for details on how to run the bookkeeper manually.
 
-The bookkeeper may be called with the following arguments:
+The bookkeeper has three modes:
 
--  ``-c`` / ``--cont``: Continuation job. After storing input and output in the history, the bookkeeper will overwrite the POSCAR and VIBROCC files in the main folder with the latest POSCAR_OUT and VIBROCC_OUT files.
--  ``-h`` / ``--help``: Displays usage information.
--  ``-n`` / ``--name``: Defines a string to be appended to the directory name in the history folder being created. The name will also be stored in the history.info file.
+- *Default*: Stores results from the previous run in a "history" directory, but **does not overwrite** any input files.
+- *Continuation*: Stores the results from the previous run in a "history" directory, and **overwrites** the :ref:`POSCAR<poscar>` and :ref:`VIBROCC<vibrocc>` files in the main folder with the latest :ref:`POSCAR_OUT<poscar_out>` and :ref:`VIBROCC_OUT<vibrocc_out>` files.
+- *Discard*: Discards the previous run as if it never happened and does not store anything in the history.
+
+
+The bookkeeper always runs in *default* mode at the start of a ViPErLEED calculation (invoked by :ref:`viperleed calc<cli_calc>`).
+This way, any remaining output files will be committed to history without overwriting any (potentially user modified) input files.
+
+By default, the bookkeeper also runs in *continuation* mode at the end of every ViPErLEED calculation, as long as it terminates normally (i.e. not due to a keyboard interrupt or other error).
+This can be disabled by providing the ``--no-cont`` flag to :ref:`viperleed calc<cli_calc>`.
+
 
 .. _history_info:
 
@@ -33,6 +38,8 @@ the bookkeeper runs:
 -  **Time**: Starting time of the tleedm job being moved. This serves as a reliable unique identifier, but is not as intuitive as the Tensors and job numbers.
 -  **Folder**: The (main) folder created for this job in the "history" directory, i.e. where the bookkeeper is moving files to.
 
+
+.. _history_dir:
 
 History organization
 --------------------

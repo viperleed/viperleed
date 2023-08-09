@@ -53,7 +53,13 @@ The ViPErLEED
 ``viperleed bookkeeper``
 ------------------------
 
-The command ``viperleed bookkeeper`` explicitly invokes the :ref:`bookkeeper<bookkeeper>`.
+The command ``viperleed bookkeeper`` manually invokes the :ref:`bookkeeper<bookkeeper>`.
+
+The bookkeeper runs automatically runs in *default* mode before and in *continuation* mode after a calculation. See the :ref:`bookkeeper<bookkeeper>` page for details.
+
+The bookkeeper can also be run manually with ``viperleed bookkeeper``.
+It can safely be run multiple times.
+If no new output is detected, it will simply exit without doing anything.
 
 **Usage:**
 
@@ -64,6 +70,8 @@ The command ``viperleed bookkeeper`` explicitly invokes the :ref:`bookkeeper<boo
 **Options:**
 
 - ``-h, --help``: Show a list of all available options and exit.
+- ``-c, --cont``: Run in :ref:`continuation mode<bookkeeper>`.
+- ``-d, --discard``: Run in :ref:`discard mode<bookkeeper>`.
 - ``-j, --job-name``: Specify a name for the current run.
   Will be appended to the name of the history folder that is created, and is logged in history.info
   Passed along to the :ref:`bookkeeper<bookkeeper>`.
