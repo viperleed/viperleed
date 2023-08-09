@@ -3,9 +3,12 @@
 POSCAR utilities
 ################
 
+ViPErLEED comes with a set of utilities for easy manipulation of POSCAR files.
+These utilities can be helpful for creating and modifying input structures for ViPErLEED calculations.
+
 All POSCAR utilities support the following options:
 
-- ``-h``, ``--help``: print help message with the available options
+- ``-h``, ``--help``: show a help message with the available options
 - ``-v``, ``--verbose``: increase output verbosity
 
 .. hint::
