@@ -1,7 +1,7 @@
 .. _poscar:
 
-The POSCAR file
-===============
+POSCAR
+======
 
 A POSCAR file describes the structure: The unit cell, the atom types 
 (and the number of atoms for each type), and their coordinates. Note 

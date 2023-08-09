@@ -1,8 +1,8 @@
 .. _viboccin:
 
-================
-The VIBROCC file
-================
+=======
+VIBROCC
+=======
 
 The VIBROCC file lists the starting guesses for vibrational amplitudes 
 (in ångstrom) and site occupations. The minimum input is a vibrational 

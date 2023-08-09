@@ -1,7 +1,7 @@
 .. _auxbeams:
 
-The AUXBEAMS file
-=================
+AUXBEAMS
+========
 
 AUXBEAMS contains the lines from the :ref:`BEAMLIST<BEAMLIST>` file 
 that concern beams listed in :ref:`IVBEAMS<IVBEAMS>`.

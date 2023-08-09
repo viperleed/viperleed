@@ -1,7 +1,7 @@
 .. _searchprogresspdf:
 
-The Search-progress.pdf file
-============================
+Search-progress.pdf
+===================
 
 The Search-progress.pdf file is meant to give an overview of the current status of the search, and of the convergence, while the search is running. It contains several different plots, listed below:
 

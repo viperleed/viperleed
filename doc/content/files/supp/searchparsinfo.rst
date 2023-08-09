@@ -1,7 +1,7 @@
 .. _searchparsinfo:
 
-The searchpars.info file
-========================
+searchpars.info
+===============
 
 The searchpars.info file is generated to help with interpreting raw 
 TensErLEED output of the search, i.e. the 

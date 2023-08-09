@@ -1,7 +1,7 @@
 .. _fdoptimizationbeams:
 
-The FD_Optimization_beams.pdf file
-==================================
+FD_Optimization_beams.pdf
+=========================
 
 The FD_Optimization_beams.pdf file plots I(V) curves obtained from 
 r-factor calculations during :ref:`full-dynamic optimization<Fdoptimization>`. 

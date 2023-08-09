@@ -1,7 +1,7 @@
 .. _r_out:
 
-File R_OUT
-==========
+R_OUT
+=====
 
 ``R_OUT`` is a file created during the :ref:`R-factor calculation<r-factor_calculation>`
 in :term:`TensErLEED`. It contains the R-factors between the input :math:`I(V)` data 

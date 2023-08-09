@@ -1,7 +1,7 @@
 .. _rfactorplots:
 
-The Rfactor_plots files
-=======================
+Rfactor_plots
+=============
 
 The Rfactor_plots files (``Rfactor_plots_refcalc.pdf`` and ``Rfactor_plots_superpos.pdf``) plot the results of the r-factor calculations. Theoretical and experimental I(V) curves are drawn for every beam, and the R-factor per beam is given.
 
