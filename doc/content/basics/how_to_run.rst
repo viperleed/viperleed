@@ -74,7 +74,7 @@ If you are running ViPErLEED on an :term:`HPC` system with a workload scheduler 
 
 Such a submission script usually contains details on the requested hardware (e.g. declared via ``#SBATCH`` in slurm) and instructions on which precompiled packages to make available.
 Below, you find an example for a submission script for the `Vienna Scientific Cluster (VSC-4) <https://vsc.ac.at//home/>`__, which uses the slurm workload manager.
-The script first loads the required Intel compilers and :term:`conda` distribution, before executing ViPErLEED using the :ref:`job script<job_script>`.
+The script first loads the required Intel compilers and :term:`conda` distribution, before executing ViPErLEED using the :ref:`viperleed command<cli_calc>`.
 
 
 .. literalinclude :: /_static/example_job_script.txt
@@ -86,10 +86,9 @@ The script first loads the required Intel compilers and :term:`conda` distributi
 Output organization
 ===================
 
-A large number of files are created in the directory that tleedm is executed in.
-The :ref:`job script<job_script>` usually defines the path to a ``work`` directory (typically just a subdirectory of the source directory ``my_surface``) that will be used during the calculation.
-ViPErLEED will copy input files there, execute tleedm, and then copy the relevant output files back to the data directory.
-For this purpose, tleedm also creates a :ref:`manifest` file that lists the relevant output files which will be copied back.
+A large number of files are created in the work directory is executed in defined by the :ref:`-w option of viperleed calc<cli_calc>`.
+ViPErLEED will copy input files there, run all requested calculations, and then copy the relevant output files back to the input directory.
+For this purpose, ViPErLEED also creates a :ref:`manifest` file that lists the relevant output files which will be copied back.
 
 The directory tree after a run may look something like this:
 
