@@ -12,6 +12,7 @@ import multiprocessing
 import os
 import shutil
 
+from viperleed import GLOBALS
 from viperleed.calc.bookkeeper import bookkeeper, BookkeeperMode
 from viperleed.calc import run_tleedm
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
@@ -26,6 +27,11 @@ logger = logging.getLogger("tleedm")
 
 def add_calc_parser_arguments(parser):
     parser.add_argument(
+        "--version",
+        action = "version",
+        version=GLOBALS["version_message"],
+    )
+    parser.add_argument(
         "-w", "--work",
         help=("specify execution work directory"),
         type=str
@@ -37,7 +43,7 @@ def add_calc_parser_arguments(parser):
         action="store_true"
         )
     parser.add_argument(
-        "--delete_workdir",
+        "--delete-workdir",
         help=("delete work directory after execution"),
         action="store_true"
         )
@@ -47,7 +53,7 @@ def add_calc_parser_arguments(parser):
         action="store_true"
         )
     parser.add_argument(
-        "-vv", "--very_verbose",
+        "-vv", "--very-verbose",
         help=("increase output verbosity and prints more debug messages"),
         action="store_true"
     )
@@ -57,7 +63,7 @@ def add_calc_parser_arguments(parser):
         type=str
     )
     parser.add_argument(
-        "--no_cont",
+        "--no-cont",
         help="Do not overwrite POSCAR with the new structure after a search.",
         action='store_true'
     )
@@ -67,19 +73,19 @@ def add_calc_parser_arguments(parser):
         type=str
         )
     parser.add_argument(                                                        #TODO: implement (for cont at end; warn if called with --no_cont)
-        "-j", "--job_name",
+        "-j", "--job-name",
         help=("defines a name for the current run. Will be appended to the name "
             "of the history folder that is created, and is logged in "
             "history.info. Passed along to the bookkeeper."),
         type=str)
     parser.add_argument(
-        "--history_name",
+        "--history-name",
         help=("defines the name of the history folder that is created/used. "
             "Passed along to the bookkeeper. Default is 'history'."),
         type=str,
         default="history")
     parser.add_argument(
-        "--work_history_name",
+        "--work-history-name",
         help=("defines the name of the workhistory folder that is created/used. "
             "Passed along to the bookkeeper. Default is 'workhistory'."),
         type=str,
