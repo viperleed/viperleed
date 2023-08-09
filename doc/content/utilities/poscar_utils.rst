@@ -8,8 +8,8 @@ These utilities can be helpful for creating and modifying input structures for V
 
 All POSCAR utilities support the following options:
 
-- ``-h``, ``--help``: show a help message with the available options
-- ``-v``, ``--verbose``: increase output verbosity
+- ``-h, --help``: show a help message with the available options
+- ``-v, --verbose``: increase output verbosity
 
 .. hint::
 
@@ -117,7 +117,7 @@ Symmetry detection works the same as the :ref:`find_symmetry<poscar_utils_find_s
 
 **Additional Options**
 
-- ``-e``, ``--symmetry-eps``: Epsilon for in-plane symmetry detection in Å. Behaves like :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file. Default: 0.1Å
+- ``-e, --symmetry-eps``: Epsilon for in-plane symmetry detection in Å. Behaves like :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file. Default: 0.1Å
 - ``--symmetry-eps-z``: Epsilon for out-of-plane symmetry detection in Å. Behaves like the second argument of :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file.
   If not provided, the value of ``--symmetry-eps`` is used.
 - ``--planegroup``: Planegroup to enforce.
@@ -140,7 +140,7 @@ This utility uses the same algorithm for symmetry detection as is used in ViPErL
 
 **Additional Options**
 
-- ``-e``, ``--symmetry-eps``: Epsilon for in-plane symmetry detection in Å. Behaves like :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file. Default: 0.1Å
+- ``-e, --symmetry-eps``: Epsilon for in-plane symmetry detection in Å. Behaves like :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file. Default: 0.1Å
 - ``--symmetry-eps-z``: Epsilon for out-of-plane symmetry detection in Å. Behaves like the second argument of :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file.
   If not provided, the value of ``--symmetry-eps`` is used.
 
