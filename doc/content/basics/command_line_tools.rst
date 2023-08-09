@@ -5,7 +5,7 @@ Command Line Tools
 
 .. todo:: viperleed gui
 
-The ViPErLEED 
+The ViPErLEED Python package (viperleed) provides a number of command line tools that can be used to run calculations, invoke the :ref:`bookkeeper<bookkeeper>`, and run the :ref:`utilities<utilities>` and :ref:`poscar utilities<poscar_utils>`.
 
 
 .. _cli_calc:

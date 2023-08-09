@@ -10,9 +10,9 @@ See :ref:`cli_bookkeeper` for details on how to run the bookkeeper manually.
 
 The bookkeeper has three modes:
 
-- *Default*: Stores results from the previous run in a "history" directory, but **does not overwrite** any input files.
-- *Continuation*: Stores the results from the previous run in a "history" directory, and **overwrites** the :ref:`POSCAR<poscar>` and :ref:`VIBROCC<vibrocc>` files in the main folder with the latest :ref:`POSCAR_OUT<poscar_out>` and :ref:`VIBROCC_OUT<vibrocc_out>` files.
-- *Discard*: Discards the previous run as if it never happened and does not store anything in the history.
+- **Default**: Stores results from the previous run in a "history" directory, but *does not overwrite* any input files.
+- **Continuation**: Stores the results from the previous run in a "history" directory, and *overwrites* the :ref:`POSCAR<poscar>` and :ref:`VIBROCC<viboccin>` files in the main folder with the latest :ref:`POSCAR_OUT<poscar_out>` and :ref:`VIBROCC_OUT<vibrocc_out>` files.
+- **Discard**: Discards the previous run as if it never happened and does not store anything in the history.
 
 
 The bookkeeper always runs in *default* mode at the start of a ViPErLEED calculation (invoked by :ref:`viperleed calc<cli_calc>`).
