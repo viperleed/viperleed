@@ -51,6 +51,9 @@ Glossary
     Python
       The Python programming language. See the Python `homepage <https://www.python.org>`__.
 
+    PyPI
+      The Python Package Index. See the `PyPI homepage <https://pypi.org>`__.
+
     Fortran
       The Fortran programming language.
       One of the first high-level programming languages.
