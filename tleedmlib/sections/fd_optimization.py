@@ -59,7 +59,6 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     -------
     rfactor : float
         The r-factor obtained for the sl, rp combination
-
     """
     rp.TENSOR_OUTPUT = [0]
     rp.workdir = Path(work_dir)
@@ -134,7 +133,6 @@ def fd_optimization(sl, rp):
     Returns
     -------
     None.
-
     """
 
     which = rp.OPTIMIZE["which"]
@@ -272,8 +270,8 @@ def fd_optimization(sl, rp):
                                 if abs(v - new_min) == lowest_dist][0]
                             logger.info(
                                 "Stopping optimization: Predicted new minimum "
-                                "{:.4f} is within convergence limits to known "
-                                "point {:.4f}".format(new_min, closest_point))
+                                f"{new_min:.4f} is within convergence limits to "
+                                f"known point {closest_point:.4f}.")
                             break  # within convergence limit
                 logger.info("Currently predicting minimum at {:.4f} with R = "
                             "{:.4f}, adding data point at {:.4f}"
