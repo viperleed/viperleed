@@ -455,7 +455,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         bool
         """
         super()._is_finished()
-        ramp_finished = self.current_energy > self.__end_energy
+        ramp_finished = self.energy_generator() > self.__end_energy
         if self.__delta_energy < 0:
             ramp_finished = self.current_energy < self.__end_energy
         if ramp_finished:

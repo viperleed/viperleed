@@ -154,7 +154,7 @@ class IVVideo(MeasurementABC):
         bool
         """
         super()._is_finished()
-        if self.current_energy >= self.__end_energy:
+        if self.current_energy + self.__delta_energy > self.__end_energy:
             return True
         self.current_energy += self.__delta_energy
         return False
