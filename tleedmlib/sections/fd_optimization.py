@@ -106,9 +106,6 @@ def apply_scaling(sl, rp, which, scale):
         rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
 
 
-def get_fd_phaseshifts(sl, rp, S_ovl):
-    rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
-    (first_line, phaseshifts) = psgen.runPhaseshiftGen(sl, rp, psgensource=rundgrenpath)
 
 
 def fd_optimization(sl, rp):
@@ -150,8 +147,6 @@ def fd_optimization(sl, rp):
             rp.OPTIMIZE["step"] = 0.5
         elif which == "phi":
             rp.OPTIMIZE["step"] = 2.
-        elif which == "S_ovl":
-            rp.OPTIMIZE["step"] = 0.05
         else:   # unit cell size
             rp.OPTIMIZE["step"] = 0.01
         logger.debug("Initial step size undefined, defaulting to {}"
@@ -292,9 +287,6 @@ def fd_optimization(sl, rp):
             trp.THETA = x
         elif which == "phi":
             trp.PHI = x
-        elif which == "S_ovl":
-            trp.S_OVL = x
-            get_fd_phaseshifts(sl, rp, x)
         else:       # geometry: x is a scaling factor for the unit cell
             x = max(0.1, x)
             apply_scaling(tsl, trp, which, x)
@@ -352,9 +344,6 @@ def fd_optimization(sl, rp):
         modifyPARAMETERS(rp, "BEAM_INCIDENCE",
                          new=f"THETA {rp.THETA:.4f}, PHI {rp.PHI:.4f}",
                          comment=comment)
-    elif which == "S_ovl":
-        rp.S_ovl = new_min
-        modifyPARAMETERS(rp, "S_OVL", f"{new_min:.4f}", comment=comment)
     else:       # geometry: x is a scaling factor for the unit cell
         apply_scaling(sl, rp, which, new_min)
         if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
