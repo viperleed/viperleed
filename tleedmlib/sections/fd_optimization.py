@@ -28,6 +28,17 @@ from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 logger = logging.getLogger("tleedm.fdopt")
 
 
+class FullDynamicCalculationError(Exception):
+    """Base class for exceptions raised by the full dynamic calculation."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
+class FullDynamicOptimizationOutOfBoundsError(FullDynamicCalculationError):
+    """Raised when the optimization is out of bounds."""
+    def __init__(self, message):
+        super().__init__(message)
+
 def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     """
     Runs reference calculation and r-factor calculation, returns R.
