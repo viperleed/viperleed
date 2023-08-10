@@ -7,7 +7,7 @@ Created on Oct 22 2021
 
 Tensor LEED Manager section Full-dynamic Optimization
 """
-
+from abc import ABC, abstractmethod
 import copy
 import logging
 import os
@@ -374,12 +374,40 @@ def fd_optimization(sl, rp):
     #                        .format(path) + str(e))
 
 
+class FDParameter(ABC):
+    """Base class for parameters accessible via full dynamic calculation."""
+
+    @abstractmethod
+    def apply(self, rparams, slab, val):
+        """Apply the parameter to the given rparams and slab."""
+        pass
+
+class FDParameterV0i(FDParameter):
+    """Parameter V0_IMAG."""
+
+    name = "V0_IMAG"
+    bounds = (0, np.inf)
+
+    def apply(self, rparams, slab, val):
+        rparams.V0_IMAG = val
+
+class FDParameterTheta(FDParameter):
+    """Parameter THETA."""
+
+    name = "THETA"
+    bounds = (-90, 90)
+
+    def apply(self, rparams, slab, val):
+        rparams.THETA = val
+
+
 class OneDimensionalFDOptimizer():                                              # TODO: extend to n dimensions
     """Base class for full-dynamic optimization."""
 
     def __init__(self, eval_func, x, convergence, R=None, bounds=None):
         self.eval_func = eval_func # callback function to evaluate
         self.x = x # points to evaluate initially
+        self.R = R # results of evaluation (R-factors)
         self.convergence = convergence # convergence criterion
 
         # bounds for x
@@ -439,6 +467,7 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
 
     def optimize(self):
         while len(self.x) < self.max_points:
+            print(f"x: {self.x}, R: {self.R}")
             next_x = self.next_point()
 
             if next_x is None:
@@ -452,10 +481,12 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
 
             if len(self.x) >= self.min_points:
                 predicted_R = self.parabola(self._predicted_min_x)
-                logger.info("Currently predicting minimum at "
-                            f"{self._predicted_min_x:.4f} "
-                            f"with R = {predicted_R:.4f}, adding data point "
-                            f"at {next_x:.4f}.")
+                logger.debug(
+                    "Currently predicting minimum at "
+                    f"{self._predicted_min_x:.4f} "
+                    f"with R = {predicted_R:.4f}, adding data point "
+                    f"at {next_x:.4f}."
+                )
 
             next_R = self.eval_func(next_x)
             self.x.append(next_x)
@@ -488,7 +519,7 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
             raise RuntimeError("Cannot fit parabola until at least 3 points "
                                "have been evaluated.")
         self.parabola = Polynomial.fit(self.x, self.R, 2)
-        self.coefficients = parabola.convert(domain=[-1, 1]).coef
+        self.coefficients = self.parabola.convert(domain=[-1, 1]).coef
 
 
     def next_point(self):
@@ -498,7 +529,7 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
         if len(self.x) == 1:
             return self.x[0] + self.initial_step
         elif len(self.x) == 2:
-            if (self.R[self.x[0]] < self.R[self.x[1]]
+            if (self.R[0] < self.R[0]
                 and (self.x[0] + 2*self.initial_step) > self.convergence):
                 return self.x[0] + 2*self.initial_step
             else:
@@ -575,4 +606,40 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
             return True
 
         return False
+
+    def finalize():
+        # TODO: case fit worse than explicit calculation, but within convergence
+        pass
+
+
+def evaluate_fd_calculation(rp, sl, fd_parameters, parameter_vals):
+    # make temporary Rparams and slab
+    test_sl = copy.deepcopy(sl)
+    test_rp = copy.deepcopy(rp)
+
+    # make temporary workdir
+    name = _temp_dir_name(fd_parameters, parameter_vals)
+    temp_dir = _fd_dir(name, rp)
+
+    # apply parameters
+    for param, val in zip(fd_parameters, parameter_vals):
+        param.apply(test_rp, test_sl, val)
+
+    # run calculation
+    r, _ = get_fd_r(test_sl, test_rp,
+                           work_dir=temp_dir, home_dir=rp.workdir)
+
+    # TODO: update csv and plot
+    return r
+
+
+
+def _fd_dir(name, rp):
+    name  = "fd_test"
+    fd_work_dir = rp.workdir / "fd_calc" / name
+    return fd_work_dir
+
+
+def _temp_dir_name(parameters, parameter_vals):
+    return "_".join([f"{p.name}={v}" for p, v in zip(parameters, parameter_vals)])
 
