@@ -67,7 +67,7 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
             try:
                 shutil.copy2(home_dir / fn, fn)
             except Exception:
-                logger.error("Error copying " + fn + " to subfolder.")
+                logger.error(f"Error copying {fn} to subfolder.")
                 raise
         logger.info("Starting full-dynamic calculation")
         try:
@@ -132,7 +132,7 @@ def fd_optimization(sl, rp):
                      "in the PARAMETERS file to define behaviour.")
         rp.setHaltingLevel(2)
         return
-    logger.info("Starting optimization of {}".format(rp.OPTIMIZE["which"]))
+    logger.info(f"Starting optimization of {rp.OPTIMIZE['which']}")
     # make sure there's a compiler ready, and we know the number of cores:
     if rp.FORTRAN_COMP[0] == "":
         try:
