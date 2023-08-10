@@ -168,10 +168,10 @@ def fd_optimization(sl, rp):
         x0 = rp.THETA
     elif which == "phi":
         x0 = rp.PHI
-    elif which == "s_ovl":
-        x0 = rp.S_OVL
     else:
         x0 = 1.   # geometry: x is a scaling factor
+
+
 
     # optimization loop
     curvature_fail = 0
@@ -222,9 +222,6 @@ def fd_optimization(sl, rp):
                     x = max(0, x)
                 if which in "abc":
                     x = max(0.1, x)   # shouldn't happen, just in case
-                if which == "S_ovl":
-                    x = min(1, x)
-                    x = max(0, x)
                 # check whether we're close to point that is already known
                 if any(abs(v - x) < rp.OPTIMIZE["convergence"]
                        for v in known_points[:, 0]):
