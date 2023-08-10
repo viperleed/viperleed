@@ -517,7 +517,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         primary = self.primary_controller
         about_to_trigger = primary.about_to_trigger
-        base.safe_disconnect(about_to_trigger, self.__store_primary_time_stamp)
+        base.safe_disconnect(about_to_trigger, self.store_primary_time_stamp)
         for ctrl in self.controllers:
             # Make sure no controller can be triggered for
             # measurement during the whole preparation
@@ -837,7 +837,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         about_to_trigger = primary.about_to_trigger
         base.safe_connect(self._request_stop_primary, primary.stop,
                           type=_UNIQUE)
-        base.safe_connect(about_to_trigger, self.__store_primary_time_stamp,
+        base.safe_connect(about_to_trigger, self.store_primary_time_stamp,
                           type=_UNIQUE)
         self._connect_controller(primary)
 
@@ -876,11 +876,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
     def __disconnect_primary_controller(self):
         """Disconnect port and signals of the primary controller."""
         primary = self.primary_controller
-        about_to_trigger = primary.about_to_trigger
         if primary is None:
             return
+        about_to_trigger = primary.about_to_trigger
         base.safe_disconnect(self._request_stop_primary, primary.stop)
-        base.safe_disconnect(about_to_trigger, self.__store_primary_time_stamp)
+        base.safe_disconnect(about_to_trigger, self.store_primary_time_stamp)
         for ctrl in self.secondary_controllers:
             base.safe_disconnect(about_to_trigger, ctrl.measure_now)
         self._disconnect_controller(primary)
@@ -1257,7 +1257,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         controller = self.sender()
         # Remove the time stamp for measurements coming from
         # the primary controller as it was already added in
-        # __store_primary_time_stamp.
+        # store_primary_time_stamp.
         if controller is self.primary_controller:
             data.pop(QuantityInfo.TIMESTAMPS)
         self.data_points.add_data(data, controller)
@@ -1427,7 +1427,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                                f"folder {self.settings.base_dir}") from None
         return device_cfg
 
-    def __store_primary_time_stamp(self):
+    def store_primary_time_stamp(self):
         """Append primary controller time stamp to data points.
 
         This method stores the time stamp of the primary

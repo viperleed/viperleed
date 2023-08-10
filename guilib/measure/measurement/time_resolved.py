@@ -62,6 +62,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         for ctrl in self.controllers:
             self.__connect_trigger_timeout(ctrl)
 
+        # Whenever the timer runs out, the primary controller has
+        # to store a time stamp.
+        trigger.timeout.connect(self.store_primary_time_stamp)
+
         # Finally, set the _camera_timer interval to zero, so
         # we can fire it at the same time as measurements are
         # acquired (in triggered mode)
@@ -557,6 +561,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             else:
                 base.safe_disconnect(about_to_trigger, trigger.start)
                 base.safe_disconnect(trigger.timeout, self._camera_timer.start)
+                base.safe_disconnect(trigger.timeout,
+                                     self.store_primary_time_stamp)
 
         super()._prepare_finalization()
 

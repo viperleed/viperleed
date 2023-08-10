@@ -915,7 +915,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """Set electron energy on LEED controller.
 
         This method must be extended in subclasses by calling super()
-        ant some point. The reimplementation should take the energy
+        and some point. The reimplementation should take the energy
         value(s) in eV, the waiting times (in msec) and the keyword
         argument trigger_meas, together with other optional data to be
         read from self.settings, and turn them into messages that can
@@ -925,6 +925,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         energy that the electrons will have when exiting the gun) to
         the set-point value to be sent to the controller can be done
         inside this method by calling .true_energy_to_setpoint(energy).
+
+        self.time_stamp has to be set in reimplementations at the
+        end of this method. Reimplementations must store the
+        time_stamp via time.perf_counter() before returning. To
+        use this library one has to import time.
 
         Parameters
         ----------
@@ -1280,7 +1285,7 @@ class MeasureControllerABC(ControllerABC):
         """
         self.busy = False
         self.measurements[QuantityInfo.TIMESTAMPS].append(
-            self.serial.time_stamp + self.time_to_trigger / 1000
+            self.time_stamp + self.time_to_trigger / 1000
             )
         self.data_ready.emit(deepcopy(self.measurements))
         for key in self.measurements:
@@ -1303,6 +1308,11 @@ class MeasureControllerABC(ControllerABC):
         has been set on the controller. It should only trigger
         measurements (and send additional data if needed).
         
+        self.time_stamp has to be set in reimplementations at the
+        end of this method. Reimplementations must store the
+        time_stamp via time.perf_counter() before returning. To
+        use this library one has to import time.
+
         self.time_stamp has to be set in reimplementations at the
         end of this method. Reimplementations must store the
         time_stamp via time.perf_counter() before returning. To
@@ -1368,6 +1378,11 @@ class MeasureControllerABC(ControllerABC):
         the set-point value to be sent to the controller can be done
         inside this method by calling .true_energy_to_setpoint(energy).
         
+        self.time_stamp has to be set in reimplementations at the
+        end of this method. Reimplementations must store the
+        time_stamp via time.perf_counter() before returning. To
+        use this library one has to import time.
+
         self.time_stamp has to be set in reimplementations at the
         end of this method. Reimplementations must store the
         time_stamp via time.perf_counter() before returning. To
