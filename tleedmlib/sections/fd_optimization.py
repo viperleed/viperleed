@@ -372,3 +372,207 @@ def fd_optimization(sl, rp):
     #     except Exception as e:
     #         logger.warning("Failed to delete temporary directory {}: "
     #                        .format(path) + str(e))
+
+
+class OneDimensionalFDOptimizer():                                              # TODO: extend to n dimensions
+    """Base class for full-dynamic optimization."""
+
+    def __init__(self, eval_func, x, convergence, R=None, bounds=None):
+        self.eval_func = eval_func # callback function to evaluate
+        self.x = x # points to evaluate initially
+        self.convergence = convergence # convergence criterion
+
+        # bounds for x
+        self.bounds = bounds if bounds is not None else (-np.inf, np.inf)
+
+        if not all(self._in_bounds(x) for x in self.x):
+            raise FullDynamicOptimizationOutOfBoundsError(
+                "Initial points must be within bounds"
+            )
+
+        if not (isinstance(R, list) or R is None):
+            raise TypeError("R must be a list or None")
+        if self.R is None:
+            # evaluate all initial points
+            self.R = [self.eval_func(x) for x in self.x]
+
+        self.evaluate_missing_points()
+
+    @property
+    def x_R_min(self):
+        if any(R is None for R in self.R):
+            raise ValueError("Cannot find minimum if not requested points "
+                             "have been evaluated")
+        return min(zip(self.x, self.R), key=lambda x: x[1])
+
+    @property
+    def x_R_sorted(self):
+        _x_R_sorted = sorted(zip(self.x, self.R), key=lambda x: x[0])
+        _x_sorted = [x for x, _ in _x_R_sorted]
+        _R_sorted = [R for _, R in _x_R_sorted]
+        return _x_sorted, _R_sorted
+
+
+    def closest_sample_point(self, compare_to):
+        return min(self.x, key=lambda x: abs(x - compare_to))
+
+    def _in_bounds(self, x_val):
+        return self.bounds[0] <= x_val <= self.bounds[1]
+
+    def evaluate_missing_points(self):
+        for index, (x, R) in enumerate(zip(self.x, self.R)):
+            if R is None:
+                self.R[index] = self.eval_func(x)
+
+
+
+class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
+    def __init__(self, x, eval_func, convergence, initial_step, min_points, max_points, R=None, bounds= None, max_step=None):
+        super().__init__(eval_func, x, convergence, R, bounds)
+        self.min_points = min_points
+        self.max_points = max_points
+        self.initial_step = initial_step
+        self.curvature_fails = 0
+
+        if len(self.x) == 0:
+            raise RuntimeError("Must provide at least one evaluation point to start.")
+
+    def optimize(self):
+        while len(self.x) < self.max_points:
+            next_x = self.next_point()
+
+            if next_x is None:
+                logger.info(
+                    "Stopping optimization: Predicted new minimum "
+                    f"{self._predicted_min_x:.4f} is within convergence limits "
+                    "to known point "
+                    f"{self.closest_sample_point(self._predicted_min_x):.4f}."
+                    )
+                return
+
+            if len(self.x) >= self.min_points:
+                predicted_R = self.parabola(self._predicted_min_x)
+                logger.info("Currently predicting minimum at "
+                            f"{self._predicted_min_x:.4f} "
+                            f"with R = {predicted_R:.4f}, adding data point "
+                            f"at {next_x:.4f}.")
+
+            next_R = self.eval_func(next_x)
+            self.x.append(next_x)
+            self.R.append(next_R)
+
+        # max points reached
+        logger.warning(
+            "Stopping optimization because the maximum number of data "
+            "points has been reached. This may indicate that optimization "
+            "did not fully converge.")
+        return
+
+    @property
+    def _predicted_min_x(self):
+        self._fit_parabola()
+        return -0.5*self._parabola_linear / self._parabola_curvature
+
+    @property
+    def _parabola_curvature(self):
+        self._fit_parabola()
+        return self.coefficients[2]
+
+    @property
+    def _parabola_linear(self):
+        self._fit_parabola()
+        return self.coefficients[1]
+
+    def _fit_parabola(self):
+        if len(self.x) < 3:
+            raise RuntimeError("Cannot fit parabola until at least 3 points "
+                               "have been evaluated.")
+        self.parabola = Polynomial.fit(self.x, self.R, 2)
+        self.coefficients = parabola.convert(domain=[-1, 1]).coef
+
+
+    def next_point(self):
+        if any([R is None for R in self.R]):
+            raise RuntimeError("Cannot predict next point until all points "
+                               "have been evaluated.")
+        if len(self.x) == 1:
+            return self.x[0] + self.initial_step
+        elif len(self.x) == 2:
+            if (self.R[self.x[0]] < self.R[self.x[1]]
+                and (self.x[0] + 2*self.initial_step) > self.convergence):
+                return self.x[0] + 2*self.initial_step
+            else:
+                return self.x[0] - self.initial_step
+
+        # Otherwise we have enough points to fit a parabola
+
+        # if curvature is convex, add point outside current scope
+        if self._parabola_curvature > 0:
+            return self._point_outside()
+
+        # if predicted minimum is outside scope, go a bit further
+        if self._predicted_min_x <= min(self.x):
+            return min(self.x) - (abs(self.initial_step))
+        elif self._predicted_min_x >= max(self.x):
+            return max(self.x) + (abs(self.initial_step))
+        else:
+            min_x = self._predicted_min_x
+
+        # have we tried this point before?
+        if not any([abs(x - min_x) < self.convergence for x in self.x]):
+            return min_x
+
+        # next, ensure we have at least one point either side of the minimum
+        left_of_min = tuple(x < min_x for x in self.x)
+        all_left = all(left_of_min)
+        if all_left or all(abs(x-min_x) < self.convergence for x in self.x):
+            return min_x + abs(self.initial_step)
+        right_of_min = tuple(x > min_x for x in self.x)
+        all_right = all(right_of_min)
+        if all_right or all(abs(x-min_x) < self.convergence for x in self.x):
+            return min_x - abs(self.initial_step)
+
+        # check if we have converged
+        if self._has_converged():
+            return None # we're done
+
+        # check midpoint of current points left & right of predicted minimum
+        midpoint = (max(left_of_min) + min(right_of_min)) / 2
+        if abs(midpoint - min_x) > self.convergence:
+            return midpoint
+
+        # otherwise, as a last resort, add a point outside the current scope
+        return self._point_outside()
+
+
+    def _point_outside(self):
+        if (len([v for v in self.x if v > np.median(self.x)])
+                > len([v for v in self.x if v < np.median(self.x)])):
+            next_point = min(self.x) - (abs(self.initial_step)
+                                             * self.curvature_fails)
+        else:
+            next_point = max(self.x) + (abs(self.initial_step)
+                                             * self.curvature_fails)
+        logger.info("Current fit parabola is not concave, no minimum "
+                    f"predicted. Adding data point at {next_point:.4f}")
+        return next_point
+
+
+    def _has_converged(self):
+        if any([R is None for R in self.R]):
+            raise RuntimeError("Cannot predict check for convergence until "
+                               "all points are evaluated.")
+
+        if len(self.x) < self.min_points:
+            return False
+
+        sorted_x, sorted_R = self.x_R_sorted
+        min_id = np.argmin(sorted_R)
+        min_x = sorted_x[min_id]
+
+        # check if there is a point within convergence range of the minimum
+        if any([abs(x - min_x) < self.convergence for x in self.x]):
+            return True
+
+        return False
+
