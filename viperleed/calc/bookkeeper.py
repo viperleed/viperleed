@@ -391,18 +391,18 @@ def bookkeeper_cli_options(parser):
               "files in the main folder."),
         action="store_true")
     parser.add_argument(
-        "-j", "--job_name",
+        "-j", "--job-name",
         help=("defines a string to be appended to the name of the history "
               "folder that is created, and is logged in history.info"),
         type=str)
     parser.add_argument(
-        "--history_name",
+        "--history-name",
         help=("defines the name of the history folder that is created/used. "
               "Default is 'history'"),
         type=str,
         default="history")
     parser.add_argument(
-        "--work_history_name",
+        "--work-history-name",
         help=("defines the name of the workhistory folder that is created/used. "
               "Default is 'workhistory'"),
         type=str,
