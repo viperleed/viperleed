@@ -3,6 +3,7 @@
 """
 Created on Oct 22 2021
 
+@author: Alexander M. Imre
 @author: Florian Kraushofer
 
 Tensor LEED Manager section Full-dynamic Optimization
@@ -16,6 +17,7 @@ import shutil
 
 import numpy as np
 from numpy.polynomial import Polynomial
+import scipy.optimize
 
 from viperleed.tleedmlib import psgen
 from viperleed.tleedmlib.files import iofdopt as tl_io
@@ -26,6 +28,31 @@ from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 
 
 logger = logging.getLogger("tleedm.fdopt")
+
+FD_PARAMETERS = {
+    'v0i': {
+        'bounds': (0,np.inf),
+        'eval': lambda r, s, v: setattr(r, "V0_IMAG", v),
+        'x0': lambda rp: rp.V0_IMAG,
+    },
+    'theta': {
+        'bounds': (0,90),
+        'eval': lambda r, s, v: setattr(r, "THETA", v),
+        'x0': lambda rp: rp.THETA,
+    },
+    'phi': {
+        'bounds': (0,360),
+        'eval': lambda r, s, v: setattr(r, "PHI", v),
+        'x0': lambda rp: rp.PHI,
+    },
+}
+
+for scaling in ('a', 'b', 'c', 'ab', 'bc', 'abc'): # scaling of lattice vectors
+    FD_PARAMETERS[scaling] = {
+        'bounds': (0.1, 10),
+        'eval': lambda r, s, v: apply_scaling(s, r, scaling, v),
+        'x0': lambda rp: 1,
+    }
 
 
 class FullDynamicCalculationError(Exception):
@@ -150,6 +177,9 @@ def fd_optimization(sl, rp):
             logger.error("No fortran compiler found, cancelling...")
             raise
     rp.updateCores()  # if number of cores is not defined, try to find it
+
+    # TODO: update theses to use the new parameters
+
     # check whether step is set; if not, choose default value
     if rp.OPTIMIZE["step"] == 0.:
         if which in ["v0i", "theta"]:
@@ -160,183 +190,60 @@ def fd_optimization(sl, rp):
             rp.OPTIMIZE["step"] = 0.01
         logger.debug("Initial step size undefined, defaulting to {}"
                      .format(rp.OPTIMIZE["step"]))
+
     if rp.OPTIMIZE["maxstep"] == 0.:
         rp.OPTIMIZE["maxstep"] = 3 * rp.OPTIMIZE["step"]
+
     if rp.OPTIMIZE["convergence"] == 0.:
         rp.OPTIMIZE["convergence"] = 0.1 * rp.OPTIMIZE["step"]
+
     rp.OPTIMIZE["maxstep"] = abs(rp.OPTIMIZE["maxstep"])  # always positive
     rp.OPTIMIZE["convergence"] = abs(rp.OPTIMIZE["convergence"])
-    # loop over required configurations, copying sl and rp every time
-    known_points = np.empty((0, 2))
-    # known_points will contain columns [x, r], with x the parameter value
-    rfactor_lists = []    # for each point, store r-factors per beam
-    tmpdirs = []
-    if which == "v0i":
-        x0 = rp.V0_IMAG
-    elif which == "theta":
-        x0 = rp.THETA
-    elif which == "phi":
-        x0 = rp.PHI
-    else:
-        x0 = 1.   # geometry: x is a scaling factor
+
+    # get FDParameter object
+    fd_param = FDParameter(
+        which,
+        FD_PARAMETERS[which]["x0"](rp),
+        FD_PARAMETERS[which]["bounds"],
+        FD_PARAMETERS[which]["eval"],
+    )
+
+    fd_evaluate = lambda x: evaluate_fd_calculation(rp, sl, fd_param, x)
+    optimizer = SingleParameterParabolaFit(
+        x0=[fd_param.start_value,],
+        eval_func=fd_evaluate,
+        fd_parameter=fd_param,
+        convergence=rp.OPTIMIZE["convergence"],
+        step=rp.OPTIMIZE["step"],
+        max_points=rp.OPTIMIZE["maxpoints"],
+        min_points=rp.OPTIMIZE["minpoints"],
+    )
+
+    # perform optimization
+    optimizer.optimize()
+    opt_x, opt_R = optimizer.finalize()
+
+
+    logger.info(
+        f"Optimization finished. Best {which} = {opt_x:.4f} with "
+        f"R = {opt_R:.4f}")
+
+    # update PARAMETERS and POSCAR_OUT
+    store_fd_param_to_file(sl, rp, fd_param.name, opt_x)
+
+    # fetch I(V) from all and plot together
+    known_points = np.array([optimizer.x, optimizer.R]).T
+    try:
+        tl_io.write_fd_opt_beams_pdf(rp, known_points,
+                                     fd_param.name,
+                                     optimizer.eval_dirs,
+                                     optimizer.x_R_min[2])  # best R per beam
+    except Exception as exc:
+        logger.warning(f"Failed to plot I(V) curves from optimization: {exc}")
 
 
 
-    # optimization loop
-    curvature_fail = 0
-    parabola = None
-    while True:
-        if rp.STOP:
-            break
-        if len(known_points) == 0:
-            x = x0   # x will be the value of the parameter under variation
-        elif len(known_points) == 1:
-            x = x0 + rp.OPTIMIZE["step"]   # first step is given
-        elif len(known_points) == 2:  # get third point
-            if known_points[1, 1] < known_points[0, 1]:
-                x = x0 + 2*rp.OPTIMIZE["step"]
-            else:
-                x = x0 - rp.OPTIMIZE["step"]
-        else:
-            parabola = Polynomial.fit(known_points[:, 0], known_points[:, 1],
-                                      2)
-            coefs = parabola.convert(domain=[-1, 1]).coef
-            current_scope = (min(known_points[:, 0]), max(known_points[:, 0]))
-            # first check curvature
-            if coefs[2] <= 0:  # TODO: some epsilon would be better
-                # no good slope - keep adding points on either side
-                curvature_fail += 1
-                if (len([v for v in known_points[:, 0] if v > x0])
-                        > len([v for v in known_points[:, 0] if v < x0])):
-                    x = current_scope[0] - (abs(rp.OPTIMIZE["step"])
-                                            * curvature_fail)
-                else:
-                    x = current_scope[1] + (abs(rp.OPTIMIZE["step"])
-                                            * curvature_fail)
-                logger.info("Current fit parabola is not concave, no minimum "
-                            "predicted. Adding data point at {:.4f}".format(x))
-            else:
-                # try to use minimum
-                new_min = -0.5*coefs[1] / coefs[2]
-                x = new_min
-                # if at the edge, better to step a bit farther again
-                if x < current_scope[0]:
-                    x = min(x, current_scope[0] - abs(rp.OPTIMIZE["step"]))
-                elif x > current_scope[1]:
-                    x = max(x, current_scope[1] + abs(rp.OPTIMIZE["step"]))
-                # limit to maxstep
-                x = min(x, current_scope[1] + rp.OPTIMIZE["maxstep"])
-                x = max(x, current_scope[0] - rp.OPTIMIZE["maxstep"])
-                if which == "v0i":
-                    x = max(0, x)
-                if which in "abc":
-                    x = max(0.1, x)   # shouldn't happen, just in case
-                # check whether we're close to point that is already known
-                if any(abs(v - x) < rp.OPTIMIZE["convergence"]
-                       for v in known_points[:, 0]):
-                    left = [v for v in known_points[:, 0] if v < x]
-                    right = [v for v in known_points[:, 0] if v > x]
-                    if (not left or
-                        all(abs(v - x) < rp.OPTIMIZE["convergence"]
-                            for v in left)):     # take step to left
-                        x = current_scope[0] - abs(rp.OPTIMIZE["step"])
-                    elif (not right or
-                          all(abs(v - x) < rp.OPTIMIZE["convergence"]
-                              for v in right)):  # take step to right
-                        x = current_scope[1] + abs(rp.OPTIMIZE["step"])
-                    elif (all(abs(v - x) < rp.OPTIMIZE["convergence"]
-                              for v in (max(left), min(right)))
-                          and len(known_points) < rp.OPTIMIZE["minpoints"]):
-                        # points are very close already, default to adding
-                        #   points outside of scope
-                        if (len(right) > len(left)):
-                            x = current_scope[0] - abs(rp.OPTIMIZE["step"])
-                        else:
-                            x = current_scope[1] + abs(rp.OPTIMIZE["step"])
-                    else:        # take midpoint
-                        x = (max(left) + min(right)) / 2
-                    # stop if minpoints and convergence
-                    if len(known_points) >= rp.OPTIMIZE["minpoints"]:
-                        if not (current_scope[0] < x < current_scope[1]):
-                            logger.info(
-                                "Minimum has converged, but is at the edge of "
-                                "the tested range. Proceeding with "
-                                "optimization.")
-                        else:
-                            lowest_dist = min([abs(v - new_min) for v
-                                               in known_points[:, 0]])
-                            closest_point = [
-                                v for v in known_points[:, 0]
-                                if abs(v - new_min) == lowest_dist][0]
-                            logger.info(
-                                "Stopping optimization: Predicted new minimum "
-                                f"{new_min:.4f} is within convergence limits to "
-                                f"known point {closest_point:.4f}.")
-                            break  # within convergence limit
-                logger.info("Currently predicting minimum at {:.4f} with R = "
-                            "{:.4f}, adding data point at {:.4f}"
-                            .format(new_min, parabola(new_min), x))
-
-        # write out results
-        if len(known_points) != 0:
-            tl_io.write_fd_opt_csv(known_points, which)
-        if len(known_points) > 2:
-            tl_io.write_fd_opt_pdf(known_points, which, parabola=parabola)
-
-        # create test objects tsl, trp and set parameters
-        tsl = copy.deepcopy(sl)
-        trp = copy.deepcopy(rp)
-        if which == "v0i":
-            x = max(0, x)
-            trp.V0_IMAG = x
-        elif which == "theta":
-            trp.THETA = x
-        elif which == "phi":
-            trp.PHI = x
-        else:       # geometry: x is a scaling factor for the unit cell
-            x = max(0.1, x)
-            apply_scaling(tsl, trp, which, x)
-
-        # create subfolder and calculate there
-        if isinstance(x, int):
-            dname = f"{which}_{x}"
-        else:
-            dname = f"{which}_{x:.4f}"
-        workdir = rp.workdir / dname
-        tmpdirs.append(workdir)
-        logger.info(f"STARTING CALCULATION AT {which} = {x:.4f}")
-        r, rfaclist = get_fd_r(tsl, trp, work_dir=workdir, home_dir=rp.workdir)
-        known_points = np.append(known_points, np.array([[x, r]]), 0)
-        rfactor_lists.append(rfaclist)
-        # decide how to proceed
-        if len(known_points) >= rp.OPTIMIZE["maxpoints"]:
-            logger.warning(
-                "Stopping optimization because the maximum number of data "
-                "points has been reached. This may indicate that optimization "
-                "did not fully converge.")
-            break
-
-    # optimization loop finished; re-fit points, analyze:
-    parabola = Polynomial.fit(known_points[:, 0], known_points[:, 1], 2)
-    coefs = parabola.convert(domain=[-1, 1]).coef
-    new_min = -0.5*coefs[1] / coefs[2]
-    logger.info(f"Optimization of {which}: Predicted minimum at "
-                f"{new_min:.4f}, R = {parabola(new_min):.4f}")
-    current_best = known_points[np.argmin(known_points, 0)[1]]
-    if (round(parabola(new_min), 4) > round(current_best[1], 4)
-            and current_best[0] != known_points[-1, 0]):
-        logger.warning(
-            "Fit prediction at {:.4f} is worse than explicit calculation "
-            "result at {:.4f} (R = {:.4f}). Outputting best known result "
-            "instead of parabolic prediction.".format(new_min, *current_best))
-        new_min = current_best[0]
-
-    # output analysis
-    tl_io.write_fd_opt_csv(known_points, which)
-    if len(known_points) > 2:
-        tl_io.write_fd_opt_pdf(known_points, which, parabola=parabola)
-
-    # output modified files
+def store_fd_param_to_file(sl, rp, which, new_min):
     comment = "Found by full-dynamic optimization"
     if which == "v0i":
         rp.V0_IMAG = new_min
@@ -369,30 +276,31 @@ def fd_optimization(sl, rp):
 class FDParameter():
     """Base class for parameters accessible via full dynamic calculation."""
 
-    def __init__(self, name, bounds, transform_func):
+    def __init__(self, name, start_value, bounds, transform_func):
         self.name = name
+        self.start_value = start_value
+        # make sure start value is within bounds
+        if start_value < bounds[0] or start_value > bounds[1]:
+            raise ValueError(f"Start value for {start_value} is not within "
+                             "bounds {bounds}")
         self.bounds = bounds
+
         self.transform_func = transform_func
 
     def apply(self, rparams, slab, val):
         """Apply the parameter to the given rparams and slab."""
         self.transform_func(rparams, slab, val)
 
-fd_param_v0i = FDParameter("v0i", (0, np.inf), lambda r, s, v: setattr(r, "V0_IMAG", v))
-fd_param_theta = FDParameter("theta", (-90, 90), lambda r, s, v: setattr(r, "THETA", v))
-
-
 
 class OneDimensionalFDOptimizer(ABC):                                           # TODO: extend to n dimensions
     """Base class for full-dynamic optimization."""
 
-    def __init__(self, eval_func, x, fd_parameter, convergence):
+    def __init__(self, eval_func, x0, fd_parameter):
         self.eval_func = eval_func # callback function to evaluate
-        initial_x = x if isinstance(x, list) else [x]
+        initial_x = x0 if isinstance(x0, list) else [x0]
         self.x = [] # points to evaluate initially
         self.R, self.R_per_beam = [], [] # results of evaluations
         self.eval_dirs = [] # directories where evaluations are preformed
-        self.convergence = convergence # convergence criterion
         self.param_name = fd_parameter.name # name of parameter to optimize
 
         # bounds for x
@@ -405,7 +313,7 @@ class OneDimensionalFDOptimizer(ABC):                                           
             )
 
         # evaluate all requested initial points
-        self._evaluate_initials(x)
+        self._evaluate_initials(x0)
 
     @property
     def x_R_min(self):
@@ -426,10 +334,11 @@ class OneDimensionalFDOptimizer(ABC):                                           
 
     def evaluate(self, x_val):
         new_R, R_per_beam, eval_dir = self.eval_func(x_val)
-        self.x.append(x_val)
+        self.x.append(float(x_val))
         self.R.append(new_R)
         self.R_per_beam.append(R_per_beam)
         self.eval_dirs.append(eval_dir)
+        return new_R
 
     def _evaluate_initials(self, initial_x):
         for x_val in initial_x:
@@ -452,10 +361,10 @@ class OneDimensionalFDOptimizer(ABC):                                           
         pass
 
 
-
 class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
-    def __init__(self, x, eval_func, fd_parameter, convergence, step, min_points, max_points, max_step=None):
-        super().__init__(eval_func, x, fd_parameter, convergence)
+    def __init__(self, x0, eval_func, fd_parameter, convergence, step, min_points, max_points, max_step=None):
+        super().__init__(eval_func, x0, fd_parameter)
+        self.convergence = convergence
         self.min_points = min_points
         self.max_points = max_points
         self.step = step
@@ -624,6 +533,11 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
         return False
 
     def finalize(self):
+        # plot for a final time
+        known_points = np.array([self.x, self.R]).T
+        tl_io.write_fd_opt_csv(known_points, "v0i")
+        tl_io.write_fd_opt_pdf(known_points, "v0i", parabola=self.parabola)
+
         # check if predicted minimum is worse than any of the points
         if self._predicted_R > min(self.R):
             logger.info(
@@ -643,17 +557,60 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
             tl_io.write_fd_opt_pdf(np.array([self.x, self.R]).T, which=self.param_name)
 
 
+class SingleParameterBruteForceOptimiser(OneDimensionalFDOptimizer):
+
+    def __init__(self, eval_func, fd_parameter, min_val, max_val, steps):
+        super().__init__(eval_func, [], fd_parameter)
+        self.min_val = min_val
+        self.max_val = max_val
+        self.steps = steps
+
+        # make sure requested min/max are within bounds
+        if not (self._in_bounds(min_val) and self._in_bounds(max_val)):
+            raise ValueError("Requested min/max values are outside of "
+                             f"parameter bounds for {fd_parameter.name}.")
+
+    def optimize(self):
+        self.res = scipy.optimize.brute(
+            func=self.evaluate,
+            ranges=((self.min_val, self.max_val),),
+            Ns=self.steps,
+            full_output=True,
+            finish=None,
+            disp=logger.level <= logging.DEBUG,
+            workers=1
+        )
+
+
+    def finalize(self):
+        # write csv output
+        known_points = np.array([self.x, self.R]).T
+        tl_io.write_fd_opt_csv(known_points, "v0i")
+        x_opt, R_opt, _, _ = self.res
+        return x_opt, R_opt
+
+    def updated_intermediate_output(self):
+        pass
+
 def evaluate_fd_calculation(rp, sl, fd_parameters, parameter_vals):
     # make temporary Rparams and slab
     test_sl = copy.deepcopy(sl)
     test_rp = copy.deepcopy(rp)
 
+    # make list if only single parameter
+    if not isinstance(fd_parameters, list):
+        _fd_parameters = [fd_parameters,]
+        _parameter_vals = [parameter_vals,]
+    else:
+        _fd_parameters = fd_parameters
+        _parameter_vals = parameter_vals
+
     # make temporary workdir
-    name = _temp_dir_name(fd_parameters, parameter_vals)
+    name = _temp_dir_name(_fd_parameters, _parameter_vals)
     temp_dir = _fd_dir(name, rp)
 
     # apply parameters
-    for param, val in zip(fd_parameters, parameter_vals):
+    for param, val in zip(_fd_parameters, _parameter_vals):
         param.apply(test_rp, test_sl, val)
 
     # run calculation
@@ -666,7 +623,6 @@ def evaluate_fd_calculation(rp, sl, fd_parameters, parameter_vals):
 
 
 def _fd_dir(name, rp):
-    name  = "fd_test"
     fd_work_dir = rp.workdir / "fd_calc" / name
     return fd_work_dir
 
