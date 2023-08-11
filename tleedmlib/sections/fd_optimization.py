@@ -357,14 +357,6 @@ def fd_optimization(sl, rp):
             modifyPARAMETERS(rp, "BULK_REPEAT", new=vec_str, comment=comment)
         writePOSCAR(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
 
-    # fetch I(V) data from all, plot together
-    best_rfactors = rfactor_lists[np.argmin(known_points[:, 1])]
-    try:
-        tl_io.write_fd_opt_beams_pdf(rp, known_points, which, tmpdirs,
-                                     best_rfactors)
-    except Exception as exc:
-        logger.warning(f"Failed to plot I(V) curves from optimization: {exc}")
-
     # clean up tmpdirs
     # for path in tmpdirs:
     #     try:
@@ -394,9 +386,11 @@ fd_param_theta = FDParameter("theta", (-90, 90), lambda r, s, v: setattr(r, "THE
 class OneDimensionalFDOptimizer(ABC):                                           # TODO: extend to n dimensions
     """Base class for full-dynamic optimization."""
 
-    def __init__(self, eval_func, x, fd_parameter, convergence, R=None):
+    def __init__(self, eval_func, x, fd_parameter, convergence):
         self.eval_func = eval_func # callback function to evaluate
         self.x = x # points to evaluate initially
+        self.R, self.R_per_beam = [], [] # results of evaluations
+        self.eval_dirs = [] # directories where evaluations are preformed
         self.convergence = convergence # convergence criterion
         self.param_name = fd_parameter.name # name of parameter to optimize
 
@@ -409,20 +403,15 @@ class OneDimensionalFDOptimizer(ABC):                                           
                 "Initial points must be within bounds"
             )
 
-        if not (isinstance(R, list) or R is None):
-            raise TypeError("R must be a list or None")
-
-        # results of evaluation (R-factors)
-        self.R = R if R is not None else [self.eval_func(x) for x in self.x]
-
-        self.evaluate_missing_points()
+        # evaluate all requested initial points
+        self._evaluate_initials()
 
     @property
     def x_R_min(self):
         if any(R is None for R in self.R):
             raise ValueError("Cannot find minimum if not requested points "
                              "have been evaluated")
-        return min(zip(self.x, self.R), key=lambda x: x[1])
+        return min(zip(self.x, self.R, self.R_per_beam), key=lambda x: x[1])
 
     @property
     def x_R_sorted(self):
@@ -431,17 +420,22 @@ class OneDimensionalFDOptimizer(ABC):                                           
         _R_sorted = [R for _, R in _x_R_sorted]
         return _x_sorted, _R_sorted
 
-
     def closest_sample_point(self, compare_to):
         return min(self.x, key=lambda x: abs(x - compare_to))
 
+    def evaluate(self, x_val):
+        new_R, R_per_beam, eval_dir = self.eval_func(x_val)
+        self.x.append(x_val)
+        self.R.append(new_R)
+        self.R_per_beam.append(R_per_beam)
+        self.eval_dirs.append(eval_dir)
+
+    def _evaluate_initials(self):
+        for x_val in self.x:
+            self.evaluate(x_val)
+
     def _in_bounds(self, x_val):
         return self.bounds[0] <= x_val <= self.bounds[1]
-
-    def evaluate_missing_points(self):
-        for index, (x, R) in enumerate(zip(self.x, self.R)):
-            if R is None:
-                self.R[index] = self.eval_func(x)
 
     @abstractmethod
     def optimize(self):
@@ -459,8 +453,8 @@ class OneDimensionalFDOptimizer(ABC):                                           
 
 
 class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
-    def __init__(self, x, eval_func, fd_parameter, convergence, initial_step, min_points, max_points, R=None, bounds= None, max_step=None):
-        super().__init__(eval_func, x, fd_parameter, convergence, R, bounds)
+    def __init__(self, x, eval_func, fd_parameter, convergence, initial_step, min_points, max_points, max_step=None):
+        super().__init__(eval_func, x, fd_parameter, convergence)
         self.min_points = min_points
         self.max_points = max_points
         self.initial_step = initial_step
@@ -661,11 +655,11 @@ def evaluate_fd_calculation(rp, sl, fd_parameters, parameter_vals):
         param.apply(test_rp, test_sl, val)
 
     # run calculation
-    r, _ = get_fd_r(test_sl, test_rp,
+    r, r_per_beam = get_fd_r(test_sl, test_rp,
                            work_dir=temp_dir, home_dir=rp.workdir)
 
     # TODO: update csv and plot
-    return r
+    return r, r_per_beam, temp_dir
 
 
 
