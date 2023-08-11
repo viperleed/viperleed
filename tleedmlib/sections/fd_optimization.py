@@ -374,44 +374,35 @@ def fd_optimization(sl, rp):
     #                        .format(path) + str(e))
 
 
-class FDParameter(ABC):
+class FDParameter():
     """Base class for parameters accessible via full dynamic calculation."""
 
-    @abstractmethod
+    def __init__(self, name, bounds, transform_func):
+        self.name = name
+        self.bounds = bounds
+        self.transform_func = transform_func
+
     def apply(self, rparams, slab, val):
         """Apply the parameter to the given rparams and slab."""
-        pass
+        self.transform_func(rparams, slab, val)
 
-class FDParameterV0i(FDParameter):
-    """Parameter V0_IMAG."""
-
-    name = "V0_IMAG"
-    bounds = (0, np.inf)
-
-    def apply(self, rparams, slab, val):
-        rparams.V0_IMAG = val
-
-class FDParameterTheta(FDParameter):
-    """Parameter THETA."""
-
-    name = "THETA"
-    bounds = (-90, 90)
-
-    def apply(self, rparams, slab, val):
-        rparams.THETA = val
+fd_param_v0i = FDParameter("v0i", (0, np.inf), lambda r, s, v: setattr(r, "V0_IMAG", v))
+fd_param_theta = FDParameter("theta", (-90, 90), lambda r, s, v: setattr(r, "THETA", v))
 
 
-class OneDimensionalFDOptimizer():                                              # TODO: extend to n dimensions
+
+class OneDimensionalFDOptimizer(ABC):                                           # TODO: extend to n dimensions
     """Base class for full-dynamic optimization."""
 
-    def __init__(self, eval_func, x, convergence, R=None, bounds=None):
+    def __init__(self, eval_func, x, fd_parameter, convergence, R=None):
         self.eval_func = eval_func # callback function to evaluate
         self.x = x # points to evaluate initially
-        self.R = R # results of evaluation (R-factors)
         self.convergence = convergence # convergence criterion
+        self.param_name = fd_parameter.name # name of parameter to optimize
 
         # bounds for x
-        self.bounds = bounds if bounds is not None else (-np.inf, np.inf)
+        self.bounds = (fd_parameter.bounds if fd_parameter.bounds is not None
+                       else (-np.inf, np.inf))
 
         if not all(self._in_bounds(x) for x in self.x):
             raise FullDynamicOptimizationOutOfBoundsError(
@@ -420,9 +411,9 @@ class OneDimensionalFDOptimizer():                                              
 
         if not (isinstance(R, list) or R is None):
             raise TypeError("R must be a list or None")
-        if self.R is None:
-            # evaluate all initial points
-            self.R = [self.eval_func(x) for x in self.x]
+
+        # results of evaluation (R-factors)
+        self.R = R if R is not None else [self.eval_func(x) for x in self.x]
 
         self.evaluate_missing_points()
 
@@ -452,22 +443,40 @@ class OneDimensionalFDOptimizer():                                              
             if R is None:
                 self.R[index] = self.eval_func(x)
 
+    @abstractmethod
+    def optimize(self):
+        pass
+
+    @abstractmethod
+    def finalize(self):
+        """Perform final steps after optimization has converged."""
+        pass
+
+    @abstractmethod
+    def updated_intermediate_output(self):
+        pass
+
 
 
 class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
-    def __init__(self, x, eval_func, convergence, initial_step, min_points, max_points, R=None, bounds= None, max_step=None):
-        super().__init__(eval_func, x, convergence, R, bounds)
+    def __init__(self, x, eval_func, fd_parameter, convergence, initial_step, min_points, max_points, R=None, bounds= None, max_step=None):
+        super().__init__(eval_func, x, fd_parameter, convergence, R, bounds)
         self.min_points = min_points
         self.max_points = max_points
         self.initial_step = initial_step
+        self.max_step = max_step if max_step is not None else np.inf
         self.curvature_fails = 0
 
         if len(self.x) == 0:
-            raise RuntimeError("Must provide at least one evaluation point to start.")
+            raise RuntimeError("Must provide at least one evaluation point to "
+                               "start.")
 
     def optimize(self):
         while len(self.x) < self.max_points:
-            print(f"x: {self.x}, R: {self.R}")
+            logger.log(5, "Fitting parabola to points:")
+            logger.log(5, f"x: [{' ,'.join(f'{x:.4f}' for x in self.x)}]")
+            logger.log(5, f"R: [{' ,'.join(f'{R:.4f}' for R in self.R)}]")
+
             next_x = self.next_point()
 
             if next_x is None:
@@ -480,17 +489,19 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
                 return
 
             if len(self.x) >= self.min_points:
-                predicted_R = self.parabola(self._predicted_min_x)
                 logger.debug(
                     "Currently predicting minimum at "
                     f"{self._predicted_min_x:.4f} "
-                    f"with R = {predicted_R:.4f}, adding data point "
+                    f"with R = {self._predicted_R:.4f}, adding data point "
                     f"at {next_x:.4f}."
                 )
 
             next_R = self.eval_func(next_x)
             self.x.append(next_x)
             self.R.append(next_R)
+
+            # update plot and csv
+            self.updated_intermediate_output()
 
         # max points reached
         logger.warning(
@@ -503,6 +514,10 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
     def _predicted_min_x(self):
         self._fit_parabola()
         return -0.5*self._parabola_linear / self._parabola_curvature
+
+    @property
+    def _predicted_R(self):
+        return self.parabola(self._predicted_min_x)  # implicit _fit_parabola
 
     @property
     def _parabola_curvature(self):
@@ -521,7 +536,6 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
         self.parabola = Polynomial.fit(self.x, self.R, 2)
         self.coefficients = self.parabola.convert(domain=[-1, 1]).coef
 
-
     def next_point(self):
         if any([R is None for R in self.R]):
             raise RuntimeError("Cannot predict next point until all points "
@@ -538,8 +552,12 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
         # Otherwise we have enough points to fit a parabola
 
         # if curvature is convex, add point outside current scope
-        if self._parabola_curvature > 0:
-            return self._point_outside()
+        if self._parabola_curvature < 0:
+            self.curvature_fails += 1
+            next_point_convex = self._point_outside()
+            logger.info("Current fit parabola is not concave, no minimum "
+                    f"predicted. Adding data point at {next_point_convex:.4f}")
+            return next_point_convex
 
         # if predicted minimum is outside scope, go a bit further
         if self._predicted_min_x <= min(self.x):
@@ -575,7 +593,6 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
         # otherwise, as a last resort, add a point outside the current scope
         return self._point_outside()
 
-
     def _point_outside(self):
         if (len([v for v in self.x if v > np.median(self.x)])
                 > len([v for v in self.x if v < np.median(self.x)])):
@@ -584,10 +601,14 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
         else:
             next_point = max(self.x) + (abs(self.initial_step)
                                              * self.curvature_fails)
-        logger.info("Current fit parabola is not concave, no minimum "
-                    f"predicted. Adding data point at {next_point:.4f}")
-        return next_point
+        # limit to max_step
+        next_point = min(next_point, max(self.x) + self.max_step)
+        next_point = max(next_point, min(self.x) - self.max_step)
 
+        # check if point is in bounds, otherwise cap it
+        next_point = min(next_point, self.bounds[1])
+        next_point = max(next_point, self.bounds[0])
+        return next_point
 
     def _has_converged(self):
         if any([R is None for R in self.R]):
@@ -607,9 +628,23 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
 
         return False
 
-    def finalize():
-        # TODO: case fit worse than explicit calculation, but within convergence
-        pass
+    def finalize(self):
+        # check if predicted minimum is worse than any of the points
+        if self._predicted_R > min(self.R):
+            logger.info(
+                f"Fit prediction at {self._predicted_min_x:.4f} is worse than "
+                f"explicit calculation at {min(self.x):.4f}. Outputting "
+                f"best known result instead of parabolic prediction."
+            )
+            return self._predicted_min_x
+        # else return the predicted minimum
+        return self._predicted_min_x, self._predicted_R
+
+    def updated_intermediate_output(self):
+        if len(self.x) > 0:
+            tl_io.write_fd_opt_csv(np.array([self.x, self.R]).T, which=self.param_name)
+        if len(self.x) >= 2:
+            tl_io.write_fd_opt_plot(np.array([self.x, self.R]).T, which=self.param_name)
 
 
 def evaluate_fd_calculation(rp, sl, fd_parameters, parameter_vals):
