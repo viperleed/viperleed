@@ -47,6 +47,12 @@ FD_PARAMETERS = {
     },
 }
 
+AVAILABLE_MINIMIZERS = (
+    'Nelder-Mead',
+    'Powell',
+    'Newton-CG',
+)
+
 for scaling in ('a', 'b', 'c', 'ab', 'bc', 'abc'): # scaling of lattice vectors
     FD_PARAMETERS[scaling] = {
         'bounds': (0.1, 10),
@@ -591,6 +597,42 @@ class SingleParameterBruteForceOptimiser(OneDimensionalFDOptimizer):
 
     def updated_intermediate_output(self):
         pass
+
+
+class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      # TODO: can implement a callback method in the minimizer
+    def __init__(self, eval_func, x0, fd_parameter, minimizer_method, tol=None):
+        super().__init__(eval_func, [], fd_parameter)
+
+        if minimizer_method not in AVAILABLE_MINIMIZERS:
+            raise ValueError(f"Minimizer method {minimizer_method} not "
+                             f"available. Available methods are: "
+                             f"{AVAILABLE_MINIMIZERS}")
+        self.minimizer_method = minimizer_method
+        self.x0 = float(x0)
+        self.tol = tol
+
+    def optimize(self):
+        self.res = scipy.optimize.minimize(
+            fun=self.evaluate,
+            x0=self.x0,
+            method=self.minimizer_method,
+            bounds=(self.bounds,),
+            options={"disp": logger.level <= logging.DEBUG},
+            tol=self.tol
+        )
+
+    def finalize(self):
+        if not self.res.success:
+            logger.warning("Minimization failed with message: "
+                           f"{self.res.message}")
+        known_points = np.array([self.x, self.R]).T
+        logger.info(f"Minimizer {self.minimizer_method} finished successfully "
+                    f"in {self.res.nit} iterations.")
+        tl_io.write_fd_opt_csv(known_points, self.param_name)                   # TODO: plot
+
+        x_opt, R_opt, _ = self.x_R_min
+        return x_opt, R_opt
+
 
 def evaluate_fd_calculation(rp, sl, fd_parameters, parameter_vals):
     # make temporary Rparams and slab
