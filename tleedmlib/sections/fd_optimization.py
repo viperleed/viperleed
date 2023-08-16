@@ -9,6 +9,7 @@ Created on Oct 22 2021
 Tensor LEED Manager section Full-dynamic Optimization
 """
 from abc import ABC, abstractmethod
+from functools import lru_cache
 import copy
 import logging
 import os
@@ -120,7 +121,7 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
             raise
         logger.info("Starting R-factor calculation...")
         try:
-            rfaclist = section_rfactor(sl, rp, 11)
+            rfaclist = section_rfactor(sl, rp, 11)                              # TODO: disable plotting
         except Exception:
             logger.error("Error running rfactor calculation")
             raise
@@ -214,19 +215,26 @@ def fd_optimization(sl, rp):
         FD_PARAMETERS[which]["eval"],
     )
 
-    fd_evaluate = lambda x: evaluate_fd_calculation(rp, sl, fd_param, x)
     optimizer = SingleParameterParabolaFit(
-        x0=[fd_param.start_value,],
-        eval_func=fd_evaluate,
         fd_parameter=fd_param,
+        sl=sl,
+        rp=rp,
         convergence=rp.OPTIMIZE["convergence"],
         step=rp.OPTIMIZE["step"],
         max_points=rp.OPTIMIZE["maxpoints"],
         min_points=rp.OPTIMIZE["minpoints"],
     )
+    optimizer = SingleParameterBruteForceOptimiser(
+        fd_parameter=fd_param,
+        sl=sl,
+        rp=rp,
+        min_val=3.5,
+        max_val=4.5,
+        steps=10,
+    )
 
     # perform optimization
-    optimizer.optimize()
+    optimizer.optimize(x0=fd_param.start_value)
     opt_x, opt_R = optimizer.finalize()
 
 
@@ -298,12 +306,68 @@ class FDParameter():
         self.transform_func(rparams, slab, val)
 
 
-class OneDimensionalFDOptimizer(ABC):                                           # TODO: extend to n dimensions
+class FDOptimizer(ABC):
+
+    def __init__(self, fd_parameters, sl, rp) -> None:
+        self.fd_parameters = (
+            [fd_parameters, ] if isinstance(fd_parameters, FDParameter)
+            else fd_parameters
+        )
+        self.slab = copy.deepcopy(sl)
+        self.rparams = copy.deepcopy(rp)
+
+
+    def _eval(self, x):
+        r, *_ = self.evaluate(x, keep_dirs=False)
+        return r
+
+    def evaluate(self, x, keep_dirs=False):
+        return self._evaluate(tuple(x), keep_dirs=keep_dirs)
+
+    @lru_cache
+    def _evaluate(self, x, keep_dirs=False):
+        tmp_slab, tmp_rparams = self._apply_params(x)
+
+        r, r_per_beam = get_fd_r(tmp_slab,
+                                 tmp_rparams,
+                                 work_dir=self._eval_dir(x),
+                                 home_dir=self.rparams.workdir)
+
+        if keep_dirs:
+            return r, r_per_beam, self._eval_dir(x)
+        else:
+            shutil.rmtree(self._eval_dir(x))
+            return r, r_per_beam, None
+
+
+    def _apply_params(self, x):
+        tmp_slab = copy.deepcopy(self.slab)
+        tmp_rparams = copy.deepcopy(self.rparams)
+        _x = np.array(x)
+        for param, val in zip(self.fd_parameters, x):
+            param.apply(tmp_rparams, tmp_slab, val)
+        return tmp_slab, tmp_rparams
+
+
+    def _eval_dir(self, x,):
+        name = "_".join([f"{p.name}={v}" for p, v in
+                         zip(self.fd_parameters, x)])
+        return self.rparams.workdir / "fd_calc" / name
+
+    @abstractmethod
+    def optimize(self, x0):
+        """Perform optimization."""
+        _x0 = np.array(x0)
+        if _x0.shape[0] != len(self.fd_parameters):
+            raise ValueError("x0 must have the same length as fd_parameters")
+        raise NotImplementedError
+
+
+class OneDimensionalFDOptimizer(FDOptimizer):
     """Base class for full-dynamic optimization."""
 
-    def __init__(self, eval_func, x0, fd_parameter):
-        self.eval_func = eval_func # callback function to evaluate
-        initial_x = x0 if isinstance(x0, list) else [x0]
+    def __init__(self, fd_parameter, sl, rp):
+        super().__init__(fd_parameter, sl, rp)
         self.x = [] # points to evaluate initially
         self.R, self.R_per_beam = [], [] # results of evaluations
         self.eval_dirs = [] # directories where evaluations are preformed
@@ -318,8 +382,6 @@ class OneDimensionalFDOptimizer(ABC):                                           
                 "Initial points must be within bounds"
             )
 
-        # evaluate all requested initial points
-        self._evaluate_initials(x0)
 
     @property
     def x_R_min(self):
@@ -339,23 +401,21 @@ class OneDimensionalFDOptimizer(ABC):                                           
         return min(self.x, key=lambda x: abs(x - compare_to))
 
     def evaluate(self, x_val):
-        new_R, R_per_beam, eval_dir = self.eval_func(x_val)
+        new_R, R_per_beam, eval_dir = super().evaluate(x_val, keep_dirs=True)
         self.x.append(float(x_val))
         self.R.append(new_R)
         self.R_per_beam.append(R_per_beam)
         self.eval_dirs.append(eval_dir)
         return new_R
 
-    def _evaluate_initials(self, initial_x):
-        for x_val in initial_x:
-            self.evaluate(x_val)
 
     def _in_bounds(self, x_val):
         return self.bounds[0] <= x_val <= self.bounds[1]
 
     @abstractmethod
-    def optimize(self):
-        pass
+    def optimize(self, x0):
+        """Perform optimization."""
+        raise NotImplementedError
 
     @abstractmethod
     def finalize(self):
@@ -368,8 +428,8 @@ class OneDimensionalFDOptimizer(ABC):                                           
 
 
 class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
-    def __init__(self, x0, eval_func, fd_parameter, convergence, step, min_points, max_points, max_step=None):
-        super().__init__(eval_func, x0, fd_parameter)
+    def __init__(self, fd_parameter, sl, rp, convergence, step, min_points, max_points, max_step=None):
+        super().__init__(fd_parameter, sl, rp)
         self.convergence = convergence
         self.min_points = min_points
         self.max_points = max_points
@@ -377,11 +437,16 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
         self.max_step = max_step if max_step is not None else np.inf
         self.curvature_fails = 0
 
-        if len(self.x) == 0:
+
+    def optimize(self, x0):
+        if len(x0) == 0:
             raise RuntimeError("Must provide at least one evaluation point to "
                                "start.")
+        for val in x0:
+            if not self._in_bounds(val):
+                raise ValueError("Initial point must be within bounds")
+            self.evaluate(val)
 
-    def optimize(self):
         while len(self.x) < self.max_points:
             logger.log(5, "Fitting parabola to points:")
             logger.log(5, f"x: [{', '.join(f'{x:.4f}' for x in self.x)}]")
@@ -565,8 +630,8 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
 
 class SingleParameterBruteForceOptimiser(OneDimensionalFDOptimizer):
 
-    def __init__(self, eval_func, fd_parameter, min_val, max_val, steps):
-        super().__init__(eval_func, [], fd_parameter)
+    def __init__(self, fd_parameter, sl, rp, min_val, max_val, steps):
+        super().__init__(fd_parameter, sl, rp)
         self.min_val = min_val
         self.max_val = max_val
         self.steps = steps
@@ -576,7 +641,10 @@ class SingleParameterBruteForceOptimiser(OneDimensionalFDOptimizer):
             raise ValueError("Requested min/max values are outside of "
                              f"parameter bounds for {fd_parameter.name}.")
 
-    def optimize(self):
+    def optimize(self, x0):
+        if x0 is not None:
+            logger.debug("Brute force optimizer does not use an initial "
+                         "guess. Ignoring provided x0.")
         self.res = scipy.optimize.brute(
             func=self.evaluate,
             ranges=((self.min_val, self.max_val),),
@@ -600,21 +668,20 @@ class SingleParameterBruteForceOptimiser(OneDimensionalFDOptimizer):
 
 
 class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      # TODO: can implement a callback method in the minimizer
-    def __init__(self, eval_func, x0, fd_parameter, minimizer_method, tol=None):
-        super().__init__(eval_func, [], fd_parameter)
+    def __init__(self, fd_parameter, sl, rp, minimizer_method, tol=None):
+        super().__init__(fd_parameter, sl, rp)
 
         if minimizer_method not in AVAILABLE_MINIMIZERS:
             raise ValueError(f"Minimizer method {minimizer_method} not "
                              f"available. Available methods are: "
                              f"{AVAILABLE_MINIMIZERS}")
         self.minimizer_method = minimizer_method
-        self.x0 = float(x0)
         self.tol = tol
 
-    def optimize(self):
+    def optimize(self, x0):
         self.res = scipy.optimize.minimize(
             fun=self.evaluate,
-            x0=self.x0,
+            x0=float(x0),
             method=self.minimizer_method,
             bounds=(self.bounds,),
             options={"disp": logger.level <= logging.DEBUG},
@@ -632,43 +699,3 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      
 
         x_opt, R_opt, _ = self.x_R_min
         return x_opt, R_opt
-
-
-def evaluate_fd_calculation(rp, sl, fd_parameters, parameter_vals):
-    # make temporary Rparams and slab
-    test_sl = copy.deepcopy(sl)
-    test_rp = copy.deepcopy(rp)
-
-    # make list if only single parameter
-    if not isinstance(fd_parameters, list):
-        _fd_parameters = [fd_parameters,]
-        _parameter_vals = [parameter_vals,]
-    else:
-        _fd_parameters = fd_parameters
-        _parameter_vals = parameter_vals
-
-    # make temporary workdir
-    name = _temp_dir_name(_fd_parameters, _parameter_vals)
-    temp_dir = _fd_dir(name, rp)
-
-    # apply parameters
-    for param, val in zip(_fd_parameters, _parameter_vals):
-        param.apply(test_rp, test_sl, val)
-
-    # run calculation
-    r, r_per_beam = get_fd_r(test_sl, test_rp,
-                           work_dir=temp_dir, home_dir=rp.workdir)
-
-    # TODO: update csv and plot
-    return r, r_per_beam, temp_dir
-
-
-
-def _fd_dir(name, rp):
-    fd_work_dir = rp.workdir / "fd_calc" / name
-    return fd_work_dir
-
-
-def _temp_dir_name(parameters, parameter_vals):
-    return "_".join([f"{p.name}={v}" for p, v in zip(parameters, parameter_vals)])
-
