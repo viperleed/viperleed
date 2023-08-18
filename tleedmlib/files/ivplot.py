@@ -96,7 +96,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
         data = [data]       # assume single set of beams
     n_beams = len(data[0])
     for dataset in data:
-        if type(dataset) not in (list, tuple):
+        if type(dataset) not in (list, tuple, np.ndarray):
             raise TypeError(
                 "Expected data as a list or tuple, found "
                 + str(type(dataset[0])))

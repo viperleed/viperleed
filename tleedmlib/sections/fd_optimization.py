@@ -9,12 +9,13 @@ Created on Oct 22 2021
 Tensor LEED Manager section Full-dynamic Optimization
 """
 from abc import ABC, abstractmethod
-import csv
+from collections.abc import Iterable
 from functools import lru_cache
+from pathlib import Path
 import copy
+import csv
 import logging
 import os
-from pathlib import Path
 import shutil
 
 try:
@@ -248,7 +249,7 @@ def fd_optimization(sl, rp):
         rp=rp,
         min_val=1,
         max_val=7,
-        steps=10,
+        steps=3,
     )
 
     # perform optimization
@@ -386,6 +387,20 @@ class FDOptimizer(ABC):
 
 
     def _apply_params(self, x):
+        """Applies a FDParamter to Rparams and Slab
+
+        Parameters
+        ----------
+        x : float
+            Value of the parameter
+
+        Returns
+        -------
+        Slab
+            Slab object with FD parameter value applied
+        Rpars
+            Rparams object with FD parameter value applied
+        """
         tmp_slab = copy.deepcopy(self.slab)
         tmp_rparams = copy.deepcopy(self.rparams)
         _x = np.array(x)
@@ -415,12 +430,14 @@ class FDOptimizer(ABC):
             logger.warning(f"Writing {_file_path.name} without "
                            "evaluated points.")
         titles = [param.name for param in self.fd_parameters]
+        # add "scaling" to name if it's unit cell scaling
         titles = [name if name not in ("a", "b", "c", "ab", "abc")
                 else f"{name} scaling"
                 for name in titles]
         titles.append("R")
 
         try:
+            # write to file with csv module
             with open(_file_path, 'w') as csv_file:
                 writer = csv.writer(csv_file, delimiter=delimiter)
                 writer.writerow(titles)
@@ -444,8 +461,8 @@ class FDOptimizer(ABC):
 
         # sort evaluated points by R factor
         by_best_r = np.argsort(self.R)
-        sorted_params = self.x[by_best_r]
-        exp_spectrum = self.exp_spectra[by_best_r][0]
+        sorted_params = np.array(self.x)[by_best_r]
+        exp_spectrum = np.array(self.exp_spectra, dtype=object)[by_best_r][0]
 
         if exp_spectrum is None:
             logger.warning("Failed to read in experimental spectra from best "
@@ -453,29 +470,33 @@ class FDOptimizer(ABC):
                         "will be skipped.")
             return
 
+        # generate list of legends for every spectrum
         legends = [
             ", ".join(
                 f"{param.name} = {val}" for param, val
-                in zip(self.fd_parameters, values)
+                in zip(self.fd_parameters, 
+                       values if isinstance(values, Iterable) else (values,))
             )
             for values in sorted_params
         ]
-        best_r_factors = self.R_per_beam[by_best_r][0]
+        legends += ["Experiment"]
+        # TODO: below could use some refactoring
+        best_r_factors = np.array(self.R_per_beam)[by_best_r][0]
         annotations = [f"R = {r:.4f}" for r in best_r_factors]
         label_style = "overbar" if self.rparams.PLOT_IV["overbar"] else "minus"
         label_width = max([beam.getLabel(style=label_style)[1]
                            for beam in self.rparams.expbeams])
         labels = [beam.getLabel(lwidth=label_width, style=label_style)[0]
                 for beam in self.rparams.expbeams]
-        formatting = copy.deepcopy(rp.PLOT_IV)  # use to set colors
+        formatting = copy.deepcopy(self.rparams.PLOT_IV)  # use to set colors
         formatting['colors'] = (
             list(cm.get_cmap('viridis', len(self.points)).colors)
             + [np.array([0, 0, 0, 1])])
-        formatting['linewidths'] = [0.5] * len(self.points) + [1.]
+        formatting['linewidths'] = [0.5,] * len(self.points) + [1.,]
         formatting['linewidths'][np.argmin(self.R)] = 1.
 
         try:
-            plot_iv(self.theo_spectra + [exp_spectrum], _file_path,
+            plot_iv(self.theo_spectra + (exp_spectrum,), _file_path,
                     labels=labels, annotations=annotations, legends=legends,
                     formatting=formatting)
         except Exception:
@@ -859,11 +880,13 @@ class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
         x_sorted, R_sorted = self.x_R_sorted
         min_id = np.argmin(self.x_R_sorted[1])
         R_minus_R_min_var_R = R_sorted - np.min(self.R) - var_R
+        # lower bound
         if get_n_zero_crossings(R_minus_R_min_var_R[:min_id+1]) == 1:
             draw_error(ax,
                        get_zero_crossing(x_sorted[:min_id+1], R_minus_R_min_var_R[:min_id+1]),
                        R_sorted[min_id], var_R, x_sorted[min_id],
                        ax.get_ylim()[1] - ax.get_ylim()[0])
+        # upper bound
         if get_n_zero_crossings(R_minus_R_min_var_R[min_id:]) == 1:
             draw_error(ax,
                        get_zero_crossing(x_sorted[min_id:], R_minus_R_min_var_R[min_id:]),
