@@ -9,6 +9,7 @@ Created on Oct 22 2021
 Tensor LEED Manager section Full-dynamic Optimization
 """
 from abc import ABC, abstractmethod
+import csv
 from functools import lru_cache
 import copy
 import logging
@@ -16,12 +17,29 @@ import os
 from pathlib import Path
 import shutil
 
+try:
+    import matplotlib
+    matplotlib.rcParams.update({'figure.max_open_warning': 0})
+    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
+    from matplotlib.backends.backend_pdf import PdfPages
+    import matplotlib.pyplot as plt
+    plt.style.use('viperleed.tleedm')
+    from matplotlib import cm
+except Exception:
+    _CAN_PLOT = False
+else:
+    _CAN_PLOT = True
+
 import numpy as np
 from numpy.polynomial import Polynomial
 import scipy.optimize
 
 from viperleed.tleedmlib import psgen
+from viperleed.tleedmlib.classes.r_error import get_zero_crossing, get_n_zero_crossings
 from viperleed.tleedmlib.files import iofdopt as tl_io
+from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
+from viperleed.tleedmlib.files.ivplot import plot_iv
+from viperleed.tleedmlib.files.ioerrorcalc import plot_r_plus_var_r, draw_error
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 from viperleed.tleedmlib.files.poscar import writePOSCAR
 from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
@@ -224,12 +242,12 @@ def fd_optimization(sl, rp):
         max_points=rp.OPTIMIZE["maxpoints"],
         min_points=rp.OPTIMIZE["minpoints"],
     )
-    optimizer = SingleParameterBruteForceOptimiser(
+    optimizer = SingleParameterBruteForceOptimizer(
         fd_parameter=fd_param,
         sl=sl,
         rp=rp,
-        min_val=3.5,
-        max_val=4.5,
+        min_val=1,
+        max_val=7,
         steps=10,
     )
 
@@ -248,12 +266,10 @@ def fd_optimization(sl, rp):
     # fetch I(V) from all and plot together
     known_points = np.array([optimizer.x, optimizer.R]).T
     try:
-        tl_io.write_fd_opt_beams_pdf(rp, known_points,
-                                     fd_param.name,
-                                     optimizer.eval_dirs,
-                                     optimizer.x_R_min[2])  # best R per beam
+        optimizer.write_beams_pdf()
     except Exception as exc:
         logger.warning(f"Failed to plot I(V) curves from optimization: {exc}")
+        raise exc # TODO: remove this raise
 
 
 
@@ -307,7 +323,6 @@ class FDParameter():
 
 
 class FDOptimizer(ABC):
-
     def __init__(self, fd_parameters, sl, rp) -> None:
         self.fd_parameters = (
             [fd_parameters, ] if isinstance(fd_parameters, FDParameter)
@@ -315,17 +330,39 @@ class FDOptimizer(ABC):
         )
         self.slab = copy.deepcopy(sl)
         self.rparams = copy.deepcopy(rp)
+        self.points = {}
 
+    @property
+    def x(self):
+        return tuple(self.points.keys())
 
-    def _eval(self, x):
-        r, *_ = self.evaluate(x, keep_dirs=False)
-        return r
+    @property
+    def R(self):
+        return tuple(res[0] for res in self.points.values())
+
+    @property
+    def R_per_beam(self):
+        return tuple(res[1] for res in self.points.values())
+
+    @property
+    def theo_spectra(self):
+        return tuple(res[2] for res in self.points.values())
+
+    @property
+    def exp_spectra(self):
+        return tuple(res[3] for res in self.points.values())
+
 
     def evaluate(self, x, keep_dirs=False):
+        # must be tuple for hashing
         return self._evaluate(tuple(x), keep_dirs=keep_dirs)
 
-    @lru_cache
     def _evaluate(self, x, keep_dirs=False):
+
+        # check if we have already evaluated the point
+        if x in self.points.keys():
+            return self.points[x]
+
         tmp_slab, tmp_rparams = self._apply_params(x)
 
         r, r_per_beam = get_fd_r(tmp_slab,
@@ -333,11 +370,19 @@ class FDOptimizer(ABC):
                                  work_dir=self._eval_dir(x),
                                  home_dir=self.rparams.workdir)
 
-        if keep_dirs:
-            return r, r_per_beam, self._eval_dir(x)
-        else:
+        # read spectra
+        try:
+            theo_spec, exp_spec = read_rfactor_columns(self._eval_dir(x))
+        except:
+            logger.warning("Failed to read spectrum data.")  # TODO: longer error message
+            theo_spec, exp_spec = None, None
+
+        self.points[x] = r, r_per_beam, theo_spec, exp_spec                     # TODO: why do we need to store expspec for all params?
+
+        if not keep_dirs:
             shutil.rmtree(self._eval_dir(x))
-            return r, r_per_beam, None
+
+        return r
 
 
     def _apply_params(self, x):
@@ -362,14 +407,87 @@ class FDOptimizer(ABC):
             raise ValueError("x0 must have the same length as fd_parameters")
         raise NotImplementedError
 
+    def write_csv(self, file_path=None, delimiter=","):
+        _file_path = (file_path if file_path is not None
+                      else self.rparams.workdir / "FD_Optimization.csv")
+
+        if len(self.points) == 0:
+            logger.warning(f"Writing {_file_path.name} without "
+                           "evaluated points.")
+        titles = [param.name for param in self.fd_parameters]
+        titles = [name if name not in ("a", "b", "c", "ab", "abc")
+                else f"{name} scaling"
+                for name in titles]
+        titles.append("R")
+
+        try:
+            with open(_file_path, 'w') as csv_file:
+                writer = csv.writer(csv_file, delimiter=delimiter)
+                writer.writerow(titles)
+                for x, (r, *_) in self.points.items():
+                    param_values = list(x)
+                    param_values.append(r)
+                    writer.writerow(param_values)
+        except Exception as err:
+            logger.warning(f"Failed to write {_file_path.name}: {err}")
+            raise err# TODO do not raise here
+
+    def write_beams_pdf(self, file_path=None):
+        _file_path = (file_path if file_path is not None
+                      else self.rparams.workdir / "FD_Optimization_beams.pdf")
+
+        global _CAN_PLOT
+        if not _CAN_PLOT:
+            logger.debug("Necessary modules for plotting not found. Skipping "
+                        "error plotting.")
+            return
+
+        # sort evaluated points by R factor
+        by_best_r = np.argsort(self.R)
+        sorted_params = self.x[by_best_r]
+        exp_spectrum = self.exp_spectra[by_best_r][0]
+
+        if exp_spectrum is None:
+            logger.warning("Failed to read in experimental spectra from best "
+                        "full-dynamic run. Output of collected I(V) spectra "
+                        "will be skipped.")
+            return
+
+        legends = [
+            ", ".join(
+                f"{param.name} = {val}" for param, val
+                in zip(self.fd_parameters, values)
+            )
+            for values in sorted_params
+        ]
+        best_r_factors = self.R_per_beam[by_best_r][0]
+        annotations = [f"R = {r:.4f}" for r in best_r_factors]
+        label_style = "overbar" if self.rparams.PLOT_IV["overbar"] else "minus"
+        label_width = max([beam.getLabel(style=label_style)[1]
+                           for beam in self.rparams.expbeams])
+        labels = [beam.getLabel(lwidth=label_width, style=label_style)[0]
+                for beam in self.rparams.expbeams]
+        formatting = copy.deepcopy(rp.PLOT_IV)  # use to set colors
+        formatting['colors'] = (
+            list(cm.get_cmap('viridis', len(self.points)).colors)
+            + [np.array([0, 0, 0, 1])])
+        formatting['linewidths'] = [0.5] * len(self.points) + [1.]
+        formatting['linewidths'][np.argmin(self.R)] = 1.
+
+        try:
+            plot_iv(self.theo_spectra + [exp_spectrum], _file_path,
+                    labels=labels, annotations=annotations, legends=legends,
+                    formatting=formatting)
+        except Exception:
+            logger.warning("Error plotting collected I(V) curves.",
+                        exc_info=True)
+
 
 class OneDimensionalFDOptimizer(FDOptimizer):
     """Base class for full-dynamic optimization."""
 
     def __init__(self, fd_parameter, sl, rp):
         super().__init__(fd_parameter, sl, rp)
-        self.x = [] # points to evaluate initially
-        self.R, self.R_per_beam = [], [] # results of evaluations
         self.eval_dirs = [] # directories where evaluations are preformed
         self.param_name = fd_parameter.name # name of parameter to optimize
 
@@ -382,6 +500,10 @@ class OneDimensionalFDOptimizer(FDOptimizer):
                 "Initial points must be within bounds"
             )
 
+    # overwrite x from parent
+    @property
+    def x(self):
+        return tuple((param[0] for param in self.points.keys()))
 
     @property
     def x_R_min(self):
@@ -401,12 +523,7 @@ class OneDimensionalFDOptimizer(FDOptimizer):
         return min(self.x, key=lambda x: abs(x - compare_to))
 
     def evaluate(self, x_val):
-        new_R, R_per_beam, eval_dir = super().evaluate(x_val, keep_dirs=True)
-        self.x.append(float(x_val))
-        self.R.append(new_R)
-        self.R_per_beam.append(R_per_beam)
-        self.eval_dirs.append(eval_dir)
-        return new_R
+        return super().evaluate(x_val, keep_dirs=True)
 
 
     def _in_bounds(self, x_val):
@@ -425,6 +542,52 @@ class OneDimensionalFDOptimizer(FDOptimizer):
     @abstractmethod
     def updated_intermediate_output(self):
         pass
+
+    def write_opt_pdf(self, file_path=None):
+        global _CAN_PLOT
+        if not _CAN_PLOT:
+            logger.debug("Necessary modules for plotting not found. Skipping "
+                        "error plotting.")
+            return
+
+        _file_path = (file_path if file_path is not None
+                      else self.rparams.workdir / "FD_Optimization.pdf")
+
+        title = self.fd_parameters[0].name
+        if title in ["a", "b", "c", "ab", "abc"]:
+            title += " scaling"
+
+        fig = plt.figure(figsize=(5.8, 4.1))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_xlabel(title)
+        ax.set_ylabel('Pendry R-factor')
+        fig.tight_layout()
+        self._annotate_opt_pdf(fig, ax)
+
+        # write
+        try:
+            pdf = PdfPages(_file_path)
+            pdf.savefig(fig)
+        except PermissionError:
+            logger.warning("Failed to write to " + _file_path.name
+                        + ": Permission denied.")
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            logger.warning("Failed to write to "+file_path.name, exc_info=True)
+        finally:
+            try:
+                pdf.close()
+            except Exception:
+                pass
+        try:
+            plt.close(fig)
+        except Exception:
+            pass
+
+    @abstractmethod
+    def _annotate_opt_pdf(self, fig, ax):
+        ax.plot(self.x, self.R, 'o', c='darkslategray')
 
 
 class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
@@ -606,8 +769,8 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
     def finalize(self):
         # plot for a final time
         known_points = np.array([self.x, self.R]).T
-        tl_io.write_fd_opt_csv(known_points, "v0i")
-        tl_io.write_fd_opt_pdf(known_points, "v0i", parabola=self.parabola)
+        self.write_csv()
+        self.write_opt_pdf()
 
         # check if predicted minimum is worse than any of the points
         if self._predicted_R > min(self.R):
@@ -623,12 +786,27 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
 
     def updated_intermediate_output(self):
         if len(self.x) > 0:
-            tl_io.write_fd_opt_csv(np.array([self.x, self.R]).T, which=self.param_name)
+            self.write_csv()
         if len(self.x) >= 2:
-            tl_io.write_fd_opt_pdf(np.array([self.x, self.R]).T, which=self.param_name)
+            self.write_opt_pdf()
+
+    def _annotate_opt_pdf(self, fig, ax):
+        if len(self.x) >= 2:
+            self._fit_parabola()
+            ax.plot(self.parabola.linspace(), lw=2)
+            annotation_pos = ((min(self.x) + max(self.x))/2,
+                              max(self.R) - 0.1*(max(self.R) - min(self.R)))
+            if self._parabola_curvature > 0:
+                ax.annotate(
+                    f"Minimum at {self._predicted_min_x:.4f}\n"
+                    f"R = {self._predicted_R:.4f}",
+                    annotation_pos,
+                    fontsize=10,
+                    ha="center")
+        super()._annotate_opt_pdf(fig, ax)
 
 
-class SingleParameterBruteForceOptimiser(OneDimensionalFDOptimizer):
+class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
 
     def __init__(self, fd_parameter, sl, rp, min_val, max_val, steps):
         super().__init__(fd_parameter, sl, rp)
@@ -658,13 +836,48 @@ class SingleParameterBruteForceOptimiser(OneDimensionalFDOptimizer):
 
     def finalize(self):
         # write csv output
-        known_points = np.array([self.x, self.R]).T
-        tl_io.write_fd_opt_csv(known_points, "v0i")
+        self.write_csv()
+        self.write_opt_pdf()
         x_opt, R_opt, _, _ = self.res
         return x_opt, R_opt
 
     def updated_intermediate_output(self):
         pass
+
+    def _annotate_opt_pdf(self, fig, ax):
+        # do not call super in this case
+        ax.plot(self.x, self.R, 'o', c='darkslategray', ls = '-')
+
+        # plot R + var(R) line
+        var_R = self._calc_var_r()
+        x_range = (min(self.x), max(self.x))
+        logger.log(5, f"R + var(R): {min(self.R) + var_R:.4f}")
+        plot_r_plus_var_r(ax, self.x, self.R, min(self.R), max(self.R),
+                          (ax.get_xlim()[0], ax.get_xlim()[1]), var_R)
+
+        # draw error estimates
+        x_sorted, R_sorted = self.x_R_sorted
+        min_id = np.argmin(self.x_R_sorted[1])
+        R_minus_R_min_var_R = R_sorted - np.min(self.R) - var_R
+        if get_n_zero_crossings(R_minus_R_min_var_R[:min_id+1]) == 1:
+            draw_error(ax,
+                       get_zero_crossing(x_sorted[:min_id+1], R_minus_R_min_var_R[:min_id+1]),
+                       R_sorted[min_id], var_R, x_sorted[min_id],
+                       ax.get_ylim()[1] - ax.get_ylim()[0])
+        if get_n_zero_crossings(R_minus_R_min_var_R[min_id:]) == 1:
+            draw_error(ax,
+                       get_zero_crossing(x_sorted[min_id:], R_minus_R_min_var_R[min_id:]),
+                       R_sorted[min_id], var_R, x_sorted[min_id],
+                       ax.get_ylim()[1] - ax.get_ylim()[0])
+
+
+
+    def _calc_var_r(self):
+        energy_range = self.rparams.total_energy_range()
+        _, temp_rp = self._apply_params((self.x_R_min[0],))
+
+        return (np.sqrt(8*np.abs(temp_rp.V0_IMAG) / energy_range)
+                * self.x_R_min[1])
 
 
 class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      # TODO: can implement a callback method in the minimizer
@@ -692,10 +905,13 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      
         if not self.res.success:
             logger.warning("Minimization failed with message: "
                            f"{self.res.message}")
-        known_points = np.array([self.x, self.R]).T
         logger.info(f"Minimizer {self.minimizer_method} finished successfully "
                     f"in {self.res.nit} iterations.")
-        tl_io.write_fd_opt_csv(known_points, self.param_name)                   # TODO: plot
+        self.write_opt_pdf()
+
 
         x_opt, R_opt, _ = self.x_R_min
         return x_opt, R_opt
+
+    def _annotate_opt_pdf(self, fig, ax):
+        super()._annotate_opt_pdf(fig, ax)

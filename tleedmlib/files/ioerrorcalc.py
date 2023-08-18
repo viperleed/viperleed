@@ -413,23 +413,11 @@ def make_errors_figs(errors):
             xrange = [x_min - abs(x_max - x_min) * 0.05,
                       x_max + abs(x_max - x_min) * 0.05]
             if var and rmin + var < rmax + (rmax-rmin)*0.1:
-                axs[figcount].plot(xrange, [rmin + var]*2, color="slategray",
-                                   linewidth=1)
-                inters = sorted(err_x_inters[err] + [xrange[0], xrange[1]])
-                (ind, diff) = max_diff(inters)
-                text_x = inters[ind] - diff/2
-                text_y = rmin + var + (rmax-rmin)*0.015
-                va = "bottom"
-                ind_at_text = np.argmin([abs(x - text_x)
-                                         for x in err_x[err]])
-                if err_y[err][ind_at_text] > rmin + var:
-                    text_y = rmin + var - (rmax-rmin)*0.015
-                    va = "top"
-                axs[figcount].text(text_x, text_y, "$R_P + var(R_P)$",
-                                   fontsize=6, ha="center", va=va,
-                                   bbox=dict(facecolor='white',
-                                             edgecolor='none',
-                                             alpha=0.6, pad=0.5))
+                plot_r_plus_var_r(axs[figcount],
+                                  err_x[err], err_y[err],
+                                  rmin, rmax,
+                                  xrange,
+                                  var)
             axs[figcount].plot(err_x[err], err_y[err], '-o',
                                markevery=err_x_to_mark[err],
                                linewidth=1, ms=2,
@@ -471,10 +459,14 @@ def make_errors_figs(errors):
             error_estimates = err.get_error_estimates
             if error_estimates[0]:
                 l_bound = p_best-error_estimates[0]
-                draw_error(axs[figcount], l_bound, err, r_interval=(rmax-rmin))
+                draw_error(axs[figcount], l_bound,
+                           err.r_min, err.var_r, err.p_best,
+                           r_interval=(rmax-rmin))
             if error_estimates[1]:
                 u_bound = p_best+error_estimates[1]
-                draw_error(axs[figcount], u_bound, err, r_interval=(rmax-rmin))
+                draw_error(axs[figcount], u_bound,
+                           err.r_min, err.var_r, err.p_best,
+                           r_interval=(rmax-rmin))
             axs[figcount].set_ylabel('Pendry R-factor', fontsize=8)
             axs[figcount].legend(fontsize="x-small", frameon=False)
             # axs[figcount].set_title(err_legend[err], fontsize=8)
@@ -486,6 +478,30 @@ def make_errors_figs(errors):
         figs.append(fig)
     logger.log(1, f'Number of error figures: {len(figs)}')
     return figs
+
+def plot_r_plus_var_r(ax, err_x, err_y, r_min, r_max, xrange, var):
+    rv = r_min + var
+    err_x_inters = [
+        x for i, x in enumerate(err_x)
+        if 0 < i and (np.sign(err_y[i-1]-rv)
+                        != np.sign(err_y[i]-rv))]
+    ax.plot(xrange, [r_min + var]*2, color="slategray",
+                                   linewidth=1)
+    inters = sorted(err_x_inters + [xrange[0], xrange[1]])
+    (ind, diff) = max_diff(inters)
+    text_x = inters[ind] - diff/2
+    text_y = r_min + var + (r_max-r_min)*0.015
+    va = "bottom"
+    ind_at_text = np.argmin([abs(x - text_x)
+                                         for x in err_x])
+    if err_y[ind_at_text] > r_min + var:
+        text_y = r_min + var - (r_max-r_min)*0.015
+        va = "top"
+    ax.text(text_x, text_y, "$R_P + var(R_P)$",
+                                   fontsize=6, ha="center", va=va,
+                                   bbox=dict(facecolor='white',
+                                             edgecolor='none',
+                                             alpha=0.6, pad=0.5))
 
 def _error_legends(mode, mode_errors):
     err_legend = {}
@@ -510,7 +526,7 @@ def _error_legends(mode, mode_errors):
     return err_legend
 
 
-def draw_error(axis, bound, error, r_interval):
+def draw_error(axis, bound, r_min, var_r, p_best, r_interval):
     """Adds annotation for statistical error estimates to individual
     error plots.
 
@@ -526,10 +542,6 @@ def draw_error(axis, bound, error, r_interval):
         R-factor range shown in the plot (rmax - rmin). Used for
         graphical scaling.
     """
-    r_min = min(error.rfacs)
-    p_best = error.lin_disp[error.rfacs.index(r_min)]
-    var_r =error.var_r
-
     # put vertical line at minimum R-factor
     #axis.vlines(x=p_best, color="black", ymin=0, ymax=2, lw=0.5)
     # put dashed line at bound
