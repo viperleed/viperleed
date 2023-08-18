@@ -36,6 +36,7 @@ from viperleed.tleedmlib.files.parameter_errors import (
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
+from viperleed.tleedmlib.sections.fd_optimization import FD_PARAMETERS
 from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
@@ -47,10 +48,10 @@ logger = logging.getLogger('tleedm.files.parameters')
 _KNOWN_PARAMS = (                                                               # TODO: IntEnum?
     'ATTENUATION_EPS', 'AVERAGE_BEAMS', 'BEAM_INCIDENCE', 'BULKDOUBLING_EPS',
     'BULKDOUBLING_MAX', 'BULK_LIKE_BELOW', 'BULK_REPEAT', 'DOMAIN',
-    'DOMAIN_STEP', 'ELEMENT_MIX', 'ELEMENT_RENAME', 'FILAMENT_WF',
-    'FORTRAN_COMP', 'HALTING', 'INTPOL_DEG', 'IV_SHIFT_RANGE', 'LAYER_CUTS',
-    'LAYER_STACK_VERTICAL', 'LMAX', 'LOG_LEVEL', 'LOG_SEARCH', 'N_BULK_LAYERS',
-    'N_CORES', 'OPTIMIZE', 'PARABOLA_FIT', 'PHASESHIFT_EPS',
+    'DOMAIN_STEP', 'ELEMENT_MIX', 'ELEMENT_RENAME', 'FD', 'FD_METHOD',
+    'FILAMENT_WF', 'FORTRAN_COMP', 'HALTING', 'INTPOL_DEG', 'IV_SHIFT_RANGE',
+    'LAYER_CUTS', 'LAYER_STACK_VERTICAL', 'LMAX', 'LOG_LEVEL', 'LOG_SEARCH',
+    'N_BULK_LAYERS', 'N_CORES', 'PARABOLA_FIT', 'PHASESHIFT_EPS',
     'PHASESHIFTS_CALC_OLD', 'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN',
     'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH', 'R_FACTOR_TYPE',
     'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE', 'SEARCH_CULL',
@@ -65,8 +66,7 @@ _KNOWN_PARAMS = (                                                               
 
 
 # parameters that can be optimized in FD optimization
-_OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i',
-                     'a', 'b', 'c', 'ab', 'abc',}
+_FD_OPTIONS = tuple(FD_PARAMETERS.keys())
 
 
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
@@ -83,6 +83,8 @@ _PARAM_ALIAS = {
     'plotrfactors': 'PLOT_IV',
     'ignorechecksum': 'TL_IGNORE_CHECKSUM',
     'ivplot': 'PLOT_IV',
+    'optimize': 'FD',
+    'fd_optimize': 'FD_METHOD',
     'compression_level': 'ZIP_COMPRESSION_LEVEL',
     'compression': 'ZIP_COMPRESSION_LEVEL',
     }
@@ -1322,6 +1324,61 @@ class ParameterInterpreter:                                                     
             except ValueError as err:
                 self.rpars.setHaltingLevel(1)
                 raise ParameterError(param, value_error) from err
+
+    def interpret_fd(self, assignment):
+        param = "FD"
+        self._ensure_no_flags_assignment(param, assignment)
+        for fd_param in assignment.values:
+            if fd_param.lower not in _FD_OPTIONS:
+                self.rpars.setHaltingLevel(3)
+                raise ParameterValueError(f"Unknown FD parameter: {fd_param}")
+        self.rpars["N_FD_PARAMS"] = len(self.rpars)
+        self.rpars["FD_PARAMS"] = [fd_param.lower
+                                   for fd_param in assignment.values]
+        logger.log(10, f"Requested FD parameters: {self.rpars['FD_PARAMS']}")
+
+    def interpret_fd_method(self, assignment):
+        param = "FD_METHOD"
+        self._ensure_no_flags_assignment(param, assignment)
+        method, *settings = assignment.values_str.strip().split(",")
+        # first value should be the method
+        if method.lower() not in _FD_METHODS:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterValueError(f"Unknown FD method: {method}")
+        self.rpars["FD_METHOD"] = method.lower()
+
+        if not settings:
+            return
+
+        # digest other values as parameters in the form of 
+        # "parameter value, parameter value, ..."
+        if method.lower() == ("parabola"):
+            self._digest_fd_method_settings(settings, self.rpars.FD_PARABOLA)
+        elif method.lower() in ("error", "brute_force"):
+            self._digest_fd_method_settings(settings, self.rpars.FD_BRUTE_FORCE)
+        elif settings:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterValueError("Could not settings for FD_METHOD")
+
+    def _digest_fd_method_settings(self, settings, method_settings):
+        for setting in settings:
+            try:
+                key, value = setting.strip().split(" ")
+            except ValueError:
+                self.rpars.setHaltingLevel(3)
+                raise ParameterValueError(f"Could not digest FD_METHOD setting: {setting}")
+            if key.lower() not in method_settings.keys():
+                self.rpars.setHaltingLevel(3)
+                raise ParameterValueError(f"Unknown FD_METHOD setting: {key}")
+            value_type = type(method_settings[key])
+            try:
+                value = value_type(value)
+            except ValueError:
+                self.rpars.setHaltingLevel(3)
+                raise ParameterValueError(
+                    f"Could not digest FD_METHOD setting value: {value}")
+            method_settings[key] = value
+
 
     def interpret_parabola_fit(self, assignment):
         param = 'PARABOLA_FIT'

@@ -166,6 +166,14 @@ class Rparams:
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
         self.EXPBEAMS_INPUT_FILE = DEFAULTS["EXPBEAMS_INPUT_FILE"]
+        self.FD_PARAMS = []       # parameters for FD optimization
+        self.FD_PARABOLA = {"step": 0.,
+                            "minpoints": 4,
+                            "maxpoints": 10,
+                            "convergence": 0.,
+                            "maxstep": 0.}
+        self.FD_BRUTE_FORCE = {"error": True,}
+        self.FD_METHOD = None
         self.FILAMENT_WF = DEFAULTS["FILAMENT_WF"]["lab6"]   # work function of emitting cathode
         self.FORTRAN_COMP = ["", ""]      # before files, after files
         self.FORTRAN_COMP_MPI = ["", ""]  # before files, after files

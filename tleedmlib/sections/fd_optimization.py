@@ -169,8 +169,6 @@ def apply_scaling(sl, rp, which, scale):
         rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
 
 
-
-
 def fd_optimization(sl, rp):
     """
     Runs multiple consecutive reference calculations and r-factor calculations
@@ -188,14 +186,16 @@ def fd_optimization(sl, rp):
     None.
     """
 
-    which = rp.OPTIMIZE["which"]
-    if which == "none":
-        logger.error("No parameter is defined for optimization. Set OPTIMIZE "
-                     "in the PARAMETERS file to define behaviour.")
-        rp.setHaltingLevel(2)
-        return
-    logger.info(f"Starting optimization of {rp.OPTIMIZE['which']}")
-    # make sure there's a compiler ready, and we know the number of cores:
+    if not rp.FD_PARAMS:
+        rp.setHaltingLevel(3)
+        raise RuntimeError(
+            "No parameters defined for optimization in the full-dynamic "
+            "calculation. Set FD in the PARAMETERS file to choose a parameter!"
+        )
+
+    logger.info(f"FD optimization of parameters: {rp.FD_PARAMS}")
+
+    # make sure there's a compiler ready, and we know the number of cores:      # TODO: this is repeated in multiple locations; refactor into base
     if rp.FORTRAN_COMP[0] == "":
         try:
             rp.getFortranComp()
@@ -204,56 +204,24 @@ def fd_optimization(sl, rp):
             raise
     rp.updateCores()  # if number of cores is not defined, try to find it
 
-    # TODO: update theses to use the new parameters
+    if len(rp.FD_PARAMS) == 1:
+        # single parameter optimization
+        param_name = rp.FD_PARAMS[0]
+        if param_name == "parabola":
+            _update_parabola_settings(rp.FD_PARABOLA, param_name)
+            # TODO: continue here; there is some confusion about min/max points and steps yet
+            optimizer = None
+        elif param_name == "error":
+            pass #TODO
+    else:
+        # multiple parameters
+        pass #TODO
+        optimizer = None
 
-    # check whether step is set; if not, choose default value
-    if rp.OPTIMIZE["step"] == 0.:
-        if which in ["v0i", "theta"]:
-            rp.OPTIMIZE["step"] = 0.5
-        elif which == "phi":
-            rp.OPTIMIZE["step"] = 2.
-        else:   # unit cell size
-            rp.OPTIMIZE["step"] = 0.01
-        logger.debug("Initial step size undefined, defaulting to {}"
-                     .format(rp.OPTIMIZE["step"]))
-
-    if rp.OPTIMIZE["maxstep"] == 0.:
-        rp.OPTIMIZE["maxstep"] = 3 * rp.OPTIMIZE["step"]
-
-    if rp.OPTIMIZE["convergence"] == 0.:
-        rp.OPTIMIZE["convergence"] = 0.1 * rp.OPTIMIZE["step"]
-
-    rp.OPTIMIZE["maxstep"] = abs(rp.OPTIMIZE["maxstep"])  # always positive
-    rp.OPTIMIZE["convergence"] = abs(rp.OPTIMIZE["convergence"])
-
-    # get FDParameter object
-    fd_param = FDParameter(
-        which,
-        FD_PARAMETERS[which]["x0"](rp),
-        FD_PARAMETERS[which]["bounds"],
-        FD_PARAMETERS[which]["eval"],
-    )
-
-    optimizer = SingleParameterParabolaFit(
-        fd_parameter=fd_param,
-        sl=sl,
-        rp=rp,
-        convergence=rp.OPTIMIZE["convergence"],
-        step=rp.OPTIMIZE["step"],
-        max_points=rp.OPTIMIZE["maxpoints"],
-        min_points=rp.OPTIMIZE["minpoints"],
-    )
-    optimizer = SingleParameterBruteForceOptimizer(
-        fd_parameter=fd_param,
-        sl=sl,
-        rp=rp,
-        min_val=1,
-        max_val=7,
-        steps=3,
-    )
 
     # perform optimization
     optimizer.optimize(x0=fd_param.start_value)
+    # finalize by plotting and printing results
     opt_x, opt_R = optimizer.finalize()
 
 
@@ -271,6 +239,68 @@ def fd_optimization(sl, rp):
     except Exception as exc:
         logger.warning(f"Failed to plot I(V) curves from optimization: {exc}")
         raise exc # TODO: remove this raise
+
+    # get FDParameter object
+    fd_param = FDParameter(
+        which,
+        FD_PARAMETERS[which]["x0"](rp),
+        FD_PARAMETERS[which]["bounds"],
+        FD_PARAMETERS[which]["eval"],
+    )
+
+    optimizer = SingleParameterParabolaFit(
+        fd_parameter=fd_param,
+        sl=sl,
+        rp=rp,
+        convergence=convergence,
+        step=step,
+        max_points=max_points,
+        min_points=min_points,
+    )
+    optimizer = SingleParameterBruteForceOptimizer(
+        fd_parameter=fd_param,
+        sl=sl,
+        rp=rp,
+        min_val=1,
+        max_val=7,
+        steps=3,
+    )
+
+
+def _update_parabola_settings(fd_parabola_settings, param_name):
+
+    # check whether step is set; if not, choose default value
+    if fd_parabola_settings.OPTIMIZE["step"] == 0.:
+        if param_name in ["v0i", "theta"]:
+            step = 0.5
+        elif param_name == "phi":
+            step = 2.
+        else:   # unit cell size
+            step = 0.01
+        logger.debug("Initial step size undefined, defaulting to {}"
+                     .format(fd_parabola_settings.OPTIMIZE["step"]))
+    else:
+        step = fd_parabola_settings.OPTIMIZE["step"]
+
+    if fd_parabola_settings.OPTIMIZE["maxstep"] == 0.:
+        max_step = 3 * fd_parabola_settings.OPTIMIZE["step"]
+    else :
+        max_step = fd_parabola_settings.OPTIMIZE["maxstep"]
+
+    if fd_parabola_settings.OPTIMIZE["convergence"] == 0.:
+        convergence = 0.1 * fd_parabola_settings.OPTIMIZE["step"]
+    else:
+        convergence = fd_parabola_settings.OPTIMIZE["convergence"]
+
+    min_points = fd_parabola_settings.OPTIMIZE["min_points"]
+    if min_points <= 1:
+        raise ValueError("Minimum number of points for parabola fit must be 1")
+
+    max_step = abs(max_step)  # always positive
+    convergence = abs(convergence)
+
+    return step, max_step, convergence, min_points
+
 
 
 
