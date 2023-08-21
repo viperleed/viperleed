@@ -765,46 +765,45 @@ class TestIVShiftRange:
             interpreter.interpret_iv_shift_range(assignment)
 
 
-class TestOptimize:
-    def test_interpret_optimize_valid_flag_and_value(self, mock_rparams):
+class TestFD:
+    def test_unknown_fd_parameter(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter= "OPTIMIZE",
-                                flags_str="v0i", values_str="step 0.1")
-        interpreter.interpret_optimize(assignment)
-        assert mock_rparams.OPTIMIZE['which'] == 'v0i'
-        assert mock_rparams.OPTIMIZE['step'] == pytest.approx(0.1)
+        assignment = Assignment("unknown_parameter", "FD")
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_fd(assignment)
 
-    def test_interpret_optimize_valid_flag_and_value_multiple(self, mock_rparams):
+    def test_set_fd_params_attributes(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(
-            parameter= "OPTIMIZE",
-            flags_str="theta",
-            values_str="step 0.1, convergence 1e-6, minpoints 10"
-            )
-        interpreter.interpret_optimize(assignment)
-        assert mock_rparams.OPTIMIZE['which'] == 'theta'
-        assert mock_rparams.OPTIMIZE['step'] == pytest.approx(0.1)
-        assert mock_rparams.OPTIMIZE['minpoints'] == pytest.approx(10)
-        assert mock_rparams.OPTIMIZE['convergence'] == pytest.approx(1e-6)
+        assignment = Assignment("v0i", "FD")
+        interpreter.interpret_fd(assignment)
+        assert mock_rparams.N_FD_PARAMS == 1
+        assert mock_rparams.FD_PARAMS == ["v0i"]
 
-    def test_interpret_optimize_invalid_flag(self, mock_rparams):
+
+class TestFDMethod:
+    def test_unknown_fd_method(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("invalid 0.1", "OPTIMIZE")
-        with pytest.raises(ParameterUnknownFlagError):
-            interpreter.interpret_optimize(assignment)
+        assignment = Assignment("unknown_method", "FD_METHOD")
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_fd_method(assignment)
 
-    def test_interpret_optimize_invalid_value(self, mock_rparams):
+    def test_set_fd_method_attribute(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("step not-a-number", "OPTIMIZE")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_optimize(assignment)
+        assignment = Assignment("parabola", "FD_METHOD")
+        interpreter.interpret_fd_method(assignment)
+        assert mock_rparams.FD_METHOD == "parabola"
 
-    def test_interpret_optimize_invalid_flag(self, mock_rparams):
+    def test_digest_fd_method_settings(self, mock_rparams):
         interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("step 0.1", "OPTIMIZE", flags_str="invalid")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_optimize(assignment)
+        assignment = Assignment("parabola, step 0.1", "FD_METHOD")
+        interpreter.interpret_fd_method(assignment)
+        assert mock_rparams.FD_PARABOLA["step"] == pytest.approx(0.1)
 
+    def test_error_on_invalid_setting(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("invalid_setting 1", "FD_METHOD")
+        with pytest.raises(ParameterValueError):
+            interpreter.interpret_fd_method(assignment)
 
 class TestPhaseshiftEps:
     def test_interpret_phaseshift_eps_valid_float(self, mock_rparams):
