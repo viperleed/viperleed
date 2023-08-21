@@ -36,7 +36,6 @@ from viperleed.tleedmlib.files.parameter_errors import (
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
-from viperleed.tleedmlib.sections.fd_optimization import FD_PARAMETERS
 from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
@@ -63,6 +62,41 @@ _KNOWN_PARAMS = (                                                               
     'T_DEBYE', 'T_EXPERIMENT', 'V0_IMAG', 'V0_REAL',
     'V0_Z_ONSET', 'VIBR_AMP_SCALE', 'ZIP_COMPRESSION_LEVEL',
     )
+
+
+# parameters accessible in the full dynamic optimization
+# must specify bounds, function for altering the parameter and initial guess 
+# x0
+FD_PARAMETERS = {
+    'v0i': {
+        'bounds': (0,np.inf),
+        'eval': lambda r, s, v: setattr(r, "V0_IMAG", v),
+        'x0': lambda rp: rp.V0_IMAG,
+    },
+    'theta': {
+        'bounds': (0,90),
+        'eval': lambda r, s, v: setattr(r, "THETA", v),
+        'x0': lambda rp: rp.THETA,
+    },
+    'phi': {
+        'bounds': (0,360),
+        'eval': lambda r, s, v: setattr(r, "PHI", v),
+        'x0': lambda rp: rp.PHI,
+    }
+}
+
+AVAILABLE_MINIMIZERS = (
+    'Nelder-Mead',
+    'Powell',
+    'Newton-CG',
+)
+
+for scaling in ('a', 'b', 'c', 'ab', 'bc', 'abc'): # scaling of lattice vectors
+    FD_PARAMETERS[scaling] = {
+        'bounds': (0.1, 10),
+        'eval': lambda r, s, v: apply_scaling(s, r, scaling, v),
+        'x0': lambda rp: 1,
+    }
 
 
 # parameters that can be optimized in FD optimization
@@ -1284,68 +1318,27 @@ class ParameterInterpreter:                                                     
             raise ParameterValueError(param) from exc
         self.rpars.LOG_LEVEL = log_level
 
-    def interpret_optimize(self, assignment):
-        param = 'OPTIMIZE'
-        if not assignment.flag:
-            message = 'Parameter to optimize not defined.'
-            self.rpars.setHaltingLevel(3)
-            raise ParameterError(param, message)
-        which = assignment.flag.lower()
-        if which not in _OPTIMIZE_OPTIONS:
-            self.rpars.setHaltingLevel(3)
-            raise ParameterUnknownFlagError(param, f'{which!r}')
-        self.rpars.OPTIMIZE['which'] = which
-        if not assignment.other_values:
-            try:
-                self.rpars.OPTIMIZE['step'] = float(assignment.value)
-            except ValueError:
-                pass   # will be caught below
-            else:
-                return
-        sublists = splitSublists(assignment.values, ',')
-        for sl in sublists:
-            if len(sl) != 2:
-                message = 'Expected "flag value" pairs, found ' + ' '.join(sl)
-                self.rpars.setHaltingLevel(2)
-                raise ParameterError(param, message)
-            flag = sl[0].lower()
-            if flag not in ['step', 'convergence',
-                            'minpoints', 'maxpoints', 'maxstep']:
-                self.rpars.setHaltingLevel(2)
-                raise ParameterUnknownFlagError(param, f'{flag!r}')
-            partype = {'step': float, 'convergence': float,
-                        'minpoints': int, 'maxpoints': int,
-                        'maxstep': float}
-            value_error = ('PARAMETERS file: OPTIMIZE: Value '
-                            f'{sl[1]} is not valid for flag {sl[0]}. '
-                            'Value will be ignored.')
-            try:
-                self.rpars.OPTIMIZE[flag] = partype[flag](sl[1])
-            except ValueError as err:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterError(param, value_error) from err
-
     def interpret_fd(self, assignment):
         param = "FD"
         self._ensure_no_flags_assignment(param, assignment)
         for fd_param in assignment.values:
-            if fd_param.lower not in _FD_OPTIONS:
+            if fd_param.lower() not in _FD_OPTIONS:
                 self.rpars.setHaltingLevel(3)
                 raise ParameterValueError(f"Unknown FD parameter: {fd_param}")
-        self.rpars["N_FD_PARAMS"] = len(self.rpars)
-        self.rpars["FD_PARAMS"] = [fd_param.lower
+        self.rpars.N_FD_PARAMS = len(assignment.values)
+        self.rpars.FD_PARAMS = [fd_param.lower()
                                    for fd_param in assignment.values]
-        logger.log(10, f"Requested FD parameters: {self.rpars['FD_PARAMS']}")
+        logger.log(10, f"Requested FD parameters: {self.rpars.FD_PARAMS}")
 
     def interpret_fd_method(self, assignment):
         param = "FD_METHOD"
         self._ensure_no_flags_assignment(param, assignment)
         method, *settings = assignment.values_str.strip().split(",")
         # first value should be the method
-        if method.lower() not in _FD_METHODS:
+        if method.lower() not in ("error", "brute_force", "parabola", *AVAILABLE_MINIMIZERS):
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError(f"Unknown FD method: {method}")
-        self.rpars["FD_METHOD"] = method.lower()
+        self.rpars.FD_METHOD = method.lower()
 
         if not settings:
             return
@@ -1356,6 +1349,8 @@ class ParameterInterpreter:                                                     
             self._digest_fd_method_settings(settings, self.rpars.FD_PARABOLA)
         elif method.lower() in ("error", "brute_force"):
             self._digest_fd_method_settings(settings, self.rpars.FD_BRUTE_FORCE)
+        elif method.lower() in AVAILABLE_MINIMIZERS:
+            self._digest_fd_method_settings(settings, self.rpars.FD_MINIMIZER)
         elif settings:
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError("Could not settings for FD_METHOD")
@@ -1369,8 +1364,12 @@ class ParameterInterpreter:                                                     
                 raise ParameterValueError(f"Could not digest FD_METHOD setting: {setting}")
             if key.lower() not in method_settings.keys():
                 self.rpars.setHaltingLevel(3)
-                raise ParameterValueError(f"Unknown FD_METHOD setting: {key}")
+                raise ParameterValueError(f"Unknown FD_METHOD setting: {key}. "
+                                          "Available settings are: "
+                                          f"{method_settings.keys()}")
             value_type = type(method_settings[key])
+            if method_settings[key] is None:
+                value_type = float
             try:
                 value = value_type(value)
             except ValueError:

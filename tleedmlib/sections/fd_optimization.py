@@ -41,7 +41,7 @@ from viperleed.tleedmlib.files import iofdopt as tl_io
 from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
 from viperleed.tleedmlib.files.ioerrorcalc import plot_r_plus_var_r, draw_error
-from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
+from viperleed.tleedmlib.files.parameters import modifyPARAMETERS, FD_PARAMETERS, AVAILABLE_MINIMIZERS
 from viperleed.tleedmlib.files.poscar import writePOSCAR
 from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
 from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
@@ -49,36 +49,6 @@ from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 
 logger = logging.getLogger("tleedm.fdopt")
 
-FD_PARAMETERS = {
-    'v0i': {
-        'bounds': (0,np.inf),
-        'eval': lambda r, s, v: setattr(r, "V0_IMAG", v),
-        'x0': lambda rp: rp.V0_IMAG,
-    },
-    'theta': {
-        'bounds': (0,90),
-        'eval': lambda r, s, v: setattr(r, "THETA", v),
-        'x0': lambda rp: rp.THETA,
-    },
-    'phi': {
-        'bounds': (0,360),
-        'eval': lambda r, s, v: setattr(r, "PHI", v),
-        'x0': lambda rp: rp.PHI,
-    },
-}
-
-AVAILABLE_MINIMIZERS = (
-    'Nelder-Mead',
-    'Powell',
-    'Newton-CG',
-)
-
-for scaling in ('a', 'b', 'c', 'ab', 'bc', 'abc'): # scaling of lattice vectors
-    FD_PARAMETERS[scaling] = {
-        'bounds': (0.1, 10),
-        'eval': lambda r, s, v: apply_scaling(s, r, scaling, v),
-        'x0': lambda rp: 1,
-    }
 
 
 class FullDynamicCalculationError(Exception):
@@ -87,10 +57,12 @@ class FullDynamicCalculationError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
+
 class FullDynamicOptimizationOutOfBoundsError(FullDynamicCalculationError):
     """Raised when the optimization is out of bounds."""
     def __init__(self, message):
         super().__init__(message)
+
 
 def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     """
@@ -207,16 +179,48 @@ def fd_optimization(sl, rp):
     if len(rp.FD_PARAMS) == 1:
         # single parameter optimization
         param_name = rp.FD_PARAMS[0]
-        if param_name == "parabola":
-            _update_parabola_settings(rp.FD_PARABOLA, param_name)
-            # TODO: continue here; there is some confusion about min/max points and steps yet
-            optimizer = None
-        elif param_name == "error":
-            pass #TODO
+        fd_param = FDParameter(name=param_name,                                 # TODO: move object creation to point of dict creation
+                               start_value=FD_PARAMETERS[param_name]["x0"](rp),
+                               bounds=FD_PARAMETERS[param_name]["bounds"],
+                               transform_func=FD_PARAMETERS[param_name]["eval"],)
+        if rp.FD_METHOD.lower() == "parabola":
+            (step, max_step, convergence, min_points, max_points
+             ) = _update_parabola_settings(rp.FD_PARABOLA, param_name)
+            optimizer = SingleParameterParabolaFit(
+                fd_param,
+                sl,
+                rp,
+                convergence=convergence,
+                step=step,
+                min_points=min_points,
+                max_points=max_points,
+                max_step=max_step,
+            )
+        elif rp.FD_METHOD.lower() == "error":
+            optimizer = SingleParameterBruteForceOptimizer(
+                fd_param,
+                sl,
+                rp,
+                min_val=rp.FD_BRUTE_FORCE["min"],
+                max_val=rp.FD_BRUTE_FORCE["max"],
+                steps=rp.FD_BRUTE_FORCE["steps"],
+                error=rp.FD_BRUTE_FORCE["error"],
+            )
+        elif rp.FD_METHOD.lower() in AVAILABLE_MINIMIZERS:
+            optimizer = SingleParameterMinimizer(
+                fd_param,
+                sl,
+                rp,
+                minimizer_method=rp.FD_MINIMIZER["method"],
+                tol=rp.FD_MINIMIZER["tol"],
+            )
+        else:
+            raise NotImplementedError(
+                "Unknown optimization method for single parameter optimization"
+            )
     else:
         # multiple parameters
-        pass #TODO
-        optimizer = None
+        raise NotImplementedError("Multiple parameter optimization not yet implemented")
 
 
     # perform optimization
@@ -224,10 +228,15 @@ def fd_optimization(sl, rp):
     # finalize by plotting and printing results
     opt_x, opt_R = optimizer.finalize()
 
+    result_msg = f"Optimization finished. Best result with R = {opt_R:.4f}:"
+    if len(rp.FD_PARAMS) == 1:
+        result_msg += f" {rp.FD_PARAMS[0]} = {opt_x:.4f}"
+    else:
+        for param_name, param_value in zip(rp.FD_PARAMS, list(opt_x)):
+            result_msg += f"\n{param_name} = {param_value:.4f}"
 
-    logger.info(
-        f"Optimization finished. Best {which} = {opt_x:.4f} with "
-        f"R = {opt_R:.4f}")
+    logger.info(result_msg)
+
 
     # update PARAMETERS and POSCAR_OUT
     store_fd_param_to_file(sl, rp, fd_param.name, opt_x)
@@ -237,40 +246,14 @@ def fd_optimization(sl, rp):
     try:
         optimizer.write_beams_pdf()
     except Exception as exc:
-        logger.warning(f"Failed to plot I(V) curves from optimization: {exc}")
+        logger.warning(f"Failed to plot I(V) curves from optimization:\n{exc}")
         raise exc # TODO: remove this raise
-
-    # get FDParameter object
-    fd_param = FDParameter(
-        which,
-        FD_PARAMETERS[which]["x0"](rp),
-        FD_PARAMETERS[which]["bounds"],
-        FD_PARAMETERS[which]["eval"],
-    )
-
-    optimizer = SingleParameterParabolaFit(
-        fd_parameter=fd_param,
-        sl=sl,
-        rp=rp,
-        convergence=convergence,
-        step=step,
-        max_points=max_points,
-        min_points=min_points,
-    )
-    optimizer = SingleParameterBruteForceOptimizer(
-        fd_parameter=fd_param,
-        sl=sl,
-        rp=rp,
-        min_val=1,
-        max_val=7,
-        steps=3,
-    )
 
 
 def _update_parabola_settings(fd_parabola_settings, param_name):
 
     # check whether step is set; if not, choose default value
-    if fd_parabola_settings.OPTIMIZE["step"] == 0.:
+    if fd_parabola_settings["step"] == 0.:
         if param_name in ["v0i", "theta"]:
             step = 0.5
         elif param_name == "phi":
@@ -278,28 +261,30 @@ def _update_parabola_settings(fd_parabola_settings, param_name):
         else:   # unit cell size
             step = 0.01
         logger.debug("Initial step size undefined, defaulting to {}"
-                     .format(fd_parabola_settings.OPTIMIZE["step"]))
+                     .format(fd_parabola_settings["step"]))
     else:
-        step = fd_parabola_settings.OPTIMIZE["step"]
+        step = fd_parabola_settings["step"]
 
-    if fd_parabola_settings.OPTIMIZE["maxstep"] == 0.:
-        max_step = 3 * fd_parabola_settings.OPTIMIZE["step"]
+    if fd_parabola_settings["maxstep"] == 0.:
+        max_step = 3 * fd_parabola_settings["step"]
     else :
-        max_step = fd_parabola_settings.OPTIMIZE["maxstep"]
+        max_step = fd_parabola_settings["maxstep"]
 
-    if fd_parabola_settings.OPTIMIZE["convergence"] == 0.:
-        convergence = 0.1 * fd_parabola_settings.OPTIMIZE["step"]
+    if fd_parabola_settings["convergence"] == 0.:
+        convergence = 0.1 * fd_parabola_settings["step"]
     else:
-        convergence = fd_parabola_settings.OPTIMIZE["convergence"]
+        convergence = fd_parabola_settings["convergence"]
 
-    min_points = fd_parabola_settings.OPTIMIZE["min_points"]
+    min_points = fd_parabola_settings["minpoints"]
     if min_points <= 1:
         raise ValueError("Minimum number of points for parabola fit must be 1")
+
+    max_points = fd_parabola_settings["maxpoints"]
 
     max_step = abs(max_step)  # always positive
     convergence = abs(convergence)
 
-    return step, max_step, convergence, min_points
+    return step, max_step, convergence, min_points, max_points
 
 
 
@@ -653,13 +638,12 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
 
 
     def optimize(self, x0):
-        if len(x0) == 0:
+        if x0 is None:
             raise RuntimeError("Must provide at least one evaluation point to "
                                "start.")
-        for val in x0:
-            if not self._in_bounds(val):
-                raise ValueError("Initial point must be within bounds")
-            self.evaluate(val)
+        if not self._in_bounds(x0):
+            raise ValueError("Initial point must be within bounds")
+        self.evaluate((x0,))
 
         while len(self.x) < self.max_points:
             logger.log(5, "Fitting parabola to points:")
@@ -685,7 +669,7 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
                     f"at {next_x:.4f}."
                 )
 
-            self.evaluate(next_x)  # updates self.x, self.R
+            self.evaluate((next_x,))  # updates self.x, self.R
 
             # update plot and csv
             self.updated_intermediate_output()
@@ -693,7 +677,7 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
         # max points reached
         logger.warning(
             "Stopping optimization because the maximum number of data "
-            "points has been reached. This may indicate that optimization "
+            "points has been reached. This may indicate that the optimization "
             "did not fully converge.")
         return
 
@@ -838,7 +822,7 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
     def updated_intermediate_output(self):
         if len(self.x) > 0:
             self.write_csv()
-        if len(self.x) >= 2:
+        if len(self.x) >= 3:
             self.write_opt_pdf()
 
     def _annotate_opt_pdf(self, fig, ax):
@@ -859,11 +843,15 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
 
 class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
 
-    def __init__(self, fd_parameter, sl, rp, min_val, max_val, steps):
+    def __init__(self, fd_parameter, sl, rp, min_val, max_val, steps, error=True):
         super().__init__(fd_parameter, sl, rp)
+        if None in (min_val, max_val, steps):
+            raise ValueError("min_val, max_val, and steps must all be "
+                             "provided for brute force optimizer.")
         self.min_val = min_val
         self.max_val = max_val
         self.steps = steps
+        self.error = error
 
         # make sure requested min/max are within bounds
         if not (self._in_bounds(min_val) and self._in_bounds(max_val)):
@@ -968,3 +956,6 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      
 
     def _annotate_opt_pdf(self, fig, ax):
         super()._annotate_opt_pdf(fig, ax)
+
+    def updated_intermediate_output(self):
+        pass

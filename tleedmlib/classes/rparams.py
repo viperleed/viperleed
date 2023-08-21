@@ -172,8 +172,15 @@ class Rparams:
                             "maxpoints": 10,
                             "convergence": 0.,
                             "maxstep": 0.}
-        self.FD_BRUTE_FORCE = {"error": True,}
+        self.FD_BRUTE_FORCE = {"error": True,
+                               "min": None,
+                               "max": None,
+                               "steps": None}
         self.FD_METHOD = None
+        self.FD_MINIMIZER = {
+            "method": "",
+            "tol": None,
+        }
         self.FILAMENT_WF = DEFAULTS["FILAMENT_WF"]["lab6"]   # work function of emitting cathode
         self.FORTRAN_COMP = ["", ""]      # before files, after files
         self.FORTRAN_COMP_MPI = ["", ""]  # before files, after files
@@ -189,8 +196,6 @@ class Rparams:
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
-        self.OPTIMIZE = {"which": "none", "step": 0., "minpoints": 4,
-                         "maxpoints": 10, "convergence": 0., "maxstep": 0.}
                     # settings for fd optimization
         self.PARABOLA_FIT = {"type": "none", "alpha": 1e-2, "mincurv": 5e-3,
                              "localize": 0}
