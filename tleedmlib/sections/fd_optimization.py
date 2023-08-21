@@ -284,6 +284,12 @@ def _update_parabola_settings(fd_parabola_settings, param_name):
     max_step = abs(max_step)  # always positive
     convergence = abs(convergence)
 
+    logger.log(10,
+               f"Parabola fit settings: step={step}, max_step={max_step}, "
+               f"convergence={convergence}, min_points={min_points}, "
+               f"max_points={max_points}."
+               )
+
     return step, max_step, convergence, min_points, max_points
 
 
@@ -669,6 +675,7 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
                     f"at {next_x:.4f}."
                 )
 
+            logger.info(f"Adding data point at {self.param_name} = {next_x:.4f}")
             self.evaluate((next_x,))  # updates self.x, self.R
 
             # update plot and csv
@@ -796,7 +803,8 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
         min_x = sorted_x[min_id]
 
         # check if there is a point within convergence range of the minimum
-        if any([abs(x - min_x) < self.convergence for x in self.x]):
+        x_without_min = [x for x in self.x if x != min_x]
+        if any([abs(x - min_x) < self.convergence for x in x_without_min]):
             return True
 
         return False
