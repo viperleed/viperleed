@@ -86,9 +86,9 @@ FD_PARAMETERS = {
 }
 
 AVAILABLE_MINIMIZERS = (
-    'Nelder-Mead',
-    'Powell',
-    'Newton-CG',
+    'nelder-mead',
+    'powell',
+    'newton-cg',
 )
 
 for scaling in ('a', 'b', 'c', 'ab', 'bc', 'abc'): # scaling of lattice vectors
@@ -1335,7 +1335,9 @@ class ParameterInterpreter:                                                     
         self._ensure_no_flags_assignment(param, assignment)
         method, *settings = assignment.values_str.strip().split(",")
         # first value should be the method
-        if method.lower() not in ("error", "brute_force", "parabola", *AVAILABLE_MINIMIZERS):
+        if method.lower() not in (
+            "error", "brute_force", "parabola", 
+            *(minimizer.lower() for minimizer in AVAILABLE_MINIMIZERS)):
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError(f"Unknown FD method: {method}")
         self.rpars.FD_METHOD = method.lower()

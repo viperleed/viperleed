@@ -211,7 +211,7 @@ def fd_optimization(sl, rp):
                 fd_param,
                 sl,
                 rp,
-                minimizer_method=rp.FD_MINIMIZER["method"],
+                minimizer_method=rp.FD_METHOD.lower(),
                 tol=rp.FD_MINIMIZER["tol"],
             )
         else:
@@ -938,16 +938,19 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      
                              f"available. Available methods are: "
                              f"{AVAILABLE_MINIMIZERS}")
         self.minimizer_method = minimizer_method
-        self.tol = tol
+        self.tol = 1e-4 if tol is None else tol
 
     def optimize(self, x0):
+        logger.info(f"Starting full dynamic calculation using "
+                    f"{self.minimizer_method} minimizer method.")
         self.res = scipy.optimize.minimize(
             fun=self.evaluate,
             x0=float(x0),
             method=self.minimizer_method,
             bounds=(self.bounds,),
-            options={"disp": logger.level <= logging.DEBUG},
-            tol=self.tol
+            options={"disp": True},
+            tol=self.tol,
+            callback=self.updated_intermediate_output
         )
 
     def finalize(self):
@@ -965,5 +968,13 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      
     def _annotate_opt_pdf(self, fig, ax):
         super()._annotate_opt_pdf(fig, ax)
 
-    def updated_intermediate_output(self):
-        pass
+    def updated_intermediate_output(self, intermediate_result):
+        #TODO: wtf, why is this not being called?
+        raise
+        print("test")
+        logger.info(
+            f"Minimizer {self.minimizer_method} iteration "
+            f"{intermediate_result.nit}. {self.param_name} = "
+            f"{intermediate_result.x:.4f}, R = {intermediate_result.fun:.4f}"
+        )
+        self.write_csv()
