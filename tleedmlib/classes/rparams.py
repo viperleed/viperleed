@@ -179,7 +179,7 @@ class Rparams:
         self.FD_METHOD = None
         self.FD_MINIMIZER = {
             "method": "",
-            "tol": None,
+            "tol": 2e-4,
         }
         self.FILAMENT_WF = DEFAULTS["FILAMENT_WF"]["lab6"]   # work function of emitting cathode
         self.FORTRAN_COMP = ["", ""]      # before files, after files

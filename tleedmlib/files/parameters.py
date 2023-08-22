@@ -88,7 +88,12 @@ FD_PARAMETERS = {
 AVAILABLE_MINIMIZERS = (
     'nelder-mead',
     'powell',
-    'newton-cg',
+    'cg',
+    'bfgs',
+    'l-bfgs-b',
+    'cobyla',
+    'TNC'
+    
 )
 
 for scaling in ('a', 'b', 'c', 'ab', 'bc', 'abc'): # scaling of lattice vectors

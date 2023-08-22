@@ -930,7 +930,7 @@ class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
 
 
 class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      # TODO: can implement a callback method in the minimizer
-    def __init__(self, fd_parameter, sl, rp, minimizer_method, tol=None):
+    def __init__(self, fd_parameter, sl, rp, minimizer_method, tol):
         super().__init__(fd_parameter, sl, rp)
 
         if minimizer_method not in AVAILABLE_MINIMIZERS:
@@ -938,7 +938,7 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      
                              f"available. Available methods are: "
                              f"{AVAILABLE_MINIMIZERS}")
         self.minimizer_method = minimizer_method
-        self.tol = 1e-4 if tol is None else tol
+        self.tol = tol
 
     def optimize(self, x0):
         logger.info(f"Starting full dynamic calculation using "
@@ -950,7 +950,7 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      
             bounds=(self.bounds,),
             options={"disp": True},
             tol=self.tol,
-            callback=self.updated_intermediate_output
+            callback=self.updated_intermediate_output,
         )
 
     def finalize(self):
@@ -961,20 +961,20 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      
                     f"in {self.res.nit} iterations.")
         self.write_opt_pdf()
 
-
         x_opt, R_opt, _ = self.x_R_min
         return x_opt, R_opt
 
     def _annotate_opt_pdf(self, fig, ax):
         super()._annotate_opt_pdf(fig, ax)
 
-    def updated_intermediate_output(self, intermediate_result):
-        #TODO: wtf, why is this not being called?
-        raise
-        print("test")
+    def evaluate(self, x_val):
+        result = super().evaluate(x_val)
         logger.info(
-            f"Minimizer {self.minimizer_method} iteration "
-            f"{intermediate_result.nit}. {self.param_name} = "
-            f"{intermediate_result.x:.4f}, R = {intermediate_result.fun:.4f}"
-        )
+            f"{self.param_name} = {x_val[0]:.4f}: "
+            f"R = {result:.4f}")
+        return result
+
+    def updated_intermediate_output(self,intermediate_result):
+        logger.debug(f"Complete iteration of minimizer {self.minimizer_method}."
+                     " Updating CSV output.")
         self.write_csv()
