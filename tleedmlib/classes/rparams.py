@@ -392,7 +392,7 @@ class Rparams:
                                # TODO: use functionality from leedbase and refactor; use pathlib
             ls = [dn for dn in list(self.source_dir.iterdir())
                   if ((self.source_dir / dn).is_dir()
-                  and dn.startswith("TensErLEED"))]
+                  and dn.name.startswith("TensErLEED"))]
             highest = 0.0
             namestr = ""
             for dn in ls:
