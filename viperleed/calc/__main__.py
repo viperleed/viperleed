@@ -95,10 +95,10 @@ def add_calc_parser_arguments(parser):
 def _interpret_tensorleed_path_flag(args):
     # if tensorleed arg is given, use that
     if args.tensorleed:
-        tensorleed_path = Path(args.tensorleed)
+        return Path(args.tensorleed)
     # else check environment variable $VIPERLEED_TENSORLEED
     try:
-        tensorleed_path = Path(os.environ["VIPERLEED_TENSORLEED"])
+        return Path(os.environ["VIPERLEED_TENSORLEED"])
     except KeyError as err:
         # environment variable not set
         raise RuntimeError(
@@ -107,7 +107,6 @@ def _interpret_tensorleed_path_flag(args):
             "the --tensorleed argument, or set the environment variable "
             "$VIPERLEED_TENSORLEED."
         ) from err
-    return tensorleed_path
 
 
 def main(args=None):
