@@ -183,6 +183,7 @@ def fd_optimization(sl, rp):
                                start_value=FD_PARAMETERS[param_name]["x0"](rp),
                                bounds=FD_PARAMETERS[param_name]["bounds"],
                                transform_func=FD_PARAMETERS[param_name]["eval"],)
+        start_value = fd_param.start_value
         if rp.FD_METHOD.lower() == "parabola":
             (step, max_step, convergence, min_points, max_points
              ) = _update_parabola_settings(rp.FD_PARABOLA, param_name)
@@ -216,15 +217,36 @@ def fd_optimization(sl, rp):
             )
         else:
             raise NotImplementedError(
-                "Unknown optimization method for single parameter optimization"
+                "Unknown optimization method for single parameter "
+                f"optimization: {rp.FD_METHOD}"
             )
     else:
         # multiple parameters
-        raise NotImplementedError("Multiple parameter optimization not yet implemented")
+        fd_parameters = [
+            FDParameter(name=param_name,
+                        start_value=FD_PARAMETERS[param_name]["x0"](rp),
+                        bounds=FD_PARAMETERS[param_name]["bounds"],
+                        transform_func=FD_PARAMETERS[param_name]["eval"],)
+            for param_name in rp.FD_PARAMS
+        ]
+        start_value = tuple(param.start_value for param in fd_parameters)
+        if rp.FD_METHOD.lower() in AVAILABLE_MINIMIZERS:
+            optimizer = ParameterMinimizer(
+                fd_parameters,
+                sl,
+                rp,
+                minimizer_method=rp.FD_METHOD.lower(),
+                tol=rp.FD_MINIMIZER["tol"],
+            )
+        else:
+            raise NotImplementedError(
+                "Unknown optimization method for multiple parameter "
+                f"optimization: {rp.FD_METHOD}"
+            )
 
 
     # perform optimization
-    optimizer.optimize(x0=fd_param.start_value)
+    optimizer.optimize(x0=start_value)
     # finalize by plotting and printing results
     opt_x, opt_R = optimizer.finalize()
 
@@ -237,17 +259,14 @@ def fd_optimization(sl, rp):
 
     logger.info(result_msg)
 
-
     # update PARAMETERS and POSCAR_OUT
-    store_fd_param_to_file(sl, rp, fd_param.name, opt_x)
+    optimizer.write_fd_params_to_file()
 
     # fetch I(V) from all and plot together
-    known_points = np.array([optimizer.x, optimizer.R]).T
     try:
         optimizer.write_beams_pdf()
     except Exception as exc:
         logger.warning(f"Failed to plot I(V) curves from optimization:\n{exc}")
-        raise exc # TODO: remove this raise
 
 
 def _update_parabola_settings(fd_parabola_settings, param_name):
@@ -525,6 +544,7 @@ class FDOptimizer(ABC):
                         exc_info=True)
 
 
+
 class OneDimensionalFDOptimizer(FDOptimizer):
     """Base class for full-dynamic optimization."""
 
@@ -630,6 +650,11 @@ class OneDimensionalFDOptimizer(FDOptimizer):
     @abstractmethod
     def _annotate_opt_pdf(self, fig, ax):
         ax.plot(self.x, self.R, 'o', c='darkslategray')
+
+    def write_fd_params_to_file(self):
+        store_fd_param_to_file(
+            self.slab, self.rparams, self.param_name, self.x_R_min[0]
+        )
 
 
 class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
@@ -929,7 +954,7 @@ class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
                 * self.x_R_min[1])
 
 
-class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      # TODO: can implement a callback method in the minimizer
+class SingleParameterMinimizer(OneDimensionalFDOptimizer):
     def __init__(self, fd_parameter, sl, rp, minimizer_method, tol):
         super().__init__(fd_parameter, sl, rp)
 
@@ -978,3 +1003,68 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):                      
         logger.debug(f"Complete iteration of minimizer {self.minimizer_method}."
                      " Updating CSV output.")
         self.write_csv()
+        self.write_opt_pdf()
+
+
+class ParameterMinimizer(FDOptimizer):
+    def __init__(self, fd_parameters, sl, rp, minimizer_method, tol):
+        super().__init__(fd_parameters, sl, rp)
+
+        if minimizer_method not in AVAILABLE_MINIMIZERS:
+            raise ValueError(f"Minimizer method {minimizer_method} not "
+                             f"available. Available methods are: "
+                             f"{AVAILABLE_MINIMIZERS}")
+        self.minimizer_method = minimizer_method
+        self.tol = tol
+        self.scipy_bounds = scipy.optimize.Bounds(
+            lb=[param.bounds[0] for param in self.fd_parameters],
+            ub=[param.bounds[1] for param in self.fd_parameters],
+        )
+
+    def optimize(self, x0):
+        logger.info(f"Starting full dynamic calculation using "
+                    f"{self.minimizer_method} minimizer method.")
+        self.res = scipy.optimize.minimize(
+            fun=self.evaluate,
+            x0=float(x0),
+            method=self.minimizer_method,
+            bounds=self.scipy_bounds,
+            options={"disp": True},
+            tol=self.tol,
+            callback=self.updated_intermediate_output,
+        )
+
+    def finalize(self):
+        if not self.res.success:
+            logger.warning("Minimization failed with message: "
+                           f"{self.res.message}")
+        logger.info(f"Minimizer {self.minimizer_method} finished successfully "
+                    f"in {self.res.nit} iterations.")
+
+        x_opt, R_opt = self.res.x, self.res.fun
+        return x_opt, R_opt
+
+
+    def evaluate(self, x_val):
+        result = super().evaluate(x_val)
+        logger.info(
+            f"{self._eval_point_string(x_val)}: "
+            f"R = {result:.4f}")
+        return result
+
+    def _eval_point_string(self, x_val):
+        ",".join(
+            f"{param.name} = {x:.4f}"
+            for param, x in zip(self.fd_parameters, x_val)
+        )
+
+    def updated_intermediate_output(self,intermediate_result):
+        logger.debug(f"Complete iteration of minimizer {self.minimizer_method}."
+                     " Updating CSV output.")
+        self.write_csv()
+
+    def write_fd_params_to_file(self):
+        for param in self.fd_parameters:
+            store_fd_param_to_file(
+                self.slab, self.rparams, param.name, self.x_R_min[0]
+            )
