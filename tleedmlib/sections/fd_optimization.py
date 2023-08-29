@@ -1026,7 +1026,7 @@ class ParameterMinimizer(FDOptimizer):
                     f"{self.minimizer_method} minimizer method.")
         self.res = scipy.optimize.minimize(
             fun=self.evaluate,
-            x0=float(x0),
+            x0=x0,
             method=self.minimizer_method,
             bounds=self.scipy_bounds,
             options={"disp": True},
@@ -1053,10 +1053,11 @@ class ParameterMinimizer(FDOptimizer):
         return result
 
     def _eval_point_string(self, x_val):
-        ",".join(
+        return ",".join(
             f"{param.name} = {x:.4f}"
             for param, x in zip(self.fd_parameters, x_val)
         )
+
 
     def updated_intermediate_output(self,intermediate_result):
         logger.debug(f"Complete iteration of minimizer {self.minimizer_method}."
