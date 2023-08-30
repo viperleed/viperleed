@@ -873,6 +873,20 @@ class TestLayerCuts:
         with pytest.raises(ParameterParseError):
             interpreter.interpret_layer_cuts(assignment)
 
+    def test_interpret_layer_cuts_two_dz(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("dz(1.0) < 2.0 < dz(0.5) < 4.0", "LAYER_CUTS")
+        interpreter.interpret_layer_cuts(assignment)
+        assert mock_rparams.LAYER_CUTS == ["dz(1.0)", "<", "2.0", "<", 
+                                           "dz(0.5)", "<", "4.0"]
+
+    def test_interpret_layer_cuts_dz_invalid(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.5 1.0 < dz(abcd) < 4.0", "LAYER_CUTS")
+        with pytest.raises(ParameterError):
+            interpreter.interpret_layer_cuts(assignment)
+
+
 
 class TestRun:
     def test_interpret_run_single_section(self, mock_rparams):
