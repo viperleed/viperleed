@@ -40,6 +40,7 @@ from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
 
+
 logger = logging.getLogger('tleedm.files.parameters')
 
 
@@ -64,27 +65,6 @@ _KNOWN_PARAMS = (                                                               
     )
 
 
-# parameters accessible in the full dynamic optimization
-# must specify bounds, function for altering the parameter and initial guess 
-# x0
-FD_PARAMETERS = {
-    'v0i': {
-        'bounds': (0,np.inf),
-        'eval': lambda r, s, v: setattr(r, "V0_IMAG", v),
-        'x0': lambda rp: rp.V0_IMAG,
-    },
-    'theta': {
-        'bounds': (0,90),
-        'eval': lambda r, s, v: setattr(r, "THETA", v),
-        'x0': lambda rp: rp.THETA,
-    },
-    'phi': {
-        'bounds': (0,360),
-        'eval': lambda r, s, v: setattr(r, "PHI", v),
-        'x0': lambda rp: rp.PHI,
-    }
-}
-
 AVAILABLE_MINIMIZERS = (
     'nelder-mead',
     'powell',
@@ -93,8 +73,29 @@ AVAILABLE_MINIMIZERS = (
     'l-bfgs-b',
     'cobyla',
     'TNC'
-    
 )
+
+
+# parameters accessible in the full dynamic optimization
+# must specify bounds, function for altering the parameter and initial guess 
+# x0
+FD_PARAMETERS = {
+    'v0i': {
+        'bounds': (0, 15),
+        'eval': lambda r, s, v: setattr(r, "V0_IMAG", v),
+        'x0': lambda rp: rp.V0_IMAG,
+    },
+    'theta': {
+        'bounds': (-20, 20),
+        'eval': lambda r, s, v: setattr(r, "THETA", v),
+        'x0': lambda rp: rp.THETA,
+    },
+    'phi': {
+        'bounds': (0, 360),
+        'eval': lambda r, s, v: setattr(r, "PHI", v),
+        'x0': lambda rp: rp.PHI,
+    }
+}
 
 for scaling in ('a', 'b', 'c', 'ab', 'bc', 'abc'): # scaling of lattice vectors
     FD_PARAMETERS[scaling] = {
@@ -147,6 +148,26 @@ _SIMPLE_BOOL_PARAMS = {
     'TL_IGNORE_CHECKSUM' : (),
     'LAYER_STACK_VERTICAL' : ({False: 'c', True: 'z'},),
     }
+
+
+def apply_scaling(sl, rp, which, scale):                                        # TODO: move elsewhere?
+    m = np.eye(3)
+    if "a" in which:
+        m[0, 0] *= scale
+    if "b" in which:
+        m[1, 1] *= scale
+    if "c" in which:
+        m[2, 2] *= scale
+    sl.getFractionalCoordinates()
+    sl.ucell = np.dot(sl.ucell, m)
+    sl.getCartesianCoordinates(updateOrigin=True)
+    sl.bulkslab.getFractionalCoordinates()
+    sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
+    sl.bulkslab.getCartesianCoordinates()
+    if type(rp.BULK_REPEAT) == float:
+        rp.BULK_REPEAT *= scale
+    elif rp.BULK_REPEAT is not None:
+        rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
 
 
 @dataclass(frozen=True)
@@ -1357,19 +1378,21 @@ class ParameterInterpreter:                                                     
         elif method.lower() in ("error", "brute_force"):
             self._digest_fd_method_settings(settings, self.rpars.FD_BRUTE_FORCE)
         elif method.lower() in AVAILABLE_MINIMIZERS:
-            self._digest_fd_method_settings(settings, self.rpars.FD_MINIMIZER)
+            self._digest_fd_method_settings(settings, self.rpars.FD_MINIMIZER,
+                                            override=True)
         elif settings:
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError("Could not settings for FD_METHOD")
 
-    def _digest_fd_method_settings(self, settings, method_settings):
+    def _digest_fd_method_settings(self, settings, method_settings, override=False):
         for setting in settings:
             try:
                 key, value = setting.strip().split(" ")
             except ValueError:
                 self.rpars.setHaltingLevel(3)
-                raise ParameterValueError(f"Could not digest FD_METHOD setting: {setting}")
-            if key.lower() not in method_settings.keys():
+                raise ParameterValueError(
+                    f"Could not digest FD_METHOD setting: {setting}")
+            if key.lower() not in method_settings.keys() and not override:
                 self.rpars.setHaltingLevel(3)
                 raise ParameterValueError(f"Unknown FD_METHOD setting: {key}. "
                                           "Available settings are: "

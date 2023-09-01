@@ -41,7 +41,7 @@ from viperleed.tleedmlib.files import iofdopt as tl_io
 from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
 from viperleed.tleedmlib.files.ioerrorcalc import plot_r_plus_var_r, draw_error
-from viperleed.tleedmlib.files.parameters import modifyPARAMETERS, FD_PARAMETERS, AVAILABLE_MINIMIZERS
+from viperleed.tleedmlib.files.parameters import modifyPARAMETERS, FD_PARAMETERS, AVAILABLE_MINIMIZERS, apply_scaling
 from viperleed.tleedmlib.files.poscar import writePOSCAR
 from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
 from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
@@ -49,6 +49,7 @@ from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 
 logger = logging.getLogger("tleedm.fdopt")
 
+_DEFAULT_MINIMIZER_TOL = 1e-4
 
 
 class FullDynamicCalculationError(Exception):
@@ -121,26 +122,6 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     return rp.last_R, rfaclist
 
 
-def apply_scaling(sl, rp, which, scale):
-    m = np.eye(3)
-    if "a" in which:
-        m[0, 0] *= scale
-    if "b" in which:
-        m[1, 1] *= scale
-    if "c" in which:
-        m[2, 2] *= scale
-    sl.getFractionalCoordinates()
-    sl.ucell = np.dot(sl.ucell, m)
-    sl.getCartesianCoordinates(updateOrigin=True)
-    sl.bulkslab.getFractionalCoordinates()
-    sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
-    sl.bulkslab.getCartesianCoordinates()
-    if type(rp.BULK_REPEAT) == float:
-        rp.BULK_REPEAT *= scale
-    elif rp.BULK_REPEAT is not None:
-        rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
-
-
 def fd_optimization(sl, rp):
     """
     Runs multiple consecutive reference calculations and r-factor calculations
@@ -165,7 +146,8 @@ def fd_optimization(sl, rp):
             "calculation. Set FD in the PARAMETERS file to choose a parameter!"
         )
 
-    logger.info(f"FD optimization of parameters: {rp.FD_PARAMS}")
+    logger.info("FD optimization of parameter(s): "
+                f"{', '.join(rp.FD_PARAMS)}")
 
     # make sure there's a compiler ready, and we know the number of cores:      # TODO: this is repeated in multiple locations; refactor into base
     if rp.FORTRAN_COMP[0] == "":
@@ -312,8 +294,6 @@ def _update_parabola_settings(fd_parabola_settings, param_name):
     return step, max_step, convergence, min_points, max_points
 
 
-
-
 def store_fd_param_to_file(sl, rp, which, new_min):
     comment = "Found by full-dynamic optimization"
     if which == "v0i":
@@ -399,26 +379,31 @@ class FDOptimizer(ABC):
         return self._evaluate(tuple(x), keep_dirs=keep_dirs)
 
     def _evaluate(self, x, keep_dirs=False):
-
         # check if we have already evaluated the point
         if x in self.points.keys():
-            return self.points[x]
+            logger.debug("Point already evaluated. Returning cached value.")
+            return self.points[x][0]  # return R only
 
         tmp_slab, tmp_rparams = self._apply_params(x)
 
+        # silence logger up to level error
+        logging.disable(max(logger.getEffectiveLevel(), logging.ERROR))
+        # run reference calculation
         r, r_per_beam = get_fd_r(tmp_slab,
                                  tmp_rparams,
                                  work_dir=self._eval_dir(x),
                                  home_dir=self.rparams.workdir)
+        # reset logger level
+        logging.disable(logging.NOTSET)
 
         # read spectra
         try:
             theo_spec, exp_spec = read_rfactor_columns(self._eval_dir(x))
         except:
-            logger.warning("Failed to read spectrum data.")  # TODO: longer error message
+            logger.warning("Failed to read spectrum data.")                     # TODO: longer error message
             theo_spec, exp_spec = None, None
 
-        self.points[x] = r, r_per_beam, theo_spec, exp_spec                     # TODO: why do we need to store expspec for all params?
+        self.points[x] = r, r_per_beam, theo_spec, exp_spec                     # TODO: Don't store exp_spec for all params
 
         if not keep_dirs:
             shutil.rmtree(self._eval_dir(x))
@@ -500,7 +485,7 @@ class FDOptimizer(ABC):
             return
 
         # sort evaluated points by R factor
-        by_best_r = np.argsort(self.R)
+        by_best_r = np.argsort(self.R)[::-1]  # ascending order
         sorted_params = np.array(self.x)[by_best_r]
         exp_spectrum = np.array(self.exp_spectra, dtype=object)[by_best_r][0]
 
@@ -1020,6 +1005,10 @@ class ParameterMinimizer(FDOptimizer):
             lb=[param.bounds[0] for param in self.fd_parameters],
             ub=[param.bounds[1] for param in self.fd_parameters],
         )
+        self.minimizer_options = {key: val for key, val
+                                  in rp.FD_MINIMIZER.items()
+                                  if key not in ("method", "tol")}
+        self.minimizer_options["disp"] = logger.level <= logging.DEBUG
 
     def optimize(self, x0):
         logger.info(f"Starting full dynamic calculation using "
@@ -1029,7 +1018,7 @@ class ParameterMinimizer(FDOptimizer):
             x0=x0,
             method=self.minimizer_method,
             bounds=self.scipy_bounds,
-            options={"disp": True},
+            options=self.minimizer_options,
             tol=self.tol,
             callback=self.updated_intermediate_output,
         )
@@ -1053,7 +1042,7 @@ class ParameterMinimizer(FDOptimizer):
         return result
 
     def _eval_point_string(self, x_val):
-        return ",".join(
+        return ", ".join(
             f"{param.name} = {x:.4f}"
             for param, x in zip(self.fd_parameters, x_val)
         )
@@ -1065,7 +1054,7 @@ class ParameterMinimizer(FDOptimizer):
         self.write_csv()
 
     def write_fd_params_to_file(self):
-        for param in self.fd_parameters:
+        for par_id, param in enumerate(self.fd_parameters):
             store_fd_param_to_file(
-                self.slab, self.rparams, param.name, self.x_R_min[0]
+                self.slab, self.rparams, param.name, self.res.x[par_id]
             )
