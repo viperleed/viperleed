@@ -894,12 +894,16 @@ class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
     def finalize(self):
         # write csv output
         self.write_csv()
+        # write pdf output
         self.write_opt_pdf()
         x_opt, R_opt, _, _ = self.res
         return x_opt, R_opt
 
     def updated_intermediate_output(self):
-        pass
+        if len(self.x) > 0:
+            self.write_csv()
+        if len(self.x) >= 3:
+            self.write_opt_pdf()
 
     def _annotate_opt_pdf(self, fig, ax):
         # do not call super in this case
@@ -928,7 +932,6 @@ class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
                        get_zero_crossing(x_sorted[min_id:], R_minus_R_min_var_R[min_id:]),
                        R_sorted[min_id], var_R, x_sorted[min_id],
                        ax.get_ylim()[1] - ax.get_ylim()[0])
-
 
 
     def _calc_var_r(self):
