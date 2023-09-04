@@ -107,8 +107,9 @@ def _fetch_and_check_spectra(rp, index, name):
 
     eps = 1e-3
     consistent = (len(rp.ivbeams) == len(theobeams)
-                  and all(ivbeam.isEqual(theobeam, eps=eps)
-                          for ivbeam, theobeam in zip(rp.ivbeams, theobeams)))
+                  and all(any(ivbeam.isEqual(theobeam, eps=eps)
+                              for theobeam in theobeams)
+                              for ivbeam in rp.ivbeams))
     if not consistent:
         logger.error("The list of beams read from IVBEAMS is not equivalent "
                      f"to the list of beams in {path}. R-Factor calculation "
