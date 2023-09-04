@@ -393,13 +393,13 @@ class Rparams:
         if self.TL_VERSION == 0.:
                                # TODO: use functionality from leedbase and refactor; use pathlib
             ls = [dn for dn in list(self.source_dir.iterdir())
-                  if ((self.source_dir / dn).is_dir()
-                  and dn.startswith("TensErLEED"))]
+                  if (dn.is_dir()
+                  and dn.name.startswith("TensErLEED"))]
             highest = 0.0
             namestr = ""
             for dn in ls:
                 try:
-                    s = dn.split('v')[-1]
+                    s = dn.name.split('v')[-1]
                     f = float(s)
                     if f > highest:
                         highest = f
