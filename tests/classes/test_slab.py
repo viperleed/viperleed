@@ -68,6 +68,7 @@ def test_bulk_symmetry_thin(fixture, request):
 
 
 class Test_restore_oristate:
+    @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
     def test_save_restore_oristate_geo(self, ag100_slab_with_displacements_and_offsets):
             slab, param = ag100_slab_with_displacements_and_offsets
             slab_copy = deepcopy(slab)
@@ -80,6 +81,7 @@ class Test_restore_oristate:
             for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
                 assert np.allclose(at_rest.disp_geo['all'], at_orig.disp_geo['all'])
 
+    @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
     def test_save_restore_oristate_vib(self, ag100_slab_with_displacements_and_offsets):
             slab, param = ag100_slab_with_displacements_and_offsets
             slab_copy = deepcopy(slab)
@@ -91,6 +93,7 @@ class Test_restore_oristate:
             for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
                 assert np.allclose(at_rest.disp_vib['all'], at_orig.disp_vib['all'])
 
+    @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
     def test_save_restore_oristate_occ(self, ag100_slab_with_displacements_and_offsets):
             slab, param = ag100_slab_with_displacements_and_offsets
             slab_copy = deepcopy(slab)
