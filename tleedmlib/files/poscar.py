@@ -22,7 +22,7 @@ import numpy as np
 from viperleed.tleedmlib.classes import atom as tl_atom, slab as tl_slab
 
 
-_LOGGER = logging.getLogger("tleedm.files.poscar")
+_LOGGER = logging.getLogger('tleedm.files.poscar')
 
 
 class POSCARError(Exception):
@@ -121,11 +121,10 @@ def writePOSCAR(slab, filename='CONTCAR', reorder=False,
         with POSCARFileWriter(filename, comments=comments) as poscar:
             poscar.write(slab)
     except OSError:
-        _LOGGER.error(f"Failed to write {filename}")
+        _LOGGER.error(f'Failed to write {filename}')
         raise
     if not silent:
-        _LOGGER.log(1, f"writePOSCAR() comments: {comments}")
-        _LOGGER.debug(f"Wrote to {filename} successfully")
+        _LOGGER.debug(f'Wrote to {filename} successfully')
 
 
 def ensure_away_from_c_edges(positions, eps):
@@ -154,14 +153,14 @@ def ensure_away_from_c_edges(positions, eps):
         rigidly to fit the (eps, 1 - eps) range.
     """
     if not 0 < eps < 1:
-        raise ValueError(f"ensure_away_from_c_edges: Invalid {eps=}. "
-                         "Should be between zero and one.")
+        raise ValueError(f'ensure_away_from_c_edges: Invalid {eps=}. '
+                         'Should be between zero and one.')
     positions = np.asarray(positions)
     min_c, max_c = positions[:, 2].min(), positions[:, 2].max()
     if max_c - min_c > 1 - 2*eps:                                               # TODO: couldn't we expand the unit cell?
         raise ValueError(
-            "ensure_away_from_c_edges: Cannot shift positions "
-            f"to fit between {eps} and {1-eps} along the c axis."
+            'ensure_away_from_c_edges: Cannot shift positions '
+            f'to fit between {eps} and {1-eps} along the c axis.'
             )
     offset = np.zeros(3)
     if max_c < eps or max_c > 1 - eps:
@@ -218,9 +217,9 @@ class POSCARReader:
             positions = ensure_away_from_c_edges(positions, self.min_frac_dist)
         except ValueError:
             _LOGGER.warning(
-                "POSCAR contains atoms close to c=0 and atoms close "
-                "to c=1. This cannot be corrected automatically and "
-                "will likely cause problems with layer assignment!"
+                'POSCAR contains atoms close to c=0 and atoms close '
+                'to c=1. This cannot be corrected automatically and '
+                'will likely cause problems with layer assignment!'
                 )
 
         # And add them to the slab
@@ -257,16 +256,16 @@ class POSCARReader:
         """
         n_positions, n_coords = np.shape(positions)
         if n_positions != sum(element_counts):
-            raise ValueError("Inconsistent number of atomic fractional "
-                             f"coordinates ({n_positions}) and chemical "
-                             f"element counts ({sum(element_counts)}).")
+            raise ValueError('Inconsistent number of atomic fractional '
+                             f'coordinates ({n_positions}) and chemical '
+                             f'element counts ({sum(element_counts)}).')
         if n_coords != 3:
-            raise ValueError("Invalid fractional coordinates. Expected "
-                             f"3 components, found {n_coords}.")
+            raise ValueError('Invalid fractional coordinates. Expected '
+                             f'3 components, found {n_coords}.')
         if len(elements) != len(element_counts):
-            raise ValueError("Inconsistent number of items in elements "
-                             f"({len(elements)} and in element_counts "
-                             f"({len(element_counts)}")
+            raise ValueError('Inconsistent number of items in elements '
+                             f'({len(elements)} and in element_counts '
+                             f'({len(element_counts)}')
 
         positions = iter(positions)
         atoms = defaultdict(list)  # Merge same-element blocks
@@ -289,24 +288,24 @@ class POSCARReader:
         for line in self.stream:
             coordinates = line.split()
             if not coordinates:
-                _LOGGER.debug("POSCAR: Empty line found; "
-                             "stopping position readout")
+                _LOGGER.debug('POSCAR: Empty line found; '
+                              'stopping position readout')
                 break
             try:
                 positions.append([float(c) for c in coordinates[:3]])
             except ValueError:  # Reached the optional "Lattice velocities"
-                _LOGGER.debug(f"POSCAR: no coordinates in {line!r}; "
-                             "stopping position readout")
+                _LOGGER.debug(f'POSCAR: no coordinates in {line!r}; '
+                              'stopping position readout')
                 break
             if len(positions) >= n_atoms:
                 break
 
         if not positions:
-            raise POSCARSyntaxError("POSCAR: No atomic coordinates found.")
+            raise POSCARSyntaxError('POSCAR: No atomic coordinates found.')
         if len(positions) < n_atoms:
             raise POSCARSyntaxError(
-                "POSCAR: Too few atomic coordinates. Found "
-                f"{len(positions)}, expected {n_atoms}"
+                'POSCAR: Too few atomic coordinates. Found '
+                f'{len(positions)}, expected {n_atoms}'
                 )
 
         # pylint: disable=redefined-variable-type
@@ -332,8 +331,8 @@ class POSCARReader:
             elements = []
         if not elements:
             raise POSCARSyntaxError(
-                "POSCAR: Element labels line not found. This is an optional "
-                "line in the POSCAR specification, but ViPErLEED needs it."
+                'POSCAR: Element labels line not found. This is an optional '
+                'line in the POSCAR specification, but ViPErLEED needs it.'
                 )
 
         element_counts = [int(c) for c in next(self.stream, '').split()]
@@ -346,12 +345,12 @@ class POSCARReader:
         slab.n_per_elem = dict(n_per_elem)
         if len(slab.n_per_elem) != len(elements):
             logging.warning(
-                "POSCAR: atoms are not element-contiguous, i.e., "
-                "there are multiple blocks with the same chemical-"
-                f"species label ({elements}). This structure will "
-                "not be preserved, i.e., atoms will be re-sorted "
-                f"(to {list(slab.n_per_elem.keys())}) so that only "
-                "one block for each element is present."
+                'POSCAR: atoms are not element-contiguous, i.e., '
+                'there are multiple blocks with the same chemical-'
+                f'species label ({elements}). This structure will '
+                'not be preserved, i.e., atoms will be re-sorted '
+                f'(to {list(slab.n_per_elem.keys())}) so that only '
+                'one block for each element is present.'
                 )
         return elements, element_counts
 
@@ -383,11 +382,11 @@ class POSCARReader:
         # Check whether POSCAR was pre-processed, i.e., whether
         # the 'Plane group = ...' comment is already there
         plane_group = 'unknown'
-        if all(s in cartesian_line for s in ("plane group = ", "  n")):
-            _, plane_group_str = cartesian_line.split("plane group = ")
-            plane_group_str = plane_group_str.split("  n")[0]
+        if all(s in cartesian_line for s in ('plane group = ', '  n')):
+            _, plane_group_str = cartesian_line.split('plane group = ')
+            plane_group_str = plane_group_str.split('  n')[0]
             plane_group_str = plane_group_str.split('(')[0].strip()
-            if not plane_group_str.startswith("*"):
+            if not plane_group_str.startswith('*'):
                 slab.preprocessed = True
             plane_group = plane_group_str
         return cartesian, plane_group
@@ -405,9 +404,9 @@ class POSCARReader:
         slab.ucell = np.array(ucell).T * slab.poscar_scaling
         if slab.ucell.shape != (3, 3):
             n_vec, n_comp = slab.ucell.shape
-            _err = ("Invalid unit-cell vectors: not enough vectors "
-                    f"({n_vec}/3) or not enough Cartesian components "
-                    f"({n_comp}/3).")
+            _err = ('Invalid unit-cell vectors: not enough vectors '
+                    f'({n_vec}/3) or not enough Cartesian components '
+                    f'({n_comp}/3).')
             _LOGGER.error(_err)
             raise POSCARSyntaxError(_err)
 
