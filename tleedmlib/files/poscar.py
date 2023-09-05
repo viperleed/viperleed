@@ -740,7 +740,13 @@ class VASPPOSCARWriter(POSCARStreamWriter):
             - 'bulk' is like 'none' but writes the space group
               (meant to be used with POSCAR_bulk).
             This argument is ignored if relax_info is given.
-        relax_info : dict or None, optional                                     # TODO: @amimre add __doc__, including defaults. Check if my guesses for the defaults make sense.
+        relax_info : dict or None, optional
+            Contains keyword information on how the slab should be relaxed:
+            - 'above_c' : float
+                Only atoms above this c fraction are allowed to move
+            - 'c_only' : bool, optional
+                Decides if movement is allowed along c only or also in-plane.
+                Default is True.
 
         Raises
         ------
@@ -771,9 +777,11 @@ class VASPPOSCARWriter(POSCARStreamWriter):
         if not self.relax_info:
             return super()._get_comments_for_atom(atom, atom_index, linklists)
 
-        c_cutoff = self.relax_info.get('above_c', np.inf)
-        relax_along_c = not self.relax_info.get('c_only', False)
+        c_cutoff = self.relax_info.get('above_c', -np.inf)
+        relax_only_along_c = self.relax_info.get('c_only', True)
 
         if atom.pos[2] <= c_cutoff:
             return '   F   F   F'
-        return '   T   T   ' + 'T' if relax_along_c else 'F'
+        if relax_only_along_c:
+            return '   F   F   T'
+        return '   T   T   T'
