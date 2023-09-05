@@ -225,8 +225,8 @@ def manual_slab_3_atoms():
 def manual_slab_1_atom_trigonal():
     slab = Slab()
     slab.ucell = np.array([[ 1, 0, 0],
-                           [-2, 3, 0],
-                           [ 1, 2, 3]],dtype=float)
+                           [-2.3, 3, 0],
+                           [ 1, 2, 3]],dtype=float).T
     slab.atlist = [Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab),]  # "random" position
     param = Rparams()
     slab.fullUpdate(param)
