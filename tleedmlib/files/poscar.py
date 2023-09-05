@@ -562,7 +562,7 @@ class POSCARWriter:
         """Yield a line of coordinates and other info for each atom in slab."""
         more_than_one = (link for link in slab.linklists if len(link) > 1)
         linklists = {id(link): i+1 for i, link in enumerate(more_than_one)}
-        for i, atom in enumerate(slab):
+        for i, atom in enumerate(slab.atlist):
             line = ''.join(f'{coord:20.16f}' for coord in atom.pos)
             line += self._get_comments_for_atom(atom, i, linklists)
             yield line + '\n'
