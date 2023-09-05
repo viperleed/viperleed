@@ -22,7 +22,7 @@ from viperleed.tleedmlib.files import poscar
 
 @pytest.fixture(scope="function")
 def atom_with_disp_and_offset(poscars_path):
-    slab = poscar.read(poscars_path / "POSCAR_STO(100)-4x1")
+    slab = poscar.read(poscars_path / "POSCAR_STO(110)-4x1")
     atom = slab.atlist[0]
     el = atom.el
     atom.disp_geo[el] = [-0.2, 0.0, 0.2]
