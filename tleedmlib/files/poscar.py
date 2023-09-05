@@ -11,9 +11,9 @@ Functions for reading and writing POSCAR files. Also defines the
 POSCARError specific exception, as well as some subclasses.
 """
 
-from io import TextIOBase
 from collections import defaultdict
 from contextlib import AbstractContextManager
+from io import TextIOBase
 import logging
 from pathlib import Path
 
@@ -38,8 +38,9 @@ def readPOSCAR(filename='POSCAR'):
 
     Parameters
     ----------
-    filename : str or Path, optional
-        The file to read from. The default is 'POSCAR'.
+    filename : str or Path or TextIOBase, optional
+        The file to read from. May be an (open) file object.
+        The default is 'POSCAR'.
 
     Returns
     -------
@@ -66,14 +67,10 @@ def readPOSCAR(filename='POSCAR'):
         If no (or too few) atomic coordinate is read.
     """
     if isinstance(filename, TextIOBase):
-        filepath = filename
-    else:
-        filepath = Path(filename)
-        if not filepath.is_file():
-            _LOGGER.error("POSCAR not found.")
-            raise FileNotFoundError(f"POSCAR file at {filepath} not found.")
+        poscar = POSCARStreamReader(filename)
+        return poscar.read()
 
-    with POSCARReader(filepath) as poscar:
+    with POSCARFileReader(filename) as poscar:
         return poscar.read()
 
 
@@ -171,16 +168,17 @@ def ensure_away_from_c_edges(positions, eps):
     return positions
 
 
-class POSCARReader(AbstractContextManager):
-    """A context manager for reading POSCAR files into a slab."""
+class POSCARReader:
+    """Base class for reading POSCAR structures into a Slab."""
 
-    def __init__(self, filename, ucell_eps=1e-4, min_frac_dist=1e-4):
+    def __init__(self, source, *, ucell_eps=1e-4, min_frac_dist=1e-4):
         """Initialize instance.
 
         Parameters
         ----------
-        filename : str or Path
-            The path to the file to be read.
+        source : object
+            Positional-only. The source from which the POSCAR
+            structure should be read.
         ucell_eps : float, optional
             Cartesian tolerance (Angstrom). All the unit cell
             Cartesian components smaller than ucell_eps will
@@ -190,42 +188,21 @@ class POSCARReader(AbstractContextManager):
             edges of the unit cell. If atoms are closer, they
             are shifted, if possible.
         """
-        super().__init__()
-        if isinstance(filename, TextIOBase):
-            self.filename = filename
-        else:
-            self.filename = Path(filename)
-        self.file_object = None
+        self._source = source
         self.ucell_eps = ucell_eps
         self.min_frac_dist = min_frac_dist
 
-    def __enter__(self):
-        """Enter context."""
-        if not isinstance(self.filename, TextIOBase):
-            self.file_object = self.filename.open('r', encoding='utf-8')
-        else:
-            self.file_object = self.filename
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Close file object when exiting."""
-        if not isinstance(self.filename, TextIOBase):
-            self.file_object.close()
-            super().__exit__(exc_type, exc_val, exc_tb)
+    @property
+    def stream(self):
+        """Return the stream from which to read structure information."""
+        raise NotImplementedError
 
     def read(self):
-        """Return a slab with info read from file."""
-        if self.file_object is None or self.file_object.closed:
-            raise ValueError(
-                "I/O operation on closed file. Use\n"
-                "with POSCARReader(filename) as poscar:\n"
-                "    slab = poscar.read()"
-                )
-
+        """Return a slab with info read from source."""
         slab = tl_slab.Slab()
 
-        next(self.file_object, None)  # Skip first line: comment
-        slab.poscar_scaling = float(next(self.file_object, '1').split()[0])     # TODO: POSCAR wiki says it's more complex!
+        next(self.stream, None)  # Skip first line: comment
+        slab.poscar_scaling = float(next(self.stream, '1').split()[0])          # TODO: POSCAR wiki says it's more complex!
 
         self._read_unit_cell(slab)    # Three lines of unit cell
         element_info = self._read_elements(slab)
@@ -305,7 +282,7 @@ class POSCARReader(AbstractContextManager):
         """Return an array of fractional atomic coordinates read from file_."""
         n_atoms = sum(slab.n_per_elem.values())
         positions = []
-        for line in self.file_object:
+        for line in self.stream:
             coordinates = line.split()
             if not coordinates:
                 _LOGGER.debug("POSCAR: Empty line found; "
@@ -339,10 +316,8 @@ class POSCARReader(AbstractContextManager):
 
     def _read_elements(self, slab):
         """Return chemical elements and counts, and update slab."""
-        file_ = self.file_object
-
         # Line of element labels, then their counts
-        elements = [el.capitalize() for el in next(file_, '').split()]
+        elements = [el.capitalize() for el in next(self.stream, '').split()]
 
         # Element labels line is optional, but we need it
         try:
@@ -357,7 +332,7 @@ class POSCARReader(AbstractContextManager):
                 "line in the POSCAR specification, but ViPErLEED needs it."
                 )
 
-        element_counts = [int(c) for c in next(file_, '').split()]
+        element_counts = [int(c) for c in next(self.stream, '').split()]
         if len(element_counts) != len(elements):
             raise POSCARSyntaxError('Length of element list does not match '
                                     'length of atoms-per-element list')
@@ -395,10 +370,10 @@ class POSCARReader(AbstractContextManager):
             case the information read is not a valid plane group.
         """
         # Skip the optional "S[elective Dynamics]" line
-        cartesian_line = next(self.file_object, '').lower()
+        cartesian_line = next(self.stream, '').lower()
         if cartesian_line.startswith('s'):
             _LOGGER.debug("POSCAR: skipping 'Selective dynamics' line (no. 9)")
-            cartesian_line = next(self.file_object, '').lower()
+            cartesian_line = next(self.stream, '').lower()
         cartesian = cartesian_line.startswith(('c', 'k'))
 
         # Check whether POSCAR was pre-processed, i.e., whether
@@ -416,7 +391,7 @@ class POSCARReader(AbstractContextManager):
     def _read_unit_cell(self, slab):
         """Read unit-cell vectors into slab from the next three lines."""
         ucell = []
-        for line in self.file_object:
+        for line in self.stream:
             try:
                 ucell.append([float(coord) for coord in line.split()])
             except ValueError:
@@ -434,6 +409,84 @@ class POSCARReader(AbstractContextManager):
 
         slab.ucell_ori = slab.ucell.copy()
         slab.ucell[abs(slab.ucell) < self.ucell_eps] = 0.                       # TODO: was done only in x,y. OK to do all?
+
+
+class POSCARFileReader(AbstractContextManager, POSCARReader):
+    """A context manager for reading POSCAR files into a slab."""
+
+    def __init__(self, filename, *, ucell_eps=1e-4, min_frac_dist=1e-4):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        filename : str or Path
+            The path to the file to be read.
+        ucell_eps : float, optional
+            Cartesian tolerance (Angstrom). All the unit cell
+            Cartesian components smaller than ucell_eps will
+            be zeroed exactly. Default is 1e-4.
+        min_frac_dist : float, optional
+            Smallest fractional distance from the c=0 and c=1
+            edges of the unit cell. If atoms are closer, they
+            are shifted, if possible.
+        """
+        super().__init__(Path(filename),
+                         ucell_eps=ucell_eps,
+                         min_frac_dist=min_frac_dist)
+        self._file_object = None
+
+    @property
+    def filename(self):
+        """Return the name of the file from which to read."""
+        return self._source  # From POSCARReader
+
+    @property
+    def stream(self):
+        """Return the stream from which to read structure information."""
+        return self._file_object
+
+    def __enter__(self):
+        """Enter context."""
+        if not self.filename.is_file():
+            _LOGGER.error('POSCAR not found.')
+            raise FileNotFoundError(
+                f'POSCAR file at {self.filename} not found.'
+                )
+        self._file_object = self.filename.open('r', encoding='utf-8')
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Close file object when exiting."""
+        try:
+            self._file_object.close()
+        except AttributeError:
+            pass
+        super().__exit__(exc_type, exc_val, exc_tb)
+
+    def read(self):
+        """Return a slab with info read from file."""
+        if self._file_object is None or self._file_object.closed:
+            raise ValueError(
+                'I/O operation on closed file. Use\n'
+                f'with {type(self).__name__}(filename) as poscar:\n'
+                '    slab = poscar.read()'
+                )
+        return super().read()
+
+
+class POSCARStreamReader(POSCARReader):
+    """Class for reading a POSCAR structure from an open stream."""
+
+    @property
+    def stream(self):
+        """Return the stream from which to read structure information."""
+        return self._source
+
+    def read(self):
+        """Return a slab with info read from file."""
+        if self.stream.closed:
+            raise ValueError('I/O operation on closed stream.')
+        return super().read()
 
 
 class POSCARWriter(AbstractContextManager):
