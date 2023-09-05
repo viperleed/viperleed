@@ -20,7 +20,7 @@ from numpy.polynomial import Polynomial
 from viperleed.tleedmlib import psgen
 from viperleed.tleedmlib.files import iofdopt as tl_io
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
-from viperleed.tleedmlib.files.poscar import writePOSCAR
+from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
 from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 
@@ -355,7 +355,7 @@ def fd_optimization(sl, rp):
         if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
             vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
             modifyPARAMETERS(rp, "BULK_REPEAT", new=vec_str, comment=comment)
-        writePOSCAR(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
+        poscar.write(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
 
     # fetch I(V) data from all, plot together
     best_rfactors = rfactor_lists[np.argmin(known_points[:, 1])]

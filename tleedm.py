@@ -26,10 +26,10 @@ for import_path in (str(cd), str(vpr_path)):
 from viperleed import GLOBALS
 from viperleed.tleedmlib.base import CustomLogFormatter
 from viperleed.tleedmlib.classes import rparams
+from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS)
 from viperleed.tleedmlib.files.parameter_errors import ParameterError
-from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.sections.run_sections import section_loop
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 
@@ -119,7 +119,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         if poscarfile.is_file():
             logger.info("Reading structure from file POSCAR")
             try:
-                slab = readPOSCAR(filename=str(poscarfile.resolve()))
+                slab = poscar.read(filename=poscarfile)
             except Exception:
                 logger.error("Exception while reading POSCAR", exc_info=True)
                 cleanup(tmpmanifest)

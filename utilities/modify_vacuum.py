@@ -24,11 +24,13 @@ for import_path in (cd, vpr_path):
     if import_path not in sys.path:
         sys.path.append(import_path)
 
-from viperleed.tleedmlib.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.tleedmlib.files import poscar
 from viperleed.utilities import default_cli_parser
 
 
-logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
+logger = logging.getLogger(
+    "viperleed.utilities.poscar.prepare_for_vasp_relaxation"
+    )
 
 
 def modify_vacuum(slab, vacuum_gap_size, absolute=False):
@@ -118,16 +120,16 @@ def main():
         logger.debug("Using absolute vacuum gap size.")
 
     # read the POSCAR file
-    slab = readPOSCAR(sys.stdin)
+    slab = poscar.read(sys.stdin)
 
     # process the slab
     processed_slab = modify_vacuum(slab, args.vacuum, absolute=args.absolute)
 
     # write the output file
-    writePOSCAR(slab=processed_slab,
-                filename=sys.stdout,
-                comments='none',
-                silent=logger.level<=logging.DEBUG)
+    poscar.write(slab=processed_slab,
+                 filename=sys.stdout,
+                 comments='none',
+                 silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
     # if executed from the terminal, send all logs to stderr because stdout is

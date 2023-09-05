@@ -33,7 +33,7 @@ class POSCARSyntaxError(POSCARError):
     """An exceptions for syntax errors in POSCAR files."""
 
 
-def readPOSCAR(filename='POSCAR'):
+def read(filename='POSCAR'):
     """Return a Slab with the contents of a POSCAR file.
 
     Parameters
@@ -74,8 +74,8 @@ def readPOSCAR(filename='POSCAR'):
         return poscar.read()
 
 
-def writePOSCAR(slab, filename='CONTCAR', reorder=False,
-                comments='none', silent=False):
+def write(slab, filename='CONTCAR', reorder=False,
+          comments='none', silent=False):
     """Write a POSCAR-style file from a slab.
 
     If a file named 'POSCAR' exists in the current folder, its first,

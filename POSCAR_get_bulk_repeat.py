@@ -10,11 +10,12 @@ the appropriate N_BULK_LAYERS and BULK_REPEAT values.
 """
 
 import copy
+
 import numpy as np
 
-from tleedmlib.files.poscar import readPOSCAR, writePOSCAR
-from tleedmlib.files.woods_notation import writeWoodsNotation
-import tleedmlib as tl
+from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.files import poscar
+from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
 
 
 def main():
@@ -27,15 +28,14 @@ def main():
 
     # read the POSCAR file
     filename = ""
-    while filename == "":
-        filename = input("Enter POSCAR file name (Default: "
-                         "[POSCAR]): ")
-        if filename == "":
+    while not filename:
+        filename = input("Enter POSCAR file name (Default: [POSCAR]): ")
+        if not filename:
             filename = "POSCAR"
         try:
-            sl = readPOSCAR(filename=filename)
+            sl = poscar.read(filename=filename)
         except FileNotFoundError:
-            print("File "+filename+" not found.")
+            print(f"File {filename} not found.")
             filename = ""
         except Exception:
             print("Exception while reading POSCAR file")
@@ -72,7 +72,6 @@ def main():
                 if eps < 0:
                     print("Value has to be greater than zero.")
 
-    rp = tl.Rparams()
     rp.LAYER_CUTS = [cut]
     rp.N_BULK_LAYERS = 1
     rp.SYMMETRY_EPS = eps
@@ -82,6 +81,7 @@ def main():
     sl.bulkslab = sl.makeBulkSlab(rp)
     bsl = sl.bulkslab
     bsl.createSublayers(eps)
+    rp = Rparams()
 
     print("Checking bulk unit cell...")
     changecell, mincell = bsl.getMinUnitCell(rp)

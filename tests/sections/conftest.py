@@ -16,18 +16,14 @@ vpr_path = str(Path(__file__).parent.parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
-
-
-from viperleed.tleedmlib.files.poscar import readPOSCAR
 from viperleed.tleedmlib.classes.rparams import Rparams
-
+from viperleed.tleedmlib.files import poscar
 
 
 @pytest.fixture()
 def fe3o4_bulk_slab(poscar_path):
     file_name = "POSCAR_Fe3O4_(001)_cod1010369"
-    file_path = poscar_path(file_name)
-    slab = readPOSCAR(str(file_path))
+    slab = poscar.read(poscar_path(file_name))
     param = Rparams()
     param.LAYER_CUTS = [0.1, 0.2, '<', 'dz(1.0)']
     param.N_BULK_LAYERS = 2

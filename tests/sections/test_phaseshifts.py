@@ -16,17 +16,14 @@ vpr_path = str(Path(__file__).parent.parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
-
-from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
-from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.tleedmlib.files.displacements import (readDISPLACEMENTS,
+                                                     readDISPLACEMENTS_block)
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 from viperleed.tleedmlib.symmetry import findSymmetry, enforceSymmetry
 from viperleed.tleedmlib.psgen import runPhaseshiftGen_old
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.classes.slab import Slab
-
-
 
 
 @pytest.fixture()
@@ -47,10 +44,10 @@ def run_phaseshift(slab_pg_rp, tensorleed_path, tmp_path_factory):
     return param, slab, firstline, phaseshift
 
 
-
 def test_phaseshifts_firstline_not_empty(run_phaseshift):
     _, _, firstline, _ = run_phaseshift
     assert firstline
+
 
 def test_phaseshifts_firstline_len(run_phaseshift):
     _, _, firstline, _ = run_phaseshift

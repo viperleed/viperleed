@@ -5,22 +5,22 @@ Created on 2023-07-26
 @author: Alexander M. Imre
 """
 
-import pytest
 import sys
 import os
 from pathlib import Path
+
+import pytest
 
 vpr_path = str(Path(__file__).parent.parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
-
-from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.tleedmlib.files import poscar
 
 
 @pytest.fixture(scope="function")
 def atom_with_disp_and_offset(poscars_path):
-    slab = readPOSCAR(poscars_path / "POSCAR_STO(100)-4x1")
+    slab = poscar.read(poscars_path / "POSCAR_STO(100)-4x1")
     atom = slab.atlist[0]
     el = atom.el
     atom.disp_geo[el] = [-0.2, 0.0, 0.2]

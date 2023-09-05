@@ -89,7 +89,7 @@ def main():
     logger.debug(f"Relaxing above c fraction {above_c}.")
 
     # read the POSCAR file from stdin
-    slab = readPOSCAR(sys.stdin)
+    slab = poscar.read(sys.stdin)
 
     if slab.vacuum_gap < 10:
         logger.warning("Gap between top and bottom of slab is less than 10 Å. "
