@@ -43,7 +43,7 @@ _FIXTURES_PATH = Path('tests/fixtures/')
 _POSCARs_PATH = _FIXTURES_PATH / 'POSCARs'
 
 _EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
-                                ("POSCAR_STO(100)-4x1", 136, 'pm', 0),
+                                ("POSCAR_STO(110)-4x1", 136, 'pm', 0),
                                 ("POSCAR_TiO2", 540, 'pmm', -1),
                                 ("POSCAR_diamond", 96, 'pm', 89),
                                 ("POSCAR_36C_p6m", 36, 'p6m', 0),
