@@ -193,36 +193,25 @@ def bookkeeper(mode,
         store_input_files_to_history(cwd_path, tensor_dir)
 
     # if CONT, check for POSCAR_OUT / VIBROCC_OUT
+    # do not complain if not found, since we move previous runs to the history
+    # by default
     if _mode is BookkeeperMode.CONT:
         if os.path.isdir("OUT"):
-            file_out = sorted([f for f in os.listdir("OUT")
-                           if os.path.isfile(os.path.join("OUT", f))
-                           and f.startswith("POSCAR_OUT_")
-                           and "parabola" not in f])
-            if len(file_out) > 0:
-                path = os.path.join("OUT", file_out[-1])
-                try:
-                    shutil.copy2(path, "POSCAR")
-                except Exception:
-                    print(f"Error: failed to copy {path} as new POSCAR.")
-            else:
-                print("Error: Flag --cont was set, but no POSCAR_OUT was "
-                      "found in OUT.")
-            file_out = sorted([file for file in out_path.iterdir()
-                           if (out_path / file).is_file()
-                           and file.name.startswith("VIBROCC_OUT_")
-                           and "parabola" not in file.name])
-            if len(file_out) > 0:
-                path = out_path / file_out[-1]
-                try:
-                    shutil.copy2(path, "VIBROCC")
-                except Exception:
-                    print("Error: failed to copy {path} as new VIBROCC.")
-            else:
-                print("Error: Flag --cont was set, but no VIBROCC_OUT was "
-                      "found in OUT.")
-        else:
-            print("Error: Flag --cont was set, but no OUT folder exists.")
+            for file in ("POSCAR", "VIBROCC"):
+
+                files_in_out = sorted(
+                    [f for f in out_path.iterdir()
+                    if (out_path / f).is_file()
+                    and f.name.startswith(f"{file}_OUT_")
+                    and "parabola" not in f.name]
+                )
+                if len(files_in_out) > 0:
+                    path = out_path / files_in_out[-1]
+                    try:
+                        shutil.copy2(path, file)
+                    except Exception:
+                        print(f"Error: failed to copy {path} as new {file}.")
+
     # move old stuff
     for file in files_to_move:
         if _mode is not BookkeeperMode.DISCARD:
