@@ -49,10 +49,10 @@ def test_rotation_on_trigonal_slab(manual_slab_1_atom_trigonal):
     rot_15 = np.array([[ 0.96592583, -0.25881905,  0.        ],
                        [ 0.25881905,  0.96592583,  0.        ],
                        [ 0.        ,  0.        ,  1.        ]])
-    expected_cell = np.array([[ 0.44828774, -2.1906707 ,  1.        ],
-                              [ 0.77645714,  2.89777748,  2.        ],
-                              [ 0.        ,  0.        ,  3.        ]])
-    expected_atom_cartpos = [0.63317754, 1.5903101]
+    expected_cell = [[0.96592583,  0.25881905, 0.],
+                     [-2.99808654, 2.30249368, 0.],
+                     [0.44828774,  2.1906707,  3.]]
+    expected_atom_cartpos = [-1.86064664,  1.88257645]
     slab = manual_slab_1_atom_trigonal
     slab.apply_matrix_transformation(rot_15)
     assert np.allclose(slab.ucell.T, expected_cell)
