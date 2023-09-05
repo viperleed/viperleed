@@ -74,8 +74,8 @@ def readPOSCAR(filename='POSCAR'):
         return poscar.read()
 
 
-def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
-                silent=False, relax_info=None):
+def writePOSCAR(slab, filename='CONTCAR', reorder=False,
+                comments='none', silent=False):
     """Write a POSCAR-style file from a slab.
 
     If a file named 'POSCAR' exists in the current folder, its first,
@@ -85,8 +85,8 @@ def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
     ----------
     slab : Slab
         The Slab object to write.
-    filename : str or Path, optional
-        The file name to write to. The default is 'CONTCAR'.
+    filename : str or Path or TextIOBase, optional
+        The file(name) to write to. The default is 'CONTCAR'.
     reorder : bool, optional
         If True, atoms will be sorted by z coordinate; in all
         cases atoms are sorted by original-element order. The
@@ -100,7 +100,6 @@ def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
           to a or b (meant to be used with POSCAR_oricell)
         - 'bulk' is like 'none' but writes the space group
           (meant to be used with POSCAR_bulk).
-        - 'relax'
     silent : bool, optional
         If True, will print less to log.
 
@@ -111,10 +110,15 @@ def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
     """
     if reorder:
         slab.sort_by_z()
-    slab.sort_by_element()   # this is the minimum that has to happen
+    slab.sort_by_element()   # This is the minimum that has to happen
+
+    if isinstance(filename, TextIOBase):
+        poscar = POSCARStreamWriter(filename, comments=comments)
+        poscar.write(slab)
+        return
 
     try:  # pylint: disable=too-many-try-statements
-        with POSCARWriter(filename, comments, relax_info) as poscar:
+        with POSCARFileWriter(filename, comments=comments) as poscar:
             poscar.write(slab)
     except OSError:
         _LOGGER.error(f"Failed to write {filename}")
@@ -489,68 +493,54 @@ class POSCARStreamReader(POSCARReader):
         return super().read()
 
 
-class POSCARWriter(AbstractContextManager):
-    """A context manager for writing a slab to POSCAR."""
+class POSCARWriter:
+    """Base class for writing a Slab to POSCAR format."""
 
-    def __init__(self, filename, comments='none', relax_info=None):
-        """Initialize instance."""
-        super().__init__()
-        if isinstance(filename, TextIOBase):
-            self.filename = filename
-        else:
-            self.filename = Path(filename)
+    def __init__(self, target, *, comments='none', **__kwargs):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        target : object
+            Positional-only. An object to be used for writing the
+            structure in POSCAR format. Subclasses are more specific
+            as to which objects they require.
+        comments : str, optional
+            Defines whether additional information for each atom
+            should be printed:
+            - 'none' writes a normal POSCAR (Default)
+            - 'all' all annotations
+            - 'nodir' all annotations except directions relating
+              to a or b (meant to be used with POSCAR_oricell)
+            - 'bulk' is like 'none' but writes the space group
+              (meant to be used with POSCAR_bulk).
+        **__kwargs : object, optional
+            Other unused keyword-only arguments.
+
+        Returns
+        -------
+        None.
+        """
+        self._target = target
         self.comments = comments
         self.file_object = None
         self.slab = None
-        self.relax_info = relax_info
-        if self.comments == 'relax':
-            self._check_relax_info()
+        self.header = '\n'  # Default is no header
 
-        if not isinstance(self.filename, TextIOBase):
-            # Take header line from existing POSCAR, or use a dummy header
-            poscar = Path('POSCAR')
-            if poscar.is_file():
-                with poscar.open('r', encoding='utf-8') as _file:
-                    self.header = _file.readline()
-            else:
-                self.header = 'unknown'
-            if not self.header.endswith('\n'):
-                self.header += '\n'
-        else:
-            self.header = '\n'
-
-    def __enter__(self):
-        """Enter context."""
-        if isinstance(self.filename, TextIOBase):
-            self.file_object = self.filename
-        else:
-            self.file_object = self.filename.open('w', encoding='utf-8')
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Close file object when exiting."""
-        if isinstance(self.filename, TextIOBase):
-            return
-        self.file_object.close()
-        super().__exit__(exc_type, exc_val, exc_tb)
+    @property
+    def stream(self):
+        """Return the stream to which the POSCAR should be written."""
+        raise NotImplementedError
 
     def write(self, slab):
-        """Write the info contained in slab to file."""
-        if self.file_object is None or self.file_object.closed:
-            raise ValueError(
-                "I/O operation on closed file. Use\n"
-                "with POSCARWriter(filename) as poscar:\n"
-                "    poscar.write(slab)"
-                )
-
-        self.file_object.writelines(self.header)
-        self.file_object.writelines(self._get_scaling(slab))
-        self.file_object.writelines(self._get_unit_cell(slab))
-        self.file_object.writelines(self._get_elements_and_numbers(slab))
-        if self.comments == 'relax':
-            self.file_object.writelines("Selective dynamics\n")
-        self.file_object.writelines(self._get_cartesian_and_group_line(slab))
-        self.file_object.writelines(self._get_atom_coordinates(slab))
+        """Write the info in slab to the self.stream as a POSCAR."""
+        self.stream.write(self.header)
+        self.stream.writelines(self._get_scaling(slab))
+        self.stream.writelines(self._get_unit_cell(slab))
+        self.stream.writelines(self._get_elements_and_numbers(slab))
+        self._write_selective_dynamics_line()
+        self.stream.writelines(self._get_cartesian_and_group_line(slab))
+        self.stream.writelines(self._get_atom_coordinates(slab))
 
     @staticmethod
     def _get_scaling(slab):
@@ -570,20 +560,14 @@ class POSCARWriter(AbstractContextManager):
         yield ''.join(f'{el:>5}' for el in slab.elements) + '\n'
         yield ''.join(f'{n:>5}' for n in slab.n_per_elem.values()) + '\n'
 
-    def _check_relax_info(self):
-        if self.relax_info is None and self.comments == 'relax':
-            raise ValueError("Specified comments='relax' but missing "
-                             "relaxation_info.")
-        if self.relax_info is not None and self.comments != 'relax':
-            _LOGGER.warning("Specified relaxation_info but comments is not"
-                           "'relax'.")
-        if (self.relax_info is not None
-            and (self.relax_info['above_c'] <= 0.0
-            or self.relax_info['above_c'] >= 1.0)):
-            raise ValueError("Invalid relaxation_info: above_c must be in range"
-                             "[0,1].")
-        self.above_c = self.relax_info['above_c']
-        self.relax_c_only = self.relax_info['c_only']
+    def _get_atom_coordinates(self, slab):
+        """Yield a line of coordinates and other info for each atom in slab."""
+        more_than_one = (link for link in slab.linklists if len(link) > 1)
+        linklists = {id(link): i+1 for i, link in enumerate(more_than_one)}
+        for i, atom in enumerate(slab):
+            line = ''.join(f'{coord:20.16f}' for coord in atom.pos)
+            line += self._get_comments_for_atom(atom, i, linklists)
+            yield line + '\n'
 
     def _get_cartesian_and_group_line(self, slab):
         """Yield the line for "Direct", group and other column headers."""
@@ -618,47 +602,180 @@ class POSCARWriter(AbstractContextManager):
                      f'{"Linking":>9}{"FreeDir":>12}: see POSCAR')
         yield line + '\n'
 
-    def _get_atom_coordinates(self, slab):
-        """Yield a line of coordinates and other info for each atom in slab."""
-        more_than_one = (link for link in slab.linklists if len(link) > 1)
-        linklists = {id(link): i+1 for i, link in enumerate(more_than_one)}
-        for i, atom in enumerate(slab.atlist):
-            line = ''.join(f"{coord:20.16f}" for coord in atom.pos)
-            if self.comments in ('none', 'bulk'):
-                # Only coordinates
-                yield line + '\n'
-                continue
-            if self.comments == 'relax':
-                if atom.pos[2] <= self.above_c:
-                    relax_pos_flags = "   F   F   F"
-                elif atom.pos[2] > self.above_c and self.relax_c_only:
-                    relax_pos_flags = "   F   F   T"
-                else:
-                    relax_pos_flags = "   T   T   T"
-                yield line + relax_pos_flags + '\n'
-                continue
+    def _get_comments_for_atom(self, atom, atom_index, linklists):
+        """Return a line of comments for atom at atom_index."""
+        if self.comments in ('none', 'bulk'):
+            # Only coordinates
+            return ''
 
-            line += (f"{i+1:>5}"                           # N
-                     # f"{atom.el}{NperElCount}".rjust(9)  # NperEl
-                     f"{atom.site.label:>12}"              # SiteLabel
-                     f"{atom.layer.num + 1:>7}")           # Layer
-            if len(atom.linklist) <= 1:                    # Linking
-                linked = 'none'
-            else:
-                linked = linklists[id(atom.linklist)]
-            line += f"{linked:>9}"
-            if self.comments == 'nodir':
-                yield line + '\n'
-                continue
-            #                                              # FreeDir
-            _free_dir = ""
-            if atom.layer.isBulk:
-                _free_dir = 'bulk'
-            elif isinstance(atom.freedir, np.ndarray):
-                _free_dir = str(atom.freedir)  # has to be made into a string
-            elif atom.freedir == 0:
-                _free_dir = 'locked'
-            else:
-                _free_dir = 'free'
-            line += f"{_free_dir:>12}"
-            yield line + '\n'
+        line = (f'{atom_index+1:>5}'                  # N
+                # f'{atom.el}{NperElCount}'.rjust(9)  # NperEl
+                f'{atom.site.label:>12}'              # SiteLabel
+                f'{atom.layer.num + 1:>7}')           # Layer
+        if len(atom.linklist) <= 1:                   # Linking
+            linked = 'none'
+        else:
+            linked = linklists[id(atom.linklist)]
+        line += f'{linked:>9}'
+        if self.comments == 'nodir':
+            return line
+        #                                              # FreeDir
+        _free_dir = ""
+        if atom.layer.isBulk:
+            _free_dir = 'bulk'
+        elif isinstance(atom.freedir, np.ndarray):
+            _free_dir = str(atom.freedir)  # has to be made into a string
+        elif atom.freedir == 0:
+            _free_dir = 'locked'
+        else:
+            _free_dir = 'free'
+        line += f"{_free_dir:>12}"
+        return line
+
+    def _write_selective_dynamics_line(self):
+        """Write the 'Selective dynamics' line needed for DFT relaxation."""
+
+
+class POSCARFileWriter(AbstractContextManager, POSCARWriter):
+    """A context manager for writing a slab to POSCAR."""
+
+    def __init__(self, filename, *, comments='none'):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        filename : str or Path
+            The path to the file to be read.
+        comments : str, optional
+            Defines whether additional information for each atom
+            should be printed:
+            - 'none' writes a normal POSCAR (Default)
+            - 'all' all annotations
+            - 'nodir' all annotations except directions relating
+              to a or b (meant to be used with POSCAR_oricell)
+            - 'bulk' is like 'none' but writes the space group
+              (meant to be used with POSCAR_bulk).
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(Path(filename), comments=comments)
+        self._file_object = None
+
+        # Take header line from existing POSCAR, or use a dummy header
+        poscar = Path('POSCAR')
+        if poscar.is_file():
+            with poscar.open('r', encoding='utf-8') as _file:
+                self.header = _file.readline()
+        else:
+            self.header = 'unknown'
+        if not self.header.endswith('\n'):
+            self.header += '\n'
+
+    @property
+    def filename(self):
+        """Return the path to the file to be written."""
+        return self._target
+
+    @property
+    def stream(self):
+        """Return the stream to which the POSCAR should be written."""
+        return self._file_object
+
+    def __enter__(self):
+        """Enter context."""
+        self._file_object = self.filename.open('w', encoding='utf-8')
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Close file object when exiting."""
+        try:
+            self._file_object.close()
+        except AttributeError:
+            pass
+        super().__exit__(exc_type, exc_val, exc_tb)
+
+    def write(self, slab):
+        """Write the info contained in slab to file."""
+        if self._file_object is None or self._file_object.closed:
+            raise ValueError(
+                'I/O operation on closed file. Use\n'
+                f'with {type(self).__name__}(filename) as poscar:\n'
+                '    poscar.write(slab)'
+                )
+        super().write(slab)
+
+
+class POSCARStreamWriter(POSCARWriter):
+    """Class for writing a Slab to an open stream in POSCAR format."""
+
+    @property
+    def stream(self):
+        """Return the stream to which the POSCAR should be written."""
+        return self._target
+
+    def write(self, slab):
+        """Write the info contained in slab to the current stream."""
+        if self.stream.closed:
+            raise ValueError('I/O operation on closed stream')
+        super().write(slab)
+
+
+class VASPPOSCARWriter(POSCARStreamWriter):
+    """Class for writing a Slab to a POSCAR, ready for VASP relaxation."""
+
+    def __init__(self, stream, *, comments='none', relax_info=None):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        stream : TextIOBase
+            The stream to which the POSCAR will be written.
+        comments : str, optional
+            Defines whether additional information for each atom
+            should be printed:
+            - 'none' writes a normal POSCAR (Default)
+            - 'all' all annotations
+            - 'nodir' all annotations except directions relating
+              to a or b (meant to be used with POSCAR_oricell)
+            - 'bulk' is like 'none' but writes the space group
+              (meant to be used with POSCAR_bulk).
+            This argument is ignored if relax_info is given.
+        relax_info : dict or None, optional                                     # TODO: @amimre add __doc__, including defaults. Check if my guesses for the defaults make sense.
+
+        Raises
+        ------
+        ValueError
+            If the 'above_c' key of relax_info is not a
+            floating-point number between 0 and 1 (included)
+        """
+        super().__init__(stream, comments=comments)
+        if relax_info is None:
+            relax_info = {}
+        self.relax_info = relax_info
+        self._check_relax_info()
+
+    def _check_relax_info(self):
+        """Raise if self.relax_info contains inappropriate values."""
+        above_c = self.relax_info.get('above_c', 0)
+        if not 0 <= above_c <= 1:
+            raise ValueError('Invalid relax_info: "above_c" '
+                             'must be in range [0, 1].')
+
+    def _write_selective_dynamics_line(self):
+        """Write the 'Selective dynamics' line needed for DFT relaxation."""
+        if self.relax_info:
+            self.stream.write('Selective dynamics\n')
+
+    def _get_comments_for_atom(self, atom, atom_index, linklists):
+        """Return a line of comments for atom at atom_index."""
+        if not self.relax_info:
+            return super()._get_comments_for_atom(atom, atom_index, linklists)
+
+        c_cutoff = self.relax_info.get('above_c', np.inf)
+        relax_along_c = not self.relax_info.get('c_only', False)
+
+        if atom.pos[2] <= c_cutoff:
+            return '   F   F   F'
+        return '   T   T   ' + 'T' if relax_along_c else 'F'
