@@ -72,6 +72,7 @@ def main():
                 if eps < 0:
                     print("Value has to be greater than zero.")
 
+    rp = Rparams()
     rp.LAYER_CUTS = [cut]
     rp.N_BULK_LAYERS = 1
     rp.SYMMETRY_EPS = eps
@@ -81,7 +82,6 @@ def main():
     sl.bulkslab = sl.makeBulkSlab(rp)
     bsl = sl.bulkslab
     bsl.createSublayers(eps)
-    rp = Rparams()
 
     print("Checking bulk unit cell...")
     changecell, mincell = bsl.getMinUnitCell(rp)
