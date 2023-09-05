@@ -741,12 +741,15 @@ class VASPPOSCARWriter(POSCARStreamWriter):
               (meant to be used with POSCAR_bulk).
             This argument is ignored if relax_info is given.
         relax_info : dict or None, optional
-            Contains keyword information on how the slab should be relaxed:
-            - 'above_c' : float
-                Only atoms above this c fraction are allowed to move
+            Contains optional information on how the slab should
+            be relaxed. Keys in use:
+            - 'above_c' : float, optional
+                Only atoms above this c fraction are allowed to move.
+                Should be between zero and one (both included). If not
+                given, all atoms can move.
             - 'c_only' : bool, optional
-                Decides if movement is allowed along c only or also in-plane.
-                Default is True.
+                Are movements allowed only along c (True) or also in
+                plane (False)? Default is True.
 
         Raises
         ------
