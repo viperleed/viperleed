@@ -522,7 +522,6 @@ class POSCARWriter:
         """
         self._target = target
         self.comments = comments
-        self.file_object = None
         self.slab = None
         self.header = '\n'  # Default is no header
 
