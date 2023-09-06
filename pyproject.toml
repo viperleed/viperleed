@@ -37,6 +37,8 @@ hardware = [
 dev = [
     "line_profiler",
     "pytest",
+    "pytest-cases",
+    "pytest-subtests"
 ]
 doc = [
     "myst-nb",
