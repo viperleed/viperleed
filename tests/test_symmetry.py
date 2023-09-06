@@ -29,6 +29,8 @@ class TestSymmetry():
         _, slab_pg, _ = slab_pg_rp
         assert slab_pg == expected_pg
 
+    # TODO: fails for slab Ag(100) with x and y displacements (because they are not allowed)
+    # this is a problem of the test
     @pytest.mark.parametrize("displacement", [(4, (np.array([0.2, 0, 0]),)),
                                             (4, (np.array([0, 0.2, 0]),)),
                                             (4, (np.array([0, 0, 0.2]),)),

@@ -5,7 +5,6 @@ Created on 2023-07-26
 @author: Alexander M. Imre
 """
 
-import pytest
 import sys
 import os
 from pathlib import Path
@@ -23,7 +22,7 @@ from viperleed.tleedmlib.files import poscar
 
 @pytest.fixture(scope="function")
 def atom_with_disp_and_offset(poscars_path):
-    slab = poscar.readPOSCAR(poscars_path / "POSCAR_STO(100)-4x1")
+    slab = poscar.read(poscars_path / "POSCAR_STO(110)-4x1")
     atom = slab.atlist[0]
     el = atom.el
     atom.disp_geo[el] = [-0.2, 0.0, 0.2]
@@ -34,7 +33,7 @@ def atom_with_disp_and_offset(poscars_path):
 @pytest.fixture()
 def fe3o4_bulk_slab(poscars_path):
     file_name = "POSCAR_Fe3O4_(001)_cod1010369"
-    slab = poscar.readPOSCAR(poscars_path / file_name)
+    slab = poscar.read(poscars_path / file_name)
     param = rparams.Rparams()
     param.LAYER_CUTS = [0.1, 0.2, '<', 'dz(1.0)']
     param.N_BULK_LAYERS = 2

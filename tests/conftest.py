@@ -1,4 +1,4 @@
-"""Module helpers of viperleed.tests.
+"""Module conftest of viperleed.tests.
 
 Created on 2023-02-28
 
@@ -43,7 +43,7 @@ _FIXTURES_PATH = Path('tests/fixtures/')
 _POSCARs_PATH = _FIXTURES_PATH / 'POSCARs'
 
 _EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
-                                ("POSCAR_STO(100)-4x1", 136, 'pm', 0),
+                                ("POSCAR_STO(110)-4x1", 136, 'pm', 0),
                                 ("POSCAR_TiO2", 540, 'pmm', -1),
                                 ("POSCAR_diamond", 96, 'pm', 89),
                                 ("POSCAR_36C_p6m", 36, 'p6m', 0),
@@ -158,7 +158,7 @@ class TestSetup:
 @pytest.fixture()
 def ag100_parameters_example():
     # read Ag(100) POSCAR and PARAMETERS files
-    slab = poscar.readPOSCAR(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
+    slab = poscar.read(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
     rpars = parameters.readPARAMETERS(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'PARAMETERS')
     # interpret PARAMETERS file
     interpreter = parameters.ParameterInterpreter(rpars)
@@ -187,14 +187,14 @@ def ag100_rename_ax(request, tmp_path):
 @pytest.fixture(scope="function", params=_EXAMPLE_POSCARs)
 def example_poscars(request):
     file_path = _POSCARs_PATH / request.param
-    slab = poscar.readPOSCAR(str(file_path))
+    slab = poscar.read(file_path)
     return slab
 
 @pytest.fixture(scope="function", params=_EXAMPLE_POSCAR_EXPECTATIONS)
 def slab_and_expectations(request):
     filename, expected_n_atoms, expected_pg, offset_at = request.param
     file_path = _POSCARs_PATH / filename
-    pos_slab = poscar.readPOSCAR(str(file_path))
+    pos_slab = poscar.read(file_path)
     return (pos_slab, expected_n_atoms, expected_pg, offset_at)
 
 @pytest.fixture(scope="function")
@@ -235,7 +235,7 @@ def manual_slab_1_atom_trigonal():
 
 @pytest.fixture()
 def ag100_slab_param(poscars_path):
-    slab = poscar.readPOSCAR(poscars_path /"POSCAR_Ag(100)")
+    slab = poscar.read(poscars_path /"POSCAR_Ag(100)")
     param = Rparams()
     param.N_BULK_LAYERS = 1
     slab.fullUpdate(param)
