@@ -1287,7 +1287,7 @@ class ParameterInterpreter:                                                     
         if not assignment.flag:
             message = 'Parameter to optimize not defined.'
             self.rpars.setHaltingLevel(3)
-            raise ParameterError(param, message)
+            raise ParameterNeedsFlagError(param, message)
         which = assignment.flag.lower()
         if which not in _OPTIMIZE_OPTIONS:
             self.rpars.setHaltingLevel(3)
