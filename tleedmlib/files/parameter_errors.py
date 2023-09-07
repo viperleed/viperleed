@@ -3,7 +3,7 @@
 class ParameterError(Exception):
     """Base class for errors raised during PARAMETERS interpretation"""
 
-    def __init__(self, parameter, message="", **kwargs):
+    def __init__(self, parameter, message="", **__kwargs):
         _message = f"PARAMETERS file: parameter {str(parameter)}:\n"
         if message:
             _message += message + " "  # add space before "input will be ignored"
