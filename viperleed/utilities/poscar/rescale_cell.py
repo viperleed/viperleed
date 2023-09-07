@@ -46,7 +46,6 @@ def main(args=None):
     # read the POSCAR file
     slab = readPOSCAR(sys.stdin)
 
-    print(args.scaling)
     if len(args.scaling) == 1 or len(args.scaling) == 3:
         slab.apply_scaling(*args.scaling)
     else:
