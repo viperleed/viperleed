@@ -130,7 +130,7 @@ def run_section(index, sl, rp):
                                    "generating IVBEAMS from EXBEAMS.")
                     ignoreError = True
                 else:
-                    logger.error("Neither IVBEAMS not EXPBEAMS file "
+                    logger.error("Neither IVBEAMS nor EXPBEAMS file "
                                  "found.")
             except Exception as e:
                 logger.error("Error while reading required file IVBEAMS",
