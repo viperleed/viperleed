@@ -101,7 +101,7 @@ def run_section(index, sl, rp):
             i += 1
             continue
         # try loading files
-        if filename == "EXPBEAMS":
+        if filename == "EXPBEAMS" and not rp.fileLoaded["EXPBEAMS"]:
             enrange = [-1 if e is rp.no_value else e
                        for e in rp.THEO_ENERGIES[:2]]
             initialization._get_expbeams(rp)
