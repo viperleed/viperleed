@@ -166,3 +166,4 @@ ALL_INPUT_FILES = set(chain.from_iterable(_REQUIRED_FILES.values()))
 # allowed names for the file containing the experimental beams
 # files will be used in precedence from left to right
 EXPBEAMS_NAMES = ("EXPBEAMS.csv", "EXPBEAMS")
+ALL_INPUT_FILES.update(set(EXPBEAMS_NAMES))
