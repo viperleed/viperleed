@@ -132,11 +132,11 @@ def bookkeeper(mode,
     max_nums = {}  # max. job number per tensor number
     rgx = re.compile(r't[0-9]{3}.r[0-9]{3}_')
     for dir in dir_list:
-        match = rgx.match(dir.name)
+        match = rgx.match(dir)
         if match:
             try:
-                r_fac_line = int(dir.name[1:4])
-                i = int(dir.name[6:9])
+                r_fac_line = int(dir[1:4])
+                i = int(dir[6:9])
                 if r_fac_line not in max_nums:
                     max_nums[r_fac_line] = i
                 else:
