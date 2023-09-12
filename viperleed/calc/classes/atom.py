@@ -178,7 +178,7 @@ class Atom:
         if el in self.offset_vib:
             vib_offset = self.offset_vib[el]
             final_vib_steps = [vib_step + vib_offset for vib_step in self.disp_vib[el]]
-            if any(np.array(final_vib_steps) < 0):
+            if any(np.array(final_vib_steps) + self.site.vibamp[el] < 0):
                 logger.error(f"Vibrational offset for {self} defined in "
                              "VIBROCC would result in negative vibrational "
                              "amplitude. Offset will be ignored.")
