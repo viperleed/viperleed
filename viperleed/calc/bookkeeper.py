@@ -132,11 +132,11 @@ def bookkeeper(mode,
     max_nums = {}  # max. job number per tensor number
     rgx = re.compile(r't[0-9]{3}.r[0-9]{3}_')
     for dir in dir_list:
-        match = rgx.match(dir)
+        match = rgx.match(dir.name)
         if match:
             try:
-                r_fac_line = int(dir[1:4])
-                i = int(dir[6:9])
+                r_fac_line = int(dir.name[1:4])
+                i = int(dir.name[6:9])
                 if r_fac_line not in max_nums:
                     max_nums[r_fac_line] = i
                 else:
@@ -263,8 +263,8 @@ def bookkeeper(mode,
                         and old_timestamp in dir.name]
         for dir in work_history_dirs:
             try:
-                tensor_num_2 = int(dir[1:4])
-                search_num = int(dir[6:9])
+                tensor_num_2 = int(dir.name[1:4])
+                search_num = int(dir.name[6:9])
             except (ValueError, IndexError):
                 pass
             else:
@@ -273,7 +273,7 @@ def bookkeeper(mode,
                 else:
                     num = max_nums[tensor_num_2] + 1
                 newname = (f"t{tensor_num_2:03d}.r{num:03d}.{search_num:03d}"
-                           + dir[9:])
+                           + dir.name[9:])
                 try:
                     shutil.move(os.path.join(work_history_name, dir),
                                 os.path.join(history_name, newname))
