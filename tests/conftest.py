@@ -38,9 +38,8 @@ from viperleed.tleedmlib.files import parameters, poscar
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
 
+from .helpers import TEST_DATA, POSCAR_PATH
 
-_FIXTURES_PATH = Path('tests/fixtures/')
-_POSCARs_PATH = _FIXTURES_PATH / 'POSCARs'
 
 _EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
                                 ("POSCAR_STO(110)-4x1", 136, 'pm', 0),
@@ -50,13 +49,12 @@ _EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
                                 ("POSCAR_36C_cm", 36,'cm', 0),]
                                #("POSCAR_Fe3O4_SCV", 83, 'cmm', 50)]            #TODO: Phaseshift generation fails. Why? @Fkraushofer (worked in fkpCurie:Florian_OldLocalTests/Fe3O4-001-SCV/history/t000.r013_211220-133452)
 
-_EXAMPLE_POSCARs = [file.name for file in _POSCARs_PATH.glob('POSCAR*')]
+
+_EXAMPLE_POSCARs = [file.name for file in POSCAR_PATH.glob('POSCAR*')]
 
 SOURCE_STR = str(Path(vpr_path) / "viperleed")
 TENSORLEED_PATH = Path(vpr_path) / "viperleed" / "tensorleed"
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
-INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
-POSCAR_PATHS = INPUTS_ORIGIN / "POSCARs"
 
 TENSERLEED_TEST_VERSIONS = ('1.72', '1.73', '1.74')
 
@@ -64,15 +62,17 @@ AG_100_DISPLACEMENTS_NAMES = ['DISPLACEMENTS_z', 'DISPLACEMENTS_vib', 'DISPLACEM
 AG_100_DELTAS_NAMES = ['Deltas_z.zip', 'Deltas_vib.zip', 'Deltas_z+vib.zip']
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def poscars_path():
-    """Return the path to a POSCAR file."""
-    return POSCAR_PATHS
+    """Return the Path to the directory containing POSCAR files."""
+    return POSCAR_PATH
 
-@pytest.fixture
-def inputs_path():
-    """Return the path to an input file."""
-    return INPUTS_ORIGIN
+
+@pytest.fixture(scope='session', name='data_path')
+def fixture_data_path():
+    """Return the Path to the top-level folder containing test data."""
+    return TEST_DATA
+
 
 @pytest.fixture
 def tensorleed_path():
@@ -107,7 +107,7 @@ class BaseTleedmFilesSetup():
         self.test_path = tmp_test_path
 
         self.work_path = self.test_path / "work"
-        self.inputs_path = INPUTS_ORIGIN / self.surface_name
+        self.inputs_path = TEST_DATA / self.surface_name
         self.input_files_paths = []
 
         for pth in self.copy_dirs:
@@ -158,8 +158,8 @@ class TestSetup:
 @pytest.fixture()
 def ag100_parameters_example():
     # read Ag(100) POSCAR and PARAMETERS files
-    slab = poscar.read(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
-    rpars = parameters.readPARAMETERS(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'PARAMETERS')
+    slab = poscar.read(TEST_DATA / 'Ag(100)' / 'initialization' / 'POSCAR')
+    rpars = parameters.readPARAMETERS(TEST_DATA / 'Ag(100)' / 'initialization' / 'PARAMETERS')
     # interpret PARAMETERS file
     interpreter = parameters.ParameterInterpreter(rpars)
     interpreter.interpret(slab)
@@ -169,8 +169,8 @@ def ag100_parameters_example():
 
 
 @pytest.fixture()
-def ag100_rename_ax(request, tmp_path):
-    dir = INPUTS_ORIGIN / "Ag(100)_el_rename"
+def ag100_rename_ax(request, tmp_path, data_path):
+    dir = data_path / "Ag(100)_el_rename"
     run = [0,] # only initialization
     files = BaseTleedmFilesSetup(surface_dir=dir,
                                 tmp_test_path=tmp_path,
@@ -186,14 +186,14 @@ def ag100_rename_ax(request, tmp_path):
 
 @pytest.fixture(scope="function", params=_EXAMPLE_POSCARs)
 def example_poscars(request):
-    file_path = _POSCARs_PATH / request.param
+    file_path = POSCAR_PATH / request.param
     slab = poscar.read(file_path)
     return slab
 
 @pytest.fixture(scope="function", params=_EXAMPLE_POSCAR_EXPECTATIONS)
 def slab_and_expectations(request):
     filename, expected_n_atoms, expected_pg, offset_at = request.param
-    file_path = _POSCARs_PATH / filename
+    file_path = POSCAR_PATH / filename
     pos_slab = poscar.read(file_path)
     return (pos_slab, expected_n_atoms, expected_pg, offset_at)
 
@@ -243,10 +243,10 @@ def ag100_slab_param(poscars_path):
 
 
 @pytest.fixture()
-def ag100_slab_with_displacements_and_offsets(ag100_slab_param, inputs_path):
+def ag100_slab_with_displacements_and_offsets(ag100_slab_param, data_path):
     slab, param = ag100_slab_param
-    vibrocc_path = inputs_path / "Ag(100)" / "mergeDisp" / "VIBROCC"
-    displacements_path = inputs_path / "Ag(100)" / "mergeDisp" / "DISPLACEMENTS_mixed"
+    vibrocc_path = data_path / "Ag(100)" / "mergeDisp" / "VIBROCC"
+    displacements_path = data_path / "Ag(100)" / "mergeDisp" / "DISPLACEMENTS_mixed"
     readVIBROCC(param, slab, str(vibrocc_path))
     readDISPLACEMENTS(param, str(displacements_path))
     readDISPLACEMENTS_block(param, slab, param.disp_blocks[param.search_index])

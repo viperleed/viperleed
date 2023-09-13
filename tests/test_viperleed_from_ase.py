@@ -30,6 +30,8 @@ from viperleed.tleedmlib.base import angle
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
+
+from .helpers import TEST_DATA
 # pylint: enable=wrong-import-position
 
 
@@ -41,8 +43,7 @@ from viperleed.tleedmlib.files.beams import readOUTBEAMS
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
-INPUTS_ASE = INPUTS_ORIGIN / "from_ase"
+ASE_DATA = TEST_DATA / 'from_ase'
 
 
 _ASE_ATOMS = (
@@ -287,7 +288,7 @@ class TestRaises:
     @staticmethod
     def test_non_existing_exec_path():
         """Test exception for non existing execution path."""
-        missing_path = INPUTS_ASE / "__th_is__do_es_not_ex_is_t__"
+        missing_path = ASE_DATA / '__th_is__do_es_not_ex_is_t__'
         with pytest.raises(FileNotFoundError) as exc:
             vpr_ase.run_from_ase(missing_path, None)
         assert exc.match("exec_path")
@@ -296,8 +297,8 @@ class TestRaises:
     def test_non_existing_parameters():
         """Test exception for non-existing PARAMETERS file."""
         with pytest.raises(FileNotFoundError) as exc:
-            vpr_ase.run_from_ase(INPUTS_ASE, None)
-        assert exc.match("PARAMETERS")
+            vpr_ase.run_from_ase(ASE_DATA, None)
+        assert exc.match('PARAMETERS')
 
     @staticmethod
     def test_out_of_plane_ab(ase_ni_100_1x1_cell):
@@ -306,7 +307,7 @@ class TestRaises:
             orthogonal_matrix=vpr_ase.rot_mat_x(20)
             )
         ase_atoms = ase_ni_100_1x1_cell
-        exec_path = INPUTS_ASE / "initialization"  # Will not run
+        exec_path = ASE_DATA / 'initialization'  # Will not run
         with pytest.raises(ValueError) as exc:
             vpr_ase.run_from_ase(
                 exec_path,
@@ -354,7 +355,7 @@ def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
     # The "initialization" folder contains only a PARAMETERS file,
     # but the required IVBEAMS or EXPBEAMS are not present, so the
     # next run_from_ase call will actually FAIL. This is fine though
-    inputs_path = INPUTS_ASE / "initialization"
+    inputs_path = ASE_DATA / 'initialization'
     results = vpr_ase.run_from_ase(
         exec_path=exec_path,
         ase_object=ase_atoms,
@@ -457,7 +458,7 @@ def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):
         ase_atoms = ase_ni_100_1x1_cell
         exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
                                             numbered=True)
-        inputs_path = INPUTS_ASE / "refcalc"
+        inputs_path = ASE_DATA / 'refcalc'
         results = vpr_ase.run_from_ase(
             exec_path=exec_path,
             ase_object=ase_atoms,

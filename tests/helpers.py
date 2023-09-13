@@ -27,6 +27,10 @@ from pytest_cases.filters import get_case_tags
 # https://github.com/nteract/testbook/issues/4
 
 
+TEST_DATA = Path(__file__).parent / '_test_data'
+POSCAR_PATH = TEST_DATA / 'POSCARs'
+
+
 # ##############################   DECORATORS   ###############################
 
 def fixture_factory(*args, **fixture_kwargs):                                   # TODO: does not work for a callable with arguments

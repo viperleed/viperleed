@@ -30,14 +30,12 @@ from viperleed.tleedmlib.files.parameter_errors import (
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
 
-_FIXTURES_PATH = Path('tests/fixtures/')                                        # TODO: use conftest functionality?
-
 
 @pytest.fixture()
-def ag100_parameters_example():
+def ag100_parameters_example(data_path):
     # read Ag(100) POSCAR and PARAMETERS files
-    slab = poscar.read(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
-    rpars = readPARAMETERS(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'PARAMETERS')
+    slab = poscar.read(data_path / 'Ag(100)' / 'initialization' / 'POSCAR')
+    rpars = readPARAMETERS(data_path / 'Ag(100)' / 'initialization' / 'PARAMETERS')
     # interpret PARAMETERS file
     interpreter = ParameterInterpreter(rpars)
     interpreter.interpret(slab)
@@ -45,21 +43,21 @@ def ag100_parameters_example():
 
 
 @pytest.fixture(scope='function')
-def slab_ag100():
+def slab_ag100(data_path):
     # read Ag(100) POSCAR
-    return poscar.read(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ag(100)')
+    return poscar.read(data_path / 'POSCARs' / 'POSCAR_Ag(100)')
 
 
 @pytest.fixture()
-def slab_ir100_2x1_o():
+def slab_ir100_2x1_o(data_path):
     # read Ir(100)-(2x1)-O POSCAR
-    return poscar.read(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ir(100)-(2x1)-O')
+    return poscar.read(data_path / 'POSCARs' / 'POSCAR_Ir(100)-(2x1)-O')
 
 
 @pytest.fixture()
-def ir100_2x1_o_parameters_example(slab_ir100_2x1_o):
+def ir100_2x1_o_parameters_example(slab_ir100_2x1_o, data_path):
     slab = slab_ir100_2x1_o
-    rpars = readPARAMETERS(_FIXTURES_PATH / 'parameters' / 'PARAMETERS_Ir(100)-(2x1)-O')
+    rpars = readPARAMETERS(data_path / 'parameters' / 'PARAMETERS_Ir(100)-(2x1)-O')
     interpreter = ParameterInterpreter(rpars)
     interpreter.interpret(slab)
     return (rpars, slab)
@@ -71,9 +69,9 @@ def mock_rparams():
 
 
 class TestAg100Parameters():
-    def test_read_parameters_for_ag100(self):
+    def test_read_parameters_for_ag100(self, data_path):
         # just check that readPARAMETERS does not crash; not interpreted yet
-        filename = 'tests/fixtures/Ag(100)/initialization/PARAMETERS'
+        filename = data_path / 'Ag(100)/initialization/PARAMETERS'
         rpars = readPARAMETERS(filename)
         assert rpars
 
