@@ -53,7 +53,7 @@ from viperleed.calc.classes import rparams
 from viperleed.calc.files.parameter_errors import ParameterError
 from viperleed.calc.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS)
-from viperleed.calc.files.poscar import readPOSCAR
+from viperleed.calc.files import poscar
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import prerun_clean, cleanup
@@ -145,7 +145,7 @@ def run_tleedm(system_name=None,
         if poscar_file.is_file():
             logger.info("Reading structure from file POSCAR")
             try:
-                slab = readPOSCAR(filename=str(poscar_file.resolve()))
+                slab = poscar.read(filename=poscarfile)
             except Exception:
                 logger.error("Exception while reading POSCAR", exc_info=True)
                 cleanup(tmp_manifest)

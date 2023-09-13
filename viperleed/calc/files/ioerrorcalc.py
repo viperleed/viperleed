@@ -320,39 +320,27 @@ def make_errors_figs(errors):
         err_y = {}
         err_x_inters = {}  # x-values of intersections with var(R)
         err_x_to_mark = {}
-        err_legend = {}
-        err_disp = {}
 
-        for err in mode_errors:
-            ats = "Atom"
-            if len(ats) > 1:
-                ats += "s"
-            ats += " " + range_to_str([at.oriN for at in err.atoms])
-            if mode == "geo":
-                direction = err.disp_label
-                disp = err.lin_disp  # in A
-                err_legend[err] = ats + " along " + direction
-            elif mode == "vib":
-                disp = err.displacements[:]  # in A
-                err_legend[err] = ats
-            elif mode == "occ":
-                disp = err.displacements[:] * 100   # in % for occ
-                err_legend[err] = ats
-            else:
-                raise ValueError(f'Unknown mode "{mode}"')
-            err_disp[err] = disp
-        xvals = [d for k in err_disp for d in err_disp[k]]
-        xrange = [min(xvals) - abs(max(xvals) - min(xvals)) * 0.05,
-                  max(xvals) + abs(max(xvals) - min(xvals)) * 0.05]
+        err_legend = _error_legends(mode, mode_errors)
+
+        x_values = [err.lin_disp for err in mode_errors]
+        if mode == "occ":
+            x_values *= 100  # convert to %
+        x_min = np.min(x_values)
+        x_max = np.max(x_values)
+        xrange = [x_min - abs(x_max - x_min) * 0.05,
+                  x_max + abs(x_max - x_min) * 0.05]
         for err in mode_errors:
             rmin = err.get_r_min
             var = err.var_r
-            disp = err_disp[err]
-            interp_f = interpolate.interp1d(disp, err.rfacs, bounds_error=False)
-            x = np.arange(min(xvals), max(xvals),
+
+            interp_f = interpolate.interp1d(err.lin_disp,
+                                            err.rfacs,
+                                            bounds_error=False)
+            x = np.arange(x_min, x_max,
                           (xrange[1] - xrange[0])*1e-4)
             y = interp_f(x)
-            indmark = [np.argmin(abs(x - v)) for v in disp]
+            indmark = [np.argmin(abs(x - v)) for v in err.lin_disp]
             err_x_to_mark[err] = indmark
             err_x[err] = x[indmark[0]:indmark[-1]+1]
             err_y[err] = y[indmark[0]:indmark[-1]+1]
@@ -417,9 +405,11 @@ def make_errors_figs(errors):
                 axs = axs.flatten()
             err = mode_errors.pop(0)
             rmax = max(r for r in err.rfacs)
-            xvals = err_disp[err]
-            xrange = [min(xvals) - abs(max(xvals) - min(xvals)) * 0.05,
-                      max(xvals) + abs(max(xvals) - min(xvals)) * 0.05]
+            x_values = err.lin_disp
+            x_min = np.min(x_values)
+            x_max = np.max(x_values)
+            xrange = [x_min - abs(x_max - x_min) * 0.05,
+                      x_max + abs(x_max - x_min) * 0.05]
             if var and rmin + var < rmax + (rmax-rmin)*0.1:
                 axs[figcount].plot(xrange, [rmin + var]*2, color="slategray",
                                    linewidth=1)
@@ -495,6 +485,28 @@ def make_errors_figs(errors):
     logger.log(1, f'Number of error figures: {len(figs)}')
     return figs
 
+def _error_legends(mode, mode_errors):
+    err_legend = {}
+    for err in mode_errors:
+        # group sort atoms by site
+        sites = [at.site for at in err.atoms]
+        atom_groups = {site:[at for at in err.atoms if at.site == site] 
+                       for site in sites}
+        label = "Atoms " if len(err.atoms) > 1 else "Atom "
+        label_parts = []
+        for site, atoms in atom_groups.items():
+            group_range = range_to_str([at.oriN for at in atoms])
+            label_parts.append(f"#{group_range} ({site})")
+        label += ", ".join(label_parts)
+        if mode == "geo":
+            direction = err.disp_label
+            err_legend[err] = f"{label} along {direction}"
+        elif mode == "vib" or mode == "occ":
+            err_legend[err] = label
+        else:
+            raise ValueError(f'Unknown mode "{mode}"')
+    return err_legend
+
 
 def draw_error(axis, bound, error, r_interval):
     """Adds annotation for statistical error estimates to individual
@@ -505,7 +517,7 @@ def draw_error(axis, bound, error, r_interval):
     axis : matplotlib axis
         axis of the error plot to be annotated.
     bound : float
-        Error bound == p_min \pm \sigma(p).
+        Error bound == :math:`p_{min} \pm \sigma(p)`.
     error : R_Error
         Error object used for error estimation.
     r_interval : float

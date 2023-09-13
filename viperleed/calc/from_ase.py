@@ -451,13 +451,13 @@ def _read_refcalc_output(rparams):
     return content_list
 
 
-def _write_poscar(slab, exec_path):                                             # TODO: could be done with a flag on writePOSCAR
+def _write_poscar(slab, exec_path):                                             # TODO: could be done with a flag on poscar.write
     """Save slab as a POSCAR file, but warn if one is already there."""
     poscar_path = exec_path / "POSCAR"
     if poscar_path.exists():
         _LOGGER.warning("A 'POSCAR' file is already present in "
                         f"{exec_path} and will be overwritten.")
-    poscar.writePOSCAR(slab, poscar_path)
+    poscar.write(slab, poscar_path)
 
 
 def rfactor_from_csv(                                                           ## TODO: add kwarg for mapping for averaging

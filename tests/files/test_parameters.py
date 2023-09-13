@@ -16,7 +16,7 @@ import viperleed.calc.files.parameters as parameters
 from viperleed.calc.files.parameters import (readPARAMETERS,
                                                   ParameterInterpreter,
                                                   Assignment, NumericBounds)
-from viperleed.calc.files.poscar import readPOSCAR
+from viperleed.calc.files import poscar
 from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.files.parameter_errors import (
     ParameterError, ParameterValueError, ParameterParseError,
@@ -26,13 +26,13 @@ from viperleed.calc.files.parameter_errors import (
     ParameterUnknownFlagError, ParameterNeedsFlagError
     )
 
-_FIXTURES_PATH = Path('tests/fixtures/')
+_FIXTURES_PATH = Path('tests/fixtures/')                                        # TODO: use conftest functionality?
 
 
 @pytest.fixture()
 def ag100_parameters_example():
     # read Ag(100) POSCAR and PARAMETERS files
-    slab = readPOSCAR(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
+    slab = poscar.read(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
     rpars = readPARAMETERS(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'PARAMETERS')
     # interpret PARAMETERS file
     interpreter = ParameterInterpreter(rpars)
@@ -43,13 +43,13 @@ def ag100_parameters_example():
 @pytest.fixture(scope='function')
 def slab_ag100():
     # read Ag(100) POSCAR
-    return readPOSCAR(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ag(100)')
+    return poscar.read(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ag(100)')
 
 
 @pytest.fixture()
 def slab_ir100_2x1_o():
     # read Ir(100)-(2x1)-O POSCAR
-    return readPOSCAR(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ir(100)-(2x1)-O')
+    return poscar.read(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ir(100)-(2x1)-O')
 
 
 @pytest.fixture()
@@ -868,6 +868,22 @@ class TestLayerCuts:
         assignment = Assignment("0.1 invalid 0.3", "LAYER_CUTS")
         with pytest.raises(ParameterParseError):
             interpreter.interpret_layer_cuts(assignment)
+
+    @pytest.mark.xfail(reason="Known bug in LAYER_CUTS")
+    def test_interpret_layer_cuts_two_dz(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("dz(1.0) < 2.0 < dz(0.5) < 4.0", "LAYER_CUTS")
+        interpreter.interpret_layer_cuts(assignment)
+        assert mock_rparams.LAYER_CUTS == ["dz(1.0)", "<", "2.0", "<", 
+                                           "dz(0.5)", "<", "4.0"]
+
+    @pytest.mark.xfail(reason="Known bug in LAYER_CUTS")
+    def test_interpret_layer_cuts_dz_invalid(self, mock_rparams):
+        interpreter = ParameterInterpreter(mock_rparams)
+        assignment = Assignment("0.5 1.0 < dz(abcd) < 4.0", "LAYER_CUTS")
+        with pytest.raises(ParameterError):
+            interpreter.interpret_layer_cuts(assignment)
+
 
 
 class TestRun:

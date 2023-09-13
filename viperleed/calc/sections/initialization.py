@@ -76,7 +76,7 @@ def initialization(sl, rp, subdomain=False):
                 "or setting SYMMETRY_CELL_TRANSFORM to conserve "
                 "translational symmetry."
                 )
-            poscar.writePOSCAR(ssl, filename="POSCAR_mincell")
+            poscar.write(ssl, filename='POSCAR_mincell')
             rp.setHaltingLevel(1)
     elif not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, transform).all():
@@ -90,8 +90,8 @@ def initialization(sl, rp, subdomain=False):
                     "slab symmetry search using base unit cell...")
         tl_symmetry.getSymBaseSymmetry(sl, rp)
         try:
-            poscar.writePOSCAR(sl.symbaseslab, filename='POSCAR_mincell',
-                               comments='all')
+            poscar.write(sl.symbaseslab, filename='POSCAR_mincell',
+                         comments='all')
         except Exception:
             logger.warning("Exception occurred while writing POSCAR_mincell")
 
@@ -99,7 +99,7 @@ def initialization(sl, rp, subdomain=False):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
-        poscar.writePOSCAR(tmpslab, filename='POSCAR', comments='all')
+        poscar.write(tmpslab, filename='POSCAR', comments='all')
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
@@ -107,7 +107,7 @@ def initialization(sl, rp, subdomain=False):
     # generate POSCAR_oricell
     tmpslab.revertUnitCell()
     try:
-        poscar.writePOSCAR(tmpslab, filename='POSCAR_oricell', comments='nodir')
+        poscar.write(tmpslab, filename='POSCAR_oricell', comments='nodir')
     except Exception:
         logger.error("Exception occurred while writing POSCAR_oricell, "
                      "execution will continue...")
@@ -212,7 +212,7 @@ def initialization(sl, rp, subdomain=False):
         bsl = copy.deepcopy(sl.bulkslab)
         bsl.sortOriginal()
         try:
-            poscar.writePOSCAR(bsl, filename='POSCAR_bulk', comments='bulk')
+            poscar.write(bsl, filename='POSCAR_bulk', comments='bulk')
         except Exception:
             logger.error("Exception occurred while writing POSCAR_bulk")
             raise
@@ -226,8 +226,8 @@ def initialization(sl, rp, subdomain=False):
         if len(bsl.sublayers) <= len(bsl.elements):
             n += 1
     try:
-        poscar.writePOSCAR(sl.addBulkLayers(rp, n=n)[0],
-                           filename='POSCAR_bulk_appended')
+        poscar.write(sl.addBulkLayers(rp, n=n)[0],
+                     filename='POSCAR_bulk_appended')
     except Exception:
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
 
@@ -481,7 +481,7 @@ def init_domains(rp):
             os.chdir(target)
             logger.info(f"Reading input files for domain {name}")
             try:
-                dp.sl = poscar.readPOSCAR()
+                dp.sl = poscar.read()
                 dp.rp = parameters.readPARAMETERS()                             # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir

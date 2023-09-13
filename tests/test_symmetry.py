@@ -12,14 +12,8 @@ from pathlib import Path
 from copy import deepcopy
 import numpy as np
 
-from viperleed.calc.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
-from viperleed.calc.files.poscar import readPOSCAR
-from viperleed.calc.files.vibrocc import readVIBROCC
-from viperleed.calc.lib.symmetry import findSymmetry, enforceSymmetry
-from viperleed.calc.files.psgen import runPhaseshiftGen_old
-from viperleed.calc.classes.atom import Atom
-from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.classes.slab import Slab
+from viperleed.calc.lib.symmetry import findSymmetry
+
 
 class TestSymmetry():
     def test_any_pg_found(self, slab_pg_rp):
@@ -31,6 +25,8 @@ class TestSymmetry():
         _, slab_pg, _ = slab_pg_rp
         assert slab_pg == expected_pg
 
+    # TODO: fails for slab Ag(100) with x and y displacements (because they are not allowed)
+    # this is a problem of the test
     @pytest.mark.parametrize("displacement", [(4, (np.array([0.2, 0, 0]),)),
                                             (4, (np.array([0, 0.2, 0]),)),
                                             (4, (np.array([0, 0, 0.2]),)),

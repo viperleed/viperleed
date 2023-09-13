@@ -15,9 +15,8 @@ import numpy as np
 
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import BackwardsReader, readIntLine
-
+from viperleed.tleedmlib.files import poscar
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
-from viperleed.calc.files.poscar import writePOSCAR
 from viperleed.calc.files.vibrocc import writeVIBROCC
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
@@ -26,16 +25,19 @@ __created__ = "19.08.2020"
 
 logger = logging.getLogger("tleedm.files.iosearch")
 
+
 class SearchIORaceConditionError(Exception):
     """Raised if reading of control.chem does not return the expected number
     of lines"""
     def __init__(self, message):
         super().__init__(message)
 
+
 class SearchIOEmptyFileError(Exception):
     """Raised if file read for the search has no content"""
     def __init__(self, message):
         super().__init__(message)
+
 
 def readSDTL_next(filename="SD.TL", offset=0):
     """
@@ -1204,7 +1206,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
-        writePOSCAR(tmpslab, filename=fn, comments="all", silent=silent)
+        poscar.write(tmpslab, filename=fn, comments="all", silent=silent)
     except Exception:
         logger.error("Exception occured while writing POSCAR_OUT" + suffix,
                      exc_info=rp.is_debug_mode)
@@ -1213,7 +1215,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         tmpslab = sl.makeSymBaseSlab(rp)
         fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
         try:
-            writePOSCAR(tmpslab, filename=fn, silent=silent)
+            poscar.write(tmpslab, filename=fn, silent=silent)
         except Exception:
             logger.warning(
                 "Exception occured while writing POSCAR_OUT_mincell" + suffix,

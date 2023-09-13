@@ -13,7 +13,7 @@ from numpy.polynomial import Polynomial
 from viperleed.calc.files import psgen
 from viperleed.calc.files import iofdopt as tl_io
 from viperleed.calc.files.parameters import modifyPARAMETERS
-from viperleed.calc.files.poscar import writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.calc.sections.refcalc import refcalc as section_refcalc
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 
@@ -21,6 +21,17 @@ __authors__ = ["Florian Kraushofer (@fkraushofer)"]
 __created__ = "2021-10-22"
 logger = logging.getLogger("tleedm.fdopt")
 
+
+class FullDynamicCalculationError(Exception):
+    """Base class for exceptions raised by the full dynamic calculation."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
+class FullDynamicOptimizationOutOfBoundsError(FullDynamicCalculationError):
+    """Raised when the optimization is out of bounds."""
+    def __init__(self, message):
+        super().__init__(message)
 
 def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     """
@@ -42,7 +53,6 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     -------
     rfactor : float
         The r-factor obtained for the sl, rp combination
-
     """
     rp.TENSOR_OUTPUT = [0]
     rp.workdir = Path(work_dir)
@@ -61,7 +71,7 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
             try:
                 shutil.copy2(home_dir / fn, fn)
             except Exception:
-                logger.error("Error copying " + fn + " to subfolder.")
+                logger.error(f"Error copying {fn} to subfolder.")
                 raise
         logger.info("Starting full-dynamic calculation")
         try:
@@ -100,9 +110,6 @@ def apply_scaling(sl, rp, which, scale):
         rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
 
 
-def get_fd_phaseshifts(sl, rp, S_ovl):
-    rundgrenpath = os.path.join('tensorleed', 'EEASiSSS.x')
-    (first_line, phaseshifts) = psgen.runPhaseshiftGen(sl, rp, psgensource=rundgrenpath)
 
 
 def fd_optimization(sl, rp):
@@ -120,7 +127,6 @@ def fd_optimization(sl, rp):
     Returns
     -------
     None.
-
     """
 
     which = rp.OPTIMIZE["which"]
@@ -129,7 +135,7 @@ def fd_optimization(sl, rp):
                      "in the PARAMETERS file to define behaviour.")
         rp.setHaltingLevel(2)
         return
-    logger.info("Starting optimization of {}".format(rp.OPTIMIZE["which"]))
+    logger.info(f"Starting optimization of {rp.OPTIMIZE['which']}")
     # make sure there's a compiler ready, and we know the number of cores:
     if rp.FORTRAN_COMP[0] == "":
         try:
@@ -144,8 +150,6 @@ def fd_optimization(sl, rp):
             rp.OPTIMIZE["step"] = 0.5
         elif which == "phi":
             rp.OPTIMIZE["step"] = 2.
-        elif which == "S_ovl":
-            rp.OPTIMIZE["step"] = 0.05
         else:   # unit cell size
             rp.OPTIMIZE["step"] = 0.01
         logger.debug("Initial step size undefined, defaulting to {}"
@@ -167,10 +171,10 @@ def fd_optimization(sl, rp):
         x0 = rp.THETA
     elif which == "phi":
         x0 = rp.PHI
-    elif which == "s_ovl":
-        x0 = rp.S_OVL
     else:
         x0 = 1.   # geometry: x is a scaling factor
+
+
 
     # optimization loop
     curvature_fail = 0
@@ -221,9 +225,6 @@ def fd_optimization(sl, rp):
                     x = max(0, x)
                 if which in "abc":
                     x = max(0.1, x)   # shouldn't happen, just in case
-                if which == "S_ovl":
-                    x = min(1, x)
-                    x = max(0, x)
                 # check whether we're close to point that is already known
                 if any(abs(v - x) < rp.OPTIMIZE["convergence"]
                        for v in known_points[:, 0]):
@@ -263,8 +264,8 @@ def fd_optimization(sl, rp):
                                 if abs(v - new_min) == lowest_dist][0]
                             logger.info(
                                 "Stopping optimization: Predicted new minimum "
-                                "{:.4f} is within convergence limits to known "
-                                "point {:.4f}".format(new_min, closest_point))
+                                f"{new_min:.4f} is within convergence limits to "
+                                f"known point {closest_point:.4f}.")
                             break  # within convergence limit
                 logger.info("Currently predicting minimum at {:.4f} with R = "
                             "{:.4f}, adding data point at {:.4f}"
@@ -286,9 +287,6 @@ def fd_optimization(sl, rp):
             trp.THETA = x
         elif which == "phi":
             trp.PHI = x
-        elif which == "S_ovl":
-            trp.S_OVL = x
-            get_fd_phaseshifts(sl, rp, x)
         else:       # geometry: x is a scaling factor for the unit cell
             x = max(0.1, x)
             apply_scaling(tsl, trp, which, x)
@@ -346,15 +344,12 @@ def fd_optimization(sl, rp):
         modifyPARAMETERS(rp, "BEAM_INCIDENCE",
                          new=f"THETA {rp.THETA:.4f}, PHI {rp.PHI:.4f}",
                          comment=comment)
-    elif which == "S_ovl":
-        rp.S_ovl = new_min
-        modifyPARAMETERS(rp, "S_OVL", f"{new_min:.4f}", comment=comment)
     else:       # geometry: x is a scaling factor for the unit cell
         apply_scaling(sl, rp, which, new_min)
         if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
             vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
             modifyPARAMETERS(rp, "BULK_REPEAT", new=vec_str, comment=comment)
-        writePOSCAR(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
+        poscar.write(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
 
     # fetch I(V) data from all, plot together
     best_rfactors = rfactor_lists[np.argmin(known_points[:, 1])]

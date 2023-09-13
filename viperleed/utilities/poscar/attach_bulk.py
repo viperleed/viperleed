@@ -13,11 +13,12 @@ import copy
 import numpy as np
 from timeit import default_timer as timer
 
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]
 __created__ = "2019-06-14"
+
 
 ###############################################
 #                  MAIN                       #
@@ -32,50 +33,55 @@ def cleanup(consoleHandler):
     logging.shutdown()
 
 
+def _read_poscar_from_user_input(name):
+    """Return a slab read from a file specified by the user."""
+    while True:
+        filename = input(f"Enter {name} POSCAR name (Ctrl+C to abort): ")
+        if not filename:
+            print("Input failed. Please try again.")
+            continue
+        try:
+            slab = poscar.read(filename)
+        except FileNotFoundError:
+            logging.error(f"{filename} not found.")
+        except Exception:
+            logging.error("Exception while reading POSCAR", exc_info=True)
+            return None
+        else:
+            logging.info(f'{name.capitalize()} POSCAR was read successfully.')
+            return slab
+
+
+logFormatter = logging.Formatter('%(levelname)s - %(message)s')
+consoleHandler = logging.StreamHandler()
+consoleHandler.setFormatter(logFormatter)
+
+
 def main(args=None):
     # start logger, write to file:
     logname = 'Combine-POSCAR.log'
     logging.basicConfig(level=logging.DEBUG, filename=logname, filemode='w',
                         format='%(levelname)s - %(message)s')
     # add console output to logger:
-    logFormatter = logging.Formatter('%(levelname)s - %(message)s')
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setFormatter(logFormatter)
     logging.getLogger().addHandler(consoleHandler)
-    logging.info("Starting new log: "+logname+"\nTime of execution (UTC): "
+    logging.info(f"Starting new log: {logname}\nTime of execution (UTC): "
                  + time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())+"\n")
     starttime = timer()
 
     # open input files:
-    filename = ""
-    while filename == "":
-        filename = input("Enter slab POSCAR name: ")
-        if not filename:
-            print("Input failed. Please try again.")
-        else:
-            try:
-                slab = readPOSCAR(filename)
-                logging.info('Slab POSCAR was read successfully.')
-            except FileNotFoundError:
-                logging.error(filename+" not found.")
-                filename = ""
-            except Exception:
-                logging.error("Exception while reading POSCAR", exc_info=True)
+    try:
+        slab = _read_poscar_from_user_input('slab')
+    except KeyboardInterrupt:
+        return -1
+    if not slab:
+        return 1  # Error reading
 
-    filename = ""
-    while filename == "":
-        filename = input("Enter bulk POSCAR name: ")
-        if not filename:
-            print("Input failed. Please try again.")
-        else:
-            try:
-                bulk = readPOSCAR(filename)
-                logging.info('Bulk POSCAR was read successfully.')
-            except FileNotFoundError:
-                logging.error(filename+" not found.")
-                filename = ""
-            except Exception:
-                logging.error("Exception while reading POSCAR", exc_info=True)
+    try:
+        bulk = _read_poscar_from_user_input('bulk')
+    except KeyboardInterrupt:
+        return -1
+    if not slab:
+        return 1  # Error reading
 
     # if a and b vectors differ, cancel operation
     if (np.linalg.norm(slab.ucell[:, 0] - bulk.ucell[:, 0]) > 1e-4
@@ -120,7 +126,7 @@ def main(args=None):
     slab.sort_by_element()
 
     try:
-        writePOSCAR(slab, reorder=False)
+        poscar.write(slab, reorder=False)
     except Exception:
         logging.error("Exception while writing CONTCAR:", exc_info=True)
 #    print(cfact)

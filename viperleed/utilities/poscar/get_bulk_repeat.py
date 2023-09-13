@@ -8,10 +8,11 @@ the appropriate N_BULK_LAYERS and BULK_REPEAT values.
 """
 
 import copy
+
 import numpy as np
 
 from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
@@ -32,15 +33,14 @@ def main(args=None):
 
     # read the POSCAR file
     filename = ""
-    while filename == "":
-        filename = input("Enter POSCAR file name (Default: "
-                         "[POSCAR]): ")
-        if filename == "":
+    while not filename:
+        filename = input("Enter POSCAR file name (Default: [POSCAR]): ")
+        if not filename:
             filename = "POSCAR"
         try:
-            slab = readPOSCAR(filename=filename)
+            slab = poscar.read(filename=filename)
         except FileNotFoundError:
-            print("File "+filename+" not found.")
+            print(f"File {filename} not found.")
             filename = ""
         except Exception:
             print("Exception while reading POSCAR file")
