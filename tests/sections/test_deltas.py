@@ -1,22 +1,24 @@
-"""Test section refcalc
+"""Tests for section deltas.
 
 Created on 2023-07-28
 
-@author: Alexander M. Imre
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 """
-from pathlib import Path
-
-import pytest
 
 
-class TestDeltasAg100():
+class TestDeltasAg100:
+    """Test the successful outcome of a delta-amplitude calculation."""
+
+    def test_successful_run(self, delta_files_ag100):
+        """Check that delta-amplitude calculation exits without errors."""
+        assert not delta_files_ag100.failed
+
     def test_delta_input_written(self, delta_files_ag100):
-        assert delta_files_ag100.expected_file_exists("delta-input")
-
-
-    def test_exit_code_0(self, delta_files_ag100):
-        assert delta_files_ag100.exit_code == 0
-
+        """Check that an input file was correctly written."""
+        assert delta_files_ag100.expected_file_exists('delta-input')
 
     def test_deltas_zip_created(self, delta_files_ag100):
-        assert delta_files_ag100.expected_file_exists(Path("Deltas") / "Deltas_001.zip")
+        """Check that an archive with delta-amplitude files was created."""
+        assert delta_files_ag100.expected_file_exists('Deltas/Deltas_001.zip')
+            )
