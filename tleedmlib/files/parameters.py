@@ -319,7 +319,9 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
         param, value_str = line.split('=', maxsplit=1)
         if param:
             # get rid of spaces and check the leftmost entry.
-            param, *_ = param.split()
+            param, *flags = param.split()
+        else:
+            flags = []
         param_alias = param.lower().replace('_', '')
         if param not in _KNOWN_PARAMS and param_alias in _PARAM_ALIAS:
             param = _PARAM_ALIAS[param_alias]
@@ -331,7 +333,8 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
             continue
         if param == 'SEARCH_CONVERGENCE':
             new_assignment = Assignment(values_str=value_str,
-                                        parameter=param)
+                                        parameter=param,
+                                        flags_str=' '.join(flags))
             interpreter.interpret_search_convergence(assignment=new_assignment,
                                                      is_updating=True)
 
