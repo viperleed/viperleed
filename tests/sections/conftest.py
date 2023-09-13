@@ -165,7 +165,7 @@ def init_files(surface, tl_version, make_section_tempdir):
     return files
 
 
-_NON_INIT_TL_VERSION = 0.0  # i.e., most recent
+_NON_INIT_TL_VERSION = 0.0  # i.e., most recent                                 # TODO: to prevent regressions like #101, it's probably better to run this stuff also for other versions!
 
 
 @pytest_cases.fixture(scope='session')
