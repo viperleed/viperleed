@@ -33,9 +33,9 @@ from ..poscar_slabs import CasePOSCARSlabs
 
 
 @fixture
-def displaced_atom(ag100_slab_with_displacements_and_offsets):
+def displaced_atom(ag100_with_displacements_and_offsets):
     """Return an Atom with displacements assigned (but not applied)."""
-    slab, *_ = ag100_slab_with_displacements_and_offsets
+    slab, *_ = ag100_with_displacements_and_offsets
     return slab.atlist[0]
 
 

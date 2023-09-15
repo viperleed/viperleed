@@ -94,12 +94,15 @@ def fixture_ag100(make_poscar):
     return make_poscar(poscar_slabs.AG_100)
 
 
-@pytest.fixture()
-def ag100_slab_with_displacements_and_offsets(ag100_slab_param, data_path):
-    slab, param = ag100_slab_param
-    vibrocc_path = data_path / "Ag(100)" / "mergeDisp" / "VIBROCC"
-    displacements_path = data_path / "Ag(100)" / "mergeDisp" / "DISPLACEMENTS_mixed"
-    readVIBROCC(param, slab, str(vibrocc_path))
-    readDISPLACEMENTS(param, str(displacements_path))
-    readDISPLACEMENTS_block(param, slab, param.disp_blocks[param.search_index])
+@pytest.fixture
+def ag100_with_displacements_and_offsets(ag100, data_path):
+    """Return a Slab and Rparams after reading a DISPLACEMENTS block."""
+    slab, param, *_ = ag100
+
+    inputs_path = data_path / 'Ag(100)/mergeDisp'
+    vibrocc_path = inputs_path / 'VIBROCC'
+    displacements_path = inputs_path / 'DISPLACEMENTS_mixed'
+    vibrocc.readVIBROCC(param, slab, str(vibrocc_path))
+    displacements.readDISPLACEMENTS(param, str(displacements_path))
+    displacements.readDISPLACEMENTS_block(param, slab, param.disp_blocks[0])
     return slab, param

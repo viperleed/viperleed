@@ -79,9 +79,9 @@ class TestRestoreOristate:
     """Collection of tests for reverting a slab to its ref-calc state."""
 
     @pytest.fixture(name='slab_and_copy')
-    def fixture_slab_and_copy(self, ag100_slab_with_displacements_and_offsets):
+    def fixture_slab_and_copy(self, ag100_with_displacements_and_offsets):
         """Return a Ag(100) slab and its deepcopy."""
-        slab, *_ = ag100_slab_with_displacements_and_offsets
+        slab, *_ = ag100_with_displacements_and_offsets
         return slab, deepcopy(slab)
 
     @staticmethod
