@@ -18,6 +18,7 @@ or running tests.
 
 from pathlib import Path
 import os
+import re
 import sys
 import shutil
 from zipfile import ZipFile
@@ -52,6 +53,14 @@ _EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
 
 
 TENSORLEED_PATH = Path(vpr_path) / "viperleed" / "tensorleed"
+
+
+@pytest.fixture(scope='session')
+def re_match():  # This is actually a fixture factory
+    """Return a re.match object from a pattern and a string."""
+    def _match(pattern, string):
+        return re.match(pattern, string)
+    return _match
 
 
 @pytest.fixture(scope='session')
