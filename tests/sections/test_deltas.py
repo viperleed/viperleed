@@ -21,4 +21,3 @@ class TestDeltasAg100:
     def test_deltas_zip_created(self, delta_files_ag100):
         """Check that an archive with delta-amplitude files was created."""
         assert delta_files_ag100.expected_file_exists('Deltas/Deltas_001.zip')
-            )
