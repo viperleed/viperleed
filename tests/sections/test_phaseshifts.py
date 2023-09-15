@@ -26,23 +26,6 @@ from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.classes.slab import Slab
 
 
-@pytest.fixture()
-def run_phaseshift(slab_pg_rp, tensorleed_path, tmp_path_factory):
-    slab, _,  param = slab_pg_rp
-    param.workdir = tmp_path_factory.mktemp(basename="phaseshifts",
-                                            numbered=True)
-    param.source_dir = tensorleed_path
-    param.THEO_ENERGIES = [10, 500, 3]
-    # run EEASISSS
-    firstline, phaseshift = runPhaseshiftGen_old(
-        slab,
-        param,
-        psgensource ='EEASiSSS.x',
-        excosource='seSernelius',
-        atdenssource='atom_density_files'
-    )
-    return param, slab, firstline, phaseshift
-
 
 @pytest.mark.xfail(reason="Relative path problem. Fixed on installable branch.")
 def test_phaseshifts_firstline_not_empty(run_phaseshift):

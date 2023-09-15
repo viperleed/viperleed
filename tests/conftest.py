@@ -106,3 +106,52 @@ def ag100_with_displacements_and_offsets(ag100, data_path):
     displacements.readDISPLACEMENTS(param, str(displacements_path))
     displacements.readDISPLACEMENTS_block(param, slab, param.disp_blocks[0])
     return slab, param
+
+
+# Notice that we need to exclude POSCARs without information as some
+# are known to make this fail because of "too small interlayer spacing"
+# For Fe3O4 this is because parameter presets are needed. For graphene,
+# only one layer is present in the POSCAR.
+_PHASESHIFT_SETTINGS = {'cases': poscar_slabs.CasePOSCARSlabs,
+                        'filter': exclude_tags(CaseTag.NO_INFO),
+                        'scope': 'session'}
+
+@pytest_cases.fixture(scope='session')
+@pytest_cases.parametrize_with_cases('args', **_PHASESHIFT_SETTINGS)
+def run_phaseshift(args, tensorleed_path, tmp_path_factory):
+    """Execute a PHASESHIFTS calculation.
+
+    Parameters
+    ----------
+    args : pytest_cases.Case
+        Slab, Rparams and other (unused) info.
+    tensorleed_path : pytest.fixture
+        The path to the directory containing the Fortran code.
+    tmp_path_factory : pytest.fixture
+        To run the PHASESHIFTS calculation in a fresh directory.
+
+    Yields
+    ------
+    param : Rparams
+        The PARAMETERS used during the PHASESHIFTS calculation.
+    slab : Slab
+        The Slab for which PHASESHIFTS were calculated.
+    firstline : str
+        The first line of the PHASESHIFTS file, that contains the
+        coefficients for the real part of the inner potential.
+    phaseshift : list
+        The PHASESHIFTS that were generated.
+    """
+    slab, param, *_ = args
+    param.source_dir = tensorleed_path
+    param.workdir = tmp_path_factory.mktemp(basename='phaseshifts',
+                                            numbered=True)
+    param.initTheoEnergies()
+    executable = 'EEASiSSS' + ('.exe' if 'nt' in os.name else '.x')             # TODO: does this cover it or should we use 'win' in sys.platform()?
+
+    # run EEASISSS in the temporary directory
+    home = Path()
+    os.chdir(param.workdir)
+    results = psgen.runPhaseshiftGen_old(slab, param, psgensource=executable)
+    yield param, slab, *results
+    os.chdir(home)
