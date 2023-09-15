@@ -13,9 +13,9 @@ from io import StringIO
 from pathlib import Path
 import sys
 
-import ase.build
 import numpy as np
 import pytest
+from pytest_cases import fixture, parametrize_with_cases
 
 VPR_PATH = str(Path(__file__).resolve().parents[2])
 if VPR_PATH not in sys.path:
@@ -32,6 +32,7 @@ from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
 
 from .helpers import TEST_DATA
+from . import cases_ase
 # pylint: enable=wrong-import-position
 
 
@@ -44,11 +45,6 @@ from .helpers import TEST_DATA
 
 
 ASE_DATA = TEST_DATA / 'from_ase'
-
-
-_ASE_ATOMS = (
-    'ase_ni_100_1x1_cell',
-    )
 
 
 def _make_refcalc_ok_transforms():
@@ -86,20 +82,10 @@ def _make_refcalc_fail_transforms():
     yield rot_90_z_and_cut, '90deg z rotation, cut half'
 
 
-@pytest.fixture(name='ase_ni_100_1x1_cell', scope='class')                      # TODO: this is a CASE
-def fixture_ase_nickel_cell():
-    """Return an ase.Atoms Ni(100)-1x1 with 6 layers."""
-    element = 'Ni'
-    return ase.build.fcc110(element, size=(1, 1, 6), vacuum=3)
-
-
-# TODO: find a better way, perhaps a decorator that does                        # TODO: use parametrize_with_cases
-# the request + extracting fixture value.
-@pytest.mark.parametrize('fixture, n_atoms', (('ase_ni_100_1x1_cell', 6),))
-def test_ase_n_atoms(fixture, n_atoms, request):
+@parametrize_with_cases('ase_atoms,info', cases=cases_ase)
+def test_ase_n_atoms(ase_atoms, info):
     """Make sure `ase_atoms` has `n_atoms` atoms."""
-    ase_atoms = request.getfixturevalue(fixture)
-    assert len(ase_atoms.positions) == n_atoms
+    assert len(ase_atoms.positions) == info.n_atoms
 
 
 def slab_from_ase(ase_atoms):
@@ -107,10 +93,10 @@ def slab_from_ase(ase_atoms):
     return Slab(ase_atoms)
 
 
-@pytest.mark.parametrize('fixture', _ASE_ATOMS)                                 # TODO: cases
-def test_n_atoms_from_ase(fixture, request):
+@parametrize_with_cases('case', cases=cases_ase)
+def test_n_atoms_from_ase(case):
     """Make sure the number of atoms in Slab match those in ase.Atoms."""
-    ase_atoms = request.getfixturevalue(fixture)
+    ase_atoms, *_ = case
     slab = slab_from_ase(ase_atoms)
     assert len(ase_atoms.positions) == len(slab.atlist)
 
@@ -188,11 +174,11 @@ class TestSlabTransforms:
     _theta = 14.7  # degrees
     _axis = np.random.rand(3)
 
-    @staticmethod
-    @pytest.fixture(params=_ASE_ATOMS, scope='function')                        # TODO: cases
-    def slab(request):
+    @fixture(name='slab')
+    @parametrize_with_cases('case', cases=cases_ase)
+    def fixture_slab(self, case):
         """Return a slab from ASE."""
-        ase_atoms = request.getfixturevalue(request.param)
+        ase_atoms, *_ = case
         return slab_from_ase(ase_atoms)
 
     @staticmethod
@@ -300,13 +286,13 @@ class TestRaises:
             vpr_ase.run_from_ase(ASE_DATA, None)
         assert exc.match('PARAMETERS')
 
-    @staticmethod
-    def test_out_of_plane_ab(ase_ni_100_1x1_cell):
+    @parametrize_with_cases('args', cases=cases_ase)
+    def test_out_of_plane_ab(self, args):
         """Test exception raised for a slab with non-xy a/b vectors."""
         transform = vpr_ase.SlabTransform(
             orthogonal_matrix=vpr_ase.rot_mat_x(20)
             )
-        ase_atoms = ase_ni_100_1x1_cell
+        ase_atoms, *_ = args
         exec_path = ASE_DATA / 'initialization'  # Will not run
         with pytest.raises(ValueError) as exc:
             vpr_ase.run_from_ase(
@@ -327,16 +313,20 @@ class TestRaises:
 # - make temp path dependent on the name of the first argument in
 #   the signature
 # - pick the right folder in 'initialization'
-@pytest.fixture(name='run_from_ase_initialization', scope='class')
-def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
+@fixture(name='run_from_ase_initialization', scope='class')
+@parametrize_with_cases('case', cases=cases_ase, scope='class')
+def fixture_run_from_ase_initialization(case, tmp_path_factory, request):
     """Return the results of an initialization run.
 
     Parameters
     ----------
-    ase_ni_100_1x1_cell : pytest.fixture
-        The ase.Atoms object from which to run.
+    case : tuple
+        Only the first item is used. It is the ase.Atoms object
+        from which to run.
     tmp_path_factory : pytest.fixture
         The pytest default name for the temporary directory factory.
+    request : pytest.fixture
+        The current request fixture.
 
     Returns
     -------
@@ -348,9 +338,10 @@ def fixture_run_from_ase_initialization(ase_ni_100_1x1_cell, tmp_path_factory):
     ase_atoms : ase.Atoms
         The Atoms object fed to run_from_ase.
     """
-    ase_atoms = ase_ni_100_1x1_cell
+    ase_atoms, *_ = case
     no_cut = vpr_ase.SlabTransform(cut_cell_c_fraction=0.)
-    exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
+    case_id = request.param.argvalues[0]
+    exec_path = tmp_path_factory.mktemp(basename=f'from_{case_id}_init',
                                         numbered=True)
     # The "initialization" folder contains only a PARAMETERS file,
     # but the required IVBEAMS or EXPBEAMS are not present, so the
@@ -406,7 +397,7 @@ class TestFailingInitialization:
         assert len(slab.atlist) == len(self.ase_atoms.positions)
 
 
-def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):
+def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):              # TODO: this one could be @parametrize and un-indented.
     """Return a pytest.fixture for a refcalc with name and kwargs.
 
     Parameters
@@ -430,14 +421,12 @@ def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):
                                    zip(*slab_transforms_and_ids)))
     params_and_ids_dict.update(kwargs)
 
-    @pytest.fixture(name=name, scope='class', **params_and_ids_dict)
-    def _fixture(ase_ni_100_1x1_cell, tmp_path_factory, request):
+    @pytest.fixture(name=name, scope='class', **params_and_ids_dict)            # TODO: somehow here @parametrize_with_cases fails. May be due to the weird placement of this fixture.
+    def _fixture(tmp_path_factory, request):
         """Return the results of a reference calculation run.
 
         Parameters
         ----------
-        ase_ni_100_1x1_cell : pytest.fixture
-            The ase.Atoms object from which to run.
         tmp_path_factory : pytest.fixture
             The pytest default name for the temporary directory factory.
         request : pytest.fixture
@@ -455,8 +444,8 @@ def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):
         ase_atoms : ase.Atoms
             The Atoms object fed to run_from_ase.
         """
-        ase_atoms = ase_ni_100_1x1_cell
-        exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_init',
+        ase_atoms, *_ = cases_ase.case_ase_ni_100_1x1_cell()
+        exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_refcalc',
                                             numbered=True)
         inputs_path = ASE_DATA / 'refcalc'
         results = vpr_ase.run_from_ase(
