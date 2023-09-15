@@ -9,10 +9,8 @@ Contains tests for symmetry-detection routines.
 
 import copy
 from contextlib import contextmanager
-from dataclasses import dataclass
 import logging
 from pathlib import Path
-import random
 import sys
 
 import numpy as np
@@ -28,7 +26,6 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
-from viperleed.guilib.base import PlaneGroup
 from viperleed.tleedmlib import symmetry
 from viperleed.tleedmlib.base import angle as angle_radians
 
@@ -36,7 +33,7 @@ from ..helpers import duplicate_all, CaseTag
 from ..poscar_slabs import make_poscar_ids
 from . import simple_slabs
 from .simple_slabs import get_atom
-from .conftest import RANDOM, get_cases
+from .conftest import get_cases
 # pylint: enable=wrong-import-position
 
 
@@ -48,7 +45,7 @@ def angle(vec1, vec2):
 def hermann(group):
     """Return the "Hermann-Maugin" part of group."""
     group = str(group)
-    return group.split('[')[0]
+    return group.split('[', maxsplit=1)[0]
 
 
 @fixture
@@ -123,7 +120,7 @@ class TestPlaneGroupFinding:
         'poscar-diamond': 'Known incorrect plane group pm instead of rcm',
         }
 
-    def test_correct_plane_group(self, with_plane_group, first_case, current_cases):
+    def test_correct_plane_group(self, with_plane_group, first_case):
         """Check the correct identification of the plane group."""
         slab, *_, info = with_plane_group()
         if not info.symmetry.hermann:
@@ -185,7 +182,7 @@ class TestPlaneGroupFinding:
         return slab, param, info
 
     def test_correct_plane_group_fix_origin(self, with_plane_group_fix_origin,
-                                            first_case, current_cases):
+                                            first_case):
         """Check the correct identification of the plane group."""
         slab, *_, info = with_plane_group_fix_origin
         with may_fail(first_case, self._known_incorrect_groups_fix):
@@ -259,7 +256,7 @@ class TestSymmetryConstraints:
                 if atom.oriN in info.symmetry.on_planes:
                     assert isinstance(atom.freedir, np.ndarray)
                 elif atom.oriN in info.symmetry.on_axes:
-                    assert atom.freedir == 0
+                    assert not atom.freedir
                 else:
                     assert atom.freedir == 1
 

@@ -96,7 +96,7 @@ def make_poscar_ids(suffix=None):
             return name.replace('_bulk', '')
         return f'{name}_{suffix}'
 
-    def make_poscar_ids(*args, **argnames_and_values):
+    def _make_poscar_ids(*args, **argnames_and_values):
         """Return case-IDs for the case parametrizations given."""
         # There should only be a single relevant argument.
         args += tuple(argnames_and_values.values())
@@ -109,7 +109,7 @@ def make_poscar_ids(suffix=None):
 
         # ...or a case
         return _clean_up_name(info.__name__)
-    return make_poscar_ids
+    return _make_poscar_ids
 
 
 # PARAMETERS presets for slabs

@@ -8,7 +8,7 @@ Created on 2023-09-07
 from pathlib import Path
 import sys
 
-from pytest_cases import fixture, parametrize
+from pytest_cases import parametrize
 
 VPR_PATH = str(Path(__file__).resolve().parents[3])
 if VPR_PATH not in sys.path:

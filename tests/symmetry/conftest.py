@@ -5,7 +5,6 @@ Created on 2023-09-08
 @author: Michele Riva (@michele-riva)
 """
 
-from collections import defaultdict
 from pathlib import Path
 import sys
 
@@ -22,7 +21,7 @@ if VPR_PATH not in sys.path:
 # Cannot do anything about it until we make viperleed installable
 from viperleed.tleedmlib import symmetry
 
-from ..helpers import flat_fixture, duplicate_all
+from ..helpers import flat_fixture
 from . import simple_slabs
 from .simple_slabs import get_atom
 from .. import poscar_slabs
@@ -51,7 +50,7 @@ def translate_atoms(slab, shift):
     for atom in slab.atlist:
         atom.cartpos[:2] += shift
         atom.pos[:2] += frac_shift
-    slab.ucell_mod.append(("add", shift))
+    slab.ucell_mod.append(('add', shift))
 
 
 slab_p1 = flat_fixture(simple_slabs.CaseSimpleSlabs().case_p1)
@@ -96,10 +95,7 @@ def displace_atoms():
                 with pytest.raises(Exception):
                     atom.assignDisp(_mode, displ)
             else:
-                try:
-                    atom.assignDisp(_mode, displ)
-                except Exception: # InvalidDisplacementDirectionError:
-                    pass
+                atom.assignDisp(_mode, displ)
         for atom in slab.atlist:
             try:
                 disp = atom.disp_geo_offset[atom.el]

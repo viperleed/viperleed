@@ -6,7 +6,7 @@ Created on 2023-07-28
 @author: Michele Riva (@michele-riva)
 """
 
-from pytest import approx, fixture, raises
+from pytest import approx
 
 
 # TODO: would need more extensive testing

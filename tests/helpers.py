@@ -267,4 +267,3 @@ class TestInfo(InfoBase):
         """Update an Rparam with the presets stored."""
         for attr_name, attr_value in self.param_presets.items():
             setattr(param, attr_name, attr_value)
-
