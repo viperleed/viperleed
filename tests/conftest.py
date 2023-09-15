@@ -1,58 +1,57 @@
-"""Module conftest of viperleed.tests.
+"""Test configuration for viperleed.tests.
 
 Created on 2023-02-28
 
-@author: Michele Riva
-@author: Alexander M. Imre
+@author: Michele Riva (@michele-riva)
+@author: Alexander M. Imre (@amimre)
 
-Contains some useful general definitions that can be used when creating
-or running tests.
+Defines fixtures and fixture factories used in multiple tests.
+
+Fixtures
+--------
+ag100
+    A Ag(100) slab, an Rparams, and a TestInfo.
+ag100_with_displacements_and_offsets
+    A Ag(100) Slab and an Rparams, after reading a DISPLACEMENTS block.
+data_path
+    Path to the top-level folder containing test data.
+make_poscar (factory)
+    Return a Slab from POSCAR, an Rparams and a TestInfo from a TestInfo.
+poscars_path
+    Path to the data directory containing POSCAR files.
+re_match (factory)
+    Return a match object from a pattern and a string.
+run_phaseshift
+    An Rparams, a Slab, and the results of generating phaseshifts
+    with them.
+tensorleed_path
+    Path to the top-level tree with tensor-LEED source code.
 """
 
-
-# Think about a decorator for injecting fixtures.
-# Some ideas at
-# https://github.com/pytest-dev/pytest/issues/2424
-# https://github.com/pytest-dev/pytest/issues/6322
-# https://github.com/nteract/testbook/issues/4
-
-from pathlib import Path
 import os
+from pathlib import Path
 import re
 import sys
-import shutil
-from zipfile import ZipFile
 
 import pytest
-import numpy as np
+import pytest_cases
 
-vpr_path = str(Path(__file__).parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
+VPR_PATH = str(Path(__file__).resolve().parents[2])
+if VPR_PATH not in sys.path:
+    sys.path.append(VPR_PATH)
 
-from viperleed.tleedm import run_tleedm
-from viperleed.tleedmlib import symmetry
-from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.classes.slab import Slab
-from viperleed.tleedmlib.files import parameters, poscar
-from viperleed.tleedmlib.files.vibrocc import readVIBROCC
-from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
+# pylint: disable=wrong-import-position
+# Will be fixed in installable version
+from viperleed.tleedmlib.files import displacements, vibrocc
+from viperleed.tleedmlib import psgen
 
 from .helpers import TEST_DATA, POSCAR_PATH
+from .helpers import CaseTag, exclude_tags
+from . import poscar_slabs
+# pylint: enable=wrong-import-position
 
 
-_EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
-                                ("POSCAR_STO(110)-4x1", 136, 'pm', 0),
-                                ("POSCAR_TiO2", 540, 'pmm', -1),
-                                ("POSCAR_diamond", 96, 'pm', 89),
-                                ("POSCAR_36C_p6m", 36, 'p6m', 0),
-                                ("POSCAR_36C_cm", 36,'cm', 0),]
-                               #("POSCAR_Fe3O4_SCV", 83, 'cmm', 50)]            #TODO: Phaseshift generation fails. Why? @Fkraushofer (worked in fkpCurie:Florian_OldLocalTests/Fe3O4-001-SCV/history/t000.r013_211220-133452)
-
-
-
-TENSORLEED_PATH = Path(vpr_path) / "viperleed" / "tensorleed"
+TENSORLEED_PATH = Path(VPR_PATH) / 'viperleed' / 'tensorleed'                   # TODO: this will need to be dynamic!
 
 
 @pytest.fixture(scope='session')
@@ -80,30 +79,19 @@ def fixture_tensorleed_path():
     """Return the Path to the top-level tree with tensor-LEED source code."""
     return TENSORLEED_PATH
 
-@pytest.fixture(scope="function", params=_EXAMPLE_POSCAR_EXPECTATIONS)
-def slab_and_expectations(request):
-    filename, expected_n_atoms, expected_pg, offset_at = request.param
-    file_path = POSCAR_PATH / filename
-    pos_slab = poscar.read(file_path)
-    return (pos_slab, expected_n_atoms, expected_pg, offset_at)
 
-@pytest.fixture(scope="function")
-def slab_pg_rp(slab_and_expectations):
-    slab, *_ = slab_and_expectations
-    rp = Rparams()
-    slab.fullUpdate(rp)
-    pg = symmetry.findSymmetry(slab, rp, output=False)
-    symmetry.enforceSymmetry(slab, rp)
-    return slab, pg, rp
+@pytest.fixture(name='make_poscar', scope='session')
+def factory_make_poscar():
+    """Return a POSCAR from a TestInfo."""
+    def _make(info):
+        return poscar_slabs.CasePOSCARSlabs().case_poscar(info)
+    return _make
 
 
-@pytest.fixture()
-def ag100_slab_param(poscars_path):
-    slab = poscar.read(poscars_path /"POSCAR_Ag(100)")
-    param = Rparams()
-    param.N_BULK_LAYERS = 1
-    slab.fullUpdate(param)
-    return slab, param
+@pytest.fixture(name='ag100')
+def fixture_ag100(make_poscar):
+    """Return a Ag(100) slab, an Rparams, and a TestInfo."""
+    return make_poscar(poscar_slabs.AG_100)
 
 
 @pytest.fixture()
