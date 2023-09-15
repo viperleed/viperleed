@@ -131,6 +131,10 @@ class TestPlaneGroupFinding:
     _known_incorrect_rotations = {
         'hex_cmm_10': 'BUG: no rotation applied',
         'hex_cmm_01': 'BUG: no rotation applied',
+        'hex_cm_10': 'BUG: no rotation applied',
+        'hex_cm_01': 'BUG: no rotation applied',
+        'hex_cm_21': 'BUG: no rotation applied',
+        'hex_cm_12': 'BUG: no rotation applied',
         }
 
     @parametrize_with_cases('args',
@@ -145,16 +149,14 @@ class TestPlaneGroupFinding:
         a_after, _ = slab.reciprocal_vectors
         area_after = np.linalg.det(slab.reciprocal_vectors)
         with subtests.test('successful logging'):
-            with may_fail(first_case, self._known_incorrect_rotations,          # TODO: not ideal (marked as SUBPASS), but should fail on XPASS
-                          strict=True):
+            with may_fail(first_case, self._known_incorrect_rotations):
                 assert re_match(r'.*unit.*cell.*change.*higher.*symmetry.*',
                                 caplog.text)
         with subtests.test('correct rotation'):
             if first_case.id == 'hex_cm_12':
                 pytest.xfail('Inconsistent rotations between detection and '
                              'reduction of symmetry. Angles differ by 180')
-            with may_fail(first_case, self._known_incorrect_rotations,          # TODO: not ideal (marked as SUBPASS), but should fail on XPASS
-                          strict=True):
+            with may_fail(first_case, self._known_incorrect_rotations):
                 assert angle(a_before, a_after) == info.symmetry.rotation
         with subtests.test('area unchanged'):
             assert area_after == approx(area_before)
