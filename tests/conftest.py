@@ -50,7 +50,6 @@ _EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
                                #("POSCAR_Fe3O4_SCV", 83, 'cmm', 50)]            #TODO: Phaseshift generation fails. Why? @Fkraushofer (worked in fkpCurie:Florian_OldLocalTests/Fe3O4-001-SCV/history/t000.r013_211220-133452)
 
 
-_EXAMPLE_POSCARs = [file.name for file in POSCAR_PATH.glob('POSCAR*')]
 
 TENSORLEED_PATH = Path(vpr_path) / "viperleed" / "tensorleed"
 
@@ -83,14 +82,6 @@ def ag100_parameters_example():
     symmetry.findSymmetry(slab, rpars)
     symmetry.findBulkSymmetry(slab, rpars)
     return (rpars, slab)
-
-
-@pytest.fixture(scope="function", params=_EXAMPLE_POSCARs)
-def example_poscars(request):
-    file_path = POSCAR_PATH / request.param
-    slab = poscar.read(file_path)
-    return slab
-
 @pytest.fixture(scope="function", params=_EXAMPLE_POSCAR_EXPECTATIONS)
 def slab_and_expectations(request):
     filename, expected_n_atoms, expected_pg, offset_at = request.param
