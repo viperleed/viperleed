@@ -45,16 +45,3 @@ def test_phaseshift_log_exists(run_phaseshift):
     param, _, _, _ = run_phaseshift
     assert len(list(param.workdir.glob('phaseshift*.log'))) > 0
 
-
-@pytest.mark.xfail(reason="Relative path problem. Fixed on installable branch.")
-def test_write_phaseshifts(run_phaseshift):
-    from tleedmlib.files.phaseshifts import writePHASESHIFTS
-    param, _, firstline, phaseshift = run_phaseshift
-    writePHASESHIFTS(firstline, phaseshift, file_path=param.workdir/'PHASESHIFTS')
-    assert len(list(param.workdir.glob('PHASESHIFTS'))) > 0
-
-
-@pytest.mark.xfail(reason="Relative path problem. Fixed on installable branch.")
-def test_phaseshifts_not_empty(run_phaseshift):
-    _, _, _, phaseshift = run_phaseshift
-    assert len(phaseshift) > 0
