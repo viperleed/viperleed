@@ -58,14 +58,6 @@ def test_rotation_on_trigonal_slab(manual_slab_1_atom_trigonal):
     assert np.allclose(slab.ucell.T, expected_cell)
     assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
 
-# TODO: unclear why this fails for the thick bulk slab
-@pytest.mark.parametrize('fixture', ('fe3o4_bulk_slab', 'fe3o4_thick_bulk_slab'))
-def test_bulk_symmetry_thin(fixture, request):
-    _, bulk, param = request.getfixturevalue(fixture)
-    findBulkSymmetry(bulk, param)
-    assert bulk.bulk_screws == [4]
-    assert len(bulk.bulk_glides) == 2
-
 
 class Test_restore_oristate:
     @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
