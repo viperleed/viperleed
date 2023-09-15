@@ -15,16 +15,15 @@ manual_slab_3_atoms
     An orthorhombic slab with three atoms.
 """
 
-import sys
-import os
 from pathlib import Path
+import sys
 
 from pytest_cases import fixture
 import numpy as np
 
-vpr_path = str(Path(__file__).parent.parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
+VPR_PATH = str(Path(__file__).resolve().parents[3])
+if VPR_PATH not in sys.path:
+    sys.path.append(VPR_PATH)
 
 # pylint: disable=wrong-import-position
 # Will be fixed in installable version
