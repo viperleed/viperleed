@@ -6,6 +6,8 @@ Created on 2023-09-06
 
 Fixtures
 --------
+displaced_atom
+    An Atom with displacements assigned (but not applied).
 poscar_with_group
     A Slab from POSCAR with known symmetry, an Rparams and a TestInfo.
     Parametrized with all known (non-bulk) POSCAR files.
@@ -28,6 +30,13 @@ from viperleed.tleedmlib import symmetry
 
 from ..poscar_slabs import CasePOSCARSlabs
 # pylint: enable=wrong-import-position
+
+
+@fixture
+def displaced_atom(ag100_slab_with_displacements_and_offsets):
+    """Return an Atom with displacements assigned (but not applied)."""
+    slab, *_ = ag100_slab_with_displacements_and_offsets
+    return slab.atlist[0]
 
 
 @fixture

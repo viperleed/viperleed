@@ -1,29 +1,35 @@
-"""files/test_vibrocc.py
+"""Tests for module viperleed.tleedmlib.files.vibrocc.
 
 Created on 2023-07-28
 
-@author: Alexander M. Imre
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 """
 
-import pytest
-import numpy as np
+from pytest import approx, fixture, raises
 
 
-def test_read_VIBROCC_offset_occ(ag100_slab_with_displacements_and_offsets):
-    slab, param = ag100_slab_with_displacements_and_offsets
-    assert np.allclose(slab.atlist[0].offset_occ['Ag'], -0.1)
+# TODO: would need more extensive testing
 
+class TestReadVIBROCC:
+    """Collection of tests for reading a VIBROCC file."""
 
-def test_interpret_VIBROCC_offset_allowed(ag100_slab_with_displacements_and_offsets):
-    slab, param = ag100_slab_with_displacements_and_offsets
-    for atom in slab.atlist:
+    def test_read_offset_occ(self, displaced_atom):
+        """Read correctly an occupation offset."""
+        atom = displaced_atom
+        assert atom.offset_occ[atom.el] == approx(-0.1)
+
+    def test_interpret_offset_allowed(self, displaced_atom):
+        """Interpret correctly an allowed occupation offset."""
+        slab = displaced_atom.slab
+        for atom in slab.atlist:
+            atom.mergeDisp(atom.el)
+        atom = displaced_atom
+        assert atom.disp_occ[atom.el] == approx([0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+
+    def test_interpret_offset_not_allowed(self, displaced_atom):                 # TODO: This is kind of duplicated in test_atom
+        """Interpret correctly a non-allowed occupation offset."""
+        atom = displaced_atom
+        atom.offset_occ[atom.el] = +0.2
         atom.mergeDisp(atom.el)
-    assert np.allclose(slab.atlist[0].disp_occ['Ag'], [0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
-
-
-def test_interpret_VIBROCC_offset_not_allowed(ag100_slab_with_displacements_and_offsets):
-    slab, param = ag100_slab_with_displacements_and_offsets
-    atom = slab.atlist[0]
-    atom.offset_occ[atom.el] = +0.2
-    atom.mergeDisp(atom.el)
-    assert np.allclose(atom.disp_occ['Ag'], [0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+        assert atom.disp_occ[atom.el] == approx([0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
