@@ -71,17 +71,6 @@ def fixture_tensorleed_path():
     """Return the Path to the top-level tree with tensor-LEED source code."""
     return TENSORLEED_PATH
 
-@pytest.fixture()
-def ag100_parameters_example():
-    # read Ag(100) POSCAR and PARAMETERS files
-    slab = poscar.read(TEST_DATA / 'Ag(100)' / 'initialization' / 'POSCAR')
-    rpars = parameters.readPARAMETERS(TEST_DATA / 'Ag(100)' / 'initialization' / 'PARAMETERS')
-    # interpret PARAMETERS file
-    interpreter = parameters.ParameterInterpreter(rpars)
-    interpreter.interpret(slab)
-    symmetry.findSymmetry(slab, rpars)
-    symmetry.findBulkSymmetry(slab, rpars)
-    return (rpars, slab)
 @pytest.fixture(scope="function", params=_EXAMPLE_POSCAR_EXPECTATIONS)
 def slab_and_expectations(request):
     filename, expected_n_atoms, expected_pg, offset_at = request.param
