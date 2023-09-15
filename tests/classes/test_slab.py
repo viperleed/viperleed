@@ -20,6 +20,7 @@ if VPR_PATH not in sys.path:
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
 from viperleed.tleedmlib.classes.slab import SymPlane
+from viperleed.tleedmlib.classes.atom import Atom
 # pylint: enable=wrong-import-position
 
 
@@ -147,3 +148,13 @@ class TestRestoreOristate:
             element = atoms[0].el
             self.check_displacements_equal(*atoms, 'occ', element, subtests)
 
+
+@pytest.mark.xfail(reason='updateElementCounts is buggy', strict=True)
+def test_add_one_atom_n_elements():
+    """Check that adding one atom to a slab updates elements correctly."""
+    slab = Slab()
+    new_atom = Atom('C', (0, 0), 1, slab)
+    slab.atlist.append(new_atom)
+    slab.updateElementCounts()
+    assert new_atom.el in slab.elements
+    assert slab.n_per_elem[new_atom.el] == 1
