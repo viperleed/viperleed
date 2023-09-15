@@ -99,32 +99,6 @@ def slab_pg_rp(slab_and_expectations):
     return slab, pg, rp
 
 
-@pytest.fixture(scope='function')
-def manual_slab_3_atoms():
-    slab = Slab()
-    slab.ucell = np.diag([3., 4., 5.])
-    positions = (np.array([-0.25, 0, 0]),
-                 np.array([0.00, 0, 0]),
-                 np.array([0.25, 0, 0]))
-    slab.atlist = [Atom('C', pos, i+1, slab)
-                   for i, pos in enumerate(positions)]
-    param = Rparams()
-    slab.fullUpdate(param)
-    return slab
-
-
-@pytest.fixture()
-def manual_slab_1_atom_trigonal():
-    slab = Slab()
-    slab.ucell = np.array([[ 1, 0, 0],
-                           [-2.3, 3, 0],
-                           [ 1, 2, 3]],dtype=float).T
-    slab.atlist = [Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab),]  # "random" position
-    param = Rparams()
-    slab.fullUpdate(param)
-    return slab
-
-
 @pytest.fixture()
 def ag100_slab_param(poscars_path):
     slab = poscar.read(poscars_path /"POSCAR_Ag(100)")
