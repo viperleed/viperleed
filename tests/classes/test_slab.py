@@ -68,40 +68,82 @@ class TestUnitCellTransforms:
         assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
 
 
-class Test_restore_oristate:
-    @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
-    def test_save_restore_oristate_geo(self, ag100_slab_with_displacements_and_offsets):
-            slab, param = ag100_slab_with_displacements_and_offsets
-            slab_copy = deepcopy(slab)
-            for at in slab.atlist:
-                at.disp_geo_offset['all'] = np.array([0.1, 0.0, 0.0])
-                at.offset_geo['all'] = np.array([0.0, 0.0, 0.1])
-                at.mergeDisp(at.el)
+# TODO: I (MRiva) don't understand what we want the behaviour to be!!
+# See comments in specific spots.
+# As far as I can understand, the purpose of restore_ori_state is to:
+#    (i) convert the current "positions" into vibrocc offsets, and
+#   (ii) fully clear the displacements of all atoms
+@pytest.mark.xfail(reason='Tests are somewhat wrong! Discuss with @amimre',
+                   strict=True)
+class TestRestoreOristate:
+    """Collection of tests for reverting a slab to its ref-calc state."""
 
-            slab.restoreOriState()
-            for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
-                assert np.allclose(at_rest.disp_geo['all'], at_orig.disp_geo['all'])
+    @pytest.fixture(name='slab_and_copy')
+    def fixture_slab_and_copy(self, ag100_slab_with_displacements_and_offsets):
+        """Return a Ag(100) slab and its deepcopy."""
+        slab, *_ = ag100_slab_with_displacements_and_offsets
+        return slab, deepcopy(slab)
 
-    @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
-    def test_save_restore_oristate_vib(self, ag100_slab_with_displacements_and_offsets):
-            slab, param = ag100_slab_with_displacements_and_offsets
-            slab_copy = deepcopy(slab)
-            for at in slab.atlist:
-                at.offset_vib['all'] = 0.1
-                at.mergeDisp(at.el)
+    @staticmethod
+    def check_displacements_equal(atom1, atom2, which, element, subtests):
+        """Check that two atoms have the same requested displacements."""
+        _test_str = f'{atom1}, {element}, '
+        displ_1 = atom1.displacements[which]
+        displ_2 = atom2.displacements[which]
+        with subtests.test(_test_str + 'total'):
+            assert displ_1[element] == pytest.approx(displ_2[element])
 
-            slab.restoreOriState()
-            for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
-                assert np.allclose(at_rest.disp_vib['all'], at_orig.disp_vib['all'])
+        offs_1 = displ_1.vibrocc_offset
+        offs_2 = displ_2.vibrocc_offset
+        with subtests.test(_test_str + 'vibrocc'):
+            assert offs_1[element] == pytest.approx(offs_2[element])
 
-    @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
-    def test_save_restore_oristate_occ(self, ag100_slab_with_displacements_and_offsets):
-            slab, param = ag100_slab_with_displacements_and_offsets
-            slab_copy = deepcopy(slab)
-            for at in slab.atlist:
-                at.offset_occ[at.el] = 0.1
-                at.mergeDisp(at.el)
+        if which == 'geo':  # Check also offset
+            offs_1 = displ_1.displacements_offset
+            offs_2 = displ_2.displacements_offset
+            with subtests.test(_test_str + 'geo offset'):
+                assert offs_1[element] == pytest.approx(offs_2[element])
 
-            slab.restoreOriState()
-            for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
-                assert np.allclose(at_rest.disp_occ[at_rest.el], at_orig.disp_occ[at_rest.el])
+    def test_restore_geo(self, slab_and_copy, subtests):
+        slab, slab_copy = slab_and_copy
+        for atom in slab:
+            geo = atom.displacements.geo
+            geo.displacements_offset['all'] = np.array([0.1, 0.0, 0.0])
+            geo.vibrocc_offset['all'] = np.array([0.0, 0.0, 0.1])
+            atom.displacements.initialized = True
+            atom.add_offsets_to_displacements()
+
+        # slab.restore_ori_state(keep_displacements=True)                       # TODO: is this what we want to test?
+        slab.restore_ori_state()
+        for atoms in zip(slab, slab_copy):
+            element = atoms[0].el
+            self.check_displacements_equal(*atoms, 'geo', element, subtests)    # TODO: what do we exactly want to be equal after restoring?
+            self.check_displacements_equal(*atoms, 'geo', 'all', subtests)
+
+    def test_restore_vib(self, slab_and_copy, subtests):
+        slab, slab_copy = slab_and_copy
+        for atom in slab:
+            vib = atom.displacements.vib
+            vib.vibrocc_offset['all'] = 0.1
+            atom.displacements.initialized = True
+            atom.add_offsets_to_displacements()
+
+        slab.restore_ori_state()
+        for atoms in zip(slab, slab_copy):
+            element = atoms[0].el
+            self.check_displacements_equal(*atoms, 'vib', element, subtests)
+            self.check_displacements_equal(*atoms, 'vib', 'all', subtests)
+
+    def test_restore_occ(self, slab_and_copy, subtests):
+        slab, slab_copy = slab_and_copy
+        for atom in slab:
+            occ = atom.displacements.occ
+            occ.vibrocc_offset[atom.el] = -0.1
+            atom.displacements.initialized = True
+            atom.add_offsets_to_displacements()
+
+        slab.restore_ori_state()
+        for atoms in zip(slab, slab_copy):
+            element = atoms[0].el
+            self.check_displacements_equal(*atoms, 'occ', element, subtests)
+
