@@ -1,62 +1,71 @@
-"""classes/test_slab.py
+"""Tests for viperleed.tleedmlib.classes.slab.
 
 Created on 2023-07-28
 
-@author: Alexander M. Imre
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 """
 
-import pytest
-import sys
-import os
-from pathlib import Path
 from copy import deepcopy
+from pathlib import Path
+import sys
+
 import numpy as np
+import pytest
 
-vpr_path = str(Path(__file__).parent.parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
+VPR_PATH = str(Path(__file__).resolve().parents[3])
+if VPR_PATH not in sys.path:
+    sys.path.append(VPR_PATH)
 
-
+# pylint: disable=wrong-import-position
+# Cannot do anything about it until we make viperleed installable
 from viperleed.tleedmlib.classes.slab import SymPlane
-from viperleed.tleedmlib.symmetry import findBulkSymmetry
+# pylint: enable=wrong-import-position
 
 
-class TestSlabTransforms:
+class TestAtomTransforms:                                                       # TODO: add test for correct rotation and mirror on slanted cell. Probably enough to is_rotation_symmetric and is_mirror_symmetric with appropriate slabs. Could use "POSCAR_36C_cm" or the bulk of Fe3O4.
+    """Test simple transformations of the atoms of a slab."""
+
     def test_mirror(self, manual_slab_3_atoms):
+        """Test the expected outcome of mirroring atoms of a simple slab."""
         slab = manual_slab_3_atoms
         mirrored_slab = deepcopy(slab)
-        symplane = SymPlane(pos=(0,0),
-                            dr=np.array([0,1]),
-                            abt=slab.ucell.T[:2,:2])
+        symplane = SymPlane((0, 0), (0, 1), abt=slab.surface_vectors)
         mirrored_slab.mirror(symplane)
         mirrored_slab.collapseCartesianCoordinates()
-        assert all(at.isSameXY(mir_at.cartpos[:2])
-                for at, mir_at in
-                zip(slab.atlist, reversed(mirrored_slab.atlist)))
+        assert all(
+            at.isSameXY(mir_at.cartpos[:2])
+            for at, mir_at in zip(slab.atlist, reversed(mirrored_slab.atlist))
+            )
 
     def test_180_rotation(self, manual_slab_3_atoms):
+        """Test the expected outcome of rotating atoms of a simple slab."""
         slab = manual_slab_3_atoms
         rotated_slab = deepcopy(slab)
-        rotated_slab.rotateAtoms((0,0), order=2)
+        rotated_slab.rotateAtoms((0, 0), order=2)
         rotated_slab.collapseCartesianCoordinates()
-        assert all(at.isSameXY(mir_at.cartpos[:2])
-                for at, mir_at in
-                zip(slab.atlist, reversed(rotated_slab.atlist)))
+        assert all(
+            at.isSameXY(rot_at.cartpos[:2])
+            for at, rot_at in zip(slab.atlist, reversed(rotated_slab.atlist))
+            )
 
 
-# Slab Matrix operations
-def test_rotation_on_trigonal_slab(manual_slab_1_atom_trigonal):
-    rot_15 = np.array([[ 0.96592583, -0.25881905,  0.        ],
-                       [ 0.25881905,  0.96592583,  0.        ],
-                       [ 0.        ,  0.        ,  1.        ]])
-    expected_cell = [[0.96592583,  0.25881905, 0.],
-                     [-2.99808654, 2.30249368, 0.],
-                     [0.44828774,  2.1906707,  3.]]
-    expected_atom_cartpos = [-1.86064664,  1.88257645]
-    slab = manual_slab_1_atom_trigonal
-    slab.apply_matrix_transformation(rot_15)
-    assert np.allclose(slab.ucell.T, expected_cell)
-    assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
+class TestUnitCellTransforms:
+    """Test simple transformations of the unit cell of a slab."""
+
+    def test_rotation_on_trigonal_slab(self, manual_slab_1_atom_trigonal):
+        """Test application of a rotation to a trigonal slab."""
+        rot_15 = [[0.96592583, -0.25881905,  0.],
+                  [0.25881905,  0.96592583,  0.],
+                  [0.,  0.,  1.]]
+        expected_cell = [[0.96592583,  0.25881905,  0.],
+                         [-2.99808654, 2.30249368,  0.],
+                         [0.44828774,  2.1906707,   3.]]
+        expected_atom_cartpos = [-1.86064664,  1.88257645]
+        slab = manual_slab_1_atom_trigonal
+        slab.apply_matrix_transformation(rot_15)
+        assert np.allclose(slab.ucell.T, expected_cell)
+        assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
 
 
 class Test_restore_oristate:
