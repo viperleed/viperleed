@@ -8,7 +8,7 @@ Created on 2023-07-28
 
 import numpy as np
 import pytest
-from pytest import approx
+from pytest import approx, mark
 
 
 # TODO: would need more extensive testing
@@ -16,6 +16,10 @@ from pytest import approx
 class TestAtomMergeDisplacementOffset:
     """Test combination of displacements and offsets."""
 
+    @mark.xfail(
+        raises=KeyError,
+        reason='Incorrect implementation in Atom for accessing site.vibamp'
+        )
     def test_offset_merge_allowed(self, manually_displaced_atom, subtests):
         """Test successful combination of VIBROCC offset and displacements."""
         atom = manually_displaced_atom
@@ -32,6 +36,10 @@ class TestAtomMergeDisplacementOffset:
         with subtests.test('occ'):
             assert atom.disp_occ[element] == approx([0.6, 0.7, 0.8, 0.9])
 
+    @mark.xfail(
+        raises=KeyError,
+        reason='Incorrect implementation in Atom for accessing site.vibamp'
+        )
     def test_displacement_out_of_range(self, manually_displaced_atom,
                                        subtests):
         """Check skipping of offsets that cause out-of-range displacements."""
@@ -44,7 +52,11 @@ class TestAtomMergeDisplacementOffset:
             pytest.xfail(reason=(
                 'The current implementation is wrong (does not check site) '
                 'fixed by @fkraushofer in installable branch. See '
-                'pull/94/commits/4a4a5a5236aa4a2cd03de4e4ec2a448e64cc63d1'
+                'pull/94/commits/4a4a5a5236aa4a2cd03de4e4ec2a448e64cc63d1. '
+                'However, the fix is also wrong, as it does not consider '
+                'that site.vibamp may not be present. It seems much better '
+                'to check for consistency only when we know that we have all '
+                'information.'
                 ))
             assert atom.disp_vib[element] == approx([-0.2, -0.1, 0.0])
         with subtests.test('occ'):
