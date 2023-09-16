@@ -1,35 +1,45 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ['setuptools']
+build-backend = 'setuptools.build_meta'
 # TODO: check version of setuptools
+# TODO: take a look at https://docs.pytest.org/en/7.1.x/explanation/goodpractices.html
+# for good practices suggested by pytest on the builder
 
 [project]
-name = "viperleed"
-requires-python = ">=3.7"
-dynamic = ["version"]
-readme = "README.md"
+name = 'viperleed'
+requires-python = '>=3.7'
+dynamic = ['version']
+readme = 'README.md'
 dependencies = [
-    "numpy",
-    "wrapt",
-    "quicktions",
-    "scipy",
-    "sklearn",
-    "matplotlib",
-    "psutil",
-]
+    'numpy',
+    'wrapt',
+    'quicktions',
+    'scipy',
+    'sklearn',
+    'matplotlib',
+    'psutil',
+    ]
 
 [project.license]
 # TODO: add license information
 
 [project.optional-dependencies]
 GUI = [
-    "PyQt5",
-    "mplcairo"
-]
+    'PyQt5',
+    'mplcairo',
+    ]
 hardware = [
-    "requests"
-]
+    'requests',
+    ]
 dev = [
-    "line_profiler",
-    "sphinx"
-]
+    'line_profiler',
+    'sphinx',
+    'pytest',
+    ]
+
+[tool.pytest.ini_options]
+xfail_strict = true
+required_plugins = ['pytest-cases', 'pytest-subtests']
+addopts = [
+    '--import-mode=importlib',
+    ]
