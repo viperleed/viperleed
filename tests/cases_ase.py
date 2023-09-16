@@ -11,6 +11,7 @@ import ase.build
 
 from .helpers import InfoBase
 
+
 @dataclass(repr=False)
 class ASEInfo(InfoBase):
     """Collection of test-related information for an ASE case."""
