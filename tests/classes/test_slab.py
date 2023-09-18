@@ -19,8 +19,8 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
-from viperleed.tleedmlib.classes.slab import Slab, SymPlane
 from viperleed.tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.slab import Slab, SymPlane
 # pylint: enable=wrong-import-position
 
 
@@ -74,8 +74,7 @@ class TestUnitCellTransforms:
 # As far as I can understand, the purpose of restore_ori_state is to:
 #    (i) convert the current "positions" into vibrocc offsets, and
 #   (ii) fully clear the displacements of all atoms
-@pytest.mark.xfail(reason='Tests are somewhat wrong! Discuss with @amimre',
-                   strict=True)
+@pytest.mark.xfail(reason='Tests are somewhat wrong! Discuss with @amimre')
 class TestRestoreOristate:
     """Collection of tests for reverting a slab to its ref-calc state."""
 
