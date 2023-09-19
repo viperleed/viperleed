@@ -22,7 +22,7 @@ from viperleed.calc.lib.base import cosvec
 # The following imports are potentially the cause of cyclic
 # imports. They are used exclusively as part of getTensorOriStates
 # which could potentially be split off somewhere else
-from viperleed.tleedmlib.files import parameters, poscar, vibrocc
+from viperleed.calc.files import parameters, poscar, vibrocc
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]

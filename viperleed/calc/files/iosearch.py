@@ -15,7 +15,7 @@ import numpy as np
 
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import BackwardsReader, readIntLine
-from viperleed.tleedmlib.files import poscar
+from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.vibrocc import writeVIBROCC
 
