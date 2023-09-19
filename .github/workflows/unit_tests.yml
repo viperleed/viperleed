@@ -40,7 +40,7 @@ jobs:
         cd ../..
     - name: Test with pytest
       run: |
-        conda install pytest wrapt parameterized
-        pip install ase
+        conda install wrapt parameterized
+        pip install ase pytest pytest-cases pytest-subtests
         cd tests
         pytest
