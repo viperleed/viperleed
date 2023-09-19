@@ -145,7 +145,7 @@ def run_tleedm(system_name=None,
         if poscar_file.is_file():
             logger.info("Reading structure from file POSCAR")
             try:
-                slab = poscar.read(filename=poscarfile)
+                slab = poscar.read(filename=poscar_file)
             except Exception:
                 logger.error("Exception while reading POSCAR", exc_info=True)
                 cleanup(tmp_manifest)
