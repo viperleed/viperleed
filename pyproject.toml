@@ -38,8 +38,11 @@ dev = [
     ]
 
 [tool.pytest.ini_options]
-xfail_strict = true
-required_plugins = ['pytest-cases', 'pytest-subtests']
 addopts = [
     '--import-mode=importlib',
     ]
+pythonpath = [
+    '.', '..'
+    ]
+required_plugins = ['pytest-cases', 'pytest-subtests']
+xfail_strict = true
