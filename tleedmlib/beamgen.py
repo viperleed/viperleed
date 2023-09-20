@@ -85,27 +85,20 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
     # Log beam groups for debugging
     _log_beamgroups(equivalent_beams)
 
-    # strip away symmetry group information
-    beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
-    subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw) # TODO: create test case to check that len(subset_classes) == np.linalg.det(rpars.SUPERLATTICE)
+    # Strip away symmetry information, and sort into scattering subsets
+    beam_subsets = _split_into_subsets([BeamIndex(hk)  # str->Fraction
+                                        for hk, *_ in equivalent_beams])
 
-    # sort beams into scattering subsets
-    beam_subsets = [[] for set in range(len(subset_classes))]
-    for index, red_index in zip(beam_indices_raw, reduced_indices):
-        applicable_subset = subset_classes.index(red_index)
-        beam_subsets[applicable_subset].append(index)
-
+    inv_bulk_surf_vectors = slab.bulkslab.reciprocal_vectors
     all_energies = []
     all_indices_arr = []
-    beamlist_content = ''
-    # for every subset calculate energies, sort and generate partial string
-    for beam_indices in beam_subsets:
-        # convert to float array
-        indices_arr = np.array(beam_indices, dtype='float64')
-        # calculate cutoff energy for each beam and scale to correct units
-        energies = (np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2,       # TODO: we could probably remove the energies from BEAMLIST completely. It seems they are not used in TensErLEED (see subroutine READIN in lib.tleed.f). Would need to remove it from here, and readBEAMLIST in beams.py.
-                           axis=1)
-                    /2 *HARTREE_TO_EV *BOHR_TO_ANGSTROM**2) 
+    for beam_indices in beam_subsets.values():
+        indices_arr = np.array(beam_indices, dtype='float64')  # from Fraction
+        # Calculate cutoff energy for each beam
+        energies = (                                                            # TODO: we could probably remove the energies from BEAMLIST completely. It seems they are not used in TensErLEED (see subroutine READIN in lib.tleed.f). Would need to remove it from here, and readBEAMLIST in beams.py.
+            H_BAR_SQ_OVER_2M
+            * np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2, axis=1)
+            )
 
         # generate file contents for beam subset
         all_indices_arr.append(indices_arr)
@@ -296,3 +289,29 @@ def get_beam_scattering_subsets(beam_indices_raw):
     subset_classes = sorted(subset_classes, key=lambda hk: hk[0]**2 + hk[1]**2)
 
     return subset_classes, reduced_indices
+
+
+def _split_into_subsets(beam_indices_raw):
+    """Split raw beam indices into bulk-independent subsets.
+
+    See also help(get_beam_scattering_subsets).
+
+    Parameters
+    ----------
+    beam_indices_raw : Sequence
+        Beam indices in (h, k) form.
+
+    Returns
+    -------
+    beam_subsets : dict
+        Keys are the unique first-Brillouin-zone beam indices for
+        the beam subsets. They are insertion-ordered by their norm.
+        Values are all the indices in beam_indices_raw that belong
+        to the specific subset.
+    """
+    (subset_classes,
+     reduced_indices) = get_beam_scattering_subsets(beam_indices_raw)           # TODO: create test case to check that len(subset_classes) == np.linalg.det(rp.SUPERLATTICE)
+    beam_subsets = {red_index: [] for red_index in subset_classes}
+    for raw_index, red_index in zip(beam_indices_raw, reduced_indices):
+        beam_subsets[red_index].append(raw_index)
+    return beam_subsets
