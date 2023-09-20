@@ -210,19 +210,32 @@ def make_beamlist_lines(all_indices, all_energies, tl_version):
     ------
     ValueError
         If indices and energies have incompatible shapes.
+    ValueError
+        If one of the beam sets exceeds the maximum size
+        currently supported in the Fortran code.
     """
     # Set up Fortran format as was used by beamgen.
-    # TensErLEED v1.7 and higher used beamgen v1.7; earlier versions used v3
-    # This matters because the format changed slightly:
-    # beamgen v1.7 had I5, beamgen v3 had I4 for some reason
-    if tl_version >= 1.7:
-        beamlist_format = ff.FortranRecordWriter(
-            "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I4"
-            )
+    # TensErLEED v1.7 and higher used beamgen v1.7; earlier versions
+    # used v3. This matters because the format changed slightly:
+    # beamgen v1.7 had I5, beamgen v3 had I4. Also the maximum
+    # number of beams per beamset has changed since.
+    if tl_version < 1.7:
+        fmt = {
+            'beamset': ff.FortranRecordWriter(
+                "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I4"
+                ),
+            'n_beams': ff.FortranRecordWriter('15I4')
+            }
+        n_beams_max = 9999
     else:
-        beamlist_format = ff.FortranRecordWriter(
-            "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"
-            )
+        fmt = {
+            'beamset': ff.FortranRecordWriter(
+                "2F10.5,2I3,10X,'E =  ',F10.4,2X,'NR.',I5"
+                ),
+            'n_beams': ff.FortranRecordWriter('15I5')
+            }
+        n_beams_max = 99999
+
     beam_nr = 1
     content = ''
     for indices, energies in zip(all_indices, all_energies):
@@ -234,13 +247,16 @@ def make_beamlist_lines(all_indices, all_energies, tl_version):
                 )
 
         # first line contains number of beams
-        content += ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
-        # TODO: why limit to 999 beams?
+        if n_beams > n_beams_max:
+            raise ValueError(
+                f'Too many beams in beam set ({n_beams}). TensErLEED v'
+                f'{tl_version:.2f} code supports at most {n_beams_max}.'
+                )
+        content += fmt['n_beams'].write([n_beams]) + '\n'
 
         # iterate over all beams and format lines
         for beam_hk, energy in zip(indices, energies):
-            line = beamlist_format.write([*beam_hk, 1, 1, energy,
-                                          beam_nr])
+            line = fmt['beamset'].write([*beam_hk, 1, 1, energy, beam_nr])
             content += line + '\n'
             beam_nr += 1
 
