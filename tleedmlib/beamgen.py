@@ -178,7 +178,7 @@ def _log_beamgroups(equivalent_beams):
     logger.log(level=1, msg='\n'.join(full_log_msg[15:]))
 
 
-def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
+def make_beamlist_lines(all_indices, all_energies, tl_version):
     """Creates contents for file BEAMLIST for each beamset in the format
     used be the legacy beamgen scripts by U. Loeffler and R. Doell.
 
@@ -197,10 +197,9 @@ def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
     all_energies : list
         Lower cut-off energies for the beams. Each element is one
         subset. Elements are numpy arrays with shape (n_beams_subset,).
-    tl_version : float, optional
-        Version of TensErLEED, by default 1.7. To be taken from
-        Rparams.TL_VERSION. This values decides the format of
-        the output string.
+    tl_version : float
+        Version of TensErLEED. To be taken from Rparams.TL_VERSION.
+        This values decides the format of the output string.
 
     Returns
     -------
