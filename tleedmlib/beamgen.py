@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-Module beamgen of viperleed.tleedmlib.
-
-Creates the BEAMLIST file for TensErLEED calculations.
+"""Module beamgen of viperleed.tleedmlib.
 
 @author: Alexander Imre
 @author: Florian Kraushofer
 
-Original version by Florian Kraushofer (2020) was a wrapper for the fortran
-beamgen script by Uli Löffler et al. Complete refactor by Alexander Imre (2023)
-that removes the dependency on the fortran script and instead accomplishes the
-same in python. This is more flexible and allows for more accurate calculations.
+Creates the BEAMLIST file for TensErLEED calculations.
+
+Original version by Florian Kraushofer (2020) was a wrapper for
+the Fortran beamgen script by Uli Löffler et al. Complete refactor
+by Alexander Imre (2023) that removes the dependency on the Fortran
+script and instead accomplishes the same in python. This is more
+flexible and allows for more accurate calculations.
 """
 
 import logging
 from pathlib import Path
 
-import numpy as np
 import fortranformat as ff
+import numpy as np
 
 from viperleed.guilib.base import get_equivalent_beams, BeamIndex
 from viperleed.tleedmlib import symmetry
@@ -31,40 +31,41 @@ logger = logging.getLogger('tleedm.beamgen')
 def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     """Calculates and writes the contents for the file BEAMLIST.
 
-    BEAMLIST contains a list of all diffraction beams that will be used 
-    for internal calculations (as opposed to IVBEAMS, which contains the
-    beams to be output). The file list the beams with indices as float
-    values and a lower cutoff energy below which the beam is evanescent
-    (i.e. does not leave the surface and has intensity 0). The used 
-    format is defined in make_beamlist_string and dictated by TensErLEED
-    and the legacy beamgen scripts that were used before. Note that
-    BEAMLIST is not read directly by refcalc, but instead all input
-    files for the refcalc are combined into one string (by collectFIN in
-    iorefcalc.py) and then piped in.
+    BEAMLIST contains a list of all diffraction beams that will be
+    used for internal calculations (as opposed to IVBEAMS, which
+    contains the beams to be output). The file lists the beams with
+    indices as float values and a lower cutoff energy below which
+    the beam is evanescent (i.e., does not leave the surface and
+    has intensity 0). The used format is defined in make_beamlist_lines
+    and dictated by TensErLEED and the legacy beamgen scripts that were
+    used before. Note that BEAMLIST is not read directly by refcalc,
+    but instead all input files for the refcalc are combined into one
+    string (by collectFIN in iorefcalc.py) and then piped in.
 
-    NB: The energies calculated here are slightly higher than the values
+    NB: The energies calculated here are slightly higher than those
     from beamgenv3 (and beamgen.v1.7) because we use *more accurate*
-    values for unit conversions.The legacy code used these rounded
+    values for unit conversions. The legacy code used these rounded
     values:
     HARTREE_TO_EV = 27.21
     BOHR_TO_ANGSTROM = 0.529
-    Similarly, the list of included beams may be different for the same 
+    Similarly, the list of included beams may be different for the same
     energy range, as the legacy code used rounded values and typecast a
     cutoff from float to int.
 
-    In any case, this version should give more accurate energy values 
+    In any case, this version should give more accurate energy values
     and be more generous in how many beams are considered.
 
     Parameters
     ----------
     sl : Slab
-        Slab object.
+        Slab object. A .bulkslab will be added if it was not
+        yet created for this slab.
     rp : Rparams
         Run parameters.
     domains : bool, optional
         Flag to indicate if performing a domain calculation,
         by default False.
-    beamlist_name : str, optional
+    beamlist_name : str or pathlike, optional
         Filename to be written, by default "BEAMLIST".
     """
     if sl.bulkslab is None:
@@ -170,16 +171,25 @@ def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
     """Creates contents for file BEAMLIST for each beamset in the format
     used be the legacy beamgen scripts by U. Loeffler and R. Doell.
 
+    Beam sets that are not related by a bulk translation are
+    separated into different "blocks". The format is the same
+    as used be the legacy beamgen scripts by U. Loeffler and R.
+    Doell. See also help(get_beam_scattering_subsets).
+
     Parameters
     ----------
-    all_indices : list(np.ndarray, shape=(n_beams_subset, 2))
-        Indices (diffraction orders) of the beams. n_beams_subset is
-        the number of beams in each subset.
-    all_energies : np.ndarray, shape=(n_beams_subset,)
-        Lower cutoff energies for the beams.
+    all_indices : list
+        Elements are numpy arrays with shape (n_beams_subset, 2).
+        Each element is one subset, containing the hk-indices
+        (diffraction orders) of the beams. n_beams_subset is the
+        number of beams in each subset.
+    all_energies : list
+        Lower cut-off energies for the beams. Each element is one
+        subset. Elements are numpy arrays with shape (n_beams_subset,).
     tl_version : float, optional
         Version of TensErLEED, by default 1.7. To be taken from
-        Rparams.TL_VERSION. This values decides the format of the output string.
+        Rparams.TL_VERSION. This values decides the format of
+        the output string.
 
     Returns
     -------
@@ -211,7 +221,8 @@ def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
                                                                      2):
             raise ValueError(
                 f'Incompatible size of indices (shape={indices.shape})'
-                f'and energies (shape={energies.shape}).')
+                f'and energies (shape={energies.shape}).'
+                )
 
         # first line contains number of beams
         content += ff.FortranRecordWriter('10I3').write([n_beams]) + '\n'
@@ -228,16 +239,15 @@ def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
 
 
 def get_beam_scattering_subsets(beam_indices_raw):
-    """Takes a list of beam_indices and returns the beam scattering
-    subsets and reduced indices for sorting.
+    """Return beam scattering subsets and reduced indices for a list of beams.
 
     LEED diffraction beams are grouped into subsets for the computation
-    of reflection/transmission matrices. In the full dynamic scattering
+    of reflection/transmission matrices. In the full-dynamic scattering
     calculation (refcalc), one needs to consider that one beam can be
     scattered into another. However, this is only possible, if the
-    beam wave-vectors are related by the *bulk* unit cell. I.e. a beam
-    (1/2,0) can be scattered into (3/2,0), but not into (1,0).
-    This property can be used in the refcalc, to simplify calculations
+    beam wave-vectors are related by the *bulk* unit cell. I.e., beam
+    (1/2, 0) can be scattered into (3/2, 0), but not into (1, 0).
+    This property can be used in the refcalc to simplify calculations
     by making the reflection/transmission matrices block-diagonal.
     To enable this, we need to group the beams accordingly in BEAMLIST.
 
@@ -250,23 +260,22 @@ def get_beam_scattering_subsets(beam_indices_raw):
 
     Parameters
     ----------
-    beam_indices_raw : list(BeamIndex)
-        List of beam indices.
+    beam_indices_raw : Sequence
+        Beam indices in (h, k) form.
 
     Returns
     -------
     subset_classes : list
-        A tuple containing the unique first Brillouin zone beam indices
-        for the beam subsets. The length gives the number of subsets.
+        The unique first-Brillouin-zone beam indices for the beam
+        subsets, sorted by their length. The length gives the number
+        of subsets.
     reduced_indices : list
-        A list of corresponding reduced indices for beam indices_raw.
+        Reduced version of the indices in beam_indices_raw.
     """
-
-    reduced_indices = [(h%1,k%1) for (h,k) in beam_indices_raw]
+    reduced_indices = [(h%1, k%1) for (h, k) in beam_indices_raw]
     subset_classes = set(reduced_indices)
 
     # sort order of subsets by |(h_red, k_red)|^2
-    subset_classes = sorted(subset_classes,
-                            key= lambda index: index[0]**2 + index[1]**2)
+    subset_classes = sorted(subset_classes, key=lambda hk: hk[0]**2 + hk[1]**2)
 
     return subset_classes, reduced_indices
