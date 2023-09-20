@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Module beamgen of viperleed.tleedmlib.
 
-@author: Alexander Imre
-@author: Florian Kraushofer
+@author: Alexander Imre (@amimre)
+@author: Florian Kraushofer (@fkraushofer)
+@author: Michele Riva (@michele-riva)
 
 Creates the BEAMLIST file for TensErLEED calculations.
 
