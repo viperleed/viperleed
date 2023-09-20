@@ -28,7 +28,8 @@ from viperleed.tleedmlib.leedbase import (HARTREE_TO_EV,
 logger = logging.getLogger('tleedm.beamgen')
 
 
-def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
+def calc_and_write_beamlist(slab, rpars, domains=False,
+                            beamlist_name='BEAMLIST'):
     """Calculates and writes the contents for the file BEAMLIST.
 
     BEAMLIST contains a list of all diffraction beams that will be
@@ -57,10 +58,10 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
 
     Parameters
     ----------
-    sl : Slab
+    slab : Slab
         Slab object. A .bulkslab will be added if it was not
         yet created for this slab.
-    rp : Rparams
+    rpars : Rparams
         Run parameters.
     domains : bool, optional
         Flag to indicate if performing a domain calculation,
@@ -68,22 +69,23 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     beamlist_name : str or pathlike, optional
         Filename to be written, by default "BEAMLIST".
     """
-    if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
-        symmetry.findSymmetry(sl.bulkslab, rp)
+    if slab.bulkslab is None:
+        slab.bulkslab = slab.makeBulkSlab(rpars)
+        symmetry.findSymmetry(slab.bulkslab, rpars)
 
-    e_max = rp.THEO_ENERGIES[1]
-    surf_ucell = sl.surface_vectors
-    inv_bulk_surf_vectors = sl.bulkslab.reciprocal_vectors
+    e_max = rpars.THEO_ENERGIES[1]
+    surf_ucell = slab.surface_vectors
+    inv_bulk_surf_vectors = slab.bulkslab.reciprocal_vectors
 
     if not domains:
-        d_min = sl.getMinLayerSpacing() * 0.7
+        d_min = slab.getMinLayerSpacing()
     else:
-        d_min = min((dp.sl.getMinLayerSpacing() for dp in rp.domainParams))*0.7
+        d_min = min(dp.slab.getMinLayerSpacing() for dp in rpars.domainParams)
+    d_min *= 0.7
 
     # convergence criterion for refcalc;
     # beams are propagated between layers if relative change is larger than this
-    conv_crit = rp.ATTENUATION_EPS
+    conv_crit = rpars.ATTENUATION_EPS
     # effective cutoff energy to use (scale to correct units)
     e_max_eff = (e_max +
                  (np.log(conv_crit)/(d_min*ANGSTROM_TO_BOHR))**2
@@ -93,12 +95,12 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
     leed_parameters = {
         'eMax': e_max_eff,
         'surfBasis': surf_ucell,
-        'SUPERLATTICE': rp.SUPERLATTICE,
-        'surfGroup': sl.foundplanegroup,
-        'bulkGroup': sl.bulkslab.foundplanegroup,
+        'SUPERLATTICE': rpars.SUPERLATTICE,
+        'surfGroup': slab.foundplanegroup,
+        'bulkGroup': slab.bulkslab.foundplanegroup,
         'screenAperture': 180,  # all beams, because internal calculation
     }
-    # use **only** beams from domain specified in rp.SUPERLATTICE
+    # use **only** beams from domain specified in rpars.SUPERLATTICE
     # beams come pre-sorted from get_equivalent_beams()
     equivalent_beams = get_equivalent_beams(leed_parameters, domains=0)
 
@@ -109,7 +111,7 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
 
     # strip away symmetry group information
     beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
-    subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw) # TODO: create test case to check that len(subset_classes) == np.linalg.det(rp.SUPERLATTICE)
+    subset_classes, reduced_indices = get_beam_scattering_subsets(beam_indices_raw) # TODO: create test case to check that len(subset_classes) == np.linalg.det(rpars.SUPERLATTICE)
 
     # sort beams into scattering subsets
     beam_subsets = [[] for set in range(len(subset_classes))]
@@ -134,7 +136,7 @@ def calc_and_write_beamlist(sl, rp, domains=False, beamlist_name='BEAMLIST'):
         all_energies.append(energies)
     beamlist_content = make_beamlist_string(all_indices_arr,
                                             all_energies,
-                                            rp.TL_VERSION)
+                                            rpars.TL_VERSION)
     # get highest energy considered; groups may have different shapes
     max_energy = max(np.max(group) for group in all_energies)
     logger.debug(f'Highest energy considered in BEAMLIST: {max_energy:.2f}eV')
