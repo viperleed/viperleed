@@ -9,11 +9,6 @@ Created on 2023-06-09
 from pathlib import Path
 import sys
 
-# pylint: disable=unused-import
-# This is a workaround to make sure we do point to the necessary
-# plugin. Will be resolved in installable by adding as a dependency
-import pytest_subtests                                                          # TODO: remove in installable
-# pylint: enable=unused-import
 from pytest_cases import fixture, parametrize_with_cases
 
 VPR_PATH = str(Path(__file__).resolve().parents[2])
