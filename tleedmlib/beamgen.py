@@ -14,7 +14,6 @@ flexible and allows for more accurate calculations.
 """
 
 import logging
-from pathlib import Path
 
 import fortranformat as ff
 import numpy as np
@@ -25,7 +24,7 @@ from viperleed.tleedmlib.leedbase import BOHR_TO_ANGSTROM, HARTREE_TO_EV
 from viperleed.tleedmlib.leedbase import getLEEDdict
 
 H_BAR_SQ_OVER_2M = 0.5 * HARTREE_TO_EV * BOHR_TO_ANGSTROM**2  # h**2/2m
-logger = logging.getLogger('tleedm.beamgen')
+_LOGGER = logging.getLogger('tleedm.beamgen')
 
 
 def calc_and_write_beamlist(slab, rpars, domains=False,
@@ -104,23 +103,25 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
         # generate file contents for beam subset
         all_indices_arr.append(indices_arr)
         all_energies.append(energies)
-    beamlist_content = make_beamlist_string(all_indices_arr,
-                                            all_energies,
-                                            rpars.TL_VERSION)
+
     # get highest energy considered; groups may have different shapes
     max_energy = max(np.max(group) for group in all_energies)
-    logger.debug(f'Highest energy considered in BEAMLIST: {max_energy:.2f}eV')
+    _LOGGER.debug(f'Highest energy considered in '
+                  f'BEAMLIST: {max_energy:.2f} eV')
 
     # write to file
-    write_file_path = Path(beamlist_name)
-    try:
-        with open(write_file_path, 'w', encoding='utf-8') as file:
-            file.write(beamlist_content)
-    except Exception:
-        logger.error(f'Unable to write file {beamlist_name}')
+    try:  # pylint: disable=too-many-try-statements
+        with open(beamlist_name, 'w', encoding='utf-8') as file:
+            file.writelines(
+                make_beamlist_lines(all_indices_arr,
+                                    all_energies,
+                                    rpars.TL_VERSION)
+                )
+    except OSError:  # Do not handle ValueError on purpose
+        _LOGGER.error(f'Unable to write file {beamlist_name}')
         raise
 
-    logger.debug('Wrote to BEAMLIST successfully.')
+    _LOGGER.debug('Wrote to BEAMLIST successfully.')
 
 
 def _get_emax_for_evanescent_beams(slab, rpars, domains):
@@ -161,7 +162,7 @@ def _get_emax_for_evanescent_beams(slab, rpars, domains):
 
 def _log_beamgroups(equivalent_beams):
     """Log information on beam groups if desired."""
-    if logger.getEffectiveLevel() > 5:
+    if _LOGGER.getEffectiveLevel() > 5:
         return
 
     full_log_msg = ['Equivalent beams:',
@@ -173,14 +174,13 @@ def _log_beamgroups(equivalent_beams):
 
     # Split log message into two parts
     # Thee first 15 lines are intended for log-level verbose...
-    logger.log(level=5, msg='\n'.join(full_log_msg[:15]))
+    _LOGGER.log(level=5, msg='\n'.join(full_log_msg[:15]))
     # ...the rest only at very verbose
-    logger.log(level=1, msg='\n'.join(full_log_msg[15:]))
+    _LOGGER.log(level=1, msg='\n'.join(full_log_msg[15:]))
 
 
 def make_beamlist_lines(all_indices, all_energies, tl_version):
-    """Creates contents for file BEAMLIST for each beamset in the format
-    used be the legacy beamgen scripts by U. Loeffler and R. Doell.
+    """Yield lines to be written to file BEAMLIST.
 
     Beam sets that are not related by a bulk translation are
     separated into different "blocks". The format is the same
@@ -201,10 +201,11 @@ def make_beamlist_lines(all_indices, all_energies, tl_version):
         Version of TensErLEED. To be taken from Rparams.TL_VERSION.
         This values decides the format of the output string.
 
-    Returns
-    -------
-    str
-        String representation of the contents of the BEAMLIST file.
+    Yields
+    ------
+    beamlist_line : str
+        String representation of each line of the BEAMLIST file.
+        '\n'-terminated.
 
     Raises
     ------
@@ -237,7 +238,6 @@ def make_beamlist_lines(all_indices, all_energies, tl_version):
         n_beams_max = 99999
 
     beam_nr = 1
-    content = ''
     for indices, energies in zip(all_indices, all_energies):
         n_beams = indices.shape[0]
         if energies.shape != (n_beams,) or indices.shape != (n_beams, 2):
@@ -252,15 +252,13 @@ def make_beamlist_lines(all_indices, all_energies, tl_version):
                 f'Too many beams in beam set ({n_beams}). TensErLEED v'
                 f'{tl_version:.2f} code supports at most {n_beams_max}.'
                 )
-        content += fmt['n_beams'].write([n_beams]) + '\n'
+        yield fmt['n_beams'].write([n_beams]) + '\n'
 
         # iterate over all beams and format lines
         for beam_hk, energy in zip(indices, energies):
             line = fmt['beamset'].write([*beam_hk, 1, 1, energy, beam_nr])
-            content += line + '\n'
+            yield line + '\n'
             beam_nr += 1
-
-    return content
 
 
 def get_beam_scattering_subsets(beam_indices_raw):
