@@ -174,7 +174,7 @@ def _log_beamgroups(equivalent_beams):
         full_log_msg.append(line)
 
     # Split log message into two parts
-    # Thee first 15 lines are intended for log-level verbose...
+    # The first 15 lines are intended for log-level verbose...
     _LOGGER.log(level=5, msg='\n'.join(full_log_msg[:15]))
     # ...the rest only at very verbose
     _LOGGER.log(level=1, msg='\n'.join(full_log_msg[15:]))
@@ -204,7 +204,7 @@ def make_beamlist_lines(all_indices, all_energies, tl_version):
 
     Yields
     ------
-    beamlist_line : str
+    beamlist_lines : str
         String representation of each line of the BEAMLIST file.
         '\n'-terminated.
 
