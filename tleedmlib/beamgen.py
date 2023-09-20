@@ -22,6 +22,7 @@ import numpy as np
 from viperleed.guilib.base import get_equivalent_beams, BeamIndex
 from viperleed.tleedmlib import symmetry
 from viperleed.tleedmlib.leedbase import BOHR_TO_ANGSTROM, HARTREE_TO_EV
+from viperleed.tleedmlib.leedbase import getLEEDdict
 
 H_BAR_SQ_OVER_2M = 0.5 * HARTREE_TO_EV * BOHR_TO_ANGSTROM**2  # h**2/2m
 logger = logging.getLogger('tleedm.beamgen')
