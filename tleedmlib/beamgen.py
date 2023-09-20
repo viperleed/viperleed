@@ -237,6 +237,11 @@ def make_beamlist_lines(all_indices, all_energies, tl_version):
             }
         n_beams_max = 99999
 
+    if len(all_indices) != len(all_energies):
+        raise ValueError(
+            f'Inconsistent number of beam indices ({len(all_indices)}) '
+            f'and energies ({len(all_energies)})'
+            )
     beam_nr = 1
     for indices, energies in zip(all_indices, all_energies):
         n_beams = indices.shape[0]
