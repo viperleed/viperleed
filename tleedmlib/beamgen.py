@@ -21,10 +21,9 @@ import numpy as np
 
 from viperleed.guilib.base import get_equivalent_beams, BeamIndex
 from viperleed.tleedmlib import symmetry
-from viperleed.tleedmlib.leedbase import (HARTREE_TO_EV,
-                                          BOHR_TO_ANGSTROM,
-                                          ANGSTROM_TO_BOHR)
+from viperleed.tleedmlib.leedbase import BOHR_TO_ANGSTROM, HARTREE_TO_EV
 
+H_BAR_SQ_OVER_2M = 0.5 * HARTREE_TO_EV * BOHR_TO_ANGSTROM**2  # h**2/2m
 logger = logging.getLogger('tleedm.beamgen')
 
 
@@ -73,33 +72,15 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
         slab.bulkslab = slab.makeBulkSlab(rpars)
         symmetry.findSymmetry(slab.bulkslab, rpars)
 
-    e_max = rpars.THEO_ENERGIES[1]
-    surf_ucell = slab.surface_vectors
-    inv_bulk_surf_vectors = slab.bulkslab.reciprocal_vectors
-
-    if not domains:
-        d_min = slab.getMinLayerSpacing()
-    else:
-        d_min = min(dp.slab.getMinLayerSpacing() for dp in rpars.domainParams)
-    d_min *= 0.7
-
-    # convergence criterion for refcalc;
-    # beams are propagated between layers if relative change is larger than this
-    conv_crit = rpars.ATTENUATION_EPS
-    # effective cutoff energy to use (scale to correct units)
-    e_max_eff = (e_max +
-                 (np.log(conv_crit)/(d_min*ANGSTROM_TO_BOHR))**2
-                 / 2 *HARTREE_TO_EV)
-
     # use guilib to generate list of beams
     leed_parameters = {
-        'eMax': e_max_eff,
+        'eMax': _get_emax_for_evanescent_beams(slab, rpars, domains),
         'surfBasis': surf_ucell,
         'SUPERLATTICE': rpars.SUPERLATTICE,
         'surfGroup': slab.foundplanegroup,
         'bulkGroup': slab.bulkslab.foundplanegroup,
         'screenAperture': 180,  # all beams, because internal calculation
-    }
+        }
     # use **only** beams from domain specified in rpars.SUPERLATTICE
     # beams come pre-sorted from get_equivalent_beams()
     equivalent_beams = get_equivalent_beams(leed_parameters, domains=0)
@@ -151,6 +132,42 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
         raise
 
     logger.debug('Wrote to BEAMLIST successfully.')
+
+
+def _get_emax_for_evanescent_beams(slab, rpars, domains):
+    """Return an energy cut-off that will generate also evanescent beams.
+
+    The full-dynamic calculation considers scattering of propagating
+    beams as well as evanescent ones. Among the latter, only those
+    that survive attenuation when propagating between two layers are
+    considered. Beams are considered surviving if their amplitude is
+    attenuated by a factor less than ATTENUATION_EPS. Here we increase
+    the highest energy by the corresponding factor.
+
+    Parameters
+    ----------
+    slab : Slab
+        The structure for which beams are to be calculated.
+    rpars : Rparams
+        Run parameters.
+    domains : bool
+        Flag to indicate if performing a domain calculation.
+
+    Returns
+    -------
+    e_max : float
+        The energy (in electronvolts) that generates also the
+        correct evanescent beams.
+    """
+    if not domains:
+        d_min = slab.getMinLayerSpacing()
+    else:
+        d_min = min(dp.sl.getMinLayerSpacing() for dp in rpars.domainParams)
+    d_min *= 0.7                                                                # TODO: may want to complain if this is small as it will give a huge load of beams (and may mean different LAYER_CUTS should be used).
+
+    e_max = rpars.THEO_ENERGIES[1]
+    e_max += H_BAR_SQ_OVER_2M * (np.log(rpars.ATTENUATION_EPS) / d_min)**2
+    return e_max
 
 
 def _log_beamgroups(equivalent_beams):
