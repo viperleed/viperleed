@@ -82,10 +82,8 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
     # beams come pre-sorted from get_equivalent_beams()
     equivalent_beams = get_equivalent_beams(leed_parameters, domains=0)
 
-    # log beamgroups for debugging if loglevel is low enough
-    beamgroups_verbose, beamgroups_vverbose = _log_beamgroups(equivalent_beams)
-    logger.log(level=5, msg = beamgroups_verbose)
-    logger.log(level=1, msg = beamgroups_vverbose)
+    # Log beam groups for debugging
+    _log_beamgroups(equivalent_beams)
 
     # strip away symmetry group information
     beam_indices_raw = list(BeamIndex(beam[0]) for beam in equivalent_beams)
@@ -168,19 +166,22 @@ def _get_emax_for_evanescent_beams(slab, rpars, domains):
 
 
 def _log_beamgroups(equivalent_beams):
-    """Creates log message for beamgroups."""
-    full_log_msg = 'Equivalent beams:\n'
-    full_log_msg += '(   h     |   k     ),group,\n'
-    for beam in equivalent_beams:
-        index = BeamIndex(beam[0])
-        line = f'{index.__format__("(4,4)s")}, {beam[1]:4},\n'
-        full_log_msg += line
-    # split log message into two parts
-    # fist 12 lines are intended for loglevel verbose
-    # the rest only at very verbose
-    log_msg_v = '\n'.join(full_log_msg.split('\n')[:15])
-    log_msg_vv = '\n'.join(full_log_msg.split('\n')[15:])
-    return log_msg_v, log_msg_vv
+    """Log information on beam groups if desired."""
+    if logger.getEffectiveLevel() > 5:
+        return
+
+    full_log_msg = ['Equivalent beams:',
+                    '(   h     |   k     ),group,']
+    for beam_hk, beam_group, *_ in equivalent_beams:
+        index = BeamIndex(beam_hk)
+        line = f'{format(index, "(4,4)s")}, {beam_group:4},\n'
+        full_log_msg.append(line)
+
+    # Split log message into two parts
+    # Thee first 15 lines are intended for log-level verbose...
+    logger.log(level=5, msg='\n'.join(full_log_msg[:15]))
+    # ...the rest only at very verbose
+    logger.log(level=1, msg='\n'.join(full_log_msg[15:]))
 
 
 def make_beamlist_string(all_indices, all_energies, tl_version=1.7):
