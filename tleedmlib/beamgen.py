@@ -227,8 +227,7 @@ def make_beamlist_lines(all_indices, all_energies, tl_version):
     content = ''
     for indices, energies in zip(all_indices, all_energies):
         n_beams = indices.shape[0]
-        if not energies.shape == (n_beams,) or not indices.shape == (n_beams,
-                                                                     2):
+        if energies.shape != (n_beams,) or indices.shape != (n_beams, 2):
             raise ValueError(
                 f'Incompatible size of indices (shape={indices.shape})'
                 f'and energies (shape={energies.shape}).'
