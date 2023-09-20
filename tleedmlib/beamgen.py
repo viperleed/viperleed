@@ -72,15 +72,12 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
         slab.bulkslab = slab.makeBulkSlab(rpars)
         symmetry.findSymmetry(slab.bulkslab, rpars)
 
-    # use guilib to generate list of beams
-    leed_parameters = {
-        'eMax': _get_emax_for_evanescent_beams(slab, rpars, domains),
-        'surfBasis': surf_ucell,
-        'SUPERLATTICE': rpars.SUPERLATTICE,
-        'surfGroup': slab.foundplanegroup,
-        'bulkGroup': slab.bulkslab.foundplanegroup,
-        'screenAperture': 180,  # all beams, because internal calculation
-        }
+    # Use guilib to generate list of beams
+    leed_parameters = getLEEDdict(slab, rpars)
+    leed_parameters['screenAperture'] = 180  # All possible beams
+    leed_parameters['eMax'] = _get_emax_for_evanescent_beams(slab, rpars,
+                                                             domains)
+
     # use **only** beams from domain specified in rpars.SUPERLATTICE
     # beams come pre-sorted from get_equivalent_beams()
     equivalent_beams = get_equivalent_beams(leed_parameters, domains=0)
