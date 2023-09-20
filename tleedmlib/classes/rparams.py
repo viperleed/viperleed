@@ -228,7 +228,7 @@ class Rparams:
         # beams is set in section INIT via self.initTheoEnergies
         self.THEO_ENERGIES = self.get_default('THEO_ENERGIES')
         self.THETA = DEFAULTS['THETA']        # from BEAM_INCIDENCE
-        self.TL_IGNORE_CHECKSUM = True
+        self.TL_IGNORE_CHECKSUM = False
         self.TL_VERSION = 0.    # requested TensErLEED version
         self.TL_VERSION_STR = None  # TODO: replace with Version class once available
         self.T_EXPERIMENT = None
