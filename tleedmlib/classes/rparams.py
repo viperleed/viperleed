@@ -228,7 +228,7 @@ class Rparams:
         # beams is set in section INIT via self.initTheoEnergies
         self.THEO_ENERGIES = self.get_default('THEO_ENERGIES')
         self.THETA = DEFAULTS['THETA']        # from BEAM_INCIDENCE
-        self.TL_IGNORE_CHECKSUM = True
+        self.TL_IGNORE_CHECKSUM = False
         self.TL_VERSION = 0.    # requested TensErLEED version
         self.TL_VERSION_STR = None  # TODO: replace with Version class once available
         self.T_EXPERIMENT = None
@@ -389,24 +389,11 @@ class Rparams:
             raise RuntimeError("Cannot determine highest TensErLEED version "
                                "without specifying a source directory.")
         if self.TL_VERSION == 0.:
-                               # TODO: use functionality from leedbase and refactor; use pathlib
-            ls = [dn for dn in list(self.source_dir.iterdir())
-                  if ((self.source_dir / dn).is_dir()
-                  and dn.name.startswith("TensErLEED"))]
-            highest = 0.0
-            namestr = ""
-            for dn in ls:
-                try:
-                    s = dn.split('v')[-1]
-                    f = float(s)
-                    if f > highest:
-                        highest = f
-                        namestr = s
-                except Exception:
-                    pass
-            self.TL_VERSION = highest
-            if highest > 0.:
-                logger.debug("Detected TensErLEED version " + namestr)
+            # fetch most recent TensErLEED version
+            newest_tl_path = leedbase.getTLEEDdir(self.source_dir, version=None)
+            self.TL_VERSION = float(newest_tl_path.name.split('-v')[1])
+            # Log used TensErLEED version
+            logger.info(f"Detected TensErLEED version {self.TL_VERSION:.2f}")
 
         # TL_VERSION_STR
         # try simple conversion to string
