@@ -9,6 +9,7 @@ Created on 2023-07-12
 from pathlib import Path
 import sys
 
+import pytest
 from pytest_cases import parametrize_with_cases, fixture
 
 VPR_PATH = str(Path(__file__).resolve().parents[3])
@@ -43,6 +44,14 @@ class TestPOSCARRead:
         """Ensure that the correct number of atoms was read."""
         slab, *_, info = args
         assert len(slab.atlist) == info.poscar.n_atoms
+
+    @parametrize_with_cases('args', **_WITH_INFO)
+    def test_nr_atom_by_elem_correct(self, args):
+        """Ensure that the correct number of atoms was read."""
+        slab, *_, info = args
+        if not info.poscar.n_atoms_by_elem:
+            pytest.skip('No element-resolved atom counts available')
+        assert slab.n_per_elem == info.poscar.n_atoms_by_elem
 
 
 # TODO: Test that the written POSCAR is the same as the read one.

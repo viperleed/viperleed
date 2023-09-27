@@ -39,18 +39,21 @@ def _get_poscar_info(*args):
         values are expected:
         name : str
             File name of the POSCAR file.
-        n_atoms : int
-            Nr. of atoms that the structure is composed of.
-        group : str
+        n_atoms : int or dict, optional
+            Nr. of atoms that the structure is composed of. If a
+            dict, it should have the form {elem: count} where elem
+            is the element name in the POSCAR file, and count the
+            number of atoms of that element.
+        group : str, optional
             Hermann-Maugin name of the plane group of the
             structure
-        displaced_atoms_info : Sequence
+        displaced_atoms_info : Sequence, optional
             Each item has two elements. The first is the index
             (1-based!) of the atom to be displaced. The second
             a bool specifying whether the atom is free to move
             or not. If only one atom is to be displaced, it is
             acceptable to give only a single 2-tuple.
-        param_presets : dict
+        param_presets : dict, optional
             Special values of PARAMETERS to be used when handling
             this slab. Keys are attributes of Rparams objects,
             values their values. A deep copy of `param_presets` is
@@ -134,6 +137,9 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_36C_cm', 36, 'cm', (1, False)),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
                      _PRESETS['Fe3O4']),
+    _get_poscar_info('POSCAR_Al2O3_NiAl(111)_cHole_20061025',
+                     {'Ni': 402, 'Al': 134+132+188, 'O': 188+213},
+                     'p3'),
     )
 
 AG_100 = POSCARS_WITH_LITTLE_SYMMETRY_INFO[0]

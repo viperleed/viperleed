@@ -14,7 +14,7 @@ from enum import IntEnum, auto
 import functools
 import inspect
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Mapping
 
 from pytest_cases import fixture
 from pytest_cases.filters import get_case_tags
@@ -199,6 +199,10 @@ class InfoBase:
             if not hasattr(self, name):
                 raise AttributeError(name)
             setattr(self, name, value)
+        try:
+            self.__post_init__()
+        except AttributeError:
+            pass
 
     def empty(self):
         """Return whether any of the fields have truethy values."""
@@ -210,6 +214,13 @@ class POSCARInfo(InfoBase):
     """Container for information about POSCAR files."""
     name: str = ''
     n_atoms: int = None
+    n_atoms_by_elem: dict = field(init=False, default_factory=dict)
+
+    def __post_init__(self):
+        """Post-process initialization values."""
+        if isinstance(self.n_atoms, Mapping):
+            self.n_atoms_by_elem = self.n_atoms
+            self.n_atoms = sum(self.n_atoms_by_elem.values())
 
 
 # Avoid using atoms that are on planes: Easier to test.
