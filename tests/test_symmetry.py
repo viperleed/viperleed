@@ -16,15 +16,8 @@ vpr_path = str(Path(__file__).parent.parent.parent.parent)
 if os.path.abspath(vpr_path) not in sys.path:
     sys.path.append(os.path.abspath(vpr_path))
 
+from viperleed.tleedmlib.symmetry import findSymmetry
 
-from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
-from viperleed.tleedmlib.files.poscar import readPOSCAR
-from viperleed.tleedmlib.files.vibrocc import readVIBROCC
-from viperleed.tleedmlib.symmetry import findSymmetry, enforceSymmetry
-from viperleed.tleedmlib.psgen import runPhaseshiftGen_old
-from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.classes.slab import Slab
 
 class TestSymmetry():
     def test_any_pg_found(self, slab_pg_rp):
@@ -36,6 +29,8 @@ class TestSymmetry():
         _, slab_pg, _ = slab_pg_rp
         assert slab_pg == expected_pg
 
+    # TODO: fails for slab Ag(100) with x and y displacements (because they are not allowed)
+    # this is a problem of the test
     @pytest.mark.parametrize("displacement", [(4, (np.array([0.2, 0, 0]),)),
                                             (4, (np.array([0, 0.2, 0]),)),
                                             (4, (np.array([0, 0, 0.2]),)),

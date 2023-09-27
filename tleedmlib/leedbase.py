@@ -26,9 +26,9 @@ from quicktions import Fraction
 from viperleed.guilib import get_equivalent_beams
 from viperleed.tleedmlib.base import cosvec
 
-# The following imports are potentially the cause of ciclic
+# The following imports are potentially the cause of cyclic
 # imports. They are used exclusively as part of getTensorOriStates
-# which could potentially be split off somewhere else 
+# which could potentially be split off somewhere else
 from viperleed.tleedmlib.files import parameters, poscar, vibrocc
 
 
@@ -317,46 +317,45 @@ def getTensorOriStates(sl, path):
     """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the
     original state of the atoms and sites, and stores them in the given
     slab's atom/site oriState variables."""
-    _path = Path(path).resolve()
+    path = Path(path).resolve()
     for fn in ["POSCAR", "PARAMETERS", "VIBROCC"]:
-        if not (_path / fn).is_file():
-            logger.error("File "+fn+" is missing in "+path)
-            raise RuntimeError("Could not check Tensors: File missing")
-    dn = os.path.basename(path)
+        if not (path / fn).is_file():
+            logger.error(f"No {fn} file in {path}")
+            raise RuntimeError("Could not check Tensors: File missing")         # TODO: FileNotFoundError?
+    dn = path.parent
     try:
-        tsl = poscar.readPOSCAR(_path / "POSCAR")
-        trp = parameters.readPARAMETERS(filename=_path / "PARAMETERS")
-        parameters.interpretPARAMETERS(trp, slab =tsl, silent=True)
+        tsl = poscar.read(path / "POSCAR")
+        trp = parameters.readPARAMETERS(filename=path/"PARAMETERS")
+        parameters.interpretPARAMETERS(trp, slab=tsl, silent=True)
         tsl.fullUpdate(trp)
-        vibrocc.readVIBROCC(trp, tsl, filename=_path / "VIBROCC", silent=True)
+        vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
         tsl.fullUpdate(trp)
-    except Exception:
+    except Exception as exc:
         logger.error("Error checking Tensors: Error while reading "
-                     "input files in "+dn)
+                     f"input files in {dn}")
         logger.debug("Exception:", exc_info=True)
         raise RuntimeError("Could not check Tensors: Error loading old input "
-                           "files")
+                           "files") from exc
     if len(tsl.atlist) != len(sl.atlist):
-        logger.error("POSCAR from "+dn+" is incompatible with "
+        logger.error(f"POSCAR from {dn} is incompatible with "
                      "current POSCAR.")
         raise RuntimeError("Tensors file incompatible")
     for at in sl.atlist:
         tal = [tat for tat in tsl.atlist if at.oriN == tat.oriN]
         if len(tal) != 1:
-            logger.error("POSCAR from "+dn+" is incompatible with "
+            logger.error(f"POSCAR from {dn} is incompatible with "
                          "current POSCAR.")
             raise RuntimeError("Tensors file incompatible")
         at.copyOriState(tal[0])
     if len(tsl.sitelist) != len(sl.sitelist):
-        logger.error("Sites from "+dn+" input differ from current input.")
+        logger.error(f"Sites from {dn} input differ from current input.")
         raise RuntimeError("Tensors file incompatible")
     for site in sl.sitelist:
         tsitel = [s for s in tsl.sitelist if site.label == s.label]
         if len(tsitel) != 1:
-            logger.error("Sites from "+dn+" input differ from current input.")
+            logger.error(f"Sites from {dn} input differ from current input.")
             raise RuntimeError("Tensors file incompatible")
         site.oriState = copy.deepcopy(tsitel[0])
-    return None
 
 
 def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):

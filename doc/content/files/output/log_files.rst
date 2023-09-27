@@ -12,7 +12,8 @@ ViPErLEED produces multiple log files with names like ``<section>-<timestamp>.lo
 ``tleedm-<timestamp>.log``
 ==========================
 
-This is the main log file for :term:`tleedm` and contains the most important information for the run, including all raised warnings, error messages and, :ref:`if enabled<log_debug>`, debug information.
+This is the main log file for :term:`tleedm` and contains the most important information for the run, including all raised warnings, error messages and – if enabled – debug information.
+The verbosity of the log file can be controlled with the parameter :ref:`LOG_LEVEL<log_level>`.
 The contents of this file will also be printed to the standard output.
 *If something goes wrong in a ViPErLEED run, this is the first place to look.*
 

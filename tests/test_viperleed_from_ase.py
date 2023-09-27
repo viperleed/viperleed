@@ -89,7 +89,7 @@ def _make_refcalc_fail_transforms():
 def fixture_ase_nickel_cell():
     """Return an ase.Atoms Ni(100)-1x1 with 6 layers."""
     element = 'Ni'
-    return ase.build.fcc110(element, size=(1,1,6), vacuum=3)
+    return ase.build.fcc110(element, size=(1, 1, 6), vacuum=3)
 
 
 # TODO: find a better way, perhaps a decorator that does
@@ -401,7 +401,7 @@ class TestFailingInitialization:
     # checksums for files to be generated, and check them over here
     def test_writes_sensible_poscar(self):
         """Ensure that written POSCAR has the right number of atoms."""
-        slab = poscar.readPOSCAR(self.exec_path / "POSCAR")
+        slab = poscar.read(self.exec_path / "POSCAR")
         assert len(slab.atlist) == len(self.ase_atoms.positions)
 
 

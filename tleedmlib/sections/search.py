@@ -41,6 +41,43 @@ from viperleed.tleedmlib.files.parameters import updatePARAMETERS
 logger = logging.getLogger("tleedm.search")
 
 
+class SearchError(Exception):
+    """Base class for exceptions in this module."""
+    def __init__(self, message, *args, **kwargs):
+        super().__init__(message, *args, **kwargs)
+
+class SearchMaxIntensitiesError(SearchError):
+    message = ("TensErLEED stopped due to unreasonably high beam amplitudes.\n"
+               "This may be causes by convergence problems due to a too small "
+               "value of LMAX. "
+               "Alternatively, this error may be caused either by scatterers "
+               "with very small distances as a result of a very large "
+               "range used in DISPLACEMENTS."
+               "Check your input files and consider increasing LMAX or "
+               "decreasing the DISPLACEMENTS ranges.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(message, *args, **kwargs)
+
+class SearchSigbusError(SearchError):
+    message = ("TensErLEED stopped due to a SIGBUS signal.\n"
+               "This may be caused by a compiler error. "
+               "If you are using gfortran, consider lowering the optimization "
+               "level to '-O1' or '-O0' using the FORTRAN_COMP parameter.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(message, *args, **kwargs)
+
+class SearchInconsistentV0ImagError(SearchError):
+    message = ("TensErLEED search stopped because stored Delta files were "
+               "calculated with a different imaginary inner potential "
+               "(optical potential) than requested in PARAMETERS. "
+               "Make sure to use the same value for V0_IMAG for "
+               "Delta-Amplitudes and structure search.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(message, *args, **kwargs)
+
 def processSearchResults(sl, rp, search_log_path, final=True):
     """Read the best structure from the last block of 'SD.TL' into a slab.
 
@@ -276,35 +313,15 @@ def _check_search_log(search_log_path):
     if ("MAX. INTENS. IN THEOR. BEAM" in log_content
             and "IS SUSPECT" in log_content
             and "****** STOP PROGRAM ******" in log_content):
-        logger.error(
-            "TensErLEED stopped due to an unreasonably high beam amplitude.\n"
-            "This is often caused by scatterers with very small distances "
-            "as a result of very large displacements used in DISPLACEMENTS. "
-            "Check your input files and consider decreasing "
-            "the DISPLACEMENTS ranges."
-            )
-        raise RuntimeError(gen_err_msg) from None
+        raise SearchMaxIntensitiesError from None
     # (2) SIGBUS signal
     elif ("received signal SIGBUS" in log_content
           and "undefined portion of a memory object" in log_content):
-        logger.error(
-            "TensErLEED search stopped due to a SIGBUS signal. "
-            "This may be caused by a compiler error. "
-            "If you are using gfortran, consider lowering the optimization "
-            "level to '-O1' or '-O0' using the FORTRAN_COMP parameter."
-        )
-        raise RuntimeError(gen_err_msg) from None
+        raise SearchSigbusError from None
     # (3) different V0_IMAG between Deltas and Search
     elif ("Average optical potential value in rf.info is incorrect:" 
           in log_content):
-        logger.error(
-            "TensErLEED search stopped because stored Delta files were "
-            "calculated with a different imaginary inner potential "
-            "(optical potential) than requested in PARAMETERS. "
-            "Make sure to use the same value for V0_IMAG for Delta-Amplitudes "
-            "and structure search."
-        )
-        raise RuntimeError(gen_err_msg) from None
+        raise SearchInconsistentV0ImagError from None
 
 
 def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):

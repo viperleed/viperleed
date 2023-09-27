@@ -52,7 +52,7 @@ _KNOWN_PARAMS = (                                                               
     'LAYER_STACK_VERTICAL', 'LMAX', 'LOG_LEVEL', 'LOG_SEARCH', 'N_BULK_LAYERS',
     'N_CORES', 'OPTIMIZE', 'PARABOLA_FIT', 'PHASESHIFT_EPS',
     'PHASESHIFTS_CALC_OLD', 'PHASESHIFTS_OUT_OLD', 'PLOT_IV', 'RUN',
-    'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH', 'R_FACTOR_TYPE', 'S_OVL',
+    'R_FACTOR_LEGACY', 'R_FACTOR_SMOOTH', 'R_FACTOR_TYPE',
     'SCREEN_APERTURE', 'SEARCH_BEAMS', 'SEARCH_CONVERGENCE', 'SEARCH_CULL',
     'SEARCH_MAX_GEN', 'SEARCH_POPULATION', 'SEARCH_START', 'SITE_DEF',
     'SUPERLATTICE', 'SUPPRESS_EXECUTION', 'SYMMETRIZE_INPUT', 'SYMMETRY_BULK',
@@ -66,7 +66,7 @@ _KNOWN_PARAMS = (                                                               
 
 # parameters that can be optimized in FD optimization
 _OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i',
-                     'a', 'b', 'c', 'ab', 'abc', 's_ovl'}
+                     'a', 'b', 'c', 'ab', 'abc',}
 
 
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
@@ -83,8 +83,6 @@ _PARAM_ALIAS = {
     'plotrfactors': 'PLOT_IV',
     'ignorechecksum': 'TL_IGNORE_CHECKSUM',
     'ivplot': 'PLOT_IV',
-    'overlap': 'S_OVL',
-    'mtoverlap': 'S_OVL',
     'compression_level': 'ZIP_COMPRESSION_LEVEL',
     'compression': 'ZIP_COMPRESSION_LEVEL',
     }
@@ -263,7 +261,6 @@ _SIMPLE_NUMERICAL_PARAMS = {
     'T_EXPERIMENT' : _POSITIVE_FLOAT,
     'V0_IMAG' : _POSITIVE_FLOAT,
     'TL_VERSION' : _POSITIVE_FLOAT,
-    'S_OVL' : _POSITIVE_FLOAT,
     # Other floats
     'V0_Z_ONSET' : NumericBounds(),
     'ATTENUATION_EPS' : NumericBounds(range_=(1e-6, 1),
@@ -322,7 +319,9 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
         param, value_str = line.split('=', maxsplit=1)
         if param:
             # get rid of spaces and check the leftmost entry.
-            param, *_ = param.split()
+            param, *flags = param.split()
+        else:
+            flags = []
         param_alias = param.lower().replace('_', '')
         if param not in _KNOWN_PARAMS and param_alias in _PARAM_ALIAS:
             param = _PARAM_ALIAS[param_alias]
@@ -334,7 +333,8 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
             continue
         if param == 'SEARCH_CONVERGENCE':
             new_assignment = Assignment(values_str=value_str,
-                                        parameter=param)
+                                        parameter=param,
+                                        flags_str=' '.join(flags))
             interpreter.interpret_search_convergence(assignment=new_assignment,
                                                      is_updating=True)
 
@@ -1290,7 +1290,7 @@ class ParameterInterpreter:                                                     
         if not assignment.flag:
             message = 'Parameter to optimize not defined.'
             self.rpars.setHaltingLevel(3)
-            raise ParameterError(param, message)
+            raise ParameterNeedsFlagError(param, message)
         which = assignment.flag.lower()
         if which not in _OPTIMIZE_OPTIONS:
             self.rpars.setHaltingLevel(3)

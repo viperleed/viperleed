@@ -2203,7 +2203,7 @@ class Slab:
         ValueError
             If the unit cell was not initialized.
         """
-        if not self.ucell:
+        if self.ucell is None:
             raise ValueError("Slab unit cell not initialized.")
 
         a1_x, a1_y = self.ucell[0,0], self.ucell[1,0]
