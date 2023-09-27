@@ -365,6 +365,7 @@ class TestSlabSymmetrization:
         'rcm-ucell=square': 'Sometimes reduced to pm',
         'rcm-ucell=rectangular': 'Sometimes reduced to pm',
         'rcmm-ucell=square': 'Often reduced to, e.g., pmg',
+        'rcmm-ucell=rectangular': 'Often reduced to, e.g., rcm',
         'pmm-ucell=rectangular': 'Sometimes reduced to pm',
         'cmm': 'Sometimes reduced to cm',
         'p2': 'Sometimes reduced to p1',
