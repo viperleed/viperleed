@@ -111,8 +111,8 @@ class TestRestoreOristate:
 def test_add_one_atom_n_elements():
     """Check that adding one atom to a slab updates elements correctly."""
     slab = Slab()
-    new_atom = Atom('C', (0, 0), 1, slab)
+    new_atom = Atom('C', (0, 0, 0), 1, slab)
     slab.atlist.append(new_atom)
-    slab.updateElementCount()
+    slab.updateElementCounts()
     assert new_atom.el in slab.elements
     assert slab.n_per_elem[new_atom.el] == 1
