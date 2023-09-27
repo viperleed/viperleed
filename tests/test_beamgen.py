@@ -61,7 +61,7 @@ _BEAMGEN_CASES = {'cases': CasePOSCARSlabs,
 class TestGenerateBeamlist:
     """Collection of tests for the generation of beam lists."""
 
-    @fixture(scope='class', name='make_beamlist')
+    @fixture(name='make_beamlist')
     @parametrize_with_cases('args', scope='class', **_BEAMGEN_CASES)
     def fixture_make_beamlist(self, args, tmp_path_factory):
         """Return slab, parameters, info and the path to a 'BEAMLIST'."""
