@@ -40,6 +40,8 @@ class TestZeroCrossings:
     _x_and_y = (  # (x_values, y_values), cross_x_position
         (([0, 1, 2],       [-1, 0, 1]),         1),
         (([0, 1, 2, 3, 4], [-1, -3, -2, 2, 5]), 2.5),
+        (([-2, -1, 0, 1, 2], [-5, -4, -3, 1, 3]), 0.75),
+        (([-2, -1, 0, 1, 2], [5, 4, 3, -1, -3]), 0.75),
         )
 
     @pytest.mark.parametrize('xy_vals,crossing_x', _x_and_y)
