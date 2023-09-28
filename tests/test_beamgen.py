@@ -73,6 +73,8 @@ class TestGenerateBeamlist:
         symmetry.findBulkSymmetry(slab.bulkslab, param)
 
         param.initTheoEnergies()
+        param.source_dir = tensorleed_path
+        param.updateDerivedParams()  # for TL_VERSION
 
         tmp_dir = tmp_path_factory.mktemp(
             basename=f'{info.poscar.name}_beamlist',
