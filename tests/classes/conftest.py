@@ -1,52 +1,71 @@
-"""classes/conftest.py
+"""Test configuration for viperleed.tests.classes.
 
 Created on 2023-07-26
 
-@author: Alexander M. Imre
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
+
+Fixtures
+--------
+manually_displaced_atom
+    One atom with displacements assigned manually to its element.
+manual_slab_1_atom_trigonal
+    A simple trigonal Slab with a single Atom.
+manual_slab_3_atoms
+    An orthorhombic slab with three atoms.
 """
 
-import sys
-import os
 from pathlib import Path
+import sys
 
+from pytest_cases import fixture
 import numpy as np
-import pytest
 
-vpr_path = str(Path(__file__).parent.parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
+VPR_PATH = str(Path(__file__).resolve().parents[3])
+if VPR_PATH not in sys.path:
+    sys.path.append(VPR_PATH)
 
-from viperleed.tleedmlib.classes import rparams
-from viperleed.tleedmlib.files import poscar
+# pylint: disable=wrong-import-position
+# Will be fixed in installable version
+from viperleed.tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.classes.slab import Slab
+# pylint: enable=wrong-import-position
 
 
-@pytest.fixture(scope="function")
-def atom_with_disp_and_offset(poscars_path):
-    slab = poscar.read(poscars_path / "POSCAR_STO(110)-4x1")
+@fixture
+def manually_displaced_atom(ag100):
+    """Return one atom with displacements assigned to its element."""
+    slab, *_ = ag100
     atom = slab.atlist[0]
-    el = atom.el
-    atom.disp_geo[el] = [-0.2, 0.0, 0.2]
-    atom.disp_vib[el] = [-0.1, 0.0, 0.1]
-    atom.disp_occ[el] = [0.7, 0.8, 0.9, 1.0]
+    element = atom.el
+    atom.disp_geo[element] = np.array([[-0.2, 0, 0], [0.0, 0, 0], [0.2, 0, 0]])
+    atom.disp_vib[element] = [-0.1, 0.0, 0.1]
+    atom.disp_occ[element] = [0.7, 0.8, 0.9, 1.0]
     return atom
 
-@pytest.fixture()
-def fe3o4_bulk_slab(poscars_path):
-    file_name = "POSCAR_Fe3O4_(001)_cod1010369"
-    slab = poscar.read(poscars_path / file_name)
-    param = rparams.Rparams()
-    param.LAYER_CUTS = [0.1, 0.2, '<', 'dz(1.0)']
-    param.N_BULK_LAYERS = 2
-    param.SYMMETRY_EPS =0.3
-    param.SYMMETRY_EPS_Z = 0.3
-    param.BULK_REPEAT = np.array([-0.0, -4.19199991, 4.19199991])
-    slab.fullUpdate(param)
-    bulk_slab = slab.makeBulkSlab(param)
-    return slab, bulk_slab, param
+
+# TODO: the two slabs below are probably better considered as CASES
+
+@fixture
+def manual_slab_1_atom_trigonal():
+    """Return a simple trigonal slab with a single carbon atom."""
+    slab = Slab()
+    slab.ucell = np.array([[1, 0, 0],
+                           [-2.3, 3, 0],
+                           [1, 2, 3]]).T
+    slab.atlist.append(Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab))
+    slab.fullUpdate(Rparams())
+    return slab
 
 
-@pytest.fixture()
-def fe3o4_thick_bulk_slab(fe3o4_bulk_slab):
-    slab, thin_bulk, param = fe3o4_bulk_slab
-    thick_bulk = thin_bulk.doubleBulkSlab()
-    return slab, thick_bulk, param
+@fixture
+def manual_slab_3_atoms():
+    """Return an orthorhombic slab with three carbon atoms."""
+    slab = Slab()
+    slab.ucell = np.diag([3., 4., 5.])
+    positions = (-0.25, 0, 0), (0, 0, 0), (0.25, 0, 0)
+    slab.atlist.extend(Atom('C', np.array(pos), i+1, slab)
+                       for i, pos in enumerate(positions))
+    slab.fullUpdate(Rparams())
+    return slab
