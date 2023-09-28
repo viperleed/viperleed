@@ -1,1093 +1,808 @@
-"""Test module parameters of viperleed.tests.
+"""Tests for module viperleed.tleedmlib.files.parameters.
 
 Created on 2023-06-09
 
-@author: Alexander M. Imre
-
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 """
 
-import pytest
 from pathlib import Path
-import os, sys
-from copy import deepcopy
+import sys
+
 import numpy as np
+import pytest
+from pytest_cases import parametrize_with_cases
 
-vpr_path = str(Path(__file__).parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
+VPR_PATH = str(Path(__file__).resolve().parents[3])
+if VPR_PATH not in sys.path:
+    sys.path.append(VPR_PATH)
 
-import viperleed.tleedmlib.files.parameters as parameters
-from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
-                                                  ParameterInterpreter,
-                                                  Assignment, NumericBounds)
-from viperleed.tleedmlib.files import poscar
+# pylint: disable=wrong-import-position
+# Will be fixed in installable version
 from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.files.parameter_errors import (
-    ParameterError, ParameterValueError, ParameterParseError,
-    ParameterIntConversionError, ParameterFloatConversionError,
-    ParameterBooleanConversionError, ParameterNotRecognizedError,
-    ParameterNumberOfInputsError, ParameterRangeError,
-    ParameterUnknownFlagError, ParameterNeedsFlagError
-    )
+from viperleed.tleedmlib.files import parameters
+from viperleed.tleedmlib.files import parameter_errors as err
+from viperleed.tleedmlib.files.parameters import NumericBounds as Bounds
 
-_FIXTURES_PATH = Path('tests/fixtures/')                                        # TODO: use conftest functionality?
+from .case_parameters import case_parameters_slab
+# pylint: enable=wrong-import-position
 
 
-@pytest.fixture()
-def ag100_parameters_example():
-    # read Ag(100) POSCAR and PARAMETERS files
-    slab = poscar.read(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
-    rpars = readPARAMETERS(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'PARAMETERS')
-    # interpret PARAMETERS file
-    interpreter = ParameterInterpreter(rpars)
-    interpreter.interpret(slab)
-    return (rpars, slab)
+class TestSlabParameters:
+    """Tests for successful read/interpretation of slab-related parameters."""
+
+    @staticmethod
+    def check_sitedef_consistent(site_def, expected, subtests):
+        """Ensure site_def has the expected values."""
+        # The tricky bit is that we currently store site_def values
+        # as lists, which includes order. Here we do an unordered
+        # comparison.
+        for element, sites in expected.items():
+            for tag, atom_nrs in sites.items():
+                with subtests.test(f'SITE_DEF[{element}][{tag}]'):
+                    assert set(site_def[element][tag]) == set(atom_nrs)
+
+    @parametrize_with_cases('args', cases=case_parameters_slab)
+    def test_read_not_empty(self, args):
+        """Check that reading of file succeeds."""
+        _, rpars, _ = args
+        assert rpars.readParams
+
+    @parametrize_with_cases('args', cases=case_parameters_slab)
+    def test_parameters_interpreted(self, args, subtests):
+        """Check that parameters have been interpreted correctly."""
+        slab, rpars, info = args
+        interpreter = parameters.ParameterInterpreter(rpars)
+        interpreter.interpret(slab)
+        expected = info.parameters.expected
+        for name, value in expected.items():
+            attr = getattr(rpars, name)
+            if name == 'SITE_DEF':
+                self.check_sitedef_consistent(attr, value, subtests)
+                continue
+            with subtests.test(name):
+                assert attr == value
 
 
-@pytest.fixture(scope='function')
-def slab_ag100():
-    # read Ag(100) POSCAR
-    return poscar.read(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ag(100)')
+# TODO: be more specific than ParameterError!
+# TODO: would be nice to reduce a bit the verbosity to use (maybe)
+# a metaclass in order to implement test_interpret_(in)valid once,
+# and parametrize it with the valid/invalid of each class below.
+# Would it be cleaner with CASES?
 
 
-@pytest.fixture()
-def slab_ir100_2x1_o():
-    # read Ir(100)-(2x1)-O POSCAR
-    return poscar.read(_FIXTURES_PATH / 'POSCARs' / 'POSCAR_Ir(100)-(2x1)-O')
+@pytest.fixture(name='interpreter')
+def fixture_interpreter():
+    """Return a fresh ParameterInterpreter."""
+    return parameters.ParameterInterpreter(Rparams())
 
 
-@pytest.fixture()
-def ir100_2x1_o_parameters_example(slab_ir100_2x1_o):
-    slab = slab_ir100_2x1_o
-    rpars = readPARAMETERS(_FIXTURES_PATH / 'parameters' / 'PARAMETERS_Ir(100)-(2x1)-O')
-    interpreter = ParameterInterpreter(rpars)
-    interpreter.interpret(slab)
-    return (rpars, slab)
+class _TestInterpretBase:
+    """Base class for parameter-interpretation tests."""
+    param = None
+    rpars_attr = None
+
+    def assignment(self, value_str, **kwargs):
+        """Return an Assignment object for self.param."""
+        return parameters.Assignment(value_str, self.param, **kwargs)
+
+    def interpret(self, interpreter, value_str, **kwargs):
+        """Interpret a value for self.param."""
+        method = getattr(interpreter, f'interpret_{self.param.lower()}')
+        return method(self.assignment(value_str, **kwargs))
+
+    def check_assigned(self, interpreter, value_str, expected, **kwargs):
+        """Assert interpretation is successful."""
+        self.interpret(interpreter, value_str, **kwargs)
+        attr = getattr(interpreter.rpars, self.rpars_attr or self.param)
+        assert attr == pytest.approx(expected)
+
+    def check_raises(self, interpreter, value_str, exc, **kwargs):
+        """Assert that an attempt to interpret raises an exc."""
+        with pytest.raises(exc):
+            self.interpret(interpreter, value_str, **kwargs)
 
 
-@pytest.fixture(scope='function')
-def mock_rparams():
-    return Rparams()
+class TestNumericalParameter(_TestInterpretBase):
+    """Tests for numeric-parameter interpretation."""
 
-
-class TestAg100Parameters():
-    def test_read_parameters_for_ag100(self):
-        # just check that readPARAMETERS does not crash; not interpreted yet
-        filename = 'tests/fixtures/Ag(100)/initialization/PARAMETERS'
-        rpars = readPARAMETERS(filename)
-        assert rpars
-
-    def test_interpret_parameters_for_ag100(self, ag100_parameters_example):
-        rpars, slab = ag100_parameters_example
-        # check that the parameters are interpreted correctly based on a few examples
-        assert rpars.V0_IMAG == pytest.approx(5.0)
-        assert rpars.THEO_ENERGIES == pytest.approx([50, 350, 3])
-
-
-class TestIr1002x1OParameters():
-    # checks reading of parameters:
-    # RUN, THEO_ENERGIES, LMAX, BULK_LIKE_BELOW, SITE_DEF, T_DEBYE, T_EXPERIMENT, VIBR_AMP_SCALE
-    def test_ir100_2x1_o_interpretation(self, ir100_2x1_o_parameters_example):
-        rpars, slab = ir100_2x1_o_parameters_example
-        # check that the parameters are interpreted correctly based on a few examples
-        assert rpars.RUN == [0, 1, 2, 3]
-        assert rpars.THEO_ENERGIES == pytest.approx([49, 700, 3])
-        assert rpars.LMAX == [8, 14]
-        assert rpars.BULK_LIKE_BELOW == pytest.approx(0.35)
-        # check that float assignment works
-        assert rpars.T_DEBYE == pytest.approx(420)
-        assert rpars.T_EXPERIMENT == pytest.approx(100)
-        # check that SITE_DEF assignment works
-        assert rpars.SITE_DEF['Ir']['surf'] == [3,2]
-        assert rpars.SITE_DEF['O']['ads'] == [1]
-        # check that string assignment works for VIBR_AMP_SCALE
-        assert rpars.VIBR_AMP_SCALE[0] == '*surf 1.3'
-        # check that Pendry R factor is selected
-        assert rpars.R_FACTOR_TYPE == 1
-
-
-# unit tests for parameter interpretation
-
-
-class TestIntpolDeg:
-    def test_interpret_intpol_deg_valid(self, mock_rparams):
-        param = 'INTPOL_DEG'
-        for val in mock_rparams.get_limits(param):
-            interpreter = ParameterInterpreter(mock_rparams)
-            interpreter.interpret_intpol_deg(Assignment(val, param))
-            assert mock_rparams.INTPOL_DEG == int(val)
-
-    def test_interpret_intpol_def_invalid(self, mock_rparams):
-        incompatible_values = ['1', 'text']
-        for val in incompatible_values:
-            interpreter = ParameterInterpreter(mock_rparams)
-            assignment = Assignment(val, 'INTPOL_DEG')
-            with pytest.raises(ParameterError):
-                        interpreter.interpret_intpol_deg(assignment)
-
-
-class TestNumericalParameter:
-    def test_interpret_numerical_parameter_float(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.01", 'TEST_PARAM')
-        bounds = NumericBounds()
-        result = interpreter.interpret_numerical_parameter(assignment,
-                                                           bounds=bounds)
-        assert result == pytest.approx(0.01)
-        assert mock_rparams.TEST_PARAM == pytest.approx(0.01)
-
-    def test_interpret_numerical_parameter_int(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("100", 'TEST_PARAM')
-        bounds = NumericBounds(type_=int)
-        result = interpreter.interpret_numerical_parameter(assignment,
-                                                           bounds=bounds)
-        assert result == 100
-        assert mock_rparams.TEST_PARAM == 100
-
-    def test_interpret_numerical_parameter_int_at_bound_ok(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("100", 'TEST_PARAM')
-        bounds = NumericBounds(type_=int, range_=(0, 100))
-        result = interpreter.interpret_numerical_parameter(assignment,
-                                                           bounds=bounds)
-        assert result == 100
-        assert mock_rparams.TEST_PARAM == 100
-
-    def test_interpret_numerical_parameter_int_at_bound_fail(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("100", 'TEST_PARAM')
-        bounds = NumericBounds(type_=int, range_=(0, 100),
-                               accept_limits=(False, False))
-        with pytest.raises(ParameterError):
-            interpreter.interpret_numerical_parameter(assignment,
-                                                      bounds=bounds)
-
-    def test_interpret_numerical_parameter_float_out_of_range(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("-0.5", 'TEST_PARAM')
-        bounds = NumericBounds(type_=float, range_=(0, 1))
-        with pytest.raises(ParameterError):
-            interpreter.interpret_numerical_parameter(assignment,
-                                                      bounds=bounds)
-
-    def test_interpret_numerical_parameter_float_at_bound_ok(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("-0.5", 'TEST_PARAM')
-        bounds = NumericBounds(type_=float, range_=(-0.5, 1))
-        result = interpreter.interpret_numerical_parameter(assignment,
-                                                           bounds=bounds)
-        assert result == -0.5
-        assert mock_rparams.TEST_PARAM == -0.5
-
-    def test_interpret_numerical_parameter_float_at_bound_fail(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("-0.5", 'TEST_PARAM')
-        bounds = NumericBounds(type_=float, range_=(-0.5, 1),
-                               accept_limits=(False, False))
-        with pytest.raises(ParameterError):
-            interpreter.interpret_numerical_parameter(assignment,
-                                                      bounds=bounds)
-
-    def test_interpret_numerical_parameter_float_out_of_range_event_modulo(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("2.5", 'TEST_PARAM')
-        bounds = NumericBounds(type_=float, range_=(0, 2),
-                               out_of_range_event='modulo')
-        result = interpreter.interpret_numerical_parameter(assignment,
-                                                           bounds=bounds)
-        assert result == pytest.approx(0.5)
-        assert mock_rparams.TEST_PARAM == pytest.approx(0.5)
-
-    def test_interpret_numerical_parameter_int_out_of_range(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("-5", 'TEST_PARAM')
-        bounds = NumericBounds(type_=int, range_=(0, 10))
-        with pytest.raises(ParameterError):
-            interpreter.interpret_numerical_parameter(assignment,
-                                                      bounds=bounds)
-
-    def test_interpret_numerical_parameter_int_out_of_range_event_modulo(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("12", 'TEST_PARAM')
-        bounds = NumericBounds(type_=int,
-                               range_=(0, 10),
-                               out_of_range_event='modulo')
-        result = interpreter.interpret_numerical_parameter(assignment,
-                                                           bounds=bounds)
-        assert result == 2
-        assert mock_rparams.TEST_PARAM == 2
-
-
-class TestSymmetryBulk:
-    def test_interpret_symmetry_bulk_mirror(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("p2 m[0 1]", "SYMMETRY_BULK")
-        interpreter.interpret_symmetry_bulk(assignment)
-        assert mock_rparams.SYMMETRY_BULK == {
-            'mirror': {(0, 1)},
-            'rotation': set(),
-            'group': 'p2'
+    param = 'TEST_PARAM'
+    valid = {  # value, bounds, expected
+        'float': ('0.01', Bounds(), 0.01),
+        'int': ('100', Bounds(type_=int), 100),
+        'int at bound': ('100', Bounds(type_=int, range_=(0, 100)), 100),
+        'float at bound': ('-0.5', Bounds(range_=(-0.5, 1)), -0.5),
+        'float modulo': ('2.5',
+                         Bounds(range_=(0, 2), out_of_range_event='modulo'),
+                         0.5),
+        'int modulo': ('12',
+                       Bounds(type_=int, range_=(0, 10),
+                              out_of_range_event='modulo'),
+                       2),
+        }
+    invalid = {  # value, bounds
+        'int at bound': ('100',
+                         Bounds(type_=int, range_=(0, 100),
+                                accept_limits=(False, False)),),
+        'float at bound': ('-0.5',
+                           Bounds(range_=(-0.5, 1),
+                                  accept_limits=(False, False))),
+        'float range': ('-0.5', Bounds(range_=(0, 1))),
+        'int range': ('-5', Bounds(type_=int, range_=(0, 10))),
         }
 
-    def test_interpret_symmetry_cm_rot4(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("cm[1 1] r4", "SYMMETRY_BULK")
-        interpreter.interpret_symmetry_bulk(assignment)
-        assert mock_rparams.SYMMETRY_BULK == {
-            'mirror': set(),
-            'rotation': {4},
-            'group': 'cm[1 1]'
-        }
+    # pylint: disable=too-many-arguments
+    # 6/5 seems OK here, considering that two are fixtures.
+    @pytest.mark.parametrize('val,bounds,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, bounds, expect, interpreter, subtests):
+        """Ensure valid values are returned and assigned."""
+        result = interpreter.interpret_numerical_parameter(
+            self.assignment(val),
+            bounds=bounds
+            )
+        with subtests.test('result'):
+            assert result == pytest.approx(expect)
+        with subtests.test('attribute'):
+            assert interpreter.rpars.TEST_PARAM == pytest.approx(expect)
+    # pylint: enable=too-many-arguments
 
-    def test_interpret_symmetry_bulk_pmm(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("pmm", "SYMMETRY_BULK")
-        interpreter.interpret_symmetry_bulk(assignment)
-        assert mock_rparams.SYMMETRY_BULK == {
-            'mirror': set(),
-            'rotation': set(),
-            'group': 'pmm',
-        }
-
-    def test_interpret_symmetry_bulk_invalid_syntax(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("invalid_syntax", "SYMMETRY_BULK")
-        with pytest.raises(ParameterValueError):
-            interpreter.interpret_symmetry_bulk(assignment)
-
-    def test_interpret_symmetry_bulk_multiple_groups(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("pmm pg", "SYMMETRY_BULK")
-        with pytest.raises(ParameterValueError):
-            interpreter.interpret_symmetry_bulk(assignment)
-
-    def test_interpret_symmetry_bulk_missing_group(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("", "SYMMETRY_BULK")
-        with pytest.raises(ParameterValueError):
-            interpreter.interpret_symmetry_bulk(assignment)
+    @pytest.mark.parametrize('val,bounds', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, bounds, interpreter):
+        """Ensure exceptions are raised for invalid combinations."""
+        with pytest.raises(err.ParameterError):
+            interpreter.interpret_numerical_parameter(self.assignment(val),
+                                                      bounds=bounds)
 
 
-class TestBulkRepeat():
-    param = 'BULK_REPEAT'
-    rpars = Rparams()
+class TestSimpleParamsExamples:
+    """Tests for a selection of simple numeric PARAMETERS."""
 
-    invalid_inputs = ['text', 'y(1.2)', 'z(abc)', '[]']
-    valid_inputs = ['c(1.2)', 'z(0.9)']
-
-    def test_interpret_bulk_repeat_invalid(self, slab_ag100):
-        slab = slab_ag100
-        for val in self.invalid_inputs:
-            with pytest.raises(ParameterError):
-                interpreter = ParameterInterpreter(self.rpars)
-                interpreter.slab = slab
-                interpreter.interpret_bulk_repeat(Assignment(val, 'BULK_REPEAT'))
-
-
-    def test_interpret_bulk_repeat_float(self, slab_ag100):
-        val = '1.428'
-        interpreter = ParameterInterpreter(self.rpars)
-        interpreter.slab = slab_ag100
-        interpreter.interpret_bulk_repeat(Assignment(val, 'BULK_REPEAT'))
-        assert self.rpars.BULK_REPEAT == pytest.approx(1.428, rel=1e-4)
-
-    def test_interpret_bulk_repeat_c(self, slab_ag100):
-        val = 'c(0.1)'
-        interpreter = ParameterInterpreter(self.rpars)
-        interpreter.slab = slab_ag100
-        interpreter.interpret_bulk_repeat(Assignment(val, 'BULK_REPEAT'))
-        assert self.rpars.BULK_REPEAT == pytest.approx(2.03646, rel=1e-4)
-
-    def test_interpret_bulk_repeat_z(self, slab_ag100):
-        val = 'c(0.1)'
-        interpreter = ParameterInterpreter(self.rpars)
-        interpreter.slab = slab_ag100
-        interpreter.interpret_bulk_repeat(Assignment(val, 'BULK_REPEAT'))
-        assert self.rpars.BULK_REPEAT == pytest.approx(2.0364, rel=1e-4)
-
-    def test_interpret_bulk_repeat_vector(self, slab_ag100):
-        val = '[1.0 2.0 3.0]'
-        interpreter = ParameterInterpreter(self.rpars)
-        interpreter.slab = slab_ag100
-        interpreter.interpret_bulk_repeat(Assignment(val, 'BULK_REPEAT'))
-        assert self.rpars.BULK_REPEAT == pytest.approx([1.0, 2.0, 3.0], rel=1e-4)
-
-
-class TestFortranComp():
-    # TODO: make use of new intepreter class
-    param = 'FORTRAN_COMP'
-    rpars = Rparams()
-    interpreter = ParameterInterpreter(rpars)
-
-    def test_fortran_comp_default_intel(self):
-        assignment = Assignment('ifort', 'FORTRAN_COMP')
-        self.interpreter.interpret_fortran_comp(assignment, skip_check=True)
-        assert 'ifort -O2 -I/opt/intel/mkl/include' in self.rpars.FORTRAN_COMP[0]
-        assert '-L/opt/intel/mkl/lib/intel64' in self.rpars.FORTRAN_COMP[1]
-
-    def test_fortran_comp_default_gnu(self):
-        assignment = Assignment('gfortran', 'FORTRAN_COMP')
-        self.interpreter.interpret_fortran_comp(assignment, skip_check=True)
-        assert 'gfortran' in self.rpars.FORTRAN_COMP[0]
-        assert '-llapack -lpthread -lblas' in self.rpars.FORTRAN_COMP[1]
-
-    def test_fortran_comp_default_intel_mpi(self):
-        assignment = Assignment('mpiifort', 'FORTRAN_COMP', flags_str='mpi')
-        self.interpreter.interpret_fortran_comp(assignment, skip_check=True)
-        assert 'mpiifort' in self.rpars.FORTRAN_COMP_MPI[0]  # no other flags by default
-
-    def test_fortran_comp_default_gnu_mpi(self):
-        assignment = Assignment('mpifort', 'FORTRAN_COMP', flags_str='mpi')
-        self.interpreter.interpret_fortran_comp(assignment, skip_check=True)
-        assert 'mpifort -Ofast -no-pie' in self.rpars.FORTRAN_COMP_MPI[0]  # no other flags by default
-
-    def test_fortran_comp_custom_without_flag(self):
-        assignment = Assignment("'ifort -O3 -march=native'", 'FORTRAN_COMP')
-        self.interpreter.interpret_fortran_comp(assignment, skip_check=True)
-        assert 'ifort -O3 -march=native' in self.rpars.FORTRAN_COMP[0]
-
-    def test_fortran_comp_custom_post_flag(self):
-        assignment = Assignment("'-L/opt/intel/mkl/lib/intel64'",
-                                'FORTRAN_COMP', flags_str='post')
-        self.interpreter.interpret_fortran_comp(assignment, skip_check=True)
-        assert '-L/opt/intel/mkl/lib/intel64' in self.rpars.FORTRAN_COMP[1]
-
-    def test_fortran_comp_custom_mpi_flag(self):
-        assignment = Assignment("'mpifort -fallow-argument-mismatch'",
-                                'FORTRAN_COMP', flags_str='mpi')
-        self.interpreter.interpret_fortran_comp(assignment, skip_check=True)
-        assert 'mpifort -fallow-argument-mismatch' in self.rpars.FORTRAN_COMP_MPI[0]
-
-
-class TestV0Real():
-    rpars = Rparams()
-    interpreter = ParameterInterpreter(rpars)
-
-    def test_interpret_v0_real_rundgren_type(self):
-        assignment = Assignment("rundgren 1.0 2.0 3.0 4.0", "V0_REAL")
-        self.interpreter.interpret_v0_real(assignment)
-        assert self.rpars.V0_REAL == [1.0, 2.0, 3.0, 4.0]
-
-    def test_interpret_v0_real_other_type(self,):
-        assignment = Assignment("EE", "V0_REAL")
-        self.interpreter.interpret_v0_real(assignment)
-        assert self.rpars.V0_REAL == "EEV+workfn"
-
-    def test_interpret_v0_real_invalid_rundgren_constants(self):
-        assignment = Assignment("rundgren 1.0 2.0", "V0_REAL")
-        with pytest.raises(ParameterError):
-            self.interpreter.interpret_v0_real(assignment)
-
-    def test_interpret_v0_real_value_error(self):
-        assignment = Assignment("rundgren 1.0 2.0 3.0 four", "V0_REAL")
-        with pytest.raises(ParameterError):
-            self.interpreter.interpret_v0_real(assignment)
-
-
-class TestTheoEnergies:
-    def test_interpret_theo_energies_single_value_default(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("_", "THEO_ENERGIES")
-        interpreter.interpret_theo_energies(assignment)
-        assert mock_rparams.THEO_ENERGIES == pytest.approx(mock_rparams.get_default("THEO_ENERGIES"))
-
-    def test_interpret_theo_energies_single_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.0", "THEO_ENERGIES")
-        interpreter.interpret_theo_energies(assignment)
-        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, 1.0, 1.0])
-
-    def test_interpret_theo_energies_three_values_all_default(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("_ _ _", "THEO_ENERGIES")
-        interpreter.interpret_theo_energies(assignment)
-        assert mock_rparams.THEO_ENERGIES == pytest.approx(mock_rparams.get_default("THEO_ENERGIES"))
-
-    def test_interpret_theo_energies_three_values_partial_default(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.0 _ 2.0", "THEO_ENERGIES")
-        interpreter.interpret_theo_energies(assignment)
-        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, mock_rparams.get_default("THEO_ENERGIES")[1], 2.0])
-
-    def test_interpret_theo_energies_three_values_positive_floats(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.0 2.0 0.5", "THEO_ENERGIES")
-        interpreter.interpret_theo_energies(assignment)
-        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, 2.0, 0.5])
-
-    def test_interpret_theo_energies_two_defaults(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.0 _ _", "THEO_ENERGIES")
-        interpreter.interpret_theo_energies(assignment)
-        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, mock_rparams.get_default("THEO_ENERGIES")[1], mock_rparams.get_default("THEO_ENERGIES")[2]])
-
-    def test_interpret_theo_energies_three_values_negative_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.0 -2.0 0.5", "THEO_ENERGIES")
-        with pytest.raises(ParameterRangeError):
-            interpreter.interpret_theo_energies(assignment)
-
-    def test_interpret_theo_energies_three_values_invalid_range(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("2.0 1.0 0.5", "THEO_ENERGIES")
-        with pytest.raises(ParameterValueError):
-            interpreter.interpret_theo_energies(assignment)
-
-    def test_interpret_theo_energies_three_values_range_correction(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.0 2.5 0.5", "THEO_ENERGIES")
-        interpreter.interpret_theo_energies(assignment)
-        assert mock_rparams.THEO_ENERGIES == pytest.approx([1.0, 2.5, 0.5])
-
-    def test_interpret_theo_energies_three_values_out_of_range_start(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("-0.5 2.0 0.5", "THEO_ENERGIES")
-        with pytest.raises(ParameterRangeError):
-            interpreter.interpret_theo_energies(assignment)
-
-
-class TestNumericalParamsExamples:
-    def test_interpret_n_bulk_layers_valid(self):
-        rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars)
-        assignment = Assignment("1", "N_BULK_LAYERS")
+    def test_interpret_n_bulk_layers_valid(self, interpreter):
+        """Check assignment of valid N_BULK_LAYERS."""
+        assignment = parameters.Assignment('1', 'N_BULK_LAYERS')
         interpreter.interpret_n_bulk_layers(assignment)
-        assert rpars.N_BULK_LAYERS == 1
+        assert interpreter.rpars.N_BULK_LAYERS == 1
 
-    def test_interpret_n_bulk_layers_invalid(self):
+    def test_interpret_n_bulk_layers_invalid(self, interpreter):
+        """Check exceptions are raised for invalid N_BULK_LAYERS."""
         # N_BULK_LAYERS must be 1 or 2
-        rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars)
-        assignment = Assignment("3", "N_BULK_LAYERS")
-        with pytest.raises(ParameterError):
+        assignment = parameters.Assignment('3', 'N_BULK_LAYERS')
+        with pytest.raises(err.ParameterError):
             interpreter.interpret_n_bulk_layers(assignment)
 
-    def test_interpret_t_debye(self):
-        rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars)
-        assignment = Assignment("300.0", "T_DEBYE")
+    def test_interpret_t_debye(self, interpreter):
+        """Check assignment of valid T_DEBYE."""
+        assignment = parameters.Assignment('300.0', 'T_DEBYE')
         interpreter.interpret_t_debye(assignment)
-        assert rpars.T_DEBYE == pytest.approx(300.0)
+        assert interpreter.rpars.T_DEBYE == pytest.approx(300.0)
 
 
-class TestLogLevel:
-    def test_interpret_log_debug_true(self):
-        rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars)
-        assignment = Assignment("true", "LOG_LEVEL")
-        interpreter.interpret_log_level(assignment)
-        assert rpars.LOG_LEVEL <= 10
+class TestAverageBeams(_TestInterpretBase):
+    """Tests for interpreting AVERAGE_BEAMS."""
 
-    def test_interpret_log_debug_false(self):
-        rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars)
-        assignment = Assignment("F", "LOG_LEVEL")
-        interpreter.interpret_log_level(assignment)
-        assert rpars.LOG_LEVEL >= 20
+    param = 'AVERAGE_BEAMS'
+    valid = {'off': ('off', False),
+             'all': ('all', (0.0, 0.0)),
+             'custom': ('45.0 60', (45.0, 60.0)),}
+    invalid = ('invalid input',)
 
-    def test_interpret_log_debug_int(self):
-        rpars = Rparams()
-        interpreter = ParameterInterpreter(rpars)
-        assignment = Assignment("3", "LOG_LEVEL")
-        interpreter.interpret_log_level(assignment)
-        assert rpars.LOG_LEVEL == 3
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid AVERAGE_BEAMS."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val', invalid, ids=invalid)
+    def test_interpret_invalid(self, val, interpreter):
+        """Ensure invalid AVERAGE_BEAMS raises exceptions."""
+        self.check_raises(interpreter, val, err.ParameterError)
 
 
-class TestFilamentWF:
-    def test_interpret_filament_wf_lab6(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("LaB6", "FILAMENT_WF")
-        interpreter.interpret_filament_wf(assignment)
-        assert mock_rparams.FILAMENT_WF == pytest.approx(2.65)
+class TestBeamIncidence(_TestInterpretBase):
+    """Tests for interpreting BEAM_INCIDENCE."""
 
-    def test_interpret_filament_wf_custom(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.0", "FILAMENT_WF")
-        interpreter.interpret_filament_wf(assignment)
-        assert mock_rparams.FILAMENT_WF == pytest.approx(1.0)
+    param = 'BEAM_INCIDENCE'
+    valid = {'custom': ('45.0 60', (45.0, 60.0)),}
+    invalid = ('invalid input',)
 
-    def test_interpret_filament_wf_invalid(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("invalid", "FILAMENT_WF")
-        with pytest.raises(ParameterFloatConversionError):
-            interpreter.interpret_filament_wf(assignment)
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check interpretation of valid BEAM_INCIDENCE into THETA and PHI."""
+        self.interpret(interpreter, val)
+        rpars = interpreter.rpars
+        assert (rpars.THETA, rpars.PHI) == expect
 
-    def test_interpret_filament_wf_flag_invalid(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.5", "FILAMENT_WF", flags_str='test')
-        with pytest.raises(ParameterUnknownFlagError):
-            interpreter.interpret_filament_wf(assignment)
+    @pytest.mark.parametrize('val', invalid, ids=invalid)
+    def test_interpret_invalid(self, val, interpreter):
+        """Ensure invalid BEAM_INCIDENCE raises exceptions."""
+        self.check_raises(interpreter, val, err.ParameterError)
 
 
-class TestAverageBeams:
-    def test_interpret_average_beams_off(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("off", "AVERAGE_BEAMS")
-        interpreter.interpret_average_beams(assignment)
-        assert mock_rparams.AVERAGE_BEAMS is False
+class TestBulkRepeat(_TestInterpretBase):
+    """Tests for interpreting BULK_REPEAT."""
 
-    def test_interpret_average_beams_all(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("all", "AVERAGE_BEAMS")
-        interpreter.interpret_average_beams(assignment)
-        assert mock_rparams.AVERAGE_BEAMS == (0.0, 0.0)
+    param = 'BULK_REPEAT'
+    valid = {  # (input, expected)
+        'float': ('1.428', 1.428),
+        'c_small': ('c(0.1)', 2.0364),
+        'c_large': ('c(1.2)', 12 * 2.0364),
+        'z': ('z(0.9)', 0.9),
+        'vector': ('[1.0 2.0 3.0]', [1.0, 2.0, 3.0])
+        }
+    invalid = ('text', 'y(1.2)', 'z(abc)', '[]')
 
-    def test_interpret_average_beams_custom_angles(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("45.0 60.0", "AVERAGE_BEAMS")
-        interpreter.interpret_average_beams(assignment)
-        assert mock_rparams.AVERAGE_BEAMS == (45.0, 60.0)
+    @pytest.fixture(name='ag100_interpreter')
+    def fixture_ag100_interpreter(self, ag100, interpreter):
+        """Return a ParameterInterpreter for a Ag(100) slab."""
+        interpreter.slab, *_ = ag100
+        return interpreter
 
-    def test_interpret_average_beams_invalid_input(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("invalid input", "AVERAGE_BEAMS")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_average_beams(assignment)
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, ag100_interpreter):
+        """Check correct interpretation of valid BULK_REPEAT."""
+        self.interpret(ag100_interpreter, val)
+        rpars = ag100_interpreter.rpars
+        assert rpars.BULK_REPEAT == pytest.approx(expect, rel=1e-4)
 
-
-class TestBeamIncidence:
-    def test_interpret_beam_incidence_custom_angles(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("45.0 60.0", "BEAM_INCIDENCE")
-        interpreter.interpret_beam_incidence(assignment)
-        assert mock_rparams.THETA == 45.0
-        assert mock_rparams.PHI == 60.0
-
-    def test_interpret_beam_incidence_invalid_input(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("invalid input", "BEAM_INCIDENCE")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_beam_incidence(assignment)
+    @pytest.mark.parametrize('val', invalid)
+    def test_interpret_invalid(self, val, ag100_interpreter):
+        """Ensure invalid BULK_REPEAT raises exceptions."""
+        self.check_raises(ag100_interpreter, val, err.ParameterError)
 
 
-class TestDomain:
-    def test_interpret_domain_existing_path(self, mock_rparams, tmp_path):
-        interpreter = ParameterInterpreter(mock_rparams)
-        domain_path = tmp_path / "domain1"
+class TestDomain(_TestInterpretBase):
+    """Tests for interpreting DOMAIN."""
+
+    param = 'DOMAIN'
+
+    def test_interpret_path_with_flag(self, interpreter, tmp_path):
+        """Test correct interpretation of a path with a domain name."""
+        domain_path = tmp_path / 'domain1'
         domain_path.mkdir()
-        assignment = Assignment(values_str=str(domain_path),
-                                parameter="DOMAINS",
-                                flags_str="domain1")
-        interpreter.interpret_domain(assignment)
-        assert mock_rparams.DOMAINS == [("domain1", str(domain_path))]
+        domain_path = str(domain_path)
+        self.interpret(interpreter, domain_path, flags_str='domain1')
+        assert interpreter.rpars.DOMAINS == [('domain1', domain_path)]
 
-    def test_interpret_domain_new_path(self, mock_rparams, tmp_path):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(str(tmp_path), "DOMAINS")
-        interpreter.interpret_domain(assignment)
-        assert mock_rparams.DOMAINS == [("1", str(tmp_path))]
+    def test_interpret_path_no_flag(self, interpreter, tmp_path):
+        """Test correct interpretation of a path without a domain name."""
+        tmp_path = str(tmp_path)
+        self.interpret(interpreter, tmp_path)
+        assert interpreter.rpars.DOMAINS == [('1', tmp_path)]
 
-    def test_interpret_domain_zip_file(self, mock_rparams, tmp_path):
-        zip_file = tmp_path / "domain.zip"
+    def test_interpret_zip_file(self, interpreter, tmp_path):
+        """Test correct interpretation of a zip file."""
+        zip_file = tmp_path / 'domain.zip'
         zip_file.touch()
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(str(zip_file), "DOMAINS")
-        interpreter.interpret_domain(assignment)
-        assert mock_rparams.DOMAINS == [("1", str(zip_file))]
-
-    def test_interpret_domain_invalid_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("invalid_path", "DOMAINS")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_domain(assignment)
-
-
-class TestDomainStep:
-    def test_interpret_domain_step_valid_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("10", "DOMAIN_STEP")
-        interpreter.interpret_domain_step(assignment)
-        assert mock_rparams.DOMAIN_STEP == 10
-
-    def test_interpret_domain_step_invalid_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("200", "DOMAIN_STEP")
-        with pytest.raises(ParameterRangeError):
-            interpreter.interpret_domain_step(assignment)
-
-    def test_interpret_domain_step_non_integer_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.5", "DOMAIN_STEP")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_domain_step(assignment)
-
-
-class TestSuperlattice:
-    def test_interpret_superlattice_matrix_notation(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(values_str="2 0, 0 2",
-                                parameter="SUPERLATTICE",
-                                flags_str="M")
-        interpreter.interpret_superlattice(assignment)
-        assert mock_rparams.SUPERLATTICE == pytest.approx(np.array([[2, 0], [0, 2,]]))
-        assert mock_rparams.superlattice_defined is True
-
-    def test_interpret_superlattice_woods_notation(self, mock_rparams, slab_ag100):
-        interpreter = ParameterInterpreter(mock_rparams)
-        interpreter.slab = slab_ag100
-        assignment = Assignment("p(2x1)", "SUPERLATTICE")
-        interpreter.interpret_superlattice(assignment)
-        assert mock_rparams.SUPERLATTICE == pytest.approx(np.array([[2, 0], [0, 1,]]))
-        assert mock_rparams.superlattice_defined is True
-
-    def test_interpret_superlattice_no_slab(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("c(2x2)", "SUPERLATTICE")
-        # should raise because slab is None
-        with pytest.raises(ParameterError):
-            interpreter.interpret_superlattice(assignment)
-
-
-class TestTensorOutput:
-    def test_interpret_tensor_output_single_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("False", "TENSOR_OUTPUT")
-        interpreter.interpret_tensor_output(assignment)
-        assert mock_rparams.TENSOR_OUTPUT == [0]
-
-    def test_interpret_tensor_output_multiple_values(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0 1 1 0", "TENSOR_OUTPUT")
-        interpreter.interpret_tensor_output(assignment)
-        assert mock_rparams.TENSOR_OUTPUT == [0, 1, 1, 0]
-
-    def test_interpret_tensor_output_repeated_values(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("2*1 2*0 1", "TENSOR_OUTPUT")
-        interpreter.interpret_tensor_output(assignment)
-        assert mock_rparams.TENSOR_OUTPUT == [1, 1, 0, 0, 1]
-
-    def test_interpret_tensor_output_invalid_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("2", "TENSOR_OUTPUT")
-        with pytest.raises(ParameterParseError):
-            interpreter.interpret_tensor_output(assignment)
-
-
-class TestElementRename:
-    def test_interpret_element_rename_valid_assignment(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="ELEMENT_RENAME",
-                                flags_str="X",
-                                values_str="H")
-        interpreter.interpret_element_rename(assignment)
-        assert mock_rparams.ELEMENT_RENAME == {"X": "H"}
-
-    def test_interpret_element_rename_invalid_element(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="ELEMENT_RENAME",
-                                flags_str="Uk",
-                                values_str="Op")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_element_rename(assignment)
-
-
-class TestSymmetryFix:
-    def test_interpret_symmetry_fix_auto(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SYMMETRY_FIX",
-                                values_str="t")
-        interpreter.interpret_symmetry_fix(assignment)
-        assert mock_rparams.SYMMETRY_FIX == ''
-
-    def test_interpret_symmetry_fix_p1(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SYMMETRY_FIX",
-                                values_str="f")
-        interpreter.interpret_symmetry_fix(assignment)
-        assert mock_rparams.SYMMETRY_FIX == "p1"
-
-    def test_interpret_symmetry_fix_invalid_group(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SYMMETRY_FIX",
-                                values_str="invalid")
-        with pytest.raises(ParameterParseError):
-            interpreter.interpret_symmetry_fix(assignment)
-
-    def test_interpret_symmetry_fix_direction_required(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SYMMETRY_FIX",
-                                values_str="cm")
-        with pytest.raises(ParameterParseError):
-            interpreter.interpret_symmetry_fix(assignment)
-
-    def test_interpret_symmetry_fix_custom_group_with_direction(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SYMMETRY_FIX",
-                                values_str="cm[1 1]")
-        interpreter.interpret_symmetry_fix(assignment)
-        assert mock_rparams.SYMMETRY_FIX == "cm[1 1]"
-
-    def test_interpret_symmetry_fix_invalid_direction(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SYMMETRY_FIX",
-                                values_str="pmt [0 x]")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_symmetry_fix(assignment)
-
-
-class TestIVShiftRange:
-    def test_interpret_iv_shift_range_valid_range(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.0 1.0 0.25", "IV_SHIFT_RANGE")
-        interpreter.interpret_iv_shift_range(assignment)
-        assert mock_rparams.IV_SHIFT_RANGE == pytest.approx([0.0, 1.0, 0.25])
-
-    def test_interpret_iv_shift_range_invalid_number_of_inputs(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.0", "IV_SHIFT_RANGE")
-        with pytest.raises(ParameterNumberOfInputsError):
-            interpreter.interpret_iv_shift_range(assignment)
-
-    def test_interpret_iv_shift_range_invalid_float_conversion(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.0 2.0 ()", "IV_SHIFT_RANGE")
-        with pytest.raises(ParameterFloatConversionError):
-            interpreter.interpret_iv_shift_range(assignment)
-
-    def test_interpret_iv_shift_range_invalid_parse(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.0 2.0 1.a", "IV_SHIFT_RANGE")
-        with pytest.raises(ParameterParseError):
-            interpreter.interpret_iv_shift_range(assignment)
-
-    def test_interpret_iv_shift_range_end_energy_less_than_start_energy(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.0 0.0 0.1", "IV_SHIFT_RANGE")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_iv_shift_range(assignment)
-
-    def test_interpret_iv_shift_range_invalid_step(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.0 1.0 -0.1", "IV_SHIFT_RANGE")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_iv_shift_range(assignment)
-
-
-class TestOptimize:
-    def test_interpret_optimize_valid_flag_and_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter= "OPTIMIZE",
-                                flags_str="v0i", values_str="step 0.1")
-        interpreter.interpret_optimize(assignment)
-        assert mock_rparams.OPTIMIZE['which'] == 'v0i'
-        assert mock_rparams.OPTIMIZE['step'] == pytest.approx(0.1)
-
-    def test_interpret_optimize_valid_flag_and_value_multiple(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(
-            parameter= "OPTIMIZE",
-            flags_str="theta",
-            values_str="step 0.1, convergence 1e-6, minpoints 10"
-            )
-        interpreter.interpret_optimize(assignment)
-        assert mock_rparams.OPTIMIZE['which'] == 'theta'
-        assert mock_rparams.OPTIMIZE['step'] == pytest.approx(0.1)
-        assert mock_rparams.OPTIMIZE['minpoints'] == pytest.approx(10)
-        assert mock_rparams.OPTIMIZE['convergence'] == pytest.approx(1e-6)
-
-    def test_interpret_optimize_invalid_flag(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("invalid 0.1", "OPTIMIZE")
-        with pytest.raises(ParameterUnknownFlagError):
-            interpreter.interpret_optimize(assignment)
-
-    def test_interpret_optimize_invalid_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("step not-a-number", "OPTIMIZE")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_optimize(assignment)
-
-    def test_interpret_optimize_invalid_flag(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("step 0.1", "OPTIMIZE", flags_str="invalid")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_optimize(assignment)
-
-
-class TestPhaseshiftEps:
-    def test_interpret_phaseshift_eps_valid_float(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.1", "PHASESHIFT_EPS")
-        interpreter.interpret_phaseshift_eps(assignment)
-        assert mock_rparams.PHASESHIFT_EPS == 0.1
-
-    def test_interpret_phaseshift_eps_invalid(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("invalid", "PHASESHIFT_EPS")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_phaseshift_eps(assignment)
-
-    def test_interpret_phaseshift_eps_default_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("fine", "PHASESHIFT_EPS")
-        interpreter.interpret_phaseshift_eps(assignment)
-        assert mock_rparams.PHASESHIFT_EPS == 0.01
-
-    def test_interpret_phaseshift_eps_out_of_range(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("-1.0", "PHASESHIFT_EPS")
-        with pytest.raises(ParameterRangeError):
-            interpreter.interpret_phaseshift_eps(assignment)
-
-        assignment = Assignment("1.5", "PHASESHIFT_EPS")
-        with pytest.raises(ParameterRangeError):
-            interpreter.interpret_phaseshift_eps(assignment)
-
-
-class TestLayerCuts:
-    def test_interpret_layer_cuts_simple_values(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.1 0.2 0.3", "LAYER_CUTS")
-        interpreter.interpret_layer_cuts(assignment)
-        assert mock_rparams.LAYER_CUTS == ["0.1", "0.2", "0.3"]
-
-    def test_interpret_layer_cuts_less_than_greater_than(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("< 0.1 > 0.2", "LAYER_CUTS")
-        with pytest.raises(ParameterParseError):
-            interpreter.interpret_layer_cuts(assignment)
-
-    def test_interpret_layer_cuts_dz_cutoff(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("dz(1.2)", "LAYER_CUTS")
-        interpreter.interpret_layer_cuts(assignment)
-        assert mock_rparams.LAYER_CUTS == ["dz(1.2)"]
-
-    def test_interpret_layer_cuts_dc_cutoff(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.15 0.3 < dz(1.2)  ", "LAYER_CUTS")
-        interpreter.interpret_layer_cuts(assignment)
-        assert mock_rparams.LAYER_CUTS == ["0.15", "0.3", "<", "dz(1.2)"]
-
-    def test_interpret_layer_cuts_invalid_function_format(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("dz(0.1) dc(0.2) invalid(0.3)", "LAYER_CUTS")
-        with pytest.raises(ParameterParseError):
-            interpreter.interpret_layer_cuts(assignment)
-
-    def test_interpret_layer_cuts_invalid_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.1 invalid 0.3", "LAYER_CUTS")
-        with pytest.raises(ParameterParseError):
-            interpreter.interpret_layer_cuts(assignment)
-
-    @pytest.mark.xfail(reason="Known bug in LAYER_CUTS")
-    def test_interpret_layer_cuts_two_dz(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("dz(1.0) < 2.0 < dz(0.5) < 4.0", "LAYER_CUTS")
-        interpreter.interpret_layer_cuts(assignment)
-        assert mock_rparams.LAYER_CUTS == ["dz(1.0)", "<", "2.0", "<", 
-                                           "dz(0.5)", "<", "4.0"]
-
-    @pytest.mark.xfail(reason="Known bug in LAYER_CUTS")
-    def test_interpret_layer_cuts_dz_invalid(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.5 1.0 < dz(abcd) < 4.0", "LAYER_CUTS")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_layer_cuts(assignment)
-
-
-
-class TestRun:
-    def test_interpret_run_single_section(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1", "RUN")
-        interpreter.interpret_run(assignment)
-        assert mock_rparams.RUN == [0, 1]
-
-    def test_interpret_run_multiple_sections(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1 2 3", "RUN")
-        interpreter.interpret_run(assignment)
-        assert mock_rparams.RUN == [0, 1, 2, 3]
-
-    def test_interpret_run_range(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1-3", "RUN")
-        interpreter.interpret_run(assignment)
-        assert mock_rparams.RUN == [0, 1, 2, 3]
-
-    def test_interpret_run_invalid_section(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("invalid", "RUN")
-        with pytest.raises(ParameterValueError):
-            interpreter.interpret_run(assignment)
-
-    def test_interpret_run_empty(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("", "RUN")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_run(assignment)
-
-    def test_interpret_run_invalid_syntax_underscore(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1 _ 2", "RUN")
-        with pytest.raises(ParameterValueError):
-            interpreter.interpret_run(assignment)
-
-    def test_interpret_run_invalid_syntax_section(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1, x", "RUN")
-        with pytest.raises(ParameterValueError):
-            interpreter.interpret_run(assignment)
-
-class TestSymmetryEps:
-    def test_interpret_symmetry_eps_single_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.1", "SYMMETRY_EPS")
-        interpreter.interpret_symmetry_eps(assignment)
-        assert mock_rparams.SYMMETRY_EPS == 0.1
-
-    def test_interpret_symmetry_eps_multiple_values(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.1 0.2", "SYMMETRY_EPS")
-        interpreter.interpret_symmetry_eps(assignment)
-        assert mock_rparams.SYMMETRY_EPS == 0.1
-        assert mock_rparams.SYMMETRY_EPS_Z == 0.2
-
-    def test_interpret_symmetry_eps_invalid_number_of_inputs(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.1 0.2 0.3", "SYMMETRY_EPS")
-        with pytest.raises(ParameterNumberOfInputsError):
-            interpreter.interpret_symmetry_eps(assignment)
-
-
-class TestSearchBeams():
-    def test_interpret_search_beams_zero(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment('0', parameter='SEARCH_BEAMS')
-        interpreter.interpret_search_beams(assignment)
-        assert mock_rparams.SEARCH_BEAMS == 0
-
-    def test_interpret_search_beams_alternative_zero(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment('A', parameter='SEARCH_BEAMS')
-        interpreter.interpret_search_beams(assignment)
-        assert mock_rparams.SEARCH_BEAMS == 0
-
-    def test_interpret_search_beams_one(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment('1', parameter='SEARCH_BEAMS')
-        interpreter.interpret_search_beams(assignment)
-        assert mock_rparams.SEARCH_BEAMS == 1
-
-    def test_interpret_search_beams_alternative_one(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment('I', parameter='SEARCH_BEAMS')
-        interpreter.interpret_search_beams(assignment)
-        assert mock_rparams.SEARCH_BEAMS == 1
-
-    def test_interpret_search_beams_two(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment('2', parameter='SEARCH_BEAMS')
-        interpreter.interpret_search_beams(assignment)
-        assert mock_rparams.SEARCH_BEAMS == 2
-
-    def test_interpret_search_beams_alternative_two(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment('F', parameter='SEARCH_BEAMS')
-        interpreter.interpret_search_beams(assignment)
-        assert mock_rparams.SEARCH_BEAMS == 2
-
-    def test_interpret_search_beams_invalid_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment('3', parameter='SEARCH_BEAMS')
-        with pytest.raises(ParameterValueError):
-            interpreter.interpret_search_beams(assignment)
-
-    def test_interpret_search_beams_multiple_values(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment('0 1', parameter='SEARCH_BEAMS')
-        with pytest.raises(ParameterError):
-            interpreter.interpret_search_beams(assignment)
-
-
-class TestSearchCull:
-    def test_interpret_search_cull_single_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.5", "SEARCH_CULL")
-        interpreter.interpret_search_cull(assignment)
-        assert mock_rparams.SEARCH_CULL == 0.5
-
-    def test_interpret_search_cull_integer_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("3", "SEARCH_CULL")
-        interpreter.interpret_search_cull(assignment)
-        assert mock_rparams.SEARCH_CULL == 3
-
-    def test_interpret_search_cull_float_bigger_one(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("1.5", "SEARCH_CULL")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_search_cull(assignment)
-
-
-    def test_interpret_search_cull_greater_than_one_integer(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("4.0", "SEARCH_CULL")
-        interpreter.interpret_search_cull(assignment)
-        assert mock_rparams.SEARCH_CULL == pytest.approx(4)
-
-    def test_interpret_search_cull_negative_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("-0.5", "SEARCH_CULL")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_search_cull(assignment)
-
-    def test_interpret_search_cull_invalid_number_of_inputs(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.5 clone 1.0", "SEARCH_CULL")
-        with pytest.raises(ParameterNumberOfInputsError):
-            interpreter.interpret_search_cull(assignment)
-
-    def test_interpret_search_cull_invalid_search_cull_type(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment("0.5 test", "SEARCH_CULL")
-        with pytest.raises(ParameterValueError):
-            interpreter.interpret_search_cull(assignment)
-
-class TestSearchConvergence:
-    def test_interpret_search_convergence_gaussian(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SEARCH_CONVERGENCE",
-                                flags_str="gaussian",
-                                values_str="0.01 0.9")
-        interpreter.interpret_search_convergence(assignment)
-        assert mock_rparams.GAUSSIAN_WIDTH == 0.01
-        assert mock_rparams.GAUSSIAN_WIDTH_SCALING == 0.9
-
-    def test_interpret_search_convergence_gaussian_no_scaling(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SEARCH_CONVERGENCE",
-                                flags_str="gaussian",
-                                values_str="0.01")
-        interpreter.interpret_search_convergence(assignment)
-        assert mock_rparams.GAUSSIAN_WIDTH == 0.01
-        assert mock_rparams.GAUSSIAN_WIDTH_SCALING == 0.5
-
-    def test_interpret_search_convergence_invalid_flag(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SEARCH_CONVERGENCE",
-                                flags_str="test",
-                                values_str=" 0.01 0.9")
-        with pytest.raises(ParameterUnknownFlagError):
-            interpreter.interpret_search_convergence(assignment)
-
-    def test_interpret_search_convergence_invalid_number_of_inputs(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SEARCH_CONVERGENCE",
-                                flags_str="gaussian",
-                                values_str="0.01 0.9 0.5")
-        with pytest.raises(ParameterNumberOfInputsError):
-            interpreter.interpret_search_convergence(assignment)
-
-    def test_interpret_search_convergence_invalid_scaling_value(self, mock_rparams):
-        interpreter = ParameterInterpreter(mock_rparams)
-        assignment = Assignment(parameter="SEARCH_CONVERGENCE",
-                                flags_str="gaussian",
-                                values_str="0.01 -0.5")
-        with pytest.raises(ParameterError):
-            interpreter.interpret_search_convergence(assignment)
-
+        zip_file = str(zip_file)
+        self.interpret(interpreter, zip_file)
+        assert interpreter.rpars.DOMAINS == [('1', zip_file)]
+
+    def test_interpret_invalid(self, interpreter):
+        """Ensure invalid DOMAIN raises exceptions."""
+        self.check_raises(interpreter, 'invalid_path', err.ParameterError)
+
+
+class TestDomainStep(_TestInterpretBase):
+    """Tests for interpreting DOMAIN_STEP."""
+
+    param = 'DOMAIN_STEP'
+    valid = {'value': ('10', 10),}
+    invalid = {'value': ('200', err.ParameterRangeError),
+               'non_integer': ('0.5', err.ParameterError),}
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid DOMAIN_STEP."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid DOMAIN_STEP raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
+class TestElementRename(_TestInterpretBase):
+    """Tests for interpreting ELEMENT_RENAME."""
+
+    param = 'ELEMENT_RENAME'
+
+    def test_interpret_valid(self, interpreter):
+        """Check correct interpretation of valid ELEMENT_RENAME."""
+        self.interpret(interpreter, 'H', flags_str='X')
+        assert interpreter.rpars.ELEMENT_RENAME == {'X': 'H'}
+
+    def test_interpret_invalid_element(self, interpreter):
+        """Ensure that an invalid chemical element raises exceptions."""
+        self.check_raises(interpreter, 'Op', err.ParameterError,
+                          flags_str='Uk')
+
+
+class TestFilamentWF(_TestInterpretBase):
+    """Tests for interpreting FILAMENT_WF."""
+
+    param = 'FILAMENT_WF'
+    valid = {'lab6': ('LaB6', 2.65),
+             'custom': ('1.0', 1.0),}
+    invalid = {
+        'invalid_float': ('invalid', '', err.ParameterFloatConversionError),
+        'flag': ('1.5', 'test', err.ParameterUnknownFlagError),
+        }
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid FILAMENT_WF."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, flag, exc, interpreter):
+        """Ensure invalid FILAMENT_WF raises exceptions."""
+        self.check_raises(interpreter, val, exc, flags_str=flag)
+
+
+class TestFortranComp(_TestInterpretBase):
+    """Tests for interpreting FORTRAN_COMP."""
+
+    param = 'FORTRAN_COMP'
+    valid = {  # id: (assign_value, assign_flag, expect_pre, expect_post)
+        'default_intel': ('ifort', '',
+                          'ifort -O2 -I/opt/intel/mkl/include',
+                          '-L/opt/intel/mkl/lib/intel64'),
+        'default_gnu': ('gfortran', '', 'gfortran',
+                        '-llapack -lpthread -lblas'),
+        'default_intel_mpi': ('mpiifort', 'mpi', 'mpiifort', None),
+        'default_gnu_mpi': ('mpifort', 'mpi', 'mpifort -Ofast -no-pie', None),
+        'custom_no_flag': ('"ifort -O3 -march=native"', '',
+                           'ifort -O3 -march=native', None),
+        'custom_post_flag': ('"-L/opt/intel/mkl/lib/intel64"', 'post',
+                             None, '-L/opt/intel/mkl/lib/intel64'),
+        'custom_mpi_flag': ('"mpifort -fallow-argument-mismatch"', 'mpi',
+                            'mpifort -fallow-argument-mismatch', None)
+        }
+
+    # pylint: disable=too-many-arguments
+    # In principle 'pre' and 'post' could be merged into a tuple,
+    # but the parametrization above would look even more complex
+    @pytest.mark.parametrize('val,flag,pre,post', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, flag, pre, post,
+                             interpreter, subtests):
+        """Check correct interpretation of valid FORTRAN_COMP(_MPI)."""
+        assignment = self.assignment(val, flags_str=flag)
+        rpars = interpreter.rpars
+        interpreter.interpret_fortran_comp(assignment, skip_check=True)
+        if 'mpi' in flag:
+            compiler = getattr(rpars, self.param + '_MPI')
+        else:
+            compiler = getattr(rpars, self.param)
+        if pre is not None:
+            with subtests.test('Check pre'):
+                assert pre in compiler[0]
+        if post is not None:
+            with subtests.test('Check post'):
+                assert post in compiler[1]
+    # pylint: enable=too-many-arguments
+
+
+class TestIntpolDeg(_TestInterpretBase):
+    """Tests for interpreting INTPOL_DEG."""
+
+    param = 'INTPOL_DEG'
+    valid = {v: (v, int(v)) for v in Rparams().get_limits(param)}
+    invalid = '1', 'text'
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid INTPOL_DEG."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val', invalid, ids=invalid)
+    def test_interpret_invalid(self, val, interpreter):
+        """Ensure invalid INTPOL_DEG raises exceptions."""
+        self.check_raises(interpreter, val, err.ParameterError)
+
+
+class TestIVShiftRange(_TestInterpretBase):
+    """Tests for interpreting IV_SHIFT_RANGE."""
+
+    param = 'IV_SHIFT_RANGE'
+    valid = {'range': ('0.0 1.0 0.25', [0.0, 1.0, 0.25]),}
+    invalid = {'nr_inputs': ('0.0', err.ParameterNumberOfInputsError),
+               'float': ('0.0 2.0 ()', err.ParameterFloatConversionError),
+               'parse': ('0.0 2.0 1.a', err.ParameterParseError),
+               'out-of-range': ('1.0 0.0 0.1', err.ParameterError),
+               'step': ('0.0 1.0 -0.1', err.ParameterError),}
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid IV_SHIFT_RANGE."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid IV_SHIFT_RANGE raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
+class TestLayerCuts(_TestInterpretBase):
+    """Tests for interpreting LAYER_CUTS."""
+
+    param = 'LAYER_CUTS'
+    valid = {
+        'simple': ('0.1 0.2 0.3', ['0.1', '0.2', '0.3']),
+        'dz': ('dz(1.2)', ['dz(1.2)']),
+        'list and dz': ('0.15 0.3 < dz(1.2)  ',
+                        ['0.15', '0.3', '<', 'dz(1.2)']),
+        'two dz': ('dz(1.0) < 2.0 < dz(0.5) < 4.0',
+                   ['dz(1.0)', '<', '2.0', '<', 'dz(0.5)', '<', '4.0']),
+        }
+    invalid = {
+        'less and greater': '< 0.1 > 0.2',
+        'cutoff function': 'dz(0.1) dc(0.2) invalid(0.3)',
+        'float': '0.1 invalid 0.3',
+        'dz': '0.5 1.0 < dz(abcd) < 4.0'
+        }
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid LAYER_CUTS."""
+        if val.count('dz') == 2:
+            pytest.xfail(reason='Known bug in LAYER_CUTS interpreter')
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, interpreter):
+        """Ensure invalid LAYER_CUTS raises exceptions."""
+        if 'abcd' in val:
+            pytest.xfail(reason='Known bug in LAYER_CUTS interpreter')
+        self.check_raises(interpreter, val, err.ParameterParseError)
+
+
+class TestLogLevel(_TestInterpretBase):
+    """Tests for interpreting LOG_LEVEL."""
+
+    param = 'LOG_LEVEL'
+
+    def test_interpret_true(self, interpreter):
+        """Check correct setting of LOG_LEVEL to True."""
+        self.interpret(interpreter, 'true')
+        assert interpreter.rpars.LOG_LEVEL <= 10
+
+    def test_interpret_false(self, interpreter):
+        """Check correct setting of LOG_LEVEL to False."""
+        self.interpret(interpreter, 'F')
+        assert interpreter.rpars.LOG_LEVEL >= 20
+
+    def test_interpret_int(self, interpreter):
+        """Check correct interpretation of integer LOG_LEVEL."""
+        self.check_assigned(interpreter, '3', 3)
+
+
+class TestOptimize(_TestInterpretBase):
+    """Tests for interpreting OPTIMIZE."""
+
+    param = 'OPTIMIZE'
+    valid = {  # value, flag, {key: expected}
+        'flag_and_value': ('step 0.1', 'v0i',
+                           {'step': 0.1}),
+        'multiple_flag_value': (
+            'step 0.1, convergence 1e-6, minpoints 10', 'theta',
+            {'step': 0.1, 'minpoints': 10, 'convergence': 1e-6}
+            ),
+        }
+    invalid = {
+        'missing_quantity': ('step 0.1', '', err.ParameterNeedsFlagError),     # TODO: currently fails. Fixed on master
+        'flag': ('invalid 0.1', 'v0i', err.ParameterUnknownFlagError),
+        'value': ('step not-a-number', 'v0i', err.ParameterError),
+        'quantity': ('step 0.1', 'invalid', err.ParameterError),
+        }
+
+    # pylint: disable=too-many-arguments
+    # 6/5 Seems OK here, especially considering that two are fixtures
+    @pytest.mark.parametrize('val,flag,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, flag, expect, interpreter, subtests):
+        """Check correct interpretation of valid OPTIMIZE."""
+        self.interpret(interpreter, val, flags_str=flag)
+        rpars = interpreter.rpars
+        with subtests.test('which'):
+            assert rpars.OPTIMIZE['which'] == flag
+        for key, value in expect.items():
+            with subtests.test(key):
+                assert rpars.OPTIMIZE[key] == pytest.approx(value)
+    # pylint: enable=too-many-arguments
+
+    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, flag, exc, interpreter):
+        """Ensure invalid OPTIMIZE raises exceptions."""
+        self.check_raises(interpreter, val, exc, flags_str=flag)
+
+
+class TestPhaseshiftEps(_TestInterpretBase):
+    """Tests for interpreting PHASESHIFT_EPS."""
+
+    param = 'PHASESHIFT_EPS'
+    valid = {'float': ('0.1', 0.1),
+             'tag': ('fine', 0.01),}
+    invalid = {'float': ('invalid', err.ParameterError),
+               'negative': ('-1.0', err.ParameterRangeError),
+               'too large': ('1.5', err.ParameterRangeError),}
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid PHASESHIFT_EPS."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid PHASESHIFT_EPS raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
+class TestRun(_TestInterpretBase):
+    """Tests for interpreting RUN."""
+
+    param = 'RUN'
+    valid = {
+        'single': ('1', [0, 1]),
+        'multiple': ('1 2 3', [0, 1, 2, 3]),
+        'range': ('1-3', [0, 1, 2, 3]),
+        }
+    invalid = {'section': ('invalid', err.ParameterValueError),
+               'empty': ('', err.ParameterError),
+               'syntax underscore': ('1 _ 2', err.ParameterValueError),
+               'syntax section': ('1, x', err.ParameterValueError)}
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid RUN."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid RUN raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
+class TestSearchBeams(_TestInterpretBase):
+    """Tests for interpreting SEARCH_BEAMS."""
+
+    param = 'SEARCH_BEAMS'
+    valid = {'average': ('A', 0), 'alt average': ('0', 0),
+             'integer': ('I', 1), 'alt integer': ('1', 1),
+             'fractional': ('F', 2), 'alt fractional': ('2', 2)}
+    invalid = {'one value': ('3', err.ParameterValueError),
+               'more values': ('0 1', err.ParameterError)}
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid SEARCH_BEAMS."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid SEARCH_BEAMS raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
+class TestSearchConvergence(_TestInterpretBase):
+    """Tests for interpreting SEARCH_CONVERGENCE."""
+
+    param = 'SEARCH_CONVERGENCE'
+    valid = {'gaussian, scaling': ('0.01 0.9', (0.01, 0.9)),
+             'gaussian, no scaling': ('0.01', (0.01, 0.5)),}
+    invalid = {
+        'flag': (' 0.01 0.9', 'test', err.ParameterUnknownFlagError),
+        'nr_values': ('.01 0.9 0.5', 'gaussian',
+                      err.ParameterNumberOfInputsError),
+        'scaling': ('0.01 -0.5', 'gaussian', err.ParameterError),
+        }
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid SEARCH_CONVERGENCE."""
+        self.interpret(interpreter, val, flags_str='gaussian')
+        rpars = interpreter.rpars
+        assert (rpars.GAUSSIAN_WIDTH, rpars.GAUSSIAN_WIDTH_SCALING) == expect
+
+    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, flag, exc, interpreter):
+        """Ensure invalid SEARCH_CONVERGENCE raises exceptions."""
+        self.check_raises(interpreter, val, exc, flags_str=flag)
+
+
+class TestSearchCull(_TestInterpretBase):
+    """Tests for interpreting SEARCH_CULL."""
+
+    param = 'SEARCH_CULL'
+    valid = {'float': ('0.5', 0.5), 'int': ('3', 3),
+             'int-like float': ('4.0', 4),}
+    invalid = {'float greater than one': ('1.5', err.ParameterError),
+               'negative': ('-0.5', err.ParameterError),
+               'too many': ('0.5 clone 1.0', err.ParameterNumberOfInputsError),
+               'invalid type': ('0.5 test', err.ParameterValueError)}
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid SEARCH_CULL."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid SEARCH_CULL raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
+class TestSuperlattice(_TestInterpretBase):
+    """Tests for interpreting SUPERLATTICE."""
+
+    param = 'SUPERLATTICE'
+
+    def test_interpret_matrix(self, interpreter):
+        """Check successful interpretation of a SUPERLATTICE matrix."""
+        self.interpret(interpreter, '2 0, 0 2', flags_str='M')
+        rpars = interpreter.rpars
+        assert rpars.superlattice_defined
+        assert rpars.SUPERLATTICE == pytest.approx(np.array([[2, 0], [0, 2]]))
+
+    def test_interpret_woods(self, interpreter, ag100):
+        """Check successful interpretation of a Woods SUPERLATTICE."""
+        interpreter.slab, *_ = ag100
+        self.interpret(interpreter, 'p(2x1)')
+        rpars = interpreter.rpars
+        assert rpars.superlattice_defined
+        assert rpars.SUPERLATTICE == pytest.approx(np.array([[2, 0], [0, 1]]))
+
+    def test_interpret_superlattice_no_slab(self, interpreter):
+        """Ensure that a Woods SUPERLATTICE without a slab raises."""
+        self.check_raises(interpreter, 'c(2x2)', err.ParameterError)
+
+
+class TestSymmetryBulk(_TestInterpretBase):
+    """Tests for interpreting SYMMETRY_BULK."""
+
+    param = 'SYMMETRY_BULK'
+    valid = {
+        'mirror': ('p2 m[0 1]',
+                   {'mirror': {(0, 1)}, 'rotation': set(), 'group': 'p2'}),
+        'cm_rot4': ('cm[1 1] r4',
+                    {'mirror': set(), 'rotation': {4}, 'group': 'cm[1 1]'}),
+        'pmm': ('pmm',
+                {'mirror': set(), 'rotation': set(), 'group': 'pmm'}),
+        }
+    invalid = {'invalid_syntax': 'invalid_syntax',
+               'multiple_groups': 'pmm pg',
+               'missing_group': ''}
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid SYMMETRY_BULK."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, interpreter):
+        """Ensure invalid SYMMETRY_BULK raises exceptions."""
+        self.check_raises(interpreter, val, err.ParameterValueError)
+
+
+class TestSymmetryEps(_TestInterpretBase):
+    """Tests for interpreting SYMMETRY_EPS/SYMMETRY_EPS_Z."""
+
+    param = 'SYMMETRY_EPS'
+
+    def test_interpret_single_value(self, interpreter):
+        """Check correct interpretation of EPS value."""
+        self.check_assigned(interpreter, '0.1', 0.1)
+
+    def test_interpret_multiple_values(self, interpreter):
+        """Check correct interpretation of EPS and EPS_Z values."""
+        self.interpret(interpreter, '0.1 0.2')
+        rpars = interpreter.rpars
+        assert (rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS_Z) == (0.1, 0.2)
+
+    def test_interpret_invalid_number_of_inputs(self, interpreter):
+        """Ensure more than two values raises exceptions."""
+        self.check_raises(interpreter, '0.1 0.2 0.3',
+                           err.ParameterNumberOfInputsError)
+
+
+class TestSymmetryFix(_TestInterpretBase):
+    """Tests for interpreting SYMMETRY_FIX."""
+
+    param = 'SYMMETRY_FIX'
+    _default = ''
+
+    valid = {'auto': ('t', _default),
+             'p1': ('p1', 'p1'),
+             'direction': ('cm[1 1]', 'cm[1 1]'),}
+    invalid = {'group': ('invalid', err.ParameterParseError),
+               'direction_missing': ('cm', err.ParameterParseError),
+               'direction_wrong': ('pmt [0 x]', err.ParameterError),}
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid SYMMETRY_FIX."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid SYMMETRY_FIX raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+    @pytest.mark.xfail(reason='Known bug in interpreter: assumes single call',
+                       strict=True)
+    def test_default_restored(self, interpreter):
+        """Ensure that the default value is used when 't' is given."""
+        self.check_assigned(interpreter, 'f', 'p1')
+        self.check_assigned(interpreter, 't', self._default)
+
+
+class TestTensorOutput(_TestInterpretBase):
+    """Tests for interpreting TENSOR_OUTPUT."""
+
+    param = 'TENSOR_OUTPUT'
+    valid = {'single': ('False', [0]),
+             'multiple': ('0 1 1 0', [0, 1, 1, 0]),
+             'repeated': ('2*1 2*0 1', [1, 1, 0, 0, 1]),}
+    invalid = ('2',)
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid TENSOR_OUTPUT."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val', invalid, ids=invalid)
+    def test_interpret_invalid(self, val, interpreter):
+        """Ensure invalid TENSOR_OUTPUT raises exceptions."""
+        self.check_raises(interpreter, val, err.ParameterParseError)
+
+
+class TestTheoEnergies(_TestInterpretBase):
+    """Tests for interpreting THEO_ENERGIES."""
+
+    param = 'THEO_ENERGIES'
+    _defaults = Rparams().get_default(param)
+    valid = {
+        'single_value_default': ('_', _defaults),
+        'single_value': ('1.0', [1.0, 1.0, 1.0]),
+        'three_values_all_default': ('_ _ _', _defaults),
+        'three_values_one_default': ('1.0 _ 2.0', [1.0, _defaults[1], 2.0]),
+        'three_positive': ('1.0 2.0 0.5', [1.0, 2.0, 0.5]),
+        'two_defaults': ('1.0 _ _', [1.0, *_defaults[1:]]),
+        'range_correction': ('1.1 2.5 0.5', [1.0, 2.5, 0.5]),
+        }
+    invalid = {
+        'one_negative': ('1.0 -2.0 0.5', err.ParameterRangeError),
+        'invalid_range': ('2.0 1.0 0.5', err.ParameterValueError),
+        'start_out_of_range': ('-0.5 2.0 0.5', err.ParameterRangeError),
+        }
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid THEO_ENERGIES."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid THEO_ENERGIES raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
+class TestV0Real(_TestInterpretBase):
+    """Tests for interpreting V0_REAL."""
+
+    param = 'V0_REAL'
+    valid = {
+        'rundgren': ('rundgren 1.0 2.0 3.0 4.0', [1.0, 2.0, 3.0, 4.0]),
+        'custom': ('EE', 'EEV+workfn'),
+        }
+    invalid = {
+        'too_few': 'rundgren 1.0 2.0',
+        'float': 'rundgren 1.0 2.0 3.0 four',
+        }
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid V0_REAL."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, interpreter):
+        """Ensure invalid V0_REAL raises exceptions."""
+        self.check_raises(interpreter, val, err.ParameterError)

@@ -1,106 +1,118 @@
-"""classes/test_slab.py
+"""Tests for viperleed.tleedmlib.classes.slab.
 
 Created on 2023-07-28
 
-@author: Alexander M. Imre
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 """
 
-import pytest
-import sys
-import os
-from pathlib import Path
 from copy import deepcopy
+from pathlib import Path
+import sys
+
 import numpy as np
+import pytest
 
-vpr_path = str(Path(__file__).parent.parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
+VPR_PATH = str(Path(__file__).resolve().parents[3])
+if VPR_PATH not in sys.path:
+    sys.path.append(VPR_PATH)
+
+# pylint: disable=wrong-import-position
+# Cannot do anything about it until we make viperleed installable
+from viperleed.tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.slab import Slab, SymPlane
+# pylint: enable=wrong-import-position
 
 
-from viperleed.tleedmlib.classes.slab import SymPlane
-from viperleed.tleedmlib.symmetry import findBulkSymmetry
+class TestAtomTransforms:                                                       # TODO: add test for correct rotation and mirror on slanted cell. Probably enough to is_rotation_symmetric and is_mirror_symmetric with appropriate slabs. Could use "POSCAR_36C_cm" or the bulk of Fe3O4.
+    """Test simple transformations of the atoms of a slab."""
 
-
-class TestSlabTransforms:
     def test_mirror(self, manual_slab_3_atoms):
+        """Test the expected outcome of mirroring atoms of a simple slab."""
         slab = manual_slab_3_atoms
         mirrored_slab = deepcopy(slab)
-        symplane = SymPlane(pos=(0,0),
-                            dr=np.array([0,1]),
-                            abt=slab.ucell.T[:2,:2])
+        symplane = SymPlane((0, 0), (0, 1), abt=slab.surface_vectors)
         mirrored_slab.mirror(symplane)
         mirrored_slab.collapseCartesianCoordinates()
-        assert all(at.isSameXY(mir_at.cartpos[:2])
-                for at, mir_at in
-                zip(slab.atlist, reversed(mirrored_slab.atlist)))
+        assert all(
+            at.isSameXY(mir_at.cartpos[:2])
+            for at, mir_at in zip(slab.atlist, reversed(mirrored_slab.atlist))
+            )
 
     def test_180_rotation(self, manual_slab_3_atoms):
+        """Test the expected outcome of rotating atoms of a simple slab."""
         slab = manual_slab_3_atoms
         rotated_slab = deepcopy(slab)
-        rotated_slab.rotateAtoms((0,0), order=2)
+        rotated_slab.rotateAtoms((0, 0), order=2)
         rotated_slab.collapseCartesianCoordinates()
-        assert all(at.isSameXY(mir_at.cartpos[:2])
-                for at, mir_at in
-                zip(slab.atlist, reversed(rotated_slab.atlist)))
+        assert all(
+            at.isSameXY(rot_at.cartpos[:2])
+            for at, rot_at in zip(slab.atlist, reversed(rotated_slab.atlist))
+            )
 
 
-# Slab Matrix operations
-def test_rotation_on_trigonal_slab(manual_slab_1_atom_trigonal):
-    rot_15 = np.array([[ 0.96592583, -0.25881905,  0.        ],
-                       [ 0.25881905,  0.96592583,  0.        ],
-                       [ 0.        ,  0.        ,  1.        ]])
-    expected_cell = [[0.96592583,  0.25881905, 0.],
-                     [-2.99808654, 2.30249368, 0.],
-                     [0.44828774,  2.1906707,  3.]]
-    expected_atom_cartpos = [-1.86064664,  1.88257645]
-    slab = manual_slab_1_atom_trigonal
-    slab.apply_matrix_transformation(rot_15)
-    assert np.allclose(slab.ucell.T, expected_cell)
-    assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
+class TestUnitCellTransforms:
+    """Test simple transformations of the unit cell of a slab."""
 
-# TODO: unclear why this fails for the thick bulk slab
-@pytest.mark.parametrize('fixture', ('fe3o4_bulk_slab', 'fe3o4_thick_bulk_slab'))
-def test_bulk_symmetry_thin(fixture, request):
-    _, bulk, param = request.getfixturevalue(fixture)
-    findBulkSymmetry(bulk, param)
-    assert bulk.bulk_screws == [4]
-    assert len(bulk.bulk_glides) == 2
+    def test_rotation_on_trigonal_slab(self, manual_slab_1_atom_trigonal):
+        """Test application of a rotation to a trigonal slab."""
+        rot_15 = [[0.96592583, -0.25881905,  0.],
+                  [0.25881905,  0.96592583,  0.],
+                  [0.,  0.,  1.]]
+        expected_cell = [[0.96592583,  0.25881905,  0.],
+                         [-2.99808654, 2.30249368,  0.],
+                         [0.44828774,  2.1906707,   3.]]
+        expected_atom_cartpos = [-1.86064664,  1.88257645]
+        slab = manual_slab_1_atom_trigonal
+        slab.apply_matrix_transformation(rot_15)
+        assert np.allclose(slab.ucell.T, expected_cell)
+        assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
 
 
-class Test_restore_oristate:
-    @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
-    def test_save_restore_oristate_geo(self, ag100_slab_with_displacements_and_offsets):
-            slab, param = ag100_slab_with_displacements_and_offsets
-            slab_copy = deepcopy(slab)
-            for at in slab.atlist:
-                at.disp_geo_offset['all'] = np.array([0.1, 0.0, 0.0])
-                at.offset_geo['all'] = np.array([0.0, 0.0, 0.1])
-                at.mergeDisp(at.el)
+# This class currently contains NO TESTS, as the previous tests were
+# somewhat faulty. The purpose of restore_ori_state is to:
+#    (i) convert the current positions, vibrations and occupations
+#        into VIBROCC offsets, and
+#   (ii) fully clear the displacements of all atoms
+# The tests were originally set up by @amimre, who found a bug that
+# concerns runs where multiple refcalc-search pairs exists in RUN.
+# This bug is documented in Issue                                               # TODO @amimre: refer to relevant issue here
+class TestRestoreOristate:
+    """Collection of tests for reverting a slab to its ref-calc state."""
 
-            slab.restoreOriState()
-            for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
-                assert np.allclose(at_rest.disp_geo['all'], at_orig.disp_geo['all'])
+    @pytest.fixture(name='slab_and_copy')
+    def fixture_slab_and_copy(self, ag100_with_displacements_and_offsets):
+        """Return a Ag(100) slab and its deepcopy."""
+        slab, *_ = ag100_with_displacements_and_offsets
+        return slab, deepcopy(slab)
 
-    @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
-    def test_save_restore_oristate_vib(self, ag100_slab_with_displacements_and_offsets):
-            slab, param = ag100_slab_with_displacements_and_offsets
-            slab_copy = deepcopy(slab)
-            for at in slab.atlist:
-                at.offset_vib['all'] = 0.1
-                at.mergeDisp(at.el)
+    @staticmethod
+    def check_displacements_equal(atom1, atom2, which, element, subtests):
+        """Check that two atoms have the same requested displacements."""
+        _test_str = f'{atom1}, {element}, '
+        displ_1 = atom1.displacements[which]
+        displ_2 = atom2.displacements[which]
+        with subtests.test(_test_str + 'total'):
+            assert displ_1[element] == pytest.approx(displ_2[element])
 
-            slab.restoreOriState()
-            for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
-                assert np.allclose(at_rest.disp_vib['all'], at_orig.disp_vib['all'])
+        offs_1 = displ_1.vibrocc_offset
+        offs_2 = displ_2.vibrocc_offset
+        with subtests.test(_test_str + 'vibrocc'):
+            assert offs_1[element] == pytest.approx(offs_2[element])
 
-    @pytest.mark.xfail(reason="Awaiting new implementation of displacements.")
-    def test_save_restore_oristate_occ(self, ag100_slab_with_displacements_and_offsets):
-            slab, param = ag100_slab_with_displacements_and_offsets
-            slab_copy = deepcopy(slab)
-            for at in slab.atlist:
-                at.offset_occ[at.el] = 0.1
-                at.mergeDisp(at.el)
+        if which == 'geo':  # Check also offset
+            offs_1 = displ_1.displacements_offset
+            offs_2 = displ_2.displacements_offset
+            with subtests.test(_test_str + 'geo offset'):
+                assert offs_1[element] == pytest.approx(offs_2[element])
 
-            slab.restoreOriState()
-            for (at_rest, at_orig) in zip(slab.atlist, slab_copy.atlist):
-                assert np.allclose(at_rest.disp_occ[at_rest.el], at_orig.disp_occ[at_rest.el])
+
+@pytest.mark.xfail(reason='updateElementCounts is buggy', strict=True)
+def test_add_one_atom_n_elements():
+    """Check that adding one atom to a slab updates elements correctly."""
+    slab = Slab()
+    new_atom = Atom('C', (0, 0, 0), 1, slab)
+    slab.atlist.append(new_atom)
+    slab.updateElementCounts()
+    assert new_atom.el in slab.elements
+    assert slab.n_per_elem[new_atom.el] == 1

@@ -1,74 +1,119 @@
-"""Test module poscar.
+"""Tests for module viperleed.tleedmlib.files.poscar.
 
 Created on 2023-07-12
 
-@author: Alexander M. Imre
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 """
 
 from pathlib import Path
-import os
 import sys
 
 import pytest
+from pytest_cases import parametrize_with_cases, fixture
 
-vpr_path = str(Path(__file__).parent.parent.parent)
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
+VPR_PATH = str(Path(__file__).resolve().parents[3])
+if VPR_PATH not in sys.path:
+    sys.path.append(VPR_PATH)
 
+# pylint: disable=wrong-import-position
+# Will be fixed in installable version
 from viperleed.tleedmlib import symmetry
-from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.files import poscar
 
-
-class TestReadPOSCAR:
-    def test_read_slab_exists(self, example_poscars):
-        slab = example_poscars
-        assert slab
-
-    def test_read_slab_has_atoms(self, example_poscars):
-        slab = example_poscars
-        assert len(slab.atlist) > 0
-
-    def test_read_slab_n_atom_correct(self, slab_and_expectations):
-        slab, expected_n_atoms, *_ = slab_and_expectations
-        assert len(slab.atlist) == expected_n_atoms
+from ..poscar_slabs import CasePOSCARSlabs
+from ..helpers import exclude_tags, CaseTag
+# pylint: enable=wrong-import-position
 
 
-class TestWritePOSCAR:
-    # TODO: Test that the written POSCAR is the same as the read one.
-    def test_write_creates_files(self, example_poscars, tmp_path):
-        slab = example_poscars
-        poscar.write(slab, tmp_path / 'POSCAR')
-        assert (tmp_path / 'POSCAR').exists()
+_WITH_INFO = {'cases': CasePOSCARSlabs,
+              'filter': exclude_tags(CaseTag.NO_INFO)}
 
-    def test_write_does_not_modify_slab(self, example_poscars, tmp_path):
-        slab = example_poscars
+
+class TestPOSCARRead:
+    """Collection of tests for reading a POSACR file."""
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs)
+    def test_read_slab_has_atoms(self, args):
+        """Ensure that some atoms were read."""
+        slab, *_ = args
+        assert slab.atlist
+
+    @parametrize_with_cases('args', **_WITH_INFO)
+    def test_nr_atom_correct(self, args):
+        """Ensure that the correct number of atoms was read."""
+        slab, *_, info = args
+        assert len(slab.atlist) == info.poscar.n_atoms
+
+    @parametrize_with_cases('args', **_WITH_INFO)
+    def test_nr_atom_by_elem_correct(self, args):
+        """Ensure that the correct number of atoms was read."""
+        slab, *_, info = args
+        if not info.poscar.n_atoms_by_elem:
+            pytest.skip('No element-resolved atom counts available')
+        assert slab.n_per_elem == info.poscar.n_atoms_by_elem
+
+
+# TODO: Test that the written POSCAR is the same as the read one.
+class TestPOSCARWrite:
+    """Collection of tests for writing a POSACR file."""
+
+    @fixture(name='write_and_read')
+    def factory_write_and_read(self, tmp_poscar):
+        """Return the slab read after having written it to file."""
+        def write_then_read(slab, **kwargs):
+            poscar.write(slab, tmp_poscar, **kwargs)
+            return poscar.read(tmp_poscar)
+        return write_then_read
+
+    @staticmethod
+    def check_not_empty(file_path):
+        """Ensure that file_path points to a non-empty file."""
+        assert file_path.exists()
+        with file_path.open('r', encoding='utf-8') as written:
+            assert written.readline()
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs)
+    def test_file_written(self, args, tmp_poscar):
+        """Ensure that a POSCAR file exists after writing."""
+        slab, *_ = args
+        poscar.write(slab, tmp_poscar)
+        self.check_not_empty(tmp_poscar)
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs)
+    def test_ori_slab_nr_atoms_unchanged(self, args, tmp_poscar):
+        """Ensure that writing does not change the number of atoms."""
+        slab, *_ = args
         n_atoms_original = len(slab.atlist)
-        poscar.write(slab, tmp_path / 'POSCAR')
-        assert slab == example_poscars                                          # TODO: will always succeed because tests "is" if there's no __eq__
+        poscar.write(slab, tmp_poscar)
         assert len(slab.atlist) == n_atoms_original
 
-    def test_write_writes_correct_number_of_atoms(self, slab_and_expectations, tmp_path):
-        slab, expected_n_atoms, *_ = slab_and_expectations
-        poscar.write(slab, tmp_path / 'POSCAR')
-        # read the written POSCAR and check that the number of atoms is correct
-        written_slab = poscar.read(tmp_path / 'POSCAR')
-        assert len(written_slab.atlist) == expected_n_atoms
+    @parametrize_with_cases('args', **_WITH_INFO)
+    def test_nr_atoms_expected(self, args, write_and_read):
+        """Check that a written slab has the expected n_atoms."""
+        slab, *_, info = args
+        written_slab = write_and_read(slab)
+        assert len(written_slab.atlist) == info.poscar.n_atoms
 
-    def test_write_slab_with_symmetry(self, slab_pg_rp, tmp_path):
-        slab, *_ = slab_pg_rp
-        poscar.write(slab, tmp_path / 'POSCAR')
-        assert (tmp_path / 'POSCAR').exists()
+    def test_write_slab_with_symmetry(self, poscar_with_group, tmp_poscar):
+        """Ensure symmetry information are written without errors."""
+        slab, *_ = poscar_with_group
+        poscar.write(slab, tmp_poscar, comments='all')
+        self.check_not_empty(tmp_poscar)
+        with tmp_poscar.open('r', encoding='utf-8') as written:
+            sym_lines = (line for line in written if 'group' in line.lower())
+            sym_line = next(sym_lines, '')
+            assert str(slab.planegroup) in sym_line
 
-    def test_write_with_symmetry_n_atoms(self, slab_pg_rp, tmp_path):
-        slab, *_ = slab_pg_rp
-        poscar.write(slab, tmp_path / 'POSCAR')
-        written_slab = poscar.read(tmp_path / 'POSCAR')
+    def test_nr_atoms_conserved(self, poscar_with_group, write_and_read):
+        """Ensure that writing a slab conserves the number of atoms."""
+        slab, *_ = poscar_with_group
+        written_slab = write_and_read(slab, comments='all')
         assert len(written_slab.atlist) == len(slab.atlist)
 
-    def test_write_with_symmetry_pg(self, slab_pg_rp, tmp_path):
-        slab, pg, rp = slab_pg_rp
-        poscar.write(slab, tmp_path / 'POSCAR')
-        written_slab = poscar.read(tmp_path / 'POSCAR')
-        written_pg = symmetry.findSymmetry(written_slab, rp)
-        assert written_pg == pg
+    def test_group_conserved(self, poscar_with_group, write_and_read):
+        """Ensure that writing a slab conserves its detected plane group."""
+        slab, rpars, *_ = poscar_with_group
+        written_slab = write_and_read(slab)
+        symmetry.findSymmetry(written_slab, rpars)
+        assert written_slab.foundplanegroup == slab.foundplanegroup
