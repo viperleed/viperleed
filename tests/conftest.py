@@ -114,9 +114,9 @@ def ag100_with_displacements_and_offsets(ag100, data_path):
 # only one layer is present in the POSCAR.
 _PHASESHIFT_SETTINGS = {'cases': poscar_slabs.CasePOSCARSlabs,
                         'filter': exclude_tags(CaseTag.NO_INFO),
-                        }
+                        'scope': 'session'}
 
-@pytest_cases.fixture
+@pytest_cases.fixture(scope='session')
 @pytest_cases.parametrize_with_cases('args', **_PHASESHIFT_SETTINGS)
 def run_phaseshift(args, tensorleed_path, tmp_path_factory):
     """Execute a PHASESHIFTS calculation.
