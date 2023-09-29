@@ -126,7 +126,7 @@ def findBulkSymmetry(sl, rp):
     pcands = ts.getCandidateLayerPeriod(eps)
     if len(pcands) == 0:
         return
-    nl = len(ts.sublayers)
+    nl = ts.n_sublayers
     # check for screw axes
     checkrots = []
     if nl % 2 == 0:
@@ -244,7 +244,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     ts = copy.deepcopy(sl)
     if bulk:        # check whether there are at least 2 atomic layers
         ts.createSublayers(epsz)
-        if len(ts.sublayers) < 2:
+        if ts.n_sublayers < 2:
             ts = ts.doubleBulkSlab()
     ts.projectCToZ()
     ts.sort_by_z()

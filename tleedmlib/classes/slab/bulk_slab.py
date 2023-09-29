@@ -136,12 +136,12 @@ class BulkSlab(BaseSlab):
         """For a bulk slab, find at what offsets the sublayers repeat,
         checking only element and number of atoms. Returns a list of integer
         offsets between layer indices that are potentially equivalent."""
-        if len(self.sublayers) <= 1:
+        if self.n_sublayers < 2:
             return([])
         cl = []     # candidate layers
         h = self.ucell[2, 2]  # cell height; periodicity cannot go beyond h/2
         l0 = self.sublayers[0]
-        nl = len(self.sublayers)
+        nl = self.n_sublayers
         l0el = l0.atlist[0].el
         l0n = len(l0.atlist)
         for i, lay in enumerate(self.sublayers[1:]):
@@ -155,7 +155,7 @@ class BulkSlab(BaseSlab):
         while i < len(cl):
             wrong = False
             zoff = self.sublayers[cl[i]].cartbotz - self.sublayers[0].cartbotz
-            for j in range(1, int(np.ceil(len(self.sublayers)/2))):
+            for j in range(1, int(np.ceil(self.n_sublayers/2))):
                 if (self.sublayers[(j + cl[i]) % nl].atlist[0].el
                         != self.sublayers[j].atlist[0].el):
                     wrong = True
@@ -183,7 +183,7 @@ class BulkSlab(BaseSlab):
         ts.createSublayers(eps)
         baseLayer = ts.sublayers[0]
         baseInd = ts.sublayers.index(baseLayer)
-        nl = len(ts.sublayers)
+        nl = ts.n_sublayers
         ori = baseLayer.atlist[0].cartpos  # compare displacements from here
         repeatC = None
         for per in pcands:
@@ -235,8 +235,7 @@ class BulkSlab(BaseSlab):
         lowocclayer = self.getLowOccLayer()
         baseInd = self.sublayers.index(lowocclayer)
         ori = lowocclayer.atlist[0].cartpos
-        for at in self.sublayers[(baseInd + sldisp)
-                                 % len(self.sublayers)].atlist:
+        for at in self.sublayers[(baseInd + sldisp) % self.n_sublayers].atlist:
             transVecs.append((at.cartpos - np.dot(matrix, ori)).reshape(3, 1))
         for (i, sl) in enumerate(self.sublayers):
             coordlist = [at.cartpos for at in sl.atlist]
@@ -248,7 +247,7 @@ class BulkSlab(BaseSlab):
             transcoords = np.copy(oricm).transpose()
             transcoords = np.dot(matrix, transcoords)
             # now get coordinates of the sublayer to compare to
-            sl2 = self.sublayers[(i + sldisp) % len(self.sublayers)]
+            sl2 = self.sublayers[(i + sldisp) % self.n_sublayers]
             oricm2 = np.array([at.cartpos for at in sl2.atlist])
             oripm2 = np.dot(np.linalg.inv(uc), oricm2.transpose()) % 1.0
             oricm2 = np.dot(uc, oripm2).transpose()

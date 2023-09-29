@@ -221,11 +221,11 @@ def initialization(sl, rp, subdomain=False):
 
     # write POSCAR_bulk_appended
     n = 1
-    if len(bsl.sublayers) <= len(bsl.elements)*2:
+    if bsl.n_sublayers <= len(bsl.elements)*2:
         # For bulk slabs with very few layers, add a few more
         # repetitions to help the user see better the bulk part
         n += 1
-        if len(bsl.sublayers) <= len(bsl.elements):
+        if bsl.n_sublayers <= len(bsl.elements):
             n += 1
     try:
         poscar.write(sl.addBulkLayers(rp, n=n)[0],

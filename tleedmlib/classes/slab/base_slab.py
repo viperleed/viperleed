@@ -179,6 +179,11 @@ class BaseSlab(ABC):
         """Return the number of composite layers of this slab."""
         return len(self.layers)
 
+    @property
+    def n_sublayers(self):
+        """Return the number of sublayers in this slab."""
+        return len(self.sublayers)
+
     #                                                                           TODO: remove. Used only once. Also confusing because it's only in-plane
     @property
     def reciprocal_vectors(self):

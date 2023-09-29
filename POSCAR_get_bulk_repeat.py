@@ -119,11 +119,11 @@ def main():
     # find largest layer spacing in reduced POSCAR
     newbsl.createSublayers(eps)
     bulkcut = -1
-    if len(newbsl.sublayers) > 1:
+    if newbsl.n_sublayers > 1:
         maxdist = abs(newbsl.sublayers[1].cartbotz
                       - newbsl.sublayers[0].cartbotz)
         cutlayer = 0
-        for i in range(1, len(newbsl.sublayers) - 1):
+        for i in range(1, newbsl.n_sublayers - 1):
             d = abs(newbsl.sublayers[i+1].cartbotz
                     - newbsl.sublayers[i].cartbotz)
             if d > maxdist:

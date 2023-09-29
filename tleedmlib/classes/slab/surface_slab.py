@@ -274,11 +274,11 @@ class SurfaceSlab(BaseSlab):
                      / 2]
 
         # now look for potential second cut
-        if len(bsl.sublayers) > 1:
+        if bsl.n_sublayers > 1:
             maxdist = abs(bsl.sublayers[1].cartbotz
                           - bsl.sublayers[0].cartbotz)
             cutlayer = 0
-            for i in range(1, len(bsl.sublayers) - 1):
+            for i in range(1, bsl.n_sublayers - 1):
                 d = abs(bsl.sublayers[i+1].cartbotz
                         - bsl.sublayers[i].cartbotz)
                 if d > maxdist:
@@ -299,14 +299,14 @@ class SurfaceSlab(BaseSlab):
         a repeat vector for which the bulk matches the slab above. Returns that
         vector in cartesian coordinates, or None if no match is found."""
         eps = rp.SYMMETRY_EPS
-        if len(self.sublayers) == 0:
+        if not self.sublayers:
             self.createSublayers(rp.SYMMETRY_EPS_Z)
         if self.bulkslab is None:
             self.makeBulkSlab(rp)
-        if len(self.bulkslab.sublayers) == 0:
+        if not self.bulkslab.sublayers:
             self.bulkslab.createSublayers(rp.SYMMETRY_EPS_Z)
-        nsub = len(self.bulkslab.sublayers)
-        if len(self.sublayers) < 2*nsub:
+        nsub = self.bulkslab.n_sublayers
+        if self.n_sublayers < 2*nsub:
             return None
         # nonbulk_subl = self.sublayers[:-nsub]
         z_range = (self.sublayers[-nsub].atlist[0].cartpos[2],
