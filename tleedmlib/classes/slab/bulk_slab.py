@@ -72,10 +72,6 @@ class BulkSlab(BaseSlab):
         vector the symmetry plane at the origin is parallel to
     linklists : list of list of Atom
         List of lists of atoms which are linked by a symmetry operation
-    layers_initialized : bool
-        Set by self.createLayers
-    sites_initialized : bool
-        Set by self.initSites
     symbaseslab : Slab or None                                                  # TODO: do we need one??
         Slab with the smallest in-plane unit-cell area that shows
         the full symmetry of the slab.

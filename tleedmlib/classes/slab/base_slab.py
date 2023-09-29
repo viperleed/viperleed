@@ -98,10 +98,6 @@ class BaseSlab(ABC):
         vector the symmetry plane at the origin is parallel to
     linklists : list of list of Atom
         List of lists of atoms which are linked by a symmetry operation
-    layers_initialized : bool
-        Set by self.createLayers
-    sites_initialized : bool
-        Set by self.initSites
     symbaseslab : Slab or None
         Slab with the smallest in-plane unit-cell area that shows
         the full symmetry of the slab.
@@ -131,10 +127,6 @@ class BaseSlab(ABC):
         # Remember the last value of the ELEMENT_MIX parameter that
         # was applied. Prevents repeated applications
         self.last_element_mix = None                                            # base?
-
-        # Some not-so-useful attributes that will soon be removed
-        self.layers_initialized = False
-        self.sites_initialized = False
 
     @property
     def angle_between_ucell_and_coord_sys(self):
@@ -401,7 +393,6 @@ class BaseSlab(ABC):
             layer.getLayerPos()
             layer.num = i
         self.atlist = tmplist
-        self.layers_initialized = True
         return ct
 
     def createSublayers(self, eps=0.001):
@@ -497,10 +488,10 @@ class BaseSlab(ABC):
         sites."""
         self.collapseFractionalCoordinates()
         self.getCartesianCoordinates()
-        if not self.layers_initialized:
+        if not self.layers:
             self.createLayers(rpars)
         self.updateElements(rpars)
-        if not self.sites_initialized:
+        if not self.sitelist:
             self.initSites(rpars)
         if rpars.fileLoaded['VIBROCC']:
             for at in self.atlist:
@@ -748,7 +739,6 @@ class BaseSlab(ABC):
         for site in [s for s in sl if s.el in rp.ELEMENT_MIX]:
             site.mixedEls = rp.ELEMENT_MIX[site.el][:]
         self.sitelist = sl
-        self.sites_initialized = True
 
     def isEquivalent(self, slab, eps=0.001):
         """Compares the slab to another slab, returns True if all atom cartpos

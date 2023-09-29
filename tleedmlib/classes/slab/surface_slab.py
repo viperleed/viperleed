@@ -95,10 +95,6 @@ class SurfaceSlab(BaseSlab):
         at the time the displacement is assigned.
     deltas_initialized : bool
         Set by Rparams.generateSearchPars
-    layers_initialized : bool
-        Set by self.createLayers
-    sites_initialized : bool
-        Set by self.initSites
     preprocessed : bool
         True if the POSCAR that this slab was read from had the
         'Plane group = XY' comment in the header, indicating that
