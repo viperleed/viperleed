@@ -351,8 +351,7 @@ class TestSlabSymmetrization:
         rattled_slab, param, info = duplicate_all(slab, param, info)
         eps = 0.05
         param.SYMMETRY_EPS = 2 * 2**0.5 * eps
-        displacements = np.random.uniform(-eps, eps,
-                                          (len(slab.atlist), 2))
+        displacements = np.random.uniform(-eps, eps, (slab.n_atoms, 2))
         for atom, delta in zip(rattled_slab.atlist, displacements):
             atom.cartpos[:2] += delta
         rattled_slab.collapseCartesianCoordinates()

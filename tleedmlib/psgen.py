@@ -119,7 +119,7 @@ def runPhaseshiftGen_old(sl, rp,
         if supercell_size > maxcells:
             supercell_size = maxcells
             # don't warn - this is a large unit cell either way.
-        if len(nsl.atlist) * supercell_size > maxats:
+        if nsl.n_atoms * supercell_size > maxats:
             logger.debug(
                 "Phaseshift generation: Given element "
                 "concentrations would require a very large supercell. "
@@ -133,7 +133,7 @@ def runPhaseshiftGen_old(sl, rp,
                 els = len([el for el in rp.ELEMENT_MIX[site.el]
                            if site.occ[el] > 0.])
                 minsize = max(minsize, int(np.ceil(2*els / ats)))
-            supercell_size = max(minsize, int(maxats / len(nsl.atlist)))
+            supercell_size = max(minsize, int(maxats / nsl.n_atoms))
 
     subatlists = {}     # atlist per block tuple
     if supercell_size > 1:  # construct supercell to get enough atoms
@@ -212,7 +212,7 @@ def runPhaseshiftGen_old(sl, rp,
             ol += '\n'
         output += ol
 
-    output += (str(len(nsl.atlist))+"  "+str(len(nsl.atlist))
+    output += (str(nsl.n_atoms)+"  "+str(nsl.n_atoms)
                + "                  #AtomTypes,#OccupiedAtomTypes\n")
     ptl = [el.lower() for el in PERIODIC_TABLE]
 
@@ -628,7 +628,7 @@ def make_atom_types(rp, sl, additional_layers):
         if scsize > maxcells:
             scsize = maxcells
             # don't warn - this is a large unit cell either way.
-        if len(nsl.atlist) * scsize > maxats:
+        if nsl.n_atoms * scsize > maxats:
             logger.debug(
                 "Phaseshift generation: Given element "
                 "concentrations would require a very large supercell. "
@@ -642,7 +642,7 @@ def make_atom_types(rp, sl, additional_layers):
                 els = len([el for el in rp.ELEMENT_MIX[site.el]
                            if site.occ[el] > 0.])
                 minsize = max(minsize, int(np.ceil(2 * els / ats)))
-            scsize = max(minsize, int(maxats / len(nsl.atlist)))
+            scsize = max(minsize, int(maxats / nsl.n_atoms))
 
 
     if scsize > 1:  # construct supercell to get enough atoms

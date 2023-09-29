@@ -174,8 +174,7 @@ class SurfaceSlab(BaseSlab):
             n_per_el = {k: n_per_el[k] for k in sorted(n_per_el.keys())}
         self.n_per_elem = n_per_el
         for elem, pos in zip(elems, ase_atoms.get_scaled_positions()):
-            n_atoms = len(self.atlist)
-            self.atlist.append(Atom(elem, pos, n_atoms + 1, self))
+            self.atlist.append(Atom(elem, pos, self.n_atoms + 1, self))
         self.getCartesianCoordinates()
         return self
 

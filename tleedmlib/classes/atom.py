@@ -554,8 +554,7 @@ class Atom:
             The duplicate atom that was created.
 
         """
-        newat = Atom(self.el, np.copy(self.pos), len(self.slab.atlist),
-                     self.slab)
+        newat = Atom(self.el, np.copy(self.pos), self.slab.n_atoms, self.slab)
         if addToAtlists:
             self.slab.atlist.append(newat)
             if self.layer is not None:

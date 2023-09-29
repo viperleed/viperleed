@@ -169,6 +169,11 @@ class BaseSlab(ABC):
         """Return whether this is a bulk slab."""
         return False
 
+    @property
+    def n_atoms(self):
+        """Return the number of atoms in this slab."""
+        return len(self.atlist)
+
     #                                                                           TODO: remove. Used only once. Also confusing because it's only in-plane
     @property
     def reciprocal_vectors(self):
@@ -249,7 +254,7 @@ class BaseSlab(ABC):
                     newbulkats.append(new_atom)
                     duplicated.append(at)
                     added_this_loop.append(new_atom)
-                    new_atom.oriN = len(ts.atlist)
+                    new_atom.oriN = ts.n_atoms
 
                 # old atoms get shifted up along ucell c
                 at.cartpos += bulkc_project_to_c

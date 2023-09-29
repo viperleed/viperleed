@@ -336,7 +336,7 @@ def getTensorOriStates(sl, path):
         logger.debug("Exception:", exc_info=True)
         raise RuntimeError("Could not check Tensors: Error loading old input "
                            "files") from exc
-    if len(tsl.atlist) != len(sl.atlist):
+    if tsl.n_atoms != sl.n_atoms:
         logger.error(f"POSCAR from {dn} is incompatible with "
                      "current POSCAR.")
         raise RuntimeError("Tensors file incompatible")

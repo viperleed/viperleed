@@ -43,7 +43,7 @@ class TestPOSCARRead:
     def test_nr_atom_correct(self, args):
         """Ensure that the correct number of atoms was read."""
         slab, *_, info = args
-        assert len(slab.atlist) == info.poscar.n_atoms
+        assert slab.n_atoms == info.poscar.n_atoms
 
     @parametrize_with_cases('args', **_WITH_INFO)
     def test_nr_atom_by_elem_correct(self, args):
@@ -84,16 +84,16 @@ class TestPOSCARWrite:
     def test_ori_slab_nr_atoms_unchanged(self, args, tmp_poscar):
         """Ensure that writing does not change the number of atoms."""
         slab, *_ = args
-        n_atoms_original = len(slab.atlist)
+        n_atoms_original = slab.n_atoms
         poscar.write(slab, tmp_poscar)
-        assert len(slab.atlist) == n_atoms_original
+        assert slab.n_atoms == n_atoms_original
 
     @parametrize_with_cases('args', **_WITH_INFO)
     def test_nr_atoms_expected(self, args, write_and_read):
         """Check that a written slab has the expected n_atoms."""
         slab, *_, info = args
         written_slab = write_and_read(slab)
-        assert len(written_slab.atlist) == info.poscar.n_atoms
+        assert written_slab.n_atoms == info.poscar.n_atoms
 
     def test_write_slab_with_symmetry(self, poscar_with_group, tmp_poscar):
         """Ensure symmetry information are written without errors."""
@@ -109,7 +109,7 @@ class TestPOSCARWrite:
         """Ensure that writing a slab conserves the number of atoms."""
         slab, *_ = poscar_with_group
         written_slab = write_and_read(slab, comments='all')
-        assert len(written_slab.atlist) == len(slab.atlist)
+        assert written_slab.n_atoms == slab.n_atoms
 
     def test_group_conserved(self, poscar_with_group, write_and_read):
         """Ensure that writing a slab conserves its detected plane group."""

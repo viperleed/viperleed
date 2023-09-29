@@ -100,13 +100,12 @@ def main():
     else:
         logging.debug("Slab and bulk elements are identical.")
 
-    batoms = len(bulk.atlist)
     cfact = slab.ucell[2][2]/bulk.ucell[2][2]
     slab.ucell[:, 2] *= (cfact + 1) / cfact        # resize the slab unit cell
     # recalculate c for the slab atoms (undistort & shift)
     for atom in slab.atlist:
         atom.pos[2] = (atom.pos[2]*(cfact/(cfact+1)))+(1/(cfact+1))
-        atom.oriN += batoms
+        atom.oriN += bulk.n_atoms
     # copy atoms from bulk and add them to the slab
     for atom in bulk.atlist:
         newat = copy.copy(atom)
