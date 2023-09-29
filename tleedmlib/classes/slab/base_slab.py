@@ -292,6 +292,10 @@ class BaseSlab(ABC):
         list of floats."""
         # first interpret LAYER_CUTS parameter - can be a list of strings
         self.check_a_b_out_of_plane()
+
+        if self.is_bulk:
+            bulk_cuts = ()
+
         ct = []
         rgx = re.compile(r'\s*(dz|dc)\s*\(\s*(?P<cutoff>[0-9.]+)\s*\)')
         al = self.atlist[:]
@@ -1092,6 +1096,11 @@ class BaseSlab(ABC):
         if changes_z:
             self.layers.clear()
             self.sublayers.clear()
+
+        if self.is_bulk:
+            return
+
+        if changes_z:
             self.bulkslab = None
         elif self.bulkslab:
             self.bulkslab.apply_matrix_transformation(trafo_matrix)
