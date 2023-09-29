@@ -495,7 +495,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             rp.setHaltingLevel(2)
                             break
                         for ln in il:
-                            if ln > len(sl.layers):
+                            if ln > sl.n_layers:
                                 logger.warning(
                                     'DISPLACEMENTS file: layer number out of '
                                     'bounds, skipping line: '+pside)

@@ -285,7 +285,7 @@ def writePARAM(sl, rp, lmax=-1):
                + str(mnlm[lmax-1])+')\n')
     output += '\nC  3. Parameters for (3D) geometry within (2D) unit mesh\n\n'
     output += '      PARAMETER (MNSITE  = '+str(len(sl.sitelist))+')\n'
-    output += '      PARAMETER (MNLTYPE = '+str(len(sl.layers))+')\n'
+    output += '      PARAMETER (MNLTYPE = '+str(sl.n_layers)+')\n'
     mnbrav = 0
     mnsub = 0
     mnstack = 0
@@ -514,11 +514,11 @@ def writeAUXGEO(sl, rp):
                '           ---\n')
     output += ('-----------------------------------------------------'
                '--------------\n')
-    ol = i3.write([len(sl.layers)]).ljust(lj)
+    ol = i3.write([sl.n_layers]).ljust(lj)
     output += ol + 'NLTYPE: number of different layer types\n'
     blayers = [lay for lay in sl.layers if lay.isBulk]
     nblayers = [lay for lay in sl.layers if not lay.isBulk]
-    layerOffsets = [np.zeros(3) for _ in range(len(sl.layers) + 1)]
+    layerOffsets = [np.zeros(3) for _ in range(sl.n_layers + 1)]
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     for i, layer in enumerate(sl.layers):
@@ -628,7 +628,7 @@ def writeAUXGEO(sl, rp):
                '  ---\n')
     output += ('--------------------------------------------------------------'
                '-----\n')
-    nonbulk = len(sl.layers)-rp.N_BULK_LAYERS
+    nonbulk = sl.n_layers - rp.N_BULK_LAYERS
     if len(rp.TENSOR_OUTPUT) < nonbulk:    # check TENSOR_OUTPUT parameter
         if len(rp.TENSOR_OUTPUT) == 1:
             # interpret one value as concerning all
@@ -646,7 +646,7 @@ def writeAUXGEO(sl, rp):
             'Parameters TENSOR_OUTPUT is defined, but contains more values '
             'than there are non-bulk layers. Excess values will be ignored.')
         rp.setHaltingLevel(1)
-    ol = i3.write([len(sl.layers)-rp.N_BULK_LAYERS]).ljust(lj)
+    ol = i3.write([sl.n_layers - rp.N_BULK_LAYERS]).ljust(lj)
     output += ol + 'NSTACK: number of layers stacked onto bulk\n'
     for layer in list(reversed(nblayers)):
         n = layer.num + 1

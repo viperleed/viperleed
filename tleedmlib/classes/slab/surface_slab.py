@@ -383,7 +383,7 @@ class SurfaceSlab(BaseSlab):
     def makeBulkSlab(self, rp):
         """Copies self to create a bulk slab, in which everything apart from the
         bulk layers is deleted. Returns that bulk slab."""
-        if  len(self.layers) < 2:
+        if self.n_layers < 2:
             err_txt = 'Less than two layers detected. Check POSCAR and consider modifying LAYER_CUTS.'
             _LOGGER.error(err_txt)
             raise RuntimeError(err_txt)

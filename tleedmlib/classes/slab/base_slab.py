@@ -174,6 +174,11 @@ class BaseSlab(ABC):
         """Return the number of atoms in this slab."""
         return len(self.atlist)
 
+    @property
+    def n_layers(self):
+        """Return the number of composite layers of this slab."""
+        return len(self.layers)
+
     #                                                                           TODO: remove. Used only once. Also confusing because it's only in-plane
     @property
     def reciprocal_vectors(self):
@@ -546,11 +551,11 @@ class BaseSlab(ABC):
     def getMinLayerSpacing(self):
         """Returns the minimum distance (cartesian) between two layers in the
         slab. Returns zero if there is only one layer, or none are defined."""
-        if len(self.layers) < 2:
+        if self.n_layers < 2:
             return 0
         self.getCartesianCoordinates()
         return min([(self.layers[i].cartori[2] - self.layers[i-1].cartbotz)
-                    for i in range(1, len(self.layers))])
+                    for i in range(1, self.n_layers)])
 
     def getMinUnitCell(self, rp, warn_convention=False):
         """Check if there is a 2D unit cell smaller than the current one.
