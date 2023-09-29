@@ -105,10 +105,6 @@ class BaseSlab(ABC):
     symbaseslab : Slab or None
         Slab with the smallest in-plane unit-cell area that shows
         the full symmetry of the slab.
-    bulk_screws : list of int
-        Integer list of rotation orders present in the bulk.
-    bulk_glides : list of SymPlane
-        List of glide-symmetry planes present in the bulk.
     """
 
     def __init__(self):
