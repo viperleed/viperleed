@@ -592,7 +592,7 @@ class Atom:
             True if positions match, else False.
 
         """
-        abt = np.transpose(self.slab.ucell[0:2, 0:2])
+        abt = self.slab.ab_cell.T
         complist = [self.cartpos[0:2]]
         # if we're close to an edge or corner, also check translations:
         for j in range(0, 2):

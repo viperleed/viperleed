@@ -198,10 +198,10 @@ class BulkSlab(BaseSlab):
         if repeatC is None:
             return None
         # optimize C vector to be close to Z, if possible
-        cFracBase = np.dot(np.linalg.inv(ts.ucell[:2, :2]), repeatC[:2]) % 1.0
-        newC = np.append(np.dot(ts.ucell[:2, :2], cFracBase), -repeatC[2])
+        cFracBase = np.dot(np.linalg.inv(ts.ab_cell), repeatC[:2]) % 1.0
+        newC = np.append(np.dot(ts.ab_cell, cFracBase), -repeatC[2])
         for (i, j) in [(0, -1), (-1, 0), (-1, -1)]:
-            v = np.dot(ts.ucell[:2, :2], cFracBase + np.array([i, j]))
+            v = np.dot(ts.ab_cell, cFracBase + np.array([i, j]))
             if (np.linalg.norm(np.append(v, -repeatC[2]))
                     < np.linalg.norm(newC)):
                 newC[:2] = v

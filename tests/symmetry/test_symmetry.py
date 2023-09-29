@@ -143,11 +143,11 @@ class TestPlaneGroupFinding:
     def test_cell_rotated(self, args, caplog, re_match, subtests, first_case):
         """Check rotation of slabs that need one to get the group right."""
         slab, param, info, *_ = args
-        a_before, _ = slab.reciprocal_vectors.copy()
-        area_before = np.linalg.det(slab.reciprocal_vectors)
+        a_before, _ = slab.ab_cell.T.copy()
+        area_before = np.linalg.det(slab.ab_cell)
         symmetry.findSymmetry(slab, param)
-        a_after, _ = slab.reciprocal_vectors
-        area_after = np.linalg.det(slab.reciprocal_vectors)
+        a_after, _ = slab.ab_cell.T
+        area_after = np.linalg.det(slab.ab_cell)
         with subtests.test('successful logging'):
             with may_fail(first_case, self._known_incorrect_rotations):
                 assert re_match(r'.*unit.*cell.*change.*higher.*symmetry.*',
@@ -520,7 +520,7 @@ class TestSymmetryReduction:
         """Check unit-cell rotations when reducing p6m."""
         slab, param, *_ = slab_p6m
         symmetry.findSymmetry(slab, param)
-        a_before, b_before = slab.surface_vectors.copy()
+        a_before, b_before = slab.ab_cell.T.copy()
         groups = ('cm[1 0]', 'cm[0 1]', 'cm[2 1]', 'cm[1 2]',
                   'cmm[1 0]', 'cmm[0 1]')
         # Need to get info about rotation angle. It's in the
@@ -528,7 +528,7 @@ class TestSymmetryReduction:
         hex_ = simple_slabs.CaseSimpleHexagonalSlabs()
         for group in groups:
             symmetry.setSymmetry(slab, param, group)
-            a_after, b_after = slab.surface_vectors
+            a_after, b_after = slab.ab_cell.T
             # Convert group name into a method of hex_
             name = group.replace('[', '_').replace(']', '').replace(' ', '')
             method = getattr(hex_, f'case_hex_{name}')

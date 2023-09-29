@@ -79,8 +79,8 @@ def main():
         return 1  # Error reading
 
     # if a and b vectors differ, cancel operation
-    if (np.linalg.norm(slab.ucell[:, 0] - bulk.ucell[:, 0]) > 1e-4
-            or np.linalg.norm(slab.ucell[:, 1] - bulk.ucell[:, 1]) > 1e-4):
+    if (np.linalg.norm(slab.ab_cell.T[0] - bulk.ab_cell.T[0]) > 1e-4
+            or np.linalg.norm(slab.ab_cell.T[1] - bulk.ab_cell.T[1]) > 1e-4):
         logging.error("Slab and bulk unit cell vectors are not equal in a and "
                       "b (error > 1e-4). Stopping operation...")
         cleanup(consoleHandler)

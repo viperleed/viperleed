@@ -129,6 +129,16 @@ class BaseSlab(ABC):
         self.last_element_mix = None                                            # base?
 
     @property
+    def ab_cell(self):
+        """Return the 2D portion of the unit cell."""
+        try:
+            return self.ucell[:2, :2]
+        except IndexError:  # Uninitialized
+            raise InvalidUnitCellError(
+                f"{type(self).__name__} has no unit cell defined."
+                ) from None
+
+    @property
     def angle_between_ucell_and_coord_sys(self):
         """Return angle between first unit-cell vector and coordinate system.
 
@@ -144,7 +154,7 @@ class BaseSlab(ABC):
             If this property is accessed before there is a unit cell
             defined.
         """
-        a_vec, *_ = self.surface_vectors
+        a_vec, *_ = self.ab_cell.T
         # NB: arctan2 requires (y, x) order
         return np.degrees(np.arctan2(a_vec[1], a_vec[0]))
 
@@ -177,19 +187,7 @@ class BaseSlab(ABC):
         np.ndarray, shape=(2, 2)
             Array of *reciprocal* lattice vectors *as rows*.
         """
-        return 2*np.pi*np.linalg.inv(self.surface_vectors).T
-
-    # @property
-    # def ab_cell(self):
-    @property
-    def surface_vectors(self):
-        """Return the 2D portion of the unit cell."""
-        try:
-            return self.ucell[:2, :2].T
-        except IndexError:  # Uninitialized
-            raise InvalidUnitCellError(
-                f'{type(self).__name__} has no unit cell defined'
-                ) from None
+        return 2*np.pi*np.linalg.inv(self.ab_cell.T).T
 
     @classmethod
     def from_slab(cls, other):
@@ -581,7 +579,7 @@ class BaseSlab(ABC):
         # TODO: write a testcase for the reduction of POSCAR Sb on Si(111)
         eps = rp.SYMMETRY_EPS
         epsz = rp.SYMMETRY_EPS_Z
-        abst = self.ucell[:2, :2].T
+        abst = self.ab_cell.T
 
         # Create a test slab: C projected to Z
         ts = copy.deepcopy(self)
@@ -670,8 +668,7 @@ class BaseSlab(ABC):
         boundary conditions into account. For this calculation, the cell is internally expanded into a supercell."""
 
         #unit vectors
-        a = self.ucell[:,0] # vector a
-        b = self.ucell[:,1] # vector b
+        a, b = self.ab_cell.T
 
         # Compare unit vector lengths and decide based on this how many cells to add around
         # A minimum 3x3 supercell is constructed for nearest neighbor query, but may be exteneded if vector lengths
@@ -752,7 +749,7 @@ class BaseSlab(ABC):
         # reorder sublayers by Z to then compare by index
         slab1.sublayers.sort(key=lambda sl: sl.cartbotz)
         slab2.sublayers.sort(key=lambda sl: sl.cartbotz)
-        ab = self.ucell[:2, :2]
+        ab = self.ab_cell
         for (i, sl) in enumerate(slab1.sublayers):
             if (len(sl.atlist) != len(slab2.sublayers[i].atlist)
                     or abs(sl.cartbotz-slab2.sublayers[i].cartbotz) > eps
@@ -1172,7 +1169,7 @@ class BaseSlab(ABC):
                          np.dot(np.array([[1, 0], [0, -1]]), rotm))
         # rotates to have plane in x direction, mirrors on x
         if glide:
-            abt = self.ucell[:2, :2].T
+            abt = self.ab_cell.T
             glidevec = (symplane.par[0]*abt[0]+symplane.par[1]*abt[1])/2
         else:
             glidevec = np.zeros(2)
@@ -1216,7 +1213,7 @@ class BaseSlab(ABC):
         rotmirm = np.dot(np.linalg.inv(rotm),
                          np.dot(np.array([[1, 0], [0, -1]]), rotm))
         # rotates to have plane in x direction, mirrors on x
-        ab = self.ucell[:2, :2]
+        ab = self.ab_cell
         abt = ab.T
         releps = [eps / np.linalg.norm(abt[j]) for j in range(0, 2)]
         shiftv = symplane.pos.reshape(2, 1)
@@ -1268,7 +1265,7 @@ class BaseSlab(ABC):
         """Evaluates whether the slab is equivalent to itself when rotated
         around the axis with the given rotational order"""
         m = rotation_matrix_order(order)
-        ab = self.ucell[:2, :2]
+        ab = self.ab_cell
         abt = ab.T
         releps = [eps / np.linalg.norm(abt[j]) for j in range(0, 2)]
         shiftv = axis.reshape(2, 1)

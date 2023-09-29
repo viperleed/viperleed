@@ -32,7 +32,7 @@ class TestAtomTransforms:                                                       
         """Test the expected outcome of mirroring atoms of a simple slab."""
         slab = manual_slab_3_atoms
         mirrored_slab = deepcopy(slab)
-        symplane = SymPlane((0, 0), (0, 1), abt=slab.surface_vectors)
+        symplane = SymPlane((0, 0), (0, 1), abt=slab.ab_cell.T)
         mirrored_slab.mirror(symplane)
         mirrored_slab.collapseCartesianCoordinates()
         assert all(

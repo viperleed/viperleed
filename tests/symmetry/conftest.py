@@ -46,7 +46,7 @@ def translate_atoms(slab, shift):
     # Since fractional positions and Cartesian positions are
     #    frac = cart @ ab_inv,
     # we can move Cartesians by shift, and fractional by:
-    frac_shift = np.dot(shift, np.linalg.inv(slab.surface_vectors))
+    frac_shift = np.dot(shift, np.linalg.inv(slab.ab_cell.T))
     for atom in slab.atlist:
         atom.cartpos[:2] += shift
         atom.pos[:2] += frac_shift

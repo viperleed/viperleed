@@ -243,7 +243,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
 
     """
     deltas_required = False
-    abst = np.transpose(sl.ucell[:2, :2])
+    abst = sl.ab_cell.T
     # if the unit cell gets modified by SYM_DELTA, restore it afterwards
     uCellState = sl.ucell_mod
     (lines, name) = dispblock

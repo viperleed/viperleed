@@ -54,8 +54,7 @@ def initialization(sl, rp, subdomain=False):
 
     # check whether the slab unit cell is minimal:
     changecell, mincell = sl.getMinUnitCell(rp)
-    transform = np.dot(np.transpose(sl.ucell[:2, :2]),
-                       np.linalg.inv(mincell)).round()
+    transform = np.dot(sl.ab_cell.T, np.linalg.inv(mincell)).round()
     ws = writeWoodsNotation(transform)
     if changecell and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
                                  np.identity(2)).all():
@@ -533,10 +532,10 @@ def init_domains(rp):
         raise RuntimeError("Failed to read domain parameters")
     # check whether bulk unit cells match
     logger.info("Starting domain consistency check...")
-    bulkuc0 = rp.domainParams[0].sl.bulkslab.ucell[:2, :2].T
+    bulkuc0 = rp.domainParams[0].sl.bulkslab.ab_cell.T
     eps = 1e-4
     for dp in rp.domainParams[1:]:
-        bulkuc = dp.sl.bulkslab.ucell[:2, :2].T
+        bulkuc = dp.sl.bulkslab.ab_cell.T
         if np.all(abs(bulkuc-bulkuc0) < eps):
             continue
         # if the unit cells don't match right away, try if rotation matches
@@ -564,9 +563,9 @@ def init_domains(rp):
             rp.setHaltingLevel(3)
             return
     logger.debug("Domain bulk unit cells are compatible.")
-    uc0 = rp.domainParams[0].sl.ucell[:2, :2].T
+    uc0 = rp.domainParams[0].sl.ab_cell.T
     largestDomain = rp.domainParams[0]
-    allMatched = all(np.all(abs(dp.sl.ucell[:2, :2].T - uc0) < 1e-4)
+    allMatched = all(np.all(abs(dp.sl.ab_cell.T - uc0) < 1e-4)
                      for dp in rp.domainParams[1:])
     supercellRequired = []
     if allMatched:
@@ -574,13 +573,13 @@ def init_domains(rp):
     else:
         maxArea = abs(np.linalg.det(uc0))
         for dp in rp.domainParams[1:]:
-            uc = dp.sl.ucell[:2, :2].T
+            uc = dp.sl.ab_cell.T
             if abs(np.linalg.det(uc)) > maxArea:
                 maxArea = abs(np.linalg.det(uc))
                 largestDomain = dp
-        uc0 = largestDomain.sl.ucell[:2, :2].T
+        uc0 = largestDomain.sl.ab_cell.T
         for dp in [p for p in rp.domainParams if p != largestDomain]:
-            uc = dp.sl.ucell[:2, :2].T
+            uc = dp.sl.ab_cell.T
             if not np.all(abs(uc-uc0) < 1e-4):
                 dp.refcalcRequired = True
                 trans = np.dot(uc0, np.linalg.inv(uc))

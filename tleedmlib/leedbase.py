@@ -565,7 +565,7 @@ def getLEEDdict(sl, rp):
         return None
     d = {"eMax": rp.THEO_ENERGIES[1],
          "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
-         "surfBasis": sl.ucell[:2, :2].T,
+         "surfBasis": sl.ab_cell.T,
          "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,
          "bulk3Dsym": sl.bulkslab.getBulk3Dstr(),
          "screenAperture": rp.SCREEN_APERTURE,

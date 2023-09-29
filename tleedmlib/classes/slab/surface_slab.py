@@ -184,8 +184,7 @@ class SurfaceSlab(BaseSlab):
         from it and creates a new bulk slab with that cell. If a different
         SUPERLATTICE was defined by the user, outputs an error and returns."""
         # calculate new SUPERLATTICE matrix
-        abst = np.transpose(self.ucell[:2, :2])
-        newSL = np.dot(abst, np.linalg.inv(newcell))
+        newSL = self.ab_cell.T.dot(np.linalg.inv(newcell))
         if not np.all(abs(newSL - newSL.round()) < 5e-2):
             _LOGGER.error(
                 'Automatically detected bulk SUPERLATTICE is '
@@ -423,8 +422,9 @@ class SurfaceSlab(BaseSlab):
         superlattice = np.identity(3, dtype=float)
         superlattice[:2, :2] = rp.SUPERLATTICE.T
         bsl.ucell = np.dot(bsl.ucell, np.linalg.inv(superlattice))
-        if (rp.superlattice_defined and np.linalg.norm(bsl.ucell[:2, 0]) >
-                np.linalg.norm(bsl.ucell[:2, 1]) + 1e-4):
+        a_vec, b_vec = bsl.ab_cell.T
+        if (rp.superlattice_defined
+                and np.linalg.norm(a_vec) > np.linalg.norm(b_vec) + 1e-4):
             _LOGGER.warning(
                 'The bulk unit cell defined by SUPERLATTICE does '
                 'not follow standard convention: the first vector is larger '

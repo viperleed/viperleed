@@ -366,10 +366,10 @@ def writeAUXLATGEO(sl, rp):
     output += rp.systemName+' '+rp.timestamp+'\n'
     ens = [rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01, rp.THEO_ENERGIES[2]]
     output += formatter['energies'].write(ens).ljust(lj) + 'EI,EF,DE\n'
-    ucsurf = np.transpose(sl.ucell[:2, :2])
+    ucsurf = sl.ab_cell.T
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
-    ucbulk = sl.bulkslab.ucell[:2, :2].T
+    ucbulk = sl.bulkslab.ab_cell.T
     output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
     output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
     if rp.TL_VERSION < 1.7:
