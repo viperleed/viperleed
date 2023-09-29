@@ -90,7 +90,7 @@ def test_ase_n_atoms(ase_atoms, info):
 
 def slab_from_ase(ase_atoms):
     """Return a Slab from an ase.Atoms object."""
-    return Slab(ase_atoms)
+    return Slab.from_ase(ase_atoms)
 
 
 @parametrize_with_cases('case', cases=cases_ase)

@@ -343,7 +343,8 @@ def _apply_transform(slab, transform, apply_cut=False):
 
     if indices:
         # Swapping axes will require to make a new bulk slab for sure
-        slab.bulkslab = None
+        if not slab.is_bulk:
+            slab.bulkslab = None
         new_axes, old_axes = ((ind,) for ind in indices)
         slab.ucell.T[new_axes] = slab.ucell.T[old_axes]
         for atom in slab:
@@ -370,7 +371,7 @@ def _apply_transform(slab, transform, apply_cut=False):
 
 def _make_and_check_slab(ase_object, transforms):
     """Return a Slab from ase.Atoms with transformations applied."""
-    slab = Slab(ase_atoms=ase_object)
+    slab = Slab.from_ase(ase_object)
 
     # Transformations of slab:
     # Mirror/rotation/swapping and/or stretching/shrinking

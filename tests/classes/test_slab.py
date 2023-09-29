@@ -20,7 +20,8 @@ if VPR_PATH not in sys.path:
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
 from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.slab import Slab, SymPlane
+from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.classes.sym_entity import SymPlane
 # pylint: enable=wrong-import-position
 
 

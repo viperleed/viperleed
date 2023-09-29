@@ -18,7 +18,7 @@ import scipy.spatial as sps
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import (addUnequalPoints, angle, dist_from_line,
                                       rotation_matrix_order, rotation_matrix)
-from viperleed.tleedmlib.classes.slab import SymPlane
+from viperleed.tleedmlib.classes.sym_entity import SymPlane
 from viperleed.tleedmlib.files import parameters
 
 logger = logging.getLogger("tleedm.symmetry")
