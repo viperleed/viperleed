@@ -704,7 +704,7 @@ class BaseSlab(ABC):
         boundary conditions into account. For this calculation, the cell is internally expanded into a supercell."""
 
         #unit vectors
-        a, b = self.ab_cell.T
+        a, b, _ = self.ucell.T
 
         # Compare unit vector lengths and decide based on this how many cells to add around
         # A minimum 3x3 supercell is constructed for nearest neighbor query, but may be exteneded if vector lengths
