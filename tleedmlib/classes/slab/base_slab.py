@@ -32,7 +32,7 @@ from viperleed.tleedmlib.classes.atom import Atom,
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
-from .slab_errors import InvalidUnitCellError
+from .slab_errors import InvalidUnitCellError, SlabError
 
 
 _LOGGER = logging.getLogger('tleedm.slab')
@@ -963,36 +963,18 @@ class BaseSlab(ABC):
                     self.collapseCartesianCoordinates()
             self.ucell_mod = self.ucell_mod[:len(restoreTo)]
 
-    def sort_by_element(self):                                                  # TODO: this could be simplified using sets
-        """Sorts atlist by elements, preserving the element order from the
-        original POSCAR"""
-        # unfortunately, simply calling the sort function by element does not
-        #    preserve the element order from the POSCAR
-        esortlist = sorted(self, key=lambda atom: atom.el)
-        lastel = ''
-        tmpElList = []
-        isoLists = []
-        # generate sub-lists isolated by elements
-        for at in esortlist:
-            if at.el != lastel:
-                tmpElList.append(at.el)
-                isoLists.append([])
-                lastel = at.el
-            isoLists[-1].append(at)
-        sortedlist = []
-        # going through the elements in the order they appear in POSCAR, find
-        #   the corresponding index in tmpElList and append the atoms of that
-        #   type to sorted list
-        for el in self.elements:
-            try:
-                i = tmpElList.index(el)
-            except ValueError:
-                _LOGGER.error('Unexpected point encountered '
-                              'in Slab.sort_by_element: '
-                              'Could not find element in element list')
-            else:
-                sortedlist.extend(isoLists[i])
-        self.atlist = sortedlist
+    def sort_by_element(self):
+        """Sort `slab.atlist` by element, preserving the element order."""
+        _map = {e: i for i, e in enumerate(self.elements)}
+        try:
+            self.atlist.sort(key=lambda atom: _map[atom.el])
+        except KeyError as missing_el:
+            _err = ('Unexpected point encountered in '
+                    f'{type(self).__name__}.sort_by_element: Could '
+                    f'not find element {missing_el} in element list')
+            _LOGGER.error(_err)
+            raise SlabError('Perhaps you added some atoms and did not call '
+                            f'.updateElementCount? {self.elements=}')
 
     def sort_by_z(self, botToTop=False):
         """Sorts atlist by z coordinate"""
