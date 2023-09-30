@@ -157,7 +157,7 @@ class BaseSlab(ABC):
             return self.ucell[:2, :2]
         except IndexError:  # Uninitialized
             raise InvalidUnitCellError(
-                f"{type(self).__name__} has no unit cell defined."
+                f'{type(self).__name__} has no unit cell defined.'
                 ) from None
 
     @property

@@ -528,4 +528,3 @@ class SurfaceSlab(BaseSlab):
         atoms get deleted."""
         for (i, at) in enumerate(self):
             at.oriN = i+1
-
