@@ -561,7 +561,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.error("No data found in fd.out. Check if file is empty.")
         raise RuntimeError                                                      # TODO: better exception
     # clear oriState for atoms and sites, current state will be new origin
-    for at in sl.atlist:
+    for at in sl:
         at.oriState = None
     for site in sl.sitelist:
         site.oriState = None
@@ -703,7 +703,7 @@ def _reinitialize_deltas(param, slab):
                 "with the new set of tensors.")
 
     # empty atom.deltasGenerated
-    for at in slab.atlist:
+    for at in slab:
         at.deltasGenerated = []
 
 

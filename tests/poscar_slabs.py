@@ -263,7 +263,7 @@ def case_double_bulk(bulk):
     # Propagate symmetry information by using duplicate atoms
     sym_info = info.symmetry
     _map = {at.duplicateOf.oriN: at.oriN
-            for at in thick_slab.atlist if at.duplicateOf}
+            for at in thick_slab if at.duplicateOf}
     on_planes = sym_info.on_planes
     on_planes += tuple(new_at for base_at, new_at in _map.items()
                        if base_at in sym_info.on_planes)

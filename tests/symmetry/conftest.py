@@ -47,7 +47,7 @@ def translate_atoms(slab, shift):
     #    frac = cart @ ab_inv,
     # we can move Cartesians by shift, and fractional by:
     frac_shift = np.dot(shift, np.linalg.inv(slab.ab_cell.T))
-    for atom in slab.atlist:
+    for atom in slab:
         atom.cartpos[:2] += shift
         atom.pos[:2] += frac_shift
     slab.ucell_mod.append(('add', shift))
@@ -96,7 +96,7 @@ def displace_atoms():
                     atom.assignDisp(_mode, displ)
             else:
                 atom.assignDisp(_mode, displ)
-        for atom in slab.atlist:
+        for atom in slab:
             try:
                 disp = atom.disp_geo_offset[atom.el]
             except KeyError:

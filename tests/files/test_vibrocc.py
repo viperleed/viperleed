@@ -22,7 +22,7 @@ class TestReadVIBROCC:
     def test_interpret_offset_allowed(self, displaced_atom):
         """Interpret correctly an allowed occupation offset."""
         slab = displaced_atom.slab
-        for atom in slab.atlist:
+        for atom in slab:
             atom.mergeDisp(atom.el)
         atom = displaced_atom
         assert atom.disp_occ[atom.el] == approx([0.4, 0.5, 0.6, 0.7, 0.8, 0.9])

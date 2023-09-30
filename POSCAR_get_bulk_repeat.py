@@ -109,8 +109,8 @@ def main():
 
     rp.BULK_REPEAT = -newC
 
-    bsl.atlist = [at for at in bsl.atlist if at.cartpos[2] > bsl.topat_ori_z
-                  - abs(newC[2])]
+    bsl.atlist = [at for at in bsl
+                  if at.cartpos[2] > bsl.topat_ori_z - abs(newC[2])]
     bsl.layers[0].atlist = bsl.atlist
 
     rp.SUPERLATTICE = np.eye(2)
@@ -158,15 +158,15 @@ def main():
     # create POSCAR with reduced size
     newsl = copy.deepcopy(sl)
     newsl.sort_by_z()
-    topBulkAt = [at for at in newsl.atlist if at.pos[2] <= cut][-1]
-    botSlabAt = [at for at in newsl.atlist if at.pos[2] > cut][0]
+    topBulkAt = [at for at in newsl if at.pos[2] <= cut][-1]
+    botSlabAt = [at for at in newsl if at.pos[2] > cut][0]
     fracRepeat = np.dot(np.linalg.inv(newsl.ucell), newC)
     newZero = (topBulkAt.pos[2]
                + (abs(botSlabAt.pos[2] - topBulkAt.pos[2]) / 2)
                - abs(fracRepeat[2]))
-    newsl.atlist = [at for at in newsl.atlist if at.pos[2] > newZero]
+    newsl.atlist = [at for at in newsl if at.pos[2] > newZero]
     newsl.updateElementCount()   # update the number of atoms per element
-    for at in newsl.atlist:
+    for at in newsl:
         at.pos[2] -= newZero
     newsl.getCartesianCoordinates()
     newsl.ucell[:, 2] = newsl.ucell[:, 2] * (1 - newZero)

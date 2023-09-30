@@ -37,7 +37,7 @@ class TestAtomTransforms:                                                       
         mirrored_slab.collapseCartesianCoordinates()
         assert all(
             at.isSameXY(mir_at.cartpos[:2])
-            for at, mir_at in zip(slab.atlist, reversed(mirrored_slab.atlist))
+            for at, mir_at in zip(slab, reversed(mirrored_slab))
             )
 
     def test_180_rotation(self, manual_slab_3_atoms):
@@ -48,7 +48,7 @@ class TestAtomTransforms:                                                       
         rotated_slab.collapseCartesianCoordinates()
         assert all(
             at.isSameXY(rot_at.cartpos[:2])
-            for at, rot_at in zip(slab.atlist, reversed(rotated_slab.atlist))
+            for at, rot_at in zip(slab, reversed(rotated_slab))
             )
 
 

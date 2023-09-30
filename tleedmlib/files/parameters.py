@@ -1646,8 +1646,7 @@ class ParameterInterpreter:                                                     
                              'function, but no slab was passed.')
                         )
                     n = int(sl[i].split('(')[1].split(')')[0])
-                    csatlist = sorted(self.slab.atlist,
-                                        key=lambda atom: atom.pos[2])
+                    csatlist = sorted(self.slab, key=lambda atom: atom.pos[2])
                     while n > 0:
                         at = csatlist.pop()
                         if at.el == assignment.flags[0]:

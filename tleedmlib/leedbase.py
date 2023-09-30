@@ -340,8 +340,8 @@ def getTensorOriStates(sl, path):
         logger.error(f"POSCAR from {dn} is incompatible with "
                      "current POSCAR.")
         raise RuntimeError("Tensors file incompatible")
-    for at in sl.atlist:
-        tal = [tat for tat in tsl.atlist if at.oriN == tat.oriN]
+    for at in sl:
+        tal = [tat for tat in tsl if at.oriN == tat.oriN]
         if len(tal) != 1:
             logger.error(f"POSCAR from {dn} is incompatible with "
                          "current POSCAR.")

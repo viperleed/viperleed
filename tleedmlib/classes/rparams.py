@@ -932,8 +932,8 @@ class Rparams:
         if (2 in self.runHistory or 42 in self.runHistory
                 or sl.deltas_initialized):
             # if delta has been run, information what deltas exist is stored
-            atlist = [at for at in sl.atlist if (not at.layer.isBulk and
-                                                 len(at.deltasGenerated) > 0)]
+            atlist = [at for at in sl if (not at.layer.isBulk and
+                                          len(at.deltasGenerated) > 0)]
         else:
             logger.debug("Delta-amplitudes were not calculated in current "
                          "run; looking for delta files by name.")
@@ -946,8 +946,8 @@ class Rparams:
                     delN.append(int(filename.split('_')[1]))
                 except ValueError:
                     filelist.remove(filename)
-            atlist = [at for at in sl.atlist if (not at.layer.isBulk and
-                                                 at.oriN in delN)]
+            atlist = [at for at in sl if (not at.layer.isBulk and
+                                          at.oriN in delN)]
             for at in atlist:
                 deltaCandidates = [fn for fn in filelist
                                    if int(fn.split('_')[1]) == at.oriN]
@@ -982,7 +982,7 @@ class Rparams:
                                      "{}, element {}".format(at, el))
                         raise RuntimeError("Missing Delta file")
             # sanity check: are displacements defined but deltas missing?
-            for at in sl.atlist:
+            for at in sl:
                 # check whether at has non-trivial displacements:
                 found = False
                 for d in [at.disp_occ, at.disp_geo, at.disp_vib]:

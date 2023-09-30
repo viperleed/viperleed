@@ -104,7 +104,7 @@ def runPhaseshiftGen_old(sl, rp,
         for (site, el) in [(site, el) for (site, el) in blocks if site.el
                            in rp.ELEMENT_MIX and (site.occ[el] > 0. or
                                                   el in site.mixedEls)]:
-            al = [at for at in nsl.atlist if at.site == site]
+            al = [at for at in nsl if at.site == site]
             atom_count = len(al)*site.occ[el]
             if minnum < 0 or (minnum > atom_count >= 0):
                 minnum = atom_count
@@ -129,7 +129,7 @@ def runPhaseshiftGen_old(sl, rp,
             # determine minimum size to have 2 of each element
             minsize = 1
             for site in [s for s in nsl.sitelist if s.el in rp.ELEMENT_MIX]:
-                ats = len([at for at in nsl.atlist if at.site == site])
+                ats = len([at for at in nsl if at.site == site])
                 els = len([el for el in rp.ELEMENT_MIX[site.el]
                            if site.occ[el] > 0.])
                 minsize = max(minsize, int(np.ceil(2*els / ats)))
@@ -164,7 +164,7 @@ def runPhaseshiftGen_old(sl, rp,
             # sort by occupancy values
             occdict = dict(sorted(occdict.items(),
                                   key=lambda kv: (kv[1], kv[0])))
-            al = [at for at in nsl.atlist if at.site == site]
+            al = [at for at in nsl if at.site == site]
             totats = len(al)
             for el in occdict:
                 subatlists[(site, el)] = []
@@ -179,8 +179,7 @@ def runPhaseshiftGen_old(sl, rp,
                 logger.warning("Error in PHASESHIFTS file "
                                "generation: Not all atoms were distributed!")
         else:
-            subatlists[(site, site.el)] = [at for at in nsl.atlist
-                                           if at.site == site]
+            subatlists[(site, site.el)] = [at for at in nsl if at.site == site]
     blocks = [(site, el) for (site, el) in blocks
               if len(subatlists[(site, el)]) > 0]
 #    if bulk:
@@ -239,7 +238,7 @@ def runPhaseshiftGen_old(sl, rp,
         chgdenrelpath = charge_density_short_path
 
     nsl.sort_by_z(botToTop=True)
-    for at in nsl.atlist:
+    for at in nsl:
         # realcartpos = np.dot(nsl.ucell, at.pos)
         # use the "real" cartesian system, with Z going up
         for (site, el) in blocks:
@@ -385,7 +384,7 @@ def runPhaseshiftGen_old(sl, rp,
     for (site, el) in blocks:   # does the averaging over atoms of same element
         writeblock = False
         pssum = None
-        for (i, at) in enumerate(nsl.atlist):
+        for (i, at) in enumerate(nsl):
             if at in newbulkats or at not in subatlists[(site, el)]: # ignored because added before
                 continue
             # if bulk or at.site not in bulksites:
@@ -597,7 +596,7 @@ def make_atom_types(rp, sl, additional_layers):
     nsl = extended_cell
 
     # lowest z position from original slab: (anything below is new bulk) !!! LEED coordinates
-    max_z_sl = max([atom.cartpos[2] for atom in sl.atlist])
+    max_z_sl = max([atom.cartpos[2] for atom in sl])
 
     blocks = []
     #        (same as POSCAR if no ELEMENT_MIX, ELEMENT_MIX elements if not)
@@ -613,7 +612,7 @@ def make_atom_types(rp, sl, additional_layers):
         for (site, el) in [(site, el) for (site, el) in blocks if site.el
                                                                   in rp.ELEMENT_MIX and (site.occ[el] > 0. or
                                                                                          el in site.mixedEls)]:
-            al = [at for at in nsl.atlist if at.site == site]
+            al = [at for at in nsl if at.site == site]
             atcount = len(al) * site.occ[el]
             if minnum < 0 or (minnum > atcount >= 0):
                 minnum = atcount
@@ -638,7 +637,7 @@ def make_atom_types(rp, sl, additional_layers):
             # determine minimum size to have 2 of each element
             minsize = 1
             for site in [s for s in nsl.sitelist if s.el in rp.ELEMENT_MIX]:
-                ats = len([at for at in nsl.atlist if at.site == site])
+                ats = len([at for at in nsl if at.site == site])
                 els = len([el for el in rp.ELEMENT_MIX[site.el]
                            if site.occ[el] > 0.])
                 minsize = max(minsize, int(np.ceil(2 * els / ats)))
@@ -844,7 +843,7 @@ def organize_atoms_by_types(newbulkats, nsl, sl, rp, additional_layers):
 
     number_of_atoms_in_bulk_layer = len(newbulkats)
     extended_slab, new_bulk_atoms = sl.addBulkLayers(rp, additional_layers)
-    for atom in extended_slab.atlist:
+    for atom in extended_slab:
         if atom not in new_bulk_atoms:
             new_bulk = False
             if (atom.site, atom.el, new_bulk) not in atom_types.keys():
@@ -882,7 +881,7 @@ def organize_atoms_by_types(newbulkats, nsl, sl, rp, additional_layers):
 
 def estimate_bulk_layer(atom, nsl, max_z_sl, additional_layers):
     """Returns the bulk layer the atom belongs to based on the z coordinate."""
-    max_z_nsl = max([atom.cartpos[2] for atom in nsl.atlist])
+    max_z_nsl = max([atom.cartpos[2] for atom in nsl])
     bulk_layer_thickness = (max_z_nsl - max_z_sl) / additional_layers
     if atom.cartpos[2] < max_z_sl:
         layer = None

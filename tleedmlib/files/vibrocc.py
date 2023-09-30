@@ -176,7 +176,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
                              + plist[1])
                 continue
             else:
-                targetatlist = [at for at in slab.atlist if at.oriN == ind]
+                targetatlist = [at for at in slab if at.oriN == ind]
                 if len(targetatlist) == 1:
                     targetat = targetatlist[0]
                 else:
@@ -397,7 +397,7 @@ def writeVIBROCC(sl, rp, filename="VIBROCC_OUT", silent=False):
     output += "\n= Search offsets\n"
     # figure out which atoms to write, in which order
     offsetList = []    # metric per atom
-    for at in [at for at in sl.atlist if not at.layer.isBulk]:
+    for at in [at for at in sl if not at.layer.isBulk]:
         to = 0
         # !!! TODO: Think about weights for the three
         for el in at.offset_occ:

@@ -254,7 +254,7 @@ class TestSymmetryConstraints:
         if not info.symmetry.link_groups:
             pytest.skip('Not enough symmetry information available')
         with may_fail(first_case, self._known_invalid_constraints):
-            for atom in slab.atlist:
+            for atom in slab:
                 if atom.oriN in info.symmetry.on_planes:
                     assert isinstance(atom.freedir, np.ndarray)
                 elif atom.oriN in info.symmetry.on_axes:
@@ -352,7 +352,7 @@ class TestSlabSymmetrization:
         eps = 0.05
         param.SYMMETRY_EPS = 2 * 2**0.5 * eps
         displacements = np.random.uniform(-eps, eps, (slab.n_atoms, 2))
-        for atom, delta in zip(rattled_slab.atlist, displacements):
+        for atom, delta in zip(rattled_slab, displacements):
             atom.cartpos[:2] += delta
         rattled_slab.collapseCartesianCoordinates()
         return rattled_slab, slab, param, info, *rest

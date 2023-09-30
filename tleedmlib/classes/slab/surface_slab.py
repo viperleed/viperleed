@@ -122,8 +122,8 @@ class SurfaceSlab(BaseSlab):
     @property
     def thickness(self):
         """Return the thickness of this slab along z."""
-        top_atom_z = max([at.cartpos[2] for at in self.atlist])
-        bottom_atom_z = min([at.cartpos[2] for at in self.atlist])
+        top_atom_z = max([at.cartpos[2] for at in self])
+        bottom_atom_z = min([at.cartpos[2] for at in self])
         return top_atom_z - bottom_atom_z
         # return abs(top_atom_z - bottom_atom_z)
 
@@ -264,12 +264,12 @@ class SurfaceSlab(BaseSlab):
 
         # calculate cut plane
         frac_bulk_thickness = abs(newC[2]) / abs(self.ucell[2, 2])
-        frac_lowest_pos = min([at.pos[2] for at in self.atlist])
+        frac_lowest_pos = min([at.pos[2] for at in self])
         frac_bulk_onset = (frac_lowest_pos + frac_bulk_thickness
                            - (rp.SYMMETRY_EPS_Z / self.ucell[2, 2]))
-        slab_cuts = [(max([at.pos[2] for at in self.atlist
+        slab_cuts = [(max([at.pos[2] for at in self
                           if at.pos[2] < frac_bulk_onset])
-                     + min([at.pos[2] for at in self.atlist
+                     + min([at.pos[2] for at in self
                             if at.pos[2] > frac_bulk_onset]))
                      / 2]
 
@@ -288,7 +288,7 @@ class SurfaceSlab(BaseSlab):
                 bulkcut_frac_from_lowest = (
                     bsl.sublayers[cutlayer].atlist[0].pos[2]
                     - (maxdist / (2 * abs(bsl.ucell[2, 2])))
-                    - min([at.pos[2] for at in bsl.atlist]))
+                    - min([at.pos[2] for at in bsl]))
                 slab_cuts.append(frac_lowest_pos
                                  + (bulkcut_frac_from_lowest
                                     * bsl.ucell[2, 2] / self.ucell[2, 2]))
@@ -370,10 +370,10 @@ class SurfaceSlab(BaseSlab):
                     rp.setHaltingLevel(2)
                     return []
             r *= 1.2    # TODO: !!! test if this is enough
-            surfats.update(a for a in self.atlist
+            surfats.update(a for a in self
                            if (a.pos[2] >= atom.pos[2]
                                and a not in covered))
-            covered.update(a for a in self.atlist
+            covered.update(a for a in self
                            if (a.pos[2] < atom.pos[2]
                                and a.isSameXY(atom.cartpos[:2], eps=r)))
             if len(covered) + len(surfats) >= len(atoms):
@@ -391,7 +391,7 @@ class SurfaceSlab(BaseSlab):
         # construct bulk slab
         bsl = BulkSlab.from_slab(self)
         bsl.resetSymmetry()
-        bsl.atlist = [at for at in bsl.atlist if at.layer.isBulk]
+        bsl.atlist = [at for at in bsl if at.layer.isBulk]
         bsl.layers = [lay for lay in bsl.layers if lay.isBulk]
         bsl.getCartesianCoordinates()
         al = bsl.atlist[:]     # temporary copy
@@ -434,12 +434,12 @@ class SurfaceSlab(BaseSlab):
         bsl.ucell_mod = []
         # position in c is now random; make topmost bulk atom top
         topc = topat.pos[2]
-        for at in bsl.atlist:
+        for at in bsl:
             at.pos[2] = (at.pos[2] - topc + 0.9999) % 1.
         # now center around cell midpoint
-        cl = [at.pos[2] for at in bsl.atlist]
+        cl = [at.pos[2] for at in bsl]
         midpos = (max(cl)+min(cl))/2
-        for at in bsl.atlist:
+        for at in bsl:
             at.pos[2] = (at.pos[2] - midpos + 0.5) % 1.
         bsl.getCartesianCoordinates(updateOrigin=True)
         bsl.updateElementCount()   # update the number of atoms per element
@@ -475,7 +475,7 @@ class SurfaceSlab(BaseSlab):
         for site in self.sitelist:
             if site.oriState is None:
                 continue
-            siteats = [at for at in self.atlist if at.site == site]
+            siteats = [at for at in self if at.site == site]
             for el in site.occ:
                 for at in siteats:
                     o = site.vibamp[el] - site.oriState.vibamp[el]
@@ -488,7 +488,7 @@ class SurfaceSlab(BaseSlab):
                 site.occ[el] = site.oriState.occ[el]
         uci = np.linalg.inv(self.ucell)
         self.getCartesianCoordinates()
-        for at in self.atlist:
+        for at in self:
             if at.oriState is None:
                 continue
             for el in at.disp_occ.keys():
@@ -517,7 +517,7 @@ class SurfaceSlab(BaseSlab):
         self.updateLayerCoordinates()
         if keepDisp:
             return
-        for at in self.atlist:
+        for at in self:
             at.deltasGenerated = []
             at.initDisp(force=True)
             at.constraints = {1: {}, 2: {}, 3: {}}
@@ -526,6 +526,6 @@ class SurfaceSlab(BaseSlab):
     def updateAtomNumbers(self):
         """Updates atom oriN - should not happen normally, but necessary if
         atoms get deleted."""
-        for (i, at) in enumerate(self.atlist):
+        for (i, at) in enumerate(self):
             at.oriN = i+1
 

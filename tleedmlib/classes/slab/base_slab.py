@@ -128,6 +128,14 @@ class BaseSlab(ABC):
         # was applied. Prevents repeated applications
         self.last_element_mix = None                                            # base?
 
+    def __iter__(self):
+        """Return an iterator of Atoms in self."""
+        return iter(self.atlist)
+
+    def __reversed__(self):
+        """Return a reversed iterator over Atoms in self."""
+        return reversed(self.atlist)
+
     @property
     def ab_cell(self):
         """Return the 2D portion of the unit cell."""
@@ -366,7 +374,7 @@ class BaseSlab(ABC):
         b = True if rparams.N_BULK_LAYERS > 0 else False
         newlayer = Layer(self, 0, b)
         self.layers.append(newlayer)
-        for atom in self.atlist:
+        for atom in self:
             # only check for new layer if we're not in the top layer already
             if laynum < len(ct):
                 if atom.pos[2] > ct[laynum]:
@@ -414,7 +422,7 @@ class BaseSlab(ABC):
         self.sort_by_z()
         subl = []  # will be a list of sublayers, using the Layer class
         for el in self.elements:
-            sublists = [[a for a in self.atlist if a.el == el]]
+            sublists = [[a for a in self if a.el == el]]
             # first, split at points where two atoms are more than eps apart
             i = 0
             while i < len(sublists):
@@ -489,7 +497,7 @@ class BaseSlab(ABC):
     def collapseFractionalCoordinates(self):
         """Finds atoms outside the parallelogram spanned by the unit vectors
         a and b and moves them inside."""
-        for at in self.atlist:
+        for at in self:
             at.pos = at.pos % 1.0
 
     # def full_update(self, rparams):
@@ -507,7 +515,7 @@ class BaseSlab(ABC):
         if not self.sitelist:
             self.initSites(rpars)
         if rpars.fileLoaded['VIBROCC']:
-            for at in self.atlist:
+            for at in self:
                 at.initDisp()
 
     @abstractmethod
@@ -536,7 +544,7 @@ class BaseSlab(ABC):
         """Calculates fractional coordinates for all atoms from their
         cartesian coordinates, using the slab unit cell."""
         uci = np.linalg.inv(self.ucell)
-        for at in self.atlist:
+        for at in self:
             tp = np.copy(at.cartpos)
             tp[2] = self.topat_ori_z-tp[2]
             at.pos = np.dot(uci, tp)
@@ -698,14 +706,14 @@ class BaseSlab(ABC):
         supercell = self.makeSupercell(transform)
 
 
-        atom_coords = [atom.cartpos for atom in supercell.atlist] # Atom coordinates in supercell
+        atom_coords = [atom.cartpos for atom in supercell] # Atom coordinates in supercell
         # For NN query use KDTree from scipy.spacial
         tree = KDTree(atom_coords)
 
         NN_dict = {} # Dict containing Atom and NN will be returned
 
         # Now query atoms in center cell for NN distances and save to dict
-        for atom in self.atlist:
+        for atom in self:
             coord = atom.cartpos
             coord += (i+1)*a + (j+1)*b # central cell
 
@@ -859,12 +867,12 @@ class BaseSlab(ABC):
             i = 0
             while i < len(subl.atlist):
                 j = i+1
-                baseat = [a for a in self.atlist
+                baseat = [a for a in self
                           if a.oriN == subl.atlist[i].oriN][0]
                 while j < len(subl.atlist):
                     if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
                                                eps=rp.SYMMETRY_EPS):
-                        for a in [a for a in self.atlist
+                        for a in [a for a in self
                                   if a.oriN == subl.atlist[j].oriN]:
                             a.duplicateOf = baseat
                         subl.atlist.pop(j)
@@ -911,9 +919,9 @@ class BaseSlab(ABC):
         self.sortOriginal()
         self.sort_by_element()
         bulkAtsRenumbered = []
-        for (i, at) in enumerate(self.atlist):
+        for (i, at) in enumerate(self):
             if self.bulkslab is not None:
-                for bat in [a for a in self.bulkslab.atlist
+                for bat in [a for a in self.bulkslab
                             if a.oriN == at.oriN
                             and a not in bulkAtsRenumbered]:
                     bat.oriN = i+1
@@ -931,7 +939,7 @@ class BaseSlab(ABC):
             oplist = self.ucell_mod[len(restoreTo):]
             for op in list(reversed(oplist)):
                 if op[0] == 'add':
-                    for at in self.atlist:
+                    for at in self:
                         at.cartpos[0:2] -= op[1]
                     self.collapseCartesianCoordinates()
                 elif op[0] == 'lmul':
@@ -947,7 +955,7 @@ class BaseSlab(ABC):
         original POSCAR"""
         # unfortunately, simply calling the sort function by element does not
         #    preserve the element order from the POSCAR
-        esortlist = sorted(self.atlist, key=lambda atom: atom.el)
+        esortlist = sorted(self, key=lambda atom: atom.el)
         lastel = ''
         tmpElList = []
         isoLists = []
@@ -987,7 +995,7 @@ class BaseSlab(ABC):
         """Updates the number of atoms per element."""
         updated_n_per_element = {}
         for el in self.elements:
-            n = len([at for at in self.atlist if at.el == el])
+            n = len([at for at in self if at.el == el])
             if n > 0:
                 updated_n_per_element[el] = n
         self.n_per_elem = updated_n_per_element
@@ -1188,7 +1196,7 @@ class BaseSlab(ABC):
             glidevec = (symplane.par[0]*abt[0]+symplane.par[1]*abt[1])/2
         else:
             glidevec = np.zeros(2)
-        for at in self.atlist:
+        for at in self:
             at.cartpos[:2] -= symplane.pos     # translate to plane
             at.cartpos[:2] = np.dot(rotmirm, at.cartpos[:2])    # apply mirror
             at.cartpos[:2] += symplane.pos     # translate back
@@ -1200,7 +1208,7 @@ class BaseSlab(ABC):
         translates back"""
         self.getCartesianCoordinates()
         m = rotation_matrix_order(order)
-        for at in self.atlist:
+        for at in self:
             # translate origin to candidate point, rotate, translate back
             at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
         self.getFractionalCoordinates()
@@ -1355,7 +1363,7 @@ class BaseSlab(ABC):
         releps = [eps / np.linalg.norm(uct[j]) for j in range(0, 3)]
         shiftv = tv.reshape(3, 1)
         # unlike in-plane operations, this one cannot be done sublayer-internal
-        coordlist = [at.cartpos for at in self.atlist]
+        coordlist = [at.cartpos for at in self]
         shiftm = np.tile(shiftv, len(coordlist))
         oricm = np.array(coordlist)  # original cartesian coordinate matrix
         oricm[:, 2] *= -1

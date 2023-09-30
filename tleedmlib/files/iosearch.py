@@ -1103,7 +1103,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         else:
             parinds = rp.searchResultConfig[0]
     # If atom and site original states are not yet saved, do it now:
-    for at in sl.atlist:
+    for at in sl:
         at.storeOriState()
     for site in sl.sitelist:
         if site.oriState is None:
@@ -1112,7 +1112,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
 
     sl.getCartesianCoordinates()
     uci = np.linalg.inv(sl.ucell)
-    for at in sl.atlist:
+    for at in sl:
         # make list of searchpars addressing this atom:
         sps = [sp for sp in rp.searchpars if sp.atom == at and sp.el != "vac"]
         if len(sps) > 0:
@@ -1173,7 +1173,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     sl.updateLayerCoordinates()
     # now update site occupations and vibrations:
     for site in sl.sitelist:
-        siteats = [at for at in sl.atlist if at.site == site
+        siteats = [at for at in sl if at.site == site
                    and not at.layer.isBulk]
         if not siteats: # site is only found in bulk
             continue

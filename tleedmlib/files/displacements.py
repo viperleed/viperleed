@@ -501,7 +501,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                     'bounds, skipping line: '+pside)
                                 rp.setHaltingLevel(2)
                                 break
-                            numlist.extend([at.oriN for at in sl.atlist
+                            numlist.extend([at.oriN for at in sl
                                             if at.layer == sl.layers[ln-1]])
                 else:  # loop finished without beak
                     _break = False
@@ -580,7 +580,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                         'element or site label, skipping line.')
                     rp.setHaltingLevel(2)
                     break
-            for at in sl.atlist:
+            for at in sl:
                 if ((at.oriN in numlist or len(numlist) == 0)
                         and at.site in targetsites and not at.layer.isBulk):
                     targetAtEls.append((at, targetel))
@@ -946,7 +946,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
     if name:
         o = " "+name
     logger.debug("DISPLACEMENTS block{} was read successfully".format(o))
-    for at in sl.atlist:
+    for at in sl:
         if len(at.disp_occ) > 5:
             logger.error(
                 'DISPLACEMENTS file: '+str(at)+' has occupations defined for '

@@ -113,7 +113,7 @@ def findBulkSymmetry(sl, rp):
         logger.debug("Bulk unit cell could be reduced with repeat vector "
                      "[{:.5f} {:.5f} {:.5f}]".format(*(-newC)))
         # apply new unit cell
-        ts.atlist = [at for at in ts.atlist
+        ts.atlist = [at for at in ts
                      if at.cartpos[2] > ts.topat_ori_z - abs(newC[2])]
         ts.layers[0].atlist = ts.atlist
         ts.layers = [ts.layers[0]]
@@ -388,9 +388,9 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 mindist = min(np.linalg.norm(p-c) for c in corners)
                 topsympoint = p
         # shift origin
-        for at in sl.atlist:
+        for at in sl:
             at.cartpos[0:2] -= topsympoint
-        for at in ts.atlist:
+        for at in ts:
             at.cartpos[0:2] -= topsympoint
         sl.ucell_mod.append(('add', -topsympoint))
         sl.getFractionalCoordinates()
@@ -444,7 +444,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             if dist_from_line(
                     oriplane.pos, oriplane.pos+oriplane.dir, shiftv) > eps:
                 shiftv = -1*shiftv
-            for at in sl.atlist:
+            for at in sl:
                 at.cartpos[0:2] -= shiftv
             # ts is not used any more in this case, otherwise those atoms
             #  would have to be shifted as well.
@@ -460,7 +460,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         #  there (potentially), test
         if toprotsym == 2 and celltype in ["hexagonal", "rhombic"]:
             shiftslab = copy.deepcopy(ts)
-            for at in shiftslab.atlist:
+            for at in shiftslab:
                 at.cartpos[:2] -= abst[0]/2
             shiftslab.getFractionalCoordinates()
             # test diagonal mirror at shifted origin
@@ -469,7 +469,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 planegroup = "cmm"
                 ts = shiftslab
                 # correct origin
-                for at in sl.atlist:
+                for at in sl:
                     at.cartpos[0:2] -= abst[0]/2
                 sl.ucell_mod.append(('add', -abst[0]/2))
                 sl.getFractionalCoordinates()
@@ -751,7 +751,7 @@ def setSymmetry(sl, rp, targetsym):
                               * np.dot(np.array(sl.orisymplane.par[1],
                                                 -sl.orisymplane.par[0]),
                                        abst))
-                    for at in sl.atlist:
+                    for at in sl:
                         at.cartpos[:2] -= shiftv
                     sl.ucell_mod.append(('add', -shiftv))
                     sl.getFractionalCoordinates()
@@ -777,7 +777,7 @@ def setSymmetry(sl, rp, targetsym):
             elif planegroup == 'pmg':   # reducing to: pm, pg
                 if targetsym == 'pm':  # needs origin shift
                     shiftv = 0.25*np.dot(sl.orisymplane.par, abst)
-                    for at in sl.atlist:
+                    for at in sl:
                         at.cartpos[:2] -= shiftv
                     sl.ucell_mod.append(('add', -shiftv))
                     sl.getFractionalCoordinates()
@@ -789,7 +789,7 @@ def setSymmetry(sl, rp, targetsym):
             elif planegroup == 'pgg':   # reducing to: pg
                 if (tspar[0], tspar[1]) in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
                     shiftv = 0.25*np.dot(np.array(tspar[1], -tspar[0]), abst)
-                    for at in sl.atlist:
+                    for at in sl:
                         at.cartpos[:2] -= shiftv
                     sl.ucell_mod.append(('add', -shiftv))
                     sl.getFractionalCoordinates()
@@ -817,7 +817,7 @@ def setSymmetry(sl, rp, targetsym):
                             # shift origin to glide plane
                             shiftv = 0.25*np.dot(np.array(tspar[1],
                                                           -tspar[0]), abst)
-                            for at in sl.atlist:
+                            for at in sl:
                                 at.cartpos[0:2] -= shiftv
                             sl.ucell_mod.append(('add', -shiftv))
                             sl.getFractionalCoordinates()
@@ -825,7 +825,7 @@ def setSymmetry(sl, rp, targetsym):
                         sl.planegroup = targetsym
                     elif targetsym == "pmg":
                         shiftv = 0.25*(abst[0]+abst[1])
-                        for at in sl.atlist:
+                        for at in sl:
                             at.cartpos[0:2] -= shiftv
                         sl.ucell_mod.append(('add', -shiftv))
                         sl.getFractionalCoordinates()
@@ -877,7 +877,7 @@ def setSymmetry(sl, rp, targetsym):
                     else:
                         allowed = False
                 if allowed:
-                    for at in sl.atlist:
+                    for at in sl:
                         at.cartpos[:2] -= shiftv
                     sl.ucell_mod.append(('add', -shiftv))
                     sl.getFractionalCoordinates()
@@ -1001,7 +1001,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
 
     # FIND ATOM LINKING - HERE WORK WITH sl INSTEAD OF ts, SINCE WE WANT
     #   TO ASSIGN PROPERTIES TO INDIVIDUAL ATOMS
-    for at in sl.atlist:  # first put all atoms in a list of their own
+    for at in sl:  # first put all atoms in a list of their own
         at.linklist = [at]
         at.symrefm = np.identity(2)
     if not planegroup == "p1":  # p1 has no symmetry to check for
@@ -1095,7 +1095,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         sl1.atlist[atj].linklist = at1.linklist
                         break
     sl.linklists = []     # re-create linklists
-    for at in sl.atlist:
+    for at in sl:
         if len(at.linklist) > 1 and at.linklist not in sl.linklists:
             # don't keep the linklists of length 1
             sl.linklists.append(at.linklist)
@@ -1201,7 +1201,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
     ts = copy.deepcopy(sl)
     ts.projectCToZ()
     ts.collapseCartesianCoordinates()
-    for at in ts.atlist:
+    for at in ts:
         # first check points
         for p in lockpoints:
             if at.isSameXY(p, eps):
@@ -1223,8 +1223,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                             shiftv = -1 * shiftv
                         at.cartpos[:2] += shiftv
                     break
-    for at in sl.atlist:
-        at2 = [a for a in ts.atlist if a.oriN == at.oriN][0]
+    for at in sl:
+        at2 = [a for a in ts if a.oriN == at.oriN][0]
         at.freedir = at2.freedir
         at.cartpos = at2.cartpos
     # average positions for linked atoms
@@ -1350,11 +1350,11 @@ def getSymBaseSymmetry(sl, rp):
     for ll in sl.symbaseslab.linklists:
         newll = []
         for ssl_at in ll:
-            at = [a for a in sl.atlist if a.oriN == ssl_at.oriN][0]
+            at = [a for a in sl if a.oriN == ssl_at.oriN][0]
             newll.append(at)
             at.linklist = newll
             at.symrefm = np.copy(ssl_at.symrefm)
-    for at in [at for at in sl.atlist if at.duplicateOf is not None]:
+    for at in [at for at in sl if at.duplicateOf is not None]:
         at.duplicateOf.linklist.append(at)
         at.linklist = at.duplicateOf.linklist
         at.symrefm = np.copy(at.duplicateOf.symrefm)
@@ -1366,6 +1366,6 @@ def getSymBaseSymmetry(sl, rp):
                           + np.dot(sl.symbaseslab.ucell, v))
     sl.getFractionalCoordinates()
     sl.linklists = []
-    for at in sl.atlist:
+    for at in sl:
         if len(at.linklist) > 1 and at.linklist not in sl.linklists:
             sl.linklists.append(at.linklist)
