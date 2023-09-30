@@ -278,7 +278,7 @@ class POSCARReader:
                     break
         slab.atlist = [at for el_ats in atoms.values() for at in el_ats]
         slab.updateAtomNumbers()
-        slab.updateElementCount()
+        slab.update_element_count()
         slab.getCartesianCoordinates()
 
     def _read_atom_coordinates(self, slab, cartesian):

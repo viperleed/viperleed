@@ -366,7 +366,7 @@ def _apply_transform(slab, transform, apply_cut=False):
         slab.atlist = [at for at in slab
                        if at.pos[2] >= transform.cut_cell_c_fraction]
     slab.updateAtomNumbers()
-    slab.updateElementCount()
+    slab.update_element_count()
 
 
 def _make_and_check_slab(ase_object, transforms):

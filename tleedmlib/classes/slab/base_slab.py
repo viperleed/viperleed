@@ -15,6 +15,7 @@ used to be contained in the original slab module by F. Kraushofer.
 """
 
 from abc import ABC, abstractmethod
+from collections import Counter
 import copy
 import itertools
 import logging
@@ -891,7 +892,7 @@ class BaseSlab(ABC):
                 i += 1
             newatlist.extend(subl.atlist)
         ssl.atlist = newatlist
-        ssl.updateElementCount()   # update number of atoms per element again
+        ssl.update_element_count()   # update number of atoms per element again
         # update the layers. Don't use Slab.createLayers here to keep it
         #   consistent with the slab layers
         for i, layer in enumerate(ssl.layers):
@@ -971,7 +972,7 @@ class BaseSlab(ABC):
                     f'not find element {missing_el} in element list')
             _LOGGER.error(_err)
             raise SlabError('Perhaps you added some atoms and did not call '
-                            f'.updateElementCount? {self.elements=}')
+                            f'.update_element_count? {self.elements=}')
 
     def sort_by_z(self, botToTop=False):
         """Sorts atlist by z coordinate"""
@@ -982,15 +983,6 @@ class BaseSlab(ABC):
     def sort_original(self):
         """Sort `slab.atlist` by original atom order from POSCAR."""
         self.atlist.sort(key=attrgetter('oriN'))
-
-    def updateElementCount(self):
-        """Updates the number of atoms per element."""
-        updated_n_per_element = {}
-        for el in self.elements:
-            n = len([at for at in self if at.el == el])
-            if n > 0:
-                updated_n_per_element[el] = n
-        self.n_per_elem = updated_n_per_element
 
     def _update_chem_elements(self, rpars):                                     # TODO: @fkraushofer why aren't we also taking into account ELEMENT_RENAME here?
         """Update elements based on the ELEMENT_MIX parameter.
@@ -1024,6 +1016,16 @@ class BaseSlab(ABC):
             new_els = rpars.ELEMENT_MIX.get(element, (element,))
             self.chemelem.update(e.capitalize() for e in new_els)
         self._last_element_mix = copy.deepcopy(rpars.ELEMENT_MIX)
+
+    def update_element_count(self):
+        """Update the number of atoms per element."""
+        n_per_elem = Counter(at.el for at in self)
+
+        # Keep original element order, if there were any elements
+        elements = self.elements or n_per_elem
+        self.n_per_elem = {el: n_per_elem[el]
+                           for el in elements
+                           if el in n_per_elem}
 
     def updateLayerCoordinates(self):
         """Update the Cartesian position of all `layers`."""

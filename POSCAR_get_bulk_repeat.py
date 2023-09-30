@@ -165,7 +165,7 @@ def main():
                + (abs(botSlabAt.pos[2] - topBulkAt.pos[2]) / 2)
                - abs(fracRepeat[2]))
     newsl.atlist = [at for at in newsl if at.pos[2] > newZero]
-    newsl.updateElementCount()   # update the number of atoms per element
+    newsl.update_element_count()   # update the number of atoms per element
     for at in newsl:
         at.pos[2] -= newZero
     newsl.getCartesianCoordinates()

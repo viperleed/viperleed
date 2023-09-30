@@ -41,7 +41,7 @@ def remove_atoms(slab, param, *atom_nrs):
     """Remove atoms with the given numbers from slab."""
     for atom_nr in atom_nrs:
         slab.atlist.remove(get_atom(slab.atlist, atom_nr))
-    slab.updateElementCount()
+    slab.update_element_count()
     slab.fullUpdate(param)
 
 
@@ -89,15 +89,9 @@ class CaseSimpleSlabs:  # pylint: disable=too-many-public-methods
     def add_atoms(slab, atoms):
         """Add atoms to a slab."""
         slab.atlist.extend(atoms)
+        slab.update_element_count()
         for atom in atoms:
             atom.pos = np.asarray(atom.pos)
-
-            # Update element counts manually bacause updateElementCount
-            # is buggy: only considers elements that have been there
-            # already
-            if atom.el not in slab.n_per_elem:
-                slab.n_per_elem[atom.el] = 0
-            slab.n_per_elem[atom.el] += 1
 
     @staticmethod
     def make_slab(ucell):

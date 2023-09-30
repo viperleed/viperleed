@@ -442,7 +442,7 @@ class SurfaceSlab(BaseSlab):
         for at in bsl:
             at.pos[2] = (at.pos[2] - midpos + 0.5) % 1.
         bsl.getCartesianCoordinates(updateOrigin=True)
-        bsl.updateElementCount()   # update the number of atoms per element
+        bsl.update_element_count()   # update the number of atoms per element
         # remove duplicates
         bsl.createSublayers(rp.SYMMETRY_EPS_Z)
         newatlist = []
@@ -459,7 +459,7 @@ class SurfaceSlab(BaseSlab):
                 i += 1
             newatlist.extend(subl.atlist)
         bsl.atlist = newatlist
-        bsl.updateElementCount()   # update number of atoms per element again
+        bsl.update_element_count()   # update number of atoms per element again
         # update the layers. Don't use Slab.createLayers here to keep it
         #   consistent with the slab layers
         for i, layer in enumerate(bsl.layers):
