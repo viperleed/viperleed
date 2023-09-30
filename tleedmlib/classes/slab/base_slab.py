@@ -29,7 +29,7 @@ from scipy.spatial import KDTree
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import angle
 from viperleed.tleedmlib.base import rotation_matrix, rotation_matrix_order
-from viperleed.tleedmlib.classes.atom import Atom, 
+from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
