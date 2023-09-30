@@ -14,3 +14,7 @@ class SlabError(Exception):
 
 class InvalidUnitCellError(SlabError):
     """Exception raised when the unit cell of a slab is inappropriate."""
+
+
+class NeedsSublayersError(SlabError):
+    """An operation requires sublayers defined."""

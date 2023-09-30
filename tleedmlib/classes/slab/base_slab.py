@@ -186,6 +186,14 @@ class BaseSlab(ABC):
         return tuple(self.n_per_elem.keys())
 
     @property
+    def fewest_atoms_sublayer(self):
+        """Return the sublayer with fewest atoms."""
+        if not self.sublayers:
+            raise NeedsSublayersError(f'{type(self).__name__} has '
+                                      'no sublayers defined')
+        return min(self.sublayers, key=lambda lay: len(lay.atlist))
+
+    @property
     @abstractmethod
     def is_bulk(self):
         """Return whether this is a bulk slab."""
@@ -563,18 +571,6 @@ class BaseSlab(ABC):
             tp[2] = self.topat_ori_z-tp[2]
             at.pos = np.dot(uci, tp)
 
-    # @property
-    # def fewest_atoms_sublayer(self):
-    def getLowOccLayer(self):
-        """Finds and returns the lowest occupancy sublayer"""
-        minlen = len(self.sublayers[0].atlist)
-        lowocclayer = self.sublayers[0]
-        for lay in self.sublayers:
-            if len(lay.atlist) < minlen:
-                lowocclayer = lay
-                minlen = len(lay.atlist)
-        return lowocclayer
-
     def getMinLayerSpacing(self):
         """Returns the minimum distance (cartesian) between two layers in the
         slab. Returns zero if there is only one layer, or none are defined."""
@@ -626,7 +622,7 @@ class BaseSlab(ABC):
 
         # Use the lowest-occupancy sublayer (the one
         # with fewer atoms of the same site type)
-        lowocclayer = ts.getLowOccLayer()
+        lowocclayer = ts.fewest_atoms_sublayer
         n_atoms = len(lowocclayer.atlist)
         if n_atoms < 2:
             # Cannot be smaller if there's only 1 atom

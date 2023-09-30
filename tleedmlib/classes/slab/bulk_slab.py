@@ -232,7 +232,7 @@ class BulkSlab(BaseSlab):
         releps = [eps / np.linalg.norm(uct[j]) for j in range(0, 3)]
         # get translation vectors to check
         transVecs = []
-        lowocclayer = self.getLowOccLayer()
+        lowocclayer = self.fewest_atoms_sublayer
         baseInd = self.sublayers.index(lowocclayer)
         ori = lowocclayer.atlist[0].cartpos
         for at in self.sublayers[(baseInd + sldisp) % self.n_sublayers].atlist:
