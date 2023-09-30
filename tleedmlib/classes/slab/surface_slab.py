@@ -52,7 +52,7 @@ class SurfaceSlab(BaseSlab):
         The original scaling factor from POSCAR
     elements : tuple of str
         Element labels as read from POSCAR
-    chemelem : list of str
+    chemelem : set of str
         Chemical elements in the slab, including from `ELEMENT_MIX`
     n_per_elem : dict {str: int}
         The number of atoms per POSCAR element.

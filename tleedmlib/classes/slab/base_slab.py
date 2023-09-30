@@ -65,7 +65,7 @@ class BaseSlab(ABC):
         The original scaling factor from POSCAR
     elements : tuple of str
         Element labels as read from POSCAR
-    chemelem : list of str
+    chemelem : set of str
         Chemical elements in the slab, including from `ELEMENT_MIX`
     n_per_elem : dict {str: int}
         The number of atoms per POSCAR element.
@@ -128,7 +128,7 @@ class BaseSlab(ABC):
 
         # Remember the last value of the ELEMENT_MIX parameter that
         # was applied. Prevents repeated applications
-        self.last_element_mix = None                                            # base?
+        self._last_element_mix = None                                           # base?
 
     def __contains__(self, item):
         """Return whether an atom, layer, site, ... is in this slab."""
@@ -533,7 +533,7 @@ class BaseSlab(ABC):
         self.getCartesianCoordinates()
         if not self.layers:
             self.createLayers(rpars)
-        self.updateElements(rpars)
+        self._update_chem_elements(rpars)
         if not self.sitelist:
             self.initSites(rpars)
         if rpars.fileLoaded['VIBROCC']:
@@ -992,35 +992,38 @@ class BaseSlab(ABC):
                 updated_n_per_element[el] = n
         self.n_per_elem = updated_n_per_element
 
-    def updateElements(self, rp):
-        """Updates elements based on the ELEMENT_MIX parameter, and warns in
-        case of a naming conflict."""
-        if self.last_element_mix == rp.ELEMENT_MIX:
+    def _update_chem_elements(self, rpars):                                     # TODO: @fkraushofer why aren't we also taking into account ELEMENT_RENAME here?
+        """Update elements based on the ELEMENT_MIX parameter.
+
+        Issue warnings in case of a naming conflict.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS to be used. Only the ELEMENT_MIX
+            attribute is used.
+
+        Returns
+        -------
+        None.
+        """
+        if self._last_element_mix == rpars.ELEMENT_MIX:
             return     # don't update if up to date
-        # update nelem
-        c = 0
-        oldels = self.elements[:]
-        for i, pel in enumerate(oldels):
-            if pel not in rp.ELEMENT_MIX:
-                c += 1
-            else:
-                c += len(rp.ELEMENT_MIX[pel])
-                # check for overlapping names:
-                for el in rp.ELEMENT_MIX[pel]:
-                    if el in oldels:
-                        _LOGGER.warning(
-                            'Element name '+el+' given in ELEMENT_MIX is also '
-                            'an element name in POSCAR. It is recommended you '
-                            'rename the element in the POSCAR file.')
-        self.chemelem = []
-        for el in self.elements:
-            if el in rp.ELEMENT_MIX:
-                self.chemelem.extend([e.capitalize()
-                                      for e in rp.ELEMENT_MIX[el]
-                                      if not e.capitalize() in self.chemelem])
-            else:
-                self.chemelem.append(el.capitalize())
-        self.last_element_mix = rp.ELEMENT_MIX
+
+        # Check for overlapping element names
+        overlapping = {e for mix in rpars.ELEMENT_MIX.values() for e in mix}
+        overlapping &= set(self.elements)
+        for element in overlapping:
+            _LOGGER.warning(
+                f'Element name {element} given in ELEMENT_MIX is '
+                'also an element name in POSCAR. It is recommended '
+                'you rename the element in the POSCAR file.'
+                )
+        self.chemelem = set()
+        for element in self.elements:
+            new_els = rpars.ELEMENT_MIX.get(element, (element,))
+            self.chemelem.update(e.capitalize() for e in new_els)
+        self._last_element_mix = copy.deepcopy(rpars.ELEMENT_MIX)
 
     def updateLayerCoordinates(self):
         """Update the Cartesian position of all `layers`."""
