@@ -33,7 +33,7 @@ from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
-from .slab_errors import InvalidUnitCellError, SlabError
+from .slab_errors import InvalidUnitCellError, NeedsSublayersError, SlabError
 
 
 _LOGGER = logging.getLogger('tleedm.slab')
