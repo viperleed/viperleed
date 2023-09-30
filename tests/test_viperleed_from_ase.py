@@ -98,7 +98,7 @@ def test_n_atoms_from_ase(case):
     """Make sure the number of atoms in Slab match those in ase.Atoms."""
     ase_atoms, *_ = case
     slab = slab_from_ase(ase_atoms)
-    assert len(ase_atoms.positions) == len(slab.atlist)
+    assert len(ase_atoms.positions) == slab.n_atoms
 
 
 class TestRotationMatrices:
@@ -394,7 +394,7 @@ class TestFailingInitialization:
     def test_writes_sensible_poscar(self):
         """Ensure that written POSCAR has the right number of atoms."""
         slab = poscar.read(self.exec_path / 'POSCAR')
-        assert len(slab.atlist) == len(self.ase_atoms.positions)
+        assert slab.n_atoms == len(self.ase_atoms.positions)
 
 
 def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):              # TODO: this one could be @parametrize and un-indented.
