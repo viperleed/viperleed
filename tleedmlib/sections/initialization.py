@@ -99,7 +99,7 @@ def initialization(sl, rp, subdomain=False):
 
     # generate new POSCAR
     tmpslab = copy.deepcopy(sl)
-    tmpslab.sortOriginal()
+    tmpslab.sort_original()
     try:
         poscar.write(tmpslab, filename='POSCAR', comments='all')
     except Exception:
@@ -212,7 +212,7 @@ def initialization(sl, rp, subdomain=False):
 
         # write POSCAR_bulk
         bsl = copy.deepcopy(sl.bulkslab)
-        bsl.sortOriginal()
+        bsl.sort_original()
         try:
             poscar.write(bsl, filename='POSCAR_bulk', comments='bulk')
         except Exception:

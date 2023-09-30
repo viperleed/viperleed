@@ -19,6 +19,7 @@ import copy
 import itertools
 import logging
 from numbers import Real
+from operator import attrgetter
 import re
 
 import numpy as np
@@ -294,7 +295,7 @@ class BaseSlab(ABC):
                 at.cartpos -= bulkc_perp_to_c
             # TODO: could be done outside loop?
             ts.collapseCartesianCoordinates(updateOrigin=True)
-            ts.sortOriginal()
+            ts.sort_original()
         return ts, newbulkats
 
     # def check_a_b_in_plane(self):
@@ -929,7 +930,7 @@ class BaseSlab(ABC):
         """Gets new 'original' numbers for atoms in the slab. If a bulkslab
         is defined, also updates the numbers there to keep the two consistent.
         """
-        self.sortOriginal()
+        self.sort_original()
         self.sort_by_element()
         bulkAtsRenumbered = []
         for (i, at) in enumerate(self):
@@ -982,9 +983,9 @@ class BaseSlab(ABC):
         if botToTop:
             self.atlist.reverse()
 
-    def sortOriginal(self):
-        """Sorts atlist by original atom order from POSCAR"""
-        self.atlist.sort(key=lambda atom: atom.oriN)
+    def sort_original(self):
+        """Sort `slab.atlist` by original atom order from POSCAR."""
+        self.atlist.sort(key=attrgetter('oriN'))
 
     def updateElementCount(self):
         """Updates the number of atoms per element."""

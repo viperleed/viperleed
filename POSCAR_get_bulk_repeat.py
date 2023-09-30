@@ -147,7 +147,7 @@ def main():
             bulkcut = newbsl.sublayers[cutlayer].cartbotz + maxdist/2
 
     # write POSCAR_bulk
-    newbsl.sortOriginal()
+    newbsl.sort_original()
     try:
         writePOSCAR(newbsl, filename='POSCAR_bulk', comments='none')
         print("Wrote POSCAR_bulk. Check file to see if periodicity is "
@@ -177,7 +177,7 @@ def main():
         newbulkcut = round((topBulkAt.pos[2] - (bulkcut / newsl.ucell[2, 2])),
                            3)
     # write POSCAR_min
-    newsl.sortOriginal()
+    newsl.sort_original()
     try:
         writePOSCAR(newsl, filename='POSCAR_min', comments='none')
         print("Wrote POSCAR_min, to be used with parameters below.")

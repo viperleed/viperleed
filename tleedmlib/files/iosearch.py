@@ -1206,7 +1206,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                     at.offset_vib[el] -= offset_vib
     fn = "POSCAR_OUT" + suffix + "_" + rp.timestamp
     tmpslab = copy.deepcopy(sl)
-    tmpslab.sortOriginal()
+    tmpslab.sort_original()
     try:
         poscar.write(tmpslab, filename=fn, comments="all", silent=silent)
     except Exception:

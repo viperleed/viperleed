@@ -1006,7 +1006,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         at.symrefm = np.identity(2)
     if not planegroup == "p1":  # p1 has no symmetry to check for
         sl.createSublayers(epsz)
-        sl.sortOriginal()
+        sl.sort_original()
         sl.collapseCartesianCoordinates()
         # TEST ROTATION AT ORIGIN - TESTING ONLY HIGHEST ROTATIONAL ORDER
         #    IS ENOUGH
