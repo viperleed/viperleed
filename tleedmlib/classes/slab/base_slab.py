@@ -28,6 +28,7 @@ from scipy.spatial import KDTree
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import angle
 from viperleed.tleedmlib.base import rotation_matrix, rotation_matrix_order
+from viperleed.tleedmlib.classes.atom import Atom, 
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
@@ -127,6 +128,18 @@ class BaseSlab(ABC):
         # Remember the last value of the ELEMENT_MIX parameter that
         # was applied. Prevents repeated applications
         self.last_element_mix = None                                            # base?
+
+    def __contains__(self, item):
+        """Return whether an atom, layer, site, ... is in this slab."""
+        if isinstance(item, Atom):
+            return item in self.atlist
+        if isinstance(item, Layer):
+            return item in self.sublayers or item in self.layers
+        if isinstance(item, Sitetype):
+            return item in self.sitelist
+        if isinstance(item, str):   # Only chemical element?
+            return item in self.chemelem
+        return False
 
     def __iter__(self):
         """Return an iterator of Atoms in self."""
@@ -888,7 +901,7 @@ class BaseSlab(ABC):
             layer.slab = ssl
             layer.getLayerPos()
             layer.num = i
-            layer.atlist = [at for at in layer.atlist if at in ssl.atlist]
+            layer.atlist = [at for at in layer.atlist if at in ssl]
         return ssl
 
     def projectCToZ(self):

@@ -466,7 +466,7 @@ class SurfaceSlab(BaseSlab):
             layer.slab = bsl
             layer.getLayerPos()
             layer.num = i
-            layer.atlist = [at for at in layer.atlist if at in bsl.atlist]
+            layer.atlist = [at for at in layer.atlist if at in bsl]
         return bsl
 
     def restoreOriState(self, keepDisp=False):
