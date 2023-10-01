@@ -107,6 +107,55 @@ class CustomLogFormatter(logging.Formatter):
 #                FUNCTIONS                    #
 ###############################################
 
+def _floor_eps(values):
+    """Return the floored-int version of values after adding 1e-8."""
+    return np.floor(values + 1e-8)
+
+
+def collapse_fractional(coordinates, method='floor', in_place=False):
+    """Collapse fractional coordinates to the base cell.
+
+    Parameters
+    ----------
+    coordinates : numpy.ndarray
+        Fractional coordinates to be collapsed. Shape (N, 2) or (N, 3).
+    method : {'floor', 'round'}, optional
+        Which method should be used for collapsing.  'round' collapses
+        the coordinates so that they are as close to zero as possible.
+        Fractional coordinates are then in range [-0.5, 0.5]. 'floor'
+        returns fractional coordinates collapsed to the (0, 0)
+        cell, that is, with all fractional coordinates in range
+        [-eps, 1-eps], with eps=1e-8. This is to make sure that
+        collapsing a fractional coordinate of (essentially) 1
+        gives (essentially) zero. Default is 'floor'.
+    in_place : bool, optional
+        If True, the function modifies directly `coordinates`. Can be
+        used to save some memory. Default is False.
+
+    Returns
+    -------
+    collapsed : numpy.ndarray
+        The collapsed fractional coordinates. Will be the same object
+        passed in if in_place is True-thy.
+
+    Raises
+    ------
+    ValueError
+        If method is not one of the valid methods.
+    """
+    _methods = {'f': _floor_eps, 'r': np.round}
+    try:
+        round_ = _methods[method[0]]
+    except (TypeError, IndexError, KeyError):
+        raise ValueError(f'collapse_fractional: Unknown {method=}')
+    if in_place:
+        collapsed = coordinates
+        collapsed -= round_(coordinates)
+    else:
+        collapsed = coordinates - round_(coordinates)
+    return collapsed
+
+
 def rotation_matrix(angle, dim=2):
     """Returns a (2x2) matrix for in-plane rotation of the given rotation
     angle. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""

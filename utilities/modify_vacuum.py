@@ -80,8 +80,7 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
 
     processed_slab.ucell[:, 2] = new_c_z / processed_slab.ucell[2, 2]
     processed_slab.ucell[2, 2] = new_c_z
-    processed_slab.update_fractional_from_cartesian()
-    processed_slab.collapseFractionalCoordinates()
+    processed_slab.collapse_cartesian_coordinates()
     return processed_slab
 
 

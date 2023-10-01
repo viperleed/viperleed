@@ -512,7 +512,7 @@ class SurfaceSlab(BaseSlab):
                 at.offset_geo[el] = no
             at.pos = at.oriState.pos
             at.disp_geo_offset = {'all': [np.zeros(3)]}
-        self.collapseFractionalCoordinates()
+        self.collapse_fractional_coordinates()
         self.update_cartesian_from_fractional()
         self.updateLayerCoordinates()
         if keepDisp:

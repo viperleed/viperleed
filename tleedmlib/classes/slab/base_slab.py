@@ -28,7 +28,7 @@ import scipy.spatial as sps
 from scipy.spatial import KDTree
 
 from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import angle
+from viperleed.tleedmlib.base import angle, collapse_fractional
 from viperleed.tleedmlib.base import rotation_matrix, rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
@@ -519,14 +519,30 @@ class BaseSlab(ABC):
         a and b and moves them inside. If keepOriZ is True, the old value of
         the top atom position will be preserved.."""
         self.update_fractional_from_cartesian()
-        self.collapseFractionalCoordinates()
+        self.collapse_fractional_coordinates()
         self.update_cartesian_from_fractional(update_origin=updateOrigin)
 
-    def collapseFractionalCoordinates(self):
-        """Finds atoms outside the parallelogram spanned by the unit vectors
-        a and b and moves them inside."""
-        for at in self:
-            at.pos = at.pos % 1.0
+    def collapse_fractional_coordinates(self):                                  # TODO: would be nicer to have the public method update everything correctly, and rather make this a private one.  USED ONLY IN SLABs and in iosearch
+        """Ensure all atoms are inside the unit cell.
+
+        Atoms whose fractional positions are outside the unit cell
+        are "back-folded" inside.
+
+        Notice that calling this method DOES NOT UPDATE the Cartesian
+        coordinates of the atoms. It must be preceded or followed by
+        a call to `update_cartesian_from_fractional` to ensure that
+        fractional and Cartesian coordinates are up to date.
+
+        Returns
+        -------
+        None.
+
+        See Also
+        --------
+        collapseCartesianCoordinates
+        """
+        for atom in self:
+            collapse_fractional(atom.pos, in_place=True)
 
     # def full_update(self, rparams):
     def fullUpdate(self, rpars):
@@ -535,7 +551,7 @@ class BaseSlab(ABC):
         from the parameters file to create layers, calculate cartesian
         coordinates (absolute and per layer), and to update elements and
         sites."""
-        self.collapseFractionalCoordinates()
+        self.collapse_fractional_coordinates()
         self.update_cartesian_from_fractional()
         if not self.layers:
             self.createLayers(rpars)

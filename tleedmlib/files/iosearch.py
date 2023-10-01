@@ -1168,7 +1168,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                 off = np.dot(sl.ucell, rel_off)
                 off[2] *= -1
                 at.offset_geo[el] = off
-    sl.collapseFractionalCoordinates()
+    sl.collapse_fractional_coordinates()
     sl.update_cartesian_from_fractional()
     sl.updateLayerCoordinates()
     # now update site occupations and vibrations:
