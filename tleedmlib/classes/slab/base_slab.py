@@ -843,8 +843,8 @@ class BaseSlab(ABC):
         """Return a copy of the slab replicated according to `transform`.
 
         The 'inverse' (i.e., leading to a size reduction) of this
-        operation can be obtained by calling `makeSymBaseSlab`
-        with the inverse of `transform`.
+        operation can be obtained by calling `makeSymBaseSlab` with
+        the same `transform`.
 
         Parameters
         ----------
