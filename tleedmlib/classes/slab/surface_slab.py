@@ -175,7 +175,7 @@ class SurfaceSlab(BaseSlab):
         self.n_per_elem = n_per_el
         for elem, pos in zip(elems, ase_atoms.get_scaled_positions()):
             self.atlist.append(Atom(elem, pos, self.n_atoms + 1, self))
-        self.getCartesianCoordinates()
+        self.update_cartesian_from_fractional()
         return self
 
     def changeBulkCell(self, rp, newcell):
@@ -247,7 +247,7 @@ class SurfaceSlab(BaseSlab):
         if changecell:
             tsl.changeBulkCell(rp, mincell)
             bsl = tsl.bulkslab
-        bsl.getCartesianCoordinates()
+        bsl.update_cartesian_from_fractional()
         # detect new C vector
         newC = bsl.getMinC(rp, z_periodic=False)
         if newC is None:
@@ -393,7 +393,7 @@ class SurfaceSlab(BaseSlab):
         bsl.resetSymmetry()
         bsl.atlist = [at for at in bsl if at.layer.isBulk]
         bsl.layers = bsl.bulk_layers
-        bsl.getCartesianCoordinates()
+        bsl.update_cartesian_from_fractional()
         al = bsl.atlist[:]     # temporary copy
         al.sort(key=lambda atom: atom.pos[2])
         topat = al[-1]
@@ -441,7 +441,7 @@ class SurfaceSlab(BaseSlab):
         midpos = (max(cl)+min(cl))/2
         for at in bsl:
             at.pos[2] = (at.pos[2] - midpos + 0.5) % 1.
-        bsl.getCartesianCoordinates(updateOrigin=True)
+        bsl.update_cartesian_from_fractional(update_origin=True)
         bsl.update_element_count()   # update the number of atoms per element
         # remove duplicates
         bsl.createSublayers(rp.SYMMETRY_EPS_Z)
@@ -487,7 +487,7 @@ class SurfaceSlab(BaseSlab):
                 site.vibamp[el] = site.oriState.vibamp[el]
                 site.occ[el] = site.oriState.occ[el]
         uci = np.linalg.inv(self.ucell)
-        self.getCartesianCoordinates()
+        self.update_cartesian_from_fractional()
         for at in self:
             if at.oriState is None:
                 continue
@@ -513,7 +513,7 @@ class SurfaceSlab(BaseSlab):
             at.pos = at.oriState.pos
             at.disp_geo_offset = {'all': [np.zeros(3)]}
         self.collapseFractionalCoordinates()
-        self.getCartesianCoordinates()
+        self.update_cartesian_from_fractional()
         self.updateLayerCoordinates()
         if keepDisp:
             return

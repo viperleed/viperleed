@@ -150,7 +150,7 @@ def runPhaseshiftGen_old(sl, rp,
                     tmpat = at.duplicate()
                     tmpat.pos[0] += i
                     tmpat.pos[1] += j
-        nsl.getCartesianCoordinates()
+        nsl.update_cartesian_from_fractional()
         nsl.ucell = np.dot(np.array([[xsize, 0, 0], [0, ysize, 0], [0, 0, 1]]),
                            nsl.ucell)
         nsl.getFractionalCoordinates()
@@ -658,7 +658,7 @@ def make_atom_types(rp, sl, additional_layers):
                     tmpat = at.duplicate()
                     tmpat.pos[0] += i
                     tmpat.pos[1] += j
-        nsl.getCartesianCoordinates()
+        nsl.update_cartesian_from_fractional()
         nsl.ucell = np.dot(np.array([[xsize, 0, 0], [0, ysize, 0], [0, 0, 1]]),
                            nsl.ucell)
         nsl.getFractionalCoordinates()
@@ -666,13 +666,13 @@ def make_atom_types(rp, sl, additional_layers):
     # Write new unit cell vectors; to be used for input
     uct = nsl.ucell.transpose()
 
-    nsl.getCartesianCoordinates()
+    nsl.update_cartesian_from_fractional()
     # Cell is now fully expanded and has right size
 
     # Generate dict with nearest neighbour distances, used to determine MT radii !!
     # Also used as atom list instead of nsl.atlist
     NN_dict = nsl.get_nearest_neigbours()
-    nsl.getCartesianCoordinates()
+    nsl.update_cartesian_from_fractional()
 
     # Here we introduce the atom_types dict, which will be very important going forward
     atom_types = {}

@@ -282,7 +282,7 @@ class BaseSlab(ABC):
                                                 (float, np.floating)):
                     zdiff = rp.BULK_REPEAT
                 bulkc = cvec * zdiff / cvec[2]
-            ts.getCartesianCoordinates()
+            ts.update_cartesian_from_fractional()
             cfact = (ts.ucell[2, 2] + abs(bulkc[2])) / ts.ucell[2, 2]
             ts.ucell[:, 2] = ts.ucell[:, 2] * cfact
             bulkc[2] = -bulkc[2]
@@ -520,7 +520,7 @@ class BaseSlab(ABC):
         the top atom position will be preserved.."""
         self.getFractionalCoordinates()
         self.collapseFractionalCoordinates()
-        self.getCartesianCoordinates(updateOrigin=updateOrigin)
+        self.update_cartesian_from_fractional(update_origin=updateOrigin)
 
     def collapseFractionalCoordinates(self):
         """Finds atoms outside the parallelogram spanned by the unit vectors
@@ -536,7 +536,7 @@ class BaseSlab(ABC):
         coordinates (absolute and per layer), and to update elements and
         sites."""
         self.collapseFractionalCoordinates()
-        self.getCartesianCoordinates()
+        self.update_cartesian_from_fractional()
         if not self.layers:
             self.createLayers(rpars)
         self._update_chem_elements(rpars)
@@ -552,22 +552,6 @@ class BaseSlab(ABC):
         a repeat vector for which the bulk matches the slab above. Returns that
         vector in cartesian coordinates, or None if no match is found."""
 
-    def getCartesianCoordinates(self, updateOrigin=False):
-        """Assigns absolute cartesian coordinates to all atoms, with x,y using
-        the unit cell (top plane), while z = 0 for the topmost atom and
-        positive going down through the slab. If updateOrigin is set True, the
-        cartesian origin relative to the fractional origin will be updated,
-        otherwise it is static."""
-        al = self.atlist[:]     # temporary copy
-        al.sort(key=lambda atom: atom.pos[2])
-        topat = al[-1]
-        topcart = np.dot(self.ucell, topat.pos)
-        if updateOrigin or self.topat_ori_z is None:
-            self.topat_ori_z = topcart[2]
-        for atom in al:
-            atom.cartpos = np.dot(self.ucell, atom.pos)
-            atom.cartpos[2] = self.topat_ori_z - atom.cartpos[2]
-
     def getFractionalCoordinates(self):
         """Calculates fractional coordinates for all atoms from their
         cartesian coordinates, using the slab unit cell."""
@@ -582,7 +566,7 @@ class BaseSlab(ABC):
         slab. Returns zero if there is only one layer, or none are defined."""
         if self.n_layers < 2:
             return 0
-        self.getCartesianCoordinates()
+        self.update_cartesian_from_fractional()
         return min([(self.layers[i].cartori[2] - self.layers[i-1].cartbotz)
                     for i in range(1, self.n_layers)])
 
@@ -852,12 +836,12 @@ class BaseSlab(ABC):
                         tmpat.pos[0] += i
                         tmpat.pos[1] += j
         ts.resetAtomOriN()
-        ts.getCartesianCoordinates(updateOrigin=True)
+        ts.update_cartesian_from_fractional(update_origin=True)
         tm = np.identity(3, dtype=float)
         tm[:2, :2] = transform
         ts.ucell = np.transpose(np.dot(tm, np.transpose(ts.ucell)))
         ts.getFractionalCoordinates()
-        ts.getCartesianCoordinates(updateOrigin=True)
+        ts.update_cartesian_from_fractional(update_origin=True)
         return ts
 
     def makeSymBaseSlab(self, rp, transform=None):
@@ -868,7 +852,7 @@ class BaseSlab(ABC):
         different matrix can also be passed."""
         ssl = copy.deepcopy(self)
         ssl.resetSymmetry()
-        ssl.getCartesianCoordinates()
+        ssl.update_cartesian_from_fractional()
         # reduce dimensions in xy
         transform3 = np.identity(3, dtype=float)
         if transform is not None:
@@ -914,7 +898,7 @@ class BaseSlab(ABC):
         """makes the c vector of the unit cell perpendicular to the surface,
         changing all atom coordinates to fit the new base"""
         if self.ucell[0, 2] != 0.0 or self.ucell[1, 2] != 0.0:
-            self.getCartesianCoordinates()
+            self.update_cartesian_from_fractional()
             self.ucell[:, 2] = np.array([0, 0, self.ucell[2, 2]])
             self.collapseCartesianCoordinates()
             # implicitly also gets new fractional coordinates
@@ -954,7 +938,7 @@ class BaseSlab(ABC):
         if restoreTo is None:
             restoreTo = []
         if len(self.ucell_mod) > 0:
-            self.getCartesianCoordinates()
+            self.update_cartesian_from_fractional()
             oplist = self.ucell_mod[len(restoreTo):]
             for op in list(reversed(oplist)):
                 if op[0] == 'add':
@@ -993,6 +977,39 @@ class BaseSlab(ABC):
     def sort_original(self):
         """Sort `slab.atlist` by original atom order from POSCAR."""
         self.atlist.sort(key=attrgetter('oriN'))
+
+    def update_cartesian_from_fractional(self, update_origin=False):
+        """Assign absolute Cartesian coordinates to all atoms.
+
+        The frame of reference has (x, y) as defined by the a and b
+        unit-cell vectors, z == 0 for the topmost atom and positive
+        going down through the slab (from the surface into the solid).
+
+        This method can be used, e.g., to (re)calculate all Cartesian
+        coordinates when distortions have been applied to the unit
+        cell (but atoms should retain their position relative to the
+        modified cell).
+
+        Parameters
+        ----------
+        update_origin : bool, optional
+            Whether the z component of the Cartesian origin should
+            be updated. If True, `topat_ori_z` is modified to be the
+            current z coordinate of the topmost atom. This value is
+            ignored if `topat_ori_z` was never initialized. Set this
+            to True if the topmost atom is likely to have moved in z.
+            Default is False.
+
+        Returns
+        -------
+        None.
+        """
+        if update_origin or self.topat_ori_z is None:
+            topat = max(self, key=lambda atom: atom.pos[2])
+            self.topat_ori_z = np.dot(self.ucell, topat.pos)[2]
+        for atom in self:
+            atom.cartpos = np.dot(self.ucell, atom.pos)
+            atom.cartpos[2] = self.topat_ori_z - atom.cartpos[2]
 
     def _update_chem_elements(self, rpars):                                     # TODO: @fkraushofer why aren't we also taking into account ELEMENT_RENAME here?
         """Update elements based on the ELEMENT_MIX parameter.
@@ -1102,7 +1119,7 @@ class BaseSlab(ABC):
 
         self.ucell = trafo_matrix.dot(self.ucell)
         self.ucell[abs(self.ucell) < 1e-5] = 0.
-        self.getCartesianCoordinates(updateOrigin=changes_z)
+        self.update_cartesian_from_fractional(update_origin=changes_z)
 
         # Update also 'layers', sublayers and bulkslab: if the
         # transformation touched 'z' we invalidate everything
@@ -1181,7 +1198,7 @@ class BaseSlab(ABC):
         # columns (i.e., a = ucell[:, 0])
         scaling_matrix = np.diag(scaling)
         self.ucell = self.ucell.dot(scaling_matrix)
-        self.getCartesianCoordinates(updateOrigin=scaling[2] != 1)
+        self.update_cartesian_from_fractional(update_origin=scaling[2] != 1)
 
         try:
             self.bulkslab.apply_scaling(*scaling)
@@ -1213,7 +1230,7 @@ class BaseSlab(ABC):
         """Translates the atoms in the slab to have the axis in the origin,
         applies an order-fold rotation matrix to the atom positions, then
         translates back"""
-        self.getCartesianCoordinates()
+        self.update_cartesian_from_fractional()
         m = rotation_matrix_order(order)
         for at in self:
             # translate origin to candidate point, rotate, translate back
@@ -1224,7 +1241,7 @@ class BaseSlab(ABC):
         """Rotates the unit cell (around the origin), leaving atom positions
         the same. Note that this rotates in the opposite direction as
         rotateAtoms."""
-        self.getCartesianCoordinates()
+        self.update_cartesian_from_fractional()
         m = rotation_matrix_order(order)
         m3 = np.identity(3, dtype=float)
         m3[:2, :2] = m

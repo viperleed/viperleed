@@ -1110,7 +1110,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
             tmp = copy.deepcopy(site)
             site.oriState = tmp
 
-    sl.getCartesianCoordinates()
+    sl.update_cartesian_from_fractional()
     uci = np.linalg.inv(sl.ucell)
     for at in sl:
         # make list of searchpars addressing this atom:
@@ -1169,7 +1169,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                 off[2] *= -1
                 at.offset_geo[el] = off
     sl.collapseFractionalCoordinates()
-    sl.getCartesianCoordinates()
+    sl.update_cartesian_from_fractional()
     sl.updateLayerCoordinates()
     # now update site occupations and vibrations:
     for site in sl.sitelist:

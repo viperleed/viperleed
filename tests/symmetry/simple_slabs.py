@@ -49,7 +49,7 @@ def tilt_c_axis(slab, direction):
     """Modify slab's c vector to tilt in a fractional direction."""
     slab.ucell.T[2, :2] = 0.3 * np.dot(direction, slab.ab_cell.T)
     slab.ucell_ori = slab.ucell.copy()
-    slab.getCartesianCoordinates()
+    slab.update_cartesian_from_fractional()
 
 
 def set_displacement_infos(test_info, *displaced_atoms):

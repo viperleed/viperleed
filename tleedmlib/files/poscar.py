@@ -279,7 +279,7 @@ class POSCARReader:
         slab.atlist = [at for el_ats in atoms.values() for at in el_ats]
         slab.updateAtomNumbers()
         slab.update_element_count()
-        slab.getCartesianCoordinates()
+        slab.update_cartesian_from_fractional()
 
     def _read_atom_coordinates(self, slab, cartesian):
         """Return an array of fractional atomic coordinates read from file_."""

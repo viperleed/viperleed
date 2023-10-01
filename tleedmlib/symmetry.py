@@ -223,7 +223,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             s = (targetsym+"[{:.0f} {:.0f}]".format(newdir[0], newdir[1]))
             parameters.modifyPARAMETERS(rp, "SYMMETRY_FIX", s)
         # MODIFY UNIT CELL
-        sl.getCartesianCoordinates()
+        sl.update_cartesian_from_fractional()
         sl.ucell_mod.append(('rmul', utr.T))
         sl.ucell = np.dot(sl.ucell, utr.T)
         # same as np.transpose(np.dot(utr,np.transpose(sl.ucell)))
@@ -260,7 +260,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     tmpat = at.duplicate()
                     tmpat.pos[0] += i
                     tmpat.pos[1] += j
-    bigslab.getCartesianCoordinates(updateOrigin=True)
+    bigslab.update_cartesian_from_fractional(update_origin=True)
     # bigslab.fullUpdate(rp)   can't do this - would collapse coordinates!
     bigslab.createSublayers(epsz)
 
@@ -644,7 +644,7 @@ def mirror_to_diagonal(sl, rp, abst, oriplane):
         raise RuntimeError(err)
     idx = 0 if dev_from_60[0] else 1
     m = rotation_matrix(angles[idx], dim=3)
-    sl.getCartesianCoordinates()
+    sl.update_cartesian_from_fractional()
     sl.ucell_mod.append(('lmul', m))
     sl.ucell = np.dot(m, sl.ucell)
     abst = sl.ab_cell.T
@@ -1324,7 +1324,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 for j in range(0, 3):
                     if abs(sl.ucell[i, j]) < 1e-6:
                         sl.ucell[i, j] = 0
-            sl.getCartesianCoordinates()
+            sl.update_cartesian_from_fractional()
             # modify BEAM_INCIDENCE
             if rp.THETA != 0:
                 logger.debug("Modifying BEAM_INCIDENCE parameter")
@@ -1346,7 +1346,7 @@ def getSymBaseSymmetry(sl, rp):
     if sl.symbaseslab.planegroup == "unknown":
         findSymmetry(sl.symbaseslab, rp, forceFindOri=True)
         enforceSymmetry(sl.symbaseslab, rp, rotcell=False)
-    sl.getCartesianCoordinates()
+    sl.update_cartesian_from_fractional()
     for ll in sl.symbaseslab.linklists:
         newll = []
         for ssl_at in ll:

@@ -99,7 +99,7 @@ def main():
             print("Found SUPERLATTICE M = {} {}, {} {}".format(
                 si[0, 0], si[0, 1], si[1, 0], si[1, 1]))
 
-    bsl.getCartesianCoordinates()
+    bsl.update_cartesian_from_fractional()
     newC = bsl.getMinC(rp, z_periodic=False)
 
     if newC is None:
@@ -168,7 +168,7 @@ def main():
     newsl.update_element_count()   # update the number of atoms per element
     for at in newsl:
         at.pos[2] -= newZero
-    newsl.getCartesianCoordinates()
+    newsl.update_cartesian_from_fractional()
     newsl.ucell[:, 2] = newsl.ucell[:, 2] * (1 - newZero)
     newsl.getFractionalCoordinates()
     newcut = round((topBulkAt.pos[2]

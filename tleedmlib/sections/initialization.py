@@ -155,7 +155,7 @@ def initialization(sl, rp, subdomain=False):
                 )
             logger.info(f"Detected bulk repeat vector: {vec_str}")
             # update bulk slab vector
-            sl.bulkslab.getCartesianCoordinates()
+            sl.bulkslab.update_cartesian_from_fractional()
             sl.bulkslab.ucell[:, 2] = np.copy(rvec)
             sl.bulkslab.collapseCartesianCoordinates()
     if rp.BULK_REPEAT is None:
@@ -552,9 +552,9 @@ def init_domains(rp):
             # dp.sl.ucell = np.transpose(np.dot(np.transpose(dp.sl.ucell),
             #                                   rotuc))
             dp.sl.ucell = np.dot(rotm_t, dp.sl.ucell)
-            dp.sl.getCartesianCoordinates()
+            dp.sl.update_cartesian_from_fractional()
             dp.sl.bulkslab.ucell = np.dot(rotm_t, dp.sl.bulkslab.ucell)
-            dp.sl.bulkslab.getCartesianCoordinates()
+            dp.sl.bulkslab.update_cartesian_from_fractional()
         else:
             logger.error(f"Bulk unit cells of domain {rp.domainParams[0].name}"
                          f" and domain {dp.name} are mismatched, and cannot be"

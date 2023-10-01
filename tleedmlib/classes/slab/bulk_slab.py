@@ -98,7 +98,7 @@ class BulkSlab(BaseSlab):
         ts = copy.deepcopy(self)
         bulkc = np.transpose(np.copy(ts.ucell))[2]
         bulkc[2] *= -1
-        ts.getCartesianCoordinates(updateOrigin=True)
+        ts.update_cartesian_from_fractional(update_origin=True)
         tmplist = ts.atlist[:]
         for at in tmplist:
             at.duplicate()
@@ -179,7 +179,7 @@ class BulkSlab(BaseSlab):
         if len(pcands) == 0:
             return None
         ts = copy.deepcopy(self)
-        ts.getCartesianCoordinates()
+        ts.update_cartesian_from_fractional()
         ts.createSublayers(eps)
         baseLayer = ts.sublayers[0]
         baseInd = ts.sublayers.index(baseLayer)

@@ -59,7 +59,7 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
     """
     processed_slab = deepcopy(slab)
     processed_slab.check_a_b_in_plane()
-    processed_slab.getCartesianCoordinates()
+    processed_slab.update_cartesian_from_fractional()
 
     slab_thickness = processed_slab.thickness
     current_gap_size = processed_slab.vacuum_gap

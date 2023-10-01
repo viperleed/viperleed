@@ -299,7 +299,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     if rp.domainParams:
         refcalc_domains(rp)
         return
-    sl.getCartesianCoordinates(updateOrigin=True)
+    sl.update_cartesian_from_fractional(update_origin=True)
     sl.updateLayerCoordinates()
     # delete old refcalc-fd.out if present - not earlier because can be input
     #   for r-factor calculation if no refcalc is executed
