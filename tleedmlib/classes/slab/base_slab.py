@@ -518,7 +518,7 @@ class BaseSlab(ABC):
         """Finds atoms outside the parallelogram spanned by the unit vectors
         a and b and moves them inside. If keepOriZ is True, the old value of
         the top atom position will be preserved.."""
-        self.getFractionalCoordinates()
+        self.update_fractional_from_cartesian()
         self.collapseFractionalCoordinates()
         self.update_cartesian_from_fractional(update_origin=updateOrigin)
 
@@ -551,15 +551,6 @@ class BaseSlab(ABC):
         """Based on a pre-existing definition of the bulk, tries to identify
         a repeat vector for which the bulk matches the slab above. Returns that
         vector in cartesian coordinates, or None if no match is found."""
-
-    def getFractionalCoordinates(self):
-        """Calculates fractional coordinates for all atoms from their
-        cartesian coordinates, using the slab unit cell."""
-        uci = np.linalg.inv(self.ucell)
-        for at in self:
-            tp = np.copy(at.cartpos)
-            tp[2] = self.topat_ori_z-tp[2]
-            at.pos = np.dot(uci, tp)
 
     def getMinLayerSpacing(self):
         """Returns the minimum distance (cartesian) between two layers in the
@@ -840,7 +831,7 @@ class BaseSlab(ABC):
         tm = np.identity(3, dtype=float)
         tm[:2, :2] = transform
         ts.ucell = np.transpose(np.dot(tm, np.transpose(ts.ucell)))
-        ts.getFractionalCoordinates()
+        ts.update_fractional_from_cartesian()
         ts.update_cartesian_from_fractional(update_origin=True)
         return ts
 
@@ -978,7 +969,7 @@ class BaseSlab(ABC):
         """Sort `slab.atlist` by original atom order from POSCAR."""
         self.atlist.sort(key=attrgetter('oriN'))
 
-    def update_cartesian_from_fractional(self, update_origin=False):
+    def update_cartesian_from_fractional(self, update_origin=False):            # TODO: should we do anything to the .bulkslab too?
         """Assign absolute Cartesian coordinates to all atoms.
 
         The frame of reference has (x, y) as defined by the a and b
@@ -1053,6 +1044,26 @@ class BaseSlab(ABC):
         self.n_per_elem = {el: n_per_elem[el]
                            for el in elements
                            if el in n_per_elem}
+
+    def update_fractional_from_cartesian(self):                                 # TODO: should we do anything to the .bulkslab too?
+        """Calculate atoms' fractional coordinates from Cartesian ones.
+
+        This method is commonly used when `ucell` is modified, and
+        the atoms should retain their absolute Cartesian positions
+        while recomputing their fractional coordinates relative to
+        the new unit cell.
+
+        Returns
+        -------
+        None.
+        """
+        uci = np.linalg.inv(self.ucell)
+        for atom in self:
+            # Flip over the z Cartesian coordinate, as
+            # we store it as "positive going down"
+            cartpos = atom.cartpos.copy()
+            cartpos[2] = self.topat_ori_z - cartpos[2]                          # TODO: edit when flipping .cartpos[2]
+            atom.pos = np.dot(uci, cartpos)
 
     def updateLayerCoordinates(self):
         """Update the Cartesian position of all `layers`."""
@@ -1235,7 +1246,7 @@ class BaseSlab(ABC):
         for at in self:
             # translate origin to candidate point, rotate, translate back
             at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
-        self.getFractionalCoordinates()
+        self.update_fractional_from_cartesian()
 
     def rotateUnitCell(self, order, append_ucell_mod=True):
         """Rotates the unit cell (around the origin), leaving atom positions
@@ -1248,7 +1259,7 @@ class BaseSlab(ABC):
         self.ucell = np.dot(m3, self.ucell)
         if append_ucell_mod:
             self.ucell_mod.append(('lmul', m3))
-        self.getFractionalCoordinates()
+        self.update_fractional_from_cartesian()
 
     # ----------------- SYMMETRY UPON TRANSFORMATION ------------------
 

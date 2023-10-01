@@ -104,10 +104,10 @@ def apply_scaling(sl, rp, which, scale):
         m[1, 1] *= scale
     if "c" in which:
         m[2, 2] *= scale
-    sl.getFractionalCoordinates()
+    sl.update_fractional_from_cartesian()
     sl.ucell = np.dot(sl.ucell, m)
     sl.update_cartesian_from_fractional(update_origin=True)
-    sl.bulkslab.getFractionalCoordinates()
+    sl.bulkslab.update_fractional_from_cartesian()
     sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
     sl.bulkslab.update_cartesian_from_fractional()
     if type(rp.BULK_REPEAT) == float:

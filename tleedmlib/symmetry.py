@@ -393,8 +393,8 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         for at in ts:
             at.cartpos[0:2] -= topsympoint
         sl.ucell_mod.append(('add', -topsympoint))
-        sl.getFractionalCoordinates()
-        ts.getFractionalCoordinates()
+        sl.update_fractional_from_cartesian()
+        ts.update_fractional_from_cartesian()
 
     if toprotsym == 0: # should be an else
         # identify group:
@@ -449,7 +449,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             # ts is not used any more in this case, otherwise those atoms
             #  would have to be shifted as well.
             sl.ucell_mod.append(('add', -shiftv))
-            sl.getFractionalCoordinates()
+            sl.update_fractional_from_cartesian()
         if oriplane:
             oriplane.pos = np.array([0, 0])
             sl.orisymplane = oriplane
@@ -462,7 +462,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             shiftslab = copy.deepcopy(ts)
             for at in shiftslab:
                 at.cartpos[:2] -= abst[0]/2
-            shiftslab.getFractionalCoordinates()
+            shiftslab.update_fractional_from_cartesian()
             # test diagonal mirror at shifted origin
             spl = SymPlane(np.array([0, 0]), (abst[0]+abst[1]), abst)
             if shiftslab.isMirrorSymmetric(spl, eps):
@@ -472,7 +472,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 for at in sl:
                     at.cartpos[0:2] -= abst[0]/2
                 sl.ucell_mod.append(('add', -abst[0]/2))
-                sl.getFractionalCoordinates()
+                sl.update_fractional_from_cartesian()
 
     if not planegroup:
         efftype = ""    # effective cell type
@@ -754,7 +754,7 @@ def setSymmetry(sl, rp, targetsym):
                     for at in sl:
                         at.cartpos[:2] -= shiftv
                     sl.ucell_mod.append(('add', -shiftv))
-                    sl.getFractionalCoordinates()
+                    sl.update_fractional_from_cartesian()
                     sl.orisymplane.type = "glide"
                     # since the origin shifts and the direction stays the
                     #  same, nothing needs to be changed about the symplane
@@ -780,7 +780,7 @@ def setSymmetry(sl, rp, targetsym):
                     for at in sl:
                         at.cartpos[:2] -= shiftv
                     sl.ucell_mod.append(('add', -shiftv))
-                    sl.getFractionalCoordinates()
+                    sl.update_fractional_from_cartesian()
                     sl.orisymplane = SymPlane(
                         np.array([0, 0]), np.array(sl.orisymplane.dir[1],
                                                    -sl.orisymplane.dir[0]),
@@ -792,7 +792,7 @@ def setSymmetry(sl, rp, targetsym):
                     for at in sl:
                         at.cartpos[:2] -= shiftv
                     sl.ucell_mod.append(('add', -shiftv))
-                    sl.getFractionalCoordinates()
+                    sl.update_fractional_from_cartesian()
                     sl.orisymplane = SymPlane(np.array([0, 0]),
                                               np.dot(tspar, abst), abst)
                     sl.orisymplane.type = "glide"
@@ -820,7 +820,7 @@ def setSymmetry(sl, rp, targetsym):
                             for at in sl:
                                 at.cartpos[0:2] -= shiftv
                             sl.ucell_mod.append(('add', -shiftv))
-                            sl.getFractionalCoordinates()
+                            sl.update_fractional_from_cartesian()
                             sl.orisymplane.type = "glide"
                         sl.planegroup = targetsym
                     elif targetsym == "pmg":
@@ -828,7 +828,7 @@ def setSymmetry(sl, rp, targetsym):
                         for at in sl:
                             at.cartpos[0:2] -= shiftv
                         sl.ucell_mod.append(('add', -shiftv))
-                        sl.getFractionalCoordinates()
+                        sl.update_fractional_from_cartesian()
                         sl.orisymplane = SymPlane(np.array([0, 0]),
                                                   np.dot(tspar, abst), abst)
                         sl.orisymplane.type = "glide"
@@ -880,7 +880,7 @@ def setSymmetry(sl, rp, targetsym):
                     for at in sl:
                         at.cartpos[:2] -= shiftv
                     sl.ucell_mod.append(('add', -shiftv))
-                    sl.getFractionalCoordinates()
+                    sl.update_fractional_from_cartesian()
                     sl.planegroup = targetsym
                 else:
                     invalidDirectionMessage(rp, planegroup, targetsym)
@@ -1364,7 +1364,7 @@ def getSymBaseSymmetry(sl, rp):
                                      sl.symbaseslab.ab_cell), cv)), 0.)
             at.cartpos = (at.duplicateOf.cartpos
                           + np.dot(sl.symbaseslab.ucell, v))
-    sl.getFractionalCoordinates()
+    sl.update_fractional_from_cartesian()
     sl.linklists = []
     for at in sl:
         if len(at.linklist) > 1 and at.linklist not in sl.linklists:

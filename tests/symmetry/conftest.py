@@ -103,7 +103,7 @@ def displace_atoms():
                 disp = atom.disp_geo_offset['all']
             disp = disp[0]
             atom.cartpos += disp
-        slab.getFractionalCoordinates()
+        slab.update_fractional_from_cartesian()
         symmetry.findSymmetry(slab, param)
     return _displace
 

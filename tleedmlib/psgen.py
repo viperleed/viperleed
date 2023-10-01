@@ -153,7 +153,7 @@ def runPhaseshiftGen_old(sl, rp,
         nsl.update_cartesian_from_fractional()
         nsl.ucell = np.dot(np.array([[xsize, 0, 0], [0, ysize, 0], [0, 0, 1]]),
                            nsl.ucell)
-        nsl.getFractionalCoordinates()
+        nsl.update_fractional_from_cartesian()
 
     for site in nsl.sitelist:
         if site.el in rp.ELEMENT_MIX:
@@ -661,7 +661,7 @@ def make_atom_types(rp, sl, additional_layers):
         nsl.update_cartesian_from_fractional()
         nsl.ucell = np.dot(np.array([[xsize, 0, 0], [0, ysize, 0], [0, 0, 1]]),
                            nsl.ucell)
-        nsl.getFractionalCoordinates()
+        nsl.update_fractional_from_cartesian()
 
     # Write new unit cell vectors; to be used for input
     uct = nsl.ucell.transpose()

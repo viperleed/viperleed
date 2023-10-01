@@ -170,7 +170,7 @@ def main():
         at.pos[2] -= newZero
     newsl.update_cartesian_from_fractional()
     newsl.ucell[:, 2] = newsl.ucell[:, 2] * (1 - newZero)
-    newsl.getFractionalCoordinates()
+    newsl.update_fractional_from_cartesian()
     newcut = round((topBulkAt.pos[2]
                    + (abs(botSlabAt.pos[2] - topBulkAt.pos[2]) / 2)), 3)
     if bulkcut > 0:
