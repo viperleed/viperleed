@@ -979,8 +979,10 @@ class BaseSlab(ABC):
                     f'{type(self).__name__}.sort_by_element: Could '
                     f'not find element {missing_el} in element list')
             _LOGGER.error(_err)
-            raise SlabError('Perhaps you added some atoms and did not call '
-                            f'.update_element_count? {self.elements=}')
+            raise SlabError(
+                'Perhaps you added some atoms and did not call '
+                f'.update_element_count? {self.elements=}'
+                ) from missing_el
 
     def sort_by_z(self, botToTop=False):
         """Sorts atlist by z coordinate"""
