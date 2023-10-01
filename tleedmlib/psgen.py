@@ -671,7 +671,7 @@ def make_atom_types(rp, sl, additional_layers):
 
     # Generate dict with nearest neighbour distances, used to determine MT radii !!
     # Also used as atom list instead of nsl.atlist
-    NN_dict = nsl.getNearestNeigbours()
+    NN_dict = nsl.get_nearest_neigbours()
     nsl.getCartesianCoordinates()
 
     # Here we introduce the atom_types dict, which will be very important going forward

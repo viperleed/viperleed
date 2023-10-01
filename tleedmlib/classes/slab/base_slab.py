@@ -702,41 +702,44 @@ class BaseSlab(ABC):
             mincell = np.dot([[1, 0], [0, -1]], mincell)
         return True, mincell
 
-    def getNearestNeigbours(self):
-        """Returns a list listing the nearest neighbor distance for all atoms in the slab taking periodic
-        boundary conditions into account. For this calculation, the cell is internally expanded into a supercell."""
+    def get_nearest_neigbours(self):
+        """Return the nearest-neighbour distance for all atoms.
 
-        #unit vectors
-        a, b, _ = self.ucell.T
+        Returns
+        -------
+        nn_distances : dict
+            Form is {`atom`: `nn_distance`}, with `nn_distance`
+            the shortest distance between `atom` and all its
+            neighbours, taking into account the periodicity of
+            the slab in the direction parallel to the surface.
+        """
+        # Work with a supercell to account for atoms at edges/corners.
+        # Decide based on unit vector lengths how many times we want
+        # to repeat in each direction: the more the unit vectors are
+        # mismatched the more repetitions.                                      # TODO: there may be a better way taking angle into account as well.
+        *ab_cell, _ = self.ucell.T  # ab_cell is 2x3
+        ab_norms = np.linalg.norm(ab_cell, axis=1)
+        repeats = np.ceil(ab_norms.max() / ab_norms)  # "+" direction
+        repeats = 2*repeats + 1           # "+", "-", and centre cell
+        supercell = self.makeSupercell(np.diag(repeats))
 
-        # Compare unit vector lengths and decide based on this how many cells to add around
-        # A minimum 3x3 supercell is constructed for nearest neighbor query, but may be exteneded if vector lengths
-        # are very different
-        max_length = max(np.linalg.norm(a), np.linalg.norm(b))
-        i = np.ceil(max_length/np.linalg.norm(a))
-        j = np.ceil(max_length/np.linalg.norm(b))
+        # For NN query use KDTree from scipy.spatial
+        atom_coords_supercell = [atom.cartpos for atom in supercell]
+        tree = KDTree(atom_coords_supercell)
 
-        # Makes supercell minimum size 3x3 original
-        transform = np.array([[2*i+1,0],
-                              [0,2*j+1]])
-        supercell = self.makeSupercell(transform)
+        # Coordinates of all atoms in the centre cell:
+        center_cell_offset = (repeats + 1) / 2  # Indices only
+        center_cell_offset = center_cell_offset.dot(ab_cell)
+        atom_coords_center = [atom.cartpos + center_cell_offset
+                              for atom in self]
 
-
-        atom_coords = [atom.cartpos for atom in supercell] # Atom coordinates in supercell
-        # For NN query use KDTree from scipy.spacial
-        tree = KDTree(atom_coords)
-
-        NN_dict = {} # Dict containing Atom and NN will be returned
-
-        # Now query atoms in center cell for NN distances and save to dict
-        for atom in self:
-            coord = atom.cartpos
-            coord += (i+1)*a + (j+1)*b # central cell
-
-            dists, _ = tree.query(coord,k=2) # second argument irrelevant; would be index of NN atoms (supercell, not original!)
-            NN_dict[atom] = dists[1] # element 0 is distance to atom itself (< 1e-15)
-
-        return NN_dict
+        # Get all distances. Use k==2 as k==1 would just return
+        # a bunch of zeros since all atom_coords_center are a
+        # subset of atom_coords_supercell: their first nearest
+        # neighbour is themselves
+        distances, _ =  tree.query(atom_coords_center, k=2)
+        distances = distances[:, 1]  # First column is zeros
+        return dict(zip(self, distances))
 
     def initSites(self, rp):
         """Goes through the atom list and supplies them with appropriate
