@@ -901,7 +901,7 @@ def organize_atoms_by_sublayers(newbulkats, nsl):
 
     # iterate over all types of atoms (i.e. all atoms that can be in each site types)
     #create the sublayers
-    nsl.createSublayers(eps=0.001)
+    nsl.create_sublayers(eps=0.001)
     atom_types = {}
     for sublayer_id, sublayer in enumerate(nsl.sublayers, 1):  # enumerate(..., 1) makes sublayer_id start at 1
         for atom in sublayer.atlist:

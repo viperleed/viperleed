@@ -81,7 +81,7 @@ def main():
 
     sl.bulkslab = sl.makeBulkSlab(rp)
     bsl = sl.bulkslab
-    bsl.createSublayers(eps)
+    bsl.create_sublayers(eps)
 
     print("Checking bulk unit cell...")
     changecell, mincell = bsl.getMinUnitCell(rp)
@@ -117,7 +117,7 @@ def main():
     newbsl = bsl.makeBulkSlab(rp)
 
     # find largest layer spacing in reduced POSCAR
-    newbsl.createSublayers(eps)
+    newbsl.create_sublayers(eps)
     bulkcut = -1
     if newbsl.n_sublayers > 1:
         maxdist = abs(newbsl.sublayers[1].cartbotz

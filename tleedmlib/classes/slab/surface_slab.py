@@ -241,7 +241,7 @@ class SurfaceSlab(BaseSlab):
         # create a pseudo-bulkslab
         tsl.bulkslab = tsl.makeBulkSlab(rp_dummy)
         bsl = tsl.bulkslab
-        bsl.createSublayers(rp.SYMMETRY_EPS_Z)
+        bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
         # reduce unit cell in xy
         changecell, mincell = bsl.getMinUnitCell(rp)
         if changecell:
@@ -260,7 +260,7 @@ class SurfaceSlab(BaseSlab):
         rp_dummy.SUPERLATTICE = np.eye(2)
         tsl.bulkslab = tsl.makeBulkSlab(rp_dummy)
         bsl = tsl.bulkslab
-        bsl.createSublayers(rp.SYMMETRY_EPS_Z)
+        bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
 
         # calculate cut plane
         frac_bulk_thickness = abs(newC[2]) / abs(self.ucell[2, 2])
@@ -300,11 +300,11 @@ class SurfaceSlab(BaseSlab):
         vector in cartesian coordinates, or None if no match is found."""
         eps = rp.SYMMETRY_EPS
         if not self.sublayers:
-            self.createSublayers(rp.SYMMETRY_EPS_Z)
+            self.create_sublayers(rp.SYMMETRY_EPS_Z)
         if self.bulkslab is None:
             self.makeBulkSlab(rp)
         if not self.bulkslab.sublayers:
-            self.bulkslab.createSublayers(rp.SYMMETRY_EPS_Z)
+            self.bulkslab.create_sublayers(rp.SYMMETRY_EPS_Z)
         nsub = self.bulkslab.n_sublayers
         if self.n_sublayers < 2*nsub:
             return None
@@ -444,7 +444,7 @@ class SurfaceSlab(BaseSlab):
         bsl.update_cartesian_from_fractional(update_origin=True)
         bsl.update_element_count()   # update the number of atoms per element
         # remove duplicates
-        bsl.createSublayers(rp.SYMMETRY_EPS_Z)
+        bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
         newatlist = []
         for subl in bsl.sublayers:
             i = 0

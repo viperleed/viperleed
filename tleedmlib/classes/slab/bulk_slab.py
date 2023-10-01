@@ -180,7 +180,7 @@ class BulkSlab(BaseSlab):
             return None
         ts = copy.deepcopy(self)
         ts.update_cartesian_from_fractional()
-        ts.createSublayers(eps)
+        ts.create_sublayers(eps)
         baseLayer = ts.sublayers[0]
         baseInd = ts.sublayers.index(baseLayer)
         nl = ts.n_sublayers

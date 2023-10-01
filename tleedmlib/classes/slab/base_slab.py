@@ -20,7 +20,7 @@ import copy
 import itertools
 import logging
 from numbers import Real
-from operator import attrgetter
+from operator import attrgetter, itemgetter
 import re
 
 import numpy as np
@@ -28,13 +28,14 @@ import scipy.spatial as sps
 from scipy.spatial import KDTree
 
 from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import angle, collapse_fractional
+from viperleed.tleedmlib.base import angle, collapse_fractional, pairwise
 from viperleed.tleedmlib.base import rotation_matrix, rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
 from .slab_errors import InvalidUnitCellError, NeedsSublayersError, SlabError
+from .slab_utils import _z_distance
 
 
 _LOGGER = logging.getLogger('tleedm.slab')
@@ -443,76 +444,91 @@ class BaseSlab(ABC):
         self.atlist = tmplist
         return ct
 
-    def createSublayers(self, eps=0.001):
-        """Sorts the atoms in the slab into sublayers, sorted by element and Z
-        coordinate."""
+    def _get_sublayers_for_el(self, element, eps):
+        """Yield Layer objects for atoms of `element` within `eps`."""
+        sublists = [[a for a in self if a.el == element]]
+        # First, split at points where two atoms are more than eps apart
+        i = 0
+        while i < len(sublists):
+            atoms = sublists[i]
+            for j, atom_pair in enumerate(pairwise(atoms)):
+                if _z_distance(*atom_pair) > eps:
+                    sublists[i:i+1] = atoms[:j+1], atoms[j+1:]
+                    break
+            i += 1
+
+        # Now go through again and split sublayers at greatest
+        # interlayer distance, if they are too thick overall
+        i = 0
+        while i < len(sublists):
+            atoms = sublists[i]
+            if len(atoms) < 2 or _z_distance(atoms[0], atoms[-1]) <= eps:
+                i += 1
+                continue
+            distances = ((j, _z_distance(*atoms))
+                         for j, atoms in enumerate(pairwise(atoms), start=1))
+            maxdistindex, _ = max(distances, key=itemgetter(1))
+            sublists[i:i+1] = atoms[:maxdistindex], atoms[maxdistindex:]
+
+        # Finally create sublayers based on sublists
+        for atoms in sublists:
+            new_layer = Layer(self, 0)
+            new_layer.atlist = atoms
+            new_layer.cartbotz = atoms[0].cartpos[2]
+            yield new_layer
+
+    def create_sublayers(self, eps=0.001):
+        """Assign the atoms in the slab to sublayers.
+
+        Each sublayer contains only atoms with the same chemical
+        element, and such that all atoms in the sublayer are closer
+        than `eps` to one another in the z direction.
+
+        After calling this method, `slab.atlist` is sorted along
+        the z Cartesian coordinate (bottommost atom first), and the
+        `slab.sublayers` attribute is up to date. Calling this method
+        more than once erases previous sublayer lists.
+
+        The sublayers created are stored in the following order:
+        - Sublayers towards the top of the slab come earlier
+        - Sublayers with the same z coordinate (within eps) are
+          next to each other, sorted by alphabetical element order
+
+        Parameters
+        ----------
+        eps : float, optional
+            Limit value for z difference to assign atoms to different
+            sublayers. Default is 0.001.
+
+        Returns
+        -------
+        None.
+        """
         self.check_a_b_in_plane()
         self.sort_by_z()
-        subl = []  # will be a list of sublayers, using the Layer class
-        for el in self.elements:
-            sublists = [[a for a in self if a.el == el]]
-            # first, split at points where two atoms are more than eps apart
-            i = 0
-            while i < len(sublists):
-                brk = False
-                if len(sublists[i]) > 1:
-                    tmplist = sublists[i][:]
-                    for j in range(1, len(tmplist)):
-                        if (abs(tmplist[j].cartpos[2]
-                                - tmplist[j-1].cartpos[2]) > eps):
-                            sublists.append(tmplist[:j])
-                            sublists.append(tmplist[j:])
-                            sublists.pop(i)
-                            brk = True
-                            break
-                    if not brk:
-                        i += 1
-                else:
-                    i += 1
-            # now, go through again and split sublayers at greatest interlayer
-            #   distance, if they are too thick overall
-            i = 0
-            while i < len(sublists):
-                brk = False
-                if len(sublists[i]) > 1:
-                    if abs(sublists[i][0].cartpos[2]
-                           - sublists[i][-1].cartpos[2]) > eps:
-                        maxdist = abs(sublists[i][1].cartpos[2]
-                                      - sublists[i][0].cartpos[2])
-                        maxdistindex = 1
-                        for j in range(2, len(sublists[i])):
-                            d = abs(sublists[i][j].cartpos[2]
-                                    - sublists[i][j-1].cartpos[2])
-                            if d > maxdist:
-                                maxdist = d
-                                maxdistindex = j
-                        sublists.append(sublists[i][:maxdistindex])
-                        sublists.append(sublists[i][maxdistindex:])
-                        sublists.pop(i)
-                        brk = True
-                else:
-                    i += 1
-                if not brk:
-                    i += 1
-            # now, create sublayers based on sublists:
-            for ls in sublists:
-                newsl = Layer(self, 0, sublayer=True)
-                subl.append(newsl)
-                newsl.atlist = ls
-                newsl.cartbotz = ls[0].cartpos[2]
+        subl = []
+        for element in self.elements:                                           # TODO: should we complain if there's no elements?
+            subl.extend(self._get_sublayers_for_el(element, eps))
+
+        # subl is sorted element-first. Re-sort it as in the __doc__
         self.sublayers = []
-        subl.sort(key=lambda sl: -sl.cartbotz)
+
+        # Work with subl sorted from bottom to top, and pop the last
+        # element each time (i.e., the topmost layer to be processed)
+        subl.sort(key=attrgetter('cartbotz'), reverse=True)
         while subl:
-            acc = [subl.pop()]  # accumulate sublayers with same z
+            same_z = [subl.pop()]  # accumulate sublayers with same z
+            this_z = same_z[0].cartbotz
             while subl:
-                if abs(subl[-1].cartbotz - acc[0].cartbotz) < eps:
-                    acc.append(subl.pop())
+                if abs(subl[-1].cartbotz - this_z) < eps:
+                    same_z.append(subl.pop())
                 else:
                     break
-            acc.sort(key=lambda sl: sl.atlist[0].el)  # sort by element
-            self.sublayers.extend(acc)
-        for (i, sl) in enumerate(self.sublayers):
-            sl.num = i
+            # Finally re-sort by element
+            same_z.sort(key=lambda lay: lay.atlist[0].el)                       # TODO: is this even necessary? .sort should be stable, so element order should be preserved
+            self.sublayers.extend(same_z)
+        for i, layer in enumerate(self.sublayers):
+            layer.num = i
 
     def collapse_cartesian_coordinates(self, update_origin=False):
         """Ensure all atoms are inside the unit cell.
@@ -626,7 +642,7 @@ class BaseSlab(ABC):
         ts = copy.deepcopy(self)
         ts.projectCToZ()
         ts.sort_by_z()
-        ts.createSublayers(epsz)
+        ts.create_sublayers(epsz)
 
         # Use the lowest-occupancy sublayer (the one
         # with fewer atoms of the same site type)
@@ -882,7 +898,7 @@ class BaseSlab(ABC):
         ssl.ucell_mod = []
         # if self.ucell_mod is not empty, don't drag that into the new slab.
         # remove duplicates
-        ssl.createSublayers(rp.SYMMETRY_EPS_Z)
+        ssl.create_sublayers(rp.SYMMETRY_EPS_Z)
         newatlist = []
         for subl in ssl.sublayers:
             i = 0

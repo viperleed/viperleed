@@ -106,7 +106,7 @@ def findBulkSymmetry(sl, rp):
     ts = copy.deepcopy(sl)
     ts.sort_by_z()
     ts.collapse_cartesian_coordinates()
-    ts.createSublayers(epsz)
+    ts.create_sublayers(epsz)
     # optimize C vector
     newC = ts.getMinC(rp)
     if newC is not None:
@@ -243,7 +243,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     # create a testslab: C projected to Z
     ts = copy.deepcopy(sl)
     if bulk:        # check whether there are at least 2 atomic layers
-        ts.createSublayers(epsz)
+        ts.create_sublayers(epsz)
         if ts.n_sublayers < 2:
             ts = ts.doubleBulkSlab()
     ts.projectCToZ()
@@ -262,7 +262,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     tmpat.pos[1] += j
     bigslab.update_cartesian_from_fractional(update_origin=True)
     # bigslab.fullUpdate(rp)   can't do this - would collapse coordinates!
-    bigslab.createSublayers(epsz)
+    bigslab.create_sublayers(epsz)
 
     # find the lowest occupancy sublayer; comparing candidate
     #   axes / planes to this one will be fastest
@@ -293,7 +293,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
 
     # we're done with the bigger slab, actually testing symmetry operations
     #   can be done just on the basic one.
-    ts.createSublayers(epsz)
+    ts.create_sublayers(epsz)
     lowocclayer = ts.sublayers[bigslab.sublayers.index(lowocclayer)]
     del bigslab
 
@@ -1005,7 +1005,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         at.linklist = [at]
         at.symrefm = np.identity(2)
     if not planegroup == "p1":  # p1 has no symmetry to check for
-        sl.createSublayers(epsz)
+        sl.create_sublayers(epsz)
         sl.sort_original()
         sl.collapse_cartesian_coordinates()
         # TEST ROTATION AT ORIGIN - TESTING ONLY HIGHEST ROTATIONAL ORDER
