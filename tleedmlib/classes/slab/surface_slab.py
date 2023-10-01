@@ -390,7 +390,7 @@ class SurfaceSlab(BaseSlab):
 
         # construct bulk slab
         bsl = BulkSlab.from_slab(self)
-        bsl.resetSymmetry()
+        bsl.clear_symmetry_and_ucell_history()
         bsl.atlist = [at for at in bsl if at.layer.isBulk]
         bsl.layers = bsl.bulk_layers
         bsl.update_cartesian_from_fractional()

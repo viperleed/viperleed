@@ -321,6 +321,25 @@ class BaseSlab(ABC):
             _LOGGER.error(_err)
             raise InvalidUnitCellError(_err)
 
+    def clear_symmetry_and_ucell_history(self):                                 # base or only surface?
+        """Set all symmetry information back to default values.
+
+        This method also completely erases the history of unit-cell
+        modifications, and sets the current unit cell as the 'original'
+        one. This means that, if the unit cell was modified prior to
+        a call to this method, the original unit cell **cannot** be
+        recovered by a call to revertUnitCell.
+
+        Returns
+        -------
+        None.
+        """
+        self.ucell_mod = []
+        self.ucell_ori = self.ucell.copy()
+        self.celltype = 'unknown'
+        self.foundplanegroup = self.planegroup = 'unknown'
+        self.orisymplane = None
+
     def createLayers(self, rparams, bulk_cuts=[]):
         """Creates a list of Layer objects based on the N_BULK_LAYERS and
         LAYER_CUTS parameters in rparams. If layers were already defined,
@@ -907,7 +926,7 @@ class BaseSlab(ABC):
         By default, the transformation matrix will be taken from rp, but a
         different matrix can also be passed."""
         ssl = copy.deepcopy(self)
-        ssl.resetSymmetry()
+        ssl.clear_symmetry_and_ucell_history()
         ssl.update_cartesian_from_fractional()
         # reduce dimensions in xy
         transform3 = np.identity(3, dtype=float)
@@ -964,17 +983,6 @@ class BaseSlab(ABC):
             self.update_cartesian_from_fractional()
             c_vec_xy[:] = 0
             self.collapse_cartesian_coordinates()  # Also updates fractional
-
-    # def reset_symmetry(self):                                                   # base? NOT A GREAT NAME. The ucell_ori is changed to the current cell!
-        # """Set all symmetry information back to default values."""
-    def resetSymmetry(self):
-        """Sets all symmetry information back to default values."""
-        self.ucell_mod = []
-        # self.ucell_ori = self.ucell.copy()
-        self.ucell_ori = self.ucell
-        self.celltype = 'unknown'
-        self.foundplanegroup = self.planegroup = 'unknown'
-        self.orisymplane = None
 
     # def update_atom_numbers(self):
     def resetAtomOriN(self):

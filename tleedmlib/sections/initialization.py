@@ -701,7 +701,7 @@ def init_domains(rp):
                     f"supercell slab for domain {dp.name}")
         try:
             os.chdir(dp.workdir)
-            dp.sl.resetSymmetry()
+            dp.sl.clear_symmetry_and_ucell_history()
             dp.rp.SYMMETRY_FIND_ORI = True
             initialization(dp.sl, dp.rp, subdomain=True)
         except Exception:
