@@ -226,7 +226,7 @@ class BulkSlab(BaseSlab):
     def isBulkTransformSymmetric(self, matrix, sldisp, eps):
         """Evalues whether the slab is self-equivalent under a given symmetry
         operation, and subsequent translation by a given number of sublayers"""
-        self.check_a_b_out_of_plane()
+        self.check_a_b_in_plane()
         uc = self.ucell
         uct = np.transpose(uc)
         releps = [eps / np.linalg.norm(uct[j]) for j in range(0, 3)]

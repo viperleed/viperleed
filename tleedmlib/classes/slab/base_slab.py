@@ -312,8 +312,7 @@ class BaseSlab(ABC):
             ts.sort_original()
         return ts, newbulkats
 
-    # def check_a_b_in_plane(self):
-    def check_a_b_out_of_plane(self):
+    def check_a_b_in_plane(self):
         """Raise InvalidUnitCellError if a, b have out-of-plane components."""
         if any(self.ucell[2, :2]):
             _err = ('Unit cell a and b vectors must not '
@@ -328,7 +327,7 @@ class BaseSlab(ABC):
         automatically detected bulk layer cuts. Returns the cuts as a sorted
         list of floats."""
         # first interpret LAYER_CUTS parameter - can be a list of strings
-        self.check_a_b_out_of_plane()
+        self.check_a_b_in_plane()
 
         if self.is_bulk:
             bulk_cuts = ()
@@ -447,6 +446,7 @@ class BaseSlab(ABC):
     def createSublayers(self, eps=0.001):
         """Sorts the atoms in the slab into sublayers, sorted by element and Z
         coordinate."""
+        self.check_a_b_in_plane()
         self.sort_by_z()
         subl = []  # will be a list of sublayers, using the Layer class
         for el in self.elements:
@@ -1356,7 +1356,6 @@ class BaseSlab(ABC):
             True if translation symmetric, else False.
 
         """
-        self.check_a_b_out_of_plane()
         if len(tv) == 2:  # two-dimensional displacement. append zero for z
             tv = np.append(tv, 0.)
         uc = np.copy(self.ucell)
