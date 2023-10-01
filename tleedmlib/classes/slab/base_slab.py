@@ -737,9 +737,9 @@ class BaseSlab(ABC):
         # mismatched the more repetitions.                                      # TODO: there may be a better way taking angle into account as well.
         *ab_cell, _ = self.ucell.T  # ab_cell is 2x3
         ab_norms = np.linalg.norm(ab_cell, axis=1)
-        repeats = np.ceil(ab_norms.max() / ab_norms)  # "+" direction
-        repeats = 2*repeats + 1           # "+", "-", and centre cell
-        supercell = self.makeSupercell(np.diag(repeats))
+        repeats = np.ceil(ab_norms.max() / ab_norms)  # '+' direction
+        repeats = 2*repeats + 1           # '+', '-', and centre cell
+        supercell = self.make_supercell(np.diag(repeats))
 
         # For NN query use KDTree from scipy.spatial
         atom_coords_supercell = [atom.cartpos for atom in supercell]
@@ -839,44 +839,66 @@ class BaseSlab(ABC):
                     return False
         return True
 
-    # def makeSupercell(self, transform):                                         # surface only?
-    def makeSupercell(self, transform):
-        """Returns a copy of the slab with the unit cell transformed by the
-        given integer-valued, (2x2) transformation matrix."""
-        if np.any(abs(np.round(transform) - transform) > 1e-6):
-            raise ValueError('Slab.makeSupercell: transformation matrix '
-                             'contains non-integer elements')
-        transform = np.round(transform).astype(int)
-        transformSize = int(round(abs(np.linalg.det(transform))))
-        ts = copy.deepcopy(self)
-        if transformSize > 1:
-            transformDiag = [1, 1]
-            if np.max(transform[:, 0]) > np.max(transform[:, 1]):
-                longSide = 0
-            else:
-                longSide = 1
-            transformDiag[longSide] = np.max(transform)
-            while transformSize / transformDiag[longSide] % 1 != 0:
-                transformDiag[longSide] -= 1
-            transformDiag[1-longSide] = int(transformSize
-                                            / transformDiag[longSide])
-            cpatlist = ts.atlist[:]
-            for at in cpatlist:
-                for i in range(0, transformDiag[0]):
-                    for j in range(0, transformDiag[1]):
-                        if i == j == 0:
-                            continue
-                        tmpat = at.duplicate() # duplicate saves duplicated atom in slab
-                        tmpat.pos[0] += i
-                        tmpat.pos[1] += j
-        ts.resetAtomOriN()
-        ts.update_cartesian_from_fractional(update_origin=True)
-        tm = np.identity(3, dtype=float)
-        tm[:2, :2] = transform
-        ts.ucell = np.transpose(np.dot(tm, np.transpose(ts.ucell)))
-        ts.update_fractional_from_cartesian()
-        ts.update_cartesian_from_fractional(update_origin=True)
-        return ts
+    def make_supercell(self, transform):                                        # TODO: surface only?
+        """Return a copy of the slab replicated according to `transform`.
+
+        The 'inverse' (i.e., leading to a size reduction) of this
+        operation can be obtained by calling `makeSymBaseSlab`
+        with the inverse of `transform`.
+
+        Parameters
+        ----------
+        transform : numpy.ndarray
+            Shape (2, 2). All elements must be (close to) integers.
+            The transposed unit cell is transformed by multiplication
+            with `transform` on the left. Notice that this is NOT the
+            usual way of doing it, e.g., as VESTA does. The equivalent
+            matrix in VESTA is `transform.T`.
+
+        Returns
+        -------
+        super_slab : Slab
+            Copy of this slab replicated according to `transform`.
+
+        Raises
+        ------
+        NonIntegerMatrixError
+            If `transform` has non-integer entries.
+        SingularMatrixError
+            If `transform` is singular.
+        ValueError
+            If `transform` has unacceptable shape.
+        """
+        super_slab = copy.deepcopy(self)
+        try:
+            repeats = leedbase.get_superlattice_repetitions(transform)
+        except ValueError as exc:
+            raise type(exc)(
+                f'{type(self).__name__}.make_supercell: {exc}'
+                ) from None
+
+        if any(r > 1 for r in repeats):  # Need to duplicate atoms
+            for atom in super_slab.atlist.copy():
+                for i, j in itertools.product(*repeats):
+                    # pylint: disable=compare-to-zero
+                    if i == j == 0:  # Skip already existing atom
+                        continue
+                    # Duplicate the atom, and implicitly store it
+                    # in super_slab. Then change its fractional pos
+                    duplicate_atom = atom.duplicate()
+                    duplicate_atom.pos[:1] += (i, j)
+
+        # We now may have added new atoms that will have fractional
+        # coordinates outside the original cell. Make sure we have
+        # the correct Cartesian coordinates before transforming the
+        # unit cell.
+        super_slab.update_cartesian_from_fractional()                           # TODO: was update_origin_True, but should not be needed as we have only added atoms by moving them in-plane
+        super_slab.ab_cell[:] = super_slab.ab_cell.dot(transform.T)
+
+        # Starting from the stored Cartesian coordinates, collapse
+        # all atoms (incl. fractional coordinates) to the new cell
+        super_slab.collapse_cartesian_coordinates()                             # TODO: was update_origin_True, same comment as above
+        return super_slab
 
     def makeSymBaseSlab(self, rp, transform=None):
         """Copies self to create a symmetry base slab by collapsing to the

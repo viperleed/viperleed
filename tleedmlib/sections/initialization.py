@@ -596,7 +596,7 @@ def init_domains(rp):
                 else:
                     supercellRequired.append(dp)
                     oldslab = dp.sl
-                    dp.sl = dp.sl.makeSupercell(np.round(trans))
+                    dp.sl = dp.sl.make_supercell(np.round(trans))
                     dp.rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans

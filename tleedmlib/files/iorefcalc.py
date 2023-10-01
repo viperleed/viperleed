@@ -15,7 +15,7 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import fortranContLine, lcm, splitMaxRight
+from viperleed.tleedmlib.base import fortranContLine, splitMaxRight
 from viperleed.tleedmlib.classes.beam import Beam
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
@@ -246,19 +246,7 @@ def writePARAM(sl, rp, lmax=-1):
     output = ('C  Dimension statements for Tensor LEED reference calculation, '
               '\nC  version v1.2\n\n')
     output += 'C  1. lattice symmetry\n\n'
-    m = rp.SUPERLATTICE.copy()
-    if m[1, 1] != 0:      # m[1] not parallel to a_bulk
-        if m[0, 1] != 0:  # m[0] not parallel to a_bulk
-            # find basis in which m[0] is parallel to a_bulk
-            f = lcm(abs(int(m[0, 1])), abs(int(m[1, 1])))
-            m[0] *= f/m[0, 1]
-            m[1] *= f/m[1, 1]
-            m[0] -= m[1]*np.sign(m[0, 1])*np.sign(m[1, 1])
-        nl1 = abs(int(round(m[0, 0])))
-        nl2 = abs(int(round(abs(np.linalg.det(rp.SUPERLATTICE))/nl1)))
-    else:               # m[1] already parallel to a_bulk
-        nl2 = abs(int(round(m[1, 0])))
-        nl1 = abs(int(round(abs(np.linalg.det(rp.SUPERLATTICE))/nl2)))
+    nl1, nl2 = leedbase.get_superlattice_repetitions(rp.SUPERLATTICE)
     ideg = 2  # any 2D point grid is at least 2fold symmetric
     # if sl.planegroup in ['p2','pmm','pmg','pgg','cmm','rcmm']:
     #     ideg = 2

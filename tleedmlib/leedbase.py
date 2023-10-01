@@ -24,7 +24,8 @@ import psutil
 from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
-from viperleed.tleedmlib.base import cosvec
+from viperleed.tleedmlib.base import cosvec, lcm
+from viperleed.tleedmlib.base import NonIntegerMatrixError, SingularMatrixError
 
 # The following imports are potentially the cause of cyclic
 # imports. They are used exclusively as part of getTensorOriStates
@@ -44,6 +45,68 @@ logger = logging.getLogger("tleedm.leedbase")
 ###############################################
 #                FUNCTIONS                    #
 ###############################################
+
+def get_superlattice_repetitions(matrix):
+    """Return the number of repeats in 2D to cover a superlattice.
+
+    Parameters
+    ----------
+    matrix : Sequence
+        Shape (2, 2). The matrix representing the transformation
+        between the "base" lattice and the super-lattice. The
+        relation is suprlattice_basis = matrix @ base_basis,
+        with the _basis matrices such that in-plane unit vectors
+        are rows, i.e., a, b = _basis. Must be non-singular, and
+        with all entries (close to) integers.
+
+    Returns
+    -------
+    repeats : tuple
+        Two elements, each corresponds to the number of repetitions
+        of the "base" cell along its two unit vectors so as to
+        completely cover the superlattice area when back-folded.
+
+    Raises
+    ------
+    ValueError
+        If matrix is singular, has non-integer elements,
+        or an inappropriate shape.
+    """
+    # Work on a numpy-array copy of the input. Ensure it's float
+    # to avoid UFuncTypeError when doing in-place divisions below
+    matrix = np.copy(matrix).astype(float)
+    if matrix.shape != (2, 2):
+        raise ValueError(f'Unexpected shape {matrix.shape} for superlattice '
+                         'transform matrix. Should be (2, 2)')
+    if np.any(abs(np.round(matrix) - matrix) > 1e-6):
+        raise NonIntegerMatrixError(
+            'Transformation matrix contains non-integer elements'
+            )
+
+    matrix = matrix.round()
+    n_repeats = abs(matrix[0, 0] * matrix[1, 1] - matrix[1, 0] * matrix[0, 1])
+    n_repeats = round(n_repeats)
+    if not n_repeats:
+        raise SingularMatrixError('Superlattice transform matrix is singular')
+
+    if n_repeats == 1:  # No area change
+        return 1, 1
+
+    # The trick is making the input matrix into a lower-triangular
+    # matrix by Gauss elimination. Then we read off the 'number of
+    # repeats along the first base vector' from the only non-zero
+    # element of the first row. The other direction is just the
+    # ratio of n_repeats and the one we already know.
+    if not matrix[1, 1]:  # The matrix is upper-triangular. Swap.
+        matrix[[0, 1]] = matrix[[1, 0]]
+    if matrix[0, 1]:      # The matrix is not triangular. Gauss.
+        multiple = lcm(abs(matrix[0, 1]), abs(matrix[1, 1]))
+        first_row, second_row = matrix
+        first_row /= first_row[1]
+        first_row -= second_row/second_row[1]
+        first_row *= multiple  # Ensure integer
+    return abs(round(matrix[0, 0])), abs(round(n_repeats / matrix[0, 0]))
+
 
 def monitoredPool(rp, poolsize, function, tasks, update_from=Path()):
     """

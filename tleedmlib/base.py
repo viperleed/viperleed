@@ -19,6 +19,17 @@ import scipy.spatial as sps
 
 logger = logging.getLogger("tleedm.base")
 
+###############################################
+#                EXCEPTIONS                   #
+###############################################
+
+class NonIntegerMatrixError(ValueError):                                         # TODO: move somewhere else
+    """A matrix that should have integer values does not."""
+
+
+class SingularMatrixError(ValueError, ZeroDivisionError):
+    """A matrix that needs inversion is singular."""
+
 
 ###############################################
 #                 CLASSES                     #
