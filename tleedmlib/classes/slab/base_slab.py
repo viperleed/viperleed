@@ -640,7 +640,7 @@ class BaseSlab(ABC):
 
         # Create a test slab: C projected to Z
         ts = copy.deepcopy(self)
-        ts.projectCToZ()
+        ts.project_c_to_z()
         ts.sort_by_z()
         ts.create_sublayers(epsz)
 
@@ -950,14 +950,20 @@ class BaseSlab(ABC):
             layer.atlist = [at for at in layer.atlist if at in ssl]
         return ssl
 
-    def projectCToZ(self):
-        """makes the c vector of the unit cell perpendicular to the surface,
-        changing all atom coordinates to fit the new base"""
-        if self.ucell[0, 2] != 0.0 or self.ucell[1, 2] != 0.0:
+    def project_c_to_z(self):                                                   # TODO: surface only?
+        """Make the c vector of the unit cell perpendicular to the surface.
+
+        All atom coordinates are updated to fit the new basis.
+
+        Returns
+        -------
+        None.
+        """
+        c_vec_xy = self.ucell.T[2, :2]
+        if any(c_vec_xy):  # Non-zero components
             self.update_cartesian_from_fractional()
-            self.ucell[:, 2] = np.array([0, 0, self.ucell[2, 2]])
-            self.collapse_cartesian_coordinates()
-            # implicitly also gets new fractional coordinates
+            c_vec_xy[:] = 0
+            self.collapse_cartesian_coordinates()  # Also updates fractional
 
     # def reset_symmetry(self):                                                   # base? NOT A GREAT NAME. The ucell_ori is changed to the current cell!
         # """Set all symmetry information back to default values."""

@@ -246,7 +246,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         ts.create_sublayers(epsz)
         if ts.n_sublayers < 2:
             ts = ts.doubleBulkSlab()
-    ts.projectCToZ()
+    ts.project_c_to_z()
     ts.sort_by_z()
 
     bigslab = copy.deepcopy(ts)
@@ -1199,7 +1199,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                            SymPlane(abst[1], abst[0], abst, collapse=False),
                            SymPlane(ori, abst[0]+abst[1], abst)])
     ts = copy.deepcopy(sl)
-    ts.projectCToZ()
+    ts.project_c_to_z()
     ts.collapse_cartesian_coordinates()
     for at in ts:
         # first check points
