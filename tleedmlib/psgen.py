@@ -591,7 +591,7 @@ def make_atom_types(rp, sl, additional_layers):
     number_of_atoms_in_bulk_layer = len(added_bulk)
     extended_cell, new_bulk_atoms = sl.addBulkLayers(rp, n=additional_layers)
     extended_cell.projectCToZ() # project C to Z for phaseshifts only
-    extended_cell.collapseCartesianCoordinates()
+    extended_cell.collapse_cartesian_coordinates()
     uct = extended_cell.ucell.transpose() # unit cell vectors in matrix
     nsl = extended_cell
 

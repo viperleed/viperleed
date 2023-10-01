@@ -104,7 +104,7 @@ class BulkSlab(BaseSlab):
             at.duplicate()
             at.cartpos = at.cartpos + bulkc
         ts.ucell[:, 2] *= 2
-        ts.collapseCartesianCoordinates(updateOrigin=True)
+        ts.collapse_cartesian_coordinates(update_origin=True)
         return ts
 
     def getBulk3Dstr(self):

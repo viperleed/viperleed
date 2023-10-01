@@ -308,7 +308,7 @@ class BaseSlab(ABC):
                 # new atoms get shifted perpendicular to ucell c
                 at.cartpos -= bulkc_perp_to_c
             # TODO: could be done outside loop?
-            ts.collapseCartesianCoordinates(updateOrigin=True)
+            ts.collapse_cartesian_coordinates(update_origin=True)
             ts.sort_original()
         return ts, newbulkats
 
@@ -514,13 +514,25 @@ class BaseSlab(ABC):
         for (i, sl) in enumerate(self.sublayers):
             sl.num = i
 
-    def collapseCartesianCoordinates(self, updateOrigin=False):
-        """Finds atoms outside the parallelogram spanned by the unit vectors
-        a and b and moves them inside. If keepOriZ is True, the old value of
-        the top atom position will be preserved.."""
+    def collapse_cartesian_coordinates(self, update_origin=False):
+        """Ensure all atoms are inside the unit cell.
+
+        This method updates both Cartesian and fractional coordinates,
+        using the current Cartesian coordinates as starting point.
+
+        Parameters
+        ----------
+        update_origin : bool, optional
+            Whether the z component of the Cartesian origin should
+            also be updated. Default is False.
+
+        Returns
+        -------
+        None.
+        """
         self.update_fractional_from_cartesian()
         self.collapse_fractional_coordinates()
-        self.update_cartesian_from_fractional(update_origin=updateOrigin)
+        self.update_cartesian_from_fractional(update_origin=update_origin)
 
     def collapse_fractional_coordinates(self):                                  # TODO: would be nicer to have the public method update everything correctly, and rather make this a private one.  USED ONLY IN SLABs and in iosearch
         """Ensure all atoms are inside the unit cell.
@@ -539,12 +551,11 @@ class BaseSlab(ABC):
 
         See Also
         --------
-        collapseCartesianCoordinates
+        collapse_cartesian_coordinates
         """
         for atom in self:
             collapse_fractional(atom.pos, in_place=True)
 
-    # def full_update(self, rparams):
     def fullUpdate(self, rpars):
         """readPOSCAR initializes the slab with information from POSCAR;
         fullUpdate re-initializes the atom list, then uses the information
@@ -777,8 +788,8 @@ class BaseSlab(ABC):
         before."""
         slab1 = copy.deepcopy(self)
         slab2 = copy.deepcopy(slab)
-        slab1.collapseCartesianCoordinates()
-        slab2.collapseCartesianCoordinates()
+        slab1.collapse_cartesian_coordinates()
+        slab2.collapse_cartesian_coordinates()
         # reorder sublayers by Z to then compare by index
         slab1.sublayers.sort(key=lambda sl: sl.cartbotz)
         slab2.sublayers.sort(key=lambda sl: sl.cartbotz)
@@ -867,7 +878,7 @@ class BaseSlab(ABC):
         else:
             transform3[:2, :2] = rp.SYMMETRY_CELL_TRANSFORM
         ssl.ucell = np.dot(ssl.ucell, np.linalg.inv(np.transpose(transform3)))
-        ssl.collapseCartesianCoordinates(updateOrigin=True)
+        ssl.collapse_cartesian_coordinates(update_origin=True)
         ssl.ucell_mod = []
         # if self.ucell_mod is not empty, don't drag that into the new slab.
         # remove duplicates
@@ -907,7 +918,7 @@ class BaseSlab(ABC):
         if self.ucell[0, 2] != 0.0 or self.ucell[1, 2] != 0.0:
             self.update_cartesian_from_fractional()
             self.ucell[:, 2] = np.array([0, 0, self.ucell[2, 2]])
-            self.collapseCartesianCoordinates()
+            self.collapse_cartesian_coordinates()
             # implicitly also gets new fractional coordinates
 
     # def reset_symmetry(self):                                                   # base? NOT A GREAT NAME. The ucell_ori is changed to the current cell!
@@ -951,13 +962,13 @@ class BaseSlab(ABC):
                 if op[0] == 'add':
                     for at in self:
                         at.cartpos[0:2] -= op[1]
-                    self.collapseCartesianCoordinates()
+                    self.collapse_cartesian_coordinates()
                 elif op[0] == 'lmul':
                     self.ucell = np.dot(np.linalg.inv(op[1]), self.ucell)
-                    self.collapseCartesianCoordinates()
+                    self.collapse_cartesian_coordinates()
                 elif op[0] == 'rmul':
                     self.ucell = np.dot(self.ucell, np.linalg.inv(op[1]))
-                    self.collapseCartesianCoordinates()
+                    self.collapse_cartesian_coordinates()
             self.ucell_mod = self.ucell_mod[:len(restoreTo)]
 
     def sort_by_element(self):

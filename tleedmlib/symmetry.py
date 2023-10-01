@@ -105,7 +105,7 @@ def findBulkSymmetry(sl, rp):
     glidesfound = []
     ts = copy.deepcopy(sl)
     ts.sort_by_z()
-    ts.collapseCartesianCoordinates()
+    ts.collapse_cartesian_coordinates()
     ts.createSublayers(epsz)
     # optimize C vector
     newC = ts.getMinC(rp)
@@ -227,7 +227,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         sl.ucell_mod.append(('rmul', utr.T))
         sl.ucell = np.dot(sl.ucell, utr.T)
         # same as np.transpose(np.dot(utr,np.transpose(sl.ucell)))
-        sl.collapseCartesianCoordinates(updateOrigin=True)
+        sl.collapse_cartesian_coordinates(update_origin=True)
         # gets fractional coordinates in the new unit cell and
         #   collapses appropriately
 
@@ -239,7 +239,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         logger.info("Found unit cell type: "+celltype)
         logger.info("Starting symmetry search...")
     # FIND HIGHEST SYMMETRY ORIGIN
-    sl.collapseCartesianCoordinates()
+    sl.collapse_cartesian_coordinates()
     # create a testslab: C projected to Z
     ts = copy.deepcopy(sl)
     if bulk:        # check whether there are at least 2 atomic layers
@@ -649,7 +649,7 @@ def mirror_to_diagonal(sl, rp, abst, oriplane):
     sl.ucell = np.dot(m, sl.ucell)
     abst = sl.ab_cell.T
     direction = (abst[0]+abst[1], abst[0]-abst[1])[idx]
-    sl.collapseCartesianCoordinates(updateOrigin=True)
+    sl.collapse_cartesian_coordinates(update_origin=True)
     oriplane = SymPlane(np.array([0, 0]), direction, abst)
     logger.warning("The POSCAR unit cell was changed to a higher "
                    "symmetry form. Make sure to check beam labels for "
@@ -1007,7 +1007,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
     if not planegroup == "p1":  # p1 has no symmetry to check for
         sl.createSublayers(epsz)
         sl.sort_original()
-        sl.collapseCartesianCoordinates()
+        sl.collapse_cartesian_coordinates()
         # TEST ROTATION AT ORIGIN - TESTING ONLY HIGHEST ROTATIONAL ORDER
         #    IS ENOUGH
         if planegroup not in ["p1", "pm", "pg", "cm", "rcm"]:
@@ -1025,7 +1025,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 rp.setHaltingLevel(1)
             tmpslab = copy.deepcopy(sl)
             tmpslab.rotateAtoms(np.array([0, 0]), toprotsym)
-            tmpslab.collapseCartesianCoordinates()
+            tmpslab.collapse_cartesian_coordinates()
             m = np.linalg.inv(rotation_matrix_order(toprotsym))
             for (sli, sl1) in enumerate(sl.sublayers):
                 for (ati, at1) in enumerate(sl1.atlist):
@@ -1070,7 +1070,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             g = True if testplane.type == "glide" else False
             tmpslab = copy.deepcopy(sl)
             tmpslab.mirror(testplane, glide=g)
-            tmpslab.collapseCartesianCoordinates()
+            tmpslab.collapse_cartesian_coordinates()
             ang = angle(np.array([1, 0]), testplane.dir)
             rotm = rotation_matrix(ang)
             m = np.dot(rotm, np.dot(np.array([[1, 0], [0, -1]]),
@@ -1200,7 +1200,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                            SymPlane(ori, abst[0]+abst[1], abst)])
     ts = copy.deepcopy(sl)
     ts.projectCToZ()
-    ts.collapseCartesianCoordinates()
+    ts.collapse_cartesian_coordinates()
     for at in ts:
         # first check points
         for p in lockpoints:
@@ -1229,7 +1229,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         at.cartpos = at2.cartpos
     # average positions for linked atoms
     if not nomove and not planegroup == "p1":
-        sl.collapseCartesianCoordinates()
+        sl.collapse_cartesian_coordinates()
         releps = [eps / np.linalg.norm(abst[j]) for j in range(0, 2)]
         mvslabs = []
         if planegroup not in ["pm", "pg", "cm", "rcm"]:
@@ -1239,18 +1239,18 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 else:
                     tmpslab = copy.deepcopy(mvslabs[-1])
                 tmpslab.rotateAtoms(ori, toprotsym)
-                tmpslab.collapseCartesianCoordinates()
+                tmpslab.collapse_cartesian_coordinates()
                 mvslabs.append(tmpslab)
         if planegroup not in ["p2", "p3", "p4", "p6"]:
             tmpslab = copy.deepcopy(sl)
             tmpslab.mirror(testplane, glide=g)
-            tmpslab.collapseCartesianCoordinates()
+            tmpslab.collapse_cartesian_coordinates()
             mvslabs.append(tmpslab)
             if planegroup not in ["pm", "pg", "cm", "rcm"]:
                 for i in range(0, toprotsym-1):
                     tmpslab = copy.deepcopy(mvslabs[-1])
                     tmpslab.rotateAtoms(ori, toprotsym)
-                    tmpslab.collapseCartesianCoordinates()
+                    tmpslab.collapse_cartesian_coordinates()
                     mvslabs.append(tmpslab)
         for (llind, ll) in enumerate(sl.linklists):
             for at in ll:
@@ -1285,7 +1285,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         "will not be symmetrized.")
                 else:
                     at.cartpos = psum / pn
-    sl.collapseCartesianCoordinates(updateOrigin=True)
+    sl.collapse_cartesian_coordinates(update_origin=True)
     if not rotcell:
         # !!! THIS IS NOW THE DEFAULT, rotcell is NEVER true.
         #  if it stays like this, consider deleting the following lines..

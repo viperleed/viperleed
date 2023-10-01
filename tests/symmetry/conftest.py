@@ -68,7 +68,7 @@ def fixture_factory_with_plane_group(args):
     def _make(random_shifts=True):
         if random_shifts:
             translate_atoms(slab, shift)
-            slab.collapseCartesianCoordinates()
+            slab.collapse_cartesian_coordinates()
         symmetry.findSymmetry(slab, param, forceFindOri=True)
         return slab, param, info
     return _make

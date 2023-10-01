@@ -157,7 +157,7 @@ def initialization(sl, rp, subdomain=False):
             # update bulk slab vector
             sl.bulkslab.update_cartesian_from_fractional()
             sl.bulkslab.ucell[:, 2] = np.copy(rvec)
-            sl.bulkslab.collapseCartesianCoordinates()
+            sl.bulkslab.collapse_cartesian_coordinates()
     if rp.BULK_REPEAT is None:
         # failed to detect repeat vector, use fixed distance instead
         blayers = sl.bulk_layers

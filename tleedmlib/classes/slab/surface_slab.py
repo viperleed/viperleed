@@ -429,7 +429,7 @@ class SurfaceSlab(BaseSlab):
                 'not follow standard convention: the first vector is larger '
                 'than the second. Make sure beams are labelled correctly.')
             rp.setHaltingLevel(1)
-        bsl.collapseCartesianCoordinates(updateOrigin=True)
+        bsl.collapse_cartesian_coordinates(update_origin=True)
         # if self.ucell_mod is not empty, don't drag that into the bulk slab.
         bsl.ucell_mod = []
         # position in c is now random; make topmost bulk atom top
