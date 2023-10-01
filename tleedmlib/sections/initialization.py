@@ -160,7 +160,7 @@ def initialization(sl, rp, subdomain=False):
             sl.bulkslab.collapseCartesianCoordinates()
     if rp.BULK_REPEAT is None:
         # failed to detect repeat vector, use fixed distance instead
-        blayers = [lay for lay in sl.layers if lay.isBulk]
+        blayers = sl.bulk_layers
         # assume that interlayer vector from bottom non-bulk to
         # top bulk layer is the same as between bulk units
         # save BULK_REPEAT value for later runs, in case atom above moves

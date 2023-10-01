@@ -182,6 +182,11 @@ class BaseSlab(ABC):
         return np.degrees(np.arctan2(a_vec[1], a_vec[0]))
 
     @property
+    def bulk_layers(self):
+        """Return the layers of self that are bulk."""
+        return [lay for lay in self.layers if lay.isBulk]
+
+    @property
     def elements(self):
         """Return a tuple of elements in this slab, as originally read."""
         return tuple(self.n_per_elem.keys())
@@ -260,7 +265,7 @@ class BaseSlab(ABC):
         duplicated = []
         zdiff = 0.
         for _ in range(n):
-            blayers = [lay for lay in ts.layers if lay.isBulk]
+            blayers = ts.bulk_layers
             if isinstance(rp.BULK_REPEAT, np.ndarray):
                 bulkc = np.copy(rp.BULK_REPEAT)
                 if bulkc[2] < 0:

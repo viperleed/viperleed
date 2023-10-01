@@ -392,7 +392,7 @@ class SurfaceSlab(BaseSlab):
         bsl = BulkSlab.from_slab(self)
         bsl.resetSymmetry()
         bsl.atlist = [at for at in bsl if at.layer.isBulk]
-        bsl.layers = [lay for lay in bsl.layers if lay.isBulk]
+        bsl.layers = bsl.bulk_layers
         bsl.getCartesianCoordinates()
         al = bsl.atlist[:]     # temporary copy
         al.sort(key=lambda atom: atom.pos[2])

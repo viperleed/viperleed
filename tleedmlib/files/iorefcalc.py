@@ -297,7 +297,7 @@ def writePARAM(sl, rp, lmax=-1):
             mnbrav += 1
         if len(layer.atlist) > mnsub:
             mnsub = len(layer.atlist)
-    for i, layer in enumerate([lay for lay in sl.layers if lay.isBulk]):
+    for i, layer in enumerate(sl.bulk_layers):
         if len(sl.bulkslab.layers[i].atlist) == 1:
             mnbrav += 1
         if len(sl.bulkslab.layers[i].atlist) > mnsub:
@@ -516,7 +516,7 @@ def writeAUXGEO(sl, rp):
                '--------------\n')
     ol = i3.write([sl.n_layers]).ljust(lj)
     output += ol + 'NLTYPE: number of different layer types\n'
-    blayers = [lay for lay in sl.layers if lay.isBulk]
+    blayers = sl.bulk_layers
     nblayers = [lay for lay in sl.layers if not lay.isBulk]
     layerOffsets = [np.zeros(3) for _ in range(sl.n_layers + 1)]
     if sl.bulkslab is None:
