@@ -1142,7 +1142,7 @@ class BaseSlab(ABC):
             cartpos[2] = self.topat_ori_z - cartpos[2]                          # TODO: edit when flipping .cartpos[2]
             atom.pos = np.dot(uci, cartpos)
 
-    def updateLayerCoordinates(self):
+    def update_layer_coordinates(self):
         """Update the Cartesian position of all `layers`."""
         for layer in self.layers:
             layer.getLayerPos()

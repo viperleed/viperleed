@@ -1170,7 +1170,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                 at.offset_geo[el] = off
     sl.collapse_fractional_coordinates()
     sl.update_cartesian_from_fractional()
-    sl.updateLayerCoordinates()
+    sl.update_layer_coordinates()
     # now update site occupations and vibrations:
     for site in sl.sitelist:
         siteats = [at for at in sl if at.site == site

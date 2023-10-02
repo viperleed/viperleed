@@ -514,7 +514,7 @@ class SurfaceSlab(BaseSlab):
             at.disp_geo_offset = {'all': [np.zeros(3)]}
         self.collapse_fractional_coordinates()
         self.update_cartesian_from_fractional()
-        self.updateLayerCoordinates()
+        self.update_layer_coordinates()
         if keepDisp:
             return
         for at in self:

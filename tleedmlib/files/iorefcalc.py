@@ -457,7 +457,7 @@ def writeAUXGEO(sl, rp):
     if rp.LAYER_STACK_VERTICAL:
         sl = copy.deepcopy(sl)
         sl.project_c_to_z()
-        sl.updateLayerCoordinates()
+        sl.update_layer_coordinates()
     output = ''
     output += ('---------------------------------------------------------'
                '----------\n')
