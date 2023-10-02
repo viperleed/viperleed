@@ -1038,11 +1038,9 @@ class BaseSlab(ABC):
                 f'update_element_count()? {self.elements=}'
                 ) from missing_el
 
-    def sort_by_z(self, botToTop=False):
-        """Sorts atlist by z coordinate"""
-        self.atlist.sort(key=lambda atom: atom.pos[2])
-        if botToTop:
-            self.atlist.reverse()
+    def sort_by_z(self, bottom_to_top=True):
+        """Sort `slab.atlist` by z coordinate."""
+        self.atlist.sort(key=lambda at: at.pos[2], reverse=not bottom_to_top)
 
     def sort_original(self):
         """Sort `slab.atlist` by original atom order from POSCAR."""

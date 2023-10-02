@@ -237,7 +237,7 @@ def runPhaseshiftGen_old(sl, rp,
         chemels[el] = chemel
         chgdenrelpath = charge_density_short_path
 
-    nsl.sort_by_z(botToTop=True)
+    nsl.sort_by_z(bottom_to_top=False)
     for at in nsl:
         # realcartpos = np.dot(nsl.ucell, at.pos)
         # use the "real" cartesian system, with Z going up
