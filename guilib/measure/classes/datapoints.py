@@ -60,7 +60,7 @@ class QuantityInfo(enum.Enum):
     New measurement quantities have to be added here.
     """
 
-    # Info:   units,   scale, dtype, label, axis, common_label, tooltip
+    # Info:   units, scale, dtype, label, axis, common_label, tooltip
     IMAGES = ('Number', None, str, 'Images', None, None, "")
     ENERGY = ('eV', 'lin', float, 'Energy', 'x', None,
               "The nominal value of the primary electron energy")
