@@ -1159,11 +1159,11 @@ class BaseSlab(ABC):
         (v, as column vectors) are transformed to v' = O @ v. This
         transformation is essentially equivalent to a change of basis.
 
-        This method differs from  `rotateUnitCell`, `rotateAtoms`, and
-        `mirror` in that the latter two only cause a rotation of the
-        atoms, but not of the unit cell, whereas the former rotates the
-        unit cell but not the atoms. Here both unit cell and atoms are
-        transformed.
+        This method differs from `rotate_atoms`, `mirror_atoms` and
+        `rotateUnitCell` in that the former two only cause a
+        rotation of the atoms, but not of the unit cell, whereas
+        the latter rotates the unit cell but not the atoms. Here both
+        unit cell and atoms are transformed.
 
         If the transformation is an out-of-plane rotation/mirror (i.e.,
         it changes the z components of unit vectors), layers, bulkslab,
@@ -1294,41 +1294,59 @@ class BaseSlab(ABC):
             pass
         return scaling_matrix
 
-    def mirror(self, symplane, glide=False):
-        """Translates the atoms in the slab to have the symplane in the
-        origin, applies a mirror or glide matrix, then translates back.
-        Very inefficient implementation!"""
-        ang = angle(symplane.dir, np.array([1, 0]))
-        rotm = rotation_matrix(ang)
-        rotmirm = np.dot(np.linalg.inv(rotm),
-                         np.dot(np.array([[1, 0], [0, -1]]), rotm))
-        # rotates to have plane in x direction, mirrors on x
-        if glide:
-            abt = self.ab_cell.T
-            glidevec = (symplane.par[0]*abt[0]+symplane.par[1]*abt[1])/2
-        else:
-            glidevec = np.zeros(2)
-        for at in self:
-            at.cartpos[:2] -= symplane.pos     # translate to plane
-            at.cartpos[:2] = np.dot(rotmirm, at.cartpos[:2])    # apply mirror
-            at.cartpos[:2] += symplane.pos     # translate back
-            at.cartpos[:2] += glidevec   # 0 if not glides
+    def mirror_atoms(self, symplane, glide=False):
+        """Apply a mirror or glide transform across `symplane`.
 
-    def rotateAtoms(self, axis, order):
-        """Translates the atoms in the slab to have the axis in the origin,
-        applies an order-fold rotation matrix to the atom positions, then
-        translates back"""
-        self.update_cartesian_from_fractional()
-        m = rotation_matrix_order(order)
-        for at in self:
-            # translate origin to candidate point, rotate, translate back
-            at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
-        self.update_fractional_from_cartesian()
+        Notice that the unit cell stays unchanged. Coordinates
+        are collapsed to the base cell after transformation.
+
+        Parameters
+        ----------
+        symplane : SymPlane
+            The mirror/glide plane. If `symplane.is_glide` a
+            glide operation is performed rather than a mirror.
+        glide : bool, optional
+            Whether a translation should also be applied, to
+            realize a glide-symmetry transformation. This is
+            ignored if `symplane.is_glide`. Default is False.
+
+        Returns
+        -------
+        None.
+        """
+        mirror = symplane.point_operation(n_dim=3)
+        glide_vec = np.zeros(2)
+        if symplane.is_glide or glide:
+            glide_vec = symplane.glide_vector
+        self._transform_atoms_2d(mirror, center=symplane.pos, shift=glide_vec)
+
+    def rotate_atoms(self, order, axis=(0., 0.)):
+        """Apply an `order`-fold 2D rotation around axis.
+
+        Notice that the unit cell stays unchanged. Coordinates
+        are collapsed to the base cell after transformation.
+
+        Parameters
+        ----------
+        order : int
+            Order of rotation, as accepted by `rotation_matrix_order`.
+            When looking down at the slab from vacuum, atoms will be
+            rotated counter-clockwise by 2pi/`order` radians.
+        axis : Sequence, optional
+            In-plane Cartesian position of the rotation axis. Shape
+            should be (2,). Default is (0, 0) (i.e., the origin).
+
+        Returns
+        -------
+        None.
+        """
+        rotation = rotation_matrix_order(order, dim=3)
+        self._transform_atoms_2d(rotation, center=axis, shift=0)
 
     def rotateUnitCell(self, order, append_ucell_mod=True):
         """Rotates the unit cell (around the origin), leaving atom positions
         the same. Note that this rotates in the opposite direction as
-        rotateAtoms."""
+        rotate_atoms."""
         self.update_cartesian_from_fractional()
         m = rotation_matrix_order(order)
         m3 = np.identity(3, dtype=float)
@@ -1337,6 +1355,69 @@ class BaseSlab(ABC):
         if append_ucell_mod:
             self.ucell_mod.append(('lmul', m3))
         self.update_fractional_from_cartesian()
+
+    def _transform_atoms_2d(self, transform, center, shift):
+        """Apply matrix `transform` at `center` to all atoms, then `shift`.
+
+        Fractional coordinates are collapsed (in 2D) at the end.
+
+        Parameters
+        ----------
+        transform : Sequence
+            Shape (3, 3). 2D transformation matrix. Will be applied
+            to the left to the Cartesian coordinates of each atom,
+            taken as a column vector.
+        center : Sequence
+            Shape (2,). Atoms are translated to `center` before applying
+            `transform`, then translated back.
+        shift : float or Sequence
+            Extra translation to be applied to all atoms at the end
+            of the centred transform `transform`. If a sequence, should
+            have shape (2,).
+
+        Returns
+        -------
+        None.
+        """
+        # All the transformations are done on the in-plane
+        # coordinates only. Make sure we have the out-of-plane
+        # right as well.
+        if self.topat_ori_z is None:
+            self.update_cartesian_from_fractional()
+
+        # Let's work with fractional coordinates, as we can
+        # collapse them. Also, we will work with coordinates
+        # as row vectors. Cartesians transform as:
+        #   c' = (c - center) @ T + center + shift
+        #      = c @ T + center @ (I - T) + shift
+        # and
+        #   c = p @ u_cell,    or   p = c @ u_inv
+        # Thus
+        #   p' = c' @ u_inv = p @ (u_cell @ T @ u_inv) + frac_offset
+        # where
+        #   frac_offset = (center @ (I - T) + shift) @ u_inv
+        #
+        # Important note: All the operations above are in principle
+        # meant to be done using the full 3D unit cells, fractional
+        # and Cartesian positions. However we can stick to using only
+        # the in-plane components for the frac_offset, as both center
+        # and shift are only in 2D.
+        ab_inv = np.linalg.inv(self.ab_cell.T)
+        transform = transform.T  # Coordinates as row vectors
+        frac_offset = np.dot(center, np.identity(2) - transform[:2, :2])
+        frac_offset += shift
+        frac_offset = frac_offset.dot(ab_inv)
+
+        # Now the part that needs to be done in 3D. This is critical
+        # for systems that have c axis not orthogonal to the surface,
+        # as both the frac_transform and the fractional-to-Cartesian
+        # conversions mix the third component into the in-plane ones.
+        ucell = self.ucell.T
+        frac_transform = ucell.dot(transform).dot(np.linalg.inv(ucell))
+        for atom in self:
+            atom.pos[:2] = atom.pos.dot(frac_transform)[:2] + frac_offset
+            collapse_fractional(atom.pos[:2], in_place=True)
+            atom.cartpos[:2] = atom.pos.dot(self.ucell.T)[:2]
 
     # ----------------- SYMMETRY UPON TRANSFORMATION ------------------
 

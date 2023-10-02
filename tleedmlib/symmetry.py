@@ -1024,8 +1024,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                                "enforceSymmetry routine: ES001")
                 rp.setHaltingLevel(1)
             tmpslab = copy.deepcopy(sl)
-            tmpslab.rotateAtoms(np.array([0, 0]), toprotsym)
-            tmpslab.collapse_cartesian_coordinates()
+            tmpslab.rotate_atoms(toprotsym)
             m = np.linalg.inv(rotation_matrix_order(toprotsym))
             for (sli, sl1) in enumerate(sl.sublayers):
                 for (ati, at1) in enumerate(sl1.atlist):
@@ -1067,10 +1066,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 logger.warning("Unexpected point encountered in "
                                "enforceSymmetry routine: ES002")
                 rp.setHaltingLevel(1)
-            g = True if testplane.type == "glide" else False
             tmpslab = copy.deepcopy(sl)
-            tmpslab.mirror(testplane, glide=g)
-            tmpslab.collapse_cartesian_coordinates()
+            tmpslab.mirror_atoms(testplane)
             ang = angle(np.array([1, 0]), testplane.dir)
             rotm = rotation_matrix(ang)
             m = np.dot(rotm, np.dot(np.array([[1, 0], [0, -1]]),
@@ -1238,19 +1235,16 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                     tmpslab = copy.deepcopy(sl)
                 else:
                     tmpslab = copy.deepcopy(mvslabs[-1])
-                tmpslab.rotateAtoms(ori, toprotsym)
-                tmpslab.collapse_cartesian_coordinates()
+                tmpslab.rotate_atoms(toprotsym, ori)
                 mvslabs.append(tmpslab)
         if planegroup not in ["p2", "p3", "p4", "p6"]:
             tmpslab = copy.deepcopy(sl)
-            tmpslab.mirror(testplane, glide=g)
-            tmpslab.collapse_cartesian_coordinates()
+            tmpslab.mirror_atoms(testplane)
             mvslabs.append(tmpslab)
             if planegroup not in ["pm", "pg", "cm", "rcm"]:
                 for i in range(0, toprotsym-1):
                     tmpslab = copy.deepcopy(mvslabs[-1])
-                    tmpslab.rotateAtoms(ori, toprotsym)
-                    tmpslab.collapse_cartesian_coordinates()
+                    tmpslab.rotate_atoms(toprotsym, ori)
                     mvslabs.append(tmpslab)
         for (llind, ll) in enumerate(sl.linklists):
             for at in ll:
