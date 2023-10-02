@@ -38,14 +38,30 @@ class SymPlane:
                     * np.linalg.norm(i*abt[0]+j*abt[1])))-1.0) < 0.001:
                 self.par = np.array([i, j])
 
+    def __str__(self):
+        """Return a string representation of this SymPlane."""
+        return f'SymPlane(pos={self.pos}, par={self.par})'
+
+    @property
+    def is_glide(self):
+        """Return whether this is a mirror plane."""
+        return self.type == 'glide'
+
+    @property
+    def is_mirror(self):
+        """Return whether this is a mirror plane."""
+        return self.type == 'mirror'
+
+    @property
+    def normal(self):
+        """Return a unit vector normal to this plane (even without perp)."""
+        return np.array((self.dir[1], -self.dir[0]))
+
     def distanceFromOrigin(self, abt):
         pointlist = [(0, 0), (1, 0), (0, 1), (1, 1)]
         return min([dist_from_line(self.pos, self.pos+self.dir,
                                    p[0]*abt[0]+p[1]*abt[1])
                     for p in pointlist])
-
-    def __str__(self):
-        return ("SymPlane(pos = {}, par = {})".format(self.pos, self.par))
 
     def isEquivalent(self, pl2, abt, eps=0.001):
         """Checks whether two symmetry planes have the same position and
@@ -68,3 +84,11 @@ class SymPlane:
             if dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
                 return True
         return False
+
+    def point_operation(self, n_dim=2):
+        """Return a matrix for mirroring across this plane."""
+        # See https://en.wikipedia.org/wiki/Householder_transformation
+        normal = self.normal
+        mirror = np.identity(n_dim)
+        mirror[:2, :2] -= 2*np.outer(normal, normal)
+        return mirror
