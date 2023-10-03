@@ -293,15 +293,15 @@ def writePARAM(sl, rp, lmax=-1):
         sl.bulkslab = sl.makeBulkSlab(rp)
     for layer in [lay for lay in sl.layers if not lay.is_bulk]:
         mnstack += 1
-        if len(layer.atlist) == 1:
+        if layer.n_atoms == 1:
             mnbrav += 1
-        if len(layer.atlist) > mnsub:
-            mnsub = len(layer.atlist)
+        if layer.n_atoms > mnsub:
+            mnsub = layer.n_atoms
     for i, layer in enumerate([lay for lay in sl.layers if lay.is_bulk]):
-        if len(sl.bulkslab.layers[i].atlist) == 1:
+        if sl.bulkslab.layers[i].n_atoms == 1:
             mnbrav += 1
-        if len(sl.bulkslab.layers[i].atlist) > mnsub:
-            mnsub = len(layer.atlist)
+        if sl.bulkslab.layers[i].n_atoms > mnsub:
+            mnsub = layer.n_atoms
     output += '      PARAMETER (MNBRAV  = '+str(mnbrav)+')\n'
     output += '      PARAMETER (MNSUB   = '+str(mnsub)+')\n'
     output += '      PARAMETER (MNSTACK = '+str(mnstack)+')\n'
@@ -537,7 +537,7 @@ def writeAUXGEO(sl, rp):
             # sanity check: ratio of unit cell areas (given simply by
             #  SUPERLATTICE) should match ratio of written vs skipped atoms:
             arearatio = 1 / abs(np.linalg.det(rp.SUPERLATTICE))
-            atomratio = len(bulkUnique) / len(layer.atlist)
+            atomratio = len(bulkUnique) / layer.n_atoms
             if abs(arearatio - atomratio) > 1e-3:
                 logger.warning(
                     'Ratio of bulk atoms inside/outside the bulk unit cell '
@@ -547,7 +547,7 @@ def writeAUXGEO(sl, rp):
                     'Check SUPERLATTICE parameter and bulk symmetry!')
                 rp.setHaltingLevel(2)
         else:
-            natoms = len(layer.atlist)
+            natoms = layer.n_atoms
         ol = i3.write([natoms]).ljust(lj)
         output += ol+'number of Bravais sublayers in layer '+str(i+1)+'\n'
         if layer.is_bulk:

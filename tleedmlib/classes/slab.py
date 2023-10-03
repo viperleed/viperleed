@@ -805,12 +805,12 @@ class Slab:
 
     def getLowOccLayer(self):
         """Finds and returns the lowest occupancy sublayer"""
-        minlen = len(self.sublayers[0].atlist)
+        minlen = self.sublayers[0].n_atoms
         lowocclayer = self.sublayers[0]
         for lay in self.sublayers:
-            if len(lay.atlist) < minlen:
+            if lay.n_atoms < minlen:
                 lowocclayer = lay
-                minlen = len(lay.atlist)
+                minlen = lay.n_atoms
         return lowocclayer
 
     def isRotationSymmetric(self, axis, order, eps):
@@ -1100,7 +1100,7 @@ class Slab:
         slab2.sublayers.sort(key=lambda sl: sl.cartbotz)
         ab = self.ucell[:2, :2]
         for (i, sl) in enumerate(slab1.sublayers):
-            if (len(sl.atlist) != len(slab2.sublayers[i].atlist)
+            if (sl.n_atoms != slab2.sublayers[i].n_atoms
                     or abs(sl.cartbotz-slab2.sublayers[i].cartbotz) > eps
                     or sl.atlist[0].el != slab2.sublayers[i].atlist[0].el):
                 return False
@@ -1193,7 +1193,7 @@ class Slab:
         # Use the lowest-occupancy sublayer (the one
         # with fewer atoms of the same site type)
         lowocclayer = ts.getLowOccLayer()
-        n_atoms = len(lowocclayer.atlist)
+        n_atoms = lowocclayer.n_atoms
         if n_atoms < 2:
             # Cannot be smaller if there's only 1 atom
             return False, abst
@@ -1346,11 +1346,11 @@ class Slab:
         l0 = self.sublayers[0]
         nl = len(self.sublayers)
         l0el = l0.atlist[0].el
-        l0n = len(l0.atlist)
+        l0n = l0.n_atoms
         for i, lay in enumerate(self.sublayers[1:]):
             if abs(lay.cartbotz - l0.cartbotz) > h/2 + eps:
                 break
-            if lay.atlist[0].el == l0el and len(lay.atlist) == l0n:
+            if lay.atlist[0].el == l0el and lay.n_atoms == l0n:
                 cl.append(i+1)
         if len(cl) == 0:
             return([])
@@ -1664,9 +1664,9 @@ class Slab:
         newatlist = []
         for subl in bsl.sublayers:
             i = 0
-            while i < len(subl.atlist):
+            while i < subl.n_atoms:
                 j = i+1
-                while j < len(subl.atlist):
+                while j < subl.n_atoms:
                     if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
                                                eps=rp.SYMMETRY_EPS):
                         subl.atlist.pop(j)
@@ -1709,11 +1709,11 @@ class Slab:
         newatlist = []
         for subl in ssl.sublayers:
             i = 0
-            while i < len(subl.atlist):
+            while i < subl.n_atoms:
                 j = i+1
                 baseat = [a for a in self.atlist
                           if a.oriN == subl.atlist[i].oriN][0]
-                while j < len(subl.atlist):
+                while j < subl.n_atoms:
                     if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
                                                eps=rp.SYMMETRY_EPS):
                         for a in [a for a in self.atlist

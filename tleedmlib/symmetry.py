@@ -268,7 +268,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     # find the lowest occupancy sublayer; comparing candidate
     #   axes / planes to this one will be fastest
     lowocclayer = bigslab.getLowOccLayer()
-    minlen = len(lowocclayer.atlist)
+    minlen = lowocclayer.n_atoms
 
     # find candidate positions for symmetry points / planes:
     if not rp.SYMMETRY_FIND_ORI and not forceFindOri and not bulk:

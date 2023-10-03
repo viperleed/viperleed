@@ -65,6 +65,11 @@ class Layer:
         """Return an iterator of Atoms in this Layer."""
         return iter(self.atlist)
 
+    @property
+    def n_atoms(self):
+        """Return the number of atoms in this layer."""
+        return len(self.atlist)
+
     def update_position(self):
         """Update the Cartesian position of this layer.
 
