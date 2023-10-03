@@ -1707,12 +1707,20 @@ class BaseSlab(ABC):
         if np.linalg.norm(translation) < eps:
             return True
 
-        # Prepare Cartesian coordinates, collapsed to the base cell,
-        # and their translated version. Unlike in-plane operations,
-        # the comparison here cannot be done one sublayer at a time
+        # Prepare Cartesian coordinates, collapsed to
+        # the base cell, and their translated version
         frac_coords = collapse_fractional(np.array([at.pos for at in self]))
         cart_coords = frac_coords.dot(ucell)
         shifted_coords = cart_coords + translation
+
+        # Unlike in-plane operations, the comparison cannot be
+        # done one sublayer at a time. We will compare element
+        # by element. Build atom-to-element index mappings for
+        # both unshifted and shifted coordinates. Use a list
+        # for element_per_atom for now, convert it to array later
+        # to use as mask. The shifted one can be an array already
+        element_per_atom = [at.el for at in self]
+        element_per_atom_shifted = np.array(element_per_atom.copy())
 
         # Discard shifted atoms that moved out of range in z...
         if not z_periodic:
@@ -1722,13 +1730,26 @@ class BaseSlab(ABC):
                                shifted_coords[:, 2] <= max(z_range) + eps),
                               axis=0)
             shifted_coords = shifted_coords[in_range]
+            element_per_atom_shifted = element_per_atom_shifted[in_range]
 
         # ...and collapse also the shifted coordinates
         shifted_coords, _ = collapse(shifted_coords, ucell, ucell_inv)
 
-        # Include replicas of atoms close to edges/corners
-        cart_coords, _ = add_edges_and_corners(cart_coords,
-                                               frac_coords,
-                                               releps, ucell)
-        distances = euclid_distance(shifted_coords, cart_coords)
-        return not any(distances.min(axis=1) > eps)
+        # Include replicas of atoms close to edges/corners, then
+        # convert element_per_atom to array for use it as a mask
+        (cart_coords,
+         element_per_atom) = add_edges_and_corners(cart_coords,
+                                                   frac_coords,
+                                                   releps, ucell,
+                                                   props=element_per_atom)
+        element_per_atom = np.array(element_per_atom)
+
+        # Finally, perform the element-wise comparison
+        for element in self.elements:
+            distances = euclid_distance(
+                shifted_coords[element_per_atom_shifted == element],
+                cart_coords[element_per_atom == element],
+                )
+            if any(distances.min(axis=1) > eps):
+                return False
+        return True
