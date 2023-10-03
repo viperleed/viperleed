@@ -556,7 +556,7 @@ class Slab:
                     acc.append(subl.pop())
                 else:
                     break
-            acc.sort(key=lambda sl: sl.atlist[0].el)  # sort by element
+            acc.sort(key=lambda lay: lay.element)  # sort by element
             self.sublayers.extend(acc)
         for (i, sl) in enumerate(self.sublayers):
             sl.num = i
@@ -955,7 +955,7 @@ class Slab:
         transVecs = []
         lowocclayer = self.getLowOccLayer()
         baseInd = self.sublayers.index(lowocclayer)
-        ori = lowocclayer.atlist[0].cartpos
+        ori = lowocclayer.cartpos
         for at in self.sublayers[(baseInd + sldisp) % len(self.sublayers)]:
             transVecs.append((at.cartpos - np.dot(matrix, ori)).reshape(3, 1))
         for (i, sl) in enumerate(self.sublayers):
@@ -1102,7 +1102,7 @@ class Slab:
         for (i, sl) in enumerate(slab1.sublayers):
             if (sl.n_atoms != slab2.sublayers[i].n_atoms
                     or abs(sl.cartbotz-slab2.sublayers[i].cartbotz) > eps
-                    or sl.atlist[0].el != slab2.sublayers[i].atlist[0].el):
+                    or sl.element != slab2.sublayers[i].element):
                 return False
             for at1 in sl:
                 complist = [at1.cartpos[0:2]]
@@ -1281,10 +1281,10 @@ class Slab:
         if len(self.sublayers) < 2*nsub:
             return None
         # nonbulk_subl = self.sublayers[:-nsub]
-        z_range = (self.sublayers[-nsub].atlist[0].cartpos[2],
-                   self.sublayers[-1].atlist[0].cartpos[2])
+        z_range = (self.sublayers[-nsub].cartpos[2],
+                   self.sublayers[-1].cartpos[2])
         baseLayer = self.sublayers[-1-nsub]
-        ori = baseLayer.atlist[0].cartpos  # compare displacements from here
+        ori = baseLayer.cartpos  # compare displacements from here
         repeat_vectors = []
         for at in self.sublayers[-1]:
             v = at.cartpos - ori
@@ -1312,7 +1312,7 @@ class Slab:
         baseLayer = ts.sublayers[0]
         baseInd = ts.sublayers.index(baseLayer)
         nl = len(ts.sublayers)
-        ori = baseLayer.atlist[0].cartpos  # compare displacements from here
+        ori = baseLayer.cartpos  # compare displacements from here
         repeatC = None
         for per in pcands:
             ind = (baseInd + per) % nl
@@ -1345,12 +1345,12 @@ class Slab:
         h = self.ucell[2, 2]  # cell height; periodicity cannot go beyond h/2
         l0 = self.sublayers[0]
         nl = len(self.sublayers)
-        l0el = l0.atlist[0].el
+        l0el = l0.element
         l0n = l0.n_atoms
         for i, lay in enumerate(self.sublayers[1:]):
             if abs(lay.cartbotz - l0.cartbotz) > h/2 + eps:
                 break
-            if lay.atlist[0].el == l0el and lay.n_atoms == l0n:
+            if lay.element == l0el and lay.n_atoms == l0n:
                 cl.append(i+1)
         if len(cl) == 0:
             return([])
@@ -1359,8 +1359,8 @@ class Slab:
             wrong = False
             zoff = self.sublayers[cl[i]].cartbotz - self.sublayers[0].cartbotz
             for j in range(1, int(np.ceil(len(self.sublayers)/2))):
-                if (self.sublayers[(j + cl[i]) % nl].atlist[0].el
-                        != self.sublayers[j].atlist[0].el):
+                if (self.sublayers[(j + cl[i]) % nl].element
+                        != self.sublayers[j].element):
                     wrong = True
                     break
                 if abs(zoff - ((self.sublayers[(j + cl[i]) % nl].cartbotz
@@ -1589,7 +1589,7 @@ class Slab:
                     cutlayer = i
             if maxdist >= second_cut_min_spacing:
                 bulkcut_frac_from_lowest = (
-                    bsl.sublayers[cutlayer].atlist[0].pos[2]
+                    bsl.sublayers[cutlayer].pos[2]
                     - (maxdist / (2 * abs(bsl.ucell[2, 2])))
                     - min([at.pos[2] for at in bsl.atlist]))
                 slab_cuts.append(frac_lowest_pos

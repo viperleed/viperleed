@@ -107,12 +107,19 @@ class SubLayer(Layer):
     cartbotz : float
         Z (i.e., out-of-plane) position of the bottom-most atom in
         the layer. A call to update_position() updates this attribute.
+    cartpos : numpy.ndarray
+        The Cartesian position of this sublayer. This differs from
+        cartori, as the latter...                                               # TODO: In need a bit better explanation of cartori from @fkraushofer to detail the difference
+    element : str
+        The chemical element of the atoms of this sublayer.
     is_bulk : bool
         Whether this layer has bulk character.
     num : int
         A progressive index (zero-based) identifying this sublayer
         within its slab. Normally, sublayer.num == 0 for the layer
         closest to the solid/vacuum interface.
+    pos : numpy.ndarray
+        The fractional position of this sublayer.
     slab : Slab
         The slab to which this sublayer belongs.
     symposlist : list
@@ -123,3 +130,30 @@ class SubLayer(Layer):
         """Initialize instance."""
         super().__init__(slab, num, is_bulk=is_bulk)
         self.symposlist = []
+
+    @property
+    def element(self):
+        """Return the chemical element for this sublayer."""
+        if not self.atlist:
+            raise LayerHasNoAtomsError(
+                f'A {type(self).__name__} without atoms has no element'
+                )
+        return self.atlist[0].el
+
+    @property
+    def cartpos(self):
+        """Return the Cartesian position of this sublayer."""
+        if not self.atlist:
+            raise LayerHasNoAtomsError(
+                f'A {type(self).__name__} without atoms has no cartpos'
+                )
+        return self.atlist[0].cartpos
+
+    @property
+    def pos(self):
+        """Return the fractional position of this sublayer."""
+        if not self.atlist:
+            raise LayerHasNoAtomsError(
+                f'A {type(self).__name__} without atoms has no pos'
+                )
+        return self.atlist[0].pos
