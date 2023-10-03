@@ -261,7 +261,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     tmpat.pos[0] += i
                     tmpat.pos[1] += j
     bigslab.update_cartesian_from_fractional(update_origin=True)
-    # bigslab.fullUpdate(rp)   can't do this - would collapse coordinates!
+    # bigslab.full_update(rp)   can't do this - would collapse coordinates!
     bigslab.create_sublayers(epsz)
 
     # find the lowest occupancy sublayer; comparing candidate

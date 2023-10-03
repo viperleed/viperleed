@@ -491,7 +491,7 @@ def init_domains(rp):
                 interpret_domain_params_silent = rp.LOG_LEVEL > logging.DEBUG
                 parameters.interpretPARAMETERS(dp.rp, slab=dp.sl,
                                                silent=interpret_domain_params_silent)
-                dp.sl.fullUpdate(dp.rp)   # gets PARAMETERS data into slab
+                dp.sl.full_update(dp.rp)   # gets PARAMETERS data into slab
                 dp.rp.fileLoaded["POSCAR"] = True
                 dp.rp.updateDerivedParams()
                 try:
@@ -500,7 +500,7 @@ def init_domains(rp):
                 except Exception:
                     logger.error("Error while reading required file VIBROCC")
                     raise
-                dp.sl.fullUpdate(dp.rp)
+                dp.sl.full_update(dp.rp)
                 try:
                     dp.rp.ivbeams = tl_beams.readIVBEAMS()
                 except FileNotFoundError:

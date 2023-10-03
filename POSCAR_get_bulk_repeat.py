@@ -77,7 +77,7 @@ def main():
     rp.N_BULK_LAYERS = 1
     rp.SYMMETRY_EPS = eps
     rp.SYMMETRY_EPS_Z = eps
-    sl.fullUpdate(rp)
+    sl.full_update(rp)
 
     sl.bulkslab = sl.makeBulkSlab(rp)
     bsl = sl.bulkslab

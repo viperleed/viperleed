@@ -390,9 +390,9 @@ def getTensorOriStates(sl, path):
         tsl = poscar.read(path / "POSCAR")
         trp = parameters.readPARAMETERS(filename=path/"PARAMETERS")
         parameters.interpretPARAMETERS(trp, slab=tsl, silent=True)
-        tsl.fullUpdate(trp)
+        tsl.full_update(trp)
         vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
-        tsl.fullUpdate(trp)
+        tsl.full_update(trp)
     except Exception as exc:
         logger.error("Error checking Tensors: Error while reading "
                      f"input files in {dn}")

@@ -42,7 +42,7 @@ def remove_atoms(slab, param, *atom_nrs):
     for atom_nr in atom_nrs:
         slab.atlist.remove(get_atom(slab.atlist, atom_nr))
     slab.update_element_count()
-    slab.fullUpdate(param)
+    slab.full_update(param)
 
 
 def tilt_c_axis(slab, direction):
@@ -110,7 +110,7 @@ class CaseSimpleSlabs:  # pylint: disable=too-many-public-methods
         """Update a slab from param, and return the latter."""
         if not param:
             param = Rparams()
-        slab.fullUpdate(param)
+        slab.full_update(param)
         return param
 
     def case_p1(self):

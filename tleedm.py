@@ -161,7 +161,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
             logger.warning(f"Error applying preset parameter {p}: ",
                            exc_info=True)
     if not domains:
-        slab.fullUpdate(rp)   # gets PARAMETERS data into slab
+        slab.full_update(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
 
     # set source directory

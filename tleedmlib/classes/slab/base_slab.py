@@ -621,22 +621,43 @@ class BaseSlab(ABC):
         for atom in self:
             collapse_fractional(atom.pos, in_place=True)
 
-    def fullUpdate(self, rpars):
-        """readPOSCAR initializes the slab with information from POSCAR;
-        fullUpdate re-initializes the atom list, then uses the information
-        from the parameters file to create layers, calculate cartesian
-        coordinates (absolute and per layer), and to update elements and
-        sites."""
+    def full_update(self, rpars):
+        """Update atoms and layers from `rpars`.
+
+        This method is typically used after information of a
+        slab is read from file (e.g., via `poscar.read`).
+
+        The method ensures that all atoms are within the (0, 0) unit
+        cell, then, if needed, uses the information from `rpars` to
+        create layers calculate Cartesian coordinates (absolute and
+        per layer), and to update elements and sites.
+        Notice that atom displacements are NOT cleared, unless
+        rpars.fileLoaded['VIBROCC'] is True-thy.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            Information read from a PARAMETERS file.
+
+        Returns
+        -------
+        None.
+        """
         self.collapse_fractional_coordinates()
         self.update_cartesian_from_fractional()
         if not self.layers:
             self.createLayers(rpars)
+        else:
+            # It is only needed if there were layers already and
+            # either (i) fractional coordinates had pos[2] out of
+            # range, or (ii) topat_ori_z had not been calculated yet
+            self.update_layer_coordinates()
         self._update_chem_elements(rpars)
         if not self.sitelist:
             self.initSites(rpars)
         if rpars.fileLoaded['VIBROCC']:
-            for at in self:
-                at.initDisp()
+            for atom in self:
+                atom.initDisp()
 
     @abstractmethod
     def getBulkRepeat(self, rp):

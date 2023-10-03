@@ -170,7 +170,7 @@ class CasePOSCARSlabs:
         """Return a slab, an Rparams and information for tests."""
         slab = self._read(info.poscar.name)
         param = self._updated_param(info)
-        slab.fullUpdate(param)
+        slab.full_update(param)
         return slab, param, info
 
     @parametrize(info=POSCARS_WITHOUT_INFO, idgen=make_poscar_ids())
