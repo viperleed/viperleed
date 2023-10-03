@@ -597,4 +597,4 @@ class Atom:
         releps = eps / np.linalg.norm(abt, axis=1)
         complist, _ = add_edges_and_corners([self.cartpos[:2]], (self.pos,),
                                             releps, abt)
-        return any(np.linalg.norm(cartpos - complist, axis=1) < eps)
+        return any(np.linalg.norm(pos - complist, axis=1) < eps)
