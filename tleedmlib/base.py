@@ -118,6 +118,40 @@ class CustomLogFormatter(logging.Formatter):
 #                FUNCTIONS                    #
 ###############################################
 
+def collapse(cartesians, ucell, ucell_inv=None, method='floor'):
+    """Collapse Cartesian coordinates to the base cell.
+
+    Parameters
+    ----------
+    cartesians : numpy.ndarray
+        Cartesian coordinates to be collapsed. Shape (N, 2) or (N, 3).
+    ucell : numpy.ndarray
+        Basis vectors (rows) of the unit cell to be used for collapsing.
+    ucell_inv : numpy.ndarray or None, optional
+        The inverse of ucell. If not given or None, it is computed
+        on the fly. Default is None.
+    method : {'floor', 'round'}, optional
+        Which method should be used for collapsing. 'floor'
+        returns Cartesian coordinates collapsed to the (0, 0)
+        cell, i.e., with all fractional coordinates in range
+        [0, 1]. 'round' collapses the coordinates so that they
+        are as close to zero as possible. Fractional coordinates
+        are then in range [-0.5, 0.5].
+
+    Returns
+    -------
+    collapsed_cartesians : numpy.ndarray
+        The Cartesian coordinates, collapsed according to method
+    fractional_coordinates : numpy.ndarray
+        The corresponding fractional coordinates
+    """
+    if ucell_inv is None:
+        ucell_inv = np.linalg.inv(ucell)
+    fractional = collapse_fractional(cartesians.dot(ucell_inv),
+                                     method=method)
+    return fractional.dot(ucell), fractional
+
+
 def _floor_eps(values):
     """Return the floored-int version of values after adding 1e-8."""
     return np.floor(values + 1e-8)
