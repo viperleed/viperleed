@@ -1201,11 +1201,12 @@ class BaseSlab(ABC):
         (v, as column vectors) are transformed to v' = O @ v. This
         transformation is essentially equivalent to a change of basis.
 
-        This method differs from `rotate_atoms`, `mirror_atoms` and
-        `rotateUnitCell` in that the former two only cause a
-        rotation of the atoms, but not of the unit cell, whereas
-        the latter rotates the unit cell but not the atoms. Here both
-        unit cell and atoms are transformed.
+        This method differs from `rotate_atoms`, `mirror_atoms`,
+        `rotate_unit_cell`, and `transform_unit_cell_2d` in that
+        the former two only cause a transformation of the atoms
+        but not of the unit cell, whereas the latter two transform
+        the unit cell but not the atoms. Here both unit cell and
+        atoms are transformed.
 
         If the transformation is an out-of-plane rotation/mirror (i.e.,
         it changes the z components of unit vectors), layers, bulkslab,
@@ -1385,18 +1386,29 @@ class BaseSlab(ABC):
         rotation = rotation_matrix_order(order, dim=3)
         self._transform_atoms_2d(rotation, center=axis, shift=0)
 
-    def rotateUnitCell(self, order, append_ucell_mod=True):
-        """Rotates the unit cell (around the origin), leaving atom positions
-        the same. Note that this rotates in the opposite direction as
-        rotate_atoms."""
-        self.update_cartesian_from_fractional()
-        m = rotation_matrix_order(order)
-        m3 = np.identity(3, dtype=float)
-        m3[:2, :2] = m
-        self.ucell = np.dot(m3, self.ucell)
-        if append_ucell_mod:
-            self.ucell_mod.append(('lmul', m3))
-        self.update_fractional_from_cartesian()
+    def rotate_unit_cell(self, order, append_ucell_mod=True):
+        """Rotate the unit cell around the origin.
+
+        All atomic Cartesian coordinates are left unchanged. Note that
+        this rotates the fractional atomic coordinates in the opposite
+        direction as `rotate_atoms`.
+
+        Parameters
+        ----------
+        order : int
+            Order of rotation. A rotation by 2pi/`order` radians
+            around the z axis will be performed.
+        append_ucell_mod : bool, optional
+            Whether the rotation applied should be registered (to
+            allow reverting). Default is True.
+
+        Returns
+        -------
+        None.
+        """
+        transform = rotation_matrix_order(order, dim=3)
+        self.transform_unit_cell_2d(transform, on_row_vectors=False,
+                                    append_ucell_mod=append_ucell_mod)
 
     def _transform_atoms_2d(self, transform, center, shift):
         """Apply matrix `transform` at `center` to all atoms, then `shift`.
@@ -1460,6 +1472,68 @@ class BaseSlab(ABC):
             atom.pos[:2] = atom.pos.dot(frac_transform)[:2] + frac_offset
             collapse_fractional(atom.pos[:2], in_place=True)
             atom.cartpos[:2] = atom.pos.dot(self.ucell.T)[:2]
+
+    def transform_unit_cell_2d(self, transform, on_row_vectors=True,
+                               append_ucell_mod=True):
+        """Apply a 2D-transformation matrix to the unit cell.
+
+        All atomic Cartesian coordinates are left unchanged.
+        Fractional coordinates are recalculated for the new
+        unit cell, but are **not** collapsed.
+
+        Parameters
+        ----------
+        transform : Sequence
+            Shape (2, 2) or (3, 3). The matrix transformation to be
+            applied to the unit cell. The transform is always applied
+            'from the left' to the unit cell. `on_row_vectors` decides
+            how the unit cell vectors are to be transformed.
+        on_row_vectors : bool, optional
+            Whether `transform` should be applied to a unit cell where
+            the unit vectors are rows, or whether it should be applied
+            on one with unit vectors as columns. Default is True.
+        append_ucell_mod : bool, optional
+            Whether the transformation applied should be registered
+            (to allow reverting). Default is True.
+
+        Notes
+        -----
+        Typical applications include transforming the unit cell with
+        SUPERLATTICE/SYMMETRY_CELL_TRANSFORM (`on_row_vectors`=True),
+        or applying a rotation or mirror (i.e., Hausholder) matrix to
+        the unit cell (`on_row_vectors`=False).
+
+        Returns
+        -------
+        None.
+        """
+        if self.topat_ori_z is None:
+            # It makes sense to run this only if we do not yet
+            # have the information about the Cartesian origin,
+            # as the Cartesian coordinates stay unaltered.
+            self.update_cartesian_from_fractional()
+        if np.shape(transform) == (2, 2):
+            transform_3d = np.identity(3)
+            transform_3d[:2, :2] = transform
+        else:
+            transform_3d = np.asarray(transform)
+
+        if on_row_vectors:                                                      # TODO: this has to be turned around when switching ucell.T
+            # transform_3d is to be multiplied to the left for a unit
+            # cell with unit vectors as rows. However, we use columns:
+            #    ucell.T = transform_3d @ ucell.T
+            #    ucell = (transform_3d @ ucell.T).T
+            #          = ucell @ transform_3d.T
+            side = 'rmul'
+            transform_3d = transform_3d.T
+            self.ucell = np.dot(self.ucell, transform_3d)
+        else:
+            side = 'lmul'
+            self.ucell = np.dot(transform_3d, self.ucell)
+
+        if append_ucell_mod:
+            self.ucell_mod.append((side, transform_3d))
+        self.update_fractional_from_cartesian()
 
     # ----------------- SYMMETRY UPON TRANSFORMATION ------------------
 

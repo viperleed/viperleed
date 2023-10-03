@@ -894,9 +894,9 @@ def setSymmetry(sl, rp, targetsym):
                                           abst[0]))) > 0.01):
                         chir = -1   # left-handed unit cell -> invert rotations
                     if (tspar[0], tspar[1]) in [(1, 2), (-1, -2)]:
-                        sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
+                        sl.rotate_unit_cell(6*chir)  # rotate 60° clockwise
                     elif (tspar[0], tspar[1]) in [(2, 1), (-2, -1)]:
-                        sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
+                        sl.rotate_unit_cell(-6*chir)  # rotate 60° countercl.
                     abst = sl.ab_cell.T
                     sl.orisymplane = SymPlane(np.array([0, 0]),
                                               abst[0]-abst[1], abst)
@@ -912,9 +912,9 @@ def setSymmetry(sl, rp, targetsym):
                             abst[0]))) > 0.01:
                         chir = -1   # left-handed unit cell
                     if (tspar[0], tspar[1]) in [(1, 0), (-1, 0)]:
-                        sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
+                        sl.rotate_unit_cell(6*chir)  # rotate 60° clockwise
                     elif (tspar[0], tspar[1]) in [(0, 1), (0, -1)]:
-                        sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
+                        sl.rotate_unit_cell(-6*chir)  # rotate 60° countercl.
                     abst = sl.ab_cell.T
                     sl.orisymplane = SymPlane(np.array([0, 0]),
                                               abst[0]+abst[1], abst)
@@ -940,9 +940,9 @@ def setSymmetry(sl, rp, targetsym):
                     elif (tspar[0], tspar[1]) in [(1, 2), (-1, -2),
                                                   (2, 1), (-2, -1)]:
                         if (tspar[0], tspar[1]) in [(1, 2), (-1, -2)]:
-                            sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
+                            sl.rotate_unit_cell(6*chir)  # rotate 60° clockwise
                         elif (tspar[0], tspar[1]) in [(2, 1), (-2, -1)]:
-                            sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
+                            sl.rotate_unit_cell(-6*chir)  # rotate 60° countercl.
                         abst = sl.ab_cell.T
                         if targetsym == 'cm':
                             sl.orisymplane = SymPlane(
@@ -950,9 +950,9 @@ def setSymmetry(sl, rp, targetsym):
                     elif (tspar[0], tspar[1]) in [(1, 0), (-1, 0),
                                                   (0, 1), (0, -1)]:
                         if (tspar[0], tspar[1]) in [(1, 0), (-1, 0)]:
-                            sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
+                            sl.rotate_unit_cell(6*chir)  # rotate 60° clockwise
                         elif (tspar[0], tspar[1]) in [(0, 1), (0, -1)]:
-                            sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
+                            sl.rotate_unit_cell(-6*chir)  # rotate 60° countercl.
                         abst = sl.ab_cell.T
                         if targetsym == 'cm':
                             sl.orisymplane = SymPlane(
