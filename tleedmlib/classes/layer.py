@@ -81,7 +81,7 @@ class Layer:
         None.
         """
         if not self.atlist:
-            LayerHasNoAtomsError(
+            raise LayerHasNoAtomsError(
                 f'{type(self).__name__} needs atoms to update_position()'
                 )
         sorted_atoms = sorted(self, key=lambda atom: atom.pos[2])
