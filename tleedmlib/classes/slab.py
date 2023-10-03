@@ -479,8 +479,8 @@ class Slab:
                 rparams.setHaltingLevel(2)
                 dl.append(layer)
         for layer in dl:
-            if layer.isBulk:
-                self.layers[layer.num+1].isBulk = True
+            if layer.is_bulk:
+                self.layers[layer.num+1].is_bulk = True
             self.layers.remove(layer)
             del layer
         self.layers.reverse()
@@ -1448,7 +1448,7 @@ class Slab:
         duplicated = []
         zdiff = 0.
         for _ in range(n):
-            blayers = [lay for lay in ts.layers if lay.isBulk]
+            blayers = [lay for lay in ts.layers if lay.is_bulk]
             if isinstance(rp.BULK_REPEAT, np.ndarray):
                 bulkc = np.copy(rp.BULK_REPEAT)
                 if bulkc[2] < 0:
@@ -1478,7 +1478,7 @@ class Slab:
             bulkc_perp_to_c = bulkc - bulkc_project_to_c
             added_this_loop = []
             for at in original_atoms:
-                if at.layer.isBulk and at not in duplicated:
+                if at.layer.is_bulk and at not in duplicated:
                     new_atom = at.duplicate()
                     newbulkats.append(new_atom)
                     duplicated.append(at)
@@ -1609,8 +1609,8 @@ class Slab:
         # construct bulk slab
         bsl = copy.deepcopy(self)
         bsl.resetSymmetry()
-        bsl.atlist = [at for at in bsl.atlist if at.layer.isBulk]
-        bsl.layers = [lay for lay in bsl.layers if lay.isBulk]
+        bsl.atlist = [at for at in bsl.atlist if at.layer.is_bulk]
+        bsl.layers = [lay for lay in bsl.layers if lay.is_bulk]
         bsl.getCartesianCoordinates()
         al = bsl.atlist[:]     # temporary copy
         al.sort(key=lambda atom: atom.pos[2])

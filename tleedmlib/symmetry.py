@@ -118,7 +118,7 @@ def findBulkSymmetry(sl, rp):
                      if at.cartpos[2] > ts.topat_ori_z - abs(newC[2])]
         ts.layers[0].atlist = ts.atlist
         ts.layers = [ts.layers[0]]
-        ts.layers[0].isBulk = True
+        ts.layers[0].is_bulk = True
         rp2 = copy.deepcopy(rp)
         rp2.SUPERLATTICE = np.array([[1, 0], [0, 1]], dtype=float)
         rp2.BULK_REPEAT = -newC

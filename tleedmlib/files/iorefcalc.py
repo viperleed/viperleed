@@ -291,13 +291,13 @@ def writePARAM(sl, rp, lmax=-1):
     mnstack = 0
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
-    for layer in [lay for lay in sl.layers if not lay.isBulk]:
+    for layer in [lay for lay in sl.layers if not lay.is_bulk]:
         mnstack += 1
         if len(layer.atlist) == 1:
             mnbrav += 1
         if len(layer.atlist) > mnsub:
             mnsub = len(layer.atlist)
-    for i, layer in enumerate([lay for lay in sl.layers if lay.isBulk]):
+    for i, layer in enumerate([lay for lay in sl.layers if lay.is_bulk]):
         if len(sl.bulkslab.layers[i].atlist) == 1:
             mnbrav += 1
         if len(sl.bulkslab.layers[i].atlist) > mnsub:
@@ -516,20 +516,20 @@ def writeAUXGEO(sl, rp):
                '--------------\n')
     ol = i3.write([len(sl.layers)]).ljust(lj)
     output += ol + 'NLTYPE: number of different layer types\n'
-    blayers = [lay for lay in sl.layers if lay.isBulk]
-    nblayers = [lay for lay in sl.layers if not lay.isBulk]
+    blayers = [lay for lay in sl.layers if lay.is_bulk]
+    nblayers = [lay for lay in sl.layers if not lay.is_bulk]
     layerOffsets = [np.zeros(3) for _ in range(len(sl.layers) + 1)]
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     for i, layer in enumerate(sl.layers):
         output += '-   layer type '+str(i+1)+' ---\n'
-        if layer.isBulk:
+        if layer.is_bulk:
             output += ('  2'.ljust(lj) + 'LAY = 2: layer type no. '
                        + str(i+1) + ' has bulk lateral periodicity\n')
         else:
             output += ('  1'.ljust(lj) + 'LAY = 1: layer type no. '
                        + str(i+1) + ' has overlayer lateral periodicity\n')
-        if layer.isBulk:
+        if layer.is_bulk:
             bl = sl.bulkslab.layers[blayers.index(layer)]
             bulknums = [at.oriN for at in bl.atlist]
             bulkUnique = [at for at in layer.atlist if at.oriN in bulknums]
@@ -550,7 +550,7 @@ def writeAUXGEO(sl, rp):
             natoms = len(layer.atlist)
         ol = i3.write([natoms]).ljust(lj)
         output += ol+'number of Bravais sublayers in layer '+str(i+1)+'\n'
-        if layer.isBulk:
+        if layer.is_bulk:
             writelist = bulkUnique
         else:
             writelist = layer.atlist

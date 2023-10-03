@@ -47,12 +47,12 @@ class Layer:
         The slab to which this layer belongs.
     """
 
-    def __init__(self, slab, num, isBulk=False, sublayer=False):
+    def __init__(self, slab, num, is_bulk=False, sublayer=False):
         """Initialize instance."""
         self.slab = slab
-        self.num = num      # consecutive layer numbering, 0 being highest
-        self.isBulk = isBulk    # defined by BLAY in PARAMETERS file
-        self.atlist = []    # atoms in this layer
+        self.num = num
+        self.is_bulk = is_bulk
+        self.atlist = []
         # cartesian origin: xy from POSCAR with possible displacements,
         #  z is highest atom
         self.cartori = None

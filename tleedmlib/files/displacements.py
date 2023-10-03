@@ -582,7 +582,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     break
             for at in sl.atlist:
                 if ((at.oriN in numlist or len(numlist) == 0)
-                        and at.site in targetsites and not at.layer.isBulk):
+                        and at.site in targetsites and not at.layer.is_bulk):
                     targetAtEls.append((at, targetel))
         else:  # loop finished without break
             _break = False
