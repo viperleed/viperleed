@@ -47,7 +47,7 @@ class Layer:
         The slab to which this layer belongs.
     """
 
-    def __init__(self, slab, num, is_bulk=False, sublayer=False):
+    def __init__(self, slab, num, is_bulk=False):
         """Initialize instance."""
         self.slab = slab
         self.num = num
@@ -57,9 +57,6 @@ class Layer:
         #  z is highest atom
         self.cartori = None
         self.cartbotz = None    # z position of lowest atom
-        if sublayer:
-            # list of candidate positions for rotation / mirror / glide planes
-            self.symposlist = []
 
     def __iter__(self):
         """Return an iterator of Atoms in this Layer."""
@@ -95,3 +92,34 @@ class Layer:
         # -> just take the z from the highest atom.
         self.cartori[2] = topat.cartpos[2]
         self.cartbotz = botat.cartpos[2]
+
+
+class SubLayer(Layer):
+    """A Layer with the same chemical element and the same z position.
+
+    Attributes
+    ----------
+    atlist : list of Atom
+        The atoms that belong to this sublayer.
+    cartori : numpy.ndarray
+        The Cartesian origin of this sublayer. A call to
+        update_position() updates this attribute.
+    cartbotz : float
+        Z (i.e., out-of-plane) position of the bottom-most atom in
+        the layer. A call to update_position() updates this attribute.
+    is_bulk : bool
+        Whether this layer has bulk character.
+    num : int
+        A progressive index (zero-based) identifying this sublayer
+        within its slab. Normally, sublayer.num == 0 for the layer
+        closest to the solid/vacuum interface.
+    slab : Slab
+        The slab to which this sublayer belongs.
+    symposlist : list
+        Candidate positions for rotation / mirror / glide planes.
+    """
+
+    def __init__(self, slab, num, is_bulk=False):
+        """Initialize instance."""
+        super().__init__(slab, num, is_bulk=is_bulk)
+        self.symposlist = []

@@ -29,7 +29,7 @@ from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
 from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.layer import Layer
+from viperleed.tleedmlib.classes.layer import Layer, SubLayer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
@@ -543,7 +543,7 @@ class Slab:
                     i += 1
             # now, create sublayers based on sublists:
             for ls in sublists:
-                newsl = Layer(self, 0, sublayer=True)
+                newsl = SubLayer(self, 0)
                 subl.append(newsl)
                 newsl.atlist = ls
                 newsl.cartbotz = ls[0].cartpos[2]
