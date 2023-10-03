@@ -1360,7 +1360,7 @@ class BaseSlab(ABC):
         mirror = symplane.point_operation(n_dim=3)
         glide_vec = np.zeros(2)
         if symplane.is_glide or glide:
-            glide_vec = symplane.glide_vector
+            glide_vec = symplane.par.dot(self.ab_cell.T) / 2
         self._transform_atoms_2d(mirror, center=symplane.pos, shift=glide_vec)
 
     def rotate_atoms(self, order, axis=(0., 0.)):
@@ -1577,7 +1577,7 @@ class BaseSlab(ABC):
 
         for layer in self.sublayers:
             # Collapse fractional coordinates before transforming
-            cart_coords = np.array([atom.cartpos[:2] for atom in layer])
+            cart_coords = np.array([atom.cartpos[:2] for atom in layer.atlist])
             cart_coords, frac_coords = collapse(cart_coords, ab_cell, ab_inv)
 
             # Create a transformed copy: shift, transform,
@@ -1621,7 +1621,7 @@ class BaseSlab(ABC):
         matrix = symplane.point_operation(n_dim=2)
         glide_vec = np.zeros(2)
         if symplane.is_glide or glide:
-            glide_vec = symplane.glide_vector
+            glide_vec = symplane.par.dot(self.ab_cell.T) / 2
         return self._is_2d_transform_symmetric(matrix, symplane.pos,
                                                glide_vec, eps)
 
