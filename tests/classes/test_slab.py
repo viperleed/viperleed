@@ -33,8 +33,7 @@ class TestAtomTransforms:                                                       
         slab = manual_slab_3_atoms
         mirrored_slab = deepcopy(slab)
         symplane = SymPlane((0, 0), (0, 1), abt=slab.ab_cell.T)
-        mirrored_slab.mirror(symplane)
-        mirrored_slab.collapse_cartesian_coordinates()
+        mirrored_slab.mirror_atoms(symplane)
         assert all(
             at.isSameXY(mir_at.cartpos[:2])
             for at, mir_at in zip(slab, reversed(mirrored_slab))
@@ -44,8 +43,7 @@ class TestAtomTransforms:                                                       
         """Test the expected outcome of rotating atoms of a simple slab."""
         slab = manual_slab_3_atoms
         rotated_slab = deepcopy(slab)
-        rotated_slab.rotateAtoms((0, 0), order=2)
-        rotated_slab.collapse_cartesian_coordinates()
+        rotated_slab.rotate_atoms(order=2)
         assert all(
             at.isSameXY(rot_at.cartpos[:2])
             for at, rot_at in zip(slab, reversed(rotated_slab))
