@@ -12,6 +12,14 @@ the same z position.
 """
 
 
+class LayerError(Exception):
+    """Base exception for Layer objects."""
+
+
+class LayerHasNoAtomsError(LayerError):
+    """Operation cannot be performed as the layer is empty."""
+
+
 class Layer:
     """A container of atoms residing close to one another along z.
 
@@ -63,6 +71,10 @@ class Layer:
         -------
         None.
         """
+        if not self.atlist:
+            LayerHasNoAtomsError(
+                f'{type(self).__name__} needs atoms to update_position()'
+                )
         sorted_atoms = sorted(self.atlist, key=lambda atom: atom.pos[2])
         topat = sorted_atoms[-1]
         botat = sorted_atoms[0]
