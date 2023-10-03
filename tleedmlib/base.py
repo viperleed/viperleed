@@ -118,6 +118,74 @@ class CustomLogFormatter(logging.Formatter):
 #                FUNCTIONS                    #
 ###############################################
 
+def add_edges_and_corners(cartesian, fractional, releps, ucell, props=None):
+    """Add atoms at edges and corners to the Cartesian coordinates given.
+
+    Notice that edges and corners will be added only for dimensions
+    up to the smallest among: shape(fractional)[1], len(releps),
+    len(ucell). The only requirements are that `fractional` contains
+    at most the same number of elements as `cartesian`, and that the
+    second axis of `cartesian` and `ucell` are broadcastable. This
+    allows, e.g., to pass in 3D coordinates but only add repeats
+    for 2D edges and corners.
+
+    Parameters
+    ----------
+    cartesian : Sequence
+        The Cartesian coordinates to which replicas of atoms at
+        edges and corners will be appended. Shape (N, 2) or (N, 3).
+    fractional : Sequence
+        Fractional coordinates corresponding to `cartesian`. Should
+        have shape (M, m), with M <= N.
+    releps : Sequence
+        Tolerance on fractional coordinates to consider an atom from
+        `cartesian` to be close to an edge. Shape (2,) or (3,).
+    ucell : Sequence
+        Unit cell to be used for the displacement of atoms close to
+        edges/corners. Shape (2, 2) or (3, 3), and such that unit
+        cell vectors are rows. The second dimension should match
+        the second one of `cartesian`.
+    props : list or None, optional
+        If given, it should have the same length as `cartesian`. It
+        is interpreted as a list of properties that should also be
+        duplicated whenever an atom is duplicated. Default is None.
+
+    Returns
+    -------
+    cartesian_extended : numpy.ndarray
+        Cartesian atomic coordinates to which extra atoms have been
+        appended at the end for all those atoms in `cartesian` that
+        were at edges/corners.
+    props_extended : list or None
+        Corresponding properties of the added atoms. None if `props`
+        was not given to begin with.
+    """
+    for i, pos in enumerate(fractional):
+        addlist = []
+        for posj, epsj, uvec in zip(pos, releps, ucell):
+            if abs(posj) < epsj:        # 'left' edge
+                addlist.append(cartesian[i] + uvec)
+            elif abs(posj - 1) < epsj:  # 'right' edge
+                addlist.append(cartesian[i] - uvec)
+        if len(addlist) == 2:
+            # 2D corner - add the diagonally opposed one
+            addlist.append(sum(addlist) - cartesian[i])
+        elif len(addlist) == 3:
+            # 3D corner - add all diagonally opposed points
+            addlist.extend(
+                p1 + p2 - cartesian[i]
+                for p1, p2 in itertools.combinations(addlist, 2)
+                )
+            addlist.append(sum(addlist[:3]) - 2 * cartesian[i])
+
+        if not addlist:
+            continue
+        cartesian = np.concatenate((cartesian, addlist))
+        if props is not None:
+            props.extend([props[i]]*len(addlist))
+    return cartesian, props
+
+
 def collapse(cartesians, ucell, ucell_inv=None, method='floor'):
     """Collapse Cartesian coordinates to the base cell.
 
