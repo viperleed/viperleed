@@ -30,7 +30,7 @@ from scipy.spatial.distance import cdist as euclid_distance
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import add_edges_and_corners, angle, collapse
 from viperleed.tleedmlib.base import collapse_fractional, pairwise
-from viperleed.tleedmlib.base import rotation_matrix, rotation_matrix_order
+from viperleed.tleedmlib.base import rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
