@@ -28,16 +28,16 @@ from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import add_edges_and_corners, angle, collapse
+from viperleed.tleedmlib.base import add_edges_and_corners, collapse
 from viperleed.tleedmlib.base import collapse_fractional, pairwise
 from viperleed.tleedmlib.base import rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
-from .slab_errors import InvalidUnitCellError
+from .slab_errors import AlreadyMinimalError, InvalidUnitCellError
 from .slab_errors import NeedsLayersError, NeedsSublayersError, SlabError
-from .slab_utils import _z_distance
+from .slab_utils import _left_handed, _z_distance
 
 
 _LOGGER = logging.getLogger('tleedm.slab')
@@ -665,39 +665,37 @@ class BaseSlab(ABC):
         a repeat vector for which the bulk matches the slab above. Returns that
         vector in cartesian coordinates, or None if no match is found."""
 
-    def getMinUnitCell(self, rp, warn_convention=False):
+    def get_minimal_ab_cell(self, eps, epsz=None, warn_convention=False):       # TODO: write a test case for the reduction of POSCAR Sb on Si(111)  # too-many-locals
         """Check if there is a 2D unit cell smaller than the current one.
 
         Parameters
         ----------
-        rp : RunParams
-            The current parameters. The only attributes
-            used are SYMMETRY_EPS and SYMMETRY_EPS_Z.
+        eps : float
+            Cartesian tolerance for in-plane comparisons (Angstrom)
+        epsz : float or None, optional
+            Cartesian tolerance for comparisons in the direction
+            perpendicular to the surface. If not given on None, it
+            is take equal to `eps`. Default is None.
         warn_convention : bool, optional
-            If True, warnings are added to the current
-            logger in case making the reduced unit cell
-            stick to the conventions would result in a
-            sub-optimal superlattice matrix. Default is
+            If True, warnings are added to the current logger in case
+            making the reduced unit cell stick to the conventions would
+            result in a sub-optimal `SUPERLATTICE` matrix. Default is
             False.
 
         Returns
         -------
-        can_be_reduced : bool
-            True if there is a smaller 2D unit cell. The
-            unit cell is considered minimizable if there
-            is a mincell with area smaller than the one
-            of the current cell. A lower limit for the
-            area of mincell is taken as 1 A**2.
         mincell : np.ndarray
-            The minimal 2D unit cell, if it can be reduced,
-            otherwise the current one. Notice that mincell is
-            such that (a, b) = mincell, i.e., it is transposed
-            with respect to self.ucell.
+            The reduced 2D unit cell. Notice that `mincell` is such that
+            `a`, `b` = `mincell`, i.e., it is transposed with respect
+            to `slab.ab_cell`.
+
+        Raises
+        ------
+        AlreadyMinimalError
+            If the current 2D unit cell cannot be reduced.
         """
-        # TODO: write a testcase for the reduction of POSCAR Sb on Si(111)
-        eps = rp.SYMMETRY_EPS
-        epsz = rp.SYMMETRY_EPS_Z
-        abst = self.ab_cell.T
+        if epsz is None:
+            epsz = eps
 
         # Create a test slab: C projected to Z
         ts = copy.deepcopy(self)
@@ -706,80 +704,112 @@ class BaseSlab(ABC):
         ts.create_sublayers(epsz)
 
         # Use the lowest-occupancy sublayer (the one
-        # with fewer atoms of the same site type)
+        # with fewest atoms of the same chemical element)
         lowocclayer = ts.fewest_atoms_sublayer
         n_atoms = len(lowocclayer.atlist)
         if n_atoms < 2:
             # Cannot be smaller if there's only 1 atom
-            return False, abst
+            raise AlreadyMinimalError(
+                f'{type(self).__name__}.get_minimal_ab_cell: fewest-atom '
+                f'sublayer ({lowocclayer.num}) contains only one atom '
+                f'({lowocclayer.atlist[0]}).'
+                )
 
-        # Create a list of candidate translation vectors, selecting
-        # only those for which the slab is translation symmetric
-        plist = [at.cartpos[0:2] for at in lowocclayer.atlist]
-        vlist = ((p1 - p2) for (p1, p2) in itertools.combinations(plist, 2))
-        tvecs = [v for v in vlist if ts.is_translation_symmetric(v, eps)]
-        if not tvecs:
-            return False, abst
+        # Create a list of candidate unit vectors as those connecting
+        # atom pairs. Notice that it is enough to take any arbitrary
+        # atom as a 'reference' as, if the unit cell can be reduced,
+        # all atoms must have a 'copy'. We take the first one.
+        plist = [at.cartpos[:2] for at in lowocclayer.atlist]
+        candidate_unit_vectors = (p - plist[0] for p in plist[1:])              # TODO: since is_translation_symmetric is somewhat expensive, would it make sense to pre-filter the vectors keeping only the shortest ones among those parallel to one another?
+        candidate_unit_vectors = (vec for vec in candidate_unit_vectors
+                                  if ts.is_translation_symmetric(vec, eps))
+        # Try to reduce the cell
+        smaller, mincell = self._minimize_ab_area(ts.ab_cell.T, n_atoms,
+                                                  candidate_unit_vectors, eps)
+        if not smaller:
+            raise AlreadyMinimalError(
+                f'{type(self).__name__}.get_minimal_ab_cell: none '
+                f'of the translation vectors tested gave a smaller area'
+                )
+        return self._reduce_mincell(mincell, eps, warn_convention)
 
-        # Now try to reduce the cell: test whether we can use a pair of
-        # vectors from [a, b, *tvecs] to make the cell smaller. Keep in
-        # mind that with n_atoms, we cannot reduce the area by more than
-        # a factor 1/n_atoms (which would give 1 atom per mincell).
-        mincell = abst.copy()
-        mincell_area = abs(np.linalg.det(mincell))
+    @staticmethod
+    def _minimize_ab_area(ab_cell, n_atoms, candidate_unit_vectors, eps):
+        """Reduce an ab_cell with n_atoms to the smallest area possible.
+
+        Parameters
+        ----------
+        ab_cell : numpy.ndarray
+            The cell to be reduced
+        n_atoms : int
+            The number of atoms in ab_cell. Used to determine the
+            maximum downscaling that can be expected.
+        candidate_unit_vectors : Iterable
+            2D Vectors to be tested for reduction of ab_cell.
+        eps : float
+            Linear Cartesian tolerance to discern whether areas
+            differ from one another. Its square is used for areas.
+
+        Returns
+        -------
+        smaller : bool
+            Whether ab_cell could be reduced.
+        mincell : numpy.ndarray
+            The reduced unit cell.
+        """
+        # Try to reduce the cell by using a pair of vectors from
+        # [a, b, *candidate_unit_vectors]. Keep in mind that with
+        # n_atoms, we cannot reduce the area by more than a factor
+        # 1 / n_atoms (which would give one atom per reduced cell)
+        ab_cell_area = abs(np.linalg.det(ab_cell))
+        smallest_area = ab_cell_area / n_atoms
         smaller = False
-        smallest_area = mincell_area / n_atoms
-        for vec in tvecs:
+        for vec in candidate_unit_vectors:
             # Try first replacing the current second unit vector
-            tcell = np.array([mincell[0], vec])
+            tcell = np.array([ab_cell[0], vec])
             tcell_area = abs(np.linalg.det(tcell))
-            if (tcell_area >= smallest_area - eps**2
-                    and tcell_area < mincell_area - eps**2):
-                mincell = tcell
-                mincell_area = tcell_area
+            if smallest_area < tcell_area + eps**2 < ab_cell_area:
+                ab_cell, ab_cell_area = tcell, tcell_area
                 smaller = True
                 continue
-
             # Try replacing the current first unit vector instead
-            tcell = np.array([mincell[1], vec])
+            tcell = np.array([ab_cell[1], vec])
             tcell_area = abs(np.linalg.det(tcell))
-            if (tcell_area >= smallest_area - eps**2
-                    and tcell_area < mincell_area - eps**2):
-                mincell = tcell
-                mincell_area = tcell_area
+            if smallest_area < tcell_area + eps**2 < ab_cell_area:
+                ab_cell, ab_cell_area = tcell, tcell_area
                 smaller = True
+        return smaller, ab_cell
 
-        if not smaller:
-            return False, abst
-
+    @staticmethod
+    def _reduce_mincell(mincell, eps, warn_convention):
+        """Ensure `mincell` is Minkowski-reduced; enforce conventions."""
         # Use Minkowski reduction to make mincell high symmetry
-        mincell, _, _ = leedbase.reduceUnitCell(mincell)
+        mincell, *_ = leedbase.reduceUnitCell(mincell)
 
         # Cosmetic corrections
-        if abs(mincell[0, 0]) < eps and abs(mincell[1, 1]) < eps:
+        if all(abs(np.diag(mincell)) < eps):
             # Swap a and b when matrix is off-diagonal
             mincell[[0, 1]] = mincell[[1, 0]]
-        if abs(mincell[1, 0]) < eps and abs(mincell[0, 1]) < eps:
+
+        _is_diagonal = abs(mincell[1, 0]) < eps and abs(mincell[0, 1]) < eps
+        if _is_diagonal:
             # If matrix is diagonal, make elements positive
             mincell = abs(mincell)
         # By convention, make the shorter vector the first one
         if np.linalg.norm(mincell[0]) > np.linalg.norm(mincell[1]) + eps:
-            if abs(mincell[1, 0]) < eps and abs(mincell[0, 1]) < eps:
-                # if matrix is diagonal, DO NOT make it off-diagonal
-                if warn_convention:
-                    _LOGGER.warning(
-                        'The unit cell orientation does not follow '
-                        'standard convention: to keep SUPERLATTICE matrix '
-                        'diagonal, the first bulk vector must be larger '
-                        'than the second. Consider swapping the unit cell '
-                        'vectors.'
-                        )
-            else:
+            # If matrix is diagonal, DO NOT make it off-diagonal
+            if not _is_diagonal:
                 mincell = np.dot([[0, 1], [-1, 0]], mincell)
+            elif _is_diagonal and warn_convention:
+                _LOGGER.warning('The unit cell orientation does not follow '
+                                'standard convention: to keep SUPERLATTICE '
+                                'matrix diagonal, the first bulk vector must '
+                                'be larger than the second. Consider swapping '
+                                'the unit cell vectors.')
         # Finally, make sure it's right-handed
-        if angle(mincell[0], mincell[1]) < 0:
+        if _left_handed(mincell):
             mincell = np.dot([[1, 0], [0, -1]], mincell)
-        return True, mincell
+        return mincell
 
     def get_nearest_neigbours(self):
         """Return the nearest-neighbour distance for all atoms.

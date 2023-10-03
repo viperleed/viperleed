@@ -22,7 +22,7 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab
-
+from .slab_errors import AlreadyMinimalError
 
 try:
     import ase
@@ -243,8 +243,12 @@ class SurfaceSlab(BaseSlab):
         bsl = tsl.bulkslab
         bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
         # reduce unit cell in xy
-        changecell, mincell = bsl.getMinUnitCell(rp)
-        if changecell:
+        try:
+            mincell = bsl.get_minimal_ab_cell(rp.SYMMETRY_EPS,
+                                              rp.SYMMETRY_EPS_Z)
+        except AlreadyMinimalError:
+            pass
+        else:
             tsl.changeBulkCell(rp, mincell)
             bsl = tsl.bulkslab
         bsl.update_cartesian_from_fractional()

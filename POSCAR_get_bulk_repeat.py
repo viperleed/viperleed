@@ -14,6 +14,7 @@ import copy
 import numpy as np
 
 from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
 
@@ -84,8 +85,11 @@ def main():
     bsl.create_sublayers(eps)
 
     print("Checking bulk unit cell...")
-    changecell, mincell = bsl.getMinUnitCell(rp)
-    if changecell:
+    try:
+        mincell = sl.get_minimal_ab_cell(rp.SYMMETRY_EPS, rp.SYMMETRY_EPS_Z)
+    except AlreadyMinimalError:
+        pass
+    else:
         sl.changeBulkCell(rp, mincell)
         bsl = sl.bulkslab
     if not rp.superlattice_defined:

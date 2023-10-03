@@ -12,6 +12,10 @@ class SlabError(Exception):
     """Base exception for Slab objects."""
 
 
+class AlreadyMinimalError(SlabError, RuntimeError):
+    """A minimization was requested, but the quantity is already minimal."""
+
+
 class InvalidUnitCellError(SlabError):
     """Exception raised when the unit cell of a slab is inappropriate."""
 

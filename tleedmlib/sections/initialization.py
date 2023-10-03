@@ -22,8 +22,9 @@ from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib import symmetry as tl_symmetry
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
-from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.classes.rparams import DomainParameters
+from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
+from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
 from viperleed.tleedmlib.files import patterninfo, phaseshifts, poscar, vibrocc
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
@@ -53,10 +54,15 @@ def initialization(sl, rp, subdomain=False):
         tl_symmetry.enforceSymmetry(sl, rp)
 
     # check whether the slab unit cell is minimal:
-    changecell, mincell = sl.getMinUnitCell(rp)
-    transform = np.dot(sl.ab_cell.T, np.linalg.inv(mincell)).round()
+    try:
+        mincell = sl.get_minimal_ab_cell(rp.SYMMETRY_EPS, rp.SYMMETRY_EPS_Z)
+    except AlreadyMinimalError:
+        transform = np.identity(2)
+    else:
+        transform = np.dot(sl.ab_cell.T, np.linalg.inv(mincell)).round()
     ws = writeWoodsNotation(transform)
-    if changecell and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
+    reducible = not np.allclose(transform, np.identity(2))
+    if reducible and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
                                  np.identity(2)).all():
         if ws:
             ws = f"= {ws}"
@@ -190,8 +196,13 @@ def initialization(sl, rp, subdomain=False):
     if bsl.planegroup == "unknown":
         # find minimum in-plane unit cell for bulk:
         logger.info("Checking bulk unit cell...")
-        changecell, mincell = bsl.getMinUnitCell(rp, warn_convention=True)
-        if changecell:
+        try:
+            mincell = bsl.get_minimal_ab_cell(rp.SYMMETRY_EPS,
+                                              rp.SYMMETRY_EPS_Z,
+                                              warn_convention=True)
+        except AlreadyMinimalError:
+            pass
+        else:
             sl.changeBulkCell(rp, mincell)
             bsl = sl.bulkslab
         if not rp.superlattice_defined:
