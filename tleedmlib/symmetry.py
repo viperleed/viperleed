@@ -286,7 +286,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 "avoid this, either decrease the z component of the "
                 "SYMMETRY_EPS parameter, or set the SYMMETRY_FIND_ORI "
                 "parameter to False.")
-        pl = [at.cartpos[0:2] for at in lowocclayer.atlist]
+        pl = [at.cartpos[0:2] for at in lowocclayer]
         symposlist, hexsymposlist = getSymPosLists(sl, rp, pl, output)
 
     comsymposlist = addUnequalPoints(symposlist, hexsymposlist, eps,
@@ -1029,9 +1029,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             tmpslab.collapseCartesianCoordinates()
             m = np.linalg.inv(rotation_matrix_order(toprotsym))
             for (sli, sl1) in enumerate(sl.sublayers):
-                for (ati, at1) in enumerate(sl1.atlist):
-                    for (atj, at2) in enumerate(tmpslab.sublayers[sli]
-                                                .atlist):
+                for (ati, at1) in enumerate(sl1):
+                    for (atj, at2) in enumerate(tmpslab.sublayers[sli]):
                         if sl1.atlist[atj] in at1.linklist:
                             # don't check atoms that are already linked
                             continue
@@ -1077,9 +1076,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             m = np.dot(rotm, np.dot(np.array([[1, 0], [0, -1]]),
                                     np.linalg.inv(rotm)))
             for (sli, sl1) in enumerate(sl.sublayers):
-                for (ati, at1) in enumerate(sl1.atlist):
-                    for (atj, at2) in enumerate(tmpslab.sublayers[sli]
-                                                .atlist):
+                for (ati, at1) in enumerate(sl1):
+                    for (atj, at2) in enumerate(tmpslab.sublayers[sli]):
                         # don't check atoms that are already linked
                         if sl1.atlist[atj] in at1.linklist:
                             continue

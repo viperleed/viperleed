@@ -61,6 +61,10 @@ class Layer:
             # list of candidate positions for rotation / mirror / glide planes
             self.symposlist = []
 
+    def __iter__(self):
+        """Return an iterator of Atoms in this Layer."""
+        return iter(self.atlist)
+
     def update_position(self):
         """Update the Cartesian position of this layer.
 
@@ -75,7 +79,7 @@ class Layer:
             LayerHasNoAtomsError(
                 f'{type(self).__name__} needs atoms to update_position()'
                 )
-        sorted_atoms = sorted(self.atlist, key=lambda atom: atom.pos[2])
+        sorted_atoms = sorted(self, key=lambda atom: atom.pos[2])
         topat = sorted_atoms[-1]
         botat = sorted_atoms[0]
 

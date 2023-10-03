@@ -531,8 +531,8 @@ def writeAUXGEO(sl, rp):
                        + str(i+1) + ' has overlayer lateral periodicity\n')
         if layer.is_bulk:
             bl = sl.bulkslab.layers[blayers.index(layer)]
-            bulknums = [at.oriN for at in bl.atlist]
-            bulkUnique = [at for at in layer.atlist if at.oriN in bulknums]
+            bulknums = {at.oriN for at in bl}
+            bulkUnique = [at for at in layer if at.oriN in bulknums]
             natoms = len(bulkUnique)
             # sanity check: ratio of unit cell areas (given simply by
             #  SUPERLATTICE) should match ratio of written vs skipped atoms:
@@ -662,7 +662,7 @@ def writeAUXGEO(sl, rp):
                    '(TENSOR_OUTPUT)\n')
         if rp.TENSOR_OUTPUT[layer.num] == 0:
             continue   # don't write the Tensor file names
-        for i, atom in enumerate(layer.atlist):
+        for i, atom in enumerate(layer):
             ol = ('T_'+str(atom.oriN)).ljust(lj)
             output += (ol + 'Tensor file name, current layer, sublayer '
                        + str(i+1) + '\n')

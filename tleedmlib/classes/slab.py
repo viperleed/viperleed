@@ -822,7 +822,7 @@ class Slab:
         releps = [eps / np.linalg.norm(abt[j]) for j in range(0, 2)]
         shiftv = axis.reshape(2, 1)
         for sl in self.sublayers:
-            coordlist = [at.cartpos[0:2] for at in sl.atlist]
+            coordlist = [at.cartpos[0:2] for at in sl]
             shiftm = np.tile(shiftv, len(coordlist))
             # matrix to shift all coordinates by axis
             oricm = np.array(coordlist)  # original cartesian coordinate matrix
@@ -956,11 +956,10 @@ class Slab:
         lowocclayer = self.getLowOccLayer()
         baseInd = self.sublayers.index(lowocclayer)
         ori = lowocclayer.atlist[0].cartpos
-        for at in self.sublayers[(baseInd + sldisp)
-                                 % len(self.sublayers)].atlist:
+        for at in self.sublayers[(baseInd + sldisp) % len(self.sublayers)]:
             transVecs.append((at.cartpos - np.dot(matrix, ori)).reshape(3, 1))
         for (i, sl) in enumerate(self.sublayers):
-            coordlist = [at.cartpos for at in sl.atlist]
+            coordlist = [at.cartpos for at in sl]
             oricm = np.array(coordlist)  # original cartesian coordinate matrix
             oripm = np.dot(np.linalg.inv(uc), oricm.transpose()) % 1.0
             # collapse (relative) coordinates to base unit cell
@@ -970,7 +969,7 @@ class Slab:
             transcoords = np.dot(matrix, transcoords)
             # now get coordinates of the sublayer to compare to
             sl2 = self.sublayers[(i + sldisp) % len(self.sublayers)]
-            oricm2 = np.array([at.cartpos for at in sl2.atlist])
+            oricm2 = np.array([at.cartpos for at in sl2])
             oripm2 = np.dot(np.linalg.inv(uc), oricm2.transpose()) % 1.0
             oricm2 = np.dot(uc, oripm2).transpose()
             # for every point in matrix, check whether is equal:
@@ -1047,7 +1046,7 @@ class Slab:
             glidev = ((symplane.par[0]*abt[0]+symplane.par[1]*abt[1])
                       / 2).reshape(2, 1)
         for sl in self.sublayers:
-            coordlist = [at.cartpos[:2] for at in sl.atlist]
+            coordlist = [at.cartpos[:2] for at in sl]
             shiftm = np.tile(shiftv, len(coordlist))  # shift all coordinates
             if glide:
                 glidem = np.tile(glidev, len(coordlist))
@@ -1105,7 +1104,7 @@ class Slab:
                     or abs(sl.cartbotz-slab2.sublayers[i].cartbotz) > eps
                     or sl.atlist[0].el != slab2.sublayers[i].atlist[0].el):
                 return False
-            for at1 in sl.atlist:
+            for at1 in sl:
                 complist = [at1.cartpos[0:2]]
                 # if we're close to an edge or corner, also check translations
                 for j in range(0, 2):
@@ -1118,7 +1117,7 @@ class Slab:
                     # coner - add the diagonally opposed one
                     complist.append(complist[1] + complist[2] - complist[0])
                 found = False
-                for at2 in slab2.sublayers[i].atlist:
+                for at2 in slab2.sublayers[i]:
                     for p in complist:
                         if np.linalg.norm(p-at2.cartpos[0:2]) < eps:
                             found = True
@@ -1201,7 +1200,7 @@ class Slab:
 
         # Create a list of candidate translation vectors, selecting
         # only those for which the slab is translation symmetric
-        plist = [at.cartpos[0:2] for at in lowocclayer.atlist]
+        plist = [at.cartpos[0:2] for at in lowocclayer]
         vlist = ((p1 - p2) for (p1, p2) in itertools.combinations(plist, 2))
         tvecs = [v for v in vlist if ts.isTranslationSymmetric(v, eps)]
         if not tvecs:
@@ -1287,7 +1286,7 @@ class Slab:
         baseLayer = self.sublayers[-1-nsub]
         ori = baseLayer.atlist[0].cartpos  # compare displacements from here
         repeat_vectors = []
-        for at in self.sublayers[-1].atlist:
+        for at in self.sublayers[-1]:
             v = at.cartpos - ori
             if self.isTranslationSymmetric(v, eps, z_periodic=False,
                                            z_range=z_range):
@@ -1317,7 +1316,7 @@ class Slab:
         repeatC = None
         for per in pcands:
             ind = (baseInd + per) % nl
-            for at in ts.sublayers[ind].atlist:
+            for at in ts.sublayers[ind]:
                 v = ori - at.cartpos
                 if ts.isTranslationSymmetric(v, eps, z_periodic=z_periodic):
                     repeatC = at.cartpos - ori
@@ -1674,7 +1673,7 @@ class Slab:
                     else:
                         j += 1
                 i += 1
-            newatlist.extend(subl.atlist)
+            newatlist.extend(subl)
         bsl.atlist = newatlist
         bsl.updateElementCount()   # update number of atoms per element again
         # update the layers. Don't use Slab.createLayers here to keep it
@@ -1683,7 +1682,7 @@ class Slab:
             layer.slab = bsl
             layer.update_position()
             layer.num = i
-            layer.atlist = [at for at in layer.atlist if at in bsl.atlist]
+            layer.atlist = [at for at in layer if at in bsl.atlist]
         return bsl
 
     def makeSymBaseSlab(self, rp, transform=None):
@@ -1724,7 +1723,7 @@ class Slab:
                     else:
                         j += 1
                 i += 1
-            newatlist.extend(subl.atlist)
+            newatlist.extend(subl)
         ssl.atlist = newatlist
         ssl.updateElementCount()   # update number of atoms per element again
         # update the layers. Don't use Slab.createLayers here to keep it
@@ -1733,7 +1732,7 @@ class Slab:
             layer.slab = ssl
             layer.update_position()
             layer.num = i
-            layer.atlist = [at for at in layer.atlist if at in ssl.atlist]
+            layer.atlist = [at for at in layer if at in ssl.atlist]
         return ssl
 
     def getSurfaceAtoms(self, rp):
