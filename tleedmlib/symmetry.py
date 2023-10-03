@@ -307,15 +307,15 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     toprotlist = []  # positions of highest rot-symmetry points
     for p in comsymposlist:
         rotsymorder = 0
-        if ts.isRotationSymmetric(p, 2, eps):
+        if ts.is_rotation_symmetric(p, 2, eps):
             rotsymorder = 2
             if celltype == "square":
-                if ts.isRotationSymmetric(p, 4, eps):
+                if ts.is_rotation_symmetric(p, 4, eps):
                     rotsymorder = 4
         if celltype == "hexagonal":
-            if ts.isRotationSymmetric(p, 3, eps):
+            if ts.is_rotation_symmetric(p, 3, eps):
                 rotsymorder = 3
-                if ts.isRotationSymmetric(p, 6, eps):
+                if ts.is_rotation_symmetric(p, 6, eps):
                     rotsymorder = 6
         if rotsymorder > toprotsym:     # new best point found
             toprotsym = rotsymorder
@@ -356,10 +356,10 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             logger.debug(str(len(symplanelist))
                          + " candidates for mirror/glide planes found...")
         for spl in symplanelist:    # test the candidates
-            if ts.isMirrorSymmetric(spl, eps):
+            if ts.is_mirror_symmetric(spl, eps):
                 spl.type = "mirror"
                 mirror = True
-            elif ts.isMirrorSymmetric(spl, eps, glide=True):
+            elif ts.is_mirror_symmetric(spl, eps, glide=True):
                 spl.type = "glide"
                 glide = True
         droptypes = ["none"]
@@ -465,7 +465,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             shiftslab.update_fractional_from_cartesian()
             # test diagonal mirror at shifted origin
             spl = SymPlane(np.array([0, 0]), (abst[0]+abst[1]), abst)
-            if shiftslab.isMirrorSymmetric(spl, eps):
+            if shiftslab.is_mirror_symmetric(spl, eps):
                 planegroup = "cmm"
                 ts = shiftslab
                 # correct origin
@@ -482,7 +482,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             else:
                 # test mirror plane along unit vector at origin
                 spl = SymPlane(np.array([0, 0]), abst[0], abst)
-                if ts.isMirrorSymmetric(spl, eps):
+                if ts.is_mirror_symmetric(spl, eps):
                     if toprotsym == 6:
                         planegroup = "p6m"
                     else:
@@ -496,7 +496,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                         for i in [+1, -1]:
                             spl = SymPlane(np.array([0, 0]),
                                            (abst[0]+(i*abst[1])), abst)
-                            if ts.isMirrorSymmetric(spl, eps):
+                            if ts.is_mirror_symmetric(spl, eps):
                                 found = True
                                 break
                         if found:
@@ -507,13 +507,13 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             if toprotsym == 4:
                 # test mirror plane along unit vector at origin
                 spl = SymPlane(np.array([0, 0]), abst[0], abst)
-                if ts.isMirrorSymmetric(spl, eps):
+                if ts.is_mirror_symmetric(spl, eps):
                     planegroup = "p4m"
                 else:
                     # test glide plane along diagonal at origin
                     spl = SymPlane(np.array([0, 0]), (abst[0]+abst[1]),
                                    abst)
-                    if ts.isMirrorSymmetric(spl, eps, glide=True):
+                    if ts.is_mirror_symmetric(spl, eps, glide=True):
                         planegroup = "p4g"
                     else:
                         planegroup = "p4"
@@ -523,7 +523,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 for i in [+1, -1]:
                     spl = SymPlane(np.array([0, 0]), (abst[0]+i*abst[1]),
                                    abst)
-                    if ts.isMirrorSymmetric(spl, eps):
+                    if ts.is_mirror_symmetric(spl, eps):
                         found = True
                         break
                 if found:
@@ -538,7 +538,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             found = False
             for i in [+1, -1]:
                 spl = SymPlane(np.array([0, 0]), (abst[0]+i*abst[1]), abst)
-                if ts.isMirrorSymmetric(spl, eps):
+                if ts.is_mirror_symmetric(spl, eps):
                     found = True
                     break
             if not found:
@@ -558,7 +558,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             mirs = [False, False]
             for i in range(0, 2):
                 spl = SymPlane(np.array([0, 0]), abst[i], abst)
-                if ts.isMirrorSymmetric(spl, eps):
+                if ts.is_mirror_symmetric(spl, eps):
                     mirs[i] = True
             if toprotsym == 2:
                 if mirs[0] and mirs[1]:
@@ -568,7 +568,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     gldplane = None
                     for i in range(0, 2):
                         spl = SymPlane(np.array([0, 0]), abst[i], abst)
-                        if ts.isMirrorSymmetric(spl, eps, glide=True):
+                        if ts.is_mirror_symmetric(spl, eps, glide=True):
                             spl.type = "glide"
                             gldplane = spl
                     if gldplane is not None:
@@ -577,13 +577,13 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     else:
                         # test glide plane at a/4:
                         spl = SymPlane(abst[0]/4, abst[1], abst)
-                        if ts.isMirrorSymmetric(spl, eps, glide=True):
+                        if ts.is_mirror_symmetric(spl, eps, glide=True):
                             planegroup = "pgg"
                         else:
                             planegroup = "p2"
                 if planegroup in ["pmm", "pmg", "pgg"]:
                     # each of these might be a mis-identified rcmm
-                    if ts.isRotationSymmetric((abst[0]+abst[1])/4, 2, eps):
+                    if ts.is_rotation_symmetric((abst[0]+abst[1])/4, 2, eps):
                         planegroup = "rcmm"
             else:
                 logger.warning("Unexpected point encountered in "

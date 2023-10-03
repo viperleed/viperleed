@@ -286,7 +286,7 @@ def rotation_matrix(angle, dim=2):
     """Returns a (2x2) matrix for in-plane rotation of the given rotation
     angle. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
     if dim < 2:
-        raise ValueError("Rotation matrix needs at least dimension 2")
+        raise ValueError('Rotation matrix needs at least dimension 2')
     m = np.eye(dim, dtype=float)
     m[:2, :2] = np.array([[np.cos(angle), -np.sin(angle)],
                           [np.sin(angle), np.cos(angle)]])

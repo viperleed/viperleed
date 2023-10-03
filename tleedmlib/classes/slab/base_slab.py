@@ -24,11 +24,12 @@ from operator import attrgetter, itemgetter
 import re
 
 import numpy as np
-import scipy.spatial as sps
 from scipy.spatial import KDTree
+from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import angle, collapse_fractional, pairwise
+from viperleed.tleedmlib.base import add_edges_and_corners, angle, collapse
+from viperleed.tleedmlib.base import collapse_fractional, pairwise
 from viperleed.tleedmlib.base import rotation_matrix, rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
@@ -1421,107 +1422,114 @@ class BaseSlab(ABC):
 
     # ----------------- SYMMETRY UPON TRANSFORMATION ------------------
 
-    def isMirrorSymmetric(self, symplane, eps, glide=False):
-        """Evaluates whether the slab is equivalent to itself when applying a
-        mirror or glide operation at a given plane"""
-        ang = angle(symplane.dir, np.array([1, 0]))
-        rotm = rotation_matrix(ang)
-        rotmirm = np.dot(np.linalg.inv(rotm),
-                         np.dot(np.array([[1, 0], [0, -1]]), rotm))
-        # rotates to have plane in x direction, mirrors on x
-        ab = self.ab_cell
-        abt = ab.T
-        releps = [eps / np.linalg.norm(abt[j]) for j in range(0, 2)]
-        shiftv = symplane.pos.reshape(2, 1)
-        if glide:
-            glidev = ((symplane.par[0]*abt[0]+symplane.par[1]*abt[1])
-                      / 2).reshape(2, 1)
-        for sl in self.sublayers:
-            coordlist = [at.cartpos[:2] for at in sl.atlist]
-            shiftm = np.tile(shiftv, len(coordlist))  # shift all coordinates
-            if glide:
-                glidem = np.tile(glidev, len(coordlist))
-            oricm = np.array(coordlist)  # original cartesian coordinate matrix
-            oripm = np.dot(np.linalg.inv(ab), oricm.transpose()) % 1.0
-            # collapse (relative) coordinates to base unit cell
-            oricm = np.dot(ab, oripm).transpose()
-            # original cartesian coordinates collapsed to base unit cell
-            tmpcoords = np.copy(oricm).transpose()
-            # copy of coordinate matrix to be rotated
-            tmpcoords -= shiftm
-            tmpcoords = np.dot(rotmirm, tmpcoords)
-            tmpcoords += shiftm
-            if glide:
-                tmpcoords += glidem
-            tmpcoords = np.dot(ab, (np.dot(np.linalg.inv(ab),
-                                           tmpcoords) % 1.0))
-            # collapse coordinates to base unit cell
-            # for every point in matrix, check whether is equal:
-            for (i, p) in enumerate(oripm.transpose()):
-                # get extended comparison list for edges/corners:
-                addlist = []
-                for j in range(0, 2):
-                    if abs(p[j]) < releps[j]:
-                        addlist.append(oricm[i]+abt[j])
-                    if abs(p[j]-1) < releps[j]:
-                        addlist.append(oricm[i]-abt[j])
-                if len(addlist) == 2:
-                    # coner - add the diagonally opposed one
-                    addlist.append(addlist[0]+addlist[1]-oricm[i])
-                for v in addlist:
-                    oricm = np.concatenate((oricm, v.reshape(1, 2)))
-            distances = sps.distance.cdist(tmpcoords.T, oricm,
-                                           'euclidean')
-            for sublist in distances:
-                if min(sublist) > eps:
-                    return False
+    def _is_2d_transform_symmetric(self, matrix, center, translation, eps):
+        """Return whether `self` is identical under a 2D symmetry transform.
+
+        Parameters
+        ----------
+        matrix : numpy.ndarray
+            Shape (2, 2). The point operation `matrix` to be applied
+            to all Cartesian coordinates (as row vectors, on the right)
+        center : Sequence
+            Shape (2,). The point of application of the operation
+            in `matrix`.
+        translation : Sequence
+            Shape (2,). Translation vector to be applied.
+        eps : float
+            Tolerance (Cartesian) for position equivalence
+
+        Returns
+        -------
+        is_symmetric : bool
+            Whether the slab is self-similar under the operation.
+
+        Raises
+        ------
+        NeedsSublayersError
+            If called before sublayers were created
+        """
+        # Use the version of the unit cell with unit vectors as rows
+        ab_cell = self.ab_cell.T
+        ab_inv = np.linalg.inv(ab_cell)
+        releps = eps / np.linalg.norm(ab_cell, axis=1)
+
+        # Run the comparison sublayer-wise
+        if not self.sublayers:
+            raise NeedsSublayersError(
+                '2d-transform invariance check requires sublayers. '
+                'Call create_sublayers(epsz), then try again.'
+                )
+
+        for layer in self.sublayers:
+            # Collapse fractional coordinates before transforming
+            cart_coords = np.array([atom.cartpos[:2] for atom in layer])
+            cart_coords, frac_coords = collapse(cart_coords, ab_cell, ab_inv)
+
+            # Create a transformed copy: shift, transform,
+            # shift back, and apply rigid translation
+            transf_coords = cart_coords - center
+            transf_coords = transf_coords.dot(matrix) + center + translation
+
+            # Collapse again
+            transf_coords, _ = collapse(transf_coords, ab_cell, ab_inv)
+
+            # Add extra atoms close to edges/corners for comparing
+            cart_coords, _ = add_edges_and_corners(cart_coords,
+                                                   frac_coords,
+                                                   releps, ab_cell)
+            # Finally compare interatomic distances
+            distances = euclid_distance(transf_coords, cart_coords)
+            if any(distances.min(axis=1) > eps):
+                return False
         return True
 
-    def isRotationSymmetric(self, axis, order, eps):
-        """Evaluates whether the slab is equivalent to itself when rotated
-        around the axis with the given rotational order"""
-        m = rotation_matrix_order(order)
-        ab = self.ab_cell
-        abt = ab.T
-        releps = [eps / np.linalg.norm(abt[j]) for j in range(0, 2)]
-        shiftv = axis.reshape(2, 1)
-        for sl in self.sublayers:
-            coordlist = [at.cartpos[0:2] for at in sl.atlist]
-            shiftm = np.tile(shiftv, len(coordlist))
-            # matrix to shift all coordinates by axis
-            oricm = np.array(coordlist)  # original cartesian coordinate matrix
-            oripm = np.dot(np.linalg.inv(ab), oricm.transpose()) % 1.0
-            # collapse (relative) coordinates to base unit cell
-            oricm = np.dot(ab, oripm).transpose()
-            # original cartesian coordinates collapsed to base unit cell
-            tmpcoords = np.copy(oricm).transpose()
-            # copy of coordinate matrix to be rotated
-            tmpcoords -= shiftm
-            tmpcoords = np.dot(m, tmpcoords)
-            tmpcoords += shiftm
-            tmpcoords = np.dot(ab,
-                               (np.dot(np.linalg.inv(ab), tmpcoords) % 1.0))
-            # collapse coordinates to base unit cell
-            # for every point in matrix, check whether is equal:
-            for (i, p) in enumerate(oripm.transpose()):
-                # get extended comparison list for edges/corners:
-                addlist = []
-                for j in range(0, 2):
-                    if abs(p[j]) < releps[j]:
-                        addlist.append(oricm[i]+abt[j])
-                    if abs(p[j]-1) < releps[j]:
-                        addlist.append(oricm[i]-abt[j])
-                if len(addlist) == 2:
-                    # coner - add the diagonally opposed one
-                    addlist.append(addlist[0]+addlist[1]-oricm[i])
-                for v in addlist:
-                    oricm = np.concatenate((oricm, v.reshape(1, 2)))
-            distances = sps.distance.cdist(tmpcoords.transpose(), oricm,
-                                           'euclidean')
-            for sublist in distances:
-                if min(sublist) > eps:
-                    return False
-        return True
+    def is_mirror_symmetric(self, symplane, eps, glide=False):
+        """Return if this slab is unchanged when applying a 2D mirror/glide.
+
+        Parameters
+        ----------
+        symplane : SymPlane
+            The plane across which a mirror/glide should be
+            performed. If `symplane.is_glide`, a glide operation
+            is applied.
+        eps : float
+            Cartesian tolerance for position equivalence.
+        glide : bool, optional
+            Whether a glide translation is applied. This value
+            is ignored if `symplane.is_glide`.
+
+        Returns
+        -------
+        symmetric : bool
+            Whether slab is unchanged when 'mirrored' across `symplane`
+        """
+        matrix = symplane.point_operation(n_dim=2)
+        glide_vec = np.zeros(2)
+        if symplane.is_glide or glide:
+            glide_vec = symplane.glide_vector
+        return self._is_2d_transform_symmetric(matrix, symplane.pos,
+                                               glide_vec, eps)
+
+    def is_rotation_symmetric(self, axis, order, eps):
+        """Return if this slab is unchanged when applying a 2D rotation.
+
+        Parameters
+        ----------
+        axis : Sequence
+            The 2D Cartesian coordinates of the axis around
+            which the rotation should be tested.
+        order : int
+            The order of the rotation to be tested.
+        eps : float
+            Cartesian tolerance for position equivalence.
+
+        Returns
+        -------
+        symmetric : bool
+            Whether slab is unchanged when rotated around `axis`.
+        """
+        matrix = rotation_matrix_order(order, dim=2)
+        return self._is_2d_transform_symmetric(matrix, axis, 0, eps)
 
     def isTranslationSymmetric(self, tv, eps, z_periodic=True, z_range=None):
         """
@@ -1600,8 +1608,7 @@ class BaseSlab(ABC):
                                - 2*oricm[i])
             for v in addlist:
                 oricm = np.concatenate((oricm, v.reshape(1, 3)))
-        distances = sps.distance.cdist(tmpcoords.transpose(), oricm,
-                                       'euclidean')
+        distances = euclid_distance(tmpcoords.transpose(), oricm)
         # print(oricm)
         if any(min(sublist) > eps for sublist in distances):
             return False
