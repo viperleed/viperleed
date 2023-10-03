@@ -35,7 +35,8 @@ from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.layer import Layer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
-from .slab_errors import InvalidUnitCellError, NeedsSublayersError, SlabError
+from .slab_errors import InvalidUnitCellError
+from .slab_errors import NeedsLayersError, NeedsSublayersError, SlabError
 from .slab_utils import _z_distance
 
 
@@ -241,6 +242,34 @@ class BaseSlab(ABC):
             Array of *reciprocal* lattice vectors *as rows*.
         """
         return 2*np.pi*np.linalg.inv(self.ab_cell.T).T
+
+    @property
+    def smallest_interlayer_spacing(self):
+        """Return the smallest z gap between two adjacent layers.
+
+        Returns
+        -------
+        min_dist : float
+            The smallest of the z distances between adjacent layers.
+            Distances are calculated between the topmost atom of the
+            lower layer and the bottommost one of the higher. Zero if
+            there is only one layer.
+
+        Raises
+        ------
+        NeedsLayersError
+            If no layers are available
+        """
+        if not self.layers:
+            raise NeedsLayersError
+
+        if self.n_layers == 1:
+            return 0.                                                           # TODO: I don't think it's right that it is zero if there's only one layer. Think about it.
+        # self.update_cartesian_from_fractional()                               # TODO: I don't think this is needed. It does not update anything for layers; only makes sense if we also .update_layer_coordinates. Would make more sense if layer.cartori and .cartbotz were @property
+
+        # Recall that z increases moving deeper into the solid
+        return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2]
+                   for lay_above, lay_below in pairwise(self.layers))
 
     @classmethod
     def from_slab(cls, other):
@@ -614,15 +643,6 @@ class BaseSlab(ABC):
         """Based on a pre-existing definition of the bulk, tries to identify
         a repeat vector for which the bulk matches the slab above. Returns that
         vector in cartesian coordinates, or None if no match is found."""
-
-    def getMinLayerSpacing(self):
-        """Returns the minimum distance (cartesian) between two layers in the
-        slab. Returns zero if there is only one layer, or none are defined."""
-        if self.n_layers < 2:
-            return 0
-        self.update_cartesian_from_fractional()
-        return min([(self.layers[i].cartori[2] - self.layers[i-1].cartbotz)
-                    for i in range(1, self.n_layers)])
 
     def getMinUnitCell(self, rp, warn_convention=False):
         """Check if there is a 2D unit cell smaller than the current one.
