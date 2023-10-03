@@ -858,46 +858,59 @@ class BaseSlab(ABC):
             site.mixedEls = rp.ELEMENT_MIX[site.el][:]
         self.sitelist = sl
 
-    def isEquivalent(self, slab, eps=0.001):
-        """Compares the slab to another slab, returns True if all atom cartpos
-        match (with at least one other atom, if there are duplicates), False
-        if not. Both slabs are copied and collapsed to the (0,0) cell
-        before."""
-        slab1 = copy.deepcopy(self)
-        slab2 = copy.deepcopy(slab)
-        slab1.collapse_cartesian_coordinates()
-        slab2.collapse_cartesian_coordinates()
-        # reorder sublayers by Z to then compare by index
-        slab1.sublayers.sort(key=lambda sl: sl.cartbotz)
-        slab2.sublayers.sort(key=lambda sl: sl.cartbotz)
-        ab = self.ab_cell
-        for (i, sl) in enumerate(slab1.sublayers):
-            if (len(sl.atlist) != len(slab2.sublayers[i].atlist)
-                    or abs(sl.cartbotz-slab2.sublayers[i].cartbotz) > eps
-                    or sl.atlist[0].el != slab2.sublayers[i].atlist[0].el):
+    def is_equivalent(self, other, eps=0.001):
+        """Return whether this slab is equivalent to another.
+
+        Parameters
+        ----------
+        other : Slab
+            The other slab to compare to.
+        eps : float, optional
+            Tolerance on Cartesian atomic coordinates.
+
+        Returns
+        -------
+        equivalent : bool
+            True if the Cartesian coordinates of all atoms match
+            (with at least one other atom, if there are duplicates),
+            False otherwise. Both slabs are copied and collapsed to
+            the (0, 0) cell.
+        """
+        if not isinstance(other, BaseSlab):
+            return False
+
+        slabs = copy.deepcopy(self), copy.deepcopy(other)
+        for slab in slabs:
+            slab.collapse_cartesian_coordinates()
+            if not slab.sublayers:
+                slab.create_sublayers(eps)
+            # Reorder sublayers by Z to then compare by index                   # TODO: is this necessary?
+            slab.sublayers.sort(key=attrgetter('cartbotz'))
+
+        if self.n_sublayers != other.n_sublayers:
+            return False
+
+        ab_cell = self.ab_cell.T
+        releps = eps / np.linalg.norm(ab_cell, axis=1)
+
+        for this_lay, other_lay in zip(*(s.sublayers for s in slabs)):
+            if (len(this_lay.atlist) != len(other_lay.atlist)
+                    or abs(this_lay.cartbotz - other_lay.cartbotz) > eps
+                    or this_lay.atlist[0].el != other_lay.atlist[0].el):
                 return False
-            for at1 in sl.atlist:
-                complist = [at1.cartpos[0:2]]
-                # if we're close to an edge or corner, also check translations
-                for j in range(0, 2):
-                    releps = eps / np.linalg.norm(ab[:, j])
-                    if abs(at1.pos[j]) < releps:
-                        complist.append(at1.cartpos[:2] + ab[:, j])
-                    if abs(at1.pos[j]-1) < releps:
-                        complist.append(at1.cartpos[:2] - ab[:, j])
-                if len(complist) == 3:
-                    # coner - add the diagonally opposed one
-                    complist.append(complist[1] + complist[2] - complist[0])
-                found = False
-                for at2 in slab2.sublayers[i].atlist:
-                    for p in complist:
-                        if np.linalg.norm(p-at2.cartpos[0:2]) < eps:
-                            found = True
-                            break
-                    if found:
-                        break
-                if not found:
-                    return False
+            # Prepare Cartesian coordinates for comparisons
+            this_coords = np.array([at.cartpos[:2] for at in this_lay.atlist])
+            other_coords = np.array([at.cartpos[:2] for at in other_lay.atlist])
+
+            # Add extra atoms at edges/corners
+            frac_coords = [at.pos[:2] for at in this_lay]
+            this_coords, _ = add_edges_and_corners(this_coords,
+                                                   frac_coords,
+                                                   releps, ab_cell)
+            # Finally compare interatomic distances
+            distances = euclid_distance(this_coords, other_coords)
+            if any(distances.min(axis=1) > eps):
+                return False
         return True
 
     def make_supercell(self, transform):                                        # TODO: surface only?
