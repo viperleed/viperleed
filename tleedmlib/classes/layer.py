@@ -11,8 +11,6 @@ subclass. The latter is for atoms of the same chemical species at
 the same z position.
 """
 
-import numpy as np
-
 
 class Layer:
     """A container of atoms residing close to one another along z.
@@ -55,19 +53,24 @@ class Layer:
             # list of candidate positions for rotation / mirror / glide planes
             self.symposlist = []
 
-    def getLayerPos(self):
-        """Gets a cartesian origin coordinate for the layer, using z of the
-        highest atom. x,y are calculated from the origin of an a,b unit cell at
-        that height. Also assigns posInLayer for all atoms in this layer."""
-        al = self.atlist[:]     # temporary copy
-        al.sort(key=lambda atom: atom.pos[2])
-        topat = al[-1]
-        botat = al[0]
-        oripos = np.array([0., 0., topat.pos[2]])
-        self.cartori = np.dot(self.slab.ucell, oripos)
+    def update_position(self):
+        """Update the Cartesian position of this layer.
+
+        The z of the highest atom is used. x, y are calculated
+        from the origin of an a, b unit cell at that height.
+
+        Returns
+        -------
+        None.
+        """
+        sorted_atoms = sorted(self.atlist, key=lambda atom: atom.pos[2])
+        topat = sorted_atoms[-1]
+        botat = sorted_atoms[0]
+
+        c_vec = self.slab.ucell.T[2]
+        self.cartori = topat.pos[2] * c_vec
         # this gets x and y correct, but z still in the wrong direction and
         #  with origin as POSCAR
         # -> just take the z from the highest atom.
         self.cartori[2] = topat.cartpos[2]
         self.cartbotz = botat.cartpos[2]
-        return

@@ -369,7 +369,7 @@ class Slab:
 
     def updateLayerCoordinates(self):
         for layer in self.layers:
-            layer.getLayerPos()
+            layer.update_position()
 
     def createLayers(self, rparams, bulk_cuts=[]):
         """Creates a list of Layer objects based on the N_BULK_LAYERS and
@@ -485,7 +485,7 @@ class Slab:
             del layer
         self.layers.reverse()
         for i, layer in enumerate(self.layers):
-            layer.getLayerPos()
+            layer.update_position()
             layer.num = i
         self.atlist = tmplist
         self.layers_initialized = True
@@ -1681,7 +1681,7 @@ class Slab:
         #   consistent with the slab layers
         for i, layer in enumerate(bsl.layers):
             layer.slab = bsl
-            layer.getLayerPos()
+            layer.update_position()
             layer.num = i
             layer.atlist = [at for at in layer.atlist if at in bsl.atlist]
         return bsl
@@ -1731,7 +1731,7 @@ class Slab:
         #   consistent with the slab layers
         for i, layer in enumerate(ssl.layers):
             layer.slab = ssl
-            layer.getLayerPos()
+            layer.update_position()
             layer.num = i
             layer.atlist = [at for at in layer.atlist if at in ssl.atlist]
         return ssl
