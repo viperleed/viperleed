@@ -316,8 +316,8 @@ class SurfaceSlab(BaseSlab):
         repeat_vectors = []
         for at in self.sublayers[-1].atlist:
             v = at.cartpos - ori
-            if self.isTranslationSymmetric(v, eps, z_periodic=False,
-                                           z_range=z_range):
+            if self.is_translation_symmetric(v, eps, z_periodic=False,
+                                             z_range=z_range):
                 repeat_vectors.append(-v)
         if len(repeat_vectors) == 0:
             return None

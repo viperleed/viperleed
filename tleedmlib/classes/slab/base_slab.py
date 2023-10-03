@@ -717,7 +717,7 @@ class BaseSlab(ABC):
         # only those for which the slab is translation symmetric
         plist = [at.cartpos[0:2] for at in lowocclayer.atlist]
         vlist = ((p1 - p2) for (p1, p2) in itertools.combinations(plist, 2))
-        tvecs = [v for v in vlist if ts.isTranslationSymmetric(v, eps)]
+        tvecs = [v for v in vlist if ts.is_translation_symmetric(v, eps)]
         if not tvecs:
             return False, abst
 
@@ -1646,85 +1646,89 @@ class BaseSlab(ABC):
         matrix = rotation_matrix_order(order, dim=2)
         return self._is_2d_transform_symmetric(matrix, axis, 0, eps)
 
-    def isTranslationSymmetric(self, tv, eps, z_periodic=True, z_range=None):
-        """
-        Evaluates whether the slab is equivalent to itself when translated
-        along the given cartesian translation vector tv.
+    def is_translation_symmetric(self, translation, eps,                        # too-many-locals
+                                 z_periodic=True, z_range=None):
+        """Return if this slab is unchanged when translated.
 
         Parameters
         ----------
-        tv : numpy array
-            2- or 3-dimensional translation vectors are accepted.
+        translation : Sequence
+            2- or 3-dimensional Cartesian translation vector
+            for which translational symmetry is to be tested.
+            The coordinate frame is the same as for atoms.
         eps : float
-            Error tolerance for positions (cartesian)
+            Error tolerance for positions (Cartesian).
         z_periodic : bool, optional
-            True for checking periodicity of a bulk slab, in which the c vector
-            is a true unit cell vector. False otherwise.
-        z_range : tuple of floats, optional
-            Limit check to only atoms within a given range of cartesian
-            coordinates. The default is None.
+            Whether the c unit vector should be considered as a repeat
+            vector or not. Should be True for checking periodicity of
+            a bulk slab, False otherwise. Default is True.
+        z_range : Sequence or None, optional
+            When a Sequence, `min(z_range)` and `max(z_range`) are used
+            as Cartesian limits. Only atoms with min_z <= z <= max_z
+            are compared. `z_range` is used only if `z_periodic` is
+            False. Default is None.
 
         Returns
         -------
-        bool
-            True if translation symmetric, else False.
+        is_symmetric : bool
+            Whether this slab is unchanged (within `eps`) upon
+            `translation`.
 
+        Raises
+        ------
+        ValueError
+            If `translation` is not a 2- or 3-D vector.
         """
-        if len(tv) == 2:  # two-dimensional displacement. append zero for z
-            tv = np.append(tv, 0.)
-        uc = np.copy(self.ucell)
-        uc[:, 2] *= -1   # mirror c vector down
-        uct = np.transpose(uc)
-        releps = [eps / np.linalg.norm(uct[j]) for j in range(0, 3)]
-        shiftv = tv.reshape(3, 1)
-        # unlike in-plane operations, this one cannot be done sublayer-internal
-        coordlist = [at.cartpos for at in self]
-        shiftm = np.tile(shiftv, len(coordlist))
-        oricm = np.array(coordlist)  # original cartesian coordinate matrix
-        oricm[:, 2] *= -1
-        shiftm[2] *= -1
-        oripm = np.dot(np.linalg.inv(uc), oricm.transpose()) % 1.0
-        # collapse (relative) coordinates to base unit cell
-        oricm = np.dot(uc, oripm).transpose()
-        # original cartesian coordinates collapsed to base unit cell
-        tmpcoords = np.copy(oricm).transpose()
-        # copy of coordinate matrix to be manipulated
-        # determine which z to check
-        if z_range is None:
-            min_z = np.min(tmpcoords[2]) - eps
-            max_z = np.max(tmpcoords[2]) + eps
-        else:
-            z_range = tuple(-v for v in z_range)
-            min_z, max_z = min(z_range) - eps, max(z_range) + eps
-        tmpcoords += shiftm
+        translation = np.array(translation)
+        if translation.shape not in ((2,), (3,)):
+            raise ValueError(
+                f'{type(self).__name__}.is_translation_symmetric: '
+                'not a 2D or 3D vector'
+                )
+        if translation.shape == (2,):  # 2D. Use zero for z component.
+            translation = np.append(translation, 0.)
+
+        # Let's work in the coordinate frame of the unit cell,                  # TODO: change when flipping cartpos[2]
+        # i.e., with z axis directed from bulk to surface. This
+        # requires updating the translation vector and z_range
+        translation[2] *= -1
+        if z_range is not None:
+            z_range = (self.topat_ori_z - min(z_range),
+                       self.topat_ori_z - max(z_range))
+
+        # Use the better version of the unit cell, with a,b,c = uc
+        ucell = self.ucell.T
+        ucell_inv = np.linalg.inv(ucell)
+        releps = eps / np.linalg.norm(ucell, axis=1)
+
+        # Collapse the translation vector toward the origin. This is
+        # useful to shortcut the check if the vector is close to zero
+        translation, _ = collapse(translation, ucell, ucell_inv, 'round')
+        if np.linalg.norm(translation) < eps:
+            return True
+
+        # Prepare Cartesian coordinates, collapsed to the base cell,
+        # and their translated version. Unlike in-plane operations,
+        # the comparison here cannot be done one sublayer at a time
+        frac_coords = collapse_fractional(np.array([at.pos for at in self]))
+        cart_coords = frac_coords.dot(ucell)
+        shifted_coords = cart_coords + translation
+
+        # Discard shifted atoms that moved out of range in z...
         if not z_periodic:
-            # discard atoms that moved out of range in z
-            tmpcoords = tmpcoords[:, tmpcoords[2] >= min_z]
-            tmpcoords = tmpcoords[:, tmpcoords[2] <= max_z]
-        tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc), tmpcoords) % 1.0))
-        # collapse coordinates to base unit cell
-        # for every point in matrix, check whether is equal:
-        for (i, p) in enumerate(oripm.transpose()):
-            # get extended comparison list for edges/corners:
-            addlist = []
-            for j in range(0, 3):
-                if abs(p[j]) < releps[j]:
-                    addlist.append(oricm[i]+uct[j])
-                if abs(p[j]-1) < releps[j]:
-                    addlist.append(oricm[i]-uct[j])
-            if len(addlist) == 2:
-                # 2D coner - add the diagonally opposed point
-                addlist.append(addlist[0]+addlist[1]-oricm[i])
-            elif len(addlist) == 3:
-                # 3D corner - add all diagonally opposed points
-                addlist.extend([(p1 + p2 - oricm[i]) for (p1, p2) in
-                                itertools.combinations(addlist, 2)])
-                addlist.append(addlist[0] + addlist[1] + addlist[2]
-                               - 2*oricm[i])
-            for v in addlist:
-                oricm = np.concatenate((oricm, v.reshape(1, 3)))
-        distances = euclid_distance(tmpcoords.transpose(), oricm)
-        # print(oricm)
-        if any(min(sublist) > eps for sublist in distances):
-            return False
-        return True
+            if z_range is None:
+                z_range = np.min(cart_coords[:, 2]), np.max(cart_coords[:, 2])
+            in_range = np.all((shifted_coords[:, 2] >= min(z_range) - eps,
+                               shifted_coords[:, 2] <= max(z_range) + eps),
+                              axis=0)
+            shifted_coords = shifted_coords[in_range]
+
+        # ...and collapse also the shifted coordinates
+        shifted_coords, _ = collapse(shifted_coords, ucell, ucell_inv)
+
+        # Include replicas of atoms close to edges/corners
+        cart_coords, _ = add_edges_and_corners(cart_coords,
+                                               frac_coords,
+                                               releps, ucell)
+        distances = euclid_distance(shifted_coords, cart_coords)
+        return not any(distances.min(axis=1) > eps)

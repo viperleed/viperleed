@@ -190,7 +190,7 @@ class BulkSlab(BaseSlab):
             ind = (baseInd + per) % nl
             for at in ts.sublayers[ind].atlist:
                 v = ori - at.cartpos
-                if ts.isTranslationSymmetric(v, eps, z_periodic=z_periodic):
+                if ts.is_translation_symmetric(v, eps, z_periodic=z_periodic):
                     repeatC = at.cartpos - ori
                     break
             if repeatC is not None:
