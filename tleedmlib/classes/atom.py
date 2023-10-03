@@ -12,6 +12,8 @@ import logging
 import numpy as np
 import copy
 
+from viperleed.tleedmlib.base import add_edges_and_corners
+
 logger = logging.getLogger("tleedm.atom")
 
 
@@ -592,18 +594,7 @@ class Atom:
 
         """
         abt = self.slab.ab_cell.T
-        complist = [self.cartpos[0:2]]
-        # if we're close to an edge or corner, also check translations:
-        for j in range(0, 2):
-            releps = eps / np.linalg.norm(abt[j])
-            if abs(self.pos[j]) < releps:
-                complist.append(self.cartpos[0:2]+abt[j])
-            if abs(self.pos[j]-1) < releps:
-                complist.append(self.cartpos[0:2]-abt[j])
-        if len(complist) == 3:
-            # corner - add the diagonally opposed one
-            complist.append(complist[1]+complist[2]-complist[0])
-        for p in complist:
-            if np.linalg.norm(p-pos) < eps:
-                return True
-        return False
+        releps = eps / np.linalg.norm(abt, axis=1)
+        complist, _ = add_edges_and_corners([self.cartpos[:2]], (self.pos,),
+                                            releps, abt)
+        return any(np.linalg.norm(cartpos - complist, axis=1) < eps)

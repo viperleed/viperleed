@@ -12,7 +12,7 @@ represent symmetry operations with a 2D location.
 
 import numpy as np
 
-from viperleed.tleedmlib.base import dist_from_line
+from viperleed.tleedmlib.base import add_edges_and_corners, dist_from_line
 
 
 class SymPlane:
@@ -68,17 +68,11 @@ class SymPlane:
         direction (including duplicates in next unit cell)"""
         if not np.array_equal(self.par, pl2.par):
             return False
-        complist = [self.pos]
+
+        # If we're close to an edge or corner, also check translations
         fpos = np.dot(np.linalg.inv(np.transpose(abt)), self.pos) % 1.0
-        # if we're close to an edge or corner, also check translations
-        for i in range(0, 2):
-            releps = eps / np.linalg.norm(abt[i])
-            if abs(fpos[i]) < releps:
-                complist.append(self.pos+abt[i])
-            if abs(fpos[i]-1) < releps:
-                complist.append(self.pos-abt[i])
-        if len(complist) == 3:  # coner - add the diagonally opposed one
-            complist.append(complist[1]+complist[2]-complist[0])
+        releps = eps / np.linalg.norm(abt, axis=1)
+        complist, _ = add_edges_and_corners([self.pos], (fpos,), releps, abt)
 
         for p in complist:
             if dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
