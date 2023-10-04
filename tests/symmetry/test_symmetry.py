@@ -405,7 +405,7 @@ class TestSlabSymmetrization:
         'infoless_poscar-graphene':  'Sometimes reduced to pmg from pmm',
         'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
             'sometimes reduced to p1 from p3'
-            )
+            ),
         'double_bulk-fe3o4': 'Often reduced to pm/p1 (from pmm)',
         'fe3o4_bulk': 'Known invalid group pm. May be correct pmm here.',
         }
