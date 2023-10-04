@@ -169,3 +169,27 @@ class TestSlabUcell:
         slab = manual_slab_3_atoms
         assert slab.ucell.shape == (3, 3)
 
+    def test_apply_scaling_scalar(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        slab.apply_scaling(2)
+        assert slab.ucell == pytest.approx(np.array([[6, 0, 0],
+                                                     [0, 8, 0],
+                                                     [0, 0, 10]]))
+
+    def test_apply_scaling_vector(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        slab.apply_scaling(1/3, 3.14, 0.1)
+        assert slab.ucell == pytest.approx(np.array([[1, 0, 0],
+                                                     [0, 12.56, 0],
+                                                     [0, 0, 0.5]]))
+
+    def test_angle_between_ucell_and_coord_sys_0(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        assert slab.angle_between_ucell_and_coord_sys == pytest.approx(0)
+
+    def test_angle_between_ucell_and_coord_sys_30(self, manual_slab_3_atoms):
+        slab = Slab()
+        slab.ucell = np.array([[np.cos(np.pi/6), np.sin(np.pi/6), 0],
+                               [np.cos(np.pi/3*4), np.sin(np.pi/3*4), 0],
+                               [0, 0, 1]]).T
+        assert slab.angle_between_ucell_and_coord_sys == pytest.approx(30)
