@@ -141,6 +141,17 @@ class SubLayer(Layer):                                                          
         super().__init__(slab, num, is_bulk=is_bulk)
         self.symposlist = []
 
+    def __str__(self):
+        """Return a string version of this sublayer."""
+        n_atoms = self.n_atoms
+        if not n_atoms:
+            atoms = '(empty)'
+        elif n_atoms == 1:
+            atoms = self.atlist[0]
+        else:
+            atoms = [f'{at}' for at in self]
+        return f'Sublayer({self.num=}, {atoms}, {self.cartbotz=})'
+
     @property
     def element(self):
         """Return the chemical element for this sublayer."""
