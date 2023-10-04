@@ -74,6 +74,17 @@ class Layer:                                                                    
         """Return the number of atoms in this layer."""
         return len(self.atlist)
 
+    @property
+    def thickness(self):
+        """Return the z thickness of this layer.
+
+        Note
+        ----
+        This is calculated from the stored positions of this layer,
+        and may not be up to date if atoms in this layer have moved
+        along z since the last call to update_position().
+        """
+        return abs(self.cartbotz - self.cartori[2])
 
     def update_position(self):
         """Update the Cartesian position of this layer from its atoms."""
