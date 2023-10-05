@@ -38,7 +38,7 @@ class TestAtomTransforms:                                                       
         mirrored_slab.mirror(symplane)
         mirrored_slab.collapseCartesianCoordinates()
         assert all(
-            at.isSameXY(mir_at.cartpos[:2])
+            at.is_same_xy(mir_at)
             for at, mir_at in zip(slab.atlist, reversed(mirrored_slab.atlist))
             )
 
@@ -49,7 +49,7 @@ class TestAtomTransforms:                                                       
         rotated_slab.rotateAtoms((0, 0), order=2)
         rotated_slab.collapseCartesianCoordinates()
         assert all(
-            at.isSameXY(rot_at.cartpos[:2])
+            at.is_same_xy(rot_at)
             for at, rot_at in zip(slab.atlist, reversed(rotated_slab.atlist))
             )
 

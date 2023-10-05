@@ -1034,7 +1034,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         if sl1.atlist[atj] in at1.linklist:
                             # don't check atoms that are already linked
                             continue
-                        if not at1.isSameXY(at2.cartpos[:2], eps):
+                        if not at1.is_same_xy(at2, eps):
                             continue
                         # combine the two linklists
                         at1.linklist.extend(sl1.atlist[atj].linklist)
@@ -1081,7 +1081,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         # don't check atoms that are already linked
                         if sl1.atlist[atj] in at1.linklist:
                             continue
-                        if not at1.isSameXY(at2.cartpos[:2], eps):
+                        if not at1.is_same_xy(at2, eps):
                             continue
                         # combine the two linklists
                         at1.linklist.extend(sl1.atlist[atj].linklist)
@@ -1203,7 +1203,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
     for at in ts.atlist:
         # first check points
         for p in lockpoints:
-            if at.isSameXY(p, eps):
+            if at.is_same_xy(p, eps):
                 if not nomove:
                     at.cartpos[0:2] = p
                 at.freedir = 0  # lock completely

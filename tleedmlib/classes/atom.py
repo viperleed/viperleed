@@ -540,27 +540,30 @@ class Atom:                                                                     
                     self.disp_occ[k] = [v]
                     self.disp_center_index['occ'][k] = 0
 
-    def isSameXY(self, pos, eps=1e-3):
-        """
-        Checks whether the atom is at the given x/y coordinates
-        (+- epsilon), taking shifts by one unit vector into account if the
-        atom is close to an edge or corner.
+    def is_same_xy(self, cartpos, eps=1e-3):
+        """Return whether this atom is close to a 2D cartpos.
+
+        If the atom is close to an edge or corner its replicas
+        are also considered.
 
         Parameters
         ----------
-        pos : numpy.array
-            Cartesian xy coordinates to check against the position of this
-            atom.
+        cartpos : numpy.ndarray or Atom
+            2D Cartesian coordinates to check against the position
+            of this atom. If an Atom, its in-plane Cartesian position
+            is used.
         eps : float, optional
-            The precision to which positions are expected to match. The default
-            is 1e-3.
+            The precision to which positions are expected to match.
+            The default is 1e-3.
 
         Returns
         -------
         bool
             True if positions match, else False.
         """
-        abt = np.transpose(self.slab.ucell[0:2, 0:2])
+        if isinstance(cartpos, Atom):
+            cartpos = cartpos.cartpos[:2]
+        abt = self.slab.ucell[:2, :2].T
         complist = [self.cartpos[0:2]]
         # if we're close to an edge or corner, also check translations:
         for j in range(0, 2):
@@ -572,10 +575,7 @@ class Atom:                                                                     
         if len(complist) == 3:
             # corner - add the diagonally opposed one
             complist.append(complist[1]+complist[2]-complist[0])
-        for p in complist:
-            if np.linalg.norm(p-pos) < eps:
-                return True
-        return False
+        return any(np.linalg.norm(cartpos - complist, axis=1) < eps)
 
     def mergeDisp(self, el):
         """

@@ -1667,8 +1667,8 @@ class Slab:
             while i < subl.n_atoms:
                 j = i+1
                 while j < subl.n_atoms:
-                    if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
-                                               eps=rp.SYMMETRY_EPS):
+                    if subl.atlist[i].is_same_xy(subl.atlist[j],
+                                                 eps=rp.SYMMETRY_EPS):
                         subl.atlist.pop(j)
                     else:
                         j += 1
@@ -1714,8 +1714,8 @@ class Slab:
                 baseat = [a for a in self.atlist
                           if a.oriN == subl.atlist[i].oriN][0]
                 while j < subl.n_atoms:
-                    if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
-                                               eps=rp.SYMMETRY_EPS):
+                    if subl.atlist[i].is_same_xy(subl.atlist[j],
+                                                 eps=rp.SYMMETRY_EPS):
                         for a in [a for a in self.atlist
                                   if a.oriN == subl.atlist[j].oriN]:
                             a.duplicate_of = baseat
@@ -1782,9 +1782,10 @@ class Slab:
             surfats.update(a for a in self.atlist
                            if (a.pos[2] >= atom.pos[2]
                                and a not in covered))
-            covered.update(a for a in self.atlist
-                           if (a.pos[2] < atom.pos[2]
-                               and a.isSameXY(atom.cartpos[:2], eps=r)))
+            covered.update(
+                a for a in self.atlist
+                if a.pos[2] < atom.pos[2] and a.is_same_xy(atom, eps=r)
+                )
             if len(covered) + len(surfats) >= len(atoms):
                 break   # that's all of them
         return surfats
