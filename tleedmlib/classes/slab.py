@@ -1688,7 +1688,7 @@ class Slab:
     def makeSymBaseSlab(self, rp, transform=None):
         """Copies self to create a symmetry base slab by collapsing to the
         cell defined by rp.SYMMETRY_CELL_TRANSFORM, then removing duplicates.
-        Also assigns the duplicateOf variable for all atoms in self.atlist.
+        Also assigns the duplicate_of variable for all atoms in self.atlist.
         By default, the transformation matrix will be taken from rp, but a
         different matrix can also be passed."""
         ssl = copy.deepcopy(self)
@@ -1718,7 +1718,7 @@ class Slab:
                                                eps=rp.SYMMETRY_EPS):
                         for a in [a for a in self.atlist
                                   if a.oriN == subl.atlist[j].oriN]:
-                            a.duplicateOf = baseat
+                            a.duplicate_of = baseat
                         subl.atlist.pop(j)
                     else:
                         j += 1

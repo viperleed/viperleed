@@ -1353,15 +1353,15 @@ def getSymBaseSymmetry(sl, rp):
             newll.append(at)
             at.linklist = newll
             at.symrefm = np.copy(ssl_at.symrefm)
-    for at in [at for at in sl.atlist if at.duplicateOf is not None]:
-        at.duplicateOf.linklist.append(at)
-        at.linklist = at.duplicateOf.linklist
-        at.symrefm = np.copy(at.duplicateOf.symrefm)
+    for at in [at for at in sl.atlist if at.duplicate_of]:
+        at.duplicate_of.linklist.append(at)
+        at.linklist = at.duplicate_of.linklist
+        at.symrefm = np.copy(at.duplicate_of.symrefm)
         if rp.SYMMETRIZE_INPUT:
-            cv = at.cartpos[:2] - at.duplicateOf.cartpos[:2]
+            cv = at.cartpos[:2] - at.duplicate_of.cartpos[:2]
             v = np.append(np.round(np.dot(np.linalg.inv(
                                      sl.symbaseslab.ucell[:2, :2]), cv)), 0.)
-            at.cartpos = (at.duplicateOf.cartpos
+            at.cartpos = (at.duplicate_of.cartpos
                           + np.dot(sl.symbaseslab.ucell, v))
     sl.getFractionalCoordinates()
     sl.linklists = []

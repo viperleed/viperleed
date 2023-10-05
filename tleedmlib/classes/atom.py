@@ -78,7 +78,7 @@ class Atom:                                                                     
         disp_* range or a tuple (atom, element)
     oriState : Atom
         Deep copy of self before a search is applied
-    duplicateOf : Atom
+    duplicate_of : Atom
         If this atom is identical to another one by translational
         symmetry (through SYMMETRY_CELL_TRANSFORM or domain supercell
         creation), this points to the atom in the base cell.
@@ -120,7 +120,7 @@ class Atom:                                                                     
         self.offset_occ = {}
         self.constraints = {1: {}, 2: {}, 3: {}}
         self.oriState = None
-        self.duplicateOf = None
+        self.duplicate_of = None
 
     def __repr__(self):
         """Return a representation string of this Atom."""
@@ -485,38 +485,41 @@ class Atom:                                                                     
         self.oriState.offset_vib = copy.copy(at.offset_vib)
         self.oriState.offset_occ = copy.copy(at.offset_occ)
 
-    def duplicate(self, addToAtlists=True):
-        """
-        Creates a new instance of this atom, using deepcopy for attributes
-        like position and elements, but without making copies of the slab or
-        layer, instead adding the new atom to the existing objects.
+    def duplicate(self, add_to_atlists=True):
+        """Return a somewhat lightweight copy of this Atom.
+
+        Attributes position and elements are deep-copied, all others
+        are instead references to those of this Atom. This includes
+        in particular, site, displacements, slab, and layer. The new
+        Atom can also be automatically added to the existing slab and
+        layer.
 
         Parameters
         ----------
-        addToAtlists : bool, optional
-            Set to False to not add the atom to atom lists in the existing
-            Slab and Layer objects.
+        add_to_atlists : bool, optional
+            Whether the duplicate atom should be added to atom lists
+            in the existing Slab and Layer objects. Default is True.
 
         Returns
         -------
         newat : Atom
             The duplicate atom that was created.
         """
-        newat = Atom(self.el, np.copy(self.pos), len(self.slab.atlist),
+        newat = Atom(self.el, self.pos.copy(), len(self.slab.atlist),
                      self.slab)
-        if addToAtlists:
+        if add_to_atlists:
             self.slab.atlist.append(newat)
             if self.layer is not None:
                 self.layer.atlist.append(newat)
                 newat.layer = self.layer
             self.slab.n_per_elem[self.el] += 1
-        newat.duplicateOf = self
+        newat.duplicate_of = self
         newat.site = self.site
         newat.dispInitialized = True
         newat.disp_vib = self.disp_vib
         newat.disp_geo = self.disp_geo
         newat.disp_occ = self.disp_occ
-        newat.cartpos = np.copy(self.cartpos)
+        newat.cartpos = self.cartpos.copy()
         return newat
 
     def initDisp(self, force=False):
@@ -536,7 +539,6 @@ class Atom:                                                                     
                 if v > 0 or k in self.site.mixedEls:
                     self.disp_occ[k] = [v]
                     self.disp_center_index['occ'][k] = 0
-        return None
 
     def isSameXY(self, pos, eps=1e-3):
         """
@@ -627,4 +629,4 @@ class Atom:                                                                     
     def storeOriState(self):
         """Stores the initial values from the input files for this atom."""
         if self.oriState is None:
-            self.oriState = self.duplicate(addToAtlists=False)
+            self.oriState = self.duplicate(add_to_atlists=False)
