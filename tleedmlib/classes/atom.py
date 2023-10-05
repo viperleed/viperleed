@@ -122,9 +122,18 @@ class Atom:                                                                     
         self.oriState = None
         self.duplicateOf = None
 
+    def __repr__(self):
+        """Return a representation string of this Atom."""
+        return (f'{type(self).__name__}(el={self.el}, pos={self.pos}, '
+                f'oriN={self.oriN}, slab={self.slab})')
+
     def __str__(self):
         """Return a string version of this Atom."""
-        return f'Atom({self.oriN} {self.el})'
+        return f'{type(self).__name__}({self.oriN} {self.el})'
+
+    def __format__(self, fmt_spec):
+        """Return a formatted version of self."""
+        return format(str(self), fmt_spec)
 
     @property
     def is_bulk(self):
