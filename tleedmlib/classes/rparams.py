@@ -932,8 +932,8 @@ class Rparams:
         if (2 in self.runHistory or 42 in self.runHistory
                 or sl.deltas_initialized):
             # if delta has been run, information what deltas exist is stored
-            atlist = [at for at in sl.atlist if (not at.layer.is_bulk and
-                                                 len(at.deltasGenerated) > 0)]
+            atlist = [at for at in sl.atlist
+                      if not at.is_bulk and at.deltasGenerated]
         else:
             logger.debug("Delta-amplitudes were not calculated in current "
                          "run; looking for delta files by name.")
@@ -946,8 +946,8 @@ class Rparams:
                     delN.append(int(filename.split('_')[1]))
                 except ValueError:
                     filelist.remove(filename)
-            atlist = [at for at in sl.atlist if (not at.layer.is_bulk and
-                                                 at.oriN in delN)]
+            atlist = [at for at in sl.atlist
+                      if not at.is_bulk and at.oriN in delN]
             for at in atlist:
                 deltaCandidates = [fn for fn in filelist
                                    if int(fn.split('_')[1]) == at.oriN]

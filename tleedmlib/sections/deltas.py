@@ -289,7 +289,7 @@ def deltas(sl, rp, subdomain=False):
         raise
 
     # go through atoms, remove those that have no variation whatsoever:
-    attodo = [at for at in sl.atlist if not at.layer.is_bulk]
+    attodo = [at for at in sl.atlist if not at.is_bulk]
     j = 0
     while j < len(attodo):
         found = False

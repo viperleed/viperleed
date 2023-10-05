@@ -126,6 +126,14 @@ class Atom:                                                                     
         """Return a string version of this Atom."""
         return f'Atom({self.oriN} {self.el})'
 
+    @property
+    def is_bulk(self):
+        """Return whether this Atom is in a bulk layer."""
+        try:
+            return self.layer.is_bulk
+        except AttributeError:
+            return False
+
     def assignConstraint(self, mode, targetel='', value=None, linkAtEl=None,
                          index=None):
         """
