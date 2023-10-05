@@ -29,7 +29,7 @@ from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
                                       rotation_matrix, dist_from_line,
                                       make_unique_list)
 from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.layer import Layer
+from viperleed.tleedmlib.classes.layer import Layer, SubLayer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
@@ -369,7 +369,7 @@ class Slab:
 
     def updateLayerCoordinates(self):
         for layer in self.layers:
-            layer.getLayerPos()
+            layer.update_position()
 
     def createLayers(self, rparams, bulk_cuts=[]):
         """Creates a list of Layer objects based on the N_BULK_LAYERS and
@@ -479,13 +479,13 @@ class Slab:
                 rparams.setHaltingLevel(2)
                 dl.append(layer)
         for layer in dl:
-            if layer.isBulk:
-                self.layers[layer.num+1].isBulk = True
+            if layer.is_bulk:
+                self.layers[layer.num+1].is_bulk = True
             self.layers.remove(layer)
             del layer
         self.layers.reverse()
         for i, layer in enumerate(self.layers):
-            layer.getLayerPos()
+            layer.update_position()
             layer.num = i
         self.atlist = tmplist
         self.layers_initialized = True
@@ -543,7 +543,7 @@ class Slab:
                     i += 1
             # now, create sublayers based on sublists:
             for ls in sublists:
-                newsl = Layer(self, 0, sublayer=True)
+                newsl = SubLayer(self, 0)
                 subl.append(newsl)
                 newsl.atlist = ls
                 newsl.cartbotz = ls[0].cartpos[2]
@@ -556,7 +556,7 @@ class Slab:
                     acc.append(subl.pop())
                 else:
                     break
-            acc.sort(key=lambda sl: sl.atlist[0].el)  # sort by element
+            acc.sort(key=lambda lay: lay.element)  # sort by element
             self.sublayers.extend(acc)
         for (i, sl) in enumerate(self.sublayers):
             sl.num = i
@@ -805,12 +805,12 @@ class Slab:
 
     def getLowOccLayer(self):
         """Finds and returns the lowest occupancy sublayer"""
-        minlen = len(self.sublayers[0].atlist)
+        minlen = self.sublayers[0].n_atoms
         lowocclayer = self.sublayers[0]
         for lay in self.sublayers:
-            if len(lay.atlist) < minlen:
+            if lay.n_atoms < minlen:
                 lowocclayer = lay
-                minlen = len(lay.atlist)
+                minlen = lay.n_atoms
         return lowocclayer
 
     def isRotationSymmetric(self, axis, order, eps):
@@ -822,7 +822,7 @@ class Slab:
         releps = [eps / np.linalg.norm(abt[j]) for j in range(0, 2)]
         shiftv = axis.reshape(2, 1)
         for sl in self.sublayers:
-            coordlist = [at.cartpos[0:2] for at in sl.atlist]
+            coordlist = [at.cartpos[0:2] for at in sl]
             shiftm = np.tile(shiftv, len(coordlist))
             # matrix to shift all coordinates by axis
             oricm = np.array(coordlist)  # original cartesian coordinate matrix
@@ -955,12 +955,11 @@ class Slab:
         transVecs = []
         lowocclayer = self.getLowOccLayer()
         baseInd = self.sublayers.index(lowocclayer)
-        ori = lowocclayer.atlist[0].cartpos
-        for at in self.sublayers[(baseInd + sldisp)
-                                 % len(self.sublayers)].atlist:
+        ori = lowocclayer.cartpos
+        for at in self.sublayers[(baseInd + sldisp) % len(self.sublayers)]:
             transVecs.append((at.cartpos - np.dot(matrix, ori)).reshape(3, 1))
         for (i, sl) in enumerate(self.sublayers):
-            coordlist = [at.cartpos for at in sl.atlist]
+            coordlist = [at.cartpos for at in sl]
             oricm = np.array(coordlist)  # original cartesian coordinate matrix
             oripm = np.dot(np.linalg.inv(uc), oricm.transpose()) % 1.0
             # collapse (relative) coordinates to base unit cell
@@ -970,7 +969,7 @@ class Slab:
             transcoords = np.dot(matrix, transcoords)
             # now get coordinates of the sublayer to compare to
             sl2 = self.sublayers[(i + sldisp) % len(self.sublayers)]
-            oricm2 = np.array([at.cartpos for at in sl2.atlist])
+            oricm2 = np.array([at.cartpos for at in sl2])
             oripm2 = np.dot(np.linalg.inv(uc), oricm2.transpose()) % 1.0
             oricm2 = np.dot(uc, oripm2).transpose()
             # for every point in matrix, check whether is equal:
@@ -1047,7 +1046,7 @@ class Slab:
             glidev = ((symplane.par[0]*abt[0]+symplane.par[1]*abt[1])
                       / 2).reshape(2, 1)
         for sl in self.sublayers:
-            coordlist = [at.cartpos[:2] for at in sl.atlist]
+            coordlist = [at.cartpos[:2] for at in sl]
             shiftm = np.tile(shiftv, len(coordlist))  # shift all coordinates
             if glide:
                 glidem = np.tile(glidev, len(coordlist))
@@ -1101,11 +1100,11 @@ class Slab:
         slab2.sublayers.sort(key=lambda sl: sl.cartbotz)
         ab = self.ucell[:2, :2]
         for (i, sl) in enumerate(slab1.sublayers):
-            if (len(sl.atlist) != len(slab2.sublayers[i].atlist)
+            if (sl.n_atoms != slab2.sublayers[i].n_atoms
                     or abs(sl.cartbotz-slab2.sublayers[i].cartbotz) > eps
-                    or sl.atlist[0].el != slab2.sublayers[i].atlist[0].el):
+                    or sl.element != slab2.sublayers[i].element):
                 return False
-            for at1 in sl.atlist:
+            for at1 in sl:
                 complist = [at1.cartpos[0:2]]
                 # if we're close to an edge or corner, also check translations
                 for j in range(0, 2):
@@ -1118,7 +1117,7 @@ class Slab:
                     # coner - add the diagonally opposed one
                     complist.append(complist[1] + complist[2] - complist[0])
                 found = False
-                for at2 in slab2.sublayers[i].atlist:
+                for at2 in slab2.sublayers[i]:
                     for p in complist:
                         if np.linalg.norm(p-at2.cartpos[0:2]) < eps:
                             found = True
@@ -1194,14 +1193,14 @@ class Slab:
         # Use the lowest-occupancy sublayer (the one
         # with fewer atoms of the same site type)
         lowocclayer = ts.getLowOccLayer()
-        n_atoms = len(lowocclayer.atlist)
+        n_atoms = lowocclayer.n_atoms
         if n_atoms < 2:
             # Cannot be smaller if there's only 1 atom
             return False, abst
 
         # Create a list of candidate translation vectors, selecting
         # only those for which the slab is translation symmetric
-        plist = [at.cartpos[0:2] for at in lowocclayer.atlist]
+        plist = [at.cartpos[0:2] for at in lowocclayer]
         vlist = ((p1 - p2) for (p1, p2) in itertools.combinations(plist, 2))
         tvecs = [v for v in vlist if ts.isTranslationSymmetric(v, eps)]
         if not tvecs:
@@ -1282,12 +1281,12 @@ class Slab:
         if len(self.sublayers) < 2*nsub:
             return None
         # nonbulk_subl = self.sublayers[:-nsub]
-        z_range = (self.sublayers[-nsub].atlist[0].cartpos[2],
-                   self.sublayers[-1].atlist[0].cartpos[2])
+        z_range = (self.sublayers[-nsub].cartpos[2],
+                   self.sublayers[-1].cartpos[2])
         baseLayer = self.sublayers[-1-nsub]
-        ori = baseLayer.atlist[0].cartpos  # compare displacements from here
+        ori = baseLayer.cartpos  # compare displacements from here
         repeat_vectors = []
-        for at in self.sublayers[-1].atlist:
+        for at in self.sublayers[-1]:
             v = at.cartpos - ori
             if self.isTranslationSymmetric(v, eps, z_periodic=False,
                                            z_range=z_range):
@@ -1313,11 +1312,11 @@ class Slab:
         baseLayer = ts.sublayers[0]
         baseInd = ts.sublayers.index(baseLayer)
         nl = len(ts.sublayers)
-        ori = baseLayer.atlist[0].cartpos  # compare displacements from here
+        ori = baseLayer.cartpos  # compare displacements from here
         repeatC = None
         for per in pcands:
             ind = (baseInd + per) % nl
-            for at in ts.sublayers[ind].atlist:
+            for at in ts.sublayers[ind]:
                 v = ori - at.cartpos
                 if ts.isTranslationSymmetric(v, eps, z_periodic=z_periodic):
                     repeatC = at.cartpos - ori
@@ -1346,12 +1345,12 @@ class Slab:
         h = self.ucell[2, 2]  # cell height; periodicity cannot go beyond h/2
         l0 = self.sublayers[0]
         nl = len(self.sublayers)
-        l0el = l0.atlist[0].el
-        l0n = len(l0.atlist)
+        l0el = l0.element
+        l0n = l0.n_atoms
         for i, lay in enumerate(self.sublayers[1:]):
             if abs(lay.cartbotz - l0.cartbotz) > h/2 + eps:
                 break
-            if lay.atlist[0].el == l0el and len(lay.atlist) == l0n:
+            if lay.element == l0el and lay.n_atoms == l0n:
                 cl.append(i+1)
         if len(cl) == 0:
             return([])
@@ -1360,8 +1359,8 @@ class Slab:
             wrong = False
             zoff = self.sublayers[cl[i]].cartbotz - self.sublayers[0].cartbotz
             for j in range(1, int(np.ceil(len(self.sublayers)/2))):
-                if (self.sublayers[(j + cl[i]) % nl].atlist[0].el
-                        != self.sublayers[j].atlist[0].el):
+                if (self.sublayers[(j + cl[i]) % nl].element
+                        != self.sublayers[j].element):
                     wrong = True
                     break
                 if abs(zoff - ((self.sublayers[(j + cl[i]) % nl].cartbotz
@@ -1448,7 +1447,7 @@ class Slab:
         duplicated = []
         zdiff = 0.
         for _ in range(n):
-            blayers = [lay for lay in ts.layers if lay.isBulk]
+            blayers = [lay for lay in ts.layers if lay.is_bulk]
             if isinstance(rp.BULK_REPEAT, np.ndarray):
                 bulkc = np.copy(rp.BULK_REPEAT)
                 if bulkc[2] < 0:
@@ -1478,7 +1477,7 @@ class Slab:
             bulkc_perp_to_c = bulkc - bulkc_project_to_c
             added_this_loop = []
             for at in original_atoms:
-                if at.layer.isBulk and at not in duplicated:
+                if at.layer.is_bulk and at not in duplicated:
                     new_atom = at.duplicate()
                     newbulkats.append(new_atom)
                     duplicated.append(at)
@@ -1590,7 +1589,7 @@ class Slab:
                     cutlayer = i
             if maxdist >= second_cut_min_spacing:
                 bulkcut_frac_from_lowest = (
-                    bsl.sublayers[cutlayer].atlist[0].pos[2]
+                    bsl.sublayers[cutlayer].pos[2]
                     - (maxdist / (2 * abs(bsl.ucell[2, 2])))
                     - min([at.pos[2] for at in bsl.atlist]))
                 slab_cuts.append(frac_lowest_pos
@@ -1609,8 +1608,8 @@ class Slab:
         # construct bulk slab
         bsl = copy.deepcopy(self)
         bsl.resetSymmetry()
-        bsl.atlist = [at for at in bsl.atlist if at.layer.isBulk]
-        bsl.layers = [lay for lay in bsl.layers if lay.isBulk]
+        bsl.atlist = [at for at in bsl.atlist if at.layer.is_bulk]
+        bsl.layers = [lay for lay in bsl.layers if lay.is_bulk]
         bsl.getCartesianCoordinates()
         al = bsl.atlist[:]     # temporary copy
         al.sort(key=lambda atom: atom.pos[2])
@@ -1665,25 +1664,25 @@ class Slab:
         newatlist = []
         for subl in bsl.sublayers:
             i = 0
-            while i < len(subl.atlist):
+            while i < subl.n_atoms:
                 j = i+1
-                while j < len(subl.atlist):
+                while j < subl.n_atoms:
                     if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
                                                eps=rp.SYMMETRY_EPS):
                         subl.atlist.pop(j)
                     else:
                         j += 1
                 i += 1
-            newatlist.extend(subl.atlist)
+            newatlist.extend(subl)
         bsl.atlist = newatlist
         bsl.updateElementCount()   # update number of atoms per element again
         # update the layers. Don't use Slab.createLayers here to keep it
         #   consistent with the slab layers
         for i, layer in enumerate(bsl.layers):
             layer.slab = bsl
-            layer.getLayerPos()
+            layer.update_position()
             layer.num = i
-            layer.atlist = [at for at in layer.atlist if at in bsl.atlist]
+            layer.atlist = [at for at in layer if at in bsl.atlist]
         return bsl
 
     def makeSymBaseSlab(self, rp, transform=None):
@@ -1710,11 +1709,11 @@ class Slab:
         newatlist = []
         for subl in ssl.sublayers:
             i = 0
-            while i < len(subl.atlist):
+            while i < subl.n_atoms:
                 j = i+1
                 baseat = [a for a in self.atlist
                           if a.oriN == subl.atlist[i].oriN][0]
-                while j < len(subl.atlist):
+                while j < subl.n_atoms:
                     if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
                                                eps=rp.SYMMETRY_EPS):
                         for a in [a for a in self.atlist
@@ -1724,16 +1723,16 @@ class Slab:
                     else:
                         j += 1
                 i += 1
-            newatlist.extend(subl.atlist)
+            newatlist.extend(subl)
         ssl.atlist = newatlist
         ssl.updateElementCount()   # update number of atoms per element again
         # update the layers. Don't use Slab.createLayers here to keep it
         #   consistent with the slab layers
         for i, layer in enumerate(ssl.layers):
             layer.slab = ssl
-            layer.getLayerPos()
+            layer.update_position()
             layer.num = i
-            layer.atlist = [at for at in layer.atlist if at in ssl.atlist]
+            layer.atlist = [at for at in layer if at in ssl.atlist]
         return ssl
 
     def getSurfaceAtoms(self, rp):
