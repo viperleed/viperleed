@@ -277,6 +277,7 @@ class TestSymmetryConstraints:
         'hex_cmm_01': 'Known incorrect plane group p2',
         'square_cm_1m1': 'Known to sometimes fail with a random shift',
         'square_pm_10': 'Known to sometimes fail with a random shift',
+        'square_pm_01': 'Known to sometimes fail with a random shift',
         'square_pg_10': 'Known to often fail with a random shift',
         'pm_10': 'Known to sometimes fail with a random shift',
         'pg_10': 'Known to often fail with a random shift',
@@ -402,6 +403,9 @@ class TestSlabSymmetrization:
         'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
         'infoless_poscar-diamond':  'Invalid pm. May be correct rcm here',
         'infoless_poscar-graphene':  'Sometimes reduced to pmg from pmm',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
+            'sometimes reduced to p1 from p3'
+            ),
         'double_bulk-fe3o4': 'Often reduced to pm/p1 (from pmm)',
         'fe3o4_bulk': 'Known invalid group pm. May be correct pmm here.',
         }

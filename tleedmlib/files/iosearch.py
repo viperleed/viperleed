@@ -1174,7 +1174,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     # now update site occupations and vibrations:
     for site in sl.sitelist:
         siteats = [at for at in sl if at.site == site
-                   and not at.layer.isBulk]
+                   and not at.layer.is_bulk]
         if not siteats: # site is only found in bulk
             continue
         for el in site.occ:

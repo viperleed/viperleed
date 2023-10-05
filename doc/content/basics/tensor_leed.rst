@@ -11,7 +11,7 @@ The descriptions below are only intended to provide a quick overview of
 the method and serve as explanation and motivation for the various sections of 
 a LEED :math:`I(V)` calculation in ViPErLEED.
 
-For an in-depth description of all parts of the tensor LEED approach, we refer to the papers by Rous and Pendry (see Refs. :cite:p:`rousTensorLEEDTechnique1986,rousTheoryTensorLEED1989`) and the explanation of how to approach is implemented in TensErLEED in 
+For an in-depth description of all parts of the tensor LEED approach, we refer to the papers by Rous and Pendry (see Refs. :cite:p:`rousTensorLEEDTechnique1986,rousTheoryTensorLEED1989`) and the explanation of how the approach is implemented in TensErLEED in 
 the original publication of the TensErLEED software :cite:p:`blumFastLEEDIntensity2001a`.
 
 Reference Calculation
@@ -19,31 +19,29 @@ Reference Calculation
 
 In the :ref:`reference calculation<ref-calc>`, the full dynamic scattering (i.e. including all multiple-scattering contributions) of the incident electron wave (with complex amplitude :math:`A_{in}`) at the reference structure is calculated.
 In principle, this calculation only yields the scattering amplitudes
-:math:`A_{out}^{ref}` (and intensities) for the requested reference structure.
+:math:`A_{out}^{ref}` (and intensities via :math:`I = |A|^2`) of all diffracted beams of interest for the requested reference structure.
 However, as shown by Rous and Pendry :cite:p:`rousTensorLEEDTechnique1986`, 
-using a first-order perturbation theory approach, it is possible to obtain
-accurate diffraction amplitudes for small deviations from this reference structure.
-These deviations may be geometrical (altered atom positions), changes to 
-the vibrational amplitude or chemical substitutions.
+using a first-order perturbation theory approach, it is possible to obtain rather accurate diffraction amplitudes for small deviations from this reference structure.
+These deviations may be geometrical (altered atom positions), changes to the vibrational amplitude or chemical substitutions.
 
 Each atom :math:`i` is assigned
-an atomic :math:`t`-matrix, :math:`t_i` based on phaseshifts and positions within the unit cell.
+an atomic :math:`t`-matrix, :math:`t_i`, based on phaseshifts and positions within the unit cell.
 The perturbed structure is consequently characterized by altered atomic 
 :math:`t`-matrices :math:`\tilde{t_i} = t_i + \delta \tilde{t_i}`.
 
-In this case, the diffraction amplitudes for a perturbed structure can be written 
+In this case, the diffraction amplitudes for beam :math:`n` a perturbed structure can be written 
 as the reference amplitudes plus a sum of delta-amplitudes for the 
 altered atoms (index :math:`i`):
 
 .. math:: 
 
-    \tilde{A}^{per} = A^{ref} + \sum_{i} \delta \tilde{A}_{i}^{per}
+    \tilde{A}^{\mathrm{per}}_{n} = A^{\mathrm{ref}}_{n} + \sum_{i} \delta \tilde{A}_{i,n}^{per}
 
 These delta-amplitudes can be expressed as 
 
 .. math:: 
 
-    \delta \tilde{A}_{i}^{per} = \sum_{l,m;l',m'} T^{ref}_{i;l,m;l',m'} \braket{\vec{r_i},l,m| \delta t_i |\vec{r_i},l',m'}
+    \delta \tilde{A}_{i}^{\mathrm{per}} = \sum_{l,m;l',m'} T^{\mathrm{ref}}_{i;l,m;l',m'} \braket{\vec{r_i},l,m| \delta t_i |\vec{r_i},l',m'}
 
 using the perturbed atomic :math:`t`-matrices :math:`\delta t_i` and the
 tensor quantities :math:`T^{ref}_{i;l,m;l',m'}`. The sum runs over angular 
@@ -95,13 +93,13 @@ Structure Search
 Once the amplitude changes for all required perturbations have been obtained, the final diffraction amplitudes can be calculated using a simple superposition.
 Essentially, for any perturbed structure, we compute the amplitudes by simply summing up amplitude changes (deltas) for all affected atoms.
 
-Consequently, using these resulting amplitudes (and intensities via :math:`I = |A|^2`), 
-an R-factor vs. the experimental intensities can now be obtained for any structure in the configuration-space.
+Consequently, using these resulting amplitudes and intensities, 
+an R-factor vs. the experimental intensities can now be obtained for any structure in the configuration space.
 Then, the best-fit structure must be found by an optimization (minimization of the R factor) in the configuration space.
 
 
 While conceptually simple, this optimization can be practically and computationally 
-very challenging, and generally constitutes the computationally most expensive
+very challenging, and usually constitutes the computationally most expensive
 part of a LEED :math:`I(V)` calculation. Still, using the TensErLEED approach,
 the problem generally remains tractable, even for relatively large unit cells.
 Running a full-dynamic calculation for every configuration is usually orders
