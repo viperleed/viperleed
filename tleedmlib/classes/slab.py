@@ -20,9 +20,10 @@ from scipy.spatial import KDTree
 
 try:
     import ase
-    has_ase = True
 except ImportError:
-    has_ase = False
+    _HAS_ASE = False
+else:
+    _HAS_ASE = True
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import (angle, rotation_matrix_order,
@@ -42,27 +43,93 @@ class InvalidUnitCellError(SlabError):
     """Exception raised when the unit cell of a slab is inappropriate."""
 
 class SymPlane:
-    """Candidate plane for a symmetry operation. 'ty' pre-defines a type
-    (mirror or glide), 'index2' allows the (1,2) and (2,1) directions if True,
-    and collapse moves pos into the (0,0) unit cell if True."""
+    """Candidate plane for a symmetry operation."""
 
-    def __init__(self, pos, dr, abt, ty="none", index2=False, collapse=True):
-        if collapse:  # collapse to (0,0) cell
-            self.pos = np.dot(abt.T, (np.dot(np.linalg.inv(abt.T), pos) % 1.0))
-        else:
-            self.pos = pos
+    def __init__(self, pos, dr, ucell, ty="none", index2=True, collapse=True):
+        """Initialize instance.
+        
+        Parameters
+        ----------
+        pos : np.ndarray
+            Cartesian position of this symmetry plane. Can later be accessed
+            as the .pos attribute. If collapse=True, self.pos contains the
+            collapsed version of pos.
+        dr : np.ndarray                                                                 # TODO: given the use in symmetry.py, this could become fractional
+            In-plane vector identifying this plane, in cartesian coordinates.
+            A unit vector parallel to dr can be accessed via .dir; a version
+            in fractional coordinates is available in .par, instead.
+        ucell : np.ndarray
+            2D unit cell of the slab for which this plane is a candidate
+            symmetry plane. Unit vectors are rows, i.e., a, b = ucell.
+        ty : {'none', 'mirror', 'glide'}, optional
+            Pre-defines a type for this symmetry plane. This property can
+            later be accessed via the .type attribute. Default is 'none'.
+        index2 : bool, optional
+            Allows also (2,1) and (1,2) directions if True. When False,
+            only (1,0), (0,1), (1,1) and (1,-1) directions are considered.
+            Default is True.
+        collapse : bool, optional
+            Moves pos into the (0,0) unit cell if True. Default is True.
+
+        Returns
+        -------
+        None.
+        """
         self.dir = dr/np.linalg.norm(dr)
-        # normalized vector perpendicular to pos = in-plane
         self.type = ty
-        self.par = []
-        optionlist = [(1, 0), (0, 1), (1, 1), (1, -1)]
-        if index2:
+        self.pos = pos
+        if collapse:  # collapse to (0,0) cell
+            self.collapse(ucell)
+
+        # Identify fractional directions .par and .perp                                 # TODO: this could be done as (i, j) = np.dot(vec, inv(abt))
+        self.par = []                                                                   # and would give general frac directions, not necessarily ints
+        self.perp = []                                                                  # The current implementation can give errors should this identification
+        optionlist = [(1, 0), (0, 1), (1, 1), (1, -1)]                                  # fail as then .par/.perp are '[]' (e.g., get_implied fails). Giving dr
+        if index2:                                                                      # as fractional would solve at least the 'par' part.
             optionlist.extend([(2, 1), (1, 2)])
+
+        perp_dir = np.dot(rotation_matrix(np.pi/2), self.dir)
         for (i, j) in optionlist:
-            if abs((abs(np.dot(self.dir, (i*abt[0]+j*abt[1])))
-                    / (np.linalg.norm(self.dir)
-                    * np.linalg.norm(i*abt[0]+j*abt[1])))-1.0) < 0.001:
+            cart_dir = i * ucell[0] + j * ucell[1]
+            cart_dir /= np.linalg.norm(cart_dir)
+            if abs(abs(np.dot(self.dir, cart_dir)) - 1.0) < 0.001:
                 self.par = np.array([i, j])
+            if abs(abs(np.dot(perp_dir, cart_dir)) - 1.0) < 0.001:
+                self.perp = np.array([i, j])
+
+    def __str__(self):
+        return (f"SymPlane(pos={self.pos}, par={self.par}, "
+                f"type={self.type})")
+
+    def collapse(self, ucell):
+        """Collapse self.pos to the (0, 0) unit cell."""
+        # We need only collapse the component of pos perpendicular to the
+        # plane, as the parallel one does not matter, and can be set to 0
+        perp_dir = np.dot(rotation_matrix(np.pi/2), self.dir)
+        pos = np.dot(self.pos, perp_dir) * perp_dir
+        self.pos = np.dot(pos.dot(np.linalg.inv(ucell)) % 1.0,
+                          ucell)
+
+    def get_implied(self, ucell, collapse=False):
+        """Return the second symmetry plane that is implied by this one.
+
+        Parameters
+        ----------
+        ucell : numpy.ndarray
+            2D unit cell of the slab. Notice that this is slab.ucell.T,
+            i.e., with a, b = ucell.
+        collapse : bool, optional
+            Whether the position of the plane returned should be collapsed
+            to the (0,0) cell. Default is False.
+
+        Returns
+        -------
+        plane : SymPlane
+            The symmetry plane implied by this one.
+        """
+        return SymPlane(pos=self.pos + np.dot(self.perp, ucell)/2,
+                        dr=self.dir, ucell=ucell, ty=self.type, index2=True,
+                        collapse=collapse)
 
     def distanceFromOrigin(self, abt):
         pointlist = [(0, 0), (1, 0), (0, 1), (1, 1)]
@@ -70,16 +137,16 @@ class SymPlane:
                                    p[0]*abt[0]+p[1]*abt[1])
                     for p in pointlist])
 
-    def __str__(self):
-        return ("SymPlane(pos = {}, par = {})".format(self.pos, self.par))
-
-    def isEquivalent(self, pl2, abt, eps=0.001):
+    def isEquivalent(self, other, abt, eps=0.001):
         """Checks whether two symmetry planes have the same position and
         direction (including duplicates in next unit cell)"""
-        if not np.array_equal(self.par, pl2.par):
+        if not isinstance(other, SymPlane):
+            raise TypeError(f"Cannot compare {type(self).__name__!r} to "
+                            f"{type(other).__name__!r}.")
+        if not np.array_equal(self.par, other.par):
             return False
         complist = [self.pos]
-        fpos = np.dot(np.linalg.inv(np.transpose(abt)), self.pos) % 1.0
+        fpos = np.dot(np.linalg.inv(abt.T), self.pos) % 1.0
         # if we're close to an edge or corner, also check translations
         for i in range(0, 2):
             releps = eps / np.linalg.norm(abt[i])
@@ -91,7 +158,7 @@ class SymPlane:
             complist.append(complist[1]+complist[2]-complist[0])
 
         for p in complist:
-            if dist_from_line(pl2.pos, pl2.pos+pl2.dir, p) < eps:
+            if tl.base.dist_from_line(other.pos, other.pos+other.dir, p) < eps:
                 return True
         return False
 
@@ -174,9 +241,7 @@ class Slab:
     """
 
     def __init__(self, ase_atoms=None):
-        global has_ase
-
-        self.ucell = None
+        self.ucell = np.array([])
         self.poscar_scaling = 1.
         self.chemelem = []
         self.n_per_elem = {}
@@ -205,16 +270,16 @@ class Slab:
 
         if ase_atoms is None:
             return
-        if not has_ase:
+        if not _HAS_ASE:
             logger.warning("Slab creation from ase.Atoms not supported: "
                            "Module ase not found.")
             return
-        if type(ase_atoms) != ase.Atoms:
+        if not isinstance(ase_atoms, ase.Atoms):
             raise TypeError("Slab object must be created empty or from "
                             "ase.Atoms, found unexpected type "
                             + str(type(ase_atoms)))
         # initialize from ase_atoms
-        self.ucell = np.transpose(ase_atoms.cell[:])
+        self.ucell = ase_atoms.cell[:].T
         elems = [v.capitalize() for v in ase_atoms.get_chemical_symbols()]
         tmp_elements = make_unique_list(elems)
         self.n_per_elem = {k: elems.count(k) for k in tmp_elements}
@@ -759,19 +824,31 @@ class Slab:
             at.constraints = {1: {}, 2: {}, 3: {}}
         return
 
-    def rotateAtoms(self, axis, order):
-        """Translates the atoms in the slab to have the axis in the origin,
-        applies an order-fold rotation matrix to the atom positions, then
-        translates back"""
+    def rotateAtoms(self, order, axis=(0., 0.)):
+        """Apply an order-fold rotation around axis.
+
+        Parameters
+        ----------
+        order : int
+            Order of rotation, as accepted by rotation_matrix_order
+        axis : array-like, optional
+            In-plane cartesian position of the rotation axis. Default
+            is (0, 0) (i.e., the origin).
+
+        Returns
+        -------
+        None.
+        """
         self.getCartesianCoordinates()
         m = rotation_matrix_order(order)
+        axis = np.asarray(axis)
         for at in self.atlist:
             # translate origin to candidate point, rotate, translate back
             at.cartpos[0:2] = np.dot(m, at.cartpos[0:2] - axis) + axis
         self.getFractionalCoordinates()
 
     def rotateUnitCell(self, order, append_ucell_mod=True):
-        """Rotates the unit cell (around the origin), leaving atom positions
+        """Rotate the unit cell (around the origin), leaving atom positions
         the same. Note that this rotates in the opposite direction as
         rotateAtoms."""
         self.getCartesianCoordinates()
@@ -816,47 +893,162 @@ class Slab:
     def isRotationSymmetric(self, axis, order, eps):
         """Evaluates whether the slab is equivalent to itself when rotated
         around the axis with the given rotational order"""
-        m = rotation_matrix_order(order)
-        ab = self.ucell[:2, :2]
-        abt = ab.T
-        releps = [eps / np.linalg.norm(abt[j]) for j in range(0, 2)]
-        shiftv = axis.reshape(2, 1)
-        for sl in self.sublayers:
-            coordlist = [at.cartpos[0:2] for at in sl.atlist]
-            shiftm = np.tile(shiftv, len(coordlist))
-            # matrix to shift all coordinates by axis
-            oricm = np.array(coordlist)  # original cartesian coordinate matrix
-            oripm = np.dot(np.linalg.inv(ab), oricm.transpose()) % 1.0
-            # collapse (relative) coordinates to base unit cell
-            oricm = np.dot(ab, oripm).transpose()
-            # original cartesian coordinates collapsed to base unit cell
-            tmpcoords = np.copy(oricm).transpose()
-            # copy of coordinate matrix to be rotated
-            tmpcoords -= shiftm
-            tmpcoords = np.dot(m, tmpcoords)
-            tmpcoords += shiftm
-            tmpcoords = np.dot(ab,
-                               (np.dot(np.linalg.inv(ab), tmpcoords) % 1.0))
-            # collapse coordinates to base unit cell
-            # for every point in matrix, check whether is equal:
-            for (i, p) in enumerate(oripm.transpose()):
-                # get extended comparison list for edges/corners:
+        rot_matrix = rotation_matrix_order(order).T
+        ab = self.ucell[:2, :2].T
+        ab_inv = np.linalg.inv(ab)
+        releps = eps / np.linalg.norm(ab, axis=1)
+        shiftv = np.asarray(axis)
+
+        for layer in self.sublayers:
+            # Collapse fractional coordinates before rotation
+            cart_coords = np.array([at.cartpos[:2] for at in layer.atlist])
+            frac_coords = cart_coords.dot(ab_inv) % 1.0   # collapsed
+            cart_coords = frac_coords.dot(ab)
+
+            # Create a rotated copy, shift, rotate, shift back
+            rot_coords = cart_coords - shiftv
+            rot_coords = rot_coords.dot(rot_matrix) + shiftv
+
+            # Collapse again
+            rot_coords = np.dot(rot_coords.dot(ab_inv) % 1.0, ab)
+
+            # Now add extra atoms close to edges/corners for comparing
+            for i, p in enumerate(frac_coords):
                 addlist = []
                 for j in range(0, 2):
-                    if abs(p[j]) < releps[j]:
-                        addlist.append(oricm[i]+abt[j])
-                    if abs(p[j]-1) < releps[j]:
-                        addlist.append(oricm[i]-abt[j])
+                    if abs(p[j]) < releps[j]:    # "left" edge
+                        addlist.append(cart_coords[i] + ab[j])
+                    if abs(p[j]-1) < releps[j]:  # "right" edge
+                        addlist.append(cart_coords[i] - ab[j])
                 if len(addlist) == 2:
                     # coner - add the diagonally opposed one
-                    addlist.append(addlist[0]+addlist[1]-oricm[i])
-                for v in addlist:
-                    oricm = np.concatenate((oricm, v.reshape(1, 2)))
-            distances = sps.distance.cdist(tmpcoords.transpose(), oricm,
+                    addlist.append(sum(addlist) - cart_coords[i])
+                cart_coords = np.concatenate((cart_coords, addlist))
+
+            # Finally compare interatomic distances
+            distances = sps.distance.cdist(rot_coords, cart_coords,
                                            'euclidean')
             for sublist in distances:
                 if min(sublist) > eps:
                     return False
+        return True
+
+    def getCompareCoords(self, eps):
+        """Return complete coordinate arrays for comparison.
+
+        The arrays contain (i) all atom coordinates, collapsed to the (0,0)
+        cell, followed by (ii) appropriate replicas for atoms close to edges
+        (and corners) of the unit cell. Also returns a second numpy array
+        containing the sublayer per atom, for filtering the coordinate array.
+
+        Parameters
+        ----------
+        eps : float
+            Error tolerance for positions (cartesian)
+
+        Returns
+        -------
+        compare_coords : numpy.array
+            2D array containing all atom coordiantes in order
+        compare_sublayers : numpy.array
+            1D array containing the sublayer index for each atom in the same
+            order as compare_coords. For sublayer-wise comparison.
+        """
+        # At variance with other methods, let's use the transposed
+        # unit cell from the beginning (i.e., a, b, c = uc)
+        uc = self.ucell.T
+        releps = tuple(eps / np.linalg.norm(uc[j, :2]) for j in range(0, 2))
+        cart_coords = np.array([at.cartpos for at in self.atlist])
+        frac_coords = np.dot(cart_coords, np.linalg.inv(uc)) % 1.0
+        compare_coords = np.dot(frac_coords, uc)  # already collapsed
+        compare_sublayers = [
+            next(i for i, sl in enumerate(self.sublayers) if at in sl.atlist)
+            for at in self.atlist
+        ]
+        for i, p in enumerate(frac_coords):
+            # get extended comparison list for edges/corners:
+            addlist = []
+            for j in range(0, 2):
+                if abs(p[j]) < releps[j]:    # "left" edge
+                    addlist.append(compare_coords[i] + uc[j])
+                if abs(p[j]-1) < releps[j]:  # "right" edge
+                    addlist.append(compare_coords[i] - uc[j])
+            if len(addlist) == 2:
+                # corner - add the diagonally opposed one
+                addlist.append(sum(addlist) - compare_coords[i])
+            if addlist:
+                compare_coords = np.concatenate((compare_coords, addlist))
+                compare_sublayers.extend([compare_sublayers[i]]*len(addlist))
+        return compare_coords, np.array(compare_sublayers)
+
+    def isTranslationSymmetric_2D(self, tv, eps, compare_to=None):
+        """Evaluate if the slab is unchanged when traslated by an in-plane tv.
+
+        Slightly faster than isTranslationSymmetric.
+
+        Parameters
+        ----------
+        tv : numpy.ndarray
+            2D or 3D translation vector; third component should be (near) zero.
+        eps : float
+            Error tolerance for positions (cartesian)
+        compare_to : tuple, or None, optional
+            When a tuple, it should contain two elements:
+                compare_coords : numpy.ndarray
+                    2D array containing cartesian coordiantes of all atoms,
+                    including equivalent positions for atoms at the edge of a
+                    unit cell
+                compare_sublayers : numpy.ndarray
+                    1D array containing the sublayer index for each atom in the
+                    same order as compare_coords. For sublayer-wise comparison.
+            If None or not given, compare_to is self.getCompareCoords(eps).
+            Default is None.
+
+        Returns
+        -------
+        bool
+            True if translation symmetric, else False.
+
+        Raises
+        ------
+        ValueError
+            If tv is not a 2- or 3-D vector.
+        """
+        if len(tv) not in (2, 3):
+            raise ValueError("isTranslationSymmetric_2D: not a 2D or 3D "
+                             "vector")
+        if len(tv) == 2:
+            tv = np.append(tv, 0.)
+
+        # Create 2D array of shifted cart. coordinates...
+        shifted_coords = np.array([at.cartpos for at in self.atlist])
+        shifted_coords += tv
+
+        # ...and collapsed to base unit cell
+        # At variance with other methods, use the better version of the
+        # unit cell, i.e., the one with a, b, c = uc
+        uc = self.ucell.T
+        frac_coords = shifted_coords.dot(np.linalg.inv(uc)) % 1.0
+        shifted_coords = frac_coords.dot(uc)
+
+        if compare_to is None:
+            compare_coords, compare_sublayers = self.getCompareCoords(eps)
+        else:
+            compare_coords, compare_sublayers = compare_to
+
+        sublayer_per_atom = np.fromiter(
+            (next(i for i, sl in enumerate(self.sublayers) if at in sl.atlist)
+             for at in self.atlist),
+            dtype=int
+            )
+        for i in range(len(self.sublayers)):  # sublayer-wise comparison
+            distances = sps.distance.cdist(
+                shifted_coords[sublayer_per_atom == i],
+                compare_coords[compare_sublayers == i],
+                'euclidean'
+                )
+            if any(min(sublist) > eps for sublist in distances):
+                return False
         return True
 
     def isTranslationSymmetric(self, tv, eps, z_periodic=True, z_range=None):
@@ -881,14 +1073,13 @@ class Slab:
         -------
         bool
             True if translation symmetric, else False.
-
         """
         self.check_a_b_out_of_plane()
         if len(tv) == 2:  # two-dimensional displacement. append zero for z
             tv = np.append(tv, 0.)
         uc = np.copy(self.ucell)
         uc[:, 2] *= -1   # mirror c vector down
-        uct = np.transpose(uc)
+        uct = uc.T
         releps = [eps / np.linalg.norm(uct[j]) for j in range(0, 3)]
         shiftv = tv.reshape(3, 1)
         # unlike in-plane operations, this one cannot be done sublayer-internal
@@ -897,12 +1088,12 @@ class Slab:
         oricm = np.array(coordlist)  # original cartesian coordinate matrix
         oricm[:, 2] *= -1
         shiftm[2] *= -1
-        oripm = np.dot(np.linalg.inv(uc), oricm.transpose()) % 1.0
         # collapse (relative) coordinates to base unit cell
-        oricm = np.dot(uc, oripm).transpose()
+        oripm = np.dot(np.linalg.inv(uc), oricm.T) % 1.0
         # original cartesian coordinates collapsed to base unit cell
-        tmpcoords = np.copy(oricm).transpose()
+        oricm = np.dot(uc, oripm).T
         # copy of coordinate matrix to be manipulated
+        tmpcoords = np.copy(oricm).T
         # determine which z to check
         if z_range is None:
             min_z = np.min(tmpcoords[2]) - eps
@@ -915,10 +1106,13 @@ class Slab:
             # discard atoms that moved out of range in z
             tmpcoords = tmpcoords[:, tmpcoords[2] >= min_z]
             tmpcoords = tmpcoords[:, tmpcoords[2] <= max_z]
-        tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc), tmpcoords) % 1.0))
         # collapse coordinates to base unit cell
+        tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc), tmpcoords) % 1.0))
         # for every point in matrix, check whether is equal:
-        for (i, p) in enumerate(oripm.transpose()):
+        # use list here, convert to np.array later
+        element_per_atom = [at.el for at in self.atlist]
+        element_per_atom_extended = element_per_atom.copy()
+        for (i, p) in enumerate(oripm.T):
             # get extended comparison list for edges/corners:
             addlist = []
             for j in range(0, 3):
@@ -937,11 +1131,17 @@ class Slab:
                                - 2*oricm[i])
             for v in addlist:
                 oricm = np.concatenate((oricm, v.reshape(1, 3)))
-        distances = sps.distance.cdist(tmpcoords.transpose(), oricm,
-                                       'euclidean')
-        # print(oricm)
-        if any(min(sublist) > eps for sublist in distances):
-            return False
+                element_per_atom_extended.append(element_per_atom[i])
+        # need to convert to array here for use as mask
+        element_per_atom = np.array(element_per_atom)
+        element_per_atom_extended = np.array(element_per_atom_extended)
+        for el in self.elements:  # element-wise comparison
+            distances = sps.distance.cdist(
+                tmpcoords.T[element_per_atom == el],
+                oricm[element_per_atom_extended == el],
+                'euclidean')
+            if any(min(sublist) > eps for sublist in distances):
+                return False
         return True
 
     def isBulkTransformSymmetric(self, matrix, sldisp, eps):
@@ -1199,23 +1399,25 @@ class Slab:
             # Cannot be smaller if there's only 1 atom
             return False, abst
 
-        # Create a list of candidate translation vectors, selecting
-        # only those for which the slab is translation symmetric
+        # Create a list of candidate translation vectors
         plist = [at.cartpos[0:2] for at in lowocclayer.atlist]
-        vlist = ((p1 - p2) for (p1, p2) in itertools.combinations(plist, 2))
-        tvecs = [v for v in vlist if ts.isTranslationSymmetric(v, eps)]
-        if not tvecs:
-            return False, abst
+        vlist = [p - plist[0] for p in plist[1:]]                               # WAS vlist = [(p1-p2) for (p1, p2) in itertools.combinations(plist, 2)]  Not sure it is enough to use just the first one "as reference" as opposed to taking all pairs for unit vectors.
+
+        # Create a list of atomic coordinates to compare to,
+        # to be used in isTranslationSymmetric_2D below
+        compare_to = ts.getCompareCoords(eps)
 
         # Now try to reduce the cell: test whether we can use a pair of
-        # vectors from [a, b, *tvecs] to make the cell smaller. Keep in
+        # vectors from [a, b, *vlist] to make the cell smaller. Keep in
         # mind that with n_atoms, we cannot reduce the area by more than
         # a factor 1/n_atoms (which would give 1 atom per mincell).
         mincell = abst.copy()
         mincell_area = abs(np.linalg.det(mincell))
-        smaller = False
         smallest_area = mincell_area / n_atoms
-        for vec in tvecs:
+        smaller = False
+        for vec in vlist:
+            if not ts.isTranslationSymmetric_2D(vec, eps, compare_to):
+                continue
             # Try first replacing the current second unit vector
             tcell = np.array([mincell[0], vec])
             tcell_area = abs(np.linalg.det(tcell))
@@ -1225,7 +1427,6 @@ class Slab:
                 mincell_area = tcell_area
                 smaller = True
                 continue
-
             # Try replacing the current first unit vector instead
             tcell = np.array([mincell[1], vec])
             tcell_area = abs(np.linalg.det(tcell))
@@ -1810,12 +2011,13 @@ class Slab:
         return b3ds
 
     def getNearestNeigbours(self):
-        """Returns a list listing the nearest neighbor distance for all atoms in the slab taking periodic
-        boundary conditions into account. For this calculation, the cell is internally expanded into a supercell."""
+        """Returns a list listing the nearest neighbor distance for all atoms
+        in the slab taking periodic boundary conditions into account. For this
+        calculation, the cell is internally expanded into a supercell."""
 
-        #unit vectors
-        a = self.ucell[:,0] # vector a
-        b = self.ucell[:,1] # vector b
+        # unit vectors
+        a = self.ucell[:, 0]  # vector a
+        b = self.ucell[:, 1]  # vector b
 
         # Compare unit vector lengths and decide based on this how many cells to add around
         # A minimum 3x3 supercell is constructed for nearest neighbor query, but may be exteneded if vector lengths
@@ -1825,8 +2027,8 @@ class Slab:
         j = np.ceil(max_length/np.linalg.norm(b))
 
         # Makes supercell minimum size 3x3 original
-        transform = np.array([[2*i+1,0],
-                              [0,2*j+1]])
+        transform = np.array([[2*i+1, 0],
+                              [0, 2*j+1]])
         supercell = self.makeSupercell(transform)
 
 
@@ -1834,15 +2036,15 @@ class Slab:
         # For NN query use KDTree from scipy.spacial
         tree = KDTree(atom_coords)
 
-        NN_dict = {} # Dict containing Atom and NN will be returned
+        NN_dict = {}  # Dict containing Atom and NN will be returned
 
         # Now query atoms in center cell for NN distances and save to dict
         for atom in self.atlist:
             coord = atom.cartpos
-            coord += (i+1)*a + (j+1)*b # central cell
+            coord += (i+1)*a + (j+1)*b  # central cell
 
-            dists, _ = tree.query(coord,k=2) # second argument irrelevant; would be index of NN atoms (supercell, not original!)
-            NN_dict[atom] = dists[1] # element 0 is distance to atom itself (< 1e-15)
+            dists, _ = tree.query(coord, k=2)  # second argument irrelevant; would be index of NN atoms (supercell, not original!)
+            NN_dict[atom] = dists[1]  # element 0 is distance to atom itself (< 1e-15)
 
         return NN_dict
 
