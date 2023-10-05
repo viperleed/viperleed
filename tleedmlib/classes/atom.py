@@ -18,14 +18,14 @@ import numpy as np
 logger = logging.getLogger('tleedm.atom')
 
 
-class Atom:
+class Atom:                                                                     # TODO: change description of cartpos when flipping .cartpos[2]
     """To be used for Slab; each atom has an element and a position.
 
     Attributes
     ----------
     el : str
         Element type
-    pos : numpy.array
+    pos : numpy.ndarray
         Atom position as fractional coordinate
     oriN : int
         Original atom number in the POSCAR
@@ -34,12 +34,12 @@ class Atom:
     layer : Layer
         Layer object that the atom belongs to
     site : Sitetype
-        Site type of the atom, containing vibrational amplitude and occupation.
-        Supplied by the SITEDEF parameter, assigned by the updateSites routine
-        of Slab
-    cartpos : numpy.array
-        Position in cartesian coordinates, with the highest atom as z = 0,
-        positive z pointing into the surface
+        Site type of the atom, containing vibrational amplitude and
+        occupation. Supplied by the SITE_DEF parameter, assigned by
+        the initSites method of Slab.
+    cartpos : numpy.ndarray
+        Position in Cartesian coordinates, with the highest atom
+        at z = 0, positive z pointing into the surface
     linklist : list of Atom
         Defines to which other atoms this Atom is linked. Notice that
         if this Atom is linked to another one, the linklist of both
@@ -47,39 +47,41 @@ class Atom:
         by all atoms in the same group. This is used together with
         symrefm to determine symmetry-conserving displacements.
     displist : list of Atom
-        Like linklist, but keeps track of which symmetry was active when
-        displacement was defined.
+        Like linklist, but keeps track of which symmetry was active
+        when displacement was defined.
     freedir : int
         Defines whether the atom can be moved or is locked by symmetry.
         0: no movements, 1: completely free,
         np.array([0|1, 0|1|-1]): parallel movement to a, b, or diagonal
     symrefm : numpy.array
-        Defines how a translation of the atom at self.linklist[0] should be
-        transformed to affect this atom.
+        Defines how a translation of the atom at self.linklist[0]
+        should be transformed to affect this atom.
     disp_vib, disp_geo, disp_occ : dict
-        Keys are elements, values are lists of vibration/geometry/occupation
-        offsets
+        Keys are elements, values are lists of vibration/geometry/
+        occupation offsets
     disp_geo_offset : dict
-        Keys are elements; values are also formatted as lists for convenience,
-        but should be one element long.
+        Keys are elements; values are also formatted as lists
+        for convenience, but should be one element long.
     disp_center_index : dict of dict
-        Which index in the displacement range corresponds to 'no change'
+        Which index in the displacement range corresponds to
+        'no change'
     dispInitialized : bool
         disp_ variables get initialized after readVIBROCC by Atom.initDisp
     deltasGenerated : list of str
         Filenames of delta files generated or found for this atom
     offset_geo, offset_vib, offset_occ : dict
-        Offsets from self.cartpos, self.site.vib, self.site.occ per element
+        Offsets from self.cartpos, self.site.vib, self.site.occ
+        per element
     constraints : dict
         Parameter constraints for restrict.f per element, where
-        1,2,3 = geo,vib,occ. Can be integer-valued index in disp range or
-        a tuple (atom, element)
+        1, 2, 3 = geo, vib, occ. Can be integer-valued index in
+        disp_* range or a tuple (atom, element)
     oriState : Atom
         Deep copy of self before a search is applied
     duplicateOf : Atom
-        If this atom is identical to another one by translational symmetry
-        (through SYMMETRY_CELL_TRANSFORM or domain supercell creation),
-        this points to the atom in the base cell.
+        If this atom is identical to another one by translational
+        symmetry (through SYMMETRY_CELL_TRANSFORM or domain supercell
+        creation), this points to the atom in the base cell.
     """
 
     def __init__(self, el, pos, oriN, slab):
