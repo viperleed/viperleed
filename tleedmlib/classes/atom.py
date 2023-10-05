@@ -124,156 +124,123 @@ class Atom:
         """Return a string version of this Atom."""
         return f'Atom({self.oriN} {self.el})'
 
-    def storeOriState(self):
-        """Stores the initial values from the input files for this atom."""
-        if self.oriState is None:
-            self.oriState = self.duplicate(addToAtlists=False)
-
-    def copyOriState(self, at):
+    def assignConstraint(self, mode, targetel='', value=None, linkAtEl=None,
+                         index=None):
         """
-        Copies positions and offsets from another atom, which may be from
-        another slab.
-        """
-        self.storeOriState()
-        self.oriState.pos = copy.copy(at.pos)
-        self.oriState.cartpos = copy.copy(at.cartpos)
-        self.oriState.offset_geo = copy.copy(at.offset_geo)
-        self.oriState.offset_vib = copy.copy(at.offset_vib)
-        self.oriState.offset_occ = copy.copy(at.offset_occ)
-
-    def initDisp(self, force=False):
-        """
-        Initializes disp_vib, disp_geo and disp_occ, based on the atoms site.
-        Site needs to be assigned first.
-        """
-        if (not self.dispInitialized or force) and self.site is not None:
-            self.dispInitialized = True
-            self.disp_vib = {'all': [0.]}
-            self.disp_geo = {'all': [np.zeros(3)]}
-            self.disp_occ = {}
-            self.disp_center_index = {'vib': {'all': 0},
-                                      'geo': {'all': 0},
-                                      'occ': {}}
-            for k, v in self.site.occ.items():
-                if v > 0 or k in self.site.mixedEls:
-                    self.disp_occ[k] = [v]
-                    self.disp_center_index['occ'][k] = 0
-        return None
-
-    def mergeDisp(self, el):
-        """
-        Merges the offsets from VIBROCC and DISPLACEMENTS into the
-        displacements lists from DISPLACEMENTS for the given element.
-
-        For vibrational and occupational offsets a consistency check is
-        performed. The offset lists will be emptied.
-        """
-        self.storeOriState()
-        # geometric offsets from DISPLACEMENTS
-        geo_d_offset = self.disp_geo_offset.get(el,
-                                          self.disp_geo_offset['all'])[0]
-        if el not in self.disp_geo:
-            self.disp_geo[el] = copy.copy(list(self.disp_geo['all']))
-        self.disp_geo[el] = list(self.disp_geo[el] + geo_d_offset)
-        self.disp_geo_offset = {'all': [np.zeros(3)]}
-
-        # geometric offsets from VIBROCC
-        if el in self.offset_geo:
-            geo_offset = self.offset_geo[el]
-            self.disp_geo[el] = [geo_step + geo_offset for geo_step in self.disp_geo[el]]
-            del self.offset_geo[el]
-
-        # vibrational offsets from VIBROCC
-        if el not in self.disp_vib:
-            self.disp_vib[el] = copy.copy(self.disp_vib['all'])
-        if el in self.offset_vib:
-            vib_offset = self.offset_vib[el]
-            final_vib_steps = [vib_step + vib_offset for vib_step in self.disp_vib[el]]
-            if any(np.array(final_vib_steps) + self.site.vibamp[el] < 0):
-                logger.error(f'Vibrational offset for {self} defined in '
-                             'VIBROCC would result in negative vibrational '
-                             'amplitude. Offset will be ignored.')
-            else:
-                self.disp_vib[el] = final_vib_steps
-            del self.offset_vib[el]
-
-        # vibrational offsets from VIBROCC
-        if el in self.offset_occ:
-            occ_offset = self.offset_occ[el]
-            final_occ_steps = [occ_step + occ_offset for occ_step in self.disp_occ[el]]
-            if any(np.array(final_occ_steps) < 0) or any(np.array(final_occ_steps) > 1):
-                logger.error(f'Occupational offset for {self} defined in '
-                             'VIBROCC would result in unphysical concentration'
-                             '(occupation <0 or >1). Offset will be ignored.')
-            else:
-                self.disp_occ[el] = final_occ_steps
-            del self.offset_occ[el]
-
-    def clearOffset(self, mode, targetel='', primary=True, displist=[]):
-        """
-        Reverts the atom's offsets for the given mode and element to the
-        original values (from POSCAR and VIBROCC)
+        Assign a displacement constraint to this atom. Can be assigned for all
+        elements or only one. Constraint is either a fixed value, or another
+        (Atom, element) pair to link to.
 
         Parameters
         ----------
         mode : integer
-            Defines what to displace. 1: geo, 2: vib, 3: occ
+            Defines what parameter to constrain. 1: geo, 2: vib, 3: occ
         targetel : string, optional
-            If passed, assignment is made only for that element, otherwise for
-            all.
-        primary : bool, optional
-            Defines whether assignment should be passed along to linked atoms.
-            This will call assignDisp for these atoms, with primary=False.
-        displist : list of Atom objects, optional
-            Passed in secondary assignment to later link parameters (the
-            'linklist' defines how the 'displist' is defined, but can change
-            via the SYM_DELTA parameter).
+            If undefined, constrain for all elements. Otherwise, only constrain
+            for the given element.
+        value : float, optional
+            The value to which the given parameter should be constrained. If
+            the value is not in the disprange, assignment will be skipped.
+            Leave at default (None) if 'linkAtEl' or 'index' argument is
+            passed instead.
+        linkAtEl : tuple (Atom, float), optional
+            The atom and element to which the parameter should be linked. If
+            that atom's displist has a different length, assigment will be
+            skipped. Leave at default (None) if 'value' or 'index' argument
+            is passed instead.
+        index:
+            The index to which the given parameter should be constrained.
+            Leave at default (None) if 'linkAtEl' or 'value' argument is
+            passed instead.
 
         Returns
         -------
         None
         """
-        if self.oriState is None or targetel.lower() == 'vac':
+        eps = 1e-5
+        pars = len([p for p in [value, linkAtEl, index] if p is not None])
+        if pars > 1:
+            logger.warning('Atom.assignConstraint: Trying to constrain both '
+                           f'to a fixed value and to another atom for {self}')
+            return
+        if pars == 0:
+            logger.warning('Atom.assignConstraint: No value, index '
+                           f'or target atom passed for {self}')
             return
         if mode == 1:
-            td = self.offset_geo
-            od = self.oriState.offset_geo
+            td = self.disp_geo
         elif mode == 2:
-            td = self.offset_vib
-            od = self.oriState.offset_vib
+            td = self.disp_vib
         elif mode == 3:
-            td = self.offset_occ
-            od = self.oriState.offset_occ
-        else:
-            logger.warning(f'Atom.clearOffset: Unknown key for mode ({self}).')
+            td = self.disp_occ
+        else:  # offset is not allowed here
+            logger.warning('Atom.assignConstraint: Unknown '
+                           f'key for mode ({self}).')
             return
-        if targetel == '':
-            els = list(td.keys())
-        else:
-            els = [targetel]
-        for el in els:
-            if el not in od:
-                del td[el]
+        if index is not None or value is not None:
+            if targetel == '':
+                els = list(td.keys())
             else:
-                td[el] = od[el]
-        # assign to atoms in linklist:
-        if primary:
-            if not self.displist:
-                self.displist = [self]
-                self.slab.displists.append(self.displist)
-            for at in [at for at in self.linklist if at != self]:
-                at.clearOffset(mode, targetel, primary=False,
-                               displist=self.displist)
-            return
-        if self.displist and displist != self.displist:
-            logger.warning(
-                f'{self} is being linked to different groups in the '
-                'DISPLACEMENTS file. This will interfere with correct '
-                'parameter linking in the search! Check SYM_DELTA settings.'
-                )
-        if self not in displist:
-            displist.append(self)
-        self.displist = displist
+                if targetel in td:
+                    els = [targetel]
+                elif 'all' in td:
+                    els = ['all']
+                else:
+                    logger.warning(
+                        f'Cannot assign constraint for {self}: Element '
+                        f'{targetel} does not have displacements assigned.'
+                        )
+                    return
+            for el in els:
+                if index:
+                    if index > len(td[el]) or index < 1:
+                        logger.warning(
+                            f'Cannot assign constraint for {self}, '
+                            f'element {el}: index {index} is out of bounds'
+                            )
+                    else:
+                        self.constraints[mode][el] = index - 1
+                    continue
+                # else value
+                if mode == 1:
+                    dirvec = td[el][-1] - td[el][0]  # dir of disp range
+                    dirvec = dirvec / np.linalg.norm(dirvec)
+                    match = [(np.linalg.norm(v - value*dirvec) < eps)
+                             for v in td[el]]
+                else:
+                    match = [(abs(v - value) < eps) for v in td[el]]
+                if any(match):
+                    self.constraints[mode][el] = match.index(True)
+                else:
+                    logger.warning(
+                        f'Cannot assign constraint for {self}, element {el}: '
+                        f'value {value} is not in displacement list'
+                        )
+        else:  # linkAtEl
+            (at, el2) = linkAtEl
+            if mode == 1:
+                td2 = at.disp_geo
+            elif mode == 2:
+                td2 = at.disp_vib
+            elif mode == 3:
+                td2 = at.disp_occ
+            if el2 in td2:
+                listlen = len(td2[el2])
+            else:
+                listlen = len(list(td2.values())[-1])
+            if targetel == '':
+                els = list(td.keys())
+            else:
+                els = [targetel]
+            for el in els:
+                if len(td[el]) != listlen:
+                    logger.warning(
+                        f'Cannot constrain {self} to {at}: displacement list '
+                        'lengths differ.'
+                        )
+                    return
+            for el in els:
+                self.constraints[mode][el] = linkAtEl
 
     def assignDisp(self, mode, disprange, targetel='', primary=True,
                    displist=[], disp_label='', disp_lin_steps = []):
@@ -421,123 +388,83 @@ class Atom:
             displist.append(self)
         self.displist = displist
 
-    def assignConstraint(self, mode, targetel='', value=None, linkAtEl=None,
-                         index=None):
+    def clearOffset(self, mode, targetel='', primary=True, displist=[]):
         """
-        Assign a displacement constraint to this atom. Can be assigned for all
-        elements or only one. Constraint is either a fixed value, or another
-        (Atom, element) pair to link to.
+        Reverts the atom's offsets for the given mode and element to the
+        original values (from POSCAR and VIBROCC)
 
         Parameters
         ----------
         mode : integer
-            Defines what parameter to constrain. 1: geo, 2: vib, 3: occ
+            Defines which offset is to be cleared. 1: geo, 2: vib, 3: occ
         targetel : string, optional
-            If undefined, constrain for all elements. Otherwise, only constrain
-            for the given element.
-        value : float, optional
-            The value to which the given parameter should be constrained. If
-            the value is not in the disprange, assignment will be skipped.
-            Leave at default (None) if 'linkAtEl' or 'index' argument is
-            passed instead.
-        linkAtEl : tuple (Atom, float), optional
-            The atom and element to which the parameter should be linked. If
-            that atom's displist has a different length, assigment will be
-            skipped. Leave at default (None) if 'value' or 'index' argument
-            is passed instead.
-        index:
-            The index to which the given parameter should be constrained.
-            Leave at default (None) if 'linkAtEl' or 'value' argument is
-            passed instead.
+            If passed, assignment is made only for that element, otherwise for
+            all.
+        primary : bool, optional
+            Defines whether assignment should be passed along to linked atoms.
+            This will call assignDisp for these atoms, with primary=False.
+        displist : list of Atom objects, optional
+            Passed in secondary assignment to later link parameters (the
+            'linklist' defines how the 'displist' is defined, but can change
+            via the SYM_DELTA parameter).
 
         Returns
         -------
         None
         """
-        eps = 1e-5
-        pars = len([p for p in [value, linkAtEl, index] if p is not None])
-        if pars > 1:
-            logger.warning('Atom.assignConstraint: Trying to constrain both '
-                           f'to a fixed value and to another atom for {self}')
-            return
-        if pars == 0:
-            logger.warning('Atom.assignConstraint: No value, index '
-                           f'or target atom passed for {self}')
+        if self.oriState is None or targetel.lower() == 'vac':
             return
         if mode == 1:
-            td = self.disp_geo
+            td = self.offset_geo
+            od = self.oriState.offset_geo
         elif mode == 2:
-            td = self.disp_vib
+            td = self.offset_vib
+            od = self.oriState.offset_vib
         elif mode == 3:
-            td = self.disp_occ
-        else:  # offset is not allowed here
-            logger.warning('Atom.assignConstraint: Unknown '
-                           f'key for mode ({self}).')
+            td = self.offset_occ
+            od = self.oriState.offset_occ
+        else:
+            logger.warning(f'Atom.clearOffset: Unknown key for mode ({self}).')
             return
-        if index is not None or value is not None:
-            if targetel == '':
-                els = list(td.keys())
+        if targetel == '':
+            els = list(td.keys())
+        else:
+            els = [targetel]
+        for el in els:
+            if el not in od:
+                del td[el]
             else:
-                if targetel in td:
-                    els = [targetel]
-                elif 'all' in td:
-                    els = ['all']
-                else:
-                    logger.warning(
-                        f'Cannot assign constraint for {self}: Element '
-                        f'{targetel} does not have displacements assigned.'
-                        )
-                    return
-            for el in els:
-                if index:
-                    if index > len(td[el]) or index < 1:
-                        logger.warning(
-                            f'Cannot assign constraint for {self}, '
-                            f'element {el}: index {index} is out of bounds'
-                            )
-                    else:
-                        self.constraints[mode][el] = index - 1
-                    continue
-                # else value
-                if mode == 1:
-                    dirvec = td[el][-1] - td[el][0]  # dir of disp range
-                    dirvec = dirvec / np.linalg.norm(dirvec)
-                    match = [(np.linalg.norm(v - value*dirvec) < eps)
-                             for v in td[el]]
-                else:
-                    match = [(abs(v - value) < eps) for v in td[el]]
-                if any(match):
-                    self.constraints[mode][el] = match.index(True)
-                else:
-                    logger.warning(
-                        f'Cannot assign constraint for {self}, element {el}: '
-                        f'value {value} is not in displacement list'
-                        )
-        else:  # linkAtEl
-            (at, el2) = linkAtEl
-            if mode == 1:
-                td2 = at.disp_geo
-            elif mode == 2:
-                td2 = at.disp_vib
-            elif mode == 3:
-                td2 = at.disp_occ
-            if el2 in td2:
-                listlen = len(td2[el2])
-            else:
-                listlen = len(list(td2.values())[-1])
-            if targetel == '':
-                els = list(td.keys())
-            else:
-                els = [targetel]
-            for el in els:
-                if len(td[el]) != listlen:
-                    logger.warning(
-                        f'Cannot constrain {self} to {at}: displacement list '
-                        'lengths differ.'
-                        )
-                    return
-            for el in els:
-                self.constraints[mode][el] = linkAtEl
+                td[el] = od[el]
+        # assign to atoms in linklist:
+        if primary:
+            if not self.displist:
+                self.displist = [self]
+                self.slab.displists.append(self.displist)
+            for at in [at for at in self.linklist if at != self]:
+                at.clearOffset(mode, targetel, primary=False,
+                               displist=self.displist)
+            return
+        if self.displist and displist != self.displist:
+            logger.warning(
+                f'{self} is being linked to different groups in the '
+                'DISPLACEMENTS file. This will interfere with correct '
+                'parameter linking in the search! Check SYM_DELTA settings.'
+                )
+        if self not in displist:
+            displist.append(self)
+        self.displist = displist
+
+    def copyOriState(self, at):
+        """
+        Copies positions and offsets from another atom, which may be from
+        another slab.
+        """
+        self.storeOriState()
+        self.oriState.pos = copy.copy(at.pos)
+        self.oriState.cartpos = copy.copy(at.cartpos)
+        self.oriState.offset_geo = copy.copy(at.offset_geo)
+        self.oriState.offset_vib = copy.copy(at.offset_vib)
+        self.oriState.offset_occ = copy.copy(at.offset_occ)
 
     def duplicate(self, addToAtlists=True):
         """
@@ -572,6 +499,25 @@ class Atom:
         newat.disp_occ = self.disp_occ
         newat.cartpos = np.copy(self.cartpos)
         return newat
+
+    def initDisp(self, force=False):
+        """
+        Initializes disp_vib, disp_geo and disp_occ, based on the atoms site.
+        Site needs to be assigned first.
+        """
+        if (not self.dispInitialized or force) and self.site is not None:
+            self.dispInitialized = True
+            self.disp_vib = {'all': [0.]}
+            self.disp_geo = {'all': [np.zeros(3)]}
+            self.disp_occ = {}
+            self.disp_center_index = {'vib': {'all': 0},
+                                      'geo': {'all': 0},
+                                      'occ': {}}
+            for k, v in self.site.occ.items():
+                if v > 0 or k in self.site.mixedEls:
+                    self.disp_occ[k] = [v]
+                    self.disp_center_index['occ'][k] = 0
+        return None
 
     def isSameXY(self, pos, eps=1e-3):
         """
@@ -609,3 +555,57 @@ class Atom:
             if np.linalg.norm(p-pos) < eps:
                 return True
         return False
+
+    def mergeDisp(self, el):
+        """
+        Merges the offsets from VIBROCC and DISPLACEMENTS into the
+        displacements lists from DISPLACEMENTS for the given element.
+
+        For vibrational and occupational offsets a consistency check is
+        performed. The offset lists will be emptied.
+        """
+        self.storeOriState()
+        # geometric offsets from DISPLACEMENTS
+        geo_d_offset = self.disp_geo_offset.get(el,
+                                          self.disp_geo_offset['all'])[0]
+        if el not in self.disp_geo:
+            self.disp_geo[el] = copy.copy(list(self.disp_geo['all']))
+        self.disp_geo[el] = list(self.disp_geo[el] + geo_d_offset)
+        self.disp_geo_offset = {'all': [np.zeros(3)]}
+
+        # geometric offsets from VIBROCC
+        if el in self.offset_geo:
+            geo_offset = self.offset_geo[el]
+            self.disp_geo[el] = [geo_step + geo_offset for geo_step in self.disp_geo[el]]
+            del self.offset_geo[el]
+
+        # vibrational offsets from VIBROCC
+        if el not in self.disp_vib:
+            self.disp_vib[el] = copy.copy(self.disp_vib['all'])
+        if el in self.offset_vib:
+            vib_offset = self.offset_vib[el]
+            final_vib_steps = [vib_step + vib_offset for vib_step in self.disp_vib[el]]
+            if any(np.array(final_vib_steps) + self.site.vibamp[el] < 0):
+                logger.error(f'Vibrational offset for {self} defined in '
+                             'VIBROCC would result in negative vibrational '
+                             'amplitude. Offset will be ignored.')
+            else:
+                self.disp_vib[el] = final_vib_steps
+            del self.offset_vib[el]
+
+        # vibrational offsets from VIBROCC
+        if el in self.offset_occ:
+            occ_offset = self.offset_occ[el]
+            final_occ_steps = [occ_step + occ_offset for occ_step in self.disp_occ[el]]
+            if any(np.array(final_occ_steps) < 0) or any(np.array(final_occ_steps) > 1):
+                logger.error(f'Occupational offset for {self} defined in '
+                             'VIBROCC would result in unphysical concentration'
+                             '(occupation <0 or >1). Offset will be ignored.')
+            else:
+                self.disp_occ[el] = final_occ_steps
+            del self.offset_occ[el]
+
+    def storeOriState(self):
+        """Stores the initial values from the input files for this atom."""
+        if self.oriState is None:
+            self.oriState = self.duplicate(addToAtlists=False)
