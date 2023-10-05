@@ -61,8 +61,8 @@ class SurfaceSlab(BaseSlab):
     layers : list of Layer
         List of Layer objects, where each `layer` is a composite
         of sublayers, as in TensErLEED
-    sublayers : list of Layer
-        List of Layer objects, each containing atoms of equal
+    sublayers : list of SubLayer
+        List of SubLayer objects, each containing atoms of equal
         element and Z coordinate
     sitelist : list of Sitetype
         List of distinct sites as Sitetype, storing information
@@ -290,7 +290,7 @@ class SurfaceSlab(BaseSlab):
                     cutlayer = i
             if maxdist >= second_cut_min_spacing:
                 bulkcut_frac_from_lowest = (
-                    bsl.sublayers[cutlayer].atlist[0].pos[2]
+                    bsl.sublayers[cutlayer].pos[2]
                     - (maxdist / (2 * abs(bsl.ucell[2, 2])))
                     - min([at.pos[2] for at in bsl]))
                 slab_cuts.append(frac_lowest_pos
@@ -313,12 +313,12 @@ class SurfaceSlab(BaseSlab):
         if self.n_sublayers < 2*nsub:
             return None
         # nonbulk_subl = self.sublayers[:-nsub]
-        z_range = (self.sublayers[-nsub].atlist[0].cartpos[2],
-                   self.sublayers[-1].atlist[0].cartpos[2])
+        z_range = (self.sublayers[-nsub].cartpos[2],
+                   self.sublayers[-1].cartpos[2])
         baseLayer = self.sublayers[-1-nsub]
-        ori = baseLayer.atlist[0].cartpos  # compare displacements from here
+        ori = baseLayer.cartpos  # compare displacements from here
         repeat_vectors = []
-        for at in self.sublayers[-1].atlist:
+        for at in self.sublayers[-1]:
             v = at.cartpos - ori
             if self.is_translation_symmetric(v, eps, z_periodic=False,
                                              z_range=z_range):
@@ -395,7 +395,7 @@ class SurfaceSlab(BaseSlab):
         # construct bulk slab
         bsl = BulkSlab.from_slab(self)
         bsl.clear_symmetry_and_ucell_history()
-        bsl.atlist = [at for at in bsl if at.layer.isBulk]
+        bsl.atlist = [at for at in bsl if at.layer.is_bulk]
         bsl.layers = bsl.bulk_layers
         bsl.update_cartesian_from_fractional()
         al = bsl.atlist[:]     # temporary copy
@@ -452,16 +452,16 @@ class SurfaceSlab(BaseSlab):
         newatlist = []
         for subl in bsl.sublayers:
             i = 0
-            while i < len(subl.atlist):
+            while i < subl.n_atoms:
                 j = i+1
-                while j < len(subl.atlist):
+                while j < subl.n_atoms:
                     if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
                                                eps=rp.SYMMETRY_EPS):
                         subl.atlist.pop(j)
                     else:
                         j += 1
                 i += 1
-            newatlist.extend(subl.atlist)
+            newatlist.extend(subl)
         bsl.atlist = newatlist
         bsl.update_element_count()   # update number of atoms per element again
         # update the layers. Don't use Slab.createLayers here to keep it
@@ -470,7 +470,7 @@ class SurfaceSlab(BaseSlab):
             layer.slab = bsl
             layer.getLayerPos()
             layer.num = i
-            layer.atlist = [at for at in layer.atlist if at in bsl]
+            layer.atlist = [at for at in layer if at in bsl]
         return bsl
 
     def restoreOriState(self, keepDisp=False):

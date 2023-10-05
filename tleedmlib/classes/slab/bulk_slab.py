@@ -46,8 +46,8 @@ class BulkSlab(BaseSlab):
     layers : list of Layer
         List of Layer objects, where each `layer` is a composite
         of sublayers, as in TensErLEED
-    sublayers : list of Layer
-        List of Layer objects, each containing atoms of equal
+    sublayers : list of SubLayer
+        List of SubLayer objects, each containing atoms of equal
         element and Z coordinate
     sitelist : list of Sitetype
         List of distinct sites as Sitetype, storing information
@@ -142,12 +142,12 @@ class BulkSlab(BaseSlab):
         h = self.ucell[2, 2]  # cell height; periodicity cannot go beyond h/2
         l0 = self.sublayers[0]
         nl = self.n_sublayers
-        l0el = l0.atlist[0].el
-        l0n = len(l0.atlist)
+        l0el = l0.element
+        l0n = l0.n_atoms
         for i, lay in enumerate(self.sublayers[1:]):
             if abs(lay.cartbotz - l0.cartbotz) > h/2 + eps:
                 break
-            if lay.atlist[0].el == l0el and len(lay.atlist) == l0n:
+            if lay.element == l0el and lay.n_atoms == l0n:
                 cl.append(i+1)
         if len(cl) == 0:
             return([])
@@ -156,8 +156,8 @@ class BulkSlab(BaseSlab):
             wrong = False
             zoff = self.sublayers[cl[i]].cartbotz - self.sublayers[0].cartbotz
             for j in range(1, int(np.ceil(self.n_sublayers/2))):
-                if (self.sublayers[(j + cl[i]) % nl].atlist[0].el
-                        != self.sublayers[j].atlist[0].el):
+                if (self.sublayers[(j + cl[i]) % nl].element
+                        != self.sublayers[j].element):
                     wrong = True
                     break
                 if abs(zoff - ((self.sublayers[(j + cl[i]) % nl].cartbotz
@@ -184,11 +184,11 @@ class BulkSlab(BaseSlab):
         baseLayer = ts.sublayers[0]
         baseInd = ts.sublayers.index(baseLayer)
         nl = ts.n_sublayers
-        ori = baseLayer.atlist[0].cartpos  # compare displacements from here
+        ori = baseLayer.cartpos  # compare displacements from here
         repeatC = None
         for per in pcands:
             ind = (baseInd + per) % nl
-            for at in ts.sublayers[ind].atlist:
+            for at in ts.sublayers[ind]:
                 v = ori - at.cartpos
                 if ts.is_translation_symmetric(v, eps, z_periodic=z_periodic):
                     repeatC = at.cartpos - ori
@@ -234,11 +234,11 @@ class BulkSlab(BaseSlab):
         transVecs = []
         lowocclayer = self.fewest_atoms_sublayer
         baseInd = self.sublayers.index(lowocclayer)
-        ori = lowocclayer.atlist[0].cartpos
-        for at in self.sublayers[(baseInd + sldisp) % self.n_sublayers].atlist:
+        ori = lowocclayer.cartpos
+        for at in self.sublayers[(baseInd + sldisp) % self.n_sublayers]:
             transVecs.append((at.cartpos - np.dot(matrix, ori)).reshape(3, 1))
         for (i, sl) in enumerate(self.sublayers):
-            coordlist = [at.cartpos for at in sl.atlist]
+            coordlist = [at.cartpos for at in sl]
             oricm = np.array(coordlist)  # original cartesian coordinate matrix
             oripm = np.dot(np.linalg.inv(uc), oricm.transpose()) % 1.0
             # collapse (relative) coordinates to base unit cell
@@ -248,7 +248,7 @@ class BulkSlab(BaseSlab):
             transcoords = np.dot(matrix, transcoords)
             # now get coordinates of the sublayer to compare to
             sl2 = self.sublayers[(i + sldisp) % self.n_sublayers]
-            oricm2 = np.array([at.cartpos for at in sl2.atlist])
+            oricm2 = np.array([at.cartpos for at in sl2])
             oripm2 = np.dot(np.linalg.inv(uc), oricm2.transpose()) % 1.0
             oricm2 = np.dot(uc, oripm2).transpose()
             # for every point in matrix, check whether is equal:

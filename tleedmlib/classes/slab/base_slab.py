@@ -32,7 +32,7 @@ from viperleed.tleedmlib.base import add_edges_and_corners, collapse
 from viperleed.tleedmlib.base import collapse_fractional, pairwise
 from viperleed.tleedmlib.base import rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.layer import Layer
+from viperleed.tleedmlib.classes.layer import Layer, SubLayer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
 from .slab_errors import AlreadyMinimalError, InvalidUnitCellError
@@ -78,8 +78,8 @@ class BaseSlab(ABC):
     layers : list of Layer
         List of Layer objects, where each `layer` is a composite
         of sublayers, as in TensErLEED
-    sublayers : list of Layer
-        List of Layer objects, each containing atoms of equal
+    sublayers : list of SubLayer
+        List of SubLayer objects, each containing atoms of equal
         element and Z coordinate
     sitelist : list of Sitetype
         List of distinct sites as Sitetype, storing information
@@ -187,7 +187,7 @@ class BaseSlab(ABC):
     @property
     def bulk_layers(self):
         """Return the layers of self that are bulk."""
-        return [lay for lay in self.layers if lay.isBulk]
+        return [lay for lay in self.layers if lay.is_bulk]
 
     @property
     def elements(self):
@@ -200,7 +200,7 @@ class BaseSlab(ABC):
         if not self.sublayers:
             raise NeedsSublayersError(f'{type(self).__name__} has '
                                       'no sublayers defined')
-        return min(self.sublayers, key=lambda lay: len(lay.atlist))
+        return min(self.sublayers, key=attrgetter('n_atoms'))
 
     @property
     @abstractmethod
@@ -265,7 +265,7 @@ class BaseSlab(ABC):
 
         if self.n_layers == 1:
             return 0.                                                           # TODO: I don't think it's right that it is zero if there's only one layer. Think about it.
-        # self.update_cartesian_from_fractional()                               # TODO: I don't think this is needed. It does not update anything for layers; only makes sense if we also .update_layer_coordinates. Would make more sense if layer.cartori and .cartbotz were @property
+        # self.update_cartesian_from_fractional()                               # TODO: I don't think this is needed. It does not update anything for layers; only makes sense if we also .update_layer_coordinates.
 
         # Recall that z increases moving deeper into the solid
         return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2]
@@ -326,7 +326,7 @@ class BaseSlab(ABC):
             bulkc_perp_to_c = bulkc - bulkc_project_to_c
             added_this_loop = []
             for at in original_atoms:
-                if at.layer.isBulk and at not in duplicated:
+                if at.layer.is_bulk and at not in duplicated:
                     new_atom = at.duplicate()
                     newbulkats.append(new_atom)
                     duplicated.append(at)
@@ -482,19 +482,19 @@ class BaseSlab(ABC):
                 rparams.setHaltingLevel(2)
                 dl.append(layer)
         for layer in dl:
-            if layer.isBulk:
-                self.layers[layer.num+1].isBulk = True
+            if layer.is_bulk:
+                self.layers[layer.num+1].is_bulk = True
             self.layers.remove(layer)
             del layer
         self.layers.reverse()
         for i, layer in enumerate(self.layers):
-            layer.getLayerPos()
+            layer.update_position()
             layer.num = i
         self.atlist = tmplist
         return ct
 
     def _get_sublayers_for_el(self, element, eps):
-        """Yield Layer objects for atoms of `element` within `eps`."""
+        """Yield SubLayer objects for atoms of `element` within `eps`."""
         sublists = [[a for a in self if a.el == element]]
         # First, split at points where two atoms are more than eps apart
         i = 0
@@ -521,7 +521,7 @@ class BaseSlab(ABC):
 
         # Finally create sublayers based on sublists
         for atoms in sublists:
-            new_layer = Layer(self, 0)
+            new_layer = SubLayer(self, 0)
             new_layer.atlist = atoms
             new_layer.cartbotz = atoms[0].cartpos[2]
             yield new_layer
@@ -574,7 +574,7 @@ class BaseSlab(ABC):
                 else:
                     break
             # Finally re-sort by element
-            same_z.sort(key=lambda lay: lay.atlist[0].el)                       # TODO: is this even necessary? .sort should be stable, so element order should be preserved
+            same_z.sort(key=attrgetter('element'))                              # TODO: is this even necessary? .sort should be stable, so element order should be preserved
             self.sublayers.extend(same_z)
         for i, layer in enumerate(self.sublayers):
             layer.num = i
@@ -706,7 +706,7 @@ class BaseSlab(ABC):
         # Use the lowest-occupancy sublayer (the one
         # with fewest atoms of the same chemical element)
         lowocclayer = ts.fewest_atoms_sublayer
-        n_atoms = len(lowocclayer.atlist)
+        n_atoms = lowocclayer.n_atoms
         if n_atoms < 2:
             # Cannot be smaller if there's only 1 atom
             raise AlreadyMinimalError(
@@ -719,7 +719,7 @@ class BaseSlab(ABC):
         # atom pairs. Notice that it is enough to take any arbitrary
         # atom as a 'reference' as, if the unit cell can be reduced,
         # all atoms must have a 'copy'. We take the first one.
-        plist = [at.cartpos[:2] for at in lowocclayer.atlist]
+        plist = [at.cartpos[:2] for at in lowocclayer]
         candidate_unit_vectors = (p - plist[0] for p in plist[1:])              # TODO: since is_translation_symmetric is somewhat expensive, would it make sense to pre-filter the vectors keeping only the shortest ones among those parallel to one another?
         candidate_unit_vectors = (vec for vec in candidate_unit_vectors
                                   if ts.is_translation_symmetric(vec, eps))
@@ -924,13 +924,13 @@ class BaseSlab(ABC):
         releps = eps / np.linalg.norm(ab_cell, axis=1)
 
         for this_lay, other_lay in zip(*(s.sublayers for s in slabs)):
-            if (len(this_lay.atlist) != len(other_lay.atlist)
+            if (this_lay.n_atoms != other_lay.n_atoms
                     or abs(this_lay.cartbotz - other_lay.cartbotz) > eps
-                    or this_lay.atlist[0].el != other_lay.atlist[0].el):
+                    or this_lay.element != other_lay.element):
                 return False
             # Prepare Cartesian coordinates for comparisons
-            this_coords = np.array([at.cartpos[:2] for at in this_lay.atlist])
-            other_coords = np.array([at.cartpos[:2] for at in other_lay.atlist])
+            this_coords = np.array([at.cartpos[:2] for at in this_lay])
+            other_coords = np.array([at.cartpos[:2] for at in other_lay])
 
             # Add extra atoms at edges/corners
             frac_coords = [at.pos[:2] for at in this_lay]
@@ -1028,11 +1028,11 @@ class BaseSlab(ABC):
         newatlist = []
         for subl in ssl.sublayers:
             i = 0
-            while i < len(subl.atlist):
+            while i < subl.n_atoms:
                 j = i+1
                 baseat = [a for a in self
                           if a.oriN == subl.atlist[i].oriN][0]
-                while j < len(subl.atlist):
+                while j < subl.n_atoms:
                     if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
                                                eps=rp.SYMMETRY_EPS):
                         for a in [a for a in self
@@ -1042,7 +1042,7 @@ class BaseSlab(ABC):
                     else:
                         j += 1
                 i += 1
-            newatlist.extend(subl.atlist)
+            newatlist.extend(subl)
         ssl.atlist = newatlist
         ssl.update_element_count()   # update number of atoms per element again
         # update the layers. Don't use Slab.createLayers here to keep it
@@ -1051,7 +1051,7 @@ class BaseSlab(ABC):
             layer.slab = ssl
             layer.getLayerPos()
             layer.num = i
-            layer.atlist = [at for at in layer.atlist if at in ssl]
+            layer.atlist = [at for at in layer if at in ssl]
         return ssl
 
     def project_c_to_z(self):                                                   # TODO: surface only?
@@ -1230,7 +1230,7 @@ class BaseSlab(ABC):
     def update_layer_coordinates(self):
         """Update the Cartesian position of all `layers`."""
         for layer in self.layers:
-            layer.getLayerPos()
+            layer.update_position()
 
     # ----------------------  TRANSFORMATIONS  ------------------------
 
@@ -1620,7 +1620,7 @@ class BaseSlab(ABC):
 
         for layer in self.sublayers:
             # Collapse fractional coordinates before transforming
-            cart_coords = np.array([atom.cartpos[:2] for atom in layer.atlist])
+            cart_coords = np.array([atom.cartpos[:2] for atom in layer])
             cart_coords, frac_coords = collapse(cart_coords, ab_cell, ab_inv)
 
             # Create a transformed copy: shift, transform,
