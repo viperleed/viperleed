@@ -630,3 +630,8 @@ class Atom:                                                                     
         """Stores the initial values from the input files for this atom."""
         if self.oriState is None:
             self.oriState = self.duplicate(add_to_atlists=False)
+
+    def translate_2d(self, cart_shift, frac_shift):
+        """Apply a 2D translation to this Atom."""
+        self.cartpos[:2] += cart_shift
+        self.pos[:2] += frac_shift
