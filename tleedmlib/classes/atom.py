@@ -49,7 +49,7 @@ class Atom:                                                                     
     displist : list of Atom
         Like linklist, but keeps track of which symmetry was active
         when displacement was defined.
-    freedir : int
+    freedir : int or numpy.ndarray
         Defines whether the atom can be moved or is locked by symmetry.
         0: no movements, 1: completely free,
         np.array([0|1, 0|1|-1]): parallel movement to a, b, or diagonal
