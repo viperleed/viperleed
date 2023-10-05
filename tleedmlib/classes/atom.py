@@ -86,7 +86,7 @@ class Atom:                                                                     
 
     def __init__(self, el, pos, oriN, slab):
         self.el = el
-        self.pos = pos
+        self.pos = np.asarray(pos, dtype=float)
         self.oriN = oriN
         self.slab = slab
         self.layer = None
