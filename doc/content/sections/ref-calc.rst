@@ -1,7 +1,7 @@
 .. _ref-calc:
 
 =====================
-Reference calculation
+Reference Calculation
 =====================
 
 
@@ -29,7 +29,7 @@ Additionally, :ref:`N_CORES<ncores>` reference calculations are executed
 simultaneously.
 
 .. note:: 
-    The reference calculation can be memory intensitve for large unit cells.
+    The reference calculation can be memory intensive for large unit cells.
     If using a large :ref:`N_CORES<ncores>`, make sure you are not running into 
     memory limitations.
 
@@ -42,10 +42,10 @@ directories called ``refcalc-compile_LMAX=n``.
 
 ViPErLEED will then go through all required energy steps from highest 
 energy to lowest, performing  calculations in temporary directories called 
-``refalc-part_xxeV``. The raw TensErLEED input and output files 
+``refcalc-part_xxeV``. The raw TensErLEED input and output files 
 :ref:`refcalc-fin` and :ref:`fd.out<fd_out>` are found in these directories
 together with the executables.
-A log will be written to ``refcalc-$timestamp$.log``.
+A log will be written to ``refcalc-$timestamp.log``.
 
 Once the TensErLEED reference calculation has concluded, ViPErLEED will
 collect all files, remove temporary directories and combine the results 
@@ -53,6 +53,4 @@ into a :ref:`THEOBEAMS.csv<THEOBEAMS>` file. By default, the theoretical
 beams will also be plotted for inspection in :ref:`THEOBEAMS.pdf<theobeams>`.
 
 Finally, unless the tensor output was disabled with the :ref:`TENSOR_OUTPUT<toutput>`
-parameter, ViPErLEED will collect the created :ref:`tensor files<tensorszip>`
-in the ``Tensors`` directory.
-
+parameter, ViPErLEED will collect the created :ref:`tensor files<tensorszip>` in compressed form in the ``Tensors`` directory.

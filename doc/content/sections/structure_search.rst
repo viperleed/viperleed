@@ -4,10 +4,10 @@
 Structure Search
 ================
 
-The structure search (refered to as ``search`` in the code) is 
+The structure search (referred to as ``search`` in the code) is 
 the third part of a :ref:`Tensor LEED<tensor_leed>` calculation as implemented 
 in ViPErLEED (:ref:`RUN<run>` = 3).
-It must follow a :ref:`refercence calculation<ref-calc>` and a 
+It must follow a :ref:`reference calculation<ref-calc>` and a 
 :ref:`delta amplitude calculation<sec_deltas>` and requires stored 
 :ref:`delta files<deltaszip>` to run.
 In almost all cases it is the most computationally expensive part of the
@@ -18,7 +18,7 @@ During the structure search, the optimization algorithm (see ref. :cite:p:`kottc
 Diffraction intensities and a corresponding R-factor are calculated for these structures based on combinations of the pre-computed delta-amplitudes.
 The optimization tries to find the combination of parameters yielding the lowest possible R-factor.
 
-The behaviour of the structure optimization algorithm is affected by multiple parameters (see :ref:`search behaviour<search_settings>`).
+The behavior of the structure optimization algorithm is affected by multiple parameters (see :ref:`search behaviour<search_settings>`).
 For details on the available options for geometrical, vibrational and occupational displacement vectors see the entry on the :ref:`DISPLACEMENTS file<displacements>`.
 There are some caveats to the structure optimization in tensor LEED in general and the implementation in TensErLEED in particular.
 See :ref:`the section on structure search in tensor leed<tensor_leed_search>` for details.
@@ -32,7 +32,7 @@ The search is also the only part of ViPErLEED and TensErLEED that makes use of p
 When a structure search is executed in ViPErLEED the following main steps are performed before the actual calculation starts:
 
 #.  The :ref:`file DISPLACEMENTS<displacements>` is read and interpreted.
-#.  The current :ref:`delta files<deltaszip>` are loaded and checked for compatibilitiy.
+#.  The current :ref:`delta files<deltaszip>` are loaded and checked for compatibility.
 #.  ViPErLEED generates and writes the TensErLEED inpute files ``rf.info``, ``PARAM`` and ``search.steu`` based on the slab and :ref:`EXPBEAMS file<expbeams>`.
 #.  Based on the slab symmetry and the :ref:`symmetry settings<symmetry_settings>`, ViPErLEED determines the symmetry-linked parameters and writes the parameter-space input file control.chem.
 #.  ViPErLEED will then, based on :ref:`N_CORES<ncores>` and the presence of ``mpirun`` fetch the corresponding TensErLEED source code files and compile them **at run-time**. **Note** that this will require the pre-compiled object files :ref:`random_.o or MPIrandom_.o<mpirandom>` to be present.
