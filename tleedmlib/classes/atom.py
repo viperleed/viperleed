@@ -159,24 +159,28 @@ class Atom:                                                                     
         Parameters
         ----------
         mode : integer
-            Defines what parameter to constrain. 1: geo, 2: vib, 3: occ
+            Which parameter to constrain. 1: geo, 2: vib, 3: occ
         targetel : string, optional
-            If undefined, constrain for all elements. Otherwise, only constrain
-            for the given element.
+            If undefined, constrain for all elements. Otherwise,
+            only constrain for the given element.
         value : float, optional
-            The value to which the given parameter should be constrained. If
-            the value is not in the disprange, assignment will be skipped.
-            Leave at default (None) if 'linkAtEl' or 'index' argument is
-            passed instead.
-        linkAtEl : tuple (Atom, float), optional
-            The atom and element to which the parameter should be linked. If
-            that atom's displist has a different length, assigment will be
-            skipped. Leave at default (None) if 'value' or 'index' argument
-            is passed instead.
-        index:
-            The index to which the given parameter should be constrained.
-            Leave at default (None) if 'linkAtEl' or 'value' argument is
-            passed instead.
+            The value to which the given parameter should be
+            constrained. If the value is not in the disprange,
+            assignment will be skipped. Leave at default (None)
+            if 'linkAtEl' or 'index' argument is passed instead.
+        linkAtEl : tuple, optional
+            Format (Atom, str). The atom and element to which the
+            parameter should be linked. If that atom's displist has
+            a different length, assignment will be skipped. The
+            element may be an empty string. In that case linking
+            is considered to apply to all elements. Leave at default
+            if 'value' or 'index' argument is passed instead. Default
+            is None.
+        index : int, optional
+            The index to which the given parameter should be
+            constrained. Leave at default if 'linkAtEl' or
+            'value' argument is passed instead. Indices are
+            1-based.
 
         Raises
         ------
@@ -283,22 +287,23 @@ class Atom:                                                                     
 
         Parameters
         ----------
-        mode : integer
-            Defines what to displace. 1: geo, 2: vib, 3: occ, 4: geo offset
+        mode : int
+            What to displace. 1: geo, 2: vib, 3: occ, 4: geo offset
         disprange :
-            The list of displacements. For geometrical offsets, pass a list
-            with only one element.
-        targetel : string, optional
-            If passed, assignment is made only for that element, otherwise for
-            all.
+            The list of displacements. For geometrical offsets, pass
+            a list with only one element.
+        targetel : str, optional
+            If given, assignment is made only for that element,
+            otherwise for all. Default is an empty string.
         primary : bool, optional
             Defines whether the assigned displacement should be passed along
             to linked atoms. This will call assignDisp for these atoms, with
             primary=False.
-        displist : list of Atom objects, optional
-            Passed in secondary assignment to later link parameters (the
-            'linklist' defines how the 'displist' is defined, but can change
-            via the SYM_DELTA parameter).
+        displist : list, optional
+            Elements are Atom objects. Passed in secondary assignment
+            to later link parameters (the 'linklist' defines how the
+            'displist' is defined, but can change via the SYM_DELTA
+            parameter).
 
         Raises
         ------
