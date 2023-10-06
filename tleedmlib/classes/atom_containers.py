@@ -88,7 +88,7 @@ class AtomList(AtomContainer, MutableSequence):
         return value.num in self._map
 
     def __delitem__(self, index):
-        """Remove atom at index (or slice)."""
+        """Remove atom(s) at index (or slice)."""
         try:
             to_remove = self._atoms[index]
         except IndexError:
@@ -133,11 +133,11 @@ class AtomList(AtomContainer, MutableSequence):
         return _repr_ + f', strict={self.strict})'
 
     def __reversed__(self):
-        """Return an reverse iterator of atoms in this AtomList."""
+        """Return a reverse iterator of atoms in this AtomList."""
         return reversed(self._atoms)
 
     def __setitem__(self, index, value):
-        """Assign the atoms at index (or slice) to value."""
+        """Assign the atom(s) at index (or slice) to value."""
         # When a slice, we expect an iterable, otherwise a single
         # element. For the case of a slice, make sure we consume a
         # possible iterator right away, as we'll need it twice
@@ -148,17 +148,18 @@ class AtomList(AtomContainer, MutableSequence):
         elif not isinstance(index, slice):
             new_atoms = (value,)
 
-        try:
-            _invalid = {at for at in new_atoms if at.num in self._map}
-        except AttributeError:
-            raise TypeError(
-                f'{type(self).__name__}: only Atom objects allowed'
-                ) from None
         if isinstance(index, slice):
             replaced = set(self._atoms[index])
         else:
             replaced = {self._atoms[index]}
-        _invalid = {at for at in _invalid if at not in replaced}
+
+        try:
+            _invalid = {at for at in new_atoms
+                        if at not in replaced and at.num in self._map}
+        except AttributeError:
+            raise TypeError(
+                f'{type(self).__name__}: only Atom objects allowed'
+                ) from None
         if _invalid and self.strict:
             raise DuplicateAtomsError(
                 f'Atom(s) {_invalid} have the same .num as others '
