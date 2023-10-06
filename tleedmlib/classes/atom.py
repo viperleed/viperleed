@@ -18,6 +18,10 @@ import numpy as np
 _LOGGER = logging.getLogger('tleedm.atom')
 
 
+class AtomError(Exception):
+    """Base exception for Atom objects."""
+
+
 class Atom:                                                                     # TODO: change description of cartpos when flipping .cartpos[2]
     """Class storing information about a single atom.
 
@@ -172,20 +176,30 @@ class Atom:                                                                     
             Leave at default (None) if 'linkAtEl' or 'value' argument is
             passed instead.
 
-        Returns
-        -------
-        None
+        Raises
+        ------
+        TypeError
+            If no constrain type is given among
+            `value`, `linkAtEl`, and `index`
+        ValueError
+            If more than one constraint type is given among
+            `value`, `linkAtEl`, and `index`
+        ValueError
+            If `mode` is not one of the acceptable displacement modes
         """
         eps = 1e-5
         pars = len([p for p in [value, linkAtEl, index] if p is not None])
         if pars > 1:
-            _LOGGER.warning('Atom.assignConstraint: Trying to constrain both '
-                            f'to a fixed value and to another atom for {self}')
-            return
-        if pars == 0:
-            _LOGGER.warning('Atom.assignConstraint: No value, index '
-                            f'or target atom passed for {self}')
-            return
+            raise ValueError(
+                f'{type(self).__name__}.assignConstraint: Can only constrain '
+                'to either a fixed value or to another atom, not both'
+                )
+        if not pars:
+            raise TypeError(
+                f'{type(self).__name__}.assignConstraint: Exactly one '
+                'constraint needed among "index", "value", or "linkAtEl"'
+                )
+
         if mode == 1:
             td = self.disp_geo
         elif mode == 2:
@@ -193,9 +207,9 @@ class Atom:                                                                     
         elif mode == 3:
             td = self.disp_occ
         else:  # offset is not allowed here
-            _LOGGER.warning('Atom.assignConstraint: Unknown '
-                            f'key for mode ({self}).')
-            return
+            raise ValueError(f'{type(self).__name__}.assignConstraint: '
+                             f'Unknown key {mode} for mode ({self})')
+
         if index is not None or value is not None:
             if targetel == '':
                 els = list(td.keys())
@@ -284,9 +298,10 @@ class Atom:                                                                     
             'linklist' defines how the 'displist' is defined, but can change
             via the SYM_DELTA parameter).
 
-        Returns
-        -------
-        None
+        Raises
+        ------
+        ValueError
+            If `mode` is not an acceptable displacement mode.
         """
         if targetel.lower() == 'vac':
             # don't write stuff for vacancies - they don't get displaced, and
@@ -310,8 +325,8 @@ class Atom:                                                                     
         elif mode == 4:
             td = self.disp_geo_offset
         else:
-            _LOGGER.warning(f'Atom.assignDisp: Unknown key for mode ({self}).')
-            return
+            raise ValueError(f'{type(self).__name__}.assignDisp: '
+                             f'Unknown key {mode} for mode ({self})')
         if targetel == '':
             els = list(td.keys())
         else:
@@ -429,7 +444,8 @@ class Atom:                                                                     
 
         Returns
         -------
-        None
+        ValueError
+            If `mode` is not one of the acceptable displacement modes.
         """
         if self.oriState is None or targetel.lower() == 'vac':
             return
@@ -443,9 +459,8 @@ class Atom:                                                                     
             td = self.offset_occ
             od = self.oriState.offset_occ
         else:
-            _LOGGER.warning('Atom.clearOffset: Unknown '
-                            f'key for mode ({self}).')
-            return
+            raise ValueError(f'{type(self).__name__}.clearOffset: '
+                             f'Unknown key {mode} for mode ({self})')
         if targetel == '':
             els = list(td.keys())
         else:
@@ -524,22 +539,43 @@ class Atom:                                                                     
         return newat
 
     def initDisp(self, force=False):
+        """Initialize displacement dictionaries based on self.site.
+
+        This method should not be called before a site has been
+        given to this Atom.
+
+        This method must be called before displacements can be
+        merged with their offsets, as this method prepares the
+        correct entries in disp_occ.
+
+        Parameters
+        ----------
+        force : bool, optional
+            Whether displacements should be cleared also
+            if they are already present. Default is False.
+
+        Raises
+        ------
+        RuntimeError
+            If this method is called before a site is available
         """
-        Initializes disp_vib, disp_geo and disp_occ, based on the atoms site.
-        Site needs to be assigned first.
-        """
-        if (not self.dispInitialized or force) and self.site is not None:
-            self.dispInitialized = True
-            self.disp_vib = {'all': [0.]}
-            self.disp_geo = {'all': [np.zeros(3)]}
-            self.disp_occ = {}
-            self.disp_center_index = {'vib': {'all': 0},
-                                      'geo': {'all': 0},
-                                      'occ': {}}
-            for k, v in self.site.occ.items():
-                if v > 0 or k in self.site.mixedEls:
-                    self.disp_occ[k] = [v]
-                    self.disp_center_index['occ'][k] = 0
+        if not self.site:
+            raise RuntimeError('Cannot initialize displacements '
+                               'before a site is defined')
+        if self.dispInitialized and not force:
+            return
+
+        self.dispInitialized = True
+        self.disp_vib = {'all': [0.]}
+        self.disp_geo = {'all': [np.zeros(3)]}
+        self.disp_occ = {}
+        self.disp_center_index = {'vib': {'all': 0},
+                                  'geo': {'all': 0},
+                                  'occ': {}}
+        for k, v in self.site.occ.items():
+            if v > 0 or k in self.site.mixedEls:
+                self.disp_occ[k] = [v]
+                self.disp_center_index['occ'][k] = 0
 
     def is_same_xy(self, cartpos, eps=1e-3):
         """Return whether this atom is close to a 2D cartpos.
