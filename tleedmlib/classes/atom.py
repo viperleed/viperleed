@@ -621,7 +621,16 @@ class Atom:                                                                     
 
         For vibrational and occupational offsets a consistency check is
         performed. The offset lists will be emptied.
+
+        Raises
+        -------
+        RuntimeError
+            If this method is called before initDisp.
         """
+        if not self.dispInitialized:
+            raise RuntimeError('Need to .initDisp before displacements '
+                               'can be merged with offsets')
+
         self.storeOriState()
         # geometric offsets from DISPLACEMENTS
         geo_d_offset = self.disp_geo_offset.get(el,
