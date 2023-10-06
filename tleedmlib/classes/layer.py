@@ -11,8 +11,11 @@ subclass. The latter is for atoms of the same chemical species at
 the same z position.
 """
 
+from viperleed.tleedmlib.classes.atom_containers import AtomContainer
+from viperleed.tleedmlib.classes.atom_containers import AtomContainerError
 
-class LayerError(Exception):
+
+class LayerError(AtomContainerError):
     """Base exception for Layer objects."""
 
 
@@ -20,7 +23,7 @@ class LayerHasNoAtomsError(LayerError):
     """Operation cannot be performed as the layer is empty."""
 
 
-class Layer:                                                                    # TODO: modify description of .cartori when flipping .cartpos[2]
+class Layer(AtomContainer):                                                     # TODO: modify description of .cartori when flipping .cartpos[2]
     """A container of atoms residing close to one another along z.
 
     This is intended to be used with Slab objects. Has origin, atoms
@@ -64,6 +67,10 @@ class Layer:                                                                    
         # layer position as it was used in the reference calculation
         self.cartori = None
         self.cartbotz = None
+
+    def __contains__(self, value):
+        """Return whether this layer contains an atom."""
+        return value in self.atlist
 
     def __iter__(self):
         """Return an iterator of Atoms in this Layer."""
