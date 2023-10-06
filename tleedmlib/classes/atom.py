@@ -15,7 +15,7 @@ import logging
 
 import numpy as np
 
-logger = logging.getLogger('tleedm.atom')
+_LOGGER = logging.getLogger('tleedm.atom')
 
 
 class Atom:                                                                     # TODO: change description of cartpos when flipping .cartpos[2]
@@ -31,9 +31,9 @@ class Atom:                                                                     
         Original atom number in the POSCAR
     slab : Slab
         The Slab that the atom belongs to.
-    layer : Layer
-        Layer object that the atom belongs to
-    site : Sitetype
+    layer : Layer or None
+        Layer object that the atom belongs to (if any).
+    site : Sitetype or None
         Site type of the atom, containing vibrational amplitude and
         occupation. Supplied by the SITE_DEF parameter, assigned by
         the initSites method of Slab.
@@ -53,7 +53,7 @@ class Atom:                                                                     
         Defines whether the atom can be moved or is locked by symmetry.
         0: no movements, 1: completely free,
         np.array([0|1, 0|1|-1]): parallel movement to a, b, or diagonal
-    symrefm : numpy.array
+    symrefm : numpy.ndarray
         Defines how a translation of the atom at self.linklist[0]
         should be transformed to affect this atom.
     disp_vib, disp_geo, disp_occ : dict
@@ -85,6 +85,7 @@ class Atom:                                                                     
     """
 
     def __init__(self, el, pos, oriN, slab):
+        """Initialize instance."""
         self.el = el
         self.pos = np.asarray(pos, dtype=float)
         self.oriN = oriN
@@ -179,12 +180,12 @@ class Atom:                                                                     
         eps = 1e-5
         pars = len([p for p in [value, linkAtEl, index] if p is not None])
         if pars > 1:
-            logger.warning('Atom.assignConstraint: Trying to constrain both '
-                           f'to a fixed value and to another atom for {self}')
+            _LOGGER.warning('Atom.assignConstraint: Trying to constrain both '
+                            f'to a fixed value and to another atom for {self}')
             return
         if pars == 0:
-            logger.warning('Atom.assignConstraint: No value, index '
-                           f'or target atom passed for {self}')
+            _LOGGER.warning('Atom.assignConstraint: No value, index '
+                            f'or target atom passed for {self}')
             return
         if mode == 1:
             td = self.disp_geo
@@ -193,8 +194,8 @@ class Atom:                                                                     
         elif mode == 3:
             td = self.disp_occ
         else:  # offset is not allowed here
-            logger.warning('Atom.assignConstraint: Unknown '
-                           f'key for mode ({self}).')
+            _LOGGER.warning('Atom.assignConstraint: Unknown '
+                            f'key for mode ({self}).')
             return
         if index is not None or value is not None:
             if targetel == '':
@@ -205,7 +206,7 @@ class Atom:                                                                     
                 elif 'all' in td:
                     els = ['all']
                 else:
-                    logger.warning(
+                    _LOGGER.warning(
                         f'Cannot assign constraint for {self}: Element '
                         f'{targetel} does not have displacements assigned.'
                         )
@@ -213,7 +214,7 @@ class Atom:                                                                     
             for el in els:
                 if index:
                     if index > len(td[el]) or index < 1:
-                        logger.warning(
+                        _LOGGER.warning(
                             f'Cannot assign constraint for {self}, '
                             f'element {el}: index {index} is out of bounds'
                             )
@@ -231,7 +232,7 @@ class Atom:                                                                     
                 if any(match):
                     self.constraints[mode][el] = match.index(True)
                 else:
-                    logger.warning(
+                    _LOGGER.warning(
                         f'Cannot assign constraint for {self}, element {el}: '
                         f'value {value} is not in displacement list'
                         )
@@ -253,10 +254,8 @@ class Atom:                                                                     
                 els = [targetel]
             for el in els:
                 if len(td[el]) != listlen:
-                    logger.warning(
-                        f'Cannot constrain {self} to {at}: displacement list '
-                        'lengths differ.'
-                        )
+                    _LOGGER.warning(f'Cannot constrain {self} to {at}: '
+                                    'displacement list lengths differ.')
                     return
             for el in els:
                 self.constraints[mode][el] = linkAtEl
@@ -312,7 +311,7 @@ class Atom:                                                                     
         elif mode == 4:
             td = self.disp_geo_offset
         else:
-            logger.warning(f'Atom.assignDisp: Unknown key for mode ({self}).')
+            _LOGGER.warning(f'Atom.assignDisp: Unknown key for mode ({self}).')
             return
         if targetel == '':
             els = list(td.keys())
@@ -337,9 +336,11 @@ class Atom:                                                                     
                         else:
                             match = False
                 if not match:
-                    logger.warning('Atom.assignDisp: Trying to assign offset, '
-                                   f'but {self} already has an offset defined.'
-                                   ' Skipping second assignment.')
+                    _LOGGER.warning(
+                        'Atom.assignDisp: Trying to assign offset, '
+                        f'but {self} already has an offset defined.'
+                        ' Skipping second assignment.'
+                        )
                 continue
             if (el not in td
                     or (len(td[el]) == 1 and np.linalg.norm(td[el]) < 1e-5)
@@ -371,7 +372,7 @@ class Atom:                                                                     
                             match = False
                             break
                 if not match and len(td[el]) > 1:
-                    logger.warning(
+                    _LOGGER.warning(
                         'Atom.assignDisp: Trying to assign displacement list, '
                         f'but {self} already has displacements assigned. '
                         'Skipping second assignment.'
@@ -398,7 +399,7 @@ class Atom:                                                                     
                               disp_lin_steps=disp_lin_steps)
             return
         if self.displist and displist != self.displist:
-            logger.warning(
+            _LOGGER.warning(
                 f'{self} is being linked to different groups in the '
                 'DISPLACEMENTS file. This will interfere with correct '
                 'parameter linking in the search! Check SYM_DELTA settings.'
@@ -443,7 +444,8 @@ class Atom:                                                                     
             td = self.offset_occ
             od = self.oriState.offset_occ
         else:
-            logger.warning(f'Atom.clearOffset: Unknown key for mode ({self}).')
+            _LOGGER.warning('Atom.clearOffset: Unknown '
+                            f'key for mode ({self}).')
             return
         if targetel == '':
             els = list(td.keys())
@@ -464,7 +466,7 @@ class Atom:                                                                     
                                displist=self.displist)
             return
         if self.displist and displist != self.displist:
-            logger.warning(
+            _LOGGER.warning(
                 f'{self} is being linked to different groups in the '
                 'DISPLACEMENTS file. This will interfere with correct '
                 'parameter linking in the search! Check SYM_DELTA settings.'
@@ -607,9 +609,9 @@ class Atom:                                                                     
             vib_offset = self.offset_vib[el]
             final_vib_steps = [vib_step + vib_offset for vib_step in self.disp_vib[el]]
             if any(np.array(final_vib_steps) + self.site.vibamp[el] < 0):
-                logger.error(f'Vibrational offset for {self} defined in '
-                             'VIBROCC would result in negative vibrational '
-                             'amplitude. Offset will be ignored.')
+                _LOGGER.error(f'Vibrational offset for {self} defined in '
+                              'VIBROCC would result in negative vibrational '
+                              'amplitude. Offset will be ignored.')
             else:
                 self.disp_vib[el] = final_vib_steps
             del self.offset_vib[el]
@@ -619,9 +621,11 @@ class Atom:                                                                     
             occ_offset = self.offset_occ[el]
             final_occ_steps = [occ_step + occ_offset for occ_step in self.disp_occ[el]]
             if any(np.array(final_occ_steps) < 0) or any(np.array(final_occ_steps) > 1):
-                logger.error(f'Occupational offset for {self} defined in '
-                             'VIBROCC would result in unphysical concentration'
-                             '(occupation <0 or >1). Offset will be ignored.')
+                _LOGGER.error(
+                    f'Occupational offset for {self} defined in '
+                    'VIBROCC would result in unphysical concentration'
+                    '(occupation <0 or >1). Offset will be ignored.'
+                    )
             else:
                 self.disp_occ[el] = final_occ_steps
             del self.offset_occ[el]
