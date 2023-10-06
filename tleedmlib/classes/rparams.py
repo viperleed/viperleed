@@ -211,7 +211,7 @@ class Rparams:
         self.SEARCH_LOOP = False
         self.SEARCH_POPULATION = 0  # trial structures in search
         self.SEARCH_START = "crandom"
-        self.SITE_DEF = {}   # {element_name: {sitename, [atom.oriN]}}
+        self.SITE_DEF = {}   # {element_name: {sitename, [atom.num]}}
         self.STOP = False
         self.SUPERLATTICE = np.identity(2, dtype=float)
         self.SUPPRESS_EXECUTION = False
@@ -947,10 +947,10 @@ class Rparams:
                 except ValueError:
                     filelist.remove(filename)
             atlist = [at for at in sl.atlist
-                      if not at.is_bulk and at.oriN in delN]
+                      if not at.is_bulk and at.num in delN]
             for at in atlist:
                 deltaCandidates = [fn for fn in filelist
-                                   if int(fn.split('_')[1]) == at.oriN]
+                                   if int(fn.split('_')[1]) == at.num]
                 checkEls = list(at.disp_occ.keys())
                 # check for vacancy:
                 occlists = []
@@ -1015,9 +1015,9 @@ class Rparams:
                             found = True
                             break
                 if found and at not in atlist:
-                    logger.error("Atom {} has displacements defined, but no "
-                                 "delta file was found! Run Delta-Amplitudes."
-                                 .format(at.oriN))
+                    logger.error(f'Atom {at.num} has displacements '
+                                 'defined, but no delta file was found! '
+                                 'Run Delta-Amplitudes.')
                     raise RuntimeError("Delta file not found")
                 elif not found and at in atlist:
                     # delta file is there, but no displacements
@@ -1122,10 +1122,10 @@ class Rparams:
                                if tup[0].restrictTo is None
                                and tup[0] not in splTargets]:
             logger.warning(
-                "Restricting search parameter for atom {}, "
-                "element {}, mode {} failed: Could not identify target "
-                "search parameter (atom {}, element {})."
-                .format(sp.atom.oriN, sp.el, sp.mode, at.oriN, el))
+                f'Restricting search parameter for atom {sp.atom.num}, '
+                f'element {sp.el}, mode {sp.mode} failed: Could not identify '
+                f'target search parameter (atom {at.num}, element {el}).'
+                )
             if sp not in indep and sp.steps > 1:
                 self.indyPars += 1
                 indep.append(sp)

@@ -264,11 +264,11 @@ class Slab:
         for (i, at) in enumerate(self.atlist):
             if self.bulkslab is not None:
                 for bat in [a for a in self.bulkslab.atlist
-                            if a.oriN == at.oriN
+                            if a.num == at.num
                             and a not in bulkAtsRenumbered]:
-                    bat.oriN = i+1
+                    bat.num = i+1
                     bulkAtsRenumbered.append(bat)
-            at.oriN = i+1
+            at.num = i+1
 
     @property
     def surface_vectors(self):
@@ -611,17 +611,17 @@ class Slab:
 
 
     def updateAtomNumbers(self):
-        """Updates atom oriN - should not happen normally, but necessary if
+        """Updates atom num - should not happen normally, but necessary if
         atoms get deleted."""
         for (i, at) in enumerate(self.atlist):
-            at.oriN = i+1
+            at.num = i+1
 
     def initSites(self, rp):
         """Goes through the atom list and supplies them with appropriate
         SiteType objects, based on the SITE_DEF parameters from the supplied
         Rparams."""
         atlist = self.atlist[:]     # copy to not have any permanent changes
-        atlist.sort(key=lambda atom: atom.oriN)
+        atlist.sort(key=lambda atom: atom.num)
         sl = []
         for el in rp.SITE_DEF:
             for sitename in rp.SITE_DEF[el]:
@@ -694,7 +694,7 @@ class Slab:
 
     def sortOriginal(self):
         """Sorts atlist by original atom order from POSCAR"""
-        self.atlist.sort(key=lambda atom: atom.oriN)
+        self.atlist.sort(key=lambda atom: atom.num)
 
     def projectCToZ(self):
         """makes the c vector of the unit cell perpendicular to the surface,
@@ -1482,7 +1482,7 @@ class Slab:
                     newbulkats.append(new_atom)
                     duplicated.append(at)
                     added_this_loop.append(new_atom)
-                    new_atom.oriN = len(ts.atlist)
+                    new_atom.num = len(ts.atlist)
 
                 # old atoms get shifted up along ucell c
                 at.cartpos += bulkc_project_to_c
@@ -1712,12 +1712,12 @@ class Slab:
             while i < subl.n_atoms:
                 j = i+1
                 baseat = [a for a in self.atlist
-                          if a.oriN == subl.atlist[i].oriN][0]
+                          if a.num == subl.atlist[i].num][0]
                 while j < subl.n_atoms:
                     if subl.atlist[i].is_same_xy(subl.atlist[j],
                                                  eps=rp.SYMMETRY_EPS):
                         for a in [a for a in self.atlist
-                                  if a.oriN == subl.atlist[j].oriN]:
+                                  if a.num == subl.atlist[j].num]:
                             a.duplicate_of = baseat
                         subl.atlist.pop(j)
                     else:

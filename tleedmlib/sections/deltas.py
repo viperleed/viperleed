@@ -358,7 +358,7 @@ def deltas(sl, rp, subdomain=False):
             checkEls.append("vac")
         for el in checkEls:
             dfiles = [f for f in os.listdir(".")
-                      if f.startswith("DEL_{}_".format(at.oriN) + el)]
+                      if f.startswith(f'DEL_{at.num}_{el}')]
             found = False
             for df in dfiles:
                 if tl_io.checkDelta(df, at, el, rp):
@@ -431,8 +431,8 @@ def deltas(sl, rp, subdomain=False):
         deltaRunTasks.append(rt)
         rt.din = din
         rt.din_short = din_short
-        rt.tensorname = os.path.join(tensordir, "T_{}".format(at.oriN))
-        nameBase = "DEL_{}_".format(at.oriN) + el
+        rt.tensorname = os.path.join(tensordir, f'T_{at.num}')
+        nameBase = f'DEL_{at.num}_{el}'
         n = 1
         nums = []
         for fn in [f for f in os.listdir(".") if f.startswith(nameBase)]:
@@ -494,7 +494,7 @@ def deltas(sl, rp, subdomain=False):
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    
+
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
         ct.basedir = os.getcwd()

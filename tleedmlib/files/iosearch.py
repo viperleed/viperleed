@@ -749,7 +749,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                "vibrational steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
-                             + str(at.oriN).rjust(7) + el.rjust(7)
+                             + str(at.num).rjust(7) + el.rjust(7)
                              + "vib".rjust(7) + str(vib).rjust(7)
                              + constr["vib"].rjust(7) + "\n")
                     nsteps.append(vib)
@@ -758,7 +758,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                "geometrical steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
-                             + str(at.oriN).rjust(7) + el.rjust(7)
+                             + str(at.num).rjust(7) + el.rjust(7)
                              + "geo".rjust(7) + str(geo).rjust(7)
                              + constr["geo"].rjust(7) + "\n")
                     nsteps.append(geo)
@@ -790,7 +790,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             elif spl and spl[0].linkedTo is not None:
                 constr = "#"+str(crp.searchpars.index(spl[0].linkedTo)+1)
             info += (str(parcount).rjust(4) + ("C"+label).rjust(7)
-                     + str(at.oriN).rjust(7) + "-".rjust(7) + "occ".rjust(7)
+                     + str(at.num).rjust(7) + "-".rjust(7) + "occ".rjust(7)
                      + str(occsteps).rjust(7) + constr.rjust(7) + "\n")
             nsteps.append(occsteps)
     # add info for domain step parameters

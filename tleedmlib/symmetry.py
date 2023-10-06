@@ -1223,7 +1223,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         at.cartpos[:2] += shiftv
                     break
     for at in sl.atlist:
-        at2 = [a for a in ts.atlist if a.oriN == at.oriN][0]
+        at2 = [a for a in ts.atlist if a.num == at.num][0]
         at.freedir = at2.freedir
         at.cartpos = at2.cartpos
     # average positions for linked atoms
@@ -1349,7 +1349,7 @@ def getSymBaseSymmetry(sl, rp):
     for ll in sl.symbaseslab.linklists:
         newll = []
         for ssl_at in ll:
-            at = [a for a in sl.atlist if a.oriN == ssl_at.oriN][0]
+            at = [a for a in sl.atlist if a.num == ssl_at.num][0]
             newll.append(at)
             at.linklist = newll
             at.symrefm = np.copy(ssl_at.symrefm)

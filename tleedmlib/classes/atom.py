@@ -31,8 +31,10 @@ class Atom:                                                                     
         Element type
     pos : numpy.ndarray
         Atom position as fractional coordinate
-    oriN : int
-        Original atom number in the POSCAR
+    num : int
+        A progressive number identifying this atom. Normally, it would
+        be the atom number in the POSCAR (i.e., the VESTA progressive,
+        non-element-specific number).
     slab : Slab
         The Slab that the atom belongs to.
     layer : Layer or None
@@ -88,12 +90,12 @@ class Atom:                                                                     
         creation), this points to the atom in the base cell.
     """
 
-    def __init__(self, el, pos, oriN, slab):
+    def __init__(self, el, pos, num, slab):
         """Initialize instance."""
         self.el = el
         self.pos = np.asarray(pos, dtype=float)
         self.cartpos = None
-        self.oriN = oriN
+        self.num = num
         self.slab = slab
         self.layer = None
         self.site = None
@@ -129,11 +131,11 @@ class Atom:                                                                     
     def __repr__(self):
         """Return a representation string of this Atom."""
         return (f'{type(self).__name__}(el={self.el}, pos={self.pos}, '
-                f'oriN={self.oriN}, slab={self.slab})')
+                f'num={self.num}, slab={self.slab})')
 
     def __str__(self):
         """Return a string version of this Atom."""
-        return f'{type(self).__name__}({self.oriN} {self.el})'
+        return f'{type(self).__name__}({self.num} {self.el})'
 
     def __format__(self, fmt_spec):
         """Return a formatted version of self."""
