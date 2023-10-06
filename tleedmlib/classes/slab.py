@@ -754,7 +754,7 @@ class Slab:
         if keepDisp:
             return
         for at in self.atlist:
-            at.deltasGenerated = []
+            at.known_deltas = []
             at.initDisp(force=True)
             at.constraints = {1: {}, 2: {}, 3: {}}
         return

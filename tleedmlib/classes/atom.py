@@ -6,8 +6,8 @@ Created on Jun 13 2019
 @author: Florian Kraushofer (@fkraushofer)
 @author: Michele Riva (@michele-riva)
 
-Class storing position and other properties of individual atoms (to be used
-with Slab, Layer, etc)
+Class storing position and other properties of individual atoms (to be
+used with Slab, Layer, etc).
 """
 
 import copy
@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger('tleedm.atom')
 
 
 class Atom:                                                                     # TODO: change description of cartpos when flipping .cartpos[2]
-    """To be used for Slab; each atom has an element and a position.
+    """Class storing information about a single atom.
 
     Attributes
     ----------
@@ -67,7 +67,7 @@ class Atom:                                                                     
         'no change'
     dispInitialized : bool
         disp_ variables get initialized after readVIBROCC by Atom.initDisp
-    deltasGenerated : list of str
+    known_deltas : list of str
         Filenames of delta files generated or found for this atom
     offset_geo, offset_vib, offset_occ : dict
         Offsets from self.cartpos, self.site.vib, self.site.occ
@@ -88,40 +88,39 @@ class Atom:                                                                     
         """Initialize instance."""
         self.el = el
         self.pos = np.asarray(pos, dtype=float)
+        self.cartpos = None
         self.oriN = oriN
         self.slab = slab
         self.layer = None
         self.site = None
-        self.cartpos = None
+
+        self.duplicate_of = None
+        self.known_deltas = []
+        self.oriState = None
+
         self.linklist = []
-        self.displist = []
         self.freedir = 1
         self.symrefm = np.identity(2)
+
+        self.displist = []
         self.disp_vib = {'all': [0.]}
         self.disp_geo = {'all': [np.zeros(3)]}
         self.disp_occ = {el: [1.]}
-        self.disp_labels = {
-            'geo': '',
-            'vib': '',
-            'occ': '',
-            }
-        self.disp_lin_steps = {
-            'geo': [],
-            'vib': [],
-            'occ': [],
-            }
+        self.disp_labels = {'geo': '',
+                            'vib': '',
+                            'occ': ''}
+        self.disp_lin_steps = {'geo': [],
+                               'vib': [],
+                               'occ': []}
         self.disp_geo_offset = {'all': [np.zeros(3)]}
         self.disp_center_index = {'vib': {'all': 0},
                                   'geo': {'all': 0},
                                   'occ': {el: 0}}
         self.dispInitialized = False
-        self.deltasGenerated = []
         self.offset_geo = {}
         self.offset_vib = {}
         self.offset_occ = {}
         self.constraints = {1: {}, 2: {}, 3: {}}
-        self.oriState = None
-        self.duplicate_of = None
 
     def __repr__(self):
         """Return a representation string of this Atom."""

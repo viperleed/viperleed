@@ -683,7 +683,7 @@ def _reinitialize_deltas(param, slab):
     """Removes references to deltas from previous tensors.
     Delete old delta files in main work folder, if necessary.
     (there should not be any, unless there was an error)
-    Also empty all atom.deltasGenerated because they would refer to
+    Also empty all atom.known_deltas because they would refer to
     previous tensors.
 
     Parameters
@@ -702,9 +702,9 @@ def _reinitialize_deltas(param, slab):
                 "cause the delta file to incorrectly be labelled as belonging "
                 "with the new set of tensors.")
 
-    # empty atom.deltasGenerated
+    # empty atom.known_deltas
     for at in slab.atlist:
-        at.deltasGenerated = []
+        at.known_deltas = []
 
 
 def runDomainRefcalc(dp):

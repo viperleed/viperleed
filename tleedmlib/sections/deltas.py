@@ -363,7 +363,7 @@ def deltas(sl, rp, subdomain=False):
             for df in dfiles:
                 if tl_io.checkDelta(df, at, el, rp):
                     found = True
-                    at.deltasGenerated.append(df)
+                    at.known_deltas.append(df)
                     countExisting += 1
                     break
             if not found:
@@ -444,20 +444,20 @@ def deltas(sl, rp, subdomain=False):
             n = max(nums) + 1
         rt.deltaname = nameBase + "_{}".format(n)
         rt.deltalogname = deltalogname
-        at.deltasGenerated.append(rt.deltaname)
+        at.known_deltas.append(rt.deltaname)
 
-    # sort deltasGenerated
+    # sort known_deltas
     for at in attodo:
         checkEls = list(at.disp_occ.keys())
         if at in vaclist:
             checkEls.append("vac")
-        copydel = at.deltasGenerated[:]
-        at.deltasGenerated = []
+        copydel = at.known_deltas[:]
+        at.known_deltas = []
         for el in checkEls:
-            at.deltasGenerated.append(
+            at.known_deltas.append(
                 [df for df in copydel
                  if df.split("_")[-2].lower() == el.lower()][0])
-        if len(at.deltasGenerated) != len(copydel):
+        if len(at.known_deltas) != len(copydel):
             logger.error("Failed to sort delta files for {}".format(at))
             raise RuntimeError("Inconsistent delta files")
 
