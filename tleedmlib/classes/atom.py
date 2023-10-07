@@ -296,9 +296,10 @@ class Atom:                                                                     
             If given, assignment is made only for that element,
             otherwise for all. Default is an empty string.
         primary : bool, optional
-            Defines whether the assigned displacement should be passed along
-            to linked atoms. This will call assignDisp for these atoms, with
-            primary=False.
+            Defines whether the assigned displacement should be passed
+            along to linked atoms. If True, assignDisp is called for
+            these atoms, with primary=False. FOR INTERNAL USE ONLY.
+            Default is True.
         displist : list, optional
             Elements are Atom objects. Passed in secondary assignment
             to later link parameters (the 'linklist' defines how the
@@ -430,27 +431,30 @@ class Atom:                                                                     
         self.displist = displist
 
     def clearOffset(self, mode, targetel='', primary=True, displist=[]):
-        """
-        Reverts the atom's offsets for the given mode and element to the
-        original values (from POSCAR and VIBROCC)
+        """Revert an offset for self and all its symmetry-equivalent atoms.
+
+        The offset restored is the one saved in .oriState
+        (typically from POSCAR or VIBROCC).
 
         Parameters
         ----------
-        mode : integer
-            Defines which offset is to be cleared. 1: geo, 2: vib, 3: occ
-        targetel : string, optional
-            If passed, assignment is made only for that element, otherwise for
-            all.
+        mode : int
+            Which offset to restore. 1: geo, 2: vib, 3: occ
+        targetel : str, optional
+            If passed, assignment is made only for that element,
+            otherwise for all.
         primary : bool, optional
-            Defines whether assignment should be passed along to linked atoms.
-            This will call assignDisp for these atoms, with primary=False.
-        displist : list of Atom objects, optional
-            Passed in secondary assignment to later link parameters (the
-            'linklist' defines how the 'displist' is defined, but can change
-            via the SYM_DELTA parameter).
+            Defines whether assignment should be passed along
+            to linked atoms. This will call assignDisp for these
+            atoms, with primary=False.
+        displist : list, optional
+            Elements are Atom objects. Passed in secondary assignment
+            to later link parameters (the 'linklist' defines how the
+            'displist' is defined, but can change via the SYM_DELTA
+            parameter).
 
-        Returns
-        -------
+        Raises
+        ------
         ValueError
             If `mode` is not one of the acceptable displacement modes.
         """
