@@ -681,7 +681,7 @@ class Atom:                                                                     
     def storeOriState(self):
         """Stores the initial values from the input files for this atom."""
         if self.oriState is None:
-            self.oriState = self.duplicate(add_to_atlists=False)
+            self.oriState = self.duplicate(add_to_atlists=False)                # TODO: potential problem: duplicate only shallow copies some attributes.
 
     def translate_2d(self, cart_shift, frac_shift):
         """Apply a 2D translation to this Atom."""
