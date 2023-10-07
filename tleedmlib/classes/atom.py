@@ -496,17 +496,14 @@ class Atom:                                                                     
             displist.append(self)
         self.displist = displist
 
-    def copyOriState(self, at):
-        """
-        Copies positions and offsets from another atom, which may be from
-        another slab.
-        """
+    def copyOriState(self, other):
+        """Deepcopy positions and offsets from another atom into oriState."""
         self.storeOriState()
-        self.oriState.pos = copy.copy(at.pos)
-        self.oriState.cartpos = copy.copy(at.cartpos)
-        self.oriState.offset_geo = copy.copy(at.offset_geo)
-        self.oriState.offset_vib = copy.copy(at.offset_vib)
-        self.oriState.offset_occ = copy.copy(at.offset_occ)
+        self.oriState.pos = other.pos.copy()
+        self.oriState.cartpos = other.cartpos.copy()
+        self.oriState.offset_geo = copy.deepcopy(other.offset_geo)
+        self.oriState.offset_vib = copy.deepcopy(other.offset_vib)
+        self.oriState.offset_occ = copy.deepcopy(other.offset_occ)
 
     def duplicate(self, add_to_atlists=True):
         """Return a somewhat lightweight copy of this Atom.
