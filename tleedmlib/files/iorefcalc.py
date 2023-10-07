@@ -569,7 +569,7 @@ def writeAUXGEO(sl, rp):
                 layerOffsets[layer.num] += writepos
                 layerOffsets[layer.num + 1] -= writepos
             ol = ol.ljust(lj)
-            output += ol+'Atom N='+str(atom.num)+' ('+atom.el+')\n'
+            output += f'{ol}Atom N={atom.num} ({atom.el})\n'
     output += ('--------------------------------------------------------------'
                '-----\n')
     output += ('--- define bulk stacking sequence                             '
@@ -663,7 +663,7 @@ def writeAUXGEO(sl, rp):
         if rp.TENSOR_OUTPUT[layer.num] == 0:
             continue   # don't write the Tensor file names
         for i, atom in enumerate(layer):
-            ol = ('T_'+str(atom.num)).ljust(lj)
+            ol = f'T_{atom.num}'.ljust(lj)
             output += (ol + 'Tensor file name, current layer, sublayer '
                        + str(i+1) + '\n')
     output += ('--------------------------------------------------------------'

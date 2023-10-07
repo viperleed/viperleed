@@ -1015,9 +1015,8 @@ class Rparams:
                             found = True
                             break
                 if found and at not in atlist:
-                    logger.error(f'Atom {at.num} has displacements '
-                                 'defined, but no delta file was found! '
-                                 'Run Delta-Amplitudes.')
+                    logger.error(f'{at} has displacements defined, but no '
+                                 'delta file was found! Run Delta-Amplitudes.')
                     raise RuntimeError("Delta file not found")
                 elif not found and at in atlist:
                     # delta file is there, but no displacements

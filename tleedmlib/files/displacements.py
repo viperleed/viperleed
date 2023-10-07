@@ -705,13 +705,13 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                         deltas_required = True
                     else:
                         logger.warning(
-                            "In-plane displacement assignment for atom "
-                            f"{at.num} is forbidden by symmetry and will "
-                            "be skipped. See 'FreeDir' in POSCAR file. To "
-                            "apply this displacement, use either the "
-                            "SYMMETRY_FIX parameter to lower the symmetry, "
-                            "or use SYM_DELTA in the DISPLACEMENTS file to "
-                            "allow symmetry breaking for this atom."
+                            f'In-plane displacement assignment for {at} is '
+                            'forbidden by symmetry and will be skipped. See '
+                            '"FreeDir" in POSCAR file. To apply this '
+                            'displacement, use either the SYMMETRY_FIX '
+                            'parameter to lower the symmetry, or use '
+                            'SYM_DELTA in the DISPLACEMENTS file to allow '
+                            'symmetry breaking for this atom.'
                             )
             else:
                 if "xy" in dr:
@@ -763,14 +763,13 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             deltas_required = True
                         else:
                             logger.warning(
-                                "In-plane azimuthal displacement "
-                                f"assignment for atom {at.num} is forbidden by "
-                                "symmetry and will be skipped. See 'FreeDir' "
-                                "in POSCAR file. To apply this displacement, "
-                                "use either the SYMMETRY_FIX parameter to "
-                                "lower the symmetry, or use SYM_DELTA in the "
-                                "DISPLACEMENTS file to allow symmetry "
-                                "breaking for this atom."
+                                'In-plane azimuthal displacement assignment '
+                                f'for {at} is forbidden by symmetry and will '
+                                'be skipped. See "FreeDir" in POSCAR file. '
+                                'To apply this displacement, use either the '
+                                'SYMMETRY_FIX parameter to lower the symmetry,'
+                                ' or use SYM_DELTA in the DISPLACEMENTS file '
+                                'to allow symmetry breaking for this atom.'
                                 )
         elif mode == 2:
             # vibrational displacement, apply:

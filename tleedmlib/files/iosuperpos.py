@@ -96,9 +96,9 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
             occupations.append(o)
             totalocc += np.array(o)
             pl = [sp for sp in sps if sp.el == el]
-            if len(pl) == 0:
-                logger.error('No search parameters found for '
-                             f'atom {at.num}. Aborting...')
+            if not pl:
+                logger.error('No search parameters found '
+                             f'for {at}. Aborting...')
                 rp.setHaltingLevel(2)
                 return ""
             deltanames.append(pl[0].deltaname)
