@@ -111,10 +111,7 @@ def main():
         newat.pos[2] /= cfact+1
         slab.atlist.append(newat)
         newat.slab = slab
-    for el in slab.elements:
-        if el in bulk.elements:
-            slab.n_per_elem[el] += bulk.n_per_elem[el]
-
+    slab.update_element_count()
     slab.sort_by_element()
 
     try:
