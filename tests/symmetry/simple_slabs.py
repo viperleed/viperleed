@@ -32,15 +32,10 @@ from ..helpers import TestInfo, DisplacementInfo, CaseTag as Tag
 # pylint: enable=wrong-import-position
 
 
-def get_atom(atlist, atom_nr):
-    """Return the atom with a certain num."""
-    return next(at for at in atlist if at.num == atom_nr)
-
-
 def remove_atoms(slab, param, *atom_nrs):
     """Remove atoms with the given numbers from slab."""
     for atom_nr in atom_nrs:
-        slab.atlist.remove(get_atom(slab.atlist, atom_nr))
+        slab.atlist.remove(slab.atlist.get(atom_nr))
     slab.update_element_count()
     slab.full_update(param)
 

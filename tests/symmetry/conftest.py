@@ -23,7 +23,6 @@ from viperleed.tleedmlib import symmetry
 
 from ..helpers import flat_fixture
 from . import simple_slabs
-from .simple_slabs import get_atom
 from .. import poscar_slabs
 # pylint: enable=wrong-import-position
 
@@ -89,7 +88,7 @@ def displace_atoms():
     def _displace(slab, param, info, displacements, check_raises=True):
         for (displ_info, displ) in zip(info.displacements, displacements):
             displ = (displ,)
-            atom = get_atom(slab.atlist, displ_info.atom_nr)
+            atom = slab.atlist.get(displ_info.atom_nr)
             if check_raises and _is_displacement_forbidden(displ, displ_info):
                 pytest.xfail('No complaint about invalid directions yet')
                 with pytest.raises(Exception):

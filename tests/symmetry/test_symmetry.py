@@ -32,7 +32,6 @@ from viperleed.tleedmlib.base import angle as angle_radians
 from ..helpers import duplicate_all, CaseTag
 from ..poscar_slabs import make_poscar_ids
 from . import simple_slabs
-from .simple_slabs import get_atom
 from .conftest import get_cases
 # pylint: enable=wrong-import-position
 
@@ -289,7 +288,7 @@ class TestSymmetryConstraints:
         slab, _, info = with_symmetry_constraints()
         with may_fail(first_case, self._known_invalid_linking):
             for atom_n, linked in info.symmetry.link_groups.items():
-                atom = get_atom(slab.atlist, atom_n)
+                atom = slab.atlist.get(atom_n)
                 assert set(at.num for at in atom.linklist) == linked
 
     _known_invalid_constrained_group = {
@@ -439,8 +438,7 @@ class TestBulkSymmetry:
         assert set(bulk_slab.bulk_screws) == info.bulk.screw_orders
         assert len(bulk_slab.bulk_glides) == info.bulk.n_glide_planes
 
-    @parametrize_with_cases('args',
-                            cases=get_cases('poscar'),
+    @parametrize_with_cases('args', cases=get_cases('poscar'),
                             has_tag=CaseTag.THICK_BULK)
     def test_thick_bulk_minimized(self, args, caplog, first_case):
         """Assert the correct identification of bulk screws and glides."""
