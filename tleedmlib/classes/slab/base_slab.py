@@ -448,7 +448,7 @@ class BaseSlab(AtomContainer):
             ct = [v for v in ct if v > max(bulk_cuts) + 1e-6] + bulk_cuts
         ct.sort()
         self.layers = []
-        tmplist = AtomList(*self.atlist)
+        tmplist = self.atlist[:]
         self.sort_by_z()
         laynum = 0
         b = True if rparams.N_BULK_LAYERS > 0 else False
