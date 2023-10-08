@@ -531,8 +531,8 @@ def writeAUXGEO(sl, rp):
                        + str(i+1) + ' has overlayer lateral periodicity\n')
         if layer.is_bulk:
             bl = sl.bulkslab.layers[blayers.index(layer)]
-            bulknums = {at.oriN for at in bl}
-            bulkUnique = [at for at in layer if at.oriN in bulknums]
+            bulknums = {at.num for at in bl}
+            bulkUnique = [at for at in layer if at.num in bulknums]
             natoms = len(bulkUnique)
             # sanity check: ratio of unit cell areas (given simply by
             #  SUPERLATTICE) should match ratio of written vs skipped atoms:
@@ -569,7 +569,7 @@ def writeAUXGEO(sl, rp):
                 layerOffsets[layer.num] += writepos
                 layerOffsets[layer.num + 1] -= writepos
             ol = ol.ljust(lj)
-            output += ol+'Atom N='+str(atom.oriN)+' ('+atom.el+')\n'
+            output += f'{ol}Atom N={atom.num} ({atom.el})\n'
     output += ('--------------------------------------------------------------'
                '-----\n')
     output += ('--- define bulk stacking sequence                             '
@@ -663,7 +663,7 @@ def writeAUXGEO(sl, rp):
         if rp.TENSOR_OUTPUT[layer.num] == 0:
             continue   # don't write the Tensor file names
         for i, atom in enumerate(layer):
-            ol = ('T_'+str(atom.oriN)).ljust(lj)
+            ol = f'T_{atom.num}'.ljust(lj)
             output += (ol + 'Tensor file name, current layer, sublayer '
                        + str(i+1) + '\n')
     output += ('--------------------------------------------------------------'

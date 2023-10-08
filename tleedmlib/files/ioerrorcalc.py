@@ -88,7 +88,7 @@ def generate_errors_csv(errors, sep=","):
 
     for param_err in errors:
 
-        atoms_str = range_to_str([at.oriN for at in param_err.atoms])
+        atoms_str = range_to_str([at.num for at in param_err.atoms])
         summary_columns["at"].append(atoms_str)
         summary_columns["dir"].append(param_err.disp_label)
         summary_columns["mode"].append(param_err.mode)
@@ -497,7 +497,7 @@ def _error_legends(mode, mode_errors):
         label = "Atoms " if len(err.atoms) > 1 else "Atom "
         label_parts = []
         for site, atoms in atom_groups.items():
-            group_range = range_to_str([at.oriN for at in atoms])
+            group_range = range_to_str([at.num for at in atoms])
             label_parts.append(f"#{group_range} ({site})")
         label += ", ".join(label_parts)
         if mode == "geo":

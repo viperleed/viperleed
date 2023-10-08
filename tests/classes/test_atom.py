@@ -16,6 +16,11 @@ from pytest import approx, mark
 class TestAtomMergeDisplacementOffset:
     """Test combination of displacements and offsets."""
 
+    def test_add_displ_offset_runtime_error(self, manually_displaced_atom):
+        """Test that a non-initialized displacement raises RuntimeError."""
+        with pytest.raises(RuntimeError):
+            manually_displaced_atom.mergeDisp(None)
+
     @mark.xfail(
         raises=KeyError,
         reason='Incorrect implementation in Atom for accessing site.vibamp'
@@ -27,6 +32,7 @@ class TestAtomMergeDisplacementOffset:
         atom.offset_geo[element] = np.array([0.1, 0, 0])
         atom.offset_vib[element] = +0.1
         atom.offset_occ[element] = -0.1
+        atom.dispInitialized = True
         atom.mergeDisp(element)
         with subtests.test('geo'):
             assert np.allclose(atom.disp_geo[element],
@@ -47,6 +53,7 @@ class TestAtomMergeDisplacementOffset:
         element = atom.el
         atom.offset_vib[element] = -0.1
         atom.offset_occ[element] = +0.2
+        atom.dispInitialized = True
         atom.mergeDisp(element)
         with subtests.test('vib'):
             pytest.xfail(reason=(
