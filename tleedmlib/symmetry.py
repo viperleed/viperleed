@@ -246,7 +246,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     if bulk:        # check whether there are at least 2 atomic layers
         ts.create_sublayers(epsz)
         if ts.n_sublayers < 2:
-            ts = ts.doubleBulkSlab()
+            ts = ts.with_double_thickness()
     ts.project_c_to_z()
     ts.sort_by_z()
 

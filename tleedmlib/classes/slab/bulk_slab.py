@@ -93,20 +93,6 @@ class BulkSlab(BaseSlab):
         """Return whether this is a bulk slab."""
         return True
 
-    def doubleBulkSlab(self):
-        """Returns a copy of the bulk slab which is doubled in thickness."""
-        ts = copy.deepcopy(self)
-        bulkc = np.transpose(np.copy(ts.ucell))[2]
-        bulkc[2] *= -1
-        ts.update_cartesian_from_fractional(update_origin=True)
-        tmplist = ts.atlist[:]
-        for at in tmplist:
-            at.duplicate()
-            at.cartpos = at.cartpos + bulkc
-        ts.ucell[:, 2] *= 2
-        ts.collapse_cartesian_coordinates(update_origin=True)
-        return ts
-
     def getBulk3Dstr(self):
         """Returns a one-line string containing information about the bulk
         screw axes and glide planes. Only to be used for bulk slabs. Format of
@@ -314,3 +300,37 @@ class BulkSlab(BaseSlab):
             if len(transVecs) == 0:
                 return False
         return True
+
+    def with_double_thickness(self, new_atoms_start_idx=None):
+        """Return a copy of this bulk slab which is twice as thick."""
+        double_slab = copy.deepcopy(self)
+        *_, c_vec = double_slab.ucell.T
+
+        # For atoms that are added, because we use z flipped                    # TODO: .cartpos[2]
+        c_vec_atoms = c_vec.copy()
+        c_vec_atoms[2] *= -1
+        double_slab.update_cartesian_from_fractional(update_origin=True)
+
+        if new_atoms_start_idx is None:
+            # BulkSlab objects tend to have a non-continuous
+            # distribution of atom numbers that usually come
+            # from the parent SurfaceSlab for which this slab
+            # is the bulk. We cannot use the normal n_atoms + 1,
+            # as we may end up in a conflict of atom numbers.
+            new_atoms_start_idx = max(at.num for at in double_slab) + 1
+
+        # Now decide which way to go, depending on
+        # whether there are layers already defined
+        if double_slab.layers:
+            # pylint: disable=protected-access
+            double_slab._add_one_bulk_cell(double_slab.layers, c_vec,
+                                           c_vec_atoms, 0, new_atoms_start_idx)
+        else:
+            for atom in double_slab.atlist.copy():
+                atom.duplicate(num=new_atoms_start_idx)
+                atom.cartpos += c_vec_atoms
+                new_atoms_start_idx += 1
+            c_vec *= 2
+        double_slab.collapse_cartesian_coordinates(update_origin=True)
+        double_slab.sublayers.clear()  # They are outdated
+        return double_slab
