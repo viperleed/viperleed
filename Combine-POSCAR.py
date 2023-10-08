@@ -111,6 +111,7 @@ def main():
         newat.pos[2] /= cfact+1
         slab.atlist.append(newat)
         newat.slab = slab
+    slab.atlist.update_atoms_map()
     slab.update_element_count()
     slab.sort_by_element()
 
