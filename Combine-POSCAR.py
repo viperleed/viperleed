@@ -94,9 +94,7 @@ def main():
         logging.debug("Slab and bulk elements are not equal. Adding missing "
                       "elements.")
         for el in bulk.elements:
-            if el not in slab.elements:
-                slab.elements.append(el)
-                slab.n_per_elem[el] = 0
+            slab.n_per_elem[el] = 0
     else:
         logging.debug("Slab and bulk elements are identical.")
 
