@@ -253,14 +253,16 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     bigslab = copy.deepcopy(ts)
     # will have atoms duplicated and shifted to 4 unit cells
     #  ([0,0], [0,1], [1,0], [1,1])
-    tmplist = bigslab.atlist[:]
-    for at in tmplist:
+    bigslab.atlist.strict = False
+    for at in bigslab.atlist[:]:
         for i in range(0, 2):
             for j in range(0, 2):
                 if not (i == 0 and j == 0):
                     tmpat = at.duplicate()
                     tmpat.pos[0] += i
                     tmpat.pos[1] += j
+    bigslab.update_atom_numbers()
+    bigslab.atlist.strict = True
     bigslab.update_cartesian_from_fractional(update_origin=True)
     # bigslab.full_update(rp)   can't do this - would collapse coordinates!
     bigslab.create_sublayers(epsz)
@@ -436,7 +438,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 elif (celltype == "hexagonal"
                       and tuple(oriplane.par) not in [(1, 1), (1, -1)]):
                     # Special case - requires rotation of unit cell to bring
-                    # mirror/glide along either (11) or (1-1) direction. 
+                    # mirror/glide along either (11) or (1-1) direction.
                     abst, oriplane = mirror_to_diagonal(sl, rp, abst, oriplane)
         if oriplane is not None and oriplane.distanceFromOrigin(abst) > eps:
             # shift to closest point on oriplane
@@ -630,7 +632,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
 
 def mirror_to_diagonal(sl, rp, abst, oriplane):
     """Rotate cell to bring oriplane along a diagonal.
-    
+
     The correct direction among (11) and (1-1) is the one
     forming a 60deg angle with the symmetry plane.
     """
