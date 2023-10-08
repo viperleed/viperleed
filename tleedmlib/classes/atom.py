@@ -512,7 +512,7 @@ class Atom:                                                                     
         self.oriState.offset_vib = copy.deepcopy(other.offset_vib)
         self.oriState.offset_occ = copy.deepcopy(other.offset_occ)
 
-    def duplicate(self, add_to_atlists=True):
+    def duplicate(self, add_to_atlists=True, num=None):
         """Return a somewhat lightweight copy of this Atom.
 
         Attributes position and elements are deep-copied, all others
@@ -526,26 +526,33 @@ class Atom:                                                                     
         add_to_atlists : bool, optional
             Whether the duplicate atom should be added to atom lists
             in the existing Slab and Layer objects. Default is True.
+        num : int or None, optional
+            Progressive number to give to the new atom returned.
+            If not given or None, it is taken from the slab of
+            this Atom. Default is None.
 
         Returns
         -------
         newat : Atom
             The duplicate atom that was created.
         """
-        newat = Atom(self.el, self.pos.copy(), self.slab.n_atoms + 1, self.slab)
-        if add_to_atlists:
-            self.slab.atlist.append(newat)                                      # TODO: consider a AtomContainer.add_atom(atom) abstract method!
-            if self.layer is not None:
-                self.layer.atlist.append(newat)
-                newat.layer = self.layer
-            self.slab.n_per_elem[self.el] += 1
+        if num is None:
+            num = self.slab.n_atoms + 1
+        newat = Atom(self.el, self.pos.copy(), num, self.slab)
+        newat.cartpos = self.cartpos.copy()
         newat.duplicate_of = self
         newat.site = self.site
         newat.dispInitialized = True
         newat.disp_vib = self.disp_vib
         newat.disp_geo = self.disp_geo
         newat.disp_occ = self.disp_occ
-        newat.cartpos = self.cartpos.copy()
+
+        if add_to_atlists:
+            self.slab.atlist.append(newat)
+            self.slab.n_per_elem[self.el] += 1
+            if self.layer is not None:
+                self.layer.atlist.append(newat)
+                newat.layer = self.layer
         return newat
 
     def initDisp(self, force=False):
