@@ -214,7 +214,7 @@ class BaseSlab(AtomContainer):
     @property
     def n_atoms(self):
         """Return the number of atoms in this slab."""
-        return len(self.atlist)
+        return self.atlist.n_atoms
 
     @property
     def n_layers(self):
@@ -1032,17 +1032,18 @@ class BaseSlab(AtomContainer):
         for subl in ssl.sublayers:
             i = 0
             while i < subl.n_atoms:
-                j = i+1
-                baseat = [a for a in self if a.num == subl.atlist[i].num][0]
+                atom_i = subl.atlist[i]
+                baseat = self.atlist.get(atom_i.num)
+                j = i + 1
                 while j < subl.n_atoms:
-                    if subl.atlist[i].is_same_xy(subl.atlist[j],
-                                                 eps=rp.SYMMETRY_EPS):
-                        for a in [a for a in self
-                                  if a.num == subl.atlist[j].num]:
-                            a.duplicate_of = baseat
-                        subl.atlist.pop(j)
-                    else:
+                    atom_j = subl.atlist[j]
+                    if not atom_i.is_same_xy(atom_j, eps=rp.SYMMETRY_EPS):
                         j += 1
+                        continue
+                    subl.atlist.pop(j)
+                    duplicate_atom = self.atlist.get(atom_j.num, None)
+                    if duplicate_atom:
+                        duplicate_atom.duplicate_of = baseat
                 i += 1
             newatlist.extend(subl)
         ssl.atlist = newatlist
