@@ -37,7 +37,7 @@ from viperleed.tleedmlib.classes.layer import Layer, SubLayer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
 from .slab_errors import AlreadyMinimalError, InvalidUnitCellError
-from .slab_errors import NeedsLayersError, NeedsSublayersError, SlabError
+from .slab_errors import MissingLayersError, MissingSublayersError, SlabError
 from .slab_utils import _left_handed, _z_distance
 
 
@@ -201,8 +201,8 @@ class BaseSlab(AtomContainer):
     def fewest_atoms_sublayer(self):
         """Return the sublayer with fewest atoms."""
         if not self.sublayers:
-            raise NeedsSublayersError(f'{type(self).__name__} has '
-                                      'no sublayers defined')
+            raise MissingSublayersError(f'{type(self).__name__} has '
+                                        'no sublayers defined')
         return min(self.sublayers, key=attrgetter('n_atoms'))
 
     @property
@@ -260,11 +260,11 @@ class BaseSlab(AtomContainer):
 
         Raises
         ------
-        NeedsLayersError
+        MissingLayersError
             If no layers are available
         """
         if not self.layers:
-            raise NeedsLayersError
+            raise MissingLayersError
 
         if self.n_layers == 1:
             return 0.                                                           # TODO: I don't think it's right that it is zero if there's only one layer. Think about it.
@@ -1615,7 +1615,7 @@ class BaseSlab(AtomContainer):
 
         Raises
         ------
-        NeedsSublayersError
+        MissingSublayersError
             If called before sublayers were created
         """
         # Use the version of the unit cell with unit vectors as rows
@@ -1625,7 +1625,7 @@ class BaseSlab(AtomContainer):
 
         # Run the comparison sublayer-wise
         if not self.sublayers:
-            raise NeedsSublayersError(
+            raise MissingSublayersError(
                 '2d-transform invariance check requires sublayers. '
                 'Call create_sublayers(epsz), then try again.'
                 )
