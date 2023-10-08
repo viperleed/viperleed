@@ -1072,23 +1072,6 @@ class BaseSlab(AtomContainer):
             c_vec_xy[:] = 0
             self.collapse_cartesian_coordinates()  # Also updates fractional
 
-    # def update_atom_numbers(self):
-    def resetAtomOriN(self):
-        """Gets new 'original' numbers for atoms in the slab. If a bulkslab
-        is defined, also updates the numbers there to keep the two consistent.
-        """
-        self.sort_original()
-        self.sort_by_element()
-        bulkAtsRenumbered = []
-        for (i, at) in enumerate(self):
-            if self.bulkslab is not None:
-                for bat in [a for a in self.bulkslab
-                            if a.num == at.num
-                            and a not in bulkAtsRenumbered]:
-                    bat.num = i+1
-                    bulkAtsRenumbered.append(bat)
-            at.num = i+1
-
     def revertUnitCell(self, restoreTo=None):
         """If the unit cell in a and b was transformed earlier, restore the
         original form and coordinates. If a 'restoreTo' argument is passed,
@@ -1133,6 +1116,32 @@ class BaseSlab(AtomContainer):
     def sort_original(self):
         """Sort `slab.atlist` by original atom order from POSCAR."""
         self.atlist.sort(key=attrgetter('num'))
+
+    def update_atom_numbers(self):
+        """Assign new incremental numbers to atoms in the slab.
+
+        If a `bulkslab` is defined, also update the numbers there
+        to keep the two consistent. This method is especially
+        useful when atoms are added and/or removed from the slab.
+
+        Returns
+        -------
+        None.
+        """
+        self.sort_original()
+        self.sort_by_element()
+        try:
+            bulk_atoms = self.bulkslab.atlist
+        except AttributeError:
+            bulk_atoms = AtomList()
+
+        for i, atom in enumerate(self, start=1):
+            bulk_atom = bulk_atoms.get(atom.num, None)
+            if bulk_atom:
+                bulk_atom.num = i
+            atom.num = i
+        bulk_atoms.update_atoms_map()
+        self.atlist.update_atoms_map()
 
     def update_cartesian_from_fractional(self, update_origin=False):            # TODO: should we do anything to the .bulkslab too?
         """Assign absolute Cartesian coordinates to all atoms.

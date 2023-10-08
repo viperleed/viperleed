@@ -528,9 +528,3 @@ class SurfaceSlab(BaseSlab):
             at.initDisp(force=True)
             at.constraints = {1: {}, 2: {}, 3: {}}
         return
-
-    def updateAtomNumbers(self):
-        """Updates atom numbers - should not happen normally, but necessary if
-        atoms get deleted."""
-        for (i, at) in enumerate(self):
-            at.num = i+1

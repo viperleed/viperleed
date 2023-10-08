@@ -276,8 +276,11 @@ class POSCARReader:
                     )
                 if n_added >= n_atoms:
                     break
-        slab.atlist = [at for el_ats in atoms.values() for at in el_ats]
-        slab.updateAtomNumbers()
+        slab.atlist.clear()
+        slab.atlist.strict = False  # All atoms have the same .num
+        slab.atlist.extend(at for el_ats in atoms.values() for at in el_ats)
+        slab.update_atom_numbers()  # Also updates atlist map
+        slab.atlist.strict = True
         slab.update_element_count()
         slab.update_cartesian_from_fractional()
 
