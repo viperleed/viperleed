@@ -532,7 +532,7 @@ class Atom:                                                                     
         newat : Atom
             The duplicate atom that was created.
         """
-        newat = Atom(self.el, self.pos.copy(), self.slab.n_atoms, self.slab)
+        newat = Atom(self.el, self.pos.copy(), self.slab.n_atoms + 1, self.slab)
         if add_to_atlists:
             self.slab.atlist.append(newat)                                      # TODO: consider a AtomContainer.add_atom(atom) abstract method!
             if self.layer is not None:
