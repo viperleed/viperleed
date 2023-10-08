@@ -54,7 +54,7 @@ def manual_slab_1_atom_trigonal():
     slab.ucell = np.array([[1, 0, 0],
                            [-2.3, 3, 0],
                            [1, 2, 3]]).T
-    slab.atlist.append(Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab))
+    slab.atlist.append(Atom('C', (0.2, 0.7, 0.1), 1, slab))
     slab.full_update(Rparams())
     return slab
 
@@ -65,7 +65,7 @@ def manual_slab_3_atoms():
     slab = Slab()
     slab.ucell = np.diag([3., 4., 5.])
     positions = (-0.25, 0, 0), (0, 0, 0), (0.25, 0, 0)
-    slab.atlist.extend(Atom('C', np.array(pos, dtype=float), i+1, slab)
+    slab.atlist.extend(Atom('C', pos, i+1, slab)
                        for i, pos in enumerate(positions))
     slab.full_update(Rparams())
     return slab

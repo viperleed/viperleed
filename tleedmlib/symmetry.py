@@ -1032,7 +1032,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         if sl1.atlist[atj] in at1.linklist:
                             # don't check atoms that are already linked
                             continue
-                        if not at1.isSameXY(at2.cartpos[:2], eps):
+                        if not at1.is_same_xy(at2, eps):
                             continue
                         # combine the two linklists
                         at1.linklist.extend(sl1.atlist[atj].linklist)
@@ -1077,7 +1077,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         # don't check atoms that are already linked
                         if sl1.atlist[atj] in at1.linklist:
                             continue
-                        if not at1.isSameXY(at2.cartpos[:2], eps):
+                        if not at1.is_same_xy(at2, eps):
                             continue
                         # combine the two linklists
                         at1.linklist.extend(sl1.atlist[atj].linklist)
@@ -1199,7 +1199,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
     for at in ts:
         # first check points
         for p in lockpoints:
-            if at.isSameXY(p, eps):
+            if at.is_same_xy(p, eps):
                 if not nomove:
                     at.cartpos[0:2] = p
                 at.freedir = 0  # lock completely
@@ -1219,7 +1219,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         at.cartpos[:2] += shiftv
                     break
     for at in sl:
-        at2 = [a for a in ts if a.oriN == at.oriN][0]
+        at2 = [a for a in ts if a.num == at.num][0]
         at.freedir = at2.freedir
         at.cartpos = at2.cartpos
     # average positions for linked atoms
@@ -1342,19 +1342,19 @@ def getSymBaseSymmetry(sl, rp):
     for ll in sl.symbaseslab.linklists:
         newll = []
         for ssl_at in ll:
-            at = [a for a in sl if a.oriN == ssl_at.oriN][0]
+            at = [a for a in sl if a.num == ssl_at.num][0]
             newll.append(at)
             at.linklist = newll
             at.symrefm = np.copy(ssl_at.symrefm)
-    for at in [at for at in sl if at.duplicateOf is not None]:
-        at.duplicateOf.linklist.append(at)
-        at.linklist = at.duplicateOf.linklist
-        at.symrefm = np.copy(at.duplicateOf.symrefm)
+    for at in [at for at in sl if at.duplicate_of]:
+        at.duplicate_of.linklist.append(at)
+        at.linklist = at.duplicate_of.linklist
+        at.symrefm = np.copy(at.duplicate_of.symrefm)
         if rp.SYMMETRIZE_INPUT:
-            cv = at.cartpos[:2] - at.duplicateOf.cartpos[:2]
+            cv = at.cartpos[:2] - at.duplicate_of.cartpos[:2]
             v = np.append(np.round(np.dot(np.linalg.inv(
                                      sl.symbaseslab.ab_cell), cv)), 0.)
-            at.cartpos = (at.duplicateOf.cartpos
+            at.cartpos = (at.duplicate_of.cartpos
                           + np.dot(sl.symbaseslab.ucell, v))
     sl.update_fractional_from_cartesian()
     sl.linklists = []

@@ -1650,7 +1650,7 @@ class ParameterInterpreter:                                                     
                     while n > 0:
                         at = csatlist.pop()
                         if at.el == assignment.flags[0]:
-                            atnums.append(at.oriN)
+                            atnums.append(at.num)
                             n -= 1
                 else:
                     self.rpars.setHaltingLevel(3)

@@ -238,9 +238,9 @@ LinkGroup = Dict[int, Set[int]]
 class SymmetryInfo(InfoBase):
     """Symmetry information pertaining to atoms in a slab."""
 
-    on_planes: Tuple[int] = ()        # oriN of atoms on plane
-    on_axes: Tuple[int] = ()          # oriN of atoms on rotation axis
-    link_groups: LinkGroup = field(   # {oriN: {linked_oriNs}}
+    on_planes: Tuple[int] = ()        # .num of atoms on plane
+    on_axes: Tuple[int] = ()          # .num of atoms on rotation axis
+    link_groups: LinkGroup = field(   # {num: {linked_nums}}
         default_factory=dict
         )
     hermann: str = ''          # expected plane group (Hermann-Maugin)

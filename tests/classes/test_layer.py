@@ -58,15 +58,15 @@ def factory_empty_layer():
     def _make(cls, **kwargs):
         mock_slab = Slab()
         mock_slab.ucell = np.array([[1.1, 0.0, 0.0],
-                      [0.0, 3.9, 0.0],
-                      [0.3, 0.5, 4.8]]).T
+                                    [0.0, 3.9, 0.0],
+                                    [0.3, 0.5, 4.8]]).T
         return cls(mock_slab, 0, **kwargs), LayerInfo()
     return _make
 
 
 def add_atom(layer):
     """Add one atom to layer."""
-    atom = Atom('C', np.array([0.1, 0.2, 0.3]), 1, layer.slab)
+    atom = Atom('C', (0.1, 0.2, 0.3), 1, layer.slab)
     atom.cartpos = atom.pos.dot(atom.slab.ucell.T)
     layer.atlist.append(atom)
     atom.layer = layer

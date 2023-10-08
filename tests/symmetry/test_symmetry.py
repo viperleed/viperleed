@@ -255,9 +255,9 @@ class TestSymmetryConstraints:
             pytest.skip('Not enough symmetry information available')
         with may_fail(first_case, self._known_invalid_constraints):
             for atom in slab:
-                if atom.oriN in info.symmetry.on_planes:
+                if atom.num in info.symmetry.on_planes:
                     assert isinstance(atom.freedir, np.ndarray)
-                elif atom.oriN in info.symmetry.on_axes:
+                elif atom.num in info.symmetry.on_axes:
                     assert not atom.freedir
                 else:
                     assert atom.freedir == 1
@@ -290,7 +290,7 @@ class TestSymmetryConstraints:
         with may_fail(first_case, self._known_invalid_linking):
             for atom_n, linked in info.symmetry.link_groups.items():
                 atom = get_atom(slab.atlist, atom_n)
-                assert set(at.oriN for at in atom.linklist) == linked
+                assert set(at.num for at in atom.linklist) == linked
 
     _known_invalid_constrained_group = {
         'rcm-ucell=rectangular': 'Known to sometimes fail with a random shift',

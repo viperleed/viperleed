@@ -14,11 +14,11 @@ For :math:`(1 \times 1)` cells, it is common (and highly recommended) to choose 
 Units
 -----
 
-ViPErLEED uses units of Ångström (Å) for all distances and vibrational amplitudes in inputs, and outputs. 
+ViPErLEED uses units of Ångström (Å) for all distances and vibrational amplitudes in inputs and outputs.
 Some plots may display picometers (1 pm = 0.01 Å), but this will **always** be clearly labeled.
 
-Energies are in- and output in units of electron volts (eV).
-Note that parts of TensErLEED and certain phaseshift generation programs may use units of `Hartree <https://en.wikipedia.org/wiki/Hartree>`__ internally (and in raw outputs).
+Energies for in- and output are in units of electron volts (eV).
+Parts of TensErLEED and certain phaseshift generation programs may use units of `Hartree <https://en.wikipedia.org/wiki/Hartree>`__ internally (and in raw outputs).
 ViPErLEED takes care of the conversion automatically.
 
 

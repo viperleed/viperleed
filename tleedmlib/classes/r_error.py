@@ -135,7 +135,7 @@ class R_Error():
         r_min = self.get_r_min
         if self.var_r is None:
             logger.warning("Cannot calculate statistical errors for "
-                           f'atoms {range_to_str([at.oriN for at in self.atoms])}')
+                           f'atoms {range_to_str([at.num for at in self.atoms])}')
             return (None, None)
 
         if self.lin_disp is None:

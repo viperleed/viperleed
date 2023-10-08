@@ -410,7 +410,7 @@ def _make_preset_params(rparams, slab):
     preset_params = {}
     site_def = defaultdict(list)
     for atom in slab.getSurfaceAtoms(rparams):
-        site_def[atom.el].append(atom.oriN)
+        site_def[atom.el].append(atom.num)
     preset_params["SITE_DEF"] = {
         element: {"surf": atom_numbers}
         for element, atom_numbers in site_def.items()

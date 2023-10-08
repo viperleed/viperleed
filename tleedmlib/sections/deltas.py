@@ -289,7 +289,7 @@ def deltas(sl, rp, subdomain=False):
         raise
 
     # go through atoms, remove those that have no variation whatsoever:
-    attodo = [at for at in sl if not at.layer.is_bulk]
+    attodo = [at for at in sl if not at.is_bulk]
     j = 0
     while j < len(attodo):
         found = False
@@ -358,12 +358,12 @@ def deltas(sl, rp, subdomain=False):
             checkEls.append("vac")
         for el in checkEls:
             dfiles = [f for f in os.listdir(".")
-                      if f.startswith("DEL_{}_".format(at.oriN) + el)]
+                      if f.startswith(f'DEL_{at.num}_{el}')]
             found = False
             for df in dfiles:
                 if tl_io.checkDelta(df, at, el, rp):
                     found = True
-                    at.deltasGenerated.append(df)
+                    at.known_deltas.append(df)
                     countExisting += 1
                     break
             if not found:
@@ -431,8 +431,8 @@ def deltas(sl, rp, subdomain=False):
         deltaRunTasks.append(rt)
         rt.din = din
         rt.din_short = din_short
-        rt.tensorname = os.path.join(tensordir, "T_{}".format(at.oriN))
-        nameBase = "DEL_{}_".format(at.oriN) + el
+        rt.tensorname = os.path.join(tensordir, f'T_{at.num}')
+        nameBase = f'DEL_{at.num}_{el}'
         n = 1
         nums = []
         for fn in [f for f in os.listdir(".") if f.startswith(nameBase)]:
@@ -444,20 +444,20 @@ def deltas(sl, rp, subdomain=False):
             n = max(nums) + 1
         rt.deltaname = nameBase + "_{}".format(n)
         rt.deltalogname = deltalogname
-        at.deltasGenerated.append(rt.deltaname)
+        at.known_deltas.append(rt.deltaname)
 
-    # sort deltasGenerated
+    # sort known_deltas
     for at in attodo:
         checkEls = list(at.disp_occ.keys())
         if at in vaclist:
             checkEls.append("vac")
-        copydel = at.deltasGenerated[:]
-        at.deltasGenerated = []
+        copydel = at.known_deltas[:]
+        at.known_deltas = []
         for el in checkEls:
-            at.deltasGenerated.append(
+            at.known_deltas.append(
                 [df for df in copydel
                  if df.split("_")[-2].lower() == el.lower()][0])
-        if len(at.deltasGenerated) != len(copydel):
+        if len(at.known_deltas) != len(copydel):
             logger.error("Failed to sort delta files for {}".format(at))
             raise RuntimeError("Inconsistent delta files")
 
@@ -494,7 +494,7 @@ def deltas(sl, rp, subdomain=False):
         except Exception:
             logger.error("No fortran compiler found, cancelling...")
             raise RuntimeError("No Fortran compiler")
-    
+
     for ct in deltaCompTasks:
         ct.fortran_comp = rp.FORTRAN_COMP
         ct.basedir = os.getcwd()
