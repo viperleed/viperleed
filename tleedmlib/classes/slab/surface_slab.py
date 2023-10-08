@@ -330,7 +330,26 @@ class SurfaceSlab(BaseSlab):
             between the bottommost points of the lowest bulk and lowest
             non-bulk layers.
         """
-        raise NotImplementedError
+        if isinstance(rpars.BULK_REPEAT, np.ndarray):
+            bulkc = rpars.BULK_REPEAT.copy()
+            if bulkc[2] < 0:
+                bulkc *= -1
+            return bulkc
+
+        cvec = self.ucell.T[2]
+        if rpars.BULK_REPEAT is None:
+            # Use the distance between the bottommost bulk layer
+            # and the bottommost non-bulk layer, i.e., the current
+            # 'thickness of bulk', plus the gap between 'bulk' and
+            # 'non-bulk' parts.
+            blayers = self.bulk_layers
+            zdiff = (blayers[-1].cartbotz
+                     - self.layers[blayers[0].num - 1].cartbotz)
+        else:  # rpars.BULK_REPEAT is float
+            zdiff = rpars.BULK_REPEAT
+        if only_z_distance:
+            return zdiff
+        return cvec * zdiff / cvec[2]
 
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a set."""

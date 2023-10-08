@@ -146,7 +146,13 @@ class BulkSlab(BaseSlab):
             Bulk repeat vector pointing from the bulk to the surface,
             or its component along z.
         """
-        raise NotImplementedError
+        bulkc = self.ucell.T[2].copy()
+        if bulkc[2] < 0:
+            bulkc *= -1
+
+        if isinstance(rpars.BULK_REPEAT, np.ndarray) or not only_z_distance:
+            return bulkc
+        return bulkc[2]
 
     def getCandidateLayerPeriod(self, eps=1e-4):
         """For a bulk slab, find at what offsets the sublayers repeat,

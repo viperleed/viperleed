@@ -110,10 +110,7 @@ def apply_scaling(sl, rp, which, scale):
     sl.bulkslab.update_fractional_from_cartesian()
     sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
     sl.bulkslab.update_cartesian_from_fractional()
-    if type(rp.BULK_REPEAT) == float:
-        rp.BULK_REPEAT *= scale
-    elif rp.BULK_REPEAT is not None:
-        rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
+    rp.BULK_REPEAT = sl.bulkslab.get_bulk_repeat(rp)
 
 
 
