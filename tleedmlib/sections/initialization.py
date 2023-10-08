@@ -24,6 +24,7 @@ from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
 from viperleed.tleedmlib.classes.rparams import DomainParameters
 from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
+from viperleed.tleedmlib.classes.slab import NoBulkRepeatError
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
 from viperleed.tleedmlib.files import patterninfo, phaseshifts, poscar, vibrocc
@@ -151,18 +152,21 @@ def initialization(sl, rp, subdomain=False):
 
     # try identifying bulk repeat:
     if rp.BULK_REPEAT is None:
-        rvec = sl.getBulkRepeat(rp)
-        if rvec is not None:
-            rp.BULK_REPEAT = rvec
-            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
+        try:
+            rp.BULK_REPEAT = sl.identify_bulk_repeat(rp.SYMMETRY_EPS,
+                                                     rp.SYMMETRY_EPS_Z)
+        except NoBulkRepeatError:
+            pass
+        else:
+            vec_str = '[{:.5f} {:.5f} {:.5f}]'.format(*rp.BULK_REPEAT)
             parameters.modifyPARAMETERS(
-                rp, "BULK_REPEAT", vec_str,
-                comment="Automatically detected repeat vector"
+                rp, 'BULK_REPEAT', vec_str,
+                comment='Automatically detected repeat vector'
                 )
-            logger.info(f"Detected bulk repeat vector: {vec_str}")
+            logger.info(f'Detected bulk repeat vector: {vec_str}')
             # update bulk slab vector
             sl.bulkslab.update_cartesian_from_fractional()
-            sl.bulkslab.ucell[:, 2] = np.copy(rvec)
+            sl.bulkslab.ucell[:, 2] = rp.BULK_REPEAT
             sl.bulkslab.collapse_cartesian_coordinates()
     if rp.BULK_REPEAT is None:
         # failed to detect repeat vector, use fixed distance instead

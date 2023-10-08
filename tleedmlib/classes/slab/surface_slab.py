@@ -24,6 +24,7 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab
 from .slab_errors import AlreadyMinimalError
+from .slab_errors import MissingBulkSlabError, NoBulkRepeatError
 
 try:
     import ase
@@ -113,7 +114,7 @@ class SurfaceSlab(BaseSlab):
         self.displists = []
         self.preprocessed = False
         self.deltas_initialized = False
-        self.symbaseslab = None
+        self.symbaseslab = None                                                 # TODO: needed?
 
     @property
     def is_bulk(self):
@@ -299,37 +300,37 @@ class SurfaceSlab(BaseSlab):
                                     * bsl.ucell[2, 2] / self.ucell[2, 2]))
         return (-newC, slab_cuts)
 
-    def getBulkRepeat(self, rp):
-        """Based on a pre-existing definition of the bulk, tries to identify
-        a repeat vector for which the bulk matches the slab above. Returns that
-        vector in cartesian coordinates, or None if no match is found."""
-        eps = rp.SYMMETRY_EPS
-        if not self.sublayers:
-            self.create_sublayers(rp.SYMMETRY_EPS_Z)
-        if self.bulkslab is None:
-            self.makeBulkSlab(rp)
-        if not self.bulkslab.sublayers:
-            self.bulkslab.create_sublayers(rp.SYMMETRY_EPS_Z)
-        nsub = self.bulkslab.n_sublayers
-        if self.n_sublayers < 2*nsub:
-            return None
-        # nonbulk_subl = self.sublayers[:-nsub]
-        z_range = (self.sublayers[-nsub].cartpos[2],
-                   self.sublayers[-1].cartpos[2])
-        baseLayer = self.sublayers[-1-nsub]
-        ori = baseLayer.cartpos  # compare displacements from here
-        repeat_vectors = []
-        for at in self.sublayers[-1]:
-            v = at.cartpos - ori
-            if self.is_translation_symmetric(v, eps, z_periodic=False,
-                                             z_range=z_range):
-                repeat_vectors.append(-v)
-        if len(repeat_vectors) == 0:
-            return None
-        # pick the shortest repeat vector
-        cv = min(repeat_vectors, key=lambda x: np.linalg.norm(x))
-        cv[2] = -cv[2]  # leed coordinates to standard
-        return cv
+    def get_bulk_repeat(self, rpars, only_z_distance=False):
+        """Return the bulk repeat vector (with positive z).
+
+        Notice that this method does **not attempt to identify an
+        unknown bulk-repeat vector**. If that's what you're after,
+        use `identify_bulk_repeat()` instead.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS to be interpreted.
+        only_z_distance : bool, optional
+            Whether a distance in the direction perpendicular to the
+            surface (i.e., not necessarily along the c axis) should
+            be returned rather than a full vector. This is ignored
+            if `rpars.BULK_REPEAT` is a vector. Default is False.
+
+        Returns
+        -------
+        bulk_repeat_vector : numpy.ndarray or float
+            Bulk repeat vector pointing from the bulk to the surface,
+            or its component along z. If `rpars.BULK_REPEAT` is a
+            vector, a copy is returned. Otherwise, the vector is taken
+            to be parallel to the c axis of this slab. Its length is
+            calculated from a z distance (i.e., perpendicular to the
+            surface). The z distance is taken as either the value of
+            `rpars.BULK_REPEAT` (if it is not-None) or the z distance
+            between the bottommost points of the lowest bulk and lowest
+            non-bulk layers.
+        """
+        raise NotImplementedError
 
     def getSurfaceAtoms(self, rp):
         """Checks which atoms are 'at the surface', returns them as a set."""
@@ -385,6 +386,99 @@ class SurfaceSlab(BaseSlab):
             if len(covered) + len(surfats) >= len(atoms):
                 break   # that's all of them
         return surfats
+
+    def identify_bulk_repeat(self, eps, epsz=None):
+        """Find a repeat vector for which the bulk matches the slab above.
+
+        Notice that this may not be the shortest of such vectors: the
+        vector returned is the the shortest among those that bring
+        `bulkslab` to match the bottommost part of the non-bulk part
+        of this slab. Should `bulkslab` be 'too thick' (e.g., the
+        LAYER_CUTS select composite layers with an exaggerated number
+        of sublayers), the vector returned will not be the shortest
+        possible.
+
+        Parameters
+        ----------
+        eps : float
+            Cartesian tolerance for in-plane comparisons (Angstrom)
+        epsz : float or None, optional
+            Cartesian tolerance for comparisons along the direction
+            perpendicular to the surface. If not given or None, take
+            the same value as `eps`. This argument is used only if
+            this slab or its `bulkslab` do not have yet `sublayers`.
+            Default is None.
+
+        Returns
+        -------
+        repeat_vec : numpy.ndarray
+            Repeat vector in Cartesian coordinates, with (x, y) in the
+            surface plane, and z directed from the solid towards the
+            surface, i.e., opposite to the usual LEED convention.
+
+        Raises
+        ------
+        MissingBulkSlabError
+            If this slab has no `bulkslab`.
+        NoBulkRepeatError
+            If a bulk repeat vector could not be found.
+        """
+        if self.bulkslab is None:
+            raise MissingBulkSlabError(
+                f'{type(self).__name__}.identify_bulk_repeat: missing '
+                'bulkslab. Call makeBulkSlab, then try again.'
+                )
+        if epsz is None:
+            epsz = eps
+        if not self.sublayers:
+            self.create_sublayers(epsz)
+        if not self.bulkslab.sublayers:
+            self.bulkslab.create_sublayers(epsz)
+
+        n_bulk_lay = self.bulkslab.n_sublayers
+        if self.n_sublayers < 2*n_bulk_lay:
+            raise NoBulkRepeatError(
+                f'{type(self).__name__}.identify_bulk_repeat: failed. '
+                f'Too few sublayers in slab ({self.n_sublayers}) with '
+                f'respect to bulkslab ({n_bulk_lay}). Should be at least '
+                f'{2*n_bulk_lay}'
+                )
+
+        # Pick the region of the slab that should be considered for
+        # comparison: from the topmost bulk layer all the way down
+        z_range = (self.bulkslab.sublayers[0].cartbotz,                         # TODO: @fkraushofer used to be self.sublayers[-n_bulk_lay], and both used .cartpos[2] instead of .cartbotz. I think that using self.bulkslab.sublayers[0] is equivalent, and that using .cartbotz is a bit better as it may loose atoms at the bottom. Did I misinterpret something?
+                   self.sublayers[-1].cartbotz)
+
+        # Construct candidate repeat vectors as all those connecting
+        # the first non-bulk layer to all atoms of the bottommost layer
+        first_non_bulk_layer = self.sublayers[-1-n_bulk_lay]
+        if first_non_bulk_layer.element != self.sublayers[-1].element:
+            # Can't detect a repeat vector if elements don't match
+            raise NoBulkRepeatError(
+                f'{type(self).__name__}.identify_bulk_repeat: failed. '
+                'Chemical elements mismatched in first non-bulk sublayer '
+                f'({first_non_bulk_layer.num}, {first_non_bulk_layer.element})'
+                f' and bottommost sublayer ({self.sublayers[-1].element}).'
+                )
+
+        ori = first_non_bulk_layer.cartpos                                      # TODO: need to flip with .cartpos[2]?
+        repeat_vectors = []
+        for atom in self.sublayers[-1]:
+            test_v = atom.cartpos - ori          # From slab to bulk
+            if self.is_translation_symmetric(test_v, eps, z_periodic=False,
+                                             z_range=z_range):
+                repeat_vectors.append(-test_v)   # From bulk to slab
+        if not repeat_vectors:
+            raise NoBulkRepeatError(
+                f'{type(self).__name__}.identify_bulk_repeat: failed. '
+                'No repeat vectors'
+                )
+
+        # Pick the shortest repeat vector, and return it with the
+        # 'conventional' z direction (positive from bulk to surface)
+        shortest = min(repeat_vectors, key=np.linalg.norm)
+        shortest[2] *= -1                                                       # TODO: .cartpos[2]
+        return shortest
 
     def makeBulkSlab(self, rp):
         """Copies self to create a bulk slab, in which everything apart from the

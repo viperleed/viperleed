@@ -23,9 +23,17 @@ class InvalidUnitCellError(SlabError):
     """Exception raised when the unit cell of a slab is inappropriate."""
 
 
+class MissingBulkSlabError(SlabError, RuntimeError):
+    """A bulkslab attribute would be needed but it is not available."""
+
+
 class MissingLayersError(SlabError):
     """An operation requires layers defined."""
 
 
 class MissingSublayersError(SlabError):
     """An operation requires sublayers defined."""
+
+
+class NoBulkRepeatError(SlabError, RuntimeError):
+    """Exception raised when failing to find a bulk repeat vector."""

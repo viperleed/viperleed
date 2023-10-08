@@ -126,10 +126,26 @@ class BulkSlab(BaseSlab):
             return "None"
         return b3ds
 
-    def getBulkRepeat(self, rp):
-        """Based on a pre-existing definition of the bulk, tries to identify
-        a repeat vector for which the bulk matches the slab above. Returns that
-        vector in cartesian coordinates, or None if no match is found."""
+    def get_bulk_repeat(self, rpars, only_z_distance=False):
+        """Return the bulk repeat vector (with positive z).
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS to be interpreted. This is unused for
+            a bulk slab.
+        only_z_distance : bool, optional
+            Whether a distance in the direction perpendicular to the
+            surface (i.e., not necessarily along the c axis) should
+            be returned rather than a full vector. This is ignored
+            if `rpars.BULK_REPEAT` is a vector. Default is False.
+
+        Returns
+        -------
+        bulk_repeat_vector : numpy.ndarray or float
+            Bulk repeat vector pointing from the bulk to the surface,
+            or its component along z.
+        """
         raise NotImplementedError
 
     def getCandidateLayerPeriod(self, eps=1e-4):

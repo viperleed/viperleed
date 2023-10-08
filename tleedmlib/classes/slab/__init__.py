@@ -12,5 +12,7 @@ The API of the package remains unchanged.
 
 from .bulk_slab import BulkSlab
 from .slab_errors import SlabError, AlreadyMinimalError
+from .slab_errors import InvalidUnitCellError, MissingBulkSlabError
 from .slab_errors import MissingLayersError, MissingSublayersError
+from .slab_errors import NoBulkRepeatError
 from .surface_slab import SurfaceSlab as Slab

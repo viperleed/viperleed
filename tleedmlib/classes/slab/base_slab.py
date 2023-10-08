@@ -663,10 +663,35 @@ class BaseSlab(AtomContainer):
                 atom.initDisp()
 
     @abstractmethod
-    def getBulkRepeat(self, rp):
-        """Based on a pre-existing definition of the bulk, tries to identify
-        a repeat vector for which the bulk matches the slab above. Returns that
-        vector in cartesian coordinates, or None if no match is found."""
+    def get_bulk_repeat(self, rpars, only_z_distance=False):
+        """Return the bulk repeat vector (with positive z).
+
+        Notice that this method does **not attempt to identify an
+        unknown bulk-repeat vector**.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS to be interpreted.
+        only_z_distance : bool, optional
+            Whether a distance in the direction perpendicular to the
+            surface (i.e., not necessarily along the c axis) should
+            be returned rather than a full vector. This is ignored
+            if `rpars.BULK_REPEAT` is a vector. Default is False.
+
+        Returns
+        -------
+        bulk_repeat_vector : numpy.ndarray or float
+            Bulk repeat vector pointing from the bulk to the surface,
+            or its component along z. If `rpars.BULK_REPEAT` is a
+            vector, a copy is returned. Otherwise, the vector is taken
+            to be parallel to the c axis of this slab. Its length is
+            calculated from a z distance (i.e., perpendicular to the
+            surface). The z distance is taken as either the value of
+            `rpars.BULK_REPEAT` (if it is not-None) or the z distance
+            between the bottommost points of the lowest bulk and lowest
+            non-bulk layers.
+        """
 
     def get_minimal_ab_cell(self, eps, epsz=None, warn_convention=False):       # TODO: write a test case for the reduction of POSCAR Sb on Si(111)  # too-many-locals
         """Check if there is a 2D unit cell smaller than the current one.
