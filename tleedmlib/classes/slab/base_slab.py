@@ -343,7 +343,7 @@ class BaseSlab(AtomContainer):
         new_layers = []
         for layer in bulk_layers.copy():  # .copy avoids infinite loop
             # Add a new bulk layer and duplicate of all its atoms
-            new_layer = Layer(self, self.n_layers, True)
+            new_layer = Layer(self, self.n_layers, is_bulk=True)
             new_layers.append(new_layer)
             self.layers.append(new_layer)
             for atom in layer:
