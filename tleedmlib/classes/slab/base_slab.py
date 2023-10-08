@@ -14,7 +14,7 @@ both. This module contains refactored and modified functionality that
 used to be contained in the original slab module by F. Kraushofer.
 """
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from collections import Counter
 import copy
 import itertools
@@ -32,6 +32,7 @@ from viperleed.tleedmlib.base import add_edges_and_corners, collapse
 from viperleed.tleedmlib.base import collapse_fractional, pairwise
 from viperleed.tleedmlib.base import rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.atom_containers import AtomContainer
 from viperleed.tleedmlib.classes.layer import Layer, SubLayer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
@@ -54,7 +55,7 @@ _LOGGER = logging.getLogger('tleedm.slab')
 #       appropriate copies of selected parts of the slab. Most of the times,
 #       we only need ucell and some lightweight version of atlist (maybe as
 #       a tuple of lightweight Atoms that do not hold references to this slab).
-class BaseSlab(ABC):
+class BaseSlab(AtomContainer):
     """An abstract base class representing a solid.
 
     Contains unit cell, element information and atom coordinates.
