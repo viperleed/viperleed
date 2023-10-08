@@ -1051,7 +1051,7 @@ class BaseSlab(AtomContainer):
         #   consistent with the slab layers
         for i, layer in enumerate(ssl.layers):
             layer.slab = ssl
-            layer.getLayerPos()
+            layer.update_position()
             layer.num = i
             layer.atlist = [at for at in layer if at in ssl]
         return ssl

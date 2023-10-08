@@ -470,7 +470,7 @@ class SurfaceSlab(BaseSlab):
         #   consistent with the slab layers
         for i, layer in enumerate(bsl.layers):
             layer.slab = bsl
-            layer.getLayerPos()
+            layer.update_position()
             layer.num = i
             layer.atlist = [at for at in layer if at in bsl]
         return bsl
