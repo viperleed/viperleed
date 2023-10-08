@@ -291,60 +291,81 @@ class BaseSlab(AtomContainer):
             setattr(instance, attr, copy.deepcopy(value, memo))
         return instance
 
-    def addBulkLayers(self, rp, n=1):
-        """Returns a copy of the slab with n bulk units appended at the
-        bottom, and a list of the new atoms that were added."""
-        ts = copy.deepcopy(self) # temporary slab
-        newbulkats = []
-        duplicated = []
-        zdiff = 0.
-        for _ in range(n):
-            blayers = ts.bulk_layers
-            if isinstance(rp.BULK_REPEAT, np.ndarray):
-                bulkc = np.copy(rp.BULK_REPEAT)
-                if bulkc[2] < 0:
-                    # perhaps vector given from surface to bulk instead of reverse...
-                    bulkc = -bulkc
-            else:
-                cvec = ts.ucell[:, 2]
-                if zdiff == 0. and rp.BULK_REPEAT is None:
-                    # assume that interlayer vector from bottom non-bulk to top
-                    # bulk layer is the same as between bulk units
-                    zdiff = (blayers[-1].cartbotz
-                             - ts.layers[blayers[0].num-1].cartbotz)
-                elif zdiff == 0. and isinstance(rp.BULK_REPEAT,
-                                                (float, np.floating)):
-                    zdiff = rp.BULK_REPEAT
-                bulkc = cvec * zdiff / cvec[2]
-            ts.update_cartesian_from_fractional()
-            cfact = (ts.ucell[2, 2] + abs(bulkc[2])) / ts.ucell[2, 2]
-            ts.ucell[:, 2] = ts.ucell[:, 2] * cfact
-            bulkc[2] = -bulkc[2]
-            original_atoms = ts.atlist[:] # all atoms before adding layers
+    def _add_one_bulk_cell(self, bulk_layers, bulkc_par,
+                           bulkc_par_atoms, bulkc_perp_atoms,
+                           new_atoms_start_index=None):
+        """Add one bulk unit cell and return the new atoms.
 
-            # split bulkc into parts parallel and orthogonal to unit cell c
-            # this allows to keep the same ucell and shift correctly the new bulk layers
-            c_direction = ts.ucell[:, 2] / np.dot(ts.ucell[:, 2], ts.ucell[:, 2])
-            bulkc_project_to_c = np.dot(bulkc, ts.ucell[:, 2]) * c_direction
-            bulkc_perp_to_c = bulkc - bulkc_project_to_c
-            added_this_loop = []
-            for at in original_atoms:
-                if at.is_bulk and at not in duplicated:
-                    new_atom = at.duplicate()
-                    newbulkats.append(new_atom)
-                    duplicated.append(at)
-                    added_this_loop.append(new_atom)
-                    new_atom.num = ts.n_atoms
+        This method is intended to be used only internally in
+        Slab objects. Use with_extra_bulk_units (for non-bulk
+        slabs) or with_double_thickness (for bulk ones).
 
-                # old atoms get shifted up along ucell c
-                at.cartpos += bulkc_project_to_c
-            for at in added_this_loop:
-                # new atoms get shifted perpendicular to ucell c
-                at.cartpos -= bulkc_perp_to_c
-            # TODO: could be done outside loop?
-            ts.collapse_cartesian_coordinates(update_origin=True)
-            ts.sort_original()
-        return ts, newbulkats
+        Parameters
+        ----------
+        bulk_layers : list of Layer
+            The layers of the bottommost bulk cell to be repeated.
+        bulkc_par : numpy.ndarray
+            Component of the bulk repeat vector parallel to the
+            c axis of the slab. This is used to expand the unit
+            cell. Shape (3,).
+        bulkc_par_atoms : numpy.ndarray
+            Component of the bulk repeat vector parallel to the c axis,
+            to be used for the Cartesian positions of the atoms. The
+            difference with `bulkc_par` is only due to the fact that we
+            store Cartesian coordinates of atoms with z going INTO THE
+            SOLID, while the unit cell reference has z going TOWARD
+            THE SURFACE. Shape (3,).
+        bulkc_perp_atoms : numpy.ndarray
+            Component of the bulk repeat vector perpendicular to the
+            c axis, to be used for the Cartesian positions of the
+            atoms. Shape (3,).
+        new_atoms_start_index : int or None, optional
+            The initial index to be used as num for the atoms that
+            are added as a consequence of the duplication.
+
+        Returns
+        -------
+        new_atoms : list
+            The atoms added to this slab.
+        new_layers : list
+            The Layer objects added to this slab.
+        """
+        if new_atoms_start_index is None:
+            new_atoms_start_index = self.n_atoms + 1
+        # The mess with needing three different components of the
+        # bulk repeat vector comes from the fact that we want to
+        # add atoms (and layers) below, but not shift the current
+        # ones relative to the current unit cell. This is useful
+        # because the 'old atoms' appear then at the same in-plane
+        # position in, e.g., VESTA.
+        self.ucell.T[2] += bulkc_par  # Expand unit cell
+        new_atoms = []
+        new_layers = []
+        for layer in bulk_layers.copy():  # .copy avoids infinite loop
+            # Add a new bulk layer and duplicate of all its atoms
+            new_layer = Layer(self, self.n_layers, True)
+            new_layers.append(new_layer)
+            self.layers.append(new_layer)
+            for atom in layer:
+                new_atom = atom.duplicate(add_to_atlists=False,
+                                          num=new_atoms_start_index)
+                new_atoms_start_index += 1
+                new_layer.atlist.append(new_atom)
+                new_atom.layer = new_layer
+                self.atlist.append(new_atom)
+                self.n_per_elem[new_atom.el] += 1
+                new_atoms.append(new_atom)
+                # Shift new atoms only perpendicular to unit-cell c
+                new_atom.cartpos -= bulkc_perp_atoms
+
+        # Shift old atoms up along unit-cell c
+        for old_atom in self:
+            if old_atom not in new_atoms:
+                old_atom.cartpos += bulkc_par_atoms
+
+        # Finally, recalculate the positions of all layers
+        self.update_layer_coordinates()
+        return new_atoms, new_layers
 
     def check_a_b_in_plane(self):
         """Raise InvalidUnitCellError if a, b have out-of-plane components."""

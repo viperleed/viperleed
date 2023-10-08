@@ -229,18 +229,18 @@ def initialization(sl, rp, subdomain=False):
             raise
 
     # write POSCAR_bulk_appended
-    n = 1
+    n_cells = 1
     if bsl.n_sublayers <= len(bsl.elements)*2:
         # For bulk slabs with very few layers, add a few more
         # repetitions to help the user see better the bulk part
-        n += 1
+        n_cells += 1
         if bsl.n_sublayers <= len(bsl.elements):
-            n += 1
+            n_cells += 1
     try:
-        poscar.write(sl.addBulkLayers(rp, n=n)[0],
+        poscar.write(sl.with_extra_bulk_units(rp, n_cells=n_cells)[0],
                      filename='POSCAR_bulk_appended')
     except Exception:
-        logger.warning("Exception occurred while writing POSCAR_bulk_appended")
+        logger.warning('Exception occurred while writing POSCAR_bulk_appended')
 
     # Check for an ambiguous angle phi
     _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1)

@@ -75,7 +75,7 @@ def runPhaseshiftGen_old(sl, rp,
     excosource = excosource.resolve()
 
     _, lmax = rp.get_limits('LMAX')
-    nsl, newbulkats = sl.addBulkLayers(rp)
+    nsl, newbulkats = sl.with_extra_bulk_units(rp, 1)
     outvals = {}
     # dict containing lists of values to output: outvals[energy][block][L]
 
@@ -586,10 +586,7 @@ def make_atom_types(rp, sl, additional_layers):
 
     # sl = original slab, nsl = extended
 
-    trial_slab = copy.deepcopy(sl)
-    _, added_bulk = trial_slab.addBulkLayers(rp, n=1)
-    number_of_atoms_in_bulk_layer = len(added_bulk)
-    extended_cell, new_bulk_atoms = sl.addBulkLayers(rp, n=additional_layers)
+    extended_cell, _ = sl.with_extra_bulk_units(rp, additional_layers)
     extended_cell.project_c_to_z() # project C to Z for phaseshifts only
     extended_cell.collapse_cartesian_coordinates()
     uct = extended_cell.ucell.transpose() # unit cell vectors in matrix
@@ -842,7 +839,7 @@ def organize_atoms_by_types(newbulkats, nsl, sl, rp, additional_layers):
     atom_types = {} # dict will contain Atom types
 
     number_of_atoms_in_bulk_layer = len(newbulkats)
-    extended_slab, new_bulk_atoms = sl.addBulkLayers(rp, additional_layers)
+    extended_slab, new_bulk_atoms = sl.with_extra_bulk_units(rp, additional_layers)
     for atom in extended_slab:
         if atom not in new_bulk_atoms:
             new_bulk = False

@@ -14,6 +14,7 @@ with the former module-based structure of slab.py.
 from collections import Counter
 import copy
 import logging
+from math import remainder as round_remainder
 
 import numpy as np
 
@@ -23,8 +24,8 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab
-from .slab_errors import AlreadyMinimalError
-from .slab_errors import MissingBulkSlabError, NoBulkRepeatError
+from .slab_errors import AlreadyMinimalError, MissingBulkSlabError
+from .slab_errors import NoBulkRepeatError, SlabError
 
 try:
     import ase
@@ -641,3 +642,94 @@ class SurfaceSlab(BaseSlab):
             at.initDisp(force=True)
             at.constraints = {1: {}, 2: {}, 3: {}}
         return
+
+    def with_extra_bulk_units(self, rpars, n_cells):
+        """Return a copy with extra bulk unit cells added at the bottom.
+
+        It is important to realize that the `bulk_appended` slab
+        returned will have **more** than `rpars.N_BULK_LAYERS` bulk
+        layers: There will be n_cells * len(self.bulk_layers).
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS  from which BULK_REPEAT is taken.
+        n_cells : int
+            The number of bulk unit cells to be added to the
+            copy returned.
+
+        Returns
+        -------
+        bulk_appended : Slab
+            A copy of self with `n_cells` bulk cells added at the
+            bottom.
+        new_bulk_atoms : list
+            The Atoms that were added to append the new bulk cells.
+
+        Raises
+        ------
+        SlabError
+            If this method is called before any layer was identified,
+            or if none of the layers is labelled as bulk.
+        SlabError
+            If the bulk repeat vector would give an unreasonably small
+            interlayer distance. This may mean that (1) there are too
+            few layers (e.g., only one thick layer), or (2) the bulk
+            was not identified correctly (e.g., wrong BULK_REPEAT).
+        """
+        bulk_appended = copy.deepcopy(self)
+        bulk_layers = bulk_appended.bulk_layers
+        if not bulk_layers:
+            raise SlabError('No bulk layers to duplicate')
+
+        # First get the bulk repeat vector (with positive z). Take into
+        # account that there already may be multiple bulk layers at the
+        # bottom. In that case the thickness of the bulk is larger than
+        # the bulk repeat, and it must be a multiple of its z component
+        bulk_c = self.get_bulk_repeat(rpars)
+        if abs(bulk_c[2]) < 0.1:
+            raise SlabError('Bulk interlayer distance is too small: '
+                            f'{bulk_c[2]}. Check LAYER_CUTS.')
+        bulk_thickness = abs(bulk_layers[0].cartori[2]
+                             - bulk_layers[-1].cartbotz)
+        if bulk_thickness > bulk_c[2]:
+            assert abs(round_remainder(bulk_thickness, bulk_c[2])) < 1e-3
+            bulk_c *= round(bulk_thickness/bulk_c[2]) + 1
+
+        # Now take the component of bulk_c parallel to unit-cell c.
+        # This will be used for expanding the unit cell.
+        slab_c = bulk_appended.ucell.T[2]
+        slab_c_direction = slab_c / np.linalg.norm(slab_c)
+        bulk_c_par = bulk_c.dot(slab_c_direction) * slab_c_direction
+
+        # Since we use the opposite-z convention for atoms, we also
+        # need the two components with flipped z: We will move old
+        # atoms up along unit-cell c, while new atoms will be shifted
+        # only in the ab plane.
+        bulk_c[2] *= -1                                                          # TODO: .cartpos[2]
+        bulk_c_par_atoms = bulk_c.dot(slab_c_direction) * slab_c_direction
+        bulk_c_perp_atoms = bulk_c - bulk_c_par_atoms
+
+        bulk_appended.update_cartesian_from_fractional()
+        new_bulk_atoms = []
+        for _ in range(n_cells):
+            # The trick to get it right is always adding atoms as
+            # duplicates of the bottommost bulk layers, which may
+            # either be the ones that this slab originally had, or
+            # those that we have just added.
+            # pylint: disable=protected-access
+            (added_atoms,
+             bulk_layers) = bulk_appended._add_one_bulk_cell(bulk_layers,
+                                                             bulk_c_par,
+                                                             bulk_c_par_atoms,
+                                                             bulk_c_perp_atoms)
+            new_bulk_atoms.extend(added_atoms)
+        bulk_appended.collapse_cartesian_coordinates(update_origin=True)
+
+        bulk_appended.sort_original()
+        # Invalidate outdated information
+        bulk_appended.sublayers = []
+
+        if not bulk_appended.is_bulk:
+            bulk_appended.bulkslab = None
+        return bulk_appended, new_bulk_atoms
