@@ -326,12 +326,12 @@ class BaseSlab(ABC):
             bulkc_perp_to_c = bulkc - bulkc_project_to_c
             added_this_loop = []
             for at in original_atoms:
-                if at.layer.is_bulk and at not in duplicated:
+                if at.is_bulk and at not in duplicated:
                     new_atom = at.duplicate()
                     newbulkats.append(new_atom)
                     duplicated.append(at)
                     added_this_loop.append(new_atom)
-                    new_atom.oriN = ts.n_atoms
+                    new_atom.num = ts.n_atoms
 
                 # old atoms get shifted up along ucell c
                 at.cartpos += bulkc_project_to_c
@@ -855,7 +855,7 @@ class BaseSlab(ABC):
         SiteType objects, based on the SITE_DEF parameters from the supplied
         Rparams."""
         atlist = self.atlist[:]     # copy to not have any permanent changes
-        atlist.sort(key=lambda atom: atom.oriN)
+        atlist.sort(key=attrgetter('num'))
         sl = []
         for el in rp.SITE_DEF:
             for sitename in rp.SITE_DEF[el]:
@@ -1007,7 +1007,7 @@ class BaseSlab(ABC):
     def makeSymBaseSlab(self, rp, transform=None):
         """Copies self to create a symmetry base slab by collapsing to the
         cell defined by rp.SYMMETRY_CELL_TRANSFORM, then removing duplicates.
-        Also assigns the duplicateOf variable for all atoms in self.atlist.
+        Also assigns the duplicate_of variable for all atoms in self.atlist.
         By default, the transformation matrix will be taken from rp, but a
         different matrix can also be passed."""
         ssl = copy.deepcopy(self)
@@ -1030,14 +1030,13 @@ class BaseSlab(ABC):
             i = 0
             while i < subl.n_atoms:
                 j = i+1
-                baseat = [a for a in self
-                          if a.oriN == subl.atlist[i].oriN][0]
+                baseat = [a for a in self if a.num == subl.atlist[i].num][0]
                 while j < subl.n_atoms:
-                    if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
-                                               eps=rp.SYMMETRY_EPS):
+                    if subl.atlist[i].is_same_xy(subl.atlist[j],
+                                                 eps=rp.SYMMETRY_EPS):
                         for a in [a for a in self
-                                  if a.oriN == subl.atlist[j].oriN]:
-                            a.duplicateOf = baseat
+                                  if a.num == subl.atlist[j].num]:
+                            a.duplicate_of = baseat
                         subl.atlist.pop(j)
                     else:
                         j += 1
@@ -1080,11 +1079,11 @@ class BaseSlab(ABC):
         for (i, at) in enumerate(self):
             if self.bulkslab is not None:
                 for bat in [a for a in self.bulkslab
-                            if a.oriN == at.oriN
+                            if a.num == at.num
                             and a not in bulkAtsRenumbered]:
-                    bat.oriN = i+1
+                    bat.num = i+1
                     bulkAtsRenumbered.append(bat)
-            at.oriN = i+1
+            at.num = i+1
 
     def revertUnitCell(self, restoreTo=None):
         """If the unit cell in a and b was transformed earlier, restore the
@@ -1129,7 +1128,7 @@ class BaseSlab(ABC):
 
     def sort_original(self):
         """Sort `slab.atlist` by original atom order from POSCAR."""
-        self.atlist.sort(key=attrgetter('oriN'))
+        self.atlist.sort(key=attrgetter('num'))
 
     def update_cartesian_from_fractional(self, update_origin=False):            # TODO: should we do anything to the .bulkslab too?
         """Assign absolute Cartesian coordinates to all atoms.

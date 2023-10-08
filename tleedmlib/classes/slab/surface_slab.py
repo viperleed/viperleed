@@ -377,9 +377,10 @@ class SurfaceSlab(BaseSlab):
             surfats.update(a for a in self
                            if (a.pos[2] >= atom.pos[2]
                                and a not in covered))
-            covered.update(a for a in self
-                           if (a.pos[2] < atom.pos[2]
-                               and a.isSameXY(atom.cartpos[:2], eps=r)))
+            covered.update(
+                a for a in self
+                if a.pos[2] < atom.pos[2] and a.is_same_xy(atom, eps=r)
+                )
             if len(covered) + len(surfats) >= len(atoms):
                 break   # that's all of them
         return surfats
@@ -395,7 +396,7 @@ class SurfaceSlab(BaseSlab):
         # construct bulk slab
         bsl = BulkSlab.from_slab(self)
         bsl.clear_symmetry_and_ucell_history()
-        bsl.atlist = [at for at in bsl if at.layer.is_bulk]
+        bsl.atlist = [at for at in bsl if at.is_bulk]
         bsl.layers = bsl.bulk_layers
         bsl.update_cartesian_from_fractional()
         al = bsl.atlist[:]     # temporary copy
@@ -455,8 +456,8 @@ class SurfaceSlab(BaseSlab):
             while i < subl.n_atoms:
                 j = i+1
                 while j < subl.n_atoms:
-                    if subl.atlist[i].isSameXY(subl.atlist[j].cartpos[:2],
-                                               eps=rp.SYMMETRY_EPS):
+                    if subl.atlist[i].is_same_xy(subl.atlist[j],
+                                                 eps=rp.SYMMETRY_EPS):
                         subl.atlist.pop(j)
                     else:
                         j += 1
@@ -522,13 +523,13 @@ class SurfaceSlab(BaseSlab):
         if keepDisp:
             return
         for at in self:
-            at.deltasGenerated = []
+            at.known_deltas = []
             at.initDisp(force=True)
             at.constraints = {1: {}, 2: {}, 3: {}}
         return
 
     def updateAtomNumbers(self):
-        """Updates atom oriN - should not happen normally, but necessary if
+        """Updates atom numbers - should not happen normally, but necessary if
         atoms get deleted."""
         for (i, at) in enumerate(self):
-            at.oriN = i+1
+            at.num = i+1
