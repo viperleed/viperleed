@@ -41,7 +41,7 @@ class BulkSlab(BaseSlab):
         Chemical elements in the slab, including from `ELEMENT_MIX`
     n_per_elem : dict {str: int}
         The number of atoms per POSCAR element.
-    atlist : list of Atom
+    atlist : AtomList
         List of all atoms in the slab.
     layers : list of Layer
         List of Layer objects, where each `layer` is a composite

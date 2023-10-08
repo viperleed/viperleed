@@ -32,7 +32,7 @@ from viperleed.tleedmlib.base import add_edges_and_corners, collapse
 from viperleed.tleedmlib.base import collapse_fractional, pairwise
 from viperleed.tleedmlib.base import rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.atom_containers import AtomContainer
+from viperleed.tleedmlib.classes.atom_containers import AtomContainer, AtomList
 from viperleed.tleedmlib.classes.layer import Layer, SubLayer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
@@ -74,7 +74,7 @@ class BaseSlab(AtomContainer):
         Chemical elements in the slab, including from `ELEMENT_MIX`
     n_per_elem : dict {str: int}
         The number of atoms per POSCAR element.
-    atlist : list of Atom
+    atlist : AtomList
         List of all atoms in the slab.
     layers : list of Layer
         List of Layer objects, where each `layer` is a composite
@@ -116,7 +116,7 @@ class BaseSlab(AtomContainer):
         self.poscar_scaling = 1.                                                # base
         self.chemelem = set()                                                   # base
         self.n_per_elem = {}                                                    # base
-        self.atlist = []                                                        # base
+        self.atlist = AtomList()                                                # base
         self.layers = []                                                        # base
         self.sublayers = []                                                     # base
         self.sitelist = []                                                      # base

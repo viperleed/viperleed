@@ -18,6 +18,7 @@ import logging
 import numpy as np
 
 from viperleed.tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 from .base_slab import BaseSlab
@@ -56,7 +57,7 @@ class SurfaceSlab(BaseSlab):
         Chemical elements in the slab, including from `ELEMENT_MIX`
     n_per_elem : dict {str: int}
         The number of atoms per POSCAR element.
-    atlist : list of Atom
+    atlist : AtomList
         List of all atoms in the slab.
     layers : list of Layer
         List of Layer objects, where each `layer` is a composite
@@ -396,7 +397,7 @@ class SurfaceSlab(BaseSlab):
         # construct bulk slab
         bsl = BulkSlab.from_slab(self)
         bsl.clear_symmetry_and_ucell_history()
-        bsl.atlist = [at for at in bsl if at.is_bulk]
+        bsl.atlist = AtomList(at for at in bsl if at.is_bulk)
         bsl.layers = bsl.bulk_layers
         bsl.update_cartesian_from_fractional()
         al = bsl.atlist[:]     # temporary copy
