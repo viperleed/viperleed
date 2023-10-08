@@ -426,7 +426,7 @@ class SurfaceSlab(BaseSlab):
         if self.bulkslab is None:
             raise MissingBulkSlabError(
                 f'{type(self).__name__}.identify_bulk_repeat: missing '
-                'bulkslab. Call makeBulkSlab, then try again.'
+                'bulkslab. Call makeBulkSlab, then try again'
                 )
         if epsz is None:
             epsz = eps
@@ -458,7 +458,7 @@ class SurfaceSlab(BaseSlab):
                 f'{type(self).__name__}.identify_bulk_repeat: failed. '
                 'Chemical elements mismatched in first non-bulk sublayer '
                 f'({first_non_bulk_layer.num}, {first_non_bulk_layer.element})'
-                f' and bottommost sublayer ({self.sublayers[-1].element}).'
+                f' and bottommost sublayer ({self.sublayers[-1].element})'
                 )
 
         ori = first_non_bulk_layer.cartpos                                      # TODO: need to flip with .cartpos[2]?
