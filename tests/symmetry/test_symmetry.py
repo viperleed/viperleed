@@ -397,6 +397,9 @@ class TestSlabSymmetrization:
         'poscar-36C_p6m': 'Often reduced to cmm',
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
+            'sometimes reduced to p1 from p3'
+            ),
         'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
         'infoless_poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
