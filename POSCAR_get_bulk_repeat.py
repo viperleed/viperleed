@@ -13,6 +13,7 @@ import copy
 
 import numpy as np
 
+from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
 from viperleed.tleedmlib.files import poscar
@@ -113,9 +114,9 @@ def main():
 
     rp.BULK_REPEAT = -newC
 
-    bsl.atlist = [at for at in bsl
-                  if at.cartpos[2] > bsl.topat_ori_z - abs(newC[2])]
-    bsl.layers[0].atlist = bsl.atlist
+    bsl.atlist = AtomList(at for at in bsl
+                          if at.cartpos[2] > bsl.topat_ori_z - abs(newC[2]))
+    bsl.layers[0].atlist = list(bsl.atlist)
 
     rp.SUPERLATTICE = np.eye(2)
     newbsl = bsl.makeBulkSlab(rp)
@@ -168,7 +169,7 @@ def main():
     newZero = (topBulkAt.pos[2]
                + (abs(botSlabAt.pos[2] - topBulkAt.pos[2]) / 2)
                - abs(fracRepeat[2]))
-    newsl.atlist = [at for at in newsl if at.pos[2] > newZero]
+    newsl.atlist = AtomList(at for at in newsl if at.pos[2] > newZero)
     newsl.update_element_count()   # update the number of atoms per element
     for at in newsl:
         at.pos[2] -= newZero

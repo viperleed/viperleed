@@ -24,6 +24,7 @@ import numpy as np
 import viperleed
 from viperleed.tleedm import run_tleedm
 from viperleed.tleedmlib.base import rotation_matrix
+from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
@@ -363,8 +364,8 @@ def _apply_transform(slab, transform, apply_cut=False):
 
     # Cut the slab as given in cut_cell_c_fraction - very important
     if transform.cut_cell_c_fraction:
-        slab.atlist = [at for at in slab
-                       if at.pos[2] >= transform.cut_cell_c_fraction]
+        slab.atlist = AtomList(at for at in slab
+                               if at.pos[2] >= transform.cut_cell_c_fraction)
     slab.updateAtomNumbers()
     slab.update_element_count()
 

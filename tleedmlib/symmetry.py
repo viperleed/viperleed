@@ -18,6 +18,7 @@ import scipy.spatial as sps
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import (addUnequalPoints, angle, dist_from_line,
                                       rotation_matrix_order, rotation_matrix)
+from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.classes.sym_entity import SymPlane
 from viperleed.tleedmlib.files import parameters
 
@@ -113,8 +114,8 @@ def findBulkSymmetry(sl, rp):
         logger.debug("Bulk unit cell could be reduced with repeat vector "
                      "[{:.5f} {:.5f} {:.5f}]".format(*(-newC)))
         # apply new unit cell
-        ts.atlist = [at for at in ts
-                     if at.cartpos[2] > ts.topat_ori_z - abs(newC[2])]
+        ts.atlist = AtomList(at for at in ts
+                             if at.cartpos[2] > ts.topat_ori_z - abs(newC[2]))
         ts.layers[0].atlist = ts.atlist
         ts.layers = [ts.layers[0]]
         ts.layers[0].is_bulk = True

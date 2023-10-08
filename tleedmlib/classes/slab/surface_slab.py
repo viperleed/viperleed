@@ -451,7 +451,7 @@ class SurfaceSlab(BaseSlab):
         bsl.update_element_count()   # update the number of atoms per element
         # remove duplicates
         bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
-        newatlist = []
+        newatlist = AtomList()
         for subl in bsl.sublayers:
             i = 0
             while i < subl.n_atoms:

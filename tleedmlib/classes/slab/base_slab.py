@@ -1028,7 +1028,7 @@ class BaseSlab(AtomContainer):
         # if self.ucell_mod is not empty, don't drag that into the new slab.
         # remove duplicates
         ssl.create_sublayers(rp.SYMMETRY_EPS_Z)
-        newatlist = []
+        newatlist = AtomList()
         for subl in ssl.sublayers:
             i = 0
             while i < subl.n_atoms:
