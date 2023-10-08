@@ -138,8 +138,10 @@ class BaseSlab(ABC):
         """Return whether an atom, layer, site, ... is in this slab."""
         if isinstance(item, Atom):
             return item in self.atlist
+        if isinstance(item, SubLayer):
+            return item in self.sublayers
         if isinstance(item, Layer):
-            return item in self.sublayers or item in self.layers
+            return item in self.layers
         if isinstance(item, Sitetype):
             return item in self.sitelist
         if isinstance(item, str):   # Only chemical element?
