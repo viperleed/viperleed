@@ -59,12 +59,13 @@ def initialization(sl, rp, subdomain=False):
         mincell = sl.get_minimal_ab_cell(rp.SYMMETRY_EPS, rp.SYMMETRY_EPS_Z)
     except AlreadyMinimalError:
         transform = np.identity(2)
+        reducible = False
     else:
         transform = np.dot(sl.ab_cell.T, np.linalg.inv(mincell)).round()
+        reducible = True
     ws = writeWoodsNotation(transform)
-    reducible = not np.allclose(transform, np.identity(2))
     if reducible and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
-                                 np.identity(2)).all():
+                                np.identity(2)).all():
         if ws:
             ws = f"= {ws}"
         else:
