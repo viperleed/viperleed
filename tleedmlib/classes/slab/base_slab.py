@@ -1123,9 +1123,10 @@ class BaseSlab(AtomContainer):
     def revert_unit_cell(self, restore_to=None):
         """Revert unit-cell and coordinate modifications.
 
-        Notice that, if any operation is undone, the atom
-        coordinates of this slab are also collapsed to the
-        base unit cell.
+        Notice that calling this method always collapses the atom
+        coordinates to the base unit cell. This is independent of
+        whether any unit-cell modification was actually reverted
+        or not.
 
         Parameters
         ----------
@@ -1140,18 +1141,12 @@ class BaseSlab(AtomContainer):
             If any of the to-be-reverted operations stored in
             `slab.ucell_mod` has an unknown operation-type name.
         """
-        if not self.ucell_mod:
-            return
-
         n_keep = 0
         if restore_to is not None:
             n_keep = len(restore_to)
 
-        operations_to_undo = self.ucell_mod[n_keep:]
-        if not operations_to_undo:
-            return
-
         self.update_cartesian_from_fractional()
+        operations_to_undo = self.ucell_mod[n_keep:]
         for op_type, op_array in reversed(operations_to_undo):
             if op_type == 'add':
                 frac_shift = np.dot(op_array, np.linalg.inv(self.ab_cell.T))
@@ -1163,7 +1158,7 @@ class BaseSlab(AtomContainer):
                 self.ucell = np.dot(self.ucell, np.linalg.inv(op_array))
             else:
                 raise RuntimeError(f'Invalid unit-cell modification {op_type}')
-        self.collapse_cartesian_coordinates()                                   # TODO: @fkraushofer. We were doing this at each iteration, but I think it is the same to do it once only. Any objection?
+        self.collapse_cartesian_coordinates()
         self.ucell_mod = self.ucell_mod[:n_keep]
 
     def sort_by_element(self):
