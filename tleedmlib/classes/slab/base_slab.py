@@ -1123,6 +1123,10 @@ class BaseSlab(AtomContainer):
     def revert_unit_cell(self, restore_to=None):
         """Revert unit-cell and coordinate modifications.
 
+        Notice that, if any operation is undone, the atom
+        coordinates of this slab are also collapsed to the
+        base unit cell.
+
         Parameters
         ----------
         restore_to : Sequence or None, optional
@@ -1143,8 +1147,11 @@ class BaseSlab(AtomContainer):
         if restore_to is not None:
             n_keep = len(restore_to)
 
-        self.update_cartesian_from_fractional()
         operations_to_undo = self.ucell_mod[n_keep:]
+        if not operations_to_undo:
+            return
+
+        self.update_cartesian_from_fractional()
         for op_type, op_array in reversed(operations_to_undo):
             if op_type == 'add':
                 frac_shift = np.dot(op_array, np.linalg.inv(self.ab_cell.T))
