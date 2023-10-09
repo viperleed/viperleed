@@ -116,7 +116,8 @@ def main():
 
     bsl.atlist = AtomList(at for at in bsl
                           if at.cartpos[2] > bsl.topat_ori_z - abs(newC[2]))
-    bsl.layers[0].atlist = list(bsl.atlist)
+    bsl.layers[0].atlist.clear()
+    bsl.layers[0].atlist.extend(bsl.atlist)
 
     rp.SUPERLATTICE = np.eye(2)
     newbsl = bsl.makeBulkSlab(rp)

@@ -586,7 +586,9 @@ class SurfaceSlab(BaseSlab):
             layer.slab = bsl
             layer.update_position()
             layer.num = i
-            layer.atlist = [at for at in layer if at in bsl]
+            atoms = [at for at in layer if at in bsl]
+            layer.atlist.clear()
+            layer.atlist.extend(atoms)
         return bsl
 
     def restoreOriState(self, keepDisp=False):

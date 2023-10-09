@@ -546,7 +546,7 @@ class BaseSlab(AtomContainer):
         # Finally create sublayers based on sublists
         for atoms in sublists:
             new_layer = SubLayer(self, 0)
-            new_layer.atlist = atoms
+            new_layer.atlist.extend(atoms)
             new_layer.cartbotz = atoms[0].cartpos[2]
             yield new_layer
 
@@ -1100,7 +1100,9 @@ class BaseSlab(AtomContainer):
             layer.slab = ssl
             layer.update_position()
             layer.num = i
-            layer.atlist = [at for at in layer if at in ssl]
+            atoms = [at for at in layer if at in ssl]
+            layer.atlist.clear()
+            layer.atlist.extend(atoms)
         return ssl
 
     def project_c_to_z(self):                                                   # TODO: surface only?
