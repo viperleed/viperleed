@@ -653,10 +653,6 @@ class SurfaceSlab(BaseSlab):
     def with_extra_bulk_units(self, rpars, n_cells):
         """Return a copy with extra bulk unit cells added at the bottom.
 
-        It is important to realize that the `bulk_appended` slab
-        returned will have **more** than `rpars.N_BULK_LAYERS` bulk
-        layers: There will be n_cells * len(self.bulk_layers).
-
         Parameters
         ----------
         rpars : Rparams
@@ -683,6 +679,14 @@ class SurfaceSlab(BaseSlab):
             interlayer distance. This may mean that (1) there are too
             few layers (e.g., only one thick layer), or (2) the bulk
             was not identified correctly (e.g., wrong BULK_REPEAT).
+
+        Note
+        ----
+        Layers in the `bulk_appended` slab retuned are re-labelled
+        so that there are exactly `rpars.N_BULK_LAYERS` bulk layers
+        at the bottom. This means that layers of this slab that are
+        labelled as bulk are turned into non-bulk layers in the
+        `bulk_appended` slab returned (as are atoms in those layers)
         """
         bulk_appended = copy.deepcopy(self)
         bulk_layers = bulk_appended.bulk_layers
@@ -732,6 +736,12 @@ class SurfaceSlab(BaseSlab):
                                                              bulk_c_perp_atoms)
             new_bulk_atoms.extend(added_atoms)
         bulk_appended.collapse_cartesian_coordinates(update_origin=True)
+
+        # Make sure the number of bulk layers in the new slab is
+        # still consistent with rpars.N_BULK_LAYERS. This means
+        # turning all layers that were bulk before into 'non-bulk'
+        for non_bulk_layer in bulk_appended.layers[:-rpars.N_BULK_LAYERS]:
+            non_bulk_layer.is_bulk = False
 
         bulk_appended.sort_original()
         # Invalidate outdated information
