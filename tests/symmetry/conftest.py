@@ -40,18 +40,6 @@ def get_cases(which='all'):
     return cases
 
 
-def translate_atoms(slab, shift):
-    """Add a 2D Cartesian shift to all atomic coordinates."""
-    # Since fractional positions and Cartesian positions are
-    #    frac = cart @ ab_inv,
-    # we can move Cartesians by shift, and fractional by:
-    frac_shift = np.dot(shift, np.linalg.inv(slab.ab_cell.T))
-    for atom in slab:
-        atom.cartpos[:2] += shift
-        atom.pos[:2] += frac_shift
-    slab.ucell_mod.append(('add', shift))
-
-
 slab_p1 = flat_fixture(simple_slabs.CaseSimpleSlabs().case_p1)
 slab_pmg = flat_fixture(simple_slabs.CaseSimpleSlabs().case_pmg)
 slab_p6m = flat_fixture(simple_slabs.CaseSimpleSlabs().case_p6m)
@@ -66,7 +54,7 @@ def fixture_factory_with_plane_group(args):
 
     def _make(random_shifts=True):
         if random_shifts:
-            translate_atoms(slab, shift)
+            slab.translate_atoms(shift)
             slab.collapse_cartesian_coordinates()
         symmetry.findSymmetry(slab, param, forceFindOri=True)
         return slab, param, info

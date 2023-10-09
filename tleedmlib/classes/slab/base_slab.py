@@ -1655,6 +1655,32 @@ class BaseSlab(AtomContainer):
             self.ucell_mod.append((side, transform_3d))
         self.update_fractional_from_cartesian()
 
+    def translate_atoms(self, shift):
+        """Add a 2D Cartesian shift to all atomic coordinates.
+
+        Parameters
+        ----------
+        shift : Sequence
+            Two elements. The 2D Cartesian rigid shift to apply
+            to all atoms.
+
+        Notes
+        -----
+        This method **does not collapse** the atom coordinates to
+            the base unit cell. Explicitly follow a call to this
+            method with .collapse_cartesian_coordinates() if the
+            atoms should be back-folded into the base unit cell.
+        This operation can be undone with a call to `revert_unit_cell`,
+            as the shift is registered as one of the `ucell_mod`.
+        """
+        # Since fractional positions and Cartesian positions are
+        #    frac = cart @ ab_inv,
+        # we can move Cartesian by shift, and fractional by:
+        frac_shift = np.dot(shift, np.linalg.inv(self.ab_cell.T))
+        for atom in self:
+            atom.translate_2d(shift, frac_shift)
+        self.ucell_mod.append(('add', shift))
+
     # ----------------- SYMMETRY UPON TRANSFORMATION ------------------
 
     def _is_2d_transform_symmetric(self, matrix, center, translation, eps):
