@@ -365,7 +365,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                'parse given value. Input will be ignored.')
                 rp.setHaltingLevel(2)
             if targetsym != "":
-                sl.revertUnitCell(uCellState)
+                sl.revert_unit_cell(uCellState)
                 setSymmetry(sl, rp, targetsym)
                 enforceSymmetry(sl, rp, movement=False, rotcell=False)
             continue
@@ -911,7 +911,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 #                     rp.setHaltingLevel(1)
         elif mode == 4:
             constraints.append((targetAtEls, ctype, value))
-    sl.revertUnitCell(uCellState)  # if modified by SYM_DELTA, go back
+    sl.revert_unit_cell(uCellState)  # if modified by SYM_DELTA, go back
     # now read constraints
     for (targetAtEls, ctype, value) in constraints:
         if value.lower().startswith("link"):

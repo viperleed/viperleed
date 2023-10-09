@@ -114,7 +114,7 @@ def initialization(sl, rp, subdomain=False):
         raise
     rp.manifest.append('POSCAR')
     # generate POSCAR_oricell
-    tmpslab.revertUnitCell()
+    tmpslab.revert_unit_cell()
     try:
         poscar.write(tmpslab, filename='POSCAR_oricell', comments='nodir')
     except Exception:
@@ -215,7 +215,7 @@ def initialization(sl, rp, subdomain=False):
         # bulk plane group detection:
         logger.info("Starting bulk symmetry search...")
         tl_symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
-        bsl.revertUnitCell()  # keep origin matched with main slab
+        bsl.revert_unit_cell()  # keep origin matched with main slab
         logger.info(f"Found bulk plane group: {bsl.foundplanegroup}")
         tl_symmetry.findBulkSymmetry(bsl, rp)
 

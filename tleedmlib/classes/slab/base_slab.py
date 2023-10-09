@@ -382,7 +382,7 @@ class BaseSlab(AtomContainer):
         modifications, and sets the current unit cell as the 'original'
         one. This means that, if the unit cell was modified prior to
         a call to this method, the original unit cell **cannot** be
-        recovered by a call to revertUnitCell.
+        recovered by a call to `revert_unit_cell`.
 
         Returns
         -------
@@ -1120,27 +1120,44 @@ class BaseSlab(AtomContainer):
             c_vec_xy[:] = 0
             self.collapse_cartesian_coordinates()  # Also updates fractional
 
-    def revertUnitCell(self, restoreTo=None):
-        """If the unit cell in a and b was transformed earlier, restore the
-        original form and coordinates. If a 'restoreTo' argument is passed,
-        restore only back to the point defined by the argument."""
-        if restoreTo is None:
-            restoreTo = []
-        if len(self.ucell_mod) > 0:
-            self.update_cartesian_from_fractional()
-            oplist = self.ucell_mod[len(restoreTo):]
-            for op in list(reversed(oplist)):
-                if op[0] == 'add':
-                    for at in self:
-                        at.cartpos[0:2] -= op[1]
-                    self.collapse_cartesian_coordinates()
-                elif op[0] == 'lmul':
-                    self.ucell = np.dot(np.linalg.inv(op[1]), self.ucell)
-                    self.collapse_cartesian_coordinates()
-                elif op[0] == 'rmul':
-                    self.ucell = np.dot(self.ucell, np.linalg.inv(op[1]))
-                    self.collapse_cartesian_coordinates()
-            self.ucell_mod = self.ucell_mod[:len(restoreTo)]
+    def revert_unit_cell(self, restore_to=None):
+        """Revert unit-cell and coordinate modifications.
+
+        Parameters
+        ----------
+        restore_to : Sequence or None, optional
+            If given and not None, keep the oldest `len(restore_to)`
+            modifications of the unit cell and coordinates. Default
+            is None.
+
+        Raises
+        -------
+        RuntimeError
+            If any of the to-be-reverted operations stored in
+            `slab.ucell_mod` has an unknown operation-type name.
+        """
+        if not self.ucell_mod:
+            return
+
+        n_keep = 0
+        if restore_to is not None:
+            n_keep = len(restore_to)
+
+        self.update_cartesian_from_fractional()
+        operations_to_undo = self.ucell_mod[n_keep:]
+        for op_type, op_array in reversed(operations_to_undo):
+            if op_type == 'add':
+                frac_shift = np.dot(op_array, np.linalg.inv(self.ab_cell.T))
+                for atom in self:
+                    atom.translate_2d(-op_array, -frac_shift)
+            elif op_type == 'lmul':
+                self.ucell = np.dot(np.linalg.inv(op_array), self.ucell)
+            elif op_type == 'rmul':
+                self.ucell = np.dot(self.ucell, np.linalg.inv(op_array))
+            else:
+                raise RuntimeError(f'Invalid unit-cell modification {op_type}')
+        self.collapse_cartesian_coordinates()                                   # TODO: @fkraushofer. We were doing this at each iteration, but I think it is the same to do it once only. Any objection?
+        self.ucell_mod = self.ucell_mod[:n_keep]
 
     def sort_by_element(self):
         """Sort `slab.atlist` by element, preserving the element order."""
