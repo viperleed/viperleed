@@ -254,7 +254,7 @@ class CaseBulkSlabs:
 def case_double_bulk(bulk):
     """Return a bulk slab with twice the thickness."""
     slab, param, info = bulk
-    thick_slab = slab.doubleBulkSlab()
+    thick_slab = slab.with_double_thickness()
 
     param, info = duplicate_all(param, info)
     param.BULK_REPEAT *= 2
