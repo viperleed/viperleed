@@ -237,7 +237,7 @@ def initialization(sl, rp, subdomain=False):
         if bsl.n_sublayers <= len(bsl.elements):
             n_cells += 1
     try:
-        poscar.write(sl.with_extra_bulk_units(rp, n_cells=n_cells)[0],
+        poscar.write(sl.with_extra_bulk_units(rp, n_cells)[0],
                      filename='POSCAR_bulk_appended')
     except Exception:
         logger.warning('Exception occurred while writing POSCAR_bulk_appended')
