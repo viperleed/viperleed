@@ -465,9 +465,14 @@ class SurfaceSlab(BaseSlab):
                 )
 
         # Pick the region of the slab that should be considered for
-        # comparison: from the topmost bulk layer all the way down
-        z_range = (self.bulkslab.sublayers[0].cartbotz,                         # TODO: @fkraushofer used to be self.sublayers[-n_bulk_lay], and both used .cartpos[2] instead of .cartbotz. I think that using self.bulkslab.sublayers[0] is equivalent, and that using .cartbotz is a bit better as it may loose atoms at the bottom. Did I misinterpret something?
-                   self.sublayers[-1].cartbotz)
+        # comparison: from the topmost bulk layer all the way down.
+        # Notice that we take the topmost bulk from self rather than
+        # from self.bulkslab, as that one may have a different frame
+        # if it was re-centred along z when creating it.
+        z_range = (
+            self.sublayers[-n_bulk_lay].cartbotz,  # topmost bulk               # TODO: .cartpos[2]
+            self.sublayers[-1].cartbotz            # bottommost
+            )
 
         # Construct candidate repeat vectors as all those connecting
         # the first non-bulk layer to all atoms of the bottommost layer
