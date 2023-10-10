@@ -714,7 +714,7 @@ class BaseSlab(AtomContainer):
             non-bulk layers.
         """
 
-    def get_minimal_ab_cell(self, eps, epsz=None, warn_convention=False):       # TODO: write a test case for the reduction of POSCAR Sb on Si(111)  # too-many-locals
+    def get_minimal_ab_cell(self, eps, epsz=None, warn_convention=False):       # TODO: write a test case for the reduction of POSCAR Sb on Si(111)
         """Check if there is a 2D unit cell smaller than the current one.
 
         Parameters
