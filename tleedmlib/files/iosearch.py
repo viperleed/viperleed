@@ -1213,7 +1213,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
-        tmpslab = sl.makeSymBaseSlab(rp)
+        tmpslab = sl.make_subcell(rp, rp.SYMMETRY_CELL_TRANSFORM)
         fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
         try:
             poscar.write(tmpslab, filename=fn, silent=silent)

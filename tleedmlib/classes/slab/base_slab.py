@@ -29,8 +29,8 @@ from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import add_edges_and_corners, collapse
-from viperleed.tleedmlib.base import collapse_fractional, pairwise
-from viperleed.tleedmlib.base import rotation_matrix_order
+from viperleed.tleedmlib.base import collapse_fractional, ensure_integer_matrix
+from viperleed.tleedmlib.base import pairwise, rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomContainer, AtomList
 from viperleed.tleedmlib.classes.layer import Layer, SubLayer
@@ -1053,57 +1053,85 @@ class BaseSlab(AtomContainer):
         super_slab.collapse_cartesian_coordinates()                             # TODO: was update_origin_True, same comment as above
         return super_slab
 
-    def makeSymBaseSlab(self, rp, transform=None):
-        """Copies self to create a symmetry base slab by collapsing to the
-        cell defined by rp.SYMMETRY_CELL_TRANSFORM, then removing duplicates.
-        Also assigns the duplicate_of variable for all atoms in self.atlist.
-        By default, the transformation matrix will be taken from rp, but a
-        different matrix can also be passed."""
-        ssl = copy.deepcopy(self)
-        ssl.clear_symmetry_and_ucell_history()
-        ssl.update_cartesian_from_fractional()
-        # reduce dimensions in xy
-        transform3 = np.identity(3, dtype=float)
-        if transform is not None:
-            transform3[:2, :2] = transform
-        else:
-            transform3[:2, :2] = rp.SYMMETRY_CELL_TRANSFORM
-        ssl.ucell = np.dot(ssl.ucell, np.linalg.inv(np.transpose(transform3)))
-        ssl.collapse_cartesian_coordinates(update_origin=True)
-        ssl.ucell_mod = []
-        # if self.ucell_mod is not empty, don't drag that into the new slab.
-        # remove duplicates
-        ssl.create_sublayers(rp.SYMMETRY_EPS_Z)
-        newatlist = AtomList()
-        for subl in ssl.sublayers:
-            i = 0
-            while i < subl.n_atoms:
-                atom_i = subl.atlist[i]
-                baseat = self.atlist.get(atom_i.num)
-                j = i + 1
-                while j < subl.n_atoms:
-                    atom_j = subl.atlist[j]
-                    if not atom_i.is_same_xy(atom_j, eps=rp.SYMMETRY_EPS):
-                        j += 1
-                        continue
-                    subl.atlist.pop(j)
-                    duplicate_atom = self.atlist.get(atom_j.num, None)
-                    if duplicate_atom:
-                        duplicate_atom.duplicate_of = baseat
-                i += 1
-            newatlist.extend(subl)
-        ssl.atlist = newatlist
-        ssl.update_element_count()   # update number of atoms per element again
-        # update the layers. Don't use Slab.createLayers here to keep it
-        #   consistent with the slab layers
-        for i, layer in enumerate(ssl.layers):
-            layer.slab = ssl
-            layer.update_position()
-            layer.num = i
-            atoms = [at for at in layer if at in ssl]
-            layer.atlist.clear()
-            layer.atlist.extend(atoms)
-        return ssl
+    def make_subcell(self, rpars, transform):
+        """Return a subcell of this slab.
+
+        This is the inverse of `make_supercell(transform)` with
+        the same `transform` matrix.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS used to determine how the copy is to be
+            prepared. Attributes used: SYMMETRY_EPS, SYMMETRY_EPS_Z.
+            Both attributes are used as Cartesian tolerances for
+            removal of duplicate atoms resulting from the reduction
+            of size.
+        transform : Sequence
+            Shape (2, 2). The transformation matrix defining the
+            subcell-to-supercell relationship. It should be an
+            integer-valued matrix. The `transform` is inverted,
+            then applied by left multiplication with the in-plane
+            unit cell, when the unit cell has vectors on the rows.
+            Default is None.
+
+        Returns
+        -------
+        subcell_slab : Slab
+            A new slab with reduced in-plane size according
+            to `transform`. Duplicate atoms resulting from
+            the size reduction are removed. Atoms that have
+            been removed from the original slab as a result
+            of the size reduction are marked as duplicates
+            of those that remain in `subcell_slab`.
+
+        Raises
+        ------
+        ValueError
+            If `transform` is not a (2x2) matrix.
+        ValueError
+            If `transform` is an invalid transformation for
+            this slab, that is, if slab is not a supercell
+            with `transform` as its superlattice matrix.
+        NonIntegerMatrixError
+            If `transform` is not integer-valued.
+        SlabError
+            If reducing the current slab was unsuccessful.
+            This is normally because either `slab.layers`
+            or `rpars` were out of date.
+
+        Notes
+        -----
+        This method is especially useful in case the slab
+            is a supercell containing multiple copies of
+            the same slab, i.e., if `get_minimal_ab_cell`
+            gives a possible reduction. In that case,
+            checking the symmetry on the smaller slab
+            is more efficient.
+        """
+        subcell_slab = copy.deepcopy(self)
+        subcell_slab.clear_symmetry_and_ucell_history()
+        subcell_slab.update_cartesian_from_fractional()
+
+        transform = ensure_integer_matrix(transform)
+        if transform.shape != (2, 2):
+            raise ValueError(f'Invalid {transform.shape=}. Expected (2, 2)')
+        if np.allclose(transform, np.identity(2)):
+            return subcell_slab
+
+        # Reduce dimensions in (x, y), then remove duplicates
+        subcell_slab.ab_cell[:] = np.dot(self.ab_cell,
+                                         np.linalg.inv(transform).T)
+        subcell_slab.collapse_cartesian_coordinates(update_origin=True)
+        subcell_slab.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
+                                            rpars.SYMMETRY_EPS_Z,
+                                            other_slab=self)
+        # Now make sure that transform actually gave a subcell
+        supercell_atoms = subcell_slab.n_atoms * abs(np.linalg.det(transform))
+        if self.n_atoms != supercell_atoms:
+            raise ValueError(f'Slab is not a supercell with {transform=} '
+                             'as its superlattice matrix'.replace('\n', ', '))
+        return subcell_slab
 
     def project_c_to_z(self):                                                   # TODO: surface only?
         """Make the c vector of the unit cell perpendicular to the surface.
@@ -1119,6 +1147,101 @@ class BaseSlab(AtomContainer):
             self.update_cartesian_from_fractional()
             c_vec_xy[:] = 0
             self.collapse_cartesian_coordinates()  # Also updates fractional
+
+    def remove_duplicate_atoms(self, eps=1e-3, epsz=1e-3, other_slab=None):
+        """Remove atoms with same positions and chemical element.
+
+        Should this slab have `layers` defined, they are updated
+        accordingly without recreating them. Sublayers are instead
+        created from scratch.
+
+        This method explicitly recalculates the correct number of atoms
+        per each (POSCAR) element, but does not recalculate Atom.num
+        values. Explicitly call self.update_atom_numbers() afterwards,
+        if needed.
+
+        Parameters
+        ----------
+        eps : float, optional
+            Cartesian tolerance (Angstrom) for in-plane
+            equivalence. Default is 1e-3.
+        epsz : float, optional
+            Cartesian tolerance (Angstrom) for out-of-plane
+            equivalence. Default is 1e-3.
+        other_slab : Slab or None, optional
+            If given and not None, atoms in `other_slab` that are
+            removed from this slab are labelled as being duplicates
+            of those that remain in this one. Atoms between the two
+            slabs are compared by `num`. Default is None.
+
+        Raises
+        ------
+        SlabError
+            If this slab has layers defined, but removing atoms
+            led to an inconsistency of which atoms survived in
+            self and which ones survived in its layers.
+        """
+        try:
+            other_slab_atlist = other_slab.atlist
+        except AttributeError:
+            other_slab_atlist = AtomList()
+
+        # The easiest way to remove duplicates is going one sublayer
+        # at a time, and check only the in-plane positions. Ensure we
+        # have sublayers, and, for that, we also make sure that the
+        # number-of-atoms-per-element is up to date.
+        self.update_element_count()
+        self.create_sublayers(epsz)
+        new_atlist = AtomList()
+        for sublayer in self.sublayers:
+            i = 0
+            while i < sublayer.n_atoms:
+                atom_i = sublayer.atlist[i]
+                other_base_atom = other_slab_atlist.get(atom_i.num, None)
+                j = i + 1
+                while j < sublayer.n_atoms:
+                    atom_j = sublayer.atlist[j]
+                    if not atom_i.is_same_xy(atom_j, eps=eps):
+                        j += 1
+                        continue
+                    sublayer.atlist.pop(j)
+                    duplicate_atom = other_slab_atlist.get(atom_j.num, None)
+                    if duplicate_atom:
+                        duplicate_atom.duplicate_of = other_base_atom
+                i += 1
+            new_atlist.extend(sublayer.atlist)
+        self.atlist = new_atlist
+
+        # Update number of atoms per element and sublayers again
+        self.update_element_count()
+        self.create_sublayers(epsz)
+
+        # Finally, update the layers, without recreating them
+        if not self.layers:
+            return
+        self._delete_removed_atoms_from_layers()
+
+    def _delete_removed_atoms_from_layers(self):
+        """Remove atoms not in self from layers. Keep only filled layers."""
+        # First remove the atoms that are not in self any longer
+        for layer in self.layers:
+            atoms = [at for at in layer if at in self]
+            layer.atlist.clear()
+            layer.atlist.extend(atoms)
+
+        # Then keep only non-empty layers. Some layers may
+        # be completely empty, e.g., when detecting bulk
+        self.layers = [layer for layer in self.layers if layer.n_atoms]
+        for i, layer in enumerate(self.layers):
+            layer.update_position()
+            layer.num = i
+
+        # Sanity check: we should now have the same atoms everywhere
+        if set(self) != set(at for lay in self.layers for at in lay):
+            raise SlabError(
+                'Inconsistent atoms in slab and its layers. Did you forget '
+                'to appropriately create_layers and update rparams before?'
+                )
 
     def revert_unit_cell(self, restore_to=None):
         """Revert unit-cell and coordinate modifications.

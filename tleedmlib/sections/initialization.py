@@ -70,7 +70,7 @@ def initialization(sl, rp, subdomain=False):
             ws = f"= {ws}"
         else:
             ws = "M = {} {}, {} {}".format(*transform.astype(int).ravel())
-        ssl = sl.makeSymBaseSlab(rp, transform=transform)
+        ssl = sl.make_subcell(rp, transform=transform)
         if subdomain:
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info(f"Found SYMMETRY_CELL_TRANSFORM {ws}")
@@ -94,7 +94,12 @@ def initialization(sl, rp, subdomain=False):
                            f"automatically detected supercell {ws}")
             rp.setHaltingLevel(1)
         if sl.symbaseslab is None:
-            sl.symbaseslab = sl.makeSymBaseSlab(rp)
+            try:
+                sl.symbaseslab = sl.make_subcell(rp,
+                                                 rp.SYMMETRY_CELL_TRANSFORM)
+            except ValueError as exc:
+                logger.error(f'Invalid SYMMETRY_CELL_TRANSFORM. {exc}')
+                raise exc
     if sl.symbaseslab is not None:
         logger.info("A symmetry cell transformation was found. Re-running "
                     "slab symmetry search using base unit cell...")
