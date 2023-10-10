@@ -125,7 +125,7 @@ def findBulkSymmetry(sl, rp):
         rp2.BULK_REPEAT = -newC
         ts = ts.makeBulkSlab(rp2)
     # figure out what to check
-    pcands = ts.getCandidateLayerPeriod(eps)
+    pcands = ts.get_candidate_layer_periods(eps)
     if len(pcands) == 0:
         return
     nl = ts.n_sublayers

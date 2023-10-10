@@ -21,6 +21,7 @@ from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.base import rotation_matrix_order
 
 from .base_slab import BaseSlab
+from .slab_utils import _cycle
 
 
 class BulkSlab(BaseSlab):
@@ -134,50 +135,76 @@ class BulkSlab(BaseSlab):
             return bulkc
         return bulkc[2]
 
-    def getCandidateLayerPeriod(self, eps=1e-4):
-        """For a bulk slab, find at what offsets the sublayers repeat,
-        checking only element and number of atoms. Returns a list of integer
-        offsets between layer indices that are potentially equivalent."""
+    def get_candidate_layer_periods(self, epsz=1e-4):
+        """Find at which offsets the sublayers repeat in a bulk slab.
+
+        Parameters
+        ----------
+        epsz : float, optional
+            Tolerance (Cartesian) on z distances. Default is 1e-4.
+
+        Returns
+        -------
+        candidate_periods : list
+            Each element is an integer corresponding to the
+            number of sublayers that potentially constitute
+            a period for the slab. They are 'potential' in
+            that only consistency of chemical elements and
+            number of atoms are considered.
+        """
         if self.n_sublayers < 2:
-            return([])
-        cl = []     # candidate layers
-        h = self.ucell[2, 2]  # cell height; periodicity cannot go beyond h/2
-        l0 = self.sublayers[0]
-        nl = self.n_sublayers
-        l0el = l0.element
-        l0n = l0.n_atoms
-        for i, lay in enumerate(self.sublayers[1:]):
-            if abs(lay.cartbotz - l0.cartbotz) > h/2 + eps:
+            return []
+
+        # Start from one layer (e.g., the first one) and accumulate
+        # potential periods as the offsets of all other layers with
+        # same element and same number of atoms. Stop at half the
+        # unit cell height, as periodicity cannot go beyond h/2                 # TODO: @fkrausofer: probably we should also stop at floor(len(sublayers) / 2), as we cannot have a sub-period longer than half the number of sublayers?
+        candidate_periods = []
+        ucell_h = self.ucell[2, 2]
+        ref_lay = self.sublayers[0]
+        for i, lay in enumerate(self.sublayers[1:], start=1):
+            if abs(lay.cartbotz - ref_lay.cartbotz) > ucell_h / 2 + epsz:
                 break
-            if lay.element == l0el and lay.n_atoms == l0n:
-                cl.append(i+1)
-        if len(cl) == 0:
-            return([])
+            if (lay.element == ref_lay.element
+                    and lay.n_atoms == ref_lay.n_atoms):
+                candidate_periods.append(i)
+
+        # Now make sure that also the layers
+        # in between have the same periods
+        n_layers = self.n_sublayers
         i = 0
-        while i < len(cl):
-            wrong = False
-            zoff = self.sublayers[cl[i]].cartbotz - self.sublayers[0].cartbotz
-            for j in range(1, int(np.ceil(self.n_sublayers/2))):
-                if (self.sublayers[(j + cl[i]) % nl].element
-                        != self.sublayers[j].element):
-                    wrong = True
+        while i < len(candidate_periods):
+            period_is_ok = True
+            period = candidate_periods[i]
+
+            # Keep track of the distance between layers that
+            # we know match: the first one and the one at period.
+            # All pairs of layers in between must also be at the
+            # same distance.
+            z_dist = self.sublayers[period].cartbotz - ref_lay.cartbotz
+            layer_pairs = zip(self.sublayers, _cycle(self.sublayers, period))
+            for j, (lay, lay_plus_period) in enumerate(layer_pairs, start=1):
+                if j > n_layers / 2:
                     break
-                if abs(zoff - ((self.sublayers[(j + cl[i]) % nl].cartbotz
-                                - self.sublayers[j].cartbotz) % h)) > eps:
-                    wrong = True
+                z_dist_this = lay_plus_period.cartbotz - lay.cartbotz
+                z_dist_this %= ucell_h
+                if (lay_plus_period.element != lay.element
+                        or lay_plus_period.n_atoms != lay.n_atoms
+                        or abs(z_dist - z_dist_this) > epsz):
+                    period_is_ok = False
                     break
-            if wrong:
-                cl.pop(i)
-            else:
+            if period_is_ok:  # Period passed the tests
                 i += 1
-        return(cl)
+            else:
+                candidate_periods.pop(i)
+        return candidate_periods
 
     def getMinC(self, rp, z_periodic=True):
         """Checks whether there is a vector c with a smaller length than
         the current one. If so, returns the minimized vector, else returns
         None."""
         eps = rp.SYMMETRY_EPS
-        pcands = self.getCandidateLayerPeriod(eps)
+        pcands = self.get_candidate_layer_periods(eps)
         if len(pcands) == 0:
             return None
         ts = copy.deepcopy(self)
