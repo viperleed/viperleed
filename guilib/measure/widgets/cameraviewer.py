@@ -808,7 +808,7 @@ class CameraViewer(qtw.QScrollArea):
         saturation_arr = np.packbits(saturation_arr, axis=1, bitorder='little')
         mask = qtg.QImage(saturation_arr, width, height,
                           saturation_arr.strides[0],
-                          qtg.QImage.Format_MonoLSB))
+                          qtg.QImage.Format_MonoLSB)
         return qtg.QRegion(qtg.QBitmap.fromImage(mask))
 
     def __make_settings_dialog(self):
