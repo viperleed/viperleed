@@ -24,8 +24,8 @@ import psutil
 from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
-from viperleed.tleedmlib.base import cosvec, lcm
-from viperleed.tleedmlib.base import NonIntegerMatrixError, SingularMatrixError
+from viperleed.tleedmlib.base import cosvec, ensure_integer_matrix, lcm
+from viperleed.tleedmlib.base import SingularMatrixError
 
 # The following imports are potentially the cause of cyclic
 # imports. They are used exclusively as part of getTensorOriStates
@@ -69,21 +69,16 @@ def get_superlattice_repetitions(matrix):
     Raises
     ------
     ValueError
-        If matrix is singular, has non-integer elements,
-        or an inappropriate shape.
+        If matrix is singular or an inappropriate shape.
+    NonIntegerMatrixError
+        If matrix has non-integer elements.
     """
     # Work on a numpy-array copy of the input. Ensure it's float
     # to avoid UFuncTypeError when doing in-place divisions below
-    matrix = np.copy(matrix).astype(float)
+    matrix = ensure_integer_matrix(np.copy(matrix).astype(float))
     if matrix.shape != (2, 2):
         raise ValueError(f'Unexpected shape {matrix.shape} for superlattice '
                          'transform matrix. Should be (2, 2)')
-    if np.any(abs(np.round(matrix) - matrix) > 1e-6):
-        raise NonIntegerMatrixError(
-            'Transformation matrix contains non-integer elements'
-            )
-
-    matrix = matrix.round()
     n_repeats = abs(matrix[0, 0] * matrix[1, 1] - matrix[1, 0] * matrix[0, 1])
     n_repeats = round(n_repeats)
     if not n_repeats:
@@ -315,7 +310,7 @@ def getTensors(index, base_dir=".", target_dir=".", required=True):
     tensor_dir = (Path(base_dir) / "Tensors").resolve()
     unpack_path = (Path(target_dir) / "Tensors" / dn).resolve()
     zip_path = (tensor_dir / dn).with_suffix(".zip")
-    
+
     if (os.path.basename(base_dir) == "Tensors"
             and not tensor_dir.is_dir()):
         base_dir = os.path.dirname(base_dir)

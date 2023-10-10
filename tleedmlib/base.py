@@ -269,6 +269,14 @@ def collapse_fractional(coordinates, method='floor', in_place=False):
     return collapsed
 
 
+def ensure_integer_matrix(matrix, eps=1e-6):
+    """Return a rounded version of matrix. Raise if matrix isn't integer."""
+    rounded = np.round(matrix)
+    if np.any(abs(matrix - rounded) > eps):
+        raise NonIntegerMatrixError(matrix)
+    return rounded
+
+
 def pairwise(iterable):
     """Return a generator of pairs of subsequent elements."""
     try:
