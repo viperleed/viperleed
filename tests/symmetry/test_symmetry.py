@@ -306,7 +306,6 @@ class TestSymmetryConstraints:
         'square_cm_11': 'Known to often fail with a random shift',
         'square_cm_1m1': 'Known to often fail with a random shift',
         'poscar-diamond': 'Known incorrect plane group pm instead of rcm',
-        'double_bulk-fe3o4': 'Regularly reduced to pm instead of pmm',
         }
 
     def test_correct_group_after_constraint(self, with_symmetry_constraints,
@@ -322,7 +321,6 @@ class TestSymmetryConstraints:
     _known_do_not_preserve = {
         'rcm': 'Fails in all directions due to missing centre link',
         'rcmm': 'Fails in all directions due to missing centre link',
-        'double_bulk-fe3o4': 'Fails in all directions. Reduced to pm[1 0]',
         }
 
     @parametrize(displacement=XYZ_DISPLACEMENTS)
