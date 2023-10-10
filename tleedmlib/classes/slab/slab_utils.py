@@ -8,7 +8,16 @@ Created on 2023-02-22
 Contains functions and classes useful for dealing with BaseSlab objects.
 """
 
+import itertools
 import numpy as np
+
+
+def _cycle(sequence, start=0):                                                  # TODO: could it be useful in other places?
+    """Return a generator that cycles though `sequence` beginning at start."""
+    if sequence:
+        start %= len(sequence)
+    _cycled = itertools.cycle(sequence)
+    return itertools.islice(_cycled, start, None)
 
 
 def _left_handed(ab_cell):
