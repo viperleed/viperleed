@@ -791,7 +791,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         error_msg = []
         for setting, (in_config, getter) in to_check.items():
             in_device = getter()
-            if in_config != in_device:
+            if not np.isclose(in_config, in_device):
                 error_msg.append(
                     error_txt.format(setting, in_device, in_config)
                     )
