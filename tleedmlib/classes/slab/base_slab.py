@@ -996,8 +996,9 @@ class BaseSlab(AtomContainer):
         """Return a copy of the slab replicated according to `transform`.
 
         The 'inverse' (i.e., leading to a size reduction) of this
-        operation can be obtained by calling `makeSymBaseSlab` with
-        the same `transform`.
+        operation can be obtained by calling `make_subcell` with
+        the same `transform`. Atoms in the duplicated replicas are
+        marked as duplicates of those in this slab.
 
         Parameters
         ----------
