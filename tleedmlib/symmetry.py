@@ -803,7 +803,7 @@ def setSymmetry(sl, rp, targetsym):
                         sl.planegroup = targetsym
                     elif targetsym == "pmg":
                         shiftv = 0.25*(abst[0]+abst[1])
-                            sl.translate_atoms(-shiftv)
+                        sl.translate_atoms(-shiftv)
                         sl.orisymplane = SymPlane(np.array([0, 0]),
                                                   np.dot(tspar, abst), abst)
                         sl.orisymplane.type = "glide"
