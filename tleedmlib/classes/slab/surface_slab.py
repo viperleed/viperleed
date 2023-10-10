@@ -516,7 +516,7 @@ class SurfaceSlab(BaseSlab):
         # construct bulk slab
         bsl = BulkSlab.from_slab(self)
         bsl.clear_symmetry_and_ucell_history()
-        bsl.atlist = AtomList(at for at in bsl if at.is_bulk)
+        bsl.atlist = AtomList(bsl.bulk_atoms)
         bsl.layers = bsl.bulk_layers
         bsl.update_cartesian_from_fractional()
         al = bsl.atlist[:]     # temporary copy

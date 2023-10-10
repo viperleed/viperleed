@@ -45,7 +45,7 @@ _LOGGER = logging.getLogger('tleedm.slab')
 
 
 # TODO: would it make sense to have cartpos[2] go the other way? Watch out for the
-#       "reference" z in LEED that should always be the z of the topmost atom AFTER REFCALC
+#       'reference' z in LEED that should always be the z of the topmost atom AFTER REFCALC
 #       Could store the top_z, then have a .leed_pos attribute that returns top_z - cartpos[2]
 # TODO: too-many-instance-attributes
 # TODO: layer coordinates may not be up to date after we do update_origin
@@ -188,6 +188,11 @@ class BaseSlab(AtomContainer):
         return np.degrees(np.arctan2(a_vec[1], a_vec[0]))
 
     @property
+    def bulk_atoms(self):
+        """Return atoms in this Slab that belong to its bulk."""
+        return [at for at in self if at.is_bulk]
+
+    @property
     def bulk_layers(self):
         """Return the layers of self that are bulk."""
         return [lay for lay in self.layers if lay.is_bulk]
@@ -225,6 +230,11 @@ class BaseSlab(AtomContainer):
     def n_sublayers(self):
         """Return the number of sublayers in this slab."""
         return len(self.sublayers)
+
+    @property
+    def non_bulk_layers(self):
+        """Return a list of the non-bulk layers in this slab."""
+        return [lay for lay in self.layers if not lay.is_bulk]
 
     #                                                                           TODO: remove. Used only once. Also confusing because it's only in-plane
     @property
@@ -627,7 +637,7 @@ class BaseSlab(AtomContainer):
         """Ensure all atoms are inside the unit cell.
 
         Atoms whose fractional positions are outside the unit cell
-        are "back-folded" inside.
+        are 'back-folded' inside.
 
         Notice that calling this method DOES NOT UPDATE the Cartesian
         coordinates of the atoms. It must be preceded or followed by
@@ -1054,7 +1064,7 @@ class BaseSlab(AtomContainer):
         super_slab.collapse_cartesian_coordinates()                             # TODO: was update_origin_True, same comment as above
         return super_slab
 
-    def make_subcell(self, rpars, transform):
+    def make_subcell(self, rpars, transform):                                   # TODO: surface only?
         """Return a subcell of this slab.
 
         This is the inverse of `make_supercell(transform)` with
@@ -1425,7 +1435,7 @@ class BaseSlab(AtomContainer):
         uci = np.linalg.inv(self.ucell)
         for atom in self:
             # Flip over the z Cartesian coordinate, as
-            # we store it as "positive going down"
+            # we store it as 'positive going down'
             cartpos = atom.cartpos.copy()
             cartpos[2] = self.topat_ori_z - cartpos[2]                          # TODO: edit when flipping .cartpos[2]
             atom.pos = np.dot(uci, cartpos)

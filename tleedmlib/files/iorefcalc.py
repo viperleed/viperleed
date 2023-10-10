@@ -279,7 +279,7 @@ def writePARAM(sl, rp, lmax=-1):
     mnstack = 0
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
-    for layer in [lay for lay in sl.layers if not lay.is_bulk]:
+    for layer in sl.non_bulk_layers:
         mnstack += 1
         if layer.n_atoms == 1:
             mnbrav += 1
@@ -505,7 +505,6 @@ def writeAUXGEO(sl, rp):
     ol = i3.write([sl.n_layers]).ljust(lj)
     output += ol + 'NLTYPE: number of different layer types\n'
     blayers = sl.bulk_layers
-    nblayers = [lay for lay in sl.layers if not lay.is_bulk]
     layerOffsets = [np.zeros(3) for _ in range(sl.n_layers + 1)]
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
@@ -636,7 +635,7 @@ def writeAUXGEO(sl, rp):
         rp.setHaltingLevel(1)
     ol = i3.write([sl.n_layers - rp.N_BULK_LAYERS]).ljust(lj)
     output += ol + 'NSTACK: number of layers stacked onto bulk\n'
-    for layer in list(reversed(nblayers)):
+    for layer in reversed(sl.non_bulk_layers):
         n = layer.num + 1
         v = sl.layers[n].cartori - layer.cartori
         v[2] = sl.layers[n].cartori[2] - layer.cartbotz
