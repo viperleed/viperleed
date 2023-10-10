@@ -14,11 +14,12 @@ import copy
 import itertools
 
 import numpy as np
-import scipy.spatial as sps
+from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import angle, rotation_matrix
-from viperleed.tleedmlib.base import rotation_matrix_order
+from viperleed.tleedmlib.base import angle
+from viperleed.tleedmlib.base import add_edges_and_corners, collapse
+from viperleed.tleedmlib.base import rotation_matrix, rotation_matrix_order
 
 from .base_slab import BaseSlab
 from .slab_utils import _cycle
@@ -244,81 +245,104 @@ class BulkSlab(BaseSlab):
         rotm = rotation_matrix(ang)
         m[:2, :2] = np.dot(np.linalg.inv(rotm),
                            np.dot(np.array([[1, 0], [0, -1]]), rotm))
-        return self.isBulkTransformSymmetric(m, sldisp, eps)
+        return self._is_bulk_transform_symmetric(m, sldisp, eps)
 
     def isBulkScrewSymmetric(self, order, sldisp, eps):
         """Evaluates whether the slab has a screw axis of the given order when
         translated by the given number of sublayers."""
         m = rotation_matrix_order(order, dim=3)
-        return self.isBulkTransformSymmetric(m, sldisp, eps)
+        return self._is_bulk_transform_symmetric(m, sldisp, eps)
 
-    def isBulkTransformSymmetric(self, matrix, sldisp, eps):
-        """Evalues whether the slab is self-equivalent under a given symmetry
-        operation, and subsequent translation by a given number of sublayers"""
-        self.check_a_b_in_plane()
-        uc = self.ucell
-        uct = np.transpose(uc)
-        releps = [eps / np.linalg.norm(uct[j]) for j in range(0, 3)]
-        # get translation vectors to check
-        transVecs = []
+    # Disabled too-many-locals below: While there are indeed quite
+    # a few locals (20/15), refactoring this would require either
+    # helper methods that take a lot of arguments or some special
+    # class that holds them. That's because all the stuff is computed
+    # the very least number of times to speed up execution. Let's
+    # prefer execution time and use a lot of comments to help.
+    # pylint: disable-next=too-many-locals
+    def _is_bulk_transform_symmetric(self, matrix, sublayer_period, eps):
+        """Return if this slab is equivalent under a 3D screw/glide.
+
+        Parameters
+        ----------
+        matrix : numpy.ndarray
+            The rotational or mirror part of the symmetry
+            transformation to be tested. Shape (3, 3). The
+            transformation `matrix` is applied from the left to
+            the Cartesian coordinates (taken as column vectors).
+            It should represent a point operation that does not
+            change the z coordinates, i.e., it is block-diagonal
+            with non-trivial elements only in [:2, :2].
+        sublayer_period : int
+            Number of sublayers to be considered for constructing
+            test translation vectors. Should be one of the candidate
+            periods returned by `self.get_candidate_layer_periods()`.
+            Translational symmetry is tested for all vectors connecting
+            atoms between sublayer pairs whose indices differ by
+            `sublayer_period`.
+        eps : float
+            Tolerance (Cartesian) for position equivalence.
+
+        Returns
+        -------
+        is_symmetric : bool
+            True if screw/glide symmetric, else False.
+        """
+        # Let's use the better version of the unit cell, with
+        # unit vector as rows
+        ucell = self.ucell.T
+        ucell_inv = np.linalg.inv(ucell)
+        releps = eps / np.linalg.norm(ucell, axis=1)
+
+        # Get translation vectors to check. Notice that it is enough
+        # to pick any single atom from any layer as 'reference', and
+        # test translations to all atoms in another layer. To minimize
+        # the number of test translations, use pairs of low-occupancy
+        # layers. The next lines assume that sublayer_period comes from
+        # a call to get_candidate_layer_periods.
         lowocclayer = self.fewest_atoms_sublayer
-        baseInd = self.sublayers.index(lowocclayer)
-        ori = lowocclayer.cartpos
-        for at in self.sublayers[(baseInd + sldisp) % self.n_sublayers]:
-            transVecs.append((at.cartpos - np.dot(matrix, ori)).reshape(3, 1))
-        for (i, sl) in enumerate(self.sublayers):
-            coordlist = [at.cartpos for at in sl]
-            oricm = np.array(coordlist)  # original cartesian coordinate matrix
-            oripm = np.dot(np.linalg.inv(uc), oricm.transpose()) % 1.0
-            # collapse (relative) coordinates to base unit cell
-            oricm = np.dot(uc, oripm).transpose()
-            # original cartesian coordinates collapsed to base unit cell
-            transcoords = np.copy(oricm).transpose()
-            transcoords = np.dot(matrix, transcoords)
-            # now get coordinates of the sublayer to compare to
-            sl2 = self.sublayers[(i + sldisp) % self.n_sublayers]
-            oricm2 = np.array([at.cartpos for at in sl2])
-            oripm2 = np.dot(np.linalg.inv(uc), oricm2.transpose()) % 1.0
-            oricm2 = np.dot(uc, oripm2).transpose()
-            # for every point in matrix, check whether is equal:
-            for (i, p) in enumerate(oripm2.transpose()):
-                # get extended comparison list for edges/corners:
-                addlist = []
-                for j in range(0, 3):
-                    if abs(p[j]) < releps[j]:
-                        addlist.append(oricm2[i]+uct[j])
-                    if abs(p[j]-1) < releps[j]:
-                        addlist.append(oricm2[i]-uct[j])
-                if len(addlist) == 2:
-                    # 2D coner - add the diagonally opposed point
-                    addlist.append(addlist[0]+addlist[1]-oricm2[i])
-                elif len(addlist) == 3:
-                    # 3D corner - add all diagonally opposed points
-                    addlist.extend([(p1 + p2 - oricm2[i]) for (p1, p2) in
-                                    itertools.combinations(addlist, 2)])
-                    addlist.append(addlist[0] + addlist[1] + addlist[2]
-                                   - 2*oricm2[i])
-                for v in addlist:
-                    oricm2 = np.concatenate((oricm2, v.reshape(1, 3)))
+        ori = matrix.dot(lowocclayer.cartpos)
+        ref_layers = itertools.islice(self.sublayers,  # From next one
+                                      lowocclayer.num + 1, None)
+        # compare_layers: sublayers starting at num+period index,
+        # wrapped around. Notice that num+period is the buddy of
+        # lowocclayer. We take it out of the iterator while making
+        # the translations. After then, compare_layers is aligned
+        # with ref_layers.
+        compare_layers = _cycle(self.sublayers,
+                                lowocclayer.num + sublayer_period)
+        translations = [at.cartpos - ori for at in next(compare_layers)]
+
+        for ref_layer, compare_layer in zip(ref_layers, compare_layers):
+            # Prepare matrix-transformed versions of the Cartesian
+            # coordinates of this sublayer, after collapsing to the
+            # base unit cell. Translations will be applied later.
+            matrix_transformed, _ = collapse(
+                np.array([at.cartpos for at in ref_layer]),
+                ucell, ucell_inv
+                )
+            matrix_transformed = matrix_transformed.dot(matrix.T)
+
+            # Get coordinates of the sublayer to compare to, also
+            # collapsed to base cell, and including extra atoms
+            # for those close to edges and corners
+            to_compare, frac_coords = collapse(
+                np.array([at.cartpos for at in compare_layer]),
+                ucell, ucell_inv
+                )
+            to_compare, _ = add_edges_and_corners(to_compare,
+                                                  frac_coords,
+                                                  releps, ucell)
             j = 0
-            while j < len(transVecs):
-                v = transVecs[j]
-                shiftm = np.tile(v, len(coordlist))
-                tmpcoords = transcoords + shiftm
-                tmpcoords = np.dot(uc, (np.dot(np.linalg.inv(uc), tmpcoords)
-                                        % 1.0))
-                distances = sps.distance.cdist(tmpcoords.transpose(), oricm2,
-                                               'euclidean')
-                mismatch = False
-                for sublist in distances:
-                    if min(sublist) > eps:
-                        mismatch = True
-                        break
-                if mismatch:
-                    transVecs.pop(j)
+            while j < len(translations):
+                transformed_3d = matrix_transformed + translations[j]
+                transformed_3d, _ = collapse(transformed_3d, ucell, ucell_inv)
+                distances = euclid_distance(transformed_3d, to_compare)
+                if any(distances.min(axis=1) > eps):
+                    translations.pop(j)
                 else:
                     j += 1
-            if len(transVecs) == 0:
+            if not translations:
                 return False
         return True
 
