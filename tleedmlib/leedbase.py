@@ -656,7 +656,7 @@ def getLEEDdict(sl, rp):
          'surfBasis': sl.ab_cell.T,
          'surfGroup': pgstring,
          'bulkGroup': sl.bulkslab.foundplanegroup,
-         'bulk3Dsym': sl.bulkslab.getBulk3Dstr(),
+         'bulk3Dsym': sl.bulkslab.get_bulk_3d_str(),
          'screenAperture': rp.SCREEN_APERTURE,
          'beamIncidence': (rp.THETA, rp.PHI)}
 

@@ -16,6 +16,7 @@ import itertools
 import numpy as np
 import scipy.spatial as sps
 
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.base import rotation_matrix_order
 
@@ -93,24 +94,17 @@ class BulkSlab(BaseSlab):
         """Return whether this is a bulk slab."""
         return True
 
-    def getBulk3Dstr(self):
-        """Returns a one-line string containing information about the bulk
-        screw axes and glide planes. Only to be used for bulk slabs. Format of
-        the string is 'r(2, 4), m([1,1], [ 1,-1])'. If neither screw axes nor
-        glide planes exist, returns string 'None'."""
-        b3ds = ""
-        if self.bulk_screws:
-            b3ds += "r({})".format(", ".join([str(v)
-                                              for v in self.bulk_screws]))
-        if self.bulk_glides:
-            if b3ds:
-                b3ds += ", "
-            b3ds += "m({})".format(", ".join([np.array2string(gp.par,
-                                                              separator=",")
-                                              for gp in self.bulk_glides]))
-        if not b3ds:
-            return "None"
-        return b3ds
+    def get_bulk_3d_str(self):
+        """Return info about bulk screw axes and glide planes as a string.
+
+        Returns
+        -------
+        bulk_3d_str : str
+            Format is 'r(2, 4), m([1,1], [ 1,-1])' if there is
+            any screw axes or glide planes, otherwise 'None'.
+        """
+        return leedbase.bulk_3d_string(self.bulk_screws,
+                                       (p.par for p in self.bulk_glides))
 
     def get_bulk_repeat(self, rpars, only_z_distance=False):
         """Return the bulk repeat vector (with positive z).
