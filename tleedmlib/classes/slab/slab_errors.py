@@ -37,3 +37,7 @@ class MissingSublayersError(SlabError):
 
 class NoBulkRepeatError(SlabError, RuntimeError):
     """Exception raised when failing to find a bulk repeat vector."""
+
+
+class TooFewLayersError(SlabError):
+    """Some layers are present, but it's too few for the operation."""
