@@ -11,6 +11,7 @@ This module was created as part of the refactoring of slab.py.
 """
 
 import copy
+import functools
 import itertools
 
 import numpy as np
@@ -21,6 +22,7 @@ from viperleed.tleedmlib.base import add_edges_and_corners, collapse
 from viperleed.tleedmlib.base import rotation_matrix_order
 
 from .base_slab import BaseSlab
+from .slab_errors import AlreadyMinimalError
 from .slab_utils import _cycle
 
 
@@ -199,42 +201,99 @@ class BulkSlab(BaseSlab):
                 candidate_periods.pop(i)
         return candidate_periods
 
-    def getMinC(self, rp, z_periodic=True):
-        """Checks whether there is a vector c with a smaller length than
-        the current one. If so, returns the minimized vector, else returns
-        None."""
-        eps = rp.SYMMETRY_EPS
-        pcands = self.get_candidate_layer_periods(eps)
-        if len(pcands) == 0:
-            return None
-        ts = copy.deepcopy(self)
-        ts.update_cartesian_from_fractional()
-        ts.create_sublayers(eps)
-        baseLayer = ts.sublayers[0]
-        baseInd = ts.sublayers.index(baseLayer)
-        nl = ts.n_sublayers
-        ori = baseLayer.cartpos  # compare displacements from here
-        repeatC = None
-        for per in pcands:
-            ind = (baseInd + per) % nl
-            for at in ts.sublayers[ind]:
-                v = ori - at.cartpos
-                if ts.is_translation_symmetric(v, eps, z_periodic=z_periodic):
-                    repeatC = at.cartpos - ori
-                    break
-            if repeatC is not None:
+    def get_minimal_c_vector(self, eps, epsz=None, z_periodic=True):
+        """Return the smallest bulk c vector, if any.
+
+        Parameters
+        ----------
+        eps : float
+            Cartesian tolerance for in-plane distances
+        epsz : float or None, optional
+            Cartesian tolerance for distances in the z direction,
+            i.e., perpendicular to the surface. If not given or
+            None, it is taken equal to `eps`.
+        z_periodic : bool, optional
+            Whether the current slab should be considered periodic
+            in the direction of the c vector. This is commonly True
+            for all bulk slabs, unless the current c vector is not
+            a repeat vector (e.g., while c is being identified using
+            detect_bulk). Default is True.
+
+        Returns
+        -------
+        shortest_c : numpy.ndarray
+            The minimal repeat c vector found, in Cartesian
+            coordinates with (x, y) in the surface plane, and
+            z directed from the solid towards the surface, i.e.,
+            opposite to the usual LEED convention. The in-plane
+            components are always minimized.
+
+        Raises
+        ------
+        AlreadyMinimalError
+            If a shorter repeat vector could not be found.
+        """
+        if epsz is None:
+            epsz = eps
+        periods = self.get_candidate_layer_periods(epsz)                        # TODO: This used to be rp.SYMMETRY_EPS, but I think eps_z is the right one. @fkraushofer: OK?
+        if not periods:
+            raise AlreadyMinimalError(
+                f'{type(self).__name__}.get_minimal_c_vector: no '
+                'candidate sublayer periods for reducing c vector'
+                )
+
+        # Work with a deepcopy, as we will play around with sublayers
+        self_copy = copy.deepcopy(self)
+        self_copy.update_cartesian_from_fractional()
+        self_copy.create_sublayers(epsz)                                        # TODO: this used to be rp.SYMMETRY_EPS but I think eps_z is the right one. @fkraushofer: OK?
+        n_layers = self_copy.n_sublayers
+
+        # Pick one layer (e.g., the first one) and test translations
+        # for all vectors connecting an atom of this layer (e.g., the
+        # first one) to all atoms of all other layers.
+        ori = self_copy.sublayers[0].cartpos
+
+        # Since the periods are sorted from smaller to larger, we need
+        # only keep track of one repeat vector, stopping at the earliest
+        _is_symmetric = functools.partial(self_copy.is_translation_symmetric,
+                                          eps=eps, z_periodic=z_periodic)
+        repeat_c = None
+        for period in periods:
+            other_layer = self_copy.sublayers[period % n_layers]                # TODO: we used to offset all by ts.sublayers.index(baseLayer), but we always used sublayers[0] as baseLayer, so ts.sublayers.index(baseLayer) == 0. @fkraushofer: OK?
+            # Vectors from surface to bulk (the way we want them
+            # later), but flip them for testing matching, which
+            # means translating the slab up towards the surface.
+            # This is important when, e.g., we're looking for the
+            # c vector in SurfaceSlab.detect_bulk: the upper part
+            # of the slab is not bulk.
+            test_vecs = (ori - atom.cartpos for atom in other_layer)
+            repeat_c = next((v for v in test_vecs if _is_symmetric(-v)), None)
+            if repeat_c is not None:
                 break
-        if repeatC is None:
-            return None
-        # optimize C vector to be close to Z, if possible
-        cFracBase = np.dot(np.linalg.inv(ts.ab_cell), repeatC[:2]) % 1.0
-        newC = np.append(np.dot(ts.ab_cell, cFracBase), -repeatC[2])
-        for (i, j) in [(0, -1), (-1, 0), (-1, -1)]:
-            v = np.dot(ts.ab_cell, cFracBase + np.array([i, j]))
-            if (np.linalg.norm(np.append(v, -repeatC[2]))
-                    < np.linalg.norm(newC)):
-                newC[:2] = v
-        return newC
+
+        if repeat_c is None:
+            raise AlreadyMinimalError(
+                f'{type(self).__name__}.get_minimal_c_vector: none '
+                'of the candidate sublayer periods is an actual period'
+                )
+
+        # Flip z, because we store it opposed in Atom.cartpos[2], but
+        # want repeat_c with the same coordinate system as unit cell
+        repeat_c[2] *= -1
+
+        # Optimize c vector to be close to z and overall
+        # shortest by collapsing the in-plane components
+        c_frac_ab = np.dot(np.linalg.inv(self.ab_cell), repeat_c[:2]) % 1.0
+
+        # Since % returns always the same sign as the divider,                  # TODO: @fkraushofer: is this the reason? That's the only thing I could think of. Actually, a bit of testing with some random values for ab_cell and c_frac_ab suggests that subtracting one is not enough to guarantee it is 'most vertical' and 'shortest'. I think we would need a proper Minkowski reduction. An example: c_frac_ab=[0.58074159 0.14628345] ab_cell.T=[[-6.40112636 -1.13022286],  [ 7.43491281 -0.45727906]] is minimized by subtracting (-3, -2)
+        # it may still be possible to get a shorter vector by
+        # subtracting '1' in either in-plane direction:
+        repeat_c[:2] = min(
+            (np.dot(self.ab_cell, c_frac_ab - f)
+             for f in [(0, 0), (0, 1), (1, 0), (1, 1)]),
+            key=np.linalg.norm
+            )
+        return repeat_c
 
     def is_bulk_glide_symmetric(self, symplane, sublayer_period, eps):
         """Return if the slab has a 3D glide plane.

@@ -256,11 +256,14 @@ class SurfaceSlab(BaseSlab):
             bsl = tsl.bulkslab
         bsl.update_cartesian_from_fractional()
         # detect new C vector
-        newC = bsl.getMinC(rp, z_periodic=False)
-        if newC is None:
+        try:
+            newC = bsl.get_minimal_c_vector(rp.SYMMETRY_EPS,
+                                            rp.SYMMETRY_EPS_Z,
+                                            z_periodic=False)
+        except AlreadyMinimalError as exc:
             _LOGGER.error('Automatic bulk detection failed: Found no bulk '
                           'repeat vector below the specified cutoff.')
-            raise RuntimeError('Failed to detect bulk repeat vector.')
+            raise RuntimeError('Failed to detect bulk repeat vector') from exc
 
         # reduce the bulk slab
         rp_dummy.BULK_REPEAT = -newC

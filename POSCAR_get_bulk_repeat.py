@@ -105,9 +105,11 @@ def main():
                 si[0, 0], si[0, 1], si[1, 0], si[1, 1]))
 
     bsl.update_cartesian_from_fractional()
-    newC = bsl.getMinC(rp, z_periodic=False)
-
-    if newC is None:
+    try:
+        newC = bsl.get_minimal_c_vector(rp.SYMMETRY_EPS,
+                                        rp.SYMMETRY_EPS_Z,
+                                        z_periodic=False)
+    except AlreadyMinimalError:
         print("No repeat vector was found inside the bulk. The bulk may "
               "already be minimal.")
         return 0

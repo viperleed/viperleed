@@ -19,6 +19,7 @@ from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import (addUnequalPoints, angle, dist_from_line,
                                       rotation_matrix_order, rotation_matrix)
 from viperleed.tleedmlib.classes.atom_containers import AtomList
+from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
 from viperleed.tleedmlib.classes.sym_entity import SymPlane
 from viperleed.tleedmlib.files import parameters
 
@@ -109,8 +110,11 @@ def findBulkSymmetry(sl, rp):
     ts.collapse_cartesian_coordinates()
     ts.create_sublayers(epsz)
     # optimize C vector
-    newC = ts.getMinC(rp)
-    if newC is not None:
+    try:
+        newC = ts.get_minimal_c_vector(eps, epsz)
+    except AlreadyMinimalError:
+        pass
+    else:
         logger.debug("Bulk unit cell could be reduced with repeat vector "
                      "[{:.5f} {:.5f} {:.5f}]".format(*(-newC)))
         # apply new unit cell
