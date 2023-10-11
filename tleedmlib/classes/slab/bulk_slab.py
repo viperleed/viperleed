@@ -97,6 +97,99 @@ class BulkSlab(BaseSlab):
         """Return whether this is a bulk slab."""
         return True
 
+    def apply_bulk_cell_reduction(self, eps, epsz=None,
+                                  new_c_vec=None,
+                                  new_ab_cell=None,
+                                  recenter=True):
+        """Reduce bulk unit cell in- and out-of-plane.
+
+        Extra atoms left after reduction of the unit cell size
+        are removed.
+
+        If desired, and the unit cell is actually changed, the
+        atom that is currently at the top can be kept at the top
+        also later. In this case, the z position of the new unit
+        cell is also centred relative to the geometric centre of
+        the atom coordinates.
+
+        Parameters
+        ----------
+        eps : float
+            Cartesian tolerance (Angstrom) for in-plane comparison
+            of atomic coordinates.
+        epsz : float or None, optional
+            Cartesian tolerance (Angstrom) for comparison of atomic
+            coordinates in the direction orthogonal to the surface.
+            If not given or None, it is taken equal to `eps`. Default
+            is None.
+        new_c_vec : Sequence or None, optional
+            Cartesian coordinates of the new repeat vector. If not
+            given or None, the current repeat vector is retained.
+            Shape (3,). Default is None.
+        new_ab_cell : Sequence or None, optional
+            Cartesian coordinates of the new surface unit cell. The
+            new unit vectors are rows, i.e., a, b = `new_ab_cell`.
+            If not given or None, the current surface unit cell is
+            retained. Default is None.
+        recenter : bool, optional
+            Whether atom coordinates along the c axis should be
+            modified so that the atom that was highest when this
+            method was called is also highest afterwards. Default
+            is True.
+
+        Returns
+        -------
+        None.
+        """
+        if new_ab_cell is None and new_c_vec is None:
+            return  # Nothing to do
+
+        if epsz is None:
+            epsz = eps
+        update_origin = new_c_vec is not None
+
+        # Keep track of the atom that is currently at the top:
+        # after reducing the unit-cell vector along c, the fractional
+        # positions are screwed. We rely on the Cartesian ones, and,
+        # if requested, will 'shift' the fractional ones such that
+        # the topmost atom now is still the topmost atom later
+        if not recenter:
+            top_atom_cfrac = 0  # Unused anyway
+        elif self.sublayers:
+            top_atom_cfrac = self.sublayers[0].pos[2]
+        elif self.layers:
+            top_atom_cfrac = max(at.pos[2] for at in self.layers[0])
+        else:
+            top_atom_cfrac = max(at.pos[2] for at in self)
+
+        # Make sure Cartesians are up to date,
+        # then reduce c direction if needed
+        self.update_cartesian_from_fractional()
+        if new_c_vec is not None:
+            self.ucell[:, 2] = new_c_vec
+
+        # Reduce in-plane dimension
+        if new_ab_cell is not None:
+            self.ab_cell[:] = new_ab_cell.T
+        self.collapse_cartesian_coordinates(update_origin=update_origin)
+
+        # Get rid of duplicates resulting from the size reduction
+        self.remove_duplicate_atoms(eps, epsz)
+
+        if not recenter:
+            return
+
+        # As mentioned above, fractional positions in c
+        # are now screwed. Make top atom the topmost again...
+        for atom in self:
+            atom.pos[2] = (atom.pos[2] - top_atom_cfrac + 0.9999) % 1.0
+        # ...then center fractional c coordinates around cell midpoint
+        atoms_c_frac = [at.pos[2] for at in self]
+        midpos = (max(atoms_c_frac) + min(atoms_c_frac)) / 2
+        for atom in self:
+            atom.pos[2] = (atom.pos[2] - midpos + 0.5) % 1.0
+        self.update_cartesian_from_fractional(update_origin=update_origin)
+
     def get_bulk_3d_str(self):
         """Return info about bulk screw axes and glide planes as a string.
 
