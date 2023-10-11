@@ -101,33 +101,21 @@ def getSymPosLists(sl, rp, pointlist, output=False):
 def findBulkSymmetry(sl, rp):
     """Checks the bulk slab for screw axes and glide planes."""
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
     abt = sl.ab_cell.T.copy()
     rotsfound = []
     glidesfound = []
     ts = copy.deepcopy(sl)
-    ts.sort_by_z()
-    ts.collapse_cartesian_coordinates()
-    ts.create_sublayers(epsz)
+    rp2 = copy.deepcopy(rp)
+
     # optimize C vector
     try:
-        newC = ts.get_minimal_c_vector(eps, epsz)
+        ts.ensure_minimal_c_vector(rp2)
     except AlreadyMinimalError:
         pass
     else:
-        logger.debug("Bulk unit cell could be reduced with repeat vector "
-                     "[{:.5f} {:.5f} {:.5f}]".format(*(-newC)))
-        # apply new unit cell
-        ts.atlist = AtomList(at for at in ts
-                             if at.cartpos[2] > ts.topat_ori_z - abs(newC[2]))
-        ts.layers[0].atlist.clear()
-        ts.layers[0].atlist.extend(ts.atlist)
-        ts.layers = [ts.layers[0]]
-        ts.layers[0].is_bulk = True
-        rp2 = copy.deepcopy(rp)
-        rp2.SUPERLATTICE = np.array([[1, 0], [0, 1]], dtype=float)
-        rp2.BULK_REPEAT = -newC
-        ts = ts.make_bulk_slab(rp2)
+        logger.debug('Bulk unit cell could be reduced with repeat vector '
+                     '[{:.5f} {:.5f} {:.5f}]'.format(*(rp2.BULK_REPEAT)))
+
     # figure out what to check
     pcands = ts.get_candidate_layer_periods(eps)
     if len(pcands) == 0:
