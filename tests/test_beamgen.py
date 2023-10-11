@@ -67,7 +67,7 @@ class TestGenerateBeamlist:
         """Return slab, parameters, info and the path to a 'BEAMLIST'."""
         slab, param, info = args
         slab.createLayers(param)
-        slab.bulkslab = slab.makeBulkSlab(param)
+        slab.make_bulk_slab(param)
         symmetry.findSymmetry(slab, param)
         symmetry.findSymmetry(slab.bulkslab, param, bulk=True)
         symmetry.findBulkSymmetry(slab.bulkslab, param)

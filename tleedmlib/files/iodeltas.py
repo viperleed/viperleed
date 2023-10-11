@@ -390,7 +390,7 @@ def generateDeltaBasic(sl, rp):
         + 'EI,EF,DE\n')
     ucsurf = sl.ab_cell.T
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
+        sl.make_bulk_slab(rp)
     ucbulk = sl.bulkslab.ab_cell.T
     output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
     output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'

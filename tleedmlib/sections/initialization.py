@@ -153,7 +153,7 @@ def initialization(sl, rp, subdomain=False):
 
     # create bulk slab:
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
+        sl.make_bulk_slab(rp)
     bsl = sl.bulkslab
 
     # try identifying bulk repeat:

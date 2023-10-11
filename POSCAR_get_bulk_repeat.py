@@ -81,8 +81,7 @@ def main():
     rp.SYMMETRY_EPS_Z = eps
     sl.full_update(rp)
 
-    sl.bulkslab = sl.makeBulkSlab(rp)
-    bsl = sl.bulkslab
+    bsl = sl.make_bulk_slab(rp)
     bsl.create_sublayers(eps)
 
     print("Checking bulk unit cell...")
@@ -122,7 +121,7 @@ def main():
     bsl.layers[0].atlist.extend(bsl.atlist)
 
     rp.SUPERLATTICE = np.eye(2)
-    newbsl = bsl.makeBulkSlab(rp)
+    newbsl = bsl.make_bulk_slab(rp)
 
     # find largest layer spacing in reduced POSCAR
     newbsl.create_sublayers(eps)

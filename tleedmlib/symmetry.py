@@ -127,7 +127,7 @@ def findBulkSymmetry(sl, rp):
         rp2 = copy.deepcopy(rp)
         rp2.SUPERLATTICE = np.array([[1, 0], [0, 1]], dtype=float)
         rp2.BULK_REPEAT = -newC
-        ts = ts.makeBulkSlab(rp2)
+        ts = ts.make_bulk_slab(rp2)
     # figure out what to check
     pcands = ts.get_candidate_layer_periods(eps)
     if len(pcands) == 0:

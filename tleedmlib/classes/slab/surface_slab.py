@@ -25,7 +25,8 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab
 from .slab_errors import AlreadyMinimalError, MissingBulkSlabError
-from .slab_errors import NoBulkRepeatError, SlabError
+from .slab_errors import MissingLayersError, NoBulkRepeatError
+from .slab_errors import TooFewLayersError, SlabError
 
 try:
     import ase
@@ -206,7 +207,7 @@ class SurfaceSlab(BaseSlab):
             return
         else:
             rp.SUPERLATTICE = newSL
-            self.bulkslab = self.makeBulkSlab(rp)
+            self.make_bulk_slab(rp)
 
     def detectBulk(self, rp, second_cut_min_spacing=1.2):
         """
@@ -242,8 +243,7 @@ class SurfaceSlab(BaseSlab):
         rp_dummy.BULK_LIKE_BELOW = 0.
         tsl.createLayers(rp_dummy)
         # create a pseudo-bulkslab
-        tsl.bulkslab = tsl.makeBulkSlab(rp_dummy)
-        bsl = tsl.bulkslab
+        bsl = tsl.make_bulk_slab(rp_dummy)
         bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
         # reduce unit cell in xy
         try:
@@ -268,8 +268,7 @@ class SurfaceSlab(BaseSlab):
         # reduce the bulk slab
         rp_dummy.BULK_REPEAT = -newC
         rp_dummy.SUPERLATTICE = np.eye(2)
-        tsl.bulkslab = tsl.makeBulkSlab(rp_dummy)
-        bsl = tsl.bulkslab
+        bsl = tsl.make_bulk_slab(rp_dummy)
         bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
 
         # calculate cut plane
@@ -451,7 +450,7 @@ class SurfaceSlab(BaseSlab):
         if self.bulkslab is None:
             raise MissingBulkSlabError(
                 f'{type(self).__name__}.identify_bulk_repeat: missing '
-                'bulkslab. Call makeBulkSlab, then try again'
+                'bulkslab. Call make_bulk_slab, then try again'
                 )
         if epsz is None:
             epsz = eps
@@ -510,96 +509,83 @@ class SurfaceSlab(BaseSlab):
         shortest[2] *= -1                                                       # TODO: .cartpos[2]
         return shortest
 
-    def makeBulkSlab(self, rp):
-        """Copies self to create a bulk slab, in which everything apart from the
-        bulk layers is deleted. Returns that bulk slab."""
-        if self.n_layers < 2:
-            err_txt = 'Less than two layers detected. Check POSCAR and consider modifying LAYER_CUTS.'
-            _LOGGER.error(err_txt)
-            raise RuntimeError(err_txt)
+    def make_bulk_slab(self, rpars, recenter=True):
+        """Return a copy of this slab with only bulk layers.
 
-        # construct bulk slab
-        bsl = BulkSlab.from_slab(self)
-        bsl.clear_symmetry_and_ucell_history()
-        bsl.atlist = AtomList(bsl.bulk_atoms)
-        bsl.layers = bsl.bulk_layers
-        bsl.update_cartesian_from_fractional()
-        al = bsl.atlist[:]     # temporary copy
-        al.sort(key=lambda atom: atom.pos[2])
-        topat = al[-1]
-        if type(rp.BULK_REPEAT) == np.ndarray:
-            bulkc = np.copy(rp.BULK_REPEAT)
-            if bulkc[2] < 0:
-                bulkc = -bulkc
-        else:
-            cvec = bsl.ucell[:, 2]
-            zdiff = 0
-            if rp.BULK_REPEAT is None:
-                # assume that interlayer vector from bottom non-bulk to top
-                #  bulk layer is the same as between bulk units
-                zdiff = (bsl.layers[-1].cartbotz
-                         - self.layers[bsl.layers[0].num-1].cartbotz)
-            elif isinstance(rp.BULK_REPEAT, (float, np.floating)):
-                zdiff = rp.BULK_REPEAT
-            if  abs(zdiff) < 1e-5:
-                err_txt = 'Unable to detect bulk interlayer vector. Check POSCAR and consider explicitly setting BULK_REPEAT.'
-                _LOGGER.error(err_txt)
-                raise RuntimeError(err_txt)
-            bulkc = cvec * zdiff / cvec[2]
-        bsl.ucell[:, 2] = bulkc
-        # reduce dimensions in xy
-        superlattice = np.identity(3, dtype=float)
-        superlattice[:2, :2] = rp.SUPERLATTICE.T
-        bsl.ucell = np.dot(bsl.ucell, np.linalg.inv(superlattice))
-        a_vec, b_vec = bsl.ab_cell.T
-        if (rp.superlattice_defined
-                and np.linalg.norm(a_vec) > np.linalg.norm(b_vec) + 1e-4):
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS used for making the new slab. Attributes
+            used (read-only): SUPERLATTICE, superlattice_defined,
+            BULK_REPEAT, SYMMETRY_EPS, SYMMETRY_EPS_Z.
+
+        Returns
+        -------
+        bulk_slab : Slab
+            Copy of self with the correct bulk unit cell. The same
+            slab can then be accessed as the `bulkslab` attribute
+            of this slab. Notice that no attempt is made on making
+            the returned slab have a 'minimal' unit cell in either
+            in- or out-of-plane directions. If you want that, you
+            can later call `self.ensure_minimal_bulk_ab_cell(rpars)`
+            (makes `self.bulkslab` have smallest in-plane cell) and
+            `self.bulkslab.ensure_minimal_c_vector(rpars)` (also
+            makes the repeat vector shortest). If you already know
+            the minimal bulk c vector and/or in-plane cell, you can
+            also use `self.bulkslab.apply_bulk_cell_reduction(...)`.
+        recenter : bool, optional
+            Whether the fractional coordinates of the bulk slab
+            that is created should be adjusted so that the topmost
+            bulk atom is at the same position. This can safely be
+            left to the default as long as the bulk repeat vector
+            is known and correct. Default is True.
+
+        Raises
+        ------
+        MissingLayersError
+            If this method is called on a slab that has no layers.
+            This normally means that `create_layers` was not called
+            before.
+        TooFewLayersError
+            If this method is called on a slab that has only one
+            layer. Normally this means that there is a problem with
+            the LAYER_CUTS.
+        """
+        if self.n_layers < 2:
+            err_txt = ('Less than two layers detected. Check POSCAR '
+                       'and consider modifying LAYER_CUTS.')
+            _LOGGER.error(err_txt)
+            exc = TooFewLayersError(err_txt)
+            if not self.layers:
+                exc = MissingLayersError('No layers detected. May need to '
+                                         'create_layers or to full_update')
+            raise exc
+
+        # Construct bulk slab
+        bulk_slab = BulkSlab.from_slab(self)
+        bulk_slab.clear_symmetry_and_ucell_history()
+        bulk_slab.atlist = AtomList(bulk_slab.bulk_atoms)
+        bulk_slab.layers = bulk_slab.bulk_layers
+
+        kwargs = {
+            'eps': rpars.SYMMETRY_EPS,
+            'epsz': rpars.SYMMETRY_EPS_Z,
+            'new_c_vec': self.get_bulk_repeat(rpars),
+            'new_ab_cell': np.dot(np.linalg.inv(rpars.SUPERLATTICE),
+                                  self.ab_cell.T),
+            'recenter': recenter
+            }
+        bulk_slab.apply_bulk_cell_reduction(**kwargs)
+        a_norm, b_norm = np.linalg.norm(bulk_slab.ab_cell.T, axis=1)
+        if rpars.superlattice_defined and a_norm > b_norm + 1e-4:
             _LOGGER.warning(
-                'The bulk unit cell defined by SUPERLATTICE does '
-                'not follow standard convention: the first vector is larger '
-                'than the second. Make sure beams are labelled correctly.')
-            rp.setHaltingLevel(1)
-        bsl.collapse_cartesian_coordinates(update_origin=True)
-        # if self.ucell_mod is not empty, don't drag that into the bulk slab.
-        bsl.ucell_mod = []
-        # position in c is now random; make topmost bulk atom top
-        topc = topat.pos[2]
-        for at in bsl:
-            at.pos[2] = (at.pos[2] - topc + 0.9999) % 1.
-        # now center around cell midpoint
-        cl = [at.pos[2] for at in bsl]
-        midpos = (max(cl)+min(cl))/2
-        for at in bsl:
-            at.pos[2] = (at.pos[2] - midpos + 0.5) % 1.
-        bsl.update_cartesian_from_fractional(update_origin=True)
-        bsl.update_element_count()   # update the number of atoms per element
-        # remove duplicates
-        bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
-        newatlist = AtomList()
-        for subl in bsl.sublayers:
-            i = 0
-            while i < subl.n_atoms:
-                j = i+1
-                while j < subl.n_atoms:
-                    if subl.atlist[i].is_same_xy(subl.atlist[j],
-                                                 eps=rp.SYMMETRY_EPS):
-                        subl.atlist.pop(j)
-                    else:
-                        j += 1
-                i += 1
-            newatlist.extend(subl)
-        bsl.atlist = newatlist
-        bsl.update_element_count()   # update number of atoms per element again
-        # update the layers. Don't use Slab.createLayers here to keep it
-        #   consistent with the slab layers
-        for i, layer in enumerate(bsl.layers):
-            layer.slab = bsl
-            layer.update_position()
-            layer.num = i
-            atoms = [at for at in layer if at in bsl]
-            layer.atlist.clear()
-            layer.atlist.extend(atoms)
-        return bsl
+                'The bulk unit cell defined by SUPERLATTICE does not '
+                'follow standard convention: the first vector is longer '
+                'than the second. Make sure beams are labelled correctly.'
+                )
+            rpars.setHaltingLevel(1)
+        self.bulkslab = bulk_slab
+        return bulk_slab
 
     def restoreOriState(self, keepDisp=False):
         """Resets the atom positions and site vibrational amplitudes to the

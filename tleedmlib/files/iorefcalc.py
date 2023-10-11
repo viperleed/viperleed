@@ -278,7 +278,7 @@ def writePARAM(sl, rp, lmax=-1):
     mnsub = 0
     mnstack = 0
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
+        sl.make_bulk_slab(rp)
     for layer in sl.non_bulk_layers:
         mnstack += 1
         if layer.n_atoms == 1:
@@ -356,7 +356,7 @@ def writeAUXLATGEO(sl, rp):
     output += formatter['energies'].write(ens).ljust(lj) + 'EI,EF,DE\n'
     ucsurf = sl.ab_cell.T
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
+        sl.make_bulk_slab(rp)
     ucbulk = sl.bulkslab.ab_cell.T
     output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
     output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
@@ -507,7 +507,7 @@ def writeAUXGEO(sl, rp):
     blayers = sl.bulk_layers
     layerOffsets = [np.zeros(3) for _ in range(sl.n_layers + 1)]
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
+        sl.make_bulk_slab(rp)
     for i, layer in enumerate(sl.layers):
         output += '-   layer type '+str(i+1)+' ---\n'
         if layer.is_bulk:

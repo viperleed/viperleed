@@ -220,7 +220,7 @@ class CaseBulkSlabs:
     def _make_bulk(slab, param):
         """Return a bulk slab and parameters from a surface slab."""
         param = copy.deepcopy(param)
-        bulk_slab = slab.makeBulkSlab(param)
+        bulk_slab = slab.make_bulk_slab(param)
         return bulk_slab, param
 
     @classmethod

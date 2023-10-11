@@ -70,7 +70,7 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
         Filename to be written, by default "BEAMLIST".
     """
     if slab.bulkslab is None:
-        slab.bulkslab = slab.makeBulkSlab(rpars)
+        slab.make_bulk_slab(rpars)
         symmetry.findSymmetry(slab.bulkslab, rpars)
 
     # Use guilib to generate list of beams
