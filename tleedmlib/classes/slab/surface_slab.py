@@ -419,7 +419,9 @@ class SurfaceSlab(BaseSlab):
         of this slab. Should `bulkslab` be 'too thick' (e.g., the
         LAYER_CUTS select composite layers with an exaggerated number
         of sublayers), the vector returned will not be the shortest
-        possible.
+        possible. If you are after the absolutely shortest vector, use
+        `slab.bulkslab.get_minimal_c_vector(eps, epsz)`, or
+        `slab.bulkslab.ensure_minimal_c_vector(rparams)`.
 
         Parameters
         ----------

@@ -187,6 +187,54 @@ class BulkSlab(BaseSlab):
             atom.pos[2] = (atom.pos[2] - midpos + 0.5) % 1.0
         self.update_cartesian_from_fractional(update_origin=update_origin)
 
+    def ensure_minimal_c_vector(self, rpars, z_periodic=False):
+        """Reduce the c vector to its minimum value.
+
+        This method not only finds the shortest c vector, but also
+        reduces the extension of this slab to have the new c vector
+        as the out-of-plane repeat. It also modifies `rpars` with
+        the minimal vector found. Use `get_minimal_c_vector` if you
+        only want to detect the shortest repeat, without affecting
+        either the slab or `rpars`.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS read from file. Attributes used:
+            read-only: SYMMETRY_EPS, SYMMETRY_EPS_Z.
+            overwritten: BULK_REPEAT. The minimal c vector
+            found is stored in the BULK_REPEAT attribute of
+            `rpars`.
+        z_periodic : bool, optional
+            Whether the slab is to be considered periodic along
+            the direction perpendicular to the surface while the
+            c vector is minimized. Typically False, unless the
+            current c vector is not a repeat vector for this slab
+            (e.g., the slab contains non-bulk parts that need to
+            be ignored). Default is False.
+
+        Returns
+        -------
+        shortest_c : numpy.ndarray
+            The new shortest c vector found.
+
+        Raises
+        ------
+        AlreadyMinimalError
+            If no shorter c vector is found.
+        """
+        self.create_sublayers(rpars.SYMMETRY_EPS_Z)
+
+        # May raise AlreadyMinimalError
+        rpars.BULK_REPEAT = self.get_minimal_c_vector(rpars.SYMMETRY_EPS,
+                                                      rpars.SYMMETRY_EPS_Z,
+                                                      z_periodic=z_periodic)
+        self.apply_bulk_cell_reduction(rpars.SYMMETRY_EPS,
+                                       epsz=rpars.SYMMETRY_EPS_Z,
+                                       new_c_vec=rpars.BULK_REPEAT)
+        self.create_sublayers(rpars.SYMMETRY_EPS_Z)
+        return rpars.BULK_REPEAT
+
     def get_bulk_3d_str(self):
         """Return info about bulk screw axes and glide planes as a string.
 
@@ -293,6 +341,10 @@ class BulkSlab(BaseSlab):
 
     def get_minimal_c_vector(self, eps, epsz=None, z_periodic=True):
         """Return the smallest bulk c vector, if any.
+
+        Notice that this method does not modify this slab. If
+        you want this slab to have the shortest c vector, use
+        `ensure_minimal_c_vector` instead.
 
         Parameters
         ----------
