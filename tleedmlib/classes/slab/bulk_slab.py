@@ -163,7 +163,7 @@ class BulkSlab(BaseSlab):
         # then reduce c direction if needed
         self.update_cartesian_from_fractional()
         if new_c_vec is not None:
-            self.ucell[:, 2] = new_c_vec
+            self.ucell.T[2] = new_c_vec
 
         # Reduce in-plane dimension
         if new_ab_cell is not None:
