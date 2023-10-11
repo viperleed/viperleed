@@ -17,9 +17,8 @@ import numpy as np
 from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import angle
 from viperleed.tleedmlib.base import add_edges_and_corners, collapse
-from viperleed.tleedmlib.base import rotation_matrix, rotation_matrix_order
+from viperleed.tleedmlib.base import rotation_matrix_order
 
 from .base_slab import BaseSlab
 from .slab_utils import _cycle
@@ -237,21 +236,55 @@ class BulkSlab(BaseSlab):
                 newC[:2] = v
         return newC
 
-    def isBulkGlideSymmetric(self, symplane, sldisp, eps):
-        """Evaluates whether the bulk has a glide plane along a given
-        direction, i.e. mirror at this direction, then some translation."""
-        m = np.identity(3, dtype=float)
-        ang = angle(symplane.dir, np.array([1, 0]))
-        rotm = rotation_matrix(ang)
-        m[:2, :2] = np.dot(np.linalg.inv(rotm),
-                           np.dot(np.array([[1, 0], [0, -1]]), rotm))
-        return self._is_bulk_transform_symmetric(m, sldisp, eps)
+    def is_bulk_glide_symmetric(self, symplane, sublayer_period, eps):
+        """Return if the slab has a 3D glide plane.
 
-    def isBulkScrewSymmetric(self, order, sldisp, eps):
-        """Evaluates whether the slab has a screw axis of the given order when
-        translated by the given number of sublayers."""
-        m = rotation_matrix_order(order, dim=3)
-        return self._is_bulk_transform_symmetric(m, sldisp, eps)
+        Parameters
+        ----------
+        symplane : SymPlane
+            The mirror part of the glide plane to test.
+        sublayer_period : int
+            Number of sublayers, corresponding to the translation
+            part of the glide operation to be tested: translations
+            are tested for all vectors connecting pairs of sublayers
+            whose indices differ by `sublayer_period`. Normally one
+            of the values returned by `get_candidate_layer_periods`.
+        eps : float
+            Tolerance (Cartesian) on atomic positions.
+
+        Returns
+        -------
+        has_glide : bool
+            Whether the slab has a bulk glide plane with the
+            given `symplane` and `sublayer_period` translation.
+        """
+        matrix = symplane.point_operation(n_dim=3)
+        return self._is_bulk_transform_symmetric(matrix, sublayer_period, eps)
+
+    def is_bulk_screw_symmetric(self, order, sublayer_period, eps):
+        """Return if the slab has a 3D screw axis.
+
+        Parameters
+        ----------
+        order : int
+            The rotation order of the screw axis to test.
+        sublayer_period : int
+            Number of sublayers, corresponding to the translation
+            part of the screw operation to be tested: translations
+            are tested for all vectors connecting pairs of sublayers
+            whose indices differ by `sublayer_period`. Normally one
+            of the values returned by `get_candidate_layer_periods`.
+        eps : float
+            Tolerance (Cartesian) on atomic positions.
+
+        Returns
+        -------
+        has_screw : bool
+            Whether the slab has a bulk screw with the given
+            `order` and `sublayer_period` translation.
+        """
+        matrix = rotation_matrix_order(order, dim=3)
+        return self._is_bulk_transform_symmetric(matrix, sublayer_period, eps)
 
     # Disabled too-many-locals below: While there are indeed quite
     # a few locals (20/15), refactoring this would require either

@@ -137,7 +137,7 @@ def findBulkSymmetry(sl, rp):
         checkrots.extend([3, 6])
     for per in pcands:
         for ro in [ro for ro in checkrots if ro not in rotsfound]:
-            if ts.isBulkScrewSymmetric(ro, per, eps):
+            if ts.is_bulk_screw_symmetric(ro, per, eps):
                 rotsfound.append(ro)
     sl.bulk_screws = rotsfound
     if len(rotsfound) > 0:
@@ -153,7 +153,7 @@ def findBulkSymmetry(sl, rp):
                             SymPlane(ori, abt[0] + 2*abt[1], abt)])
     for per in pcands:
         for gl in [gl for gl in checkglides if gl not in glidesfound]:
-            if ts.isBulkGlideSymmetric(gl, per, eps):
+            if ts.is_bulk_glide_symmetric(gl, per, eps):
                 glidesfound.append(gl)
     sl.bulk_glides = glidesfound
     if len(rotsfound) > 0:
