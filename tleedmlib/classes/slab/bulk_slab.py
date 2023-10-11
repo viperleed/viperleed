@@ -97,11 +97,15 @@ class BulkSlab(BaseSlab):
         """Return whether this is a bulk slab."""
         return True
 
+    # Disabled too-many-arguments below because 6/5 seem better than
+    # packing these arguments into some data structure which would
+    # make the call to this method harder to follow.
+    # pylint: disable-next=too-many-arguments
     def apply_bulk_cell_reduction(self, eps, epsz=None,
                                   new_c_vec=None,
                                   new_ab_cell=None,
                                   recenter=True):
-        """Reduce bulk unit cell in- and out-of-plane.
+        """Reduce bulk unit cell in- and/or out-of-plane.
 
         Extra atoms left after reduction of the unit cell size
         are removed.
@@ -153,14 +157,7 @@ class BulkSlab(BaseSlab):
         # positions are screwed. We rely on the Cartesian ones, and,
         # if requested, will 'shift' the fractional ones such that
         # the topmost atom now is still the topmost atom later
-        if not recenter:
-            top_atom_cfrac = 0  # Unused anyway
-        elif self.sublayers:
-            top_atom_cfrac = self.sublayers[0].pos[2]
-        elif self.layers:
-            top_atom_cfrac = max(at.pos[2] for at in self.layers[0])
-        else:
-            top_atom_cfrac = max(at.pos[2] for at in self)
+        top_atom_cfrac = self._get_top_atom_c_pos() if recenter else 0
 
         # Make sure Cartesians are up to date,
         # then reduce c direction if needed
@@ -387,6 +384,17 @@ class BulkSlab(BaseSlab):
             key=np.linalg.norm
             )
         return repeat_c
+
+    def _get_top_atom_c_pos(self):
+        """Return the c fractional coordinate of the topmost atom."""
+        # Use the least expensive method by taking into consideration
+        # the normal sorting of sublayers and layers: scan through the
+        # smallest iterable available
+        if self.sublayers:
+            return max(at.pos[2] for at in self.sublayers[0])
+        if self.layers:
+            return max(at.pos[2] for at in self.layers[0])
+        return max(at.pos[2] for at in self)
 
     def is_bulk_glide_symmetric(self, symplane, sublayer_period, eps):
         """Return if the slab has a 3D glide plane.
