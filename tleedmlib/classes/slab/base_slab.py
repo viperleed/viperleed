@@ -385,7 +385,7 @@ class BaseSlab(AtomContainer):
             _LOGGER.error(_err)
             raise InvalidUnitCellError(_err)
 
-    def clear_symmetry_and_ucell_history(self):                                 # base or only surface?
+    def clear_symmetry_and_ucell_history(self):
         """Set all symmetry information back to default values.
 
         This method also completely erases the history of unit-cell
@@ -973,7 +973,7 @@ class BaseSlab(AtomContainer):
             slab.collapse_cartesian_coordinates()
             if not slab.sublayers:
                 slab.create_sublayers(eps)
-            # Reorder sublayers by Z to then compare by index                   # TODO: is this necessary?
+            # Reorder sublayers by Z to then compare by index                   # TODO: is this necessary? Maybe only in the else?
             slab.sublayers.sort(key=attrgetter('cartbotz'))
 
         if self.n_sublayers != other.n_sublayers:
