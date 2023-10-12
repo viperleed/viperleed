@@ -90,7 +90,7 @@ def main():
     except AlreadyMinimalError:
         pass
     else:
-        sl.changeBulkCell(rp, mincell)
+        sl._change_bulk_cell(rp, mincell)                                       # TODO: temporary
         bsl = sl.bulkslab
     if not rp.superlattice_defined:
         ws = writeWoodsNotation(rp.SUPERLATTICE)

@@ -18,6 +18,9 @@ from math import remainder as round_remainder
 
 import numpy as np
 
+from viperleed.tleedmlib.base import NonIntegerMatrixError
+from viperleed.tleedmlib.base import ensure_integer_matrix
+from viperleed.tleedmlib.classes import rparams as tl_rparams
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
@@ -182,32 +185,59 @@ class SurfaceSlab(BaseSlab):
         self.update_cartesian_from_fractional()
         return self
 
-    def changeBulkCell(self, rp, newcell):
-        """Takes a unit cell (a,b), calculates a new SUPERLATTICE parameter
-        from it and creates a new bulk slab with that cell. If a different
-        SUPERLATTICE was defined by the user, outputs an error and returns."""
-        # calculate new SUPERLATTICE matrix
-        newSL = self.ab_cell.T.dot(np.linalg.inv(newcell))
-        if not np.all(abs(newSL - newSL.round()) < 5e-2):
-            _LOGGER.error(
+    def _change_bulk_cell(self, rpars, new_ab_cell):                            # TODO: Merge with ensure_minimal_bulk_ab_cell?
+        """Assign a new 2D unit cell to the bulk, if possible.
+
+        The new cell is applied only if it gives an acceptable
+        `SUPERLATTICE` matrix. Otherwise exceptions are raised.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS to be used and updated. Attributes accessed:
+            (read/write) SUPERLATTICE; (read) BULK_REPEAT, SYMMETRY_EPS,
+            SYMMETRY_EPS_Z, superlattice_defined.
+        newcell : Sequence
+            Shape (2, 2), representing the new 2D unit cell in
+            Cartesian coordinates. The new unit vectors should
+            be rows. A tentative SUPERCELL is calculated from it.
+
+        Raises
+        ------
+        NonIntegerMatrixError
+            If `newcell` gives a superlattice matrix that is not
+            integer-valued.
+        tleedmlib.classes.rpars.InconsistentParametersError
+            If `newcell` gives a different superlattice matrix than
+            the one in `rpars`.
+        """
+        # Calculate new SUPERLATTICE matrix
+        superlattice = self.ab_cell.T.dot(np.linalg.inv(new_ab_cell))
+        try:
+            superlattice = ensure_integer_matrix(superlattice, eps=5e-2)
+        except NonIntegerMatrixError:
+            raise NonIntegerMatrixError(
                 'Automatically detected bulk SUPERLATTICE is '
-                'not integer-valued: \n'+str(newSL)+'\n'
-                '# User-defined SUPERLATTICE will be used instead.')
-            rp.setHaltingLevel(2)
-            return
-        else:
-            newSL = newSL.round()
-        if rp.superlattice_defined:
-            _LOGGER.warning(
+                f'not integer-valued: \n{superlattice}'                         # TODO: guilib array formatter
+                ) from None
+        if (rpars.superlattice_defined
+                and not np.allclose(superlattice, rpars.SUPERLATTICE)):
+            raise tl_rparams.InconsistentParametersError(
                 'Automatically detected minimum-area bulk unit cell differs '
                 'from the cell defined by the SUPERLATTICE parameter. '
                 'Consider changing the SUPERLATTICE parameter. Found matrix: '
-                '\n' + str(newSL.astype(int)))
-            rp.setHaltingLevel(2)
-            return
-        else:
-            rp.SUPERLATTICE = newSL
-            self.make_bulk_slab(rp)
+                f'\n{superlattice.astype(int)}'                                 # TODO: guilib array formatter
+                )
+        rpars.SUPERLATTICE = superlattice
+
+        if not self.bulkslab:
+            raise MissingBulkSlabError
+        # Notice that there is no need to re-center along
+        # bulk c, as we're only modifying the in-plane cell.
+        self.bulkslab.apply_bulk_cell_reduction(rpars.SYMMETRY_EPS,
+                                                epsz=rpars.SYMMETRY_EPS_Z,
+                                                new_ab_cell=new_ab_cell,
+                                                recenter=False)
 
     def detectBulk(self, rp, second_cut_min_spacing=1.2):
         """
@@ -252,7 +282,7 @@ class SurfaceSlab(BaseSlab):
         except AlreadyMinimalError:
             pass
         else:
-            tsl.changeBulkCell(rp, mincell)
+            tsl._change_bulk_cell(rp, mincell)                                  # TODO: temporary
             bsl = tsl.bulkslab
         bsl.update_cartesian_from_fractional()
         # detect new C vector
