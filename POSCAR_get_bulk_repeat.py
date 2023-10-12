@@ -15,7 +15,7 @@ import numpy as np
 
 from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
+from viperleed.tleedmlib.classes.slab import NoBulkRepeatError
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
 
@@ -75,99 +75,64 @@ def main():
                     print("Value has to be greater than zero.")
 
     rp = Rparams()
-    rp.LAYER_CUTS = [cut]
-    rp.N_BULK_LAYERS = 1
-    rp.SYMMETRY_EPS = eps
-    rp.SYMMETRY_EPS_Z = eps
-    sl.full_update(rp)
+    rp.BULK_LIKE_BELOW = cut
+    rp.SYMMETRY_EPS = rp.SYMMETRY_EPS_Z = eps
 
-    bsl = sl.make_bulk_slab(rp)
-    bsl.create_sublayers(eps)
-
-    print("Checking bulk unit cell...")
+    print('Checking bulk unit cell...')
     try:
-        mincell = sl.get_minimal_ab_cell(rp.SYMMETRY_EPS, rp.SYMMETRY_EPS_Z)
-    except AlreadyMinimalError:
-        pass
+        new_bulk_c, bulk_cuts, bulk_interlayer = sl.detect_bulk(rp, 0.7)
+    except NoBulkRepeatError:
+        _no_repeat = True
     else:
-        sl._change_bulk_cell(rp, mincell)                                       # TODO: temporary
-        bsl = sl.bulkslab
-    if not rp.superlattice_defined:
-        ws = writeWoodsNotation(rp.SUPERLATTICE)
-        # !!! replace the writeWoodsNotation from baselib with
-        #   the one from guilib
-        si = rp.SUPERLATTICE.astype(int)
-        if ws:
-            print("Found SUPERLATTICE = "+ws)
-        else:
-            print("Found SUPERLATTICE M = {} {}, {} {}".format(
-                si[0, 0], si[0, 1], si[1, 0], si[1, 1]))
+        _no_repeat = False
 
-    bsl.update_cartesian_from_fractional()
-    try:
-        newC = bsl.get_minimal_c_vector(rp.SYMMETRY_EPS,
-                                        rp.SYMMETRY_EPS_Z,
-                                        z_periodic=False)
-    except AlreadyMinimalError:
-        print("No repeat vector was found inside the bulk. The bulk may "
-              "already be minimal.")
+    ws = writeWoodsNotation(rp.SUPERLATTICE)                                    # TODO: replace writeWoodsNotation with guilib functions
+    if ws:
+        info = f'= {ws}'
+    else:
+        info = 'M = {} {}, {} {}'.format(*rp.SUPERLATTICE.astype(int).ravel())
+    print(f'Found SUPERLATTICE {info}')
+
+    if _no_repeat:
+        print('No repeat vector was found inside the bulk. The bulk may '
+              'already be minimal.')
         return 0
 
-    rp.BULK_REPEAT = -newC
+    if 0.7 < bulk_interlayer < 1.2:
+        dec = None
+        while dec is None:
+            reply = input('Cutting the bulk into two layers is possible '
+                          f'with a spacing of {round(bulk_interlayer, 2)} A. '
+                          'Proceed? (y/[n]): ')
+            reply = reply.lower()
+            if not reply or reply.startswith('n'):
+                dec = False
+            elif reply.startswith('y'):
+                dec = True
+        if not dec:
+            bulk_cuts.pop()  # Keep only the top one
 
-    bsl.atlist = AtomList(at for at in bsl
-                          if at.cartpos[2] > bsl.topat_ori_z - abs(newC[2]))
-    bsl.layers[0].atlist.clear()
-    bsl.layers[0].atlist.extend(bsl.atlist)
-
-    rp.SUPERLATTICE = np.eye(2)
-    newbsl = bsl.make_bulk_slab(rp)
-
-    # find largest layer spacing in reduced POSCAR
-    newbsl.create_sublayers(eps)
-    bulkcut = -1
-    if newbsl.n_sublayers > 1:
-        maxdist = abs(newbsl.sublayers[1].cartbotz
-                      - newbsl.sublayers[0].cartbotz)
-        cutlayer = 0
-        for i in range(1, newbsl.n_sublayers - 1):
-            d = abs(newbsl.sublayers[i+1].cartbotz
-                    - newbsl.sublayers[i].cartbotz)
-            if d > maxdist:
-                maxdist = d
-                cutlayer = i
-        if maxdist < 1.2 and maxdist > 0.7:
-            dec = None
-            while dec is None:
-                r = input("Cutting the bulk into two layers is possible with "
-                          "a spacing of {} A. Proceed? (y/[n]): "
-                          .format(round(maxdist, 2)))
-                if r == "" or r.lower() in ["n", "no"]:
-                    dec = False
-                elif r.lower() in ["y", "yes"]:
-                    dec = True
-        elif maxdist > 1.2:
-            dec = True
-        else:
-            dec = False
-        if dec:
-            bulkcut = newbsl.sublayers[cutlayer].cartbotz + maxdist/2
+    # Update with newly detected info
+    rp.LAYER_CUTS = sl.create_layers(rp, bulk_cuts=bulk_cuts)
+    rp.N_BULK_LAYERS = len(bulk_cuts)
 
     # write POSCAR_bulk
-    newbsl.sort_original()
+    sl.make_bulk_slab(rp)
     try:
-        writePOSCAR(newbsl, filename='POSCAR_bulk', comments='none')
-        print("Wrote POSCAR_bulk. Check file to see if periodicity is "
-              "correct.")
+        poscar.write(sl.bulkslab, filename='POSCAR_bulk', comments='none')
     except Exception:
-        print("Exception occurred while writing POSCAR_bulk")
+        print('Exception occurred while writing POSCAR_bulk')
+    else:
+        print('Wrote POSCAR_bulk. Check file to see if periodicity is '
+              'correct.')
 
-    # create POSCAR with reduced size
+    # Crop off all the atoms at the bottom, leaving only one bulk cell
     newsl = copy.deepcopy(sl)
+
     newsl.sort_by_z()
     topBulkAt = [at for at in newsl if at.pos[2] <= cut][-1]
     botSlabAt = [at for at in newsl if at.pos[2] > cut][0]
-    fracRepeat = np.dot(np.linalg.inv(newsl.ucell), newC)
+    fracRepeat = np.dot(np.linalg.inv(newsl.ucell), -new_bulk_c)
     newZero = (topBulkAt.pos[2]
                + (abs(botSlabAt.pos[2] - topBulkAt.pos[2]) / 2)
                - abs(fracRepeat[2]))
@@ -178,31 +143,25 @@ def main():
     newsl.update_cartesian_from_fractional()
     newsl.ucell[:, 2] = newsl.ucell[:, 2] * (1 - newZero)
     newsl.update_fractional_from_cartesian()
-    newcut = round((topBulkAt.pos[2]
-                   + (abs(botSlabAt.pos[2] - topBulkAt.pos[2]) / 2)), 3)
-    if bulkcut > 0:
-        newbulkcut = round((topBulkAt.pos[2] - (bulkcut / newsl.ucell[2, 2])),
-                           3)
+
+    # Finally, convert the cut positions
+    bulk_cuts = [round(c - newZero, 3) for c in bulk_cuts]
+
     # write POSCAR_min
     newsl.sort_original()
     try:
-        writePOSCAR(newsl, filename='POSCAR_min', comments='none')
-        print("Wrote POSCAR_min, to be used with parameters below.")
+        poscar.write(newsl, filename='POSCAR_min', comments='none')
     except Exception:
-        print("Exception occurred while writing POSCAR_min")
+        print('Exception occurred while writing POSCAR_min')
+    else:
+        print('Wrote POSCAR_min, to be used with parameters below.')
 
     # print info
-    print("\nParameters found:")
-    print("BULK_REPEAT = xyz"+str(rp.BULK_REPEAT))
-    if bulkcut > 0:
-        print("N_BULK_LAYERS = 2")
-        print("LAYER_CUTS = {} {}   ! etc.".format(newbulkcut, newcut))
-    else:
-        print("N_BULK_LAYERS = 1")
-        print("LAYER_CUTS = {}      ! etc.".format(newcut))
-
-    input("Program finished, exit with return")
-
+    print('\nParameters found:')
+    print(f'BULK_REPEAT = xyz{rp.BULK_REPEAT}')
+    print(f'N_BULK_LAYERS = {len(bulk_cuts)}')
+    print(f'LAYER_CUTS = {" ".join(bulk_cuts)}   ! etc.')
+    input('Program finished, exit with return')
     return 0
 
 
