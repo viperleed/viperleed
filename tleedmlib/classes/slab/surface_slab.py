@@ -568,6 +568,12 @@ class SurfaceSlab(BaseSlab):
             The PARAMETERS used for making the new slab. Attributes
             used (read-only): SUPERLATTICE, superlattice_defined,
             BULK_REPEAT, SYMMETRY_EPS, SYMMETRY_EPS_Z.
+        recenter : bool, optional
+            Whether the fractional coordinates of the bulk slab
+            that is created should be adjusted so that the topmost
+            bulk atom is at the same position. This can safely be
+            left to the default as long as the bulk repeat vector
+            is known and correct. Default is True.
 
         Returns
         -------
@@ -583,12 +589,6 @@ class SurfaceSlab(BaseSlab):
             makes the repeat vector shortest). If you already know
             the minimal bulk c vector and/or in-plane cell, you can
             also use `self.bulkslab.apply_bulk_cell_reduction(...)`.
-        recenter : bool, optional
-            Whether the fractional coordinates of the bulk slab
-            that is created should be adjusted so that the topmost
-            bulk atom is at the same position. This can safely be
-            left to the default as long as the bulk repeat vector
-            is known and correct. Default is True.
 
         Raises
         ------
