@@ -185,7 +185,7 @@ class SurfaceSlab(BaseSlab):
         self.update_cartesian_from_fractional()
         return self
 
-    def _change_bulk_cell(self, rpars, new_ab_cell):                            # TODO: Merge with ensure_minimal_bulk_ab_cell?
+    def _change_bulk_cell(self, rpars, new_ab_cell):
         """Assign a new 2D unit cell to the bulk, if possible.
 
         The new cell is applied only if it gives an acceptable
@@ -270,39 +270,29 @@ class SurfaceSlab(BaseSlab):
         rp_dummy = copy.deepcopy(rp)
         rp_dummy.LAYER_CUTS = [rp.BULK_LIKE_BELOW]
         rp_dummy.N_BULK_LAYERS = 1
-        rp_dummy.BULK_LIKE_BELOW = 0.
         tsl.createLayers(rp_dummy)
-        # create a pseudo-bulkslab
-        bsl = tsl.make_bulk_slab(rp_dummy)
-        bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
-        # reduce unit cell in xy
+        # Create a pseudo-bulk slab to determine the correct repeat
+        # c vector: the c vector now is very likely to be wrong (as
+        # it is just chopped off from the one of self).
+        tsl.make_bulk_slab(rp)
+        tsl.ensure_minimal_bulk_ab_cell(rp)
+        bsl = tsl.bulkslab
+
+        # Detect new c vector (z_periodic=False because current c is
+        # the one of self, and is most likely wrong), and collapse cell
+        # in the process to get the proper bulk slab. Notice that the
+        # next call also saves the new c vector in rp_dummy.BULK_REPEAT
         try:
-            mincell = bsl.get_minimal_ab_cell(rp.SYMMETRY_EPS,
-                                              rp.SYMMETRY_EPS_Z)
-        except AlreadyMinimalError:
-            pass
-        else:
-            tsl._change_bulk_cell(rp, mincell)                                  # TODO: temporary
-            bsl = tsl.bulkslab
-        bsl.update_cartesian_from_fractional()
-        # detect new C vector
-        try:
-            newC = bsl.get_minimal_c_vector(rp.SYMMETRY_EPS,
-                                            rp.SYMMETRY_EPS_Z,
-                                            z_periodic=False)
+            bsl.ensure_minimal_c_vector(rp_dummy, z_periodic=False)
         except AlreadyMinimalError as exc:
             _LOGGER.error('Automatic bulk detection failed: Found no bulk '
-                          'repeat vector below the specified cutoff.')
-            raise RuntimeError('Failed to detect bulk repeat vector') from exc
-
-        # reduce the bulk slab
-        rp_dummy.BULK_REPEAT = -newC
-        rp_dummy.SUPERLATTICE = np.eye(2)
-        bsl = tsl.make_bulk_slab(rp_dummy)
-        bsl.create_sublayers(rp.SYMMETRY_EPS_Z)
+                          'repeat vector below the specified cut-off.')
+            raise NoBulkRepeatError('Failed to detect '
+                                    'bulk repeat vector') from exc
 
         # calculate cut plane
-        frac_bulk_thickness = abs(newC[2]) / abs(self.ucell[2, 2])
+        bulk_height = abs(bsl.ucell[2, 2])
+        frac_bulk_thickness = bulk_height / abs(self.ucell[2, 2])
         frac_lowest_pos = min([at.pos[2] for at in self])
         frac_bulk_onset = (frac_lowest_pos + frac_bulk_thickness
                            - (rp.SYMMETRY_EPS_Z / self.ucell[2, 2]))
@@ -331,7 +321,37 @@ class SurfaceSlab(BaseSlab):
                 slab_cuts.append(frac_lowest_pos
                                  + (bulkcut_frac_from_lowest
                                     * bsl.ucell[2, 2] / self.ucell[2, 2]))
-        return (-newC, slab_cuts)
+        return rp_dummy.BULK_REPEAT, slab_cuts
+
+    def ensure_minimal_bulk_ab_cell(self, rpars, warn_convention=False):
+        """Make sure the `bulkslab` has the smallest possible in-plane cell.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The PARAMETERS to be used and updated. Attributes accessed:
+            (read/write) SUPERLATTICE; (read) BULK_REPEAT, SYMMETRY_EPS,
+            SYMMETRY_EPS_Z, superlattice_defined; setHaltingLevel method
+        warn_convention : bool, optional
+            Whether warnings should be logged in case the reduced cell
+            could not be made to follow standard conventions.
+
+        Raises
+        ------
+        NonIntegerMatrixError
+            If reduction to a minimal cell would give a SUPERLATTICE
+            matrix with non-integer values.
+        tleedmlib.classes.rparams.InconsistentParametersError
+            If reduction to a minimal cell would give a SUPERLATTICE
+            different from the one in `rpars`.
+        """
+        bulk = self.bulkslab or self.make_bulk_slab(rpars)
+        eps, epsz = rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS_Z
+        try:
+            mincell = bulk.get_minimal_ab_cell(eps, epsz, warn_convention)
+        except AlreadyMinimalError:
+            return
+        self._change_bulk_cell(rpars, mincell)
 
     def get_bulk_repeat(self, rpars, only_z_distance=False):
         """Return the bulk repeat vector (with positive z).

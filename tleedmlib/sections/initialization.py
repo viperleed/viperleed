@@ -20,9 +20,11 @@ import numpy as np
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib import symmetry as tl_symmetry
+from viperleed.tleedmlib.base import NonIntegerMatrixError
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
 from viperleed.tleedmlib.classes.rparams import DomainParameters
+from viperleed.tleedmlib.classes.rparams import InconsistentParametersError
 from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
 from viperleed.tleedmlib.classes.slab import NoBulkRepeatError
 from viperleed.tleedmlib.classes.slab import BulkSlab, Slab
@@ -199,16 +201,19 @@ def initialization(sl, rp, subdomain=False):
 
     if bsl.planegroup == "unknown":
         # find minimum in-plane unit cell for bulk:
-        logger.info("Checking bulk unit cell...")
+        logger.info('Checking bulk unit cell...')
         try:
-            mincell = bsl.get_minimal_ab_cell(rp.SYMMETRY_EPS,
-                                              rp.SYMMETRY_EPS_Z,
-                                              warn_convention=True)
-        except AlreadyMinimalError:
-            pass
-        else:
-            sl._change_bulk_cell(rp, mincell)                                   # TODO: temporary
-            bsl = sl.bulkslab
+            sl.ensure_minimal_bulk_ab_cell(rp, warn_convention=True)
+        except NonIntegerMatrixError as exc:
+            logger.error(
+                f'{exc}\n# User-defined SUPERLATTICE will be used instead.'
+                )
+            rp.setHaltingLevel(2)
+        except InconsistentParametersError as exc:
+            # SUPERLATTICE does not match auto-detected one
+            logger.warning(exc)
+            rp.setHaltingLevel(2)
+
         if not rp.superlattice_defined:
             ws = writeWoodsNotation(rp.SUPERLATTICE)                   # TODO: replace writeWoodsNotation with guilib functions
             superlattice = rp.SUPERLATTICE.astype(int)
