@@ -186,6 +186,7 @@ class SurfaceSlab(BaseSlab):
         self.update_cartesian_from_fractional()
         return self
 
+    # Used only in ensure_minimal_bulk_ab_cell
     def _change_bulk_cell(self, rpars, new_ab_cell):
         """Assign a new 2D unit cell to the bulk, if possible.
 
