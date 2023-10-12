@@ -25,7 +25,7 @@ from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
 from viperleed.tleedmlib.classes.rparams import DomainParameters
 from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
 from viperleed.tleedmlib.classes.slab import NoBulkRepeatError
-from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.classes.slab import BulkSlab, Slab
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
 from viperleed.tleedmlib.files import patterninfo, phaseshifts, poscar, vibrocc
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
@@ -631,7 +631,7 @@ def init_domains(rp):
     # store some information about the supercell in rp:
     rp.pseudoSlab = Slab()                                                      # Do we really still need this pseudo-slab?
     rp.pseudoSlab.ucell = largestDomain.sl.ucell.copy()
-    rp.pseudoSlab.bulkslab = Slab()
+    rp.pseudoSlab.bulkslab = BulkSlab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
     # run beamgen for the whole system
     logger.info("Generating BEAMLIST...")
