@@ -166,10 +166,10 @@ class SurfaceSlab(BaseSlab):
             If `ase_atoms` is not an ase.Atoms object.
         """
         if not _HAS_ASE:
-            _LOGGER.warning('Slab creation from ase.Atoms not '                 # TODO: probably we should raise (ModuleNotFoundError?)
-                            'supported: Module ase not found.')
-            return cls()
-
+            _err_msg = ('Slab creation from ase.Atoms not '
+                        'supported: Module ase not found')
+            _LOGGER.error(_err_msg)
+            raise ModuleNotFoundError(_err_msg, name='ase', path=__file__)
         if not isinstance(ase_atoms, ase.Atoms):
             raise TypeError(f'{cls.__name__}.from_ase requires an ase.Atoms '
                             f'object, found {type(ase_atoms)!r} instead.')
