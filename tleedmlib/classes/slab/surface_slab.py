@@ -130,10 +130,9 @@ class SurfaceSlab(BaseSlab):
     @property
     def thickness(self):
         """Return the thickness of this slab along z."""
-        top_atom_z = max([at.cartpos[2] for at in self])
-        bottom_atom_z = min([at.cartpos[2] for at in self])
-        return top_atom_z - bottom_atom_z
-        # return abs(top_atom_z - bottom_atom_z)
+        top_atom_z = min(at.cartpos[2] for at in self)                          # TODO: swap min and max with .cartpos[2]
+        bottom_atom_z = max(at.cartpos[2] for at in self)
+        return abs(top_atom_z - bottom_atom_z)
 
     @property
     def vacuum_gap(self):
