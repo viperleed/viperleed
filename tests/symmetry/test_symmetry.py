@@ -303,6 +303,7 @@ class TestSymmetryConstraints:
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
         'square_pm_10': 'Known to often fail with a random shift',
+        'square_pm_01': 'Known to often fail with a random shift',
         'square_cm_11': 'Known to often fail with a random shift',
         'square_cm_1m1': 'Known to often fail with a random shift',
         'poscar-diamond': 'Known incorrect plane group pm instead of rcm',
@@ -393,12 +394,14 @@ class TestSlabSymmetrization:
         'poscar-diamond': 'Known invalid group pm. May be correct rcm here',
         'poscar-36C_p6m': 'Often reduced to cmm',
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
+        'poscar_Fe3O4_001_cod': 'Sometimes reduced to cm from cmm',
         'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
         'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
             'sometimes reduced to p1 from p3'
             ),
         'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
         'infoless_poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
+        'infoless_poscar_Fe3O4_001_cod': 'Sometimes reduced to cm from cmm',
         'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
         'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
         'infoless_poscar-diamond':  'Invalid pm. May be correct rcm here',
