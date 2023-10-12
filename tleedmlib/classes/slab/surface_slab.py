@@ -15,11 +15,12 @@ from collections import Counter
 import copy
 import logging
 from math import remainder as round_remainder
+from operator import itemgetter
 
 import numpy as np
 
 from viperleed.tleedmlib.base import NonIntegerMatrixError
-from viperleed.tleedmlib.base import ensure_integer_matrix
+from viperleed.tleedmlib.base import ensure_integer_matrix, pairwise
 from viperleed.tleedmlib.classes import rparams as tl_rparams
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
@@ -239,89 +240,127 @@ class SurfaceSlab(BaseSlab):
                                                 new_ab_cell=new_ab_cell,
                                                 recenter=False)
 
-    def detectBulk(self, rp, second_cut_min_spacing=1.2):
-        """
-        Determine the minimal bulk repeat vector from BULK_LIKE_BELOW.
+    def detect_bulk(self, rpars, second_cut_min_spacing=1.2):                   # TODO: @fkraushofer, @amimre: I'm not really happy about the fact that calling this modifies stuff only half-way: it stores the correct BULK_REPEAT and SUPERLATTICE, but does not create_layers, and does not update LAYER_CUTS nor N_BULK_LAYERS. We probably should either do all or nothing.
+        """Determine the minimal bulk repeat vector from BULK_LIKE_BELOW.
+
+        Notice that this method modifies `rpars.BULK_REPEAT` and
+        `rpars.SUPERLATTICE` so they contain the detected (minimal)
+        bulk-repeat vector and the superlattice matrix.
+
+        After a call to this method and before `make_bulk_slab`, make
+        sure to `createLayers` using the `bulk_cuts` returned, and to
+        appropriately modify the `LAYER_CUTS` and `N_BULK_LAYERS` of
+        `rpars`.
 
         Parameters
         ----------
-        rp : Rparams
-            Run parameters object. Contains BULK_LIKE_BELOW, not modified.
+        rpars : Rparams
+            Run parameters object. Attributes accessed:
+            BULK_LIKE_BELOW (read), SYMMETRY_EPS (read),
+            SYMMETRY_EPS_Z (read), SUPERLATTICE (read/write),
+            superlattice_defined (read), BULK_REPEAT (write)
         second_cut_min_spacing : float, optional
-            Minimal z spacing in Angstrom between sublayers of the detected
-            bulk unit to make an additional cut through the bulk. If no two
-            sublayers are below this threshold, the bulk will be treated as
-            a single layer.
-
-        Raises
-        ------
-        RuntimeError
-            Raised if no repeat vector is found.
+            Minimal z spacing in Angstrom between sublayers of the
+            detected bulk unit to make an additional cut through
+            the bulk. If no two sublayers are further apart then
+            this threshold, the bulk will be treated as a single
+            layer. Default is 1.2.
 
         Returns
         -------
-        bulk_repeat : np.array
+        bulk_repeat : numpy.ndarray
             The new repeat vector.
-        slab_cuts : list of float
-            Layer cuts needed for the bulk.
+        bulk_cuts : list of float
+            Layer cuts for self that generate the bulk.
+        bulk_dist : float
+            Zero if `bulk_cuts` contains only a single cut position.
+            Otherwise it is the largest distance found between bulk
+            sublayers, where the second bulk cut position is placed.
 
+        Raises
+        ------
+        ValueError
+            If no `BULK_LIKE_BELOW` was defined in `rpars`.
+        NoBulkRepeatError
+            If no repeat vector is found.
         """
-        tsl = copy.deepcopy(self)   # temporary copy to mess up layers in
-        rp_dummy = copy.deepcopy(rp)
-        rp_dummy.LAYER_CUTS = [rp.BULK_LIKE_BELOW]
-        rp_dummy.N_BULK_LAYERS = 1
-        tsl.createLayers(rp_dummy)
+        if rpars.BULK_LIKE_BELOW <= 0:
+            raise ValueError(f'{type(self).__name__}.detect_bulk: rpars '
+                             'must have a positive BULK_LIKE_BELOW defined')
+        # Work with a temporary copy of this slab to mess up layers,
+        # and a temporary copy of rpars to modify LAYER_CUTS
+        self_copy = copy.deepcopy(self)
+        rpars_copy = copy.deepcopy(rpars)
+        rpars_copy.LAYER_CUTS = [rpars.BULK_LIKE_BELOW]
+        rpars_copy.N_BULK_LAYERS = 1
+        self_copy.createLayers(rpars_copy)
         # Create a pseudo-bulk slab to determine the correct repeat
         # c vector: the c vector now is very likely to be wrong (as
-        # it is just chopped off from the one of self).
-        tsl.make_bulk_slab(rp)
-        tsl.ensure_minimal_bulk_ab_cell(rp)
-        bsl = tsl.bulkslab
+        # it is just chopped off from the one of self). Notice that
+        # here we should not re-center the coordinates, as we know
+        # that the bulk repeat is incorrect.
+        self_copy.make_bulk_slab(rpars, recenter=False)
+
+        # Reduce in-plane bulk. This also updates rpars.SUPERLATTICE
+        self_copy.ensure_minimal_bulk_ab_cell(rpars)
 
         # Detect new c vector (z_periodic=False because current c is
         # the one of self, and is most likely wrong), and collapse cell
         # in the process to get the proper bulk slab. Notice that the
-        # next call also saves the new c vector in rp_dummy.BULK_REPEAT
+        # next call also saves the new c vector in rpars.BULK_REPEAT
         try:
-            bsl.ensure_minimal_c_vector(rp_dummy, z_periodic=False)
+            self_copy.bulkslab.ensure_minimal_c_vector(rpars, z_periodic=False)
         except AlreadyMinimalError as exc:
             _LOGGER.error('Automatic bulk detection failed: Found no bulk '
                           'repeat vector below the specified cut-off.')
             raise NoBulkRepeatError('Failed to detect '
                                     'bulk repeat vector') from exc
 
-        # calculate cut plane
-        bulk_height = abs(bsl.ucell[2, 2])
+        # Identify the cut positions for self_copy that give bulk layers
+        # pylint: disable-next=protected-access
+        bulk_cuts, bulk_dist = self_copy._get_bulk_cuts(rpars.SYMMETRY_EPS_Z,
+                                                        second_cut_min_spacing)
+        return rpars.BULK_REPEAT, bulk_cuts, bulk_dist
+
+    def _get_bulk_cuts(self, epsz, second_cut_min_spacing):
+        """Return cut positions for self to give bulk layers."""
+        # Calculate cut plane (fractional) between bulk and non-bulk
+        # portion of self: will take atoms in the bottommost non-bulk
+        # layer, and those in the topmost bulk layer. However, take
+        # into account that we may not yet have self.layers defined
+        # (nor their bulk or non-bulk nature)
+        frac_atoms_z = [at.pos[2] for at in self]
+
+        bulk_height = abs(self.bulkslab.ucell[2, 2])
         frac_bulk_thickness = bulk_height / abs(self.ucell[2, 2])
-        frac_lowest_pos = min([at.pos[2] for at in self])
+        frac_lowest_pos = min(frac_atoms_z)
         frac_bulk_onset = (frac_lowest_pos + frac_bulk_thickness
-                           - (rp.SYMMETRY_EPS_Z / self.ucell[2, 2]))
-        slab_cuts = [(max([at.pos[2] for at in self
-                          if at.pos[2] < frac_bulk_onset])
-                     + min([at.pos[2] for at in self
-                            if at.pos[2] > frac_bulk_onset]))
+                           - (epsz / self.ucell[2, 2]))
+        slab_cuts = [(max(f for f in frac_atoms_z if f < frac_bulk_onset)
+                     + min(f for f in frac_atoms_z if f > frac_bulk_onset))
                      / 2]
 
-        # now look for potential second cut
-        if bsl.n_sublayers > 1:
-            maxdist = abs(bsl.sublayers[1].cartbotz
-                          - bsl.sublayers[0].cartbotz)
-            cutlayer = 0
-            for i in range(1, bsl.n_sublayers - 1):
-                d = abs(bsl.sublayers[i+1].cartbotz
-                        - bsl.sublayers[i].cartbotz)
-                if d > maxdist:
-                    maxdist = d
-                    cutlayer = i
-            if maxdist >= second_cut_min_spacing:
-                bulkcut_frac_from_lowest = (
-                    bsl.sublayers[cutlayer].pos[2]
-                    - (maxdist / (2 * abs(bsl.ucell[2, 2])))
-                    - min([at.pos[2] for at in bsl]))
-                slab_cuts.append(frac_lowest_pos
-                                 + (bulkcut_frac_from_lowest
-                                    * bsl.ucell[2, 2] / self.ucell[2, 2]))
-        return rp_dummy.BULK_REPEAT, slab_cuts
+        if self.bulkslab.n_sublayers == 1:
+            return slab_cuts, 0.
+
+        # Look for second cut, where bulk sublayers are furthest apart
+        lays_and_distances = (
+            (lay_above, abs(lay_above.cartbotz - lay_below.cartbotz))
+            for lay_above, lay_below in pairwise(self.bulkslab.sublayers)
+            )
+        lay_above_cut, maxdist = max(lays_and_distances, key=itemgetter(1))
+        if maxdist >= second_cut_min_spacing:
+            # Get fractional position, in bulk cell, of the cut
+            bulk_frac_cut_from_lowest = (
+                lay_above_cut.pos[2]
+                - (0.5 * maxdist) / bulk_height
+                - min(lay.pos[2] for lay in self.bulkslab.sublayers)
+                )
+            slab_cuts.append(
+                frac_lowest_pos
+                + bulk_frac_cut_from_lowest * frac_bulk_thickness
+                )
+        return slab_cuts, maxdist
 
     def ensure_minimal_bulk_ab_cell(self, rpars, warn_convention=False):
         """Make sure the `bulkslab` has the smallest possible in-plane cell.

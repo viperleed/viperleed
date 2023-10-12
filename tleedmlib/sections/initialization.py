@@ -131,27 +131,25 @@ def initialization(sl, rp, subdomain=False):
 
     if rp.BULK_LIKE_BELOW > 0:
         if rp.BULK_REPEAT is not None:
-            logger.warning("Both BULK_LIKE_BELOW and BULK_REPEAT are defined."
-                           "BULK_LIKE_BELOW will be ignored in favour of the "
-                           "explicitly defined bulk repeat vector.")
-        else:
-            # The modifications to the PARAMETERS file below are currently not in the docs. Should we add that?
-            cvec, cuts = sl.detectBulk(rp)
-            rp.BULK_REPEAT = cvec
-            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
+            logger.warning('Both BULK_LIKE_BELOW and BULK_REPEAT are defined.'
+                           'BULK_LIKE_BELOW will be ignored in favour of the '
+                           'explicitly defined bulk repeat vector.')
+        else:                                                                   # TODO: The modifications to the PARAMETERS file below are currently not in the docs. Should we add that?
+            _, cuts, _ = sl.detect_bulk(rp)
+            vec_str = '[{:.5f} {:.5f} {:.5f}]'.format(*rp.BULK_REPEAT)
             parameters.modifyPARAMETERS(
-                rp, "BULK_REPEAT", vec_str,
-                comment="Automatically detected repeat vector"
+                rp, 'BULK_REPEAT', vec_str,
+                comment='Automatically detected repeat vector'
                 )
-            logger.info(f"Detected bulk repeat vector: {vec_str}")
+            logger.info(f'Detected bulk repeat vector: {vec_str}')
             layer_cuts = sl.createLayers(rp, bulk_cuts=cuts)
             parameters.modifyPARAMETERS(
-                rp, "LAYER_CUTS",
-                " ".join(f"{c:.4f}" for c in layer_cuts)
+                rp, 'LAYER_CUTS',
+                ' '.join(f'{c:.4f}' for c in layer_cuts)
                 )
             rp.N_BULK_LAYERS = len(cuts)
-            parameters.modifyPARAMETERS(rp, "N_BULK_LAYERS", str(len(cuts)))
-        parameters.modifyPARAMETERS(rp, "BULK_LIKE_BELOW", new="")
+            parameters.modifyPARAMETERS(rp, 'N_BULK_LAYERS', str(len(cuts)))
+        parameters.modifyPARAMETERS(rp, 'BULK_LIKE_BELOW', new='')
 
     # create bulk slab:
     if sl.bulkslab is None:
