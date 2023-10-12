@@ -112,22 +112,22 @@ class BaseSlab(AtomContainer):
 
     def __init__(self):
         """Initialize instance."""
-        self.ucell = np.array([])                                               # base
-        self.poscar_scaling = 1.                                                # base
-        self.chemelem = set()                                                   # base
-        self.n_per_elem = {}                                                    # base
-        self.atlist = AtomList()                                                # base
-        self.layers = []                                                        # base
-        self.sublayers = []                                                     # base
-        self.sitelist = []                                                      # base
-        self.ucell_mod = []                                                     # base
-        self.ucell_ori = np.array([])                                           # base
+        self.ucell = np.array([])
+        self.poscar_scaling = 1.
+        self.chemelem = set()
+        self.n_per_elem = {}
+        self.atlist = AtomList()
+        self.layers = []
+        self.sublayers = []
+        self.sitelist = []
+        self.ucell_mod = []
+        self.ucell_ori = np.array([])
         self.topat_ori_z = None                                                 # base (non-bulk after we fix the cartpos[2] flip)
-        self.celltype = 'unknown'                                               # base
-        self.planegroup = 'unknown'                                             # base
-        self.foundplanegroup = 'unknown'                                        # base
-        self.orisymplane = None                                                 # base
-        self.linklists = []                                                     # base?
+        self.celltype = 'unknown'
+        self.planegroup = 'unknown'
+        self.foundplanegroup = 'unknown'
+        self.orisymplane = None
+        self.linklists = []                                                     # non-bulk?
         self.symbaseslab = None                                                 # non-bulk?
         self.bulkslab = None  # Deleted in BulkSlab.__init__
 
