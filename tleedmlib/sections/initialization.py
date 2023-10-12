@@ -142,10 +142,10 @@ def initialization(sl, rp, subdomain=False):
                 comment='Automatically detected repeat vector'
                 )
             logger.info(f'Detected bulk repeat vector: {vec_str}')
-            layer_cuts = sl.createLayers(rp, bulk_cuts=cuts)
+            rp.LAYER_CUTS = sl.createLayers(rp, bulk_cuts=cuts)                # TODO: I dislike this. It does not preserve the user input: e.g., LAYER_CUTS = 0.1 0.2 < dz(1.3) is replaced with a list of floats instead of replacing only the part relevant for the bulk.
             parameters.modifyPARAMETERS(
                 rp, 'LAYER_CUTS',
-                ' '.join(f'{c:.4f}' for c in layer_cuts)
+                ' '.join(f'{c:.4f}' for c in rp.LAYER_CUTS)
                 )
             rp.N_BULK_LAYERS = len(cuts)
             parameters.modifyPARAMETERS(rp, 'N_BULK_LAYERS', str(len(cuts)))
