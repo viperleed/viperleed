@@ -1141,6 +1141,7 @@ class ParameterInterpreter:                                                     
         if intpol_deg in self.rpars.get_limits(param):
             self.rpars.INTPOL_DEG = int(intpol_deg)
             return
+        self.rpars.setHaltingLevel(1)
         message = 'Only degree 3 and 5 interpolation supported at the moment.'
         raise ParameterError(parameter=param, message=message)
 
