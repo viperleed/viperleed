@@ -122,10 +122,10 @@ def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
     ParameterError
         If one of the parameters to be updated has an invalid value.
     """
-    update_from = Path(update_from)
-    try:
-        with open(update_from / filename, 'r', encoding='utf-8') as rf:
-            lines = rf.readlines()
+    filename = Path(update_from, filename).resolve()
+    try:  # pylint: disable=too-many-try-statements
+        with filename.open('r', encoding='utf-8') as param_file:
+            lines = param_file.readlines()
     except FileNotFoundError:
         _LOGGER.error('updatePARAMETERS routine: PARAMETERS file not found.')
         raise
