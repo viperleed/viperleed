@@ -92,11 +92,9 @@ class ParameterParseError(ParameterError):
     def __init__(self, parameter, message='',
                  supp_message='Check parameter syntax'):
         """Initialize instance."""
-        if message:
-            super().__init__(parameter, message)
-            return
-        super().__init__(parameter,
-                         f'Could not parse input. {supp_message}')
+        if not message:
+            message = f'Could not parse input. {supp_message}'
+        super().__init__(parameter, message)
 
 
 
@@ -106,15 +104,13 @@ class ParameterNumberOfInputsError(ParameterError):
     def __init__(self, parameter, found_and_expected=None, message=''):
         """Initialize instance."""
         if message:
-            super().__init__(parameter, message)
-            return
-        if found_and_expected:
-            super().__init__(parameter,
-                             f'Expected {found_and_expected[1]} inputs, '
-                             'but found {found_and_expected[0]}')
+            pass
+        elif found_and_expected:
+            message = (f'Expected {found_and_expected[1]} inputs, '
+                       f'but found {found_and_expected[0]}')
         else:
-            super().__init__(parameter,
-                             'Unexpected number of inputs')
+            message = 'Unexpected number of inputs'
+        super().__init__(parameter, message)
 
 
 class ParameterRangeError(ParameterError):
@@ -124,9 +120,8 @@ class ParameterRangeError(ParameterError):
                  allowed_range=None, message=None):
         """Initialize instance."""
         if message:
-            super().__init__(parameter, message)
-            return
-        if given_value is not None and allowed_range is not None:
+            pass
+        elif given_value is not None and allowed_range is not None:
             message = (f'Value {given_value} is outside allowed range '
                        f'({allowed_range[0]} <= {parameter} <= '
                        f'{allowed_range[1]})')
