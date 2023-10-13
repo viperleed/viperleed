@@ -1064,8 +1064,8 @@ class ParameterInterpreter:                                                     
         self._ensure_single_flag_assignment(param, assignment)
         self._ensure_chemical_elements(param, assignment.values)
 
-        element = assignment.flag.lower().capitalize()
-        self.rpars.ELEMENT_MIX[element] = [el.lower().capitalize()
+        element = assignment.flag.capitalize()
+        self.rpars.ELEMENT_MIX[element] = [el.capitalize()
                                            for el in assignment.values]
 
     def interpret_element_rename(self, assignment):
@@ -1074,8 +1074,8 @@ class ParameterInterpreter:                                                     
         self._ensure_single_flag_and_value_assignment(param, assignment)
         self._ensure_chemical_elements(param, assignment.values)
 
-        self.rpars.ELEMENT_RENAME[assignment.flag.lower().capitalize()] = (
-            assignment.value.lower().capitalize()
+        self.rpars.ELEMENT_RENAME[assignment.flag.capitalize()] = (
+            assignment.value.capitalize()
             )
 
     def interpret_filament_wf(self, assignment):
@@ -1266,10 +1266,9 @@ class ParameterInterpreter:                                                     
             return
 
         # Try to interpret as string (e.g. 'verbose', 'vv')
-        if assignment.values_str.lower() in self.rpars.get_default(param):
-            self.rpars.LOG_LEVEL = (
-                self.rpars.get_default(param)[assignment.values_str.lower()]
-                )
+        _defaults = self.rpars.get_default(param)
+        if assignment.values_str.lower() in _defaults:
+            self.rpars.LOG_LEVEL = _defaults[assignment.values_str.lower()]
             return
 
         # Otherwise interpret as int
