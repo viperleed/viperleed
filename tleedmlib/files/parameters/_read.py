@@ -98,22 +98,29 @@ def readPARAMETERS(filename='PARAMETERS'):
 
 
 def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
-    """
-    Reads PARAMETERS file again, but ignores everything not concerning the
-    search or STOP. Updates the given Rparams object accordingly.
+    """Update `rpars` from file, ignoring non-SEARCH-related parameters.
+
+    The following parameters are considered:
+    SEARCH_CONVERGENCE, SEARCH_KILL, STOP
 
     Parameters
     ----------
     rpars : Rparams
-        Parameters for current run, as defined previously. Will be updated if
-        parameters have changed.
-    filename : str, optional
+        Parameters for current run. Its SEARCH-related members
+        are updated if the contents of `filename` has changed.
+    filename : str or Path, optional
         The file to be read. The default is 'PARAMETERS'.
-    update_from : str or path-like, optional                                    # TODO: missing doc
+    update_from : str or Path, optional
+        Path to the directory in which to look for `filename`.
+        The default is an empty string, corresponding to the
+        current directory.
 
-    Returns
-    -------
-    None.
+    Raises
+    ------
+    FileNotFoundError
+        If no `filename` is found in `update_from`.
+    ParameterError
+        If one of the parameters to be updated has an invalid value.
     """
     update_from = Path(update_from)
     try:
