@@ -190,15 +190,11 @@ class ParameterInterpreter:                                                     
     def _get_param_assignments(self):
         """Yield parameters and assignments for each PARAMETER read."""
         flat_params = (
-            (p_name, *flags_and_value)
-            for p_name in self.param_names
-            for flags_and_value in self.rpars.readParams[p_name]
+            (param_name, assignment)
+            for param_name in self.param_names
+            for assignment in self.rpars.readParams[param_name]
             )
-        for param, flags, right_side in flat_params:
-            assignment = Assignment(values_str=right_side,                      # TODO: use directly in readPARAMETERS
-                                    flags_str=flags,
-                                    parameter=param)
-            yield param, assignment
+        yield from flat_params
 
     def _interpret_param(self, param, assignment):
         """Interpret the value of a single PARAMETER if known, or complain."""

@@ -63,16 +63,10 @@ def readPARAMETERS(filename='PARAMETERS'):
         _LOGGER.error('PARAMETERS file not found.')
         raise FileNotFoundError(filename)
 
-    with filename.open('r', encoding='utf-8') as param_file:
-        lines = param_file.readlines()
-
-    # read PARAMETERS:
     rpars = rparams.Rparams()
-    for line in lines:
-        line = strip_comments(line)
-        for param in ['STOP', 'SEARCH_KILL']:
-            if (line.upper().startswith(param)
-                    and not re.match(fr'\s*{param}\s*=\s*[Ff](alse)?', line)):
+    with ParametersReader(filename, noisy=True) as param_file:
+        for param, assignment in param_file:
+            if param == 'STOP':
                 _LOGGER.warning(
                     f'PARAMETERS file: {param} was set at start of '
                     f'program. Modifying PARAMETERS to disable {param}; '
@@ -82,19 +76,8 @@ def readPARAMETERS(filename='PARAMETERS'):
                                  comment='Disabled at program start',
                                  path=filename.parent,
                                  suppress_ori=True)
-        if '=' not in line:
-            continue  # ignore all lines that don't have an '=' sign            # TODO: we should probably still check whether the line starts with something that looks like a parameter and warn. Can easily happen to forget an "=".
-        param, value = line.split('=', maxsplit=1)  # parameter at left of '='
-        if not param:
-            continue
-        # get rid of spaces and check the leftmost entry.
-        param, *flags = param.split()
-        param = from_alias(param)
-        value = value.strip()
-        if not value:
-            rpars.setHaltingLevel(1)
-            raise ParameterNotRecognizedError(parameter=param)
-        rpars.readParams[param].append((flags, value))
+                continue
+            rpars.readParams[param].append(assignment)
     return rpars
 
 
