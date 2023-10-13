@@ -17,29 +17,25 @@ a PARAMETERS file.
 class ParameterError(Exception):
     """Base class for errors raised during PARAMETERS interpretation."""
 
+    _default_message = ''
+
     def __init__(self, parameter, message='', **__kwargs):
         """Initialize instance."""
         _message = f'PARAMETERS file: parameter {str(parameter)}:\n'
-        if message:
-            # add space before 'input will be ignored'
-            _message += message + ' '
+        _message += message or self._default_message
         super().__init__(_message)
 
 
 class ParameterNotRecognizedError(ParameterError):
     """Raised when a parameter is not recognized."""
 
-    def __init__(self, parameter, message='Parameter not recognized'):
-        super().__init__(parameter, message)
+    _default_message = 'Parameter not recognized'
 
 
 class ParameterUnexpectedInputError(ParameterError):
     """Raised when unexpected input is encountered."""
 
-    def __init__(self, parameter, message=""):
-        if not message:
-            message = 'Encountered unexpected input. Check parameter syntax'
-        super().__init__(parameter, message)
+    _default_message = 'Encountered unexpected input. Check parameter syntax'
 
 
 # base class for conversion errors
@@ -150,5 +146,4 @@ class ParameterUnknownFlagError(ParameterError):
 class ParameterNeedsFlagError(ParameterError):
     """Raised when a flag is needed but not given."""
 
-    def __init__(self, parameter, message='Parameter requires a flag'):
-        super().__init__(parameter, message)
+    _default_message = 'Parameter requires a flag'
