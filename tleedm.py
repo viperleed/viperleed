@@ -29,7 +29,7 @@ from viperleed.tleedmlib.classes import rparams
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
                                                   interpretPARAMETERS)
-from viperleed.tleedmlib.files.parameter_errors import ParameterError
+from viperleed.tleedmlib.files.parameters.errors import ParameterError
 from viperleed.tleedmlib.sections.run_sections import section_loop
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 

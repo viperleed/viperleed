@@ -21,8 +21,9 @@ if VPR_PATH not in sys.path:
 # Will be fixed in installable version
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.files import parameters
-from viperleed.tleedmlib.files import parameter_errors as err
-from viperleed.tleedmlib.files.parameters import NumericBounds as Bounds
+from viperleed.tleedmlib.files.parameters import errors as err
+from viperleed.tleedmlib.files.parameters._utils import Assignment
+from viperleed.tleedmlib.files.parameters._utils import NumericBounds as Bounds
 
 from .case_parameters import case_parameters_slab
 # pylint: enable=wrong-import-position
@@ -84,7 +85,7 @@ class _TestInterpretBase:
 
     def assignment(self, value_str, **kwargs):
         """Return an Assignment object for self.param."""
-        return parameters.Assignment(value_str, self.param, **kwargs)
+        return Assignment(value_str, self.param, **kwargs)
 
     def interpret(self, interpreter, value_str, **kwargs):
         """Interpret a value for self.param."""
@@ -159,20 +160,20 @@ class TestSimpleParamsExamples:
 
     def test_interpret_n_bulk_layers_valid(self, interpreter):
         """Check assignment of valid N_BULK_LAYERS."""
-        assignment = parameters.Assignment('1', 'N_BULK_LAYERS')
+        assignment = Assignment('1', 'N_BULK_LAYERS')
         interpreter.interpret_n_bulk_layers(assignment)
         assert interpreter.rpars.N_BULK_LAYERS == 1
 
     def test_interpret_n_bulk_layers_invalid(self, interpreter):
         """Check exceptions are raised for invalid N_BULK_LAYERS."""
         # N_BULK_LAYERS must be 1 or 2
-        assignment = parameters.Assignment('3', 'N_BULK_LAYERS')
+        assignment = Assignment('3', 'N_BULK_LAYERS')
         with pytest.raises(err.ParameterError):
             interpreter.interpret_n_bulk_layers(assignment)
 
     def test_interpret_t_debye(self, interpreter):
         """Check assignment of valid T_DEBYE."""
-        assignment = parameters.Assignment('300.0', 'T_DEBYE')
+        assignment = Assignment('300.0', 'T_DEBYE')
         interpreter.interpret_t_debye(assignment)
         assert interpreter.rpars.T_DEBYE == pytest.approx(300.0)
 
