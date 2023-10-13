@@ -298,11 +298,15 @@ class BulkSlab(BaseSlab):
         # Start from one layer (e.g., the first one) and accumulate
         # potential periods as the offsets of all other layers with
         # same element and same number of atoms. Stop at half the
-        # unit cell height, as periodicity cannot go beyond h/2                 # TODO: @fkrausofer: probably we should also stop at floor(len(sublayers) / 2), as we cannot have a sub-period longer than half the number of sublayers?
+        # unit cell height, as periodicity cannot go beyond h/2.
+        # The same is true for the number of sublayers.
+        n_layers = self.n_sublayers
         candidate_periods = []
         ucell_h = self.ucell[2, 2]
         ref_lay = self.sublayers[0]
         for i, lay in enumerate(self.sublayers[1:], start=1):
+            if i > n_layers / 2:
+                break
             if abs(lay.cartbotz - ref_lay.cartbotz) > ucell_h / 2 + epsz:
                 break
             if (lay.element == ref_lay.element
@@ -311,7 +315,6 @@ class BulkSlab(BaseSlab):
 
         # Now make sure that also the layers
         # in between have the same periods
-        n_layers = self.n_sublayers
         i = 0
         while i < len(candidate_periods):
             period_is_ok = True
