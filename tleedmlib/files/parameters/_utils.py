@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Module parameters of viperleed.tleedmlib.
+"""Module _utils of viperleed.tleedmlib.files.parameters.
 
 Created on Tue Aug 18 16:56:39 2020
 
-@author: Florian Kraushofer
-@author: Alexander M. Imre
-@author: Michele Riva
+@author: Florian Kraushofer (@fkraushofer)
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 
-Initial version by Florian Kraushofer in 2020, major rewrite by
-Alexander Imre & Michele Riva in June 2023.
+Initial version by @fkraushofer in 2020, major rewrite by @amimre
+and @michele-riva in June 2023. This module used to be part of
+parameters.py. Refactored in October 2023.
 
-Functions for reading from and writing to the PARAMETERS file.
+Contains functions and classes used in multiple submodules of
+the viperleed.tleedmlib.files.parameters package.
 """
 
 import ast

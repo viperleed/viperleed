@@ -1,4 +1,18 @@
 # -*- coding: utf-8 -*-
+"""Module errors of viperleed.tleedmlib.files.parameters.
+
+Created in June 2023
+
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
+
+This module used to be called files/parameter_errors.py. Refactored
+in October 2023.
+
+Defines exceptions that may be raised when reading/writing/interpreting
+a PARAMETERS file.
+"""
+
 
 class ParameterError(Exception):
     """Base class for errors raised during PARAMETERS interpretation"""
