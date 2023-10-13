@@ -97,14 +97,14 @@ def readPARAMETERS(filename='PARAMETERS'):
     return rpars
 
 
-def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
+def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
     """
     Reads PARAMETERS file again, but ignores everything not concerning the
     search or STOP. Updates the given Rparams object accordingly.
 
     Parameters
     ----------
-    rp : Rparams
+    rpars : Rparams
         Parameters for current run, as defined previously. Will be updated if
         parameters have changed.
     filename : str, optional
@@ -125,13 +125,13 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
 
     # note no slab is given to the interpreter.
     # Slab is not needed for STOP, SEARCH_KILL and SEARCH_CONVERGENCE
-    interpreter = ParameterInterpreter(rp)
+    interpreter = ParameterInterpreter(rpars)
     for line in lines:
         line = strip_comments(line)
         for param in ['SEARCH_KILL', 'STOP']:  # SEARCH_KILL is legacy name
             if line.upper().startswith(param):
                 if not re.match(fr'\s*{param}\s*=\s*[Ff](alse)?', line):
-                    rp.STOP = True
+                    rpars.STOP = True
                     continue  # if need to STOP, we don't need continue interpreting the line
         if '=' not in line:
             continue  # ignore all lines that don't have an '=' sign at all
