@@ -146,11 +146,10 @@ def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
             continue
 
         param, value_str = line.split('=', maxsplit=1)
-        if param:
-            # get rid of spaces and check the leftmost entry.
-            param, *flags = param.split()
-        else:
-            flags = []
+        if not param:  # Nothing left of '='
+            continue
+
+        param, *flags = param.split()
         try:
             param = from_alias(param)
         except ParameterNotRecognizedError:
@@ -162,6 +161,6 @@ def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
         if param == 'SEARCH_CONVERGENCE':
             new_assignment = Assignment(values_str=value_str,
                                         parameter=param,
-                                        flags_str=' '.join(flags))
+                                        flags_str=flags)
             interpreter.interpret_search_convergence(assignment=new_assignment,
                                                      is_updating=True)
