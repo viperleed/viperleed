@@ -91,6 +91,7 @@ def readPARAMETERS(filename='PARAMETERS'):
         param = from_alias(param)
         value = value.strip()
         if not value:
+            rpars.setHaltingLevel(1)
             raise ParameterNotRecognizedError(parameter=param)
         if param not in rpars.readParams:
             rpars.readParams[param] = []
