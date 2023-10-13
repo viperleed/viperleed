@@ -15,32 +15,9 @@ Contains functions and classes used in multiple submodules of
 the viperleed.tleedmlib.files.parameters package.
 """
 
-import ast
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from functools import partialmethod
 import logging
-from pathlib import Path
-import re
-import shutil
-
-import numpy as np
-
-from viperleed.tleedmlib.base import (strip_comments, splitSublists,
-                                      readVector, readIntRange,
-                                      recombineListElements)
-from viperleed.tleedmlib.classes import rparams
-from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
-from viperleed.tleedmlib import periodic_table
-from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
-
-from .errors import (
-    ParameterError, ParameterValueError, ParameterParseError,
-    ParameterIntConversionError, ParameterFloatConversionError,
-    ParameterBooleanConversionError, ParameterNotRecognizedError,
-    ParameterNumberOfInputsError, ParameterRangeError,
-    ParameterUnknownFlagError, ParameterNeedsFlagError
-    )
 
 
 logger = logging.getLogger('tleedm.files.parameters')

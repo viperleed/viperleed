@@ -17,35 +17,30 @@ read from a PARAMETERS file.
 
 import ast
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from functools import partialmethod
 import logging
 from pathlib import Path
 import re
-import shutil
 
 import numpy as np
 
-from viperleed.tleedmlib.base import (strip_comments, splitSublists,
-                                      readVector, readIntRange,
-                                      recombineListElements)
-from viperleed.tleedmlib.classes import rparams
-from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib import periodic_table
+from viperleed.tleedmlib.base import readIntRange, readVector
+from viperleed.tleedmlib.base import recombineListElements, splitSublists
+from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
-from .errors import (
-    ParameterError, ParameterValueError, ParameterParseError,
-    ParameterIntConversionError, ParameterFloatConversionError,
-    ParameterBooleanConversionError, ParameterNotRecognizedError,
-    ParameterNumberOfInputsError, ParameterRangeError,
-    ParameterUnknownFlagError, ParameterNeedsFlagError
-    )
+from .errors import ParameterError, ParameterBooleanConversionError
+from .errors import ParameterFloatConversionError, ParameterIntConversionError
+from .errors import ParameterNeedsFlagError, ParameterNotRecognizedError
+from .errors import ParameterNumberOfInputsError, ParameterParseError
+from .errors import ParameterRangeError, ParameterUnknownFlagError
+from .errors import ParameterValueError
 from ._known_parameters import _KNOWN_PARAMS
 from ._utils import Assignment, NumericBounds, _POSITIVE_FLOAT, _POSITIVE_INT
 
-logger = logging.getLogger('tleedm.files.parameters')
 
+logger = logging.getLogger('tleedm.files.parameters')
 
 
 # Bool parameters for which to create interpret...() methods automatically.

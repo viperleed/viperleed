@@ -15,32 +15,14 @@ Functions for reading from a PARAMETERS file and for updating
 an Rparams object at runtime from a user-modified PARAMETERS file.
 """
 
-import ast
-from collections.abc import Sequence
-from dataclasses import dataclass, field
-from functools import partialmethod
 import logging
 from pathlib import Path
 import re
-import shutil
 
-import numpy as np
-
-from viperleed.tleedmlib.base import (strip_comments, splitSublists,
-                                      readVector, readIntRange,
-                                      recombineListElements)
+from viperleed.tleedmlib.base import strip_comments
 from viperleed.tleedmlib.classes import rparams
-from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
-from viperleed.tleedmlib import periodic_table
-from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
-from .errors import (
-    ParameterError, ParameterValueError, ParameterParseError,
-    ParameterIntConversionError, ParameterFloatConversionError,
-    ParameterBooleanConversionError, ParameterNotRecognizedError,
-    ParameterNumberOfInputsError, ParameterRangeError,
-    ParameterUnknownFlagError, ParameterNeedsFlagError
-    )
+from .errors import ParameterNotRecognizedError
 from ._known_parameters import _KNOWN_PARAMS, _PARAM_ALIAS
 from ._interpret import ParameterInterpreter
 from ._utils import Assignment
