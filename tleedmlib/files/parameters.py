@@ -660,12 +660,10 @@ class ParameterInterpreter:                                                     
             logger.setLevel(logging.ERROR)
 
         self._update_param_order()
-
         for param, assignment in self._get_param_assignments():
-            # Check if we are doing a domain calculation                        # TODO: this is a logical error! We may not know if we are doing a domain calc before yet. If a parameter is specified that should be ignored (e.g. BULK_REPEAT) prior to RUN this may crash!
+            # Check if we are doing a domain calculation
             _is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
             if _is_domain_calc and param in self.domains_ignore_params:
-                # skip in domain calculation
                 continue
 
             self._interpret_param(param, assignment)
@@ -700,7 +698,7 @@ class ParameterInterpreter:                                                     
 
     def _update_param_order(self):
         """Define order in which parameters should be read."""
-        ordered_params = 'LOG_LEVEL', 'RUN'                                     # TODO: I think DOMAIN should be in here too
+        ordered_params = 'LOG_LEVEL', 'RUN'
         self.param_names = [p for p in ordered_params
                             if p in self.rpars.readParams]
         self.param_names.extend(
@@ -780,8 +778,8 @@ class ParameterInterpreter:                                                     
 
     def interpret_numerical_parameter(self, assignment,
                                       param=None, return_only=False,
-                                      bounds=NumericBounds(),
-                                      no_flags=False):                  # TODO: ideally one could default to actually using the limits known from self.rpars.get_limits!
+                                      bounds=NumericBounds(),                   # TODO: ideally one could default to actually using the limits known from self.rpars.get_limits!
+                                      no_flags=False):
         """Set a parameter to a numeric (int or float) value.
 
         Parameters
@@ -974,7 +972,6 @@ class ParameterInterpreter:                                                     
     def interpret_bulk_repeat(self, assignment):
         """Assign parameter BULK_REPEAT."""
         param = 'BULK_REPEAT'
-
         if not self.slab:  # BULK_REPEAT is moot without a slab
             raise ParameterError(parameter=param,
                                  message='No slab defined for bulk repeat.')
@@ -996,7 +993,7 @@ class ParameterInterpreter:                                                     
                 raise ParameterFloatConversionError(parameter=param) from None
             return
 
-        # (3) C or Z distance. Should match, e.g. c(2.0) or z(2.0)
+        # (3) C or Z distance. Should match, e.g., c(2.0) or z(2.0)
         match = re.match(r'\s*(c|z)\(\s*(?P<val>[0-9.]+)\s*\)',
                          bulk_repeat_str)
         if not match:
@@ -1858,8 +1855,8 @@ class ParameterInterpreter:                                                     
             energies = (assignment.value, assignment.value, "1")
 
         # (2) Three values. Any can be an "_" meaning "default".
-        # Internally, we store those as "-1". The others should
-        # be positive floats.
+        # Internally, we store those as an Rparams.no_value. The
+        # others should be positive floats.
         theo_energies = self._parse_energy_range(param, assignment, energies,
                                                  accept_underscore=True)
         non_defaults = [v for v, s in zip(theo_energies, energies) if s != '_']
