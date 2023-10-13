@@ -36,7 +36,7 @@ from .errors import ParameterNeedsFlagError, ParameterNotRecognizedError
 from .errors import ParameterNumberOfInputsError, ParameterParseError
 from .errors import ParameterRangeError, ParameterUnknownFlagError
 from .errors import ParameterValueError
-from ._known_parameters import _KNOWN_PARAMS
+from ._known_parameters import KNOWN_PARAMS
 from ._utils import Assignment, NumericBounds, _POSITIVE_FLOAT, _POSITIVE_INT
 
 
@@ -215,7 +215,7 @@ class ParameterInterpreter:                                                     
         self.param_names = [p for p in ordered_params
                             if p in self.rpars.readParams]
         self.param_names.extend(
-            p for p in _KNOWN_PARAMS
+            p for p in KNOWN_PARAMS
             if p in self.rpars.readParams and p not in self.param_names
             )
 
