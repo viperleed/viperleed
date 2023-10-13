@@ -162,6 +162,8 @@ class SurfaceSlab(BaseSlab):
 
         Raises
         ------
+        ModuleNotFoundError
+            If the ase module is not available.
         TypeError
             If `ase_atoms` is not an ase.Atoms object.
         """
