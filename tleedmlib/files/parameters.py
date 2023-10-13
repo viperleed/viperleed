@@ -1312,11 +1312,10 @@ class ParameterInterpreter:                                                     
                 self.rpars.setHaltingLevel(2)
                 raise ParameterUnknownFlagError(param, f'{flag!r}')
             partype = {'step': float, 'convergence': float,
-                        'minpoints': int, 'maxpoints': int,
-                        'maxstep': float}
-            value_error = ('PARAMETERS file: OPTIMIZE: Value '
-                            f'{sl[1]} is not valid for flag {sl[0]}. '
-                            'Value will be ignored.')
+                       'minpoints': int, 'maxpoints': int,
+                       'maxstep': float}
+            value_error = (f'Value {sl[1]} is not valid for flag {sl[0]}. '
+                           'Value will be ignored')
             try:
                 self.rpars.OPTIMIZE[flag] = partype[flag](sl[1])
             except ValueError as err:
@@ -2054,7 +2053,7 @@ class ParameterInterpreter:                                                     
 
     def _read_woods_notation(self, param, assignment):
         if self.slab is None:
-            message = (f'{param} parameter appears to be in Wood, '
+            message = (f'{param} parameter appears to be in Wood '
                        'notation but no slab was passed. Cannot '
                        'calculate bulk unit cell!')
             self.rpars.setHaltingLevel(2)
