@@ -1094,11 +1094,8 @@ class ParameterInterpreter:                                                     
         param = 'FORTRAN_COMP'
         message = (f'Only one flag allowed for {param} per line. '
                    f'Got {assignment.flags}.')
-        self._ensure_single_flag_assignment(param,
-                                            assignment,
-                                            message=message)
-
-        flag, compiler_str = assignment.flag.lower(), assignment.value
+        self._ensure_single_flag_assignment(param, assignment, message=message)
+        flag, compiler_str = assignment.flag.lower(), assignment.values_str
 
         # (1) Default (i.e., non-MPI) compiler flags
         if not flag and compiler_str.lower() in ['ifort', 'gfortran']:
