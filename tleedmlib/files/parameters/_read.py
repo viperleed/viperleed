@@ -23,7 +23,7 @@ from viperleed.tleedmlib.base import strip_comments
 from viperleed.tleedmlib.classes import rparams
 
 from .errors import ParameterNotRecognizedError
-from ._known_parameters import KNOWN_PARAMS, _PARAM_ALIAS
+from ._known_parameters import from_alias
 from ._interpret import ParameterInterpreter
 from ._utils import Assignment
 from ._write import modifyPARAMETERS
@@ -78,11 +78,7 @@ def readPARAMETERS(filename='PARAMETERS'):
             continue
         # get rid of spaces and check the leftmost entry.
         param, *flags = param.split()
-        if (param not in KNOWN_PARAMS and
-                param.lower().replace('_', '') in _PARAM_ALIAS):
-            param = _PARAM_ALIAS[param.lower().replace('_', '')]
-        if param not in KNOWN_PARAMS:
-            raise ParameterNotRecognizedError(parameter=param)
+        param = from_alias(param)
         value = value.strip()
         if not value:
             raise ParameterNotRecognizedError(parameter=param)
@@ -137,10 +133,9 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
             param, *flags = param.split()
         else:
             flags = []
-        param_alias = param.lower().replace('_', '')
-        if param not in KNOWN_PARAMS and param_alias in _PARAM_ALIAS:
-            param = _PARAM_ALIAS[param_alias]
-        if param not in KNOWN_PARAMS:
+        try:
+            param = from_alias(param)
+        except ParameterNotRecognizedError:
             continue
         values = value_str.rstrip().split()
         if not values:

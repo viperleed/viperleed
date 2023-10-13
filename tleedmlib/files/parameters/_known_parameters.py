@@ -19,6 +19,8 @@ file.
 
 import logging
 
+from .errors import ParameterNotRecognizedError
+
 
 _LOGGER = logging.getLogger('tleedm.files.parameters')
 
@@ -89,24 +91,53 @@ KNOWN_PARAMS = (
     )
 
 
+def _make_alias(param):
+    """Return an alias of param."""
+    return param.lower().replace('_', '')
+
+
 # _PARAM_ALIAS keys should be all lowercase, with no underscores
-_PARAM_ALIAS = {
+_PARAM_ALIAS = {_make_alias(p): p for p in KNOWN_PARAMS}
+_PARAM_ALIAS.update({    # Sort keys alphabetically!
     'bulklike': 'BULK_LIKE_BELOW',
     'bulksymmetry': 'SYMMETRY_BULK',
     'compiler': 'FORTRAN_COMP',
-    'fortrancompile': 'FORTRAN_COMP',
-    'fortrancompiler': 'FORTRAN_COMP',
+    'compression': 'ZIP_COMPRESSION_LEVEL',
+    'compression_level': 'ZIP_COMPRESSION_LEVEL',
     'fdoptimize': 'OPTIMIZE',
     'fdoptimization': 'OPTIMIZE',
+    'fortrancompile': 'FORTRAN_COMP',
+    'fortrancompiler': 'FORTRAN_COMP',
+    'ignorechecksum': 'TL_IGNORE_CHECKSUM',
+    'ivplot': 'PLOT_IV',
     'logdebug' : 'LOG_LEVEL',
     'plotrfactor': 'PLOT_IV',
     'plotrfactors': 'PLOT_IV',
-    'ignorechecksum': 'TL_IGNORE_CHECKSUM',
-    'ivplot': 'PLOT_IV',
-    'compression_level': 'ZIP_COMPRESSION_LEVEL',
-    'compression': 'ZIP_COMPRESSION_LEVEL',
-    }
+    })
 
 
-for known_param in KNOWN_PARAMS:
-    _PARAM_ALIAS[known_param.lower().replace('_', '')] = known_param
+def from_alias(known_param_or_alias):
+    """Return a parameter name, possibly from its alias.
+
+    Parameters
+    ----------
+    known_param_or_alias : str
+        The name of a parameter or one of its aliases.
+
+    Returns
+    -------
+    known_param : str
+        The name of the known parameter.
+
+    Raises
+    ------
+    ParameterNotRecognizedError
+        If known_param_or_alias is not a known parameter.
+    """
+    if known_param_or_alias in KNOWN_PARAMS:
+        return known_param_or_alias
+    try:
+        return _PARAM_ALIAS[_make_alias(known_param_or_alias)]
+    except KeyError:
+        pass
+    raise ParameterNotRecognizedError(parameter=known_param_or_alias)
