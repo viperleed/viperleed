@@ -93,8 +93,6 @@ def readPARAMETERS(filename='PARAMETERS'):
         if not value:
             rpars.setHaltingLevel(1)
             raise ParameterNotRecognizedError(parameter=param)
-        if param not in rpars.readParams:
-            rpars.readParams[param] = []
         rpars.readParams[param].append((flags, value))
     return rpars
 

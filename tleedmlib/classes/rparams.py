@@ -8,6 +8,7 @@ Class containing parameters read from the PARAMETERS file, and some parameters
 defined at runtime. Most default values are defined here.
 """
 
+from collections import defaultdict
 import logging
 import os
 from pathlib import Path
@@ -152,7 +153,7 @@ class Rparams:
     __init__), as well as some parameters defined at runtime."""
 
     def __init__(self):
-        self.readParams = {}    # original parameters as read from file
+        self.readParams = defaultdict(list)  # Raw PARAMETERS from file
 
         # FROM PARAMETERS FILE
         self.ATTENUATION_EPS = 0.001
