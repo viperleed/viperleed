@@ -124,47 +124,23 @@ def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
         If one of the parameters to be updated has an invalid value.
     """
     filename = Path(update_from, filename).resolve()
-    try:  # pylint: disable=too-many-try-statements
-        with filename.open('r', encoding='utf-8') as param_file:
-            lines = param_file.readlines()
-    except FileNotFoundError:
+    if not filename.is_file():
         _LOGGER.error('updatePARAMETERS routine: PARAMETERS file not found.')
-        raise
+        raise FileNotFoundError(filename)
 
-    # note no slab is given to the interpreter.
-    # Slab is not needed for STOP, SEARCH_KILL and SEARCH_CONVERGENCE
+    # Note that no slab is given to the interpreter. It is not needed
+    # for STOP, SEARCH_KILL and SEARCH_CONVERGENCE. Also, note that
+    # we don't complain (again) about faulty parameters while reading
     interpreter = ParameterInterpreter(rpars)
-    for line in lines:
-        line = strip_comments(line)
-        for param in ['SEARCH_KILL', 'STOP']:  # SEARCH_KILL is legacy name
-            if line.upper().startswith(param):
-                if not re.match(fr'\s*{param}\s*=\s*[Ff](alse)?', line):
-                    rpars.STOP = True
-                    return  # We can stop right away
-
-        # Ignore all lines that don't have an '=' sign at all
-        if '=' not in line:
-            continue
-
-        param, value_str = line.split('=', maxsplit=1)
-        if not param:  # Nothing left of '='
-            continue
-
-        param, *flags = param.split()
-        try:
-            param = from_alias(param)
-        except ParameterNotRecognizedError:
-            continue
-        values = value_str.rstrip().split()
-        if not values:
-            # don't complain *again* in updatePARAMETERS
-            continue
-        if param == 'SEARCH_CONVERGENCE':
-            new_assignment = Assignment(values_str=value_str,
-                                        parameter=param,
-                                        flags_str=flags)
-            interpreter.interpret_search_convergence(assignment=new_assignment,
-                                                     is_updating=True)
+    with ParametersReader(filename, noisy=False) as param_file:
+        for param, assignment in param_file:
+            if param == 'STOP':
+                rpars.STOP = assignment
+            if rpars.STOP:
+                return  # No need to continue reading
+            if param == 'SEARCH_CONVERGENCE':
+                interpreter.interpret_search_convergence(assignment=assignment,
+                                                         is_updating=True)
 
 
 class ParametersReader(AbstractContextManager):
