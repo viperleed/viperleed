@@ -58,14 +58,16 @@ def readPARAMETERS(filename='PARAMETERS'):
         a known one, or if a parameter read has no value.
     """
     filename = Path(filename).resolve()
-    try:
-        rf = filename.open('r', encoding='utf-8')
-    except FileNotFoundError as err:
-        logger.error('PARAMETERS file not found.')
-        raise err
+    if not filename.is_file():
+        _LOGGER.error('PARAMETERS file not found.')
+        raise FileNotFoundError(filename)
+
+    with filename.open('r', encoding='utf-8') as param_file:
+        lines = param_file.readlines()
+
     # read PARAMETERS:
     rpars = rparams.Rparams()
-    for line in rf:
+    for line in lines:
         line = strip_comments(line)
         for param in ['STOP', 'SEARCH_KILL']:
             if (line.upper().startswith(param)
@@ -93,7 +95,6 @@ def readPARAMETERS(filename='PARAMETERS'):
         if param not in rpars.readParams:
             rpars.readParams[param] = []
         rpars.readParams[param].append((flags, value))
-    rf.close()
     return rpars
 
 
