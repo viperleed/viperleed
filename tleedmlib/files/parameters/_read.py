@@ -29,25 +29,33 @@ from ._utils import Assignment
 from ._write import modifyPARAMETERS
 
 
-logger = logging.getLogger('tleedm.files.parameters')
+_LOGGER = logging.getLogger('tleedm.files.parameters')
 
 
 def readPARAMETERS(filename='PARAMETERS'):
-    """
-    Reads a PARAMETERS file and returns an Rparams object with the
-    raw input, without interpretation.
+    """Return an Rparams with the raw contents read from a PARAMETERS file.
 
     Parameters
     ----------
-    filename : str, optional
+    filename : str or Path, optional
         The file to be read. The default is 'PARAMETERS'.
 
     Returns
     -------
     rpars : Rparams
-        Object storing parameters for current run. Will contain
-        parameters read in this function, and some 'global'
-        parameters defined at runtime.
+        Object storing parameters for current run. Contains the
+        raw parameters read in this function in its `.readParams`
+        attribute. The parameters read are not interpreted. For
+        that, call `interpretPARAMETEERS` passing the the same
+        `rpars` object.
+
+    Raises
+    ------
+    FileNotFoundError
+        If filename does not exist.
+    ParameterNotRecognizedError
+        If one of the parameters read from filename is not
+        a known one, or if a parameter read has no value.
     """
     filename = Path(filename).resolve()
     try:
@@ -62,7 +70,7 @@ def readPARAMETERS(filename='PARAMETERS'):
         for param in ['STOP', 'SEARCH_KILL']:
             if (line.upper().startswith(param)
                     and not re.match(fr'\s*{param}\s*=\s*[Ff](alse)?', line)):
-                logger.warning(
+                _LOGGER.warning(
                     f'PARAMETERS file: {param} was set at start of '
                     f'program. Modifying PARAMETERS to disable {param}; '
                     're-insert it if you actually want to stop.'
@@ -112,7 +120,7 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
         with open(update_from / filename, 'r', encoding='utf-8') as rf:
             lines = rf.readlines()
     except FileNotFoundError:
-        logger.error('updatePARAMETERS routine: PARAMETERS file not found.')
+        _LOGGER.error('updatePARAMETERS routine: PARAMETERS file not found.')
         raise
 
     # note no slab is given to the interpreter.
