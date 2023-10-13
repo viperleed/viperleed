@@ -314,7 +314,7 @@ def updatePARAMETERS(rp, filename='PARAMETERS', update_from=''):
                 if not re.match(fr'\s*{param}\s*=\s*[Ff](alse)?', line):
                     rp.STOP = True
                     continue  # if need to STOP, we don't need continue interpreting the line
-        if '=' not in line:                                                     # TODO: perhaps we should rather look at the first entry of a .split() and see if, by chance, it is a valid parameter. Then warn and continue reading.
+        if '=' not in line:
             continue  # ignore all lines that don't have an '=' sign at all
         param, value_str = line.split('=', maxsplit=1)
         if param:
@@ -352,8 +352,9 @@ def readPARAMETERS(filename='PARAMETERS'):
     Returns
     -------
     rpars : Rparams
-        Object storing parameters for current run. Will contain parameters
-        read in this function, and some 'global' parameters defined at runtime.
+        Object storing parameters for current run. Will contain
+        parameters read in this function, and some 'global'
+        parameters defined at runtime.
     """
     filename = Path(filename).resolve()
     try:
@@ -373,11 +374,12 @@ def readPARAMETERS(filename='PARAMETERS'):
                     f'program. Modifying PARAMETERS to disable {param}; '
                     're-insert it if you actually want to stop.'
                     )
-                modifyPARAMETERS(rpars, param, comment='Disabled at program '
-                                 'start', path=filename.parent,
+                modifyPARAMETERS(rpars, param,
+                                 comment='Disabled at program start',
+                                 path=filename.parent,
                                  suppress_ori=True)
         if '=' not in line:
-            continue     # ignore all lines that don't have an '=' sign at all
+            continue  # ignore all lines that don't have an '=' sign            # TODO: we should probably still check whether the line starts with something that looks like a parameter and warn. Can easily happen to forget an "=".
         param, value = line.split('=', maxsplit=1)  # parameter at left of '='
         if not param:
             continue
@@ -411,8 +413,8 @@ def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
     modpar : str
         The parameter that should be modified.
     new : str, optional
-        The new value for the parameter. If not passed (default), the parameter
-        will be commented out without replacement.
+        The new value for the parameter. If not passed (default),
+        the parameter will be commented out without replacement.
     comment : str, optional
         A comment to be added in the new line in PARAMETERS.
     path : str or Path, optional
@@ -421,9 +423,9 @@ def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
     suppress_ori : bool, optional
         If True, no 'PARAMETERS_original' file will be created.
     include_left : bool, optional
-        If False (default), 'new' will be interpreted as only the string that
-        should go on the right-hand side of the equal sign. If True, the entire
-        line will be replace by 'new'.
+        If False (default), 'new' will be interpreted as only the
+        string that should go on the right-hand side of the equal
+        sign. If True, the entire line will be replace by 'new'.
 
     Returns
     -------
@@ -438,8 +440,9 @@ def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
             shutil.copy2(file, ori)
         except Exception:
             logger.error(
-                'modifyPARAMETERS: Could not copy PARAMETERS file '
-                'to PARAMETERS_ori. Proceeding, original file will be lost.')
+                'modifyPARAMETERS: Could not copy PARAMETERS file to '
+                'PARAMETERS_ori. Proceeding, original file will be lost.'
+                )
         rp.manifest.append(oriname)
     if 'PARAMETERS' not in rp.manifest and _path == Path():
         rp.manifest.append('PARAMETERS')
@@ -511,11 +514,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     Parameters
     ----------
     rpars : Rparams
-        Object storing parameters for current run. Created previously by
-        readPARAMETERS, and should already contain raw string data.
+        Object storing parameters for current run. Created previously
+        by readPARAMETERS, and should already contain raw string data.
     slab : Slab, optional
-        Slab object with elements and atomic position data. If not passed, some
-        parameters will not be interpreted.
+        Slab object with elements and atomic position data. If not
+        passed, some parameters will not be interpreted.
     silent : bool, optional
         If True, less output will be printed. The default is False.
 
@@ -561,7 +564,7 @@ class Assignment:
 
     def __post_init__(self):
         """Split out left- and right-hand sides into flags and values."""
-        flags = self._unpack_assignment_side(self.flags_str)                # TODO: are there any instances where we can have more than one flag per line?? If not we should raise always in that case!!
+        flags = self._unpack_assignment_side(self.flags_str)                    # TODO: are there any instances where we can have more than one flag per line?? If not we should raise always in that case!!
         values = self._unpack_assignment_side(self.values_str)
 
         object.__setattr__(self, 'flags', flags)
@@ -574,7 +577,7 @@ class Assignment:
         if not isinstance(self.flags_str, str):
             object.__setattr__(self, 'flags_str', ' '.join(self.flags_str))
         if not self.parameter:
-            raise ValueError("parameter must be a non-empty string")
+            raise ValueError('parameter must be a non-empty string')
 
     @property
     def flag(self):
@@ -730,7 +733,8 @@ class ParameterInterpreter:                                                     
             If True, only return the value of the parameter, but do
             not set it. Default is False.
         no_flags : bool, optional
-            If True, complain if assignment has flags. Default is False.
+            If True, complain if assignment has flags. Default is
+            False.
 
         Returns
         -------
@@ -739,8 +743,16 @@ class ParameterInterpreter:                                                     
 
         Raises
         ------
+        ValueError
+            If allowed_values contains keys other than True and False.
+        ValueError
+            If allowed_values contains identical aliases for True
+            and False.
         ParameterUnknownFlagError
             When assignment has flags but no_flag is True.
+        ParameterBooleanConversionError
+            If the string value of the parameter does not
+            have an acceptable boolean correspondent.
         """
         if allowed_values is None:
             allowed_values = {}
@@ -784,8 +796,6 @@ class ParameterInterpreter:                                                     
 
         Parameters
         ----------
-        param : str
-            The name of the parameter in PARAMETERS
         assignment : Assignment
             The assignment of the parameter, read from PARAMETERS.
         param : str, optional
@@ -793,14 +803,15 @@ class ParameterInterpreter:                                                     
             from assignment.parameter. Also used as attribute name
             for self.rpars. Default is None.
         return_only: bool, optional
-            If True, only return the value of the parameter, but do not
-            set it. Default is False.
+            If True, only return the value of the parameter, but
+            do not set it. Default is False.
         bounds : NumericBounds, optional
             Acceptable limits for value, and what to do in case an
             out-of-bounds value is given. Default is an unbounded
             float.
         no_flags : bool, optional
-            If True, complain if assignment has flags. Default is False.
+            If True, complain if assignment has flags. Default is
+            False.
 
         Returns
         ----------
@@ -1164,8 +1175,8 @@ class ParameterInterpreter:                                                     
             start, stop, step = *iv_range, _no_value
 
         if step is not _no_value and (stop - start) * step < 0:
-            message = (f"Inconsistent {param} step. Cannot shift from "
-                       f"{start:.2f} to {stop:.2f} with {step=:.2f}")
+            message = (f'Inconsistent {param} step. Cannot shift from '
+                       f'{start:.2f} to {stop:.2f} with {step=:.2f}')
             self.rpars.setHaltingLevel(1)
             raise ParameterError(param, message)
 
@@ -1569,13 +1580,13 @@ class ParameterInterpreter:                                                     
             if cull_float - int(cull_float) < 1e-6:
                 self.rpars.SEARCH_CULL = int(cull_float)
             else:
-                message = f'{param} value has to be integer if greater than 1.'
+                message = 'Values greater than one must be integers'
                 self.rpars.setHaltingLevel(1)
                 raise ParameterError(param, message)
         elif cull_float >= 0:
             self.rpars.SEARCH_CULL = cull_float
         else:
-            message = f'{param} value has to be non-negative.'
+            message = f'{param} value must be non-negative'
             self.rpars.setHaltingLevel(1)
             raise ParameterError(param, message)
         if assignment.other_values:
@@ -1596,8 +1607,8 @@ class ParameterInterpreter:                                                     
             bounds=NumericBounds(type_=int, range_=(1, None))
             )
         if self.rpars.SEARCH_POPULATION < 16:
-            logger.warning('SEARCH_POPULATION is very small. A '
-                        'minimum value of 16 is recommended.')
+            logger.warning(f'{param} is very small. A minimum '
+                           'value of 16 is recommended.')
 
     def interpret_search_start(self, assignment):
         param = 'SEARCH_START'
@@ -1848,7 +1859,7 @@ class ParameterInterpreter:                                                     
             self.rpars.THEO_ENERGIES = self.rpars.get_default(param)
             return
         if not assignment.other_values:
-            energies = (assignment.value, assignment.value, "1")
+            energies = (assignment.value, assignment.value, '1')
 
         # (2) Three values. Any can be an "_" meaning "default".
         # Internally, we store those as an Rparams.no_value. The
@@ -1915,7 +1926,7 @@ class ParameterInterpreter:                                                     
         self.rpars.V0_REAL = v0_real.rstrip()
 
     def interpret_vibr_amp_scale(self, assignment):
-        # this parameter is not interpreted right now
+        """Store raw values: Requires sites for interpreting."""
         self.rpars.VIBR_AMP_SCALE.extend(assignment.values_str.split(','))
 
     # ------------------------ Helper methods -------------------------
@@ -1970,7 +1981,7 @@ class ParameterInterpreter:                                                     
             In case there are at least 3 entries and the last
             entry (interpreted as a step size) is zero.
         """
-        energies_str = ",".join(energies)
+        energies_str = ','.join(energies)
         if accept_underscore:
             # We have to replace '_' with something that AST can
             # handle. 'None' seems easy enough. We replace it
@@ -2061,7 +2072,7 @@ class ParameterInterpreter:                                                     
     def _read_matrix_notation(self, param, values):
         sublists = splitSublists(values, ',')
         if len(sublists) != 2:
-            message = 'Number of lines in matrix is not equal to 2.'
+            message = 'Number of lines in matrix is not equal to 2'
             self.rpars.setHaltingLevel(2)
             raise ParameterParseError(param, message)
         nl = []
@@ -2074,7 +2085,7 @@ class ParameterInterpreter:                                                     
                     raise ParameterFloatConversionError(param, sl)
             else:
                 self.rpars.setHaltingLevel(2)
-                message = 'Number of columns in matrix is not equal to 2.'
+                message = 'Number of columns in matrix is not equal to 2'
                 raise ParameterParseError(param, message)
         matrix = np.array(nl, dtype=float)
         return matrix
