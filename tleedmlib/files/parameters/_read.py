@@ -139,7 +139,7 @@ def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
             if line.upper().startswith(param):
                 if not re.match(fr'\s*{param}\s*=\s*[Ff](alse)?', line):
                     rpars.STOP = True
-                    continue  # if need to STOP, we don't need continue interpreting the line
+                    return  # We can stop right away
         if '=' not in line:
             continue  # ignore all lines that don't have an '=' sign at all
         param, value_str = line.split('=', maxsplit=1)
