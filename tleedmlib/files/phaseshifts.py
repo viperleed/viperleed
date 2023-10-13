@@ -574,7 +574,7 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         ax.set_xlim((np.min(energies), np.max(energies)))
         for j in range(0, nlplot):
             ax.plot(energies, ps_vals[:, i, j],
-                    linewidth=linewidth, label="L = {}".format(j),
+                    linewidth=linewidth, label=f"$\ell$ = {j}",
                     c=colors[j % len(colors)],
                     ls=styles[(j // len(colors)) % len(styles)])
         legend = ax.legend(ncol=(nlplot // 8 + 1))
