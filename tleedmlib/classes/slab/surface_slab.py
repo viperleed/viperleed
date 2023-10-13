@@ -240,25 +240,24 @@ class SurfaceSlab(BaseSlab):
                                                 new_ab_cell=new_ab_cell,
                                                 recenter=False)
 
-    def detect_bulk(self, rpars, second_cut_min_spacing=1.2):                   # TODO: @fkraushofer, @amimre: I'm not really happy about the fact that calling this modifies stuff only half-way: it stores the correct BULK_REPEAT and SUPERLATTICE, but does not create_layers, and does not update LAYER_CUTS nor N_BULK_LAYERS. We probably should either do all or nothing.
+    def detect_bulk(self, rpars, second_cut_min_spacing=1.2):
         """Determine the minimal bulk repeat vector from BULK_LIKE_BELOW.
 
         Notice that this method modifies `rpars.BULK_REPEAT` and
         `rpars.SUPERLATTICE` so they contain the detected (minimal)
-        bulk-repeat vector and the superlattice matrix.
-
-        After a call to this method and before `make_bulk_slab`, make
-        sure to `createLayers` using the `bulk_cuts` returned, and to
-        appropriately modify the `LAYER_CUTS` and `N_BULK_LAYERS` of
-        `rpars`.
+        bulk-repeat vector and the superlattice matrix. It also
+        modifies `rpars.LAYER_CUTS` and `rpars.N_BULK_LAYERS` to
+        reflect the newly detected bulk. Finally, this slab will
+        have its `.layers` and `bulkslab` set accordingly.
 
         Parameters
         ----------
         rpars : Rparams
             Run parameters object. Attributes accessed:
-            BULK_LIKE_BELOW (read), SYMMETRY_EPS (read),
-            SYMMETRY_EPS_Z (read), SUPERLATTICE (read/write),
-            superlattice_defined (read), BULK_REPEAT (write)
+            (read)  BULK_LIKE_BELOW, SYMMETRY_EPS, SYMMETRY_EPS_Z,
+                    SUPERLATTICE, superlattice_defined
+            (write) BULK_REPEAT, LAYER_CUTS, N_BULK_LAYERS,
+                    SUPERLATTICE.
         second_cut_min_spacing : float, optional
             Minimal z spacing in Angstrom between sublayers of the
             detected bulk unit to make an additional cut through
@@ -268,8 +267,6 @@ class SurfaceSlab(BaseSlab):
 
         Returns
         -------
-        bulk_repeat : numpy.ndarray
-            The new repeat vector.
         bulk_cuts : list of float
             Layer cuts for self that generate the bulk.
         bulk_dist : float
@@ -288,39 +285,51 @@ class SurfaceSlab(BaseSlab):
             raise ValueError(f'{type(self).__name__}.detect_bulk: rpars '
                              'must have a positive BULK_LIKE_BELOW defined')
         # Work with a temporary copy of this slab to mess up layers,
-        # and a temporary copy of rpars to modify LAYER_CUTS
+        # and a temporary copy of rpars to modify LAYER_CUTS, and
+        # N_BULK_LAYERS. This copy will also store the correct
+        # BULK_REPEAT and SUPERLATTICE till we're sure that the
+        # procedure is successful
         self_copy = copy.deepcopy(self)
         rpars_copy = copy.deepcopy(rpars)
         rpars_copy.LAYER_CUTS = [rpars.BULK_LIKE_BELOW]
         rpars_copy.N_BULK_LAYERS = 1
         self_copy.createLayers(rpars_copy)
+
         # Create a pseudo-bulk slab to determine the correct repeat
         # c vector: the c vector now is very likely to be wrong (as
         # it is just chopped off from the one of self). Notice that
         # here we should not re-center the coordinates, as we know
         # that the bulk repeat is incorrect.
-        self_copy.make_bulk_slab(rpars, recenter=False)
+        self_copy.make_bulk_slab(rpars_copy, recenter=False)
 
-        # Reduce in-plane bulk. This also updates rpars.SUPERLATTICE
-        self_copy.ensure_minimal_bulk_ab_cell(rpars)
+        # Reduce in-plane bulk. This also updates .SUPERLATTICE
+        self_copy.ensure_minimal_bulk_ab_cell(rpars_copy)
 
         # Detect new c vector (z_periodic=False because current c is
         # the one of self, and is most likely wrong), and collapse cell
         # in the process to get the proper bulk slab. Notice that the
-        # next call also saves the new c vector in rpars.BULK_REPEAT
+        # next call also saves the new c vector in .BULK_REPEAT
         try:
-            self_copy.bulkslab.ensure_minimal_c_vector(rpars, z_periodic=False)
+            self_copy.bulkslab.ensure_minimal_c_vector(rpars_copy,
+                                                       z_periodic=False)
         except AlreadyMinimalError as exc:
             _LOGGER.error('Automatic bulk detection failed: Found no bulk '
                           'repeat vector below the specified cut-off.')
             raise NoBulkRepeatError('Failed to detect '
                                     'bulk repeat vector') from exc
 
-        # Identify the cut positions for self_copy that give bulk layers
+        # Identify the cut positions that give bulk layers
         # pylint: disable-next=protected-access
         bulk_cuts, bulk_dist = self_copy._get_bulk_cuts(rpars.SYMMETRY_EPS_Z,
                                                         second_cut_min_spacing)
-        return rpars.BULK_REPEAT, bulk_cuts, bulk_dist
+
+        # Finally, update self and rpars with the new information
+        rpars.BULK_REPEAT = rpars_copy.BULK_REPEAT
+        rpars.SUPERLATTICE = rpars_copy.SUPERLATTICE
+        rpars.LAYER_CUTS = self.createLayers(rpars, bulk_cuts=bulk_cuts)        # TODO: I (MRiva) dislike this. It does not preserve the user input: e.g., LAYER_CUTS = 0.1 0.2 < dz(1.3) is replaced with a list of floats instead of replacing only the part relevant for the bulk.
+        rpars.N_BULK_LAYERS = len(bulk_cuts)
+        self.make_bulk_slab(rpars)
+        return bulk_cuts, bulk_dist
 
     def _get_bulk_cuts(self, epsz, second_cut_min_spacing):
         """Return cut positions for self to give bulk layers."""

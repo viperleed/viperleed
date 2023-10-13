@@ -168,7 +168,7 @@ def main():
 
     print('Checking bulk unit cell...')
     try:
-        _, bulk_cuts, bulk_interlayer = slab.detect_bulk(rpars, 0.7)
+        bulk_cuts, bulk_interlayer = slab.detect_bulk(rpars, 0.7)
     except NoBulkRepeatError:
         _no_repeat = True
     else:

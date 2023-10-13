@@ -135,20 +135,24 @@ def initialization(sl, rp, subdomain=False):
                            'BULK_LIKE_BELOW will be ignored in favour of the '
                            'explicitly defined bulk repeat vector.')
         else:                                                                   # TODO: The modifications to the PARAMETERS file below are currently not in the docs. Should we add that?
-            _, cuts, _ = sl.detect_bulk(rp)
+            # If successful, the next call updates the relevant rpars
+            # attributes: SUPERLATTICE (not written to file),
+            # BULK_REPEAT, LAYER_CUTS, and N_BULK_LAYERS (written
+            # to file below). The slab will have .layers and the
+            # freshly detected .bulkslab.
+            sl.detect_bulk(rp)
             vec_str = '[{:.5f} {:.5f} {:.5f}]'.format(*rp.BULK_REPEAT)
+            logger.info(f'Detected bulk repeat vector: {vec_str}')
             parameters.modifyPARAMETERS(
                 rp, 'BULK_REPEAT', vec_str,
                 comment='Automatically detected repeat vector'
                 )
-            logger.info(f'Detected bulk repeat vector: {vec_str}')
-            rp.LAYER_CUTS = sl.createLayers(rp, bulk_cuts=cuts)                # TODO: I dislike this. It does not preserve the user input: e.g., LAYER_CUTS = 0.1 0.2 < dz(1.3) is replaced with a list of floats instead of replacing only the part relevant for the bulk.
             parameters.modifyPARAMETERS(
                 rp, 'LAYER_CUTS',
                 ' '.join(f'{c:.4f}' for c in rp.LAYER_CUTS)
                 )
-            rp.N_BULK_LAYERS = len(cuts)
-            parameters.modifyPARAMETERS(rp, 'N_BULK_LAYERS', str(len(cuts)))
+            parameters.modifyPARAMETERS(rp, 'N_BULK_LAYERS',
+                                        str(rp.N_BULK_LAYERS))
         parameters.modifyPARAMETERS(rp, 'BULK_LIKE_BELOW', new='')
 
     # create bulk slab:
