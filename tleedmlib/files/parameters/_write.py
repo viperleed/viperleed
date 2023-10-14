@@ -126,7 +126,7 @@ def modify(rp, modpar, new=_COMMENT_OUT, comment='', path='',
                 output += f'!{line.rstrip():<34} ! {comment}\n'
         else:
             output += line
-    if new and not found:
+    if new != _COMMENT_OUT and not found:
         if not headerPrinted:
             output += """
 
