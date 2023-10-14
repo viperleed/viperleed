@@ -33,7 +33,7 @@ from ._write import modifyPARAMETERS
 _LOGGER = logging.getLogger('tleedm.files.parameters')
 
 
-def readPARAMETERS(filename='PARAMETERS'):
+def read(filename='PARAMETERS'):
     """Return an Rparams with the raw contents read from a PARAMETERS file.
 
     Parameters

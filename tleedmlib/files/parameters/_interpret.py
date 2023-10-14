@@ -102,7 +102,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
     ----------
     rpars : Rparams
         Object storing parameters for current run. Created previously
-        by readPARAMETERS, and should already contain raw string data.
+        by parameters.read, and should already contain raw string data.
     slab : Slab, optional
         Slab object with elements and atomic position data. If not
         passed, some parameters will not be interpreted.

@@ -49,5 +49,5 @@ for label, test_info in _POSCAR_INFO.items():
 def case_parameters_slab(info, make_poscar, data_path):
     """Return a slab, an Rparam (read from file), and TestInfo."""
     slab, _, info = make_poscar(info)
-    rpars = parameters.readPARAMETERS(data_path / info.parameters.param_path)
+    rpars = parameters.read(data_path / info.parameters.param_path)
     return slab, rpars, info

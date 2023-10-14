@@ -485,7 +485,7 @@ def init_domains(rp):
             logger.info(f"Reading input files for domain {name}")
             try:
                 dp.sl = poscar.read()
-                dp.rp = parameters.readPARAMETERS()                             # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
+                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
