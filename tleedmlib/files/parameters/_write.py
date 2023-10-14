@@ -21,7 +21,7 @@ import shutil
 from viperleed.tleedmlib.base import strip_comments
 
 
-logger = logging.getLogger('tleedm.files.parameters')
+_LOGGER = logging.getLogger('tleedm.files.parameters')
 
 
 def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
@@ -63,7 +63,7 @@ def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
         try:
             shutil.copy2(file, ori)
         except Exception:
-            logger.error(
+            _LOGGER.error(
                 'modifyPARAMETERS: Could not copy PARAMETERS file to '
                 'PARAMETERS_ori. Proceeding, original file will be lost.'
                 )
@@ -74,15 +74,16 @@ def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
     headerPrinted = False
 
     try:
-        with open(file, 'r', encoding='utf-8') as rf:
-            plines = rf.readlines()
+        with file.open('r', encoding='utf-8') as parameters_file:
+            lines = parameters_file.readlines()
     except FileNotFoundError:
-        plines = []
-    except Exception as err:
-        logger.error('Error reading PARAMETERS file.')
-        raise err
+        lines = []
+    except Exception:
+        _LOGGER.error('Error reading PARAMETERS file.')
+        raise
+
     found = False
-    for line in plines:
+    for line in lines:
         if '! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #' in line:
             headerPrinted = True
         valid = False
@@ -125,8 +126,8 @@ def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
         if comment:
             output += f' ! {comment}'
     try:
-        with open(file, 'w', encoding='utf-8') as wf:
-            wf.write(output)
+        with file.open('w', encoding='utf-8') as parameters_file:
+            parameters_file.write(output)
     except Exception:
-        logger.error('modifyPARAMETERS: Failed to write PARAMETERS file.')
+        _LOGGER.error('modifyPARAMETERS: Failed to write PARAMETERS file.')
         raise
