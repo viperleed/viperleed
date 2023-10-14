@@ -85,7 +85,7 @@ def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
     """Update `rpars` from file, ignoring non-SEARCH-related parameters.
 
     The following parameters are considered:
-    SEARCH_CONVERGENCE, SEARCH_KILL, STOP
+    SEARCH_CONVERGENCE, STOP (and its legacy names).
 
     Parameters
     ----------
@@ -112,7 +112,7 @@ def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
         raise FileNotFoundError(filename)
 
     # Note that no slab is given to the interpreter. It is not needed
-    # for STOP, SEARCH_KILL and SEARCH_CONVERGENCE. Also, note that
+    # for STOP (+legacy names) and SEARCH_CONVERGENCE. Also, note that
     # we don't complain (again) about faulty parameters while reading
     interpreter = ParameterInterpreter(rpars)
     with ParametersReader(filename, noisy=False) as param_file:
