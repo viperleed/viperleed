@@ -24,12 +24,14 @@ from viperleed.tleedmlib.base import NonIntegerMatrixError
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
 from viperleed.tleedmlib.classes.rparams import DomainParameters
-from viperleed.tleedmlib.classes.rparams import InconsistentParametersError
 from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
 from viperleed.tleedmlib.classes.slab import NoBulkRepeatError
 from viperleed.tleedmlib.classes.slab import BulkSlab, Slab
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
 from viperleed.tleedmlib.files import patterninfo, phaseshifts, poscar, vibrocc
+from viperleed.tleedmlib.files.parameter_errors import (
+    InconsistentParametersError
+    )
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
 from viperleed.tleedmlib.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.tleedmlib.sections._sections import (ALL_INPUT_FILES,

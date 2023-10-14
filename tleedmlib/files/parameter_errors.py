@@ -10,6 +10,10 @@ class ParameterError(Exception):
         super().__init__(_message)
 
 
+class InconsistentParametersError(ParameterError):
+    """A user parameter conflicts with another one."""
+
+
 class ParameterNotRecognizedError(ParameterError):
     """Raised when a parameter is not recognized"""
 

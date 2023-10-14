@@ -88,10 +88,6 @@ class RParamsError(Exception):
     """Generic exception concerning PARAMETERS."""
 
 
-class InconsistentParametersError(RParamsError):                                # TODO: I'm not sure if this is the right place, or if we should rather have a ParametersError. This is meant to be used for runtime inconsistencies.
-    """Slab transformation lead to an inconsistency with PARAMETERS."""
-
-
 class SearchPar:
     """Stores properties of ONE parameter of the search, i.e. what variation
     of what atom is linked to this parameter."""

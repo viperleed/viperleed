@@ -21,9 +21,11 @@ import numpy as np
 
 from viperleed.tleedmlib.base import NonIntegerMatrixError
 from viperleed.tleedmlib.base import ensure_integer_matrix, pairwise
-from viperleed.tleedmlib.classes import rparams as tl_rparams
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
+from viperleed.tleedmlib.files.parameter_errors import (
+    InconsistentParametersError
+    )
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 from .base_slab import BaseSlab
@@ -210,7 +212,7 @@ class SurfaceSlab(BaseSlab):
         NonIntegerMatrixError
             If `newcell` gives a superlattice matrix that is not
             integer-valued.
-        tleedmlib.classes.rpars.InconsistentParametersError
+        tleedmlib.files.parameter_errors.InconsistentParametersError
             If `newcell` gives a different superlattice matrix than
             the one in `rpars`.
         """
@@ -225,7 +227,7 @@ class SurfaceSlab(BaseSlab):
                 ) from None
         if (rpars.superlattice_defined
                 and not np.allclose(superlattice, rpars.SUPERLATTICE)):
-            raise tl_rparams.InconsistentParametersError(
+            raise InconsistentParametersError(
                 'Automatically detected minimum-area bulk unit cell differs '
                 'from the cell defined by the SUPERLATTICE parameter. '
                 'Consider changing the SUPERLATTICE parameter. Found matrix: '
@@ -391,7 +393,7 @@ class SurfaceSlab(BaseSlab):
         NonIntegerMatrixError
             If reduction to a minimal cell would give a SUPERLATTICE
             matrix with non-integer values.
-        tleedmlib.classes.rparams.InconsistentParametersError
+        tleedmlib.file.parameter_errors.InconsistentParametersError
             If reduction to a minimal cell would give a SUPERLATTICE
             different from the one in `rpars`.
         """
