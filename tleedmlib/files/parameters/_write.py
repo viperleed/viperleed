@@ -23,8 +23,19 @@ from viperleed.tleedmlib.base import strip_comments
 
 _LOGGER = logging.getLogger('tleedm.files.parameters')
 
+# Some weird string that will unlikely be the new value for
+# a parameter. Used as default for modify to signal that
+# we want to comment out a line
+_COMMENT_OUT = '__comment_out_the_parameter_requested_alkjv__'
 
-def modify(rp, modpar, new='', comment='', path='',
+
+def comment_out(rpars, modpar, comment='', path='', suppress_ori=False):
+    """Comment out modpar in the PARAMETERS file."""
+    modify(rpars, modpar, new=_COMMENT_OUT, comment=comment,
+           path=path, suppress_ori=suppress_ori, include_left=False)
+
+
+def modify(rp, modpar, new=_COMMENT_OUT, comment='', path='',
            suppress_ori=False, include_left=False):
     """
     Looks for 'modpar' in the PARAMETERS file, comments that line out, and
@@ -37,8 +48,8 @@ def modify(rp, modpar, new='', comment='', path='',
     modpar : str
         The parameter that should be modified.
     new : str, optional
-        The new value for the parameter. If not passed (default),
-        the parameter will be commented out without replacement.
+        The new value for the parameter. If not passed, the
+        parameter will be commented out without replacement.
     comment : str, optional
         A comment to be added in the new line in PARAMETERS.
     path : str or Path, optional
@@ -102,9 +113,10 @@ def modify(rp, modpar, new='', comment='', path='',
                     param = p
         if valid and param == modpar:
             found = True
-            if new and f'{modpar} = {new.strip()}' == stripped_line:
+            if (new != _COMMENT_OUT
+                    and f'{modpar} = {new.strip()}' == stripped_line):
                 output += line
-            elif new:
+            elif new != _COMMENT_OUT:
                 output += f'!{line[:-1]} ! line automatically changed to:\n'
                 if not include_left:
                     output += f'{modpar} = '

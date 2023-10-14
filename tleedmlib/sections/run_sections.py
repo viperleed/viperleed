@@ -164,11 +164,11 @@ def run_section(index, sl, rp):
                 writeVIBROCC(sl, rp, "VIBROCC")
                 rp.manifest.append("VIBROCC")
             if rp.T_EXPERIMENT is not None:
-                parameters.modify(rp, "T_EXPERIMENT", new="")
+                parameters.comment_out(rp, "T_EXPERIMENT")
             if rp.T_DEBYE is not None:
-                parameters.modify(rp, "T_DEBYE", new="")
+                parameters.comment_out(rp, "T_DEBYE")
             if len(rp.VIBR_AMP_SCALE) > 0:
-                parameters.modify(rp, "VIBR_AMP_SCALE", new="")
+                parameters.comment_out(rp, "VIBR_AMP_SCALE")
         elif filename == "PHASESHIFTS":
             try:
                 (rp.phaseshifts_firstline, rp.phaseshifts,

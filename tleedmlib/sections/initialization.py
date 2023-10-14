@@ -133,7 +133,7 @@ def initialization(sl, rp, subdomain=False):
                               " ".join(f"{c:.4f}" for c in layer_cuts))
             rp.N_BULK_LAYERS = len(cuts)
             parameters.modify(rp, "N_BULK_LAYERS", str(len(cuts)))
-        parameters.modify(rp, "BULK_LIKE_BELOW", new="")
+        parameters.comment_out(rp, "BULK_LIKE_BELOW")
 
     # create bulk slab:
     if sl.bulkslab is None:

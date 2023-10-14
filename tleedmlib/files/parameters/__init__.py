@@ -12,4 +12,4 @@ of the former parameters.py module.
 from . import errors
 from ._interpret import interpretPARAMETERS, ParameterInterpreter
 from ._read import read, update
-from ._write import modify
+from ._write import comment_out, modify
