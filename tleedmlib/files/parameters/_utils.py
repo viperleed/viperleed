@@ -163,8 +163,8 @@ class NumericBounds:
         return f'larger than or equal to {self.max}'
 
 
-_POSITIVE_INT = NumericBounds(type_=int, range_=(1, None))
-_POSITIVE_FLOAT = NumericBounds(type_=float, range_=(0, None))
+POSITIVE_INT = NumericBounds(type_=int, range_=(1, None))
+POSITIVE_FLOAT = NumericBounds(type_=float, range_=(0, None))
 
 
 @dataclass(frozen=True)

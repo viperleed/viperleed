@@ -37,7 +37,7 @@ from .errors import ParameterNumberOfInputsError, ParameterParseError
 from .errors import ParameterRangeError, ParameterUnknownFlagError
 from .errors import ParameterValueError
 from ._known_parameters import KNOWN_PARAMS
-from ._utils import Assignment, NumericBounds, _POSITIVE_FLOAT, _POSITIVE_INT
+from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
 
 logger = logging.getLogger('tleedm.files.parameters')
@@ -68,15 +68,15 @@ _OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i',
 # automatically. Key is parameter name, value is a NumericBounds
 _SIMPLE_NUMERICAL_PARAMS = {
     # Positive-only integers
-    'BULKDOUBLING_MAX' : _POSITIVE_INT,
-    'N_CORES' : _POSITIVE_INT,
-    'SEARCH_MAX_GEN' : _POSITIVE_INT,
-    'TENSOR_INDEX' : _POSITIVE_INT,
+    'BULKDOUBLING_MAX' : POSITIVE_INT,
+    'N_CORES' : POSITIVE_INT,
+    'SEARCH_MAX_GEN' : POSITIVE_INT,
+    'TENSOR_INDEX' : POSITIVE_INT,
     # Positive-only floats
-    'T_DEBYE' : _POSITIVE_FLOAT,
-    'T_EXPERIMENT' : _POSITIVE_FLOAT,
-    'V0_IMAG' : _POSITIVE_FLOAT,
-    'TL_VERSION' : _POSITIVE_FLOAT,
+    'T_DEBYE' : POSITIVE_FLOAT,
+    'T_EXPERIMENT' : POSITIVE_FLOAT,
+    'V0_IMAG' : POSITIVE_FLOAT,
+    'TL_VERSION' : POSITIVE_FLOAT,
     # Other floats
     'V0_Z_ONSET' : NumericBounds(),
     'ATTENUATION_EPS' : NumericBounds(range_=(1e-6, 1),
@@ -604,7 +604,7 @@ class ParameterInterpreter:                                                     
         try:
             self.rpars.FILAMENT_WF = known_filaments[assignment.value.lower()]
         except KeyError:
-            self.interpret_numerical_parameter(assignment)                      # TODO: bounds? We probably want a _POSITIVE_FLOAT
+            self.interpret_numerical_parameter(assignment)                      # TODO: bounds? We probably want a POSITIVE_FLOAT
 
     def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
         """Assign parameter FORTRAN_COMP."""
