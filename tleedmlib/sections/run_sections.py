@@ -23,11 +23,10 @@ from viperleed.tleedmlib.sections import superpos
 from viperleed.tleedmlib.sections import errorcalc
 from viperleed.tleedmlib.sections import fd_optimization
 from viperleed.tleedmlib.sections.cleanup import cleanup, move_oldruns
+from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files.beams import (readBEAMLIST, readIVBEAMS,
                                              readOUTBEAMS, checkEXPBEAMS)
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS
-from viperleed.tleedmlib.files.parameters import (modifyPARAMETERS,
-                                                  updatePARAMETERS)
 from viperleed.tleedmlib.files.phaseshifts import readPHASESHIFTS
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC, writeVIBROCC
 
@@ -165,11 +164,11 @@ def run_section(index, sl, rp):
                 writeVIBROCC(sl, rp, "VIBROCC")
                 rp.manifest.append("VIBROCC")
             if rp.T_EXPERIMENT is not None:
-                modifyPARAMETERS(rp, "T_EXPERIMENT", new="")
+                parameters.modifyPARAMETERS(rp, "T_EXPERIMENT", new="")
             if rp.T_DEBYE is not None:
-                modifyPARAMETERS(rp, "T_DEBYE", new="")
+                parameters.modifyPARAMETERS(rp, "T_DEBYE", new="")
             if len(rp.VIBR_AMP_SCALE) > 0:
-                modifyPARAMETERS(rp, "VIBR_AMP_SCALE", new="")
+                parameters.modifyPARAMETERS(rp, "VIBR_AMP_SCALE", new="")
         elif filename == "PHASESHIFTS":
             try:
                 (rp.phaseshifts_firstline, rp.phaseshifts,
@@ -347,7 +346,7 @@ def section_loop(rp, sl):
                     "will stop, check log for warnings and errors."
                     )
             break
-        updatePARAMETERS(rp)
+        parameters.update(rp)  # Look for a user STOP
         if rp.RUN and rp.STOP and not rp.RUN[0] in [11, 12, 31]:
             logger.info("# Stopped by user STOP command.")
             break

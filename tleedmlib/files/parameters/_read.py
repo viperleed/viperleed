@@ -81,8 +81,8 @@ def read(filename='PARAMETERS'):
     return rpars
 
 
-def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
-    """Update `rpars` from file, ignoring non-SEARCH-related parameters.
+def update(rpars, filename='PARAMETERS', update_from=''):
+    """Update `rpars` from file.
 
     The following parameters are considered:
     SEARCH_CONVERGENCE, STOP (and its legacy names).
@@ -90,8 +90,8 @@ def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
     Parameters
     ----------
     rpars : Rparams
-        Parameters for current run. Its SEARCH-related members
-        are updated if the contents of `filename` has changed.
+        Parameters for current run. Its attributes are updated
+        if the contents of `filename` has changed.
     filename : str or Path, optional
         The file to be read. The default is 'PARAMETERS'.
     update_from : str or Path, optional
@@ -108,7 +108,7 @@ def updatePARAMETERS(rpars, filename='PARAMETERS', update_from=''):
     """
     filename = Path(update_from, filename).resolve()
     if not filename.is_file():
-        _LOGGER.error('updatePARAMETERS routine: PARAMETERS file not found.')
+        _LOGGER.error('parameters.update: PARAMETERS file not found.')
         raise FileNotFoundError(filename)
 
     # Note that no slab is given to the interpreter. It is not needed

@@ -99,7 +99,8 @@ def monitoredPool(rp, poolsize, function, tasks, update_from=Path()):
         while not all(r.ready() for r in results):
             if killed:
                 break
-            parameters.updatePARAMETERS(rp, update_from=update_from)
+            # See if user wants to STOP
+            parameters.update(rp, update_from=update_from)
             if rp.STOP:
                 kill_pool(pool)
                 logger.info("Stopped by STOP parameter.")

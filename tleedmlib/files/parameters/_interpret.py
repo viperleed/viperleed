@@ -1004,7 +1004,7 @@ class ParameterInterpreter:                                                     
 
         if (not assignment.flags and len(assignment.values) == 1 and
             assignment.value.lower() == 'off' and
-            not is_updating):                                                   # TODO: this is the behaviour of updatePARAMETERS. Was skipping this intended there?
+            not is_updating):                                                   # TODO: this is the behaviour of parameters.update(). Was skipping this intended there?
             self.rpars.GAUSSIAN_WIDTH_SCALING = 1.
             return
 
