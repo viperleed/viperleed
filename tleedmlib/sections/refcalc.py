@@ -23,8 +23,8 @@ from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.checksums import validate_multiple_files
 from viperleed.tleedmlib.files import beams
 from viperleed.tleedmlib.files import iorefcalc as tl_io
+from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files.ivplot import plot_iv
-from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 
 
 logger = logging.getLogger("tleedm.refcalc")
@@ -665,13 +665,13 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.warning("Failed to copy refcalc-fd.out to Tensors folder.")
     # modify PARAMETERS to contain the energies and LMAX that were really used
     if os.path.isfile(os.path.join("Tensors", dn, "PARAMETERS")):
-        modifyPARAMETERS(rp, "THEO_ENERGIES",
-                         new=" ".join(["{:.4g}".format(v)
-                                       for v in rp.THEO_ENERGIES]),
-                         path=os.path.join("Tensors", dn),
-                         suppress_ori=True)
-        modifyPARAMETERS(rp, "LMAX", new="{}-{}".format(*rp.LMAX),
-                         path=os.path.join("Tensors", dn), suppress_ori=True)
+        parameters.modify(rp, "THEO_ENERGIES",
+                          new=" ".join(["{:.4g}".format(v)
+                                        for v in rp.THEO_ENERGIES]),
+                          path=os.path.join("Tensors", dn),
+                          suppress_ori=True)
+        parameters.modify(rp, "LMAX", new="{}-{}".format(*rp.LMAX),
+                          path=os.path.join("Tensors", dn), suppress_ori=True)
 
     # remove references to Deltas from old tensors
     _reinitialize_deltas(rp, sl)

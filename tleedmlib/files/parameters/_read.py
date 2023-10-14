@@ -27,7 +27,7 @@ from .errors import ParameterNotRecognizedError
 from ._known_parameters import from_alias
 from ._interpret import ParameterInterpreter
 from ._utils import Assignment
-from ._write import modifyPARAMETERS
+from ._write import modify as modify_parameters
 
 
 _LOGGER = logging.getLogger('tleedm.files.parameters')
@@ -72,10 +72,10 @@ def read(filename='PARAMETERS'):
                     f'program. Modifying PARAMETERS to disable {param}; '
                     're-insert it if you actually want to stop.'
                     )
-                modifyPARAMETERS(rpars, param,
-                                 comment='Disabled at program start',
-                                 path=filename.parent,
-                                 suppress_ori=True)
+                modify_parameters(rpars, param,
+                                  comment='Disabled at program start',
+                                  path=filename.parent,
+                                  suppress_ori=True)
                 continue
             rpars.readParams[param].append(assignment)
     return rpars

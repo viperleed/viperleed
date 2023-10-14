@@ -68,9 +68,9 @@ def initialization(sl, rp, subdomain=False):
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info(f"Found SYMMETRY_CELL_TRANSFORM {ws}")
             sl.symbaseslab = ssl
-            parameters.modifyPARAMETERS(rp, "SYMMETRY_CELL_TRANSFORM",
-                                        new=f"SYMMETRY_CELL_TRANSFORM {ws}",
-                                        include_left=True)
+            parameters.modify(rp, "SYMMETRY_CELL_TRANSFORM",
+                              new=f"SYMMETRY_CELL_TRANSFORM {ws}",
+                              include_left=True)
         else:
             logger.warning(
                 f"POSCAR unit cell is not minimal (supercell {ws}). "
@@ -125,19 +125,15 @@ def initialization(sl, rp, subdomain=False):
             cvec, cuts = sl.detectBulk(rp)
             rp.BULK_REPEAT = cvec
             vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            parameters.modifyPARAMETERS(
-                rp, "BULK_REPEAT", vec_str,
-                comment="Automatically detected repeat vector"
-                )
+            parameters.modify(rp, "BULK_REPEAT", vec_str,
+                              comment="Automatically detected repeat vector")
             logger.info(f"Detected bulk repeat vector: {vec_str}")
             layer_cuts = sl.createLayers(rp, bulk_cuts=cuts)
-            parameters.modifyPARAMETERS(
-                rp, "LAYER_CUTS",
-                " ".join(f"{c:.4f}" for c in layer_cuts)
-                )
+            parameters.modify(rp, "LAYER_CUTS",
+                              " ".join(f"{c:.4f}" for c in layer_cuts))
             rp.N_BULK_LAYERS = len(cuts)
-            parameters.modifyPARAMETERS(rp, "N_BULK_LAYERS", str(len(cuts)))
-        parameters.modifyPARAMETERS(rp, "BULK_LIKE_BELOW", new="")
+            parameters.modify(rp, "N_BULK_LAYERS", str(len(cuts)))
+        parameters.modify(rp, "BULK_LIKE_BELOW", new="")
 
     # create bulk slab:
     if sl.bulkslab is None:
@@ -150,10 +146,8 @@ def initialization(sl, rp, subdomain=False):
         if rvec is not None:
             rp.BULK_REPEAT = rvec
             vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            parameters.modifyPARAMETERS(
-                rp, "BULK_REPEAT", vec_str,
-                comment="Automatically detected repeat vector"
-                )
+            parameters.modify(rp, "BULK_REPEAT", vec_str,
+                              comment="Automatically detected repeat vector")
             logger.info(f"Detected bulk repeat vector: {vec_str}")
             # update bulk slab vector
             sl.bulkslab.getCartesianCoordinates()
@@ -171,7 +165,7 @@ def initialization(sl, rp, subdomain=False):
         else:
             rp.BULK_REPEAT = (blayers[0].cartbotz
                               - sl.layers[blayers[0].num-1].cartbotz)
-        parameters.modifyPARAMETERS(
+        parameters.modify(
             rp, "BULK_REPEAT", f"{rp.BULK_REPEAT:.5f}",
             comment="Automatically detected spacing. Check POSCAR_bulk."
             )
@@ -607,11 +601,9 @@ def init_domains(rp):
                     else:
                         ws = ("M = {:.0f} {:.0f}, "
                               "{:.0f} {:.0f}".format(*trans.ravel()))
-                    parameters.modifyPARAMETERS(
-                        dp.rp, "SYMMETRY_CELL_TRANSFORM",
-                        new=f"SYMMETRY_CELL_TRANSFORM {ws}",
-                        path=dp.workdir, include_left=True
-                        )
+                    parameters.modify(dp.rp, "SYMMETRY_CELL_TRANSFORM",
+                                      new=f"SYMMETRY_CELL_TRANSFORM {ws}",
+                                      path=dp.workdir, include_left=True)
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:

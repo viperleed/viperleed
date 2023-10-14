@@ -24,8 +24,8 @@ from viperleed.tleedmlib.base import strip_comments
 _LOGGER = logging.getLogger('tleedm.files.parameters')
 
 
-def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
-                     suppress_ori=False, include_left=False):
+def modify(rp, modpar, new='', comment='', path='',
+           suppress_ori=False, include_left=False):
     """
     Looks for 'modpar' in the PARAMETERS file, comments that line out, and
     replaces it by the string specified by 'new'
@@ -64,7 +64,7 @@ def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
             shutil.copy2(file, ori)
         except Exception:
             _LOGGER.error(
-                'modifyPARAMETERS: Could not copy PARAMETERS file to '
+                'parameters.modify: Could not copy PARAMETERS file to '
                 'PARAMETERS_ori. Proceeding, original file will be lost.'
                 )
         rp.manifest.append(oriname)
@@ -129,5 +129,5 @@ def modifyPARAMETERS(rp, modpar, new='', comment='', path='',
         with file.open('w', encoding='utf-8') as parameters_file:
             parameters_file.write(output)
     except Exception:
-        _LOGGER.error('modifyPARAMETERS: Failed to write PARAMETERS file.')
+        _LOGGER.error('parameters.modify: Failed to write PARAMETERS file.')
         raise
