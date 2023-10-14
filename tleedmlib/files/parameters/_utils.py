@@ -20,7 +20,11 @@ from dataclasses import dataclass, field
 import logging
 
 
-logger = logging.getLogger('tleedm.files.parameters')
+_LOGGER = logging.getLogger('tleedm.files.parameters')
+
+# TODO: some of these classes are probably also useful for other
+# files, possibly with little modification. If they are, they
+# could go higher up the hierarchy into a file._utils.py or similar
 
 
 @dataclass(frozen=True)
@@ -196,7 +200,7 @@ class Assignment:
 
     def __post_init__(self):
         """Split out left- and right-hand sides into flags and values."""
-        flags = self._unpack_assignment_side(self.flags_str)                    # TODO: are there any instances where we can have more than one flag per line?? If not we should raise always in that case!!
+        flags = self._unpack_assignment_side(self.flags_str)
         values = self._unpack_assignment_side(self.values_str)
 
         object.__setattr__(self, 'flags', flags)
@@ -231,7 +235,8 @@ class Assignment:
         """Return all the values except for the first one (as strings)."""
         return self.values[1:]
 
-    def _unpack_assignment_side(self, side):
+    @staticmethod
+    def _unpack_assignment_side(side):
         """Split the side left or right of the equal into bits."""
         if isinstance(side, str):
             return tuple(side.split())
