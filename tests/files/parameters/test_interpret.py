@@ -481,15 +481,14 @@ class TestOptimize(_TestInterpretBase):
 
     param = 'OPTIMIZE'
     valid = {  # value, flag, {key: expected}
-        'flag_and_value': ('step 0.1', 'v0i',
-                           {'step': 0.1}),
+        'flag_and_value': ('step 0.1', 'v0i', {'step': 0.1}),
         'multiple_flag_value': (
             'step 0.1, convergence 1e-6, minpoints 10', 'theta',
             {'step': 0.1, 'minpoints': 10, 'convergence': 1e-6}
             ),
         }
     invalid = {
-        'missing_quantity': ('step 0.1', '', err.ParameterNeedsFlagError),     # TODO: currently fails. Fixed on master
+        'missing_quantity': ('step 0.1', '', err.ParameterNeedsFlagError),
         'flag': ('invalid 0.1', 'v0i', err.ParameterUnknownFlagError),
         'value': ('step not-a-number', 'v0i', err.ParameterError),
         'quantity': ('step 0.1', 'invalid', err.ParameterError),

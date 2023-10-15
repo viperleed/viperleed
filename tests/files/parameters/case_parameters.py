@@ -18,7 +18,7 @@ if VPR_PATH not in sys.path:
 # Will be fixed in installable version
 from viperleed.tleedmlib.files import parameters
 
-from ..poscar_slabs import POSCARS_WITHOUT_INFO, AG_100
+from ...poscar_slabs import POSCARS_WITHOUT_INFO, AG_100
 # pylint: enable=wrong-import-position
 
 
