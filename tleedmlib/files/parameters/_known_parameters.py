@@ -140,4 +140,6 @@ def from_alias(known_param_or_alias):
         return _PARAM_ALIAS[_make_alias(known_param_or_alias)]
     except KeyError:
         pass
+    except AttributeError:  # No .lower or no .replace
+        raise TypeError('from_alias: must be string')
     raise ParameterNotRecognizedError(parameter=known_param_or_alias)

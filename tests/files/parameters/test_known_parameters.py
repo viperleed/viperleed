@@ -34,6 +34,7 @@ class TestFromAlias:
         'unknown': ('unknown_parameter', errors.ParameterNotRecognizedError),
         'empty': ('', errors.ParameterNotRecognizedError),
         'spaces': ('   ', errors.ParameterNotRecognizedError),
+        'non-string': (123, TypeError),
         }
 
     @parametrize('invalid_arg,exc', _invalid.values(), ids=_invalid)
