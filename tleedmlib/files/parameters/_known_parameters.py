@@ -131,6 +131,8 @@ def from_alias(known_param_or_alias):
 
     Raises
     ------
+    TypeError
+        If known_param_or_alias is not a string.
     ParameterNotRecognizedError
         If known_param_or_alias is not a known parameter.
     """
@@ -140,6 +142,6 @@ def from_alias(known_param_or_alias):
         return _PARAM_ALIAS[_make_alias(known_param_or_alias)]
     except KeyError:
         pass
-    except AttributeError:  # No .lower or no .replace
-        raise TypeError('from_alias: must be string')
+    except AttributeError as exc:  # No .lower or no .replace
+        raise TypeError('from_alias: must be string') from exc
     raise ParameterNotRecognizedError(parameter=known_param_or_alias)
