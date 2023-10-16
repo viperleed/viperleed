@@ -15,12 +15,10 @@ Functions for reading from a PARAMETERS file and for updating
 an Rparams object at runtime from a user-modified PARAMETERS file.
 """
 
-
 import logging
 from pathlib import Path
 
 from viperleed.tleedmlib.classes import rparams
-
 
 from ._interpret import ParameterInterpreter
 from ._reader import ParametersReader
