@@ -131,3 +131,14 @@ class ParametersReader(AbstractContextManager):
                         'in a line without an "=" sign. Assignment will be '
                         f'SKIPPED.\n    Faulty line: {line}')
 
+
+# To me this pylint complaint does not make much sense
+# here. The public methods come from the parent.
+# pylint: disable-next=too-few-public-methods
+class RawLineParametersReader(ParametersReader):
+    """A ParametersReader that also returns lines exactly as they were read."""
+
+    def _read_one_line(self, line, line_nr):
+        """Return a parameter, and the whole raw line it was in."""
+        param, *_ = super()._read_one_line(line, line_nr)
+        return param, line
