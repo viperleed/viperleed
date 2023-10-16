@@ -200,6 +200,13 @@ class Assignment:
 
     def __post_init__(self):
         """Split out left- and right-hand sides into flags and values."""
+        try:
+            object.__setattr__(self, 'parameter', self.parameter.strip())
+        except AttributeError:  # Not a string
+            raise TypeError('parameter must be a string')
+        if not self.parameter:
+            raise ValueError('parameter must contain printable characters')
+
         flags = self._unpack_assignment_side(self.flags_str)
         values = self._unpack_assignment_side(self.values_str)
 
@@ -212,8 +219,6 @@ class Assignment:
             object.__setattr__(self, 'values_str', ' '.join(self.values_str))
         if not isinstance(self.flags_str, str):
             object.__setattr__(self, 'flags_str', ' '.join(self.flags_str))
-        if not self.parameter:
-            raise ValueError('parameter must be a non-empty string')
 
     @property
     def flag(self):
