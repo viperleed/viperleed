@@ -202,8 +202,8 @@ class Assignment:
         """Split out left- and right-hand sides into flags and values."""
         try:
             object.__setattr__(self, 'parameter', self.parameter.strip())
-        except AttributeError:  # Not a string
-            raise TypeError('parameter must be a string')
+        except AttributeError as exc:  # Not a string
+            raise TypeError('parameter must be a string') from exc
         if not self.parameter:
             raise ValueError('parameter must contain printable characters')
 
