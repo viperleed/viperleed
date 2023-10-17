@@ -257,24 +257,27 @@ class BaseSlab(AtomContainer):
     def smallest_interlayer_spacing(self):
         """Return the smallest z gap between two adjacent layers.
 
+        Make sure to update_layer_coordinates() before.
+
         Returns
         -------
         min_dist : float
             The smallest of the z distances between adjacent layers.
             Distances are calculated between the topmost atom of the
-            lower layer and the bottommost one of the higher. Zero if
-            there is only one layer.
+            lower layer and the bottommost one of the higher.
 
         Raises
         ------
         MissingLayersError
             If no layers are available
+        TooFewLayersError
+            If only one layer is present.
         """
         if not self.layers:
             raise MissingLayersError
 
         if self.n_layers == 1:
-            return 0.                                                           # TODO: I don't think it's right that it is zero if there's only one layer. Think about it.
+            raise TooFewLayersError(f'{type(self).__name} has only one layer')
 
         # Recall that z increases moving deeper into the solid
         return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2]

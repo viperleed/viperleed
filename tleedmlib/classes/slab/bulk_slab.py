@@ -97,6 +97,28 @@ class BulkSlab(BaseSlab):
         """Return whether this is a bulk slab."""
         return True
 
+    @property
+    def smallest_interlayer_spacing(self):
+        """Return the smallest z gap between two adjacent layers.
+
+        Make sure to update_layer_coordinates() before.
+
+        Returns
+        -------
+        min_dist : float
+            The smallest of the z distances between adjacent layers.
+            Distances are calculated between the topmost atom of the
+            lower layer and the bottommost one of the higher.
+
+        Raises
+        ------
+        MissingLayersError
+            If no layers are available
+        """
+        if self.n_layers == 1:
+            return self.ucell.T[2] - self.layers[0].thickness
+        return super().smallest_interlayer_spacing
+
     # Disabled too-many-arguments below because 6/5 seem better than
     # packing these arguments into some data structure which would
     # make the call to this method harder to follow.
