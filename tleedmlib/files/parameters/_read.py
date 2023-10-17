@@ -60,6 +60,7 @@ def read(filename='PARAMETERS'):
         raise FileNotFoundError(filename)
 
     rpars = rparams.Rparams()
+    comment_out_stop = False
     with ParametersReader(filename, noisy=True) as param_file:
         while True:
             try:
@@ -71,17 +72,18 @@ def read(filename='PARAMETERS'):
                 rpars.setHaltingLevel(2)
                 continue
             if param == 'STOP':
-                _LOGGER.warning(
-                    f'PARAMETERS file: {param} was set at start of '
-                    f'program. Modifying PARAMETERS to disable {param}; '
-                    're-insert it if you actually want to stop.'
-                    )
-                comment_out(rpars, param,
-                            comment='Disabled at program start',
-                            path=filename.parent,
-                            suppress_ori=True)
-                continue
-            rpars.readParams[param].append(assignment)
+                comment_out_stop = True
+            else:
+                rpars.readParams[param].append(assignment)
+
+    if comment_out_stop:
+        _LOGGER.warning(
+            f'PARAMETERS file: STOP was set at start of '
+            f'program. Modifying PARAMETERS to disable STOP; '
+            're-insert it if you actually want to stop.'
+            )
+        comment_out(rpars, 'STOP', comment='Disabled at program start',
+                    path=filename.parent, suppress_ori=True)
     return rpars
 
 
@@ -122,6 +124,8 @@ def update(rpars, filename='PARAMETERS', update_from=''):
     with ParametersReader(filename, noisy=False) as param_file:
         for param, assignment in param_file:
             if param == 'STOP':
+                # pylint: disable=no-member
+                # Method is added dynamically
                 interpreter.interpret_stop(assignment)
             if rpars.STOP:
                 return  # No need to continue reading

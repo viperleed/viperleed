@@ -142,6 +142,12 @@ class ParametersReader(AbstractContextManager, Iterator):
 class RawLineParametersReader(ParametersReader):
     """A ParametersReader that also returns lines exactly as they were read."""
 
+    def __next__(self):
+        """Return the next understandable information in the file."""
+        for line_nr, line in enumerate(self._file_obj, start=1):
+            return self._read_one_line(line, line_nr)
+        raise StopIteration
+
     def _read_one_line(self, line, line_nr):
         """Return a parameter, and the whole raw line it was in."""
         param, *_ = super()._read_one_line(line, line_nr)
