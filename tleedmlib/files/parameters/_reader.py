@@ -15,6 +15,7 @@ Defines context-manager, iterator classes for reading parameters from
 a PARAMETERS file.
 """
 
+from collections.abc import Iterator
 from contextlib import AbstractContextManager
 import logging
 from pathlib import Path
@@ -30,7 +31,7 @@ from ._utils import Assignment
 _LOGGER = logging.getLogger('tleedm.files.parameters')
 
 
-class ParametersReader(AbstractContextManager):
+class ParametersReader(AbstractContextManager, Iterator):
     """A context manager that iterates the contents of a PARAMETERS file."""
 
     def __init__(self, filename, noisy=True):
@@ -61,13 +62,14 @@ class ParametersReader(AbstractContextManager):
             pass
         return super().__exit__(exc_type, exc_value, traceback)
 
-    def __iter__(self):
-        """Yield parameters and assignments from a PARAMETERS file."""
+    def __next__(self):
+        """Return the next understandable information in the file."""
         for line_nr, line in enumerate(self._file_obj, start=1):
             param, *rest = self._read_one_line(line, line_nr)
             if not param:
                 continue
-            yield (param, *rest)
+            return (param, *rest)
+        raise StopIteration
 
     def _complain_about_missing_equals(self, line, line_nr):
         """Warn the user if line contains a known parameter but no '='."""

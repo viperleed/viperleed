@@ -68,7 +68,7 @@ def read(filename='PARAMETERS'):
                 break
             except MissingEqualsError as exc:
                 _LOGGER.warning(exc)
-                rpars.setHaltingLever(2)
+                rpars.setHaltingLevel(2)
                 continue
             if param == 'STOP':
                 _LOGGER.warning(
