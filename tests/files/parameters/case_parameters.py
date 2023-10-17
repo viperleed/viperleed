@@ -103,6 +103,11 @@ class CasesParametersFile:
         """Return information regarding a PARAMETERS file."""
         return info, data_path/info.parameters.param_path
 
+    def case_stop(self, data_path):
+        """Return one PARAMETERS file with a line without an '=' sign."""
+        info = _fill_test_info('stop')
+        return self.case_parameters_file(info, data_path)
+
     def case_misses_equals(self, data_path):
         """Return one PARAMETERS file with a line without an '=' sign."""
         info = _fill_test_info('missing_equals')

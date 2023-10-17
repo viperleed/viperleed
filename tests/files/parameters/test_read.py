@@ -66,6 +66,13 @@ class TestReadSuccessful:
         _, rpars = read_parameters(args)
         assert set(rpars.readParams.keys()) == set(info.parameters.expected)
 
+    def test_stop_commented_out(self, data_path, read_parameters):
+        """Check that a 'STOP' is commented out when reading."""
+        args = CasesParametersFile().case_stop(data_path)
+        fpath, _ = read_parameters(args)
+        with fpath.open('r', encoding='utf-8') as parameters_file:
+            assert '! STOP' in parameters_file.read()
+
 
 class TestReadFailing:
     """Collection of tests for reading from an improper PARAMETERS file."""
