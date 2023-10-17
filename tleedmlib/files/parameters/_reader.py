@@ -140,10 +140,14 @@ class ParametersReader(AbstractContextManager, Iterator):
 # here. The public methods come from the parent.
 # pylint: disable-next=too-few-public-methods
 class RawLineParametersReader(ParametersReader):
-    """A ParametersReader that also returns lines exactly as they were read."""
+    """A ParametersReader that also returns lines exactly as they were read.
+
+    Differently from a ParametersReader, a RawLineParametersReader
+    returns all the lines, whether they contain a parameter or not.
+    """
 
     def __next__(self):
-        """Return the next understandable information in the file."""
+        """Return the next acceptable information in the file."""
         for line_nr, line in enumerate(self._file_obj, start=1):
             return self._read_one_line(line, line_nr)
         raise StopIteration
