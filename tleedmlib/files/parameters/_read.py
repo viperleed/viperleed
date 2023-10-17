@@ -122,7 +122,7 @@ def update(rpars, filename='PARAMETERS', update_from=''):
     with ParametersReader(filename, noisy=False) as param_file:
         for param, assignment in param_file:
             if param == 'STOP':
-                rpars.STOP = assignment
+                interpreter.interpret_stop(assignment)
             if rpars.STOP:
                 return  # No need to continue reading
             if param == 'SEARCH_CONVERGENCE':
