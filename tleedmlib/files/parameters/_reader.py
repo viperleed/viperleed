@@ -24,6 +24,7 @@ import re
 from viperleed.tleedmlib.base import strip_comments
 
 from .errors import ParameterNotRecognizedError, MissingEqualsError
+from .errors import ParameterHasNoValueError
 from ._known_parameters import from_alias
 from ._utils import Assignment
 
@@ -100,7 +101,7 @@ class ParametersReader(AbstractContextManager, Iterator):
 
         try:
             param, assignment = self._parse_line(line)
-        except ParameterNotRecognizedError:
+        except (ParameterNotRecognizedError, ParameterHasNoValueError):
             if not self.noisy:
                 return '', None
             raise
@@ -118,7 +119,7 @@ class ParametersReader(AbstractContextManager, Iterator):
         param = from_alias(param)
         values_str = values_str.strip()
         if not values_str:
-            raise ParameterNotRecognizedError(parameter=param)
+            raise ParameterHasNoValueError(parameter=param)
         assignment = Assignment(values_str=values_str,
                                 parameter=param,
                                 flags_str=flags)

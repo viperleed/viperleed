@@ -32,6 +32,12 @@ class ParameterNotRecognizedError(ParameterError):
     _default_message = 'Parameter not recognized'
 
 
+class ParameterHasNoValueError(ParameterError):
+    """Raised when a parameter is not recognized."""
+
+    _default_message = 'Parameter appears to have no value'
+
+
 class ParameterUnexpectedInputError(ParameterError):
     """Raised when unexpected input is encountered."""
 
