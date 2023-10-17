@@ -62,7 +62,10 @@ class TestSlabParameters:
                 self.check_sitedef_consistent(attr, value, subtests)
                 continue
             with subtests.test(name):
-                assert attr == value
+                if isinstance(value, np.ndarray):
+                    assert attr == pytest.approx(value)
+                else:
+                    assert attr == value
 
 
 # TODO: be more specific than ParameterError!
