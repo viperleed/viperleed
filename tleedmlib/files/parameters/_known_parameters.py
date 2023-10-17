@@ -70,6 +70,7 @@ KNOWN_PARAMS = (
     'SITE_DEF',
     'SUPERLATTICE',
     'SUPPRESS_EXECUTION',
+    'STOP',
     'SYMMETRIZE_INPUT',
     'SYMMETRY_BULK',
     'SYMMETRY_CELL_TRANSFORM',
@@ -113,6 +114,7 @@ _PARAM_ALIAS.update({    # Sort keys alphabetically!
     'logdebug' : 'LOG_LEVEL',
     'plotrfactor': 'PLOT_IV',
     'plotrfactors': 'PLOT_IV',
+    'searchkill': 'STOP',
     })
 
 
