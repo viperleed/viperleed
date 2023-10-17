@@ -93,7 +93,7 @@ class ParametersReader(AbstractContextManager, Iterator):
         # We treat STOP differently, as its presence, even without
         # an equal sign, is interpreted as 'please, stop right now'
         if self._stop_requested(line):
-            return 'STOP', True
+            return 'STOP', Assignment('True', 'STOP')
 
         if '=' not in line:
             self._complain_about_missing_equals(line, line_nr)
