@@ -163,6 +163,7 @@ class CaseTag(IntEnum):
     NEED_ROTATION = auto()
     THICK_BULK = auto()
     NO_INFO = auto()
+    RAISES = auto()
 
 
 @dataclass

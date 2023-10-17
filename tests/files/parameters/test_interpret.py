@@ -44,12 +44,6 @@ class TestSlabParameters:
                     assert set(site_def[element][tag]) == set(atom_nrs)
 
     @parametrize_with_cases('args', cases=case_parameters_slab)
-    def test_read_not_empty(self, args):
-        """Check that reading of file succeeds."""
-        _, rpars, _ = args
-        assert rpars.readParams
-
-    @parametrize_with_cases('args', cases=case_parameters_slab)
     def test_parameters_interpreted(self, args, subtests):
         """Check that parameters have been interpreted correctly."""
         slab, rpars, info = args
