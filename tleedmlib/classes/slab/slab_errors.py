@@ -19,12 +19,20 @@ class AlreadyMinimalError(SlabError, RuntimeError):
     """A minimization was requested, but the quantity is already minimal."""
 
 
+class EmptySlabError(SlabError):
+    """The slab has no atoms."""
+
+
 class InvalidUnitCellError(SlabError):
     """Exception raised when the unit cell of a slab is inappropriate."""
 
 
 class MissingBulkSlabError(SlabError, RuntimeError):
     """A bulkslab attribute would be needed but it is not available."""
+
+
+class MissingElementsError(SlabError):
+    """The slab has no elements."""
 
 
 class MissingLayersError(SlabError):

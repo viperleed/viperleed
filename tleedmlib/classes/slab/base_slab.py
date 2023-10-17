@@ -36,7 +36,8 @@ from viperleed.tleedmlib.classes.atom_containers import AtomContainer, AtomList
 from viperleed.tleedmlib.classes.layer import Layer, SubLayer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
-from .slab_errors import AlreadyMinimalError, InvalidUnitCellError
+from .slab_errors import AlreadyMinimalError, EmptySlabError
+from .slab_errors import InvalidUnitCellError, MissingElementsError
 from .slab_errors import MissingLayersError, MissingSublayersError, SlabError
 from .slab_utils import _left_handed, _z_distance
 
@@ -578,11 +579,25 @@ class BaseSlab(AtomContainer):
             Limit value for z difference to assign atoms to different
             sublayers. Default is 0.001.
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        InvalidUnitCellError
+            If the (a,b) unit-cell vectors have out-of-plane components
+        EmptySlabError
+            If there are no atoms in this slab.
+        MissingElementsError
+            If this slab has no elements. Normally, this means that
+            `update_element_count` was not called yet.
         """
         self.check_a_b_in_plane()
+        if not self.n_atoms:
+            raise EmptySlabError(f'{type(self).__name__} has no atoms')
+        if not self.elements:
+            raise MissingElementsError(
+                f'{type(self).__name__} has no eleemtns.'
+                ' Did you forget to update_element_count()?'
+                )
+
         self.sort_by_z()
         subl = []
         for element in self.elements:                                           # TODO: should we complain if there's no elements?
