@@ -19,6 +19,7 @@ from viperleed.tleedmlib.files.parameters._read import read, update
 from viperleed.tleedmlib.files.parameters._reader import (
     ParametersReader, RawLineParametersReader
     )
+from viperleed.tleedmlib.files.parameters._utils import Assignment
 
 from ...helpers import exclude_tags, duplicate_all, CaseTag
 from .case_parameters import CasesParametersFile
@@ -62,7 +63,7 @@ class TestReadSuccessful:
     @parametrize_with_cases('args', **_NOT_RAISING)
     def test_read_expected(self, args, read_parameters):
         """Check that reading of file succeeds."""
-        info, fpath = args
+        info, _ = args
         _, rpars = read_parameters(args)
         assert set(rpars.readParams.keys()) == set(info.parameters.expected)
 
@@ -148,7 +149,6 @@ class TestUpdate:
     def test_updated_relevant(self, read_once):
         """Check no stopping occurs if STOP=False is written."""
         fpath, rpars = read_once
-        before, *_ = duplicate_all(rpars.readParams)
         with fpath.open('a', encoding='utf-8') as parameters_file:
             parameters_file.write('SEARCH_CONVERGENCE dgen = 2519 1.5\n')
         update(rpars, update_from=fpath.parent)
@@ -159,7 +159,6 @@ class TestUpdate:
     def test_updated_stop_false(self, read_once):
         """Check no stopping occurs if STOP=False is written."""
         fpath, rpars = read_once
-        before, *_ = duplicate_all(rpars.readParams)
         with fpath.open('a', encoding='utf-8') as parameters_file:
             parameters_file.write('STOP = false\n')
         update(rpars, update_from=fpath.parent)
@@ -168,8 +167,35 @@ class TestUpdate:
     def test_updated_stop_true(self, read_once):
         """Check no stopping occurs if STOP=False is written."""
         fpath, rpars = read_once
-        before, *_ = duplicate_all(rpars.readParams)
         with fpath.open('a', encoding='utf-8') as parameters_file:
             parameters_file.write('STOP\n')
         update(rpars, update_from=fpath.parent)
         assert rpars.STOP
+
+
+class TestReader:
+    """Collection of simple tests for ParametersReader classes."""
+
+    @fixture(name='path_to_params', scope='session')
+    def fixture_path_to_params(self, data_path):
+        """Return the path to a PARAMETERS file."""
+        _, fpath = CasesParametersFile().case_stop(data_path)
+        return fpath
+
+    def test_reader(self, path_to_params):
+        """Check the lines returned by a ParametersReader."""
+        with ParametersReader(path_to_params) as reader:
+            assert next(reader)[1] == Assignment('1-3', 'RUN')
+            assert next(reader)[1] == Assignment('50 700 3', 'THEO_ENERGIES')
+
+    def test_raw_reader(self, path_to_params):
+        """Check the lines returned by a RawLineParametersReader."""
+        expected_lines = (
+            ('', '! ####### GLOBAL PARAMETERS #######\n'),
+            ('', '\n'),
+            ('RUN', 'RUN = 1-3\n'),
+            ('THEO_ENERGIES', 'THEO_ENERGIES =   50 700 3\n'),
+            )
+        with RawLineParametersReader(path_to_params) as reader:
+            for expected, _read in zip(expected_lines, reader):
+                assert _read == expected

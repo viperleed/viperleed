@@ -82,7 +82,7 @@ def _get_all_parameters_infos():
     """Yield all TestInfo objects of known PARAMETERS files."""
     yield from _POSCAR_INFO.items()
 
-    for label_, fpath in _PATHS.items():
+    for label_ in _PATHS:
         if label_ in _POSCAR_INFO:
             continue
         try:
