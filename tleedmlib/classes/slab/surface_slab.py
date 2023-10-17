@@ -122,7 +122,7 @@ class SurfaceSlab(BaseSlab):
         self.displists = []
         self.preprocessed = False
         self.deltas_initialized = False
-        self.symbaseslab = None                                                 # TODO: needed?
+        self.symbaseslab = None
 
     @property
     def is_bulk(self):

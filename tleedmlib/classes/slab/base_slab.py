@@ -105,9 +105,6 @@ class BaseSlab(AtomContainer):
         vector the symmetry plane at the origin is parallel to
     linklists : list of list of Atom
         List of lists of atoms which are linked by a symmetry operation
-    symbaseslab : Slab or None
-        Slab with the smallest in-plane unit-cell area that shows
-        the full symmetry of the slab.
     """
 
     def __init__(self):
@@ -128,7 +125,6 @@ class BaseSlab(AtomContainer):
         self.foundplanegroup = 'unknown'
         self.orisymplane = None
         self.linklists = []                                                     # non-bulk?
-        self.symbaseslab = None                                                 # non-bulk?
         self.bulkslab = None  # Deleted in BulkSlab.__init__
 
         # Remember the last value of the ELEMENT_MIX parameter that
