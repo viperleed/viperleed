@@ -617,8 +617,6 @@ class BaseSlab(AtomContainer):
                     same_z.append(subl.pop())
                 else:
                     break
-            # Finally re-sort by element
-            same_z.sort(key=attrgetter('element'))                              # TODO: is this even necessary? .sort should be stable, so element order should be preserved
             self.sublayers.extend(same_z)
         for i, layer in enumerate(self.sublayers):
             layer.num = i
