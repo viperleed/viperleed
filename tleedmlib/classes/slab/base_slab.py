@@ -274,7 +274,6 @@ class BaseSlab(AtomContainer):
 
         if self.n_layers == 1:
             return 0.                                                           # TODO: I don't think it's right that it is zero if there's only one layer. Think about it.
-        # self.update_cartesian_from_fractional()                               # TODO: I don't think this is needed. It does not update anything for layers; only makes sense if we also .update_layer_coordinates.
 
         # Recall that z increases moving deeper into the solid
         return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2]
@@ -969,7 +968,7 @@ class BaseSlab(AtomContainer):
             slab.collapse_cartesian_coordinates()
             if not slab.sublayers:
                 slab.create_sublayers(eps)
-            # Reorder sublayers by Z to then compare by index                   # TODO: is this necessary? Maybe only in the else?
+            # Reorder sublayers by Z to then compare by index                   # TODO: is this necessary? Test for a system with two chemical species close in z.
             slab.sublayers.sort(key=attrgetter('cartbotz'))
 
         if self.n_sublayers != other.n_sublayers:
@@ -1052,12 +1051,12 @@ class BaseSlab(AtomContainer):
         # coordinates outside the original cell. Make sure we have
         # the correct Cartesian coordinates before transforming the
         # unit cell.
-        super_slab.update_cartesian_from_fractional()                           # TODO: was update_origin_True, but should not be needed as we have only added atoms by moving them in-plane
+        super_slab.update_cartesian_from_fractional()
         super_slab.ab_cell[:] = super_slab.ab_cell.dot(transform.T)
 
         # Starting from the stored Cartesian coordinates, collapse
         # all atoms (incl. fractional coordinates) to the new cell
-        super_slab.collapse_cartesian_coordinates()                             # TODO: was update_origin_True, same comment as above
+        super_slab.collapse_cartesian_coordinates()
         return super_slab
 
     def make_subcell(self, rpars, transform):                                   # TODO: surface only?

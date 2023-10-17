@@ -380,7 +380,7 @@ class BulkSlab(BaseSlab):
         """
         if epsz is None:
             epsz = eps
-        periods = self.get_candidate_layer_periods(epsz)                        # TODO: This used to be rp.SYMMETRY_EPS, but I think eps_z is the right one. @fkraushofer: OK?
+        periods = self.get_candidate_layer_periods(epsz)
         if not periods:
             raise AlreadyMinimalError(
                 f'{type(self).__name__}.get_minimal_c_vector: no '
@@ -390,7 +390,7 @@ class BulkSlab(BaseSlab):
         # Work with a deepcopy, as we will play around with sublayers
         self_copy = copy.deepcopy(self)
         self_copy.update_cartesian_from_fractional()
-        self_copy.create_sublayers(epsz)                                        # TODO: this used to be rp.SYMMETRY_EPS but I think eps_z is the right one. @fkraushofer: OK?
+        self_copy.create_sublayers(epsz)
         n_layers = self_copy.n_sublayers
 
         # Pick one layer (e.g., the first one) and test translations
@@ -404,7 +404,7 @@ class BulkSlab(BaseSlab):
                                           eps=eps, z_periodic=z_periodic)
         repeat_c = None
         for period in periods:
-            other_layer = self_copy.sublayers[period % n_layers]                # TODO: we used to offset all by ts.sublayers.index(baseLayer), but we always used sublayers[0] as baseLayer, so ts.sublayers.index(baseLayer) == 0. @fkraushofer: OK?
+            other_layer = self_copy.sublayers[period % n_layers]
             # Vectors from surface to bulk (the way we want them
             # later), but flip them for testing matching, which
             # means translating the slab up towards the surface.
