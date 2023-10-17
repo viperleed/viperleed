@@ -1195,7 +1195,7 @@ class BaseSlab(AtomContainer):
         bulk_atoms.update_atoms_map()
         self.atlist.update_atoms_map()
 
-    def update_cartesian_from_fractional(self, update_origin=False):            # TODO: should we do anything to the .bulkslab too?
+    def update_cartesian_from_fractional(self, update_origin=False):
         """Assign absolute Cartesian coordinates to all atoms.
 
         The frame of reference has (x, y) as defined by the a and b
@@ -1206,6 +1206,9 @@ class BaseSlab(AtomContainer):
         coordinates when distortions have been applied to the unit
         cell (but atoms should retain their position relative to the
         modified cell).
+
+        Notice that this method does not touch the atomic coordinates
+        in this slab's `bulkslab`.
 
         Parameters
         ----------
@@ -1271,13 +1274,16 @@ class BaseSlab(AtomContainer):
                            for el in elements
                            if el in n_per_elem}
 
-    def update_fractional_from_cartesian(self):                                 # TODO: should we do anything to the .bulkslab too?
+    def update_fractional_from_cartesian(self):
         """Calculate atoms' fractional coordinates from Cartesian ones.
 
         This method is commonly used when `ucell` is modified, and
         the atoms should retain their absolute Cartesian positions
         while recomputing their fractional coordinates relative to
         the new unit cell.
+
+        Notice that this method does not touch the atomic coordinates
+        in this slab's `bulkslab`.
 
         Returns
         -------
