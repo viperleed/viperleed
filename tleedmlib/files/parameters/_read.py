@@ -20,6 +20,7 @@ from pathlib import Path
 
 from viperleed.tleedmlib.classes import rparams
 
+from .errors import MissingEqualsError
 from ._interpret import ParameterInterpreter
 from ._reader import ParametersReader
 from ._write import comment_out
@@ -60,7 +61,15 @@ def read(filename='PARAMETERS'):
 
     rpars = rparams.Rparams()
     with ParametersReader(filename, noisy=True) as param_file:
-        for param, assignment in param_file:
+        while True:
+            try:
+                param, assignment = next(param_file)
+            except StopIteration:
+                break
+            except MissingEqualsError as exc:
+                _LOGGER.warning(exc)
+                rpars.setHaltingLever(2)
+                continue
             if param == 'STOP':
                 _LOGGER.warning(
                     f'PARAMETERS file: {param} was set at start of '

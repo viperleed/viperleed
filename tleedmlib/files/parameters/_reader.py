@@ -22,7 +22,7 @@ import re
 
 from viperleed.tleedmlib.base import strip_comments
 
-from .errors import ParameterNotRecognizedError
+from .errors import ParameterNotRecognizedError, MissingEqualsError
 from ._known_parameters import from_alias
 from ._utils import Assignment
 
@@ -69,6 +69,20 @@ class ParametersReader(AbstractContextManager):
                 continue
             yield (param, *rest)
 
+    def _complain_about_missing_equals(self, line, line_nr):
+        """Warn the user if line contains a known parameter but no '='."""
+        if not line or not self.noisy:
+            return
+        param, *_ = line.split()
+        try:
+            param = from_alias(param)
+        except ParameterNotRecognizedError:
+            return
+        _err_msg = (f'-- line {line_nr} -- Found {param} in a '
+                    'line without an "=" sign. Assignment will '
+                    f'be SKIPPED.\n    Faulty line: {line}')
+        raise MissingEqualsError(param, message=_err_msg)
+
     def _read_one_line(self, line, line_nr):
         """Return a parameter and other custom information from one line."""
         line = strip_comments(line)
@@ -79,7 +93,7 @@ class ParametersReader(AbstractContextManager):
             return 'STOP', True
 
         if '=' not in line:
-            self._warn_about_missing_equals(line, line_nr)
+            self._complain_about_missing_equals(line, line_nr)
             return '', None
 
         try:
@@ -117,19 +131,6 @@ class ParametersReader(AbstractContextManager):
                     and not re.match(fr'\s*{param}\s*=\s*[F](ALSE)?', line)):
                 return True
         return False
-
-    def _warn_about_missing_equals(self, line, line_nr):
-        """Warn the user if line contains a known parameter but no '='."""
-        if not line or not self.noisy:
-            return
-        param, *_ = line.split()
-        try:
-            param = from_alias(param)
-        except ParameterNotRecognizedError:
-            return
-        _LOGGER.warning(f'PARAMETERS file, line {line_nr}: found {param} '      # TODO: should we actually raise?
-                        'in a line without an "=" sign. Assignment will be '
-                        f'SKIPPED.\n    Faulty line: {line}')
 
 
 # To me this pylint complaint does not make much sense

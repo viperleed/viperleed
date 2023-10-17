@@ -142,3 +142,7 @@ class ParameterNeedsFlagError(ParameterError):
     """Raised when a flag is needed but not given."""
 
     _default_message = 'Parameter requires a flag'
+
+
+class MissingEqualsError(ParameterError):
+    """A known parameter is present on a line without an '='."""
