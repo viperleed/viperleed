@@ -274,7 +274,6 @@ class BaseSlab(AtomContainer):
 
         if self.n_layers == 1:
             return 0.                                                           # TODO: I don't think it's right that it is zero if there's only one layer. Think about it.
-        # self.update_cartesian_from_fractional()                               # TODO: I don't think this is needed. It does not update anything for layers; only makes sense if we also .update_layer_coordinates.
 
         # Recall that z increases moving deeper into the solid
         return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2]
