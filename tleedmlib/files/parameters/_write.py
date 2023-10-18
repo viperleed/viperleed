@@ -25,6 +25,8 @@ import numpy as np
 from viperleed.tleedmlib.base import strip_comments
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
 
+from ._reader import RawLineParametersReader
+
 
 _LOGGER = logging.getLogger('tleedm.files.parameters')
 
@@ -333,3 +335,156 @@ class ModifiedParameterValue:
     def _get_raw_value_beam_incidence(rpars):
         """Return theta and phi."""
         return rpars.THETA, rpars.PHI
+
+
+class ParametersFileEditor(AbstractContextManager):
+    """A context manager for editing a PARAMETERS file."""
+
+    _filename = 'PARAMETERS'
+    _header = """
+
+! ######################################################
+! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #
+! ######################################################
+
+"""
+
+    def __init__(self, rpars, path='', save_existing_parameters_file=True):
+        """Initialize instance."""
+        self._path = Path(path).resolve()
+        self._rpars = rpars
+        self._should_save_existing_file = save_existing_parameters_file
+
+        self._to_modify = {}  # Parameters to modify/comment out
+        self._has_header = False
+        self._write_param_file = None  # The file object to write to
+
+    @property
+    def _file(self):
+        """Return the path to the PARAMETERS file to modify."""
+        return self._path / self._filename
+
+    def __enter__(self):
+        """Prepare to modify a PARAMETERS file."""
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Modify PARAMETERS file before exiting."""
+        self.write_modified_parameters()
+        return super().__exit__(exc_type, exc_value, traceback)
+
+    def comment_out_parameter(self, param, comment=''):
+        """Mark param as to be completely commented out."""
+        commented = ModifiedParameterValue(param, self._rpars,
+                                           comment=comment,
+                                           only_comment_out=True)
+        self._to_modify[param] = commented
+        return commented
+
+    def modify_param(self, param, new_value=None, comment=''):
+        """Mark param as to be modified from the current value in rpars."""
+        if new_value is None:
+            new_value = self._rpars
+        mod_param = ModifiedParameterValue(param, new_value, comment=comment)
+        self._to_modify[param] = mod_param
+        return mod_param
+
+    def save_existing_parameters_file(self):
+        """Save a copy of an existing PARAMETERS file as 'ori_<timestamp>'."""
+        if not self._should_save_existing_file:
+            return
+
+        oriname = f'{self._filename}_ori_{self._rpars.timestamp}'
+        if not self._file.is_file() or oriname in self._rpars.manifest:
+            self._should_save_existing_file = False
+            return
+
+        try:
+            shutil.copy2(self._file, self._path / oriname)
+        except OSError:
+            _LOGGER.error(
+                f'parameters.modify: Could not copy {self._filename} file to '
+                f'{self._filename}_ori. Proceeding. Original file will be lost'
+                )
+        self._rpars.manifest.append(oriname)
+        self._should_save_existing_file = False
+
+    def write_modified_parameters(self):
+        """Write a new PARAMETERS, modifying all the requested lines."""
+        self.save_existing_parameters_file()
+        cwd = Path().resolve()
+        if self._filename not in self._rpars.manifest and self._path == cwd:
+            self._rpars.manifest.append(self._filename)
+
+        if not self._to_modify:
+            return
+
+        # Collect the contents of the PARAMETERS
+        # file before re-opening it for writing
+        lines = self._collect_lines()
+        self._has_header = False
+        _head_mark = '! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #'
+        with self._file.open('w', encoding='utf-8') as self._write_param_file:
+            for param, raw_line in lines:
+                if _head_mark in raw_line:
+                    self._has_header = True
+                self._write_one_line(param, raw_line)
+            self._write_missing_parameters()
+        self._to_modify.clear()
+
+    def _collect_lines(self):
+        """Return lines read from the PARAMETERS file."""
+        if not self._file.is_file():
+            return ()
+
+        reader = RawLineParametersReader(self._file, noisy=False)
+        try:  # pylint: disable=too-many-try-statements
+            with reader:
+                return tuple(reader)
+        except Exception:
+            _LOGGER.error(f'Error reading {self._filename} file.')
+            raise
+
+    def _get_comment_line_for(self, modified, raw_line):
+        """Return a commented version of `raw_line`."""
+        if modified.only_comment_out:
+            comment = modified.comment or 'line commented out automatically'
+            return f'! {raw_line.rstrip():<33} ! {comment}\n'
+        return f'! {raw_line.rstrip():<33} ! line automatically changed to:\n'
+
+    def _is_unchanged(self, modified, raw_line):
+        """Return whether `modified` is already present in `raw_line`."""
+        return strip_comments(modified.line) == strip_comments(raw_line)
+
+    def _write_one_line(self, param, raw_line):
+        """Write one `raw_line` containing param."""
+        if not param:  # Empty, comment, or invalid line
+            self._write_param_file.write(raw_line)
+            return
+
+        modified = self._to_modify.get(param, None)
+        if modified is None or self._is_unchanged(modified, raw_line):
+            # No modification needed
+            self._write_param_file.write(raw_line)
+            return
+
+        commented_line = self._get_comment_line_for(modified, raw_line)
+        self._write_param_file.write(commented_line)
+        self._write_new_parameter_line(modified)
+
+    def _write_new_parameter_line(self, modified):
+        """Write one line for `modified`, if necessary."""
+        if modified.only_comment_out or modified.already_written:
+            return
+        self._write_param_file.write(modified.line)
+        modified.already_written = True
+
+    def _write_missing_parameters(self):
+        """Write all the parameters that were not found."""
+        to_be_written = [p for p in self._to_modify.values()
+                         if not p.already_written]
+        if not to_be_written:
+            return
+        if not self._has_header:
+            self._write_param_file.write(self._header)
+        self._write_param_file.writelines(p.line for p in to_be_written)

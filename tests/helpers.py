@@ -8,11 +8,13 @@ Contains some useful general definitions that can be used when creating
 or running tests.
 """
 
+from contextlib import contextmanager
 import copy
 from dataclasses import dataclass, field, fields
 from enum import IntEnum, auto
 import functools
 import inspect
+import os
 from pathlib import Path
 from typing import Dict, List, Set, Tuple, Mapping
 
@@ -154,6 +156,18 @@ def exclude_tags(*tags):
         return not any(tag in case_tags for tag in tags)
     return _filter
 
+
+# #######################   CONTEX MANAGERS   #########################
+
+@contextmanager
+def execute_in_dir(path):
+    """Safely execute code in a specific directory."""
+    home = Path().resolve()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(home)
 
 # ###############################   CLASSES   #################################
 

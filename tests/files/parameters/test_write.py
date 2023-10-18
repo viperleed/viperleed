@@ -12,6 +12,9 @@ from pytest_cases import parametrize
 from viperleed.tleedmlib.base import strip_comments
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.files.parameters._write import ModifiedParameterValue
+from viperleed.tleedmlib.files.parameters._write import ParametersFileEditor
+
+from ...helpers import execute_in_dir
 
 
 class TestModifiedParameterValue:
@@ -100,3 +103,109 @@ class TestModifiedParameterValue:
         """Check complaints when asking for a parameter without a formatter."""
         with pytest.raises(ValueError):
             ModifiedParameterValue('PARAM_WITHOUT_FORMATTER', 1)
+
+
+class TestParametersEditor:
+    """Collection of tests for the ParametersFileEditor class."""
+
+    def test_comment_out_parameter(self):
+        """Test successful execution of comment_out_parameter method."""
+        rpars = Rparams()
+        editor = ParametersFileEditor(rpars)
+        modpar, comment = 'PARAM1', 'Test Comment'
+        modified = editor.comment_out_parameter(modpar, comment=comment)
+        assert modified.only_comment_out
+        assert modified.param == modpar
+        assert modified.comment == comment
+
+    def test_modify_parameter_explicit_value(self):
+        """Test successful execution of modify_param method."""
+        rpars = Rparams()
+        editor = ParametersFileEditor(rpars)
+        modpar, new_value, comment = 'BULK_LIKE_BELOW', 0.23, 'Test Comment'
+        modified = editor.modify_param(modpar, new_value, comment=comment)
+        assert not modified.only_comment_out
+        assert modified.param == modpar
+        assert modified.comment == comment
+        assert modified.fmt_value == '0.2300'
+
+    def test_dont_save_nonexisting_file(self):
+        """Check no duplicate file is created if one did not exist."""
+        rpars = Rparams()
+        editor = ParametersFileEditor(rpars, path='_a_non_exis_ting_pa_th__',
+                                      save_existing_parameters_file=True)
+        editor.save_existing_parameters_file()
+        # pylint: disable-next=protected-access
+        assert not any(editor._path.glob('*'))
+
+    def test_save_existing_parameters_file(self, read_one_param_file):
+        """Check that original file is duplicated correctly."""
+        fpath, rpars = read_one_param_file
+        rpars.timestamp = timestamp = 'new_timestamp_123456'
+        editor = ParametersFileEditor(rpars, path=fpath.parent)
+        editor.save_existing_parameters_file()
+        new_param = next(fpath.parent.glob(f'PARAMETERS*{timestamp}'), None)
+        assert new_param is not None
+        with fpath.open('r', encoding='utf-8') as old_file:
+            with new_param.open('r', encoding='utf-8') as new_file:
+                assert new_file.read() == old_file.read()
+
+    def test_write_modified_nothing(self, read_one_param_file):
+        """Check that file is unchanged with no edits."""
+        fpath, rpars = read_one_param_file
+        editor = ParametersFileEditor(rpars, path=fpath.parent)
+        editor.write_modified_parameters()
+        ori_path = next(fpath.parent.glob(f'PARAMETERS*{rpars.timestamp}'))
+        with fpath.open('r', encoding='utf-8') as mod_file:
+            with ori_path.open('r', encoding='utf-8') as ori_file:
+                assert mod_file.read() == ori_file.read()
+
+    @staticmethod
+    def _modify_one_param(editor, rpars):
+        """Edit one parameter, return a comment."""
+        rpars.BULK_LIKE_BELOW = 0.9876
+        comment = 'Decreasing digits'
+        editor.modify_param('BULK_LIKE_BELOW', comment=comment)
+        return comment
+
+    @staticmethod
+    def _check_file_modified(fpath, comment):
+        """Check that the expected modifications were carried out."""
+        with open(fpath, 'r', encoding='utf-8') as mod_file:
+            line = next((line for line in mod_file
+                         if 'BULK_LIKE_BELOW = 0.9876' in line), None)
+            assert line is not None
+            assert line.strip().endswith(comment)
+
+    def test_write_modified_called(self, read_one_param_file):
+        """Check editing for explicit call to write_modified_parameters."""
+        fpath, rpars = read_one_param_file
+        with execute_in_dir(fpath.parent):
+            fpath.unlink()
+            editor = ParametersFileEditor(rpars)
+            comment = self._modify_one_param(editor, rpars)
+            editor.write_modified_parameters()
+            self._check_file_modified(fpath.name, comment)
+
+    def test_write_modified_context(self, read_one_param_file):
+        """Check editing behaviour when used as a context manager."""
+        fpath, rpars = read_one_param_file
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            comment = self._modify_one_param(editor, rpars)
+            try:
+                self._check_file_modified(fpath, comment)
+            except AssertionError:
+                pass
+            else:
+                pytest.fail(reason='File was modified too early')
+        self._check_file_modified(fpath, comment)
+
+    def test_write_commented_param(self, read_one_param_file):
+        """check correct commenting-out of one parameter."""
+        fpath, rpars = read_one_param_file
+        with ParametersFileEditor(rpars, path=fpath.parent) as editor:
+            editor.comment_out_parameter('SITE_DEF')  # Two of them!
+        with fpath.open('r', encoding='utf-8') as param_file:
+            site_def_lines = tuple(line for line in param_file
+                                   if 'SITE_DEF' in line)
+        assert not any(strip_comments(line) for line in site_def_lines)
