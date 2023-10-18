@@ -64,6 +64,7 @@ DEFAULTS = {
         },
     'RUN': (0, 1, 2, 3),
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
+    'SYMMETRY_FIX': '',
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
     'THEO_ENERGIES - no experiments': (20, 800, 3),
     'THETA': 0,   # perpendicular incidence
@@ -221,7 +222,7 @@ class Rparams:
         self.SYMMETRY_EPS = 0.1
         self.SYMMETRY_EPS_Z = 0.1
         self.SYMMETRY_FIND_ORI = True
-        self.SYMMETRY_FIX = ''
+        self.SYMMETRY_FIX = self.get_default('SYMMETRY_FIX')
         self.SYMMETRY_BULK = {}   # keys: group, rotation, mirror
         self.TENSOR_INDEX = None  # default: pick highest in Tensors folder
         self.TENSOR_OUTPUT = []  # per layer: write Tensor output? (0/1)

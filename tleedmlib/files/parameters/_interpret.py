@@ -1272,9 +1272,10 @@ class ParameterInterpreter:                                                     
 
     def interpret_symmetry_fix(self, assignment):                               # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
         param = 'SYMMETRY_FIX'
-        group = assignment.value.lower()
-        if group.startswith('t'):
-            return  # same as default, determine symmetry automatically
+        group = assignment.values_str.lower()
+        if group.startswith('t'):  # determine symmetry automatically
+            self.rpars.SYMMETRY_FIX = self.rpars.get_default(param)
+            return
         if group.startswith('f'):
             self.rpars.SYMMETRY_FIX = 'p1'
             return

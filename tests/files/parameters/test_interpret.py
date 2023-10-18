@@ -759,8 +759,6 @@ class TestSymmetryFix(_TestInterpretBase):
         """Ensure invalid SYMMETRY_FIX raises exceptions."""
         self.check_raises(interpreter, val, exc)
 
-    @pytest.mark.xfail(reason='Known bug in interpreter: assumes single call',
-                       strict=True)
     def test_default_restored(self, interpreter):
         """Ensure that the default value is used when 't' is given."""
         self.check_assigned(interpreter, 'f', 'p1')
