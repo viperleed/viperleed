@@ -666,11 +666,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     # modify PARAMETERS to contain the energies and LMAX that were really used
     if os.path.isfile(os.path.join("Tensors", dn, "PARAMETERS")):
         parameters.modify(rp, "THEO_ENERGIES",
-                          new=" ".join(["{:.4g}".format(v)
-                                        for v in rp.THEO_ENERGIES]),
                           path=os.path.join("Tensors", dn),
                           suppress_ori=True)
-        parameters.modify(rp, "LMAX", new="{}-{}".format(*rp.LMAX),
+        parameters.modify(rp, "LMAX",
                           path=os.path.join("Tensors", dn), suppress_ori=True)
 
     # remove references to Deltas from old tensors

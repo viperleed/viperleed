@@ -30,33 +30,34 @@ from ._reader import RawLineParametersReader
 
 _LOGGER = logging.getLogger('tleedm.files.parameters')
 
-# Some weird string that will unlikely be the new value for
-# a parameter. Used as default for modify to signal that
-# we want to comment out a line
-_COMMENT_OUT = '__comment_out_the_parameter_requested_alkjv__'
-
 
 def comment_out(rpars, modpar, comment='', path='', suppress_ori=False):
     """Comment out modpar in the PARAMETERS file."""
-    modify(rpars, modpar, new=_COMMENT_OUT, comment=comment,
-           path=path, suppress_ori=suppress_ori, include_left=False)
+    editor = ParametersFileEditor(
+        rpars, path=path,
+        save_existing_parameters_file=not suppress_ori
+        )
+    with editor:
+        editor.comment_out_parameter(modpar, comment=comment)
 
 
-def modify(rp, modpar, new=_COMMENT_OUT, comment='', path='',
-           suppress_ori=False, include_left=False):
-    """
-    Looks for 'modpar' in the PARAMETERS file, comments that line out, and
-    replaces it by the string specified by 'new'
+def modify(rpars, modpar, new=None, comment='', path='', suppress_ori=False):
+    """Change the value for `modpar` in the PARAMETERS file.
+
+    The lines that contains `modpar` are commented out, and
+    replaced by the string specified by `new`, or the value
+    currently stored in `rpars`.
 
     Parameters
     ----------
-    rp : Rparams
+    rpars : Rparams
         The run parameters object.
     modpar : str
         The parameter that should be modified.
-    new : str, optional
-        The new value for the parameter. If not passed, the
-        parameter will be commented out without replacement.
+    new : object or None, optional
+        The new value for the parameter. If None, the current
+        value of `modpar` in `rpars` is used instead. Default
+        is None.
     comment : str, optional
         A comment to be added in the new line in PARAMETERS.
     path : str or Path, optional
@@ -64,92 +65,20 @@ def modify(rp, modpar, new=_COMMENT_OUT, comment='', path='',
         Default is an empty string, i.e., the current directory.
     suppress_ori : bool, optional
         If True, no 'PARAMETERS_original' file will be created.
-    include_left : bool, optional
-        If False (default), 'new' will be interpreted as only the
-        string that should go on the right-hand side of the equal
-        sign. If True, the entire line will be replace by 'new'.
 
     Returns
     -------
-    None.
+    new_value : str
+        String value of the parameter as inserted in the
+        PARAMETERS file.
     """
-    _path = Path(path)
-    file = _path / 'PARAMETERS'
-    oriname = f'PARAMETERS_ori_{rp.timestamp}'
-    ori = _path / oriname
-    if oriname not in rp.manifest and not suppress_ori and file.is_file():
-        try:
-            shutil.copy2(file, ori)
-        except Exception:
-            _LOGGER.error(
-                'parameters.modify: Could not copy PARAMETERS file to '
-                'PARAMETERS_ori. Proceeding, original file will be lost.'
-                )
-        rp.manifest.append(oriname)
-    if 'PARAMETERS' not in rp.manifest and _path == Path():
-        rp.manifest.append('PARAMETERS')
-    output = ''
-    headerPrinted = False
-
-    try:
-        with file.open('r', encoding='utf-8') as parameters_file:
-            lines = parameters_file.readlines()
-    except FileNotFoundError:
-        lines = []
-    except Exception:
-        _LOGGER.error('Error reading PARAMETERS file.')
-        raise
-
-    found = False
-    for line in lines:
-        if '! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #' in line:
-            headerPrinted = True
-        valid = False
-        param = ''
-        stripped_line = strip_comments(line)
-        if '=' in stripped_line:
-            # Parameter is defined left of '='
-            param, *_ = stripped_line.split('=')
-            if param:
-                valid = True
-                param, *_ = param.split()
-        else:
-            for p in ['STOP', 'SEARCH_KILL']:
-                if stripped_line.upper().startswith(p):
-                    valid = True
-                    param = p
-        if valid and param == modpar:
-            found = True
-            if (new != _COMMENT_OUT
-                    and f'{modpar} = {new.strip()}' == stripped_line):
-                output += line
-            elif new != _COMMENT_OUT:
-                output += f'!{line[:-1]} ! line automatically changed to:\n'
-                if not include_left:
-                    output += f'{modpar} = '
-                output += f'{new} ! {comment}\n'
-            else:
-                comment = comment or 'line commented out automatically'
-                output += f'!{line.rstrip():<34} ! {comment}\n'
-        else:
-            output += line
-    if new != _COMMENT_OUT and not found:
-        if not headerPrinted:
-            output += """
-
-! ######################################################
-! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #
-! ######################################################
-"""
-        output += f'\n{modpar} = {new}'
-        if comment:
-            output += f' ! {comment}'
-    try:
-        with file.open('w', encoding='utf-8') as parameters_file:
-            parameters_file.write(output)
-    except Exception:
-        _LOGGER.error('parameters.modify: Failed to write PARAMETERS file.')
-        raise
+    editor = ParametersFileEditor(
+        rpars, path=path,
+        save_existing_parameters_file=not suppress_ori
+        )
+    with editor:
+        new_param = editor.modify_param(modpar, new_value=new, comment=comment)
+    return new_param.fmt_value
 
 
 # This is almost a dataclass (but not quite), all the

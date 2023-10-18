@@ -57,20 +57,18 @@ def initialization(sl, rp, subdomain=False):
     transform = np.dot(np.transpose(sl.ucell[:2, :2]),
                        np.linalg.inv(mincell)).round()
     ws = writeWoodsNotation(transform)
+    if ws:
+        ws = f"= {ws}"
+    else:
+        ws = "M = {} {}, {} {}".format(*transform.astype(int).ravel())
     if changecell and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
                                  np.identity(2)).all():
-        if ws:
-            ws = f"= {ws}"
-        else:
-            ws = "M = {} {}, {} {}".format(*transform.astype(int).ravel())
         ssl = sl.makeSymBaseSlab(rp, transform=transform)
         if subdomain:
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info(f"Found SYMMETRY_CELL_TRANSFORM {ws}")
             sl.symbaseslab = ssl
-            parameters.modify(rp, "SYMMETRY_CELL_TRANSFORM",
-                              new=f"SYMMETRY_CELL_TRANSFORM {ws}",
-                              include_left=True)
+            parameters.modify(rp, "SYMMETRY_CELL_TRANSFORM")
         else:
             logger.warning(
                 f"POSCAR unit cell is not minimal (supercell {ws}). "
@@ -124,15 +122,15 @@ def initialization(sl, rp, subdomain=False):
             # The modifications to the PARAMETERS file below are currently not in the docs. Should we add that?
             cvec, cuts = sl.detectBulk(rp)
             rp.BULK_REPEAT = cvec
-            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            parameters.modify(rp, "BULK_REPEAT", vec_str,
-                              comment="Automatically detected repeat vector")
+            vec_str = parameters.modify(
+                rp, "BULK_REPEAT",
+                comment="Automatically detected repeat vector"
+                )
             logger.info(f"Detected bulk repeat vector: {vec_str}")
-            layer_cuts = sl.createLayers(rp, bulk_cuts=cuts)
-            parameters.modify(rp, "LAYER_CUTS",
-                              " ".join(f"{c:.4f}" for c in layer_cuts))
+            rp.LAYER_CUTS = sl.createLayers(rp, bulk_cuts=cuts)
+            parameters.modify(rp, "LAYER_CUTS")
             rp.N_BULK_LAYERS = len(cuts)
-            parameters.modify(rp, "N_BULK_LAYERS", str(len(cuts)))
+            parameters.modify(rp, "N_BULK_LAYERS")
         parameters.comment_out(rp, "BULK_LIKE_BELOW")
 
     # create bulk slab:
@@ -145,9 +143,10 @@ def initialization(sl, rp, subdomain=False):
         rvec = sl.getBulkRepeat(rp)
         if rvec is not None:
             rp.BULK_REPEAT = rvec
-            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            parameters.modify(rp, "BULK_REPEAT", vec_str,
-                              comment="Automatically detected repeat vector")
+            vec_str = parameters.modify(
+                rp, "BULK_REPEAT",
+                comment="Automatically detected repeat vector"
+                )
             logger.info(f"Detected bulk repeat vector: {vec_str}")
             # update bulk slab vector
             sl.bulkslab.getCartesianCoordinates()
@@ -166,7 +165,7 @@ def initialization(sl, rp, subdomain=False):
             rp.BULK_REPEAT = (blayers[0].cartbotz
                               - sl.layers[blayers[0].num-1].cartbotz)
         parameters.modify(
-            rp, "BULK_REPEAT", f"{rp.BULK_REPEAT:.5f}",
+            rp, "BULK_REPEAT",
             comment="Automatically detected spacing. Check POSCAR_bulk."
             )
         logger.warning(
@@ -595,15 +594,8 @@ def init_domains(rp):
                     dp.rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans
-                    ws = writeWoodsNotation(trans)
-                    if ws:
-                        ws = f"= {ws}"
-                    else:
-                        ws = ("M = {:.0f} {:.0f}, "
-                              "{:.0f} {:.0f}".format(*trans.ravel()))
                     parameters.modify(dp.rp, "SYMMETRY_CELL_TRANSFORM",
-                                      new=f"SYMMETRY_CELL_TRANSFORM {ws}",
-                                      path=dp.workdir, include_left=True)
+                                      path=dp.workdir)
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:

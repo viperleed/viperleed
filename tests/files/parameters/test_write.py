@@ -13,6 +13,7 @@ from viperleed.tleedmlib.base import strip_comments
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.files.parameters._write import ModifiedParameterValue
 from viperleed.tleedmlib.files.parameters._write import ParametersFileEditor
+from viperleed.tleedmlib.files.parameters._write import comment_out, modify
 
 from ...helpers import execute_in_dir
 
@@ -166,16 +167,7 @@ class TestParametersEditor:
         rpars.BULK_LIKE_BELOW = 0.9876
         comment = 'Decreasing digits'
         editor.modify_param('BULK_LIKE_BELOW', comment=comment)
-        return comment
-
-    @staticmethod
-    def _check_file_modified(fpath, comment):
-        """Check that the expected modifications were carried out."""
-        with open(fpath, 'r', encoding='utf-8') as mod_file:
-            line = next((line for line in mod_file
-                         if 'BULK_LIKE_BELOW = 0.9876' in line), None)
-            assert line is not None
-            assert line.strip().endswith(comment)
+        return comment, 'BULK_LIKE_BELOW = 0.9876'
 
     def test_write_modified_called(self, read_one_param_file):
         """Check editing for explicit call to write_modified_parameters."""
@@ -183,29 +175,60 @@ class TestParametersEditor:
         with execute_in_dir(fpath.parent):
             fpath.unlink()
             editor = ParametersFileEditor(rpars)
-            comment = self._modify_one_param(editor, rpars)
+            comment, value = self._modify_one_param(editor, rpars)
             editor.write_modified_parameters()
-            self._check_file_modified(fpath.name, comment)
+            check_file_modified(fpath.name, value, comment)
 
     def test_write_modified_context(self, read_one_param_file):
         """Check editing behaviour when used as a context manager."""
         fpath, rpars = read_one_param_file
         with ParametersFileEditor(rpars, path=fpath.parent) as editor:
-            comment = self._modify_one_param(editor, rpars)
+            comment, value = self._modify_one_param(editor, rpars)
             try:
-                self._check_file_modified(fpath, comment)
+                check_file_modified(fpath, value, comment)
             except AssertionError:
                 pass
             else:
                 pytest.fail(reason='File was modified too early')
-        self._check_file_modified(fpath, comment)
+        check_file_modified(fpath, value, comment)
 
     def test_write_commented_param(self, read_one_param_file):
         """check correct commenting-out of one parameter."""
         fpath, rpars = read_one_param_file
         with ParametersFileEditor(rpars, path=fpath.parent) as editor:
             editor.comment_out_parameter('SITE_DEF')  # Two of them!
-        with fpath.open('r', encoding='utf-8') as param_file:
-            site_def_lines = tuple(line for line in param_file
-                                   if 'SITE_DEF' in line)
-        assert not any(strip_comments(line) for line in site_def_lines)
+        assert all_commented_out(fpath, 'SITE_DEF')
+
+
+def all_commented_out(fpath, param):
+    """Return whether all fpath lines with param are commented out."""
+    with fpath.open('r', encoding='utf-8') as _file:
+        return not any(strip_comments(line) for line in _file if param in line)
+
+
+def check_file_modified(fpath, assign_str, comment=''):
+    """Check that the expected modifications were carried out."""
+    with open(fpath, 'r', encoding='utf-8') as mod_file:
+        lines = (line for line in mod_file if assign_str in line)
+        line = next(lines, None)
+        assert line is not None
+        if comment:
+            assert line.strip().endswith(comment)
+
+
+class TestCommentOutAndModifyFunctions:
+    """Collection of tests for the public functions of ._write."""
+
+    def test_comment_out_param(self, read_one_param_file):
+        """Check effective commenting-out of one parameter."""
+        fpath, rpars = read_one_param_file
+        comment_out(rpars, 'BULK_LIKE_BELOW', path=fpath.parent)
+        assert all_commented_out(fpath, 'BULK_LIKE_BELOW')
+
+    def test_modify_param(self, read_one_param_file):
+        """Check effective modification of one parameter."""
+        fpath, rpars = read_one_param_file
+        rpars.LMAX = (34, 99)
+        with execute_in_dir(fpath.parent):
+            modify(rpars, 'LMAX')
+        check_file_modified(fpath, 'LMAX = 34-99')

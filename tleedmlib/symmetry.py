@@ -206,9 +206,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         if not bulk and rp.superlattice_defined:
             rp.SUPERLATTICE = np.dot(usurf, np.dot(rp.SUPERLATTICE,
                                                    np.linalg.inv(ubulk)))
-            newsl = ("SUPERLATTICE M = {:.0f} {:.0f}, {:.0f} {:.0f}"
-                     .format(*[x for y in rp.SUPERLATTICE for x in y]))
-            parameters.modify(rp, "SUPERLATTICE", newsl, include_left=True)
+            parameters.modify(rp, "SUPERLATTICE")
         # MODIFY SYMMETRY_FIX PARAMETER
         if "[" in rp.SYMMETRY_FIX and not bulk:
             rgx = re.compile(r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*\[\s*'
@@ -1327,8 +1325,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             if rp.THETA != 0:
                 logger.debug("Modifying BEAM_INCIDENCE parameter")
                 rp.PHI += np.degrees(ang)
-                parameters.modify(rp, "BEAM_INCIDENCE",
-                                  "{:.3f} {:.3f}".format(rp.THETA, rp.PHI))
+                parameters.modify(rp, "BEAM_INCIDENCE")
     return
 
 
