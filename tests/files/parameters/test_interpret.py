@@ -766,7 +766,7 @@ class TestTensorOutput(_TestInterpretBase):
     valid = {'single': ('False', [0]),
              'multiple': ('0 1 1 0', [0, 1, 1, 0]),
              'repeated': ('2*1 2*0 1', [1, 1, 0, 0, 1]),}
-    invalid = ('2',)
+    invalid = ('2', '5*5 0 0 1')
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
