@@ -53,12 +53,13 @@ class TestReadSuccessful:
         _, rpars = read_parameters(args)
         assert set(rpars.readParams.keys()) == set(info.parameters.expected)
 
-    def test_stop_commented_out(self, data_path, read_parameters):
+    def test_stop_commented_out(self, data_path, read_parameters, re_match):
         """Check that a 'STOP' is commented out when reading."""
         args = CasesParametersFile().case_stop(data_path)
         fpath, _ = read_parameters(args)
         with fpath.open('r', encoding='utf-8') as parameters_file:
-            assert '! STOP' in parameters_file.read()
+            assert re_match(r'.*[\s\S]*[!%#]\s*STOP\s*! Disabled',
+                            parameters_file.read())
 
 
 class TestReadFailing:
