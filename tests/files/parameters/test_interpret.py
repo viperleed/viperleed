@@ -727,6 +727,12 @@ class TestSymmetryEps(_TestInterpretBase):
         self.check_raises(interpreter, '0.1 0.2 0.3',
                            err.ParameterNumberOfInputsError)
 
+    def test_large_values_log(self, interpreter, caplog, re_match):
+        """Check correct interpretation of EPS and EPS_Z values."""
+        self.interpret(interpreter, '1.5 1.2')
+        assert re_match(r'.*[\s\S]*SYMMETRY_EPS.*[\s\S]*very loose constraint',
+                        caplog.text)
+
 
 class TestSymmetryFix(_TestInterpretBase):
     """Tests for interpreting SYMMETRY_FIX."""
