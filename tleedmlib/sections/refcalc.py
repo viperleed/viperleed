@@ -666,8 +666,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     # modify PARAMETERS to contain the energies and LMAX that were really used
     if os.path.isfile(os.path.join("Tensors", dn, "PARAMETERS")):
         parameters.modify(rp, "THEO_ENERGIES",
-                          path=os.path.join("Tensors", dn),
-                          suppress_ori=True)
+                          path=os.path.join("Tensors", dn), suppress_ori=True)
         parameters.modify(rp, "LMAX",
                           path=os.path.join("Tensors", dn), suppress_ori=True)
 
