@@ -714,7 +714,9 @@ class TestSymmetryEps(_TestInterpretBase):
 
     def test_interpret_single_value(self, interpreter):
         """Check correct interpretation of EPS value."""
-        self.check_assigned(interpreter, '0.1', 0.1)
+        self.check_assigned(interpreter, '0.5', 0.5)
+        rpars = interpreter.rpars
+        assert rpars.SYMMETRY_EPS == rpars.SYMMETRY_EPS_Z
 
     def test_interpret_multiple_values(self, interpreter):
         """Check correct interpretation of EPS and EPS_Z values."""

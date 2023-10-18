@@ -1238,6 +1238,7 @@ class ParameterInterpreter:                                                     
         self._interpret_wood_or_matrix(param, assignment)
 
     def interpret_symmetry_eps(self, assignment):
+        """Assign parameters SYMMETRY_EPS/SYMMETRY_EPS_Z."""
         param = 'SYMMETRY_EPS'
         self._ensure_no_flags_assignment(param, assignment)
         if len(assignment.values) not in (1, 2):
@@ -1254,15 +1255,20 @@ class ParameterInterpreter:                                                     
         bounds = NumericBounds(type_=float, range_=(1e-100, None))
         self.interpret_numerical_parameter(assignment, bounds=bounds)
         if self.rpars.SYMMETRY_EPS > 1.0:
+            # pylint: disable-next=logging-format-interpolation
             logger.warning(warning_str.format(''))
         # interpret possible second value as SYMMETRY_EPS_Z
-        if assignment.other_values:
-            z_assignment = Assignment(assignment.other_values, param)
-            self.interpret_numerical_parameter(z_assignment,
-                                               param='SYMMETRY_EPS_Z',
-                                               bounds=bounds)
-            if self.rpars.SYMMETRY_EPS_Z > 1.0:
-                logger.warning(warning_str.format('for z '))
+        if not assignment.other_values:
+            self.rpars.SYMMETRY_EPS_Z = self.rpars.SYMMETRY_EPS                 # TODO: not nice, as changes to _EPS that may occur are not reflected on _Z. Could do this with a @property of Rparams or a dedicated class.
+            return
+
+        z_assignment = Assignment(assignment.other_values, param)
+        self.interpret_numerical_parameter(z_assignment,
+                                           param='SYMMETRY_EPS_Z',
+                                           bounds=bounds)
+        if self.rpars.SYMMETRY_EPS_Z > 1.0:
+            # pylint: disable-next=logging-format-interpolation
+            logger.warning(warning_str.format('for z '))
 
     def interpret_symmetry_fix(self, assignment):                               # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
         param = 'SYMMETRY_FIX'
