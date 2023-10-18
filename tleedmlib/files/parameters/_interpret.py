@@ -60,11 +60,6 @@ _SIMPLE_BOOL_PARAMS = {
     }
 
 
-# parameters that can be optimized in FD optimization
-_OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i',
-                     'a', 'b', 'c', 'ab', 'abc',}
-
-
 # Numerical parameters for which to create interpret...() methods
 # automatically. Key is parameter name, value is a NumericBounds
 _SIMPLE_NUMERICAL_PARAMS = {
@@ -94,6 +89,9 @@ _SIMPLE_NUMERICAL_PARAMS = {
     'ZIP_COMPRESSION_LEVEL' : NumericBounds(type_=int, range_=(0, 9))
     }
 
+
+# parameters that can be optimized in FD optimization
+_OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i', 'a', 'b', 'c', 'ab', 'abc',}
 
 
 def interpretPARAMETERS(rpars, slab=None, silent=False):
@@ -737,7 +735,7 @@ class ParameterInterpreter:                                                     
             lmax_list = [int(v) for v in values]
         except ValueError:
             self.rpars.setHaltingLevel(1)
-            raise ParameterIntConversionError(param)
+            raise ParameterIntConversionError(param) from None
         if len(lmax_list) > 2:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
@@ -880,13 +878,13 @@ class ParameterInterpreter:                                                     
             ps_eps = ps_eps_default_dict.get(s, None)
             if ps_eps is None:
                 self.rpars.setHaltingLevel(1)
-                raise ParameterFloatConversionError(param)
+                raise ParameterFloatConversionError(param) from None
         if 0 < ps_eps < 1:
             self.rpars.PHASESHIFT_EPS = ps_eps
         else:
             self.rpars.setHaltingLevel(1)
-            raise ParameterRangeError(param,
-                                      given_value=ps_eps, allowed_range=(0,1))
+            raise ParameterRangeError(param, given_value=ps_eps,
+                                      allowed_range=(0, 1))
 
     def interpret_plot_iv(self, assignment):
         param = 'PLOT_IV'
@@ -895,7 +893,7 @@ class ParameterInterpreter:                                                     
             self.rpars.setHaltingLevel(1)
             raise ParameterNeedsFlagError(param)
 
-        flag = assignment.flags[0].lower()
+        flag = assignment.flag.lower()
         value = assignment.value.lower()
         if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
                         'border', 'borders', 'axes', 'legend', 'legends',
@@ -943,7 +941,7 @@ class ParameterInterpreter:                                                     
                     i = int(value)
                 except (ValueError, IndexError):
                     self.rpars.setHaltingLevel(1)
-                    raise ParameterIntConversionError(param, value)
+                    raise ParameterIntConversionError(param, value) from None
                 if i <= 0:
                     message = 'perpage value has to be positive integer.'
                     self.rpars.setHaltingLevel(1)
@@ -1080,9 +1078,9 @@ class ParameterInterpreter:                                                     
         cull_value = assignment.value
         try:
             cull_float = float(cull_value)
-        except ValueError as err:
+        except ValueError as exc:
             self.rpars.setHaltingLevel(1)
-            raise ParameterFloatConversionError(param, cull_value) from err
+            raise ParameterFloatConversionError(param, cull_value) from exc
         if cull_float >= 1:
             if cull_float - int(cull_float) < 1e-6:
                 self.rpars.SEARCH_CULL = int(cull_float)
@@ -1420,11 +1418,11 @@ class ParameterInterpreter:                                                     
                 raise ParameterParseError(param, message)
             try:
                 self.rpars.V0_REAL = [float(c) for c in rundgren_constants]
-            except ValueError as err:
+            except ValueError as exc:
                 message = (f'Could not parse constants {rundgren_constants} '
                            'for Rundgren-type function.')
                 self.rpars.setHaltingLevel(1)
-                raise ParameterError(param, message=message) from err
+                raise ParameterError(param, message=message) from exc
             return
 
         # Pass a specific function to FORTRAN, but replace
@@ -1573,8 +1571,7 @@ class ParameterInterpreter:                                                     
                        'calculate bulk unit cell!')
             self.rpars.setHaltingLevel(2)
             raise ParameterError(param, message)
-        read_result = readWoodsNotation(assignment.values_str, self.slab.ucell)
-        return read_result
+        return readWoodsNotation(assignment.values_str, self.slab.ucell)
 
     def _read_matrix_notation(self, param, values):
         sublists = splitSublists(values, ',')
@@ -1594,8 +1591,7 @@ class ParameterInterpreter:                                                     
                 self.rpars.setHaltingLevel(2)
                 message = 'Number of columns in matrix is not equal to 2'
                 raise ParameterParseError(param, message)
-        matrix = np.array(nl, dtype=float)
-        return matrix
+        return np.array(nl, dtype=float)
 
 
 # Dynamically produce methods for the 'simple parameters' listed above
