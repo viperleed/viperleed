@@ -1169,17 +1169,10 @@ class ParameterInterpreter:                                                     
         self.rpars.SITE_DEF[assignment.flags[0]] = newdict
 
     def interpret_superlattice(self, assignment):
+        """Assign parameter SUPERLATTICE (Wood's or matrix notation)."""
         param = 'SUPERLATTICE'
-        if 'M' not in assignment.flags:
-            self._ensure_no_flags_assignment(param, assignment)
-            read_result = self._read_woods_notation(param, assignment)
-            setattr(self.rpars, param, read_result)
-            self.rpars.superlattice_defined = True
-        else:
-            matrix = self._read_matrix_notation(param, assignment.values)
-            # write to param
-            setattr(self.rpars, param, matrix)
-            self.rpars.superlattice_defined = True
+        self._interpret_wood_or_matrix(param, assignment)
+        self.rpars.superlattice_defined = True
 
     def interpret_symmetry_bulk(self, assignment):
         """Assign parameter SYMMETRY_BULK."""
@@ -1240,15 +1233,9 @@ class ParameterInterpreter:                                                     
             raise ParameterValueError(param, message=message)
 
     def interpret_symmetry_cell_transform(self, assignment):
+        """Assign parameter SYMMETRY_CELL_TRANSFORM (Wood's or matrix)."""
         param = 'SYMMETRY_CELL_TRANSFORM'
-        if 'M' not in assignment.flags:
-            self._ensure_no_flags_assignment(param, assignment)
-            read_result = self._read_woods_notation(param, assignment)
-            setattr(self.rpars, param, read_result)
-        else:
-            matrix = self._read_matrix_notation(param, assignment.values)
-            # write to param
-            setattr(self.rpars, param, matrix)
+        self._interpret_wood_or_matrix(param, assignment)
 
     def interpret_symmetry_eps(self, assignment):
         param = 'SYMMETRY_EPS'
@@ -1433,6 +1420,16 @@ class ParameterInterpreter:                                                     
     def interpret_vibr_amp_scale(self, assignment):
         """Store raw values: Requires sites for interpreting."""
         self.rpars.VIBR_AMP_SCALE.extend(assignment.values_str.split(','))
+
+    def _interpret_wood_or_matrix(self, param, assignment):
+        """Store a Wood- or matrix-notation parameter value."""
+        if 'M' not in assignment.flags:
+            self._ensure_no_flags_assignment(param, assignment)
+            wood = self._read_woods_notation(param, assignment)
+            setattr(self.rpars, param, wood)
+        else:
+            matrix = self._read_matrix_notation(param, assignment.values)
+            setattr(self.rpars, param, matrix)
 
     # ------------------------ Helper methods -------------------------
     def _ensure_chemical_elements(self, param, elements):
