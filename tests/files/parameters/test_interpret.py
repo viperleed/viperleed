@@ -626,29 +626,58 @@ class TestSearchCull(_TestInterpretBase):
         self.check_raises(interpreter, val, exc)
 
 
-class TestSuperlattice(_TestInterpretBase):
+class _TestWoodsOrMatrixParam(_TestInterpretBase):
+    """Tests for interpreting a parameter in Woods or matrix notation."""
+
+    def test_interpret_matrix(self, interpreter):
+        """Check successful interpretation of a matrix."""
+        self.interpret(interpreter, '2 0, 0 2', flags_str='M')
+        value = getattr(interpreter.rpars, self.param)
+        assert value == pytest.approx(np.array([[2, 0], [0, 2]]))
+
+    def test_interpret_woods(self, interpreter, ag100):
+        """Check successful interpretation of a Woods notation."""
+        interpreter.slab, *_ = ag100
+        self.interpret(interpreter, 'p(2x1)')
+        value = getattr(interpreter.rpars, self.param)
+        assert value == pytest.approx(np.array([[2, 0], [0, 1]]))
+
+    invalid = {
+        'wood no slab': ('c(2x2)', '', err.ParameterError),
+        'matrix float': ('a 1, 2 3', 'M', err.ParameterFloatConversionError),
+        'matrix rows': ('1 2', 'M', err.ParameterParseError),
+        'matrix cols': ('1 2, 3', 'M', err.ParameterParseError),
+        }
+
+    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, flag, exc, interpreter):
+        """Ensure that a Woods SUPERLATTICE without a slab raises."""
+        self.check_raises(interpreter, val, err.ParameterError,
+                          flags_str=flag)
+
+
+class TestSuperlattice(_TestWoodsOrMatrixParam):
     """Tests for interpreting SUPERLATTICE."""
 
     param = 'SUPERLATTICE'
 
     def test_interpret_matrix(self, interpreter):
         """Check successful interpretation of a SUPERLATTICE matrix."""
-        self.interpret(interpreter, '2 0, 0 2', flags_str='M')
+        super().test_interpret_matrix(interpreter)
         rpars = interpreter.rpars
         assert rpars.superlattice_defined
-        assert rpars.SUPERLATTICE == pytest.approx(np.array([[2, 0], [0, 2]]))
 
     def test_interpret_woods(self, interpreter, ag100):
         """Check successful interpretation of a Woods SUPERLATTICE."""
-        interpreter.slab, *_ = ag100
-        self.interpret(interpreter, 'p(2x1)')
+        super().test_interpret_woods(interpreter, ag100)
         rpars = interpreter.rpars
         assert rpars.superlattice_defined
-        assert rpars.SUPERLATTICE == pytest.approx(np.array([[2, 0], [0, 1]]))
 
-    def test_interpret_superlattice_no_slab(self, interpreter):
-        """Ensure that a Woods SUPERLATTICE without a slab raises."""
-        self.check_raises(interpreter, 'c(2x2)', err.ParameterError)
+
+class TestSymCellTransform(_TestWoodsOrMatrixParam):
+    """Tests for interpreting SYMMETRY_CELL_TRANSFORM."""
+
+    param = 'SYMMETRY_CELL_TRANSFORM'
 
 
 class TestSymmetryBulk(_TestInterpretBase):
