@@ -1307,38 +1307,27 @@ class ParameterInterpreter:                                                     
             raise ParameterParseError(param)
 
     def interpret_tensor_output(self, assignment):
+        """Assign parameter TENSOR_OUTPUT."""
         param = 'TENSOR_OUTPUT'
-        nl = recombineListElements(assignment.values, '*')
-        for s in nl:
-            s = re.sub(r'[Tt](rue|RUE)?', '1', s)
-            s = re.sub(r'[Ff](alse|ALSE)?', '0', s)
-            try:
-                v = int(s)
-                if v not in (0, 1):
-                    message = ('Problem with TENSOR_OUTPUT input format: '
-                               f'Found value {v}, expected 0 or 1.')
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterParseError(param, message)
-                else:
-                    self.rpars.TENSOR_OUTPUT.append(v)
-            except ValueError:
-                if '*' in s:
-                    sl = s.split('*')
-                    try:
-                        r = int(sl[0])
-                        v = int(sl[1])
-                    except ValueError as err:
-                        raise ParameterIntConversionError(param, sl) from err
-                    if v not in (0, 1):
-                        message = ('Problem with TENSOR_OUTPUT input format: '
-                                   f'Found value {v}, expected 0 or 1.')
-                        self.rpars.setHaltingLevel(1)
-                        raise ParameterParseError(param, message)
-                    else:
-                        self.rpars.TENSOR_OUTPUT.extend([v]*r)
-                else:
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterValueError(param, s)
+        tensor_output = []
+        # Acceptable format for each token is (repeats*)value,
+        # with the bracketed part as optional and 'value' either
+        # zero or one (or a bool that can be translated to those)
+        rgx = re.compile(r'\s*((?P<repeats>\d+)\s*[*])?\s*(?P<value>[01])\s*$')
+        tokens = recombineListElements(assignment.values, '*')
+        for token in tokens:
+            token_01 = re.sub(r'[Tt](rue|RUE)?', '1', token)
+            token_01 = re.sub(r'[Ff](alse|ALSE)?', '0', token_01)
+
+            _match = rgx.match(token_01)
+            if not _match:
+                self.rpars.setHaltingLevel(1)
+                raise ParameterParseError(param,
+                                          f'Invalid format in: {token!r}')
+            repeats = int(_match['repeats'] or '1')
+            value = int(_match['value'])
+            tensor_output.extend((value,)*repeats)
+        self.rpars.TENSOR_OUTPUT = tensor_output
 
     def interpret_theo_energies(self, assignment):
         """Assign parameter THEO_ENERGIES. Correct start if inappropriate."""
