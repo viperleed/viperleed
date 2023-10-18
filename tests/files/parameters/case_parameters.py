@@ -33,9 +33,10 @@ _READ = {
     'Ag': {'V0_IMAG': 5.0, 'THEO_ENERGIES': [50, 350, 3],
            'RUN': [0], 'LOG_LEVEL': 10, 'N_BULK_LAYERS': 1,
            'BULK_REPEAT': np.array([1.44, 1.44, -2.03646753]),
-           'SITE_DEF' : {'Ag': {'surf': {1}}},
-           'LMAX': [8, 12], 'T_DEBYE': 330, 'T_EXPERIMENT': 100,
-           'VIBR_AMP_SCALE': ['*surf 1.3',]},
+           'SITE_DEF' : {'Ag': {'surf': {1}}}, 'LMAX': [8, 12],
+           'T_DEBYE': 330, 'T_EXPERIMENT': 100,
+           'VIBR_AMP_SCALE': ['*surf 1.3',],
+           'SUPERLATTICE': np.identity(2)},
     'Ir': {'RUN': [0, 1, 2, 3],
            'THEO_ENERGIES': [49, 700, 3], 'LMAX': [8, 14],
            'BULK_LIKE_BELOW': 0.35, 'T_DEBYE': 420, 'T_EXPERIMENT': 100,
@@ -47,6 +48,7 @@ _READ = {
 for key in ('stop', 'no_stop', 'left empty'):
     _READ[key].update(**_READ['Ir'])  # Copies of the Ir file
 _READ['missing_equals'].update(**_READ['Ag'])
+del _READ['missing_equals']['SUPERLATTICE']
 
 _PATHS = {
     'Ag': 'Ag(100)/initialization/PARAMETERS',
