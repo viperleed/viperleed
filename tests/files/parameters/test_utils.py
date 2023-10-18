@@ -11,6 +11,8 @@ import pytest
 from viperleed.tleedmlib.files.parameters._utils import Assignment
 from viperleed.tleedmlib.files.parameters._utils import NumericBounds as Bounds
 
+from ...helpers import not_raises
+
 
 _FLOAT_ZERO_FIVE = Bounds(range_=(0, 5))
 _INT_FIVE_TEN_MODULO = Bounds(type_=int, range_=(5, 10),
@@ -176,8 +178,8 @@ class TestAssignment:
     @parametrize(empty_kwargs=_empty_values.values(), ids=_empty_values)
     def test_creation_empty_is_valid(self, empty_kwargs):
         """Check that passing some empty inputs is acceptable."""
-        # TODO: use with not_raises(Exception):
-        assignment = Assignment(**empty_kwargs)
+        with not_raises(Exception):
+            assignment = Assignment(**empty_kwargs)
         assert not assignment.values
 
     def test_flag(self):

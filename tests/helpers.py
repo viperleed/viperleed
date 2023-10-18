@@ -169,6 +169,17 @@ def execute_in_dir(path):
     finally:
         os.chdir(home)
 
+
+@contextmanager
+def not_raises(exception):
+    """Fail a test if a specific exception is raised."""
+    # Exclude this function when reporting the exception trace
+    __tracebackhide__ = True
+    try:
+        yield
+    except exception:
+        pytest.fail(f'DID RAISE {exception.__name__}')
+
 # ###############################   CLASSES   #################################
 
 class CaseTag(IntEnum):
