@@ -1562,6 +1562,7 @@ class ParameterInterpreter:                                                     
         return d
 
     def _read_woods_notation(self, param, assignment):
+        """Return a Woods notation from an Assignment, if slab exists."""
         if self.slab is None:
             message = (f'{param} parameter appears to be in Wood '
                        'notation but no slab was passed. Cannot '
@@ -1571,24 +1572,21 @@ class ParameterInterpreter:                                                     
         return readWoodsNotation(assignment.values_str, self.slab.ucell)
 
     def _read_matrix_notation(self, param, values):
-        sublists = splitSublists(values, ',')
-        if len(sublists) != 2:
+        """Try interpreting values as a 2x2 matrix."""
+        matrix = splitSublists(values, ',')
+        if len(matrix) != 2:
             message = 'Number of lines in matrix is not equal to 2'
             self.rpars.setHaltingLevel(2)
             raise ParameterParseError(param, message)
-        nl = []
-        for sl in sublists:
-            if len(sl) == 2:
-                try:
-                    nl.append([float(s) for s in sl])
-                except ValueError:
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterFloatConversionError(param, sl)
-            else:
-                self.rpars.setHaltingLevel(2)
-                message = 'Number of columns in matrix is not equal to 2'
-                raise ParameterParseError(param, message)
-        return np.array(nl, dtype=float)
+        if any(len(row) != 2 for row in matrix):
+            message = 'Number of columns in matrix is not equal to 2'
+            self.rpars.setHaltingLevel(2)
+            raise ParameterParseError(param, message)
+        try:
+            return np.array(matrix).astype(float)
+        except ValueError:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterFloatConversionError(param, matrix) from None
 
 
 # Dynamically produce methods for the 'simple parameters' listed above
