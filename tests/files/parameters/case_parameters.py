@@ -54,7 +54,7 @@ _PATHS = {
     'empty': 'parameters/PARAMETERS_empty',
     'stop': 'parameters/PARAMETERS_stop',
     'no_stop': 'parameters/PARAMETERS_stop_false',
-    'missing_equals': 'Ag(100)/initialization/PARAMETERS',
+    'missing_equals': 'parameters/PARAMETERS_missing_equals',
     'unknown_param': 'parameters/PARAMETERS_unknown',
     'left empty': 'parameters/PARAMETERS_left_side_empty',
     'no value': 'parameters/PARAMETERS_no_value',
