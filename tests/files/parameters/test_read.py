@@ -6,7 +6,6 @@ Created on 2023-10-17
 """
 
 import logging
-import shutil
 
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
@@ -23,19 +22,6 @@ from viperleed.tleedmlib.files.parameters._utils import Assignment
 
 from ...helpers import exclude_tags, duplicate_all, CaseTag
 from .case_parameters import CasesParametersFile
-
-
-@fixture(scope='class', name='read_parameters')
-def factory_read_parameters(tmp_path_factory):
-    """Return an Rparams read from file and the path to it."""
-    def _move_to_temp_and_read(args):
-        _, fpath = args
-        tmp_dir = tmp_path_factory.mktemp(basename='parameters', numbered=True)
-        new_fpath = tmp_dir / 'PARAMETERS'
-        shutil.copy2(fpath, new_fpath)
-        rpars = read(new_fpath)
-        return new_fpath, rpars
-    return _move_to_temp_and_read
 
 
 _NOT_RAISING = {'cases': CasesParametersFile,
@@ -115,40 +101,34 @@ class TestUpdate:
         with pytest.raises(FileNotFoundError):
             update(None)
 
-    @fixture(name='read_once')
-    def fixture_read_once(self, data_path, read_parameters):
-        """Read one PARAMETERS file."""
-        args = CasesParametersFile().case_stop(data_path)
-        return read_parameters(args)
-
-    def test_nothing_updated(self, read_once):
+    def test_nothing_updated(self, read_one_param_file):
         """Check that nothing is changed if no PARAMETERS is unchanged."""
-        fpath, rpars = read_once
+        fpath, rpars = read_one_param_file
         before, *_ = duplicate_all(rpars.readParams)
         update(rpars, update_from=fpath.parent)
         assert rpars.readParams == before
 
-    def test_updated_irrelevant(self, read_once):
+    def test_updated_irrelevant(self, read_one_param_file):
         """Check nothing changes if a non-watched parameter is changed."""
-        fpath, rpars = read_once
+        fpath, rpars = read_one_param_file
         before, *_ = duplicate_all(rpars.readParams)
         with fpath.open('a', encoding='utf-8') as parameters_file:
             parameters_file.write('BULK_LIKE_BELOW = 0.25\n')
         update(rpars, update_from=fpath.parent)
         assert rpars.readParams == before
 
-    def test_updated_irrelevant_typo(self, read_once):
+    def test_updated_irrelevant_typo(self, read_one_param_file):
         """Check no complaints when a wrong parameter is written."""
-        fpath, rpars = read_once
+        fpath, rpars = read_one_param_file
         before, *_ = duplicate_all(rpars.readParams)
         with fpath.open('a', encoding='utf-8') as parameters_file:
             parameters_file.write('SURFACE_ABOVE = 0.25\n')
         update(rpars, update_from=fpath.parent)
         assert rpars.readParams == before
 
-    def test_updated_relevant(self, read_once):
+    def test_updated_relevant(self, read_one_param_file):
         """Check no stopping occurs if STOP=False is written."""
-        fpath, rpars = read_once
+        fpath, rpars = read_one_param_file
         with fpath.open('a', encoding='utf-8') as parameters_file:
             parameters_file.write('SEARCH_CONVERGENCE dgen = 2519 1.5\n')
         update(rpars, update_from=fpath.parent)
@@ -156,17 +136,17 @@ class TestUpdate:
         assert rpars.SEARCH_MAX_DGEN['dec'] == 2519
         assert rpars.SEARCH_MAX_DGEN_SCALING['dec'] == 1.5
 
-    def test_updated_stop_false(self, read_once):
+    def test_updated_stop_false(self, read_one_param_file):
         """Check no stopping occurs if STOP=False is written."""
-        fpath, rpars = read_once
+        fpath, rpars = read_one_param_file
         with fpath.open('a', encoding='utf-8') as parameters_file:
             parameters_file.write('STOP = false\n')
         update(rpars, update_from=fpath.parent)
         assert not rpars.STOP
 
-    def test_updated_stop_true(self, read_once):
+    def test_updated_stop_true(self, read_one_param_file):
         """Check no stopping occurs if STOP=False is written."""
-        fpath, rpars = read_once
+        fpath, rpars = read_one_param_file
         with fpath.open('a', encoding='utf-8') as parameters_file:
             parameters_file.write('STOP\n')
         update(rpars, update_from=fpath.parent)
