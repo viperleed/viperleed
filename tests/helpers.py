@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Set, Tuple, Mapping
 
+import pytest
 from pytest_cases import fixture
 from pytest_cases.filters import get_case_tags
 
