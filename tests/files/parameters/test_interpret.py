@@ -535,12 +535,12 @@ class TestParabolaFit(_TestInterpretBase):
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
-        """Check correct interpretation of valid PHASESHIFT_EPS."""
+        """Check correct interpretation of valid PARABOLA_FIT."""
         self.check_assigned(interpreter, val, expect)
 
     @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
-        """Ensure invalid PHASESHIFT_EPS raises exceptions."""
+        """Ensure invalid PARABOLA_FIT raises exceptions."""
         self.check_raises(interpreter, val, exc)
 
 
