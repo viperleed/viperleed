@@ -1458,7 +1458,7 @@ class ParameterInterpreter:                                                     
                 invalid.append(element)
 
         if invalid:
-            message = f'Element(s) {invalid} not found in periodic table.'
+            message = f'Element(s) {invalid} not found in periodic table'
             self.rpars.setHaltingLevel(2)
             raise ParameterError(parameter=param, message=message)
 
