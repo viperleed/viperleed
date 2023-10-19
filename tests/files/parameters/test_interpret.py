@@ -517,19 +517,23 @@ class TestPhaseshiftEps(_TestInterpretBase):
     param = 'PHASESHIFT_EPS'
     valid = {'float': ('0.1', 0.1),
              'tag': ('fine', 0.01),}
-    invalid = {'float': ('invalid', err.ParameterError),
-               'negative': ('-1.0', err.ParameterRangeError),
-               'too large': ('1.5', err.ParameterRangeError),}
+    invalid = {
+        'float': ('invalid', '', err.ParameterFloatConversionError),
+        'negative': ('-1.0', '', err.ParameterRangeError),
+        'too large': ('1.5', '', err.ParameterRangeError),
+        'too many': ('1.3 2.4', '', err.ParameterNumberOfInputsError),
+        'flag': ('1.23', 'flag', err.ParameterUnknownFlagError),
+        }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid PHASESHIFT_EPS."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
-    def test_interpret_invalid(self, val, exc, interpreter):
+    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid PHASESHIFT_EPS raises exceptions."""
-        self.check_raises(interpreter, val, exc)
+        self.check_raises(interpreter, val, exc, flags_str=flag)
 
 
 class TestRun(_TestInterpretBase):

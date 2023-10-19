@@ -867,15 +867,16 @@ class ParameterInterpreter:                                                     
                     raise ParameterError(param, value_error)
 
     def interpret_phaseshift_eps(self, assignment):
+        """Assign parameter PHASESHIFT_EPS."""
         param = 'PHASESHIFT_EPS'
-        ps_eps_value = assignment.value
+        self._ensure_simple_assignment(param, assignment)
         try:
-            ps_eps = float(ps_eps_value)
+            ps_eps = float(assignment.value)
         except ValueError:
             # check if one of default values (e.g. 'fine')
-            s = ps_eps_value.lower()[0]
-            ps_eps_default_dict = self.rpars.get_default(param)
-            ps_eps = ps_eps_default_dict.get(s, None)
+            preset = assignment.value.lower()[0]
+            _defaults = self.rpars.get_default(param)
+            ps_eps = _defaults.get(preset, None)
             if ps_eps is None:
                 self.rpars.setHaltingLevel(1)
                 raise ParameterFloatConversionError(param) from None
