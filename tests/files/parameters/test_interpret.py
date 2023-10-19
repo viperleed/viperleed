@@ -511,6 +511,39 @@ class TestOptimize(_TestInterpretBase):
         self.check_raises(interpreter, val, exc, flags_str=flag)
 
 
+class TestParabolaFit(_TestInterpretBase):
+    """Tests for interpreting PARABOLA_FIT."""
+
+    param = 'PARABOLA_FIT'
+    _defaults = getattr(Rparams(), param)
+    valid = {
+        'off': ('off', {**_defaults, 'type': 'none'}),
+        'localize': ('type linear, localise 0.3',
+                     {**_defaults, 'type': 'linear', 'localize': 0.3}),
+        'none': ('type none, alpha 3.17',
+                 {**_defaults, 'type': 'none', 'alpha': 3.17}),
+        }
+    invalid = {
+        'type': ('type not_a_known_type', err.ParameterError),
+        'float': ('type linear, alpha abcd', err.ParameterError),
+        'negative': ('type linear, alpha -1.3', err.ParameterError),
+        # 'flag': ('type linear, who_knows 0.5', err. ParameterValueError),     # TODO: ignored without complaints
+        # 'too many': ('type linear abcd', err. ParameterNumberOfInputsError),  # TODO: ignored without complaints
+        # 'off+invalid': ('off this_is_wrong, so is_this, and this too',        # TODO: ignored without complaints
+                        # err.ParameterValueError),
+        }
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid PHASESHIFT_EPS."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid PHASESHIFT_EPS raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
 class TestPhaseshiftEps(_TestInterpretBase):
     """Tests for interpreting PHASESHIFT_EPS."""
 
