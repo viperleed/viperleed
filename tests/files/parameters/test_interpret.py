@@ -740,7 +740,7 @@ class TestSymmetryFix(_TestInterpretBase):
     """Tests for interpreting SYMMETRY_FIX."""
 
     param = 'SYMMETRY_FIX'
-    _default = ''
+    _default = Rparams().get_default(param)
 
     valid = {'auto': ('t', _default),
              'p1': ('p1', 'p1'),
