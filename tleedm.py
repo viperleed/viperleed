@@ -140,6 +140,12 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     try:
         # interpret the PARAMETERS file
         parameters.interpretPARAMETERS(rp, slab=slab, silent=False)
+    except parameters.errors.ParameterNeedsSlabError:
+        # Domains calculation is the only case in which slab is None
+        logger.error('Main PARAMETERS file contains an invalid parameter '
+                     'for a multi-domain calculation', exc_info=True)
+        cleanup(tmpmanifest)
+        return 2
     except parameters.errors.ParameterError:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)

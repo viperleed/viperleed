@@ -103,6 +103,11 @@ class ParameterParseError(ParameterError):
         super().__init__(parameter, message)
 
 
+class ParameterNeedsSlabError(ParameterError):
+    """A parameter requiring a Slab was requested without a Slab present."""
+
+    _default_message = 'Cannot interpret parameter without a slab'
+
 
 class ParameterNumberOfInputsError(ParameterError):
     """Raised when the number of inputs is unexpected."""

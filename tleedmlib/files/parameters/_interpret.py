@@ -32,10 +32,10 @@ from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
 from .errors import ParameterError, ParameterBooleanConversionError
 from .errors import ParameterFloatConversionError, ParameterIntConversionError
-from .errors import ParameterNeedsFlagError, ParameterNotRecognizedError
-from .errors import ParameterNumberOfInputsError, ParameterParseError
-from .errors import ParameterRangeError, ParameterUnknownFlagError
-from .errors import ParameterValueError
+from .errors import ParameterNeedsFlagError, ParameterNeedsSlabError
+from .errors import ParameterNotRecognizedError, ParameterNumberOfInputsError
+from .errors import ParameterParseError, ParameterRangeError
+from .errors import ParameterUnknownFlagError, ParameterValueError
 from ._known_parameters import KNOWN_PARAMS
 from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
@@ -1584,7 +1584,7 @@ class ParameterInterpreter:                                                     
                        'notation but no slab was passed. Cannot '
                        'calculate bulk unit cell!')
             self.rpars.setHaltingLevel(2)
-            raise ParameterError(param, message)
+            raise ParameterNeedsSlabError(param, message)
         return readWoodsNotation(assignment.values_str, self.slab.ucell)
 
     def _read_matrix_notation(self, param, values):

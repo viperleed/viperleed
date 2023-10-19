@@ -691,7 +691,7 @@ class _TestWoodsOrMatrixParam(_TestInterpretBase):
         assert value == pytest.approx(np.array([[2, 0], [0, 1]]))
 
     invalid = {
-        'wood no slab': ('c(2x2)', '', err.ParameterError),
+        'wood no slab': ('c(2x2)', '', err.ParameterNeedsSlabError),
         'matrix float': ('a 1, 2 3', 'M', err.ParameterFloatConversionError),
         'matrix rows': ('1 2', 'M', err.ParameterParseError),
         'matrix cols': ('1 2, 3', 'M', err.ParameterParseError),
@@ -700,8 +700,7 @@ class _TestWoodsOrMatrixParam(_TestInterpretBase):
     @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure that a Woods SUPERLATTICE without a slab raises."""
-        self.check_raises(interpreter, val, err.ParameterError,
-                          flags_str=flag)
+        self.check_raises(interpreter, val, exc, flags_str=flag)
 
 
 class TestSuperlattice(_TestWoodsOrMatrixParam):
