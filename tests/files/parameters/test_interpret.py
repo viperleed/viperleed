@@ -453,6 +453,38 @@ class TestLayerCuts(_TestInterpretBase):
         self.check_raises(interpreter, val, err.ParameterParseError)
 
 
+class TestLMax(_TestInterpretBase):
+    """Tests for interpreting LMAX."""
+
+    param = 'LMAX'
+    valid = {
+        'single': ('7', [7, 7]),
+        'range hyphen': ('9-12', [9, 12]),
+        'range colon': ('8:18', [8, 18]),
+        'range space': ('6 17', [6, 17]),
+        'range swapped': ('15-11', [11, 15]),
+        }
+    invalid = {
+        'too many': ('9 12 18', err.ParameterNumberOfInputsError),
+        'not int': ('1.3', err.ParameterIntConversionError),
+        'out of range single': ('1', err.ParameterError),
+        'out of range min': ('0 16', err.ParameterError),
+        'out of range max': ('6 1600', err.ParameterError),
+        # 'negative': ('-4', err.ParameterError),                               # TODO: does not work because we replace '-'
+        # 'out of range negative': ('-6 -8', err.ParameterError),               # TODO: does not work because we replace '-'
+        }
+
+    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid LMAX."""
+        self.check_assigned(interpreter, val, expect)
+
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid LMAX raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
 class TestLogLevel(_TestInterpretBase):
     """Tests for interpreting LOG_LEVEL."""
 
