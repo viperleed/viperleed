@@ -524,13 +524,13 @@ class TestParabolaFit(_TestInterpretBase):
                  {**_defaults, 'type': 'none', 'alpha': 3.17}),
         }
     invalid = {
-        'type': ('type not_a_known_type', err.ParameterError),
-        'float': ('type linear, alpha abcd', err.ParameterError),
-        'negative': ('type linear, alpha -1.3', err.ParameterError),
-        # 'flag': ('type linear, who_knows 0.5', err. ParameterValueError),     # TODO: ignored without complaints
-        # 'too many': ('type linear abcd', err. ParameterNumberOfInputsError),  # TODO: ignored without complaints
-        # 'off+invalid': ('off this_is_wrong, so is_this, and this too',        # TODO: ignored without complaints
-                        # err.ParameterValueError),
+        'type': ('type not_a_known_type', err.ParameterValueError),
+        'float': ('type linear, alpha abc', err.ParameterFloatConversionError),
+        'negative': ('type linear, alpha -1.3', err.ParameterRangeError),
+        'flag': ('type linear, who_knows 0.5', err. ParameterValueError),
+        'too many': ('type linear abcd', err. ParameterNumberOfInputsError),
+        'off+invalid': ('off this_is_wrong, so is_this, and this too',
+                        err.ParameterValueError),
         }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)

@@ -835,36 +835,50 @@ class ParameterInterpreter:                                                     
                 self.rpars.setHaltingLevel(1)
                 raise ParameterError(param, value_error) from err
 
-    def interpret_parabola_fit(self, assignment):
-        param = 'PARABOLA_FIT'
-        if assignment.value.lower() == 'off':
+    def interpret_parabola_fit(self, assignment):                               # TODO: custom class
+        """Assign parameter PARABOLA_FIT."""
+        if assignment.values_str.lower() == 'off':
             self.rpars.PARABOLA_FIT['type'] = 'none'
             return
-        sublists = splitSublists(assignment.values, ',')
-        for sl in sublists:
-            flag = sl[0].lower()
-            if flag.lower() == 'localise':
-                flag = 'localize'
-            value_error = (f'PARAMETERS file: PARABOLA_FIT: Value {sl[1]} '
-                            f'is not valid for flag {sl[0]}. Value will be '
-                            'ignored.')
-            if flag == 'type':
-                if sl[1].lower() in ('linear', 'linearregression', 'lasso',
-                                        'ridge', 'elasticnet', 'none'):
-                    self.rpars.PARABOLA_FIT['type'] = sl[1]
-                else:
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterError(param, value_error)
-            elif flag in ('alpha', 'mincurv', 'localize'):
-                try:
-                    f = float(sl[1])
-                except ValueError:
-                    f = -1
-                if f >= 0:
-                    self.rpars.PARABOLA_FIT[flag] = f
-                else:
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterError(param, value_error)
+        for flag_value_pair in assignment.values_str.split(','):
+            self._interpret_parabola_fit_flag_value_pair(flag_value_pair)
+
+    def _interpret_parabola_fit_flag_value_pair(self, flag_value_pair):
+        """Interpret one 'flag value' pair for PARABOLA_FIT."""
+        param = 'PARABOLA_FIT'
+        try:
+            flag, value = (s.lower() for s in flag_value_pair.split())
+        except ValueError:
+            value_error = ('Expected "flag value" pairs, '
+                           f'found "{flag_value_pair}"')
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param, message=value_error)
+        if flag == 'localise':
+            flag = 'localize'
+        value_error = (f'Invalid value {value} for flag {flag}. '
+                       'Value will be ignored')
+        if flag not in ('type', 'alpha', 'mincurv', 'localize'):
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, f'Unknown {flag=!r}')
+        if flag == 'type' and value not in ('linear', 'linearregression',
+                                            'lasso', 'ridge', 'elasticnet',
+                                            'none'):
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, value_error)
+        if flag == 'type':
+            self.rpars.PARABOLA_FIT[flag] = value
+            return
+        try:
+            value_float = float(value)
+        except ValueError:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterFloatConversionError(param, value)
+        if value_float >= 0:
+            self.rpars.PARABOLA_FIT[flag] = value_float
+            return
+        self.rpars.setHaltingLevel(1)
+        raise ParameterRangeError(param,
+                                  message=f'{flag} value must be non-negative')
 
     def interpret_phaseshift_eps(self, assignment):
         """Assign parameter PHASESHIFT_EPS."""
