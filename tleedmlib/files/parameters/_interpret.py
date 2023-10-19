@@ -1073,37 +1073,42 @@ class ParameterInterpreter:                                                     
             raise _errors[0]
         self.rpars.search_convergence_known = search_convergence_known
 
-    def interpret_search_cull(self, assignment):
+    def interpret_search_cull(self, assignment):                                # TODO: custom class to merge the value and type, probably a float subclass (using __new__)
+        """Assign parameter SEARCH_CULL and SEARCH_CULL_TYPE."""
         param = 'SEARCH_CULL'
+        rpars = self.rpars
         cull_value = assignment.value
         try:
             cull_float = float(cull_value)
         except ValueError as exc:
-            self.rpars.setHaltingLevel(1)
+            rpars.setHaltingLevel(1)
             raise ParameterFloatConversionError(param, cull_value) from exc
-        if cull_float >= 1:
-            if cull_float - int(cull_float) < 1e-6:
-                self.rpars.SEARCH_CULL = int(cull_float)
-            else:
-                message = 'Values greater than one must be integers'
-                self.rpars.setHaltingLevel(1)
-                raise ParameterError(param, message)
+        cull_int = int(cull_float)
+        if cull_float >= 1 and abs(cull_float - cull_int) < 1e-6:
+            rpars.SEARCH_CULL = int(cull_float)
+        elif cull_float >= 1:
+            message = 'Values greater than one must be integers'
+            rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message)
         elif cull_float >= 0:
-            self.rpars.SEARCH_CULL = cull_float
+            rpars.SEARCH_CULL = cull_float
         else:
             message = f'{param} value must be non-negative'
-            self.rpars.setHaltingLevel(1)
-            raise ParameterError(param, message)
-        if assignment.other_values:
-            next_value = assignment.other_values[0].lower()
-            if next_value in ['clone', 'genetic', 'random']:
-                self.rpars.SEARCH_CULL_TYPE = next_value
-            else:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterValueError(param, next_value)
-            if len(assignment.other_values) > 1:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterNumberOfInputsError(param)
+            rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message)
+
+        if not assignment.other_values:
+            rpars.SEARCH_CULL_TYPE = rpars.get_default('SEARCH_CULL_TYPE')
+            return
+        if len(assignment.other_values) > 1:
+            rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param)
+        cull_type = assignment.other_values[0].lower()
+        if cull_type in ['clone', 'genetic', 'random']:
+            rpars.SEARCH_CULL_TYPE = cull_type
+        else:
+            rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, cull_type)
 
     def interpret_search_population(self, assignment):
         param = 'SEARCH_POPULATION'

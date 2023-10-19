@@ -63,6 +63,7 @@ DEFAULTS = {
         'e': 0.001,
         },
     'RUN': (0, 1, 2, 3),
+    'SEARCH_CULL_TYPE': 'genetic',
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
     'SYMMETRY_FIX': '',
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
@@ -201,8 +202,10 @@ class Rparams:
         self.S_OVL = 0.3 # Muffin tin overlap parameter after Rundgren 2021, default is 0.3 - set or optimize in FD
         self.SCREEN_APERTURE = 110.
         self.SEARCH_BEAMS = 0   # 0: average, 1: integer, 2: fractional
-        self.SEARCH_CULL = 0.1  # fraction of all, or absolute N if >1
-        self.SEARCH_CULL_TYPE = "genetic"  # clone, genetic, random
+        # SEARCH_CULL: fraction of population, or absolute nr. if >1
+        # SEARCH_CULL_TYPE: clone, genetic, random
+        self.SEARCH_CULL = 0.1
+        self.SEARCH_CULL_TYPE = self.get_default('SEARCH_CULL_TYPE')
         self.SEARCH_MAX_GEN = 100000  # maximum number of generations in search
         self.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 100}
         # maximum number of generations without change before search

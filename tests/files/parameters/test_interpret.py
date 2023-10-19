@@ -605,20 +605,31 @@ class TestSearchConvergence(_TestInterpretBase):
 
 
 class TestSearchCull(_TestInterpretBase):
-    """Tests for interpreting SEARCH_CULL."""
+    """Tests for interpreting SEARCH_CULL and SEARCH_CULL_TYPE."""
 
     param = 'SEARCH_CULL'
     valid = {'float': ('0.5', 0.5), 'int': ('3', 3),
-             'int-like float': ('4.0', 4),}
-    invalid = {'float greater than one': ('1.5', err.ParameterError),
-               'negative': ('-0.5', err.ParameterError),
-               'too many': ('0.5 clone 1.0', err.ParameterNumberOfInputsError),
-               'invalid type': ('0.5 test', err.ParameterValueError)}
+             'int-like float': ('4.0', 4),
+             'explicit type': ('0.48 clone', (0.48, 'clone'))}
+    invalid = {
+        'float greater than one': ('1.5', err.ParameterValueError),
+        'negative': ('-0.5', err.ParameterValueError),
+        'too many': ('0.5 clone 1.0', err.ParameterNumberOfInputsError),
+        'invalid cull type': ('0.5 test', err.ParameterValueError),
+        'not a float': ('abcd', err.ParameterFloatConversionError),
+        }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid SEARCH_CULL."""
-        self.check_assigned(interpreter, val, expect)
+        rpars = interpreter.rpars
+        if len(val.split()) > 1:
+            expect_cull, expect_type = expect
+        else:
+            expect_cull = expect
+            expect_type = rpars.get_default('SEARCH_CULL_TYPE')
+        self.check_assigned(interpreter, val, expect_cull)
+        assert rpars.SEARCH_CULL_TYPE == expect_type
 
     @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
