@@ -276,7 +276,7 @@ class ParameterInterpreter:                                                     
         if (allowed_values
                 and set(allowed_values[True]) & set(allowed_values[False])):
             raise ValueError('The sets of allowed values for '
-                             'True and False must not overlap.')
+                             'True and False must not overlap')
 
         # Check if the value is in the allowed ones
         str_value = assignment.value.lower()
@@ -490,7 +490,7 @@ class ParameterInterpreter:                                                     
         param = 'BULK_REPEAT'
         if not self.slab:  # BULK_REPEAT is moot without a slab
             raise ParameterError(parameter=param,
-                                 message='No slab defined for bulk repeat.')
+                                 message='No slab defined for bulk repeat')
 
         bulk_repeat_str = assignment.values_str.lower()
         # (1) Vector
@@ -529,7 +529,7 @@ class ParameterInterpreter:                                                     
         name = assignment.flag
         names = [n for n, _ in self.rpars.DOMAINS]
         if name in names:  # Already defined
-            error_message = f'Multiple sources defined for domain {name}.'
+            error_message = f'Multiple sources defined for domain {name}'
             self.rpars.setHaltingLevel(3)
             raise ParameterError(parameter=param, message=error_message)
         if not name:  # Get unique name                                         # TODO: used in several other places
@@ -546,7 +546,7 @@ class ParameterInterpreter:                                                     
             path = right_side + '.zip'
         else:
             error_message = (f'Value for DOMAIN {name} could not be '
-                             'interpreted as either a path or a .zip file.')
+                             'interpreted as either a path or a .zip file')
             self.rpars.setHaltingLevel(3)
             raise ParameterError(parameter=param, message=error_message)
         self.rpars.DOMAINS.append((name, path))
@@ -568,7 +568,7 @@ class ParameterInterpreter:                                                     
             while 100 % j != 0:
                 j -= 1
             message = (f'100 is not divisible by given value {domain_step}. '
-                       f'Consider using {j} instead.')
+                       f'Consider using {j} instead')
             self.rpars.setHaltingLevel(1)
             raise ParameterError(parameter=param,message=message)
 
@@ -609,7 +609,7 @@ class ParameterInterpreter:                                                     
         """Assign parameter FORTRAN_COMP."""
         param = 'FORTRAN_COMP'
         message = (f'Only one flag allowed for {param} per line. '
-                   f'Got {assignment.flags}.')
+                   f'Got {assignment.flags}')
         self._ensure_single_flag_assignment(param, assignment, message=message)
         flag, compiler_str = assignment.flag.lower(), assignment.values_str
 
@@ -628,8 +628,8 @@ class ParameterInterpreter:                                                     
         # (3) Custom compiler flags or full compilation string.
         #     Both need quotation marks                                         # TODO: is this needed now that we use f-strings?
         if not compiler_str.startswith(("'", '"')):
-            message = ('No valid shorthand and not delimited '
-                       'by quotation marks.')
+            message = ('No valid shorthand and not '
+                       'delimited by quotation marks')
             raise ParameterError(param, message)
 
         delim = assignment.values_str[0]
@@ -655,7 +655,7 @@ class ParameterInterpreter:                                                     
             self.rpars.INTPOL_DEG = int(intpol_deg)
             return
         self.rpars.setHaltingLevel(1)
-        message = 'Only degree 3 and 5 interpolation supported at the moment.'
+        message = 'Only degree 3 and 5 interpolation supported at the moment'
         raise ParameterError(parameter=param, message=message)
 
     def interpret_iv_shift_range(self, assignment):                             # TODO: would be very convenient to have a simple EnergyRange (namedtuple or dataclass) to use for this and THEO_ENERGIES. Then we could have .start, .stop, .step instead of indices.
@@ -698,7 +698,7 @@ class ParameterInterpreter:                                                     
         if all(c in assignment.values_str for c in '<>'):
             self.rpars.setHaltingLevel(1)
             raise ParameterParseError(param,
-                                    'Cannot parse list with both "<" and ">".')
+                                    'Cannot parse list with both "<" and ">"')
         if any(c in assignment.values_str for c in '<>'):
             layer_cuts = []
             for s in assignment.values:
@@ -744,7 +744,7 @@ class ParameterInterpreter:                                                     
                 _, lmax_list[0], _ = sorted((_min, lmax_list[0], _max))
                 raise ParameterError(
                     param,
-                    f'LMAX must be between {_min} and {_max}.'
+                    f'LMAX must be between {_min} and {_max}'
                 )
             self.rpars.LMAX = [lmax_list[0], lmax_list[0]]
         elif len(lmax_list) == 2:
@@ -753,12 +753,12 @@ class ParameterInterpreter:                                                     
             if lmax_list[0] < _min:
                 raise ParameterError(
                     param,
-                    'LMAX lower bound must be positive.'
+                    'LMAX lower bound must be positive'
                 )
             if lmax_list[1] > _max:
                 raise ParameterError(
                     param,
-                    f'LMAX values >{_max} are currently not supported.'
+                    f'LMAX values >{_max} are currently not supported'
                     )
             self.rpars.LMAX = lmax_list
 
@@ -798,7 +798,7 @@ class ParameterInterpreter:                                                     
     def interpret_optimize(self, assignment):
         param = 'OPTIMIZE'
         if not assignment.flag:
-            message = 'Parameter to optimize not defined.'
+            message = 'Parameter to optimize not defined'
             self.rpars.setHaltingLevel(3)
             raise ParameterNeedsFlagError(param, message)
         which = assignment.flag.lower()
@@ -958,7 +958,7 @@ class ParameterInterpreter:                                                     
                     self.rpars.setHaltingLevel(1)
                     raise ParameterIntConversionError(param, value) from None
                 if i <= 0:
-                    message = 'perpage value has to be positive integer.'
+                    message = 'perpage value has to be positive integer'
                     self.rpars.setHaltingLevel(1)
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = i
@@ -970,7 +970,7 @@ class ParameterInterpreter:                                                     
                     raise ParameterIntConversionError(param,
                                                       assignment.all_[:2])
                 if any(i <= 0 for i in il):
-                    message = 'perpage values have to be positive integers.'
+                    message = 'perpage values have to be positive integers'
                     raise ParameterParseError(param, message)
                 self.rpars.PLOT_IV['perpage'] = tuple(il)
 
@@ -989,7 +989,7 @@ class ParameterInterpreter:                                                     
         if not segments:
             self.rpars.setHaltingLevel(3)
             raise ParameterError(param,
-                                 'RUN was defined, but no values were read.')
+                                 'RUN was defined, but no values were read')
         # Insert initialization section if not present
         if segments[0] is not Section.INITIALIZATION:
             segments.insert(0, Section.INITIALIZATION)
@@ -1044,7 +1044,7 @@ class ParameterInterpreter:                                                     
                 if is_updating:
                     self.rpars.searchConvInit['gaussian'] = gauss_width
             elif should_update:
-                message = 'gaussian width should be a positive number '
+                message = 'gaussian width should be a positive number'
                 _errors.append(
                     ParameterError(param, message=message)
                     )
@@ -1072,14 +1072,14 @@ class ParameterInterpreter:                                                     
                 if is_updating:
                     self.rpars.searchConvInit['dgen'][target] = max_dgen
             elif should_update:
-                message = 'dgen should be a positive number '
+                message = 'dgen should be a positive number'
                 _errors.append(
                     ParameterError(param, message=message)
                     )
             if scaling is not None and scaling >= 1:
                 self.rpars.SEARCH_MAX_DGEN_SCALING[target] = scaling
             elif scaling:
-                message = 'scaling value cannot be smaller than 1.'
+                message = 'scaling value cannot be smaller than 1'
                 _errors.append(
                     ParameterError(param, message=message)
                     )
@@ -1172,7 +1172,7 @@ class ParameterInterpreter:                                                     
                         raise ParameterError(
                             param,
                             ('SITE_DEF parameter contains a top() '
-                             'function, but no slab was passed.')
+                             'function, but no slab was passed')
                         )
                     n = int(sl[i].split('(')[1].split(')')[0])
                     csatlist = sorted(self.slab.atlist,
@@ -1233,12 +1233,12 @@ class ParameterInterpreter:                                                     
                 continue
             unrecognized = unrecognized.replace(token, '')
             if 'group' in self.rpars.SYMMETRY_BULK:
-                message = 'Only one symmetry group can be given.'
+                message = 'Only one symmetry group can be given'
                 raise ParameterValueError(param, message=message)
             self.rpars.SYMMETRY_BULK['group'] = token.strip().lower()
 
         if 'group' not in self.rpars.SYMMETRY_BULK:
-            message = 'Need to specify exactly one symmetry group.'
+            message = 'Need to specify exactly one symmetry group'
             raise ParameterValueError(param, message=message)
 
         if unrecognized:
@@ -1300,7 +1300,7 @@ class ParameterInterpreter:                                                     
             self.rpars.SYMMETRY_FIX = 'p1'
             return
         if group in self.grouplist and group in ('cm', 'pmg'):
-            message = f'For group {group} direction needs to be specified.'
+            message = f'For group {group} direction needs to be specified'
             self.rpars.setHaltingLevel(1)
             raise ParameterParseError(param, message)
         if group in self.grouplist:
@@ -1376,7 +1376,7 @@ class ParameterInterpreter:                                                     
                                                  accept_underscore=True)
         non_defaults = [v for v, s in zip(theo_energies, energies) if s != '_']
         if not all(e > 0 for e in non_defaults):
-            message = f'{param} values have to be positive.'
+            message = f'{param} values must be positive'
             self.rpars.setHaltingLevel(1)
             raise ParameterRangeError(param, message)
 
@@ -1388,7 +1388,7 @@ class ParameterInterpreter:                                                     
 
         start, stop, step = theo_energies
         if stop < start:
-            message = f'maximum {param} value should be >= than the minimum.'
+            message = f'maximum {param} value should be >= than the minimum'
             self.rpars.setHaltingLevel(1)
             raise ParameterValueError(param)
 
@@ -1416,14 +1416,14 @@ class ParameterInterpreter:                                                     
         if v0r_type == 'rundgren':
             rundgren_constants = assignment.other_values
             if len(rundgren_constants) != 4:
-                message = ('Rundgren-type function expects four constants '
-                           'separated by whitespace.')
+                message = ('Rundgren-type function expects four '
+                           'constants separated by whitespace')
                 raise ParameterParseError(param, message)
             try:
                 self.rpars.V0_REAL = [float(c) for c in rundgren_constants]
             except ValueError as exc:
                 message = (f'Could not parse constants {rundgren_constants} '
-                           'for Rundgren-type function.')
+                           'for Rundgren-type function')
                 self.rpars.setHaltingLevel(1)
                 raise ParameterError(param, message=message) from exc
             return
