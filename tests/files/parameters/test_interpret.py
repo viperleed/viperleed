@@ -781,15 +781,13 @@ class _TestWoodsOrMatrixParam(_TestInterpretBase):
 
     def test_interpret_matrix(self, interpreter):
         """Check successful interpretation of a matrix."""
-        self.interpret(interpreter, '2 0, 0 2', flags_str='M')
-        value = getattr(interpreter.rpars, self.param)
-        assert value == pytest.approx(np.array([[2, 0], [0, 2]]))
+        self.check_assigned(interpreter, '2 0, 0 2',
+                            np.array([[2, 0], [0, 2]]), flags_str='M')
 
     def test_interpret_woods(self, ag100_interpreter):
         """Check successful interpretation of a Woods notation."""
-        self.interpret(ag100_interpreter, 'p(2x1)')
-        value = getattr(ag100_interpreter.rpars, self.param)
-        assert value == pytest.approx(np.array([[2, 0], [0, 1]]))
+        self.check_assigned(ag100_interpreter, 'p(2x1)',
+                            np.array([[2, 0], [0, 1]]))
 
     invalid = {
         'wood no slab': ('c(2x2)', '', err.ParameterNeedsSlabError),
