@@ -307,8 +307,12 @@ class TestDomainStep(_TestInterpretBase):
 
     param = 'DOMAIN_STEP'
     valid = {'value': ('10', 10),}
-    invalid = {'value': ('200', err.ParameterRangeError),
-               'non_integer': ('0.5', err.ParameterError),}
+    invalid = {
+        'value': ('200', err.ParameterRangeError),
+        'out of range low': ('-5', err.ParameterRangeError),
+        'does not divide 100': ('38', err.ParameterError),
+        'too many': ('12 13', err.ParameterNumberOfInputsError),
+        }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
