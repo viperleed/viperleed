@@ -272,21 +272,21 @@ class TestDomain(_TestInterpretBase):
         domain_path.mkdir()
         domain_path = str(domain_path)
         self.interpret(interpreter, domain_path, flags_str='domain1')
-        assert interpreter.rpars.DOMAINS == [('domain1', domain_path)]
+        assert interpreter.rpars.DOMAINS == {'domain1': domain_path}
 
     def test_interpret_path_no_flag(self, interpreter, tmp_path):
         """Test correct interpretation of a path without a domain name."""
         tmp_path = str(tmp_path)
         self.interpret(interpreter, tmp_path)
-        assert interpreter.rpars.DOMAINS == [('1', tmp_path)]
+        assert interpreter.rpars.DOMAINS == {'1': tmp_path}
 
     def test_interpret_zip_file(self, interpreter, tmp_path):
         """Test correct interpretation of a zip file."""
         zip_file = tmp_path / 'domain.zip'
         zip_file.touch()
-        zip_file = str(zip_file)
-        self.interpret(interpreter, zip_file)
-        assert interpreter.rpars.DOMAINS == [('1', zip_file)]
+        zip_file_name = str(zip_file)
+        self.interpret(interpreter, zip_file_name)
+        assert interpreter.rpars.DOMAINS == {'1': zip_file_name}
 
     def test_interpret_invalid(self, interpreter):
         """Ensure invalid DOMAIN raises exceptions."""

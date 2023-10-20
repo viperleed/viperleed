@@ -164,7 +164,7 @@ class Rparams:
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.
         self.BULK_REPEAT = None
-        self.DOMAINS = []         # list of domains (name, path)
+        self.DOMAINS = {}         # {name: path_to_tensors_zip_or_dir}
         self.DOMAIN_STEP = 1      # area step in percent for domain search
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}

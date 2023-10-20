@@ -393,7 +393,7 @@ def init_domains(rp):
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
     home = Path.cwd()
-    for (name, path) in rp.DOMAINS:
+    for name, path in rp.DOMAINS.items():
         # determine the target path
         target = Path(f"Domain_{name}").resolve()
         dp = DomainParameters(target, home, name)

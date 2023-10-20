@@ -533,14 +533,13 @@ class ParameterInterpreter:                                                     
         param = 'DOMAIN'
         # Check name
         name = assignment.flag
-        names = [n for n, _ in self.rpars.DOMAINS]
-        if name in names:  # Already defined
+        if name in self.rpars.DOMAINS:  # Already defined
             error_message = f'Multiple sources defined for domain {name}'
             self.rpars.setHaltingLevel(3)
             raise ParameterError(parameter=param, message=error_message)
         if not name:  # Get unique name                                         # TODO: used in several other places
             i = 1
-            while str(i) in names:
+            while str(i) in self.rpars.DOMAINS:
                 i += 1
             name = str(i)
 
@@ -555,7 +554,7 @@ class ParameterInterpreter:                                                     
                              'interpreted as either a path or a .zip file')
             self.rpars.setHaltingLevel(3)
             raise ParameterError(parameter=param, message=error_message)
-        self.rpars.DOMAINS.append((name, path))
+        self.rpars.DOMAINS[name] = path
 
     def interpret_domain_step(self, assignment):
         """Assign parameter DOMAIN_STEP."""
