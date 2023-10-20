@@ -466,12 +466,21 @@ class TestIVShiftRange(_TestInterpretBase):
     """Tests for interpreting IV_SHIFT_RANGE."""
 
     param = 'IV_SHIFT_RANGE'
-    valid = {'range': ('0.0 1.0 0.25', [0.0, 1.0, 0.25]),}
-    invalid = {'nr_inputs': ('0.0', err.ParameterNumberOfInputsError),
-               'float': ('0.0 2.0 ()', err.ParameterFloatConversionError),
-               'parse': ('0.0 2.0 1.a', err.ParameterParseError),
-               'out-of-range': ('1.0 0.0 0.1', err.ParameterError),
-               'step': ('0.0 1.0 -0.1', err.ParameterError),}
+    _defaults = Rparams().get_default('IV_SHIFT_RANGE')
+    valid = {
+        'range': ('0.0 1.0 0.25', [0.0, 1.0, 0.25]),
+        'default bound': ('_ 1.0 0.25', [_defaults[0], 1.0, 0.25]),
+        'default step': ('-2.5 1.0 _', [-2.5, 1.0, _defaults[2]]),
+        'no step': ('-2.5 1.0', [-2.5, 1.0, _defaults[2]]),
+        'swapped': ('3 -2 -0.5', [-2.0, 3.0, 0.5]),
+        }
+    invalid = {
+        'nr_inputs': ('0.0', err.ParameterNumberOfInputsError),
+        'float': ('0.0 2.0 ()', err.ParameterFloatConversionError),
+        'parse': ('0.0 2.0 1.a', err.ParameterParseError),
+        'swapped opposite step': ('1.0 0.0 0.1', err.ParameterValueError),
+        'opposite step': ('0.0 1.0 -0.1', err.ParameterValueError),
+        }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):

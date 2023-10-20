@@ -683,7 +683,7 @@ class ParameterInterpreter:
             message = (f'Inconsistent {param} step. Cannot shift from '
                        f'{start:.2f} to {stop:.2f} with {step=:.2f}')
             self.rpars.setHaltingLevel(1)
-            raise ParameterError(param, message)
+            raise ParameterValueError(param, message=message)
 
         if stop < start:
             start, stop = stop, start
