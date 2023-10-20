@@ -1356,22 +1356,38 @@ class ParameterInterpreter:                                                     
             'rotation': set()
             }
         unrecognized = assignment.values_str
+        unrecognized = self._interpret_symmetry_bulk_glides(unrecognized)
+        unrecognized = self._interpret_symmetry_bulk_screws(unrecognized)
+        unrecognized = self._interpret_symmetry_bulk_group(unrecognized)
 
+        if unrecognized:
+            self.rpars.setHaltingLevel(2)
+            message = f'Could not recognize {unrecognized!r}: '
+            if 'm' in unrecognized:
+                message += ('Syntax for mirrors is "m[n1 n2]"; '
+                            'n1 and n2 must be 0, +-1, or +-2; ')
+            if 'r' in unrecognized:
+                message += ('Syntax for rotations is rN; N must be '
+                            '2, 3, 4, or 6')
+            raise ParameterValueError(param, message=message)
+
+    def _interpret_symmetry_bulk_glides(self, unrecognized):
+        """Look up `unrecognized` for glide-plane-direction specifications."""
         _mirror_re = re.compile(r'(\s+m\[\s*(-?[012])\s*,?\s*(-?[012])\])',
                                 re.IGNORECASE)
         for token, *directions in _mirror_re.findall(unrecognized):
             # All matches of mirrors are acceptable
             unrecognized = unrecognized.replace(token, '')
             direction = tuple(int(v) for v in directions)
-            if direction[0] < 0:
+            if (direction[0] < 0
+                    or not direction[0] and direction[1] < 0):
                 direction = -direction[0], -direction[1]
             self.rpars.SYMMETRY_BULK['mirror'].add(direction)
+        return unrecognized
 
-        _rotation_re = re.compile(r'(\s+r([2346]))', re.IGNORECASE)
-        for token, order in _rotation_re.findall(unrecognized):
-            unrecognized = unrecognized.replace(token, '')
-            self.rpars.SYMMETRY_BULK['rotation'].add(int(order))
-
+    def _interpret_symmetry_bulk_group(self, unrecognized):
+        """Look up `unrecognized` for a symmetry group specification."""
+        param = 'SYMMETRY_BULK'
         _group_re = re.compile(                                                 # TODO: For now borrowed from guilib. Eventually will try to instantiate a PlaneGroup
             r'(\s*(\w+)\s*(?:\[\s*-?[012]\s*-?[012]\s*\])?)',
             re.IGNORECASE
@@ -1388,17 +1404,15 @@ class ParameterInterpreter:                                                     
         if 'group' not in self.rpars.SYMMETRY_BULK:
             message = 'Need to specify exactly one symmetry group'
             raise ParameterValueError(param, message=message)
+        return unrecognized
 
-        if unrecognized:
-            self.rpars.setHaltingLevel(2)
-            message = f'Could not recognize {unrecognized!r}: '
-            if 'm' in unrecognized:
-                message += ('Syntax for mirrors is "m[n1 n2]"; '
-                            'n1 and n2 must be 0, +-1, or +-2; ')
-            if 'r' in unrecognized:
-                message += ('Syntax for rotations is rN; N must be '
-                            '2, 3, 4, or 6')
-            raise ParameterValueError(param, message=message)
+    def _interpret_symmetry_bulk_screws(self, unrecognized):
+        """Look up `unrecognized` for screw-axis-order specifications."""
+        _rotation_re = re.compile(r'(\s+r([2346]))', re.IGNORECASE)
+        for token, order in _rotation_re.findall(unrecognized):
+            unrecognized = unrecognized.replace(token, '')
+            self.rpars.SYMMETRY_BULK['rotation'].add(int(order))
+        return unrecognized
 
     def interpret_symmetry_cell_transform(self, assignment):
         """Assign parameter SYMMETRY_CELL_TRANSFORM (Wood's or matrix)."""

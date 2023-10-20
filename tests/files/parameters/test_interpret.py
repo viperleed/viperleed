@@ -826,14 +826,26 @@ class TestSymmetryBulk(_TestInterpretBase):
     valid = {
         'mirror': ('p2 m[0 1]',
                    {'mirror': {(0, 1)}, 'rotation': set(), 'group': 'p2'}),
+        'mirror first neg': (
+            'p2 m[-2 1]',
+            {'mirror': {(2, -1)}, 'rotation': set(), 'group': 'p2'}
+            ),
+        'mirror second neg': (
+            'p2 m[0 -1]',
+            {'mirror': {(0, 1)}, 'rotation': set(), 'group': 'p2'}
+            ),
         'cm_rot4': ('cm[1 1] r4',
                     {'mirror': set(), 'rotation': {4}, 'group': 'cm[1 1]'}),
         'pmm': ('pmm',
                 {'mirror': set(), 'rotation': set(), 'group': 'pmm'}),
         }
-    invalid = {'invalid_syntax': 'invalid_syntax',
-               'multiple_groups': 'pmm pg',
-               'missing_group': ''}
+    invalid = {
+        'invalid_syntax': 'invalid_syntax',
+        'multiple_groups': 'pmm pg',
+        'missing_group': '',
+        'wrong glide': 'pmm m[3 -2]',
+        'wrong screw': 'p4g r(12)',
+        }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
