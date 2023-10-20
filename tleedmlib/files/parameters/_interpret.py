@@ -1717,6 +1717,7 @@ class ParameterInterpreter:
                 self.rpars.setHaltingLevel(1)
                 raise ParameterUnknownFlagError(param, name)
             if len(values) != 1:
+                self.rpars.setHaltingLevel(1)
                 raise ParameterNumberOfInputsError(
                     parameter=param,
                     message=f'Found {len(values)} values for angle {name}'
