@@ -531,6 +531,7 @@ class TestOptimize(_TestInterpretBase):
     param = 'OPTIMIZE'
     valid = {  # value, flag, {key: expected}
         'flag_and_value': ('step 0.1', 'v0i', {'step': 0.1}),
+        'no flag at right': ('0.8', 'v0i', {'step': 0.8}),
         'multiple_flag_value': (
             'step 0.1, convergence 1e-6, minpoints 10', 'theta',
             {'step': 0.1, 'minpoints': 10, 'convergence': 1e-6}
@@ -541,6 +542,7 @@ class TestOptimize(_TestInterpretBase):
         'flag': ('invalid 0.1', 'v0i', err.ParameterUnknownFlagError),
         'value': ('step not-a-number', 'v0i', err.ParameterError),
         'quantity': ('step 0.1', 'invalid', err.ParameterError),
+        'non-a-number step': ('abcd', 'phi', err.ParameterError),
         }
 
     # pylint: disable=too-many-arguments
