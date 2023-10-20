@@ -344,16 +344,23 @@ class ParameterInterpreter:                                                     
         if no_flags:
             self._ensure_no_flags_assignment(param, assignment)
         type_ = bounds.type_
+        if type_ is float:
+            exc = ParameterFloatConversionError(assignment.parameter,
+                                                assignment.value)
+        else:
+            exc = ParameterIntConversionError(assignment.parameter,
+                                              assignment.value)
+
         try:
-            # The inner float is necessary for, e.g., 1e6 as int
-            value = type_(float(assignment.value))
+            # First convert to float. Necessary for, e.g., 1e6 as int
+            float_value = float(assignment.value)
         except ValueError:
             self.rpars.setHaltingLevel(1)
-            if type_ is float:
-                exc = ParameterFloatConversionError
-            else:
-                exc = ParameterIntConversionError
-            raise exc(parameter=assignment.parameter) from None
+            raise exc from None
+
+        value = type_(float_value)
+        if type_ is int and not np.isclose(value, float_value):
+            raise exc
 
         in_range = all(bounds.is_in_range(value))
         if not in_range and bounds.fail:
@@ -575,8 +582,7 @@ class ParameterInterpreter:                                                     
             message = (f'100 is not divisible by given value {domain_step}. '
                        f'Consider using {j} instead')
             self.rpars.setHaltingLevel(1)
-            raise ParameterError(parameter=param,message=message)
-
+            raise ParameterError(param, message=message)
         self.rpars.DOMAIN_STEP = domain_step
 
     def interpret_element_mix(self, assignment):                                # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME? We should perhaps have a call to a checker after all parameters are read in?

@@ -310,6 +310,7 @@ class TestDomainStep(_TestInterpretBase):
     invalid = {
         'value': ('200', err.ParameterRangeError),
         'out of range low': ('-5', err.ParameterRangeError),
+        'non integer': ('5.5', err.ParameterIntConversionError),
         'does not divide 100': ('38', err.ParameterError),
         'too many': ('12 13', err.ParameterNumberOfInputsError),
         }
