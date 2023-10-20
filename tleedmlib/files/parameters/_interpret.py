@@ -871,7 +871,7 @@ class ParameterInterpreter:
                 return_only=True
                 )
         except ParameterError as exc:
-            raise ParameterValueError(param) from exc
+            raise ParameterValueError(param, assignment.values_str) from exc
         self.rpars.LOG_LEVEL = log_level
 
     def interpret_optimize(self, assignment):

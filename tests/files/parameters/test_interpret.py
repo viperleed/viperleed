@@ -595,6 +595,23 @@ class TestLogLevel(_TestInterpretBase):
         """Check correct interpretation of integer LOG_LEVEL."""
         self.check_assigned(interpreter, '3', 3)
 
+    def test_interpret_default(self, interpreter):
+        """Check correct interpretation of a default string LOG_LEVEL."""
+        self.interpret(interpreter, 'vv')
+        assert interpreter.rpars.LOG_LEVEL < 5
+
+    invalid = {
+        'too many': ('not a level', '', err.ParameterNumberOfInputsError),
+        'too few': ('', '', err.ParameterHasNoValueError),
+        'flag': ('true', 'flag', err.ParameterUnknownFlagError),
+        'invalid str': ('not_a_level', '', err.ParameterValueError),
+        }
+
+    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, flag, exc, interpreter):
+        """Check correct interpretation of a default string LOG_LEVEL."""
+        self.check_raises(interpreter, val, exc, flags_str=flag)
+
 
 class TestOptimize(_TestInterpretBase):
     """Tests for interpreting OPTIMIZE."""
