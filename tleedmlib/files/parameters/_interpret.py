@@ -1243,6 +1243,7 @@ class ParameterInterpreter:                                                     
         """Assign the SITE_DEF for one POSCAR element."""
         param = 'SITE_DEF'
         self._ensure_has_sitedef_compatible_slab(param)
+
         if assignment.values_str.count('top(') > 1:
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError(
