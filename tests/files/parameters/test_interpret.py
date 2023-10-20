@@ -459,19 +459,36 @@ class TestLMax(_TestInterpretBase):
     param = 'LMAX'
     valid = {
         'single': ('7', [7, 7]),
+        'single with spaces': ('6    ', [6, 6]),
         'range hyphen': ('9-12', [9, 12]),
         'range colon': ('8:18', [8, 18]),
         'range space': ('6 17', [6, 17]),
         'range swapped': ('15-11', [11, 15]),
+        'space and hyphen': ('12 - 15', [12, 15]),
+        'multi space': ('7     10', [7, 10]),
+        'multi space and hyphen': ('9    -         12', [9, 12]),
+        'stripped': ('  12 - 9     ', [9, 12]),
+        'two hyphens': ('5--16', [5, 16]),
+        'three hyphens': ('1---2', [1, 2]),
+        'four hyphens': ('5----17', [5, 17]),
+        'three hyphens and spaces': ('1 --- 2', [1, 2]),
         }
     invalid = {
+        'no value': ('   ', err.ParameterHasNoValueError),
         'too many': ('9 12 18', err.ParameterNumberOfInputsError),
-        'not int': ('1.3', err.ParameterIntConversionError),
-        'out of range single': ('1', err.ParameterError),
-        'out of range min': ('0 16', err.ParameterError),
-        'out of range max': ('6 1600', err.ParameterError),
-        # 'negative': ('-4', err.ParameterError),                               # TODO: does not work because we replace '-'
-        # 'out of range negative': ('-6 -8', err.ParameterError),               # TODO: does not work because we replace '-'
+        'not int': ('1.3', err.ParameterValueError),
+        'not numeric': ('a', err.ParameterValueError),
+        'wrong delimiter': ('1 & 2', err.ParameterValueError),
+        'out of range single': ('0', err.ParameterRangeError),
+        'out of range min': ('0 16', err.ParameterRangeError),
+        'out of range max': ('6 1600', err.ParameterRangeError),
+        'negative': ('-4', err.ParameterRangeError),
+        'range both negative': ('-6 -8', err.ParameterRangeError),
+        'range min negative swapped': ('1 -5', err.ParameterRangeError),
+        'range min negative hyphen': ('-2 -     5', err.ParameterRangeError),
+        'range max negative hyphens': ('1-- -5', err.ParameterRangeError),
+        'ends with delimiter': ('2-', err.ParameterValueError),
+        'ends with delimiter strip': ('2 -  ', err.ParameterValueError),
         }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)

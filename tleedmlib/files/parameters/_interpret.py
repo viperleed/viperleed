@@ -30,12 +30,19 @@ from viperleed.tleedmlib.base import recombineListElements, splitSublists
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
-from .errors import ParameterError, ParameterBooleanConversionError
-from .errors import ParameterFloatConversionError, ParameterIntConversionError
-from .errors import ParameterNeedsFlagError, ParameterNeedsSlabError
-from .errors import ParameterNotRecognizedError, ParameterNumberOfInputsError
-from .errors import ParameterParseError, ParameterRangeError
-from .errors import ParameterUnknownFlagError, ParameterValueError
+from .errors import ParameterError
+from .errors import ParameterBooleanConversionError
+from .errors import ParameterFloatConversionError
+from .errors import ParameterHasNoValueError
+from .errors import ParameterIntConversionError
+from .errors import ParameterNeedsFlagError
+from .errors import ParameterNeedsSlabError
+from .errors import ParameterNotRecognizedError
+from .errors import ParameterNumberOfInputsError
+from .errors import ParameterParseError
+from .errors import ParameterRangeError
+from .errors import ParameterUnknownFlagError
+from .errors import ParameterValueError
 from ._known_parameters import KNOWN_PARAMS
 from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
@@ -726,41 +733,117 @@ class ParameterInterpreter:                                                     
                     raise ParameterParseError(param)
         self.rpars.LAYER_CUTS = layer_cuts
 
-    def interpret_lmax(self, assignment):
+    @staticmethod
+    def _tokenize_int_range(numeric_string):
+        r"""Return integers representing range bounds in `numeric_string`.
+
+        A token of the form '-\d+' is considered as a negative number
+        unless it is preceded by another '\d+' without delimiters, or
+        only by '-' delimiters. This means that
+        >>> _tokenize_int_range('1-15')
+        [1, 15]
+        >>> _tokenize_int_range('-1---15')
+        [-1, 15]
+        >>> _tokenize_int_range('-1-- -15')
+        [-1, -15]
+        >>> _tokenize_int_range('1 -15')
+        [1, -15]
+
+        Acceptable delimiters are spaces, '-', or ':'.
+
+        Parameters
+        ----------
+        numeric_string : str
+            The string to be analysed.
+
+        Returns
+        -------
+        integers : list
+            Integers in `numeric_string`.
+
+        Raises
+        ------
+        ValueError
+            If any of the entries is neither a number or a delimiter
+        ValueError
+            If, after stripping spaces, `numeric_string` ends with a
+            delimiter instead of a number
+        """
+        string = re.sub(r'\s', ' ', numeric_string.strip())
+        delimiter_chars = ' :-'
+        delimiters = tuple(delimiter_chars)
+        # Remove all adjacent identical delimiters
+        for delimiter in delimiter_chars:
+            string = re.sub(fr'{delimiter}*{delimiter}', delimiter, string)
+        if not string:
+            return []
+        _digits_or_delim_re = re.compile(fr'[\d{delimiter_chars}]+')
+        _digits_re = re.compile(r'\d+')
+        if not _digits_or_delim_re.fullmatch(string):
+            raise ValueError('contains non-integers or invalid delimiters')
+        if string.endswith(delimiters):
+            raise ValueError('ends with a delimiter')
+        integers = []
+        for match_digits in _digits_re.finditer(string):
+            token, start = match_digits.group(), match_digits.start()
+            delimiter = string[start-1:start]
+            if not delimiter:  # First token in string
+                integers.append(int(token))
+                continue
+            if delimiter != '-':
+                integers.append(int(token))
+                continue
+            # Figure out if the '-' is a delimiter or it means negative
+            previous = string[:max(start-1, 0)]
+            if not previous or previous.endswith(delimiters):
+                # Negative number
+                integers.append(int(delimiter + token))
+            else:
+                integers.append(int(token))
+        return integers
+
+    def interpret_lmax(self, assignment):                                       # TODO: custom class
+        """Assign parameter LMAX."""
         param = 'LMAX'
         _min, _max = self.rpars.get_limits(param)
 
-        values = re.sub(r'[:-]', ' ', assignment.values_str).split()
         try:
-            lmax_list = [int(v) for v in values]
-        except ValueError:
+            values = self._tokenize_int_range(assignment.values_str)
+        except ValueError as exc:
+            raise ParameterValueError(
+                param,
+                message=f'Invalid {assignment.values_str!r}: {exc}'
+                ) from None
+
+        if not values:
             self.rpars.setHaltingLevel(1)
-            raise ParameterIntConversionError(param) from None
-        if len(lmax_list) > 2:
+            raise ParameterHasNoValueError(param)
+        if len(values) > 2:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
-        if len(lmax_list) == 1:
-            if not _min < lmax_list[0] <= _max:
-                _, lmax_list[0], _ = sorted((_min, lmax_list[0], _max))
-                raise ParameterError(
-                    param,
-                    f'LMAX must be between {_min} and {_max}'
+        if len(values) == 1:
+            if not _min < values[0] <= _max:
+                raise ParameterRangeError(param, values[0], (_min+1, _max))
+            self.rpars.LMAX = values*2
+            return
+
+        # Disable pylint warning, as it is taken care of by the
+        # previous 'if not values' check. Here len == 2
+        # pylint: disable-next=unbalanced-tuple-unpacking
+        start, stop = values
+        if stop < start:
+            stop, start = start, stop
+        if start < _min:
+            raise ParameterRangeError(
+                param,
+                message=f'{param} lower bound must be at least {_min+1}'
                 )
-            self.rpars.LMAX = [lmax_list[0], lmax_list[0]]
-        elif len(lmax_list) == 2:
-            if lmax_list[1] < lmax_list[0]:
-                lmax_list.reverse()
-            if lmax_list[0] < _min:
-                raise ParameterError(
-                    param,
-                    'LMAX lower bound must be positive'
+        if stop > _max:
+            raise ParameterRangeError(
+                param,
+                message=f'{param} values >{_max} are currently not supported'
                 )
-            if lmax_list[1] > _max:
-                raise ParameterError(
-                    param,
-                    f'LMAX values >{_max} are currently not supported'
-                    )
-            self.rpars.LMAX = lmax_list
+        self.rpars.LMAX = [start, stop]
 
     def interpret_log_level(self, assignment):
         """Assign parameter LOG_LEVEL."""
