@@ -949,11 +949,15 @@ class TestTheoEnergies(_TestInterpretBase):
         'three_positive': ('1.0 2.0 0.5', [1.0, 2.0, 0.5]),
         'two_defaults': ('1.0 _ _', [1.0, *_defaults[1:]]),
         'range_correction': ('1.1 2.5 0.5', [1.0, 2.5, 0.5]),
+        'start rounded negative': ('0.1 2.5 0.5', [0.5, 2.5, 0.5]),
+        'start rounded zero': ('0.3 2.5 0.5', [0.5, 2.5, 0.5]),
         }
     invalid = {
         'one_negative': ('1.0 -2.0 0.5', err.ParameterRangeError),
         'invalid_range': ('2.0 1.0 0.5', err.ParameterValueError),
         'start_out_of_range': ('-0.5 2.0 0.5', err.ParameterRangeError),
+        'too few': ('1.0 2.0 ', err.ParameterNumberOfInputsError),
+        'too many': ('1.0 2.0 0.3 9', err.ParameterNumberOfInputsError),
         }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)

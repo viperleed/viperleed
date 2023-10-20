@@ -1536,7 +1536,8 @@ class ParameterInterpreter:                                                     
         # others should be positive floats.
         theo_energies = self._parse_energy_range(param, assignment, energies,
                                                  accept_underscore=True)
-        non_defaults = [v for v, s in zip(theo_energies, energies) if s != '_']
+        non_defaults = [e for e in theo_energies
+                        if e is not self.rpars.no_value]
         if not all(e > 0 for e in non_defaults):
             message = f'{param} values must be positive'
             self.rpars.setHaltingLevel(1)
@@ -1545,6 +1546,9 @@ class ParameterInterpreter:                                                     
         if len(theo_energies) != 3:
             raise ParameterNumberOfInputsError(param)
         if len(non_defaults) < 3:
+            # Do not mess with start/stop yet, as some needs to
+            # be initialized from experimental data. We will
+            # fix the bounds in Rparams.initTheoEnergies.
             self.rpars.THEO_ENERGIES = theo_energies
             return
 
@@ -1556,16 +1560,15 @@ class ParameterInterpreter:                                                     
 
         # If the max is not hit by the steps exactly, correct
         # the lower bound down so that this is the case
-        # pylint: disable=compare-to-zero  # Clearer this way
+        # pylint: disable-next=compare-to-zero  # Clearer this way
         if (stop - start) % step == 0:
             self.rpars.THEO_ENERGIES = theo_energies
             return
-        # pylint: enable=compare-to-zero
 
         start -= step - (stop - start) % step
-        if start < 0:
+        if start < -1e-6:
             start = start % step
-        if not start:
+        if abs(start) < 1e-6:
             start = step
         logger.info('THEO_ENERGIES parameter: (Eto - Efrom) % Estep != 0, '
                     f'Efrom was corrected to {start}')
