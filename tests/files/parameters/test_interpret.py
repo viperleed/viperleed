@@ -202,8 +202,32 @@ class TestBeamIncidence(_TestInterpretBase):
     """Tests for interpreting BEAM_INCIDENCE."""
 
     param = 'BEAM_INCIDENCE'
-    valid = {'custom': ('45.0 60', (45.0, 60.0)),}
-    invalid = ('invalid input',)
+    valid = {
+        'custom': ('45.0 60', (45.0, 60.0)),
+        'negative theta': ('-30 30', (30.0, 210.0)),
+        'comma': ('THETA 19.3, PHI 138', (19.3, 138)),
+        'comma swap': ('phi 37, THETA 21', (21.0, 37.0)),
+        }
+    invalid = {
+        'not float': ('invalid input', '', err.ParameterFloatConversionError),
+        'flag': ('10 20', 'flag', err.ParameterUnknownFlagError),
+        'too many': ('10 20 30', '', err.ParameterNumberOfInputsError),
+        'too few': ('10 ', '', err.ParameterNumberOfInputsError),
+        'invalid angle': ('invalid 10, THETA 20', '',
+                          err.ParameterNumberOfInputsError),
+        'angle typo': ('PHIinvalid 10, THETA 20', '',
+                       err.ParameterUnknownFlagError),
+        'missing angle': ('THETA 10, ', '', err.ParameterNumberOfInputsError),
+        'missing angle value': ('THETA 10, PHI', '',
+                                err.ParameterNumberOfInputsError),
+        'missing values': ('THETA, PHI', '', err.ParameterNumberOfInputsError),
+        'too many angle values': ('THETA 10 20, PHI 0', '',
+                                  err.ParameterNumberOfInputsError),
+        'repeated': ('PHI 130, PHI 28, THETA 30', '',
+                     err.ParameterNumberOfInputsError),
+        'non float angle': ('PHI abcd, THETA 30', '',
+                     err.ParameterFloatConversionError),
+        }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
@@ -212,10 +236,10 @@ class TestBeamIncidence(_TestInterpretBase):
         rpars = interpreter.rpars
         assert (rpars.THETA, rpars.PHI) == expect
 
-    @pytest.mark.parametrize('val', invalid, ids=invalid)
-    def test_interpret_invalid(self, val, interpreter):
+    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid BEAM_INCIDENCE raises exceptions."""
-        self.check_raises(interpreter, val, err.ParameterError)
+        self.check_raises(interpreter, val, exc, flags_str=flag)
 
 
 @pytest.fixture(name='ag100_interpreter')

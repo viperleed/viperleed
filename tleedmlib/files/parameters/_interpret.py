@@ -479,15 +479,14 @@ class ParameterInterpreter:
             return
 
         # Otherwise, try to parse the value
-        angles = self._parse_incidence_angles(assignment, param, right_side)
+        angles = self._parse_incidence_angles(param, assignment)
         self.rpars.AVERAGE_BEAMS = angles['THETA'], angles['PHI']
 
     def interpret_beam_incidence(self, assignment):
         """Assign parameter BEAM_INCIDENCE."""
         param = 'BEAM_INCIDENCE'
         self._ensure_no_flags_assignment(param, assignment)
-        right_side = assignment.values_str.lower().strip()
-        angles = self._parse_incidence_angles(assignment, param, right_side)
+        angles = self._parse_incidence_angles(param, assignment)
         self.rpars.THETA, self.rpars.PHI = angles['THETA'], angles['PHI']
 
     def interpret_bulk_repeat(self, assignment):
@@ -1690,53 +1689,65 @@ class ParameterInterpreter:
             pass
         return enrange
 
-    def _parse_incidence_angles(self, assignment, param, right_side):
-        bounds = {
-            'THETA': NumericBounds(type_=float, range_=(-90, 90),
-                                   out_of_range_event='fail'),
-            'PHI': NumericBounds(type_=float, range_=(0, 360),
-                                 out_of_range_event='modulo')
-            }
-        d = {'THETA': 0, 'PHI': 0}
-        if ',' in right_side:
-            sublists = splitSublists(assignment.values, ',')
-            for sl in sublists:
-                for name in ['THETA', 'PHI']:
-                    if sl[0].upper() == name:
-                        d[name] = self.interpret_numerical_parameter(
-                            Assignment(sl[1], param),
-                            param=f'{param} {name}',
-                            bounds=bounds[name],
-                            return_only=True
-                            )
-                        break
-                else:
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterUnknownFlagError(parameter=param,
-                                                    flag=sl[0])
+    def _parse_incidence_angles(self, param, assignment):                       # TODO: dedicated class
+        """Return a dictionary with incidence angles from an assignment."""
+        bounds = {'THETA': NumericBounds(type_=float, range_=(-90, 90),
+                                         out_of_range_event='fail'),
+                  'PHI': NumericBounds(type_=float, range_=(0, 360),
+                                       out_of_range_event='modulo')}
+        if ',' not in assignment.values_str and len(assignment.values) != 2:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(
+                parameter=param,
+                found_and_expected=(len(assignment.values), 2)
+                )
+        if ',' not in assignment.values_str:
+            # pylint: disable=consider-using-f-string
+            # disable: Better than repeating 'assignment.values' twice
+            right_side = 'THETA {}, PHI {}'.format(*assignment.values)
         else:
-            if len(assignment.values) != 2:
+            right_side = assignment.values_str.upper()
+        self._check_n_incidence_angles_ok(param, right_side)
+
+        angles_specs = (spec.strip().split()
+                        for spec in right_side.strip().split(','))
+        angles = {}
+        for name, *values in angles_specs:
+            if name not in ('THETA', 'PHI'):
                 self.rpars.setHaltingLevel(1)
+                raise ParameterUnknownFlagError(param, name)
+            if len(values) != 1:
                 raise ParameterNumberOfInputsError(
                     parameter=param,
-                    found_and_expected=(len(assignment.values), 2)
+                    message=f'Found {len(values)} values for angle {name}'
                     )
-            for value, name in zip(assignment.values, ('THETA', 'PHI')):
-                d[name] = self.interpret_numerical_parameter(
-                    Assignment(value, param),
-                    param=f'{param} {name}',
-                    bounds=bounds[name],
-                    return_only=True
-                    )
+            angles[name] = self.interpret_numerical_parameter(
+                Assignment(values[0], param),
+                param=f'{param} {name}',
+                bounds=bounds[name],
+                return_only=True
+                )
 
-        if any(v is None for v in d.values()):
+        # Check for negative theta and adjust phi
+        if angles['THETA'] < 0:
+            angles['THETA'] = abs(angles['THETA'])
+            angles['PHI'] = (angles['PHI'] + 180) % 360
+        return angles
+
+    def _check_n_incidence_angles_ok(self, param, right_side):
+        """Complain if right_side contains the wrong number of angles."""
+        nr_angle_specs = len(right_side.split(','))
+        if nr_angle_specs != 2:
             self.rpars.setHaltingLevel(1)
-            raise ParameterParseError(parameter=param)
-        # check for negative theta and adjust phi
-        if d['THETA'] < 0:
-            d['THETA'] = abs(d['THETA'])
-            d['PHI'] = (d['PHI'] + 180) % 360
-        return d
+            raise ParameterNumberOfInputsError(
+                parameter=param, found_and_expected=(nr_angle_specs, 2)
+                )
+        if (right_side.count('THETA'), right_side.count('PHI')) != (1, 1):
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(
+                parameter=param,
+                message='Expected exactly one entry for THETA and one for PHI'
+                )
 
     def _read_woods_notation(self, param, assignment):
         """Return a Woods notation from an Assignment, if slab exists."""
