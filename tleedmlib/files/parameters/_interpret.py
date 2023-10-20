@@ -573,6 +573,7 @@ class ParameterInterpreter:
             raise ParameterError(param, message=message)
         self.rpars.DOMAIN_STEP = domain_step
 
+                                                                                # TODO: shouldn't we have a slab? Should we check that it has atoms, elements, and that the POSCAR element exists? Similar questions for ELEMENT_RENAME.
     def interpret_element_mix(self, assignment):                                # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME? We should perhaps have a call to a checker after all parameters are read in?
         """Assign parameter ELEMENT_MIX."""
         param = 'ELEMENT_MIX'
@@ -1617,7 +1618,7 @@ class ParameterInterpreter:
         if invalid:
             message = f'Element(s) {invalid} not found in periodic table'
             self.rpars.setHaltingLevel(2)
-            raise ParameterError(parameter=param, message=message)
+            raise ParameterValueError(param, message=message)
 
     def _parse_energy_range(self, param, assignment,
                             energies, accept_underscore=True):

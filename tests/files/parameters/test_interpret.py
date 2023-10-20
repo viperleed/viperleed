@@ -326,6 +326,31 @@ class TestDomainStep(_TestInterpretBase):
         self.check_raises(interpreter, val, exc)
 
 
+class TestElementMix(_TestInterpretBase):                                       # TODO: should also test for conflicts with RENAME
+    """Tests for interpreting ELEMENT_MIX."""
+
+    param = 'ELEMENT_MIX'
+    valid = {
+        'no elements': ('Fe', '', {'Fe': []}),                                  # TODO: This should probably fail!
+        'single element': ('Fe', 'Mn', {'Fe': ['Mn',]}),                        # TODO: should this fail and rather ask to use ELEMENT_RENAME?
+        'two elements': ('Mn', 'Co Cu', {'Mn': ['Co', 'Cu']}),
+        }
+    invalid = {
+        'too many flags': ('D E', 'Mn Fe Co', err.ParameterUnknownFlagError),
+        'not chem elem': ('X', 'chem_el_unknown Fe', err.ParameterValueError),
+        }
+
+    @pytest.mark.parametrize('poscar_el,mix,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, poscar_el, mix, expect, interpreter):
+        """Check correct interpretation of valid FILAMENT_WF."""
+        self.check_assigned(interpreter, mix, expect, flags_str=poscar_el)
+
+    @pytest.mark.parametrize('poscar_el,mix,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, poscar_el, mix, exc, interpreter):
+        """Ensure invalid FILAMENT_WF raises exceptions."""
+        self.check_raises(interpreter, mix, exc, flags_str=poscar_el)
+
+
 class TestElementRename(_TestInterpretBase):
     """Tests for interpreting ELEMENT_RENAME."""
 
