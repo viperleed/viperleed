@@ -236,7 +236,13 @@ class TestBulkRepeat(_TestInterpretBase):
         'z': ('z(0.9)', 0.9),
         'vector': ('[1.0 2.0 3.0]', [1.0, 2.0, 3.0])
         }
-    invalid = ('text', 'y(1.2)', 'z(abc)', '[]')
+    invalid = {
+        'not a float': ('text', err.ParameterFloatConversionError),
+        'invalid direction spec': ('y(1.2)', err.ParameterParseError),
+        'z, not float': ('z(abc)', err.ParameterParseError),
+        'z, invalid float': ('z(1.3.5)', err.ParameterFloatConversionError),
+        'vector not enough items': ('[]', err.ParameterParseError),
+        }
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, ag100_interpreter):
@@ -245,10 +251,14 @@ class TestBulkRepeat(_TestInterpretBase):
         rpars = ag100_interpreter.rpars
         assert rpars.BULK_REPEAT == pytest.approx(expect, rel=1e-4)
 
-    @pytest.mark.parametrize('val', invalid)
-    def test_interpret_invalid(self, val, ag100_interpreter):
+    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, ag100_interpreter):
         """Ensure invalid BULK_REPEAT raises exceptions."""
-        self.check_raises(ag100_interpreter, val, err.ParameterError)
+        self.check_raises(ag100_interpreter, val, exc)
+
+    def test_slab_missing(self, interpreter):
+        """Check complaints if a slab is not passed."""
+        self.check_raises(interpreter, '1.5', err.ParameterNeedsSlabError)
 
 
 class TestDomain(_TestInterpretBase):

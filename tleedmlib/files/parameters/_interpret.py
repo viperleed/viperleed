@@ -496,8 +496,7 @@ class ParameterInterpreter:                                                     
         """Assign parameter BULK_REPEAT."""
         param = 'BULK_REPEAT'
         if not self.slab:  # BULK_REPEAT is moot without a slab
-            raise ParameterError(parameter=param,
-                                 message='No slab defined for bulk repeat')
+            raise ParameterNeedsSlabError(param)
 
         bulk_repeat_str = assignment.values_str.lower()
         # (1) Vector
