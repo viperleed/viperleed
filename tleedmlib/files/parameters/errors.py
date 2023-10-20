@@ -88,7 +88,7 @@ class ParameterValueError(ParameterError):
         """Initialize instance."""
         if not message:
             message = 'Could not interpret '
-            message += f'{given_value!r}' if given_value else 'given_value'
+            message += f'{given_value!r}' if given_value else 'given value'
         super().__init__(parameter, message)
 
 
