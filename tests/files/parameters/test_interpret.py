@@ -287,10 +287,19 @@ class TestDomain(_TestInterpretBase):
         zip_file_name = str(zip_file)
         self.interpret(interpreter, zip_file_name)
         assert interpreter.rpars.DOMAINS == {'1': zip_file_name}
+        self.interpret(interpreter, str(zip_file.with_suffix('')))
+        assert interpreter.rpars.DOMAINS == {'1': zip_file_name,
+                                             '2': zip_file_name}
 
     def test_interpret_invalid(self, interpreter):
         """Ensure invalid DOMAIN raises exceptions."""
         self.check_raises(interpreter, 'invalid_path', err.ParameterError)
+
+    def test_duplicate_name(self, interpreter):
+        """Ensure that no two domains can have the same name."""
+        interpreter.rpars.DOMAINS['domain'] = 'path_to_domain'
+        self.check_raises(interpreter, 'path_to_domain', err.ParameterError,
+                          flags_str='domain')
 
 
 class TestDomainStep(_TestInterpretBase):
