@@ -127,7 +127,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
 _BELOW_DEBUG = 2
 
 
-class ParameterInterpreter:                                                     # TODO: self-tear-down
+class ParameterInterpreter:
     """Class to interpret parameters from the PARAMETERS file.
 
     To add a new parameter, add a method with the name 'interpret_<param>'.
