@@ -170,7 +170,7 @@ class ParameterInterpreter:
         for param, assignment in self._get_param_assignments():
             # Check if we are doing a domain calculation
             _is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
-            if _is_domain_calc and param in self.domains_ignore_params:
+            if _is_domain_calc and param in self.domains_ignore_params:         # TODO: shouldn't we complain rather than silently skip?
                 continue
 
             self._interpret_param(param, assignment)
@@ -630,7 +630,7 @@ class ParameterInterpreter:
         if not compiler_str.startswith(("'", '"')):
             message = ('No valid shorthand and not '
                        'delimited by quotation marks')
-            raise ParameterError(param, message)
+            raise ParameterValueError(param, message=message)
 
         delim = assignment.values_str[0]
         _, compiler_str, _ = assignment.values_str.split(delim, maxsplit=2)

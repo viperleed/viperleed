@@ -393,28 +393,35 @@ class TestFortranComp(_TestInterpretBase):
     """Tests for interpreting FORTRAN_COMP."""
 
     param = 'FORTRAN_COMP'
-    valid = {  # id: (assign_value, assign_flag, expect_pre, expect_post)
-        'default_intel': ('ifort', '',
+    valid = {  # id: (assign_flag, assign_value, expect_pre, expect_post)
+        'default_intel': ('', 'ifort',
                           'ifort -O2 -I/opt/intel/mkl/include',
                           '-L/opt/intel/mkl/lib/intel64'),
-        'default_gnu': ('gfortran', '', 'gfortran',
+        'default_gnu': ('', 'gfortran', 'gfortran',
                         '-llapack -lpthread -lblas'),
-        'default_intel_mpi': ('mpiifort', 'mpi', 'mpiifort', None),
-        'default_gnu_mpi': ('mpifort', 'mpi', 'mpifort -Ofast -no-pie', None),
-        'custom_no_flag': ('"ifort -O3 -march=native"', '',
+        'default_intel_mpi': ('mpi', 'mpiifort', 'mpiifort', None),
+        'default_gnu_mpi': ('mpi', 'mpifort', 'mpifort -Ofast -no-pie', None),
+        'custom_no_flag': ('', '"ifort -O3 -march=native"',
                            'ifort -O3 -march=native', None),
-        'custom_post_flag': ('"-L/opt/intel/mkl/lib/intel64"', 'post',
+        'custom_post_flag': ('post', '"-L/opt/intel/mkl/lib/intel64"',
                              None, '-L/opt/intel/mkl/lib/intel64'),
-        'custom_mpi_flag': ('"mpifort -fallow-argument-mismatch"', 'mpi',
-                            'mpifort -fallow-argument-mismatch', None)
+        'custom_mpi_flag': ('mpi', '"mpifort -fallow-argument-mismatch"',
+                            'mpifort -fallow-argument-mismatch', None),
+        'custom_mpi_post_flag': ('mpipost', '"-L/opt/intel/mkl/lib/intel64"',
+                                 None, '-L/opt/intel/mkl/lib/intel64'),
+        }
+    invalid = {
+        'missing quote': ('', 'abcd', err.ParameterValueError),
+        'too many flags': ('f1 f2', 'gfortran', err.ParameterUnknownFlagError),
+        'unknown flag': ('invalid', '"ifort"', err.ParameterUnknownFlagError),
         }
 
     # About the disable below: In principle 'pre' and 'post' could
     # be merged into a tuple, but the parametrization above would
     # look even more complex
-    @pytest.mark.parametrize('val,flag,pre,post', valid.values(), ids=valid)
+    @pytest.mark.parametrize('flag,val,pre,post', valid.values(), ids=valid)
     # pylint: disable-next=too-many-arguments
-    def test_interpret_valid(self, val, flag, pre, post,
+    def test_interpret_valid(self, flag, val, pre, post,
                              interpreter, subtests):
         """Check correct interpretation of valid FORTRAN_COMP(_MPI)."""
         assignment = self.assignment(val, flags_str=flag)
@@ -430,6 +437,11 @@ class TestFortranComp(_TestInterpretBase):
         if post is not None:
             with subtests.test('Check post'):
                 assert post in compiler[1]
+
+    @pytest.mark.parametrize('flag,val,exc', invalid.values(), ids=invalid)
+    def test_invalid(self, flag, val, exc, interpreter):
+        """Ensure invalid FORTRAN_COMP raises exceptions."""
+        self.check_raises(interpreter, val, exc, flags_str=flag)
 
 
 class TestIntpolDeg(_TestInterpretBase):
