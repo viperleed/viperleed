@@ -127,7 +127,7 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
 _BELOW_DEBUG = 2
 
 
-class ParameterInterpreter:                                                     # TODO: order alphabetically, self-tear-down
+class ParameterInterpreter:                                                     # TODO: self-tear-down
     """Class to interpret parameters from the PARAMETERS file.
 
     To add a new parameter, add a method with the name 'interpret_<param>'.
@@ -151,31 +151,19 @@ class ParameterInterpreter:                                                     
     def __init__(self, rpars):
         """Initialize interpreter instance from an Rparams."""
         self.rpars = rpars
-        self._slab = None
-        self.param_names = []  # In precedence order
+        self.slab = None
+        self._param_names = []  # In precedence order
 
         # Some flags
         self._search_conv_read = False
-        self.silent = False
-
-    @property
-    def slab(self):
-        """Return the slab currently used for interpretation (or None)."""
-        return self._slab
-
-    @slab.setter
-    def slab(self, slab):
-        """Set the slab to be used for interpretation."""
-        self._slab = slab
 
     def interpret(self, slab, silent=False):
         """Interpret all known parameters using slab."""
         self.slab = slab
         self._search_conv_read = False
-        self.silent = silent
 
         _backup_log_level = logger.level
-        if self.silent:
+        if silent:
             logger.setLevel(logging.ERROR)
 
         self._update_param_order()
@@ -189,7 +177,7 @@ class ParameterInterpreter:                                                     
             logger.log(_BELOW_DEBUG,
                        f'Successfully interpreted parameter {param}')
 
-        # finally set the log level back to what it was
+        # Finally set the log level back to what it was
         logger.setLevel(_backup_log_level)
 
     # ----------------  Helper methods for interpret() ----------------
@@ -197,7 +185,7 @@ class ParameterInterpreter:                                                     
         """Yield parameters and assignments for each PARAMETER read."""
         flat_params = (
             (param_name, assignment)
-            for param_name in self.param_names
+            for param_name in self._param_names
             for assignment in self.rpars.readParams[param_name]
             )
         yield from flat_params
@@ -214,11 +202,11 @@ class ParameterInterpreter:                                                     
     def _update_param_order(self):
         """Define order in which parameters should be read."""
         ordered_params = 'LOG_LEVEL', 'RUN'
-        self.param_names = [p for p in ordered_params
-                            if p in self.rpars.readParams]
-        self.param_names.extend(
+        self._param_names = [p for p in ordered_params
+                             if p in self.rpars.readParams]
+        self._param_names.extend(
             p for p in KNOWN_PARAMS
-            if p in self.rpars.readParams and p not in self.param_names
+            if p in self.rpars.readParams and p not in self._param_names
             )
 
     # ---------- Methods for interpreting simple parameters -----------
