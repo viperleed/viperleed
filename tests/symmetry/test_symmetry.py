@@ -368,6 +368,7 @@ class TestSlabSymmetrization:
         'rcmm-ucell=square': 'Often reduced to, e.g., pmg',
         'rcmm-ucell=rectangular': 'Often reduced to, e.g., rcm',
         'pmm-ucell=rectangular': 'Sometimes reduced to pm',
+        'pmg-ucell=rectangular': 'Sometimes identified as rcm',
         'cmm': 'Sometimes reduced to cm',
         'p2': 'Sometimes reduced to p1',
         'cm_1m1': 'Sometimes reduced to p1',
@@ -403,6 +404,9 @@ class TestSlabSymmetrization:
             ),
         'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
         'infoless_poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
+        'infoless_poscar-Fe3O4_(001)_cod1010369': (
+            'Sometimes reduced to cm from cmm'
+            ),
         'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
         'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
         'infoless_poscar-diamond':  'Invalid pm. May be correct rcm here',
