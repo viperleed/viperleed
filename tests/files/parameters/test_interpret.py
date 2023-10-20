@@ -218,6 +218,13 @@ class TestBeamIncidence(_TestInterpretBase):
         self.check_raises(interpreter, val, err.ParameterError)
 
 
+@pytest.fixture(name='ag100_interpreter')
+def fixture_ag100_interpreter(ag100, interpreter):
+    """Return a ParameterInterpreter for a Ag(100) slab."""
+    interpreter.slab, *_ = ag100
+    return interpreter
+
+
 class TestBulkRepeat(_TestInterpretBase):
     """Tests for interpreting BULK_REPEAT."""
 
@@ -230,12 +237,6 @@ class TestBulkRepeat(_TestInterpretBase):
         'vector': ('[1.0 2.0 3.0]', [1.0, 2.0, 3.0])
         }
     invalid = ('text', 'y(1.2)', 'z(abc)', '[]')
-
-    @pytest.fixture(name='ag100_interpreter')
-    def fixture_ag100_interpreter(self, ag100, interpreter):
-        """Return a ParameterInterpreter for a Ag(100) slab."""
-        interpreter.slab, *_ = ag100
-        return interpreter
 
     @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, ag100_interpreter):
@@ -737,20 +738,18 @@ class TestSiteDefInvalid(_TestInterpretBase):
         """Check complaints when no slab is provided."""
         self.check_raises(interpreter, '', err.ParameterNeedsSlabError)
 
-    def test_empty_slab(self, interpreter, ag100):
+    def test_empty_slab(self, ag100_interpreter):
         """Check complaints when an empty slab is provided."""
-        interpreter.slab, *_ = ag100
-        interpreter.slab.atlist.clear()
+        ag100_interpreter.slab.atlist.clear()
         with pytest.raises(err.ParameterError) as exc:
-            self.interpret(interpreter, '')
+            self.interpret(ag100_interpreter, '')
         assert exc.match('.*no atoms')
 
-    def test_no_elements(self, interpreter, ag100):
+    def test_no_elements(self, ag100_interpreter):
         """Check complaints when an empty slab is provided."""
-        interpreter.slab, *_ = ag100
-        interpreter.slab.n_per_elem.clear()
+        ag100_interpreter.slab.n_per_elem.clear()
         with pytest.raises(err.ParameterError) as exc:
-            self.interpret(interpreter, '')
+            self.interpret(ag100_interpreter, '')
         assert exc.match('.*no elements')
 
     invalid = {  # element, spec, exception
@@ -762,10 +761,9 @@ class TestSiteDefInvalid(_TestInterpretBase):
         }
 
     @pytest.mark.parametrize('element,val,exc', invalid.values(), ids=invalid)
-    def test_invalid(self, element, val, exc, interpreter, ag100):
+    def test_invalid(self, element, val, exc, ag100_interpreter):
         """Check complaints when an empty slab is provided."""
-        interpreter.slab, *_ = ag100
-        self.check_raises(interpreter, val, exc, flags_str=element)
+        self.check_raises(ag100_interpreter, val, exc, flags_str=element)
 
 
 class _TestWoodsOrMatrixParam(_TestInterpretBase):
@@ -777,11 +775,10 @@ class _TestWoodsOrMatrixParam(_TestInterpretBase):
         value = getattr(interpreter.rpars, self.param)
         assert value == pytest.approx(np.array([[2, 0], [0, 2]]))
 
-    def test_interpret_woods(self, interpreter, ag100):
+    def test_interpret_woods(self, ag100_interpreter):
         """Check successful interpretation of a Woods notation."""
-        interpreter.slab, *_ = ag100
-        self.interpret(interpreter, 'p(2x1)')
-        value = getattr(interpreter.rpars, self.param)
+        self.interpret(ag100_interpreter, 'p(2x1)')
+        value = getattr(ag100_interpreter.rpars, self.param)
         assert value == pytest.approx(np.array([[2, 0], [0, 1]]))
 
     invalid = {
@@ -808,10 +805,10 @@ class TestSuperlattice(_TestWoodsOrMatrixParam):
         rpars = interpreter.rpars
         assert rpars.superlattice_defined
 
-    def test_interpret_woods(self, interpreter, ag100):
+    def test_interpret_woods(self, ag100_interpreter):
         """Check successful interpretation of a Woods SUPERLATTICE."""
-        super().test_interpret_woods(interpreter, ag100)
-        rpars = interpreter.rpars
+        super().test_interpret_woods(ag100_interpreter)
+        rpars = ag100_interpreter.rpars
         assert rpars.superlattice_defined
 
 
