@@ -726,6 +726,46 @@ class TestSearchCull(_TestInterpretBase):
         self.check_raises(interpreter, val, exc)
 
 
+class TestSiteDefInvalid(_TestInterpretBase):
+    """Tests of invalid conditions when interpreting SITE_DEF."""
+
+    param = 'SITE_DEF'
+
+    def test_missing_slab(self, interpreter):
+        """Check complaints when no slab is provided."""
+        self.check_raises(interpreter, '', err.ParameterNeedsSlabError)
+
+    def test_empty_slab(self, interpreter, ag100):
+        """Check complaints when an empty slab is provided."""
+        interpreter.slab, *_ = ag100
+        interpreter.slab.atlist.clear()
+        with pytest.raises(err.ParameterError) as exc:
+            self.interpret(interpreter, '')
+        assert exc.match('.*no atoms')
+
+    def test_no_elements(self, interpreter, ag100):
+        """Check complaints when an empty slab is provided."""
+        interpreter.slab, *_ = ag100
+        interpreter.slab.n_per_elem.clear()
+        with pytest.raises(err.ParameterError) as exc:
+            self.interpret(interpreter, '')
+        assert exc.match('.*no elements')
+
+    invalid = {  # element, spec, exception
+        'wrong element': ('Te', 'surf 1-10', err.ParameterUnknownFlagError),
+        'top twice': ('Ag', 'topmost top(2) others top(10)',
+                      err.ParameterValueError),
+        'too few specs': ('Ag', 'spec 1-10, surf', err.ParameterParseError),
+        'unknown specs': ('Ag', 'surf abcd', err.ParameterParseError),
+        }
+
+    @pytest.mark.parametrize('element,val,exc', invalid.values(), ids=invalid)
+    def test_invalid(self, element, val, exc, interpreter, ag100):
+        """Check complaints when an empty slab is provided."""
+        interpreter.slab, *_ = ag100
+        self.check_raises(interpreter, val, exc, flags_str=element)
+
+
 class _TestWoodsOrMatrixParam(_TestInterpretBase):
     """Tests for interpreting a parameter in Woods or matrix notation."""
 

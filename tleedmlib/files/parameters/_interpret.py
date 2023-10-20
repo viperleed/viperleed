@@ -1239,37 +1239,101 @@ class ParameterInterpreter:                                                     
             self.rpars.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, search_start)
 
-    def interpret_site_def(self, assignment):                                  # TODO: clean up this mess, also write tests
+    def interpret_site_def(self, assignment):                                   # TODO: custom class
+        """Assign the SITE_DEF for one POSCAR element."""
         param = 'SITE_DEF'
-        newdict = {}
-        sublists = splitSublists(assignment.values, ',')
-        for sl in sublists:
-            atnums = []
-            for i in range(1, len(sl)):
-                ir = readIntRange(sl[i])
-                if len(ir) > 0:
-                    atnums.extend(ir)
-                elif 'top(' in sl[i]:
-                    if self.slab is None:
-                        self.rpars.setHaltingLevel(3)
-                        raise ParameterError(
-                            param,
-                            ('SITE_DEF parameter contains a top() '
-                             'function, but no slab was passed')
-                        )
-                    n = int(sl[i].split('(')[1].split(')')[0])
-                    csatlist = sorted(self.slab.atlist,
-                                        key=lambda atom: atom.pos[2])
-                    while n > 0:
-                        at = csatlist.pop()
-                        if at.el == assignment.flags[0]:
-                            atnums.append(at.num)
-                            n -= 1
-                else:
-                    self.rpars.setHaltingLevel(3)
-                    raise ParameterError(param, 'Problem with SITE_DEF input format')
-            newdict[sl[0]] = atnums
-        self.rpars.SITE_DEF[assignment.flags[0]] = newdict
+        self._ensure_has_sitedef_compatible_slab(param)
+        if assignment.values_str.count('top(') > 1:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterValueError(
+                param,
+                message='only a single top() allowed per SITE_DEF line'
+                )
+
+        site_element = assignment.flag.capitalize()
+        if site_element not in self.slab.elements:
+            msg = (f'{site_element!r} is not one of the valid '
+                   'POSCAR elements:' + ', '.join(self.slab.elements))
+            raise ParameterUnknownFlagError(param, message=msg)
+
+        sorted_atoms = []
+        if 'top(' in assignment.values_str:
+            sorted_atoms = sorted(
+                (at for at in self.slab.atlist if at.el == site_element),
+                key=lambda atom: atom.pos[2],
+                reverse=True
+                )
+
+        site_def_dict = {}
+        for site_label, *site_specs in splitSublists(assignment.values, ','):
+            if not site_specs:
+                self.rpars.setHaltingLevel(2)
+                err = ('No atom selection pattern found for site '
+                       f'label {site_label}, element {site_element}.')
+                raise ParameterParseError(param, message=err)
+            try:
+                atnums = self._get_atom_numbers_for_site(site_specs,
+                                                         sorted_atoms)
+            except ValueError as exc:  # Invalid syntax
+                self.rpars.setHaltingLevel(3)
+                raise ParameterParseError(
+                    param,
+                    f'Invalid syntax in {assignment.values_str!r}: {exc!r}'
+                    ) from None
+            site_def_dict[site_label] = atnums
+        self.rpars.SITE_DEF[site_element] = site_def_dict
+
+    def _ensure_has_sitedef_compatible_slab(self, param):
+        """Complain if self.slab is inappropriate for SITE_DEF."""
+        if self.slab is None:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterNeedsSlabError(param)
+        if not self.slab.atlist:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterError(param, 'Slab contains no atoms')
+        if not self.slab.elements:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterError(param, 'Slab has no elements')
+
+    @staticmethod
+    def _get_atom_numbers_for_site(site_specs, sorted_atoms):
+        """Return atom numbers given a selection specification.
+
+        Parameters
+        ----------
+        site_specs : Sequence
+            Items are strings. Each corresponds to a specification for
+            selecting some atom numbers. Acceptable specifications are:
+            - single integer
+            - range of integers (e.g., '1-5', '10:28')
+            - 'top(N)'
+        sorted_atoms : Sequence
+            Atom objects, with element already correct for the specific
+            site, sorted by decreasing fractional position. Used only
+            if one of the `site_specs` is 'top(N)'.
+
+        Returns
+        -------
+        atnums : list
+            Atom numbers that are selected by the given `site_specs`.
+
+        Raises
+        ------
+        ValueError
+            If any of the `site_specs` has invalid syntax.
+        """
+        atnums = []
+        for site_spec in site_specs:
+            extra_atom_numbers = readIntRange(site_spec)
+            if extra_atom_numbers:
+                atnums.extend(extra_atom_numbers)
+                continue
+            if 'top(' in site_spec:
+                n_top = int(site_spec.split('(')[1].split(')')[0])
+                atnums.extend(at.num for at in sorted_atoms[:n_top])
+                continue
+            raise ValueError(site_spec)
+        return atnums
 
     def interpret_superlattice(self, assignment):
         """Assign parameter SUPERLATTICE (Wood's or matrix notation)."""
