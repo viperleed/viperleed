@@ -440,10 +440,13 @@ class ParameterInterpreter:
 
     def _ensure_single_value_assignment(self, param, assignment):
         """Raise if assignment contains multiple values."""
-        if assignment.other_values:
+        n_values = len(assignment.values)
+        if not n_values:
             self.rpars.setHaltingLevel(1)
-            raise ParameterNumberOfInputsError(param,
-                                               (len(assignment.values), 1))
+            raise ParameterHasNoValueError(param)
+        if n_values != 1:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param, (n_values, 1))
 
     def _ensure_no_flags_assignment(self, param, assignment):
         """Raise if assignment contains any flag."""
