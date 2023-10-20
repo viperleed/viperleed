@@ -86,6 +86,9 @@ class _TestInterpretBase:
 
     def interpret(self, interpreter, value_str, **kwargs):
         """Interpret a value for self.param."""
+        if not self.param:
+            raise AttributeError('Did you forget to set the '
+                                 'class attribute param?')
         method = getattr(interpreter, f'interpret_{self.param.lower()}')
         return method(self.assignment(value_str, **kwargs))
 
@@ -356,10 +359,11 @@ class TestFortranComp(_TestInterpretBase):
                             'mpifort -fallow-argument-mismatch', None)
         }
 
-    # pylint: disable=too-many-arguments
-    # In principle 'pre' and 'post' could be merged into a tuple,
-    # but the parametrization above would look even more complex
+    # About the disable below: In principle 'pre' and 'post' could
+    # be merged into a tuple, but the parametrization above would
+    # look even more complex
     @pytest.mark.parametrize('val,flag,pre,post', valid.values(), ids=valid)
+    # pylint: disable-next=too-many-arguments
     def test_interpret_valid(self, val, flag, pre, post,
                              interpreter, subtests):
         """Check correct interpretation of valid FORTRAN_COMP(_MPI)."""
@@ -376,7 +380,6 @@ class TestFortranComp(_TestInterpretBase):
         if post is not None:
             with subtests.test('Check post'):
                 assert post in compiler[1]
-    # pylint: enable=too-many-arguments
 
 
 class TestIntpolDeg(_TestInterpretBase):
