@@ -1110,6 +1110,8 @@ class ParameterInterpreter:
 
         Raises
         ------
+        ParameterHasNoValueError
+            If assignment carries no values.
         ParameterNumberOfInputsError
             If there are more than two values for this parameter.
         ParameterNeedsFlagError
