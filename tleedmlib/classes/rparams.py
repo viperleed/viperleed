@@ -258,7 +258,7 @@ class Rparams:
         self.output_interval = None # changed in updateDerivedParams
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
         self.searchStartInit = None
-        self.search_convergence_known = False  # used by parameter.py
+
         # script progress tracking
         self.halt = 0
         self.systemName = ""

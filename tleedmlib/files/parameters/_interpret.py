@@ -1087,84 +1087,135 @@ class ParameterInterpreter:
         else:
             raise ParameterValueError(param, value)
 
-    def interpret_search_convergence(self, assignment, is_updating=False):
-        param = 'SEARCH_CONVERGENCE'
-        search_convergence_known = self.rpars.search_convergence_known
+    def interpret_search_convergence(self, assignment, is_updating=False):      # TODO: custom class
+        """Interpret SEARCH_CONVERGENCE parameter.
 
+        This method also sets rpars.searchConvInit if `is_updating`
+        is True-thy and the values to be assigned have changed.
+
+        Parameters
+        ----------
+        assignment : Assignment
+            The assignment line, containing details of the
+            flags and values to be interpreted.
+        is_updating : bool, optional
+            Whether this method is being called as part of a
+            parameters.update (True) or an interpretPARAMETERS
+            (False). Default is False.
+
+        Raises
+        ------
+        ParameterNumberOfInputsError
+            If there are more than two values for this parameter.
+        ParameterNeedsFlagError
+            If more values are present, but no flag was given.
+        ParameterUnknownFlagError
+            If the first flag is neither 'dgen' nor 'gaussian'.
+        ParameterUnknownFlagError
+            If the first flag is 'gaussian' and there are more
+            flags.
+        ParameterUnknownFlagError
+            If first flag is 'dgen' and there is more than one
+            additional flag, or if the additional flag is not
+            one of the acceptable ones ('dec', 'best', 'all').
+        ParameterFloatConversionError
+            If numeric values cannot be converted to float.
+        ParameterRangeError
+            If Gaussian width, its scaling factor, dgen, or its
+            scaling factor are out of bounds
+        """
+        param = 'SEARCH_CONVERGENCE'
+        if not assignment.values:
+            raise ParameterHasNoValueError(param)
         if len(assignment.values) > 2:
             raise ParameterNumberOfInputsError(param)
 
-        if (not assignment.flags and len(assignment.values) == 1 and
-            assignment.value.lower() == 'off' and
-            not is_updating):                                                   # TODO: this is the behaviour of parameters.update(). Was skipping this intended there?
+        if (not assignment.flags
+                and not assignment.other_values
+                and assignment.value.lower() == 'off'
+                and not is_updating):                                           # TODO: this is the behaviour of parameters.update(). Was skipping this intended there?
             self.rpars.GAUSSIAN_WIDTH_SCALING = 1.
             return
 
         if not assignment.flags:
             raise ParameterNeedsFlagError(param)
-        elif assignment.flag.lower() not in ['dgen', 'gaussian']:
+        if assignment.flag.lower() not in ('dgen', 'gaussian'):
             raise ParameterUnknownFlagError(param, f'{assignment.flag!r}')
 
-        try:
-            numeric = [float(value) for value in assignment.values]
-        except ValueError as err:
-            raise ParameterFloatConversionError(param) from err
+        numeric = [None, None]
+        for i, value in enumerate(assignment.values):
+            try:
+                numeric[i] = float(value)
+            except ValueError as err:
+                raise ParameterFloatConversionError(param) from err
 
-        _errors = []
         if assignment.flag.lower() == 'gaussian':
-            if len(numeric) == 1:
-                numeric.append(0.5)
-            gauss_width, scaling = numeric
-            should_update = (not is_updating
-                             or gauss_width != self.rpars.searchConvInit['gaussian'])
-            if gauss_width is not None and gauss_width > 0 and should_update:
-                self.rpars.GAUSSIAN_WIDTH = gauss_width
-                if is_updating:
-                    self.rpars.searchConvInit['gaussian'] = gauss_width
-            elif should_update:
-                message = 'gaussian width should be a positive number'
-                _errors.append(
-                    ParameterError(param, message=message)
-                    )
-            if scaling is not None and 0 < scaling <= 1:
-                self.rpars.GAUSSIAN_WIDTH_SCALING = scaling
-            elif scaling is not None:
-                _errors.append(
-                    ParameterRangeError(param, scaling, (0, 1))
-                    )
-        elif assignment.flag.lower() == 'dgen':
-            if len(assignment.flags) == 1:
-                target = 'dec'
-            elif assignment.flags[1].lower() in ['dec', 'best', 'all']:
-                target = assignment.flags[1].lower()
-            else:
-                raise ParameterUnknownFlagError(param, f'{assignment.flags[1]!r}')
-            max_dgen, scaling = numeric
-            should_update = (not is_updating
-                             or max_dgen != self.rpars.searchConvInit['dgen'][target])
-            if max_dgen is not None and max_dgen > 0 and should_update:
-                if not search_convergence_known:  # clear default values
-                    self.rpars.SEARCH_MAX_DGEN = {'all': 0, 'best': 0, 'dec': 0}
-                    search_convergence_known = True
-                self.rpars.SEARCH_MAX_DGEN[target] = max_dgen
-                if is_updating:
-                    self.rpars.searchConvInit['dgen'][target] = max_dgen
-            elif should_update:
-                message = 'dgen should be a positive number'
-                _errors.append(
-                    ParameterError(param, message=message)
-                    )
-            if scaling is not None and scaling >= 1:
-                self.rpars.SEARCH_MAX_DGEN_SCALING[target] = scaling
-            elif scaling:
-                message = 'scaling value cannot be smaller than 1'
-                _errors.append(
-                    ParameterError(param, message=message)
-                    )
+            self._ensure_single_flag_assignment(param, assignment)
+            self._interpret_search_convergence_gaussian(
+                param, *numeric, is_updating
+                )
+        else:
+            self._interpret_search_convergence_dgen(
+                param, assignment.other_flags, *numeric, is_updating
+                )
 
-        if _errors:
-            raise _errors[0]
-        self.rpars.search_convergence_known = search_convergence_known
+    # disable: The only option would be to pack max_dgen and scaling
+    # into a single object, but I'm not sure this would make it
+    # more understandable.
+    # pylint: disable-next=too-many-arguments
+    def _interpret_search_convergence_dgen(self, param, flags, max_dgen,
+                                           scaling, is_updating):
+        """Assign the SEARCH_MAX_DGEN/_SCLING parameters."""
+        if len(flags) > 1:
+            raise ParameterUnknownFlagError(param, ' '.join(flags[1:]))
+        target = flags[0] if flags else 'dec'
+        if target not in ['dec', 'best', 'all']:
+            raise ParameterUnknownFlagError(param, f'{target!r}')
+        should_store_new_value = (
+            not is_updating
+            or max_dgen != self.rpars.searchConvInit['dgen'][target]
+            )
+        valid = max_dgen is not None and max_dgen > 0
+        if should_store_new_value and not valid:
+            message = 'dgen should be a positive number'
+            raise ParameterRangeError(param, message=message)
+
+        if should_store_new_value and not self._search_conv_read:
+            # Clear default values
+            self.rpars.reset_default('SEARCH_MAX_DGEN')
+            self._search_conv_read = True
+        if should_store_new_value:
+            self.rpars.SEARCH_MAX_DGEN[target] = max_dgen
+        if should_store_new_value and is_updating:
+            self.rpars.searchConvInit['dgen'][target] = max_dgen
+
+        if scaling is not None and scaling >= 1:
+            self.rpars.SEARCH_MAX_DGEN_SCALING[target] = scaling
+        elif scaling:
+            message = 'dgen scaling value cannot be smaller than 1'
+            raise ParameterRangeError(param, message=message)
+
+    def _interpret_search_convergence_gaussian(self, param, gauss_width,
+                                               scaling, is_updating):
+        """Assign the GAUSSIAN_WIDTH/_SCALING parameters."""
+        should_store_new_value = (
+            not is_updating
+            or gauss_width != self.rpars.searchConvInit['gaussian']
+            )
+        valid = gauss_width is not None and gauss_width > 0
+        if should_store_new_value and not valid:
+            message = 'gaussian width should be a positive number'
+            raise ParameterRangeError(param, message=message)
+
+        if should_store_new_value:
+            self.rpars.GAUSSIAN_WIDTH = gauss_width
+        if should_store_new_value and is_updating:
+            self.rpars.searchConvInit['gaussian'] = gauss_width
+
+        if scaling is not None and 0 < scaling <= 1:
+            self.rpars.GAUSSIAN_WIDTH_SCALING = scaling
+        elif scaling is not None:
+            raise ParameterRangeError(param, scaling, (0, 1))
 
     def interpret_search_cull(self, assignment):                                # TODO: custom class to merge the value and type, probably a float subclass (using __new__)
         """Assign parameter SEARCH_CULL and SEARCH_CULL_TYPE."""
