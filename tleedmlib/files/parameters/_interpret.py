@@ -128,6 +128,11 @@ def interpretPARAMETERS(rpars, slab=None, silent=False):
 _BELOW_DEBUG = 2
 
 
+# Disable 'too-many-public-methods' because of the mechanics of a
+# ParameterInterpreter: a dispatcher for interpreting PARAMETERS.
+# Methods are public, but are very rarely used. Most of the times
+# they are used via the .interpret() interface.
+# pylint: disable-next=too-many-public-methods
 class ParameterInterpreter:
     """Class to interpret parameters from the PARAMETERS file.
 
@@ -211,6 +216,10 @@ class ParameterInterpreter:
             )
 
     # ---------- Methods for interpreting simple parameters -----------
+    # Disable pylint warning since, while 6 is a bit many, we can't
+    # really do much better than this. Merging some in a container
+    # does not seem clearer.
+    # pylint: disable-next=too-many-arguments
     def interpret_bool_parameter(self, assignment,
                                  allowed_values=None,
                                  param=None, return_only=False,
@@ -289,6 +298,10 @@ class ParameterInterpreter:
             setattr(self.rpars, param.upper(), value)
         return value
 
+    # Disable pylint warning since, while 6 is a bit many, we can't
+    # really do much better than this. Merging some in a container
+    # does not seem clearer.
+    # pylint: disable-next=too-many-arguments
     def interpret_numerical_parameter(self, assignment,
                                       param=None, return_only=False,
                                       bounds=NumericBounds(),                   # TODO: ideally one could default to actually using the limits known from self.rpars.get_limits!
@@ -957,7 +970,7 @@ class ParameterInterpreter:
             value_float = float(value)
         except ValueError:
             self.rpars.setHaltingLevel(1)
-            raise ParameterFloatConversionError(param, value)
+            raise ParameterFloatConversionError(param, value) from None
         if value_float >= 0:
             self.rpars.PARABOLA_FIT[flag] = value_float
             return
@@ -1716,7 +1729,7 @@ class ParameterInterpreter:
         except ValueError:
             err_ = f'Expected "flag value" pairs, found "{flag_value_pair}"'
             self.rpars.setHaltingLevel(1)
-            raise ParameterNumberOfInputsError(param, message=err_)
+            raise ParameterNumberOfInputsError(param, message=err_) from None
         return flag, value
 
     def _parse_energy_range(self, param, assignment,
