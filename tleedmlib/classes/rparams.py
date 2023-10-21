@@ -333,6 +333,11 @@ class Rparams:
             value = list(value)
         return value
 
+    def reset_default(self, param):
+        """Reset param to its default value."""
+        default = self.get_default(param)
+        setattr(self, param, default)
+
     @staticmethod
     def get_limits(param):
         """Return the smallest and largest acceptable values of param."""

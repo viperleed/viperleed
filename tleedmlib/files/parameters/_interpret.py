@@ -1191,7 +1191,7 @@ class ParameterInterpreter:
             raise ParameterValueError(param, message)
 
         if not assignment.other_values:
-            rpars.SEARCH_CULL_TYPE = rpars.get_default('SEARCH_CULL_TYPE')
+            rpars.reset_default('SEARCH_CULL_TYPE')
             return
         if len(assignment.other_values) > 1:
             rpars.setHaltingLevel(1)
@@ -1451,7 +1451,7 @@ class ParameterInterpreter:
         param = 'SYMMETRY_FIX'
         group = assignment.values_str.lower()
         if group.startswith('t'):  # determine symmetry automatically
-            self.rpars.SYMMETRY_FIX = self.rpars.get_default(param)
+            self.rpars.reset_default('SYMMETRY_FIX')
             return
         if group.startswith('f'):
             self.rpars.SYMMETRY_FIX = 'p1'
@@ -1521,7 +1521,7 @@ class ParameterInterpreter:
         # (1) Single value input: treat as default if it is a single
         # underscore, otherwise as a request for a single energy
         if not assignment.other_values and assignment.value == '_':
-            self.rpars.THEO_ENERGIES = self.rpars.get_default(param)
+            self.rpars.reset_default(param)
             return
         if not assignment.other_values:
             energies = (assignment.value, assignment.value, '1')
