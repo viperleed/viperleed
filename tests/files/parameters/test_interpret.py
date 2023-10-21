@@ -171,7 +171,7 @@ class TestNumericalParameter(_TestInterpretBase):
     @parametrize('val,bounds', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, bounds, interpreter):
         """Ensure exceptions are raised for invalid combinations."""
-        with pytest.raises(err.ParameterError):
+        with pytest.raises(err.ParameterRangeError):
             interpreter.interpret_numerical_parameter(self.assignment(val),
                                                       bounds=bounds)
 
@@ -189,7 +189,7 @@ class TestSimpleParamsExamples:
         """Check exceptions are raised for invalid N_BULK_LAYERS."""
         # N_BULK_LAYERS must be 1 or 2
         assignment = Assignment('3', 'N_BULK_LAYERS')
-        with pytest.raises(err.ParameterError):
+        with pytest.raises(err.ParameterRangeError):
             interpreter.interpret_n_bulk_layers(assignment)
 
     def test_interpret_t_debye(self, interpreter):
@@ -212,17 +212,19 @@ class TestAverageBeams(_TestInterpretBase):
     valid = {'off': ('off', False),
              'all': ('all', (0.0, 0.0)),
              'custom': ('45.0 60', (45.0, 60.0)),}
-    invalid = ('invalid input',)
+    invalid = {
+        'invalid input': ('invalid input', err.ParameterFloatConversionError),
+        }
 
     @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid AVERAGE_BEAMS."""
         self.check_assigned(interpreter, val, expect)
 
-    @parametrize('val', invalid, ids=invalid)
-    def test_interpret_invalid(self, val, interpreter):
+    @parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid AVERAGE_BEAMS raises exceptions."""
-        self.check_raises(interpreter, val, err.ParameterError)
+        self.check_raises(interpreter, val, exc)
 
 
 class TestBeamIncidence(_TestInterpretBase):
@@ -344,13 +346,13 @@ class TestDomain(_TestInterpretBase):
 
     def test_interpret_invalid(self, interpreter):
         """Ensure invalid DOMAIN raises exceptions."""
-        self.check_raises(interpreter, 'invalid_path', err.ParameterError)
+        self.check_raises(interpreter, 'invalid_path', err.ParameterValueError)
 
     def test_duplicate_name(self, interpreter):
         """Ensure that no two domains can have the same name."""
         interpreter.rpars.DOMAINS['domain'] = 'path_to_domain'
-        self.check_raises(interpreter, 'path_to_domain', err.ParameterError,
-                          flags_str='domain')
+        self.check_raises(interpreter, 'path_to_domain',
+                          err.ParameterValueError, flags_str='domain')
 
 
 class TestDomainStep(_TestInterpretBase):
@@ -362,7 +364,7 @@ class TestDomainStep(_TestInterpretBase):
         'value': ('200', err.ParameterRangeError),
         'out of range low': ('-5', err.ParameterRangeError),
         'non integer': ('5.5', err.ParameterIntConversionError),
-        'does not divide 100': ('38', err.ParameterError),
+        'does not divide 100': ('38', err.ParameterValueError),
         'too many': ('12 13', err.ParameterNumberOfInputsError),
         }
 
@@ -414,7 +416,7 @@ class TestElementRename(_TestInterpretBase):
 
     def test_interpret_invalid_element(self, interpreter):
         """Ensure that an invalid chemical element raises exceptions."""
-        self.check_raises(interpreter, 'Op', err.ParameterError,
+        self.check_raises(interpreter, 'Op', err.ParameterValueError,
                           flags_str='Uk')
 
 
@@ -510,7 +512,7 @@ class TestIntpolDeg(_TestInterpretBase):
     @parametrize('val', invalid, ids=invalid)
     def test_interpret_invalid(self, val, interpreter):
         """Ensure invalid INTPOL_DEG raises exceptions."""
-        self.check_raises(interpreter, val, err.ParameterError)
+        self.check_raises(interpreter, val, err.ParameterValueError)
 
 
 class TestIVShiftRange(_TestInterpretBase):
@@ -845,7 +847,7 @@ class TestRun(_TestInterpretBase):
         'range': ('1-3', [0, 1, 2, 3]),
         }
     invalid = {'section': ('invalid', err.ParameterValueError),
-               'empty': ('', err.ParameterError),
+               'empty': ('', err.ParameterHasNoValueError),
                'syntax underscore': ('1 _ 2', err.ParameterValueError),
                'syntax section': ('1, x', err.ParameterValueError)}
 
@@ -868,7 +870,7 @@ class TestSearchBeams(_TestInterpretBase):
              'integer': ('I', 1), 'alt integer': ('1', 1),
              'fractional': ('F', 2), 'alt fractional': ('2', 2)}
     invalid = {'one value': ('3', err.ParameterValueError),
-               'more values': ('0 1', err.ParameterError)}
+               'more values': ('0 1', err.ParameterNumberOfInputsError)}
 
     @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
@@ -1255,8 +1257,8 @@ class TestV0Real(_TestInterpretBase):
         'custom': ('EE', 'EEV+workfn'),
         }
     invalid = {
-        'too_few': 'rundgren 1.0 2.0',
-        'float': 'rundgren 1.0 2.0 3.0 four',
+        'too_few': ('rundgren 1.0 2.0', err.ParameterNumberOfInputsError),
+        'float': ('rundgren 1 2 3.0 four', err.ParameterFloatConversionError),
         }
 
     @parametrize('val,expect', valid.values(), ids=valid)
@@ -1264,7 +1266,7 @@ class TestV0Real(_TestInterpretBase):
         """Check correct interpretation of valid V0_REAL."""
         self.check_assigned(interpreter, val, expect)
 
-    @parametrize('val', invalid.values(), ids=invalid)
-    def test_interpret_invalid(self, val, interpreter):
+    @parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid V0_REAL raises exceptions."""
-        self.check_raises(interpreter, val, err.ParameterError)
+        self.check_raises(interpreter, val, exc)

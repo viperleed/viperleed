@@ -558,7 +558,7 @@ class ParameterInterpreter:
         if name in self.rpars.DOMAINS:  # Already defined
             error_message = f'Multiple sources defined for domain {name}'
             self.rpars.setHaltingLevel(3)
-            raise ParameterError(parameter=param, message=error_message)
+            raise ParameterValueError(param, message=error_message)
         if not name:  # Get unique name                                         # TODO: used in several other places
             i = 1
             while str(i) in self.rpars.DOMAINS:
@@ -575,7 +575,7 @@ class ParameterInterpreter:
             error_message = (f'Value for DOMAIN {name} could not be '
                              'interpreted as either a path or a .zip file')
             self.rpars.setHaltingLevel(3)
-            raise ParameterError(parameter=param, message=error_message)
+            raise ParameterValueError(param, message=error_message)
         self.rpars.DOMAINS[name] = path
 
     def interpret_domain_step(self, assignment):
@@ -597,7 +597,7 @@ class ParameterInterpreter:
             message = (f'100 is not divisible by given value {domain_step}. '
                        f'Consider using {j} instead')
             self.rpars.setHaltingLevel(1)
-            raise ParameterError(param, message=message)
+            raise ParameterValueError(param, message=message)
         self.rpars.DOMAIN_STEP = domain_step
 
                                                                                 # TODO: shouldn't we have a slab? Should we check that it has atoms, elements, and that the POSCAR element exists? Similar questions for ELEMENT_RENAME.
@@ -684,7 +684,7 @@ class ParameterInterpreter:
             return
         self.rpars.setHaltingLevel(1)
         message = 'Only degree 3 and 5 interpolation supported at the moment'
-        raise ParameterError(parameter=param, message=message)
+        raise ParameterValueError(param, message=message)
 
     def interpret_iv_shift_range(self, assignment):                             # TODO: would be very convenient to have a simple EnergyRange (namedtuple or dataclass) to use for this and THEO_ENERGIES. Then we could have .start, .stop, .step instead of indices.
         """Assign parameter IV_SHIFT_RANGE."""
@@ -1111,8 +1111,8 @@ class ParameterInterpreter:
             logger.info('Found domain search.')
         if not segments:
             self.rpars.setHaltingLevel(3)
-            raise ParameterError(param,
-                                 'RUN was defined, but no values were read')
+            message = f'{param} was defined, but no values were read'
+            raise ParameterHasNoValueError(param, message)
         # Insert initialization section if not present
         if segments[0] is not Section.INITIALIZATION:
             segments.insert(0, Section.INITIALIZATION)
@@ -1685,14 +1685,15 @@ class ParameterInterpreter:
             if len(rundgren_constants) != 4:
                 message = ('Rundgren-type function expects four '
                            'constants separated by whitespace')
-                raise ParameterParseError(param, message)
+                raise ParameterNumberOfInputsError(param, message=message)
             try:
                 self.rpars.V0_REAL = [float(c) for c in rundgren_constants]
             except ValueError as exc:
                 message = (f'Could not parse constants {rundgren_constants} '
                            'for Rundgren-type function')
                 self.rpars.setHaltingLevel(1)
-                raise ParameterError(param, message=message) from exc
+                raise ParameterFloatConversionError(param,
+                                                    message=message) from exc
             return
 
         # Pass a specific function to FORTRAN, but replace
