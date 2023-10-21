@@ -9,6 +9,7 @@ defined at runtime. Most default values are defined here.
 """
 
 from collections import defaultdict
+import copy
 import logging
 import os
 from pathlib import Path
@@ -40,7 +41,8 @@ NO_VALUE = None  # This needs to be a singleton, so "is NO_VALUE" works
 # Notice that the defaults in here that may be mutated during execution
 # are saved as immutable types to prevent inadvertent modification of
 # this global, and are rather converted to their mutable equivalent
-# in the relevant places
+# in the relevant places. The only difference is dictionaries. Copies
+# are used for them.
 DEFAULTS = {
     'EXPBEAMS_INPUT_FILE' : None,
     'FILAMENT_WF': {
@@ -65,6 +67,7 @@ DEFAULTS = {
     'RUN': (0, 1, 2, 3),
     'SEARCH_CULL_TYPE': 'genetic',
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
+    'SEARCH_MAX_DGEN': {'all': 0, 'best': 0, 'dec': 100},
     'SYMMETRY_FIX': '',
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
     'THEO_ENERGIES - no experiments': (20, 800, 3),
@@ -207,7 +210,7 @@ class Rparams:
         self.SEARCH_CULL = 0.1
         self.SEARCH_CULL_TYPE = self.get_default('SEARCH_CULL_TYPE')
         self.SEARCH_MAX_GEN = 100000  # maximum number of generations in search
-        self.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 100}
+        self.SEARCH_MAX_DGEN = self.get_default('SEARCH_MAX_DGEN')
         # maximum number of generations without change before search
         #   is stopped. All: all configs, best: only 1, dec: best 10%
         #    0: don't use parameter
@@ -331,6 +334,8 @@ class Rparams:
             raise ValueError(f'No default found for parameter {param}') from err
         if isinstance(value, tuple):
             value = list(value)
+        elif isinstance(value, dict):
+            value = copy.deepcopy(value)
         return value
 
     def reset_default(self, param):
