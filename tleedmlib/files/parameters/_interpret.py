@@ -1092,10 +1092,9 @@ class ParameterInterpreter:
     def _interpret_plot_iv__plot(self, assignment):
         """Assign PLOT_IV['plot']."""
         self._ensure_single_value_assignment(assignment)
-        synonyms = {True: ('1', 'on'),
-                    False: ('none', '0', 'off')}
+        extra_synonyms = {False: ('none',)}
         self.rpars.PLOT_IV['plot'] = self.interpret_bool_parameter(
-            assignment, synonyms, return_only=True
+            assignment, extra_synonyms, return_only=True
             )
 
     def interpret_run(self, assignment):
