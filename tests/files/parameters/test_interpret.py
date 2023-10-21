@@ -199,7 +199,7 @@ class TestSimpleParamsExamples:
         assert interpreter.rpars.T_DEBYE == pytest.approx(300.0)
 
     def test_interpret_layer_stack_vertical(self, interpreter):
-        """Check assignment of valid T_DEBYE."""
+        """Check assignment of valid LAYER_STACK_VERTICAL."""
         assignment = Assignment('c', 'LAYER_STACK_VERTICAL')
         interpreter.interpret_layer_stack_vertical(assignment)
         assert not interpreter.rpars.LAYER_STACK_VERTICAL
