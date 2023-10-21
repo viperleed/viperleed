@@ -378,7 +378,7 @@ class ParameterInterpreter:
         ----------
         wrapped : callable
             The callable that will be wrapped to create methods.
-            The a call to new_method(*args, **kwargs) becomes a
+            The call to new_method(*args, **kwargs) becomes a
             wrapped(*args, **wrapped_kwargs, **kwargs) call,
             where wrapped_kwargs is generated here using
             kwargs_names and new_methods_info.
@@ -616,7 +616,7 @@ class ParameterInterpreter:
         try:
             self.rpars.FILAMENT_WF = known_filaments[assignment.value.lower()]
         except KeyError:
-            self.interpret_numerical_parameter(assignment)                      # TODO: bounds? We probably want a POSITIVE_FLOAT
+            self.interpret_numerical_parameter(assignment)
 
     def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
         """Assign parameter FORTRAN_COMP."""
