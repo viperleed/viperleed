@@ -770,23 +770,23 @@ class TestPlotIV(_TestInterpretBase):
         'invalid axes': ('borders', 'invalid', err.ParameterParseError),
         'invalid legend': ('legends', 'invalid', err.ParameterParseError),
         'invalid overbar': ('overline', 'invalid', err.ParameterParseError),
-        'invalid perpage': ('perpage', 'wrong', err.ParameterIntConversionError),
-        # 'invalid perpage two': ('perpage', '5 wrong', err.ParameterIntConversionError),  # AttributeError bug
-        'perpage neg': ('perpage', '-5',  err.ParameterParseError),
-        'perpage neg two': ('perpage', '-5 -3',  err.ParameterParseError),
-        'empty axes': ('axes', '', err.ParameterParseError),                    # ParameterHasNoValueError
-        'empty legend': ('legend', '', err.ParameterParseError),                # ParameterHasNoValueError
-        'empty overbar': ('overbar', '', err.ParameterParseError),              # ParameterHasNoValueError
-        'empty perpage': ('perpage', '', err.ParameterIntConversionError),      # ParameterHasNoValueError
-
-        # Here some more conditions that should fail but do not
-        # 'empty plot': ('plot', '', err.ParameterHasNoValueError),
-        # 'empty colors': ('colors', '', err.ParameterHasNoValueError),
-        # 'two axes': ('axes', 'all none', err.ParameterNumberOfInputsError),
-        # 'two legend': ('legend', 'tr none', err.ParameterNumberOfInputsError),
-        # 'two overbar': ('overbar', 't f', err.ParameterNumberOfInputsError),
-        # 'two plot': ('plot', 'true 0', err.ParameterNumberOfInputsError),
-        # 'multi flag': ('plot axes', 'true', err.ParameterUnknownFlagError),
+        'invalid perpage': ('perpage', 'wrong',
+                            err.ParameterIntConversionError),
+        'invalid perpage two': ('perpage', '5 wrong',
+                                err.ParameterIntConversionError),
+        'perpage neg': ('perpage', '-5',  err.ParameterRangeError),
+        'perpage neg two': ('perpage', '-5 -3',  err.ParameterRangeError),
+        'empty axes': ('axes', '', err.ParameterHasNoValueError),
+        'empty colors': ('colors', '', err.ParameterHasNoValueError),
+        'empty legend': ('legend', '', err.ParameterHasNoValueError),
+        'empty overbar': ('overbar', '', err.ParameterHasNoValueError),
+        'empty perpage': ('perpage', '', err.ParameterHasNoValueError),
+        'empty plot': ('plot', '', err.ParameterHasNoValueError),
+        'two axes': ('axes', 'all none', err.ParameterNumberOfInputsError),
+        'two legend': ('legend', 'tr none', err.ParameterNumberOfInputsError),
+        'two overbar': ('overbar', 't f', err.ParameterNumberOfInputsError),
+        'two plot': ('plot', 'true 0', err.ParameterNumberOfInputsError),
+        'multi flag': ('plot axes', 'true', err.ParameterUnknownFlagError),
         }
 
     @pytest.mark.parametrize('flag,val,attr,expect', valid.values(), ids=valid)

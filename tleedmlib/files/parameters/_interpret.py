@@ -992,77 +992,103 @@ class ParameterInterpreter:
                                       allowed_range=(0, 1))
 
     def interpret_plot_iv(self, assignment):
+        """Assign parameter PLOT_IV."""
         param = 'PLOT_IV'
-        # there should be a flag
-        if not assignment.flags:
-            self.rpars.setHaltingLevel(1)
-            raise ParameterNeedsFlagError(param)
-
+        self._ensure_single_flag_assignment(assignment)
+        flag_aliases = {
+            'plot': 'plot',
+            'axes': 'axes', 'border': 'axes', 'borders': 'axes',
+            'colors': 'colors', 'colours': 'colors',
+            'color': 'colors', 'colour': 'colors',
+            'legend': 'legend', 'legends': 'legend',
+            'overbar': 'overbar', 'overline': 'overbar',
+            'perpage': 'perpage', 'layout': 'perpage',
+            }
         flag = assignment.flag.lower()
-        value = assignment.value.lower()
-        if flag not in ('color', 'colour', 'colors', 'colours', 'perpage',
-                        'border', 'borders', 'axes', 'legend', 'legends',
-                        'layout', 'overbar', 'overline', 'plot'):
+        try:
+            flag = flag_aliases[flag]
+        except KeyError:
             self.rpars.setHaltingLevel(1)
-            raise ParameterUnknownFlagError(param, f'{flag!r}')
-        if flag == 'plot':
-            # should it plot?
-            if value in ('true', 't', '1'):
-                self.rpars.PLOT_IV['plot'] = True
-            elif value in ('false', 'none', 'f', '0'):
-                self.rpars.PLOT_IV['plot'] = False
-        if flag in ('border', 'borders', 'axes'):
-            if value in ('all', 'none'):
-                self.rpars.PLOT_IV['axes'] = value
-            elif value in ('less', 'lb'):
-                self.rpars.PLOT_IV['axes'] = 'lb'
-            elif value in ('bottom', 'b'):
-                self.rpars.PLOT_IV['axes'] = 'b'
-            else:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterParseError(param)
-        elif flag in ('color', 'colour', 'colors', 'colours'):
-            self.rpars.PLOT_IV['colors'] = assignment.values
-        elif flag in ('legend', 'legends'):
-            if value in ('all', 'first', 'none'):
-                self.rpars.PLOT_IV['legend'] = value
-            elif value in ('topright', 'tr'):
-                self.rpars.PLOT_IV['legend'] = 'tr'
-            else:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterParseError(param)
-        elif flag in ('overbar', 'overline'):
-            if value.startswith('t'):
-                self.rpars.PLOT_IV['overbar'] = True
-            elif value.startswith('f'):
-                self.rpars.PLOT_IV['overbar'] = False
-            else:
-                message = f'Value for flag {flag} not recognized'
-                self.rpars.setHaltingLevel(1)
-                raise ParameterParseError(param, message)
-        elif flag in ('perpage', 'layout'):
-            if not assignment.other_values:
-                try:
-                    i = int(value)
-                except (ValueError, IndexError):
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterIntConversionError(param, value) from None
-                if i <= 0:
-                    message = 'perpage value has to be positive integer'
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterParseError(param, message)
-                self.rpars.PLOT_IV['perpage'] = i
-            elif len(assignment.values) >= 2:
-                try:
-                    il = [int(v) for v in assignment.values[:2]]
-                except ValueError:
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterIntConversionError(param,
-                                                      assignment.all_[:2])
-                if any(i <= 0 for i in il):
-                    message = 'perpage values have to be positive integers'
-                    raise ParameterParseError(param, message)
-                self.rpars.PLOT_IV['perpage'] = tuple(il)
+            raise ParameterUnknownFlagError(param, f'{flag!r}') from None
+        setter = getattr(self, f'_interpret_plot_iv__{flag}')
+        setter(assignment)
+
+    def _interpret_plot_iv__axes(self, assignment):
+        """Assign PLOT_IV['axes']."""
+        self._ensure_single_value_assignment(assignment)
+        synonyms = {'all': 'all',
+                    'none': 'none',
+                    'lb': 'lb', 'less': 'lb',
+                    'b': 'b', 'bottom': 'b',}
+        try:
+            self.rpars.PLOT_IV['axes'] = synonyms[assignment.value.lower()]
+        except KeyError:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterParseError(assignment.parameter) from None
+
+    def _interpret_plot_iv__colors(self, assignment):
+        """Assign PLOT_IV['colors']."""
+        if not assignment.values:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterHasNoValueError(assignment.parameter)
+        self.rpars.PLOT_IV['colors'] = assignment.values
+
+    def _interpret_plot_iv__legend(self, assignment):
+        """Assign PLOT_IV['legend']."""
+        self._ensure_single_value_assignment(assignment)
+        value = assignment.value.lower()
+        if value in ('all', 'first', 'none'):
+            self.rpars.PLOT_IV['legend'] = value
+        elif value in ('topright', 'tr'):
+            self.rpars.PLOT_IV['legend'] = 'tr'
+        else:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterParseError(assignment.parameter)
+
+    def _interpret_plot_iv__overbar(self, assignment):
+        """Assign PLOT_IV['overbar']."""
+        self._ensure_single_value_assignment(assignment)
+        value = assignment.value.lower()
+        if value.startswith('t'):
+            self.rpars.PLOT_IV['overbar'] = True
+        elif value.startswith('f'):
+            self.rpars.PLOT_IV['overbar'] = False
+        else:
+            message = f'Value for flag {assignment.flag!r} not recognized'
+            self.rpars.setHaltingLevel(1)
+            raise ParameterParseError(assignment.parameter, message)
+
+    def _interpret_plot_iv__perpage(self, assignment):
+        """Assign PLOT_IV['perpage']."""
+        # Can be one or two integers
+        if not assignment.values:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterHasNoValueError(assignment.parameter)
+        if len(assignment.values) > 2:
+            self.rpars.setHaltingLevel(1)
+            message = 'perpage accepts one or two positive integers'
+            raise ParameterNumberOfInputsError(assignment.parameter,
+                                               message=message)
+        try:
+            values = tuple(int(v) for v in assignment.values)
+        except ValueError:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterIntConversionError(assignment.parameter,
+                                              assignment.values) from None
+        if any(v <= 0 for v in values):
+            _plural = 's' if len(values)>1 else ''
+            message = f'perpage value{_plural} must be positive'
+            raise ParameterRangeError(assignment.parameter, message=message)
+        self.rpars.PLOT_IV['perpage'] = values if len(values)>1 else values[0]
+
+    def _interpret_plot_iv__plot(self, assignment):
+        """Assign PLOT_IV['plot']."""
+        self._ensure_single_value_assignment(assignment)
+        synonyms = {True: ('1', 'on'),
+                    False: ('none', '0', 'off')}
+        self.rpars.PLOT_IV['plot'] = self.interpret_bool_parameter(
+            assignment, synonyms, return_only=True
+            )
 
     def interpret_run(self, assignment):
         """Assign parameter RUN, inserting an initialization if needed."""
