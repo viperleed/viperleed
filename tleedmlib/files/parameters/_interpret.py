@@ -432,7 +432,7 @@ class ParameterInterpreter:
     # ----- Methods to make sure no extra flags/values are given ------
     def _ensure_single_flag_assignment(self, param, assignment, message=None,
                                        must_have_exaclty_one=True):
-        """Raise if assignment contains multiple flags."""
+        """Raise if assignment contains multiple or, optionally, no flags."""
         if must_have_exaclty_one and not assignment.flag:
             self.rpars.setHaltingLevel(1)
             raise ParameterNeedsFlagError(param, message)
