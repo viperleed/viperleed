@@ -735,6 +735,72 @@ class TestPhaseshiftEps(_TestInterpretBase):
         self.check_raises(interpreter, val, exc, flags_str=flag)
 
 
+class TestPlotIV(_TestInterpretBase):
+    """Tests for interpreting parameter PLOT_IV."""
+
+    param = 'PLOT_IV'
+    valid = {   # flag, value, attribute, expected
+        'plot true': ('plot', 'true', 'plot', True),
+        'plot true t': ('plot', 't', 'plot', True),
+        'plot true one': ('plot', '1', 'plot', True),
+        'plot false': ('plot', 'false', 'plot', False),
+        'plot false f': ('plot', 'f', 'plot', False),
+        'plot false zero': ('plot', '0', 'plot', False),
+        'legend none': ('legend', 'none', 'legend', 'none'),
+        'legend first': ('legends', 'first', 'legend', 'first'),
+        'legend top': ('legend', 'topright', 'legend', 'tr'),
+        'colors': ('colors', 'blue red', 'colors', ('blue', 'red')),
+        'colors color': ('color', 'blue red', 'colors', ('blue', 'red')),
+        'colors colour': ('colour', 'blue red', 'colors', ('blue', 'red')),
+        'colors colours': ('colours', 'blue red', 'colors', ('blue', 'red')),
+        'colors rgb': ('colors', '255 0 0 0 255 0',
+                       'colors', ('255', '0', '0', '0', '255', '0')),           # TODO: is this the way we want to interpret this?? This is the current result
+        'axes': ('border', 'none', 'axes', 'none'),
+        'axes all': ('borders', 'all', 'axes', 'all'),
+        'axes bottom': ('axes', 'bottom', 'axes', 'b'),
+        'axes less': ('axes', 'less', 'axes', 'lb'),
+        'overbar true': ('overbar', 'truthfulvalue', 'overbar', True),
+        'overbar false': ('overline', 'falsified', 'overbar', False),
+        'perpage single': ('perpage', '3', 'perpage', 3),
+        'perpage two': ('layout', '3 12', 'perpage', (3, 12)),
+        }
+    invalid = {
+        'no flag': ('', 'abcd', err.ParameterNeedsFlagError),
+        'unknown flag': ('invalid', 'value', err.ParameterUnknownFlagError),
+        'invalid axes': ('borders', 'invalid', err.ParameterParseError),
+        'invalid legend': ('legends', 'invalid', err.ParameterParseError),
+        'invalid overbar': ('overline', 'invalid', err.ParameterParseError),
+        'invalid perpage': ('perpage', 'wrong', err.ParameterIntConversionError),
+        # 'invalid perpage two': ('perpage', '5 wrong', err.ParameterIntConversionError),  # AttributeError bug
+        'perpage neg': ('perpage', '-5',  err.ParameterParseError),
+        'perpage neg two': ('perpage', '-5 -3',  err.ParameterParseError),
+        'empty axes': ('axes', '', err.ParameterParseError),                    # ParameterHasNoValueError
+        'empty legend': ('legend', '', err.ParameterParseError),                # ParameterHasNoValueError
+        'empty overbar': ('overbar', '', err.ParameterParseError),              # ParameterHasNoValueError
+        'empty perpage': ('perpage', '', err.ParameterIntConversionError),      # ParameterHasNoValueError
+
+        # Here some more conditions that should fail but do not
+        # 'empty plot': ('plot', '', err.ParameterHasNoValueError),
+        # 'empty colors': ('colors', '', err.ParameterHasNoValueError),
+        # 'two axes': ('axes', 'all none', err.ParameterNumberOfInputsError),
+        # 'two legend': ('legend', 'tr none', err.ParameterNumberOfInputsError),
+        # 'two overbar': ('overbar', 't f', err.ParameterNumberOfInputsError),
+        # 'two plot': ('plot', 'true 0', err.ParameterNumberOfInputsError),
+        # 'multi flag': ('plot axes', 'true', err.ParameterUnknownFlagError),
+        }
+
+    @pytest.mark.parametrize('flag,val,attr,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, flag, val, attr, expect, interpreter):
+        """Check correct interpretation of valid PLOT_IV."""
+        self.interpret(interpreter, val, flags_str=flag)
+        assert interpreter.rpars.PLOT_IV[attr] == expect
+
+    @pytest.mark.parametrize('flag,val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, flag, val, exc, interpreter):
+        """Ensure invalid PLOT_IV raises exceptions."""
+        self.check_raises(interpreter, val, exc, flags_str=flag)
+
+
 class TestRun(_TestInterpretBase):
     """Tests for interpreting RUN."""
 
