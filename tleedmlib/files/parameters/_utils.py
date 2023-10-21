@@ -134,13 +134,17 @@ class NumericBounds:
         if self.fail and not all(in_range):
             raise RuntimeError
 
-        if self.coerce:
-            _, value, _ = sorted((value, *self.closed_range))
-            return value
+        if self.out_of_range_event == 'modulo':
+            _min, _max = self.range_
+            return (value - _min) % (_max - _min) + _min
 
-        assert self.out_of_range_event == 'modulo'
-        _min, _max = self.range_
-        return (value - _min) % (_max - _min) + _min
+        assert self.coerce
+        _min, _max = self.closed_range
+        if _min is not None:
+            value = max(value, _min)
+        if _max is not None:
+            value = min(value, _max)
+        return value
 
     def _make_message(self):
         """Return a message for value-out-of-bounds."""

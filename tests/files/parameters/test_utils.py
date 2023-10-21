@@ -63,6 +63,10 @@ class TestNumericBounds:
             Bounds(type_=int, range_=(1, 10), out_of_range_event='coerce'),
             15, 10
             ),
+        'coerce low, upper unbound' : (
+            Bounds(type_=int, range_=(12, None), out_of_range_event='coerce'),
+            5, 12
+            ),
         'modulo_in_range': (_INT_FIVE_TEN_MODULO, 7, 7),
         'modulo_too_high': (_INT_FIVE_TEN_MODULO, 16, 6),
         'modulo_at_max': (_INT_FIVE_TEN_MODULO, 10, 10),                        # TODO: should treat better the cases at bounds! Must depend on accept_limits.
