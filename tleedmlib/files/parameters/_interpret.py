@@ -257,7 +257,7 @@ class ParameterInterpreter:
         if allowed_values is None:
             allowed_values = {}
         if no_flags:
-            self._ensure_no_flags_assignment(param, assignment)
+            self._ensure_no_flags_assignment(assignment, param)
 
         _bool_synonyms = self.bool_synonyms.copy()
         for option, values in allowed_values.items():
@@ -330,7 +330,7 @@ class ParameterInterpreter:
             When assignment has flags but no_flag is True.
         """
         if no_flags:
-            self._ensure_no_flags_assignment(param, assignment)
+            self._ensure_no_flags_assignment(assignment, param)
         type_ = bounds.type_
         if type_ is float:
             exc = ParameterFloatConversionError(assignment.parameter,
@@ -430,9 +430,12 @@ class ParameterInterpreter:
                           _SIMPLE_NUMERICAL_PARAMS)
 
     # ----- Methods to make sure no extra flags/values are given ------
-    def _ensure_single_flag_assignment(self, param, assignment, message=None,
+    def _ensure_single_flag_assignment(self, assignment, param=None,
+                                       message=None,
                                        must_have_exaclty_one=True):
         """Raise if assignment contains multiple or, optionally, no flags."""
+        if param is None:
+            param = assignment.parameter
         if must_have_exaclty_one and not assignment.flag:
             self.rpars.setHaltingLevel(1)
             raise ParameterNeedsFlagError(param, message)
@@ -442,9 +445,11 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, message)
 
-    def _ensure_single_value_assignment(self, param, assignment):
+    def _ensure_single_value_assignment(self, assignment, param=None):
         """Raise if assignment contains multiple values."""
         n_values = len(assignment.values)
+        if param is None:
+            param = assignment.parameter
         if not n_values:
             self.rpars.setHaltingLevel(1)
             raise ParameterHasNoValueError(param)
@@ -452,27 +457,29 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param, (n_values, 1))
 
-    def _ensure_no_flags_assignment(self, param, assignment):
+    def _ensure_no_flags_assignment(self, assignment, param=None):
         """Raise if assignment contains any flag."""
+        if param is None:
+            param = assignment.parameter
         if assignment.flags:
             self.rpars.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, assignment.flag)             # TODO: too-many-flags?
 
-    def _ensure_simple_assignment(self, param, assignment):
+    def _ensure_simple_assignment(self, assignment, param=None):
         """Raise if assignment is not simple (i.e., one value, no flags)."""
-        self._ensure_no_flags_assignment(param, assignment)
-        self._ensure_single_value_assignment(param, assignment)
+        self._ensure_no_flags_assignment(assignment, param)
+        self._ensure_single_value_assignment(assignment, param)
 
-    def _ensure_single_flag_and_value_assignment(self, param, assignment):
+    def _ensure_single_flag_and_value_assignment(self, assignment, param=None):
         """Raise if assignment does not have a single flag--value pair."""
-        self._ensure_single_flag_assignment(param, assignment)
-        self._ensure_single_value_assignment(param, assignment)
+        self._ensure_single_flag_assignment(assignment, param)
+        self._ensure_single_value_assignment(assignment, param)
 
     # ----------- Methods to interpret individual parameters ----------
     def interpret_average_beams(self, assignment):                              # TODO: not nice to have multiple types for this. May make sense to make it its own class with some helpers. Otherwise one has to do a bunch of isinstance checks when using it
         """Assign parameter AVERAGE_BEAMS."""
         param = 'AVERAGE_BEAMS'
-        self._ensure_no_flags_assignment(param, assignment)
+        self._ensure_no_flags_assignment(assignment)
         right_side = assignment.values_str.lower().strip()
         # trivial cases
         if right_side in ['off', 'none', 'false', 'f']:
@@ -489,7 +496,7 @@ class ParameterInterpreter:
     def interpret_beam_incidence(self, assignment):
         """Assign parameter BEAM_INCIDENCE."""
         param = 'BEAM_INCIDENCE'
-        self._ensure_no_flags_assignment(param, assignment)
+        self._ensure_no_flags_assignment(assignment)
         angles = self._parse_incidence_angles(param, assignment)
         self.rpars.THETA, self.rpars.PHI = angles['THETA'], angles['PHI']
 
@@ -560,7 +567,7 @@ class ParameterInterpreter:
     def interpret_domain_step(self, assignment):
         """Assign parameter DOMAIN_STEP."""
         param = 'DOMAIN_STEP'
-        self._ensure_simple_assignment(param, assignment)
+        self._ensure_simple_assignment(assignment)
         domain_step = self.interpret_numerical_parameter(
             assignment,
             bounds=NumericBounds(type_=int, range_=(1, 100)),
@@ -583,7 +590,7 @@ class ParameterInterpreter:
     def interpret_element_mix(self, assignment):                                # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME? We should perhaps have a call to a checker after all parameters are read in?
         """Assign parameter ELEMENT_MIX."""
         param = 'ELEMENT_MIX'
-        self._ensure_single_flag_assignment(param, assignment)
+        self._ensure_single_flag_assignment(assignment)
         self._ensure_chemical_elements(param, assignment.values)
 
         element = assignment.flag.capitalize()
@@ -593,7 +600,7 @@ class ParameterInterpreter:
     def interpret_element_rename(self, assignment):
         """Assign parameter ELEMENT_RENAME."""
         param = 'ELEMENT_RENAME'
-        self._ensure_single_flag_and_value_assignment(param, assignment)
+        self._ensure_single_flag_and_value_assignment(assignment)
         self._ensure_chemical_elements(param, assignment.values)
 
         self.rpars.ELEMENT_RENAME[assignment.flag.capitalize()] = (
@@ -603,7 +610,7 @@ class ParameterInterpreter:
     def interpret_filament_wf(self, assignment):
         """Assign parameter FILAMENT_WF."""
         param = 'FILAMENT_WF'
-        self._ensure_simple_assignment(param, assignment)
+        self._ensure_simple_assignment(assignment)
         # Check common filaments (e.g., W), otherwise assume a float
         known_filaments = self.rpars.get_default(param)
         try:
@@ -616,7 +623,7 @@ class ParameterInterpreter:
         param = 'FORTRAN_COMP'
         message = (f'Only one flag allowed for {param} per line. '
                    f'Got {assignment.flags}')
-        self._ensure_single_flag_assignment(param, assignment, message=message,
+        self._ensure_single_flag_assignment(assignment, message=message,
                                             must_have_exaclty_one=False)
         flag, compiler_str = assignment.flag.lower(), assignment.values_str
 
@@ -656,7 +663,7 @@ class ParameterInterpreter:
     def interpret_intpol_deg(self, assignment):
         """Assign parameter INTPOL_DEG."""
         param = 'INTPOL_DEG'
-        self._ensure_simple_assignment(param, assignment)
+        self._ensure_simple_assignment(assignment)
         intpol_deg = assignment.value
         if intpol_deg in self.rpars.get_limits(param):
             self.rpars.INTPOL_DEG = int(intpol_deg)
@@ -848,7 +855,7 @@ class ParameterInterpreter:
     def interpret_log_level(self, assignment):
         """Assign parameter LOG_LEVEL."""
         param = 'LOG_LEVEL'
-        self._ensure_simple_assignment(param, assignment)
+        self._ensure_simple_assignment(assignment)
 
         # Try to interpret as bool. This is the way
         # the previous LOG_DEBUG used to work
@@ -966,7 +973,7 @@ class ParameterInterpreter:
     def interpret_phaseshift_eps(self, assignment):
         """Assign parameter PHASESHIFT_EPS."""
         param = 'PHASESHIFT_EPS'
-        self._ensure_simple_assignment(param, assignment)
+        self._ensure_simple_assignment(assignment)
         try:
             ps_eps = float(assignment.value)
         except ValueError:
@@ -1081,7 +1088,7 @@ class ParameterInterpreter:
     def interpret_search_beams(self, assignment):
         """Assign parameter SEARCH_BEAMS."""
         param = 'SEARCH_BEAMS'
-        self._ensure_simple_assignment(param, assignment)
+        self._ensure_simple_assignment(assignment)
         value = assignment.value.lower()
         if value.startswith(('0', 'a')):
             self.rpars.SEARCH_BEAMS = 0
@@ -1157,7 +1164,7 @@ class ParameterInterpreter:
                 raise ParameterFloatConversionError(param) from err
 
         if assignment.flag.lower() == 'gaussian':
-            self._ensure_single_flag_assignment(param, assignment)
+            self._ensure_single_flag_assignment(assignment)
             self._interpret_search_convergence_gaussian(
                 param, *numeric, is_updating
                 )
@@ -1475,7 +1482,7 @@ class ParameterInterpreter:
     def interpret_symmetry_eps(self, assignment):
         """Assign parameters SYMMETRY_EPS/SYMMETRY_EPS_Z."""
         param = 'SYMMETRY_EPS'
-        self._ensure_no_flags_assignment(param, assignment)
+        self._ensure_no_flags_assignment(assignment)
         if len(assignment.values) not in (1, 2):
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
@@ -1658,7 +1665,7 @@ class ParameterInterpreter:
     def _interpret_wood_or_matrix(self, param, assignment):
         """Store a Wood- or matrix-notation parameter value."""
         if 'M' not in assignment.flags:
-            self._ensure_no_flags_assignment(param, assignment)
+            self._ensure_no_flags_assignment(assignment)
             wood = self._read_woods_notation(param, assignment)
             setattr(self.rpars, param, wood)
         else:
