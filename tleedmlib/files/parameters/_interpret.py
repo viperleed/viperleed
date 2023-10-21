@@ -887,6 +887,7 @@ class ParameterInterpreter:
         self.rpars.LOG_LEVEL = log_level
 
     def interpret_optimize(self, assignment):
+        """Assign parameter OPTIMIZE."""
         param = 'OPTIMIZE'
         if not assignment.flag:
             message = 'Parameter to optimize not defined'
@@ -901,30 +902,29 @@ class ParameterInterpreter:
             try:
                 self.rpars.OPTIMIZE['step'] = float(assignment.value)
             except ValueError:
-                pass   # will be caught below
-            else:
-                return
-        sublists = splitSublists(assignment.values, ',')
-        for sl in sublists:
-            if len(sl) != 2:
-                message = 'Expected "flag value" pairs, found ' + ' '.join(sl)
-                self.rpars.setHaltingLevel(2)
-                raise ParameterError(param, message)
-            flag = sl[0].lower()
-            if flag not in ['step', 'convergence',
-                            'minpoints', 'maxpoints', 'maxstep']:
-                self.rpars.setHaltingLevel(2)
-                raise ParameterUnknownFlagError(param, f'{flag!r}')
-            partype = {'step': float, 'convergence': float,
-                       'minpoints': int, 'maxpoints': int,
-                       'maxstep': float}
-            value_error = (f'Value {sl[1]} is not valid for flag {sl[0]}. '
-                           'Value will be ignored')
-            try:
-                self.rpars.OPTIMIZE[flag] = partype[flag](sl[1])
-            except ValueError as err:
                 self.rpars.setHaltingLevel(1)
-                raise ParameterError(param, value_error) from err
+                raise ParameterFloatConversionError(param,
+                                                    assignment.value) from None
+            return
+        for flag_value_pair in assignment.values_str.split(','):
+            self._interpret_optimize_flag_value_pair(param, flag_value_pair)
+
+    def _interpret_optimize_flag_value_pair(self, param, flag_value_pair):
+        """Interpret one 'flag value' pair for OPTIMIZE."""
+        flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
+        value_error = f'Value {value!r} is invalid for flag {flag!r}'
+        partype = {'step': float, 'convergence': float,
+                   'minpoints': int, 'maxpoints': int,
+                   'maxstep': float}
+        try:
+            numeric = partype[flag](value)
+        except ValueError as exc:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message=value_error) from exc
+        except KeyError:
+            self.rpars.setHaltingLevel(2)
+            raise ParameterUnknownFlagError(param, f'{flag!r}') from None
+        self.rpars.OPTIMIZE[flag] = numeric
 
     def interpret_parabola_fit(self, assignment):                               # TODO: custom class
         """Assign parameter PARABOLA_FIT."""
@@ -937,13 +937,7 @@ class ParameterInterpreter:
     def _interpret_parabola_fit_flag_value_pair(self, flag_value_pair):
         """Interpret one 'flag value' pair for PARABOLA_FIT."""
         param = 'PARABOLA_FIT'
-        try:
-            flag, value = (s.lower() for s in flag_value_pair.split())
-        except ValueError:
-            value_error = ('Expected "flag value" pairs, '
-                           f'found "{flag_value_pair}"')
-            self.rpars.setHaltingLevel(1)
-            raise ParameterNumberOfInputsError(param, message=value_error)
+        flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
         if flag == 'localise':
             flag = 'localize'
         value_error = (f'Invalid value {value} for flag {flag}. '
@@ -1713,6 +1707,17 @@ class ParameterInterpreter:
             message = f'Element(s) {invalid} not found in periodic table'
             self.rpars.setHaltingLevel(2)
             raise ParameterValueError(param, message=message)
+
+    def _get_flag_value_from_pair(self, param, flag_value_pair):
+        """Return lowercase flag and value from a pair, or complain."""
+        try:
+            flag, value = (s.strip()
+                           for s in flag_value_pair.lower().strip().split())
+        except ValueError:
+            err_ = f'Expected "flag value" pairs, found "{flag_value_pair}"'
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNumberOfInputsError(param, message=err_)
+        return flag, value
 
     def _parse_energy_range(self, param, assignment,
                             energies, accept_underscore=True):

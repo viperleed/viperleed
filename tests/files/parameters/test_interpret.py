@@ -679,9 +679,13 @@ class TestOptimize(_TestInterpretBase):
     invalid = {
         'missing_quantity': ('step 0.1', '', err.ParameterNeedsFlagError),
         'flag': ('invalid 0.1', 'v0i', err.ParameterUnknownFlagError),
-        'value': ('step not-a-number', 'v0i', err.ParameterError),
-        'quantity': ('step 0.1', 'invalid', err.ParameterError),
-        'non-a-number step': ('abcd', 'phi', err.ParameterError),
+        'value': ('step not-a-number', 'v0i', err.ParameterValueError),
+        'quantity': ('step 0.1', 'invalid', err.ParameterUnknownFlagError),
+        'non-float step': ('abcd', 'phi', err.ParameterFloatConversionError),
+        'empty value': ('step 0.1, minpoints', 'phi',
+                        err.ParameterNumberOfInputsError),
+        'empty flag-value pair': ('step 0.1, , minpoints 5', 'phi',
+                                  err.ParameterNumberOfInputsError),
         }
 
     # pylint: disable=too-many-arguments
