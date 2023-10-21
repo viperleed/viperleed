@@ -1360,7 +1360,16 @@ class ParameterInterpreter:
                 )
 
         site_def_dict = {}
-        for site_label, *site_specs in splitSublists(assignment.values, ','):
+        for flag_and_values in assignment.values_str.strip().split(','):
+            try:
+                site_label, *site_specs = (s.strip()
+                                           for s in flag_and_values.split())
+            except ValueError:
+                self.rpars.setHaltingLevel(2)
+                message = ('Expected "site_label atom_selection_patterns ". '
+                           f'Found "{flag_and_values}"')
+                raise ParameterNumberOfInputsError(param,
+                                                   message=message) from None
             if not site_specs:
                 self.rpars.setHaltingLevel(2)
                 err = ('No atom selection pattern found for site '

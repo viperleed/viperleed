@@ -1030,6 +1030,8 @@ class TestSiteDefInvalid(_TestInterpretBase):
                       err.ParameterValueError),
         'too few specs': ('Ag', 'spec 1-10, surf', err.ParameterParseError),
         'unknown specs': ('Ag', 'surf abcd', err.ParameterParseError),
+        'empty spec': ('Ag', 'surf 1,, below 3',
+                       err.ParameterNumberOfInputsError),
         }
 
     @pytest.mark.parametrize('element,val,exc', invalid.values(), ids=invalid)
