@@ -1451,7 +1451,7 @@ class ParameterInterpreter:
         param = 'SYMMETRY_FIX'
         group = assignment.values_str.lower()
         if group.startswith('t'):  # determine symmetry automatically
-            self.rpars.reset_default('SYMMETRY_FIX')
+            self.rpars.reset_default(param)
             return
         if group.startswith('f'):
             self.rpars.SYMMETRY_FIX = 'p1'
