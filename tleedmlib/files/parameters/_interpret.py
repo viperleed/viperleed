@@ -17,6 +17,7 @@ read from a PARAMETERS file.
 
 import ast
 from collections.abc import Sequence
+import copy
 from functools import partialmethod
 import logging
 from pathlib import Path
@@ -269,7 +270,7 @@ class ParameterInterpreter:
         if no_flags:
             self._ensure_no_flags_assignment(assignment, param)
 
-        _bool_synonyms = self.bool_synonyms.copy()
+        _bool_synonyms = copy.deepcopy(self.bool_synonyms)
         for option, values in allowed_values.items():
             try:
                 _bool_synonyms[option].update(v.lower() for v in values)
@@ -278,8 +279,7 @@ class ParameterInterpreter:
                                  'in allowed_values') from None
 
         # Make sure there is no intersection between the two sets
-        if (allowed_values
-                and set(allowed_values[True]) & set(allowed_values[False])):
+        if set(_bool_synonyms[True]) & set(_bool_synonyms[False]):
             raise ValueError('The sets of allowed values for '
                              'True and False must not overlap')
 

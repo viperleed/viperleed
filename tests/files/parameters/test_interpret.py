@@ -87,6 +87,7 @@ class TestInterpreterBasics:
     wrong_alias = {
         'not bool': {'abcd': ('abcd alias',)},
         'overlapping': {True: ('alias',), False: ('alias',)},
+        'overlapping when joined': {True: ('false',)},
         }
     
     @pytest.mark.parametrize('aliases', wrong_alias.values(), ids=wrong_alias)
