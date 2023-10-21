@@ -75,6 +75,27 @@ def fixture_interpreter():
     return parameters.ParameterInterpreter(Rparams())
 
 
+class TestInterpreterBasics:
+    """Tests for ParameterInterpreter basic functionality."""
+
+    def test_unknown_param(self, interpreter):
+        """Check complaints when an unknown parameter is requested."""
+        # pylint: disable=protected-access
+        with pytest.raises(err.ParameterNotRecognizedError):
+            interpreter._interpret_param('UNKNOWN_PARAMETER', None)
+    
+    wrong_alias = {
+        'not bool': {'abcd': ('abcd alias',)},
+        'overlapping': {True: ('alias',), False: ('alias',)},
+        }
+    
+    @pytest.mark.parametrize('aliases', wrong_alias.values(), ids=wrong_alias)
+    def test_bool_param_wrong_synonyms(self, aliases, interpreter):
+        """Check complaints when an invalid synonym dict is passed."""
+        with pytest.raises(ValueError):
+            interpreter.interpret_bool_parameter(None, aliases)
+
+
 class _TestInterpretBase:
     """Base class for parameter-interpretation tests."""
     param = None
