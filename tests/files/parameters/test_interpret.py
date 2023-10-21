@@ -796,6 +796,7 @@ class TestSearchConvergence(_TestInterpretBase):
         'too many values': ('.01 0.9 0.5', 'gaussian',
                             err.ParameterNumberOfInputsError),
         'scaling': ('0.01 -0.5', 'gaussian', err.ParameterRangeError),
+        'gaussian neg': ('-3.5 0.2', 'gaussian', err.ParameterRangeError),
         'no float': ('a 0.3', 'gaussian', err.ParameterFloatConversionError),
         'dgen neg': ('-1 5', 'dgen dec', err.ParameterRangeError),
         'dgen invalid flag': ('1 1', 'dgen invalid',
