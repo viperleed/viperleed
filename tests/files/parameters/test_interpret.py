@@ -785,26 +785,65 @@ class TestSearchConvergence(_TestInterpretBase):
     """Tests for interpreting SEARCH_CONVERGENCE."""
 
     param = 'SEARCH_CONVERGENCE'
-    valid = {'gaussian, scaling': ('0.01 0.9', (0.01, 0.9)),
-             'gaussian, no scaling': ('0.01', (0.01, 0.5)),}
+    valid_gauss = {'scaling': ('0.01 0.9', (0.01, 0.9)),
+                   'no scaling': ('0.01', (0.01, 0.5)),}
+    valid_dgen = {'positive': ('1 1.5', (1, 1.5)),}
     invalid = {
-        'flag': (' 0.01 0.9', 'test', err.ParameterUnknownFlagError),
+        'unknown flag': (' 0.01 0.9', 'unknown', err.ParameterUnknownFlagError),
+        'no flag': ('0.2 0.5', '', err.ParameterNeedsFlagError),
         'nr_values': ('.01 0.9 0.5', 'gaussian',
                       err.ParameterNumberOfInputsError),
-        'scaling': ('0.01 -0.5', 'gaussian', err.ParameterError),
+        'scaling': ('0.01 -0.5', 'gaussian', err.ParameterRangeError),
+        'no float': ('a 0.3', 'gaussian', err.ParameterFloatConversionError),
+        'dgen neg': ('-1 5', 'dgen dec', err.ParameterError),                   # TODO: err.ParameterRangeError),
+        'dgen invalid flag': ('1 1', 'dgen invalid',
+                              err.ParameterUnknownFlagError),
+        'dgen dec small': ('100 0.1', 'dgen dec', err.ParameterError),          # TODO: err.ParameterRangeError),
+        # 'dgen too many': ('100 3', 'dgen dec invalid',
+                          # err.ParameterUnknownFlagError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
-    def test_interpret_valid(self, val, expect, interpreter):
-        """Check correct interpretation of valid SEARCH_CONVERGENCE."""
+    @pytest.mark.parametrize('val,expect', valid_gauss.values(), ids=valid_gauss)
+    def test_interpret_valid_gaussian(self, val, expect, interpreter):
+        """Check correct interpretation of SEARCH_CONVERGENCE gaussian."""
         self.interpret(interpreter, val, flags_str='gaussian')
         rpars = interpreter.rpars
         assert (rpars.GAUSSIAN_WIDTH, rpars.GAUSSIAN_WIDTH_SCALING) == expect
+
+    @pytest.mark.parametrize('val,expect', valid_dgen.values(), ids=valid_dgen)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of SEARCH_CONVERGENCE gaussian."""
+        self.interpret(interpreter, val, flags_str='dgen')
+        rpars = interpreter.rpars
+        assert (rpars.SEARCH_MAX_DGEN['dec'],
+                rpars.SEARCH_MAX_DGEN_SCALING['dec']) == expect
+
+    def test_off(self, interpreter):
+        """Check correct interpretation of 'off'."""
+        self.interpret(interpreter, 'off')
+        assert interpreter.rpars.GAUSSIAN_WIDTH_SCALING == 1.0
 
     @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid SEARCH_CONVERGENCE raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
+
+    def test_no_change_in_gaussian_when_updating(self, interpreter):
+        """Check that gaussian is unchanged while updating from file."""
+        rpars = interpreter.rpars
+        rpars.GAUSSIAN_WIDTH = rpars.searchConvInit['gaussian'] = 2.0
+        assignment = self.assignment('2 0.5', flags_str='gaussian')
+        interpreter.interpret_search_convergence(assignment, is_updating=True)
+        assert rpars.GAUSSIAN_WIDTH == 2.0
+
+    def test_no_change_in_dgen_when_updating(self, interpreter):
+        """Check that dgen is unchanged while updating from file."""
+        rpars = interpreter.rpars
+        rpars.SEARCH_MAX_DGEN['dec'] = 3
+        rpars.searchConvInit['dgen']['dec'] = 3
+        assignment = self.assignment('3 1.5', flags_str='dgen dec')
+        interpreter.interpret_search_convergence(assignment, is_updating=True)
+        assert rpars.SEARCH_MAX_DGEN['dec'] == 3
 
 
 class TestSearchCull(_TestInterpretBase):
