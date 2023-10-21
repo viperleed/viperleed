@@ -11,7 +11,7 @@ import sys
 
 import numpy as np
 import pytest
-from pytest_cases import parametrize_with_cases
+from pytest_cases import parametrize, parametrize_with_cases
 
 VPR_PATH = str(Path(__file__).resolve().parents[3])
 if VPR_PATH not in sys.path:
@@ -83,14 +83,14 @@ class TestInterpreterBasics:
         # pylint: disable=protected-access
         with pytest.raises(err.ParameterNotRecognizedError):
             interpreter._interpret_param('UNKNOWN_PARAMETER', None)
-    
+
     wrong_alias = {
         'not bool': {'abcd': ('abcd alias',)},
         'overlapping': {True: ('alias',), False: ('alias',)},
         'overlapping when joined': {True: ('false',)},
         }
-    
-    @pytest.mark.parametrize('aliases', wrong_alias.values(), ids=wrong_alias)
+
+    @parametrize('aliases', wrong_alias.values(), ids=wrong_alias)
     def test_bool_param_wrong_synonyms(self, aliases, interpreter):
         """Check complaints when an invalid synonym dict is passed."""
         with pytest.raises(ValueError):
@@ -154,9 +154,9 @@ class TestNumericalParameter(_TestInterpretBase):
         'int range': ('-5', Bounds(type_=int, range_=(0, 10))),
         }
 
-    # pylint: disable=too-many-arguments
+    @parametrize('val,bounds,expect', valid.values(), ids=valid)
     # 6/5 seems OK here, considering that two are fixtures.
-    @pytest.mark.parametrize('val,bounds,expect', valid.values(), ids=valid)
+    # pylint: disable-next=too-many-arguments
     def test_interpret_valid(self, val, bounds, expect, interpreter, subtests):
         """Ensure valid values are returned and assigned."""
         result = interpreter.interpret_numerical_parameter(
@@ -167,9 +167,8 @@ class TestNumericalParameter(_TestInterpretBase):
             assert result == pytest.approx(expect)
         with subtests.test('attribute'):
             assert interpreter.rpars.TEST_PARAM == pytest.approx(expect)
-    # pylint: enable=too-many-arguments
 
-    @pytest.mark.parametrize('val,bounds', invalid.values(), ids=invalid)
+    @parametrize('val,bounds', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, bounds, interpreter):
         """Ensure exceptions are raised for invalid combinations."""
         with pytest.raises(err.ParameterError):
@@ -215,12 +214,12 @@ class TestAverageBeams(_TestInterpretBase):
              'custom': ('45.0 60', (45.0, 60.0)),}
     invalid = ('invalid input',)
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid AVERAGE_BEAMS."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val', invalid, ids=invalid)
+    @parametrize('val', invalid, ids=invalid)
     def test_interpret_invalid(self, val, interpreter):
         """Ensure invalid AVERAGE_BEAMS raises exceptions."""
         self.check_raises(interpreter, val, err.ParameterError)
@@ -257,14 +256,14 @@ class TestBeamIncidence(_TestInterpretBase):
                      err.ParameterFloatConversionError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check interpretation of valid BEAM_INCIDENCE into THETA and PHI."""
         self.interpret(interpreter, val)
         rpars = interpreter.rpars
         assert (rpars.THETA, rpars.PHI) == expect
 
-    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    @parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid BEAM_INCIDENCE raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
@@ -296,14 +295,14 @@ class TestBulkRepeat(_TestInterpretBase):
         'vector not enough items': ('[]', err.ParameterParseError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, ag100_interpreter):
         """Check correct interpretation of valid BULK_REPEAT."""
         self.interpret(ag100_interpreter, val)
         rpars = ag100_interpreter.rpars
         assert rpars.BULK_REPEAT == pytest.approx(expect, rel=1e-4)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, ag100_interpreter):
         """Ensure invalid BULK_REPEAT raises exceptions."""
         self.check_raises(ag100_interpreter, val, exc)
@@ -367,12 +366,12 @@ class TestDomainStep(_TestInterpretBase):
         'too many': ('12 13', err.ParameterNumberOfInputsError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid DOMAIN_STEP."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid DOMAIN_STEP raises exceptions."""
         self.check_raises(interpreter, val, exc)
@@ -392,12 +391,12 @@ class TestElementMix(_TestInterpretBase):                                       
         'not chem elem': ('X', 'chem_el_unknown Fe', err.ParameterValueError),
         }
 
-    @pytest.mark.parametrize('poscar_el,mix,expect', valid.values(), ids=valid)
+    @parametrize('poscar_el,mix,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, poscar_el, mix, expect, interpreter):
         """Check correct interpretation of valid FILAMENT_WF."""
         self.check_assigned(interpreter, mix, expect, flags_str=poscar_el)
 
-    @pytest.mark.parametrize('poscar_el,mix,exc', invalid.values(), ids=invalid)
+    @parametrize('poscar_el,mix,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, poscar_el, mix, exc, interpreter):
         """Ensure invalid FILAMENT_WF raises exceptions."""
         self.check_raises(interpreter, mix, exc, flags_str=poscar_el)
@@ -430,12 +429,12 @@ class TestFilamentWF(_TestInterpretBase):
         'flag': ('1.5', 'test', err.ParameterUnknownFlagError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid FILAMENT_WF."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    @parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid FILAMENT_WF raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
@@ -471,7 +470,7 @@ class TestFortranComp(_TestInterpretBase):
     # About the disable below: In principle 'pre' and 'post' could
     # be merged into a tuple, but the parametrization above would
     # look even more complex
-    @pytest.mark.parametrize('flag,val,pre,post', valid.values(), ids=valid)
+    @parametrize('flag,val,pre,post', valid.values(), ids=valid)
     # pylint: disable-next=too-many-arguments
     def test_interpret_valid(self, flag, val, pre, post,
                              interpreter, subtests):
@@ -490,7 +489,7 @@ class TestFortranComp(_TestInterpretBase):
             with subtests.test('Check post'):
                 assert post in compiler[1]
 
-    @pytest.mark.parametrize('flag,val,exc', invalid.values(), ids=invalid)
+    @parametrize('flag,val,exc', invalid.values(), ids=invalid)
     def test_invalid(self, flag, val, exc, interpreter):
         """Ensure invalid FORTRAN_COMP raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
@@ -503,12 +502,12 @@ class TestIntpolDeg(_TestInterpretBase):
     valid = {v: (v, int(v)) for v in Rparams().get_limits(param)}
     invalid = '1', 'text'
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid INTPOL_DEG."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val', invalid, ids=invalid)
+    @parametrize('val', invalid, ids=invalid)
     def test_interpret_invalid(self, val, interpreter):
         """Ensure invalid INTPOL_DEG raises exceptions."""
         self.check_raises(interpreter, val, err.ParameterError)
@@ -534,12 +533,12 @@ class TestIVShiftRange(_TestInterpretBase):
         'opposite step': ('0.0 1.0 -0.1', err.ParameterValueError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid IV_SHIFT_RANGE."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid IV_SHIFT_RANGE raises exceptions."""
         self.check_raises(interpreter, val, exc)
@@ -564,14 +563,14 @@ class TestLayerCuts(_TestInterpretBase):
         'dz': '0.5 1.0 < dz(abcd) < 4.0'
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid LAYER_CUTS."""
         if val.count('dz') == 2:
             pytest.xfail(reason='Known bug in LAYER_CUTS interpreter')
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val', invalid.values(), ids=invalid)
+    @parametrize('val', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, interpreter):
         """Ensure invalid LAYER_CUTS raises exceptions."""
         if 'abcd' in val:
@@ -617,12 +616,12 @@ class TestLMax(_TestInterpretBase):
         'ends with delimiter strip': ('2 -  ', err.ParameterValueError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid LMAX."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid LMAX raises exceptions."""
         self.check_raises(interpreter, val, exc)
@@ -659,7 +658,7 @@ class TestLogLevel(_TestInterpretBase):
         'invalid str': ('not_a_level', '', err.ParameterValueError),
         }
 
-    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    @parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Check correct interpretation of a default string LOG_LEVEL."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
@@ -689,9 +688,9 @@ class TestOptimize(_TestInterpretBase):
                                   err.ParameterNumberOfInputsError),
         }
 
-    # pylint: disable=too-many-arguments
+    @parametrize('val,flag,expect', valid.values(), ids=valid)
     # 6/5 Seems OK here, especially considering that two are fixtures
-    @pytest.mark.parametrize('val,flag,expect', valid.values(), ids=valid)
+    # pylint: disable-next=too-many-arguments
     def test_interpret_valid(self, val, flag, expect, interpreter, subtests):
         """Check correct interpretation of valid OPTIMIZE."""
         self.interpret(interpreter, val, flags_str=flag)
@@ -701,9 +700,8 @@ class TestOptimize(_TestInterpretBase):
         for key, value in expect.items():
             with subtests.test(key):
                 assert rpars.OPTIMIZE[key] == pytest.approx(value)
-    # pylint: enable=too-many-arguments
 
-    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    @parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid OPTIMIZE raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
@@ -731,12 +729,12 @@ class TestParabolaFit(_TestInterpretBase):
                         err.ParameterValueError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid PARABOLA_FIT."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid PARABOLA_FIT raises exceptions."""
         self.check_raises(interpreter, val, exc)
@@ -756,12 +754,12 @@ class TestPhaseshiftEps(_TestInterpretBase):
         'flag': ('1.23', 'flag', err.ParameterUnknownFlagError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid PHASESHIFT_EPS."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    @parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid PHASESHIFT_EPS raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
@@ -822,13 +820,16 @@ class TestPlotIV(_TestInterpretBase):
         'multi flag': ('plot axes', 'true', err.ParameterUnknownFlagError),
         }
 
-    @pytest.mark.parametrize('flag,val,attr,expect', valid.values(), ids=valid)
+    @parametrize('flag,val,attr,expect', valid.values(), ids=valid)
+    # About the disable: Perhaps one could pack the attr and
+    # expect together, but seems a bit overkill for 6/5.
+    # pylint: disable-next=too-many-arguments
     def test_interpret_valid(self, flag, val, attr, expect, interpreter):
         """Check correct interpretation of valid PLOT_IV."""
         self.interpret(interpreter, val, flags_str=flag)
         assert interpreter.rpars.PLOT_IV[attr] == expect
 
-    @pytest.mark.parametrize('flag,val,exc', invalid.values(), ids=invalid)
+    @parametrize('flag,val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, flag, val, exc, interpreter):
         """Ensure invalid PLOT_IV raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
@@ -848,12 +849,12 @@ class TestRun(_TestInterpretBase):
                'syntax underscore': ('1 _ 2', err.ParameterValueError),
                'syntax section': ('1, x', err.ParameterValueError)}
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid RUN."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid RUN raises exceptions."""
         self.check_raises(interpreter, val, exc)
@@ -869,12 +870,12 @@ class TestSearchBeams(_TestInterpretBase):
     invalid = {'one value': ('3', err.ParameterValueError),
                'more values': ('0 1', err.ParameterError)}
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid SEARCH_BEAMS."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid SEARCH_BEAMS raises exceptions."""
         self.check_raises(interpreter, val, exc)
@@ -891,7 +892,8 @@ class TestSearchConvergence(_TestInterpretBase):
         'gaussian no values': ('', 'gaussian', err.ParameterHasNoValueError),
         'dgen no values': ('', 'dgen', err.ParameterHasNoValueError),
         'no flag': ('0.2 0.5', '', err.ParameterNeedsFlagError),
-        'unknown flag': (' 0.01 0.9', 'unknown', err.ParameterUnknownFlagError),
+        'unknown flag': (' 0.01 0.9', 'unknown',
+                         err.ParameterUnknownFlagError),
         'too many values': ('.01 0.9 0.5', 'gaussian',
                             err.ParameterNumberOfInputsError),
         'scaling': ('0.01 -0.5', 'gaussian', err.ParameterRangeError),
@@ -907,14 +909,14 @@ class TestSearchConvergence(_TestInterpretBase):
                                 err.ParameterUnknownFlagError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid_gauss.values(), ids=valid_gauss)
+    @parametrize('val,expect', valid_gauss.values(), ids=valid_gauss)
     def test_interpret_valid_gaussian(self, val, expect, interpreter):
         """Check correct interpretation of SEARCH_CONVERGENCE gaussian."""
         self.interpret(interpreter, val, flags_str='gaussian')
         rpars = interpreter.rpars
         assert (rpars.GAUSSIAN_WIDTH, rpars.GAUSSIAN_WIDTH_SCALING) == expect
 
-    @pytest.mark.parametrize('val,expect', valid_dgen.values(), ids=valid_dgen)
+    @parametrize('val,expect', valid_dgen.values(), ids=valid_dgen)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of SEARCH_CONVERGENCE gaussian."""
         self.interpret(interpreter, val, flags_str='dgen')
@@ -927,7 +929,7 @@ class TestSearchConvergence(_TestInterpretBase):
         self.interpret(interpreter, 'off')
         assert interpreter.rpars.GAUSSIAN_WIDTH_SCALING == 1.0
 
-    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    @parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid SEARCH_CONVERGENCE raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
@@ -984,7 +986,7 @@ class TestSearchCull(_TestInterpretBase):
         'not a float': ('abcd', err.ParameterFloatConversionError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid SEARCH_CULL."""
         rpars = interpreter.rpars
@@ -996,7 +998,7 @@ class TestSearchCull(_TestInterpretBase):
         self.check_assigned(interpreter, val, expect_cull)
         assert rpars.SEARCH_CULL_TYPE == expect_type
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid SEARCH_CULL raises exceptions."""
         self.check_raises(interpreter, val, exc)
@@ -1035,7 +1037,7 @@ class TestSiteDefInvalid(_TestInterpretBase):
                        err.ParameterNumberOfInputsError),
         }
 
-    @pytest.mark.parametrize('element,val,exc', invalid.values(), ids=invalid)
+    @parametrize('element,val,exc', invalid.values(), ids=invalid)
     def test_invalid(self, element, val, exc, ag100_interpreter):
         """Check complaints when an empty slab is provided."""
         self.check_raises(ag100_interpreter, val, exc, flags_str=element)
@@ -1061,7 +1063,7 @@ class _TestWoodsOrMatrixParam(_TestInterpretBase):
         'matrix cols': ('1 2, 3', 'M', err.ParameterParseError),
         }
 
-    @pytest.mark.parametrize('val,flag,exc', invalid.values(), ids=invalid)
+    @parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure that a Woods SUPERLATTICE without a slab raises."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
@@ -1119,12 +1121,12 @@ class TestSymmetryBulk(_TestInterpretBase):
         'wrong screw': 'p4g r(12)',
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid SYMMETRY_BULK."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val', invalid.values(), ids=invalid)
+    @parametrize('val', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, interpreter):
         """Ensure invalid SYMMETRY_BULK raises exceptions."""
         self.check_raises(interpreter, val, err.ParameterValueError)
@@ -1172,12 +1174,12 @@ class TestSymmetryFix(_TestInterpretBase):
                'direction_missing': ('cm', err.ParameterParseError),
                'direction_wrong': ('pmt [0 x]', err.ParameterError),}
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid SYMMETRY_FIX."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid SYMMETRY_FIX raises exceptions."""
         self.check_raises(interpreter, val, exc)
@@ -1197,12 +1199,12 @@ class TestTensorOutput(_TestInterpretBase):
              'repeated': ('2*1 2*0 1', [1, 1, 0, 0, 1]),}
     invalid = ('2', '5*5 0 0 1')
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid TENSOR_OUTPUT."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val', invalid, ids=invalid)
+    @parametrize('val', invalid, ids=invalid)
     def test_interpret_invalid(self, val, interpreter):
         """Ensure invalid TENSOR_OUTPUT raises exceptions."""
         self.check_raises(interpreter, val, err.ParameterParseError)
@@ -1233,12 +1235,12 @@ class TestTheoEnergies(_TestInterpretBase):
         'too many': ('1.0 2.0 0.3 9', err.ParameterNumberOfInputsError),
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid THEO_ENERGIES."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val,exc', invalid.values(), ids=invalid)
+    @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid THEO_ENERGIES raises exceptions."""
         self.check_raises(interpreter, val, exc)
@@ -1257,12 +1259,12 @@ class TestV0Real(_TestInterpretBase):
         'float': 'rundgren 1.0 2.0 3.0 four',
         }
 
-    @pytest.mark.parametrize('val,expect', valid.values(), ids=valid)
+    @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid V0_REAL."""
         self.check_assigned(interpreter, val, expect)
 
-    @pytest.mark.parametrize('val', invalid.values(), ids=invalid)
+    @parametrize('val', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, interpreter):
         """Ensure invalid V0_REAL raises exceptions."""
         self.check_raises(interpreter, val, err.ParameterError)
