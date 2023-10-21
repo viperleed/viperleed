@@ -322,22 +322,24 @@ class Rparams:
     def no_value(self):
         return NO_VALUE
 
-    def get_default(self, param):
+    @staticmethod
+    def get_default(param):
         """Return the default value of param."""
         try:
             value = DEFAULTS[param]
         except KeyError as err:
-            raise ValueError(f"No default found for parameter {param}.") from err
+            raise ValueError(f'No default found for parameter {param}') from err
         if isinstance(value, tuple):
             value = list(value)
         return value
 
-    def get_limits(self, param):
+    @staticmethod
+    def get_limits(param):
         """Return the smallest and largest acceptable values of param."""
         try:
             return PARAM_LIMITS[param]
         except KeyError as err:
-            raise ValueError(f"No limits found for parameter {param}.") from err
+            raise ValueError(f'No limits found for parameter {param}') from err
 
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and

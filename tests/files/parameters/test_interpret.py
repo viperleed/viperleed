@@ -490,7 +490,7 @@ class TestIVShiftRange(_TestInterpretBase):
     """Tests for interpreting IV_SHIFT_RANGE."""
 
     param = 'IV_SHIFT_RANGE'
-    _defaults = Rparams().get_default('IV_SHIFT_RANGE')
+    _defaults = Rparams.get_default('IV_SHIFT_RANGE')
     valid = {
         'range': ('0.0 1.0 0.25', [0.0, 1.0, 0.25]),
         'default bound': ('_ 1.0 0.25', [_defaults[0], 1.0, 0.25]),
@@ -1038,7 +1038,7 @@ class TestSymmetryFix(_TestInterpretBase):
     """Tests for interpreting SYMMETRY_FIX."""
 
     param = 'SYMMETRY_FIX'
-    _default = Rparams().get_default(param)
+    _default = Rparams.get_default(param)
 
     valid = {'auto': ('t', _default),
              'p1': ('p1', 'p1'),
@@ -1087,7 +1087,7 @@ class TestTheoEnergies(_TestInterpretBase):
     """Tests for interpreting THEO_ENERGIES."""
 
     param = 'THEO_ENERGIES'
-    _defaults = Rparams().get_default(param)
+    _defaults = Rparams.get_default(param)
     valid = {
         'single_value_default': ('_', _defaults),
         'single_value': ('1.0', [1.0, 1.0, 1.0]),
