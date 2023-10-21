@@ -430,8 +430,12 @@ class ParameterInterpreter:
                           _SIMPLE_NUMERICAL_PARAMS)
 
     # ----- Methods to make sure no extra flags/values are given ------
-    def _ensure_single_flag_assignment(self, param, assignment, message=None):
+    def _ensure_single_flag_assignment(self, param, assignment, message=None,
+                                       must_have_exaclty_one=True):
         """Raise if assignment contains multiple flags."""
+        if must_have_exaclty_one and not assignment.flag:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterNeedsFlagError(param, message)
         if message is None:
             message = assignment.flags_str
         if assignment.other_flags:
@@ -612,7 +616,8 @@ class ParameterInterpreter:
         param = 'FORTRAN_COMP'
         message = (f'Only one flag allowed for {param} per line. '
                    f'Got {assignment.flags}')
-        self._ensure_single_flag_assignment(param, assignment, message=message)
+        self._ensure_single_flag_assignment(param, assignment, message=message,
+                                            must_have_exaclty_one=False)
         flag, compiler_str = assignment.flag.lower(), assignment.values_str
 
         # (1) Default (i.e., non-MPI) compiler flags
