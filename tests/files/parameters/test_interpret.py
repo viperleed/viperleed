@@ -786,6 +786,7 @@ class TestPlotIV(_TestInterpretBase):
         'two legend': ('legend', 'tr none', err.ParameterNumberOfInputsError),
         'two overbar': ('overbar', 't f', err.ParameterNumberOfInputsError),
         'two plot': ('plot', 'true 0', err.ParameterNumberOfInputsError),
+        'perpage x3': ('perpage', '1 2 3', err.ParameterNumberOfInputsError),
         'multi flag': ('plot axes', 'true', err.ParameterUnknownFlagError),
         }
 
