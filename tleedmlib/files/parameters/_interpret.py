@@ -48,7 +48,7 @@ from ._known_parameters import KNOWN_PARAMS
 from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
 
-logger = logging.getLogger('tleedm.files.parameters')
+_LOGGER = logging.getLogger('tleedm.files.parameters')
 
 
 # Bool parameters for which to create interpret...() methods automatically.
@@ -169,9 +169,9 @@ class ParameterInterpreter:
         self.slab = slab
         self._search_conv_read = False
 
-        _backup_log_level = logger.level
+        _backup_log_level = _LOGGER.level
         if silent:
-            logger.setLevel(logging.ERROR)
+            _LOGGER.setLevel(logging.ERROR)
 
         self._update_param_order()
         for param, assignment in self._get_param_assignments():
@@ -181,11 +181,11 @@ class ParameterInterpreter:
                 continue
 
             self._interpret_param(param, assignment)
-            logger.log(_BELOW_DEBUG,
-                       f'Successfully interpreted parameter {param}')
+            _LOGGER.log(_BELOW_DEBUG,
+                        f'Successfully interpreted parameter {param}')
 
         # Finally set the log level back to what it was
-        logger.setLevel(_backup_log_level)
+        _LOGGER.setLevel(_backup_log_level)
 
     # ----------------  Helper methods for interpret() ----------------
     def _get_param_assignments(self):
@@ -374,9 +374,9 @@ class ParameterInterpreter:
         if not in_range:
             in_range_value = bounds.make_in_range(value)
             out_of_range = bounds.format_out_of_range(value)
-            logger.warning(f'PARAMETERS file: {assignment.parameter}: '
-                           f'{out_of_range}. '
-                           f'Value will be set to {in_range_value}.')
+            _LOGGER.warning(f'PARAMETERS file: {assignment.parameter}: '
+                            f'{out_of_range}. '
+                            f'Value will be set to {in_range_value}.')
             value = in_range_value
 
         param = param or assignment.parameter
@@ -1108,7 +1108,7 @@ class ParameterInterpreter:
                 self.rpars.setHaltingLevel(2)
                 raise ParameterValueError(param, section_str) from exc
         if Section.DOMAINS in segments:
-            logger.info('Found domain search.')
+            _LOGGER.info('Found domain search.')
         if not segments:
             self.rpars.setHaltingLevel(3)
             message = f'{param} was defined, but no values were read'
@@ -1308,8 +1308,8 @@ class ParameterInterpreter:
             bounds=NumericBounds(type_=int, range_=(1, None))
             )
         if self.rpars.SEARCH_POPULATION < 16:
-            logger.warning(f'{param} is very small. A minimum '
-                           'value of 16 is recommended.')
+            _LOGGER.warning(f'{param} is very small. A minimum '
+                            'value of 16 is recommended.')
 
     def interpret_search_start(self, assignment):
         param = 'SEARCH_START'
@@ -1540,7 +1540,7 @@ class ParameterInterpreter:
         self.interpret_numerical_parameter(assignment, bounds=bounds)
         if self.rpars.SYMMETRY_EPS > 1.0:
             # pylint: disable-next=logging-format-interpolation
-            logger.warning(warning_str.format(''))
+            _LOGGER.warning(warning_str.format(''))
         # interpret possible second value as SYMMETRY_EPS_Z
         if not assignment.other_values:
             self.rpars.SYMMETRY_EPS_Z = self.rpars.SYMMETRY_EPS                 # TODO: not nice, as changes to _EPS that may occur are not reflected on _Z. Could do this with a @property of Rparams or a dedicated class.
@@ -1552,7 +1552,7 @@ class ParameterInterpreter:
                                            bounds=bounds)
         if self.rpars.SYMMETRY_EPS_Z > 1.0:
             # pylint: disable-next=logging-format-interpolation
-            logger.warning(warning_str.format('for z '))
+            _LOGGER.warning(warning_str.format('for z '))
 
     def interpret_symmetry_fix(self, assignment):                               # TODO: use symmetry groups from elsewhere once symmetry and guilib are merged
         param = 'SYMMETRY_FIX'
@@ -1672,8 +1672,8 @@ class ParameterInterpreter:
             start = start % step
         if abs(start) < 1e-6:
             start = step
-        logger.info('THEO_ENERGIES parameter: (Eto - Efrom) % Estep != 0, '
-                    f'Efrom was corrected to {start}')
+        _LOGGER.info('THEO_ENERGIES parameter: (Eto - Efrom) % Estep != 0, '
+                     f'Efrom was corrected to {start}')
         self.rpars.THEO_ENERGIES = [start, stop, step]
 
     def interpret_v0_real(self, assignment):
