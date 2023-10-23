@@ -31,7 +31,7 @@ import scipy
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.checksums import validate_multiple_files
-from viperleed.tleedmlib.classes.rparams import SearchPar
+from viperleed.tleedmlib.classes.searchpar import SearchPar
 from viperleed.tleedmlib.files import iosearch as tl_io
 from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files import searchpdf

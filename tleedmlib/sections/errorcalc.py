@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 
 from viperleed.tleedmlib.classes.r_error import R_Error
-from viperleed.tleedmlib.classes.rparams import SearchPar
+from viperleed.tleedmlib.classes.searchpar import SearchPar
 from viperleed.tleedmlib.files import ioerrorcalc as tl_io
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
 from viperleed.tleedmlib.sections.deltas import deltas as section_deltas
