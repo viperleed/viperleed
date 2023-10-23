@@ -483,8 +483,8 @@ def init_domains(rp):
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
                 interpret_domain_params_silent = rp.LOG_LEVEL > logging.DEBUG
-                parameters.interpretPARAMETERS(dp.rp, slab=dp.sl,
-                                               silent=interpret_domain_params_silent)
+                parameters.interpret(dp.rp, slab=dp.sl,
+                                     silent=interpret_domain_params_silent)
                 dp.sl.fullUpdate(dp.rp)   # gets PARAMETERS data into slab
                 dp.rp.fileLoaded["POSCAR"] = True
                 dp.rp.updateDerivedParams()

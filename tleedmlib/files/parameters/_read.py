@@ -43,7 +43,7 @@ def read(filename='PARAMETERS'):
         Object storing parameters for current run. Contains the
         raw parameters read in this function in its `.readParams`
         attribute. The parameters read are not interpreted. For
-        that, call `interpretPARAMETEERS` passing the the same
+        that, call `parameters.interpret` passing the the same
         `rpars` object.
 
     Raises

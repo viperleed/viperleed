@@ -103,7 +103,7 @@ _SIMPLE_NUMERICAL_PARAMS = {
 _OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i', 'a', 'b', 'c', 'ab', 'abc',}
 
 
-def interpretPARAMETERS(rpars, slab=None, silent=False):
+def interpret(rpars, slab=None, silent=False):
     """Interpret rpars.readParams to actual values.
 
     Parameters
@@ -1145,7 +1145,7 @@ class ParameterInterpreter:
             flags and values to be interpreted.
         is_updating : bool, optional
             Whether this method is being called as part of a
-            parameters.update (True) or an interpretPARAMETERS
+            parameters.update (True) or a parameters.interpret
             (False). Default is False.
 
         Raises
