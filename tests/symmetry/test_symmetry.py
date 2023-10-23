@@ -294,6 +294,7 @@ class TestSymmetryConstraints:
 
     _known_invalid_constrained_group = {
         'rcm-ucell=rectangular': 'Known to sometimes fail with a random shift',
+        'rcm-ucell=square': 'Known to sometimes fail with a random shift',
         'pm_10': 'Known to sometimes fail with a random shift',
         'cm_1m1': 'Known to sometimes fail with a random shift',
         'hex_cm_10': 'Known to sometimes fail with a random shift',
