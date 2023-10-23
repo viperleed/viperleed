@@ -15,7 +15,9 @@ base-class CameraABC. All classes handling cameras should be
 concrete subclasses of CameraABC.
 """
 
+from collections.abc import Sequence
 from abc import abstractmethod
+import operator
 
 import numpy as np
 from PyQt5 import QtCore as qtc
@@ -791,7 +793,13 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         error_msg = []
         for setting, (in_config, getter) in to_check.items():
             in_device = getter()
-            if not np.isclose(in_config, in_device):
+            if isinstance(in_config, str):
+                equal = operator.eq
+            elif isinstance(in_config, (Sequence, np.ndarray)):
+                equal = np.allclose
+            else:
+                equal = np.isclose
+            if not equal(in_config, in_device):
                 error_msg.append(
                     error_txt.format(setting, in_device, in_config)
                     )
