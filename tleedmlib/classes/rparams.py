@@ -19,7 +19,6 @@ from timeit import default_timer as timer
 
 import numpy as np
 
-import viperleed
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import available_cpu_count
 from viperleed.tleedmlib.checksums import (KNOWN_TL_VERSIONS,
