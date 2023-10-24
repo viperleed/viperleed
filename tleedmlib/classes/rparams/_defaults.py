@@ -15,7 +15,10 @@ import logging
 
 _LOGGER = logging.getLogger('tleedm.rparams')
 
-NO_VALUE = None  # This needs to be a singleton, so "is NO_VALUE" works
+# Notice that we cannot use a module-level global object(), as this
+# module may be imported a number of times when using multiprocessing
+NO_VALUE = None
+
 
 # Notice that the defaults in here that may be mutated during execution
 # are saved as immutable types to prevent inadvertent modification of
