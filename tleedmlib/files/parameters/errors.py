@@ -24,7 +24,7 @@ class ParameterError(Exception):
         _message = f'PARAMETERS file: parameter {str(parameter)}:\n'
         _message += message or self._default_message
         self.parameter = parameter
-        self.message = _message
+        self.message = message or self._default_message
         super().__init__(_message)
 
 
