@@ -40,7 +40,7 @@ ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
-        _get_expbeams(rp)
+        rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
@@ -342,49 +342,10 @@ def initialization(sl, rp, subdomain=False):
     return
 
 
-def _get_expbeams(rp):                                                          # TODO: could become an RParams method
-    """Load an EXPBEAMS file into rp."""
-    # if already loaded, do nothing
-    if rp.fileLoaded["EXPBEAMS"]:
-        return
-    # Check if multiple experimental input files were provided
-    exp_files_provided = [fn for fn in EXPBEAMS_NAMES if Path(fn).is_file()]
-    if len(exp_files_provided) > 1:
-        logger.warning(
-            "Multiple files with experimental I(V) curves were provided. "
-            "Check if the root directory contains the correct files. "
-            f"ViPErLEED will preferentially use '{exp_files_provided[0]}'."
-            )
-        rp.setHaltingLevel(1)
-
-    # Check for experimental beams
-    try:
-        rp.EXPBEAMS_INPUT_FILE = exp_files_provided[0]
-    except IndexError:
-        # reset the default
-        rp.EXPBEAMS_INPUT_FILE = rp.get_default("EXPBEAMS_INPUT_FILE")
-        return
-
-    err_msg = f"Error while reading file {rp.EXPBEAMS_INPUT_FILE}"
-    enrange = [-1 if e is rp.no_value else e
-               for e in rp.THEO_ENERGIES[:2]]
-    try:
-        rp.expbeams = tl_beams.readOUTBEAMS(filename=rp.EXPBEAMS_INPUT_FILE,
-                                            enrange=enrange)
-    except Exception:                                                           # TODO: catch better
-        logger.error(f"{err_msg}.", exc_info=True)
-        return
-
-    if len(rp.expbeams):
-        rp.fileLoaded["EXPBEAMS"] = True
-    else:
-        logger.error(f"{err_msg}: No data was read.")
-
-
 def init_domains(rp):
     """Runs an alternative initialization for the domain search. This will
     include running the 'normal' initialization for each domain."""
-    _get_expbeams(rp)
+    rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
     if len(rp.DOMAINS) < 2:
         logger.error("A domain search was defined, but less than two domains "
@@ -723,11 +684,12 @@ def preserve_original_input(rp, init_logger, path=""):
                            f"{ORIGINAL_INPUTS_DIR_NAME}. "
                            "Check disk permissions.") from exc
 
-    # make sure the correct version of EXPBEAMS is stored (if used)
+    # We will copy all files that have potentially been used as
+    # inputs. Make sure the correct version of EXPBEAMS is stored
     files_to_preserve = ALL_INPUT_FILES.copy()
     files_to_preserve.remove('EXPBEAMS')
-    if rp.EXPBEAMS_INPUT_FILE:
-        files_to_preserve.add(rp.EXPBEAMS_INPUT_FILE)
+    if rp.expbeams_file_name:
+        files_to_preserve.add(rp.expbeams_file_name)
 
     # copy all files to orig_inputs that were used as original input
     for file in files_to_preserve:

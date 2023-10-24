@@ -63,7 +63,6 @@ class Rparams:
         self.DOMAIN_STEP = 1      # area step in percent for domain search
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
-        self.EXPBEAMS_INPUT_FILE = DEFAULTS['EXPBEAMS_INPUT_FILE']
         self.FILAMENT_WF = DEFAULTS['FILAMENT_WF']['lab6']   # work function of emitting cathode
         self.FORTRAN_COMP = ['', '']      # before files, after files
         self.FORTRAN_COMP_MPI = ['', '']  # before files, after files
@@ -183,6 +182,7 @@ class Rparams:
             'refcalc': [],
             'superpos': None
             }
+        self.expbeams_file_name = ''     # EXPBEAMS or EXPBEAMS.csv?
         self.phaseshifts = []
         self.phaseshifts_firstline = ''  # contains parameters for MUFTIN
         self.refcalc_fdout = ''
@@ -220,6 +220,40 @@ class Rparams:
     @property
     def no_value(self):
         return NO_VALUE
+
+    def try_loading_expbeams_file(self):
+        """Read an EXPBEAMS file if not already available."""
+        if self.fileLoaded['EXPBEAMS']:
+            return
+
+        exp_files_provided = (f for f in EXPBEAMS_NAMES if Path(f).is_file())
+        try:
+            self.expbeams_file_name = next(exp_files_provided)
+        except StopIteration:  # Nothing to load
+            self.expbeams_file_name = ''
+            return
+
+        # Warn if multiple experimental input files were provided
+        if next(exp_files_provided, False):
+            self.setHaltingLevel(1)
+            _LOGGER.warning(
+                'Multiple files with experimental I(V) curves were provided. '
+                'Check if the root directory contains the correct files. '
+                f'Using file {self.expbeams_file_name!r}.'
+                )
+        err_msg = f'Error while reading file {self.expbeams_file_name}'
+        enrange = [-1 if e is NO_VALUE else e for e in self.THEO_ENERGIES[:2]]
+        try:
+            self.expbeams = tl_beams.readOUTBEAMS(self.expbeams_file_name,
+                                                  enrange=enrange)
+        except OSError:
+            _LOGGER.error(f'{err_msg}.', exc_info=True)
+            return
+
+        if self.expbeams:
+            self.fileLoaded['EXPBEAMS'] = True
+        else:
+            _LOGGER.error(f'{err_msg}: No data was read.')
 
     @staticmethod
     def get_default(param):

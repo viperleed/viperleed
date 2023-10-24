@@ -102,19 +102,7 @@ def run_section(index, sl, rp):
             continue
         # try loading files
         if filename == "EXPBEAMS":
-            enrange = [-1 if e is rp.no_value else e
-                       for e in rp.THEO_ENERGIES[:2]]
-            initialization._get_expbeams(rp)
-            try:
-                rp.expbeams = readOUTBEAMS(rp.EXPBEAMS_INPUT_FILE,
-                                           enrange=enrange)
-            except Exception as e:  # e.g. FileNotFoundError
-                # do NOT raise, as we can run until Deltas without EXPBEAMS
-                logger.error("Error while reading required file "
-                             f"{rp.EXPBEAMS_INPUT_FILE}",
-                             exc_info=(type(e) != FileNotFoundError))
-            if len(rp.expbeams) > 0:
-                rp.fileLoaded["EXPBEAMS"] = True
+            rp.try_loading_expbeams_file()
             if index != 0:
                 checkEXPBEAMS(sl, rp)
         elif filename == "IVBEAMS":

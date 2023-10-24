@@ -26,7 +26,6 @@ NO_VALUE = None
 # in the relevant places. The only difference is dictionaries. Copies
 # are used for them.
 DEFAULTS = {
-    'EXPBEAMS_INPUT_FILE' : None,
     'FILAMENT_WF': {
         'lab6': 2.65,  # This is the default if nothing is given
         'w': 4.5,
