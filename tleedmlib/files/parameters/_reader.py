@@ -25,7 +25,7 @@ from viperleed.tleedmlib.base import strip_comments
 
 from .errors import ParameterNotRecognizedError, MissingEqualsError
 from .errors import ParameterHasNoValueError
-from ._known_parameters import from_alias
+from ._known_parameters import from_alias, did_you_mean
 from ._utils import Assignment
 
 
@@ -75,6 +75,21 @@ class ParametersReader(AbstractContextManager, Iterator):
             return (param, *rest)
         raise StopIteration
 
+    def _complain_about_line_parse_errors(self, line, exc):
+        """Re-raise an exception occurred while line was being parsed."""
+        if not isinstance(exc, ParameterNotRecognizedError):
+            raise exc
+        # Suggest a close match for an unknown parameter
+        param, *_ = self._tokenize_line(line)
+        try:
+            close_match = did_you_mean(param)
+        except ParameterNotRecognizedError:
+            # No close match. Stick to the original exception
+            raise exc from None
+        new_message = (f'{exc.message} (at line {self._current_line}). '
+                       f'Did you mean {close_match!r}?')
+        raise ParameterNotRecognizedError(exc.parameter, message=new_message)
+
     def _complain_about_missing_equals(self, line):
         """Warn the user if line contains a known parameter but no '='."""
         if not line or not self.noisy:
@@ -104,21 +119,19 @@ class ParametersReader(AbstractContextManager, Iterator):
 
         try:
             param, assignment = self._parse_line(line)
-        except (ParameterNotRecognizedError, ParameterHasNoValueError):
+        except (ParameterNotRecognizedError, ParameterHasNoValueError) as exc:
             if not self.noisy:
                 return '', None
-            raise
+            self._complain_about_line_parse_errors(line, exc)
         if not param:
             return '', None
         return param.upper(), assignment
 
     def _parse_line(self, line):
         """Return a parameter string and an Assignment from line."""
-        # Syntax is 'PARAMETER flag flag ... = value value value ...'
-        left_side, values_str = line.split('=', maxsplit=1)
-        if not left_side:  # Nothing left of '='
+        param, flags, values_str = self._tokenize_line(line)
+        if not param:
             return '', None
-        param, *flags = left_side.split()
         param = from_alias(param)
         values_str = values_str.strip()
         if not values_str:
@@ -137,6 +150,16 @@ class ParametersReader(AbstractContextManager, Iterator):
                     and not re.match(fr'\s*{param}\s*=\s*[F](ALSE)?', line)):
                 return True
         return False
+
+    @staticmethod
+    def _tokenize_line(line):
+        """Split up line into tokens."""
+        # Syntax is 'PARAMETER flag flag ... = value value value ...'
+        left_side, values_str = line.split('=', maxsplit=1)
+        if not left_side:  # Nothing left of '='
+            return left_side, (), values_str
+        param, *flags = left_side.split()
+        return param, flags, values_str
 
 
 # To me this pylint complaint does not make much sense

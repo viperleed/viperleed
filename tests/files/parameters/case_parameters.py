@@ -60,6 +60,7 @@ _PATHS = {
     'unknown_param': 'parameters/PARAMETERS_unknown',
     'left empty': 'parameters/PARAMETERS_left_side_empty',
     'no value': 'parameters/PARAMETERS_no_value',
+    'typo': 'parameters/PARAMETERS_typo',
     }
 
 
@@ -125,6 +126,12 @@ class CasesParametersFile:
     def case_no_value_parameter(self, data_path):
         """Return one PARAMETERS file with a value-less parameter."""
         info = _fill_test_info('no value', needs_expected=False)
+        return self.case_parameters_file(info, data_path)
+
+    @case(tags=CaseTag.RAISES)
+    def case_typo(self, data_path):
+        """Return one PARAMETERS file with a typo in it."""
+        info = _fill_test_info('typo', needs_expected=False)
         return self.case_parameters_file(info, data_path)
 
 

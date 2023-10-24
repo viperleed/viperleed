@@ -93,6 +93,13 @@ class TestReadFailing:
         with pytest.raises(ParameterNotRecognizedError):
             read_parameters(args)
 
+    def test_typo(self, data_path, read_parameters):
+        """Check suggestions when a typo is present."""
+        args = CasesParametersFile().case_typo(data_path)
+        with pytest.raises(ParameterNotRecognizedError) as exc:
+            read_parameters(args)
+        assert exc.match(".*ENERGEIS:\n.*Did you mean 'THEO_ENERGIES'?")
+
 
 class TestUpdate:
     """Collection of tests for updating from a PARAMETERS file."""
