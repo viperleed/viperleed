@@ -46,6 +46,16 @@ class ParameterUnexpectedInputError(ParameterError):
     _default_message = 'Encountered unexpected input. Check parameter syntax'
 
 
+class ParameterConflictError(ParameterError):
+    """Raised when the value of two or more parameters clash."""
+
+    _default_message = 'Parameters have conflicting values'
+
+    def __init__(self, *parameters, message=''):
+        """Initialize instance."""
+        super().__init__(', and '.join(parameters), message=message)
+
+
 # base class for conversion errors
 class ParameterConversionError(ParameterError):
     """Raised when a conversion fails."""
