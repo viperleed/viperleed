@@ -22,20 +22,18 @@ import shutil
 from timeit import default_timer as timer
 
 import numpy as np
-
 try:
-    import matplotlib.pyplot as plt                                             # TODO: we should make a general PLOTTING parameter to turn plotting on/off. If plotting is enabled but we can't import matplotlib, we should rather raise an error.
-except Exception:
+    import matplotlib.pyplot as plt
+except ImportError:
     _CAN_PLOT = False
 else:
     _CAN_PLOT = True
-    plt.style.use('viperleed.tleedm')
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import available_cpu_count
+from viperleed.tleedmlib.checksums import KNOWN_TL_VERSIONS
+from viperleed.tleedmlib.checksums import UnknownTensErLEEDVersionError
 from viperleed.tleedmlib.classes.searchpar import SearchPar
-from viperleed.tleedmlib.checksums import (KNOWN_TL_VERSIONS,
-                                           UnknownTensErLEEDVersionError)
 from viperleed.tleedmlib.files.iodeltas import checkDelta
 
 from ._defaults import NO_VALUE, DEFAULTS
@@ -43,6 +41,8 @@ from ._limits import PARAM_LIMITS
 
 
 _LOGGER = logging.getLogger('tleedm.rparams')
+if _CAN_PLOT:
+    plt.style.use('viperleed.tleedm')
 
 
 class Rparams:
