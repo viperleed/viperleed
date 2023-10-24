@@ -166,8 +166,11 @@ class TestReader:
     def test_reader(self, path_to_params):
         """Check the lines returned by a ParametersReader."""
         with ParametersReader(path_to_params) as reader:
+            # pylint: disable=protected-access
             assert next(reader)[1] == Assignment('1-3', 'RUN')
+            assert reader._current_line == 3
             assert next(reader)[1] == Assignment('50 700 3', 'THEO_ENERGIES')
+            assert reader._current_line == 4
 
     def test_raw_reader(self, path_to_params):
         """Check the lines returned by a RawLineParametersReader."""
@@ -178,5 +181,7 @@ class TestReader:
             ('THEO_ENERGIES', 'THEO_ENERGIES =   50 700 3\n'),
             )
         with RawLineParametersReader(path_to_params) as reader:
-            for expected, _read in zip(expected_lines, reader):
+            # pylint: disable=protected-access
+            for i, (expected, _read) in enumerate(zip(expected_lines, reader)):
                 assert _read == expected
+                assert reader._current_line == i + 1

@@ -49,10 +49,12 @@ class ParametersReader(AbstractContextManager, Iterator):
         self.filename = Path(filename)
         self.noisy = noisy
         self._file_obj = None
+        self._current_line = 0
 
     def __enter__(self):
         """Enter context."""
         self._file_obj = self.filename.open('r', encoding='utf-8')
+        self._current_line = 0
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -65,14 +67,15 @@ class ParametersReader(AbstractContextManager, Iterator):
 
     def __next__(self):
         """Return the next understandable information in the file."""
-        for line_nr, line in enumerate(self._file_obj, start=1):
-            param, *rest = self._read_one_line(line, line_nr)
+        for line in self._file_obj:
+            self._current_line += 1
+            param, *rest = self._read_one_line(line)
             if not param:
                 continue
             return (param, *rest)
         raise StopIteration
 
-    def _complain_about_missing_equals(self, line, line_nr):
+    def _complain_about_missing_equals(self, line):
         """Warn the user if line contains a known parameter but no '='."""
         if not line or not self.noisy:
             return
@@ -81,12 +84,12 @@ class ParametersReader(AbstractContextManager, Iterator):
             param = from_alias(param)
         except ParameterNotRecognizedError:
             return
-        _err_msg = (f'-- line {line_nr} -- Found {param} in a '
-                    'line without an "=" sign. Assignment will '
+        _err_msg = (f'-- line {self._current_line} -- Found {param} '
+                    'in a line without an "=" sign. Assignment will '
                     f'be SKIPPED.\n    Faulty line: {line}')
         raise MissingEqualsError(param, message=_err_msg)
 
-    def _read_one_line(self, line, line_nr):
+    def _read_one_line(self, line):
         """Return a parameter and other custom information from one line."""
         line = strip_comments(line)
 
@@ -96,7 +99,7 @@ class ParametersReader(AbstractContextManager, Iterator):
             return 'STOP', Assignment('True', 'STOP')
 
         if '=' not in line:
-            self._complain_about_missing_equals(line, line_nr)
+            self._complain_about_missing_equals(line)
             return '', None
 
         try:
@@ -148,11 +151,10 @@ class RawLineParametersReader(ParametersReader):
 
     def __next__(self):
         """Return the next acceptable information in the file."""
-        for line_nr, line in enumerate(self._file_obj, start=1):
-            return self._read_one_line(line, line_nr)
-        raise StopIteration
+        self._current_line += 1
+        return self._read_one_line(next(self._file_obj))
 
-    def _read_one_line(self, line, line_nr):
+    def _read_one_line(self, line):
         """Return a parameter, and the whole raw line it was in."""
-        param, *_ = super()._read_one_line(line, line_nr)
+        param, *_ = super()._read_one_line(line)
         return param, line
