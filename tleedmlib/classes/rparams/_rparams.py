@@ -483,13 +483,8 @@ class Rparams:
             return
         info = False
         if self.fileLoaded['EXPBEAMS']:
-            minen = min(self.expbeams[0].intens)
-            maxen = max(self.expbeams[0].intens)
-            for beam in self.expbeams:
-                if min(beam.intens) < minen:
-                    minen = min(beam.intens)
-                if max(beam.intens) > maxen:
-                    maxen = max(beam.intens)
+            minen = min(en for beam in self.expbeams for en in beam.intens)
+            maxen = max(en for beam in self.expbeams for en in beam.intens)
             values = [minen - 3, maxen + 3, 3]
             if NO_VALUE in self.THEO_ENERGIES[:2]:
                 info = True
