@@ -463,7 +463,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
 
     # get fortran files and compile
     try:
-        tldir = leedbase.getTLEEDdir(tensorleed_path=rp.source_dir, version=rp.TL_VERSION)
+        tldir = rp.get_tenserleed_directory()
         libpath = tldir / "lib"
         libname = next(libpath.glob("rfacsb*"))                                 # StopIteration??
         srcpath = tldir / "src"

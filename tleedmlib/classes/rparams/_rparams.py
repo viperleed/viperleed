@@ -283,6 +283,63 @@ class Rparams:
                 self.rfacscatter.append(p)
                 pg = p[0]
 
+    def get_tenserleed_directory(self, version=None):                           # TODO: replace the default for TL_VERSION with Version('unknown')
+        """Return the Path to a TensErLEED directory.
+
+        The directory is looked up in Rparams.source_dir.
+
+        Parameters
+        ----------
+        version : float or None, optional
+            Which specific version of TensErLEED should be looked
+            up. If not given or None, `Rparams.TL_VERSION` is used.
+            If `version == 0`, the highest version is returned.
+            Default is None.
+
+        Returns
+        -------
+        tenserleed_path : Path
+            Path to the desired 'TensErLEED' directory.
+
+        Raises
+        ------
+        RuntimeError
+            If this method is called before `Rparams.source_dir` is set
+        FileNotFoundError
+            If `Rparams.source_dir` has no 'TensErLEED' subdirectories
+        FileNotFoundError
+            If `version` is given, but the corresponding directory
+            was not found
+        """
+        if not self.source_dir:
+            raise RuntimeError(
+                f'{type(self).__name__}.get_tenserleed_directory: '
+                'source_dir is not set'
+                )
+        source_tree = self.source_dir.resolve()
+        version = version or self.TL_VERSION
+
+        highest = foundversion = 0.0
+        founddir = None
+        for directory in source_tree.glob('TensErLEED*'):
+            if not directory.is_dir():
+                continue
+            try:
+                foundversion = float(directory.name.split('v')[-1])
+            except (ValueError, IndexError):
+                continue
+            if foundversion == version:
+                return directory
+            if foundversion > highest:
+                highest = foundversion
+                founddir = directory
+
+        if not founddir:
+            raise FileNotFoundError('Could not find TensErLEED code')
+        if version > 0 and foundversion != version:
+            raise FileNotFoundError(f'Could not find TensErLEED {version=}')
+        return founddir
+
     def updateDerivedParams(self):
         """
         Checks which derivative parameters (which cannot be calculated at
@@ -301,10 +358,9 @@ class Rparams:
                                'without specifying a source directory')
         if self.TL_VERSION == 0.:
             # Fetch most recent TensErLEED version
-            newest_tl_path = leedbase.getTLEEDdir(self.source_dir, version=None)
-            self.TL_VERSION = float(newest_tl_path.name.split('-v')[1])
-            # Log used TensErLEED version
-            _LOGGER.info(f'Detected TensErLEED version {self.TL_VERSION:.2f}')
+            _, version = self.get_tenserleed_directory().name.split('v')
+            self.TL_VERSION = float(version)
+            _LOGGER.debug(f'Detected TensErLEED version {self.TL_VERSION:.2f}')
 
         # TL_VERSION_STR
         # try simple conversion to string

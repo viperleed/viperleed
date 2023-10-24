@@ -172,48 +172,6 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
-def _version_from_dirname(dirname):
-    try:
-        return float(dirname.split('v')[-1])
-    except Exception:
-        logger.debug("Could not parse version number "
-                     f"for directory {dirname}")
-        return np.nan
-
-
-def getTLEEDdir(tensorleed_path, version=None):
-    """Finds directories in the 'tensorleed' folder that have names starting
-    with 'TensErLEED', then picks the one with the highest version number.
-    Returns an absolute path to that directory, eg
-    './tensorleed/TensErLEED-v1.6'."""
-    if tensorleed_path is None:
-        raise RuntimeError("tensorleed_path is None")
-    source_dir = tensorleed_path.resolve()
-    tl_version_dirs = [dir.resolve() for dir in source_dir.iterdir()
-                       if ((source_dir / dir).is_dir()
-                       and dir.name.startswith('TensErLEED'))]
-    logger.log(1, f"getTLEEDdir: available TensErLEED directories: "
-                 f"{[d.name for d in tl_version_dirs]}")
-    if not tl_version_dirs:
-        raise FileNotFoundError("Could not find any TensErLEED directory.")
-    if version:
-        logger.log(5, f"getTLEEDdir: Looking for TensErLEED version {version}")
-        for tl_dir in tl_version_dirs:
-            if np.isclose(version, _version_from_dirname(tl_dir.name)):
-                return tl_dir
-        # if we get here, we didn't find the requested version
-        raise RuntimeError("Could not find requested TensErLEED version "
-                           f"{version}.")
-    # if no version is specified, return the highest version
-    version_numbers = [_version_from_dirname(d.name) for d in tl_version_dirs]
-    if all(np.isnan(version_numbers)):
-        raise RuntimeError("Could not find any TensErLEED version.")
-    highest_tl_version_dir = tl_version_dirs[np.nanargmax(version_numbers)]
-    logger.log(1, "getTLEEDdir: highest TensErLEED version is "
-               f"{highest_tl_version_dir.name}")
-    return highest_tl_version_dir
-
-
 def getMaxTensorIndex(home=".", zip_only=False):
     """
     Checks the Tensors folder for the highest Tensor index there,

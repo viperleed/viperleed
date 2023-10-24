@@ -733,7 +733,7 @@ def search(sl, rp):
             raise FileNotFoundError("Fortran compile error") from exc
     # get fortran files
     try:
-        tldir = leedbase.getTLEEDdir(tensorleed_path=rp.source_dir, version=rp.TL_VERSION)
+        tldir = rp.get_tenserleed_directory()
         srcpath = tldir / 'src'
         if usempi:
             src_file = next(srcpath.glob('search.mpi*'), None)
