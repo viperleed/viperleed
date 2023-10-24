@@ -17,6 +17,7 @@ names used internally when reading/writing/interpreting a PARAMETERS
 file.
 """
 
+from difflib import get_close_matches
 import logging
 
 from .errors import ParameterNotRecognizedError
@@ -147,3 +148,15 @@ def from_alias(known_param_or_alias):
     except AttributeError as exc:  # No .lower or no .replace
         raise TypeError('from_alias: must be string') from exc
     raise ParameterNotRecognizedError(parameter=known_param_or_alias)
+
+
+def did_you_mean(unknown_param):
+    """Return one close match for `unknown_param` from the known ones."""
+    try:
+        alias = _make_alias(unknown_param)
+    except AttributeError as exc:  # No .lower or no .replace
+        raise TypeError('from_alias: must be string') from exc
+    close_matches = get_close_matches(alias, _PARAM_ALIAS)
+    if not close_matches:
+        raise ParameterNotRecognizedError(unknown_param)
+    return _PARAM_ALIAS[close_matches[0]]

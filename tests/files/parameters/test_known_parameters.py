@@ -9,7 +9,8 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.tleedmlib.files.parameters._known_parameters import (
-    from_alias
+    from_alias, did_you_mean,
+    _PARAM_ALIAS, KNOWN_PARAMS
     )
 from viperleed.tleedmlib.files.parameters import errors
 
@@ -48,3 +49,48 @@ class TestFromAlias:
         param1 = from_alias('fdoptimize')
         param2 = from_alias('fdoptimization')
         assert param1 == param2 == 'OPTIMIZE'
+
+
+class TestDidYouMean:
+    """Collection of tests for function did_you_mean."""
+
+    def test_known_params(self, subtests):
+        """Check that the close match of known parameters is itself."""
+        for known_param in KNOWN_PARAMS:
+            with subtests.test(known_param):
+                assert did_you_mean(known_param) == known_param
+
+    def test_aliases(self, subtests):
+        """Check that the close match of an alias is the known parameter."""
+        for alias, known_param in _PARAM_ALIAS.items():
+            with subtests.test(alias):
+                assert did_you_mean(alias) == known_param
+
+    valid = {
+        'sotp': 'STOP',
+        'bulkliek': 'BULK_LIKE_BELOW',
+        'bluk_bellow': 'BULK_LIKE_BELOW',
+        'cmprssn': 'ZIP_COMPRESSION_LEVEL',
+        'plt': 'PLOT_IV',
+        'T_deb': 'T_DEBYE',
+        'Tensot': 'TENSOR_OUTPUT',
+        'level': 'LOG_LEVEL',
+        'vers': 'TL_VERSION',
+        }
+    invalid = ('zip', 'zi', 'suprel', 'super', 'asdf', 'unknown_param')
+
+    @parametrize('typo,known', valid.items(), ids=valid)
+    def test_close_typos(self, typo, known):
+        """Check correct identification of a parameter from a typo."""
+        assert did_you_mean(typo) == known
+
+    @parametrize(typo=invalid)
+    def test_far_typos(self, typo):
+        """Ensure far typos raise exceptions."""
+        with pytest.raises(errors.ParameterNotRecognizedError):
+            did_you_mean(typo)
+
+    def test_type_error(self):
+        """Check complaints when passing a non-string."""
+        with pytest.raises(TypeError):
+            did_you_mean(5)
