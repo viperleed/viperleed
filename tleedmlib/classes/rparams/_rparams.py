@@ -300,7 +300,7 @@ class Rparams:
             raise RuntimeError('Cannot determine highest TensErLEED version '
                                'without specifying a source directory')
         if self.TL_VERSION == 0.:
-            # fetch most recent TensErLEED version
+            # Fetch most recent TensErLEED version
             newest_tl_path = leedbase.getTLEEDdir(self.source_dir, version=None)
             self.TL_VERSION = float(newest_tl_path.name.split('-v')[1])
             # Log used TensErLEED version
@@ -779,10 +779,10 @@ class Rparams:
         if not _CAN_PLOT:
             return
 
-        for searchname in self.lastParScatterFigs:
-            for f in self.lastParScatterFigs[searchname]:
+        for figures in self.lastParScatterFigs.values():
+            for figure in figures:
                 try:
-                    plt.close(f)
+                    plt.close(figure)
                 except Exception:
                     pass
 
@@ -1062,8 +1062,9 @@ class Rparams:
                 raise
             finally:
                 os.chdir(home)
-            for sp in [sp for sp in dp.rp.searchpars
-                       if type(sp.restrictTo) == int]:
+            for sp in dp.rp.searchpars:
+                if not isinstance(sp.restrictTo, int):
+                    continue
                 sp.restrictTo += len(self.searchpars)
             self.searchpars.extend(dp.rp.searchpars)
             self.indyPars += dp.rp.indyPars
