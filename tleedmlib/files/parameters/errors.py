@@ -23,6 +23,8 @@ class ParameterError(Exception):
         """Initialize instance."""
         _message = f'PARAMETERS file: parameter {str(parameter)}:\n'
         _message += message or self._default_message
+        self.parameter = parameter
+        self.message = _message
         super().__init__(_message)
 
 
@@ -56,7 +58,7 @@ class ParameterConversionError(ParameterError):
             super().__init__(parameter, message)
             return
         message = 'Failed to convert '
-        if given_value:
+        if given_value is not None:
             message += f'{given_value!r} to {self._type}'
         else:
             message += f'input to {self._type}. Check parameter syntax'
