@@ -1335,21 +1335,14 @@ class ParameterInterpreter:
     def interpret_site_def(self, assignment):                                   # TODO: custom class
         """Assign the SITE_DEF for one POSCAR element."""
         param = 'SITE_DEF'
-        self._ensure_has_sitedef_compatible_slab(param)
-
         if assignment.values_str.count('top(') > 1:
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError(
                 param,
                 message='only a single top() allowed per SITE_DEF line'
                 )
-
-        site_element = assignment.flag.capitalize()
-        if site_element not in self.slab.elements:
-            msg = (f'{site_element!r} is not one of the valid '
-                   'POSCAR elements:' + ', '.join(self.slab.elements))
-            raise ParameterUnknownFlagError(param, message=msg)
-
+        site_element = self._get_valid_slab_element_from_flag(param,
+                                                              assignment)
         sorted_atoms = []
         if 'top(' in assignment.values_str:
             sorted_atoms = sorted(
@@ -1385,18 +1378,6 @@ class ParameterInterpreter:
                     ) from None
             site_def_dict[site_label] = atnums
         self.rpars.SITE_DEF[site_element] = site_def_dict
-
-    def _ensure_has_sitedef_compatible_slab(self, param):
-        """Complain if self.slab is inappropriate for SITE_DEF."""
-        if self.slab is None:
-            self.rpars.setHaltingLevel(3)
-            raise ParameterNeedsSlabError(param)
-        if not self.slab.atlist:
-            self.rpars.setHaltingLevel(3)
-            raise ParameterError(param, 'Slab contains no atoms')
-        if not self.slab.elements:
-            self.rpars.setHaltingLevel(3)
-            raise ParameterError(param, 'Slab has no elements')
 
     @staticmethod
     def _get_atom_numbers_for_site(site_specs, sorted_atoms):
@@ -1730,6 +1711,28 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(2)
             raise ParameterValueError(param, message=message)
 
+    def _ensure_has_non_empty_slab(self, param):
+        """Complain if self.slab is inappropriate for SITE_DEF."""
+        if self.slab is None:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterNeedsSlabError(param)
+        if not self.slab.atlist:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterError(param, 'Slab contains no atoms')
+
+    def _ensure_valid_slab_element(self, param, element):
+        """Raise unless element is one of the elements of self.slab."""
+        self._ensure_has_non_empty_slab(param)
+        known_elements = self.slab.elements
+        if not known_elements:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterError(param, 'Slab has no elements')
+        if element not in known_elements:
+            msg = (f'{element!r} is not one of the valid '
+                   'POSCAR elements:' + ', '.join(known_elements))
+            self.rpars.setHaltingLevel(3)
+            raise ParameterUnknownFlagError(param, message=msg)
+
     def _get_flag_value_from_pair(self, param, flag_value_pair):
         """Return lowercase flag and value from a pair, or complain."""
         try:
@@ -1740,6 +1743,12 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param, message=err_) from None
         return flag, value
+
+    def _get_valid_slab_element_from_flag(self, param, assignment):
+        """Return a valid POSCAR element from assignment; raise otherwise."""
+        element = assignment.flag.capitalize()
+        self._ensure_valid_slab_element(param, element)
+        return element
 
     def _parse_energy_range(self, param, assignment,
                             energies, accept_underscore=True):
