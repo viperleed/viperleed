@@ -78,8 +78,8 @@ def read(filename='PARAMETERS'):
 
     if comment_out_stop:
         _LOGGER.warning(
-            f'PARAMETERS file: STOP was set at start of '
-            f'program. Modifying PARAMETERS to disable STOP; '
+            'PARAMETERS file: STOP was set at start of '
+            'program. Modifying PARAMETERS to disable STOP; '
             're-insert it if you actually want to stop.'
             )
         comment_out(rpars, 'STOP', comment='Disabled at program start',
