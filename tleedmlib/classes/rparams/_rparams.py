@@ -733,17 +733,18 @@ class Rparams:
         list of int
             Parameter values for a new configuration.
         """
+        if not parents:
+            _LOGGER.warning('Rparams.getOffspringConfig: Cannot create '
+                            'offspring configuration without parents. '
+                            'Returning random configuration')
+            return self.getRandomConfig()
+
+        if len(parents) == 1:
+            _LOGGER.warning('Rparams.getOffspringConfig: Only one parent '
+                            'passed. Returning clone.')
+            return parents[0]
+
         parents = parents[:]
-        if len(parents) < 2:
-            if len(parents) == 0:
-                _LOGGER.warning('Rparams.getOffspringConfig: Cannot create '
-                                'offspring configuration without parents. '
-                                'Returning random configuration')
-                return self.getRandomConfig()
-            else:
-                _LOGGER.warning('Rparams.getOffspringConfig: Only one parent '
-                                'passed. Returning clone.')
-                return parents[0]
         i = random.randint(0, len(parents)-1)
         p2 = [parents.pop(i)]
         while len(p2) == 1:
