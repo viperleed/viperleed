@@ -811,7 +811,9 @@ class Rparams:
         None.
         """
         if self.domainParams:
-            return(self.generateSearchPars_domains())
+            self.generateSearchPars_domains()
+            return
+
         self.searchpars = []
         self.search_maxfiles = 0   # maximum number of delta files for one atom
         self.search_maxconc = 1
