@@ -1363,31 +1363,35 @@ class ParameterInterpreter:
 
         site_def_dict = {}
         for flag_and_values in assignment.values_str.strip().split(','):
-            try:
-                site_label, *site_specs = (s.strip()
-                                           for s in flag_and_values.split())
-            except ValueError:
-                self.rpars.setHaltingLevel(2)
-                message = ('Expected "site_label atom_selection_patterns ". '
-                           f'Found "{flag_and_values}"')
-                raise ParameterNumberOfInputsError(param,
-                                                   message=message) from None
-            if not site_specs:
-                self.rpars.setHaltingLevel(2)
-                err = ('No atom selection pattern found for site '
-                       f'label {site_label}, element {site_element}.')
-                raise ParameterParseError(param, message=err)
+            site_label, site_specs = self._get_valid_sitedef_spec(
+                param, site_element, flag_and_values
+                )
             try:
                 atnums = self._get_atom_numbers_for_site(site_specs,
                                                          sorted_atoms)
             except ValueError as exc:  # Invalid syntax
                 self.rpars.setHaltingLevel(3)
-                raise ParameterParseError(
-                    param,
-                    f'Invalid syntax in {assignment.values_str!r}: {exc!r}'
-                    ) from None
+                err_ = f'Invalid syntax in {assignment.values_str!r}: {exc!r}'
+                raise ParameterParseError(param, message=err_) from None
             site_def_dict[site_label] = atnums
         self.rpars.SITE_DEF[site_element] = site_def_dict
+
+    def _get_valid_sitedef_spec(self, param, site_element, label_and_specs):
+        """Return a site label and atom selection specifications, or raise."""
+        try:
+            site_label, *site_specs = (s.strip()
+                                       for s in label_and_specs.split())
+        except ValueError:
+            self.rpars.setHaltingLevel(2)
+            err_ = ('Expected "site_label atom_selection_patterns ". '
+                    f'Found "{label_and_specs}"')
+            raise ParameterNumberOfInputsError(param, message=err_) from None
+        if not site_specs:
+            self.rpars.setHaltingLevel(2)
+            err_ = ('No atom selection pattern found for site '
+                    f'label {site_label}, element {site_element}.')
+            raise ParameterParseError(param, message=err_)
+        return site_label, site_specs
 
     @staticmethod
     def _get_atom_numbers_for_site(site_specs, sorted_atoms):
