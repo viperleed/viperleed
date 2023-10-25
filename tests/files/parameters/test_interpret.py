@@ -75,6 +75,13 @@ def fixture_interpreter():
     return parameters.ParameterInterpreter(Rparams())
 
 
+@pytest.fixture(name='ag100_interpreter')
+def fixture_ag100_interpreter(ag100, interpreter):
+    """Return a ParameterInterpreter for a Ag(100) slab."""
+    interpreter.slab, *_ = ag100
+    return interpreter
+
+
 class TestInterpreterBasics:
     """Tests for ParameterInterpreter basic functionality."""
 
@@ -269,13 +276,6 @@ class TestBeamIncidence(_TestInterpretBase):
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid BEAM_INCIDENCE raises exceptions."""
         self.check_raises(interpreter, val, exc, flags_str=flag)
-
-
-@pytest.fixture(name='ag100_interpreter')
-def fixture_ag100_interpreter(ag100, interpreter):
-    """Return a ParameterInterpreter for a Ag(100) slab."""
-    interpreter.slab, *_ = ag100
-    return interpreter
 
 
 class TestBulkRepeat(_TestInterpretBase):
