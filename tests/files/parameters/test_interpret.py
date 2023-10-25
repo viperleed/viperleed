@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.files.parameters.
+"""Tests for module _interpret of viperleed.tleedmlib.files.parameters.
 
 Created on 2023-06-09
 
