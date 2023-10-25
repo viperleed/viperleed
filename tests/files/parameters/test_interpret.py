@@ -379,6 +379,35 @@ class TestDomainStep(_TestInterpretBase):
         self.check_raises(interpreter, val, exc)
 
 
+class _TestSlabNotEmpty(_TestInterpretBase):
+    """Collection of tests for parameters that need a non-empty slab."""
+
+    def test_missing_slab(self, interpreter):
+        """Check complaints when no slab is provided."""
+        self.check_raises(interpreter,
+                          'value_that_wont_be_interpreted',
+                          err.ParameterNeedsSlabError,
+                          flags_str='Ag')
+
+    def test_empty_slab(self, ag100_interpreter):
+        """Check complaints when an empty slab is provided."""
+        ag100_interpreter.slab.atlist.clear()
+        with pytest.raises(err.ParameterError) as exc:
+            self.interpret(ag100_interpreter,
+                           'value_that_wont_be_interpreted',
+                           flags_str='Ag')
+        assert exc.match('.*no atoms')
+
+    def test_no_elements(self, ag100_interpreter):
+        """Check complaints when an empty slab is provided."""
+        ag100_interpreter.slab.n_per_elem.clear()
+        with pytest.raises(err.ParameterError) as exc:
+            self.interpret(ag100_interpreter,
+                           'value_that_wont_be_interpreted',
+                           flags_str='Ag')
+        assert exc.match('.*no elements')
+
+
 class TestElementMix(_TestInterpretBase):                                       # TODO: should also test for conflicts with RENAME
     """Tests for interpreting ELEMENT_MIX."""
 
@@ -1006,28 +1035,10 @@ class TestSearchCull(_TestInterpretBase):
         self.check_raises(interpreter, val, exc)
 
 
-class TestSiteDefInvalid(_TestInterpretBase):
+class TestSiteDefInvalid(_TestSlabNotEmpty):
     """Tests of invalid conditions when interpreting SITE_DEF."""
 
     param = 'SITE_DEF'
-
-    def test_missing_slab(self, interpreter):
-        """Check complaints when no slab is provided."""
-        self.check_raises(interpreter, '', err.ParameterNeedsSlabError)
-
-    def test_empty_slab(self, ag100_interpreter):
-        """Check complaints when an empty slab is provided."""
-        ag100_interpreter.slab.atlist.clear()
-        with pytest.raises(err.ParameterError) as exc:
-            self.interpret(ag100_interpreter, '')
-        assert exc.match('.*no atoms')
-
-    def test_no_elements(self, ag100_interpreter):
-        """Check complaints when an empty slab is provided."""
-        ag100_interpreter.slab.n_per_elem.clear()
-        with pytest.raises(err.ParameterError) as exc:
-            self.interpret(ag100_interpreter, '')
-        assert exc.match('.*no elements')
 
     invalid = {  # element, spec, exception
         'wrong element': ('Te', 'surf 1-10', err.ParameterUnknownFlagError),
