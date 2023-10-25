@@ -1731,8 +1731,8 @@ class ParameterInterpreter:
             self.rpars.setHaltingLevel(3)
             raise ParameterError(param, 'Slab has no elements')
         if element not in known_elements:
-            msg = (f'{element!r} is not one of the valid '
-                   'POSCAR elements:' + ', '.join(known_elements))
+            msg = (f'{element!r} is not a valid POSCAR element. '
+                   'Known elements: ' + ', '.join(known_elements))
             self.rpars.setHaltingLevel(3)
             raise ParameterUnknownFlagError(param, message=msg)
 
