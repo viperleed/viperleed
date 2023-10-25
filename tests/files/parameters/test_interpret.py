@@ -413,7 +413,6 @@ class TestElementMix(_TestSlabNotEmpty):                                        
 
     param = 'ELEMENT_MIX'
     valid = {
-        'single element': ('Ag', 'Mn', {'Ag': ['Mn',]}),                        # TODO: should this fail and rather ask to use ELEMENT_RENAME?
         'two elements': ('Ag', 'Co Cu', {'Ag': ['Co', 'Cu']}),
         }
     invalid = {
@@ -422,6 +421,7 @@ class TestElementMix(_TestSlabNotEmpty):                                        
         'no elements': ('Ag', '   ', err.ParameterHasNoValueError),
         'not-poscar elem': ('Mn', 'Co Cu', err.ParameterUnknownFlagError),
         'unknown element': ('X', 'Au Hg', err.ParameterUnknownFlagError),
+        'single element': ('Ag', 'Mn', err.ParameterNumberOfInputsError),
         }
 
     @parametrize('poscar_el,mix,expect', valid.values(), ids=valid)

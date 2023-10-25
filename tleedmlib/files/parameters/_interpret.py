@@ -600,16 +600,22 @@ class ParameterInterpreter:
             raise ParameterValueError(param, message=message)
         self.rpars.DOMAIN_STEP = domain_step
 
-                                                                                # TODO: shouldn't we have a slab? Should we check that it has atoms, elements, and that the POSCAR element exists? Similar questions for ELEMENT_RENAME.
     def interpret_element_mix(self, assignment):                                # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME? We should perhaps have a call to a checker after all parameters are read in?
         """Assign parameter ELEMENT_MIX."""
         param = 'ELEMENT_MIX'
         self._ensure_single_flag_assignment(assignment)
         element = self._get_valid_slab_element_from_flag(param, assignment)
 
-        self.rpars.ELEMENT_MIX[element] = [el.capitalize()
-                                           for el in assignment.values]
         self._ensure_chemical_elements(param, assignment.values)
+        mix = [el.capitalize() for el in assignment.values]
+        if len(mix) == 1:
+            rename = mix[0]
+            self.rpars.setHaltingLevel(3)
+            message = (f'Only one mixed element found: {rename}. If you '
+                       f'intended to rename {element} to {rename}, you should '
+                       f'use "ELEMENT_RENAME {element} = {rename}"')
+            raise ParameterNumberOfInputsError(param, message=message)
+        self.rpars.ELEMENT_MIX[element] = mix
 
     def interpret_element_rename(self, assignment):
         """Assign parameter ELEMENT_RENAME."""
