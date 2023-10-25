@@ -408,44 +408,49 @@ class _TestSlabNotEmpty(_TestInterpretBase):
         assert exc.match('.*no elements')
 
 
-class TestElementMix(_TestInterpretBase):                                       # TODO: should also test for conflicts with RENAME
+class TestElementMix(_TestSlabNotEmpty):                                        # TODO: should also test for conflicts with RENAME
     """Tests for interpreting ELEMENT_MIX."""
 
     param = 'ELEMENT_MIX'
     valid = {
-        'single element': ('Fe', 'Mn', {'Fe': ['Mn',]}),                        # TODO: should this fail and rather ask to use ELEMENT_RENAME?
-        'two elements': ('Mn', 'Co Cu', {'Mn': ['Co', 'Cu']}),
+        'single element': ('Ag', 'Mn', {'Ag': ['Mn',]}),                        # TODO: should this fail and rather ask to use ELEMENT_RENAME?
+        'two elements': ('Ag', 'Co Cu', {'Ag': ['Co', 'Cu']}),
         }
     invalid = {
         'too many flags': ('D E', 'Mn Fe Co', err.ParameterUnknownFlagError),
-        'not chem elem': ('X', 'chem_el_unknown Fe', err.ParameterValueError),
+        'not chem elem': ('Ag', 'chem_el_unknown Fe', err.ParameterValueError),
         'no elements': ('Ag', '   ', err.ParameterHasNoValueError),
+        'not-poscar elem': ('Mn', 'Co Cu', err.ParameterUnknownFlagError),
+        'unknown element': ('X', 'Au Hg', err.ParameterUnknownFlagError),
         }
 
     @parametrize('poscar_el,mix,expect', valid.values(), ids=valid)
-    def test_interpret_valid(self, poscar_el, mix, expect, interpreter):
+    def test_interpret_valid(self, poscar_el, mix, expect, ag100_interpreter):
         """Check correct interpretation of valid FILAMENT_WF."""
-        self.check_assigned(interpreter, mix, expect, flags_str=poscar_el)
+        self.check_assigned(ag100_interpreter, mix, expect, flags_str=poscar_el)
 
     @parametrize('poscar_el,mix,exc', invalid.values(), ids=invalid)
-    def test_interpret_invalid(self, poscar_el, mix, exc, interpreter):
+    def test_interpret_invalid(self, poscar_el, mix, exc, ag100_interpreter):
         """Ensure invalid FILAMENT_WF raises exceptions."""
-        self.check_raises(interpreter, mix, exc, flags_str=poscar_el)
+        self.check_raises(ag100_interpreter, mix, exc, flags_str=poscar_el)
 
 
-class TestElementRename(_TestInterpretBase):
+class TestElementRename(_TestSlabNotEmpty):
     """Tests for interpreting ELEMENT_RENAME."""
 
     param = 'ELEMENT_RENAME'
 
-    def test_interpret_valid(self, interpreter):
+    def test_interpret_valid(self, ag100_interpreter):
         """Check correct interpretation of valid ELEMENT_RENAME."""
-        self.interpret(interpreter, 'H', flags_str='X')
-        assert interpreter.rpars.ELEMENT_RENAME == {'X': 'H'}
+        self.interpret(ag100_interpreter, 'H', flags_str='Ag')
+        assert ag100_interpreter.rpars.ELEMENT_RENAME == {'Ag': 'H'}
 
     invalid = {
         'not chem elem': ('Ag', 'Op', err.ParameterValueError),
         'no elements': ('Ag', '', err.ParameterHasNoValueError),
+        'not-poscar elem': ('Mn', 'Co', err.ParameterUnknownFlagError),
+        'too many flags': ('Ag B', 'Mn Fe', err.ParameterUnknownFlagError),
+        'no flag': ('', 'C', err.ParameterNeedsFlagError),
         }
 
     @parametrize('flag,val,exc', invalid.values(), ids=invalid)

@@ -605,21 +605,19 @@ class ParameterInterpreter:
         """Assign parameter ELEMENT_MIX."""
         param = 'ELEMENT_MIX'
         self._ensure_single_flag_assignment(assignment)
-        self._ensure_chemical_elements(param, assignment.values)
+        element = self._get_valid_slab_element_from_flag(param, assignment)
 
-        element = assignment.flag.capitalize()
         self.rpars.ELEMENT_MIX[element] = [el.capitalize()
                                            for el in assignment.values]
+        self._ensure_chemical_elements(param, assignment.values)
 
     def interpret_element_rename(self, assignment):
         """Assign parameter ELEMENT_RENAME."""
         param = 'ELEMENT_RENAME'
         self._ensure_single_flag_and_value_assignment(assignment)
+        element = self._get_valid_slab_element_from_flag(param, assignment)
         self._ensure_chemical_elements(param, assignment.values)
-
-        self.rpars.ELEMENT_RENAME[assignment.flag.capitalize()] = (
-            assignment.value.capitalize()
-            )
+        self.rpars.ELEMENT_RENAME[element] = assignment.value.capitalize()
 
     def interpret_filament_wf(self, assignment):
         """Assign parameter FILAMENT_WF."""
