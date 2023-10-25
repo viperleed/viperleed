@@ -34,7 +34,9 @@ from viperleed.tleedmlib.base import available_cpu_count
 from viperleed.tleedmlib.checksums import KNOWN_TL_VERSIONS
 from viperleed.tleedmlib.checksums import UnknownTensErLEEDVersionError
 from viperleed.tleedmlib.classes.searchpar import SearchPar
+from viperleed.tleedmlib.files import beams as tl_beams
 from viperleed.tleedmlib.files.iodeltas import checkDelta
+from viperleed.tleedmlib.sections._sections import EXPBEAMS_NAMES
 
 from ._defaults import NO_VALUE, DEFAULTS
 from ._limits import PARAM_LIMITS
