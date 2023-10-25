@@ -26,6 +26,7 @@ from viperleed.tleedmlib.files.parameters._utils import Assignment
 from viperleed.tleedmlib.files.parameters._utils import NumericBounds as Bounds
 
 from .case_parameters import case_parameters_slab
+from ...poscar_slabs import CasePOSCARSlabs
 # pylint: enable=wrong-import-position
 
 
@@ -1054,19 +1055,27 @@ class TestSiteDefInvalid(_TestSlabNotEmpty):
         'wrong element': ('Te', 'surf 1-10', err.ParameterUnknownFlagError),
         'top twice': ('Ag', 'topmost top(2) others top(10)',
                       err.ParameterValueError),
-        'too few specs': ('Ag', 'spec 1-10, surf', err.ParameterParseError),
+        'too few specs': ('Ag', 'spec 1-3, surf', err.ParameterParseError),
         'unknown specs': ('Ag', 'surf abcd', err.ParameterParseError),
         'empty spec': ('Ag', 'surf 1,, below 3',
                        err.ParameterNumberOfInputsError),
         'no flag': ('', 'surf 12', err.ParameterNeedsFlagError),
         'too many flags': ('Ag another', 'top 12',
                            err.ParameterUnknownFlagError),
+        'atoms dont exist': ('Ag', 'top 1500-1520', err.ParameterValueError),
         }
 
     @parametrize('element,val,exc', invalid.values(), ids=invalid)
     def test_invalid(self, element, val, exc, ag100_interpreter):
         """Check complaints when an empty slab is provided."""
         self.check_raises(ag100_interpreter, val, exc, flags_str=element)
+
+    def test_swapped_elements(self, interpreter):
+        """Ensure complaints when selecting atoms of the wrong element."""
+        fe3o4, *_ = CasePOSCARSlabs().case_poscar_fe3o4_001_cod()
+        interpreter.slab = fe3o4
+        self.check_raises(interpreter, 'its_actually_iron 1',
+                          err.ParameterValueError, flags_str='O')
 
 
 class _TestWoodsOrMatrixParam(_TestInterpretBase):

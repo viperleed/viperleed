@@ -1361,6 +1361,7 @@ class ParameterInterpreter:
                 reverse=True
                 )
 
+        atom_map = {at.num: at for at in self.slab.atlist}
         site_def_dict = {}
         for flag_and_values in assignment.values_str.strip().split(','):
             site_label, site_specs = self._get_valid_sitedef_spec(
@@ -1373,6 +1374,13 @@ class ParameterInterpreter:
                 self.rpars.setHaltingLevel(3)
                 err_ = f'Invalid syntax in {assignment.values_str!r}: {exc!r}'
                 raise ParameterParseError(param, message=err_) from None
+            try:
+                self._ensure_sitedef_makes_sense(site_element, site_label,
+                                                 atnums, atom_map)
+            except ValueError as exc:
+                self.rpars.setHaltingLevel(3)
+                raise ParameterValueError(assignment.parameter,
+                                          message=str(exc)) from None
             site_def_dict[site_label] = atnums
         self.rpars.SITE_DEF[site_element] = site_def_dict
 
@@ -1432,6 +1440,29 @@ class ParameterInterpreter:
                 continue
             raise ValueError(site_spec)
         return atnums
+
+    @staticmethod
+    def _ensure_sitedef_makes_sense(poscar_el, site_label, atom_nrs, atom_map):
+        """Raise ValueError if the atom_nrs selected for a site are wrong."""
+        invalid_atom_nums = []
+        invalid_elements = []
+        for num in atom_nrs:
+            try:
+                atom = atom_map[num]
+            except KeyError:
+                invalid_atom_nums.append(num)
+                continue
+            if atom.el != poscar_el:
+                invalid_elements.append(atom)
+        if not invalid_atom_nums and not invalid_elements:
+            return
+        error = f'Invalid selection for {site_label}:'
+        if invalid_atom_nums:
+            error += f'\nAtom number(s) {invalid_atom_nums} not found in slab'
+        if invalid_elements:
+            error += (f'\nAtom(s) {[str(at) for at in invalid_elements]} '
+                      f'do not have POSCAR element {poscar_el}')
+        raise ValueError(error)
 
     def interpret_superlattice(self, assignment):
         """Assign parameter SUPERLATTICE (Wood's or matrix notation)."""
