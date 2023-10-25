@@ -413,13 +413,13 @@ class TestElementMix(_TestInterpretBase):                                       
 
     param = 'ELEMENT_MIX'
     valid = {
-        'no elements': ('Fe', '', {'Fe': []}),                                  # TODO: This should probably fail!
         'single element': ('Fe', 'Mn', {'Fe': ['Mn',]}),                        # TODO: should this fail and rather ask to use ELEMENT_RENAME?
         'two elements': ('Mn', 'Co Cu', {'Mn': ['Co', 'Cu']}),
         }
     invalid = {
         'too many flags': ('D E', 'Mn Fe Co', err.ParameterUnknownFlagError),
         'not chem elem': ('X', 'chem_el_unknown Fe', err.ParameterValueError),
+        'no elements': ('Ag', '   ', err.ParameterHasNoValueError),
         }
 
     @parametrize('poscar_el,mix,expect', valid.values(), ids=valid)
@@ -443,10 +443,15 @@ class TestElementRename(_TestInterpretBase):
         self.interpret(interpreter, 'H', flags_str='X')
         assert interpreter.rpars.ELEMENT_RENAME == {'X': 'H'}
 
-    def test_interpret_invalid_element(self, interpreter):
+    invalid = {
+        'not chem elem': ('Ag', 'Op', err.ParameterValueError),
+        'no elements': ('Ag', '', err.ParameterHasNoValueError),
+        }
+
+    @parametrize('flag,val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, flag, val, exc, ag100_interpreter):
         """Ensure that an invalid chemical element raises exceptions."""
-        self.check_raises(interpreter, 'Op', err.ParameterValueError,
-                          flags_str='Uk')
+        self.check_raises(ag100_interpreter, val, exc, flags_str=flag)
 
 
 class TestFilamentWF(_TestInterpretBase):

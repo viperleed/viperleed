@@ -1700,6 +1700,8 @@ class ParameterInterpreter:
     # ------------------------ Helper methods -------------------------
     def _ensure_chemical_elements(self, param, elements):
         """Raise unless all entries are valid chemical elements."""
+        if not elements:
+            raise ParameterHasNoValueError(param)
         invalid = []
         for element in elements:
             try:
