@@ -1048,6 +1048,9 @@ class TestSiteDefInvalid(_TestSlabNotEmpty):
         'unknown specs': ('Ag', 'surf abcd', err.ParameterParseError),
         'empty spec': ('Ag', 'surf 1,, below 3',
                        err.ParameterNumberOfInputsError),
+        'no flag': ('', 'surf 12', err.ParameterNeedsFlagError),
+        'too many flags': ('Ag another', 'top 12',
+                           err.ParameterUnknownFlagError),
         }
 
     @parametrize('element,val,exc', invalid.values(), ids=invalid)

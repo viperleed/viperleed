@@ -1341,6 +1341,7 @@ class ParameterInterpreter:
                 param,
                 message='only a single top() allowed per SITE_DEF line'
                 )
+        self._ensure_single_flag_assignment(assignment)
         site_element = self._get_valid_slab_element_from_flag(param,
                                                               assignment)
         sorted_atoms = []
