@@ -605,7 +605,7 @@ class ParameterInterpreter:
             raise ParameterValueError(param, message=message)
         self.rpars.DOMAIN_STEP = domain_step
 
-    def interpret_element_mix(self, assignment):                                # TODO: don't we check to avoid conflicts for ELEMENT_MIX and ELEMENT_RENAME? We should perhaps have a call to a checker after all parameters are read in?
+    def interpret_element_mix(self, assignment):
         """Assign parameter ELEMENT_MIX."""
         param = 'ELEMENT_MIX'
         self._ensure_single_flag_assignment(assignment)

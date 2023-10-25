@@ -409,7 +409,7 @@ class _TestSlabNotEmpty(_TestInterpretBase):
         assert exc.match('.*no elements')
 
 
-class TestElementMix(_TestSlabNotEmpty):                                        # TODO: should also test for conflicts with RENAME
+class TestElementMix(_TestSlabNotEmpty):
     """Tests for interpreting ELEMENT_MIX."""
 
     param = 'ELEMENT_MIX'
