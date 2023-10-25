@@ -44,6 +44,7 @@ from .errors import ParameterParseError
 from .errors import ParameterRangeError
 from .errors import ParameterUnknownFlagError
 from .errors import ParameterValueError
+from ._checker import ParametersChecker
 from ._known_parameters import KNOWN_PARAMS
 from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
@@ -183,6 +184,10 @@ class ParameterInterpreter:
             self._interpret_param(param, assignment)
             _LOGGER.log(_BELOW_DEBUG,
                         f'Successfully interpreted parameter {param}')
+
+        # Make sure there is no inconsistent combination of parameters
+        checker = ParametersChecker()
+        checker.check_parameter_conflicts(self.rpars)
 
         # Finally set the log level back to what it was
         _LOGGER.setLevel(_backup_log_level)
