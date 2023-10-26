@@ -109,7 +109,7 @@ def apply_scaling(sl, rp, which, scale):
     sl.bulkslab.getFractionalCoordinates()
     sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
     sl.bulkslab.getCartesianCoordinates()
-    if type(rp.BULK_REPEAT) == float:
+    if isinstance(rp.BULK_REPEAT, (np.floating, float)):
         rp.BULK_REPEAT *= scale
     elif rp.BULK_REPEAT is not None:
         rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)

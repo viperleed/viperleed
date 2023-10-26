@@ -395,7 +395,7 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     output = (formatter['energies'].write([minen]).ljust(16) + "EMIN\n")
     output += (formatter['energies'].write([maxen]).ljust(16) + "EMAX\n")
     # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES
-    output += (formatter['energies'].write([step]).ljust(16) + "EINCR\n")
+    output += (formatter['energies'].write([vincr]).ljust(16) + "EINCR\n")  # interpolation step width
     output += (formatter['int'].write([0]).ljust(16)
                + "IPR - determines amount of output to stdout\n")
     output += (formatter['energies'].write([rp.V0_IMAG]).ljust(16) + "VI\n")
