@@ -40,6 +40,7 @@ from viperleed.tleedmlib.sections._sections import EXPBEAMS_NAMES
 
 from ._defaults import NO_VALUE, DEFAULTS
 from ._limits import PARAM_LIMITS
+from .special.layer_cuts import LayerCuts
 
 
 _LOGGER = logging.getLogger('tleedm.rparams')
@@ -73,7 +74,7 @@ class Rparams:
         self.HALTING = 2    # 2: major concerns, 1: minor warnings, 0: always
         self.INTPOL_DEG = 3 # Degree of interpolation spline used in R-factor calculation
         self.IV_SHIFT_RANGE = self.get_default('IV_SHIFT_RANGE')
-        self.LAYER_CUTS = ['dz(1.2)']  # list of either str or c coordinates
+        self.LAYER_CUTS = LayerCuts()
         self.LAYER_STACK_VERTICAL = True
         self.LMAX = [0, 0]    # minimum and maximum LMAX
         self.LOG_LEVEL = DEFAULTS['LOG_LEVEL'][NO_VALUE]

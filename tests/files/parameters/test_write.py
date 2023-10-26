@@ -10,7 +10,7 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.tleedmlib.base import strip_comments
-from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts
 from viperleed.tleedmlib.files.parameters._write import ModifiedParameterValue
 from viperleed.tleedmlib.files.parameters._write import ParametersFileEditor
 from viperleed.tleedmlib.files.parameters._write import comment_out, modify
@@ -53,18 +53,27 @@ class TestModifiedParameterValue:
                                '[1.30000 -2.38000 4.99700]'),
         'LMAX single': ('LMAX', (10, 10), '10'),
         'LMAX range': ('LMAX', (6, 15), '6-15'),
-        'LAYER_CUTS list': ('LAYER_CUTS', (0.1, 0.3, 0.87),
-                            '0.1000 0.3000 0.8700'),
-        'LAYER_CUTS dz': ('LAYER_CUTS', '0.1 < dz(1.3)', '0.1 < dz(1.3)'),
         }
 
     @parametrize('attr,value,expected', _fmt_values.values(), ids=_fmt_values)
     def test_format_value(self, attr, value, expected):
         """Check the expected formatting of example values."""
-        if attr == 'LAYER_CUTS' and 'dz' in value:
-            pytest.xfail(reason='Known bug for formatting LAYER_CUTS with dz')
         rpars = Rparams()
         setattr(rpars, attr, value)
+        mod_param = ModifiedParameterValue(attr, rpars)
+        assert mod_param.fmt_value == expected
+
+    _fmt_layer_cuts = {
+        'LAYER_CUTS list': ((0.1, 0.3, 0.87), '0.1000 0.3000 0.8700'),
+        'LAYER_CUTS dz': ('0.1 < dz(1.3)', '0.1000 < dz(1.3)'),
+        }
+
+    @parametrize('val,expected', _fmt_layer_cuts.values(), ids=_fmt_layer_cuts)
+    def test_format_layer_cuts_value(self, val, expected):
+        """Check the expected formatting of example values."""
+        attr = 'LAYER_CUTS'
+        rpars = Rparams()
+        setattr(rpars, attr, LayerCuts.as_layer_cuts(val))
         mod_param = ModifiedParameterValue(attr, rpars)
         assert mod_param.fmt_value == expected
 

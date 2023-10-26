@@ -113,8 +113,9 @@ class ModifiedParameterValue:
     """
 
     _simple_params = {   # Those with a specific format string
-        'V0_IMAG': '.4f',
         'BULK_LIKE_BELOW': '.4f',
+        'LAYER_CUTS': '.4f',
+        'V0_IMAG': '.4f',
         }
     _string_params = {   # Those for which str is enough
         'N_BULK_LAYERS',
@@ -212,11 +213,6 @@ class ModifiedParameterValue:
         if isinstance(bulk_repeat, (np.ndarray, Sequence)):
             return self._format_vector(bulk_repeat, '{:.5f}', brackets='[]')
         return f'{bulk_repeat:.5f}'  # Z distance
-
-    def _format_layer_cuts_value(self):
-        """Return a formatted version of LAYER_CUTS."""
-        layer_cuts = self._raw_value
-        return ' '.join(f'{cut:.4f}' for cut in layer_cuts)                     # TODO: BETTER!
 
     def _format_lmax_value(self):
         """Return a formatted version of LMAX."""

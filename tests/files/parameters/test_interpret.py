@@ -125,13 +125,17 @@ class _TestInterpretBase:
     def check_assigned(self, interpreter, value_str, expected, **kwargs):
         """Assert interpretation is successful."""
         self.interpret(interpreter, value_str, **kwargs)
-        attr = getattr(interpreter.rpars, self.rpars_attr or self.param)
+        attr = self.rpars_value(interpreter)
         assert attr == pytest.approx(expected)
 
     def check_raises(self, interpreter, value_str, exc, **kwargs):
         """Assert that an attempt to interpret raises an exc."""
         with pytest.raises(exc):
             self.interpret(interpreter, value_str, **kwargs)
+
+    def rpars_value(self, interpreter):
+        """Return the value of the attribute in interpreter.rpars."""
+        return getattr(interpreter.rpars, self.rpars_attr or self.param)
 
 
 class TestNumericalParameter(_TestInterpretBase):
@@ -593,10 +597,10 @@ class TestLayerCuts(_TestInterpretBase):
     valid = {
         'simple': ('0.1 0.2 0.3', ['0.1', '0.2', '0.3']),
         'dz': ('dz(1.2)', ['dz(1.2)']),
-        'list and dz': ('0.15 0.3 < dz(1.2)  ',
-                        ['0.15', '0.3', '<', 'dz(1.2)']),
-        'two dz': ('dz(1.0) < 2.0 < dz(0.5) < 4.0',
-                   ['dz(1.0)', '<', '2.0', '<', 'dz(0.5)', '<', '4.0']),
+        'list and dz': ('0.15 0.3 < dz(1.2)  ', ['0.15', '0.3', 'dz(1.2)']),
+        'two dz': ('dz(1.0) < 0.28 < dz(0.5) < 0.6',
+                   ['dz(1.0)', '0.28', 'dz(0.5)', '0.6']),
+        'larger than': ('0.75 0.3 > dz(1.2)  ', ['dz(1.2)', '0.3', '0.75']),
         }
     invalid = {
         'less and greater': '< 0.1 > 0.2',
@@ -608,15 +612,14 @@ class TestLayerCuts(_TestInterpretBase):
     @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid LAYER_CUTS."""
-        if val.count('dz') == 2:
-            pytest.xfail(reason='Known bug in LAYER_CUTS interpreter')
-        self.check_assigned(interpreter, val, expect)
+        self.interpret(interpreter, val)
+        value = self.rpars_value(interpreter)
+        assert all(cut == cut_expected
+                   for cut, cut_expected in zip(value, expect))
 
     @parametrize('val', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, interpreter):
         """Ensure invalid LAYER_CUTS raises exceptions."""
-        if 'abcd' in val:
-            pytest.xfail(reason='Known bug in LAYER_CUTS interpreter')
         self.check_raises(interpreter, val, err.ParameterParseError)
 
 

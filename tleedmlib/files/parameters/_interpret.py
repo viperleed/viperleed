@@ -726,39 +726,17 @@ class ParameterInterpreter:
         self.rpars.IV_SHIFT_RANGE = [start, stop, step]
 
     def interpret_layer_cuts(self, assignment):
+        """Assign parameter LAYER_CUTS."""
         param = 'LAYER_CUTS'
-        layer_cuts = list(assignment.values)
-        # some simple filtering here, but leave as list of strings
-        if all(c in assignment.values_str for c in '<>'):
-            self.rpars.setHaltingLevel(1)
-            raise ParameterParseError(param,
-                                    'Cannot parse list with both "<" and ">"')
-        if any(c in assignment.values_str for c in '<>'):
-            layer_cuts = []
-            for s in assignment.values:
-                s = s.replace('<', ' < ')
-                s = s.replace('>', ' > ')
-                layer_cuts.extend(s.split())
-
-        rgx = re.compile(r'\s*(dz|dc)\s*\(\s*(?P<cutoff>[0-9.]+)\s*\)')
-        for (i, s) in enumerate(layer_cuts):
-            if 'dz' in s.lower() or 'dc' in s.lower():
-                m = rgx.match(assignment.values_str.lower())
-                if m:
-                    try:
-                        float(m.group('cutoff'))
-                        layer_cuts[i] = m.group(0)
-                    except Exception:                                           # TODO: catch better; only 1 statement in try.
-                        self.rpars.setHaltingLevel(1)
-                        raise ParameterParseError(param,
-                                                  f'Could not parse function {s}')
-            elif s != '<' and s != '>':
-                try:
-                    float(s)
-                except Exception:
-                    self.rpars.setHaltingLevel(1)
-                    raise ParameterParseError(param)
-        self.rpars.LAYER_CUTS = layer_cuts
+        try:
+            cuts = self.rpars.LAYER_CUTS.from_string(assignment.values_str)
+        except ValueError as exc:
+            # String has invalid syntax
+            raise ParameterParseError(param, message=str(exc)) from None
+        if not len(cuts):
+            raise ParameterValueError(param,
+                                      message='At least one layer cut needed')
+        self.rpars.LAYER_CUTS = cuts
 
     @staticmethod
     def _tokenize_int_range(numeric_string):

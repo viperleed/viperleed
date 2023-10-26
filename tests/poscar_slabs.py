@@ -21,7 +21,7 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
-from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts
 from viperleed.tleedmlib.files import poscar
 
 from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo, CaseTag as Tag
@@ -117,7 +117,7 @@ def make_poscar_ids(suffix=None):
 
 # PARAMETERS presets for slabs
 _PRESETS = {
-    'Fe3O4': {'LAYER_CUTS': [0.1, 0.2, '<', 'dz(1.0)'],
+    'Fe3O4': {'LAYER_CUTS': LayerCuts.from_string('0.1 0.2 <dz(1.0)'),
               'N_BULK_LAYERS': 2,
               'SYMMETRY_EPS': 0.3,
               'SYMMETRY_EPS_Z': 0.3,

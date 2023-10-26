@@ -35,6 +35,25 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 logger = logging.getLogger("tleedm.slab")
 
+
+def _z_distance(atom1, atom2):                                                  # TODO: could it be useful in other places? If yes, then maybe the right place is .atom?
+    """Return the distance along z between two atoms."""
+    return abs(atom2.cartpos[2] - atom1.cartpos[2])
+
+
+def pairwise(iterable):
+    """Return a generator of pairs of subsequent elements."""
+    try:
+        # pairwise is available in py >= 3.10
+        return itertools.pairwise(iterable)
+    except AttributeError:
+        pass
+    # Rough equivalent from the python docs
+    orig, offset = itertools.tee(iterable)
+    next(offset, None)
+    return zip(orig, offset)
+
+
 class SlabError(Exception):
     """A generic exception related to a Slab object."""
 
@@ -300,7 +319,7 @@ class Slab:
         $a_i \dot$ b_j = 2\pi\delta_{ij}$.
         We need to transpose here again, because of swap row <-> col
         when going between real and reciprocal space.
-        TensErLEED always does this calculation explicitly and 
+        TensErLEED always does this calculation explicitly and
         normalizes to area, but here the inverse already contains a
         factor of 1/det.
 
@@ -371,6 +390,38 @@ class Slab:
         for layer in self.layers:
             layer.update_position()
 
+    def _get_layer_cut_positions(self, rpars, bulk_cuts):
+        """Return crystal-cut positions from rpars.LAYER_CUTS."""
+        # rpars.LAYER_CUTS is a 'list' of LayerCutTokens. Each either
+        # .is_numeric (fractional positions) or .is_auto_cut (dc/dz).
+        # We can collect the fractional ones immediately.
+        cuts = [token.value for token in rpars.LAYER_CUTS if token.is_numeric]
+
+        # The dc/dz need a bit of work. We use as cut
+        # position the midpoints between atoms that are
+        # further than the desired z-distance cut-off
+        auto_cuts = (token for token in rpars.LAYER_CUTS if token.is_auto_cut)
+        _c_to_z = self.ucell[2, 2] / np.linalg.norm(self.ucell[:, 2])
+        atoms = sorted(self.atlist, key=lambda atom: atom.pos[2])
+        for token in auto_cuts:
+            cutoff = token.value
+            cutoff *= _c_to_z if token.is_auto_cut_dc else 1
+            try:
+                lower, upper = token.get_bounds(bulk_cuts)
+            except ValueError:
+                # bulk_cuts > upper. This auto-cut is useless
+                continue
+            cuts.extend(
+                sum(at.pos[2] for at in pair) / 2
+                for pair in pairwise(atoms)
+                if (all(lower < at.pos[2] < upper for at in pair)
+                    and _z_distance(*pair) > cutoff)
+                )
+        if bulk_cuts:
+            cuts = [v for v in cuts if v > max(bulk_cuts) + 1e-6] + bulk_cuts
+        cuts.sort()
+        return cuts
+
     def createLayers(self, rparams, bulk_cuts=[]):
         """Creates a list of Layer objects based on the N_BULK_LAYERS and
         LAYER_CUTS parameters in rparams. If layers were already defined,
@@ -379,68 +430,10 @@ class Slab:
         list of floats."""
         # first interpret LAYER_CUTS parameter - can be a list of strings
         self.check_a_b_out_of_plane()
-        ct = []
-        rgx = re.compile(r'\s*(dz|dc)\s*\(\s*(?P<cutoff>[0-9.]+)\s*\)')
-        al = self.atlist[:]
-        al.sort(key=lambda atom: atom.pos[2])
-        for (i, s) in enumerate(rparams.LAYER_CUTS):
-            if type(s) == float:
-                ct.append(s)
-                continue
-            s = s.lower()
-            if "dz" in s or "dc" in s:
-                m = rgx.match(s)
-                if not m:
-                    logger.warning("Error parsing part of LAYER_CUTS: " + s)
-                    continue
-                cutoff = float(m.group('cutoff'))
-                lowbound = 0.
-                if bulk_cuts:
-                    lowbound = max(bulk_cuts)
-                highbound = 1.
-                val = None
-                if (i > 1) and (rparams.LAYER_CUTS[i-1] in ["<", ">"]):
-                    try:
-                        val = float(rparams.LAYER_CUTS[i-2])
-                    except ValueError:
-                        logger.warning("LAYER_CUTS: Error parsing left-hand "
-                                       "boundary for " + s)
-                    if val is not None:
-                        if rparams.LAYER_CUTS[i-1] == "<":
-                            lowbound = val
-                        else:
-                            highbound = val
-                if i < len(rparams.LAYER_CUTS) - 2 and (rparams.LAYER_CUTS[i+1]
-                                                        in ["<", ">"]):
-                    try:
-                        val = float(rparams.LAYER_CUTS[i+2])
-                    except ValueError:
-                        logger.warning("LAYER_CUTS: Error parsing right-hand "
-                                       "boundary for " + s)
-                    if val is not None:
-                        if rparams.LAYER_CUTS[i+1] == ">":
-                            lowbound = val
-                        else:
-                            highbound = val
-                if 'dc' in s:
-                    cutoff *= (self.ucell[2, 2]
-                               / np.linalg.norm(self.ucell[:, 2]))
-                for i in range(1, len(al)):
-                    if ((abs(al[i].cartpos[2]-al[i-1].cartpos[2]) > cutoff)
-                            and al[i].pos[2] > lowbound
-                            and al[i].pos[2] < highbound
-                            and al[i-1].pos[2] > lowbound
-                            and al[i-1].pos[2] < highbound):
-                        ct.append(abs((al[i].pos[2]+al[i-1].pos[2])/2))
-            elif s not in ["<", ">"]:
-                try:
-                    ct.append(float(s))
-                except ValueError:
-                    logger.warning("LAYER_CUTS: Could not parse value: " + s)
-                    continue
-        if bulk_cuts:
-            ct = [v for v in ct if v > max(bulk_cuts) + 1e-6] + bulk_cuts
-        ct.sort()
+
+        # Get a sorted list of fractional cut positions
+        ct = self._get_layer_cut_positions(rparams, bulk_cuts)
+
         self.layers = []
         tmplist = self.atlist[:]
         self.sort_by_z()
@@ -1537,7 +1530,7 @@ class Slab:
         """
         tsl = copy.deepcopy(self)   # temporary copy to mess up layers in
         rp_dummy = copy.deepcopy(rp)
-        rp_dummy.LAYER_CUTS = [rp.BULK_LIKE_BELOW]
+        rp_dummy.LAYER_CUTS.update_from_sequence([rp_dummy.BULK_LIKE_BELOW])
         rp_dummy.N_BULK_LAYERS = 1
         rp_dummy.BULK_LIKE_BELOW = 0.
         tsl.createLayers(rp_dummy)
@@ -1995,7 +1988,7 @@ class Slab:
         float
             Angle between first Slab unit cell vector and Cartesian
             coordinate system.
-        
+
         Raises
         ______
         ValueError

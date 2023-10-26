@@ -127,7 +127,8 @@ def initialization(sl, rp, subdomain=False):
                 comment="Automatically detected repeat vector"
                 )
             logger.info(f"Detected bulk repeat vector: {vec_str}")
-            rp.LAYER_CUTS = sl.createLayers(rp, bulk_cuts=cuts)
+            new_cuts = sl.createLayers(rp, bulk_cuts=cuts)
+            rp.LAYER_CUTS.update_from_sequence(new_cuts)
             parameters.modify(rp, "LAYER_CUTS")
             rp.N_BULK_LAYERS = len(cuts)
             parameters.modify(rp, "N_BULK_LAYERS")
