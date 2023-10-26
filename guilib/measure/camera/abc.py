@@ -1721,6 +1721,15 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             )
         return not (roi_outside or roi_small or roi_not_multiple)
 
+    @qtc.pyqtSlot()
+    def __on_all_frames_done(self):
+        """Disconnect the current processor to prevent duplicate processing."""
+        processor = self.sender()
+        if processor:
+            # Disconnect the sender processor to prevent
+            # double processing of the next frame (issue #122)
+            base.safe_disconnect(self.__process_frame, processor.process_frame)
+
     @qtc.pyqtSlot(np.ndarray)
     def __on_frame_ready(self, image):
         """React to receiving a new frame from the camera.
@@ -1750,6 +1759,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
             processor = ImageProcessor()
             processor.image_processed.connect(self.image_processed)
             processor.image_saved.connect(self.__on_image_saved)
+            processor.all_frames_acquired.connect(self.__on_all_frames_done)
             self.__process_thread.finished.connect(processor.deleteLater)
             self.__process_frame.connect(processor.process_frame)
             processor.prepare_to_process(self.process_info.copy(), image)
@@ -1778,9 +1788,6 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """React to an image being saved."""
         processor = self.sender()
         if processor:
-            # Disconnect the sender processor to prevent
-            # duplicate processing of the next frame
-            base.safe_disconnect(self.__process_frame, processor.process_frame)
             try:
                 self.__image_processors.remove(processor)
             except ValueError:
