@@ -351,12 +351,9 @@ class ParameterInterpreter:
         if no_flags:
             self._ensure_no_flags_assignment(assignment, param)
         type_ = bounds.type_
-        if type_ is float:
-            exc = ParameterFloatConversionError(assignment.parameter,
-                                                assignment.value)
-        else:
-            exc = ParameterIntConversionError(assignment.parameter,
-                                              assignment.value)
+        exc_cls = (ParameterFloatConversionError if type_ is float
+                   else ParameterIntConversionError)
+        exc = exc_cls(assignment.parameter, assignment.value)
 
         try:
             # First convert to float. Necessary for, e.g., 1e6 as int
@@ -501,10 +498,10 @@ class ParameterInterpreter:
         self._ensure_no_flags_assignment(assignment)
         right_side = assignment.values_str.lower().strip()
         # trivial cases
-        if right_side in ['off', 'none', 'false', 'f']:
+        if right_side in {'off', 'none', 'false', 'f'}:
             self.rpars.AVERAGE_BEAMS = False
             return
-        if right_side.lower() in ['all', 'perpendicular', 'perp']:
+        if right_side.lower() in {'all', 'perpendicular', 'perp'}:
             self.rpars.AVERAGE_BEAMS = (0., 0.)
             return
 
@@ -651,13 +648,13 @@ class ParameterInterpreter:
         flag, compiler_str = assignment.flag.lower(), assignment.values_str
 
         # (1) Default (i.e., non-MPI) compiler flags
-        if not flag and compiler_str.lower() in ['ifort', 'gfortran']:
+        if not flag and compiler_str.lower() in {'ifort', 'gfortran'}:
             self.rpars.getFortranComp(comp=compiler_str.lower(),
                                       skip_check=skip_check)
             return
 
         # (2) MPI compiler flags
-        if flag == 'mpi' and compiler_str.lower() in ['mpifort', 'mpiifort']:
+        if flag == 'mpi' and compiler_str.lower() in {'mpifort', 'mpiifort'}:
             self.rpars.getFortranMpiComp(comp=compiler_str.lower(),
                                          skip_check=skip_check)
             return
@@ -1054,9 +1051,9 @@ class ParameterInterpreter:
         """Assign PLOT_IV['legend']."""
         self._ensure_single_value_assignment(assignment)
         value = assignment.value.lower()
-        if value in ('all', 'first', 'none'):
+        if value in {'all', 'first', 'none'}:
             self.rpars.PLOT_IV['legend'] = value
-        elif value in ('topright', 'tr'):
+        elif value in {'topright', 'tr'}:
             self.rpars.PLOT_IV['legend'] = 'tr'
         else:
             self.rpars.setHaltingLevel(1)
@@ -1304,7 +1301,7 @@ class ParameterInterpreter:
             rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
         cull_type = assignment.other_values[0].lower()
-        if cull_type in ['clone', 'genetic', 'random']:
+        if cull_type in {'clone', 'genetic', 'random'}:
             rpars.SEARCH_CULL_TYPE = cull_type
         else:
             rpars.setHaltingLevel(1)
@@ -1846,10 +1843,8 @@ class ParameterInterpreter:
         except (SyntaxError, ValueError, TypeError,
                 MemoryError, RecursionError) as exc:
             self.rpars.setHaltingLevel(1)
-            if 'float' in exc.args[0]:
-                new_exc = ParameterFloatConversionError
-            else:  # Some other weird input
-                new_exc = ParameterParseError
+            new_exc = (ParameterFloatConversionError if 'float' in exc.args[0]
+                       else ParameterParseError)  # Some other weird input
             raise new_exc(param, assignment.values_str) from exc
 
         # Make sure step, the last one, is NOT ZERO
@@ -1876,12 +1871,11 @@ class ParameterInterpreter:
                 parameter=param,
                 found_and_expected=(len(assignment.values), 2)
                 )
+        right_side = assignment.values_str.upper()
         if ',' not in assignment.values_str:
             # pylint: disable=consider-using-f-string
             # disable: Better than repeating 'assignment.values' twice
             right_side = 'THETA {}, PHI {}'.format(*assignment.values)
-        else:
-            right_side = assignment.values_str.upper()
         self._check_n_incidence_angles_ok(param, right_side)
 
         angles_specs = (spec.strip().split()

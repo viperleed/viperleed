@@ -157,9 +157,9 @@ class ModifiedParameterValue:
         self.fmt_value = ''
         self.line = ''
         if not self.only_comment_out:
-            self._update_(rpars_or_value)
+            self._update(rpars_or_value)
 
-    def _update_(self, rpars_or_value):
+    def _update(self, rpars_or_value):
         """Gather the value, its formatted version and a line."""
         try:
             rpars_or_value.BULK_REPEAT
@@ -181,7 +181,7 @@ class ModifiedParameterValue:
             return f'{self._raw_value:{fmt_string}}'
 
         if param in self._wood_or_matrix:
-            return self._format_wood_or_matrix_value_()
+            return self._format_wood_or_matrix_value()
 
         if param in self._vector_params:
             args = self._vector_params[param]
@@ -195,13 +195,11 @@ class ModifiedParameterValue:
 
     def _format_line(self):
         """Return a formatted version of the new line for a PARAMETER."""
-        if '=' in self.fmt_value:
-            fmt_line = self.fmt_value
-        else:
-            fmt_line = f'{self.param} = {self.fmt_value}'
+        value = self.fmt_value
+        line = value if '=' in value else f'{self.param} = {value}'
         if self.comment:
-            fmt_line = f'{fmt_line.rstrip():<35} ! {self.comment}'
-        return fmt_line + '\n'
+            line = f'{line.rstrip():<35} ! {self.comment}'
+        return line + '\n'
 
     def _format_beam_incidence_value(self):
         """Return a formatted version of BEAM_INCIDENCE."""
@@ -227,7 +225,7 @@ class ModifiedParameterValue:
             return str(min_)
         return f'{min_}-{max_}'
 
-    def _format_wood_or_matrix_value_(self):
+    def _format_wood_or_matrix_value(self):
         """Return a formatted version of an integer matrix value."""
         formatted = writeWoodsNotation(self._raw_value)
         if formatted:

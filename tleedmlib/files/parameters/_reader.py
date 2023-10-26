@@ -145,11 +145,10 @@ class ParametersReader(AbstractContextManager, Iterator):
         """Return whether line contains a STOP condition."""
         # SEARCH_KILL is legacy name
         line = line.upper()
-        for param in ['SEARCH_KILL', 'STOP']:
-            if (line.startswith(param)
-                    and not re.match(fr'\s*{param}\s*=\s*[F](ALSE)?', line)):
-                return True
-        return False
+        stop_false = {alias: re.compile(fr'\s*{alias}\s*=\s*[F](ALSE)?').match
+                      for alias in ('SEARCH_KILL', 'STOP')}
+        return any(line.startswith(stop) and not is_false(line)
+                   for stop, is_false in stop_false.items())
 
     @staticmethod
     def _tokenize_line(line):
