@@ -46,3 +46,65 @@ pythonpath = [
     ]
 required_plugins = ['pytest-cases', 'pytest-subtests']
 xfail_strict = true
+
+
+[tool.pylint.master]
+extension-pkg-whitelist = ['PyQt5', 'quicktions']
+extension-pkg-allow-list = ['PyQt5', 'quicktions']
+load-plugins = [
+    'pylint.extensions.bad_builtin',
+    'pylint.extensions.broad_try_clause',
+    'pylint.extensions.code_style',
+    'pylint.extensions.comparison_placement',
+    'pylint.extensions.confusing_elif',
+    'pylint.extensions.for_any_all',
+    'pylint.extensions.consider_refactoring_into_while_condition',
+    'pylint.extensions.consider_ternary_expression',
+    'pylint.extensions.mccabe',
+    'pylint.extensions.dict_init_mutate',
+    'pylint.extensions.docstyle',
+    'pylint.extensions.dunder',
+    'pylint.extensions.check_elif',
+    'pylint.extensions.empty_comment',
+    'pylint.extensions.private_import',
+    'pylint.extensions.redefined_variable_type',
+    'pylint.extensions.overlapping_exceptions',
+    'pylint.extensions.docparams',
+    'pylint.extensions.set_membership',
+    ]
+
+[tool.pylint.basic]
+no-docstring-rgx = '^(?!__init__$)_'
+# The regexes below undo the changes in pylint 3.0 concerning
+# two-letter-long names. The regexes are the only ones that
+# were changed in github.com/pylint-dev/pylint/pull/8813. Note
+# that DEFAULT_NAME_RGX is the one used for function, method,
+# attr, argument, and variable. The long regexs are all the
+# same, and match lower_camel_case.
+# See github.com/pylint-dev/pylint/releases/tag/v3.0.0
+class-rgx = '[^\W\da-z][^\W_]+$'
+class-attribute-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+function-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+method-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+attr-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+argument-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+variable-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+
+[tool.pylint.main]
+check-quote-consistency = 'yes'
+
+[tool.pylint.format]
+max-line-length = 80
+
+[tool.pylint.messages_control]
+enable = ['useless-suppression',
+          'use-implicit-booleaness-not-comparison-to-zero',
+          'use-implicit-booleaness-not-comparison-to-string']
+disable = [
+	'logging-fstring-interpolation',
+	'consider-using-assignment-expr',  # We want to support 3.7 too
+	]
+
+[tool.pylint.reports]
+output-format = 'colorized'
+msg-template = '"{module} - L{line:4d}: {msg_id:5s}: {msg} ({symbol})"'
