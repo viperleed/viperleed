@@ -524,7 +524,6 @@ class LayerCuts:
         shift_left, shift_right = (None, *tokens[:-1]), (*tokens[1:], None)
         triplets = zip(shift_left, tokens, shift_right)
         for i, (lower, middle, upper) in enumerate(triplets):
-            assert middle is tokens[i]
             if not middle.is_auto_cut:
                 continue
             tokens[i] = middle.with_bounds(lower, upper)
