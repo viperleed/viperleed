@@ -28,6 +28,7 @@ class TestLayerCutToken:
         'order <': (CutType.ORDERING, '<'),
         'auto dc': (CutType.AUTO_DC, 1.5),
         'auto dz': (CutType.AUTO_DZ, 1.4),
+        'auto w num bounds': (CutType.AUTO_DC, 1.37, 0.2, 0.8),
         }
     invalid_tokens = {
         'numeric not-a-real': ((CutType.NUMERIC, 'abcd'), TypeError),
@@ -36,7 +37,7 @@ class TestLayerCutToken:
         'auto not-a-real': ((CutType.AUTO_DC, 'abcd'), TypeError),
         'order not <>': ((CutType.ORDERING, '!'), ValueError),
         'non auto w bounds': ((CutType.NUMERIC, 0.57, 0.3, 0.4), ValueError),
-        'auto w wrong bounds': ((CutType.AUTO_DC, 1.43, 0.2, 0.8), TypeError),
+        'auto w wrong bounds': ((CutType.AUTO_DC, 1.3, '0.2', 0.8), TypeError),
         }
 
     @fixture(name='make_token', scope='session')
