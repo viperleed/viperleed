@@ -10,6 +10,7 @@ import itertools
 import pytest
 from pytest_cases import fixture, parametrize
 
+from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
 from viperleed.tleedmlib.classes.rparams.special.energy_range import (
     EnergyRange
     )
@@ -19,20 +20,26 @@ from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
 class TestEnergyRange:
     """Collection of tests for the EnergyRange base class."""
 
-    @fixture(name='make_range', scope='session')
+    _class = EnergyRange
+
+    @fixture(name='make_range', scope='class')
     def factory_make_range(self):
         """Return an EnergyRange object."""
         def _make(name):
-            return EnergyRange(*self.valid[name][0])
+            try:
+                return self._class(*self.valid[name][0])
+            except KeyError:
+                pytest.skip(f'{name!r} is not valid')
+                raise
         return _make
 
     valid = {      # init value,     expected
         '1 2 0.1': ((1.0, 2.0, 0.1), (1.0, 2.0, 0.1)),
         '1 2 0.2': ((1.0, 2.0, 0.2), (1.0, 2.0, 0.2)),
         'start==stop': ((1.0, 1.0, 0.1), (1.0, 1.0, 0.1)),
-        'small step': ((0.0, 1.0, 1e-10), (0.0, 1.0, 1e-10)),
+        'small step': ((1.0, 1.7, 1e-10), (1.0, 1.7, 1e-10)),
         'swapped': ((3.0, 1.0, -0.1), (1.0, 3.0, 0.1)),
-        'swapped no step': ((3.0, 1.0), (1.0, 3.0, NO_VALUE)),
+        'swapped no step': ((3.0, -1.0), (-1.0, 3.0, NO_VALUE)),
         'no step': ((1.0, 2.0), (1.0, 2.0, NO_VALUE)),
         }
     invalid = {
@@ -45,9 +52,11 @@ class TestEnergyRange:
         'nan step': ((1.0, 5.0, float('nan')), ValueError),
         }
 
-    @parametrize(name=valid)
-    def test_equal(self, name, make_range):
+    @parametrize('name,args', valid.items(), ids=valid)
+    def test_equal(self, name, args, make_range):
         """Check correct result of the equality method."""
+        *_, expected = args
+        assert pytest.approx(make_range(name)) == expected
         assert make_range(name) == make_range(name)
 
     @parametrize(names=itertools.combinations(valid, 2))
@@ -62,25 +71,31 @@ class TestEnergyRange:
         """Check that an invalid type cannot be compared."""
         assert make_range('1 2 0.1') != invalid
 
-    @parametrize('name,expected', valid.items(), ids=valid)
-    def test_iter(self, name, expected, make_range):
+    @parametrize('name,args', valid.items(), ids=valid)
+    def test_iter(self, name, args, make_range):
         """Check correct iteration of an EnergyRange."""
-        assert tuple(make_range(name)) == expected[1]
+        *_, expected = args
+        assert tuple(make_range(name)) == pytest.approx(expected)
 
-    @parametrize('name,expected', valid.items(), ids=valid)
-    def test_properties(self, name, expected, make_range):
+    @parametrize('name,args', valid.items(), ids=valid)
+    def test_properties(self, name, args, make_range):
         """Check min and max."""
+        *_, expected = args
         energy_range = make_range(name)
-        assert (energy_range.min, energy_range.max) == expected[1][:2]
+        min_max = energy_range.min, energy_range.max
+        assert min_max == pytest.approx(expected[:2])
 
-    @parametrize('value,expected', valid.values(), ids=valid)
-    def test_from_value(self, value, expected):
+    @parametrize('name,args', valid.items(), ids=valid)
+    def test_from_value(self, name, args):
         """Check correct creation from a single sequence."""
-        energy_range = EnergyRange.from_value(value)
-        assert tuple(energy_range) == expected
+        if name not in self.valid:
+            pytest.skip(reason=f'{name!r} is not valid')
+        value, expected = args
+        energy_range = self._class.from_value(value)
+        assert tuple(energy_range) == pytest.approx(expected)
 
     @parametrize('value,exc', invalid.values(), ids=invalid)
     def test_invalid_input(self, value, exc):
         """Check complaints when created from an invalid input."""
         with pytest.raises(exc):
-            EnergyRange.from_value(value)
+            self._class.from_value(value)
