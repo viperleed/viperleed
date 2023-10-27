@@ -62,6 +62,21 @@ class EnergyRange(SpecialParameter):
         return self.stop
 
     @property
+    def defined(self):
+        """Return whether all of the attributes have a value set."""
+        return not any(v is NO_VALUE for v in self)
+
+    @property
+    def has_bounds(self):
+        """Return whether both start and stop are defined."""
+        return not any(v is NO_VALUE for v in (self.start, self.stop))
+
+    @property
+    def has_step(self):
+        """Return whether this EnergyRange has step defined."""
+        return self.step is not NO_VALUE
+
+    @property
     def _non_defaults(self):
         """Return the non-default values in self."""
         return [e for e in self if e is not NO_VALUE]
@@ -81,17 +96,15 @@ class EnergyRange(SpecialParameter):
             pass
 
         start, stop, step = self
-        has_start_stop = all(v is not NO_VALUE for v in (start, stop))
-        has_values = has_start_stop and step is not NO_VALUE
-
-        if has_values and (stop - start) * step < 0:
+        if self.defined and (stop - start) * step < 0:
             raise ValueError('Inconsistent step. Cannot shift from '
                              f'{start:.2f} to {stop:.2f} with {step=:.2f}')
-        if has_start_stop and self._swap and stop < start:
+
+        if self.has_bounds and self._swap and stop < start:
             self._swap()
 
     def _swap(self):
         """Swap start and stop, change step."""
         self.start, self.stop = self.stop, self.start
-        if self.step is not NO_VALUE:
+        if self.has_step:
             self.step *= -1

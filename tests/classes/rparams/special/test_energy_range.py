@@ -99,3 +99,8 @@ class TestEnergyRange:
         """Check complaints when created from an invalid input."""
         with pytest.raises(exc):
             self._class.from_value(value)
+
+    def test_defined(self, make_range):
+        """Check correct value of defined @property."""
+        assert make_range('swapped').defined
+        assert not make_range('no step').defined
