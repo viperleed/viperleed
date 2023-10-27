@@ -20,6 +20,9 @@ if VPR_PATH not in sys.path:
 # pylint: disable=wrong-import-position
 # Will be fixed in installable version
 from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.classes.rparams.special.layer_cuts import (
+    LayerCutToken as Cut, LayerCutTokenType as CutType
+    )
 from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files.parameters import errors as err
 from viperleed.tleedmlib.files.parameters._utils import Assignment
@@ -597,10 +600,19 @@ class TestLayerCuts(_TestInterpretBase):
     valid = {
         'simple': ('0.1 0.2 0.3', ['0.1', '0.2', '0.3']),
         'dz': ('dz(1.2)', ['dz(1.2)']),
-        'list and dz': ('0.15 0.3 < dz(1.2)  ', ['0.15', '0.3', 'dz(1.2)']),
-        'two dz': ('dz(1.0) < 0.28 < dz(0.5) < 0.6',
-                   ['dz(1.0)', '0.28', 'dz(0.5)', '0.6']),
-        'larger than': ('0.75 0.3 > dz(1.2)  ', ['dz(1.2)', '0.3', '0.75']),
+        'list and dz': (
+            '0.15 0.3 < dz(1.2)  ',
+            ['0.15', '0.3', Cut(CutType.AUTO_DZ, 1.2, 0.3, None)]
+            ),
+        'two dz': (
+            'dz(1.0) < 0.28 < dz(0.5) < 0.6',
+            [Cut(CutType.AUTO_DZ, 1.0, None, 0.28), '0.28',
+             Cut(CutType.AUTO_DZ, 0.5, 0.28, 0.60), '0.60']
+            ),
+        'larger than': (
+            '0.75 0.3 > dz(1.2)  ',
+            [Cut(CutType.AUTO_DZ, 1.2, None, 0.3), '0.3', '0.75']
+            ),
         }
     invalid = {
         'less and greater': '< 0.1 > 0.2',
