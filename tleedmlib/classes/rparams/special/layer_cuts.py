@@ -249,20 +249,14 @@ class LayerCutToken:
 class LayerCuts:
     """A container of LayerCutToken objects."""
 
-    _default = 'dz(1.2)'
-
     def __init__(self, *tokens):
         """Initialize instance from some LayerCutToken objects."""
         self._tokens = None
         self._tokens_with_ordering = None   # Also, sorted as original
         self._had_larger_than = False  # Internally we change all to <
 
-        if not tokens:
-            tokens = self._tokenize_string(self._default)
-            ori_tokens = tokens.copy()
-        else:
-            self._check_tokens(tokens)
-            ori_tokens, tokens = self._clean_up_tokens(tokens)
+        self._check_tokens(tokens)
+        ori_tokens, tokens = self._clean_up_tokens(tokens)
         self._tokens = tokens
         self._tokens_with_ordering = ori_tokens
 

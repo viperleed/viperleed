@@ -13,6 +13,9 @@ part of the rparams.py module, refactored by Michele Riva in Oct 2023.
 
 import logging
 
+from .special.layer_cuts import LayerCuts
+
+
 _LOGGER = logging.getLogger('tleedm.rparams')
 
 # Notice that we cannot use a module-level global object(), as this
@@ -31,14 +34,13 @@ DEFAULTS = {
         'w': 4.5,
         },
     'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: init from data
+    'LAYER_CUTS': LayerCuts.from_string('dz(1.2)'),
     'LOG_LEVEL' : {
         NO_VALUE: logging.INFO,
         'debug': logging.DEBUG,
-        'v' : 5,
-        'verbose' : 5,
-        'vv' : 1,
-        'vverbose' : 1,
-    },
+        'v' : 5, 'verbose' : 5,
+        'vv' : 1, 'vverbose' : 1,
+        },
     'PHASESHIFT_EPS': {
         'r': 0.1,
         'n': 0.05,

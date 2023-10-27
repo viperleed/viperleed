@@ -220,7 +220,6 @@ class TestLayerCuts:
             assert len(cuts) == info.len_
 
     str_valid = {
-        'default': LayerCutInfo('', 'dz(1.2)', 'dz(1.2)', 'dz(1.2)', 1),
         'numeric': LayerCutInfo('0.5 0.3', '0.5 0.3', '0.5 0.3',
                                 '0.5000 0.3000', 2),
         'dc only': LayerCutInfo('dc(3)', 'dc(3.0)', 'dc(3.0)', 'dc(3.0)', 1),
@@ -318,8 +317,8 @@ class TestLayerCuts:
             '0.27 dc(1.54) 0.85 0.97', '0.27 < dc(1.54) < 0.85 0.97',
             '0.2700 < dc(1.54) < 0.8500 0.9700', 4
             ),
-        'layer_cuts': LayerCutInfo(LayerCuts(), 'dz(1.2)', 'dz(1.2)',
-                                   'dz(1.2)', 1),
+        'layer_cuts': LayerCutInfo(LayerCuts.from_string('dz(1.2)'), 'dz(1.2)',
+                                   'dz(1.2)', 'dz(1.2)', 1),
         }
     as_cuts_invalid = {
         **{k: (v, ValueError) for k, v in str_invalid.items()},
