@@ -157,12 +157,11 @@ def run_tleedm(system_name="", console_output=True, slab=None,
 
     rp.timestamp = timestamp
     rp.manifest = tmpmanifest
-    for p in preset_params:
-        try:
-            setattr(rp, p, preset_params[p])
-        except Exception:
-            logger.warning(f"Error applying preset parameter {p}: ",
-                           exc_info=True)
+    try:
+        rp.update(preset_params)
+    except (ValueError, TypeError):
+        logger.warning(f"Error applying preset parameters: ",
+                       exc_info=True)
     if not domains:
         slab.fullUpdate(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
