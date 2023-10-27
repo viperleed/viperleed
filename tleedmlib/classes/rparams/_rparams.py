@@ -294,6 +294,14 @@ class Rparams:
         except KeyError as err:
             raise ValueError(f'No limits found for parameter {param}') from err
 
+    def update(self, presets):
+        """Load presets into this Rparams object."""
+        for param_name, param_value in presets.items():
+            param_name = param_name.upper()
+            getattr(self, param_name)  # Raise AttributeError if wrong
+            value = self._to_simple_or_special_param(param_name, param_value)
+            setattr(self, param_name, value)
+
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and
         theory. Note that this may change if experimental beams are dropped."""
