@@ -364,7 +364,9 @@ def writeAUXLATGEO(sl, rp):
         lj = 30  # ljust spacing
     output = ''
     output += rp.systemName+' '+rp.timestamp+'\n'
-    ens = [rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01, rp.THEO_ENERGIES[2]]
+    ens = [rp.THEO_ENERGIES.start,
+           rp.THEO_ENERGIES.stop + 0.01,
+           rp.THEO_ENERGIES.step]
     output += formatter['energies'].write(ens).ljust(lj) + 'EI,EF,DE\n'
     ucsurf = np.transpose(sl.ucell[:2, :2])
     if sl.bulkslab is None:

@@ -50,12 +50,12 @@ DEFAULTS = {
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
     'SEARCH_MAX_DGEN': {'all': 0, 'best': 0, 'dec': 100},
     'SYMMETRY_FIX': '',
-    'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
-    'THEO_ENERGIES - no experiments': (20, 800, 3),
     'THETA': 0,   # perpendicular incidence
     'PHI': 0,     # not needed in case of perpendicular incidence
     'ZIP_COMPRESSION_LEVEL': 2,
 
     # SPECIAL PARAMETERS
     'LAYER_CUTS': 'dz(1.2)',
+    'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
+    'THEO_ENERGIES - no experiments': (20, 800, 3),
     }

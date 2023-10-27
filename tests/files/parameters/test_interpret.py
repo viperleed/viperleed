@@ -1267,22 +1267,27 @@ class TestTheoEnergies(_TestInterpretBase):
     _defaults = Rparams.get_default(param)
     valid = {
         'single_value_default': ('_', _defaults),
-        'single_value': ('1.0', [1.0, 1.0, 1.0]),
+        'single_value': ('5.0', [5.0, 5.0, 1.0]),
         'three_values_all_default': ('_ _ _', _defaults),
-        'three_values_one_default': ('1.0 _ 2.0', [1.0, _defaults[1], 2.0]),
+        'three_values_one_default': ('1.0 _ 2.0', [1.0, _defaults.stop, 2.0]),
         'three_positive': ('1.0 2.0 0.5', [1.0, 2.0, 0.5]),
-        'two_defaults': ('1.0 _ _', [1.0, *_defaults[1:]]),
+        'two_defaults': ('1.0 _ _', [1.0, _defaults.stop, _defaults.step]),
         'range_correction': ('1.1 2.5 0.5', [1.0, 2.5, 0.5]),
         'start rounded negative': ('0.1 2.5 0.5', [0.5, 2.5, 0.5]),
         'start rounded zero': ('0.3 2.5 0.5', [0.5, 2.5, 0.5]),
         }
     invalid = {
-        'one_negative': ('1.0 -2.0 0.5', err.ParameterRangeError),
+        'one_negative': ('1.0 -2.0 0.5', err.ParameterValueError),
         'invalid_range': ('2.0 1.0 0.5', err.ParameterValueError),
-        'start_out_of_range': ('-0.5 2.0 0.5', err.ParameterRangeError),
+        'start_out_of_range': ('-0.5 2.0 0.5', err.ParameterValueError),
         'zero step': ('1.0 2.0 0.0', err.ParameterRangeError),
         'too few': ('1.0 2.0 ', err.ParameterNumberOfInputsError),
         'too many': ('1.0 2.0 0.3 9', err.ParameterNumberOfInputsError),
+        'nan value': ('nan 2.0 0.3', err.ParameterParseError),
+        'nan step': ('0.1 2.0 nan', err.ParameterParseError),
+        'inf value': ('inf 2.0 0.3', err.ParameterParseError),
+        'inf step': ('0.3 2.5 inf', err.ParameterParseError),
+        'float(inf) step': ('0.3 2.5 float("inf")', err.ParameterParseError),
         }
 
     @parametrize('val,expect', valid.values(), ids=valid)

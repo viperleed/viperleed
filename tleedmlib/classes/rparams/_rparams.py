@@ -244,7 +244,7 @@ class Rparams:
                 f'Using file {self.expbeams_file_name!r}.'
                 )
         err_msg = f'Error while reading file {self.expbeams_file_name}'
-        enrange = [-1 if e is NO_VALUE else e for e in self.THEO_ENERGIES[:2]]
+        enrange = self.THEO_ENERGIES.as_floats()[:2]
         try:
             self.expbeams = tl_beams.readOUTBEAMS(self.expbeams_file_name,
                                                   enrange=enrange)
@@ -311,8 +311,8 @@ class Rparams:
         totalrange = 0.
         for b in self.expbeams:
             expEnergies.extend([k for k in b.intens if k not in expEnergies])
-            totalrange += (min(max(b.intens), self.THEO_ENERGIES[1])
-                           - max(min(b.intens), self.THEO_ENERGIES[0]))
+            totalrange += (min(max(b.intens), self.THEO_ENERGIES.max)
+                           - max(min(b.intens), self.THEO_ENERGIES.min))
         return totalrange
 
     def storeRfacScatter(self, x, y, s, c):
@@ -451,10 +451,10 @@ class Rparams:
         if self.fileLoaded['PHASESHIFTS']:
             # get highest required energy index
             hi = len(self.phaseshifts)-1
-            if self.THEO_ENERGIES[1] is not NO_VALUE:
+            if self.THEO_ENERGIES.max is not NO_VALUE:
                 for i in range(0, len(self.phaseshifts)):
                     if (self.phaseshifts[i][0]*leedbase.HARTREE_TO_EV
-                            > self.THEO_ENERGIES[1]):
+                            > self.THEO_ENERGIES.max):
                         hi = i
                         break
             # LMAX
@@ -590,29 +590,22 @@ class Rparams:
         -------
         None.
         """
-        if NO_VALUE not in self.THEO_ENERGIES:
+        energies = self.THEO_ENERGIES
+        if energies.defined:
             return
-        info = False
+        info = self.fileLoaded['EXPBEAMS'] and not energies.has_bounds
         if self.fileLoaded['EXPBEAMS']:
             minen = min(en for beam in self.expbeams for en in beam.intens)
             maxen = max(en for beam in self.expbeams for en in beam.intens)
             values = [minen - 3, maxen + 3, 3]
-            if NO_VALUE in self.THEO_ENERGIES[:2]:
-                info = True
         else:
-            values = list(DEFAULTS['THEO_ENERGIES - no experiments'])
+            values = self.get_default('THEO_ENERGIES - no experiments')
 
-        for i in range(0, 3):
-            if self.THEO_ENERGIES[i] is NO_VALUE:
-                self.THEO_ENERGIES[i] = values[i]
+        energies.set_undefined_values(values)
         if info:
             _LOGGER.debug('Initialized energy range from experimental '
-                          f'beams file: {self.THEO_ENERGIES[0]:.2f} to '
-                          f'{self.THEO_ENERGIES[1]:.2f} eV')
-        d = ((self.THEO_ENERGIES[1] - self.THEO_ENERGIES[0])
-             % self.THEO_ENERGIES[2])
-        if d != 0:
-            self.THEO_ENERGIES[1] += (self.THEO_ENERGIES[2] - d)
+                          f'beams file: {energies.start:.2f} to '
+                          f'{energies.stop:.2f} eV')
 
     # TODO: eventually, these default values should be moved to some constant or other file
     def getFortranComp(self, comp='auto', skip_check=False):                    # TODO: combine with FortranCompMPI from below; lots of repeated code

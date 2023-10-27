@@ -16,7 +16,7 @@ from .._defaults import NO_VALUE
 
 
 @dataclass(eq=False)  # __eq__ inherited from EnergyRange
-class TheoEnergies(EnergyRange):
+class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
     """Energy range used for calculating I(V) curves."""
 
     def __post_init__(self):

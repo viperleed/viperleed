@@ -28,6 +28,7 @@ import numpy as np
 from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.base import readIntRange, readVector
 from viperleed.tleedmlib.base import recombineListElements, splitSublists
+from viperleed.tleedmlib.classes.rparams import LayerCuts, TheoEnergies
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
@@ -729,7 +730,7 @@ class ParameterInterpreter:
         """Assign parameter LAYER_CUTS."""
         param = 'LAYER_CUTS'
         try:
-            cuts = self.rpars.LAYER_CUTS.from_string(assignment.values_str)
+            cuts = LayerCuts.from_string(assignment.values_str)
         except ValueError as exc:
             # String has invalid syntax
             raise ParameterParseError(param, message=str(exc)) from None
@@ -1639,43 +1640,21 @@ class ParameterInterpreter:
         # others should be positive floats.
         theo_energies = self._parse_energy_range(param, assignment, energies,
                                                  accept_underscore=True)
-        non_defaults = [e for e in theo_energies
-                        if e is not self.rpars.no_value]
-        if not all(e > 0 for e in non_defaults):
-            message = f'{param} values must be positive'
-            self.rpars.setHaltingLevel(1)
-            raise ParameterRangeError(param, message)
-
         if len(theo_energies) != 3:
             raise ParameterNumberOfInputsError(param)
-        if len(non_defaults) < 3:
-            # Do not mess with start/stop yet, as some needs to
-            # be initialized from experimental data. We will
-            # fix the bounds in Rparams.initTheoEnergies.
-            self.rpars.THEO_ENERGIES = theo_energies
-            return
 
-        start, stop, step = theo_energies
-        if stop < start:
-            message = f'maximum {param} value should be >= than the minimum'
+        try:
+            self.rpars.THEO_ENERGIES = TheoEnergies(*theo_energies)
+        except ValueError as exc:  # NB: No TypeError -- all are float
             self.rpars.setHaltingLevel(1)
-            raise ParameterValueError(param)
+            raise ParameterValueError(param, message=str(exc)) from None
 
-        # If the max is not hit by the steps exactly, correct
-        # the lower bound down so that this is the case
-        # pylint: disable-next=compare-to-zero  # Clearer this way
-        if (stop - start) % step == 0:
-            self.rpars.THEO_ENERGIES = theo_energies
-            return
-
-        start -= step - (stop - start) % step
-        if start < -1e-6:
-            start = start % step
-        if abs(start) < 1e-6:
-            start = step
-        _LOGGER.info('THEO_ENERGIES parameter: (Eto - Efrom) % Estep != 0, '
-                     f'Efrom was corrected to {start}')
-        self.rpars.THEO_ENERGIES = [start, stop, step]
+        # Notify in case start was adjusted to fit step
+        if self.rpars.THEO_ENERGIES != theo_energies:
+            _LOGGER.info(
+                f'{param} parameter: (Eto - Efrom) % Estep != 0, Efrom '
+                f'was corrected to {self.rpars.THEO_ENERGIES.start}'
+                )
 
     def interpret_v0_real(self, assignment):
         """Assign parameter V0_REAL."""
@@ -1830,7 +1809,7 @@ class ParameterInterpreter:
             return enrange
         try:
             1 / enrange[-1]
-        except ZeroDivisionError:
+        except ZeroDivisionError:                                               # TODO: move this. The check is done in EnergyRange
             message = 'Step cannot be zero'
             raise ParameterRangeError(param, message=message) from None
         except TypeError:  # It's a NO_VALUE

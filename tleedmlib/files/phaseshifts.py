@@ -309,9 +309,9 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen):
     """Check that the energy range of phaseshifts is large enough for rp."""
     checkfail = False
 
-    er = np.arange(rp.THEO_ENERGIES[0],
-                   rp.THEO_ENERGIES[1] + 1e-4,
-                   rp.THEO_ENERGIES[2])
+    er = np.arange(rp.THEO_ENERGIES.start,
+                   rp.THEO_ENERGIES.stop + 1e-4,
+                   rp.THEO_ENERGIES.step)
     psmin = round(phaseshifts[0][0] * HARTREE_TO_EV, 2)
     psmax = round(phaseshifts[-1][0] * HARTREE_TO_EV, 2)
 

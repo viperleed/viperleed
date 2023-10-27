@@ -522,7 +522,7 @@ def getLEEDdict(sl, rp):
         logger.error("getLEEDdict: SUPERLATTICE contains non-integer-valued "
                      "entries.")
         return None
-    d = {"eMax": rp.THEO_ENERGIES[1],
+    d = {"eMax": rp.THEO_ENERGIES.max,
          "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
          "surfBasis": sl.ucell[:2, :2].T,
          "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,

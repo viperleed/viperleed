@@ -356,8 +356,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         rp.setHaltingLevel(3)
         return
 
-    energies = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01,         # TODO: use better arange
-                         rp.THEO_ENERGIES[2])
+    energies = np.arange(rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01,         # TODO: use better arange
+                         rp.THEO_ENERGIES.step)
     tl_path = rp.get_tenserleed_directory()
     rp.updateCores()
     single_threaded = (rp.N_CORES <= 1)

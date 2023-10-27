@@ -36,7 +36,7 @@ logger = logging.getLogger("tleedm.rfactor")
 def rfactor(sl, rp, index, for_error=False, only_vary=None):                    # TODO: Parameters __doc__
     """Runs the r-factor calculation for either the reference calculation
     (index 11) or the superpos (index 12)."""
-    if int((rp.THEO_ENERGIES[1] - rp.THEO_ENERGIES[0]) / rp.THEO_ENERGIES[2]) + 1 < 2:
+    if rp.THEO_ENERGIES.n_energies < 2:
         logger.info("Only one theoretical energy found: Cannot "
                     "calculate a meaningful R-Factor. Stopping...")
         return []
@@ -146,16 +146,16 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         real_iv_shift = [rp.best_v0r] * 2
 
         # extend energy range if they are close together
-    if abs(min(exp_energies) - rp.THEO_ENERGIES[0]) < abs(real_iv_shift[0]):
-        minen = max(min(exp_energies), rp.THEO_ENERGIES[0]) + real_iv_shift[0]
+    if abs(min(exp_energies) - rp.THEO_ENERGIES.min) < abs(real_iv_shift[0]):
+        minen = max(min(exp_energies), rp.THEO_ENERGIES.min) + real_iv_shift[0]
     else:
-        minen = max(min(exp_energies), rp.THEO_ENERGIES[0])
-    if abs(max(exp_energies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
+        minen = max(min(exp_energies), rp.THEO_ENERGIES.min)
+    if abs(max(exp_energies) - rp.THEO_ENERGIES.max) < abs(real_iv_shift[1]):
         maxen = (
-            min(max(exp_energies), rp.THEO_ENERGIES[1]) + real_iv_shift[1]
+            min(max(exp_energies), rp.THEO_ENERGIES.max) + real_iv_shift[1]
         )  # TODO: should this be + or - ? I think + ...
     else:
-        maxen = min(max(exp_energies), rp.THEO_ENERGIES[1])
+        maxen = min(max(exp_energies), rp.THEO_ENERGIES.max)
         
     intpol_step = min(
         exp_energies[1] - exp_energies[0], theo_energies[1] - theo_energies[0]

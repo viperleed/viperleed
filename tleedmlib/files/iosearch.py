@@ -355,16 +355,14 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     for b in rp.expbeams:
         expEnergies.extend([k for k in b.intens if k not in expEnergies])
     expEnergies.sort()
-    minen = max(min(expEnergies), rp.THEO_ENERGIES[0])
-    maxen = min(max(expEnergies), rp.THEO_ENERGIES[1])
+    minen = max(min(expEnergies), rp.THEO_ENERGIES.min)
+    maxen = min(max(expEnergies), rp.THEO_ENERGIES.max)
     # extend energy range if they are close together
-    if abs(min(expEnergies) - rp.THEO_ENERGIES[0]) < abs(rp.IV_SHIFT_RANGE[0]):
-        minen = (max(min(expEnergies), rp.THEO_ENERGIES[0])
-                 - rp.IV_SHIFT_RANGE[0])
-    if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(rp.IV_SHIFT_RANGE[1]):
-        maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
-                 + rp.IV_SHIFT_RANGE[1]) + 0.01
-    step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
+    if abs(min(expEnergies) - rp.THEO_ENERGIES.min) < abs(rp.IV_SHIFT_RANGE[0]):
+        minen -= rp.IV_SHIFT_RANGE[0]
+    if abs(max(expEnergies) - rp.THEO_ENERGIES.max) < abs(rp.IV_SHIFT_RANGE[1]):
+        maxen += rp.IV_SHIFT_RANGE[1] + 0.01
+    step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES.step)
     if rp.IV_SHIFT_RANGE[2] is rp.no_value:
         vincr = step
     else:
@@ -483,9 +481,8 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
                     "{:.2g} eV ({} independent fit parameters, {:.2g} eV per "
                     "parameter)"
                     .format(totalrange, rp.indyPars, totalrange / rp.indyPars))
-    theoEnergies = int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
-                       / rp.THEO_ENERGIES[2]) + 1
-    if theoEnergies >= len(expEnergies):
+    n_theo_energies = rp.THEO_ENERGIES.n_energies
+    if n_theo_energies >= len(expEnergies):
         logger.warning("Theoretical beams have more data points than "
                        "experimental beams")
         rp.setHaltingLevel(1)
@@ -545,7 +542,7 @@ C MNDATA IS MAX. NUMBER OF DATA POINTS IN EXPERIMENTAL BEAMS
     # array size parameter only - add some buffer -> *1.1
     output += """
 C MNDATT IS NUMBER OF THEORETICAL DATA POINTS IN EACH BEAM
-      PARAMETER(MNDATT = {})""".format(int(theoEnergies*1.1))
+      PARAMETER(MNDATT = {})""".format(int(n_theo_energies*1.1))
     output += """
 C MPS IS POPULATION SIZE (number of independent trial structures)
       PARAMETER(MPS = {})""".format(rp.SEARCH_POPULATION)

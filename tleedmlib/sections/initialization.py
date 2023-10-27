@@ -603,11 +603,7 @@ def init_domains(rp):
             continue
         cmessage = f"Reference calculation required for domain {dp.name}: "
         # check energies
-        if (rp.THEO_ENERGIES[0] < dp.rp.THEO_ENERGIES[0] or
-            rp.THEO_ENERGIES[1] > dp.rp.THEO_ENERGIES[1] or
-            rp.THEO_ENERGIES[2] != dp.rp.THEO_ENERGIES[2] or
-            (rp.THEO_ENERGIES[0] % rp.THEO_ENERGIES[2]
-             != dp.rp.THEO_ENERGIES[0] % dp.rp.THEO_ENERGIES[2])):
+        if not dp.rp.THEO_ENERGIES.contains(rp.THEO_ENERGIES):
             logger.info("%sEnergy range is mismatched.", cmessage)
             dp.refcalcRequired = True
             continue
