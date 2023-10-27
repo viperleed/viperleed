@@ -19,6 +19,8 @@ from numbers import Real
 import re
 from typing import Any
 
+from ._base import SpecialParameter
+
 
 def pairwise(iterable):
     """Yield pairs of items from iterable."""
@@ -250,7 +252,7 @@ class LayerCutToken:
                             'tokens can be used as bounds')
 
 
-class LayerCuts:
+class LayerCuts(SpecialParameter, param='LAYER_CUTS'):
     """A container of LayerCutToken objects."""
 
     def __init__(self, *tokens):
@@ -312,6 +314,9 @@ class LayerCuts:
         raise TypeError('Cannot produce a LayerCuts from '
                         f'{type(other).__name__!r}. Only '
                         'str and Sequence allowed')
+
+    # Override parent's method
+    from_value = as_layer_cuts
 
     @classmethod
     def from_string(cls, string):

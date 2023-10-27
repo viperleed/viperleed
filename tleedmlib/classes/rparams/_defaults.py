@@ -13,8 +13,6 @@ part of the rparams.py module, refactored by Michele Riva in Oct 2023.
 
 import logging
 
-from .special.layer_cuts import LayerCuts
-
 
 _LOGGER = logging.getLogger('tleedm.rparams')
 
@@ -29,12 +27,12 @@ NO_VALUE = None
 # in the relevant places. The only difference is dictionaries. Copies
 # are used for them.
 DEFAULTS = {
+    # BASIC PARAMETERS
     'FILAMENT_WF': {
         'lab6': 2.65,  # This is the default if nothing is given
         'w': 4.5,
         },
     'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: init from data
-    'LAYER_CUTS': LayerCuts.from_string('dz(1.2)'),
     'LOG_LEVEL' : {
         NO_VALUE: logging.INFO,
         'debug': logging.DEBUG,
@@ -57,4 +55,7 @@ DEFAULTS = {
     'THETA': 0,   # perpendicular incidence
     'PHI': 0,     # not needed in case of perpendicular incidence
     'ZIP_COMPRESSION_LEVEL': 2,
+
+    # SPECIAL PARAMETERS
+    'LAYER_CUTS': 'dz(1.2)',
     }

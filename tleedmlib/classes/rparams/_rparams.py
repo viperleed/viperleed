@@ -40,8 +40,7 @@ from viperleed.tleedmlib.sections._sections import EXPBEAMS_NAMES
 
 from ._defaults import NO_VALUE, DEFAULTS
 from ._limits import PARAM_LIMITS
-from .special.layer_cuts import LayerCuts
-
+from .special._base import SpecialParameter, NotASpecialParameterError
 
 _LOGGER = logging.getLogger('tleedm.rparams')
 if _CAN_PLOT:
@@ -258,8 +257,8 @@ class Rparams:
         else:
             _LOGGER.error(f'{err_msg}: No data was read.')
 
-    @staticmethod
-    def get_default(param):
+    @classmethod
+    def get_default(cls, param):
         """Return the default value of param."""
         try:
             value = DEFAULTS[param]
@@ -269,7 +268,18 @@ class Rparams:
             value = list(value)
         elif isinstance(value, dict):
             value = copy.deepcopy(value)
-        return value
+
+        # See if param is a special one
+        return cls._to_simple_or_special_param(param, value)
+
+    @staticmethod
+    def _to_simple_or_special_param(param, value):
+        """Return the value of a standard or special parameter."""
+        try:
+            special = SpecialParameter.get_subclass(param)
+        except NotASpecialParameterError:
+            return value
+        return special.from_value(value)
 
     def reset_default(self, param):
         """Reset param to its default value."""
