@@ -126,7 +126,7 @@ class _TestInterpretBase:
         """Assert interpretation is successful."""
         self.interpret(interpreter, value_str, **kwargs)
         attr = self.rpars_value(interpreter)
-        assert attr == pytest.approx(expected)
+        assert expected == pytest.approx(attr)
 
     def check_raises(self, interpreter, value_str, exc, **kwargs):
         """Assert that an attempt to interpret raises an exc."""
