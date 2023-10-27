@@ -1,8 +1,10 @@
-"""Tests for module energy_range of viperleed.tleedmlib.rparams.special.
+"""Tests for EnergyRange(+subclasses) of viperleed.tleedmlib.rparams.special.
 
 Created on 2023-10-27
 
 @author: Michele Riva (@michele-riva)
+
+Contains also tests for the TheoEnergies subclass of EnergyRange.
 """
 
 import itertools
@@ -14,7 +16,9 @@ from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
 from viperleed.tleedmlib.classes.rparams.special.energy_range import (
     EnergyRange
     )
-from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
+from viperleed.tleedmlib.classes.rparams.special.theo_energies import (
+    TheoEnergies
+    )
 
 
 class TestEnergyRange:
@@ -104,3 +108,101 @@ class TestEnergyRange:
         """Check correct value of defined @property."""
         assert make_range('swapped').defined
         assert not make_range('no step').defined
+
+
+class TestTheoEnergies(TestEnergyRange):
+    """Tests for the TheoEnergies subclass of EnergyRange."""
+
+    _class = TheoEnergies
+    valid = {
+        **TestEnergyRange.valid,
+        'adjust': ((1.0, 10.0, 2.0), (2.0, 10.0, 2.0)),
+        }
+    for key in ('swapped', 'swapped no step'):
+        valid.pop(key)
+
+    invalid = {
+        **TestEnergyRange.invalid,
+        'swapped neg step': ((3.0, 1.0, -0.1), ValueError),
+        'swapped no step': ((3.0, 1.0,), ValueError),
+        'negative': ((-3.0, 1.0, 0.1), ValueError),
+        }
+
+    @parametrize('value,exc', invalid.values(), ids=invalid)
+    def test_invalid_input(self, value, exc):
+        """Check complaints when created from an invalid input."""
+        super().test_invalid_input(value, exc)
+
+    @parametrize(name=valid)
+    def test_adjusted(self, name, make_range):
+        """Check that a defined TheoEnergies is adjusted."""
+        energy_range = make_range(name)
+        if not energy_range.defined:
+            energy_range.set_undefined_values((3, 20, 0.5))
+            energy_range.adjust_to_fit_step()
+        assert energy_range.is_adjusted
+
+    @parametrize('name,expected', valid.items(), ids=valid)
+    def test_as_floats(self, name, expected, make_range):
+        """Check correctness of the as_floats method."""
+        energy_range = make_range(name)
+        if not energy_range.defined:
+            assert -1 in energy_range.as_floats()
+        else:
+            as_floats = energy_range.as_floats()
+            assert as_floats == pytest.approx(list(expected[1]))
+            assert -1 not in as_floats
+
+    def test_undefined_raises(self, make_range):
+        """Check complaints when accessing properties of undefined range."""
+        undefined = make_range('no step')
+        for attr in ('is_adjusted', 'n_energies'):
+            with pytest.raises(RuntimeError):
+                getattr(undefined, attr)
+
+    n_energies = {
+        '1 2 0.1': 11,
+        '1 2 0.2': 6,
+        'start==stop': 1,
+        'small step': 7e9+1,
+        'adjust': 5,
+        }
+
+    @parametrize('name,expected', n_energies.items(), ids=n_energies)
+    def test_n_energies(self, name, expected, make_range):
+        """Check correct number of energies."""
+        energy_range = make_range(name)
+        assert energy_range.n_energies == expected
+
+    contains_valid = {  # outer, inner
+        'same':         ((1.0, 2.0, 0.1), (1.0, 2.0, 0.1), True),
+        'start lower':  ((0.7, 2.0, 0.1), (1.0, 2.0, 0.1), True),
+        'start higher': ((1.2, 2.0, 0.1), (1.0, 2.0, 0.1), False),
+        'stop lower':   ((1.0, 1.8, 0.1), (1.0, 2.0, 0.1), False),
+        'stop higher':  ((1.0, 2.9, 0.1), (1.0, 2.0, 0.1), True),
+        'diff step':    ((1.0, 2.0, 0.1), (1.0, 2.0, 0.5), False),
+        'shifted':      ((0.05, 2.05, 0.1), (1.0, 2.0, 0.1), False),
+        }
+
+    @parametrize('out_args,in_args,result', contains_valid.values(),
+                 ids=contains_valid)
+    def test_contains(self, out_args, in_args, result):
+        """Check correct result of contains method."""
+        outer = self._class(*out_args)
+        inner = self._class(*in_args)
+        assert outer.contains(inner) is result
+
+    contains_invalid = {
+        'self undefined': (TheoEnergies(), TheoEnergies(1.0, 2.0, 0.1),
+                           RuntimeError),
+        'other undefined': (TheoEnergies(1.0, 2.0, 0.1), TheoEnergies(),
+                            ValueError),
+        'wrong type': (TheoEnergies(0.05, 5.05, 0.1), 'abcd', TypeError),
+        }
+
+    @parametrize('outer,inner,exc', contains_invalid.values(),
+                 ids=contains_invalid)
+    def test_contains_invalid(self, outer, inner, exc):
+        """Check complaints when calling contains with invalid arguments."""
+        with pytest.raises(exc):
+            outer.contains(inner)
