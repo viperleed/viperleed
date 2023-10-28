@@ -734,7 +734,7 @@ class ParameterInterpreter:
         except ValueError as exc:
             # String has invalid syntax
             raise ParameterParseError(param, message=str(exc)) from None
-        if not len(cuts):
+        if not cuts:
             raise ParameterValueError(param,
                                       message='At least one layer cut needed')
         self.rpars.LAYER_CUTS = cuts

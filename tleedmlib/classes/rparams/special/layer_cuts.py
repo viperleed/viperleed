@@ -266,6 +266,10 @@ class LayerCuts(SpecialParameter, param='LAYER_CUTS'):
         self._tokens = tokens
         self._tokens_with_ordering = ori_tokens
 
+    def __bool__(self):
+        """Return whether there is any cut in this LayerCuts."""
+        return bool(self._tokens)
+
     def __format__(self, format_spec):
         """Return a formatted version of this LayerCuts object.
 
