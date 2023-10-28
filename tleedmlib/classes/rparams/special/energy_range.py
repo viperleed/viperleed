@@ -90,6 +90,13 @@ class EnergyRange(SpecialParameter):
         """Return an EnergyRange from value."""
         return cls(*value)
 
+    def set_undefined_values(self, new_values):
+        """Assign undefined values from new_values, then adjust start."""
+        for attr, value in zip(('start', 'stop', 'step'), new_values):
+            if getattr(self, attr) is NO_VALUE:
+                setattr(self, attr, value)
+        self.__post_init__()  # Check and process new values
+
     def _check_consistency(self):
         """Change inconsistent values or complain."""
         try:
@@ -184,12 +191,5 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
         self_shift = remainder(self.start, self.step)
         other_shift = remainder(other.start, other.step)
         return abs(self_shift - other_shift) < self.step * 1e-6
-
-    def set_undefined_values(self, new_values):
-        """Assign undefined values from new_values, then adjust start."""
-        for attr, value in zip(('start', 'stop', 'step'), new_values):
-            if getattr(self, attr) is NO_VALUE:
-                setattr(self, attr, value)
-        self.adjust_to_fit_step()
 
     _swap = None  # Never swap a TheoEnergies. All items must be > 0
