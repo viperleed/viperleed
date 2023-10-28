@@ -22,6 +22,8 @@ from ._base import SpecialParameter
 from .._defaults import NO_VALUE
 
 
+EPS = 1e-8  # Tolerance for comparisons of floats
+
 # Notice that we purposely do not pass a param keyword here, as
 # this is exclusively a base class, and it is not associated with
 # any parameter. Hence, it is not registered by SpecialParameter.
@@ -38,8 +40,16 @@ class EnergyRange(SpecialParameter):
         """Return whether this EnergyRange is identical to another."""
         if not isinstance(other, (EnergyRange, Sequence)):
             return NotImplemented
-        equal = tuple(self) == tuple(other)
-        return equal or NotImplemented
+        if len(tuple(self)) != len(tuple(other)):
+            return NotImplemented
+        for v_self, v_other in zip(self, other):
+            if (v_self, v_other) == (NO_VALUE, NO_VALUE):
+                continue
+            if v_self is NO_VALUE or v_other is NO_VALUE:
+                return NotImplemented
+            if abs(v_self - v_other) > EPS:
+                return NotImplemented
+        return True
 
     def __iter__(self):
         """Yield items of self."""
@@ -167,7 +177,7 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
         if not self.defined:
             raise RuntimeError(f'{self} has undefined items')
         start, stop, step = self
-        return abs(remainder(stop - start,  step)) < 1e-6
+        return abs(remainder(stop - start,  step)) < EPS
 
     @property
     def n_energies(self):
@@ -187,9 +197,9 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
         # remainder, but there are some corner cases in which
         # it is complicated to get the same results as now.
         start -= step - (stop - start) % step
-        # if start < -1e-6:    # Testing reveals that this is never hit
+        # if start < -EPS:    # Testing reveals that this is never hit
             # start = start % step
-        if abs(start) < 1e-6:
+        if abs(start) < EPS:
             start = step
         self.start = start
 
@@ -212,6 +222,6 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
         # Finally, make sure they're not shifted
         self_shift = remainder(self.start, self.step)
         other_shift = remainder(other.start, other.step)
-        return abs(self_shift - other_shift) < self.step * 1e-6
+        return abs(self_shift - other_shift) < self.step * EPS
 
     _swap = None  # Never swap a TheoEnergies. All items must be > 0
