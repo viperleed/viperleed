@@ -12,6 +12,7 @@ TheoEnergies(EnergyRange)
     Used as the Rparams attribute THEO_ENERGIES
 """
 
+import ast
 from collections.abc import Sequence
 from dataclasses import dataclass
 from math import isfinite, remainder
@@ -89,6 +90,27 @@ class EnergyRange(SpecialParameter):
     def from_value(cls, value):
         """Return an EnergyRange from value."""
         return cls(*value)
+
+
+    @staticmethod
+    def parse_string_sequence(string_sequence):
+        """Return floating-point or NO_VALUE from a string sequence."""
+        # We will use ast to interpret the sequence as a tuple.
+        # Notice the trailing comma, in case string_sequence is
+        # only one-element-long
+        string = ','.join(string_sequence) + ','
+
+        # We have to replace '_' with something that AST can
+        # handle. 'None' seems easy enough. We replace it
+        # again further down when converting the rest to float
+        string = string.replace('_', 'None')
+        try:
+            return [float(v) if v is not None else NO_VALUE
+                    for v in ast.literal_eval(string)]
+        except (SyntaxError, ValueError, TypeError,
+                MemoryError, RecursionError) as exc:
+            new_exc = TypeError if 'float' in exc.args[0] else ValueError
+            raise new_exc(' '.join(string_sequence)) from exc
 
     def set_undefined_values(self, new_values):
         """Assign undefined values from new_values, then adjust start."""

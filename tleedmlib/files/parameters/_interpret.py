@@ -15,7 +15,6 @@ Functions and classes for interpreting the contents previously
 read from a PARAMETERS file.
 """
 
-import ast
 from collections.abc import Sequence
 import copy
 from functools import partialmethod
@@ -28,7 +27,8 @@ import numpy as np
 from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.base import readIntRange, readVector
 from viperleed.tleedmlib.base import recombineListElements, splitSublists
-from viperleed.tleedmlib.classes.rparams import LayerCuts, TheoEnergies
+from viperleed.tleedmlib.classes.rparams import LayerCuts, EnergyRange
+from viperleed.tleedmlib.classes.rparams import TheoEnergies
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
@@ -696,12 +696,10 @@ class ParameterInterpreter:
     def interpret_iv_shift_range(self, assignment):                             # TODO: would be very convenient to have a simple EnergyRange (namedtuple or dataclass) to use for this and THEO_ENERGIES. Then we could have .start, .stop, .step instead of indices.
         """Assign parameter IV_SHIFT_RANGE."""
         param = 'IV_SHIFT_RANGE'
-        if len(assignment.values) not in (2, 3):
+        energies = self._parse_energy_range(assignment, assignment.values)
+        if len(energies) not in (2, 3):
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(parameter=param)
-        iv_range = self._parse_energy_range(param, assignment,
-                                            assignment.values,
-                                            accept_underscore=True)
         # Interpret underscores as defaults
         _no_value = self.rpars.no_value
         _defaults = self.rpars.get_default(param)
@@ -1636,16 +1634,15 @@ class ParameterInterpreter:
             energies = (assignment.value, assignment.value, '1')
 
         # (2) Three values. Any can be an "_" meaning "default".
-        # Internally, we store those as an Rparams.no_value. The
+        # Internally, we store those as an rparams.NO_VALUE. The
         # others should be positive floats.
-        theo_energies = self._parse_energy_range(param, assignment, energies,
-                                                 accept_underscore=True)
+        theo_energies = self._parse_energy_range(assignment, energies)
         if len(theo_energies) != 3:
             raise ParameterNumberOfInputsError(param)
 
         try:
             self.rpars.THEO_ENERGIES = TheoEnergies(*theo_energies)
-        except ValueError as exc:  # NB: No TypeError -- all are float
+        except ValueError as exc:  # No TypeError, as all are floats
             self.rpars.setHaltingLevel(1)
             raise ParameterValueError(param, message=str(exc)) from None
 
@@ -1751,25 +1748,18 @@ class ParameterInterpreter:
         self._ensure_valid_slab_element(param, element)
         return element
 
-    def _parse_energy_range(self, param, assignment,
-                            energies, accept_underscore=True):
-        """Return a tuple of floats for energies.
+    def _parse_energy_range(self, assignment, energies):
+        """Return a list of floats for energies.
 
         Parameters
         ----------
-        param : str
-            The parameter to be assigned. Used only for error reporting
         assignment : Assignment
-            The assignment for the parameter, Used only for error
+            The assignment for the parameter. Used only for error
             reporting.
         energies : Sequence
-            The energies that should be parsed. Elements are
-            strings. If accept_underscore is True, they may
-            also contain single underscore characters, which
+            The energies that should be parsed. Elements are strings.
+            They may also contain single underscore characters, which
             will be replaced with an Rparams.NO_VALUE.
-        accept_underscore : bool, optional
-            Whether the energy range should accept underscores in
-            the fields to signify "default value"
 
         Returns
         -------
@@ -1784,37 +1774,15 @@ class ParameterInterpreter:
             If other parsing errors occur (typically a malformed
             input that cannot be converted to a simple tuple of
             of numbers).
-        ParameterRangeError
-            In case there are at least 3 entries and the last
-            entry (interpreted as a step size) is zero.
         """
-        energies_str = ','.join(energies)
-        if accept_underscore:
-            # We have to replace '_' with something that AST can
-            # handle. 'None' seems easy enough. We replace it
-            # again further down when converting the rest to float
-            energies_str = energies_str.replace('_', 'None')
         try:
-            enrange = [float(v) if v is not None else self.rpars.no_value
-                       for v in ast.literal_eval(energies_str)]
-        except (SyntaxError, ValueError, TypeError,
-                MemoryError, RecursionError) as exc:
+            return EnergyRange.parse_string_sequence(energies)
+        except (TypeError, ValueError) as exc:
             self.rpars.setHaltingLevel(1)
-            new_exc = (ParameterFloatConversionError if 'float' in exc.args[0]
-                       else ParameterParseError)  # Some other weird input
-            raise new_exc(param, assignment.values_str) from exc
-
-        # Make sure step, the last one, is NOT ZERO
-        if len(enrange) < 3:
-            return enrange
-        try:
-            1 / enrange[-1]
-        except ZeroDivisionError:                                               # TODO: move this. The check is done in EnergyRange
-            message = 'Step cannot be zero'
-            raise ParameterRangeError(param, message=message) from None
-        except TypeError:  # It's a NO_VALUE
-            pass
-        return enrange
+            new_exc = (ParameterParseError if isinstance(exc, ValueError)
+                       else ParameterFloatConversionError)
+            raise new_exc(assignment.parameter,
+                          message=assignment.values_str) from exc
 
     def _parse_incidence_angles(self, param, assignment):                       # TODO: dedicated class
         """Return a dictionary with incidence angles from an assignment."""
