@@ -8,14 +8,12 @@ Defines the TheoEnergies subclass of EnergyRange, used as the Rparams
 attribute THEO_ENERGIES.
 """
 
-from dataclasses import dataclass
 from math import remainder
 
 from .energy_range import EnergyRange
 from .._defaults import NO_VALUE
 
 
-@dataclass(eq=False)  # __eq__ inherited from EnergyRange
 class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
     """Energy range used for calculating I(V) curves."""
 
