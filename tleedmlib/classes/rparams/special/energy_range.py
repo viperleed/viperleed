@@ -53,7 +53,7 @@ class EnergyRange(SpecialParameter):
             raise TypeError('Values must be real')
         if not all(isfinite(e) for e in non_defaults):
             raise ValueError('All values must be finite')
-        self.check_consistency()
+        self._check_consistency()
 
     @property
     def min(self):
@@ -90,7 +90,7 @@ class EnergyRange(SpecialParameter):
         """Return an EnergyRange from value."""
         return cls(*value)
 
-    def check_consistency(self):
+    def _check_consistency(self):
         """Change inconsistent values or complain."""
         try:
             1 / self.step
