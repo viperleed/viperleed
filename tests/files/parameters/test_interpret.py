@@ -1280,7 +1280,7 @@ class TestTheoEnergies(_TestInterpretBase):
         'one_negative': ('1.0 -2.0 0.5', err.ParameterValueError),
         'invalid_range': ('2.0 1.0 0.5', err.ParameterValueError),
         'start_out_of_range': ('-0.5 2.0 0.5', err.ParameterValueError),
-        'zero step': ('1.0 2.0 0.0', err.ParameterRangeError),
+        'zero step': ('1.0 2.0 0.0', err.ParameterValueError),
         'too few': ('1.0 2.0 ', err.ParameterNumberOfInputsError),
         'too many': ('1.0 2.0 0.3 9', err.ParameterNumberOfInputsError),
         'nan value': ('nan 2.0 0.3', err.ParameterParseError),
