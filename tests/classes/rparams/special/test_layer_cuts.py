@@ -211,6 +211,8 @@ class TestLayerCuts:
 
     def _validate_expected_info(self, cuts, info, subtests):
         """Check that cuts has the values expected from info."""
+        with subtests.test('bool True'):
+            assert cuts
         with subtests.test('str(cuts._tokens)'):
             assert self._make_tokens_string(cuts) == info.str_tokens
         with subtests.test('str(cuts)'):
@@ -264,6 +266,10 @@ class TestLayerCuts:
         """Check complaints when creating from a string with syntax errors."""
         with pytest.raises(ValueError):
             LayerCuts.from_string(string)
+
+    def test_bool_false(self):
+        """Check False-ness of an empty LayerCuts."""
+        assert not LayerCuts()
 
     def test_iteration_less_than(self):
         """Check that iterating over a LayerCuts gives the expected result."""
