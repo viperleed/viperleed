@@ -126,6 +126,30 @@ class TestEnergyRange:
         assert make_range('swapped').defined
         assert not make_range('no step').defined
 
+    valid_grid = {
+        'simple': ([4.0, 5.0, 6.0, 7.0], (4, 7, 1)),
+        'many': ([0.0123*(v+4) for v in range(100000)],
+                 (0.0492, 1230.0369, 0.0123)),
+        'float step': ([0.1, 0.2, 0.3, 0.4, 0.5], (0.1, 0.5, 0.1)),
+        # 'inverted': ([7.0, 6.0, 5.0, 4.0], (4, 7, 1)),                        # Fails for TheoEnergies. Pending discussion in 7f405baa8a693171b80549ca3be5a58a5e7280e8
+        }
+    invalid_grid = {
+        'too few': ([0.0], ValueError),
+        'wrong types': (['1.0', '2.0', '3.0', '4.0'], TypeError),
+        }
+
+    @parametrize('grid,expected', valid_grid.values(), ids=valid_grid)
+    def test_from_sorted_grid_valid(self, grid, expected):
+        """Test valid initialization from a sorted energy grid."""
+        energies = self._class.from_sorted_grid(grid)
+        assert energies == expected
+
+    @parametrize('grid,exc', invalid_grid.values(), ids=invalid_grid)
+    def test_from_sorted_grid_invalid(self, grid, exc):
+        """Check complaints when given an invalid energy grid."""
+        with pytest.raises(exc):
+            self._class.from_sorted_grid(grid)
+
 
 class TestTheoEnergies(TestEnergyRange):
     """Tests for the TheoEnergies subclass of EnergyRange."""
