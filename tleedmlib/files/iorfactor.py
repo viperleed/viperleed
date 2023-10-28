@@ -189,7 +189,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
         real_iv_shift = [rp.best_v0r] * 2
     # extend energy range if they are close together
     if abs(min(expEnergies) - rp.THEO_ENERGIES.min) < abs(real_iv_shift[0]):
-        minen -= - real_iv_shift[0]
+        minen -= real_iv_shift[0]
     if abs(max(expEnergies) - rp.THEO_ENERGIES.max) < abs(real_iv_shift[1]):
         maxen += real_iv_shift[1] + 0.01
     # chose energy step width
