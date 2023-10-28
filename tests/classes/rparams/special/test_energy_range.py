@@ -42,6 +42,8 @@ class TestEnergyRange:
         'swapped': ((3.0, 1.0, -0.1), (1.0, 3.0, 0.1)),
         'swapped no step': ((3.0, -1.0), (-1.0, 3.0, NO_VALUE)),
         'no step': ((1.0, 2.0), (1.0, 2.0, NO_VALUE)),
+        'large': ((10**20, 10**21, 10**19), (10**20, 10**21, 10**19)),
+        'many': ((0.0492, 1230.0369, 0.0123), (0.0492, 1230.0369, 0.0123)),
         }
     invalid = {
         'wrong type': (('invalid_input',), TypeError),
@@ -86,6 +88,23 @@ class TestEnergyRange:
         min_max = energy_range.min, energy_range.max
         assert min_max == pytest.approx(expected[:2])
 
+    n_energies = {
+        '1 2 0.1': 11,
+        '1 2 0.2': 6,
+        'start==stop': 1,
+        'small step': 7e9+1,
+        'swapped': 21,
+        'adjust': 5,
+        'large': 91,
+        'many': 100000,
+        }
+
+    @parametrize('name,expected', n_energies.items(), ids=n_energies)
+    def test_n_energies(self, name, expected, make_range):
+        """Check correct number of energies."""
+        energy_range = make_range(name)
+        assert energy_range.n_energies == expected
+
     @parametrize('name,args', valid.items(), ids=valid)
     def test_from_value(self, name, args):
         """Check correct creation from a single sequence."""
@@ -103,6 +122,7 @@ class TestEnergyRange:
 
     def test_defined(self, make_range):
         """Check correct value of defined @property."""
+        assert make_range('large').defined
         assert make_range('swapped').defined
         assert not make_range('no step').defined
 
@@ -156,20 +176,6 @@ class TestTheoEnergies(TestEnergyRange):
         for attr in ('is_adjusted', 'n_energies'):
             with pytest.raises(RuntimeError):
                 getattr(undefined, attr)
-
-    n_energies = {
-        '1 2 0.1': 11,
-        '1 2 0.2': 6,
-        'start==stop': 1,
-        'small step': 7e9+1,
-        'adjust': 5,
-        }
-
-    @parametrize('name,expected', n_energies.items(), ids=n_energies)
-    def test_n_energies(self, name, expected, make_range):
-        """Check correct number of energies."""
-        energy_range = make_range(name)
-        assert energy_range.n_energies == expected
 
     contains_valid = {  # outer, inner
         'same':         ((1.0, 2.0, 0.1), (1.0, 2.0, 0.1), True),

@@ -92,6 +92,14 @@ class EnergyRange(SpecialParameter):
         return self.step is not NO_VALUE
 
     @property
+    def n_energies(self):
+        """Return the number of energies in this TheoEnergies."""
+        if not self.defined:
+            raise RuntimeError(f'{self} has undefined items')
+        # +1 because we include both start and stop
+        return round((self.stop - self.start) / self.step) + 1
+
+    @property
     def _non_defaults(self):
         """Return the non-default values in self."""
         return [e for e in self if e is not NO_VALUE]
@@ -178,14 +186,6 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
             raise RuntimeError(f'{self} has undefined items')
         start, stop, step = self
         return abs(remainder(stop - start,  step)) < EPS
-
-    @property
-    def n_energies(self):
-        """Return the number of energies in this TheoEnergies."""
-        if not self.defined:
-            raise RuntimeError(f'{self} has undefined items')
-        # +1 because we include both start and stop
-        return round((self.stop - self.start) / self.step) + 1
 
     def adjust_to_fit_step(self):
         """Modify start so that (stop - start) is a multiple of step."""
