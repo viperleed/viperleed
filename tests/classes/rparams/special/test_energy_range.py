@@ -14,10 +14,7 @@ from pytest_cases import fixture, parametrize
 
 from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
 from viperleed.tleedmlib.classes.rparams.special.energy_range import (
-    EnergyRange
-    )
-from viperleed.tleedmlib.classes.rparams.special.theo_energies import (
-    TheoEnergies
+    EnergyRange, TheoEnergies
     )
 
 
