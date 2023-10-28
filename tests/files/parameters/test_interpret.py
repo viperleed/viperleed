@@ -569,9 +569,9 @@ class TestIVShiftRange(_TestInterpretBase):
     _defaults = Rparams.get_default('IV_SHIFT_RANGE')
     valid = {
         'range': ('0.0 1.0 0.25', [0.0, 1.0, 0.25]),
-        'default bound': ('_ 1.0 0.25', [_defaults[0], 1.0, 0.25]),
-        'default step': ('-2.5 1.0 _', [-2.5, 1.0, _defaults[2]]),
-        'no step': ('-2.5 1.0', [-2.5, 1.0, _defaults[2]]),
+        'default bound': ('_ 1.0 0.25', [_defaults.start, 1.0, 0.25]),
+        'default step': ('-2.5 1.0 _', [-2.5, 1.0, _defaults.step]),
+        'no step': ('-2.5 1.0', [-2.5, 1.0, _defaults.step]),
         'swapped': ('3 -2 -0.5', [-2.0, 3.0, 0.5]),
         }
     invalid = {

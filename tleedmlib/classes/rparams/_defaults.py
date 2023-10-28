@@ -32,7 +32,6 @@ DEFAULTS = {
         'lab6': 2.65,  # This is the default if nothing is given
         'w': 4.5,
         },
-    'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: init from data
     'LOG_LEVEL' : {
         NO_VALUE: logging.INFO,
         'debug': logging.DEBUG,
@@ -55,6 +54,7 @@ DEFAULTS = {
     'ZIP_COMPRESSION_LEVEL': 2,
 
     # SPECIAL PARAMETERS
+    'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: from data
     'LAYER_CUTS': 'dz(1.2)',
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
     'THEO_ENERGIES - no experiments': (20, 800, 3),

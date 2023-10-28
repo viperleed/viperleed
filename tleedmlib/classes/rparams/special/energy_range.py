@@ -236,3 +236,11 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
         return abs(self_shift - other_shift) < self.step * EPS
 
     _swap = None  # Never swap a TheoEnergies. All items must be > 0
+
+
+# The next is just a bare EnergyRange. We subclass so we can keep the
+# EnergyRange base class free from any specific Rparams attribute. This
+# leaves the freedom in the future to subclass EnergyRange further and
+# associate the subclasses with other Rparams attributes.
+class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
+    """EnergyRange for Rparams attribute IV_SHIFT_RANGE."""

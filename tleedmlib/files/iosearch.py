@@ -20,8 +20,10 @@ import numpy as np
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import BackwardsReader, readIntLine
+from viperleed.tleedmlib.classes.rparams import EnergyRange
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
+from viperleed.tleedmlib.files.iorfactor import sorted_energies_from_beams
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
 
 
@@ -351,23 +353,20 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         Content of the output file.
 
     """
-    expEnergies = []
-    for b in rp.expbeams:
-        expEnergies.extend([k for k in b.intens if k not in expEnergies])
-    expEnergies.sort()
-    minen = max(min(expEnergies), rp.THEO_ENERGIES.min)
-    maxen = min(max(expEnergies), rp.THEO_ENERGIES.max)
+    exp_grid = sorted_energies_from_beams(rp.expbeams)                          # TODO: this code is pretty much repeated in iorfactor and in rfactor
+    exp_energies = EnergyRange.from_sorted_grid(exp_grid)
+    minen = max(exp_energies.min, rp.THEO_ENERGIES.min)
+    maxen = min(exp_energies.max, rp.THEO_ENERGIES.max)
     # extend energy range if they are close together
-    if abs(min(expEnergies) - rp.THEO_ENERGIES.min) < abs(rp.IV_SHIFT_RANGE[0]):
-        minen -= rp.IV_SHIFT_RANGE[0]
-    if abs(max(expEnergies) - rp.THEO_ENERGIES.max) < abs(rp.IV_SHIFT_RANGE[1]):
-        maxen += rp.IV_SHIFT_RANGE[1] + 0.01
-    step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES.step)
-    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
-        vincr = step
+    if abs(exp_energies.min - rp.THEO_ENERGIES.min) < abs(rp.IV_SHIFT_RANGE.min):
+        minen -= rp.IV_SHIFT_RANGE.min                                          # TODO: @fkraushofer shouldn't this be +? otherwise, shifting negative makes the range SMALLER
+    if abs(exp_energies.max - rp.THEO_ENERGIES.max) < abs(rp.IV_SHIFT_RANGE.max):
+        maxen += rp.IV_SHIFT_RANGE.max + 0.01
+    if rp.IV_SHIFT_RANGE.has_step:
+        vincr = rp.IV_SHIFT_RANGE.step
     else:
-        vincr = rp.IV_SHIFT_RANGE[2]
-        # step = min(step, vincr)
+        vincr = min(exp_energies.step, rp.THEO_ENERGIES.step)
+
     # find correspondence experimental to theoretical beams:
     beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
@@ -398,9 +397,9 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
                + "IPR - determines amount of output to stdout\n")
     output += (formatter['energies'].write([rp.V0_IMAG]).ljust(16) + "VI\n")
     output += (formatter['energies'].write([0.]).ljust(16) + "V0RR\n")
-    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE[0]]).ljust(16)
+    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE.start]).ljust(16)
                + "V01\n")
-    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE[1]]).ljust(16)
+    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE.stop]).ljust(16)
                + "V02\n")
     output += (formatter['energies'].write([vincr]).ljust(16) + "VINCR\n")
     output += (formatter['int'].write([rp.R_FACTOR_SMOOTH]).ljust(16)

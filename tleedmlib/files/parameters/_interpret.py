@@ -28,7 +28,7 @@ from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.base import readIntRange, readVector
 from viperleed.tleedmlib.base import recombineListElements, splitSublists
 from viperleed.tleedmlib.classes.rparams import LayerCuts, EnergyRange
-from viperleed.tleedmlib.classes.rparams import TheoEnergies
+from viperleed.tleedmlib.classes.rparams import TheoEnergies, IVShiftRange
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
@@ -693,36 +693,23 @@ class ParameterInterpreter:
         message = 'Only degree 3 and 5 interpolation supported at the moment'
         raise ParameterValueError(param, message=message)
 
-    def interpret_iv_shift_range(self, assignment):                             # TODO: would be very convenient to have a simple EnergyRange (namedtuple or dataclass) to use for this and THEO_ENERGIES. Then we could have .start, .stop, .step instead of indices.
+    def interpret_iv_shift_range(self, assignment):
         """Assign parameter IV_SHIFT_RANGE."""
         param = 'IV_SHIFT_RANGE'
         energies = self._parse_energy_range(assignment, assignment.values)
         if len(energies) not in (2, 3):
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(parameter=param)
-        # Interpret underscores as defaults
-        _no_value = self.rpars.no_value
-        _defaults = self.rpars.get_default(param)
-        for i, (bound, default) in enumerate(zip(iv_range, _defaults)):
-            if bound is _no_value:
-                iv_range[i] = default
 
-        if len(iv_range) == 3:
-            start, stop, step = iv_range
-        else:
-            start, stop, step = *iv_range, _no_value
-
-        if step is not _no_value and (stop - start) * step < 0:
-            message = (f'Inconsistent {param} step. Cannot shift from '
-                       f'{start:.2f} to {stop:.2f} with {step=:.2f}')
+        try:
+            iv_range = IVShiftRange(*energies)
+        except ValueError as exc:  # No TypeError, as all are floats
             self.rpars.setHaltingLevel(1)
-            raise ParameterValueError(param, message=message)
+            raise ParameterValueError(param, message=str(exc)) from exc
 
-        if stop < start:
-            start, stop = stop, start
-            step = step if step is _no_value else -step
-
-        self.rpars.IV_SHIFT_RANGE = [start, stop, step]
+        # Interpret underscores as defaults
+        iv_range.set_undefined_values(self.rpars.get_default(param))
+        self.rpars.IV_SHIFT_RANGE = iv_range
 
     def interpret_layer_cuts(self, assignment):
         """Assign parameter LAYER_CUTS."""

@@ -28,6 +28,7 @@ else:
     plt.style.use('viperleed.tleedm')
 
 from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.classes.rparams import EnergyRange
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.files.ivplot import plot_iv
 
@@ -153,6 +154,11 @@ def readROUTSHORT(filename="ROUTSHORT"):
     return rfaclist
 
 
+def sorted_energies_from_beams(beams):
+    """Return a list of sorted energies from a list of Beam objects."""
+    return sorted({e for beam in beams for e in beam.intens})
+
+
 def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     """
     Writes input file WEXPEL for R-factor calculation.
@@ -173,32 +179,26 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     None.
 
     """
-    theoEnergies = []
-    for b in theobeams:
-        theoEnergies.extend([k for k in b.intens if k not in theoEnergies])
-    theoEnergies.sort()
-    expEnergies = []
-    for b in rp.expbeams:
-        expEnergies.extend([k for k in b.intens if k not in expEnergies])
-    expEnergies.sort()
-    minen = max(min(expEnergies), rp.THEO_ENERGIES.min)
-    maxen = min(max(expEnergies), rp.THEO_ENERGIES.max)
-    if not for_error:
-        real_iv_shift = rp.IV_SHIFT_RANGE[:2]
+    theo_grid = sorted_energies_from_beams(theobeams)
+    exp_grid = sorted_energies_from_beams(rp.expbeams)
+    exp_energies = EnergyRange.from_sorted_grid(exp_grid)
+    theo_energies = EnergyRange.from_sorted_grid(theo_grid)
+    minen = max(exp_energies.min, rp.THEO_ENERGIES.min)                         # minen/maxen: theory beams outside this range are not read in
+    maxen = min(exp_energies.max, rp.THEO_ENERGIES.max)
+    iv_shift = (EnergyRange(rp.best_v0r, rp.best_v0r) if for_error
+                else rp.IV_SHIFT_RANGE)                                         # TODO: Fortran code says both extremes should be multiples of EINCR below, but we never check
+    # extend energy range if they are close together                            # TODO: I'm not sure this 'expansion' is done the right way. Shifting 'left' (iv_shit.min) should expand the right bound (maxen), shifting 'right' (iv_shift.max) should expand the left bound (minen).
+    if abs(exp_energies.min - rp.THEO_ENERGIES.min) < abs(iv_shift.min):
+        minen -= iv_shift.min                                                   # TODO: @fkraushofer shouldn't this be +? otherwise, shifting negative makes the range SMALLER
+    if abs(exp_energies.max - rp.THEO_ENERGIES.max) < abs(iv_shift.max):
+        maxen += iv_shift.max + 0.01
+
+    # chose energy step width                                                   # TODO: @fkraushofer shouldn't this be also iv_shift?
+    if rp.IV_SHIFT_RANGE.has_step:
+        vincr = rp.IV_SHIFT_RANGE.step
     else:
-        real_iv_shift = [rp.best_v0r] * 2
-    # extend energy range if they are close together
-    if abs(min(expEnergies) - rp.THEO_ENERGIES.min) < abs(real_iv_shift[0]):
-        minen -= real_iv_shift[0]
-    if abs(max(expEnergies) - rp.THEO_ENERGIES.max) < abs(real_iv_shift[1]):
-        maxen += real_iv_shift[1] + 0.01
-    # chose energy step width
-    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
-        min_used_energy_step = min(expEnergies[1]-expEnergies[0],
-            theoEnergies[1]-theoEnergies[0])
-        vincr = min_used_energy_step
-    else:
-        vincr = rp.IV_SHIFT_RANGE[2]
+        vincr = min(exp_energies.step, theo_energies.step)                      # TODO: @fkraushofer why not rp.THEO_ENERGIES.step? We should probably simply check that theo_energies and rp.THEO_ENERGIES are equivalent, then use only one.
+
     # find correspondence experimental to theoretical beams:
     beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
@@ -224,8 +224,8 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     output += " IPR=         0,\n"  # output formatting
     output += (" VI=" + f72.write([rp.V0_IMAG]).rjust(11) + ",\n")
     output += " V0RR=      0.0,\n"
-    output += (" V01=" + f72.write([real_iv_shift[0]]).rjust(10) + ",\n")
-    output += (" V02=" + f72.write([real_iv_shift[1]]).rjust(10) + ",\n")
+    output += (" V01=" + f72.write([iv_shift.start]).rjust(10) + ",\n")
+    output += (" V02=" + f72.write([iv_shift.stop]).rjust(10) + ",\n")
     output += (" VINCR=" + f72.write([vincr]).rjust(8) + ",\n")
     output += " ISMOTH=" + i3.write([rp.R_FACTOR_SMOOTH]).rjust(7) + ",\n"
     output += " EOT=         0,\n"
@@ -290,20 +290,16 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
     None.
 
     """
-    theoEnergies = []
-    for b in theobeams:
-        theoEnergies.extend([k for k in b.intens if k not in theoEnergies])
-    theoEnergies.sort()
-    expEnergies = []
-    for b in rp.expbeams:
-        expEnergies.extend([k for k in b.intens if k not in expEnergies])
-    expEnergies.sort()
-    minen = min(min(expEnergies), min(theoEnergies))
-    maxen = max(max(expEnergies), max(theoEnergies))
-    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
-        step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES.step)
+    theo_grid = sorted_energies_from_beams(theobeams)
+    exp_grid = sorted_energies_from_beams(rp.expbeams)
+    theo_energies = EnergyRange.from_sorted_grid(theo_grid)
+    exp_energies = EnergyRange.from_sorted_grid(exp_grid)
+    minen = min(exp_energies.min, theo_energies.min)                            # TODO: @fkraushofer why not rp.THEO_ENERGIES.min/.max?
+    maxen = max(exp_energies.max, theo_energies.max)                            # TODO: @fkraushofer shouldn't we adjust min/max as in writeWEXPEL?
+    if rp.IV_SHIFT_RANGE.has_step:                                              # TODO: @fkraushofer why don't we do the same as in writeWEXPEL when for_error?
+        step = rp.IV_SHIFT_RANGE.step
     else:
-        step = rp.IV_SHIFT_RANGE[2]
+        step = min(exp_energies.step, rp.THEO_ENERGIES.step)
     ngrid = int(np.ceil(((maxen-minen)/step)*1.1))
     n_var = 1
     if for_error:
@@ -327,7 +323,7 @@ C           interpolation)
 C  MNS    : number of geometries including those, that are skipped
 
       PARAMETER (MNET = {}, MNGP = {})
-      PARAMETER (MNS = {})""".format(len(theoEnergies), ngrid, n_var)
+      PARAMETER (MNS = {})""".format(theo_energies.n_energies, ngrid, n_var)
     output += """
 
 C  MNGAP  : number of gaps in the experimental spectra (NOTE: if there are no
@@ -559,7 +555,7 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
                    for j in range(0, min(len(ytheo), len(yexp)))])
     dysq = np.copy(dy)
     dysq[:, 1] = dysq[:, 1] ** 2
-    
+
     eps = 1e-10 # needed to avoid division by 0. Only important for plotting.
     norm_y_squares = np.array(
         [[dysq[j, 0], (dysq[j, 1]
@@ -700,7 +696,7 @@ def beamlist_to_array(beams):
     energies = sorted({e for b in beams for e in b.intens})
     in_grid = np.array(energies)
     n_E = in_grid.shape[0]
-    
+
     # fill with NaNs as default value
     beam_arr = np.full([n_E, n_beams], fill_value=np.NaN)
 
