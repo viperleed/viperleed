@@ -251,3 +251,7 @@ class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
     def fixed(cls, fixed_value):
         """Return an IVShiftRange with both bounds at the same value."""
         return cls(fixed_value, fixed_value, NO_VALUE)
+
+    def set_undefined_step(self, new_step):
+        """Assign a new_step if this range has it undefined."""
+        super().set_undefined_values(NO_VALUE, NO_VALUE, new_step)

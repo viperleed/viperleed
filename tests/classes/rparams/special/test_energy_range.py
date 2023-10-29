@@ -290,3 +290,16 @@ class TestIVShiftRange(TestEnergyRange):
         """Check correct creation of fixed IVShiftRange objects."""
         fixed = self._class.fixed(0.5)
         assert fixed == (0.5, 0.5, NO_VALUE)
+
+    undef_step = {
+        'coherent': ((-0.5, 1.9), 0.1, (-0.5, 1.9, 0.1)),
+        'incoherent': ((-0.5, 1.9), 0.2, (-0.5, 1.9, 0.2)),
+        'with step': ((-0.5, 1.9, 0.2), 0.1, (-0.5, 1.9, 0.2)),
+        }
+
+    @parametrize('ini_vals,step,expect', undef_step.values(), ids=undef_step)
+    def test_set_undefined_step(self, ini_vals, step, expect):
+        """Check correct setting of an undefined step."""
+        original = self._class(*ini_vals)
+        original.set_undefined_step(step)
+        assert original == expect
