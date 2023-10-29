@@ -42,12 +42,13 @@ class EnergyRange(SpecialParameter):
             return NotImplemented
         if len(tuple(self)) != len(tuple(other)):
             return NotImplemented
+        scale = self.step if self.has_step else 1
         for v_self, v_other in zip(self, other):
             if (v_self, v_other) == (NO_VALUE, NO_VALUE):
                 continue
             if v_self is NO_VALUE or v_other is NO_VALUE:
                 return NotImplemented
-            if abs(v_self - v_other) > EPS:
+            if abs(v_self - v_other) > EPS*scale:
                 return NotImplemented
         return True
 
