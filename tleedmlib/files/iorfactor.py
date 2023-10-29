@@ -185,7 +185,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     theo_energies = EnergyRange.from_sorted_grid(theo_grid)
     minen = max(exp_energies.min, rp.THEO_ENERGIES.min)                         # minen/maxen: theory beams outside this range are not read in
     maxen = min(exp_energies.max, rp.THEO_ENERGIES.max)
-    iv_shift = (EnergyRange(rp.best_v0r, rp.best_v0r) if for_error
+    iv_shift = (rp.IV_SHIFT_RANGE.fixed(rp.best_v0r) if for_error
                 else rp.IV_SHIFT_RANGE)                                         # TODO: Fortran code says both extremes should be multiples of EINCR below, but we never check
     # extend energy range if they are close together                            # TODO: I'm not sure this 'expansion' is done the right way. Shifting 'left' (iv_shit.min) should expand the right bound (maxen), shifting 'right' (iv_shift.max) should expand the left bound (minen).
     if abs(exp_energies.min - rp.THEO_ENERGIES.min) < abs(iv_shift.min):
