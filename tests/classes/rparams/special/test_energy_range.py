@@ -150,6 +150,20 @@ class TestEnergyRange:
         with pytest.raises(exc):
             self._class.from_sorted_grid(grid)
 
+    set_undef = {  # ini_vals, new_vals, expect
+        'defined': ((1.0, 3.0, 0.1), (0.4, 1.8, 0.2), (1.0, 3.0, 0.1)),
+        'no step': ((1.0, 3.0, NO_VALUE), (0.4, 1.8, 0.2), (1.0, 3.0, 0.2)),
+        'no bound': ((NO_VALUE, 3.0, NO_VALUE), ((1.0, 3.0, NO_VALUE)),
+                     (1.0, 3.0, NO_VALUE)),
+        }
+
+    @parametrize('ini_vals,new_vals,expect', set_undef.values(), ids=set_undef)
+    def test_set_undefined(self, ini_vals, new_vals, expect):
+        """Check correct setting of new values for undefined members."""
+        before = self._class(*ini_vals)
+        before.set_undefined_values(new_vals)
+        assert before == expect
+
 
 class TestTheoEnergies(TestEnergyRange):
     """Tests for the TheoEnergies subclass of EnergyRange."""
@@ -233,3 +247,13 @@ class TestTheoEnergies(TestEnergyRange):
         """Check complaints when calling contains with invalid arguments."""
         with pytest.raises(exc):
             outer.contains(inner)
+
+    set_undef = {  # ini_vals, new_vals, expect
+        **TestEnergyRange.set_undef,
+        'adjust': ((0.1, 1.0, NO_VALUE), (3.6, 8.0, 0.2), (0.2, 1.0, 0.2)),
+        }
+
+    @parametrize('ini_vals,new_vals,expect', set_undef.values(), ids=set_undef)
+    def test_set_undefined(self, ini_vals, new_vals, expect):
+        """Check correct setting of new values for undefined members."""
+        super().test_set_undefined(ini_vals, new_vals, expect)
