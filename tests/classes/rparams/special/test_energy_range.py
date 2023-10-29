@@ -12,10 +12,10 @@ import itertools
 import pytest
 from pytest_cases import fixture, parametrize
 
+from viperleed.tleedmlib.classes.rparams import EnergyRange
+from viperleed.tleedmlib.classes.rparams import IVShiftRange
+from viperleed.tleedmlib.classes.rparams import TheoEnergies
 from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
-from viperleed.tleedmlib.classes.rparams.special.energy_range import (
-    EnergyRange, TheoEnergies
-    )
 
 
 class TestEnergyRange:
@@ -263,3 +263,14 @@ class TestTheoEnergies(TestEnergyRange):
     def test_set_undefined(self, ini_vals, new_vals, expect, subtests):
         """Check correct setting of new values for undefined members."""
         super().test_set_undefined(ini_vals, new_vals, expect, subtests)
+
+
+class TestIVShiftRange(TestEnergyRange):
+    """Tests for IVShiftRange subclass of EnergyRange."""
+
+    _class = IVShiftRange
+
+    def test_fixed(self):
+        """Check correct creation of fixed IVShiftRange objects."""
+        fixed = self._class.fixed(0.5)
+        assert fixed == (0.5, 0.5, NO_VALUE)
