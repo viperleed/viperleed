@@ -105,6 +105,10 @@ class EnergyRange(SpecialParameter):
         """Return the non-default values in self."""
         return [e for e in self if e is not NO_VALUE]
 
+    def copy(self):
+        """Return a (deep)copy of this EnergyRange."""
+        return self.__class__(*self)
+
     @classmethod
     def from_value(cls, value):
         """Return an EnergyRange from value."""

@@ -171,6 +171,21 @@ class TestEnergyRange:
             before.set_undefined_values(*new_vals)
             assert before == expect
 
+    @parametrize(name=valid)
+    def test_copy(self, name, make_range, subtests):
+        """Check correct creation of a copy."""
+        original = make_range(name)
+        copied = original.copy()
+        with subtests.test('identity'):
+            assert copied is not original
+        with subtests.test('equality'):
+            assert copied == original
+        if not copied.defined:
+            return
+        with subtests.test('different after modification'):
+            copied.start += copied.step
+            assert copied != original
+
 
 class TestTheoEnergies(TestEnergyRange):
     """Tests for the TheoEnergies subclass of EnergyRange."""
