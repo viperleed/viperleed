@@ -158,11 +158,18 @@ class TestEnergyRange:
         }
 
     @parametrize('ini_vals,new_vals,expect', set_undef.values(), ids=set_undef)
-    def test_set_undefined(self, ini_vals, new_vals, expect):
+    def test_set_undefined(self, ini_vals, new_vals, expect, subtests):
         """Check correct setting of new values for undefined members."""
         before = self._class(*ini_vals)
-        before.set_undefined_values(new_vals)
-        assert before == expect
+        with subtests.test('single object'):
+            before.set_undefined_values(new_vals)
+            assert before == expect
+
+        # Again, with unpacking
+        before = self._class(*ini_vals)
+        with subtests.test('unpacked'):
+            before.set_undefined_values(*new_vals)
+            assert before == expect
 
 
 class TestTheoEnergies(TestEnergyRange):
@@ -193,8 +200,7 @@ class TestTheoEnergies(TestEnergyRange):
         """Check that a defined TheoEnergies is adjusted."""
         energy_range = make_range(name)
         if not energy_range.defined:
-            energy_range.set_undefined_values((3, 20, 0.5))
-            energy_range.adjust_to_fit_step()
+            energy_range.set_undefined_values(3, 20, 0.5)
         assert energy_range.is_adjusted
 
     @parametrize('name,expected', valid.items(), ids=valid)
@@ -254,6 +260,6 @@ class TestTheoEnergies(TestEnergyRange):
         }
 
     @parametrize('ini_vals,new_vals,expect', set_undef.values(), ids=set_undef)
-    def test_set_undefined(self, ini_vals, new_vals, expect):
+    def test_set_undefined(self, ini_vals, new_vals, expect, subtests):
         """Check correct setting of new values for undefined members."""
-        super().test_set_undefined(ini_vals, new_vals, expect)
+        super().test_set_undefined(ini_vals, new_vals, expect, subtests)

@@ -141,8 +141,10 @@ class EnergyRange(SpecialParameter):
             new_exc = TypeError if 'float' in exc.args[0] else ValueError
             raise new_exc(' '.join(string_sequence)) from exc
 
-    def set_undefined_values(self, new_values):
+    def set_undefined_values(self, *new_values):
         """Assign undefined values from new_values, then adjust start."""
+        if len(new_values) == 1:
+            new_values = new_values[0]
         for attr, value in zip(('start', 'stop', 'step'), new_values):
             if getattr(self, attr) is NO_VALUE:
                 setattr(self, attr, value)
@@ -161,7 +163,6 @@ class EnergyRange(SpecialParameter):
         if self.defined and (stop - start) * step < 0:
             raise ValueError('Inconsistent step. Cannot shift from '
                              f'{start:.2f} to {stop:.2f} with {step=:.2f}')
-
         if self.has_bounds and self._swap and stop < start:
             self._swap()
 
