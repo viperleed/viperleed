@@ -15,7 +15,8 @@ TheoEnergies(EnergyRange)
 import ast
 from collections.abc import Sequence
 from dataclasses import dataclass
-from math import isfinite, remainder
+from decimal import Decimal
+from math import ceil, floor, isfinite, remainder
 from numbers import Real
 
 import numpy as np
@@ -265,6 +266,26 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
 
 class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
     """EnergyRange for Rparams attribute IV_SHIFT_RANGE."""
+
+    @property
+    def is_adjusted(self):
+        """Return whether bounds are integer multiples of the step."""
+        if not self.defined:
+            raise RuntimeError(f'{self} has undefined items')
+        *bounds, step = self
+        return all(abs(remainder(b, step)) < EPS for b in bounds)
+
+    def adjust_to_fit_step(self):
+        """Expand bounds so that they are integer multiples of step."""
+        # The next one raises RuntimeError if we're not fully defined:
+        # We should not mess with the start/stop till we know all.
+        if self.is_adjusted:
+            return
+        # Exact floor/ceil comes from the 'exact' solution using
+        # Decimal in https://stackoverflow.com/questions/28425705/
+        start, stop, step = (Decimal(str(v)) for v in self)
+        self.start = float(floor(start / step) * step)
+        self.stop = float(ceil(stop / step) * step)
 
     @classmethod
     def fixed(cls, fixed_value):

@@ -59,12 +59,13 @@ class TestEnergyRange:
         'nan step': ((1.0, 5.0, float('nan')), ValueError),
         }
 
-    @parametrize('name,args', valid.items(), ids=valid)
-    def test_equal(self, name, args, make_range):
+    @parametrize(name=valid, ids=valid)
+    def test_equal(self, name, make_range):
         """Check correct result of the equality method."""
-        *_, expected = args
-        assert pytest.approx(make_range(name)) == expected
-        assert make_range(name) == make_range(name)
+        energy_range = make_range(name)
+        *_, expected = self.valid[name]
+        assert pytest.approx(energy_range) == expected
+        assert energy_range == make_range(name)
 
     @parametrize(names=itertools.combinations(valid, 2))
     def test_different(self, names, make_range):
@@ -78,17 +79,18 @@ class TestEnergyRange:
         """Check that an invalid type cannot be compared."""
         assert make_range('1 2 0.1') != invalid
 
-    @parametrize('name,args', valid.items(), ids=valid)
-    def test_iter(self, name, args, make_range):
+    @parametrize(name=valid)
+    def test_iter(self, name, make_range):
         """Check correct iteration of an EnergyRange."""
-        *_, expected = args
-        assert tuple(make_range(name)) == pytest.approx(expected)
-
-    @parametrize('name,args', valid.items(), ids=valid)
-    def test_properties(self, name, args, make_range):
-        """Check min and max."""
-        *_, expected = args
         energy_range = make_range(name)
+        *_, expected = self.valid[name]
+        assert tuple(energy_range) == pytest.approx(expected)
+
+    @parametrize(name=valid)
+    def test_properties(self, name, make_range):
+        """Check min and max."""
+        energy_range = make_range(name)
+        *_, expected = self.valid[name]
         min_max = energy_range.min, energy_range.max
         assert min_max == pytest.approx(expected[:2])
 
@@ -109,12 +111,12 @@ class TestEnergyRange:
         energy_range = make_range(name)
         assert energy_range.n_energies == expected
 
-    @parametrize('name,args', valid.items(), ids=valid)
-    def test_from_value(self, name, args):
+    @parametrize(name=valid)
+    def test_from_value(self, name):
         """Check correct creation from a single sequence."""
         if name not in self.valid:
             pytest.skip(reason=f'{name!r} is not valid')
-        value, expected = args
+        value, expected = self.valid[name]
         energy_range = self._class.from_value(value)
         assert tuple(energy_range) == pytest.approx(expected)
 
@@ -219,7 +221,7 @@ class TestEnergyRange:
         'stop lower':   ((1.0, 1.8, 0.1), (1.0, 2.0, 0.1), False),
         'stop higher':  ((1.0, 2.9, 0.1), (1.0, 2.0, 0.1), True),
         'diff step':    ((1.0, 2.0, 0.1), (1.0, 2.0, 0.5), False),
-        'shifted':      ((0.05, 2.05, 0.1), (1.0, 2.0, 0.1), False),
+        'shifted':      ((0.05, 2.05, 0.1), (1.0, 2.2, 0.1), False),
         }
 
     @parametrize('out_args,in_args,result', contains_valid.values(),
@@ -301,6 +303,28 @@ class TestIVShiftRange(TestEnergyRange):
     """Tests for IVShiftRange subclass of EnergyRange."""
 
     _class = IVShiftRange
+    valid = {
+        **TestEnergyRange.valid,
+        # Replace the ones that need adjustments
+        'shifted': ((1.05, 2.05, 0.2), (1.0, 2.2, 0.2)),
+
+        # Add some more to check the adjustments. Notice that
+        # these are nasty cases, as a very simple floor/ceil
+        # with floating points fails some of these checks
+        '1.27 no step': ((1.27, 1.27), (1.27, 1.27, NO_VALUE)),
+        '1.27, 0.05': ((1.27, 1.27, 0.05), (1.25, 1.30, .05)),
+        '1.29, 0.05': ((1.29, 1.29, 0.05), (1.25, 1.30, .05)),
+        '1.30, 0.05': ((1.30, 1.30, 0.05), (1.30, 1.30, .05)),
+        '-1.27, 0.05': ((-1.27, -1.27, 0.05), (-1.30, -1.25, .05)),
+        '-1.29, 0.05': ((-1.29, -1.29, 0.05), (-1.30, -1.25, .05)),
+        '-1.30, 0.05': ((-1.30, -1.30, 0.05), (-1.30, -1.30, .05)),
+        '4.4, 0.2': ((4.4, 4.4, 0.2), (4.4, 4.4, 0.2)),
+        '4.5, 0.2': ((4.5, 4.5, 0.2), (4.4, 4.6, 0.2)),
+        '4.6, 0.2': ((4.6, 4.6, 0.2), (4.6, 4.6, 0.2)),
+        '-4.4, 0.2': ((-4.4, -4.4, 0.2), (-4.6, -4.4, 0.2)),
+        '-4.5, 0.2': ((-4.5, -4.5, 0.2), (-4.6, -4.4, 0.2)),
+        '-4.6, 0.2': ((-4.6, -4.6, 0.2), (-4.6, -4.6, 0.2)),
+        }
 
     def test_fixed(self):
         """Check correct creation of fixed IVShiftRange objects."""
@@ -309,8 +333,8 @@ class TestIVShiftRange(TestEnergyRange):
 
     undef_step = {
         'coherent': ((-0.5, 1.9), 0.1, (-0.5, 1.9, 0.1)),
-        'incoherent': ((-0.5, 1.9), 0.2, (-0.5, 1.9, 0.2)),
-        'with step': ((-0.5, 1.9, 0.2), 0.1, (-0.5, 1.9, 0.2)),
+        'incoherent': ((-0.5, 1.9), 0.2, (-0.6, 2.0, 0.2)),
+        'with step': ((-0.5, 1.9, 0.2), 0.1, (-0.6, 2.0, 0.2)),
         }
 
     @parametrize('ini_vals,step,expect', undef_step.values(), ids=undef_step)
