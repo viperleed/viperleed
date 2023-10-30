@@ -204,9 +204,6 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
         super().__post_init__()
         if not all(e > 0 for e in self._non_defaults):
             raise ValueError('Values must be positive')
-        if self.has_bounds and self.stop < self.start:
-            raise ValueError('Maximum energy value should be at '
-                             'least as large as the minimum')
 
         # Mess with start/stop only if all the values are present,
         # otherwise, leave it for when the others will be initialized
