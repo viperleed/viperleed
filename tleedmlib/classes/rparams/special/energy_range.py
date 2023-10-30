@@ -69,6 +69,10 @@ class EnergyRange(SpecialParameter):
             raise ValueError('All values must be finite')
         self._check_consistency()
 
+        # Mess with start/stop only if all the values are present
+        if self.defined:
+            self.adjust_to_fit_step()
+
     @property
     def min(self):
         """Return the lower limit of this EnergyRange."""
@@ -95,6 +99,13 @@ class EnergyRange(SpecialParameter):
         return self.step is not NO_VALUE
 
     @property
+    def is_adjusted(self):
+        """Return True, or raise if this EnergyRange is undefined."""
+        if not self.defined:
+            raise RuntimeError(f'{self} has undefined items')
+        return True
+
+    @property
     def n_energies(self):
         """Return the number of energies in this TheoEnergies."""
         if not self.defined:
@@ -106,6 +117,22 @@ class EnergyRange(SpecialParameter):
     def _non_defaults(self):
         """Return the non-default values in self."""
         return [e for e in self if e is not NO_VALUE]
+
+    def adjust_to_fit_step(self):
+        """Adjust bounds to fit constraints with steps.
+
+        The base-class implementation complains if this EnergyRange
+        is not defined. This method should be extended in subclasses
+        to fix inconsistencies of the bounds with the step.
+
+        Raises
+        ------
+        RuntimeError
+            If this method is called before all the `start`, `stop`
+            and `step` attributes have been assigned.
+        """
+        if not self.defined:
+            raise RuntimeError(f'{self} has undefined items')
 
     def contains(self, other):
         """Return whether other is a subset of this EnergyRange."""
@@ -199,16 +226,6 @@ class EnergyRange(SpecialParameter):
 class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
     """Energy range used for calculating I(V) curves."""
 
-    def __post_init__(self):
-        """Check and process initialization values."""
-        super().__post_init__()
-
-        # Mess with start/stop only if all the values are present,
-        # otherwise, leave it for when the others will be initialized
-        # from experimental data. That's in Rparams.initTheoEnergies.
-        if self.defined:
-            self.adjust_to_fit_step()
-
     @property
     def is_adjusted(self):
         """Return whether (stop - start) is a multiple of step."""
@@ -219,6 +236,8 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
 
     def adjust_to_fit_step(self):
         """Modify start so that (stop - start) is a multiple of step."""
+        # The next one raises RuntimeError if we're not fully defined:
+        # We should not mess with the start/stop till we know all.
         if self.is_adjusted:
             return
 

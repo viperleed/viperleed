@@ -157,6 +157,25 @@ class TestEnergyRange:
         with pytest.raises(exc):
             self._class.from_sorted_grid(grid)
 
+    def test_undefined_raises(self, make_range):
+        """Check complaints when accessing properties of undefined range."""
+        undefined = make_range('no step')
+        for attr in ('is_adjusted', 'n_energies'):
+            with pytest.raises(RuntimeError):
+                getattr(undefined, attr)
+        for method_name in ('adjust_to_fit_step', ):
+            method = getattr(undefined, method_name)
+            with pytest.raises(RuntimeError):
+                method()
+
+    @parametrize(name=valid)
+    def test_adjusted(self, name, make_range):
+        """Check that a defined TheoEnergies is adjusted."""
+        energy_range = make_range(name)
+        if not energy_range.defined:
+            pytest.skip(f'{name!r} range is not fully defined')
+        assert energy_range.is_adjusted
+
     set_undef = {  # ini_vals, new_vals, expect
         'defined': ((1.0, 3.0, 0.1), (0.4, 1.8, 0.2), (1.0, 3.0, 0.1)),
         'no step': ((1.0, 3.0, NO_VALUE), (0.4, 1.8, 0.2), (1.0, 3.0, 0.2)),
@@ -266,13 +285,6 @@ class TestTheoEnergies(TestEnergyRange):
             as_floats = energy_range.as_floats()
             assert as_floats == pytest.approx(list(expected[1]))
             assert -1 not in as_floats
-
-    def test_undefined_raises(self, make_range):
-        """Check complaints when accessing properties of undefined range."""
-        undefined = make_range('no step')
-        for attr in ('is_adjusted', 'n_energies'):
-            with pytest.raises(RuntimeError):
-                getattr(undefined, attr)
 
     set_undef = {  # ini_vals, new_vals, expect
         **TestEnergyRange.set_undef,
