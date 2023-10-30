@@ -154,6 +154,18 @@ def readROUTSHORT(filename="ROUTSHORT"):
     return rfaclist
 
 
+def check_theobeams_energies(rpars, theobeams):                                 # TODO: write a test for refcalc on a larger range than R-factor. I'd ask @amimre to take care of this.
+    """Complain if the energies in theobeams are inconsistent with rpars."""
+    theo_grid = sorted_energies_from_beams(theobeams)
+    theo_energies = EnergyRange.from_sorted_grid(theo_grid)
+    if not theo_energies.contains(rpars.THEO_ENERGIES):
+        raise ValueError(
+            f'theobeams has {theo_energies=}, which does not contain all the '
+            f'energies in the THEO_ENERGIES parameter({rpars.THEO_ENERGIES}). '
+            'Did you load the wrong calculation?'
+            )
+
+
 def sorted_energies_from_beams(beams):
     """Return a list of sorted energies from a list of Beam objects."""
     return sorted({e for beam in beams for e in beam.intens})
@@ -179,10 +191,9 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     None.
 
     """
-    theo_grid = sorted_energies_from_beams(theobeams)
+    check_theobeams_energies(rp, theobeams)
     exp_grid = sorted_energies_from_beams(rp.expbeams)
     exp_energies = EnergyRange.from_sorted_grid(exp_grid)
-    theo_energies = EnergyRange.from_sorted_grid(theo_grid)
     minen = max(exp_energies.min, rp.THEO_ENERGIES.min)                         # minen/maxen: theory beams outside this range are not read in
     maxen = min(exp_energies.max, rp.THEO_ENERGIES.max)
     iv_shift = (rp.IV_SHIFT_RANGE.fixed(rp.best_v0r) if for_error
@@ -197,7 +208,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     if rp.IV_SHIFT_RANGE.has_step:
         vincr = rp.IV_SHIFT_RANGE.step
     else:
-        vincr = min(exp_energies.step, theo_energies.step)                      # TODO: @fkraushofer why not rp.THEO_ENERGIES.step? We should probably simply check that theo_energies and rp.THEO_ENERGIES are equivalent, then use only one.
+        vincr = min(exp_energies.step, rp.THEO_ENERGIES.step)
 
     # find correspondence experimental to theoretical beams:
     beamcorr = leedbase.getBeamCorrespondence(sl, rp)
@@ -275,8 +286,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
 
 
 def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
-    """
-    Generates the PARAM file for the rfactor calculation.
+    """Generate the PARAM file for the rfactor calculation.
 
     Parameters
     ----------
@@ -288,14 +298,12 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
     Returns
     -------
     None.
-
     """
-    theo_grid = sorted_energies_from_beams(theobeams)
+    check_theobeams_energies(rp, theobeams)
     exp_grid = sorted_energies_from_beams(rp.expbeams)
-    theo_energies = EnergyRange.from_sorted_grid(theo_grid)
     exp_energies = EnergyRange.from_sorted_grid(exp_grid)
-    minen = min(exp_energies.min, theo_energies.min)                            # TODO: @fkraushofer why not rp.THEO_ENERGIES.min/.max?
-    maxen = max(exp_energies.max, theo_energies.max)                            # TODO: @fkraushofer shouldn't we adjust min/max as in writeWEXPEL?
+    minen = min(exp_energies.min, rp.THEO_ENERGIES.min)
+    maxen = max(exp_energies.max, rp.THEO_ENERGIES.max)                         # TODO: @fkraushofer shouldn't we adjust min/max as in writeWEXPEL?
     if rp.IV_SHIFT_RANGE.has_step:                                              # TODO: @fkraushofer why don't we do the same as in writeWEXPEL when for_error?
         step = rp.IV_SHIFT_RANGE.step
     else:
@@ -309,21 +317,20 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
             only_vary = [sp for sp in rp.searchpars
                          if sp.atom in rp.search_atlist]
         n_var = max([sp.steps for sp in only_vary])
-    output = """
+    output = f"""
 C  MNBED  : number of beams in experimental spectra before averaging
 C  MNBTD  : number of beams in theoretical spectra before averaging
 
-      PARAMETER (MNBED = {}, MNBTD = {})""".format(len(rp.expbeams),
-                                                   len(theobeams))
-    output += """
+      PARAMETER (MNBED = {len(rp.expbeams)}, MNBTD = {len(theobeams)})"""
+    output += f"""
 
 C  MNET   : number of energies in theoretical beam at time of reading in
 C  MNGP  : greater equal number of grid points in energy working grid (ie after
 C           interpolation)
 C  MNS    : number of geometries including those, that are skipped
 
-      PARAMETER (MNET = {}, MNGP = {})
-      PARAMETER (MNS = {})""".format(theo_energies.n_energies, ngrid, n_var)
+      PARAMETER (MNET = {rp.THEO_ENERGIES.n_energies}, MNGP = {ngrid})
+      PARAMETER (MNS = {n_var})"""
     output += """
 
 C  MNGAP  : number of gaps in the experimental spectra (NOTE: if there are no
