@@ -18,6 +18,8 @@ from dataclasses import dataclass
 from math import isfinite, remainder
 from numbers import Real
 
+import numpy as np
+
 from ._base import SpecialParameter
 from .._defaults import NO_VALUE
 
@@ -122,8 +124,7 @@ class EnergyRange(SpecialParameter):
             raise ValueError('Not enough energy_grid values. Need '
                              f'at least 2, found {n_energies}')
         start, stop = energy_grid[0], energy_grid[-1]
-        step = energy_grid[1] - energy_grid[0]                                  # TODO: or is it better (stop-start)/(N-1) ?
-        # step = (stop - start) / (n_energies - 1)
+        step = (stop - start) / (n_energies - 1)
         return cls(start, stop, step)
 
     @staticmethod

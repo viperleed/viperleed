@@ -9,12 +9,14 @@ Contains also tests for the TheoEnergies subclass of EnergyRange.
 
 import itertools
 
+import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize
 
 from viperleed.tleedmlib.classes.rparams import EnergyRange
 from viperleed.tleedmlib.classes.rparams import IVShiftRange
 from viperleed.tleedmlib.classes.rparams import TheoEnergies
+from viperleed.tleedmlib.classes.rparams.special.energy_range import EPS
 from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
 
 
@@ -128,10 +130,13 @@ class TestEnergyRange:
         assert make_range('swapped').defined
         assert not make_range('no step').defined
 
+    _n_many = n_energies['many']
     valid_grid = {
         'simple': ([4.0, 5.0, 6.0, 7.0], (4, 7, 1)),
-        'many': ([0.0123*(v+4) for v in range(100000)],
-                 (0.0492, 1230.0369, 0.0123)),
+        'many': (0.0123*(np.arange(_n_many) + 4), (0.0492, 1230.0369, 0.0123)),
+        'random': (0.0123*(np.arange(_n_many) + 4)
+                   + 0.0123*EPS*(np.random.rand(_n_many)-0.5),
+                   (0.0492, 1230.0369, 0.0123)),
         'float step': ([0.1, 0.2, 0.3, 0.4, 0.5], (0.1, 0.5, 0.1)),
         'inverted': ([7.0, 6.0, 5.0, 4.0], (4, 7, 1)),
         }
