@@ -202,8 +202,6 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
     def __post_init__(self):
         """Check and process initialization values."""
         super().__post_init__()
-        if not all(e > 0 for e in self._non_defaults):
-            raise ValueError('Values must be positive')
 
         # Mess with start/stop only if all the values are present,
         # otherwise, leave it for when the others will be initialized
@@ -238,6 +236,12 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
     def as_floats(self):
         """Return a list of float values, replacing NO_VALUE with -1."""
         return [-1 if e is NO_VALUE else e for e in self]
+
+    def _check_consistency(self):
+        """Change inconsistent values or complain."""
+        super()._check_consistency()
+        if not all(e > 0 for e in self._non_defaults):
+            raise ValueError('Values must be positive')
 
 
 class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
