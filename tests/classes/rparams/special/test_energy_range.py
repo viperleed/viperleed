@@ -193,6 +193,39 @@ class TestEnergyRange:
             copied.start += copied.step
             assert copied != original
 
+    contains_valid = {  # outer, inner
+        'same':         ((1.0, 2.0, 0.1), (1.0, 2.0, 0.1), True),
+        'start lower':  ((0.7, 2.0, 0.1), (1.0, 2.0, 0.1), True),
+        'start higher': ((1.2, 2.0, 0.1), (1.0, 2.0, 0.1), False),
+        'stop lower':   ((1.0, 1.8, 0.1), (1.0, 2.0, 0.1), False),
+        'stop higher':  ((1.0, 2.9, 0.1), (1.0, 2.0, 0.1), True),
+        'diff step':    ((1.0, 2.0, 0.1), (1.0, 2.0, 0.5), False),
+        'shifted':      ((0.05, 2.05, 0.1), (1.0, 2.0, 0.1), False),
+        }
+
+    @parametrize('out_args,in_args,result', contains_valid.values(),
+                 ids=contains_valid)
+    def test_contains(self, out_args, in_args, result):
+        """Check correct result of contains method."""
+        outer = self._class(*out_args)
+        inner = self._class(*in_args)
+        assert outer.contains(inner) is result
+
+    contains_invalid = {
+        'self undefined': (TheoEnergies(), TheoEnergies(1.0, 2.0, 0.1),
+                           RuntimeError),
+        'other undefined': (TheoEnergies(1.0, 2.0, 0.1), TheoEnergies(),
+                            ValueError),
+        'wrong type': (TheoEnergies(0.05, 5.05, 0.1), 'abcd', TypeError),
+        }
+
+    @parametrize('outer,inner,exc', contains_invalid.values(),
+                 ids=contains_invalid)
+    def test_contains_invalid(self, outer, inner, exc):
+        """Check complaints when calling contains with invalid arguments."""
+        with pytest.raises(exc):
+            outer.contains(inner)
+
 
 class TestTheoEnergies(TestEnergyRange):
     """Tests for the TheoEnergies subclass of EnergyRange."""
@@ -240,39 +273,6 @@ class TestTheoEnergies(TestEnergyRange):
         for attr in ('is_adjusted', 'n_energies'):
             with pytest.raises(RuntimeError):
                 getattr(undefined, attr)
-
-    contains_valid = {  # outer, inner
-        'same':         ((1.0, 2.0, 0.1), (1.0, 2.0, 0.1), True),
-        'start lower':  ((0.7, 2.0, 0.1), (1.0, 2.0, 0.1), True),
-        'start higher': ((1.2, 2.0, 0.1), (1.0, 2.0, 0.1), False),
-        'stop lower':   ((1.0, 1.8, 0.1), (1.0, 2.0, 0.1), False),
-        'stop higher':  ((1.0, 2.9, 0.1), (1.0, 2.0, 0.1), True),
-        'diff step':    ((1.0, 2.0, 0.1), (1.0, 2.0, 0.5), False),
-        'shifted':      ((0.05, 2.05, 0.1), (1.0, 2.0, 0.1), False),
-        }
-
-    @parametrize('out_args,in_args,result', contains_valid.values(),
-                 ids=contains_valid)
-    def test_contains(self, out_args, in_args, result):
-        """Check correct result of contains method."""
-        outer = self._class(*out_args)
-        inner = self._class(*in_args)
-        assert outer.contains(inner) is result
-
-    contains_invalid = {
-        'self undefined': (TheoEnergies(), TheoEnergies(1.0, 2.0, 0.1),
-                           RuntimeError),
-        'other undefined': (TheoEnergies(1.0, 2.0, 0.1), TheoEnergies(),
-                            ValueError),
-        'wrong type': (TheoEnergies(0.05, 5.05, 0.1), 'abcd', TypeError),
-        }
-
-    @parametrize('outer,inner,exc', contains_invalid.values(),
-                 ids=contains_invalid)
-    def test_contains_invalid(self, outer, inner, exc):
-        """Check complaints when calling contains with invalid arguments."""
-        with pytest.raises(exc):
-            outer.contains(inner)
 
     set_undef = {  # ini_vals, new_vals, expect
         **TestEnergyRange.set_undef,

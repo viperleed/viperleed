@@ -107,6 +107,23 @@ class EnergyRange(SpecialParameter):
         """Return the non-default values in self."""
         return [e for e in self if e is not NO_VALUE]
 
+    def contains(self, other):
+        """Return whether other is a subset of this EnergyRange."""
+        if not isinstance(other, EnergyRange):
+            raise TypeError
+        if not self.defined:
+            raise RuntimeError('Cannot compare non-defined TheoEnergies')
+        if not other.defined:
+            raise ValueError('Cannot compare non-defined TheoEnergies')
+        if self.start > other.start or self.stop < other.stop:
+            return False
+        if self.step != other.step:
+            return False
+        # Finally, make sure they're not shifted
+        self_shift = remainder(self.start, self.step)
+        other_shift = remainder(other.start, other.step)
+        return abs(self_shift - other_shift) < self.step * EPS
+
     def copy(self):
         """Return a (deep)copy of this EnergyRange."""
         return self.__class__(*self)
@@ -224,23 +241,6 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
     def as_floats(self):
         """Return a list of float values, replacing NO_VALUE with -1."""
         return [-1 if e is NO_VALUE else e for e in self]
-
-    def contains(self, other):
-        """Return whether other is a subset of this TheoEnergies."""
-        if not isinstance(other, TheoEnergies):
-            raise TypeError
-        if not self.defined:
-            raise RuntimeError('Cannot compare non-defined TheoEnergies')
-        if not other.defined:
-            raise ValueError('Cannot compare non-defined TheoEnergies')
-        if self.start > other.start or self.stop < other.stop:
-            return False
-        if self.step != other.step:
-            return False
-        # Finally, make sure they're not shifted
-        self_shift = remainder(self.start, self.step)
-        other_shift = remainder(other.start, other.step)
-        return abs(self_shift - other_shift) < self.step * EPS
 
 
 class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
