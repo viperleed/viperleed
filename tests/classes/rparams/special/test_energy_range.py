@@ -41,7 +41,8 @@ class TestEnergyRange:
         'start==stop': ((1.0, 1.0, 0.1), (1.0, 1.0, 0.1)),
         'small step': ((1.0, 1.7, 1e-10), (1.0, 1.7, 1e-10)),
         'swapped': ((3.0, 1.0, -0.1), (1.0, 3.0, 0.1)),
-        'swapped no step': ((3.0, -1.0), (-1.0, 3.0, NO_VALUE)),
+        'swapped no step': ((3.0, 1.0), (1.0, 3.0, NO_VALUE)),
+        'negative': ((-3.0, 1.0), (-3.0, 1.0, NO_VALUE)),
         'no step': ((1.0, 2.0), (1.0, 2.0, NO_VALUE)),
         'large': ((10**20, 10**21, 10**19), (10**20, 10**21, 10**19)),
         'many': ((0.0492, 1230.0369, 0.0123), (0.0492, 1230.0369, 0.0123)),
@@ -132,7 +133,7 @@ class TestEnergyRange:
         'many': ([0.0123*(v+4) for v in range(100000)],
                  (0.0492, 1230.0369, 0.0123)),
         'float step': ([0.1, 0.2, 0.3, 0.4, 0.5], (0.1, 0.5, 0.1)),
-        # 'inverted': ([7.0, 6.0, 5.0, 4.0], (4, 7, 1)),                        # Fails for TheoEnergies. Pending discussion in 7f405baa8a693171b80549ca3be5a58a5e7280e8
+        'inverted': ([7.0, 6.0, 5.0, 4.0], (4, 7, 1)),
         }
     invalid_grid = {
         'too few': ([0.0], ValueError),
@@ -196,13 +197,11 @@ class TestTheoEnergies(TestEnergyRange):
         **TestEnergyRange.valid,
         'adjust': ((1.0, 10.0, 2.0), (2.0, 10.0, 2.0)),
         }
-    for key in ('swapped', 'swapped no step'):
+    for key in ('negative',):
         valid.pop(key)
 
     invalid = {
         **TestEnergyRange.invalid,
-        'swapped neg step': ((3.0, 1.0, -0.1), ValueError),
-        'swapped no step': ((3.0, 1.0,), ValueError),
         'negative': ((-3.0, 1.0, 0.1), ValueError),
         }
 

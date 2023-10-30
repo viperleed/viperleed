@@ -241,8 +241,6 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
         other_shift = remainder(other.start, other.step)
         return abs(self_shift - other_shift) < self.step * EPS
 
-    _swap = None  # Never swap a TheoEnergies. All items must be > 0
-
 
 class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
     """EnergyRange for Rparams attribute IV_SHIFT_RANGE."""
