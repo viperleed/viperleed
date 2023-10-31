@@ -95,7 +95,7 @@ class TestEnergyRange:
         assert tuple(energy_range) == pytest.approx(expected)
 
     @parametrize(name=valid)
-    def test_properties(self, name, make_range):
+    def test_min_max(self, name, make_range):
         """Check min and max."""
         energy_range = make_range(name)
         *_, expected = self.valid[name]
@@ -129,7 +129,7 @@ class TestEnergyRange:
         assert tuple(energy_range) == pytest.approx(expected)
 
     @parametrize('value,exc', invalid.values(), ids=invalid)
-    def test_invalid_input(self, value, exc):
+    def test_from_value_invalid(self, value, exc):
         """Check complaints when created from an invalid input."""
         with pytest.raises(exc):
             self._class.from_value(value)
@@ -139,6 +139,7 @@ class TestEnergyRange:
         assert make_range('large').defined
         assert make_range('swapped').defined
         assert not make_range('no step').defined
+        assert not make_range('no bound').defined
 
     _n_many = n_energies['many']
     valid_grid = {
@@ -231,6 +232,13 @@ class TestEnergyRange:
         'diff step':    ((1.0, 2.0, 0.1), (1.0, 2.0, 0.5), False),
         'shifted':      ((0.05, 2.05, 0.1), (1.0, 2.2, 0.1), False),
         }
+    contains_invalid = {
+        'self undefined': (TheoEnergies(), TheoEnergies(1.0, 2.0, 0.1),
+                           RuntimeError),
+        'other undefined': (TheoEnergies(1.0, 2.0, 0.1), TheoEnergies(),
+                            ValueError),
+        'wrong type': (TheoEnergies(0.05, 5.05, 0.1), 'abcd', TypeError),
+        }
 
     @parametrize('out_args,in_args,result', contains_valid.values(),
                  ids=contains_valid)
@@ -239,14 +247,6 @@ class TestEnergyRange:
         outer = self._class(*out_args)
         inner = self._class(*in_args)
         assert outer.contains(inner) is result
-
-    contains_invalid = {
-        'self undefined': (TheoEnergies(), TheoEnergies(1.0, 2.0, 0.1),
-                           RuntimeError),
-        'other undefined': (TheoEnergies(1.0, 2.0, 0.1), TheoEnergies(),
-                            ValueError),
-        'wrong type': (TheoEnergies(0.05, 5.05, 0.1), 'abcd', TypeError),
-        }
 
     @parametrize('outer,inner,exc', contains_invalid.values(),
                  ids=contains_invalid)
