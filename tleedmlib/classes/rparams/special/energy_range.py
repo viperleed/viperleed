@@ -257,6 +257,18 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
         """Return a list of float values, replacing NO_VALUE with -1."""
         return [-1 if e is NO_VALUE else e for e in self]
 
+    def expanded_by(self, n_steps):
+        """Return a copy of this range wider by n_steps left and right."""
+        if not self.defined:
+            raise RuntimeError(f'{self} has undefined items')
+        delta = n_steps * self.step
+        start = max(self.step, self.min - delta)
+        stop = self.max + delta
+        if stop < start:
+            raise ValueError(f'Cannot expand by {n_steps=}. {self} would '
+                             'become empty')
+        return self.__class__(start, stop, self.step)
+
     def _check_consistency(self):
         """Change inconsistent values or complain."""
         super()._check_consistency()

@@ -299,6 +299,33 @@ class TestTheoEnergies(TestEnergyRange):
         """Check correct setting of new values for undefined members."""
         super().test_set_undefined(ini_vals, new_vals, expect, subtests)
 
+    expand_valid = {
+        'pos': ('1 2 0.1', 3, (0.7, 2.3, 0.1)),
+        'neg': ('1 2 0.1', -3, (1.3, 1.7, 0.1)),
+        'zero': ('1 2 0.1', 0, (1.0, 2.0, 0.1)),
+        'coerced': ('1 2 0.1', 20, (0.1, 4, 0.1)),
+        'fixed': ('start==stop', 2, (0.8, 1.2, 0.1)),
+        }
+    expand_invalid = {
+        'no bound': ('no bound', 5, RuntimeError),
+        'no step': ('no step', 5, RuntimeError),
+        'neg too much': ('1 2 0.1', -6, ValueError),
+        }
+
+    @parametrize('name,extra,expect', expand_valid.values(), ids=expand_valid)
+    def test_expanded_by_valid(self, name, extra, expect, make_range):
+        """Check correct result of expanding a TheoEnergies."""
+        original = make_range(name)
+        expanded = original.expanded_by(extra)
+        assert expanded == expect
+
+    @parametrize('name,extra,exc', expand_invalid.values(), ids=expand_invalid)
+    def test_expanded_by_invalid(self, name, extra, exc, make_range):
+        """Check complaints when trying to expand a TheoEnergies."""
+        original = make_range(name)
+        with pytest.raises(exc):
+            original.expanded_by(extra)
+
 
 class TestIVShiftRange(TestEnergyRange):
     """Tests for IVShiftRange subclass of EnergyRange."""
