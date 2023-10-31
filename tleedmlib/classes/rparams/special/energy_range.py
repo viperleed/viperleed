@@ -19,8 +19,6 @@ from decimal import Decimal
 from math import ceil, floor, isfinite, remainder
 from numbers import Real
 
-import numpy as np
-
 from ._base import SpecialParameter
 from .._defaults import NO_VALUE
 
@@ -171,6 +169,44 @@ class EnergyRange(SpecialParameter):
         start, stop = energy_grid[0], energy_grid[-1]
         step = (stop - start) / (n_energies - 1)
         return cls(start, stop, step)
+
+    def intersected(self, other):
+        """Return the subset of this range in common with another.
+
+        Parameters
+        ----------
+        other : EnergyRange
+            The other range to intersect this one with.
+
+        Returns
+        -------
+        intersected : EnergyRange
+            The range common to self and other. The step of intersected
+            is the same as the one of self. Notice that intersected may
+            be wider than the actual common range. This may be the case
+            if type(self) needs its bounds to somehow fit its step.
+
+        Raises
+        ------
+        TypeError
+            If other is not an EnergyRange
+        ValueError
+            If self and other have no energies in common, or if other
+            has no bounds defined.
+        RuntimeError
+            If self has no bounds defined.
+        """
+        if not isinstance(other, EnergyRange):
+            raise TypeError
+        if not self.has_bounds:
+            raise RuntimeError(f'{self} has no bounds')
+        if not other.has_bounds:
+            raise ValueError(f'{other} has no bounds')
+        new_start = max(self.min, other.min)
+        new_stop = min(self.max, other.max)
+        if new_stop < new_start:
+            raise ValueError('No intersection')
+        return self.__class__(new_start, new_stop, self.step)
 
     @staticmethod
     def parse_string_sequence(string_sequence):

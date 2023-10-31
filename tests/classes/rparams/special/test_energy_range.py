@@ -39,6 +39,13 @@ class TestEnergyRange:
     valid = {      # init value,     expected
         '1 2 0.1': ((1.0, 2.0, 0.1), (1.0, 2.0, 0.1)),
         '1 2 0.2': ((1.0, 2.0, 0.2), (1.0, 2.0, 0.2)),
+        '.1 .9 .2': ((0.1, 0.9, 0.2), (0.1, 0.9, 0.2)),
+        '.4 1.1 .1': ((0.4, 1.1, 0.1), (0.4, 1.1, 0.1)),
+        '.05 1.5 .05': ((0.05, 1.5, 0.05), (0.05, 1.5, 0.05)),
+        '2 4.1 0.35': ((2, 4.1, 0.35), (2, 4.1, 0.35)),
+        '2 6 0.4': ((2, 6, 0.4), (2, 6, 0.4)),
+        '.4 1.2 .2': ((0.4, 1.2, 0.2), (0.4, 1.2, 0.2)),
+        '.9 3.6 .3': ((0.9, 3.6, 0.3), (0.9, 3.6, 0.3)),
         'shifted': ((1.05, 2.05, 0.2), (1.05, 2.05, 0.2)),
         'start==stop': ((1.0, 1.0, 0.1), (1.0, 1.0, 0.1)),
         'small step': ((1.0, 1.7, 1e-10), (1.0, 1.7, 1e-10)),
@@ -248,6 +255,46 @@ class TestEnergyRange:
         with pytest.raises(exc):
             outer.contains(inner)
 
+    valid_intersections = {  # name1, name2, expected
+        'exists 0.2': ('.1 .9 .2', '.4 1.1 .1', (0.4, 0.9, 0.2)),
+        'exists 0.1': ('.4 1.1 .1', '.1 .9 .2', (0.4, 0.9, 0.1)),
+        'same': ('.4 1.1 .1', '.4 1.1 .1', (0.4, 1.1, 0.1)),
+        'outside': ('.05 1.5 .05', '.4 1.1 .1', (0.4, 1.1, 0.05)),
+        'inside': ('.4 1.1 .1', '.05 1.5 .05', (0.4, 1.1, 0.1)),
+        'with fixed': ('.05 1.5 .05', 'start==stop', (1.0, 1.0, 0.05)),
+        'only one pt': ('1 2 0.1', '2 6 0.4', (2.0, 2.0, 0.1)),
+        'adjust': ('.4 1.2 .2', '.9 3.6 .3', (0.9, 1.2, 0.2)),
+        }
+    invalid_intersections = {
+        'no intersection': ((0.4, 1.1, 0.1), (1.5, 1.9, 0.1), ValueError),
+        'self no bounds': ((NO_VALUE, 1, 0.1), (0.2, 0.4, 0.2), RuntimeError),
+        'other no bounds': ((0.4, 1.1, 0.1), (0.2, NO_VALUE, 0.9), ValueError),
+        }
+
+    @parametrize(name=valid_intersections)
+    def test_intersected(self, name, make_range):
+        """Check correct result of intersection between ranges."""
+        if name not in self.valid_intersections:
+            pytest.skip(reason=f'{name!r} has some invalid cases')
+        name_first, name_second, expected = self.valid_intersections[name]
+        first_, second_ = make_range(name_first), make_range(name_second)
+        assert first_.intersected(second_) == expected
+
+    @parametrize('first_vals,second_vals,exc', invalid_intersections.values(),
+                 ids=invalid_intersections)
+    def test_intersected_invalid(self, first_vals, second_vals, exc):
+        """Check complaints when intersecting invalid stuff."""
+        first = self._class(*first_vals)
+        second = self._class(*second_vals)
+        with pytest.raises(exc):
+            first.intersected(second)
+
+    def test_intersected_typerror(self, make_range):
+        """Check complaints when intersecting invalid stuff."""
+        energy_range = make_range('1 2 0.1')
+        with pytest.raises(TypeError):
+            energy_range.intersected('invalid')
+
 
 class TestTheoEnergies(TestEnergyRange):
     """Tests for the TheoEnergies subclass of EnergyRange."""
@@ -299,6 +346,13 @@ class TestTheoEnergies(TestEnergyRange):
         """Check correct setting of new values for undefined members."""
         super().test_set_undefined(ini_vals, new_vals, expect, subtests)
 
+    valid_intersections = {  # name1, name2, expected
+        **TestEnergyRange.valid_intersections,
+        # Modify the ones that are changed to fit steps
+        'exists 0.2': ('.1 .9 .2', '.4 1.1 .1', (0.3, 0.9, 0.2)),
+        'adjust': ('.4 1.2 .2', '.9 3.6 .3', (0.8, 1.2, 0.2)),
+        }
+
     expand_valid = {
         'pos': ('1 2 0.1', 3, (0.7, 2.3, 0.1)),
         'neg': ('1 2 0.1', -3, (1.3, 1.7, 0.1)),
@@ -335,6 +389,8 @@ class TestIVShiftRange(TestEnergyRange):
         **TestEnergyRange.valid,
         # Replace the ones that need adjustments
         'shifted': ((1.05, 2.05, 0.2), (1.0, 2.2, 0.2)),
+        '.1 .9 .2': ((0.1, 0.9, 0.2), (0.0, 1.0, 0.2)),
+        '2 4.1 0.35': ((2, 4.1, 0.35), (1.75, 4.2, 0.35)),
 
         # Add some more to check the adjustments. Notice that
         # these are nasty cases, as a very simple floor/ceil
@@ -384,3 +440,16 @@ class TestIVShiftRange(TestEnergyRange):
         original = self._class(*ini_vals)
         original.set_undefined_step(step)
         assert original == expect
+
+    valid_intersections = {  # name1, name2, expected
+        **TestEnergyRange.valid_intersections,
+        # Modify those for which either member is adapted
+        'exists 0.2': ('.1 .9 .2',  # => (0, 1, 0.2)
+                       '.4 1.1 .1',
+                       (0.4, 1.0, 0.2)),
+        'exists 0.1': ('.4 1.1 .1',
+                       '.1 .9 .2',  # => (0, 1, 0.2)
+                       (0.4, 1.0, 0.1)),
+        # This one is only adjusted after intersecting
+        'adjust': ('.4 1.2 .2', '.9 3.6 .3', (0.8, 1.2, 0.2)),
+        }
