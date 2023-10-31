@@ -268,9 +268,9 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         # optimize V0r and calculate R factor
 
         ## settings for V0r optimization
-    bounds = rp.IV_SHIFT_RANGE.min, rp.IV_SHIFT_RANGE.max
+    bounds = iv_shift.min, iv_shift.max
     v0r_range = np.array(
-        [int(bound / intpol_step) for bound in bounds], dtype="int32"
+        [round(bound / intpol_step) for bound in bounds], dtype="int32"
     )
     v0r_center = int((v0r_range[0] + v0r_range[1]) / 2)
     start_guess = np.array([v0r_range[0], v0r_center, v0r_range[1]], dtype="int32")
