@@ -275,6 +275,14 @@ class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
         *bounds, step = self
         return all(abs(remainder(b, step)) < EPS for b in bounds)
 
+    @property
+    def is_fixed(self):
+        """Return whether this IVShiftRange has equal bounds."""
+        if not self.has_bounds:
+            raise RuntimeError(f'{self} has no bounds')
+        scale = self.step if self.has_step else 1
+        return abs(self.stop - self.start) < EPS * scale
+
     def adjust_to_fit_step(self):
         """Expand bounds so that they are integer multiples of step."""
         # The next one raises RuntimeError if we're not fully defined:

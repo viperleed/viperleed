@@ -46,6 +46,7 @@ class TestEnergyRange:
         'swapped no step': ((3.0, 1.0), (1.0, 3.0, NO_VALUE)),
         'negative': ((-3.0, 1.0), (-3.0, 1.0, NO_VALUE)),
         'no step': ((1.0, 2.0), (1.0, 2.0, NO_VALUE)),
+        'no bound': ((1.0, NO_VALUE, 0.3), (1.0, NO_VALUE, 0.3)),
         'large': ((10**20, 10**21, 10**19), (10**20, 10**21, 10**19)),
         'many': ((0.0492, 1230.0369, 0.0123), (0.0492, 1230.0369, 0.0123)),
         }
@@ -330,6 +331,19 @@ class TestIVShiftRange(TestEnergyRange):
         """Check correct creation of fixed IVShiftRange objects."""
         fixed = self._class.fixed(0.5)
         assert fixed == (0.5, 0.5, NO_VALUE)
+
+    def test_is_fixed(self):
+        """Check correct identification of fixed-ness."""
+        free = self._class(0.1, 1.8, 0.1)
+        fixed = free.fixed(0.5)
+        assert fixed.is_fixed
+        assert not free.is_fixed
+
+    def test_is_fixed_raises(self, make_range):
+        """Check complaints when testing fixed-ness without bounds."""
+        no_bounds = make_range('no bound')
+        with pytest.raises(RuntimeError):
+            _ = no_bounds.is_fixed
 
     undef_step = {
         'coherent': ((-0.5, 1.9), 0.1, (-0.5, 1.9, 0.1)),
