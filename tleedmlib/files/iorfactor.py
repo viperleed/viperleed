@@ -36,6 +36,10 @@ from viperleed.tleedmlib.files.ivplot import plot_iv
 logger = logging.getLogger("tleedm.files.iorfactor")
 
 
+class RfactorError(Exception):
+    """Base exception for R-factor calculations."""
+
+
 def readROUT(filename="ROUT"):
     """
     Reads the ROUT file.
