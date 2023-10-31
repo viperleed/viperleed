@@ -176,8 +176,7 @@ def sorted_energies_from_beams(beams):
 
 
 def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
-    """
-    Writes input file WEXPEL for R-factor calculation.
+    """Write input file WEXPEL for R-factor calculation.
 
     Parameters
     ----------
@@ -189,11 +188,13 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
         The theoretical beams, containing I(V) data.
     filename : str, optional
         Name of the file that will be written. The default is "WEXPEL".
+    for_error : bool, optional
+        Whether the R-factor calculation is used to determine error
+        curves. The default is False.
 
     Returns
     -------
     None.
-
     """
     check_theobeams_energies(rp, theobeams)
     exp_grid = sorted_energies_from_beams(rp.expbeams)
@@ -225,72 +226,86 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
             iorf.append(1)
     iorf.extend([0]*(len(rp.ivbeams)-len(rp.expbeams)))
 
-    f72 = ff.FortranRecordWriter("F7.2")
+    f72 = ff.FortranRecordWriter('F7.2')
     if rp.TL_VERSION < 1.7:
-        beam_formatter = ff.FortranRecordWriter("25I3")
+        beam_formatter = ff.FortranRecordWriter('25I3')
     else:
-        beam_formatter = ff.FortranRecordWriter("25I4")
-    i3 = ff.FortranRecordWriter("I3")
-    output = " &NL1\n"
-    output += (" EMIN=" + f72.write([minen]).rjust(9) + ",\n")
-    output += (" EMAX=" + f72.write([maxen]).rjust(9) + ",\n")
-    output += (" EINCR=" + f72.write([vincr]).rjust(8) + ",\n")  # interpolation step width
-    output += " LIMFIL=      1,\n"  # number of consecutive input files
-    output += " IPR=         0,\n"  # output formatting
-    output += (" VI=" + f72.write([rp.V0_IMAG]).rjust(11) + ",\n")
-    output += " V0RR=      0.0,\n"
-    output += (" V01=" + f72.write([iv_shift.start]).rjust(10) + ",\n")
-    output += (" V02=" + f72.write([iv_shift.stop]).rjust(10) + ",\n")
-    output += (" VINCR=" + f72.write([vincr]).rjust(8) + ",\n")
-    output += " ISMOTH=" + i3.write([rp.R_FACTOR_SMOOTH]).rjust(7) + ",\n"
-    output += " EOT=         0,\n"
-    output += " PLOT=        1,\n"
-    output += " GAP=         0,\n"
-    output += " &END\n"
-    output += (beam_formatter.write([n+1 for n in beamcorr]) + "\n")
+        beam_formatter = ff.FortranRecordWriter('25I4')
+    i3 = ff.FortranRecordWriter('I3')
+
+    # EMIN/EMAX are just two bounds to select which theory beams are
+    #     read in. All energies outside the closed [EMIN, EMAX] range
+    #     are not read in (and do not fill up any array). Notice that
+    #     we take the maximum a bit larger, just to make sure that
+    #     integer divisions in the FORTRAN code don't discard the
+    #     upper limit.
+    # EINCR is the interpolation step.
+    # LIMFIL is number of consecutive input files. Hardcode to 1.
+    # IPR is output formatting. Hardcode to 0.
+    # **IMPORTANT**: VINCR should be an integer multiple of EINCR.
+    # If the two are not multiples, the V0R shifts are wrong. Here,
+    # for simplicity, we take them to be the exact same.
+    output = f'''\
+ &NL1
+ EMIN={f72.write([minen]):>9},
+ EMAX={f72.write([maxen + 0.1 * vincr]):>9},
+ EINCR={f72.write([vincr]):>8},
+ LIMFIL=      1,
+ IPR=         0,
+ VI={f72.write([rp.V0_IMAG]):>11},
+ V0RR=      0.0,
+ V01={f72.write([iv_shift.start]):>10},
+ V02={f72.write([iv_shift.stop]):>10},
+ VINCR={f72.write([vincr]):>8},
+ ISMOTH={i3.write([rp.R_FACTOR_SMOOTH]):>7},
+ EOT=         0,
+ PLOT=        1,
+ GAP=         0,
+ &END
+'''
+    output += beam_formatter.write([n+1 for n in beamcorr]) + '\n'
     if len(beamcorr) % 25 == 0:
         output += "\n"
     for i in range(0, 2):  # redundant since indices are already taken care of
         output += beam_formatter.write(
-            [n+1 for n in range(0, len(rp.expbeams))]) + "\n"
+            [n+1 for n in range(len(rp.expbeams))]) + '\n'
         if len(rp.expbeams) % 25 == 0:
-            output += "\n"
-    output += beam_formatter.write(iorf) + "\n"
+            output += '\n'
+    output += beam_formatter.write(iorf) + '\n'
     if len(iorf) % 25 == 0:
-        output += "\n"
-    output += "&NL2\n"
-    output += " NSSK=    0,\n"
+        output += '\n'
+    output += '&NL2\n'
+    output += ' NSSK=    0,\n'
     if rp.R_FACTOR_TYPE == 1:
-        output += " WR=      0.,0.,1.,\n"  # Pendry
+        output += ' WR=      0.,0.,1.,\n'  # Pendry
     elif rp.R_FACTOR_TYPE == 2:
-        output += " WR=      1.,0.,0.,\n"  # R2
+        output += ' WR=      1.,0.,0.,\n'  # R2
     else:
-        output += " WR=      0.,1.,0.,\n"  # Zanazzi-Jona
-    output += """ &END
+        output += ' WR=      0.,1.,0.,\n'  # Zanazzi-Jona
+    output += '''\
+ &END
  &NL3
  NORM=           1,
  INTMAX=    999.99,
  PLSIZE=   1.0,1.0,
  XTICS=         50,
  &END
- """
+ '''
     auxexpbeams = writeAUXEXPBEAMS(rp.expbeams, header=rp.systemName,
                                    write=True, numbers=False)
-    output += auxexpbeams
-    output += "\n"
+    output += auxexpbeams + '\n'
     # information about gaps in the experimental spectra would go here
     try:
         with open(filename, 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error("Failed to write "+filename)
+        logger.error(f'Failed to write {filename}')
         raise
-    logger.debug("Wrote to R-factor input file "+filename+" successfully")
-    return
+    logger.debug(f'Wrote to R-factor input file {filename} successfully')
 
 
 def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
-    """Generate the PARAM file for the rfactor calculation.
+    """Generate the PARAM file for the R-factor calculation.
 
     Parameters
     ----------
@@ -298,6 +313,15 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
         The run parameters.
     theobeams : list of Beam
         The theoretical beams, containing I(V) data.
+    for_error : bool, optional
+        Whether this R-factor calculation is used to produce error
+        curves. Default is False.
+    only_vary : list or None, optional
+        Which parameter should be varied. Items are SearchPar objects.
+        This argument is used only if for_error. In that case, it is
+        used solely to compute how many distinct parameters values
+        are expected. If not given or None, all the parameters are
+        used. Default is False.
 
     Returns
     -------
@@ -316,17 +340,16 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
     n_var = 1
     if for_error:
         if not only_vary:
-            logger.warning("Rfactor PARAM for error: Parameters under "
-                           "variation not passed.")
+            logger.warning('Rfactor PARAM for error: Parameters under '
+                           'variation not passed.')
             only_vary = [sp for sp in rp.searchpars
                          if sp.atom in rp.search_atlist]
         n_var = max([sp.steps for sp in only_vary])
-    output = f"""
+    output = f'''
 C  MNBED  : number of beams in experimental spectra before averaging
 C  MNBTD  : number of beams in theoretical spectra before averaging
 
-      PARAMETER (MNBED = {len(rp.expbeams)}, MNBTD = {len(theobeams)})"""
-    output += f"""
+      PARAMETER (MNBED = {len(rp.expbeams)}, MNBTD = {len(theobeams)})
 
 C  MNET   : number of energies in theoretical beam at time of reading in
 C  MNGP  : greater equal number of grid points in energy working grid (ie after
@@ -334,22 +357,20 @@ C           interpolation)
 C  MNS    : number of geometries including those, that are skipped
 
       PARAMETER (MNET = {rp.THEO_ENERGIES.n_energies}, MNGP = {ngrid})
-      PARAMETER (MNS = {n_var})"""
-    output += """
+      PARAMETER (MNS = {n_var})
 
 C  MNGAP  : number of gaps in the experimental spectra (NOTE: if there are no
 C           gaps in the spectra set MNGAP to 1 to avoid zero-sized arrays)
 
       PARAMETER (MNGAP = 1)
-"""
+'''
     # write PARAM
     try:
-        with open("PARAM", "w") as wf:
+        with open('PARAM', 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error("Failed at writing PARAM file for R-factor calculation.")
+        logger.error('Failed at writing PARAM file for R-factor calculation.')
         raise
-    return
 
 
 def read_rfactor_columns(cols_dir=''):
