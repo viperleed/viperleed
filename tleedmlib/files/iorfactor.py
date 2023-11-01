@@ -462,6 +462,39 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     logger.debug(f'Wrote to R-factor input file {filename} successfully')
 
 
+def _largest_nr_grid_points(rpars, theobeams, for_error, n_expand):
+    """Return the largest possible number of grid points."""
+    # The number of grid point is the quantity used to set up the
+    # dimensions of the arrays that will contain the IV curves.
+    # It should be at least as large as:
+    # - the number of experiment energies, on the original grid
+    # - the number of theory energies, on the original grid
+    # - the number of experiment energies, on the interpolated grid
+    # - the number of theory energies, on the interpolated grid
+    # - in principle, there is also some relation to the number
+    #   of energies in GAPS, if there's gaps in the data. Since
+    #   we don't allow this, we do not care. Should we ever change
+    #   our mind, we'd have to look more closely at the code.
+
+    # Notice that, in principle, we would not need to keep extra room
+    # for shifting the theory relative to experiments. The FORTRAN code
+    # translates the 'shifted' indices to indices in the interpolated
+    # version of the theory beams. However, it seems cleaner to use the
+    # very same logic as in WEXPEL. This way we only need to maintain
+    # one piece of code.
+    (experiment, theory,
+     _, interp_step) = prepare_rfactor_energy_ranges(rpars, theobeams,
+                                                     for_error, n_expand)
+    interp_exp = EnergyRange(experiment.start, experiment.stop, interp_step)
+    interp_theo = EnergyRange(theory.start, theory.stop, interp_step)
+
+    n_max = max((experiment.n_energies,
+                 theory.n_energies,
+                 interp_exp.n_energies,
+                 interp_theo.n_energies))
+    return round(np.ceil(n_max * 1.1))  # 10% headroom, just in case
+
+
 def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
     """Generate the PARAM file for the R-factor calculation.
 
@@ -481,20 +514,16 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
         are expected. If not given or None, all the parameters are
         used. Default is False.
 
-    Returns
-    -------
-    None.
+    Raises
+    ------
+    RfactorError
+        If this function is called before writeWEXPEL.
     """
-    check_theobeams_energies(rp, theobeams)
-    exp_grid = sorted_energies_from_beams(rp.expbeams)
-    exp_energies = EnergyRange.from_sorted_grid(exp_grid)
-    minen = min(exp_energies.min, rp.THEO_ENERGIES.min)
-    maxen = max(exp_energies.max, rp.THEO_ENERGIES.max)                         # TODO: @fkraushofer shouldn't we adjust min/max as in writeWEXPEL?
-    if rp.IV_SHIFT_RANGE.has_step:                                              # TODO: @fkraushofer why don't we do the same as in writeWEXPEL when for_error?
-        step = rp.IV_SHIFT_RANGE.step
-    else:
-        step = min(exp_energies.step, rp.THEO_ENERGIES.step)
-    ngrid = int(np.ceil(((maxen-minen)/step)*1.1))
+    if not rp.IV_SHIFT_RANGE.has_step:
+        raise RfactorError('Cannot writeRfactPARAM without interpolation '
+                           'step. Did you forget to call writeWEXPEL first?')
+    ngrid = _largest_nr_grid_points(rp, theobeams, for_error, _N_EXPAND_THEO)
+
     n_var = 1
     if for_error:
         if not only_vary:
