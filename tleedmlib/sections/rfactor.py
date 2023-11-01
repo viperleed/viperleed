@@ -17,7 +17,6 @@ import subprocess
 import numpy as np
 
 from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.classes.rparams import EnergyRange
 from viperleed.tleedmlib.checksums import validate_multiple_files
 from viperleed.tleedmlib.files import iorfactor as tl_io
 from viperleed.tleedmlib.files.iorefcalc import readFdOut
@@ -131,26 +130,22 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     else:
         check_ierr(701, logger)
 
-    tl_io.check_theobeams_energies(rp, theobeams)                               # TODO: repeated in iorfactor, iosearch
+    (_, theo_range,
+     iv_shift,
+     intpol_step) = tl_io.prepare_rfactor_energy_ranges(rp, theobeams,
+                                                        for_error, n_expand=0)  # TODO: @amimre here we can avoid throwing away useful data points, but I'm not sure how your thing behaves if these data points are actually not available.
 
-    exp_grid = tl_io.sorted_energies_from_beams(rp.expbeams)
-    exp_energies = EnergyRange.from_sorted_grid(exp_grid)
-    real_iv_shift = (EnergyRange(rp.best_v0r, rp.best_v0r) if for_error
-                     else rp.IV_SHIFT_RANGE)
+    # The next bit is commented out to maintain consistency with
+    # the current code in iorfactor. However, there is an ongoing
+    # discussion on whether we should take rp.IV_SHIFT_RANGE or
+    # whether min(intpol_step, rp.IV_SHIFT_RANGE.step) is OK
+    # intpol_step = min(exp_energies.step, rp.THEO_ENERGIES.step)
+    # if rp.IV_SHIFT_RANGE.has_step:
+        # intpol_step = min(intpol_step, rp.IV_SHIFT_RANGE.step)                # TODO: different in iorfactor. Pending question to @fkraushofer
 
-    # extend energy range if they are close together
-    minen = max(exp_energies.min, rp.THEO_ENERGIES.min)
-    maxen = min(exp_energies.max, rp.THEO_ENERGIES.max)
-    if abs(exp_energies.min - rp.THEO_ENERGIES.min) < abs(real_iv_shift.min):
-        minen += real_iv_shift.min
-    if abs(exp_energies.max - rp.THEO_ENERGIES.max) < abs(real_iv_shift.max):
-        maxen += real_iv_shift.max                                              # TODO: (amimre): should this be + or - ? I think + ... (mriva): THESE CORRECTIONS ARE DIFFERENT IN iorfactor etc...!
-
-    intpol_step = min(exp_energies.step, rp.THEO_ENERGIES.step)
-    if rp.IV_SHIFT_RANGE.has_step:
-        intpol_step = min(intpol_step, rp.IV_SHIFT_RANGE.step)
-
-    out_grid = np.arange(minen, maxen + intpol_step, intpol_step)
+    out_grid = np.arange(theo_range.min,
+                         theo_range.max + 0.1 * intpol_step,
+                         intpol_step)
 
     # find correspondence experimental to theoretical beams:
     beamcorr = tl_io.getBeamCorrespondence(sl, rp)

@@ -170,9 +170,181 @@ def check_theobeams_energies(rpars, theobeams):                                 
             )
 
 
+def prepare_rfactor_energy_ranges(rpars, theobeams=None,
+                                  for_error=False, n_expand=0):
+    """Return EnergyRange objects for experiment, theory and iv_shifts.
+
+    Parameters
+    ----------
+    rpars : Rparams
+        The object holding information about the current PARAMETERS.
+        Attributes used: THEO_ENERGIES, expbeams, IV_SHIFT_RANGE
+    theobeams : Sequence or None, optional
+        Elements are Beam objects. They are the beams loaded from
+        the calculation against which experimental data should be
+        compared. If given, it is checked for consistency with the
+        rpars.THEO_ENERGIES attribute. theobeams are considered to
+        be consistent if rpars.THEO_ENERGIES is a subset of the
+        energies in theobeams with the same step size. No check is
+        performed if not given or None. Default is None.
+    for_error : bool, optional
+        Whether the R-factor calculation is meant to be used for
+        error curves. Default is False.
+    n_expand : int, optional
+        How many steps should the theory range be expanded at both
+        ends not to disregard available values that may be useful
+        for interpolation. This is on top of the expansion that is
+        considered due to shifting. Default is zero.
+
+    Returns
+    -------
+    exp_range : EnergyRange
+        The range of energies of the experimental beams.
+    theo_range : TheoEnergies
+        The relevant range of energies. This is derived from the
+        rpars.THEO_ENERGIES value. It is appropriately expanded to
+        account for relative shifting of the curves. Additionally,
+        it is also expanded by n_expand steps to the left and right.
+    iv_shift : IVShiftRange
+        The range of shifts to be applied. If for_error, this is
+        fixed to rpars.best_v0r value. Otherwise, it is the rpars
+        attribute IV_SHIFT_RANGE. Notice that, in the latter case,
+        the attribute is modified in place if it does not yet have
+        a step defined. Its step is set to interp_step. Notice also
+        that, as a consequence of this change, rpars.IV_SHIFT_RANGE
+        may be expanded so that its bounds are integer multiples of
+        the step.
+    interp_step : float
+        The energy step to be used for interpolation. Notice that
+        this is ALWAYS taken from rpars.IV_SHIFT_RANGE.
+
+    Raises
+    ------
+    ValueError
+        If theobeams was given, but it is inconsistent with rpars.
+    RfactorError
+        If rpars.THEO_ENERGIES has any undefined attribute, if there
+        are no beams in rpars.expbeams, or if rpars.IV_SHIFT_RANGE
+        has any of its bounds undefined.
+    RfactorError
+        When for_error and either (i) no rpars.best_v0r is present,
+        or (ii) the rpars.best_v0r value is inconsistent with the
+        interpolation step, or (iii) rpars.IV_SHIFT_RANGE has no
+        step.
+    """
+    if theobeams is not None:
+        check_theobeams_energies(rpars, theobeams)  # May ValueError
+    if not rpars.THEO_ENERGIES.defined:
+        raise RfactorError('Cannot run an R-factor calculation before '
+                           f'{rpars.THEO_ENERGIES=} has stop, start, and '
+                           'step defined')
+    if not rpars.expbeams:
+        raise RfactorError('No experimental beams loaded')
+
+    # Prepare experimental range
+    exp_grid = sorted_energies_from_beams(rpars.expbeams)
+    exp_range = EnergyRange.from_sorted_grid(exp_grid)
+
+    # Now handle iv_shift. Notice that _prepare_iv_shift_range always
+    # sets the step to the one of IV_SHIFT_RANGE to ensure consistency
+    iv_shift = _prepare_iv_shift_range(rpars, exp_range, for_error)
+
+    # Finally, the relevant range of theory energies
+    theo_range = _find_common_theory_experiment_range(rpars.THEO_ENERGIES,
+                                                      exp_range, iv_shift,
+                                                      n_expand)
+    return exp_range, theo_range, iv_shift, iv_shift.step
+
+
+def _prepare_iv_shift_range(rpars, experiment, for_error):
+    """Return an iv_shift appropriate for an R-factor calculation."""
+    if for_error and rpars.best_v0r is None:
+        raise RfactorError(
+            'Cannot run an error calculation if rpars.best_v0r is '
+            'undefined. Did you forget to run a normal R-factor first?'
+            )
+    if not rpars.IV_SHIFT_RANGE.has_bounds:
+        raise RfactorError('Cannot run an R-factor calculation if '
+                           f'{rpars.IV_SHIFT_RANGE=} misses one of '
+                           'its bounds')
+
+    # Set up the step. This also ensures that the bounds are consistent
+    if not for_error:
+        step = min(rpars.THEO_ENERGIES.step, experiment.step)                   # TODO: interpolation step was min(step, rp.IV_SHIFT_RANGE.step). Removed in d4626116f11fb0bf9bef6c228413047a7207d441, called 'fixed issue with iv_shift', but it is unclear what the issue was. See also discussion in d4626116f11fb0bf9bef6c228413047a7207d441
+        rpars.IV_SHIFT_RANGE.set_undefined_step(step)
+        return rpars.IV_SHIFT_RANGE
+
+    # In the for_error case, always make sure to
+    # use the step stored in rpars.IV_SHIFT_RANGE
+    if not rpars.IV_SHIFT_RANGE.has_step:
+        raise RfactorError(
+            'Cannot run an error calculation if rpars.IV_SHIFT_RANGE has '
+            'no step defined. Did you forget to run a normal R-factor first?'
+            )
+    iv_shift = rpars.IV_SHIFT_RANGE.fixed(rpars.best_v0r)
+    iv_shift.set_undefined_step(rpars.IV_SHIFT_RANGE.step)
+
+    # Check that we did not change the iv_shift bounds. If
+    # we did, best_v0r is for the wrong interpolation step
+    if not iv_shift.is_fixed:
+        raise RfactorError(f'{rpars.best_v0r=} is inconsistent with the '
+                           f'interpolation step ({iv_shift.step} eV). Did '
+                           'you change the step of rpars.IV_SHIFT_RANGE '
+                           'since the last R-factor calculation?')
+    return iv_shift
+
+
+def _find_common_theory_experiment_range(theory, experiment,
+                                         iv_shift, n_expand):
+    """Return the range of theory energies in common with experiment."""
+    # This is a little bit tricky. Here is what we want:
+    #             |-----------------------|    theory
+    #                     |-------------|      experiment
+    #                     .             .
+    #  |------------------vvvvv|        .      theory, shift max left
+    #                |----vvvvvvvvvvvvvvv----| theory, shift max right
+    # The 'v's mark regions of the shifted theory in common
+    # with experiments, on the 'shifted' scales. (These are
+    # the extremes. We want all the continuous shifts in
+    # between too.) However, we want the union of all the
+    # 'v' parts ON THE ORIGINAL ENERGY SCALE of the theory,
+    # i.e.,
+    #             |-----------------------|    theory
+    #             |------------------vvvvv|    left, on same scale
+    #             |----vvvvvvvvvvvvvvv----|    right, on same scale
+    #             |----vvvvvvvvvvvvvvvvvvv|    Union of all shifts
+    # Rather than doing this mess, we can equivalently EXPAND the
+    # experimental range: on the left by the max right shift, on
+    # the right by the max left shift, like so:
+    #                     |-------------|            experiment
+    #                  |RR|-------------|LLLLLLLLLL| expanded exp.
+    #             |-----------------------|          theory
+    #             |----vvvvvvvvvvvvvvvvvvv|          common range
+    expanded_exp = experiment.copy()
+    expanded_exp.start -= iv_shift.stop  # Expand when stop > 0
+    expanded_exp.stop -= iv_shift.start  # Expand when start < 0
+
+    # Expand by n_expand left & right, finally intersect
+    theory_larger = theory.expanded_by(n_expand)
+    try:
+        return theory_larger.intersected(expanded_exp)
+    except ValueError:  # No intersection
+        raise RfactorError('Cannot run R-factor calculation: No common '
+                           'energies between experiment and theory') from None
+
+
 def sorted_energies_from_beams(beams):
     """Return a list of sorted energies from a list of Beam objects."""
     return sorted({e for beam in beams for e in beam.intens})
+
+
+# How many extra points to take at the boundaries to prevent wasting
+# data for interpolation? The FORTRAN code likes to have 2 intervals
+# left and right. Notice that this value is specific of the FORTRAN
+# code, which uses 3rd order interpolation. It is made into a const
+# so we can change it in only one spot should I (@michele-riva) have
+# gotten it wrong. It SHOULD NOT BE USED for other purposes.
+_N_EXPAND_THEO = 2
 
 
 def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
@@ -196,24 +368,10 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     -------
     None.
     """
-    check_theobeams_energies(rp, theobeams)
-    exp_grid = sorted_energies_from_beams(rp.expbeams)
-    exp_energies = EnergyRange.from_sorted_grid(exp_grid)
-    minen = max(exp_energies.min, rp.THEO_ENERGIES.min)                         # minen/maxen: theory beams outside this range are not read in
-    maxen = min(exp_energies.max, rp.THEO_ENERGIES.max)
-    iv_shift = (rp.IV_SHIFT_RANGE.fixed(rp.best_v0r) if for_error
-                else rp.IV_SHIFT_RANGE)                                         # TODO: Fortran code says both extremes should be multiples of EINCR below, but we never check
-    # extend energy range if they are close together                            # TODO: I'm not sure this 'expansion' is done the right way. Shifting 'left' (iv_shit.min) should expand the right bound (maxen), shifting 'right' (iv_shift.max) should expand the left bound (minen).
-    if abs(exp_energies.min - rp.THEO_ENERGIES.min) < abs(iv_shift.min):
-        minen -= iv_shift.min                                                   # TODO: @fkraushofer shouldn't this be +? otherwise, shifting negative makes the range SMALLER
-    if abs(exp_energies.max - rp.THEO_ENERGIES.max) < abs(iv_shift.max):
-        maxen += iv_shift.max + 0.01
-
-    # chose energy step width                                                   # TODO: @fkraushofer shouldn't this be also iv_shift?
-    if rp.IV_SHIFT_RANGE.has_step:
-        vincr = rp.IV_SHIFT_RANGE.step
-    else:
-        vincr = min(exp_energies.step, rp.THEO_ENERGIES.step)
+    (_, theo_range,
+     iv_shift, vincr) = prepare_rfactor_energy_ranges(rp, theobeams,
+                                                      for_error,
+                                                      n_expand=_N_EXPAND_THEO)
 
     # find correspondence experimental to theoretical beams:
     beamcorr = leedbase.getBeamCorrespondence(sl, rp)
@@ -247,8 +405,8 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     # for simplicity, we take them to be the exact same.
     output = f'''\
  &NL1
- EMIN={f72.write([minen]):>9},
- EMAX={f72.write([maxen + 0.1 * vincr]):>9},
+ EMIN={f72.write([theo_range.min]):>9},
+ EMAX={f72.write([theo_range.max + 0.1 * vincr]):>9},
  EINCR={f72.write([vincr]):>8},
  LIMFIL=      1,
  IPR=         0,

@@ -20,10 +20,10 @@ import numpy as np
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import BackwardsReader, readIntLine
-from viperleed.tleedmlib.classes.rparams import EnergyRange
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
-from viperleed.tleedmlib.files.iorfactor import sorted_energies_from_beams
+from viperleed.tleedmlib.files.iorfactor import prepare_rfactor_energy_ranges
+from viperleed.tleedmlib.files.iorfactor import _N_EXPAND_THEO
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
 
 
@@ -351,21 +351,9 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     -------
     output : str
         Content of the output file.
-
     """
-    exp_grid = sorted_energies_from_beams(rp.expbeams)                          # TODO: this code is pretty much repeated in iorfactor and in rfactor
-    exp_energies = EnergyRange.from_sorted_grid(exp_grid)
-    minen = max(exp_energies.min, rp.THEO_ENERGIES.min)
-    maxen = min(exp_energies.max, rp.THEO_ENERGIES.max)
-    # extend energy range if they are close together
-    if abs(exp_energies.min - rp.THEO_ENERGIES.min) < abs(rp.IV_SHIFT_RANGE.min):
-        minen -= rp.IV_SHIFT_RANGE.min                                          # TODO: @fkraushofer shouldn't this be +? otherwise, shifting negative makes the range SMALLER
-    if abs(exp_energies.max - rp.THEO_ENERGIES.max) < abs(rp.IV_SHIFT_RANGE.max):
-        maxen += rp.IV_SHIFT_RANGE.max + 0.01
-    if rp.IV_SHIFT_RANGE.has_step:
-        vincr = rp.IV_SHIFT_RANGE.step
-    else:
-        vincr = min(exp_energies.step, rp.THEO_ENERGIES.step)
+    (_, theo_range,
+     _, vincr) = prepare_rfactor_energy_ranges(rp, n_expand=_N_EXPAND_THEO)
 
     # find correspondence experimental to theoretical beams:
     beamcorr = leedbase.getBeamCorrespondence(sl, rp)
@@ -389,10 +377,14 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
                      'beams': ff.FortranRecordWriter("25I4"),
                      'weights': ff.FortranRecordWriter("25F4.1")
                      }
-    output = (formatter['energies'].write([minen]).ljust(16) + "EMIN\n")
-    output += (formatter['energies'].write([maxen]).ljust(16) + "EMAX\n")
-    # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES
-    output += (formatter['energies'].write([vincr]).ljust(16) + "EINCR\n")  # interpolation step width
+    output = (formatter['energies'].write([theo_range.min]).ljust(16)
+              + "EMIN\n")
+    output += (
+        formatter['energies'].write([theo_range.max + 0.1 * vincr]).ljust(16)
+        + "EMAX\n"
+        )
+    # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES                # TODO: shouldn't we check this then??
+    output += (formatter['energies'].write([vincr]).ljust(16) + "EINCR\n")
     output += (formatter['int'].write([0]).ljust(16)
                + "IPR - determines amount of output to stdout\n")
     output += (formatter['energies'].write([rp.V0_IMAG]).ljust(16) + "VI\n")
