@@ -313,9 +313,9 @@ class TestTheoEnergies(TestEnergyRange):
         }
 
     @parametrize('value,exc', invalid.values(), ids=invalid)
-    def test_invalid_input(self, value, exc):
+    def test_from_value_invalid(self, value, exc):
         """Check complaints when created from an invalid input."""
-        super().test_invalid_input(value, exc)
+        super().test_from_value_invalid(value, exc)
 
     @parametrize(name=valid)
     def test_adjusted(self, name, make_range):
