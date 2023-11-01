@@ -4,7 +4,8 @@ Created on 2023-10-27
 
 @author: Michele Riva (@michele-riva)
 
-Contains also tests for the TheoEnergies subclass of EnergyRange.
+Contains also tests for the TheoEnergies and IVShiftRange
+subclasses of EnergyRange.
 """
 
 import itertools
