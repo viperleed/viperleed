@@ -53,7 +53,7 @@ class TestEnergyRange:
         'swapped': ((3.0, 1.0, -0.1), (1.0, 3.0, 0.1)),
         'swapped no step': ((3.0, 1.0), (1.0, 3.0, NO_VALUE)),
         'negative': ((-3.0, 1.0), (-3.0, 1.0, NO_VALUE)),
-        'no step': ((1.0, 2.0), (1.0, 2.0, NO_VALUE)),
+        'no step': ((1.0, 2.0), (1.0, 2.0)),
         'no bound': ((1.0, NO_VALUE, 0.3), (1.0, NO_VALUE, 0.3)),
         'large': ((10**20, 10**21, 10**19), (10**20, 10**21, 10**19)),
         'many': ((0.0492, 1230.0369, 0.0123), (0.0492, 1230.0369, 0.0123)),
@@ -93,7 +93,7 @@ class TestEnergyRange:
         """Check correct iteration of an EnergyRange."""
         energy_range = make_range(name)
         *_, expected = self.valid[name]
-        assert tuple(energy_range) == pytest.approx(expected)
+        assert energy_range == expected
 
     @parametrize(name=valid)
     def test_min_max(self, name, make_range):
@@ -127,7 +127,7 @@ class TestEnergyRange:
             pytest.skip(reason=f'{name!r} is not valid')
         value, expected = self.valid[name]
         energy_range = self._class.from_value(value)
-        assert tuple(energy_range) == pytest.approx(expected)
+        assert energy_range == expected
 
     @parametrize('value,exc', invalid.values(), ids=invalid)
     def test_from_value_invalid(self, value, exc):

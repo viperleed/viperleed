@@ -46,10 +46,13 @@ class EnergyRange(SpecialParameter):
         """Return whether this EnergyRange is identical to another."""
         if not isinstance(other, (EnergyRange, Sequence)):
             return NotImplemented
-        if len(tuple(self)) != len(tuple(other)):
+        tuple_other = tuple(other)
+        if not self.has_step and len(tuple_other) == 2:
+            tuple_other = *tuple_other, NO_VALUE
+        if len(tuple(self)) != len(tuple_other):
             return NotImplemented
         scale = abs(self.step) if self.has_step else 1
-        for v_self, v_other in zip(self, other):
+        for v_self, v_other in zip(self, tuple_other):
             if (v_self, v_other) == (NO_VALUE, NO_VALUE):
                 continue
             if v_self is NO_VALUE or v_other is NO_VALUE:
