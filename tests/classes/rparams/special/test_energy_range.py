@@ -83,10 +83,10 @@ class TestEnergyRange:
 
     non_comparable = ('string', 1.78)
 
-    @parametrize(invalid=non_comparable)
-    def test_different_not_comparable(self, invalid, make_range):
+    @parametrize(invalid_=non_comparable)
+    def test_different_not_comparable(self, invalid_, make_range):
         """Check that an invalid type cannot be compared."""
-        assert make_range('1 2 0.1') != invalid
+        assert make_range('1 2 0.1') != invalid_
 
     @parametrize(name=valid)
     def test_iter(self, name, make_range):
@@ -313,11 +313,69 @@ class TestTheoEnergies(TestEnergyRange):
         'negative': ((-3.0, 1.0, 0.1), ValueError),
         }
 
+    set_undef = {  # ini_vals, new_vals, expect
+        **TestEnergyRange.set_undef,
+        'adjust': ((0.1, 1.0, NO_VALUE), (3.6, 8.0, 0.2), (0.2, 1.0, 0.2)),
+        }
+
+    valid_intersections = {  # name1, name2, expected
+        **TestEnergyRange.valid_intersections,
+        # Modify the ones that are changed to fit steps
+        'exists 0.2': ('.1 .9 .2', '.4 1.1 .1', (0.3, 0.9, 0.2)),
+        'adjust': ('.4 1.2 .2', '.9 3.6 .3', (0.8, 1.2, 0.2)),
+        }
+
+    # ###### Re-parametrize tests with the expanded cases above #######
+    # ---------------------------   valid   ---------------------------
+    @parametrize(name=valid)
+    def test_copy(self, name, make_range, subtests):
+        """Check correct creation of a copy."""
+        super().test_copy(name, make_range, subtests)
+
+    @parametrize(names=itertools.combinations(valid, 2))
+    def test_different(self, names, make_range):
+        """Check non-equality of different ranges."""
+        super().test_different(names, make_range)
+
+    @parametrize(name=valid, ids=valid)
+    def test_equal(self, name, make_range):
+        """Check correct result of the equality method."""
+        super().test_equal(name, make_range)
+
+    @parametrize(name=valid)
+    def test_from_value(self, name):
+        """Check correct creation from a single sequence."""
+        super().test_from_value(name)
+
+    @parametrize(name=valid)
+    def test_iter(self, name, make_range):
+        """Check correct iteration of an EnergyRange."""
+        super().test_iter(name, make_range)
+
+    @parametrize(name=valid)
+    def test_min_max(self, name, make_range):
+        """Check min and max."""
+        super().test_min_max(name, make_range)
+
+    # --------------------------   invalid   --------------------------
     @parametrize('value,exc', invalid.values(), ids=invalid)
     def test_from_value_invalid(self, value, exc):
         """Check complaints when created from an invalid input."""
         super().test_from_value_invalid(value, exc)
 
+    # -------------------------   set_undef   -------------------------
+    @parametrize('ini_vals,new_vals,expect', set_undef.values(), ids=set_undef)
+    def test_set_undefined(self, ini_vals, new_vals, expect, subtests):
+        """Check correct setting of new values for undefined members."""
+        super().test_set_undefined(ini_vals, new_vals, expect, subtests)
+
+    # --------------------   valid_intersections   --------------------
+    @parametrize(name=valid_intersections)
+    def test_intersected(self, name, make_range):
+        """Check correct result of intersection between ranges."""
+        super().test_intersected(name, make_range)
+
+    # ----------------------   NEW or MODIFIED   ----------------------
     @parametrize(name=valid)
     def test_adjusted(self, name, make_range):
         """Check that a defined TheoEnergies is adjusted."""
@@ -336,23 +394,6 @@ class TestTheoEnergies(TestEnergyRange):
             as_floats = energy_range.as_floats()
             assert as_floats == pytest.approx(list(expected[1]))
             assert -1 not in as_floats
-
-    set_undef = {  # ini_vals, new_vals, expect
-        **TestEnergyRange.set_undef,
-        'adjust': ((0.1, 1.0, NO_VALUE), (3.6, 8.0, 0.2), (0.2, 1.0, 0.2)),
-        }
-
-    @parametrize('ini_vals,new_vals,expect', set_undef.values(), ids=set_undef)
-    def test_set_undefined(self, ini_vals, new_vals, expect, subtests):
-        """Check correct setting of new values for undefined members."""
-        super().test_set_undefined(ini_vals, new_vals, expect, subtests)
-
-    valid_intersections = {  # name1, name2, expected
-        **TestEnergyRange.valid_intersections,
-        # Modify the ones that are changed to fit steps
-        'exists 0.2': ('.1 .9 .2', '.4 1.1 .1', (0.3, 0.9, 0.2)),
-        'adjust': ('.4 1.2 .2', '.9 3.6 .3', (0.8, 1.2, 0.2)),
-        }
 
     expand_valid = {
         'pos': ('1 2 0.1', 3, (0.7, 2.3, 0.1)),
@@ -406,11 +447,70 @@ class TestIVShiftRange(TestEnergyRange):
         '4.4, 0.2': ((4.4, 4.4, 0.2), (4.4, 4.4, 0.2)),
         '4.5, 0.2': ((4.5, 4.5, 0.2), (4.4, 4.6, 0.2)),
         '4.6, 0.2': ((4.6, 4.6, 0.2), (4.6, 4.6, 0.2)),
-        '-4.4, 0.2': ((-4.4, -4.4, 0.2), (-4.6, -4.4, 0.2)),
+        '-4.4, 0.2': ((-4.4, -4.4, 0.2), (-4.4, -4.4, 0.2)),
         '-4.5, 0.2': ((-4.5, -4.5, 0.2), (-4.6, -4.4, 0.2)),
         '-4.6, 0.2': ((-4.6, -4.6, 0.2), (-4.6, -4.6, 0.2)),
         }
 
+    # NB: the next one only has modified cases, nothing new. It
+    # does not need any re-parametrization
+    valid_intersections = {  # name1, name2, expected
+        **TestEnergyRange.valid_intersections,
+        # Modify those for which either member is adapted
+        'exists 0.2': ('.1 .9 .2',  # => (0, 1, 0.2)
+                       '.4 1.1 .1',
+                       (0.4, 1.0, 0.2)),
+        'exists 0.1': ('.4 1.1 .1',
+                       '.1 .9 .2',  # => (0, 1, 0.2)
+                       (0.4, 1.0, 0.1)),
+        # This one is only adjusted after intersecting
+        'adjust': ('.4 1.2 .2', '.9 3.6 .3', (0.8, 1.2, 0.2)),
+        }
+
+    # ###### Re-parametrize tests with the expanded cases above #######
+    # ---------------------------   valid   ---------------------------
+    @parametrize(name=valid)
+    def test_adjusted(self, name, make_range):
+        """Check that a defined TheoEnergies is adjusted."""
+        super().test_adjusted(name, make_range)
+
+    @parametrize(name=valid)
+    def test_copy(self, name, make_range, subtests):
+        """Check correct creation of a copy."""
+        super().test_copy(name, make_range, subtests)
+
+    @parametrize(names=itertools.combinations(valid, 2))
+    def test_different(self, names, make_range):
+        """Check non-equality of different ranges."""
+        try:
+            expected = [self.valid[name][1] for name in names]
+        except KeyError:
+            expected = 0, 0
+        if expected[0] == expected[1]:
+            pytest.skip(reason=f'{names!r} values are identical')
+        super().test_different(names, make_range)
+
+    @parametrize(name=valid, ids=valid)
+    def test_equal(self, name, make_range):
+        """Check correct result of the equality method."""
+        super().test_equal(name, make_range)
+
+    @parametrize(name=valid)
+    def test_from_value(self, name):
+        """Check correct creation from a single sequence."""
+        super().test_from_value(name)
+
+    @parametrize(name=valid)
+    def test_iter(self, name, make_range):
+        """Check correct iteration of an EnergyRange."""
+        super().test_iter(name, make_range)
+
+    @parametrize(name=valid)
+    def test_min_max(self, name, make_range):
+        """Check min and max."""
+        super().test_min_max(name, make_range)
+
+    # ----------------------   NEW or MODIFIED   ----------------------
     def test_fixed(self):
         """Check correct creation of fixed IVShiftRange objects."""
         fixed = self._class.fixed(0.5)
@@ -441,16 +541,3 @@ class TestIVShiftRange(TestEnergyRange):
         original = self._class(*ini_vals)
         original.set_undefined_step(step)
         assert original == expect
-
-    valid_intersections = {  # name1, name2, expected
-        **TestEnergyRange.valid_intersections,
-        # Modify those for which either member is adapted
-        'exists 0.2': ('.1 .9 .2',  # => (0, 1, 0.2)
-                       '.4 1.1 .1',
-                       (0.4, 1.0, 0.2)),
-        'exists 0.1': ('.4 1.1 .1',
-                       '.1 .9 .2',  # => (0, 1, 0.2)
-                       (0.4, 1.0, 0.1)),
-        # This one is only adjusted after intersecting
-        'adjust': ('.4 1.2 .2', '.9 3.6 .3', (0.8, 1.2, 0.2)),
-        }
