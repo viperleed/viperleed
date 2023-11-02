@@ -9,7 +9,12 @@ Classes
 EnergyRange
     Base class for parameters with 'start stop step' user input .
 TheoEnergies(EnergyRange)
-    Used as the Rparams attribute THEO_ENERGIES
+    Used as the Rparams attribute THEO_ENERGIES. The start -- stop
+    intervalB is an integer multiple of step. All attributes are
+    strictly positive.
+IVShiftRange
+    Used as the Rparams attribute IV_SHIFT_RANGE. Bounds are integer
+    multiples of step. The step attribute is strictly positive.
 """
 
 import ast
@@ -43,7 +48,7 @@ class EnergyRange(SpecialParameter):
             return NotImplemented
         if len(tuple(self)) != len(tuple(other)):
             return NotImplemented
-        scale = self.step if self.has_step else 1
+        scale = abs(self.step) if self.has_step else 1
         for v_self, v_other in zip(self, other):
             if (v_self, v_other) == (NO_VALUE, NO_VALUE):
                 continue

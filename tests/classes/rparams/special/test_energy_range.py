@@ -450,6 +450,9 @@ class TestIVShiftRange(TestEnergyRange):
         '-4.4, 0.2': ((-4.4, -4.4, 0.2), (-4.4, -4.4, 0.2)),
         '-4.5, 0.2': ((-4.5, -4.5, 0.2), (-4.6, -4.4, 0.2)),
         '-4.6, 0.2': ((-4.6, -4.6, 0.2), (-4.6, -4.6, 0.2)),
+
+        # And some more unsorted cases
+        'neg step no bound': ((3, NO_VALUE, -1), (3, NO_VALUE, -1)),
         }
 
     # NB: the next one only has modified cases, nothing new. It
@@ -534,10 +537,21 @@ class TestIVShiftRange(TestEnergyRange):
         'incoherent': ((-0.5, 1.9), 0.2, (-0.6, 2.0, 0.2)),
         'with step': ((-0.5, 1.9, 0.2), 0.1, (-0.6, 2.0, 0.2)),
         }
+    undef_step_invalid = {
+        'neg step': ((-0.5, 1.9), -0.1, ValueError),
+        }
 
     @parametrize('ini_vals,step,expect', undef_step.values(), ids=undef_step)
     def test_set_undefined_step(self, ini_vals, step, expect):
         """Check correct setting of an undefined step."""
-        original = self._class(*ini_vals)
-        original.set_undefined_step(step)
-        assert original == expect
+        iv_shift = self._class(*ini_vals)
+        iv_shift.set_undefined_step(step)
+        assert iv_shift == expect
+
+    @parametrize('ini_vals,step,exc', undef_step_invalid.values(),
+                 ids=undef_step_invalid)
+    def test_set_undefined_step_invalid(self, ini_vals, step, exc):
+        """Check complaints when an invalid step is given."""
+        iv_shift = self._class(*ini_vals)
+        with pytest.raises(exc):
+            iv_shift.set_undefined_step(step)
