@@ -249,6 +249,18 @@ def prepare_rfactor_energy_ranges(rpars, theobeams=None,
     # sets the step to the one of IV_SHIFT_RANGE to ensure consistency
     iv_shift = _prepare_iv_shift_range(rpars, exp_range, for_error)
 
+    small_step = min(exp_range.step, rpars.THEO_ENERGIES.step)
+    if not iv_shift.is_fixed and iv_shift.step > small_step:
+        # Warn only if we're not fixed. If we are, it may just be
+        # that the user gave us this specific step value because
+        # it is exactly an integer multiple of the fixed value
+        # they desired
+        logger.warning(f'Using interpolation step {iv_shift.step} eV, which '
+                       'is coarser than the smallest step between experiment '
+                       f'and theory ({small_step} eV). Consider using '
+                       f'{small_step} or not defining a step for the '
+                       'IV_SHIFT_RANGE parameter')
+
     # Finally, the relevant range of theory energies
     theo_range = _find_common_theory_experiment_range(rpars.THEO_ENERGIES,
                                                       exp_range, iv_shift,
@@ -270,7 +282,14 @@ def _prepare_iv_shift_range(rpars, experiment, for_error):
 
     # Set up the step. This also ensures that the bounds are consistent
     if not for_error:
-        step = min(rpars.THEO_ENERGIES.step, experiment.step)                   # TODO: interpolation step was min(step, rp.IV_SHIFT_RANGE.step). Removed in d4626116f11fb0bf9bef6c228413047a7207d441, called 'fixed issue with iv_shift', but it is unclear what the issue was. See also discussion in d4626116f11fb0bf9bef6c228413047a7207d441
+        # Notice that here we purposely do not take as step
+        # min(step, IV_SHIFT_RANGE.step). This would otherwise
+        # require us to potentially force a modification of the
+        # step of IV_SHIFT_RANGE and, likely, its bounds (because
+        # they are integer multiples). This seems like too much
+        # fiddling with the user input. See also discussion at
+        # viperleed/commit/d4626116f11fb0bf9bef6c228413047a7207d441
+        step = min(rpars.THEO_ENERGIES.step, experiment.step)
         rpars.IV_SHIFT_RANGE.set_undefined_step(step)
         return rpars.IV_SHIFT_RANGE
 

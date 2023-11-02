@@ -134,15 +134,6 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
      iv_shift,
      intpol_step) = tl_io.prepare_rfactor_energy_ranges(rp, theobeams,
                                                         for_error, n_expand=0)  # TODO: @amimre here we can avoid throwing away useful data points, but I'm not sure how your thing behaves if these data points are actually not available.
-
-    # The next bit is commented out to maintain consistency with
-    # the current code in iorfactor. However, there is an ongoing
-    # discussion on whether we should take rp.IV_SHIFT_RANGE or
-    # whether min(intpol_step, rp.IV_SHIFT_RANGE.step) is OK
-    # intpol_step = min(exp_energies.step, rp.THEO_ENERGIES.step)
-    # if rp.IV_SHIFT_RANGE.has_step:
-        # intpol_step = min(intpol_step, rp.IV_SHIFT_RANGE.step)                # TODO: different in iorfactor. Pending question to @fkraushofer
-
     out_grid = np.arange(theo_range.min,
                          theo_range.max + 0.1 * intpol_step,
                          intpol_step)
