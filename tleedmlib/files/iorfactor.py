@@ -912,7 +912,7 @@ def beamlist_to_array(beams):
     # turn list of Beam objects into an array of intensities
 
     n_beams = len(beams)
-    energies = sorted({e for b in beams for e in b.intens})
+    energies = sorted_energies_from_beams(beams)
     in_grid = np.array(energies)
     n_E = in_grid.shape[0]
 

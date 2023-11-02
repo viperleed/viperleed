@@ -611,9 +611,7 @@ def rfactor_from_csv(
     # Treat corr_beams1 as 'experiment' and corr_beams2 as 'theory'
     rpars = Rparams()
     rpars.expbeams = corr_beams1
-    rpars.THEO_ENERGIES = TheoEnergies.from_sorted_grid(
-        rf_io.sorted_energies_from_beams(corr_beams2)
-        )
+    rpars.THEO_ENERGIES = TheoEnergies.from_sorted_grid(beams2_en)
     rpars.IV_SHIFT_RANGE = IVShiftRange(*v0r_shift_range, intpol_step)
 
     # Finally, get the right energies
