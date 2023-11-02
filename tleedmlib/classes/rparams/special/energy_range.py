@@ -178,6 +178,19 @@ class EnergyRange(SpecialParameter):
         step = (stop - start) / (n_energies - 1)
         return cls(start, stop, step)
 
+    def is_equivalent(self, other):
+        """Return whether self is equal to other, including swapping."""
+        if self == other:
+            return True
+        # Try converting to an EnergyRange. Notice that we do not
+        # use self.__class__ but always EnergyRange, as the base
+        # class only swaps the bound values but never adjusts them
+        try:
+            range_other = EnergyRange(*other)
+        except (ValueError, TypeError) as exc:
+            return False
+        return self == range_other
+
     def intersected(self, other):
         """Return the subset of this range in common with another.
 

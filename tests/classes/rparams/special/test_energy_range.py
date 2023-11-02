@@ -296,6 +296,22 @@ class TestEnergyRange:
         with pytest.raises(TypeError):
             energy_range.intersected('invalid')
 
+    is_equivalent = {
+        'identical': ((0.2, 2.2, 0.2), (0.2, 2.2, 0.2), True),
+        'different': ((0.2, 2.2, 0.2), (0.9, 1.5, 0.28), False),
+        'wrong type': ((0.2, 2.2, 0.2), '0.9, 1.5, 0.28', False),
+        'swapped': ((0.2, 2.2, 0.2), (2.2, 0.2, -0.2), True),
+        'swapped no step': ((0.2, 2.2), (2.2, 0.2), True),
+        }
+
+    @parametrize('ini_vals,other,expect', is_equivalent.values(),
+                 ids=is_equivalent)
+    def test_is_equivalent(self, ini_vals, other, expect):
+        """Check correct identification of equivalence."""
+        energy_range = self._class(*ini_vals)
+        equal = energy_range.is_equivalent(other)
+        assert equal is expect
+
 
 class TestTheoEnergies(TestEnergyRange):
     """Tests for the TheoEnergies subclass of EnergyRange."""

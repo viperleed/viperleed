@@ -1634,7 +1634,7 @@ class ParameterInterpreter:
             raise ParameterValueError(param, message=str(exc)) from None
 
         # Notify in case start was adjusted to fit step
-        if self.rpars.THEO_ENERGIES != theo_energies:
+        if not self.rpars.THEO_ENERGIES.is_equivalent(theo_energies):
             _LOGGER.info(
                 f'{param} parameter: (Eto - Efrom) % Estep != 0, Efrom '
                 f'was corrected to {self.rpars.THEO_ENERGIES.start}'
