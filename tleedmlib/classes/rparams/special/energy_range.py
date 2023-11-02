@@ -187,7 +187,7 @@ class EnergyRange(SpecialParameter):
         # class only swaps the bound values but never adjusts them
         try:
             range_other = EnergyRange(*other)
-        except (ValueError, TypeError) as exc:
+        except (ValueError, TypeError):
             return False
         return self == range_other
 
@@ -358,11 +358,21 @@ class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
         # We should not mess with the start/stop till we know all.
         if self.is_adjusted:
             return
+
+        # Make sure that adjusting does not un-fix a fixed range
+        was_fixed = self.is_fixed
+
         # Exact floor/ceil comes from the 'exact' solution using
         # Decimal in https://stackoverflow.com/questions/28425705/
         start, stop, step = (Decimal(str(v)) for v in self)
         self.start = float(floor(start / step) * step)
         self.stop = float(ceil(stop / step) * step)
+
+        if was_fixed and not self.is_fixed:
+            raise RuntimeError(
+                f'{step=:s} cannot be used to fix IV_SHIFT_RANGE to '
+                f'{start}: {start} is not an integer multiple of {step}'
+                )
 
     @classmethod
     def fixed(cls, fixed_value):

@@ -703,9 +703,17 @@ class ParameterInterpreter:
 
         try:
             iv_range = IVShiftRange(*energies)
-        except ValueError as exc:  # No TypeError, as all are floats
+        except (ValueError, RuntimeError) as exc:
+            # RuntimeError: was fixed, and we tried to unfix it
             self.rpars.setHaltingLevel(1)
             raise ParameterValueError(param, message=str(exc)) from exc
+
+        # Make sure that the user gave us a reasonable
+        # step. Inform them if we had to change stuff
+        if iv_range.defined and not iv_range.is_equivalent(energies):
+            _LOGGER.info(f'IV_SHIFT_RANGE bounds were not integer multiples '
+                         f'of {iv_range.step}. Bounds have been adjusted to '
+                         f'{iv_range.min} {iv_range.max}.')
 
         # Interpret underscores as defaults
         iv_range.set_undefined_values(self.rpars.get_default(param))

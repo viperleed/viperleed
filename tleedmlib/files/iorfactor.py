@@ -290,7 +290,16 @@ def _prepare_iv_shift_range(rpars, experiment, for_error):
         # fiddling with the user input. See also discussion at
         # viperleed/commit/d4626116f11fb0bf9bef6c228413047a7207d441
         step = min(rpars.THEO_ENERGIES.step, experiment.step)
-        rpars.IV_SHIFT_RANGE.set_undefined_step(step)
+        try:
+            rpars.IV_SHIFT_RANGE.set_undefined_step(step)
+        except RuntimeError:  # Was fixed and we're trying to unfix it
+            start = rpars.IV_SHIFT_RANGE.min
+            raise RfactorError(
+                f'Cannot fix IV_SHIFT_RANGE to {start}. The automatic step '
+                f'from experiment and theory ({step} eV) is inappropriate: '
+                f'{start} must be an integer  multiple of {step=}. Provide '
+                'an explicit step by setting IV_SHIFT_RANGE'
+                ) from None
         return rpars.IV_SHIFT_RANGE
 
     # In the for_error case, always make sure to
@@ -301,15 +310,15 @@ def _prepare_iv_shift_range(rpars, experiment, for_error):
             'no step defined. Did you forget to run a normal R-factor first?'
             )
     iv_shift = rpars.IV_SHIFT_RANGE.fixed(rpars.best_v0r)
-    iv_shift.set_undefined_step(rpars.IV_SHIFT_RANGE.step)
-
-    # Check that we did not change the iv_shift bounds. If
-    # we did, best_v0r is for the wrong interpolation step
-    if not iv_shift.is_fixed:
+    try:
+        iv_shift.set_undefined_step(rpars.IV_SHIFT_RANGE.step)
+    except RuntimeError as exc:
+        # We have tried to unfix a fixed range: best_v0r
+        # is for the wrong interpolation step
         raise RfactorError(f'{rpars.best_v0r=} is inconsistent with the '
                            f'interpolation step ({iv_shift.step} eV). Did '
                            'you change the step of rpars.IV_SHIFT_RANGE '
-                           'since the last R-factor calculation?')
+                           'since the last R-factor calculation?') from exc
     return iv_shift
 
 
