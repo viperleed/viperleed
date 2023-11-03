@@ -470,6 +470,10 @@ class TestIVShiftRange(TestEnergyRange):
         # And some more unsorted cases
         'neg step no bound': ((3, NO_VALUE, -1), (3, NO_VALUE, -1)),
         }
+    invalid = {
+        **TestEnergyRange.invalid,
+        'unfix': ((1.27, 1.27, 0.05), RuntimeError),
+        }
 
     # NB: the next one only has modified cases, nothing new. It
     # does not need any re-parametrization
@@ -528,6 +532,12 @@ class TestIVShiftRange(TestEnergyRange):
     def test_min_max(self, name, make_range):
         """Check min and max."""
         super().test_min_max(name, make_range)
+
+    # --------------------------   invalid   --------------------------
+    @parametrize('value,exc', invalid.values(), ids=invalid)
+    def test_from_value_invalid(self, value, exc):
+        """Check complaints when created from an invalid input."""
+        super().test_from_value_invalid(value, exc)
 
     # ----------------------   NEW or MODIFIED   ----------------------
     def test_fixed(self):

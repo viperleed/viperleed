@@ -370,7 +370,7 @@ class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
 
         if was_fixed and not self.is_fixed:
             raise RuntimeError(
-                f'{step=:s} cannot be used to fix IV_SHIFT_RANGE to '
+                f'{step=!s} cannot be used to fix IV_SHIFT_RANGE to '
                 f'{start}: {start} is not an integer multiple of {step}'
                 )
 
