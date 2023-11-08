@@ -969,7 +969,8 @@ void setVoltageWaitAndTrigger(){
         If we receive data, but it isn't exactly the amount
         we were expecting to get
     STATE_ERROR : ERROR_NEVER_CALIBRATED
-        If one of the ADC channels used was not calibrated
+        If the ADCs should be triggered for measurements but
+        one of the ADC channels to be used was not calibrated
     STATE_SET_VOLTAGE (stays)
         While waiting for data from the PC, and until the
         voltage output can be considered stable
