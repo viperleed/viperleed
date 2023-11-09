@@ -630,6 +630,7 @@ C  Broadcast input data to other processes
       CALL MPI_BCAST(WHICHR,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
       CALL MPI_BCAST(DMISCH,1,MPI_REAL,0,MPI_COMM_WORLD, IERR)
       CALL MPI_BCAST(MAXGEN,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
+      CALL MPI_BCAST(INIT,1,MPI_INTEGER,0,MPI_COMM_WORLD, IERR)
 
 !  initialize random function
 !  AMI: changed to do this in Fortran directly, rather than C

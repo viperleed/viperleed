@@ -514,20 +514,6 @@ C  initialize population here (may change in readsc)
          PAROLD(IPARAM,IPOP)=1
  1849    PARIND(IPARAM,IPOP)=1
 
-!  initialize random function 
-!  AMI: changed to do this in Fortran directly, rather than C
-
-
-      ! seed random number generator
-      if (INIT == 0) then
-            call random_seed()
-      else
-            call random_seed(size=seed_size) ! set seed size (= number of random numbers) to 1
-            allocate(seed(seed_size)) ! allocate size = 1
-            seed = INIT
-            call random_seed(put=seed)
-      end if
-
 
 C Modul 1: READIN INFORMATION FOR rfactor determination from WEXPEL,
 C          such as beam grouping, energy ranges etc.
@@ -569,6 +555,22 @@ C Modul 4: Readin control information for search algorithm
 !     Allocate WSK, as by now we have the correct maximum number of
 !     items NWSK from the contents of VARST, which was filled in READSC
       allocate(WSK(NWSK))
+
+!  initialize random function
+!  @amimre: changed to do this in Fortran directly, rather than C
+!  @michele-riva (2023-11-09)
+!      Moved after READSC rather than before READRF as INIT is read
+!      from file in READSC and is uninitialized otherwise
+
+      ! seed random number generator
+      if (INIT == 0) then
+            call random_seed()
+      else
+            call random_seed(size=seed_size) ! set seed size (= number of random numbers) to 1
+            allocate(seed(seed_size)) ! allocate size = 1
+            seed = INIT
+            call random_seed(put=seed)
+      end if
 
 C  initialize variables for HASHTAB
 
