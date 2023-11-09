@@ -1,8 +1,8 @@
-C  Tensor LEED subroutines for optimization algorithm 
+C  Tensor LEED subroutines for optimization algorithm
 C  v1.7, VB 13.04.00 modified wrt field limitations by LH 26.03.21
 C  for use with search.f v1.7
 C
-C  as described in 
+C  as described in
 C
 C  V. Blum, K. Heinz, submitted to Comp. Phys. Comm. (2000).
 C
@@ -12,7 +12,7 @@ C  Welcome to the Erlangen Tensor LEED program package. Permission is granted
 C  to use these programs freely, and to modify them as you may find appropriate.
 C  However, we cannot take any responsibility for possible bugs or other
 C  limitations you may encounter. If you find a bug or worthwhile improvement,
-C  please notify us at 
+C  please notify us at
 C
 C                       tleed@fkp.physik.uni-erlangen.de
 C
@@ -20,7 +20,7 @@ C  so we can make the updated code available to everyone. Likewise, in re-
 C  distributing the code please refer back to us first to ensure the latest version
 C  of the package is passed on.
 C
-C  Allocation error in Subroutine RINTAV removed via introduction 
+C  Allocation error in Subroutine RINTAV removed via introduction
 C  of additional fields ATAV and PQ1.        Oct. 2018 L. Hammer
 C
 C**********************************************************************************
@@ -76,7 +76,7 @@ CVB
       DIMENSION RPE(NBED),EE(NBED,NDATA),EET(NBED)
       DIMENSION YE(NBED,NDATA)
       REAL ARM(2),ARPEM(2),ERANGM(2),RAZZM(2),RANNM(2),RAVPM(2)
-      REAL XRPEM(2)                                                    
+      REAL XRPEM(2)
 
 CVB  for R2:
 
@@ -106,19 +106,19 @@ C  PERFORM DOMAIN-AVERAGING
       CALL RINTAV(ATSMK,NSS,NBTD,NETI,PQ,PQAV,KAV,SYM,NBT,ESMK,IPR,ATAV)
 
 
-C  CHECK FOR TOO HIGH THEOR. INTENS.             
-      DO 28 IB=1,NBT                             
+C  CHECK FOR TOO HIGH THEOR. INTENS.
+      DO 28 IB=1,NBT
       CALL MAXINT(ATAV,NSS,NBTD,IB,NETI,AM,NDATT)
-     
-       IF (AM.LE.1.) GO TO 28                     
-       WRITE(6,29)IB,AM                           
+
+       IF (AM.LE.1.) GO TO 28
+       WRITE(6,29)IB,AM
 29    FORMAT(1H ,///,29H MAX. INTENS. IN THEOR. BEAM ,1I5,12H IS SUSPECT
      1(,1E13.5,29H)- ****** STOP PROGRAM ******)
 
       write(0,29)IB,AM
 
-      STOP                                      
-28    CONTINUE                                  
+      STOP
+28    CONTINUE
 
 C Initialize some values
 
@@ -134,7 +134,7 @@ C  INTERPOLATE THEOR. DATA ONTO WORKING GRID
 
       CALL INTPOL(AT,1,NBTD,NET,1,NBT,ET,EINCR,IPR,XPL,YPL)
 
-CVB   
+CVB
 
       IF (WHICHR.eq.1) THEN
 
@@ -382,7 +382,7 @@ CVB
 
       STY2=TSTY2(IBT)-SSY2-SUY2
 
-CVB   
+CVB
       END IF
 CVB
 
@@ -432,7 +432,7 @@ C  if beamgroup is valid, i.e 1 or 2
 
 CVB  for R2:
 
-         AR2M(KMIT)=AR2M(KMIT)+WB(IBE)*EET(IBE)*R2(IBE)         
+         AR2M(KMIT)=AR2M(KMIT)+WB(IBE)*EET(IBE)*R2(IBE)
 
 CVB
 
@@ -440,7 +440,7 @@ CVB
          RAZZM(KMIT)=RAZZM(KMIT)+SY2*WB(IBE)                            260187
          RANNM(KMIT)=RANNM(KMIT)+SEY2*WB(IBE)+STY2*WB(IBE)              260187
 
-      ENDIF        
+      ENDIF
 
 
       ERANG=ERANG+WB(IBE)*EET(IBE)
@@ -476,7 +476,7 @@ C  now do all averaging procedures for beam groups
         ARM(I)=5.
         AR2M(I)=5.
 
-        ELSE 
+        ELSE
 
 CVB  for R2:
 
@@ -499,7 +499,7 @@ CVB
 
         RAVP=RAZZ/RANN
 
-CVB   
+CVB
       ELSE
 
         RAVP = 5.0
@@ -560,7 +560,7 @@ C  use variable AR as current rfactor
       END IF
 
 CVB Now use AR for search and store all other relevant information
-C  accordingly (i.e. total, integer and half order rfactor and 
+C  accordingly (i.e. total, integer and half order rfactor and
 C  inner potential)
 
       IF (AR.GE.BARAV) GO TO 145
@@ -568,7 +568,7 @@ C  inner potential)
         BARAV=AR
         BV0(IPOP)=-V0RR+V0  ! TODO: avoid use of IPOP by writing to some fixed variable, pass BV0(IPOP) from search
 
-        IF (WHICHR.eq.1) THEN  
+        IF (WHICHR.eq.1) THEN
 
           BRGES(IPOP)=RAVP
           BRINS(IPOP)=RAVPM(1)
@@ -619,7 +619,7 @@ C      write(4,*) NPS,NPRMK,PNUM
       DO 1856 IPOP=1,NPS ! populations
       !  PNUM is total number of parameters (including conc steps), must be equal MNPRMK
       DO 1855 IPARAM=1,PNUM
-      
+
 C If parameter is dependent on another, we can skip everything
 
        IF(PARDEP(IPARAM).ne.0) THEN
@@ -676,13 +676,13 @@ C  VARST is array containing number of grid points for each parameter
 
 C  MKSUM is now used to normalise distribution to an integral value of 1.
 C  Instead, the gaussian distribution is now normalised to an integral value
-C  of 1.-background*VARST(IPARAM), where background is a constant 
-C  probability that is added to the gaussian probability of each parameter 
+C  of 1.-background*VARST(IPARAM), where background is a constant
+C  probability that is added to the gaussian probability of each parameter
 C  grid point.
 
       BACKGROUND = 0.005
 
-      NormG = 1. - BACKGROUND * REAL(VARST(IPARAM)) 
+      NormG = 1. - BACKGROUND * REAL(VARST(IPARAM))
       IF (NormG.lt.0.) THEN
         NormG = 0.
         BACKGROUND = 1/REAL(VARST(IPARAM))
@@ -732,7 +732,7 @@ C      write(6,*) "random",FMKRN," between",MKHELP1," ",MKHELP2,"?"             
 
       ! The random() function from the C standard library that was previously used
       ! produces an integer in the interval [0, RAND_MAX].
-      ! However, it seems that RAND_MAX is not clearly defined; the below 
+      ! However, it seems that RAND_MAX is not clearly defined; the below
       ! value is 2^31-1 as mentioned in the C documentation.
       integer, parameter :: RAND_MAX = 2147483647
       real(8) rand_in
@@ -878,7 +878,7 @@ C
       WRITE(4,'(a52,5000(a,2I1,a))')
      .  text,
      .  (
-     .    
+     .
      .      (
      .        (
      .          'P',IPLACE,IFILE,','
@@ -914,7 +914,7 @@ cas     +IFILE=1,NFIL(IPLACE)),('C',IPLACE,IPLACE,',')),IPLACE=1,MNPLACES)
         if (IDOM .eq. 1) then
 
           WRITE(4,5559) IPOP,'|| ',BRGES(IPOP),' | ',BRINS(IPOP),
-     .    ' | ',BRHAS(IPOP),' | ',BV0(IPOP),'|| ', 
+     .    ' | ',BRHAS(IPOP),' | ',BV0(IPOP),'|| ',
      .    nint(PMISCH(IDOM,IPOP)*DMISCH*100),
      .    '% | ',
      .    (PARIND(IPARAM,IPOP),' ',IPARAM=1,NPRAS(IDOM),1)
@@ -942,19 +942,19 @@ cas     +IFILE=1,NFIL(IPLACE)),('C',IPLACE,IPLACE,',')),IPLACE=1,MNPLACES)
 
         IF (WHICHG.eq.1) THEN
 
-          write(4,'(A34,I7,A4,F10.8)') 
+          write(4,'(A34,I7,A4,F10.8)')
      +    'Average RPe-INTEGER of GENERATION ',
      +    IGEN,' :  ',AVERNEW
 
         ELSE IF (WHICHG.eq.2) THEN
 
-          write(4,'(A34,I7,A4,F10.8)') 
+          write(4,'(A34,I7,A4,F10.8)')
      +    'Average RPe-FRACTIONALS of GENERATION ',
      +    IGEN,' :  ',AVERNEW
 
         ELSE
 
-          write(4,'(A26,I7,A4,F10.8)') 
+          write(4,'(A26,I7,A4,F10.8)')
      +    'Average RPe of GENERATION ',
      +    IGEN,' :  ',AVERNEW
 
@@ -964,19 +964,19 @@ cas     +IFILE=1,NFIL(IPLACE)),('C',IPLACE,IPLACE,',')),IPLACE=1,MNPLACES)
 
         IF (WHICHG.eq.1) THEN
 
-          write(4,'(A33,I7,A4,F10.8)') 
+          write(4,'(A33,I7,A4,F10.8)')
      +    'Average R2-INTEGER of GENERATION ',
      +    IGEN,' :  ',AVERNEW
 
         ELSE IF (WHICHG.eq.2) THEN
 
-          write(4,'(A33,I7,A4,F10.8)') 
+          write(4,'(A33,I7,A4,F10.8)')
      +    'Average R2-FRACTIONALS of GENERATION ',
      +    IGEN,' :  ',AVERNEW
 
         ELSE
 
-          write(4,'(A25,I7,A4,F10.8)') 
+          write(4,'(A25,I7,A4,F10.8)')
      +    'Average R2 of GENERATION ',
      +    IGEN,' :  ',AVERNEW
 
@@ -991,7 +991,7 @@ cas     +IFILE=1,NFIL(IPLACE)),('C',IPLACE,IPLACE,',')),IPLACE=1,MNPLACES)
       END
 C
 C ================================================================================
-C 
+C
       SUBROUTINE READSC(NDOM,NPLACES,NFILES,INFILE,NSURF,
      +                  IFORM,PNUM,VARST,NPRMK,NPRAS,PARTYP,NPS,
      +                  PARIND,STAFLA,OUTINT,FILREL,WHICHG,WHICHR,
@@ -1118,12 +1118,12 @@ C --- Schleife ueber alle Domaenen
             READ(21,'(a100)') text
             READ(21,'(A15)') INFILE(IDOM,IPLACE,IFILE)
             READ(21,'(I5)')  IFORM(IDOM,IPLACE,IFILE)
-            READ(21,'(I5)')  PARTYP(IDOM,IPLACE,IFILE)      
+            READ(21,'(I5)')  PARTYP(IDOM,IPLACE,IFILE)
 
             WRITE(6,'(a100)') text
             WRITE(6,'(A15)') INFILE(IDOM,IPLACE,IFILE)
             WRITE(6,'(I5)')  IFORM(IDOM,IPLACE,IFILE)
-            WRITE(6,'(I5)')  PARTYP(IDOM,IPLACE,IFILE)      
+            WRITE(6,'(I5)')  PARTYP(IDOM,IPLACE,IFILE)
 
             DO 1369 IPARAM = 1, PARTYP(IDOM,IPLACE,IFILE)
               READ(21,'(2I5)') VARST(PNUM + IPARAM)
@@ -1220,10 +1220,10 @@ C  Declaration of global variables
       INTEGER ISMOTH
       INTEGER NDATA
       INTEGER NBED
-      INTEGER NBE           
+      INTEGER NBE
       INTEGER NEE
       DIMENSION NEE(NBED)
-      INTEGER NBEA 
+      INTEGER NBEA
       DIMENSION NBEA(NBED)
       DIMENSION BENAME(5,NBED)
       REAL EINCR
@@ -1247,7 +1247,7 @@ CVB
       REAL XPL,YPL
       DIMENSION XPL(NDATA),YPL(1,NDATA)
       REAL AEP
-      DIMENSION AEP(NBED,NDATA)        
+      DIMENSION AEP(NBED,NDATA)
       INTEGER NNN(NDATA)
 
 C AVERAGE DATA FROM DIFFERENT EXPERIMENTS AND ORDER BY INCREASING ENERGY
@@ -1289,7 +1289,7 @@ CVB  for R2 :
 CVB  for RPe:
 
       TSEY2(IB)=0.
-      
+
       CALL VARSUM(YE,AE,AE,AE,1,1,NBED,1,1,1,IB,1,1,IE2,0,EINCR,
      10.,0.,2,TSEY2(IB),YPL)
 
@@ -1417,7 +1417,7 @@ C  begin readin from stdin
 5     FORMAT(33H0AVERAGING SCHEME OF THEOR. BEAMS,400(25I4,/))
 
 C Values for averaging of beams in integer and half order beams
-      READ(12,*) 
+      READ(12,*)
       READ(12,'(25I4)') (MITTEL(I),I=1,NBED)
 
 C beam order IBP, beam weights WR
@@ -1856,7 +1856,7 @@ C     LEVEL 2, A1,A2,B1,B2
 CVB  check whether integration limits are equal
 
       IF (IE1.eq.IE2) THEN
-    
+
         S=0.
 
         RETURN
@@ -1946,7 +1946,7 @@ C  LEED PROGRAM (THIS IS NECESSARY FOR THE CASE WHEN SYMMETRY HAS
 C  HAS BEEN EXPLOITED, OTHERWISE ALL WEIGHTS ARE 1.)
       SUBROUTINE RINTAV(AT,NS,NB,NE,PQ,PQ1,KAV,SYM,LAVM,ES,NPRIN,ATAV)  281279
       DIMENSION AT(NS,NB,NE),ATAV(NS,NB,NE),KAV(NB),PQ(2,NB),PQ1(2,NB)
-	  DIMENSION ES(NE)
+      DIMENSION ES(NE)
       INTEGER SYM(NB)                                                    281279
 C  FOR CDC ONLY *****************************
 C     LEVEL 2, AT
@@ -2086,7 +2086,7 @@ C---------------------------------------------------------------------
 ! AMI March 2022: keep for now probably
 !
 !
-C  SUBROUTINE READT READS IN THEORETICAL IV-CURVES TO BE USED AS 
+C  SUBROUTINE READT READS IN THEORETICAL IV-CURVES TO BE USED AS
 C  PSEUDOEXPERIMENT
 C  AUTHOR: R.DOELL, 06.11.92
       SUBROUTINE READT(AE,EE,NBED,NEE,NBEA,NDATA,BENAME,IPR,MAXI,IOFF)
@@ -2133,17 +2133,17 @@ C BEGIN READ IN PART
           WRITE(7,'(A33)') '*********************************'
           STOP 'ERROR 1 IN PSEUDOEXPERIMENT'
       ENDIF
-      DO 210 IB=1,NBED   
+      DO 210 IB=1,NBED
          READ(12,101) INN,(BENAME(I,IB),I=1,5)
          write(6,101) INN,(BENAME(I,IB),I=1,5)
   210 CONTINUE
 C
 C  PRESET ALL ARRAYS
-      DO 220 K=1,NBED   
+      DO 220 K=1,NBED
             MAXI(K) = 1.E-30
             NEE(K) = 0
             IOFF(K) = 0
-      DO 220 J=1,NDATA    
+      DO 220 J=1,NDATA
             AE(K,J) = 0.
   220 CONTINUE
 C
@@ -2187,7 +2187,7 @@ C  Subroutine HeadDoc writes header for output file
       IF (WHICHR.eq.1) THEN
 
         IF (WHICHG.eq.1) THEN
-        
+
           WRITE(4,*) "R-factor minimum search using",
      &               " integer beam RPe for optimization."
 
@@ -2206,7 +2206,7 @@ C  Subroutine HeadDoc writes header for output file
       ELSE IF (WHICHR.eq.2) THEN
 
         IF (WHICHG.eq.1) THEN
-        
+
           WRITE(4,*) "R-factor minimum search using ",
      &               "integer beam R2 for optimization."
 
@@ -2227,7 +2227,7 @@ C  Subroutine HeadDoc writes header for output file
       WRITE (4,*)
 
       RETURN
-    
+
       END
 
 **************************************************************************
@@ -2298,7 +2298,7 @@ C  number of energies in delta amp files
 
       INTEGER DATTNO
 
-C  XIST, DELWV, CUNDVB, CDVB are auxiliary arrays only 
+C  XIST, DELWV, CUNDVB, CDVB are auxiliary arrays only
 C  to provide variable boundaries for unformatted readin
 
       COMPLEX XIST,DELWV
@@ -2363,7 +2363,7 @@ C  Read in headers of all files
 
           END IF
 
-C  Now store data or check whether files are ok          
+C  Now store data or check whether files are ok
 
           IF (CNTFIL.eq.11) THEN
 
@@ -2374,7 +2374,7 @@ C  first file
 
 C  NT0 is a known quantity here so it must be kept!
 
-            IF (INT0.ne.NT0) THEN 
+            IF (INT0.ne.NT0) THEN
 
               write (8,*) 'Number of theoretical beams incorrect in',
      +                    INFILE(IDOM,IPLACE,IFILE),'!'
@@ -2384,8 +2384,8 @@ C  NT0 is a known quantity here so it must be kept!
 
             DO 2224 I=1,2
 
-              RAR1(I) = TRAR1(I) 
-              RAR2(I) = TRAR2(I) 
+              RAR1(I) = TRAR1(I)
+              RAR2(I) = TRAR2(I)
 
  2224       CONTINUE
 
@@ -2399,7 +2399,7 @@ C  NT0 is a known quantity here so it must be kept!
               CHECK = CHECK + ABS(RAR1(I) - TRAR1(I))
               CHECK = CHECK + ABS(RAR2(I) - TRAR2(I))
 
- 2225       CONTINUE   
+ 2225       CONTINUE
 
             IF ((CHECK.gt.1.0e-09).or.(INT0.ne.NT0)) THEN
 
@@ -2423,7 +2423,7 @@ C  note AID is not read correctly!!
 
           ELSE
 
-            READ(CNTFIL,'(10F10.5)',ERR=100) 
+            READ(CNTFIL,'(10F10.5)',ERR=100)
      +      ((PQFEX(I,J), I=1,2), J=1,NT0)
 
             GO TO 110
@@ -2432,8 +2432,8 @@ C  note AID is not read correctly!!
  100        write(0,*) "Error reading v1.7 style output beam list",
      +                 " from delta amplitude file. Trying pre-v1.7"
             write(0,*) "format instead ..."
-            
-            READ(CNTFIL,'(10F7.4)') 
+
+            READ(CNTFIL,'(10F7.4)')
      +      ((PQFEX(I,J), I=1,2), J=1,NT0)
             ! AMI: this is a warning message and is sent to stderr (0)
             write(0,*) "Read may have been successful. Check",
@@ -2456,7 +2456,7 @@ C  note AID is not read correctly!!
 
 C  Now read in delta amplitudes in energy range EMIN, EMAX from file
 C  in repeat-until-EOF loop 2226 - IDATT counts energy
-C  Unfortunately, array DELWV must be kept for proper reading of 
+C  Unfortunately, array DELWV must be kept for proper reading of
 C  unformatted files
 
           IDATT=0
@@ -2480,12 +2480,12 @@ C  unformatted files
 
             ELSE
 
-              READ(CNTFIL,'(6E13.7)',ERR=2227,END=2227) 
+              READ(CNTFIL,'(6E13.7)',ERR=2227,END=2227)
      +             EMK(IDATT),VPI(IDATT),VV(IDATT)
 
               READ(CNTFIL,'(6E13.7)') (XISTMK(IDOM,IDATT,I), I=1,NT0)
 
-              READ(CNTFIL,'(6E13.7)') 
+              READ(CNTFIL,'(6E13.7)')
      +             ((DELMK(IDATT,I,J,IDOM,IPLACE,IFILE),
      +             J=1,NT0), I=1,NCSTEP)
 
@@ -2537,7 +2537,7 @@ C  check validity of read energy
 
               END IF
 
-            END IF              
+            END IF
 
 C  Continue energy loop until last energy has been read in
 
@@ -2546,7 +2546,7 @@ C  Continue energy loop until last energy has been read in
 C  jump here to leave energy loop
 
  2227     CONTINUE
-           
+
 C  Save total number of energies in DATTNO
 C  last valid step (the one before exiting loop) must be saved
 
@@ -2579,7 +2579,7 @@ C  Subroutine ReadCD performs unformatted readin of CDISP etc.
 
       REAL PQFEX(NT0),AID(NCSTEP)
 
-      REAL CUNDISP(NNATOMS,3,NDOM,MNPLACES,NFILES)         
+      REAL CUNDISP(NNATOMS,3,NDOM,MNPLACES,NFILES)
       REAL CDISP(NSTEP,NNATOMS,3,NDOM,MNPLACES,NFILES)
 
       REAL CUNDVB(NATOMS,3),CDVB(NCSTEP,NATOMS,3)
@@ -2628,7 +2628,7 @@ C  to allow for variable arrays cause f77 cannot handle anything intelligently.
       READ(CNTFIL,ERR=2240,END=2240) E,VPI,VV,XIST,DELWV
 
       DO 2250 I=1,NT0
-        
+
         XISTMK(IDOM,IDATT,I) = XIST(I)
 
         DO 2250 J=1,NCSTEP
@@ -2713,7 +2713,7 @@ C  resulting intensities ATSAS for each domain
 
 C  local variables
 
-C  outermost displacement 
+C  outermost displacement
 
       REAL CXDISP,XDISP
 
@@ -2739,10 +2739,10 @@ C  delta amplitude being calculated, variables for intensity calc
       REAL AmpAbs
 
 
-C  Calculate outermost displacement CXDISP of any surface atom first to later 
+C  Calculate outermost displacement CXDISP of any surface atom first to later
 C  correct propagator between top layer and onset of damping above (ASE).
 C  Will only work properly for flat surface in precalc since only relative
-C  displacements can be considered! To avoid this, quantity CUNDISP must be used 
+C  displacements can be considered! To avoid this, quantity CUNDISP must be used
 C  in computation of delta amplitudes.
 
 C  NATOMS can no longer be used as it once was in superpos!
@@ -2759,7 +2759,7 @@ C  NATOMS can no longer be used as it once was in superpos!
 
             IAct = IFNUM(IDOM, IPLACE, IFILE)
 
-            XDISP = XDISP + 
+            XDISP = XDISP +
      .              CONC(IDOM, NPARC(IDOM, IPLACE), IPLACE, IFILE) *
      .              CDISP(IAct, 1, 1, IDOM, IPLACE, IFILE)
 
@@ -2809,7 +2809,7 @@ C  OVERLAYER PROPAGATOR
 
         DO 550 IBEAM=1,NT0
 
-          AK2 = BK2 + PQFEX(1,IBEAM)*RAR1(1) 
+          AK2 = BK2 + PQFEX(1,IBEAM)*RAR1(1)
      +               + PQFEX(2,IBEAM)*RAR2(1)
 
 
@@ -2837,7 +2837,7 @@ C  to each amplitude.
 
               IAct = IFNUM(IDOM, IPLACE, IFILE)
 
-              DelAct = DelAct + 
+              DelAct = DelAct +
      .                 DELMK(IDATT, IAct, IBEAM, IDOM, IPLACE, IFILE)*
      .                 CONC(IDOM, NPARC(IDOM, IPLACE), IPLACE, IFILE)
 
@@ -2870,7 +2870,7 @@ C  cutoff for maximum intensity - caution if occurs!!
             ELSE
 
               RPRE = CABS(PRE)
-              ATSAS(IDOM, IBEAM, IDATT) = 
+              ATSAS(IDOM, IBEAM, IDATT) =
      .             AmpAbs*AmpAbs * RPRE*RPRE * A/C
             END IF
 
@@ -2888,7 +2888,7 @@ c  next beam
 
 c next energy
 
- 3333 CONTINUE  
+ 3333 CONTINUE
 
       RETURN
 
@@ -2904,10 +2904,10 @@ C  of the current generation.
 
 C  The width is determined for each 'individual' of current generation by
 C  comparison with the previous results, yielding an average sensitivity
-C  of each parameter wrt the r-factor which is represented in WIDT. 
+C  of each parameter wrt the r-factor which is represented in WIDT.
 C  This average is taken by determining an average change in r-factor for
 C  each parameter, weighting the change in each parameter with the sum
-C  of changes in all parameters, for each 'individual'. 
+C  of changes in all parameters, for each 'individual'.
 
       Subroutine GetWid(WIDT,PARIND,PAROLD,RPEIND,RPEOLD,NormInd,
      +                  NPS,NPRMK)
@@ -2945,7 +2945,7 @@ C  Sens is sensitivity of current parameter in current population
 
 
 C  NormInd is sum over displacements between this and last generation for
-C  each individual 
+C  each individual
 
       DO 40 IPop = 1,NPS,1
 
@@ -2981,8 +2981,8 @@ C  'individual'
 
             SumSteps = SumSteps + DelPar
 
-            Sens = ( ABS(RPEIND(IPop) - RPEOLD(Ipop))) 
-            Sens = Sens * REAL(DelPar) / REAL(NormInd(IPop)) 
+            Sens = ( ABS(RPEIND(IPop) - RPEOLD(Ipop)))
+            Sens = Sens * REAL(DelPar) / REAL(NormInd(IPop))
 
 
             SumSens = SumSens + Sens
@@ -3099,12 +3099,12 @@ c      END IF
 ! AMI March 2022: Need to have a closer look at this, not sure if we can keep as is              @Tobias
 !
 !
-C Subroutine GetDependency initializes the PARDEP array. For each parameter, if 
+C Subroutine GetDependency initializes the PARDEP array. For each parameter, if
 C it should always be equivalent to another parameter via the "Atom number"
-C FILREL, the PARDEP(IPARAM) will be set to the index of that parameter. For 
-C all other parameters, PARDEP will be 0, and only those parameters need to be 
+C FILREL, the PARDEP(IPARAM) will be set to the index of that parameter. For
+C all other parameters, PARDEP will be 0, and only those parameters need to be
 C calculated by SEA_RCD.
-C Added 2020-12 by F. Kraushofer; largely a copy of GetGrid that stores the 
+C Added 2020-12 by F. Kraushofer; largely a copy of GetGrid that stores the
 C information instead of having to run in every iteration of the optimization
 C loop.
 
@@ -3120,33 +3120,33 @@ C  Dimension sizes
 
 C  Global variables
 
-									
+
 C  NFIL is number of files for each place
-															 
+
 C  PARTYP is number of parameters in current file
-															   
-													
-											 
+
+
+
 C  FILREL can force different atoms to be treated equally ("atom number")
 C  PARDEP stores whether a parameter should be set to the same value as another one
-      
+
 
       INTEGER   NFIL,FILREL
       DIMENSION NFIL(NDOM,MNPLACES),FILREL(NDOM,MNPLACES)
       INTEGER   PARTYP
-											
+
       DIMENSION PARTYP(NDOM,MNPLACES,NFILES)
       INTEGER   PARDEP
       DIMENSION PARDEP(NPRMK)
-							
-														  
+
+
 
 C  local variables
 
 C  CNT1 counts parameters that have already been processed in previous files
 C  CNT2 has the same purpose when atom number is considered (for second atom)
 C  CNTPAR is another counter for parameters within a place
-							 
+
 C  OFFSET is used to skip the parameters PARIND of the first (LDOM - 1) domains;
 C  so OFFSET is equal to 0, if LDOM = 1, and equal to NPRAS(1), if LDOM = 2,
 C  and so on.
@@ -3160,7 +3160,7 @@ C  Set 0 for all
 
 C  start loop to do this for each domain
       do 201 LDOM = 1, NDOM
-      
+
 C --- first determine the value of OFFSET corresponding to the LDOM-th domain
       OFFSET = 0
       do 200 KDOM = 1, LDOM - 1
@@ -3168,7 +3168,7 @@ C --- first determine the value of OFFSET corresponding to the LDOM-th domain
  200  continue
 
 C  Check dependences
-										  
+
 
       CNT1 = OFFSET
       DO 970 IPLACE1 = 1, NPLACES(LDOM) - 1
@@ -3200,7 +3200,7 @@ C  store dependence
               DO 974 IPARAM = 1, PARTYP(LDOM, IPLACE2, IFILE)
 
                 PARDEP(CNT2+CNTPAR+IPARAM) = CNT1+CNTPAR+IPARAM
-											   
+
 
  974          CONTINUE
 
@@ -3211,7 +3211,7 @@ C  store dependence
 C  never forget concentration parameter
 
             PARDEP(CNT2+CNTPAR+1) = CNT1+CNTPAR+1
-									  
+
 
           END IF
 
@@ -3236,7 +3236,7 @@ C  domain loop ends
  201  continue
 
       RETURN
-   
+
       END
 
 ********************************************************************************
@@ -3269,11 +3269,11 @@ C  PARIND are current parameter values as determined by Sea_RCD
 C  VARST is number of grid points for each parameter
 C  NPARC is current concentration step number
 C  FILREL can force different atoms to be treated equally ("atom number")
-C  PARDEP stores whether a parameter should be set to the same value as 
+C  PARDEP stores whether a parameter should be set to the same value as
 C  another one (see subroutine GetDependency)
 
       INTEGER   IPOP
-      
+
       INTEGER   NFIL
       DIMENSION NFIL(NDOM,MNPLACES)
       INTEGER   IFNUM,PARTYP
@@ -3348,7 +3348,7 @@ C  the concentration step number
  981  CONTINUE
 
       RETURN
-   
+
       END
 
 ********************************************************************************
@@ -3400,7 +3400,7 @@ C  initialise intensity ATSMK first
  100    continue
  110  continue
 
-C  now compute actual area fractions (normalised to 1) 
+C  now compute actual area fractions (normalised to 1)
 
       PARSUM = 0
 
@@ -3419,7 +3419,7 @@ C  wenn nicht alle Parameter 0 sind, kann man ordentlich normieren,...
 
       else
 
-C  ... ansonsten wird Norm auf Dummy-Wert gesetzt; mit dieser 
+C  ... ansonsten wird Norm auf Dummy-Wert gesetzt; mit dieser
 C  Konvention wird im Falle aller Parameterwerte auf 0 die letzte
 C  Domaene spaeter automatisch auf 100 Prozent Flaechenanteil gesetzt.
 

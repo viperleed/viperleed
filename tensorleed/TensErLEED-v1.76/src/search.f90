@@ -1,8 +1,8 @@
-C  Tensor LEED optimization algorithm 
+C  Tensor LEED optimization algorithm
 C  v1.7, VB 13.04.00 modified wrt field limitations by LH 26.03.21
 C  for use with lib.search.f v1.7
 C
-C  as described in 
+C  as described in
 C
 C  V. Blum, K. Heinz, submitted to Comp. Phys. Comm. (2000).
 C
@@ -12,7 +12,7 @@ C  Welcome to the Erlangen Tensor LEED program package. Permission is granted
 C  to use these programs freely, and to modify them as you may find appropriate.
 C  However, we cannot take any responsibility for possible bugs or other
 C  limitations you may encounter. If you find a bug or worthwhile improvement,
-C  please notify us at 
+C  please notify us at
 C
 C                       tleed@fkp.physik.uni-erlangen.de
 C
@@ -35,11 +35,11 @@ C  determines the next parameter value. The slight distortion of the
 C  gaussian distribution ensures that every new parameter value can be
 C  reached from a certain starting point, despite the discrete nature
 C  of the random values used. 15.5.97
-C  V. Blum v92: handling of area fractions corrected so that now analogous 
+C  V. Blum v92: handling of area fractions corrected so that now analogous
 C  to other parameters. C source code for random routine now uses random()
-C  instead of rand(). Initialisation of random done by randominit (uses 
-C  srandom(). (cf man-pages). R-Faktor subroutine corrected so that 
-C  beam weights WB from WEXPEL are used correctly now. 21.10.97  
+C  instead of rand(). Initialisation of random done by randominit (uses
+C  srandom(). (cf man-pages). R-Faktor subroutine corrected so that
+C  beam weights WB from WEXPEL are used correctly now. 21.10.97
 C  V. Blum v100: entire run now constructed by shell script, including
 C  parameter restrictions (subroutine restrict) and r-factor control
 C  file. WEXPEL no longer in use - now up-to-date-file rf.info. Note
@@ -61,7 +61,7 @@ C  A. Imre: replaced random C funktion with Fortran intrinsic.
 
 C  Welcome stranger!
 
-C  This program searches for a global minimum of the r-factor of a given 
+C  This program searches for a global minimum of the r-factor of a given
 C  number of trial stuctures. The only algorithm implemented so far performs
 C  random sampling with a downstep constraint. The program was written by
 C  M. Kottcke.
@@ -80,14 +80,14 @@ C  for the vacancy.
 C
 C  The treatment of the surface parameter is slightly different from usual
 C  TLEED. Also, it will only work properly if the use of CUNDISP is taken
-C  up in its original form - this is currently not the case. 
+C  up in its original form - this is currently not the case.
 C
 C  Much of this program has grown from LEED and TLEED codes developped by
 C  generations of LEED scientists. At least the main program is now fully
 C  documented, and all variables have been declared. This may not seem
-C  necessary in many cases, however on the whole it improves the 
+C  necessary in many cases, however on the whole it improves the
 C  understanding of the purpose of each part greatly. Therefore please
-C  comment each change, remove old comments immediately and declare 
+C  comment each change, remove old comments immediately and declare
 C  and document each new variable in the program header immediately.
 C
 C  The generations of physicists to come in the future, boldy going where
@@ -95,7 +95,7 @@ C  no LEED analysis has gone before, will be indebted to you eternally.
 
 *************************************************************************
 
-C 
+C
 
       PROGRAM SEARCH
       use intarr_hashing
@@ -152,7 +152,7 @@ C  EMIN, EMAX are boundaries of energy range to be considered
 C  EINCR is energy increment of interpolation grid for experimental as well
 C        as theoretical data
 C  IPR controls size of output during r-factor calculation such as Y-functions etc.
-C  VI is optical potential value in eV of calculation (must be identical with 
+C  VI is optical potential value in eV of calculation (must be identical with
 C     VPI read from delta amp files which is in hartrees.)
 C  V0RR is value of inner potential used in calculation (should be identical
 C       with VV value read from delta amp files)
@@ -186,11 +186,11 @@ C  OVLG is total energy range (sum of all used experimental beams)
       DIMENSION BENAME(5,MNBED)
       INTEGER MITTEL
       DIMENSION MITTEL(MNBED)
-      
+
 C  Arrays for data to compare search results to from WEXPEL via READE or READT
 
 C  AE is array for measured experimental intensity data (or theor. comparison data
-C     if EOT=1.) 
+C     if EOT=1.)
 C  EE is array with measurement energy grid
 C  NEE is number of experimental energies in each beam
 C  NBEA contains information for averaging of experimental beams
@@ -221,7 +221,7 @@ C  TSE is integral value over exp data in R2 calculation for each beam
 C  TSE2 is integral value over (squared) exp data in R2 calculation for each beam
 C  TSEY2 is integral value over exp data in RPe calculation for each beam
 C  XPL, YPL are arrays for later use in INTPOL, EXPAV, VARSUM that
-C           must be stated globally simply to allow for variable dimensions 
+C           must be stated globally simply to allow for variable dimensions
 C           in subroutines   (cheers, f77)
 C  AEP contains 1st derivative of experimental data
 C  NNN is array for later use in EXPAV that needs variable dimensions
@@ -256,7 +256,7 @@ C  WHICHG is flag to optimize for integer, half-order or total R-factor
 C  WHICHR decides whether R2 or RPe is used for optimization
 C  VARST is array containing number of grid points for each parameter
 C  PARTYP is array containing the number of different parameters in each file
-C  OUTINT forces output of current search data to SEADOC after OUTINT generations 
+C  OUTINT forces output of current search data to SEADOC after OUTINT generations
 C         regardless of improvements made
 C  FILREL is atom number that forces two atoms to be varied together,
 C         i.e. with identical parameter choice only
@@ -286,7 +286,7 @@ C  SEANAME: name of search document file
 C  Variables used to read delta amplitude files in ReadFile
 
 C  CNTFIL is file number during readin of delta amplitudes
-C  THETA, FI are determine angle of incident beam w.r.t. surface 
+C  THETA, FI are determine angle of incident beam w.r.t. surface
 C            under consideration, in radians (not degrees!)
 C  RAR1,RAR2 are reciprocal lattice vectors of surface
 C  PQFEX is beam list
@@ -295,16 +295,16 @@ C  CDISP are displaced positions of that atom in variation
 C  AID is array that has a bright past in the history of TLEED and currently no future.
 C  EMK,EMK0 contain energy steps in hartrees for computation of intensities
 C           (EMK0 for test reasons only).
-C  ESMK contains energy steps in eV for use in r-factor calculation and can be 
+C  ESMK contains energy steps in eV for use in r-factor calculation and can be
 C       corrected for shifts of inner potential.
 C  VPI is optical potential in hartrees
 C  VV is inner potential value
 C  XISTMK is array to store amplitudes of beams for the undisplaced surface
-C  DELMK contains delta amplitudes for all displacements for all beams, files, 
+C  DELMK contains delta amplitudes for all displacements for all beams, files,
 C        and places.
 C  DATTNO is number of theoretical energies in interval [EMIN,EMAX] from WEXPEL
 C         (only these are used in calculation)
-C  DELWV,XIST are no longer used, they are simply dummy arrays for unformatted 
+C  DELWV,XIST are no longer used, they are simply dummy arrays for unformatted
 C             read-in (variable dimensions!)
 C  CUNDVB,CDVB are for unformatted read-in (variable dimensions!)
 C  quot is used for energy-dependent inner potential V0R=const+E/quot
@@ -335,14 +335,14 @@ C  quot is used for energy-dependent inner potential V0R=const+E/quot
 
 C  Variables for search procedure in main program
 
-C  RMUT is constant that normalizes width of gaussian distribution 
+C  RMUT is constant that normalizes width of gaussian distribution
 C       to a useful value
 C  AVERNEW is average search r-factor of current generation
 C  RPEIND are current r-factors that are used for optimization, for each individual
 C  WIDT is parameter for width determination of gaussian distribution determined
 C        from current and previous generation, for each parameter
 C  BV0 is optimized inner potential value
-C  BRGES is total rfactor of current population 
+C  BRGES is total rfactor of current population
 C  BRINS is the integer rfactor
 C  BRHAS is the half-order rfactor
 C  ending 'OLD' means the appropriate parameter for the previous calculation
@@ -407,14 +407,14 @@ C  NETI is number of theoretical energies, historical reasons
 C  PQ used to be theoretical beam identification - currently unused
 C     but kept for various output routines
 C  SYM used to store symmetry properties of beams but is useless in tensor LEED
-C  NET is no of points in each theoretical beam after interpolation 
+C  NET is no of points in each theoretical beam after interpolation
 C  AT are theoretical intensities after interpolation to experimental grid
 C  ET is working space containing part of energy array ESMK
 C  ATP is first derivative of theoretical intensities for each beam
 C  YT are theoretical Pendry y-functions for each beam
 C  TSTY2 is an integral over theoretical y-function
 C  ARM,ARPEM,ERANGM,RAZZM,RANNM,RAVPM,XRPEM are various r-factors
-C        and energy ranges averaged over beam groups defined by MITTEL  
+C        and energy ranges averaged over beam groups defined by MITTEL
 C  NST1, NST2 are number of data points outside theory-exp overlap
 C        for each beam
 C  R2 is obviously R2.
@@ -591,7 +591,7 @@ C  CNTFIL is current file number
      +                    CUNDISP,CDISP,AID,EMK,EMK0,ESMK,VPI,VV,
      +                    XISTMK,DELMK,DATTNO,XIST,DELWV,CUNDVB,CDVB)
 
- 2223     CONTINUE     
+ 2223     CONTINUE
 
  2222   CONTINUE
 
@@ -627,7 +627,7 @@ C   current individual number; IPARAM will mean current parameter
 
       DO 7618 IPARAM=1,MNPRMK
  7618 WIDT(IPARAM)=1.
-      
+
       AVERNEW=4.
 
 C  intialize PARDEP
@@ -648,7 +648,7 @@ C  Determine parameters of new population
 
       END IF
 
-C  initialize PMOLD values prior to first generation so that restart runs can be 
+C  initialize PMOLD values prior to first generation so that restart runs can be
 C  successful
 
       DO IPOP=1,MPS
@@ -687,9 +687,9 @@ C START NEW GENERATION
 
 C  increment generation number
 
-      IGEN=IGEN+1 
+      IGEN=IGEN+1
 
-C  close and reopen control file for new generation 
+C  close and reopen control file for new generation
 
       close(8,STATUS='keep')
 
@@ -749,7 +749,7 @@ C  Some collisions won't slow things down too much -> reduce size again by facto
         call HASHTAB%init(MIN((MAXGEN-IGEN)*MPS/(5*NUMTASK),1000000))
        ELSE
         RPEIND(IPOP) = HASHTAB%get(NPRMK, PARIND(:,IPOP))
-C        write(6,'("Found stored R=",F7.4,", old R=",F7.4)') 
+C        write(6,'("Found stored R=",F7.4,", old R=",F7.4)')
 C     +             RPEIND(IPOP),RPEOLD(IPOP)
 
         IF (RPEIND(IPOP).EQ.0.0 ) THEN
@@ -977,7 +977,6 @@ C  Determine parameters of next population
 
         CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
      +               WSK,WIDT,RMUT,NPAR,PARDEP)
-
         goto 1492
 
       end if

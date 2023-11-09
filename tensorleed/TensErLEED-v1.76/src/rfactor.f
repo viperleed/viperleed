@@ -1,7 +1,7 @@
 C  VAN HOVE R-FACTOR PROGRAM  /  MODIFIED BY G. BESOLD (JAN. '82)
 C                                ADDITION       (JAN.  '87)              260187
 C  MODIFIED BY RD: AVERAGE-R-FACTORS EXCHANGED                           141290
-C  Allocation error in subroutine RINTAV removed 
+C  Allocation error in subroutine RINTAV removed
 C  via introduction of a second field ATAV.       L.Hammer Oct. 2018
 C  OUTPUT expanded for error curve calculations   L.Hammer Mar. 2021
 C  INPUT formats expanded to allow for 9999 exp. and theo. beams  L.Hammer Mar. 2021
@@ -12,7 +12,7 @@ C##############################################################################
 
 C  Three different R-factors (the R2-factor, the Zanazzi-Jona R-factor and the
 C  Pendry R-factor), together with their average can be produced. Experimental
-C  IV-curves from different experiments can be averaged together (the same 
+C  IV-curves from different experiments can be averaged together (the same
 C  energy values, but no energy limits are required). The input energies may be
 C  in any order.
 C  It is possible to specify gaps in the experimental IV-curves. These energy
@@ -49,7 +49,7 @@ C  - TEXT (describing theory) (CHARACTER*80)
 C  - NBTD (1I3)
 C  - LAB(IB),PQ(IB),SYM(IB) (1I3,2F10.5,1I3) (LAB not used)
 C  - repeat last step until NBTD beams have been read in
-C  - read energy, geometry and theoretical intensities for all beams 
+C  - read energy, geometry and theoretical intensities for all beams
 C    (van Hove-output format)
 C  - repeat last step until NS geometries have been read in
 C  - repeat last two steps until an END-OF-FILE is encountered
@@ -73,7 +73,7 @@ C  include problem dependent parameter statements for dimensions
 
 C  variables in namelist NL1
 
-C  EMIN,EMAX:(in eV) energies at sides of desired theoretical energy range 
+C  EMIN,EMAX:(in eV) energies at sides of desired theoretical energy range
 C          (intensities outside this interval will be ignored)
 C  EINCR : (in eV) energy grid step, a value of 1. eV or lower is recommended
 C          (a 10-fold denser grid is used for the Zanazzi-Jona integrals)
@@ -98,7 +98,7 @@ C  GAP   : GAP = 1 indicates gaps in the experimental spectra
       REAL EMIN, EMAX, EINCR, VI, V0RR, V01, V02
       INTEGER LIMFIL, IPR, ISMOTH, EOT, GAP
 
-C  quantities that are not supplied in namelists or input formats for 
+C  quantities that are not supplied in namelists or input formats for
 C  experimental and theoretical spectra
 
 C  NBED  : number of experimental beams (including those to be averaged over)
@@ -106,7 +106,7 @@ C  NBTD  : number of theoretical beams (including those to be averaged over)
 C  KAV   : beam groupings for averaging of theo beams, KAV = 1 for first group,
 C          KAV = I for Ith group to be averaged, KAV = 0 to ignore beams
 C          (KAV.le.NBTD must hold)
-C  IBP   : relationship between theor and exp beams, IBP(I) = J indicates that 
+C  IBP   : relationship between theor and exp beams, IBP(I) = J indicates that
 C          the Ith exp beam (after averaging over different experiments) corre-
 C          sponds to the Jth theor beam (counted after domain-averaging), when
 C          J = 0, the (exp) beam I is skipped
@@ -135,7 +135,7 @@ C          R-factor
 
 C  variables in namelist NL3
 
-C  NORM  : for NORM = 1 the experimental and theoretical spectra are plotted 
+C  NORM  : for NORM = 1 the experimental and theoretical spectra are plotted
 C          for each beam with the same integral intensity, for NORM = 2 they
 C          have the same maximum intensity
 C  INTMAX: maximum intensity used for plotting the spectra
@@ -196,7 +196,7 @@ C  variables for reading, averaging and interpolating theoretical intensities
 C  ES    : energy grid to be read in
 C  ATS   : intensities of theoretical beams on energy grid ES (for all
 C          geometries)
-C  ATSAV : averaged intensities of theoretical beams on energy grid ES 
+C  ATSAV : averaged intensities of theoretical beams on energy grid ES
 C          for all geometries)
 C  NSS   : no of geometries remaining after skipping those specified in NSSK
 C  NETI  : number of energy grid points at time of reading in
@@ -263,11 +263,11 @@ C          the associated experimental beam)
 C  variables used for integrals over experimental and theoretical intensities
 
 C  EPSE  : maximum of first derivative of experimental intensity
-C  SS,SU : integral of experimental or theoretical intensity in the region 
+C  SS,SU : integral of experimental or theoretical intensity in the region
 C          below NE1 or NT1 (SS) or above NE2 or NT2 (SU)
 C  SS2,SU2:same as SS and SU2 for integral over squared intensities
 C  SSY2,SUY2:same as SS and SU2 for integral over squared Pendry Y-function
-C  SG,SGY2:integral over theoretical intensitiy (SG) or theoretical Pendry 
+C  SG,SGY2:integral over theoretical intensitiy (SG) or theoretical Pendry
 C          Y-function (SGY2) in the range of a gap
 C  SE,ST : integral over experimental or theoretical intensity in common energy
 C          range
@@ -307,7 +307,7 @@ C  BRAVB : weighted average over all R-factors for all beams of best average
 C          R-factor geometry
 C  BV0   : inner potential variation of best average R-factor geometry
 C  BCIFE : relation of fractional to integer experimental beam intensities for
-C          best average R-factor geometry 
+C          best average R-factor geometry
 C  BCIFT : same as BCIFE for theoretical beam intensities
 C  NSB   : geometry index of best average R-factor geometry
 
@@ -693,7 +693,7 @@ C  produce some integrals over experimental data
           IF (WR(1).GT.1.E-6) THEN
             CALL VARSUM(AE,AE,AE,AE,1,1,NBED,1,MNGP,1,1,IB,1,1,IE2,0,
      *                  EINCR,0.,0.,2,TSE2(IB),YPL)
-          ENDIF 
+          ENDIF
 
           IF (WR(3).GT.1.E-6) THEN
             CALL VARSUM(YE,AE,AE,AE,1,1,NBED,1,MNGP,1,1,IB,1,1,IE2,0,
@@ -715,7 +715,7 @@ C  read and write title of theoretical data (supplied by LEED program)  # KEEP T
 C  NBTD is number of beams to be read in (supplied by the LEED program)
 
       READ(5,26) NBTD
- 26   FORMAT(I5) 
+ 26   FORMAT(I5)
 
 C  read in calculated energies and intensities (in range EMIN to EMAX)
 
@@ -1046,7 +1046,7 @@ C  if a IV-curve is truncated, above integrals should be reduced accordingly
 
       ST   = TST(IBT) - SS - SG - SU
       STY2 = TSTY2(IBT) - SSY2 - SGY2 - SUY2
-      STST(IBT) = ST 
+      STST(IBT) = ST
 
 C  calculate normalization factor experiment/theory
 
@@ -1168,7 +1168,7 @@ C  average over above R-factors for current beam   ! TODO: scrap
 
       WS=0.
       DO I=1,3
-        WS=WS+WR(I)      
+        WS=WS+WR(I)
       ENDDO
       RAVB(IBE) = (WR(1)*R2(IBE) + WR(2)*RRZJ(IBE) + WR(3)*RPE(IBE))/WS
       ERANG = ERANG + EET(IBE)
@@ -1241,7 +1241,7 @@ C  write R-factors for current geometry to output
         WRITE(6,120) V0,ERANGM(2),(ARM(I,2),I=1,3),RAVM(2)
         WRITE(7,126) -1,D12,V0R,EMIN,EMAX,ERANGM(2),RAVM(2)              141290
       ENDIF
-  
+
       WRITE(6,120) V0,ERANG    ,(AR(I),I=1,3), RAV
       WRITE(7,127)  0,D12,V0R,EMIN,EMAX,ERANG,RAV                        141290
 
@@ -1290,7 +1290,7 @@ C  check if RAV is a better average R-factor than current best average BRAV
           TSEB(IBE) = SEST(IBE)
           BRAVB(IBE) = RAVB(IBE)
 
-          IF (IBT.NE.0) THEN 
+          IF (IBT.NE.0) THEN
              NTMINB(IBT) = NTMIN(IBT)
              NTMAXB(IBT) = NTMAX(IBT)
              DO IET=1,NET(IBT)
@@ -1313,7 +1313,7 @@ C  end of inner potential loop
 
  200  V0 = V0 + VINCR
 
-      WRITE(7,129) 
+      WRITE(7,129)
       WRITE(9,130) BGRAV ! file ROUTSHORT
       BGRAV = 1.E2
 
