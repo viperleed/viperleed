@@ -1062,7 +1062,9 @@ C  calculate normalization factor experiment/theory
 
 C  produce integrals involving both, experiment and theory
 
+      S2   = 0.
       SG2  = 0.
+      SRZJ = 0.
       SGZJ = 0.
       SGY2 = 0.
 
