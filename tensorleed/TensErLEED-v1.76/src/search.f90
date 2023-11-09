@@ -369,10 +369,16 @@ C  LASTGEN is the last generation that had an improvement anywhere
 C  Variables for randomizing of parameter values
 
 C  WSK is gaussian probability distribution plus a small constant offset
-C      in sea_rcd, only used there, but needs variable dimensions 
+C      in sea_rcd, only used there, but needs variable dimensions
+!  @michele-riva 2023-11-09
+!      Made WSK allocatable, as the previous dimension size MNCSTEP
+!      was incorrect: It would only take into consideration geometric
+!      and vibration steps, but WSK also contains concentrations
+!      and area fractions. It is as long as max(VARST). Allocation
+!      is done after VARST has been filled in READSC.
 
-      REAL WSK
-      DIMENSION WSK(MNCSTEP)
+      real, allocatable :: WSK(:)
+      integer NWSK
 
 C  Variables used in processing parameter values for use in GetInt
 C  and only defined for current individual (subroutine GetGrid, Mischung)
@@ -557,7 +563,12 @@ C Modul 4: Readin control information for search algorithm
       CALL READSC(NDOM,NPLACES,NFILES,INFILE,NSURF,IFORM,
      +            PNUM,VARST,NPRMK,NPRAS,PARTYP,NPS,PARIND,STAFLA,
      +            OUTINT,FILREL,WHICHG,WHICHR,DATOUT,NFIL,NCONCS,CONC,
-     +            DMISCH,MAXGEN,SEANAME,NPAR,RMUT,INIT)
+     +            DMISCH,MAXGEN,SEANAME,NPAR,RMUT,INIT,NWSK)
+
+! @michele-riva (2023-11-09)
+!     Allocate WSK, as by now we have the correct maximum number of
+!     items NWSK from the contents of VARST, which was filled in READSC
+      allocate(WSK(NWSK))
 
 C  initialize variables for HASHTAB
 
@@ -644,7 +655,7 @@ C  skip randomizing of parameters
 C  Determine parameters of new population
 
             CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
-     +                   WSK,WIDT,RMUT,NPAR,PARDEP)
+     +                   WSK,WIDT,RMUT,NPAR,PARDEP,NWSK)
 
       END IF
 
@@ -976,7 +987,7 @@ C  Here ends a (nearly) endless loop - next generation
 C  Determine parameters of next population
 
         CALL SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,RPEIND,
-     +               WSK,WIDT,RMUT,NPAR,PARDEP)
+     +               WSK,WIDT,RMUT,NPAR,PARDEP,NWSK)
         goto 1492
 
       end if

@@ -597,7 +597,7 @@ C  Beam me up to main! Now!
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
       SUBROUTINE SEA_RCD(NDOM,NPS,NPRMK,NSTEP,PNUM,VARST,PARIND,
-     +                   RPEIND,WSK,WIDT,RMUT,NPAR,PARDEP)
+     +                   RPEIND,WSK,WIDT,RMUT,NPAR,PARDEP,NWSK)
 
 C Global variables
       INTEGER NDOM,NPS,NPRMK,PNUM,NSTEP,NPAR
@@ -605,7 +605,7 @@ C Global variables
       DIMENSION VARST(NPRMK),PARIND(NPRMK,NPS),PARDEP(NPRMK)
       REAL RPEIND,WSK,WIDT,RMUT
       DIMENSION WIDT(NPRMK)
-      DIMENSION RPEIND(NPS),WSK(NSTEP)
+      DIMENSION RPEIND(NPS),WSK(NWSK)
 
 C Local variables
       INTEGER MKLP1,MKLP2,MKLP5,INDEX
@@ -639,7 +639,9 @@ c      WRITE(6,*) 'width=',width
 
 
 !  VARST = variable step
-!  VARST is array containing number of grid points for each parameter
+!  VARST is array containing number of grid points for each parameter.
+!  It includes all parameters: geometrical, vibrations, concentrations,
+!  and domain areas.
 
       DO IPVAL=1,VARST(IPARAM)
 
@@ -996,7 +998,7 @@ C
      +                  IFORM,PNUM,VARST,NPRMK,NPRAS,PARTYP,NPS,
      +                  PARIND,STAFLA,OUTINT,FILREL,WHICHG,WHICHR,
      +                  DATOUT,NFIL,NCONCS,CONC,DMISCH,MAXGEN,
-     +                  SEANAME,NPAR,RMUT,INIT)
+     +                  SEANAME,NPAR,RMUT,INIT,NWSK)
 
       include "PARAM"
 
@@ -1027,7 +1029,7 @@ C  DATOUT determines whether to store and print R(struct) data
       integer IDOM
       character*10 SEANAME
       REAL RMUT
-      INTEGER INIT
+      INTEGER INIT, NWSK
 
 CVB  NFIL(NDOM,IPLACE) is number of files per domain NDOM and atomic site IPLACE
 
@@ -1056,6 +1058,7 @@ C --- DMISCH ist die Mischungsverhaeltnissschrittweite in Prozentpunkten
 C  begin work
 
       PNUM = 0
+      NWSK = 0   ! Will be == max(VARST)
 
       OPEN(21,FILE='search.steu',STATUS='UNKNOWN')
 
@@ -1128,6 +1131,7 @@ C --- Schleife ueber alle Domaenen
             DO 1369 IPARAM = 1, PARTYP(IDOM,IPLACE,IFILE)
               READ(21,'(2I5)') VARST(PNUM + IPARAM)
               write(6,'(2I5)') VARST(PNUM + IPARAM)
+              NWSK = MAX(NWSK, VARST(PNUM + IPARAM))
  1369       CONTINUE
 
             PNUM = PNUM + PARTYP(IDOM,IPLACE,IFILE)
@@ -1166,6 +1170,7 @@ C  saved in array VARST directly
         PNUM = PNUM + 1
         NPRAS(IDOM) = NPRAS(IDOM) + 1
         VARST(PNUM) = NCONC
+        NWSK = MAX(NWSK, NCONC)
 
 CVB
 
@@ -1178,6 +1183,7 @@ C --- Pro Domaene ein zusaetzlicher Parameter
       do 2010 IDOM = 1, NDOM
         PNUM = PNUM + 1
         VARST(PNUM) = INT(1.0/DMISCH + 1.0 + 1.0E-02)
+        NWSK = MAX(NWSK, VARST(PNUM))
  2010 continue
 
       READ(21,'(A100)') text
