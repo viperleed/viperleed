@@ -12,10 +12,13 @@ import sys
 
 import numpy as np
 import pytest
+from pytest_cases import parametrize
 
 VPR_PATH = str(Path(__file__).resolve().parents[3])
 if VPR_PATH not in sys.path:
     sys.path.append(VPR_PATH)
+
+from ..poscar_slabs import POSCARS_WITHOUT_INFO, AG_100
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
@@ -35,7 +38,7 @@ class TestAtomTransforms:                                                       
         mirrored_slab.mirror(symplane)
         mirrored_slab.collapseCartesianCoordinates()
         assert all(
-            at.isSameXY(mir_at.cartpos[:2])
+            at.is_same_xy(mir_at)
             for at, mir_at in zip(slab.atlist, reversed(mirrored_slab.atlist))
             )
 
@@ -46,7 +49,7 @@ class TestAtomTransforms:                                                       
         rotated_slab.rotateAtoms((0, 0), order=2)
         rotated_slab.collapseCartesianCoordinates()
         assert all(
-            at.isSameXY(rot_at.cartpos[:2])
+            at.is_same_xy(rot_at)
             for at, rot_at in zip(slab.atlist, reversed(rotated_slab.atlist))
             )
 
@@ -116,3 +119,77 @@ def test_add_one_atom_n_elements():
     slab.updateElementCounts()
     assert new_atom.el in slab.elements
     assert slab.n_per_elem[new_atom.el] == 1
+
+class TestSlab:
+    """Test for the Slab class."""
+
+    def test_empty_slab(self):
+        """Check that an empty slab has no atoms."""
+        slab = Slab()
+        assert slab.atlist == []
+        assert slab.elements == ()
+        assert slab.layers == []
+        assert slab.planegroup == 'unknown'
+
+    def test_slab_getCartesianCoordinates(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        slab.atlist[0].pos = np.array([0.1, 0.2, 0.3])
+        slab.getCartesianCoordinates()
+        assert slab.atlist[0].cartpos == pytest.approx([0.3, 0.8, -1.5])
+
+    def test_slab_getFractionalCoordinates(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        slab.atlist[0].cartpos = np.array([0.3, 0.8, -1.5])
+        slab.getFractionalCoordinates()
+        assert slab.atlist[0].pos == pytest.approx([0.1, 0.2, 0.3])
+
+    def test_slab_collapseFractionalCoordinates(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        slab.atlist[0].pos = np.array([1.1, 2.2, -3.3])
+        slab.collapseFractionalCoordinates()
+        assert slab.atlist[0].pos == pytest.approx([0.1, 0.2, 0.7])
+
+    @parametrize(info=POSCARS_WITHOUT_INFO)
+    def test_slab_sort_by_z(self, info, make_poscar):
+        slab, *_ = make_poscar(info)
+        slab.sort_by_z()
+        assert all(at1.pos[2] <= at2.pos[2]
+                   for at1, at2 in zip(slab.atlist, slab.atlist[1:]))
+
+    def test_updateElementCount(self, make_poscar):
+        slab, *_ = make_poscar(AG_100)
+        n_ag_atoms = slab.n_per_elem['Ag']
+        slab.atlist.pop()
+        slab.updateElementCount()
+        assert slab.n_per_elem['Ag'] == n_ag_atoms - 1
+
+class TestSlabUcell:
+    """Test for the Slab.ucell property."""
+    def test_slab_ucell(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        assert slab.ucell.shape == (3, 3)
+
+    def test_apply_scaling_scalar(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        slab.apply_scaling(2)
+        assert slab.ucell == pytest.approx(np.array([[6, 0, 0],
+                                                     [0, 8, 0],
+                                                     [0, 0, 10]]))
+
+    def test_apply_scaling_vector(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        slab.apply_scaling(1/3, 3.14, 0.1)
+        assert slab.ucell == pytest.approx(np.array([[1, 0, 0],
+                                                     [0, 12.56, 0],
+                                                     [0, 0, 0.5]]))
+
+    def test_angle_between_ucell_and_coord_sys_0(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        assert slab.angle_between_ucell_and_coord_sys == pytest.approx(0)
+
+    def test_angle_between_ucell_and_coord_sys_30(self, manual_slab_3_atoms):
+        slab = Slab()
+        slab.ucell = np.array([[np.cos(np.pi/6), np.sin(np.pi/6), 0],
+                               [np.cos(np.pi/3*4), np.sin(np.pi/3*4), 0],
+                               [0, 0, 1]]).T
+        assert slab.angle_between_ucell_and_coord_sys == pytest.approx(30)

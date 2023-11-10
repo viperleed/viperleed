@@ -42,9 +42,8 @@ The major steps are listed below in order of execution.
     generated automatically.
 #.  Generate the :ref:`BEAMLIST<beamlist>`, 
     :ref:`PatternInfo.tld<patterninfo>`, and 
-    :ref:`IVBEAMS<ivbeams>` files.
-#.  Create the directory ``original_imputs`` in which all files used to 
+    :ref:`IVBEAMS<ivbeams>` files (:ref:`IVBEAMS<ivbeams>` is only generated if not provided by the user).
+#.  Create the directory ``original_inputs`` in which all files used to 
     start the calculation are stored.
     This way it is possible to look up the used settings, even if, for example, the 
     PARAMETERS file was altered by the user during the run.
-    

@@ -395,7 +395,7 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     output = (formatter['energies'].write([minen]).ljust(16) + "EMIN\n")
     output += (formatter['energies'].write([maxen]).ljust(16) + "EMAX\n")
     # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES
-    output += (formatter['energies'].write([step]).ljust(16) + "EINCR\n")
+    output += (formatter['energies'].write([vincr]).ljust(16) + "EINCR\n")  # interpolation step width
     output += (formatter['int'].write([0]).ljust(16)
                + "IPR - determines amount of output to stdout\n")
     output += (formatter['energies'].write([rp.V0_IMAG]).ljust(16) + "VI\n")
@@ -671,9 +671,9 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             output += (formatter['int'].write([dlind]).ljust(16)
                        + "Atom number\n")
             output += (
-                formatter['int'].write([len(at.deltasGenerated)]).ljust(16)
+                formatter['int'].write([len(at.known_deltas)]).ljust(16)
                 + "No. of different files for Atom no. {}\n".format(i+1))
-            for (j, deltafile) in enumerate(at.deltasGenerated):
+            for (j, deltafile) in enumerate(at.known_deltas):
                 name = deltafile
                 if frompath:  # need to get the file; if True frompath is Path
                     name = "D{}_".format(k+1) + deltafile
@@ -749,7 +749,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                "vibrational steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
-                             + str(at.oriN).rjust(7) + el.rjust(7)
+                             + str(at.num).rjust(7) + el.rjust(7)
                              + "vib".rjust(7) + str(vib).rjust(7)
                              + constr["vib"].rjust(7) + "\n")
                     nsteps.append(vib)
@@ -758,7 +758,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                "geometrical steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
-                             + str(at.oriN).rjust(7) + el.rjust(7)
+                             + str(at.num).rjust(7) + el.rjust(7)
                              + "geo".rjust(7) + str(geo).rjust(7)
                              + constr["geo"].rjust(7) + "\n")
                     nsteps.append(geo)
@@ -790,7 +790,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             elif spl and spl[0].linkedTo is not None:
                 constr = "#"+str(crp.searchpars.index(spl[0].linkedTo)+1)
             info += (str(parcount).rjust(4) + ("C"+label).rjust(7)
-                     + str(at.oriN).rjust(7) + "-".rjust(7) + "occ".rjust(7)
+                     + str(at.num).rjust(7) + "-".rjust(7) + "occ".rjust(7)
                      + str(occsteps).rjust(7) + constr.rjust(7) + "\n")
             nsteps.append(occsteps)
     # add info for domain step parameters
@@ -1174,7 +1174,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     # now update site occupations and vibrations:
     for site in sl.sitelist:
         siteats = [at for at in sl.atlist if at.site == site
-                   and not at.layer.isBulk]
+                   and not at.is_bulk]
         if not siteats: # site is only found in bulk
             continue
         for el in site.occ:

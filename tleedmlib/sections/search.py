@@ -57,7 +57,7 @@ class SearchMaxIntensitiesError(SearchError):
                "decreasing the DISPLACEMENTS ranges.")
 
     def __init__(self, *args, **kwargs):
-        super().__init__(message, *args, **kwargs)
+        super().__init__(self.message, *args, **kwargs)
 
 class SearchSigbusError(SearchError):
     message = ("TensErLEED stopped due to a SIGBUS signal.\n"
@@ -66,7 +66,7 @@ class SearchSigbusError(SearchError):
                "level to '-O1' or '-O0' using the FORTRAN_COMP parameter.")
 
     def __init__(self, *args, **kwargs):
-        super().__init__(message, *args, **kwargs)
+        super().__init__(self.message, *args, **kwargs)
 
 class SearchInconsistentV0ImagError(SearchError):
     message = ("TensErLEED search stopped because stored Delta files were "
@@ -1035,7 +1035,7 @@ def search(sl, rp):
                                 logger.info(
                                     "Search convergence criterion reached: "
                                     f"max. generations without change ({o[k]})"
-                                    f": {dgen[k]}/{rp.SEARCH_MAX_DGEN[k]:d}."
+                                    f": {dgen[k]}/{rp.SEARCH_MAX_DGEN[k]}."
                                     )
                                 break
                     # decide to write debug info

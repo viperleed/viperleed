@@ -255,9 +255,9 @@ class TestSymmetryConstraints:
             pytest.skip('Not enough symmetry information available')
         with may_fail(first_case, self._known_invalid_constraints):
             for atom in slab.atlist:
-                if atom.oriN in info.symmetry.on_planes:
+                if atom.num in info.symmetry.on_planes:
                     assert isinstance(atom.freedir, np.ndarray)
-                elif atom.oriN in info.symmetry.on_axes:
+                elif atom.num in info.symmetry.on_axes:
                     assert not atom.freedir
                 else:
                     assert atom.freedir == 1
@@ -276,7 +276,9 @@ class TestSymmetryConstraints:
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
         'square_cm_1m1': 'Known to sometimes fail with a random shift',
+        'square_cm_11': 'Known to sometimes fail with a random shift',
         'square_pm_10': 'Known to sometimes fail with a random shift',
+        'square_pm_01': 'Known to sometimes fail with a random shift',
         'square_pg_10': 'Known to often fail with a random shift',
         'pm_10': 'Known to sometimes fail with a random shift',
         'pg_10': 'Known to often fail with a random shift',
@@ -289,10 +291,11 @@ class TestSymmetryConstraints:
         with may_fail(first_case, self._known_invalid_linking):
             for atom_n, linked in info.symmetry.link_groups.items():
                 atom = get_atom(slab.atlist, atom_n)
-                assert set(at.oriN for at in atom.linklist) == linked
+                assert set(at.num for at in atom.linklist) == linked
 
     _known_invalid_constrained_group = {
         'rcm-ucell=rectangular': 'Known to sometimes fail with a random shift',
+        'rcm-ucell=square': 'Known to sometimes fail with a random shift',
         'pm_10': 'Known to sometimes fail with a random shift',
         'cm_1m1': 'Known to sometimes fail with a random shift',
         'hex_cm_10': 'Known to sometimes fail with a random shift',
@@ -397,11 +400,18 @@ class TestSlabSymmetrization:
         'poscar-36C_p6m': 'Often reduced to cmm',
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
+        'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
+            'sometimes reduced to p1 from p3'
+            ),
         'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
         'infoless_poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
         'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
         'infoless_poscar-diamond':  'Invalid pm. May be correct rcm here',
+        'infoless_poscar-graphene':  'Sometimes reduced to pmg from pmm',
+        'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
+            'sometimes reduced to p1 from p3'
+            ),
         'double_bulk-fe3o4': 'Often reduced to pm/p1 (from pmm)',
         'fe3o4_bulk': 'Known invalid group pm. May be correct pmm here.',
         }

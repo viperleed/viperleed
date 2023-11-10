@@ -619,7 +619,7 @@ class POSCARWriter:
             return line
         #                                              # FreeDir
         _free_dir = ""
-        if atom.layer.isBulk:
+        if atom.is_bulk:
             _free_dir = 'bulk'
         elif isinstance(atom.freedir, np.ndarray):
             _free_dir = str(atom.freedir)  # has to be made into a string

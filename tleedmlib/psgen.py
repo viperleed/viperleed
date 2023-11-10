@@ -42,37 +42,34 @@ def runPhaseshiftGen_old(sl, rp,
     files and extracts information for PHASESHIFTS file, then returns that
     information (without writing PHASESHIFTS)."""
 
-    test_new = True
-    '''
-    if test_new:
-        runPhaseshiftGen_new(sl, rp,
-                            psgensource='EEASiSSS.x',
-                            excosource='seSernelius',
-                            atdenssource='atom_density_files')
-    '''
     if rp.source_dir is None:
-        raise RuntimeError("No source tensorleed source directory specified")
-    shortpath = rp.source_dir
-    try:
-        rel_path = rp.source_dir.resolve().relative_to(Path.cwd().resolve())
-    except ValueError:
-        # Path.relative_to() can raise ValueError if not on same drive
-        rel_path = rp.source_dir
-    if len(str(rel_path)) < len(str(shortpath)):
-        shortpath = rel_path
+        raise RuntimeError("No tensorleed source directory specified")
 
-    if len(str(shortpath)) > 62:
-        # too long - need to copy stuff here
-        manual_copy = True
-        os.makedirs("tensorleed", exist_ok=True)
-        shutil.copy2(shortpath / excosource, excosource)
-        shortpath = Path(".")
-    else:
-        manual_copy = False
+    # Since there's a limit on the path length, pick the shortest one
+    # we can find around. Use './' and '../' shorthands if necessary.
+    # Notice that we use os.path.rel_path and not Path.relative_to as
+    # the latter does not produce './' and '../' shorthands
+    shortpath = str(rp.source_dir)
+    if len(os.path.relpath(rp.source_dir)) < len(shortpath):
+        shortpath = os.path.relpath(rp.source_dir)
 
-    psgensource = rp.source_dir / psgensource
-    excosource = shortpath / excosource
-    excosource = excosource.resolve()
+    manual_copy = len(shortpath) > 62
+    if manual_copy:
+        # Copy over files. Charge densities will be copied later
+        # in _collect_eeasisss_input when we know which elements
+        shutil.copy2(Path(shortpath, excosource), excosource)
+        shortpath = '.'
+
+    # Here it is important NOT TO .resolve() excosource that will
+    # end up in the input file. Otherwise all the mess above with
+    # deciding what's the shortest possible way is useless
+    psgensource = Path(rp.source_dir, psgensource)
+    excosource = Path(shortpath, excosource)
+
+    if not psgensource.is_file():
+        raise FileNotFoundError('Could not find PAHSESHIFTS executable at '
+                                f'{psgensource}. Did you forget to compile it? '
+                                'Try running make in the tensorleed directory')
 
     _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.addBulkLayers(rp)
@@ -301,7 +298,7 @@ def runPhaseshiftGen_old(sl, rp,
     phaseshifts_log_name = f"phaseshifts-{rp.timestamp}"
     phaseshifts_log_path = (rp.workdir / phaseshifts_log_name).with_suffix(".log")
 
-    # RUNS phaseshift programm
+    # RUNS phaseshift program
     ps_output = subprocess.run(psgensource,
                                cwd=rp.workdir,
                                input=output,
@@ -905,7 +902,7 @@ def organize_atoms_by_sublayers(newbulkats, nsl):
     nsl.createSublayers(eps=0.001)
     atom_types = {}
     for sublayer_id, sublayer in enumerate(nsl.sublayers, 1):  # enumerate(..., 1) makes sublayer_id start at 1
-        for atom in sublayer.atlist:
+        for atom in sublayer:
             new_bulk = True if atom in newbulkats else False
             if (sublayer_id, atom.site, atom.el, new_bulk) not in atom_types.keys():
                 atom_types[(sublayer_id, atom.site, atom.el, new_bulk)] = Atom_type(atom.el, str(atom.site), new_bulk)

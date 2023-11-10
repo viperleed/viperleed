@@ -74,6 +74,8 @@ class BackwardsReader:                                                          
             self.f.seek(-self.blksize * self.blkcount, 2)
         self.data = ((self.f.read(self.blksize))
                      .decode(self.encoding).splitlines())
+        if not self.data:  # File is empty
+            return
         # strip the last item if it's empty... a byproduct of the last line
         # having a newline at the end of it
         if not self.data[-1]:

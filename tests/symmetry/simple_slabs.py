@@ -33,8 +33,8 @@ from ..helpers import TestInfo, DisplacementInfo, CaseTag as Tag
 
 
 def get_atom(atlist, atom_nr):
-    """Return the atom with a certain oriN."""
-    return next(at for at in atlist if at.oriN == atom_nr)
+    """Return the atom with a certain num."""
+    return next(at for at in atlist if at.num == atom_nr)
 
 
 def remove_atoms(slab, param, *atom_nrs):
