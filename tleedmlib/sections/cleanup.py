@@ -15,10 +15,9 @@ import os
 from pathlib import Path                                                     # TODO: use everywhere
 import shutil
 import re
-import sys
 from zipfile import ZipFile, ZIP_DEFLATED
 
-from viperleed.tleedmlib.base import get_elapsed_time_str
+from viperleed.tleedmlib.base import copytree_exists_ok, get_elapsed_time_str
 from viperleed.tleedmlib.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
 
 
@@ -198,28 +197,6 @@ def _organize_supp_out(path, outfiles):
             except OSError:
                 logger.error(f"Error moving {folder} directory {_dir.name}: ",
                              exc_info=True)
-
-
-def copytree_exists_ok(source, destination):
-    """Copy the tree at the `source` directory to `destination`."""
-    if sys.version_info >= (3, 8):
-        # dirs_exist_ok was introduced in python 3.8:
-        # https://docs.python.org/3/library/shutil.html#shutil.copytree
-        # pylint: disable-next=unexpected-keyword-arg
-        shutil.copytree(source, destination, dirs_exist_ok=True)
-        return
-    # For earlier python versions, we need to do things manually. We
-    # use a simplified version of the implementation of copytree from
-    # shutil for py3.8. We assume that source and destination are Path
-    # objects, and that we don't have anything special like symlinks.
-    destination.mkdir(parents=True, exist_ok=True)
-    for srcentry in source.glob('*'):
-        dstentry = destination / srcentry.name
-        if srcentry.is_dir():
-            copytree_exists_ok(srcentry, dstentry)
-        else:  # file
-            shutil.copy2(srcentry, dstentry)
-    shutil.copystat(source, destination)
 
 
 def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
