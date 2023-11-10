@@ -64,7 +64,7 @@ _BEAMGEN_CASES = {
 class TestGenerateBeamlist:
     """Collection of tests for the generation of beam lists."""
 
-    @fixture(name='make_beamlist')
+    @fixture(name='make_beamlist', scope='class')
     @parametrize_with_cases('args', **_BEAMGEN_CASES)
     def fixture_make_beamlist(self, args, tmp_path_factory, tensorleed_path):
         """Return slab, parameters, info and the path to a 'BEAMLIST'."""
