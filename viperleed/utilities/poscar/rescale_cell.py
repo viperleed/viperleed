@@ -9,7 +9,7 @@ from copy import deepcopy
 import logging
 import sys
 
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
 __authors__ = ["Alexander M. Imre (@amimre)",]
@@ -44,7 +44,7 @@ def main(args=None):
     logger.info("ViPErLEED utility: rescale unit cell\n")
 
     # read the POSCAR file
-    slab = readPOSCAR(sys.stdin)
+    slab = poscar.read(sys.stdin)
 
     if len(args.scaling) == 1 or len(args.scaling) == 3:
         slab.apply_scaling(*args.scaling)
@@ -52,10 +52,10 @@ def main(args=None):
         raise ValueError("The number of scaling factors must be either 1 or 3.")
 
     # write the output file
-    writePOSCAR(slab=slab,
-                filename=sys.stdout,
-                comments='none',
-                silent=logger.level<=logging.DEBUG)
+    poscar.write(slab=slab,
+                 filename=sys.stdout,
+                 comments='none',
+                 silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
     main()

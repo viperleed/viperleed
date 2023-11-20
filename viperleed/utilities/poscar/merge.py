@@ -10,7 +10,7 @@ import sys
 from scipy.spatial.distance import cdist
 import numpy as np
 
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
 __authors__ = ["Alexander M. Imre (@amimre)",
@@ -74,7 +74,7 @@ def main(args=None):
 
     slabs = []
     for filename in args.files:
-        slabs.append(readPOSCAR(filename))
+        slabs.append(poscar.read(filename))
 
     if len(slabs) < 2:
         raise RuntimeError("Need at least two POSCAR files to merge.")
@@ -91,10 +91,10 @@ def main(args=None):
                               eps=args.eps_collision)
 
     # write the output file
-    writePOSCAR(slab=merged_slab,
-                filename=sys.stdout,
-                comments='none',
-                silent=logger.level<=logging.DEBUG)
+    poscar.write(slab=merged_slab,
+                 filename=sys.stdout,
+                 comments='none',
+                 silent=logger.level<=logging.DEBUG)
 
 
 if __name__ == "__main__":

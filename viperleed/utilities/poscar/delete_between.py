@@ -7,7 +7,7 @@ from copy import deepcopy
 import logging
 import sys
 
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
 __authors__ = ["Alexander M. Imre (@amimre)",
@@ -47,7 +47,7 @@ def main(args=None):
                            "fraction.")
 
     # read the POSCAR file
-    slab = readPOSCAR(sys.stdin)
+    slab = poscar.read(sys.stdin)
 
 
     # process the slab
@@ -60,10 +60,10 @@ def main(args=None):
                  f" in the range c = [{args.c[0]:5.3},{args.c[1]:5.3}].")
 
     # write the output file
-    writePOSCAR(slab=modified_slab,
-                filename=sys.stdout,
-                comments='none',
-                silent=logger.level<=logging.DEBUG)
+    poscar.write(slab=modified_slab,
+                 filename=sys.stdout,
+                 comments='none',
+                 silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
     main()

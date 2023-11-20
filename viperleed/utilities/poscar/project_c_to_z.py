@@ -9,7 +9,7 @@ import logging
 import os
 import sys
 
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
 __authors__ = ["Alexander M. Imre (@amimre)",
@@ -35,16 +35,16 @@ def main(args=None):
     logger.debug("ViPErLEED utility: Project c to z axis\n")
 
     # read the POSCAR file from stdin
-    slab = readPOSCAR(sys.stdin)
+    slab = poscar.read(sys.stdin)
 
     # project the c vector to the z axis
     slab.projectCToZ()
 
     # write the output file
-    writePOSCAR(slab=slab,
-                filename=sys.stdout,
-                comments='none',
-                silent=logger.level<=logging.DEBUG)
+    poscar.write(slab=slab,
+                 filename=sys.stdout,
+                 comments='none',
+                 silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
     main()

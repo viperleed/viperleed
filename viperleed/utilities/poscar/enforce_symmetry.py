@@ -9,7 +9,7 @@ import sys
 
 from viperleed.calc.lib import symmetry
 from viperleed.calc.classes import rparams
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.guilib.base import PlaneGroup
 from viperleed.utilities.poscar import add_verbose_option
 from viperleed.utilities.poscar import poscar_utility_logger as logger
@@ -49,7 +49,7 @@ def main(args=None):
     logger.info("ViPErLEED utility: find symmetry\n")
 
     # read the POSCAR file
-    slab = readPOSCAR(sys.stdin)
+    slab = poscar.read(sys.stdin)
 
     param = rparams.Rparams()
     slab.fullUpdate(param)
@@ -75,10 +75,10 @@ def main(args=None):
     symmetry.enforceSymmetry(slab, param, planegroup)
 
     # write the output file
-    writePOSCAR(slab=slab,
-                filename=sys.stdout,
-                comments='none',
-                silent=logger.level<=logging.DEBUG)
+    poscar.write(slab=slab,
+                 filename=sys.stdout,
+                 comments='none',
+                 silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
     main()

@@ -9,7 +9,7 @@ import sys
 
 from viperleed.calc.lib import symmetry
 from viperleed.calc.classes import rparams
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
 __authors__ = ["Alexander M. Imre (@amimre)",]
@@ -47,7 +47,7 @@ def main(args=None):
     logger.info("ViPErLEED utility: find symmetry\n")
 
     # read the POSCAR file
-    slab = readPOSCAR(sys.stdin)
+    slab = poscar.read(sys.stdin)
 
     param = rparams.Rparams()
     slab.fullUpdate(param)

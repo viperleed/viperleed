@@ -10,7 +10,7 @@ import os
 import numpy as np
 
 import viperleed.calc.lib.periodic_table as periodic_table
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
 __authors__ = ["Alexander M. Imre (@amimre)",]
@@ -55,7 +55,7 @@ def main(args=None):
         raise ValueError("Only one of the options -a, -d, and -c can be used.")
 
     # read the POSCAR file from stdin
-    slab = readPOSCAR(sys.stdin)
+    slab = poscar.read(sys.stdin)
 
     # sort the elements as desired
     if args.custom:
@@ -78,11 +78,11 @@ def main(args=None):
     slab.updateElementCount()
 
     # write the output file
-    writePOSCAR(slab=slab,
-                filename=sys.stdout,
-                reorder=True,
-                comments='none',
-                silent=logger.level<=logging.DEBUG)
+    poscar.write(slab=slab,
+                 filename=sys.stdout,
+                 reorder=True,
+                 comments='none',
+                 silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
     main()

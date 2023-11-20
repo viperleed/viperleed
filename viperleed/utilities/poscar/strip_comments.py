@@ -7,7 +7,7 @@ from copy import deepcopy
 import logging
 import sys
 
-from viperleed.calc.files.poscar import readPOSCAR, writePOSCAR
+from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
 __authors__ = ["Alexander M. Imre (@amimre)",]
@@ -33,13 +33,13 @@ def main(args=None):
     logger.debug("ViPErLEED utility: strip comments\n")
 
     # read the POSCAR files
-    slab = readPOSCAR(sys.stdin)
+    slab = poscar.read(sys.stdin)
 
     # write the output file without comments
-    writePOSCAR(slab=slab,
-                filename=sys.stdout,
-                comments='none',
-                silent=logger.level<=logging.DEBUG)
+    poscar.write(slab=slab,
+                 filename=sys.stdout,
+                 comments='none',
+                 silent=logger.level<=logging.DEBUG)
 
 
 if __name__ == "__main__":
