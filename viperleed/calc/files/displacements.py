@@ -628,7 +628,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             if fl[0] < fl[1]:
                 drange = np.arange(fl[0], fl[1] + 1e-6, abs(fl[2]))
             else:
-                drange = np.arange(fl[0], fl[0] - 1e-6, -abs(fl[2]))
+                drange = np.arange(fl[0], fl[1] - 1e-6, -abs(fl[2]))
             if min([abs(v) for v in drange]) > 5e-5:
                 logger.warning(
                     "DISPLACEMENTS: A range does not contain zero. This means "
