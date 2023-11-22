@@ -99,11 +99,11 @@ def main():
     try:
         timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
         fn = f"PHASESHIFTS_mod_{timestamp}"
-        writePHASESHIFTS(firstline, ps, filename=fn)
+        writePHASESHIFTS(firstline, ps, file_path=fn)
         print(f"Wrote new phaseshifts file as {fn}")
     except Exception:
         print("Error writing new phaseshifts file.")
-        return 1
+        raise
     return 0
 
 
