@@ -408,16 +408,20 @@ C  Subroutines are included in alphabetical order
         DO K = 1, N
           KK = K + KNBJ
           MPU1 = MPU + 1
-          IF ((MPU1.LE.NPUN).AND.(KK.EQ.NPU(MPU1))) THEN
-            MPU = MPU + 1
-            NPUC(MPU) = 0
+          IF (MPU1.LE.NPUN) then   ! Fortran IF condition is never lazy
+              if (KK.EQ.NPU(MPU1)) then
+                 MPU = MPU + 1
+                 NPUC(MPU) = 0
+              endif
           ENDIF
           IF ((2.0 * E - (AK2 + SPQ(1, KK))**2 - (AK3 + SPQ(2, KK))**2)
      &        .GE.(-TST)) THEN  ! beam propagates
             NB(J) = NB(J) + 1
             NT = NT + 1
-            IF ((MPU1.LE.NPUN).AND.(KK.EQ.NPU(MPU1))) THEN
-              NPUC(MPU) = NT
+            IF (MPU1.LE.NPUN) then ! Fortran IF condition is never lazy
+                if (KK.EQ.NPU(MPU1)) then
+                   NPUC(MPU) = NT
+                endif
             ENDIF
             DO I = 1, 2
               PQ(I, NT) = SPQ(I, KK)
