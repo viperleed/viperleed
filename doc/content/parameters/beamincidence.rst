@@ -22,7 +22,7 @@ ViPErLEED considers the incident wave vector to be in direction from the electro
    BEAM_INCIDENCE = THETA 0.3, PHI 10.1
    BEAM_INCIDENCE = 0.3 10.1
 
-**Acceptable values**: -90 :math:`\leq` ``theta`` :math:`\leq` 90, 0 :math:`\leq` ``phi`` < 360. All numbers are considered floats. Negative values for ``theta`` will internally be corrected to positive by adding or subtracting 180° **should be 360°** from ``phi``.
+**Acceptable values**: -90 :math:`\leq` ``theta`` :math:`\leq` 90, 0 :math:`\leq` ``phi`` < 360. All numbers are considered floats. Negative values for ``theta`` will internally be corrected to positive by adding or subtracting 180° from ``phi``.
 
 ``theta`` and ``phi`` represent tilt and azimuthal angles, respectively, in degrees.
 Notice that if the flags THETA and PHI are not specified, only the first two floats are considered:

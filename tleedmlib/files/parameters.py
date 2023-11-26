@@ -147,8 +147,10 @@ class NumericBounds:
             If type_ is not one of the acceptable values
         """
         if self.out_of_range_event not in ('fail', 'modulo', 'coerce'):
-            raise ValueError(f'Invalid {self.out_of_range_event=}. '
-                             'Must be "fail", "coerce", or "modulo"')
+            raise ValueError(
+                f'Invalid out_of_range_event={self.out_of_range_event}. '
+                'Must be "fail", "coerce", or "modulo"'
+                )
         if self.type_ not in (int, float):
             raise ValueError('type_ must be int or float')
         is_modulo = self.out_of_range_event == 'modulo'
@@ -754,7 +756,7 @@ class ParameterInterpreter:                                                     
             try:
                 _bool_synonyms[option].update(v.lower() for v in values)
             except KeyError:
-                raise ValueError(f'Unexpected {option=} '
+                raise ValueError(f'Unexpected option={option} '
                                  'in allowed_values') from None
 
         # Make sure there is no intersection between the two sets
@@ -1170,7 +1172,7 @@ class ParameterInterpreter:                                                     
 
         if step is not _no_value and (stop - start) * step < 0:
             message = (f"Inconsistent {param} step. Cannot shift from "
-                       f"{start:.2f} to {stop:.2f} with {step=:.2f}")
+                       f"{start:.2f} to {stop:.2f} with step={step:.2f}")
             self.rpars.setHaltingLevel(1)
             raise ParameterError(param, message)
 
