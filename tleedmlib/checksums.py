@@ -31,6 +31,7 @@ KNOWN_TL_VERSIONS = (
     "1.73",  # TODO: use Version when available
     "1.74",
     "1.75",
+    "1.76",
     "1.8",
 )
 
@@ -441,7 +442,7 @@ def _add_checksums_for_dir(path,
     for pattern in patterns:
         for file in path.glob(pattern):
             checksum = get_file_checksum(file)
-            key = str(file.relative_to(base_path))
+            key = str(file.relative_to(base_path).as_posix())
             if key not in checksum_dict_:
                 checksum_dict_[key] = set()
             checksum_dict_[key].add(checksum)
