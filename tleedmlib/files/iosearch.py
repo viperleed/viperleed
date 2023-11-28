@@ -23,7 +23,7 @@ from viperleed.tleedmlib.base import BackwardsReader, readIntLine
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
 from viperleed.tleedmlib.files.iorfactor import prepare_rfactor_energy_ranges
-from viperleed.tleedmlib.files.iorfactor import _N_EXPAND_THEO
+from viperleed.tleedmlib.files.iorfactor import _N_EXPAND_THEO, largest_nr_grid_points
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
 
 
@@ -527,13 +527,15 @@ C MNBMD IS MAX(MNBED,MNBTD)
     output += "      PARAMETER(MNBTD = {})\n".format(len(rp.ivbeams))
     output += "      PARAMETER(MNBMD = {})".format(max(len(rp.expbeams),
                                                        len(rp.ivbeams)))
+    max_nr_data_points = largest_nr_grid_points(rp, rp.theobeams['refcalc'],
+                                                False, _N_EXPAND_THEO)
     output += """
 C MNDATA IS MAX. NUMBER OF DATA POINTS IN EXPERIMENTAL BEAMS
-      PARAMETER(MNDATA = {})""".format(int(len(expEnergies)*1.1))
+      PARAMETER(MNDATA = {})""".format(max_nr_data_points)
     # array size parameter only - add some buffer -> *1.1
     output += """
 C MNDATT IS NUMBER OF THEORETICAL DATA POINTS IN EACH BEAM
-      PARAMETER(MNDATT = {})""".format(int(n_theo_energies*1.1))
+      PARAMETER(MNDATT = {})""".format(max_nr_data_points)
     output += """
 C MPS IS POPULATION SIZE (number of independent trial structures)
       PARAMETER(MPS = {})""".format(rp.SEARCH_POPULATION)

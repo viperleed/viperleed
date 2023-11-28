@@ -490,7 +490,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     logger.debug(f'Wrote to R-factor input file {filename} successfully')
 
 
-def _largest_nr_grid_points(rpars, theobeams, for_error, n_expand):
+def largest_nr_grid_points(rpars, theobeams, for_error, n_expand):
     """Return the largest possible number of grid points."""
     # The number of grid point is the quantity used to set up the
     # dimensions of the arrays that will contain the IV curves.
@@ -550,7 +550,7 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
     if not rp.IV_SHIFT_RANGE.has_step:
         raise RfactorError('Cannot writeRfactPARAM without interpolation '
                            'step. Did you forget to call writeWEXPEL first?')
-    ngrid = _largest_nr_grid_points(rp, theobeams, for_error, _N_EXPAND_THEO)
+    ngrid = largest_nr_grid_points(rp, theobeams, for_error, _N_EXPAND_THEO)
 
     n_var = 1
     if for_error:
