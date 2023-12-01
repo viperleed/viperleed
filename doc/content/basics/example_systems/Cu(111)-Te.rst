@@ -6,7 +6,7 @@ Example System: Cu(111)-Te ad-chains
 
 The following example covers a ViPErLEED analysis and structure optimization for a copper telluride layer on Cu(111) based on the paper by :cite:t:`kisslingerSubmonolayerCopperTelluride2021`.
 The experimental data and the outline for the analysis steps described below were provided by the authors of the publication.
-This system deals with :math:`(5\times \sqrt{3})_{\text{rect}}` superstructure and has 10 atoms per bulk layer.
+This system deals with a :math:`(5\times \sqrt{3})_{\text{rect}}` superstructure and has 10 atoms per bulk layer.
 It serves as an example for how a more challenging system can be treated with ViPErLEED.
 In fact, the analysis presented in the original publication was performed using an early development version of ViPErLEED :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 
@@ -78,7 +78,7 @@ Similar to the previous examples, we start by setting up a :ref:`PARAMETERS file
    :caption: PARAMETERS
 
 Most of the parameters set in this file have been explained in :ref:`previous examples<example_ag_100>`, so will skip some details here.
-Worth mentioning in this particular case is that we use :ref:`SITE_DEF<sitedef>` to define the two topmost Copper and tellurium atoms as explicit surface sites.
+Worth mentioning in this particular case is that we use :ref:`SITE_DEF<sitedef>` to define the two topmost copper and tellurium atoms as explicit surface sites.
 We are further using the :ref:`SUPERLATTICE parameter<superlattice>` to manually define the surface superlattice type and orientation (to match the convention used in :ref:`EXPBEAMS.csv<expbeams>`).
 
 As usual,the :ref:`IVBEAMS<ivbeams>` and :ref:`PHASESHIFTS<phaseshifts>` files are generated automatically during initialization (:ref:`RUN = 0<run>`).
@@ -102,8 +102,8 @@ For details on the used syntax, see the entry on the :ref:`DISPLACEMENTS file<di
     Note that we allow displacements of up to 0.3 Å for tellurium to speed up the convergence in this example.
     Normally, this is not recommended, because :ref:`tensor LEED approximation<tensor_leed>` will lead to substation errors for displacement of 0.3 Å.
 
-As usual, we can see a visualization of the optimization convergence in the file :ref:`Search-progress.pdf<searchprogresspdf>` in the ``OUT`` directory.
-:numref:`Cu(111)-Te_search_report` shows the first page output of :ref:`Search-progress.pdf<searchprogresspdf>`.
+As usual, we can see a visualization of the optimization convergence in the file :ref:`Search-report.pdf<searchreportpdf>` in the ``OUT`` directory.
+:numref:`Cu(111)-Te_search_report` shows the first page output of :ref:`Search-report.pdf<searchreportpdf>`.
 The upper figure shows the R-factor as a function of the search progress (search generations).
 The lower figure shows the deviation of the structural parameters over time.
 Together, these two plots give an idea, of how converged the search is.
@@ -113,11 +113,11 @@ Together, these two plots give an idea, of how converged the search is.
    :width: 60%
    :align: center
    
-   First page of the file :ref:`Search-progress.pdf<searchprogresspdf>` produced for the first (rough) structure-optimization.
+   First page of the file :ref:`Search-report.pdf<searchreportpdf>` produced for the first (rough) structure-optimization.
 
-The initial reference-calculation yields an :ref:`R-factor<r-factor_calculation>` :math:`\approx 0.82` since our starting configuration is very far from the ideal positions.
-Over this rough optimization, the R-factor quickly drops to :math:`\approx 0.47`.
-This is still not great, but the progress is encouraging.
+The initial reference-calculation yields an :ref:`R-factor<r-factor_calculation>` :math:`R_P \approx 0.82` since our starting configuration is very far from the ideal positions.
+Over this rough optimization, where parameter values are shifted by up to 0.24 Å compared to the initial model, the R-factor quickly drops to :math:`R_P \approx 0.47`.
+This is still quite poor, but the progress is encouraging.
 
 Remember to keep best fit-structure by calling the :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag before proceeding:
 
@@ -125,8 +125,8 @@ Remember to keep best fit-structure by calling the :ref:`bookkeeper utility<book
 
         $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
 
-Once we run the next reference-calculation, we notice that we get a R-factor of :math:`\approx 0.33`, even though we got :math:`R_{\text{P}} \approx 0.47` at the end of the previous run – **a big difference**!
-This comes from the mentioned **tensor LEED error**.
+Once we run the next reference-calculation, we notice that we get a R-factor of :math:`R_P \approx 0.33`, even though we got :math:`R_P \approx 0.47` at the end of the previous run – **a big difference**!
+This comes from the mentioned **Tensor LEED error**.
 
 Fine DISPLACEMENTS and Search Parameters
 ========================================
@@ -155,7 +155,7 @@ For this stage, a choice of 10 pm range with 1 pm steps (0.1 Å range with 0.01 
    Of course, this is not the only possible (or necessarily best) choice of hyper parameters to speed up this section.
    One could, for example, also reduce the search population size (:ref:`SEARCH_POPULATION<searchpop>`) or limit the maximum number of generations (:ref:`SEARCH_MAX_GEN<searchgenmax>`).
 
-The optimization on the 1 pm (0.01 Å) grid allows us to further reduce the R-factor to about :math:`\approx 0.23`, which is again a good improvement on the previous value of :math:`\approx 0.33`.
+The optimization on the 1 pm (0.01 Å) grid allows us to further reduce the R-factor to about :math:`R_P \approx 0.23`, which is again a good improvement on the previous value of :math:`R_P \approx 0.33`.
 
 Full-dynamic Optimization
 =========================
@@ -175,7 +175,7 @@ To do this, we set :ref:`RUN = 6<run>` and add this line to :ref:`PARAMETERS<par
     OPTIMIZE V0i = step 0.5
 
 .. warning::
-    Always make sure that the optimized value used for :math:`V_{0\text{i}}` is (i) reasonable (:math:`V_{0\text{i}} \lesssim 6 \text{eV}`), (ii) forms an actual minimum rather then a minimum at the limit of your range, and (iii) gives qualitatively correct :math:`I(V)` curves.
+    Always make sure that the optimized value used for :math:`V_{0\text{i}}` is (i) reasonable (:math:`V_{0\text{i}} \lesssim 7 \text{eV}`), (ii) forms an actual minimum rather then a minimum at the limit of your range, and (iii) gives qualitatively correct :math:`I(V)` curves.
 
     Since higher :math:`V_{0\text{i}}` smoothens out the :math:`I(V)` curves, it is possible to deceptively decrease the R-factor by arbitrarily increasing :math:`V_{0\text{i}}`.
 
@@ -193,7 +193,8 @@ Furthermore, ViPErLEED produces the files :ref:`FD_Optimization_beams.pdf<fdopti
    :width: 90%
    :align: center
 
-   Part of ``FD_Optimization_beams.pdf`` showing the effects of :math:`V_{0\text{i}}` on the :math:`(1|0)` beam.
+   Part of ``FD_Optimization_beams.pdf`` showing the effects of :math:`V_{0\text{i}}` on the :math:`(1|0)` beam. 
+   Note that the :math:`V_{0i}`` variation only leads to minor changes of the spectral appearance.
 
 Refined structure fit
 =====================
@@ -208,7 +209,7 @@ We recommend starting with the vibrational amplitudes here, since we have not to
 
 You may want to finish up with a last "fine-tuning" of the vibrational amplitudes and (:math:`z`) positions.
 See e.g. file ``DISPLACEMENTS_fine_2`` in the input files, but feel free to play around with the setting yourself, to get a feeling for the available options.
-Altogether, this should bring us to an R-factor :math:`\approx 0.19`, which is already good agreement for such a complex structure.
+Altogether, this should bring us to an R-factor :math:`R_P \approx 0.19`, which is already a good agreement for such a heavily corrugated surface, details see discussion in ref. :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 
 Error calculation
 =================
@@ -222,7 +223,7 @@ Here is an example for displacements in (:math:`x`) direction, but example for (
    :caption: DISPLACEMENTS for error calculation in x direction
 
 The results are plotted in the file :ref:`Errors.pdf<errorspdf>`.
-We see that displacements for atoms in all layers have a drastic impact on the R-factor – so we can be fairly confident in our structure.
+We see that displacements for atoms in all layers have a drastic impact on the R-factor – so we can be fairly confident that all varied atoms are indeed present within the true surface structure.
 
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/Errors_x_vib.pdf
    :width: 100%

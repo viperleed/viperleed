@@ -328,7 +328,7 @@ From there call either ``make intel`` or ``make gcc``, to compile using the Inte
 
 .. _mpirandom:
 
-Randomizer library for TensErLEED <= 1.73
+Randomizer library for TensErLEED < 1.74
 -----------------------------------------
 
 TensErLEED versions up to 1.73 need the :term:`C`-object files called ``random_.o`` and/or ``MPIrandom_.o``.
