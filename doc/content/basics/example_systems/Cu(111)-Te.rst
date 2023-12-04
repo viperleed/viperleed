@@ -116,10 +116,10 @@ Together, these two plots give an idea, of how converged the search is.
    First page of the file :ref:`Search-report.pdf<searchreportpdf>` produced for the first (rough) structure-optimization.
 
 The initial reference-calculation yields an :ref:`R-factor<r-factor_calculation>` :math:`R_P \approx 0.82` since our starting configuration is very far from the ideal positions.
-Over this rough optimization, where parameter values are shifted by up to 0.24 Å compared to the initial model, the R-factor quickly drops to :math:`R_P \approx 0.47`.
+Over this rough optimization, where parameter values are shifted by up to 0.24 Å compared to the initial model (this is a lot !), the R-factor quickly drops to :math:`R_P \approx 0.47`.
 This is still quite poor, but the progress is encouraging.
 
-Remember to keep best fit-structure by calling the :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag before proceeding:
+Remember to keep the best fit-structure by calling the :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag before proceeding:
 
     .. code-block:: console
 
@@ -131,7 +131,7 @@ This comes from the mentioned **Tensor LEED error**.
 Fine DISPLACEMENTS and Search Parameters
 ========================================
 
-We should follow up by running a second, less coarse, optimization.
+Since in the former fit no parameter value reached the edge of the respective variation range, we should follow up by running a second, less coarse, optimization.
 For this stage, a choice of 10 pm range with 1 pm steps (0.1 Å range with 0.01 Å steps) should be reasonable:
 
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_rough_2
@@ -152,8 +152,6 @@ For this stage, a choice of 10 pm range with 1 pm steps (0.1 Å range with 0.01 
    Therefore, the danger of getting trapped in a local R-factor minimum close to the starting position is low, and we can initialize the search at the previously determined values.
    The :ref:`SEARCH_CONVERGENCE<search_convergence>` dgen parameter ensures that the search range shrinks more rapidly than with standard parameters.
 
-   Of course, this is not the only possible (or necessarily best) choice of hyper parameters to speed up this section.
-   One could, for example, also reduce the search population size (:ref:`SEARCH_POPULATION<searchpop>`) or limit the maximum number of generations (:ref:`SEARCH_MAX_GEN<searchgenmax>`).
 
 The optimization on the 1 pm (0.01 Å) grid allows us to further reduce the R-factor to about :math:`R_P \approx 0.23`, which is again a good improvement on the previous value of :math:`R_P \approx 0.33`.
 
@@ -175,9 +173,10 @@ To do this, we set :ref:`RUN = 6<run>` and add this line to :ref:`PARAMETERS<par
     OPTIMIZE V0i = step 0.5
 
 .. warning::
-    Always make sure that the optimized value used for :math:`V_{0\text{i}}` is (i) reasonable (:math:`V_{0\text{i}} \lesssim 7 \text{eV}`), (ii) forms an actual minimum rather then a minimum at the limit of your range, and (iii) gives qualitatively correct :math:`I(V)` curves.
+    Always make sure that the optimized value used for :math:`V_{0\text{i}}` is (i) reasonable (:math:`V_{0\text{i}} \lesssim 7 \text{eV}`), (ii) forms an actual minimum, and (iii) gives qualitatively correct :math:`I(V)` curves.
 
     Since higher :math:`V_{0\text{i}}` smoothens out the :math:`I(V)` curves, it is possible to deceptively decrease the R-factor by arbitrarily increasing :math:`V_{0\text{i}}`.
+    This usually happens in cases of very high R-factor values, where :math:`V_{0\text{i}}` optimization is not the main concern anyhow.
 
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_Optimization.pdf
    :width: 60%

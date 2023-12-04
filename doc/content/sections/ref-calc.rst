@@ -42,9 +42,8 @@ directories called ``refcalc-compile_LMAX=n``.
 
 ViPErLEED will then go through all required energy steps from highest 
 energy to lowest, performing  calculations in temporary directories called 
-``refcalc-part_xxeV``. The raw TensErLEED input and output files 
-:ref:`refcalc-fin` and :ref:`fd.out<fd_out>` are found in these directories
-together with the executables.
+``refcalc-part_xxeV``.
+The output amplitudes, intensities and tensors are stored in the work directory before further processing.
 A log will be written to ``refcalc-$timestamp.log``.
 
 Once the TensErLEED reference calculation has concluded, ViPErLEED will
