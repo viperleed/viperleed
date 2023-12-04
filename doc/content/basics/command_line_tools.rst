@@ -87,5 +87,5 @@ If no new output is detected, it will simply exit without doing anything.
 ``viperleed util`` and ``viperleed poscar``
 -------------------------------------------
 
-The commands ``viperleed util`` and ``viperleed poscar`` are used invoke the ViPErLEED :ref:`utilities<utilities>` and :ref:`poscar utilities<poscar_utils>` respectively.
+The commands ``viperleed util`` and ``viperleed poscar`` are used to invoke the ViPErLEED :ref:`utilities<utilities>` and :ref:`poscar utilities<poscar_utils>` respectively.
 See those pages for details.
