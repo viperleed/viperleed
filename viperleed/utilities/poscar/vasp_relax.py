@@ -54,8 +54,6 @@ def write_vasp_poscar(slab, args):
     # that would only be used in this specific use case. It would
     # also complicate uselessly the code: it would need to decide
     # to use a VASPPOSCARWriter rather than a POSCARFileWriter
-    if args.reorder:
-        slab.sort_by_z()
     slab.sort_by_element()
     relax_info = {'above_c': args.above_c,
                   'c_only': not args.all_directions}
