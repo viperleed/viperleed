@@ -10,7 +10,7 @@ GCC_CFLAGS := -O3 -fno-finite-math-only
 INTEL_FFLAGS := -O3
 INTEL_CFLAGS := -O3
 
-
+# Set the sha256 command to be used for checksum verification
 SHA256_CMD = sha256sum
 ifeq ($(shell uname), Darwin)
         SHA256_CMD = openssl sha256 -r
