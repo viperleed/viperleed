@@ -131,6 +131,15 @@ class TestSlab:
         assert slab.layers == []
         assert slab.planegroup == 'unknown'
 
+    def test_slab_thickness(self, make_poscar):
+        slab, *_ = make_poscar(AG_100)
+        assert slab.thickness == pytest.approx(10.18233, abs=1e-4)
+
+    def test_slab_vacuum_gap(self, make_poscar):
+        slab, *_ = make_poscar(AG_100)
+        assert slab.vacuum_gap == pytest.approx(10.18233, abs=1e-4)
+
+
     def test_slab_getCartesianCoordinates(self, manual_slab_3_atoms):
         slab = manual_slab_3_atoms
         slab.atlist[0].pos = np.array([0.1, 0.2, 0.3])
