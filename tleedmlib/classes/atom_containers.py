@@ -254,7 +254,7 @@ class AtomList(AtomContainer, MutableSequence):
         self._sort_map = dict(zip(self, range(self.n_atoms)))
         return self._sort_map
 
-    def sort(self, /, *, key=None, reverse=False):
+    def sort(self, *, key=None, reverse=False):
         """Sort this list of atoms."""
         self._atoms.sort(key=key, reverse=reverse)
 

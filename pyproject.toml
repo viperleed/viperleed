@@ -44,7 +44,10 @@ addopts = [
 pythonpath = [
     '.', '..'
     ]
-required_plugins = ['pytest-cases', 'pytest-subtests']
+required_plugins = [
+    'pytest-cases>=3.8.1',  # 3.8.1 fixes some ScopeMismatch
+    'pytest-subtests'
+    ]
 xfail_strict = true
 
 

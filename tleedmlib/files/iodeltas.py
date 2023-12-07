@@ -387,7 +387,7 @@ def generateDeltaBasic(sl, rp):
     output += rp.systemName+" "+rp.timestamp+"\n"
     output += (formatter['energies'].write(
         [rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01]).ljust(lj)
-        + 'EI,EF,DE\n')
+        + 'EI,EF\n')
     ucsurf = sl.ucell[:2, :2].T
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)

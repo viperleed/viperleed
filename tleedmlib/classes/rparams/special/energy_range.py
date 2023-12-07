@@ -270,7 +270,7 @@ class EnergyRange(SpecialParameter):
         start, stop, step = self
         if self.defined and (stop - start) * step < 0:
             raise ValueError('Inconsistent step. Cannot shift from '
-                             f'{start:.2f} to {stop:.2f} with {step=:.2f}')
+                             f'{start:.2f} to {stop:.2f} with step={step:.2f}')
         if self.has_bounds and self._swap and stop < start:
             self._swap()
 
@@ -370,7 +370,7 @@ class IVShiftRange(EnergyRange, param='IV_SHIFT_RANGE'):
 
         if was_fixed and not self.is_fixed:
             raise RuntimeError(
-                f'{step=!s} cannot be used to fix IV_SHIFT_RANGE to '
+                f'step={step!s} cannot be used to fix IV_SHIFT_RANGE to '
                 f'{start}: {start} is not an integer multiple of {step}'
                 )
 

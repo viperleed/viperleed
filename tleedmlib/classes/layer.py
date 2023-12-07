@@ -168,7 +168,7 @@ class SubLayer(Layer):                                                          
             atoms = self.atlist[0]
         else:
             atoms = [f'{at}' for at in self]
-        return f'Sublayer({self.num=}, {atoms}, {self.cartbotz=})'
+        return f'Sublayer(num={self.num}, {atoms}, cartbotz={self.cartbotz})'
 
     @property
     def element(self):

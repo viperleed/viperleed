@@ -66,8 +66,10 @@ class NumericBounds:
             If type_ is not one of the acceptable values
         """
         if self.out_of_range_event not in ('fail', 'modulo', 'coerce'):
-            raise ValueError(f'Invalid {self.out_of_range_event=}. '
-                             'Must be "fail", "coerce", or "modulo"')
+            raise ValueErrorraise ValueError(
+                f'Invalid out_of_range_event={self.out_of_range_event}. '
+                'Must be "fail", "coerce", or "modulo"'
+                )
         if self.type_ not in (int, float):
             raise ValueError('type_ must be int or float')
         is_modulo = self.out_of_range_event == 'modulo'

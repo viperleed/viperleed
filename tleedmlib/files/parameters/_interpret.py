@@ -281,7 +281,7 @@ class ParameterInterpreter:
             try:
                 _bool_synonyms[option].update(v.lower() for v in values)
             except KeyError:
-                raise ValueError(f'Unexpected {option=} '
+                raise ValueError(f'Unexpected option={option} '
                                  'in allowed_values') from None
 
         # Make sure there is no intersection between the two sets
