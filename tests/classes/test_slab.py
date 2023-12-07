@@ -410,9 +410,18 @@ class TestUnitCellTransforms:
         slab.apply_scaling(*scaling)
         assert slab.ucell == pytest.approx(expected)
 
-    @pytest.mark.skip(reason='to be implemented')
-    def test_project_c_to_z(self):
-        """TODO"""
+    def test_project_c_to_z(self, make_poscar):
+        """Check that the c vector is parallel to the z axis after projection."""
+        slab, *_ = make_poscar(SLAB_36C_cm)
+        slab_copy = deepcopy(slab)
+        slab.projectCToZ()
+        # check that the c vector is now parallel to the z axis
+        assert slab.ucell[0, 2] == pytest.approx(0)
+        assert slab.ucell[1, 2] == pytest.approx(0)
+        # check that atom positions were updated correctly
+        assert all(
+            np.allclose(at.cartpos, at_copy.cartpos) 
+            for at, at_copy in zip(slab.atlist[~4:5], slab_copy.atlist[~4:5]))  #items 4,5 are wrapped around
 
     @pytest.mark.skip(reason='to be implemented')
     def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates. Also test raises RuntimeError.
