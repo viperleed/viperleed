@@ -4,6 +4,7 @@
 Created on 2023-10-23, originally Jun 13 2019
 
 @author: Florian Kraushofer (@fkraushofer)
+@author: Michele Riva (@michele-riva)
 
 This is the module defining the core class of this package, i.e.,
 Rparams. The class contains parameters read from the PARAMETERS
