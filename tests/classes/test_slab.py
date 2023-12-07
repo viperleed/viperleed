@@ -18,7 +18,7 @@ VPR_PATH = str(Path(__file__).resolve().parents[3])
 if VPR_PATH not in sys.path:
     sys.path.append(VPR_PATH)
 
-from ..poscar_slabs import POSCARS_WITHOUT_INFO, AG_100
+from ..poscar_slabs import POSCARS_WITHOUT_INFO, AG_100, SLAB_36C_cm
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
@@ -27,7 +27,7 @@ from viperleed.tleedmlib.classes.slab import Slab, SymPlane
 # pylint: enable=wrong-import-position
 
 
-class TestAtomTransforms:                                                       # TODO: add test for correct rotation and mirror on slanted cell. Probably enough to is_rotation_symmetric and is_mirror_symmetric with appropriate slabs. Could use "POSCAR_36C_cm" or the bulk of Fe3O4.
+class TestAtomTransforms:
     """Test simple transformations of the atoms of a slab."""
 
     def test_mirror(self, manual_slab_3_atoms):
@@ -42,6 +42,12 @@ class TestAtomTransforms:                                                       
             for at, mir_at in zip(slab.atlist, reversed(mirrored_slab.atlist))
             )
 
+    def test_mirror_on_slanted_cell(self, make_poscar):
+        """Test the expected outcome of mirroring atoms of a slanted slab."""
+        slab = make_poscar(SLAB_36C_cm)[0]
+        sym_plane = SymPlane((0, 0), (0, 1), abt=slab.surface_vectors)
+        assert slab.isMirrorSymmetric(sym_plane, eps=1e-6)  # will be is_mirror_symmetric on refactor branch
+
     def test_180_rotation(self, manual_slab_3_atoms):
         """Test the expected outcome of rotating atoms of a simple slab."""
         slab = manual_slab_3_atoms
@@ -52,6 +58,11 @@ class TestAtomTransforms:                                                       
             at.is_same_xy(rot_at)
             for at, rot_at in zip(slab.atlist, reversed(rotated_slab.atlist))
             )
+
+    def test_180_rotation_on_slanted_cell(self, make_poscar):
+        """Test the expected outcome of rotating atoms of a slanted slab."""
+        slab = make_poscar(SLAB_36C_cm)[0]
+        assert slab.isRotationSymmetric(np.array([0,0]), order=2, eps=1e-6)  # will be is_rotation_symmetric on refactor branch
 
 
 class TestUnitCellTransforms:
@@ -138,7 +149,6 @@ class TestSlab:
     def test_slab_vacuum_gap(self, make_poscar):
         slab, *_ = make_poscar(AG_100)
         assert slab.vacuum_gap == pytest.approx(10.18233, abs=1e-4)
-
 
     def test_slab_getCartesianCoordinates(self, manual_slab_3_atoms):
         slab = manual_slab_3_atoms
