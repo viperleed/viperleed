@@ -66,7 +66,6 @@ class TestSlabParameters:
                     assert attr == value
 
 
-# TODO: be more specific than ParameterError!
 # TODO: would be nice to reduce a bit the verbosity to use (maybe)
 # a metaclass in order to implement test_interpret_(in)valid once,
 # and parametrize it with the valid/invalid of each class below.
@@ -1222,7 +1221,7 @@ class TestSymmetryFix(_TestInterpretBase):
              'direction': ('cm[1 1]', 'cm[1 1]'),}
     invalid = {'group': ('invalid', err.ParameterParseError),
                'direction_missing': ('cm', err.ParameterParseError),
-               'direction_wrong': ('pmt [0 x]', err.ParameterError),}
+               'direction_wrong': ('pmt [0 x]', err.ParameterParseError),}
 
     @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
