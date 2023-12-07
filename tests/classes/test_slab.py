@@ -222,33 +222,59 @@ class TestCoordinates:
         assert slab.atlist[0].pos == pytest.approx([1, 0.0, 1.0], abs = 1e-8)
 
 
-class TestSlabUcell:
-    """Test for the Slab.ucell property."""
-    def test_slab_ucell(self, manual_slab_3_atoms):
-        slab = manual_slab_3_atoms
-        assert slab.ucell.shape == (3, 3)
+class TestUnitCellTransforms:
+    """Test simple transformations of the unit cell of a slab."""
 
-    def test_apply_scaling_scalar(self, manual_slab_3_atoms):
-        slab = manual_slab_3_atoms
-        slab.apply_scaling(2)
-        assert slab.ucell == pytest.approx(np.array([[6, 0, 0],
-                                                     [0, 8, 0],
-                                                     [0, 0, 10]]))
+    def test_ucell_array(self, manual_slab_3_atoms):
+        """Check that the array shape of the unit cell is as expected."""
+        assert manual_slab_3_atoms.ucell.shape == (3, 3)
 
-    def test_apply_scaling_vector(self, manual_slab_3_atoms):
-        slab = manual_slab_3_atoms
-        slab.apply_scaling(1/3, 3.14, 0.1)
-        assert slab.ucell == pytest.approx(np.array([[1, 0, 0],
-                                                     [0, 12.56, 0],
-                                                     [0, 0, 0.5]]))
-
-    def test_angle_between_ucell_and_coord_sys_0(self, manual_slab_3_atoms):
+    def test_angle_between_ucell_and_coord_sys_zero(self, manual_slab_3_atoms):
+        """Check correct identification of the rotation of the a vector."""
         slab = manual_slab_3_atoms
         assert slab.angle_between_ucell_and_coord_sys == pytest.approx(0)
 
-    def test_angle_between_ucell_and_coord_sys_30(self, manual_slab_3_atoms):
+    def test_angle_between_ucell_and_coord_sys_30(self):
+        """Check correct identification of the rotation of the a vector."""
         slab = Slab()
         slab.ucell = np.array([[np.cos(np.pi/6), np.sin(np.pi/6), 0],
                                [np.cos(np.pi/3*4), np.sin(np.pi/3*4), 0],
                                [0, 0, 1]]).T
         assert slab.angle_between_ucell_and_coord_sys == pytest.approx(30)
+
+    _scalings = {  # Applied, expected result
+        'scalar': ((2,),  np.diag((6, 8, 10))),
+        'vector': ((1/3, 3.14, 0.1), np.diag((1, 12.56, 0.5)))
+        }
+
+    @parametrize('scaling,expected', _scalings.values(), ids=_scalings)
+    def test_apply_scaling(self, scaling, expected, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        slab.apply_scaling(*scaling)
+        assert slab.ucell == pytest.approx(expected)
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_project_c_to_z(self):
+        """TODO"""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates. Also test raises RuntimeError.
+        """TODO"""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_revert_unit_cell_undo_nothing(self):                               # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell.
+        """TODO"""
+
+    def test_rotation_on_trigonal_slab(self, manual_slab_1_atom_trigonal):
+        """Test application of a rotation to a trigonal slab."""
+        rot_15 = [[0.96592583, -0.25881905,  0.],
+                  [0.25881905,  0.96592583,  0.],
+                  [0.,  0.,  1.]]
+        expected_cell = [[0.96592583,  0.25881905,  0.],
+                         [-2.99808654, 2.30249368,  0.],
+                         [0.44828774,  2.1906707,   3.]]
+        expected_atom_cartpos = [-1.86064664,  1.88257645]
+        slab = manual_slab_1_atom_trigonal
+        slab.apply_matrix_transformation(rot_15)
+        assert np.allclose(slab.ucell.T, expected_cell)
+        assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
