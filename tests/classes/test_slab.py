@@ -7,6 +7,7 @@ Created on 2023-07-28
 """
 
 from copy import deepcopy
+from random import shuffle
 from pathlib import Path
 import sys
 
@@ -184,19 +185,22 @@ class TestBulk3DOperations:
         """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
+
 class TestBulkDetectAndExtraBulk:
     """Collection of tests for adding bulk units to slabs."""
 
-    def test_detect_bulk(self):                                                 # TODO: also check that rp and sl are unchanged if it fails
+    @pytest.mark.skip(reason='to be implemented')
+    def test_detect_bulk(self, make_poscar):                                                 # TODO: also check that rp and sl are unchanged if it fails
         """TODO"""
 
     def test_with_extra_bulk_units(self):                                       # TODO: also check the number of bulk layers
         """TODO"""
 
+    @pytest.mark.skip(reason='to be implemented')
     def test_with_double_thickness_once(self):
         """TODO"""
 
+    @pytest.mark.skip(reason='to be implemented')
     def test_with_double_thickness_twice(self):
         """TODO"""
 
@@ -270,7 +274,7 @@ class TestCoordinates:
 class TestDuplicateAtoms:
     """Tests for checking detection and removal of duplicate atoms."""
 
-    @pytest.mark.parametrize('info', poscar_slabs.WITH_DUPLICATE_ATOMS)
+    #@pytest.mark.parametrize('info', poscar_slabs.WITH_DUPLICATE_ATOMS)  #TODO: WITH_DUPLICATE_ATOMS is not yet defined
     def test_with_duplicate_atoms(self, info, make_poscar):
         """Check that POSCARs with duplicates are handled correctly."""
         slab, *_ = make_poscar(info)
@@ -283,7 +287,7 @@ class TestDuplicateAtoms:
         with not_raises(AtomsTooCloseError):
             slab.check_atom_collisions()
 
-    @pytest.mark.parametrize('info', poscar_slabs.WITH_DUPLICATE_ATOMS)
+    #@pytest.mark.parametrize('info', poscar_slabs.WITH_DUPLICATE_ATOMS)
     def test_remove_duplicates(self, info):                                     # TODO: n_atoms, raises, others? check method
         """TODO"""
         slab, rpars, *_ = make_poscar(info)
@@ -331,21 +335,34 @@ class TestSlabLayers:
 class TestSorting:
     """Collection of tests for slab sorting."""
 
-    @pytest.mark.skip(reason='to be implemented')
-    def test_element_sort(self):
+    #@pytest.mark.skip(reason='to be implemented')
+    @pytest.mark.parametrize('info', POSCARS_WITHOUT_INFO)
+    def test_element_sort(self, info, make_poscar):
         """Check correct element-based sorting of a Slab."""
+        slab, *_ = make_poscar(info)
+        shuffle(slab.atlist)
+        slab.sort_by_element()
+        element_index_orig_order = [slab.elements.index(at.el) for at in slab.atlist]
+        assert element_index_orig_order == sorted(element_index_orig_order)
 
-    @pytest.mark.skip(reason='to be implemented')
+    @pytest.mark.skip(reason='to be implemented')  # TODO: not sure what this is supposed to do
     def test_element_sort_raises_with_outdated_elements(self):
         """Ensure sorting complains when elements are outdated."""
 
-    @pytest.mark.skip(reason='to be implemented')
-    def test_sort_original(self):
+    @pytest.mark.parametrize('info', POSCARS_WITHOUT_INFO)
+    def test_sort_original(self, info, make_poscar):
         """Check correct sorting of a Slab to original atom numbers."""
+        slab, *_ = make_poscar(info)
+        original_atlist = deepcopy(slab.atlist)
+        shuffle(slab.atlist)
+        slab.sortOriginal()
+        assert all(all(at1.pos == at2.pos) and at1.el == at2.el
+                   for at1, at2 in zip(slab.atlist, original_atlist))
 
     @parametrize(info=POSCARS_WITHOUT_INFO)
     def test_simple_sort_by_z(self, info, make_poscar):
         slab, *_ = make_poscar(info)
+        shuffle(slab.atlist)
         slab.sort_by_z()
         assert all(at1.pos[2] <= at2.pos[2]
                    for at1, at2 in zip(slab.atlist, slab.atlist[1:]))
