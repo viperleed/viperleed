@@ -423,14 +423,6 @@ class TestUnitCellTransforms:
             np.allclose(at.cartpos, at_copy.cartpos) 
             for at, at_copy in zip(slab.atlist[~4:5], slab_copy.atlist[~4:5]))  #items 4,5 are wrapped around
 
-    @pytest.mark.skip(reason='to be implemented')
-    def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates. Also test raises RuntimeError.
-        """TODO"""
-
-    @pytest.mark.skip(reason='to be implemented')
-    def test_revert_unit_cell_undo_nothing(self):                               # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell.
-        """TODO"""
-
     def test_rotation_on_trigonal_slab(self, manual_slab_1_atom_trigonal):
         """Test application of a rotation to a trigonal slab."""
         rot_15 = [[0.96592583, -0.25881905,  0.],
@@ -444,6 +436,54 @@ class TestUnitCellTransforms:
         slab.apply_matrix_transformation(rot_15)
         assert np.allclose(slab.ucell.T, expected_cell)
         assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
+
+@pytest.mark.parametrize('info', POSCARS_WITHOUT_INFO)
+class TestRevertUnitCell:
+    """Tests for reverting the unit cell of a slab."""
+    def test_revert_unit_cell_one_operation(self, info, make_poscar):
+        """Check that reverting one operation gives the same result as before."""
+        slab, *_ = make_poscar(info)
+        slab_copy = deepcopy(slab)
+        slab.rotateUnitCell(30)
+        slab.revertUnitCell()
+        assert slab.ucell == pytest.approx(slab_copy.ucell)
+        assert all(
+            np.allclose(at.cartpos, at_copy.cartpos) 
+            for at, at_copy in zip(slab.atlist, slab_copy.atlist))
+        assert all(
+            np.allclose(at.pos, at_copy.pos) 
+            for at, at_copy in zip(slab.atlist, slab_copy.atlist))
+
+    @pytest.mark.xfail(reason='Bug in revertUnitCell for multiple operations?')
+    def test_revert_unit_cell_few_operation(self, info, make_poscar):
+        """Same as above, but reverting a few operations."""
+        slab, *_ = make_poscar(info)
+        slab_copy = deepcopy(slab)
+        slab.rotateUnitCell(30)
+        slab.rotateUnitCell(20)
+        slab.rotateUnitCell(40)                                                 # TODO: so far, this is the only type of operation we have built in
+        slab.revertUnitCell()
+        assert slab.ucell == pytest.approx(slab_copy.ucell)
+        assert all(
+            np.allclose(at.cartpos, at_copy.cartpos) 
+            for at, at_copy in zip(slab.atlist, slab_copy.atlist))
+        assert all(
+            np.allclose(at.pos, at_copy.pos) 
+            for at, at_copy in zip(slab.atlist, slab_copy.atlist))
+
+    def test_revert_unit_cell_undo_nothing(self, info, make_poscar):                               # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell. – @michele-riva: not sure what you mean by this
+        """Check that reverting with no operations does nothing."""
+        slab, *_ = make_poscar(info)
+        slab_copy = deepcopy(slab)
+        slab.revertUnitCell()
+        assert slab.ucell == pytest.approx(slab_copy.ucell)
+        assert all(
+            np.allclose(at.cartpos, at_copy.cartpos) 
+            for at, at_copy in zip(slab.atlist, slab_copy.atlist))
+        assert all(
+            np.allclose(at.pos, at_copy.pos) 
+            for at, at_copy in zip(slab.atlist, slab_copy.atlist))
+
 
 class TestSlabProperties:
     def test_slab_thickness(self, make_poscar):
