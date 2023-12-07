@@ -18,10 +18,12 @@ VPR_PATH = str(Path(__file__).resolve().parents[3])
 if VPR_PATH not in sys.path:
     sys.path.append(VPR_PATH)
 
+from .. import poscar_slabs
 from ..poscar_slabs import POSCARS_WITHOUT_INFO, AG_100, SLAB_36C_cm
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
+#from viperleed.tleedmlib.base import pairwise
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.slab import Slab, SymPlane
 # pylint: enable=wrong-import-position
@@ -151,27 +153,69 @@ class TestAtomsAndElements:
         slab.update_element_count()
         assert slab.n_per_elem['Ag'] == n_ag_atoms - 1
 
-    def test_slab_thickness(self, make_poscar):
-        slab, *_ = make_poscar(AG_100)
-        assert slab.thickness == pytest.approx(10.18233, abs=1e-4)
 
-    def test_slab_vacuum_gap(self, make_poscar):
-        slab, *_ = make_poscar(AG_100)
-        assert slab.vacuum_gap == pytest.approx(10.18233, abs=1e-4)
+    @pytest.mark.skip(reason='to be implemented')
+    def test_atlist_is_not_list(self):                                          # TODO: Should consider various situations to make sure that no Slab method messes with the atlist
+        """TODO"""
 
-    @parametrize(info=POSCARS_WITHOUT_INFO)
-    def test_slab_sort_by_z(self, info, make_poscar):
-        slab, *_ = make_poscar(info)
-        slab.sort_by_z()
-        assert all(at1.pos[2] <= at2.pos[2]
-                   for at1, at2 in zip(slab.atlist, slab.atlist[1:]))
-
-    def test_updateElementCount(self, make_poscar):
+    def test_update_atom_numbers(self, make_poscar):
         slab, *_ = make_poscar(AG_100)
         n_ag_atoms = slab.n_per_elem['Ag']
         slab.atlist.pop()
         slab.updateElementCount()
         assert slab.n_per_elem['Ag'] == n_ag_atoms - 1
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_chemelem_upon_element_mix_changed(self):
+        """Check that chemelem are changed when ELEMENT_MIX is."""
+
+
+@pytest.mark.skip(reason='to be implemented')
+class TestBulk3DOperations:
+    """Tests for 3D symmetry operations of BulkSlab objects."""
+
+    def test_get_candidate_layer_periods(self):
+        """TODO"""
+
+    def test_bulk_screw_symmetric(self):                                        # TODO: especially consider the cases where an should be on an axis but it is away, and those where it should be at an n-fold position but it isn't.
+        """TODO"""
+
+    def test_bulk_glide_symmetric(self):                                        # TODO: especially consider the cases where an should be on an plane but it is away, and those where it should be at a glide-symmetric position but it isn't.
+        """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+class TestBulkDetectAndExtraBulk:
+    """Collection of tests for adding bulk units to slabs."""
+
+    def test_detect_bulk(self):                                                 # TODO: also check that rp and sl are unchanged if it fails
+        """TODO"""
+
+    def test_with_extra_bulk_units(self):                                       # TODO: also check the number of bulk layers
+        """TODO"""
+
+    def test_with_double_thickness_once(self):
+        """TODO"""
+
+    def test_with_double_thickness_twice(self):
+        """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+class TestBulkUcell:
+    """Tests concerning reduction of bulk unit cell and C vector."""
+
+    def test_get_min_c(self):                                                   # TODO: also various raises
+        """TODO"""
+
+    def test_ensure_min_c(self):
+        """TODO"""
+
+    def test_apply_bulk_ucell_reduction(self):                                  # TODO: separately ab only and c_vec. Both with recenter==True/False
+        """TODO"""
+
+    def test_minimal_bulk_ab(self):                                             # TODO: SurfaceSlab
+        """TODO"""
 
 
 class TestCoordinates:
@@ -220,6 +264,102 @@ class TestCoordinates:
         slab.atlist[0].pos = np.array([1.0 - 1e-9, 2.0 + 1e-9, -3.0 -1e-15])
         slab.collapseFractionalCoordinates()
         assert slab.atlist[0].pos == pytest.approx([1, 0.0, 1.0], abs = 1e-8)
+
+
+@pytest.mark.skip(reason='to be implemented')
+class TestDuplicateAtoms:
+    """Tests for checking detection and removal of duplicate atoms."""
+
+    @pytest.mark.parametrize('info', poscar_slabs.WITH_DUPLICATE_ATOMS)
+    def test_with_duplicate_atoms(self, info, make_poscar):
+        """Check that POSCARs with duplicates are handled correctly."""
+        slab, *_ = make_poscar(info)
+        with pytest.raises(AtomsTooCloseError):
+            slab.check_atom_collisions()
+
+    def test_without_duplicates(self, make_poscar):
+        """Check that POSCARs without duplicates are handled correctly."""
+        slab, *_ = make_poscar(poscar_slabs.AG_100)
+        with not_raises(AtomsTooCloseError):
+            slab.check_atom_collisions()
+
+    @pytest.mark.parametrize('info', poscar_slabs.WITH_DUPLICATE_ATOMS)
+    def test_remove_duplicates(self, info):                                     # TODO: n_atoms, raises, others? check method
+        """TODO"""
+        slab, rpars, *_ = make_poscar(info)
+
+
+@pytest.mark.skip(reason='to be implemented')
+class TestSuperAndSubCell:
+    """Collection of tests for creation of larger and smaller slab versions."""
+
+    def test_supercell(self):                                                   # TODO: diagonal and non-diagonal (for some weird basis cell?). I think the old version was failing under some non-diagonal situations. Explicitly test the two removed update_origin.
+        """TODO"""
+
+    def test_subcell(self):                                                     # TODO: this is the inverse of the previous one.
+        """TODO"""
+
+
+class TestSlabLayers:
+    """Collection of tests concerning slab (sub)layers."""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_bulk_layers(self):
+        """TODO"""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_create_layers(self):
+        """Check that layers are created correctly."""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_create_sublayers(self):                                            # TODO: also test if this works fine excluding the second sort-by-element run
+        """Check that sublayers are created correctly."""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_full_update_with_layers_defined(self):                             # TODO: test correct behaviour for (i) coords initially outside the unit cell, and (ii) no topat_ori_z available
+        """TODO"""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_interlayer_spacing(self):                                          # TODO: also raises.
+        """TODO"""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_slab_lowocc_sublayer(self):
+        """TODO"""
+
+
+class TestSorting:
+    """Collection of tests for slab sorting."""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_element_sort(self):
+        """Check correct element-based sorting of a Slab."""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_element_sort_raises_with_outdated_elements(self):
+        """Ensure sorting complains when elements are outdated."""
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_sort_original(self):
+        """Check correct sorting of a Slab to original atom numbers."""
+
+    @parametrize(info=POSCARS_WITHOUT_INFO)
+    def test_simple_sort_by_z(self, info, make_poscar):
+        slab, *_ = make_poscar(info)
+        slab.sort_by_z()
+        assert all(at1.pos[2] <= at2.pos[2]
+                   for at1, at2 in zip(slab.atlist, slab.atlist[1:]))
+
+    @pytest.mark.skip(reason='functions not implemented on master')
+    @parametrize(info=poscar_slabs.POSCARS_WITHOUT_INFO)
+    @parametrize(bottom_to_top=(True, False))
+    def test_z_sort(self, info, bottom_to_top, make_poscar):
+        """Check successful sorting of atoms by out-of-plane position."""
+        slab, *_ = make_poscar(info)
+        slab.sort_by_z(bottom_to_top=bottom_to_top)
+        _ordered = operator.ge if bottom_to_top else operator.le                # TODO: swap when flipping .cartpos
+        assert all(_ordered(at1.cartpos[2], at2.cartpos[2])
+                   for at1, at2 in pairwise(slab))
 
 
 class TestUnitCellTransforms:
@@ -278,3 +418,67 @@ class TestUnitCellTransforms:
         slab.apply_matrix_transformation(rot_15)
         assert np.allclose(slab.ucell.T, expected_cell)
         assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
+
+class TestSlabProperties:
+    def test_slab_thickness(self, make_poscar):
+        slab, *_ = make_poscar(AG_100)
+        assert slab.thickness == pytest.approx(10.18233, abs=1e-4)
+
+    def test_slab_vacuum_gap(self, make_poscar):
+        slab, *_ = make_poscar(AG_100)
+        assert slab.vacuum_gap == pytest.approx(10.18233, abs=1e-4)
+
+@pytest.mark.skip(reason='to be implemented')
+class TestUnitCellReduction:
+    """Tests for minimization of various bits of the unit cell."""
+
+    def test_ab_cell_minimization(self):                                        # TODO: Use also "Sb on Si(111)" case from Max Buchta
+        """TODO"""
+
+    def test_ab_cell_already_minimal(self):
+        """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+def test_contains():
+    """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+def test_check_ab_in_plane():
+    """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+def test_nearest_neighbors():
+    """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+def test_ucell_ori_after_reset_symmetry():                                      # TODO: ucell_ori should not change when transforming the unit cell after resetSymmetry was called
+    """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+def test_translation_symmetry_different_species():                              # TODO: could use something like an MgO slab and ascertain that Mg->O is not a valid translation
+    """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+def test_slab_equivalence():                                                    # TODO: check also cases covered by TODOs
+    """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+def test_identify_bulk_repeat():
+    """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+def test_get_bulk_repeat():
+    """TODO"""
+
+
+@pytest.mark.skip(reason='to be implemented')
+def test_make_bulk_slab():
+    """TODO"""
