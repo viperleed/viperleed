@@ -490,10 +490,28 @@ def test_translation_symmetry_different_species():                              
     """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
-def test_slab_equivalence():                                                    # TODO: check also cases covered by TODOs
-    """TODO"""
+@pytest.mark.parametrize('info', POSCARS_WITHOUT_INFO)
+def test_slab_equivalence(info, make_poscar):
+    """Check that a slab is equivalent to its deepcopy."""
+    slab, *_ = make_poscar(info)
+    slab_copy = deepcopy(slab)
+    # shuffle atoms to make sure that the order is not important
+    shuffle(slab_copy.atlist)
+    for at in slab_copy.atlist:
+        at.cartpos[0] = 0
+    assert slab.isEquivalent(slab_copy, eps = 1e-3)
 
+@pytest.mark.xfail(reason='Bug in isEquivalent??')
+@pytest.mark.parametrize('info', POSCARS_WITHOUT_INFO)
+def test_slab_inequivalence(info, make_poscar):
+    """Check that a slab is equivalent to its deepcopy."""
+    slab, *_ = make_poscar(info)
+    slab_copy = deepcopy(slab)
+    shuffle(slab_copy.atlist)
+    for at in slab_copy.atlist:
+        at.cartpos[0] -= 0.1
+        at.pos[1] += 0.1
+    assert not slab.isEquivalent(slab_copy, eps=1e-10)
 
 @pytest.mark.skip(reason='to be implemented')
 def test_identify_bulk_repeat():
