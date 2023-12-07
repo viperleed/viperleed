@@ -131,16 +131,34 @@ def test_add_one_atom_n_elements():
     assert new_atom.el in slab.elements
     assert slab.n_per_elem[new_atom.el] == 1
 
-class TestSlab:
-    """Test for the Slab class."""
+
+class TestAtomsAndElements:
+    """Collection of tests for atom additions/removals."""
 
     def test_empty_slab(self):
-        """Check that an empty slab has no atoms."""
+        """Check that an empty slab has no atoms, layers, etc..."""
         slab = Slab()
         assert slab.atlist == []
         assert slab.elements == ()
         assert slab.layers == []
         assert slab.planegroup == 'unknown'
+
+    def test_add_one_atom_n_elements(self):
+        """Check that adding one atom to a slab updates elements correctly."""
+        slab = Slab()
+        new_atom = Atom('C', (0, 0, 0), 1, slab)
+        slab.atlist.append(new_atom)
+        slab.update_element_count()
+        assert new_atom.el in slab.elements
+        assert slab.n_per_elem[new_atom.el] == 1
+
+    def test_remove_one_atom_n_elements(self, make_poscar):
+        """Check that removing one atom updates elements correctly."""
+        slab, *_ = make_poscar(poscar_slabs.AG_100)
+        n_ag_atoms = slab.n_per_elem['Ag']
+        slab.atlist.pop()
+        slab.update_element_count()
+        assert slab.n_per_elem['Ag'] == n_ag_atoms - 1
 
     def test_slab_thickness(self, make_poscar):
         slab, *_ = make_poscar(AG_100)
@@ -149,24 +167,6 @@ class TestSlab:
     def test_slab_vacuum_gap(self, make_poscar):
         slab, *_ = make_poscar(AG_100)
         assert slab.vacuum_gap == pytest.approx(10.18233, abs=1e-4)
-
-    def test_slab_getCartesianCoordinates(self, manual_slab_3_atoms):
-        slab = manual_slab_3_atoms
-        slab.atlist[0].pos = np.array([0.1, 0.2, 0.3])
-        slab.getCartesianCoordinates()
-        assert slab.atlist[0].cartpos == pytest.approx([0.3, 0.8, -1.5])
-
-    def test_slab_getFractionalCoordinates(self, manual_slab_3_atoms):
-        slab = manual_slab_3_atoms
-        slab.atlist[0].cartpos = np.array([0.3, 0.8, -1.5])
-        slab.getFractionalCoordinates()
-        assert slab.atlist[0].pos == pytest.approx([0.1, 0.2, 0.3])
-
-    def test_slab_collapseFractionalCoordinates(self, manual_slab_3_atoms):
-        slab = manual_slab_3_atoms
-        slab.atlist[0].pos = np.array([1.1, 2.2, -3.3])
-        slab.collapseFractionalCoordinates()
-        assert slab.atlist[0].pos == pytest.approx([0.1, 0.2, 0.7])
 
     @parametrize(info=POSCARS_WITHOUT_INFO)
     def test_slab_sort_by_z(self, info, make_poscar):
@@ -181,6 +181,55 @@ class TestSlab:
         slab.atlist.pop()
         slab.updateElementCount()
         assert slab.n_per_elem['Ag'] == n_ag_atoms - 1
+
+
+class TestCoordinates:
+    """Collection of tests for Cartesian/fractional coordinates."""
+    def test_cartesian_from_fractional(self, manual_slab_3_atoms):
+        """Check correct update of Cartesian atom coordinates."""
+        slab = manual_slab_3_atoms
+        atom = slab.atlist[0]
+        atom.pos = np.array([0.1, 0.2, 0.3])
+        slab.getCartesianCoordinates()
+        assert atom.cartpos == pytest.approx([0.3, 0.8, -1.5])
+
+    def test_cartesian_from_fractional_with_origin(self, manual_slab_3_atoms):
+        """Check correct update of Cartesian atom coordinates with updating origin."""
+        slab = manual_slab_3_atoms
+        atom = slab.atlist[0]
+        atom.pos = np.array([0.1, 0.2, 0.3])
+        slab.getCartesianCoordinates(updateOrigin=True)
+        assert atom.pos == pytest.approx([0.1, 0.2, 0.3])
+        assert atom.cartpos == pytest.approx([0.3, 0.8, 0])
+
+    def test_fractional_from_cartesian(self, manual_slab_3_atoms):
+        slab = manual_slab_3_atoms
+        slab.atlist[0].cartpos = np.array([0.3, 0.8, -1.5])
+        slab.getFractionalCoordinates()
+        assert slab.atlist[0].pos == pytest.approx([0.1, 0.2, 0.3])
+
+    @pytest.mark.xfail(reason='collapseCartesianCoordinates is buggy??')
+    def test_collapse_cartesian(self, manual_slab_3_atoms):
+        """Check that cartesian coordinates are correctly collapsed."""
+        slab = manual_slab_3_atoms
+        slab.atlist[0].cartpos = np.array([5, 6, 3])
+        slab.collapseCartesianCoordinates()
+        assert slab.atlist[0].cartpos == pytest.approx([2, 2, 3])
+
+    def test_collapse_fractional(self, manual_slab_3_atoms):
+        """Check that fractional coordinates are correctly collapsed."""
+        slab = manual_slab_3_atoms
+        slab.atlist[0].pos = np.array([1.1, 2.2, -3.3])
+        slab.collapseFractionalCoordinates()
+        assert slab.atlist[0].pos == pytest.approx([0.1, 0.2, 0.7])
+
+    def test_collapse_fractional_small_eps(self, manual_slab_3_atoms):
+        """Check that fractional coordinates are correctly collapsed even with small eps."""
+        slab = manual_slab_3_atoms
+        slab.atlist[0].pos = np.array([1.0 - 1e-9, 2.0 + 1e-9, -3.0 -1e-15])
+        slab.collapseFractionalCoordinates()
+        assert slab.atlist[0].pos == pytest.approx([1, 0.0, 1.0], abs = 1e-8)
+
 
 class TestSlabUcell:
     """Test for the Slab.ucell property."""
