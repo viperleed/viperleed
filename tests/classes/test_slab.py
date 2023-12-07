@@ -92,7 +92,7 @@ class TestUnitCellTransforms:
 #   (ii) fully clear the displacements of all atoms
 # The tests were originally set up by @amimre, who found a bug that
 # concerns runs where multiple refcalc-search pairs exists in RUN.
-# This bug is documented in Issue                                               # TODO @amimre: refer to relevant issue here
+# This bug is documented in Issue #107.
 class TestRestoreOristate:
     """Collection of tests for reverting a slab to its ref-calc state."""
 
