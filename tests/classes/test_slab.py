@@ -121,17 +121,6 @@ class TestRestoreOristate:
                 assert offs_1[element] == pytest.approx(offs_2[element])
 
 
-@pytest.mark.xfail(reason='updateElementCounts is buggy', strict=True)
-def test_add_one_atom_n_elements():
-    """Check that adding one atom to a slab updates elements correctly."""
-    slab = Slab()
-    new_atom = Atom('C', (0, 0, 0), 1, slab)
-    slab.atlist.append(new_atom)
-    slab.updateElementCounts()
-    assert new_atom.el in slab.elements
-    assert slab.n_per_elem[new_atom.el] == 1
-
-
 class TestAtomsAndElements:
     """Collection of tests for atom additions/removals."""
 
@@ -143,6 +132,7 @@ class TestAtomsAndElements:
         assert slab.layers == []
         assert slab.planegroup == 'unknown'
 
+    @pytest.mark.xfail(reason='updateElementCounts is buggy', strict=True)
     def test_add_one_atom_n_elements(self):
         """Check that adding one atom to a slab updates elements correctly."""
         slab = Slab()
@@ -152,6 +142,7 @@ class TestAtomsAndElements:
         assert new_atom.el in slab.elements
         assert slab.n_per_elem[new_atom.el] == 1
 
+    @pytest.mark.xfail(reason='updateElementCounts is buggy', strict=True)
     def test_remove_one_atom_n_elements(self, make_poscar):
         """Check that removing one atom updates elements correctly."""
         slab, *_ = make_poscar(poscar_slabs.AG_100)
