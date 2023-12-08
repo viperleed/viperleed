@@ -28,22 +28,8 @@ class ParameterError(Exception):
         super().__init__(_message)
 
 
-class ParameterNotRecognizedError(ParameterError):
-    """Raised when a parameter is not recognized."""
-
-    _default_message = 'Parameter not recognized'
-
-
-class ParameterHasNoValueError(ParameterError):
-    """Raised when a parameter is not recognized."""
-
-    _default_message = 'Parameter appears to have no value'
-
-
-class ParameterUnexpectedInputError(ParameterError):
-    """Raised when unexpected input is encountered."""
-
-    _default_message = 'Encountered unexpected input. Check parameter syntax'
+class MissingEqualsError(ParameterError):
+    """A known parameter is present on a line without an '='."""
 
 
 class ParameterConflictError(ParameterError):
@@ -93,32 +79,28 @@ class ParameterFloatConversionError(ParameterConversionError):
     _type = 'float'
 
 
-class ParameterValueError(ParameterError):
-    """Raised when the value is not allowed."""
+class ParameterHasNoValueError(ParameterError):
+    """Raised when a parameter is not recognized."""
 
-    def __init__(self, parameter, given_value=None, message=''):
-        """Initialize instance."""
-        if not message:
-            message = 'Could not interpret '
-            message += f'{given_value!r}' if given_value else 'given value'
-        super().__init__(parameter, message)
+    _default_message = 'Parameter appears to have no value'
 
 
-class ParameterParseError(ParameterError):
-    """Raised when parsing fails."""
+class ParameterNeedsFlagError(ParameterError):
+    """Raised when a flag is needed but not given."""
 
-    def __init__(self, parameter, message='',
-                 supp_message='Check parameter syntax'):
-        """Initialize instance."""
-        if not message:
-            message = f'Could not parse input. {supp_message}'
-        super().__init__(parameter, message)
+    _default_message = 'Parameter requires a flag'
 
 
 class ParameterNeedsSlabError(ParameterError):
     """A parameter requiring a Slab was requested without a Slab present."""
 
     _default_message = 'Cannot interpret parameter without a slab'
+
+
+class ParameterNotRecognizedError(ParameterError):
+    """Raised when a parameter is not recognized."""
+
+    _default_message = 'Parameter not recognized'
 
 
 class ParameterNumberOfInputsError(ParameterError):
@@ -133,6 +115,17 @@ class ParameterNumberOfInputsError(ParameterError):
                        f'but found {found_and_expected[0]}')
         else:
             message = 'Unexpected number of inputs'
+        super().__init__(parameter, message)
+
+
+class ParameterParseError(ParameterError):
+    """Raised when parsing fails."""
+
+    def __init__(self, parameter, message='',
+                 supp_message='Check parameter syntax'):
+        """Initialize instance."""
+        if not message:
+            message = f'Could not parse input. {supp_message}'
         super().__init__(parameter, message)
 
 
@@ -151,6 +144,12 @@ class ParameterRangeError(ParameterError):
         super().__init__(parameter, message)
 
 
+class ParameterUnexpectedInputError(ParameterError):
+    """Raised when unexpected input is encountered."""
+
+    _default_message = 'Encountered unexpected input. Check parameter syntax'
+
+
 class ParameterUnknownFlagError(ParameterError):
     """Raised when an unknown flag is encountered."""
 
@@ -161,11 +160,12 @@ class ParameterUnknownFlagError(ParameterError):
         super().__init__(parameter, message)
 
 
-class ParameterNeedsFlagError(ParameterError):
-    """Raised when a flag is needed but not given."""
+class ParameterValueError(ParameterError):
+    """Raised when the value is not allowed."""
 
-    _default_message = 'Parameter requires a flag'
-
-
-class MissingEqualsError(ParameterError):
-    """A known parameter is present on a line without an '='."""
+    def __init__(self, parameter, given_value=None, message=''):
+        """Initialize instance."""
+        if not message:
+            message = 'Could not interpret '
+            message += f'{given_value!r}' if given_value else 'given value'
+        super().__init__(parameter, message)
