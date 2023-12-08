@@ -935,7 +935,7 @@ class ParameterInterpreter:
                        'Value will be ignored')
         if flag not in ('type', 'alpha', 'mincurv', 'localize'):
             self.rpars.setHaltingLevel(1)
-            raise ParameterValueError(param, f'Unknown {flag=!r}')
+            raise ParameterValueError(param, f'Unknown flag={flag!r}')
         if flag == 'type' and value not in ('linear', 'linearregression',
                                             'lasso', 'ridge', 'elasticnet',
                                             'none'):

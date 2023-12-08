@@ -322,8 +322,8 @@ class TheoEnergies(EnergyRange, param='THEO_ENERGIES'):
         start = max(self.step, self.min - delta)
         stop = self.max + delta
         if stop < start:
-            raise ValueError(f'Cannot expand by {n_steps=}. {self} would '
-                             'become empty')
+            raise ValueError(f'Cannot expand by n_steps={n_steps}. '
+                             f'{self} would become empty')
         return self.__class__(start, stop, self.step)
 
     def _check_consistency(self):

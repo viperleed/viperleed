@@ -391,7 +391,9 @@ class Rparams:
         if not founddir:
             raise FileNotFoundError('Could not find TensErLEED code')
         if version > 0 and foundversion != version:
-            raise FileNotFoundError(f'Could not find TensErLEED {version=}')
+            raise FileNotFoundError(
+                f'Could not find TensErLEED version={version}'
+                )
         return founddir
 
     def updateDerivedParams(self):

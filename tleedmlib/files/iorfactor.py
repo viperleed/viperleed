@@ -164,9 +164,9 @@ def check_theobeams_energies(rpars, theobeams):                                 
     theo_energies = EnergyRange.from_sorted_grid(theo_grid)
     if not theo_energies.contains(rpars.THEO_ENERGIES):
         raise ValueError(
-            f'theobeams has {theo_energies=}, which does not contain all the '
-            f'energies in the THEO_ENERGIES parameter({rpars.THEO_ENERGIES}). '
-            'Did you load the wrong calculation?'
+            f'theobeams has theo_energies={theo_energies}, which does not '
+            'contain all the energies in the THEO_ENERGIES parameter '
+            f'({rpars.THEO_ENERGIES}). Did you load the wrong calculation?'
             )
 
 
@@ -236,8 +236,8 @@ def prepare_rfactor_energy_ranges(rpars, theobeams=None,
         check_theobeams_energies(rpars, theobeams)  # May ValueError
     if not rpars.THEO_ENERGIES.defined:
         raise RfactorError('Cannot run an R-factor calculation before '
-                           f'{rpars.THEO_ENERGIES=} has stop, start, and '
-                           'step defined')
+                           f'rpars.THEO_ENERGIES={rpars.THEO_ENERGIES} '
+                           'has stop, start, and step defined')
     if not rpars.expbeams:
         raise RfactorError('No experimental beams loaded')
 
@@ -277,8 +277,8 @@ def _prepare_iv_shift_range(rpars, experiment, for_error):
             )
     if not rpars.IV_SHIFT_RANGE.has_bounds:
         raise RfactorError('Cannot run an R-factor calculation if '
-                           f'{rpars.IV_SHIFT_RANGE=} misses one of '
-                           'its bounds')
+                           f'rpars.IV_SHIFT_RANGE={rpars.IV_SHIFT_RANGE} '
+                           'misses one of its bounds')
 
     # Set up the step. This also ensures that the bounds are consistent
     if not for_error:
@@ -297,8 +297,8 @@ def _prepare_iv_shift_range(rpars, experiment, for_error):
             raise RfactorError(
                 f'Cannot fix IV_SHIFT_RANGE to {start}. The automatic step '
                 f'from experiment and theory ({step} eV) is inappropriate: '
-                f'{start} must be an integer  multiple of {step=}. Provide '
-                'an explicit step by setting IV_SHIFT_RANGE'
+                f'{start} must be an integer  multiple of step={step}. '
+                'Provide an explicit step by setting IV_SHIFT_RANGE'
                 ) from None
         return rpars.IV_SHIFT_RANGE
 
@@ -315,9 +315,9 @@ def _prepare_iv_shift_range(rpars, experiment, for_error):
     except RuntimeError as exc:
         # We have tried to unfix a fixed range: best_v0r
         # is for the wrong interpolation step
-        raise RfactorError(f'{rpars.best_v0r=} is inconsistent with the '
-                           f'interpolation step ({iv_shift.step} eV). Did '
-                           'you change the step of rpars.IV_SHIFT_RANGE '
+        raise RfactorError(f'rpars.best_v0r={rpars.best_v0r} is inconsistent '
+                           f'with the interpolation step ({iv_shift.step} eV).'
+                           ' Did you change the step of rpars.IV_SHIFT_RANGE '
                            'since the last R-factor calculation?') from exc
     return iv_shift
 
