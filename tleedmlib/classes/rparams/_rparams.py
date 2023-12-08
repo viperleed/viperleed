@@ -308,10 +308,8 @@ class Rparams:
         theory. Note that this may change if experimental beams are dropped."""
         if not self.expbeams:
             return 0.
-        expEnergies = []
         totalrange = 0.
         for b in self.expbeams:
-            expEnergies.extend([k for k in b.intens if k not in expEnergies])
             totalrange += (min(max(b.intens), self.THEO_ENERGIES.max)
                            - max(min(b.intens), self.THEO_ENERGIES.min))
         return totalrange
