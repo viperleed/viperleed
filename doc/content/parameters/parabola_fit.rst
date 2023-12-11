@@ -3,12 +3,16 @@
 PARABOLA_FIT
 ============
 
-PARABOLA_FIT allows fitting the R-factor data over the N-dimensional space of fit parameter values with a paraboloid.
+.. warning::
 
-.. warning:: 
-   This functionality is experimental.
+   **Deprecated since version 0.9.0.**
+
+   This functionality was experimental.
    Parabola fits don't appear to be very realiable at the moment and may be removed or significantly reworked in the future.
+   Use at your own risk.
    Perform an :ref:`error calculation<error_calculation>` for more reliable 1D R-factor data.
+
+PARABOLA_FIT allows fitting the R-factor data over the N-dimensional space of fit parameter values with a paraboloid.
 
 **Default**: PARABOLA_FIT = off
 
