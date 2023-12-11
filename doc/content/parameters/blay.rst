@@ -5,7 +5,10 @@ N_BULK_LAYERS
 
 N_BULK_LAYERS defines how many layers, counting from the bottom, form the repeat unit of the bulk structure. Layers are defined by the :ref:`LAYER_CUTS<CTRUNC>`  parameter.
 
-Note that the :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`  parameters offers an easy way to detect the bulk repeat unit automatically, which will set both N_BULK_LAYERS and :ref:`LAYER_CUTS<CTRUNC>`.
+.. note::
+
+   The :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` parameters offers an easy way to detect the bulk repeat unit automatically, which will set both N_BULK_LAYERS and :ref:`LAYER_CUTS<CTRUNC>`.
+   If :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` and the bulk is detected, N_BULK_LAYERS will be updated in the :ref:`PARAMETERS<parameters>` file during initialization.
 
 **Default:** 1
 
