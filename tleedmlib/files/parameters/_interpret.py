@@ -1545,7 +1545,7 @@ class ParameterInterpreter:
         self._interpret_wood_or_matrix(param, assignment)
 
     def interpret_symmetry_eps(self, assignment):
-        """Assign parameters SYMMETRY_EPS and SYMMETRY_EPS.Z."""
+        """Assign parameters SYMMETRY_EPS and SYMMETRY_EPS.z."""
         param = 'SYMMETRY_EPS'
         self._ensure_no_flags_assignment(assignment)
         if len(assignment.values) not in (1, 2):
@@ -1554,7 +1554,7 @@ class ParameterInterpreter:
 
         # warning specific to SYMMETRY_EPS
         warning_str = ('PARAMETERS file: SYMMETRY_EPS:\n'
-                       'Given value {} is greater than one Ångström. This is a '
+                       'Given value {}is greater than one Ångström. This is a '
                        'very loose constraint and might lead to incorrect '
                        'symmetry detection. Be sure to check the output.')
 
@@ -1565,17 +1565,17 @@ class ParameterInterpreter:
         if self.rpars.SYMMETRY_EPS > 1.0:
             # pylint: disable-next=logging-format-interpolation
             _LOGGER.warning(warning_str.format(''))
-        # interpret possible second value as SYMMETRY_EPS.Z
+        # interpret possible second value as SYMMETRY_EPS.z
         if not assignment.other_values:
             self.rpars.SYMMETRY_EPS = SymmetryEps(eps_value)
             return
 
         z_assignment = Assignment(assignment.other_values, param)
         eps_z_value = self.interpret_numerical_parameter(z_assignment,
-                                           bounds=bounds,
-                                           return_only=True)
+                                                         bounds=bounds,
+                                                         return_only=True)
         self.rpars.SYMMETRY_EPS = SymmetryEps(eps_value, eps_z_value)
-        if self.rpars.SYMMETRY_EPS.Z > 1.0:
+        if self.rpars.SYMMETRY_EPS.z > 1.0:
             # pylint: disable-next=logging-format-interpolation
             _LOGGER.warning(warning_str.format('for z '))
 

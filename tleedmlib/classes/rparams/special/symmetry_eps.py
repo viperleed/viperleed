@@ -37,7 +37,7 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
         return instance
 
     @property
-    def Z(self):
+    def z(self):  # pylint: disable=invalid-name
         """Return the z value of this SymmetryEps."""
         # About the disable: the member exists, it's created in __new__
         z_value = self._z  # pylint: disable=no-member
