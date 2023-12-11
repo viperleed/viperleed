@@ -23,6 +23,12 @@ from pathlib import Path
 import re
 
 import numpy as np
+try:
+    from matplotlib.colors import is_color_like  # For PLOT_IV
+except ImportError:
+    _CAN_PLOT = False
+else:
+    _CAN_PLOT = True
 
 from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.base import readIntRange, readVector
@@ -979,6 +985,9 @@ class ParameterInterpreter:
 
     def interpret_plot_iv(self, assignment):
         """Assign parameter PLOT_IV."""
+        if not _CAN_PLOT:
+            # Cannot interpret this parameter
+            return
         param = 'PLOT_IV'
         self._ensure_single_flag_assignment(assignment)
         flag_aliases = {
@@ -1014,10 +1023,15 @@ class ParameterInterpreter:
 
     def _interpret_plot_iv__colors(self, assignment):
         """Assign PLOT_IV['colors']."""
-        if not assignment.values:
+        colors = assignment.values
+        if not colors:
             self.rpars.setHaltingLevel(1)
             raise ParameterHasNoValueError(assignment.parameter)
-        self.rpars.PLOT_IV['colors'] = assignment.values
+        if not all(is_color_like(c) for c in colors):
+            err_ = ('Cannot interpret at least one of '
+                    f'{assignment.values_str!r} as color(s)')
+            raise ParameterValueError(assignment.parameter, message=err_)
+        self.rpars.PLOT_IV['colors'] = colors
 
     def _interpret_plot_iv__legend(self, assignment):
         """Assign PLOT_IV['legend']."""
