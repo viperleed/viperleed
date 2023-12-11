@@ -26,9 +26,9 @@ from viperleed.tleedmlib.files import iorfactor
 # pylint: enable=wrong-import-position
 
 @pytest.fixture
-def ag100_expbeams():
+def ag100_expbeams(data_path):
     """Return a list of experimental beam energies for Ag(100)."""
-    return readOUTBEAMS(str(Path(VPR_PATH) / 'viperleed' / 'tests' / '_test_data' / 'Ag(100)' / 'initialization' / 'EXPBEAMS.csv'))
+    return readOUTBEAMS(str(data_path / 'Ag(100)' / 'initialization' / 'EXPBEAMS.csv'))
 
 
 class TestCheckTheoBeamsEnergies:
