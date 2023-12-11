@@ -93,6 +93,11 @@ KNOWN_PARAMS = (
     )
 
 
+_DEPRECATED = {  # alias: (since version, till version), both inclusive
+    'parabolafit': ('0.11.0', None),
+}
+
+
 def _make_alias(param):
     """Return an alias of param."""
     return param.lower().replace('_', '')
@@ -160,3 +165,34 @@ def did_you_mean(unknown_param):
     if not close_matches:
         raise ParameterNotRecognizedError(unknown_param)
     return _PARAM_ALIAS[close_matches[0]]
+
+
+def warn_if_deprecated(param, version):
+    """Emit a log warning if `param` is deprecated for `version`.
+
+    Parameters
+    ----------
+    param : str
+        Parameter to be checked for deprecation. It may also be
+        one of the aliases.
+    version : str
+        The ViPErLEED version for which deprecation should be
+        checked.
+
+    Returns
+    -------
+    is_deprecated : bool
+        True if `param` is deprecated for `version`.
+    """
+    try:
+        since, till = _DEPRECATED.get(_make_alias(param))
+    except (TypeError, KeyError):
+        return False
+    if version < since:
+        return False
+    if till is not None and version > till:
+        return False
+    _LOGGER.warning(f'PARAMETER {param} is deprecated in ViPErLEED version '
+                    f'{version}. This may cause errors or undefined behavior. '
+                    'Use at your own risk')
+    return True
