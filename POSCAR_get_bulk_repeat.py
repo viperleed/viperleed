@@ -14,7 +14,6 @@ import copy
 import numpy as np
 
 from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.classes.rparams.special.symmetry_eps import SymmetryEps
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
 
@@ -76,7 +75,7 @@ def main():
     rp = Rparams()
     rp.LAYER_CUTS.update_from_sequence([cut])
     rp.N_BULK_LAYERS = 1
-    rp.SYMMETRY_EPS = SymmetryEps(eps)
+    rp.SYMMETRY_EPS = rp.SYMMETRY_EPS.from_value(eps)
     sl.fullUpdate(rp)
 
     sl.bulkslab = sl.makeBulkSlab(rp)

@@ -6,33 +6,41 @@ Created on 2023-12-11
 
 Defines the class SymmetryEps, which is a float with optional z value.
 """
-from dataclasses import dataclass
-from typing import Optional
 
 from ._base import SpecialParameter
 
-@dataclass
-class SymmetryEps(float, SpecialParameter):
-    """SymmetryEps acts like a float but has an optional .Z value.
 
-    Used for interpreting the parameter SYMMETRY_EPS. The user can specify a
-    second float value to be used for symmetry comparisons in the z direction.
-    If no second value is given, the first value is used by default."""
 
-    value: float
-    z: Optional[float] = None
+class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
+    """SymmetryEps acts like a float but has an optional .z value.
+
+    Used for interpreting the parameter SYMMETRY_EPS. The user
+    can specify a second float value to be used for symmetry
+    comparisons in the z direction (i.e., orthogonal to the
+    surface). If no second value is given, the first value is
+    used by default.
+    """
 
     def __new__(cls, value, z=None):
         """Initialize instance."""
-        return float.__new__(cls, value)
-
-    def __init__(self, value, z=None):
-        float.__init__(self)
-        self.__z = z
+        try:
+            float(value)
+        except (ValueError, TypeError):
+            raise TypeError('SymmetryEps value must be float') from None
+        if z is not None:
+            try:
+                z = float(z)
+            except (ValueError, TypeError):
+                raise TypeError('SymmetryEps z value must be float') from None
+        instance = super().__new__(cls, value)
+        setattr(instance, '_z', z)
+        return instance
 
     @property
     def Z(self):
-        """Return z value of instance."""
-        if self.__z is None:
-            return float(self)
-        return self.__z
+        """Return the z value of this SymmetryEps."""
+        # About the disable: the member exists, it's created in __new__
+        z_value = self._z  # pylint: disable=no-member
+        if z_value is None:
+            return self
+        return z_value
