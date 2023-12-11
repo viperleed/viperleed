@@ -51,5 +51,5 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
         # About the disable: the member exists, it's created in __new__
         z_value = self._z  # pylint: disable=no-member
         if z_value is None:
-            return self
+            return float(self)
         return z_value
