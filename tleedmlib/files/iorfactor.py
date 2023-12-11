@@ -162,7 +162,7 @@ def check_theobeams_energies(rpars, theobeams):                                 
     """Complain if the energies in theobeams are inconsistent with rpars."""
     theo_grid = sorted_energies_from_beams(theobeams)
     theo_energies = EnergyRange.from_sorted_grid(theo_grid)
-    if not theo_energies.contains(rpars.THEO_ENERGIES):
+    if not theo_energies.contains(rpars.THEO_ENERGIES, ignore_step=True):
         raise ValueError(
             f'theobeams has theo_energies={theo_energies}, which does not '
             'contain all the energies in the THEO_ENERGIES parameter '

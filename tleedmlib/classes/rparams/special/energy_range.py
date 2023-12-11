@@ -141,7 +141,7 @@ class EnergyRange(SpecialParameter):
         if not self.defined:
             raise RuntimeError(f'{self} has undefined items')
 
-    def contains(self, other):
+    def contains(self, other, ignore_step=False):
         """Return whether other is a subset of this EnergyRange."""
         if not isinstance(other, EnergyRange):
             raise TypeError
@@ -151,6 +151,8 @@ class EnergyRange(SpecialParameter):
             raise ValueError('Cannot compare non-defined TheoEnergies')
         if self.start > other.start or self.stop < other.stop:
             return False
+        if ignore_step:
+            return True
         if self.step != other.step:
             return False
         # Finally, make sure they're not shifted
