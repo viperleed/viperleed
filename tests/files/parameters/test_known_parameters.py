@@ -5,11 +5,13 @@ Created on 2023-10-15
 @author: Michele Riva (@michele-riva)
 """
 
+import logging
+
 import pytest
 from pytest_cases import parametrize
 
 from viperleed.tleedmlib.files.parameters._known_parameters import (
-    from_alias, did_you_mean,
+    from_alias, did_you_mean, warn_if_deprecated,
     _PARAM_ALIAS, KNOWN_PARAMS
     )
 from viperleed.tleedmlib.files.parameters import errors
@@ -94,3 +96,38 @@ class TestDidYouMean:
         """Check complaints when passing a non-string."""
         with pytest.raises(TypeError):
             did_you_mean(5)
+
+
+class TestDeprecated:
+    """Collection of tests for the reporting of parameter deprecation."""
+
+    not_deprecated = {  # parameter, current version
+        'param': ('FORTRAN_COMP', '0.10.0'),
+        'will be deprecated': ('ParabolaFit', '0.10.0'),
+        'unknown': ('invalid_param', '0.11.0'),
+        }
+
+    @parametrize('param,version', not_deprecated.values(), ids=not_deprecated)
+    def test_not_deprecated(self, param, version, caplog):
+        """Check a non-deprecated parameter."""
+        with caplog.at_level(logging.WARNING):
+            is_deprecated = warn_if_deprecated(param, version)
+        assert not is_deprecated
+        assert 'deprecated' not in caplog.text
+
+    deprecated = {  # parameter, current version
+        'current': ('PARABOLA_FIT', '0.11.0'),
+        'was deprecated': ('PARABOLAfit', '1.0.0'),
+        }
+
+    @parametrize('param,version', deprecated.values(), ids=deprecated)
+    def test_deprecated(self, param, version, caplog):
+        """Check a non-deprecated parameter."""
+        with caplog.at_level(logging.WARNING):
+            is_deprecated = warn_if_deprecated(param, version)
+        assert is_deprecated
+        assert all(s in caplog.text for s in ('deprecated', param, version))
+
+    @pytest.mark.skip(reason='No parameter has been revived yet')
+    def test_revived(self, caplog):
+        self.test_not_deprecated('PARABOLA_FIT', '2.3.0', caplog)

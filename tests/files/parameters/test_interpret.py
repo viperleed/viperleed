@@ -839,8 +839,8 @@ class TestPlotIV(_TestInterpretBase):
         'colors color': ('color', 'blue red', 'colors', ('blue', 'red')),
         'colors colour': ('colour', 'blue red', 'colors', ('blue', 'red')),
         'colors colours': ('colours', 'blue red', 'colors', ('blue', 'red')),
-        'colors rgb': ('colors', '255 0 0 0 255 0',
-                       'colors', ('255', '0', '0', '0', '255', '0')),           # TODO: is this the way we want to interpret this?? This is the current result
+        'colors rgb hex': ('colors', '#FF0000 purple',
+                           'colors', ('#FF0000', 'purple')),
         'axes': ('border', 'none', 'axes', 'none'),
         'axes all': ('borders', 'all', 'axes', 'all'),
         'axes bottom': ('axes', 'bottom', 'axes', 'b'),
@@ -864,6 +864,7 @@ class TestPlotIV(_TestInterpretBase):
         'perpage neg two': ('perpage', '-5 -3',  err.ParameterRangeError),
         'empty axes': ('axes', '', err.ParameterHasNoValueError),
         'empty colors': ('colors', '', err.ParameterHasNoValueError),
+        'invalid rgb': ('colors', '255 0 0 green', err.ParameterValueError),
         'empty legend': ('legend', '', err.ParameterHasNoValueError),
         'empty overbar': ('overbar', '', err.ParameterHasNoValueError),
         'empty perpage': ('perpage', '', err.ParameterHasNoValueError),
