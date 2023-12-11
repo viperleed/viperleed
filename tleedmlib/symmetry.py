@@ -99,7 +99,7 @@ def getSymPosLists(sl, rp, pointlist, output=False):
 def findBulkSymmetry(sl, rp):
     """Checks the bulk slab for screw axes and glide planes."""
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
+    epsz = rp.SYMMETRY_EPS.Z
     uct = np.transpose(copy.copy(sl.ucell))
     abt = uct[:2, :2]
     rotsfound = []
@@ -168,7 +168,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     celltype = "ERROR - not recognized"
     planegroup = ""  # plane group will be stored in Hermann-Mauguin notation
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
+    epsz = rp.SYMMETRY_EPS.Z
     # reduce surface unit cell
     abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
 #        usurf = np.array([[1,0],[0,1]])
@@ -994,7 +994,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             logger.warning("enforceSymmetry: Invalid 'movement' variable "
                            "passed. Using SYMMETRIZE_INPUT parameter instead.")
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
+    epsz = rp.SYMMETRY_EPS.Z
     abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
 
     # FIND ATOM LINKING - HERE WORK WITH sl INSTEAD OF ts, SINCE WE WANT

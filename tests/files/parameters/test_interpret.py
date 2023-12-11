@@ -1182,7 +1182,7 @@ class TestSymmetryBulk(_TestInterpretBase):
 
 
 class TestSymmetryEps(_TestInterpretBase):
-    """Tests for interpreting SYMMETRY_EPS/SYMMETRY_EPS_Z."""
+    """Tests for interpreting SYMMETRY_EPS/SYMMETRY_EPS.Z."""
 
     param = 'SYMMETRY_EPS'
 
@@ -1190,13 +1190,13 @@ class TestSymmetryEps(_TestInterpretBase):
         """Check correct interpretation of EPS value."""
         self.check_assigned(interpreter, '0.5', 0.5)
         rpars = interpreter.rpars
-        assert rpars.SYMMETRY_EPS == rpars.SYMMETRY_EPS_Z
+        assert rpars.SYMMETRY_EPS == rpars.SYMMETRY_EPS.Z
 
     def test_interpret_multiple_values(self, interpreter):
         """Check correct interpretation of EPS and EPS_Z values."""
         self.interpret(interpreter, '0.1 0.2')
         rpars = interpreter.rpars
-        assert (rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS_Z) == (0.1, 0.2)
+        assert (rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.Z) == (0.1, 0.2)
 
     def test_interpret_invalid_number_of_inputs(self, interpreter):
         """Ensure more than two values raises exceptions."""

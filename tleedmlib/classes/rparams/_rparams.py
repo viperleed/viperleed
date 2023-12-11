@@ -42,6 +42,7 @@ from viperleed.tleedmlib.sections._sections import EXPBEAMS_NAMES
 from ._defaults import NO_VALUE, DEFAULTS
 from ._limits import PARAM_LIMITS
 from .special._base import SpecialParameter, NotASpecialParameterError
+from .special.symmetry_eps import SymmetryEps
 
 _LOGGER = logging.getLogger('tleedm.rparams')
 if _CAN_PLOT:
@@ -120,8 +121,7 @@ class Rparams:
         self.SUPPRESS_EXECUTION = False
         self.SYMMETRIZE_INPUT = True
         self.SYMMETRY_CELL_TRANSFORM = np.identity(2, dtype=float)
-        self.SYMMETRY_EPS = 0.1
-        self.SYMMETRY_EPS_Z = 0.1
+        self.SYMMETRY_EPS = SymmetryEps(0.1)
         self.SYMMETRY_FIND_ORI = True
         self.SYMMETRY_FIX = self.get_default('SYMMETRY_FIX')
         self.SYMMETRY_BULK = {}   # keys: group, rotation, mirror

@@ -1150,7 +1150,7 @@ class Slab:
         ----------
         rp : RunParams
             The current parameters. The only attributes
-            used are SYMMETRY_EPS and SYMMETRY_EPS_Z.
+            used are SYMMETRY_EPS and SYMMETRY_EPS.Z.
         warn_convention : bool, optional
             If True, warnings are added to the current
             logger in case making the reduced unit cell
@@ -1174,7 +1174,7 @@ class Slab:
         """
         # TODO: write a testcase for the reduction of POSCAR Sb on Si(111)
         eps = rp.SYMMETRY_EPS
-        epsz = rp.SYMMETRY_EPS_Z
+        epsz = rp.SYMMETRY_EPS.Z
         abst = self.ucell[:2, :2].T
 
         # Create a test slab: C projected to Z
@@ -1265,11 +1265,11 @@ class Slab:
         vector in cartesian coordinates, or None if no match is found."""
         eps = rp.SYMMETRY_EPS
         if len(self.sublayers) == 0:
-            self.createSublayers(rp.SYMMETRY_EPS_Z)
+            self.createSublayers(rp.SYMMETRY_EPS.Z)
         if self.bulkslab is None:
             self.makeBulkSlab(rp)
         if len(self.bulkslab.sublayers) == 0:
-            self.bulkslab.createSublayers(rp.SYMMETRY_EPS_Z)
+            self.bulkslab.createSublayers(rp.SYMMETRY_EPS.Z)
         nsub = len(self.bulkslab.sublayers)
         if len(self.sublayers) < 2*nsub:
             return None
@@ -1537,7 +1537,7 @@ class Slab:
         # create a pseudo-bulkslab
         tsl.bulkslab = tsl.makeBulkSlab(rp_dummy)
         bsl = tsl.bulkslab
-        bsl.createSublayers(rp.SYMMETRY_EPS_Z)
+        bsl.createSublayers(rp.SYMMETRY_EPS.Z)
         # reduce unit cell in xy
         changecell, mincell = bsl.getMinUnitCell(rp)
         if changecell:
@@ -1556,13 +1556,13 @@ class Slab:
         rp_dummy.SUPERLATTICE = np.eye(2)
         tsl.bulkslab = tsl.makeBulkSlab(rp_dummy)
         bsl = tsl.bulkslab
-        bsl.createSublayers(rp.SYMMETRY_EPS_Z)
+        bsl.createSublayers(rp.SYMMETRY_EPS.Z)
 
         # calculate cut plane
         frac_bulk_thickness = abs(newC[2]) / abs(self.ucell[2, 2])
         frac_lowest_pos = min([at.pos[2] for at in self.atlist])
         frac_bulk_onset = (frac_lowest_pos + frac_bulk_thickness
-                           - (rp.SYMMETRY_EPS_Z / self.ucell[2, 2]))
+                           - (rp.SYMMETRY_EPS.Z / self.ucell[2, 2]))
         slab_cuts = [(max([at.pos[2] for at in self.atlist
                           if at.pos[2] < frac_bulk_onset])
                      + min([at.pos[2] for at in self.atlist
@@ -1653,7 +1653,7 @@ class Slab:
         bsl.getCartesianCoordinates(updateOrigin=True)
         bsl.updateElementCount()   # update the number of atoms per element
         # remove duplicates
-        bsl.createSublayers(rp.SYMMETRY_EPS_Z)
+        bsl.createSublayers(rp.SYMMETRY_EPS.Z)
         newatlist = []
         for subl in bsl.sublayers:
             i = 0
@@ -1698,7 +1698,7 @@ class Slab:
         ssl.ucell_mod = []
         # if self.ucell_mod is not empty, don't drag that into the new slab.
         # remove duplicates
-        ssl.createSublayers(rp.SYMMETRY_EPS_Z)
+        ssl.createSublayers(rp.SYMMETRY_EPS.Z)
         newatlist = []
         for subl in ssl.sublayers:
             i = 0

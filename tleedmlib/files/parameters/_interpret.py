@@ -27,7 +27,8 @@ import numpy as np
 from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.base import readIntRange, readVector
 from viperleed.tleedmlib.base import recombineListElements, splitSublists
-from viperleed.tleedmlib.classes.rparams import LayerCuts, EnergyRange
+from viperleed.tleedmlib.classes.rparams import (LayerCuts, EnergyRange, 
+                                                 SymmetryEps)
 from viperleed.tleedmlib.classes.rparams import TheoEnergies, IVShiftRange
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
@@ -1517,7 +1518,7 @@ class ParameterInterpreter:
         self._interpret_wood_or_matrix(param, assignment)
 
     def interpret_symmetry_eps(self, assignment):
-        """Assign parameters SYMMETRY_EPS/SYMMETRY_EPS_Z."""
+        """Assign parameters SYMMETRY_EPS and SYMMETRY_EPS.Z."""
         param = 'SYMMETRY_EPS'
         self._ensure_no_flags_assignment(assignment)
         if len(assignment.values) not in (1, 2):
@@ -1526,26 +1527,28 @@ class ParameterInterpreter:
 
         # warning specific to SYMMETRY_EPS
         warning_str = ('PARAMETERS file: SYMMETRY_EPS:\n'
-                       'Given value {}is greater than one Ångström. This is a '
+                       'Given value {} is greater than one Ångström. This is a '
                        'very loose constraint and might lead to incorrect '
                        'symmetry detection. Be sure to check the output.')
 
         # interpret first value as SYMMETRY_EPS
         bounds = NumericBounds(type_=float, range_=(1e-100, None))
-        self.interpret_numerical_parameter(assignment, bounds=bounds)
+        eps_value = (self.interpret_numerical_parameter(
+            assignment, bounds=bounds, return_only=True))
         if self.rpars.SYMMETRY_EPS > 1.0:
             # pylint: disable-next=logging-format-interpolation
             _LOGGER.warning(warning_str.format(''))
-        # interpret possible second value as SYMMETRY_EPS_Z
+        # interpret possible second value as SYMMETRY_EPS.Z
         if not assignment.other_values:
-            self.rpars.SYMMETRY_EPS_Z = self.rpars.SYMMETRY_EPS                 # TODO: not nice, as changes to _EPS that may occur are not reflected on _Z. Could do this with a @property of Rparams or a dedicated class.
+            self.rpars.SYMMETRY_EPS = SymmetryEps(eps_value)
             return
 
         z_assignment = Assignment(assignment.other_values, param)
-        self.interpret_numerical_parameter(z_assignment,
-                                           param='SYMMETRY_EPS_Z',
-                                           bounds=bounds)
-        if self.rpars.SYMMETRY_EPS_Z > 1.0:
+        eps_z_value = self.interpret_numerical_parameter(z_assignment,
+                                           bounds=bounds,
+                                           return_only=True)
+        self.rpars.SYMMETRY_EPS = SymmetryEps(eps_value, eps_z_value)
+        if self.rpars.SYMMETRY_EPS.Z > 1.0:
             # pylint: disable-next=logging-format-interpolation
             _LOGGER.warning(warning_str.format('for z '))
 
