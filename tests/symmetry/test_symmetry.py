@@ -353,7 +353,7 @@ class TestSlabSymmetrization:
         symmetry.enforceSymmetry(slab, param)
         rattled_slab, param, info = duplicate_all(slab, param, info)
         eps = 0.05
-        param.SYMMETRY_EPS = 2 * 2**0.5 * eps
+        param.SYMMETRY_EPS = param.SYMMETRY_EPS.from_value(2 * 2**0.5 * eps)
         displacements = np.random.uniform(-eps, eps,
                                           (len(slab.atlist), 2))
         for atom, delta in zip(rattled_slab.atlist, displacements):
