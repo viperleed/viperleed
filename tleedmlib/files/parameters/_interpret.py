@@ -903,6 +903,11 @@ class ParameterInterpreter:
         if which not in _OPTIMIZE_OPTIONS:
             self.rpars.setHaltingLevel(3)
             raise ParameterUnknownFlagError(param, f'{which!r}')
+        if Section.FD_OPTIMIZATION.value not in self.rpars.RUN:                 # TODO: remove .value when using TLEEDMSection in RUN
+            err_ = ('RUN does not include a full-dynamic-optimization section '
+                    f'(RUN = {Section.FD_OPTIMIZATION.value}). It makes no '
+                    'sense to provide an OPTIMIZE parameter')
+            raise SuperfluousParameterError(param, message=err_)
         self.rpars.OPTIMIZE['which'] = which
         if not assignment.other_values:
             try:
