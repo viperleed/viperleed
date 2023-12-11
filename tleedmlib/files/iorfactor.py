@@ -158,7 +158,7 @@ def readROUTSHORT(filename="ROUTSHORT"):
     return rfaclist
 
 
-def check_theobeams_energies(rpars, theobeams):                                 # TODO: write a test for refcalc on a larger range than R-factor. I'd ask @amimre to take care of this.
+def check_theobeams_energies(rpars, theobeams):
     """Complain if the energies in theobeams are inconsistent with rpars."""
     theo_grid = sorted_energies_from_beams(theobeams)
     theo_energies = EnergyRange.from_sorted_grid(theo_grid)
