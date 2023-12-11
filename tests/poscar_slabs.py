@@ -120,7 +120,6 @@ _PRESETS = {
     'Fe3O4': {'LAYER_CUTS': LayerCuts.from_string('0.1 0.2 <dz(1.0)'),
               'N_BULK_LAYERS': 2,
               'SYMMETRY_EPS': 0.3,
-              'SYMMETRY_EPS_Z': 0.3,
               'BULK_REPEAT': np.array([0.0, -4.19199991, 4.19199991]),
               'SUPERLATTICE': np.array(((1, 1), (1, -1))),
               'superlattice_defined': True},

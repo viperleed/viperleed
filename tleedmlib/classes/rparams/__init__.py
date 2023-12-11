@@ -18,7 +18,8 @@ _limits. Special parameters define their own defaults and limits.
 
 # Important note: import first stuff from .special, as it is used
 # in _rparams and would otherwise lead to cyclic import issues
-from .special.layer_cuts import LayerCuts
 from .special.energy_range import EnergyRange, IVShiftRange, TheoEnergies
+from .special.layer_cuts import LayerCuts
+from .special.symmetry_eps import SymmetryEps
 from ._domain_params import DomainParameters
 from ._rparams import Rparams
