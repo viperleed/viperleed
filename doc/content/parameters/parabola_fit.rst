@@ -5,7 +5,7 @@ PARABOLA_FIT
 
 .. warning::
 
-   **Deprecated since version 0.9.0.**
+   **Deprecated since version 0.11.0.**
 
    This functionality was experimental.
    Parabola fits don't appear to be very realiable at the moment and may be removed or significantly reworked in the future.
