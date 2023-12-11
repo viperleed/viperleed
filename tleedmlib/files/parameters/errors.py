@@ -169,3 +169,9 @@ class ParameterValueError(ParameterError):
             message = 'Could not interpret '
             message += f'{given_value!r}' if given_value else 'given value'
         super().__init__(parameter, message)
+
+
+class SuperfluousParameterError(ParameterError):
+    """A useless parameter was given in the current PARAMETERS file."""
+
+    _default_message = 'Parameter cannot be used in this PARAMETERS file'

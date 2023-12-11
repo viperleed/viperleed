@@ -51,6 +51,7 @@ from .errors import ParameterParseError
 from .errors import ParameterRangeError
 from .errors import ParameterUnknownFlagError
 from .errors import ParameterValueError
+from .errors import SuperfluousParameterError
 from ._checker import ParametersChecker
 from ._known_parameters import KNOWN_PARAMS
 from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
@@ -183,11 +184,7 @@ class ParameterInterpreter:
 
         self._update_param_order()
         for param, assignment in self._get_param_assignments():
-            # Check if we are doing a domain calculation
-            _is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
-            if _is_domain_calc and param in self.domains_ignore_params:         # TODO: shouldn't we complain rather than silently skip?
-                continue
-
+            self._complain_if_invalid_param_in_domain_calc(param)
             self._interpret_param(param, assignment)
             _LOGGER.log(_BELOW_DEBUG,
                         f'Successfully interpreted parameter {param}')
@@ -200,6 +197,18 @@ class ParameterInterpreter:
         _LOGGER.setLevel(_backup_log_level)
 
     # ----------------  Helper methods for interpret() ----------------
+    def _complain_if_invalid_param_in_domain_calc(self, param):
+        """Raise if an invalid param is given in a DOMAINS calculation."""
+        _is_domain_calc = 4 in self.rpars.RUN or self.rpars.domainParams
+        if not _is_domain_calc or param not in self.domains_ignore_params:
+            return
+        err_ = (
+            f'Found parameter {param} in the main PARAMETERS file of a '
+            'DOMAIN calculation. This parameter can only be defined in '
+            'the PARAMETERS files of the individual structural domains'
+            )
+        raise SuperfluousParameterError(param, message=err_)
+
     def _get_param_assignments(self):
         """Yield parameters and assignments for each PARAMETER read."""
         flat_params = (
