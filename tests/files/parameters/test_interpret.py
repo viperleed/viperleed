@@ -749,8 +749,9 @@ class TestOptimize(_TestInterpretBase):
     # pylint: disable-next=too-many-arguments
     def test_interpret_valid(self, val, flag, expect, interpreter, subtests):
         """Check correct interpretation of valid OPTIMIZE."""
-        self.interpret(interpreter, val, flags_str=flag)
         rpars = interpreter.rpars
+        rpars.RUN.append(6)
+        self.interpret(interpreter, val, flags_str=flag)
         with subtests.test('which'):
             assert rpars.OPTIMIZE['which'] == flag
         for key, value in expect.items():
@@ -760,7 +761,15 @@ class TestOptimize(_TestInterpretBase):
     @parametrize('val,flag,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, flag, exc, interpreter):
         """Ensure invalid OPTIMIZE raises exceptions."""
+        rpars = interpreter.rpars
+        rpars.RUN.append(6)
         self.check_raises(interpreter, val, exc, flags_str=flag)
+
+    def test_interpret_superfluous(self, interpreter):
+        """Ensure that defining OPTIMIZE without RUN=6 complains."""
+        val, flag, *_ = self.valid['flag_and_value']
+        self.check_raises(interpreter, val, err.SuperfluousParameterError,
+                           flags_str=flag)
 
 
 class TestParabolaFit(_TestInterpretBase):
