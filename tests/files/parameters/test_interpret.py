@@ -512,11 +512,14 @@ class TestFortranComp(_TestInterpretBase):
                             'mpifort -fallow-argument-mismatch', None),
         'custom_mpi_post_flag': ('mpipost', '"-L/opt/intel/mkl/lib/intel64"',
                                  None, '-L/opt/intel/mkl/lib/intel64'),
+        'without quotes': ('mpipost', '-L/opt/intel/mkl/lib/intel64',
+                           None, '-L/opt/intel/mkl/lib/intel64'),
         }
     invalid = {
-        'missing quote': ('', 'abcd', err.ParameterValueError),
         'too many flags': ('f1 f2', 'gfortran', err.ParameterUnknownFlagError),
         'unknown flag': ('invalid', '"ifort"', err.ParameterUnknownFlagError),
+        'single quote': ('post', '"-L/opt/intel/mkl/lib/intel64',
+                         err.ParameterValueError)
         }
 
     # About the disable below: In principle 'pre' and 'post' could

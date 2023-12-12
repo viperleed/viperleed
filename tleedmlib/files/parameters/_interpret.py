@@ -708,15 +708,15 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                                          skip_check=skip_check)
             return
 
-        # (3) Custom compiler flags or full compilation string.
-        #     Both need quotation marks                                         # TODO: is this needed now that we use f-strings?
-        if not compiler_str.startswith(("'", '"')):
-            message = ('No valid shorthand and not '
-                       'delimited by quotation marks')
-            raise ParameterValueError(param, message=message)
-
+        # (3) Remove optional quotes from custom compiler string
         delim = assignment.values_str[0]
-        _, compiler_str, _ = assignment.values_str.split(delim, maxsplit=2)
+        if delim in ('"', "'"):
+            compiler_str = assignment.values_str[1:]
+            if not compiler_str.endswith(delim):
+                raise ParameterValueError(param,
+                                          message='No closing quotation mark')
+            compiler_str = compiler_str[:-1]
+
         if not flag:
             self.rpars.FORTRAN_COMP[0] = compiler_str
         elif flag == 'post':
