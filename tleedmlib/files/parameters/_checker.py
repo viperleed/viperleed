@@ -52,3 +52,15 @@ class ParametersChecker:
             message = ('The same POSCAR element cannot appear in both. '
                        'Conflicting elements: ' + ', '.join(conflict))
             raise ParameterConflictError(*params, message=message)
+
+    def _check_and_update_fortran_comp(self):                                   # TODO: it may be necessary to add a .exe on Windows
+        """Update FORTRAN_COMP parameter with info from pre and post."""
+        # First the 'standard' compiler
+        pre, post = self._rpars.FORTRAN_COMP
+        if not post and pre in {'ifort', 'gfortran'}:
+            self._rpars.getFortranComp(comp=pre)
+
+        # Then MPI
+        pre, post = self._rpars.FORTRAN_COMP_MPI
+        if not post and pre in {'mpifort', 'mpiifort'}:
+            self._rpars.getFortranMpiComp(comp=pre)

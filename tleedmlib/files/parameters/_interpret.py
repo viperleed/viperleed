@@ -687,7 +687,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         except KeyError:
             self.interpret_numerical_parameter(assignment)
 
-    def interpret_fortran_comp(self, assignment, skip_check=False):             # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
+    def interpret_fortran_comp(self, assignment):                               # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
         """Assign parameter FORTRAN_COMP."""
         param = 'FORTRAN_COMP'
         message = (f'Only one flag allowed for {param} per line. '
@@ -698,14 +698,12 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
 
         # (1) Default (i.e., non-MPI) compiler flags
         if not flag and compiler_str.lower() in {'ifort', 'gfortran'}:
-            self.rpars.getFortranComp(comp=compiler_str.lower(),
-                                      skip_check=skip_check)
+            self.rpars.FORTRAN_COMP[0] = compiler_str.lower()
             return
 
         # (2) MPI compiler flags
         if flag == 'mpi' and compiler_str.lower() in {'mpifort', 'mpiifort'}:
-            self.rpars.getFortranMpiComp(comp=compiler_str.lower(),
-                                         skip_check=skip_check)
+            self.rpars.FORTRAN_COMP_MPI[0] = compiler_str.lower()
             return
 
         # (3) Remove optional quotes from custom compiler string

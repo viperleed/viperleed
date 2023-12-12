@@ -26,6 +26,7 @@ from viperleed.tleedmlib.classes.rparams.special.layer_cuts import (
     )
 from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files.parameters import errors as err
+from viperleed.tleedmlib.files.parameters._checker import ParametersChecker
 from viperleed.tleedmlib.files.parameters._known_parameters import (
     is_deprecated
     )
@@ -532,7 +533,15 @@ class TestFortranComp(_TestInterpretBase):
         """Check correct interpretation of valid FORTRAN_COMP(_MPI)."""
         assignment = self.assignment(val, flags_str=flag)
         rpars = interpreter.rpars
-        interpreter.interpret_fortran_comp(assignment, skip_check=True)
+        interpreter.interpret_fortran_comp(assignment)
+        finish_interpret = ParametersChecker()
+        # pylint: disable=protected-access
+        finish_interpret._rpars = rpars
+        try:
+            finish_interpret._check_and_update_fortran_comp()
+        except FileNotFoundError:
+            pytest.skip(f'Compiler {val} not available')
+        # pylint: enable=protected-access
         if 'mpi' in flag:
             compiler = getattr(rpars, self.param + '_MPI')
         else:

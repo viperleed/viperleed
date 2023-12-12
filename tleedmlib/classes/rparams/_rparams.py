@@ -608,7 +608,7 @@ class Rparams:
                           f'{energies.stop:.2f} eV')
 
     # TODO: eventually, these default values should be moved to some constant or other file
-    def getFortranComp(self, comp='auto', skip_check=False):                    # TODO: combine with FortranCompMPI from below; lots of repeated code
+    def getFortranComp(self, comp='auto'):                                      # TODO: combine with FortranCompMPI from below; lots of repeated code
         """
         Checks whether ifort or gfortran are present, and sets FORTRAN_COMP
         accordingly.
@@ -618,16 +618,13 @@ class Rparams:
         comp : str, optional
             'auto' (default): will check ifort first, then gfortran.
             'ifort' or 'gfortran': only that compiler will be checked.
-        skip_check : bool, optional
-            If True, will not check if the compiler is present. Default False.
+
         Raises
         ------
-        RuntimeError
-            If the given compiler is not supported, or if no compiler is found.
-
-        Returns
-        -------
-        None.
+        ValueError
+            If the given compiler is not supported
+        FileNotFoundError
+            If the desired compiler was not found
         """
         # supported compilers, in order of priority
         supported = ['ifort', 'gfortran']
@@ -639,14 +636,11 @@ class Rparams:
         else:
             _LOGGER.error('Rparams.getFortranComp: requested compiler is not '
                           'supported.')
-            raise RuntimeError('Fortran compiler not supported')
-        if not skip_check:
-            for c in check:
-                if shutil.which(c, os.X_OK) is not None:
-                    found = c
-                    break
-        else:
-            found = check[0]
+            raise ValueError('Fortran compiler not supported')
+        for c in check:
+            if shutil.which(c, os.X_OK) is not None:
+                found = c
+                break
         if found == '':
             if comp == 'auto':
                 _LOGGER.error('Rparams.getFortranComp: No fortran compiler '
@@ -654,7 +648,7 @@ class Rparams:
             else:
                 _LOGGER.error('Rparams.getFortranComp: Requested fortran '
                               'compiler not found.')
-            raise RuntimeError('Fortran compiler not found')
+            raise FileNotFoundError('Fortran compiler not found')
         if found == 'ifort':
             self.FORTRAN_COMP = [
                 'ifort -O2 -I/opt/intel/mkl/include',
@@ -667,7 +661,7 @@ class Rparams:
                                  '-fbacktrace']  # should not affect performance
             _LOGGER.debug('Using fortran compiler: gfortran')
 
-    def getFortranMpiComp(self, comp='auto', skip_check=False):
+    def getFortranMpiComp(self, comp='auto'):
         """
         Checks whether mpiifort or mpifort are present, and sets FORTRAN_COMP
         mpi accordingly.
@@ -677,17 +671,13 @@ class Rparams:
         comp : str, optional
             'auto' (default): will check mpiifort first, then mpifort.
             'mpiifort' or 'mpifort': only that compiler will be checked.
-        skip_check : bool, optional
-            If True, will not check if the compiler is present. Default False.
 
         Raises
         ------
-        RuntimeError
-            If the given compiler is not supported, or if no compiler is found.
-
-        Returns
-        -------
-        None.
+        ValueError
+            If the given compiler is not supported
+        FileNotFoundError
+            If the desired compiler was not found
         """
         # supported compilers, in order of priority
         supported = ['mpiifort', 'mpifort']
@@ -699,14 +689,11 @@ class Rparams:
         else:
             _LOGGER.error('Rparams.getFortranMpiComp: requested compiler is '
                           'not supported.')
-            raise RuntimeError('Fortran MPI compiler not supported')
-        if not skip_check:
-            for c in check:
-                if shutil.which(c, os.X_OK) is not None:
-                    found = c
-                    break
-        else:
-            found = check[0]
+            raise ValueError('Fortran MPI compiler not supported')
+        for c in check:
+            if shutil.which(c, os.X_OK) is not None:
+                found = c
+                break
         if found == '':
             if comp == 'auto':
                 _LOGGER.error('Rparams.getFortranMpiComp: No fortran compiler '
@@ -714,7 +701,7 @@ class Rparams:
             else:
                 _LOGGER.error('Rparams.getFortranMpiComp: Requested fortran '
                               'compiler not found.')
-            raise RuntimeError('Fortran MPI compiler not found')
+            raise FileNotFoundError('Fortran MPI compiler not found')
         if found == 'mpiifort':
             self.FORTRAN_COMP_MPI = ['mpiifort -Ofast', '']
             _LOGGER.debug('Using fortran compiler: mpiifort')
