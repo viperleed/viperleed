@@ -66,10 +66,10 @@ def runPhaseshiftGen_old(sl, rp,
     psgensource = Path(rp.source_dir, psgensource)
     excosource = Path(shortpath, excosource)
 
-    if not psgensource.is_file():
-        raise FileNotFoundError('Could not find PAHSESHIFTS executable at '
-                                f'{psgensource}. Did you forget to compile it? '
-                                'Try running make in the tensorleed directory')
+    # if not psgensource.is_file():
+    #     raise FileNotFoundError('Could not find PAHSESHIFTS executable at '
+    #                             f'{psgensource}. Did you forget to compile it? '
+    #                             'Try running make in the tensorleed directory')
 
     _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.addBulkLayers(rp)
