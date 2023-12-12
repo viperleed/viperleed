@@ -17,7 +17,7 @@ read from a PARAMETERS file.
 
 from collections.abc import Sequence
 import copy
-from functools import partialmethod
+from functools import partialmethod, wraps
 import logging
 from pathlib import Path
 import re
@@ -30,10 +30,11 @@ except ImportError:
 else:
     _CAN_PLOT = True
 
+from viperleed import __version__
 from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.base import readIntRange, readVector
 from viperleed.tleedmlib.base import recombineListElements, splitSublists
-from viperleed.tleedmlib.classes.rparams import (LayerCuts, EnergyRange, 
+from viperleed.tleedmlib.classes.rparams import (LayerCuts, EnergyRange,
                                                  SymmetryEps)
 from viperleed.tleedmlib.classes.rparams import TheoEnergies, IVShiftRange
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
@@ -54,7 +55,7 @@ from .errors import ParameterUnknownFlagError
 from .errors import ParameterValueError
 from .errors import SuperfluousParameterError
 from ._checker import ParametersChecker
-from ._known_parameters import KNOWN_PARAMS
+from ._known_parameters import KNOWN_PARAMS, is_deprecated, warn_if_deprecated
 from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
 
@@ -136,6 +137,36 @@ def interpret(rpars, slab=None, silent=False):
     interpreter.interpret(slab=slab, silent=silent)
 
 
+def _with_dynamic_methods(cls):
+    """Attach dynamically generated methods to the ParameterInterpreter cls."""
+
+    def _interpret_deprecated(interpreter_method, param):
+        """Interpret a deprecated PARAMETER."""
+        @wraps(interpreter_method)
+        def _wrapper_method(self, assignment):
+            if warn_if_deprecated(param, __version__):
+                self.rpars.setHaltingLevel(3)
+            interpreter_method(self, assignment)
+        return _wrapper_method
+
+    # Dynamically produce methods for the 'simple parameters' listed
+    # above. Notice that we should do this only once for the class,
+    # and not for each instance separately. Calling the methods again
+    # is possible, and would simply override the bindings
+    cls.make_boolean_interpreter_methods()
+    cls.make_numerical_interpreter_methods()
+
+    # Now wrap all the interpreter methods for deprecated parameters
+    for method_name, method in cls.__dict__.items():
+        if not method_name.startswith('interpret_'):
+            continue
+        *_, param = method_name.split('interpret_')
+        if not is_deprecated(param, __version__):
+            continue
+        setattr(cls, method_name, _interpret_deprecated(method, param))
+    return cls
+
+
 _BELOW_DEBUG = 2
 
 
@@ -143,11 +174,12 @@ _BELOW_DEBUG = 2
 # ParameterInterpreter: a dispatcher for interpreting PARAMETERS.
 # Methods are public, but are very rarely used. Most of the times
 # they are used via the .interpret() interface.
-# pylint: disable-next=too-many-public-methods
-class ParameterInterpreter:
+@_with_dynamic_methods
+class ParameterInterpreter:  # pylint: disable=too-many-public-methods
     """Class to interpret parameters from the PARAMETERS file.
 
-    To add a new parameter, add a method with the name 'interpret_<param>'.
+    To add a new parameter, add a method with the name
+    'interpret_<param>' and with a single assignment argument.
     """
 
     domains_ignore_params = {
@@ -1895,11 +1927,3 @@ class ParameterInterpreter:
         except ValueError:
             self.rpars.setHaltingLevel(1)
             raise ParameterFloatConversionError(param, matrix) from None
-
-
-# Dynamically produce methods for the 'simple parameters' listed above
-# Notice that we should do this only once right here, not for each
-# instance separately. Calling the methods again is possible, and
-# would simply override the bindings.
-ParameterInterpreter.make_boolean_interpreter_methods()
-ParameterInterpreter.make_numerical_interpreter_methods()

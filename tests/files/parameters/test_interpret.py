@@ -19,12 +19,16 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Will be fixed in installable version
+from viperleed import __version__
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut, LayerCutTokenType as CutType
     )
 from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files.parameters import errors as err
+from viperleed.tleedmlib.files.parameters._known_parameters import (
+    is_deprecated
+    )
 from viperleed.tleedmlib.files.parameters._utils import Assignment
 from viperleed.tleedmlib.files.parameters._utils import NumericBounds as Bounds
 
@@ -803,6 +807,14 @@ class TestParabolaFit(_TestInterpretBase):
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid PARABOLA_FIT raises exceptions."""
         self.check_raises(interpreter, val, exc)
+
+    @pytest.mark.skipif(not is_deprecated(param, __version__),
+                        reason='Not deprecated')
+    def test_deprecated(self, interpreter, caplog):
+        """Ensure that PARABOLA_FIT is flagged as deprecated."""
+        val, *_ = self.valid['off']
+        self.interpret(interpreter, val)
+        assert 'deprecated' in caplog.text
 
 
 class TestPhaseshiftEps(_TestInterpretBase):
