@@ -3,6 +3,7 @@
 Created on 2023-12-11
 
 @author: Alexander Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 
 Defines the class SymmetryEps, which is a float with optional z value.
 """
@@ -76,7 +77,7 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
         if isinstance(other, Real) and not has_z:
             _lt = float(self) < other
         elif isinstance(other, Real):  # float(self) != self.z
-            _ls = False
+            _lt = False
         else:
             _lt = (float(self), self.z) < (float(other), other.z)
         return _lt or NotImplemented
