@@ -83,6 +83,7 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
 
     def __hash__(self):
         """Return hash(self)."""
-        if self._z is None:
+        has_no_z = self._z is None or self.z == float(self)
+        if has_no_z:
             return super().__hash__()
         return hash((float(self), self.z))
