@@ -8,6 +8,7 @@ Defines the class SymmetryEps, which is a float with optional z value.
 """
 
 from functools import total_ordering
+from numbers import Real
 
 from ._base import SpecialParameter
 
@@ -56,18 +57,26 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
 
     def __eq__(self, other):
         """Return self == other."""
-        if not isinstance(other, SymmetryEps):
+        if not isinstance(other, (SymmetryEps, Real)):
             return NotImplemented
-        _eq = (float(self), self.z) == (float(other), other.z)
+        if isinstance(other, Real) and self._z is None:
+            _eq = float(self) == other
+        else:
+            _eq = (float(self), self.z) == (float(other), other.z)
         return _eq or NotImplemented
 
     def __lt__(self, other):
         """Return self < other."""
-        if not isinstance(other, SymmetryEps):
+        if not isinstance(other, (SymmetryEps, Real)):
             return NotImplemented
-        _lt = (float(self), self.z) < (float(other), other.z)
+        if isinstance(other, Real) and self._z is None:
+            _lt = float(self) < other
+        else:
+            _lt = (float(self), self.z) < (float(other), other.z)
         return _lt or NotImplemented
 
     def __hash__(self):
         """Return hash(self)."""
+        if self._z is None:
+            return super().__hash__()
         return hash((float(self), self.z))
