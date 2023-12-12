@@ -167,6 +167,19 @@ def did_you_mean(unknown_param):
     return _PARAM_ALIAS[close_matches[0]]
 
 
+def is_deprecated(param, version):
+    """Return whether param is deprecated for a ViPErLEED version."""
+    try:
+        since, till = _DEPRECATED.get(_make_alias(param))
+    except (TypeError, KeyError):
+        return False
+    if version < since:
+        return False
+    if till is not None and version > till:
+        return False
+    return True
+
+
 def warn_if_deprecated(param, version):
     """Emit a log warning if `param` is deprecated for `version`.
 
@@ -184,13 +197,7 @@ def warn_if_deprecated(param, version):
     is_deprecated : bool
         True if `param` is deprecated for `version`.
     """
-    try:
-        since, till = _DEPRECATED.get(_make_alias(param))
-    except (TypeError, KeyError):
-        return False
-    if version < since:
-        return False
-    if till is not None and version > till:
+    if not is_deprecated(param, version):
         return False
     _LOGGER.warning(f'PARAMETER {param} is deprecated in ViPErLEED version '
                     f'{version}. This may cause errors or undefined behavior. '
