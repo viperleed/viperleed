@@ -59,8 +59,11 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
         """Return self == other."""
         if not isinstance(other, (SymmetryEps, Real)):
             return NotImplemented
-        if isinstance(other, Real) and self._z is None:
+        has_z = self._z is not None or self.z != float(self)
+        if isinstance(other, Real) and not has_z:
             _eq = float(self) == other
+        elif isinstance(other, Real):  # float(self) != self.z
+            _eq = False
         else:
             _eq = (float(self), self.z) == (float(other), other.z)
         return _eq or NotImplemented
@@ -69,8 +72,11 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
         """Return self < other."""
         if not isinstance(other, (SymmetryEps, Real)):
             return NotImplemented
-        if isinstance(other, Real) and self._z is None:
+        has_z = self._z is not None or self.z != float(self)
+        if isinstance(other, Real) and not has_z:
             _lt = float(self) < other
+        elif isinstance(other, Real):  # float(self) != self.z
+            _ls = False
         else:
             _lt = (float(self), self.z) < (float(other), other.z)
         return _lt or NotImplemented
