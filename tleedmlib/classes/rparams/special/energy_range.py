@@ -145,14 +145,18 @@ class EnergyRange(SpecialParameter):
         """Return whether other is a subset of this EnergyRange."""
         if not isinstance(other, EnergyRange):
             raise TypeError
-        if not self.defined:
+        if not self.has_bounds:
             raise RuntimeError('Cannot compare non-defined TheoEnergies')
-        if not other.defined:
+        if not other.has_bounds:
             raise ValueError('Cannot compare non-defined TheoEnergies')
         if self.start > other.start or self.stop < other.stop:
             return False
         if ignore_step:
             return True
+        if not self.defined:
+            raise RuntimeError('Cannot compare non-defined TheoEnergies')
+        if not other.defined:
+            raise ValueError('Cannot compare non-defined TheoEnergies')
         if self.step != other.step:
             return False
         # Finally, make sure they're not shifted
