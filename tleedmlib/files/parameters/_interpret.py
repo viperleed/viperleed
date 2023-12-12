@@ -143,10 +143,10 @@ def _with_dynamic_methods(cls):
     def _interpret_deprecated(interpreter_method, param):
         """Interpret a deprecated PARAMETER."""
         @wraps(interpreter_method)
-        def _wrapper_method(self, assignment):
+        def _wrapper_method(self, assignment, **kwargs):
             if warn_if_deprecated(param, __version__):
                 self.rpars.setHaltingLevel(3)
-            interpreter_method(self, assignment)
+            interpreter_method(self, assignment, **kwargs)
         return _wrapper_method
 
     # Dynamically produce methods for the 'simple parameters' listed
