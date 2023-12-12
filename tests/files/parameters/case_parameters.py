@@ -50,6 +50,9 @@ for key in ('stop', 'no_stop', 'left empty'):
 _READ['missing_equals'].update(**_READ['Ag'])
 del _READ['missing_equals']['SUPERLATTICE']
 
+# FORTRAN_COMP added only for the 'Ag'
+_READ['Ag']['FORTRAN_COMP'] = ['gfortran', '-llapack -lpthread -lblas']
+
 _PATHS = {
     'Ag': 'Ag(100)/initialization/PARAMETERS',
     'Ir': 'parameters/PARAMETERS_Ir(100)-(2x1)-O',
