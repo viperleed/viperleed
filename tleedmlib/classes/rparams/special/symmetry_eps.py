@@ -57,14 +57,16 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
     def __eq__(self, other):
         """Return self == other."""
         if not isinstance(other, SymmetryEps):
-            raise NotImplementedError
-        return (float(self), self.z) == (float(other), other.z)
+            return NotImplemented
+        _eq = (float(self), self.z) == (float(other), other.z)
+        return _eq or NotImplemented
 
     def __lt__(self, other):
         """Return self < other."""
         if not isinstance(other, SymmetryEps):
-            raise NotImplementedError
-        return (float(self), self.z) < (float(other), other.z)
+            return NotImplemented
+        _lt = (float(self), self.z) < (float(other), other.z)
+        return _lt or NotImplemented
 
     def __hash__(self):
         """Return hash(self)."""
