@@ -7,19 +7,19 @@ Created on 2023-12-11
 Defines the class SymmetryEps, which is a float with optional z value.
 """
 
+from functools import total_ordering
+
 from ._base import SpecialParameter
 
 
 # TODO: arithmetic operations return a float. This may be problematic.
-# hash uses the default float implementation. This means that it cannot
-# distinguish SymmetryEps(0.1) from SymmetryEps(0.1, 0.2)
 # Dunder methods that may be needed: '__add__', '__eq__', '__floordiv__',
-# '__ge__', '__gt__', '__hash__', '__le__', '__lt__', '__mod__', '__mul__',
-# '__neg__', '__pos__', '__pow__', '__radd__', '__rdivmod__', '__rfloordiv__',
-# '__rmod__', '__rmul__', '__round__', '__rpow__', '__rsub__', '__rtruediv__',
-# '__sub__', '__truediv__'
+# '__mod__', '__mul__', '__neg__', '__pos__', '__pow__', '__radd__',
+# '__rdivmod__', '__rfloordiv__', '__rmod__', '__rmul__', '__round__',
+# '__rpow__', '__rsub__', '__rtruediv__', '__sub__', '__truediv__'
 # TODO: forbid negative values!
 
+@total_ordering
 class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
     """SymmetryEps acts like a float but has an optional .z value.
 
@@ -53,3 +53,19 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
         if z_value is None:
             return float(self)
         return z_value
+
+    def __eq__(self, other):
+        """Return self == other."""
+        if not isinstance(other, SymmetryEps):
+            raise NotImplementedError
+        return (float(self), self.z) == (float(other), other.z)
+
+    def __lt__(self, other):
+        """Return self < other."""
+        if not isinstance(other, SymmetryEps):
+            raise NotImplementedError
+        return (float(self), self.z) < (float(other), other.z)
+
+    def __hash__(self):
+        """Return hash(self)."""
+        return hash((float(self), self.z))
