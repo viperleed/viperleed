@@ -299,11 +299,7 @@ def runPhaseshiftGen_old(sl, rp,
     phaseshifts_log_path = (rp.workdir / phaseshifts_log_name).with_suffix(".log")
 
     # RUNS phaseshift program
-    ps_output = subprocess.run(psgensource,
-                               cwd=rp.workdir,
-                               input=output,
-                               encoding='ascii',
-                               capture_output=True)
+    logger.warning("PHASESHIFT TESTING VERSION – SKIPPING EEASISSS EXECUTION")
 
     # Write EEASISSS output to log file
     try:
