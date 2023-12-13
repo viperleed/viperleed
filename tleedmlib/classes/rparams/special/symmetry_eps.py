@@ -60,27 +60,48 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
         """Return self == other."""
         if not isinstance(other, (SymmetryEps, Real)):
             return NotImplemented
-        has_z = self._z is not None or self.z != float(self)
-        if isinstance(other, Real) and not has_z:
-            _eq = float(self) == other
-        elif isinstance(other, Real):  # float(self) != self.z
-            _eq = False
-        else:
-            _eq = (float(self), self.z) == (float(other), other.z)
+        was_real = not isinstance(other, SymmetryEps)
+        if was_real:
+            other = SymmetryEps(other)
+        _eq = (float(self), self.z) == (float(other), other.z)
+        if was_real:
+            # Do not transform a False into a NotImplemented to
+            # prevent python from falling back onto trying the
+            # reverse operation other.__eq__(self) that returns
+            # the incorrect result
+            return _eq
         return _eq or NotImplemented
 
     def __lt__(self, other):
         """Return self < other."""
         if not isinstance(other, (SymmetryEps, Real)):
             return NotImplemented
-        has_z = self._z is not None or self.z != float(self)
-        if isinstance(other, Real) and not has_z:
-            _lt = float(self) < other
-        elif isinstance(other, Real):  # float(self) != self.z
-            _lt = False
-        else:
-            _lt = (float(self), self.z) < (float(other), other.z)
+        was_real = not isinstance(other, SymmetryEps)
+        if was_real:
+            other = SymmetryEps(other)
+        _lt = float(self) < float(other) and self.z < other.z
+        if was_real:
+            # Do not transform a False into a NotImplemented to
+            # prevent python from falling back onto trying the
+            # reverse operation other.__gt__(self) that returns
+            # the incorrect result
+            return _lt
         return _lt or NotImplemented
+
+    def __ne__(self, other):
+        """Return self != other."""
+        # Notice that, while normally python should take care
+        # correctly of the default __ne__ implementation, we
+        # want to make sure that we do not fall back onto
+        # checking other.__ne__(self) when comparing to a
+        # simple Real value. Otherwise we get the wrong result.
+        # Reimplementing __ne__ is generally suggested when
+        # inheriting from a built-in objects like here (float).
+        # See github.com/python/cpython/issues/48645
+        _eq = self.__eq__(other)
+        if _eq is NotImplemented:
+            return _eq
+        return not _eq
 
     def __hash__(self):
         """Return hash(self)."""
