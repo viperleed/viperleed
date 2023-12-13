@@ -615,7 +615,8 @@ def rfactor_from_csv(
     rpars.IV_SHIFT_RANGE = IVShiftRange(*v0r_shift_range, intpol_step)
 
     # Finally, get the right energies
-    _, theo_range, *_ = rf_io.prepare_rfactor_energy_ranges(rpars, n_expand=0)  # TODO: @amimre  -- adjust this n_expand like the one in run_new_rfactor
+    _, theo_range, *_ = (
+        rf_io.prepare_rfactor_energy_ranges(rpars, n_expand=(intpol_deg-1)/2))
     grid = np.arange(theo_range.min,
                      theo_range.max + 0.1*intpol_step,
                      intpol_step)
