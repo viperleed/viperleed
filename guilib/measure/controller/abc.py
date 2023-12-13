@@ -1202,7 +1202,7 @@ class MeasureControllerABC(ControllerABC):
     def time_to_first_measurement(self):
         """Return the interval between trigger and 1st measurement (msec).
 
-        Notice that this duffers from self.initial_delay. This is
+        Notice that this differs from self.initial_delay. This is
         the total amount of time the controller requires to return
         its measurement. self.initial_delay is instead the time
         the measurement was acquired (relative to triggering). The
@@ -1212,7 +1212,7 @@ class MeasureControllerABC(ControllerABC):
         A typical implementation:
         >>> n_ave = self.nr_samples
         >>> return (self.initial_delay
-                    + (n_ave - 1)/2 * self.measurement_interval)
+                    + (n_ave - 1) * self.measurement_interval)
 
         Must be overridden in subclasses.
 
