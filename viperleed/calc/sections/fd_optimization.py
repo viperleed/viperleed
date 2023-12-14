@@ -179,6 +179,7 @@ def fd_optimization(sl, rp):
     # optimization loop
     curvature_fail = 0
     parabola = None
+    best_explicit_r = None
     while True:
         if rp.STOP:
             break
@@ -302,6 +303,8 @@ def fd_optimization(sl, rp):
         r, rfaclist = get_fd_r(tsl, trp, work_dir=workdir, home_dir=rp.workdir)
         known_points = np.append(known_points, np.array([[x, r]]), 0)
         rfactor_lists.append(rfaclist)
+        if not best_explicit_r or r < best_explicit_r[0]:
+            best_explicit_r = trp.stored_R["refcalc"]    # has int & frac components
         # decide how to proceed
         if len(known_points) >= rp.OPTIMIZE["maxpoints"]:
             logger.warning(
@@ -317,7 +320,7 @@ def fd_optimization(sl, rp):
     logger.info(f"Optimization of {which}: Predicted minimum at "
                 f"{new_min:.4f}, R = {parabola(new_min):.4f}")
     current_best = known_points[np.argmin(known_points, 0)[1]]
-    rp.stored_R["refcalc"] = current_best[1]
+    rp.stored_R["refcalc"] = best_explicit_r
     if (round(parabola(new_min), 4) > round(current_best[1], 4)
             and current_best[0] != known_points[-1, 0]):
         logger.warning(
