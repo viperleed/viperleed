@@ -1229,8 +1229,8 @@ class TestSymmetryEps(_TestInterpretBase):
     def test_interpret_multiple_values(self, interpreter):
         """Check correct interpretation of EPS and EPS_Z values."""
         self.interpret(interpreter, '0.1 0.2')
-        rpars = interpreter.rpars
-        assert (rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z) == (0.1, 0.2)
+        eps = interpreter.rpars.SYMMETRY_EPS
+        assert (float(eps), eps.z) == (0.1, 0.2)
 
     def test_interpret_invalid_number_of_inputs(self, interpreter):
         """Ensure more than two values raises exceptions."""
