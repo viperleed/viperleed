@@ -317,6 +317,7 @@ def fd_optimization(sl, rp):
     logger.info(f"Optimization of {which}: Predicted minimum at "
                 f"{new_min:.4f}, R = {parabola(new_min):.4f}")
     current_best = known_points[np.argmin(known_points, 0)[1]]
+    rp.stored_R["refcalc"] = current_best[1]
     if (round(parabola(new_min), 4) > round(current_best[1], 4)
             and current_best[0] != known_points[-1, 0]):
         logger.warning(
