@@ -104,3 +104,99 @@ class TestSymmetryEps:
         """Check correct result of repr(eps)."""
         eps = SymmetryEps(0.1, 0.3)
         assert 'z=' in repr(eps)
+
+
+class TestSymmetryEpsArithmetics:
+    """Collection of tests for arithmetic operations on SymmetryEps objects."""
+
+    valid = {  # self, other, operation, expected
+        'add, no z': ((0.1,), SymmetryEps(0.1), operator.add,
+                      SymmetryEps(0.2)),
+        'add, z, float': ((0.1, 0.3), 0.1, operator.add,
+                          SymmetryEps(0.2, 0.4)),
+        'add, z': ((0.1, 0.3), SymmetryEps(0.15, 0.4), operator.add,
+                   SymmetryEps(0.25, 0.7)),
+        'sub, no z': ((0.2,), SymmetryEps(0.05), operator.sub,
+                      SymmetryEps(0.15)),
+        'sub, z, float': ((0.2, 0.1), SymmetryEps(0.05), operator.sub,
+                          SymmetryEps(0.15, 0.05)),
+        'sub, z': ((0.4, 0.3), SymmetryEps(0.1, 0.2), operator.sub,
+                   SymmetryEps(0.3, 0.1)),
+        'mul, no z': ((0.1,), 5.5, operator.mul, SymmetryEps(0.55)),
+        'mul, z': ((0.1, 0.2), 3.2, operator.mul, SymmetryEps(0.32, 0.64)),
+        'div, no z': ((0.5,), 5, operator.truediv, SymmetryEps(0.1)),
+        'div, z': ((1.2, 0.3), 0.3, operator.truediv, SymmetryEps(4, 1)),
+        'pow, no z': ((2,), 3, operator.pow, SymmetryEps(8)),
+        'pow, z': ((2, 3), 3, operator.pow, SymmetryEps(8, 27)),
+        'modulo, no z': ((4.2,), 2, operator.mod, SymmetryEps(0.2)),
+        'modulo, z': ((4.2, 0.1), 2, operator.mod, SymmetryEps(0.2, 0.1)),
+        }
+    invalid = {  # self, other, operation, exc
+        'type': ((0.2,), 'abc', operator.mul, TypeError),
+        'mul': ((0.1,), SymmetryEps(0.1), operator.mul, TypeError),
+        'div': ((0.1, 0.2), SymmetryEps(0.3), operator.floordiv, TypeError),
+        'pow': ((0.3, 0.1), SymmetryEps(0.5), pow, TypeError),
+        'neg result': ((0.1, 0.2), 0.5, operator.sub, ValueError),
+        }
+
+    @parametrize('args,other,operation,expected', valid.values(), ids=valid)
+    def test_valid(self, args, other, operation, expected, value_and_z):
+        """Check that operation(eps, other) == expected."""
+        eps = SymmetryEps(*args)
+        result = operation(eps, other)
+        assert value_and_z(result) == pytest.approx(value_and_z(expected))
+
+    @parametrize('args,other,operation,exc', invalid.values(), ids=invalid)
+    def test_invalid(self, args, other, operation, exc):
+        """Check complaints when using invalid arithmetic operations."""
+        eps = SymmetryEps(*args)
+        with pytest.raises(exc):
+            operation(eps, other)
+
+    def test_reverse(self, value_and_z):
+        """Check result of an arithmetic operation with swapped args."""
+        eps = SymmetryEps(0.3, z=0.5)
+        result = 3.2 + eps
+        expected = SymmetryEps(3.5, 3.7)
+        assert value_and_z(result) == pytest.approx(value_and_z(expected))
+
+    valid_pos = {
+        'with z': (2.7, 0.43),
+        'without z': (3.5,),
+        }
+
+    @parametrize(args=valid_pos.values(), ids=valid_pos)
+    def test_pos(self, args, value_and_z, subtests):
+        """Check correct result of +eps."""
+        eps = SymmetryEps(*args)
+        result = +eps
+        with subtests.test('result'):
+            assert value_and_z(result) == pytest.approx(value_and_z(eps))
+        with subtests.test('immutable'):
+            assert result is not eps
+
+    def test_neg(self):
+        """Ensure -eps complains."""
+        eps = SymmetryEps(2.7, 0.43)
+        with pytest.raises(TypeError):
+            result = -eps
+
+    three = {
+        'round, no digits': ((2.7, 1.2), (None,), round, SymmetryEps(3, 1)),
+        'round, digits': ((2.73, 1.26), (1,), round, SymmetryEps(2.7, 1.3)),
+        'round no z': ((2.2,), (None,), round, SymmetryEps(2)),
+        }
+
+    @parametrize('args,others,operation,expected', three.values(), ids=three)
+    def test_valid_ternary(self, args, others, operation,
+                           expected, value_and_z):
+        """Check result of an operation with more three arguments."""
+        eps = SymmetryEps(*args)
+        result = operation(eps, *others)
+        assert value_and_z(result) == pytest.approx(value_and_z(expected))
+
+    def test_pow_modulo_raises(self):
+        """Ensure that the 3-args form of pow() is unsupported."""
+        eps = SymmetryEps(0.1)
+        with pytest.raises(TypeError):
+            pow(eps, 2, 3)
