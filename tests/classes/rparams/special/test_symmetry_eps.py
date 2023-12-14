@@ -25,6 +25,8 @@ class TestSymmetryEps:
     invalid = {
         'float': (('invalid',), TypeError),
         'float z': ((0.1, 'invalid'), TypeError),
+        'negative': ((-0.1,), ValueError),
+        'negative z': ((0.1, -0.2), ValueError),
         }
 
     @parametrize('values,expected', valid.values(), ids=valid)

@@ -19,7 +19,6 @@ from ._base import SpecialParameter
 # '__mod__', '__mul__', '__neg__', '__pos__', '__pow__', '__radd__',
 # '__rdivmod__', '__rfloordiv__', '__rmod__', '__rmul__', '__round__',
 # '__rpow__', '__rsub__', '__rtruediv__', '__sub__', '__truediv__'
-# TODO: forbid negative values!
 
 @total_ordering
 class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
@@ -34,18 +33,24 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
 
     def __new__(cls, value, z=None):
         """Initialize instance."""
-        try:
-            float(value)
-        except (ValueError, TypeError):
-            raise TypeError('SymmetryEps value must be float') from None
+        cls._check_float_value(value)
         if z is not None:
-            try:
-                z = float(z)
-            except (ValueError, TypeError):
-                raise TypeError('SymmetryEps z value must be float') from None
+            z = cls._check_float_value(z, 'z ')
         instance = super().__new__(cls, value)
         setattr(instance, '_z', z)
         return instance
+
+    @staticmethod
+    def _check_float_value(value, extra_msg=''):
+        """Return a float version of value. Raise if not acceptable."""
+        try:
+            float_v = float(value)
+        except (ValueError, TypeError):
+            raise TypeError(f'SymmetryEps {extra_msg}value '
+                            'must be float') from None
+        if float_v <= 0:
+            raise ValueError(f'SymmetryEps {extra_msg}value must be positive')
+        return float_v
 
     @property
     def has_z(self):
