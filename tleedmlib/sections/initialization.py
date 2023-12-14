@@ -237,6 +237,9 @@ def initialization(sl, rp, subdomain=False):
     # Check for an ambiguous angle phi
     _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1)
 
+    # Check that layer cuts are not too close together
+    _check_and_warn_layer_cuts(sl)
+
     # check whether PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
     # True: new phaseshifts need to be generated/written
@@ -790,4 +793,16 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
             f"{(rp.PHI+ angle_between_first_uc_vec_and_x):.2f}° from a.\n"
             "See the ViPErLEED documentation for the parameter BEAM_INCDIDENCE "
             "for details."
+            )
+
+def _check_and_warn_layer_cuts(slab):
+    """Check if layer cuts are too close together and warn if so."""
+    layer_cuts = slab.LAYER_CUTS
+    min_spacing = slab.getMinLayerSpacing()
+    if min_spacing < 1.0:
+        logger.warning(
+            f"Layer cuts are very close together. The minimum spacing "
+            f"between layers is {min_spacing:.2f} Å. This may lead to "
+            "covergence issues in the reference calculation. Check the "
+            "LAYERS_CUTS parameter in the PARAMETERS file."
             )
