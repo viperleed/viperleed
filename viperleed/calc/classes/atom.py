@@ -126,9 +126,9 @@ class Atom:
         self.storeOriState()
         self.oriState.pos = copy.copy(at.pos)
         self.oriState.cartpos = copy.copy(at.cartpos)
-        self.oriState.offset_geo = copy.copy(at.offset_geo)
-        self.oriState.offset_vib = copy.copy(at.offset_vib)
-        self.oriState.offset_occ = copy.copy(at.offset_occ)
+        self.oriState.offset_geo = copy.deepcopy(at.offset_geo)
+        self.oriState.offset_vib = copy.deepcopy(at.offset_vib)
+        self.oriState.offset_occ = copy.deepcopy(at.offset_occ)
 
     def initDisp(self, force=False):
         """
@@ -186,11 +186,11 @@ class Atom:
                 self.disp_vib[el] = final_vib_steps
             del self.offset_vib[el]
 
-        # vibrational offsets from VIBROCC
+        # occupational offsets from VIBROCC
         if el in self.offset_occ:
             occ_offset = self.offset_occ[el]
             final_occ_steps = [occ_step + occ_offset for occ_step in self.disp_occ[el]]
-            if any(np.array(final_occ_steps) < 0) or any(np.array(final_occ_steps) > 1):
+            if any(np.array(final_occ_steps) < -1e-6) or any(np.array(final_occ_steps) > 1+1e-6):
                 logger.error(f"Occupational offset for {self} defined in "
                             "VIBROCC would result in unphysical concentration"
                             "(occupation <0 or >1). Offset will be ignored.")
