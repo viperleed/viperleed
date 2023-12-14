@@ -8,9 +8,17 @@ Created on 2023-12-11
 import operator
 
 import pytest
-from pytest_cases import parametrize
+from pytest_cases import fixture, parametrize
 
 from viperleed.tleedmlib.classes.rparams import SymmetryEps
+
+
+@fixture(name='value_and_z')
+def factory_value_and_z():
+    """Return the float and z values of a SymmetryEps."""
+    def _make(eps):
+        return float(eps), eps.z
+    return _make
 
 
 class TestSymmetryEps:
@@ -30,10 +38,10 @@ class TestSymmetryEps:
         }
 
     @parametrize('values,expected', valid.values(), ids=valid)
-    def test_valid(self, values, expected):
+    def test_valid(self, values, expected, value_and_z):
         """Check correct interpretation of valid values."""
         eps = SymmetryEps(*values)
-        assert (float(eps), eps.z) == expected
+        assert value_and_z(eps) == expected
 
     @parametrize('values,exc', invalid.values(), ids=invalid)
     def test_invalid(self, values, exc):
