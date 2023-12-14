@@ -99,3 +99,8 @@ class TestSymmetryEps:
             assert eps is not other
         with subtests.test('hash equality'):
             assert hash(eps) == hash(other)
+
+    def test_repr(self):
+        """Check correct result of repr(eps)."""
+        eps = SymmetryEps(0.1, 0.3)
+        assert 'z=' in repr(eps)

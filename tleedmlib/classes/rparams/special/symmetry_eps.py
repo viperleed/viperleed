@@ -66,6 +66,13 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
             return float(self)
         return self._z  # pylint: disable=no-member
 
+    def __repr__(self):
+        """Return a representation string for self."""
+        txt = f'SymmetryEps({float(self)}'
+        if self.has_z:
+            txt += f', z={self.z}'
+        return txt + ')'
+
     def __eq__(self, other):
         """Return self == other."""
         if not isinstance(other, (SymmetryEps, Real)):
