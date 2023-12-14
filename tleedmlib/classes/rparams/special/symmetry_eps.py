@@ -48,13 +48,18 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
         return instance
 
     @property
+    def has_z(self):
+        """Return whether self has a z value defined."""
+        # About the disable: the member exists, it's created in __new__
+        return self._z is not None  # pylint: disable=no-member
+
+    @property
     def z(self):  # pylint: disable=invalid-name
         """Return the z value of this SymmetryEps."""
         # About the disable: the member exists, it's created in __new__
-        z_value = self._z  # pylint: disable=no-member
-        if z_value is None:
+        if not self.has_z:
             return float(self)
-        return z_value
+        return self._z  # pylint: disable=no-member
 
     def __eq__(self, other):
         """Return self == other."""
@@ -105,7 +110,7 @@ class SymmetryEps(float, SpecialParameter, param='SYMMETRY_EPS'):
 
     def __hash__(self):
         """Return hash(self)."""
-        has_no_z = self._z is None or self.z == float(self)
+        has_no_z = not self.has_z or self.z == float(self)
         if has_no_z:
             return super().__hash__()
         return hash((float(self), self.z))
