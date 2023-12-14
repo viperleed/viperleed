@@ -140,6 +140,7 @@ class TestSymmetryEpsArithmetics:
         }
 
     @parametrize('args,other,operation,expected', valid.values(), ids=valid)
+    # pylint: disable-next=too-many-arguments
     def test_valid(self, args, other, operation, expected, value_and_z):
         """Check that operation(eps, other) == expected."""
         eps = SymmetryEps(*args)
@@ -179,7 +180,7 @@ class TestSymmetryEpsArithmetics:
         """Ensure -eps complains."""
         eps = SymmetryEps(2.7, 0.43)
         with pytest.raises(TypeError):
-            result = -eps
+            _ = -eps
 
     three = {
         'round, no digits': ((2.7, 1.2), (None,), round, SymmetryEps(3, 1)),
@@ -188,6 +189,7 @@ class TestSymmetryEpsArithmetics:
         }
 
     @parametrize('args,others,operation,expected', three.values(), ids=three)
+    # pylint: disable-next=too-many-arguments
     def test_valid_ternary(self, args, others, operation,
                            expected, value_and_z):
         """Check result of an operation with more three arguments."""

@@ -1590,8 +1590,9 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
 
         # interpret first value as SYMMETRY_EPS
         bounds = NumericBounds(type_=float, range_=(1e-100, None))
-        eps_value = (self.interpret_numerical_parameter(
-            assignment, bounds=bounds, return_only=True))
+        eps_value = self.interpret_numerical_parameter(assignment,
+                                                       bounds=bounds,
+                                                       return_only=True)
         if self.rpars.SYMMETRY_EPS > 1.0:
             # pylint: disable-next=logging-format-interpolation
             _LOGGER.warning(warning_str.format(''))

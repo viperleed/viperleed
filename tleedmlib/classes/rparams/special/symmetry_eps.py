@@ -43,12 +43,10 @@ def _make_arithmetic(operation, allow_eps):
             except (TypeError, ValueError):
                 return NotImplemented
         value = operation(float(self), float(other))
-        if self.has_z or other.has_z:
-            z = operation(self.z, other.z)
-        else:
-            z = None
+        z_result = (operation(self.z, other.z) if self.has_z or other.has_z
+                    else None)
         try:
-            return self.__class__(value, z=z)
+            return self.__class__(value, z=z_result)
         except ValueError as exc:
             raise ValueError(exc) from None
 
