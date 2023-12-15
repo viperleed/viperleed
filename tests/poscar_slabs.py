@@ -140,6 +140,7 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_Al2O3_NiAl(111)_cHole_20061025',
                      {'Ni': 402, 'Al': 134+132+188, 'O': 188+213},
                      'p3'),
+    _get_poscar_info('POSCAR_Cu2O(111)_1x1_surplus_oxygen', 66, 'p3m1'),
     )
 
 def _get_info_by_name(name):
@@ -149,6 +150,7 @@ def _get_info_by_name(name):
 
 AG_100 = _get_info_by_name('Ag(100)')
 SLAB_36C_cm = _get_info_by_name('36C_cm')
+SLAB_Cu2O_111 = _get_info_by_name('Cu2O(111)')
 
 POSCARS_WITHOUT_INFO = [
     _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
