@@ -557,7 +557,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.error("Error reading fd.out after reference calculation. "
                      "Check settings and refcalc log.")
         raise
-    if not len(rp.theobeams["refcalc"]):
+    if rp.theobeams["refcalc"] is None:
         logger.error("No data found in fd.out. Check if file is empty.")
         raise RuntimeError                                                      # TODO: better exception
     # clear oriState for atoms and sites, current state will be new origin

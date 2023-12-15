@@ -220,6 +220,8 @@ def readFdOut(readfile="fd.out", for_error=False, ampfile="amp.out"):
             return theobeams, fdout
         # now read the rest
         parse_data(amplines[nbeams+2:], "amp", ampfile, theobeams, nbeams)
+    if not theobeams:
+        raise RuntimeError(f"No beams found in {readfile}")
     return theobeams, fdout
 
 
