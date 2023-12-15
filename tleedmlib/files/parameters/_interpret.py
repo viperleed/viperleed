@@ -867,8 +867,8 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
         if len(values) == 1:
-            if not _min < values[0] <= _max:
-                raise ParameterRangeError(param, values[0], (_min+1, _max))
+            if not _min <= values[0] <= _max:
+                raise ParameterRangeError(param, values[0], (_min, _max))
             self.rpars.LMAX = values*2
             return
 
