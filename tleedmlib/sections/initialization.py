@@ -238,7 +238,7 @@ def initialization(sl, rp, subdomain=False):
     _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1)
 
     # Check that layer cuts are not too close together
-    _check_and_warn_layer_cuts(sl)
+    _check_and_warn_layer_cuts(rp, sl)
 
     # check whether PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
@@ -795,9 +795,9 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
             "for details."
             )
 
-def _check_and_warn_layer_cuts(slab):
+def _check_and_warn_layer_cuts(rpars, slab):
     """Check if layer cuts are too close together and warn if so."""
-    layer_cuts = slab.LAYER_CUTS
+    layer_cuts = rpars.LAYER_CUTS
     min_spacing = slab.getMinLayerSpacing()
     if min_spacing < 1.0:
         logger.warning(
