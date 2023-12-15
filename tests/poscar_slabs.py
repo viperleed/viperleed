@@ -142,8 +142,13 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
                      'p3'),
     )
 
-AG_100 = POSCARS_WITH_LITTLE_SYMMETRY_INFO[0]
-SLAB_36C_cm = POSCARS_WITH_LITTLE_SYMMETRY_INFO[5]
+def _get_info_by_name(name):
+    """Return a TestInfo object by name."""
+    return next(i for i in POSCARS_WITH_LITTLE_SYMMETRY_INFO
+                if name in i.poscar.name)
+
+AG_100 = _get_info_by_name('Ag(100)')
+SLAB_36C_cm = _get_info_by_name('36C_cm')
 
 POSCARS_WITHOUT_INFO = [
     _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
