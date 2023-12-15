@@ -45,7 +45,6 @@ DEFAULTS = {
         'e': 0.001,
         },
     'RUN': (0, 1, 2, 3),
-    'SEARCH_CULL_TYPE': 'genetic',
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
     'SEARCH_MAX_DGEN': {'all': 0, 'best': 0, 'dec': 100},
     'SYMMETRY_EPS': 0.1,  # z always equal to in-plane
@@ -57,6 +56,7 @@ DEFAULTS = {
     # SPECIAL PARAMETERS
     'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: from data
     'LAYER_CUTS': 'dz(1.2)',
+    'SEARCH_CULL': (0.1, 'genetic'),
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
     'THEO_ENERGIES - no experiments': (20, 800, 3),
     }

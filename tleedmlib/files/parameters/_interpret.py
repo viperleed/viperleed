@@ -1300,42 +1300,27 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         elif scaling is not None:
             raise ParameterRangeError(param, scaling, (0, 1))
 
-    def interpret_search_cull(self, assignment):                                # TODO: custom class to merge the value and type, probably a float subclass (using __new__)
-        """Assign parameter SEARCH_CULL and SEARCH_CULL_TYPE."""
+    def interpret_search_cull(self, assignment):
+        """Assign parameter SEARCH_CULL."""
         param = 'SEARCH_CULL'
         rpars = self.rpars
-        cull_value = assignment.value
-        try:
-            cull_float = float(cull_value)
-        except ValueError as exc:
-            rpars.setHaltingLevel(1)
-            raise ParameterFloatConversionError(param, cull_value) from exc
-        cull_int = int(cull_float)
-        if cull_float >= 1 and abs(cull_float - cull_int) < 1e-6:
-            rpars.SEARCH_CULL = int(cull_float)
-        elif cull_float >= 1:
-            message = 'Values greater than one must be integers'
-            rpars.setHaltingLevel(1)
-            raise ParameterValueError(param, message)
-        elif cull_float >= 0:
-            rpars.SEARCH_CULL = cull_float
-        else:
-            message = f'{param} value must be non-negative'
-            rpars.setHaltingLevel(1)
-            raise ParameterValueError(param, message)
-
-        if not assignment.other_values:
-            rpars.reset_default('SEARCH_CULL_TYPE')
-            return
-        if len(assignment.other_values) > 1:
+        if len(assignment.values) not in (1, 2):
             rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
-        cull_type = assignment.other_values[0].lower()
-        if cull_type in {'clone', 'genetic', 'random'}:
-            rpars.SEARCH_CULL_TYPE = cull_type
-        else:
+        try:
+            cull = rpars.SEARCH_CULL.from_value(assignment.values)
+        except TypeError as exc:   # Numeric value is not a number
             rpars.setHaltingLevel(1)
-            raise ParameterValueError(param, cull_type)
+            raise ParameterFloatConversionError(param,
+                                                message=str(exc)) from exc
+        except ValueError as exc:  # Numeric or type are wrong
+            rpars.setHaltingLevel(1)
+            raise ParameterValueError(param, message=str(exc)) from exc
+
+        if not cull.has_type:
+            _default = rpars.get_default('SEARCH_CULL')
+            cull.type_ = _default.type_
+        rpars.SEARCH_CULL = cull
 
     def interpret_search_population(self, assignment):
         param = 'SEARCH_POPULATION'

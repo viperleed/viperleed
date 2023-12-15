@@ -24,6 +24,9 @@ from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut, LayerCutTokenType as CutType
     )
+from viperleed.tleedmlib.classes.rparams.special.search_cull import (
+    SearchCull
+    )
 from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files.parameters import errors as err
 from viperleed.tleedmlib.files.parameters._checker import ParametersChecker
@@ -1060,12 +1063,14 @@ class TestSearchConvergence(_TestInterpretBase):
 
 
 class TestSearchCull(_TestInterpretBase):
-    """Tests for interpreting SEARCH_CULL and SEARCH_CULL_TYPE."""
+    """Tests for interpreting SEARCH_CULL."""
 
     param = 'SEARCH_CULL'
-    valid = {'float': ('0.5', 0.5), 'int': ('3', 3),
-             'int-like float': ('4.0', 4),
-             'explicit type': ('0.48 clone', (0.48, 'clone'))}
+    _default = Rparams.get_default(param)
+    valid = {'float': ('0.5', SearchCull(0.5, _default.type_)),
+             'int': ('3', SearchCull(3, _default.type_)),
+             'int-like float': ('4.0', SearchCull(4, _default.type_)),
+             'explicit type': ('0.48 clone', SearchCull(0.48, 'clone'))}
     invalid = {
         'float greater than one': ('1.5', err.ParameterValueError),
         'negative': ('-0.5', err.ParameterValueError),
@@ -1077,14 +1082,7 @@ class TestSearchCull(_TestInterpretBase):
     @parametrize('val,expect', valid.values(), ids=valid)
     def test_interpret_valid(self, val, expect, interpreter):
         """Check correct interpretation of valid SEARCH_CULL."""
-        rpars = interpreter.rpars
-        if len(val.split()) > 1:
-            expect_cull, expect_type = expect
-        else:
-            expect_cull = expect
-            expect_type = rpars.get_default('SEARCH_CULL_TYPE')
-        self.check_assigned(interpreter, val, expect_cull)
-        assert rpars.SEARCH_CULL_TYPE == expect_type
+        self.check_assigned(interpreter, val, expect)
 
     @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):

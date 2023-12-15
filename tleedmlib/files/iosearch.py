@@ -847,17 +847,15 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         output += (formatter['int'].write([1]).ljust(16) +
                    "Certain start position (1) or random configuration (0)\n")
         if rp.SEARCH_START == "control":
-            if cull and rp.SEARCH_CULL > 0:
-                if rp.SEARCH_CULL < 1:
-                    ncull = int(round(rp.SEARCH_POPULATION * rp.SEARCH_CULL))
-                else:
-                    if rp.SEARCH_CULL < rp.SEARCH_POPULATION:
-                        ncull = rp.SEARCH_CULL
-                    else:
-                        logger.warning(
-                            "SEARCH_CULL parameter too large: would cull "
-                            "entire population. Culling will be skipped.")
-                        ncull = 0
+            if cull and rp.SEARCH_CULL:
+                try:
+                    ncull = rp.SEARCH_CULL.nr_individuals(rp.SEARCH_POPULATION)
+                except ValueError:  # Too small population
+                    ncull = 0
+                    logger.warning(
+                        "SEARCH_CULL parameter too large: would cull "
+                        "entire population. Culling will be skipped."
+                        )
                 if any([sp.parabolaFit["min"] is not None
                         for sp in rp.searchpars]):
                     # replace one by predicted best
@@ -867,24 +865,25 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 nsurvive = rp.SEARCH_POPULATION - ncull
                 clines = controllines[2:]
                 csurvive = []
-                if (rp.SEARCH_CULL_TYPE == "genetic" or
-                        getPredicted):  # prepare readable clines
+                if rp.SEARCH_CULL.type_.is_genetic or getPredicted:
+                    # prepare readable clines
                     try:
                         csurvive = [readIntLine(s, width=ctrl_width)
                                     for s in clines[:nsurvive]]
                     except ValueError:
-                        if rp.SEARCH_CULL_TYPE == "genetic":
+                        if rp.SEARCH_CULL.type_.is_genetic:
                             logger.warning(
                                 "SEARCH_CULL: Failed to read old "
                                 "configuration from control.chem, cannot run "
-                                "genetic algorithm. Defaulting to cloning.")
+                                "genetic algorithm. Defaulting to cloning."
+                                )
                             rp.setHaltingLevel(1)
                             csurvive = []
                 for (i, line) in enumerate(clines):
                     if i < nsurvive:
                         output += line
-                    elif (rp.SEARCH_CULL_TYPE == "random" or
-                          (rp.SEARCH_CULL_TYPE == "genetic" and csurvive)
+                    elif (rp.SEARCH_CULL.type_.is_random or
+                          (rp.SEARCH_CULL.type_.is_genetic and csurvive)
                           or getPredicted):
                         if getPredicted:
                             bc = None
@@ -894,7 +893,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                 best_config=bc,
                                 mincurv=rp.PARABOLA_FIT["mincurv"])
                             getPredicted = False
-                        elif rp.SEARCH_CULL_TYPE == "random":
+                        elif rp.SEARCH_CULL.type_.is_random:
                             nc = rp.getRandomConfig()
                         else:  # "genetic"
                             nc = rp.getOffspringConfig(csurvive)

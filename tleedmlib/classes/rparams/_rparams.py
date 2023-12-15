@@ -101,9 +101,8 @@ class Rparams:
         self.SCREEN_APERTURE = 110.
         self.SEARCH_BEAMS = 0   # 0: average, 1: integer, 2: fractional
         # SEARCH_CULL: fraction of population, or absolute nr. if >1
-        # SEARCH_CULL_TYPE: clone, genetic, random
-        self.SEARCH_CULL = 0.1
-        self.SEARCH_CULL_TYPE = self.get_default('SEARCH_CULL_TYPE')
+        # SEARCH_CULL.type_: clone, genetic, random
+        self.SEARCH_CULL = self.get_default('SEARCH_CULL')
         self.SEARCH_MAX_GEN = 100000  # maximum number of generations in search
         self.SEARCH_MAX_DGEN = self.get_default('SEARCH_MAX_DGEN')
         # maximum number of generations without change before search
