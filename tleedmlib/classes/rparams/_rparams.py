@@ -181,7 +181,7 @@ class Rparams:
         self.ivbeams = []   # uses Beam class; list of beams only
         self.expbeams = []  # uses Beam class; contains intensities
         self.theobeams = {  # uses Beam class; contains intensities
-            'refcalc': [],
+            'refcalc': None,
             'superpos': None
             }
         self.expbeams_file_name = ''     # EXPBEAMS or EXPBEAMS.csv?
