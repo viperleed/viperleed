@@ -400,6 +400,7 @@ class TestSlabSymmetrization:
         'poscar-diamond': 'Known invalid group pm. May be correct rcm here',
         'poscar-36C_p6m': 'Often reduced to cmm',
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
+        'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
         'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
         'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
             'sometimes reduced to p1 from p3'
