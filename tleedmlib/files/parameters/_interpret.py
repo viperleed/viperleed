@@ -1353,7 +1353,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.setHaltingLevel(1)
             raise ParameterUnknownFlagError(param, search_start)
 
-    def interpret_site_def(self, assignment):                                   # TODO: custom class
+    def interpret_site_def(self, assignment):                                   # TODO: Issue #143
         """Assign the SITE_DEF for one POSCAR element."""
         param = 'SITE_DEF'
         if assignment.values_str.count('top(') > 1:
@@ -1825,7 +1825,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise new_exc(assignment.parameter,
                           message=assignment.values_str) from exc
 
-    def _parse_incidence_angles(self, param, assignment):                       # TODO: dedicated class
+    def _parse_incidence_angles(self, param, assignment):                       # TODO: Issue #147
         """Return a dictionary with incidence angles from an assignment."""
         bounds = {'THETA': NumericBounds(type_=float, range_=(-90, 90),
                                          out_of_range_event='fail'),
