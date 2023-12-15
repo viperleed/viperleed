@@ -10,6 +10,7 @@ Contains definition of pytest cases generated from POSCAR files.
 from pathlib import Path
 import copy
 import inspect
+import io
 import sys
 
 import numpy as np
@@ -28,6 +29,7 @@ from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo, CaseTag as Tag
 from .helpers import duplicate_all
 # pylint: enable=wrong-import-position
 
+POSCAR_FILES = tuple(POSCAR_PATH.glob('POSCAR*'))
 
 def _get_poscar_info(*args):
     """Return a TestInfo object appropriately filled with args.
@@ -155,6 +157,21 @@ SLAB_Cu2O_111 = _get_info_by_name('Cu2O(111)')
 POSCARS_WITHOUT_INFO = [
     _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
     ]
+
+
+class CasePOSCARFiles:
+    @staticmethod
+    def _string(file):
+        """Return the string of a POSCAR file name."""
+        with open(POSCAR_PATH / file, 'r', encoding='utf-8') as file:
+            contents = file.read()
+        return contents
+
+    @parametrize(file=POSCAR_FILES)
+    def case_poscar_file(self, file):
+        """Return a POSCAR file name."""
+        content = self._string(file)
+        return file, content
 
 
 class CasePOSCARSlabs:
