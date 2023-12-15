@@ -589,6 +589,7 @@ class TestIVShiftRange(_TestInterpretBase):
         'default step': ('-2.5 1.0 _', [-2.5, 1.0, _defaults.step]),
         'no step': ('-2.5 1.0', [-2.5, 1.0, _defaults.step]),
         'swapped': ('3 -2 -0.5', [-2.0, 3.0, 0.5]),
+        'adjusted': ('1.05 2.05 0.2', [1.0, 2.2, 0.2]),
         }
     invalid = {
         'nr_inputs': ('0.0', err.ParameterNumberOfInputsError),
@@ -607,6 +608,13 @@ class TestIVShiftRange(_TestInterpretBase):
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid IV_SHIFT_RANGE raises exceptions."""
         self.check_raises(interpreter, val, exc)
+    
+    def test_adjusted_logs(self, interpreter, caplog):
+        """Check logging messages when IV_SHIFT_RANGE bounds are modified."""
+        val, expect = self.valid['adjusted']
+        with caplog.at_level(0):
+            self.check_assigned(interpreter, val, expect)
+        assert 'integer multiple' in caplog.text
 
 
 class TestLayerCuts(_TestInterpretBase):
@@ -631,10 +639,12 @@ class TestLayerCuts(_TestInterpretBase):
             ),
         }
     invalid = {
-        'less and greater': '< 0.1 > 0.2',
-        'cutoff function': 'dz(0.1) dc(0.2) invalid(0.3)',
-        'float': '0.1 invalid 0.3',
-        'dz': '0.5 1.0 < dz(abcd) < 4.0'
+        'less and greater': ('< 0.1 > 0.2', err.ParameterParseError),
+        'cutoff function': ('dz(0.1) dc(0.2) invalid(0.3)',
+                            err.ParameterParseError),
+        'float': ('0.1 invalid 0.3', err.ParameterParseError),
+        'dz': ('0.5 1.0 < dz(abcd) < 4.0', err.ParameterParseError),
+        'no cut': ('', err.ParameterValueError),
         }
 
     @parametrize('val,expect', valid.values(), ids=valid)
@@ -645,10 +655,10 @@ class TestLayerCuts(_TestInterpretBase):
         assert all(cut == cut_expected
                    for cut, cut_expected in zip(value, expect))
 
-    @parametrize('val', invalid.values(), ids=invalid)
-    def test_interpret_invalid(self, val, interpreter):
+    @parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid LAYER_CUTS raises exceptions."""
-        self.check_raises(interpreter, val, err.ParameterParseError)
+        self.check_raises(interpreter, val, exc)
 
 
 class TestLMax(_TestInterpretBase):
@@ -1223,7 +1233,7 @@ class TestSymmetryEps(_TestInterpretBase):
         assert rpars.SYMMETRY_EPS == rpars.SYMMETRY_EPS.z
 
     def test_interpret_multiple_values(self, interpreter):
-        """Check correct interpretation of EPS and EPS_Z values."""
+        """Check correct interpretation of EPS and EPS.z values."""
         self.interpret(interpreter, '0.1 0.2')
         eps = interpreter.rpars.SYMMETRY_EPS
         assert (float(eps), eps.z) == (0.1, 0.2)
@@ -1234,7 +1244,7 @@ class TestSymmetryEps(_TestInterpretBase):
                            err.ParameterNumberOfInputsError)
 
     def test_large_values_log(self, interpreter, caplog, re_match):
-        """Check correct interpretation of EPS and EPS_Z values."""
+        """Check correct interpretation of EPS and EPS.z values."""
         self.interpret(interpreter, '1.5 1.2')
         assert re_match(r'.*[\s\S]*SYMMETRY_EPS.*[\s\S]*very loose constraint',
                         caplog.text)
