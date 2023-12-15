@@ -881,7 +881,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         if start < _min:
             raise ParameterRangeError(
                 param,
-                message=f'{param} lower bound must be at least {_min+1}'
+                message=f'{param} lower bound must be at least {_min}'
                 )
         if stop > _max:
             raise ParameterRangeError(
