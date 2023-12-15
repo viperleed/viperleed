@@ -21,6 +21,8 @@ from viperleed.tleedmlib.classes.rparams.special.energy_range import EPS
 from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
 
 
+# Makes no sense to complain about too many methods in a test class
+# pylint: disable-next=too-many-public-methods
 class TestEnergyRange:
     """Collection of tests for the EnergyRange base class."""
 

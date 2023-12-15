@@ -528,7 +528,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             param = assignment.parameter
         if assignment.flags:
             self.rpars.setHaltingLevel(1)
-            raise ParameterUnknownFlagError(param, assignment.flag)             # TODO: too-many-flags?
+            raise ParameterUnknownFlagError(param, assignment.flag)
 
     def _ensure_simple_assignment(self, assignment, param=None):
         """Raise if assignment is not simple (i.e., one value, no flags)."""
@@ -541,7 +541,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         self._ensure_single_value_assignment(assignment, param)
 
     # ----------- Methods to interpret individual parameters ----------
-    def interpret_average_beams(self, assignment):                              # TODO: not nice to have multiple types for this. May make sense to make it its own class with some helpers. Otherwise one has to do a bunch of isinstance checks when using it
+    def interpret_average_beams(self, assignment):                              # TODO: Issue #135
         """Assign parameter AVERAGE_BEAMS."""
         param = 'AVERAGE_BEAMS'
         self._ensure_no_flags_assignment(assignment)
@@ -687,7 +687,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         except KeyError:
             self.interpret_numerical_parameter(assignment)
 
-    def interpret_fortran_comp(self, assignment):                               # TODO: would be nicer to have a namedtuple or dataclass or similar. It could then have .pre, .post, .mpi, etc...
+    def interpret_fortran_comp(self, assignment):                               # TODO: Issue #136
         """Assign parameter FORTRAN_COMP."""
         param = 'FORTRAN_COMP'
         message = (f'Only one flag allowed for {param} per line. '
@@ -708,7 +708,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
 
         # (3) Remove optional quotes from custom compiler string
         delim = assignment.values_str[0]
-        if delim in ('"', "'"):
+        if delim in {'"', "'"}:
             compiler_str = assignment.values_str[1:]
             if not compiler_str.endswith(delim):
                 raise ParameterValueError(param,
@@ -968,7 +968,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterUnknownFlagError(param, f'{flag!r}') from None
         self.rpars.OPTIMIZE[flag] = numeric
 
-    def interpret_parabola_fit(self, assignment):                               # TODO: custom class
+    def interpret_parabola_fit(self, assignment):                               # TODO: Issue #137
         """Assign parameter PARABOLA_FIT."""
         if assignment.values_str.lower() == 'off':
             self.rpars.PARABOLA_FIT['type'] = 'none'
@@ -1169,7 +1169,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         else:
             raise ParameterValueError(param, value)
 
-    def interpret_search_convergence(self, assignment, is_updating=False):      # TODO: custom class
+    def interpret_search_convergence(self, assignment, is_updating=False):      # TODO: Issue #139
         """Interpret SEARCH_CONVERGENCE parameter.
 
         This method also sets rpars.searchConvInit if `is_updating`

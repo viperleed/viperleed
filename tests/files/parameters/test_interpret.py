@@ -542,10 +542,8 @@ class TestFortranComp(_TestInterpretBase):
         except FileNotFoundError:
             pytest.skip(f'Compiler {val} not available')
         # pylint: enable=protected-access
-        if 'mpi' in flag:
-            compiler = getattr(rpars, self.param + '_MPI')
-        else:
-            compiler = getattr(rpars, self.param)
+        attr_name = self.param + ('_MPI' if 'mpi' in flag else '')
+        compiler = getattr(rpars,  attr_name)
         if pre is not None:
             with subtests.test('Check pre'):
                 assert pre in compiler[0]

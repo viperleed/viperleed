@@ -28,6 +28,7 @@ def factory_rpars_with_attrs():
 
 @fixture(name='checker')
 def fixture_checker():
+    """Return a fresh ParametersChecker object."""
     return ParametersChecker()
 
 

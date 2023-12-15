@@ -130,4 +130,5 @@ class TestDeprecated:
 
     @pytest.mark.skip(reason='No parameter has been revived yet')
     def test_revived(self, caplog):
+        """Check that a revived PARAMETER is not deprecarted."""
         self.test_not_deprecated('PARABOLA_FIT', '2.3.0', caplog)
