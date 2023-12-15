@@ -20,7 +20,9 @@ if VPR_PATH not in sys.path:
     sys.path.append(VPR_PATH)
 
 from .. import poscar_slabs
-from ..poscar_slabs import POSCARS_WITHOUT_INFO, AG_100, SLAB_36C_cm
+from ..poscar_slabs import (
+    POSCARS_WITHOUT_INFO, AG_100, SLAB_36C_cm, SLAB_Cu2O_111
+)
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
@@ -566,3 +568,17 @@ def test_get_bulk_repeat():
 @pytest.mark.skip(reason='to be implemented')
 def test_make_bulk_slab():
     """TODO"""
+
+
+@pytest.mark.xfail(reason='Issue #140')
+def test_layer_cutting_for_slab_with_incomplete_bulk_layer(make_poscar):
+    """Test for issue #140."""
+    slab, rpars, *_ = make_poscar(SLAB_Cu2O_111)
+    rpars.BULK_LIKE_BELOW = 0.35
+    slab.fullUpdate(rpars)
+    # detect bulk and get cut position above bulk
+    _, bulk_cuts = slab.detectBulk(rpars)
+    # run layer creating with forced but above bulk
+    slab.createLayers(rpars, bulk_cuts=bulk_cuts)
+    min_layer_spacing = slab.getMinLayerSpacing()
+    assert min_layer_spacing >= 1.0
