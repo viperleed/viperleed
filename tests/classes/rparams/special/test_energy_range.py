@@ -240,6 +240,10 @@ class TestEnergyRange:
                            RuntimeError),
         'other undefined': (TheoEnergies(1.0, 2.0, 0.1), TheoEnergies(),
                             ValueError),
+        'self no step' : (TheoEnergies(0.7, 2.0), TheoEnergies(1.0, 2.0, 1.0),
+                          RuntimeError),
+        'other no step': (TheoEnergies(0.7, 2.0, 0.1), TheoEnergies(1.0, 2.0),
+                          ValueError),
         'wrong type': (TheoEnergies(0.05, 5.05, 0.1), 'abcd', TypeError),
         }
 
@@ -257,6 +261,16 @@ class TestEnergyRange:
         """Check complaints when calling contains with invalid arguments."""
         with pytest.raises(exc):
             outer.contains(inner)
+
+    @parametrize(key=contains_valid)
+    def test_contains_ignore_step(self, key):
+        """Check range inclusion ignoring steps."""
+        out_args, in_args, result = self.contains_valid[key]
+        if key == 'diff step':
+            result = True
+        outer = self._class(*out_args)
+        inner = self._class(*in_args)
+        assert outer.contains(inner, ignore_step=True) is result
 
     valid_intersections = {  # name1, name2, expected
         'exists 0.2': ('.1 .9 .2', '.4 1.1 .1', (0.4, 0.9, 0.2)),
