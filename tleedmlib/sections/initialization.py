@@ -561,7 +561,7 @@ def init_domains(rp):
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
-    rp.pseudoSlab = Slab()                                                      # Do we really still need this pseudo-slab?
+    rp.pseudoSlab = Slab()
     rp.pseudoSlab.ucell = largestDomain.sl.ucell.copy()
     rp.pseudoSlab.bulkslab = Slab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
@@ -595,7 +595,7 @@ def init_domains(rp):
         rp.ivbeams = tl_beams.sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
 
-    rp.updateDerivedParams()
+    rp.updateDerivedParams()  # Also sets LMAX
     if rp.LMAX[1] == 0:
         rp.LMAX[1] = max([dp.rp.LMAX[1] for dp in rp.domainParams])
     for dp in rp.domainParams:
