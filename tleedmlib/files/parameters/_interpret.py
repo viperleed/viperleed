@@ -1578,7 +1578,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         eps_value = self.interpret_numerical_parameter(assignment,
                                                        bounds=bounds,
                                                        return_only=True)
-        if self.rpars.SYMMETRY_EPS > 1.0:
+        if eps_value > 1.0:
             # pylint: disable-next=logging-format-interpolation
             _LOGGER.warning(warning_str.format(''))
         # interpret possible second value as SYMMETRY_EPS.z
