@@ -24,6 +24,7 @@ from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut, LayerCutTokenType as CutType
     )
+from viperleed.tleedmlib.classes.rparams.special.l_max import LMax
 from viperleed.tleedmlib.classes.rparams.special.search_cull import (
     SearchCull
     )
@@ -666,20 +667,20 @@ class TestLMax(_TestInterpretBase):
 
     param = 'LMAX'
     valid = {
-        'single': ('7', [7, 7]),
-        'single with spaces': ('6    ', [6, 6]),
-        'range hyphen': ('9-12', [9, 12]),
-        'range colon': ('8:18', [8, 18]),
-        'range space': ('6 17', [6, 17]),
-        'range swapped': ('15-11', [11, 15]),
-        'space and hyphen': ('12 - 15', [12, 15]),
-        'multi space': ('7     10', [7, 10]),
-        'multi space and hyphen': ('9    -         12', [9, 12]),
-        'stripped': ('  12 - 9     ', [9, 12]),
-        'two hyphens': ('5--16', [5, 16]),
-        'three hyphens': ('1---2', [1, 2]),
-        'four hyphens': ('5----17', [5, 17]),
-        'three hyphens and spaces': ('1 --- 2', [1, 2]),
+        'single': ('7', LMax(7)),
+        'single with spaces': ('6    ', LMax(6)),
+        'range hyphen': ('9-12', LMax(9, 12)),
+        'range colon': ('8:18', LMax(8, 18)),
+        'range space': ('6 17', LMax(6, 17)),
+        'range swapped': ('15-11', LMax(11, 15)),
+        'space and hyphen': ('12 - 15', LMax(12, 15)),
+        'multi space': ('7     10', LMax(7, 10)),
+        'multi space and hyphen': ('9    -         12', LMax(9, 12)),
+        'stripped': ('  12 - 9     ', LMax(9, 12)),
+        'two hyphens': ('5--16', LMax(5, 16)),
+        'three hyphens': ('1---2', LMax(1, 2)),
+        'four hyphens': ('5----17', LMax(5, 17)),
+        'three hyphens and spaces': ('1 --- 2', LMax(1, 2)),
         }
     invalid = {
         'no value': ('   ', err.ParameterHasNoValueError),

@@ -847,11 +847,9 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 integers.append(int(token))
         return integers
 
-    def interpret_lmax(self, assignment):                                       # TODO: custom class
+    def interpret_lmax(self, assignment):
         """Assign parameter LMAX."""
         param = 'LMAX'
-        _min, _max = self.rpars.get_limits(param)
-
         try:
             values = self._tokenize_int_range(assignment.values_str)
         except ValueError as exc:
@@ -866,29 +864,10 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         if len(values) > 2:
             self.rpars.setHaltingLevel(1)
             raise ParameterNumberOfInputsError(param)
-        if len(values) == 1:
-            if not _min <= values[0] <= _max:
-                raise ParameterRangeError(param, values[0], (_min, _max))
-            self.rpars.LMAX = values*2
-            return
-
-        # Disable pylint warning, as it is taken care of by the
-        # previous 'if not values' check. Here len == 2
-        # pylint: disable-next=unbalanced-tuple-unpacking
-        start, stop = values
-        if stop < start:
-            stop, start = start, stop
-        if start < _min:
-            raise ParameterRangeError(
-                param,
-                message=f'{param} lower bound must be at least {_min}'
-                )
-        if stop > _max:
-            raise ParameterRangeError(
-                param,
-                message=f'{param} values >{_max} are currently not supported'
-                )
-        self.rpars.LMAX = [start, stop]
+        try:
+            self.rpars.LMAX = self.rpars.LMAX.from_value(values)
+        except ValueError as exc:  # out-of-range
+            raise ParameterRangeError(param, message=str(exc))
 
     def interpret_log_level(self, assignment):
         """Assign parameter LOG_LEVEL."""

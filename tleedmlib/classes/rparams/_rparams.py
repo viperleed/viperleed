@@ -76,7 +76,7 @@ class Rparams:
         self.IV_SHIFT_RANGE = self.get_default('IV_SHIFT_RANGE')
         self.LAYER_CUTS = self.get_default('LAYER_CUTS')
         self.LAYER_STACK_VERTICAL = True
-        self.LMAX = [0, 0]    # minimum and maximum LMAX
+        self.LMAX = self.get_default('LMAX')
         self.LOG_LEVEL = DEFAULTS['LOG_LEVEL'][NO_VALUE]
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
@@ -457,13 +457,12 @@ class Rparams:
                         hi = i
                         break
             # LMAX
-            min_set = True
             if self.PHASESHIFT_EPS == 0:
                 self.PHASESHIFT_EPS = DEFAULTS['PHASESHIFT_EPS']['f']
-            if self.LMAX[0] <= 0:
-                self.LMAX[0] = 6
-                min_set = False
-            if self.LMAX[1] == 0:  # determine value from PHASESHIFT_EPS
+            min_set = self.LMAX.has_min
+            if not min_set:
+                self.LMAX.min = 6
+            if not self.LMAX.has_max:  # determine value from PHASESHIFT_EPS
                 lmax = 1
                 for el in self.phaseshifts[hi][1]:  # only check highest energy
                     for i, val in enumerate(el):
@@ -479,13 +478,13 @@ class Rparams:
                         'parameter is greater than 18, which is currently '
                         'not supported. LMAX was set to 18.'
                         )
-                self.LMAX[1] = lmax
+                self.LMAX.max = lmax
             else:       # sanity check: are large values ignored?
                 warn = False
                 highval = 0
                 for el in self.phaseshifts[hi][1]:   # highest energy
                     for i, val in enumerate(el):
-                        if abs(val) > 0.1 and (i+1) > self.LMAX[1]:
+                        if abs(val) > 0.1 and (i+1) > self.LMAX.max:
                             warn = True
                             highval = max(highval, abs(val))
                 if warn:

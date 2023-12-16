@@ -259,7 +259,7 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
         newpsGen, newpsWrite = False, False
 
     # Check that the phaseshifts read in have sufficient lmax
-    elif n_l_values < rp.LMAX[1] + 1:
+    elif n_l_values < rp.LMAX.max + 1:  # +1 because of L=0
         logger.warning(
             "Maximum angular momentum LMAX in PHASESHIFTS "
             "file is lower than required by PARAMETERS. A "
@@ -548,7 +548,7 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
 
     figsize = (7, 4)
     linewidth = 1
-    nlplot = min(np.shape(ps_vals)[-1], rp.LMAX[1]+1)
+    nlplot = min(np.shape(ps_vals)[-1], rp.LMAX.max+1)
 
     figs = []
     # colors = ["#000000", "#004949", "#009292", "#ff6db6", "#ffb6db",

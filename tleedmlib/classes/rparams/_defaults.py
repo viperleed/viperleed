@@ -56,6 +56,7 @@ DEFAULTS = {
     # SPECIAL PARAMETERS
     'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: from data
     'LAYER_CUTS': 'dz(1.2)',
+    'LMAX': (NO_VALUE, NO_VALUE),
     'SEARCH_CULL': (0.1, 'genetic'),
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
     'THEO_ENERGIES - no experiments': (20, 800, 3),

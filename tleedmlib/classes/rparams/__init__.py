@@ -20,6 +20,7 @@ _limits. Special parameters define their own defaults and limits.
 # in _rparams and would otherwise lead to cyclic import issues
 from .special.energy_range import EnergyRange, IVShiftRange, TheoEnergies
 from .special.layer_cuts import LayerCuts
+from .special.l_max import LMax
 from .special.search_cull import SearchCull
 from .special.symmetry_eps import SymmetryEps
 from ._domain_params import DomainParameters

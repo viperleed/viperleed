@@ -47,8 +47,8 @@ class RefcalcCompileTask():
         self.fortran_comp = fortran_comp
         self.source_dir = Path(sourcedir).resolve()  # where the fortran files are
         self.basedir = Path(basedir)  # where the calculation is based
-        self.foldername = "refcalc-compile_LMAX{}".format(lmax)
-        self.exename = "refcalc-{}".format(lmax)
+        self.foldername = f'refcalc-compile_LMAX{lmax}'
+        self.exename = f'refcalc-{lmax}'
 
         if os.name == 'nt':
             self.exename += '.exe'
@@ -369,8 +369,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             raise RuntimeError("Fortran compile error")
 
     # first, figure out for which LMAX to compile:
-    if single_threaded or rp.LMAX[0] == rp.LMAX[1] or rp.TL_VERSION <= 1.6:
-        which_lmax = set([rp.LMAX[1]])
+    if single_threaded or rp.LMAX.has_single_value or rp.TL_VERSION <= 1.6:
+        which_lmax = {rp.LMAX.max,}
     else:    # find appropriate LMAX per energy
         ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV) for (i, ps) in enumerate(rp.phaseshifts)]
         lmax = {}  # lmax as a function of energy
@@ -395,7 +395,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                          if abs(v) > rp.PHASESHIFT_EPS]) + 1)
                 except (IndexError, ValueError):
                     pass
-            lmax[en] = min(max((rp.LMAX[0], *lmax_cands)), rp.LMAX[1])
+            lmax[en] = min(max((rp.LMAX.min, *lmax_cands)), rp.LMAX.max)
             if lmax[en] < 6 and warn_small:
                 warn_small = False
                 logger.debug("Found small LMAX value based on PHASESHIFT_EPS "

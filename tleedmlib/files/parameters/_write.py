@@ -118,6 +118,7 @@ class ModifiedParameterValue:
         'V0_IMAG': '.4f',
         }
     _string_params = {   # Those for which str is enough
+        'LMAX',
         'N_BULK_LAYERS',
         'SYMMETRY_FIX',  # For now
         }
@@ -213,13 +214,6 @@ class ModifiedParameterValue:
         if isinstance(bulk_repeat, (np.ndarray, Sequence)):
             return self._format_vector(bulk_repeat, '{:.5f}', brackets='[]')
         return f'{bulk_repeat:.5f}'  # Z distance
-
-    def _format_lmax_value(self):
-        """Return a formatted version of LMAX."""
-        min_, max_ = self._raw_value
-        if min_ == max_:
-            return str(min_)
-        return f'{min_}-{max_}'
 
     def _format_wood_or_matrix_value(self):
         """Return a formatted version of an integer matrix value."""

@@ -10,7 +10,7 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.tleedmlib.base import strip_comments
-from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts
+from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts, LMax
 from viperleed.tleedmlib.files.parameters._write import ModifiedParameterValue
 from viperleed.tleedmlib.files.parameters._write import ParametersFileEditor
 from viperleed.tleedmlib.files.parameters._write import comment_out, modify
@@ -51,8 +51,8 @@ class TestModifiedParameterValue:
         'BULK_REPEAT float': ('BULK_REPEAT', 9.234, '9.23400'),
         'BULK_REPEAT vector': ('BULK_REPEAT', (1.3, -2.38, 4.997),
                                '[1.30000 -2.38000 4.99700]'),
-        'LMAX single': ('LMAX', (10, 10), '10'),
-        'LMAX range': ('LMAX', (6, 15), '6-15'),
+        'LMAX single': ('LMAX', LMax(10, 10), '10'),
+        'LMAX range': ('LMAX', LMax(6, 15), '6-15'),
         }
 
     @parametrize('attr,value,expected', _fmt_values.values(), ids=_fmt_values)
@@ -237,7 +237,7 @@ class TestCommentOutAndModifyFunctions:
     def test_modify_param(self, read_one_param_file):
         """Check effective modification of one parameter."""
         fpath, rpars = read_one_param_file
-        rpars.LMAX = (34, 99)
+        rpars.LMAX = LMax(3, 16)
         with execute_in_dir(fpath.parent):
             modify(rpars, 'LMAX')
-        check_file_modified(fpath, 'LMAX = 34-99')
+        check_file_modified(fpath, 'LMAX = 3-16')

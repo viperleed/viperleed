@@ -229,7 +229,7 @@ def writePARAM(sl, rp, lmax=-1):
     """Creats the contents of the PARAM file for the reference calculation.
     If no LMAX is passed, will use maximum LMAX from rp. Returns str."""
     if lmax == -1:
-        lmax = rp.LMAX[1]
+        lmax = rp.LMAX.max
     try:
         beamlist, beamblocks, beamN = writeAUXBEAMS(
             ivbeams=rp.ivbeams, beamlist=rp.beamlist, write=False)
@@ -439,7 +439,7 @@ def writeAUXNONSTRUCT(sl, rp):
     output += formatter['eps'].write([rp.BULKDOUBLING_EPS]).ljust(45) + 'EPS\n'
     output += (formatter['ints'].write([rp.BULKDOUBLING_MAX]).ljust(45)
                + 'LITER\n')
-    output += formatter['ints'].write([rp.LMAX[1]]).ljust(45) + 'LMAX\n'
+    output += formatter['ints'].write([rp.LMAX.max]).ljust(45) + 'LMAX\n'
     if rp.TL_VERSION >= 1.7:
         # TODO: if phaseshifts are calculated differently, change format here
         output += (formatter['ints'].write([1]).ljust(45)
