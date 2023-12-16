@@ -609,7 +609,7 @@ class TestIVShiftRange(_TestInterpretBase):
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid IV_SHIFT_RANGE raises exceptions."""
         self.check_raises(interpreter, val, exc)
-    
+
     def test_adjusted_logs(self, interpreter, caplog):
         """Check logging messages when IV_SHIFT_RANGE bounds are modified."""
         val, expect = self.valid['adjusted']
