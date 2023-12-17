@@ -3,7 +3,7 @@
 BULK_REPEAT
 ===========
 
-BULK_REPEAT defines how the bulk layers (as defined by :ref:`LAYER_CUTS<CTRUNC>`  and :ref:`N_BULK_LAYERS<BLAY>`) are repeated after reaching the bottom of the :ref:`POSCAR file<POSCAR>`. If the **c** vector of the POSCAR is oriented parallel to a bulk repeat vector, BULK_REPEAT can be defined simply as a bulk "layer thickness" (which may be equivalent to step height). Note that the :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` parameters offers an easy way to detect the bulk repeat unit automatically.
+BULK_REPEAT defines how the bulk layers (as defined by :ref:`LAYER_CUTS<CTRUNC>`  and :ref:`N_BULK_LAYERS<BLAY>`) are repeated after reaching the bottom of the :ref:`POSCAR file<POSCAR>`. If the **c** vector of the POSCAR is oriented parallel to a bulk repeat vector, BULK_REPEAT can be defined simply as a bulk "layer thickness" (which may be equivalent to step height). Note that the :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` parameter offers an easy way to detect the bulk repeat unit automatically.
 
 .. note::
 
