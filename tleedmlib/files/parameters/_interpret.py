@@ -34,9 +34,11 @@ from viperleed import __version__
 from viperleed.tleedmlib import periodic_table
 from viperleed.tleedmlib.base import readIntRange, readVector
 from viperleed.tleedmlib.base import recombineListElements, splitSublists
-from viperleed.tleedmlib.classes.rparams import (LayerCuts, EnergyRange,
-                                                 SymmetryEps)
-from viperleed.tleedmlib.classes.rparams import TheoEnergies, IVShiftRange
+from viperleed.tleedmlib.classes.rparams import EnergyRange
+from viperleed.tleedmlib.classes.rparams import IVShiftRange
+from viperleed.tleedmlib.classes.rparams import LayerCuts
+from viperleed.tleedmlib.classes.rparams import SymmetryEps
+from viperleed.tleedmlib.classes.rparams import TheoEnergies
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
@@ -706,7 +708,8 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.FORTRAN_COMP_MPI[0] = compiler_str.lower()
             return
 
-        # (3) Remove optional quotes from custom compiler string
+        # (3) Custom compiler flags or full compilation string.
+        #     Remove optional quotes
         delim = assignment.values_str[0]
         if delim in {'"', "'"}:
             compiler_str = assignment.values_str[1:]

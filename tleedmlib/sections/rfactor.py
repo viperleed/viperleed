@@ -132,10 +132,10 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
 
     (_, theo_range,
      iv_shift,
-     intpol_step) = (
-         tl_io.prepare_rfactor_energy_ranges(rp, theobeams, for_error,
-                                             n_expand=(rp.INTPOL_DEG-1)/2)
-         )
+     intpol_step) = tl_io.prepare_rfactor_energy_ranges(
+        rp, theobeams, for_error,
+        n_expand=(rp.INTPOL_DEG - 1) // 2
+        )
     out_grid = np.arange(theo_range.min,
                          theo_range.max + 0.1 * intpol_step,
                          intpol_step)
