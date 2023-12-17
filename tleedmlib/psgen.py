@@ -19,7 +19,6 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.tleedmlib.classes.sitetype import Atom_type
-from viperleed.tleedmlib.classes.rparams import PARAM_LIMITS
 from viperleed.tleedmlib.leedbase import EV_TO_HARTREE
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
 
@@ -268,8 +267,8 @@ def runPhaseshiftGen_old(sl, rp,
 
     # Energy step used for phaseshift calculation eeasisss.
     # Does not need to match theory energy step as phaseshifts will be interpolated anyways.
-    ps_energy_step = max(1.0, round(float(rp.THEO_ENERGIES[2]), 0))
-    output += ("0.0," + str(round(float(rp.THEO_ENERGIES[1]) + 20, 1)) # hardcoded lower boundary of 0
+    ps_energy_step = max(1.0, round(rp.THEO_ENERGIES.step))
+    output += ("0.0," + str(round(rp.THEO_ENERGIES.max + 20, 1)) # hardcoded lower boundary of 0
                + ","+str(ps_energy_step)
                + " |'phaseshift'/'dataflow' run: E1->E2,PS_Estep\n")
     output += "100.,100.,1  |'sigma' run: E1->E2,NumVals\n"
@@ -498,8 +497,8 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     remove_outdir = False # INFO: useful for debugging
 
     # Energy grid paramenters
-    E2 = round(float(rp.THEO_ENERGIES[1]) + 20, 2)  # add 20 eV to energy range
-    Estep = round(float(rp.THEO_ENERGIES[2]), 2) # may need a lower limit of 1.0 like the old eeasisss version
+    E2 = round(rp.THEO_ENERGIES.max + 20, 2)  # add 20 eV to energy range
+    Estep = round(rp.THEO_ENERGIES.step, 2) # may need a lower limit of 1.0 like the old eeasisss version
 
     ###############################################
     #                 Start code                  #

@@ -19,8 +19,7 @@ from numpy.polynomial import Polynomial
 
 from viperleed.tleedmlib import psgen
 from viperleed.tleedmlib.files import iofdopt as tl_io
-from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
-from viperleed.tleedmlib.files import poscar
+from viperleed.tleedmlib.files import parameters, poscar
 from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
 from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 
@@ -340,21 +339,18 @@ def fd_optimization(sl, rp):
     comment = "Found by full-dynamic optimization"
     if which == "v0i":
         rp.V0_IMAG = new_min
-        modifyPARAMETERS(rp, "V0_IMAG", new=f"{new_min:.4f}", comment=comment)
+        parameters.modify(rp, "V0_IMAG", comment=comment)
     elif which in ("theta", "phi"):
         setattr(rp, which.upper(), new_min)
         if rp.THETA < 0:
             rp.THETA = abs(rp.THETA)
             rp.PHI += 180
         rp.PHI = rp.PHI % 360
-        modifyPARAMETERS(rp, "BEAM_INCIDENCE",
-                         new=f"THETA {rp.THETA:.4f}, PHI {rp.PHI:.4f}",
-                         comment=comment)
+        parameters.modify(rp, "BEAM_INCIDENCE", comment=comment)
     else:       # geometry: x is a scaling factor for the unit cell
         apply_scaling(sl, rp, which, new_min)
         if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
-            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            modifyPARAMETERS(rp, "BULK_REPEAT", new=vec_str, comment=comment)
+            parameters.modify(rp, "BULK_REPEAT", comment=comment)
         poscar.write(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
 
     # fetch I(V) data from all, plot together

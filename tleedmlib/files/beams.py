@@ -28,6 +28,8 @@ logger = logging.getLogger("tleedm.files.beams")
 def averageBeams(beams, weights=None):
     """Takes a list of parcentages and a list of lists of Beam objects.
     Returns a new list of Beam obects with weighted averaged intensities."""
+    if beams is None:
+        raise ValueError("averageBeams: No beams passed.")
     if weights is None or len(weights) == 0:
         weights = [1/len(beams)] * len(beams)
     avbeams = copy.deepcopy(beams[0])

@@ -31,11 +31,11 @@ import scipy
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.checksums import validate_multiple_files
-from viperleed.tleedmlib.classes.rparams import SearchPar
+from viperleed.tleedmlib.classes.searchpar import SearchPar
 from viperleed.tleedmlib.files import iosearch as tl_io
+from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files import searchpdf
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS_block
-from viperleed.tleedmlib.files.parameters import updatePARAMETERS
 
 
 logger = logging.getLogger("tleedm.search")
@@ -733,7 +733,7 @@ def search(sl, rp):
             raise FileNotFoundError("Fortran compile error") from exc
     # get fortran files
     try:
-        tldir = leedbase.getTLEEDdir(tensorleed_path=rp.source_dir, version=rp.TL_VERSION)
+        tldir = rp.get_tenserleed_directory()
         srcpath = tldir / 'src'
         if usempi:
             src_file = next(srcpath.glob('search.mpi*'), None)
@@ -951,7 +951,7 @@ def search(sl, rp):
         try:
             while proc.poll() is None:  # proc is running
                 time.sleep(timestep)
-                updatePARAMETERS(rp)                                            # TODO: Would be way nicer with a QFileSystemWatcher
+                parameters.update(rp)                                           # TODO: Would be way nicer with a QFileSystemWatcher
                 # check convergence criteria
                 stop = False
                 checkrepeat = True

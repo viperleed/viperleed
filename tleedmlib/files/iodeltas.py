@@ -356,8 +356,8 @@ C      TLEED beams for a superlattice not present in the reference structure
 C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
 C  MNCSTEP: number of geometric variation steps to be performed """
              + "(inner var. loop)\n\n")
-    param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX[1])
-    param += "      PARAMETER( MNLMB = {} )\n".format(MNLMB[rp.LMAX[1]-1])
+    param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX.max)
+    param += "      PARAMETER( MNLMB = {} )\n".format(MNLMB[rp.LMAX.max-1])
     param += ("      PARAMETER( MNPSI = {}, MNEL = {} )\n"
               .format(len(rp.phaseshifts), (len(rp.phaseshifts[0][1]))))
     param += "      PARAMETER( MNT0 = {} )\n".format(len(beamlist))
@@ -386,7 +386,7 @@ def generateDeltaBasic(sl, rp):
     output = ""
     output += rp.systemName+" "+rp.timestamp+"\n"
     output += (formatter['energies'].write(
-        [rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01]).ljust(lj)
+        [rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01]).ljust(lj)
         + 'EI,EF\n')
     ucsurf = sl.ucell[:2, :2].T
     if sl.bulkslab is None:

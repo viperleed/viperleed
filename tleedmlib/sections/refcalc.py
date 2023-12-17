@@ -23,8 +23,8 @@ from viperleed.tleedmlib.base import splitMaxRight
 from viperleed.tleedmlib.checksums import validate_multiple_files
 from viperleed.tleedmlib.files import beams
 from viperleed.tleedmlib.files import iorefcalc as tl_io
+from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files.ivplot import plot_iv
-from viperleed.tleedmlib.files.parameters import modifyPARAMETERS
 
 
 logger = logging.getLogger("tleedm.refcalc")
@@ -47,8 +47,8 @@ class RefcalcCompileTask():
         self.fortran_comp = fortran_comp
         self.source_dir = Path(sourcedir).resolve()  # where the fortran files are
         self.basedir = Path(basedir)  # where the calculation is based
-        self.foldername = "refcalc-compile_LMAX{}".format(lmax)
-        self.exename = "refcalc-{}".format(lmax)
+        self.foldername = f'refcalc-compile_LMAX{lmax}'
+        self.exename = f'refcalc-{lmax}'
 
         if os.name == 'nt':
             self.exename += '.exe'
@@ -356,9 +356,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         rp.setHaltingLevel(3)
         return
 
-    energies = np.arange(rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01,         # TODO: use better arange
-                         rp.THEO_ENERGIES[2])
-    tl_path = leedbase.getTLEEDdir(tensorleed_path=rp.source_dir, version=rp.TL_VERSION)
+    energies = np.arange(rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01,         # TODO: use better arange
+                         rp.THEO_ENERGIES.step)
+    tl_path = rp.get_tenserleed_directory()
     rp.updateCores()
     single_threaded = (rp.N_CORES <= 1)
     if rp.FORTRAN_COMP[0] == "":
@@ -369,8 +369,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             raise RuntimeError("Fortran compile error")
 
     # first, figure out for which LMAX to compile:
-    if single_threaded or rp.LMAX[0] == rp.LMAX[1] or rp.TL_VERSION <= 1.6:
-        which_lmax = set([rp.LMAX[1]])
+    if single_threaded or rp.LMAX.has_single_value or rp.TL_VERSION <= 1.6:
+        which_lmax = {rp.LMAX.max,}
     else:    # find appropriate LMAX per energy
         ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV) for (i, ps) in enumerate(rp.phaseshifts)]
         lmax = {}  # lmax as a function of energy
@@ -395,7 +395,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                          if abs(v) > rp.PHASESHIFT_EPS]) + 1)
                 except (IndexError, ValueError):
                     pass
-            lmax[en] = min(max((rp.LMAX[0], *lmax_cands)), rp.LMAX[1])
+            lmax[en] = min(max((rp.LMAX.min, *lmax_cands)), rp.LMAX.max)
             if lmax[en] < 6 and warn_small:
                 warn_small = False
                 logger.debug("Found small LMAX value based on PHASESHIFT_EPS "
@@ -557,7 +557,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.error("Error reading fd.out after reference calculation. "
                      "Check settings and refcalc log.")
         raise
-    if not len(rp.theobeams["refcalc"]):
+    if rp.theobeams["refcalc"] is None:
         logger.error("No data found in fd.out. Check if file is empty.")
         raise RuntimeError                                                      # TODO: better exception
     # clear oriState for atoms and sites, current state will be new origin
@@ -665,13 +665,10 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.warning("Failed to copy refcalc-fd.out to Tensors folder.")
     # modify PARAMETERS to contain the energies and LMAX that were really used
     if os.path.isfile(os.path.join("Tensors", dn, "PARAMETERS")):
-        modifyPARAMETERS(rp, "THEO_ENERGIES",
-                         new=" ".join(["{:.4g}".format(v)
-                                       for v in rp.THEO_ENERGIES]),
-                         path=os.path.join("Tensors", dn),
-                         suppress_ori=True)
-        modifyPARAMETERS(rp, "LMAX", new="{}-{}".format(*rp.LMAX),
-                         path=os.path.join("Tensors", dn), suppress_ori=True)
+        parameters.modify(rp, "THEO_ENERGIES",
+                          path=os.path.join("Tensors", dn), suppress_ori=True)
+        parameters.modify(rp, "LMAX",
+                          path=os.path.join("Tensors", dn), suppress_ori=True)
 
     # remove references to Deltas from old tensors
     _reinitialize_deltas(rp, sl)

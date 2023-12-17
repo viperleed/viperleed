@@ -99,7 +99,6 @@ def getSymPosLists(sl, rp, pointlist, output=False):
 def findBulkSymmetry(sl, rp):
     """Checks the bulk slab for screw axes and glide planes."""
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
     uct = np.transpose(copy.copy(sl.ucell))
     abt = uct[:2, :2]
     rotsfound = []
@@ -107,7 +106,7 @@ def findBulkSymmetry(sl, rp):
     ts = copy.deepcopy(sl)
     ts.sort_by_z()
     ts.collapseCartesianCoordinates()
-    ts.createSublayers(epsz)
+    ts.createSublayers(eps.z)
     # optimize C vector
     newC = ts.getMinC(rp)
     if newC is not None:
@@ -168,7 +167,6 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     celltype = "ERROR - not recognized"
     planegroup = ""  # plane group will be stored in Hermann-Mauguin notation
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
     # reduce surface unit cell
     abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
 #        usurf = np.array([[1,0],[0,1]])
@@ -206,10 +204,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         if not bulk and rp.superlattice_defined:
             rp.SUPERLATTICE = np.dot(usurf, np.dot(rp.SUPERLATTICE,
                                                    np.linalg.inv(ubulk)))
-            newsl = ("SUPERLATTICE M = {:.0f} {:.0f}, {:.0f} {:.0f}"
-                     .format(*[x for y in rp.SUPERLATTICE for x in y]))
-            parameters.modifyPARAMETERS(rp, "SUPERLATTICE", newsl,
-                                        include_left=True)
+            parameters.modify(rp, "SUPERLATTICE")
         # MODIFY SYMMETRY_FIX PARAMETER
         if "[" in rp.SYMMETRY_FIX and not bulk:
             rgx = re.compile(r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*\[\s*'
@@ -222,7 +217,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             newdir = np.dot(np.linalg.inv(newab), cartdir)
             newdir = newdir / min(newdir)
             s = (targetsym+"[{:.0f} {:.0f}]".format(newdir[0], newdir[1]))
-            parameters.modifyPARAMETERS(rp, "SYMMETRY_FIX", s)
+            parameters.modify(rp, "SYMMETRY_FIX", s)
         # MODIFY UNIT CELL
         sl.getCartesianCoordinates()
         sl.ucell_mod.append(('rmul', utr.T))
@@ -244,7 +239,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     # create a testslab: C projected to Z
     ts = copy.deepcopy(sl)
     if bulk:        # check whether there are at least 2 atomic layers
-        ts.createSublayers(epsz)
+        ts.createSublayers(eps.z)
         if len(ts.sublayers) < 2:
             ts = ts.doubleBulkSlab()
     ts.projectCToZ()
@@ -263,7 +258,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     tmpat.pos[1] += j
     bigslab.getCartesianCoordinates(updateOrigin=True)
     # bigslab.fullUpdate(rp)   can't do this - would collapse coordinates!
-    bigslab.createSublayers(epsz)
+    bigslab.createSublayers(eps.z)
 
     # find the lowest occupancy sublayer; comparing candidate
     #   axes / planes to this one will be fastest
@@ -294,7 +289,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
 
     # we're done with the bigger slab, actually testing symmetry operations
     #   can be done just on the basic one.
-    ts.createSublayers(epsz)
+    ts.createSublayers(eps.z)
     lowocclayer = ts.sublayers[bigslab.sublayers.index(lowocclayer)]
     del bigslab
 
@@ -997,7 +992,6 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             logger.warning("enforceSymmetry: Invalid 'movement' variable "
                            "passed. Using SYMMETRIZE_INPUT parameter instead.")
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
     abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
 
     # FIND ATOM LINKING - HERE WORK WITH sl INSTEAD OF ts, SINCE WE WANT
@@ -1006,7 +1000,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         at.linklist = [at]
         at.symrefm = np.identity(2)
     if not planegroup == "p1":  # p1 has no symmetry to check for
-        sl.createSublayers(epsz)
+        sl.createSublayers(eps.z)
         sl.sortOriginal()
         sl.collapseCartesianCoordinates()
         # TEST ROTATION AT ORIGIN - TESTING ONLY HIGHEST ROTATIONAL ORDER
@@ -1328,10 +1322,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             if rp.THETA != 0:
                 logger.debug("Modifying BEAM_INCIDENCE parameter")
                 rp.PHI += np.degrees(ang)
-                parameters.modifyPARAMETERS(
-                    rp, "BEAM_INCIDENCE",
-                    "{:.3f} {:.3f}".format(rp.THETA, rp.PHI)
-                    )
+                parameters.modify(rp, "BEAM_INCIDENCE")
     return
 
 
