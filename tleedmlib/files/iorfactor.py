@@ -36,6 +36,16 @@ from viperleed.tleedmlib.files.ivplot import plot_iv
 logger = logging.getLogger("tleedm.files.iorfactor")
 
 
+# How many extra points to take at the boundaries to prevent wasting
+# data for interpolation of theoretical beams? The FORTRAN code likes
+# to have 2 intervals left and right. Notice that this value is
+# specific of the FORTRAN code, which uses 3rd order interpolation.
+# It is made into a const so we can change it in only one spot should
+# I (@michele-riva) have gotten it wrong. It SHOULD NOT BE USED for
+# other purposes.
+_N_EXPAND_THEO = 2
+
+
 class RfactorError(Exception):
     """Base exception for R-factor calculations."""
 
@@ -170,9 +180,9 @@ def check_theobeams_energies(rpars, theobeams):
             )
 
 
-def prepare_rfactor_energy_ranges(rpars, theobeams=None,
-                                  for_error=False, n_expand=0):
-    """Return EnergyRange objects for experiment, theory and iv_shifts.
+def prepare_rfactor_energy_ranges(rpars, theobeams=None, for_error=False,
+                                  n_expand=_N_EXPAND_THEO):
+    f"""Return EnergyRange objects for experiment, theory and iv_shifts.
 
     Parameters
     ----------
@@ -194,7 +204,7 @@ def prepare_rfactor_energy_ranges(rpars, theobeams=None,
         How many steps should the theory range be expanded at both
         ends not to disregard available values that may be useful
         for interpolation. This is on top of the expansion that is
-        considered due to shifting. Default is zero.
+        considered due to shifting. Default is {_N_EXPAND_THEO}.
 
     Returns
     -------
@@ -366,15 +376,6 @@ def sorted_energies_from_beams(beams):
     return sorted({e for beam in beams for e in beam.intens})
 
 
-# How many extra points to take at the boundaries to prevent wasting
-# data for interpolation? The FORTRAN code likes to have 2 intervals
-# left and right. Notice that this value is specific of the FORTRAN
-# code, which uses 3rd order interpolation. It is made into a const
-# so we can change it in only one spot should I (@michele-riva) have
-# gotten it wrong. It SHOULD NOT BE USED for other purposes.
-_N_EXPAND_THEO = 2
-
-
 def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     """Write input file WEXPEL for R-factor calculation.
 
@@ -490,7 +491,8 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     logger.debug(f'Wrote to R-factor input file {filename} successfully')
 
 
-def largest_nr_grid_points(rpars, theobeams, for_error, n_expand):
+def largest_nr_grid_points(rpars, theobeams, for_error,
+                           n_expand=_N_EXPAND_THEO):
     """Return the largest possible number of grid points."""
     # The number of grid point is the quantity used to set up the
     # dimensions of the arrays that will contain the IV curves.
@@ -550,7 +552,7 @@ def writeRfactPARAM(rp, theobeams, for_error=False, only_vary=None):
     if not rp.IV_SHIFT_RANGE.has_step:
         raise RfactorError('Cannot writeRfactPARAM without interpolation '
                            'step. Did you forget to call writeWEXPEL first?')
-    ngrid = largest_nr_grid_points(rp, theobeams, for_error, _N_EXPAND_THEO)
+    ngrid = largest_nr_grid_points(rp, theobeams, for_error)
 
     n_var = 1
     if for_error:

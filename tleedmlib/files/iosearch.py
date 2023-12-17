@@ -22,8 +22,8 @@ from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import BackwardsReader, readIntLine
 from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
+from viperleed.tleedmlib.files.iorfactor import largest_nr_grid_points
 from viperleed.tleedmlib.files.iorfactor import prepare_rfactor_energy_ranges
-from viperleed.tleedmlib.files.iorfactor import _N_EXPAND_THEO, largest_nr_grid_points
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
 
 
@@ -352,8 +352,7 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     output : str
         Content of the output file.
     """
-    (_, theo_range,
-     _, vincr) = prepare_rfactor_energy_ranges(rp, n_expand=_N_EXPAND_THEO)
+    _, theo_range, _, vincr = prepare_rfactor_energy_ranges(rp)
 
     # find correspondence experimental to theoretical beams:
     beamcorr = leedbase.getBeamCorrespondence(sl, rp)
@@ -528,7 +527,7 @@ C MNBMD IS MAX(MNBED,MNBTD)
     output += "      PARAMETER(MNBMD = {})".format(max(len(rp.expbeams),
                                                        len(rp.ivbeams)))
     max_nr_data_points = largest_nr_grid_points(rp, rp.theobeams['refcalc'],
-                                                False, _N_EXPAND_THEO)
+                                                False)
     output += """
 C MNDATA IS MAX. NUMBER OF DATA POINTS IN EXPERIMENTAL BEAMS
       PARAMETER(MNDATA = {})""".format(max_nr_data_points)
