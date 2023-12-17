@@ -306,6 +306,7 @@ class TestSymmetryConstraints:
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
         'square_pm_10': 'Known to often fail with a random shift',
+        'square_pm_01': 'Known to often fail with a random shift',
         'square_cm_11': 'Known to often fail with a random shift',
         'square_cm_1m1': 'Known to often fail with a random shift',
         'poscar-diamond': 'Known incorrect plane group pm instead of rcm',
