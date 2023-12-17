@@ -21,28 +21,28 @@ from viperleed.tleedmlib.classes.rparams import Rparams, TheoEnergies
 from viperleed.tleedmlib.files.beams import readOUTBEAMS
 
 from viperleed.tleedmlib.files import iorfactor
-
-
 # pylint: enable=wrong-import-position
+
 
 @pytest.fixture
 def ag100_expbeams(data_path):
     """Return a list of experimental beam energies for Ag(100)."""
-    return readOUTBEAMS(str(data_path / 'Ag(100)' / 'initialization' / 'EXPBEAMS.csv'))
+    _expbeams_path = data_path / 'Ag(100)' / 'initialization' / 'EXPBEAMS.csv'
+    return readOUTBEAMS(str(_expbeams_path))
 
 
 class TestCheckTheoBeamsEnergies:
     """Collection of tests for checking the theoretical beam energies."""
-    def test_check_theobeams_energies_valid_range(self, ag100_expbeams):
-        theobeams = ag100_expbeams
+
+    def test_valid_range(self, ag100_expbeams):
+        """Ensure matching theory energies is correctly identified."""
         rpars = Rparams()
         rpars.THEO_ENERGIES = TheoEnergies(300, 500, 0.5)
-        iorfactor.check_theobeams_energies(rpars, theobeams)
+        iorfactor.check_theobeams_energies(rpars, ag100_expbeams)
 
-    def test_check_theobeams_energies_invalid_range(self, ag100_expbeams):
-        """Test that emulates a Rfactor calculation on a larger energy range than the Refcalc."""
-        theobeams = ag100_expbeams
+    def test_invalid_range(self, ag100_expbeams):
+        """Emulate an Rfactor on a energy range larger than in Refcalc."""
         rpars = Rparams()
         rpars.THEO_ENERGIES = TheoEnergies(300, 800, 0.5)
         with pytest.raises(ValueError):
-            iorfactor.check_theobeams_energies(rpars, theobeams)
+            iorfactor.check_theobeams_energies(rpars, ag100_expbeams)
