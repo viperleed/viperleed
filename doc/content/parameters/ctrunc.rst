@@ -8,7 +8,7 @@ LAYER_CUTS determines how the slab provided in the :ref:`POSCAR<POSCAR>`  file i
 .. note:
 
    The :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` parameter offers an easy way to detect the bulk repeat unit automatically, which will set both :ref:`N_BULK_LAYERS<BLAY>` and LAYER_CUTS.
-   However, be careful combining :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` with :ref:`LAYER_CUTS<LAYER_CUTS>` because the former will overwrite the latter during initialization producing a fixed list of cut positions. Particular care should be taken in adapting `dc(float)` and `dz(float)` cut types after initialization.
+   However, be careful combining :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` with :ref:`LAYER_CUTS<LAYER_CUTS>` because the former will overwrite the latter during initialization producing a fixed list of cut positions. Particular care should be taken in adapting larger ``dc(float)`` and ``dz(float)`` cut types after initialization.
 
 **Allowed values:** ``list`` of floats (0 < ``x`` < 1), ``dz(float)``, or ``dc(float)``
 
