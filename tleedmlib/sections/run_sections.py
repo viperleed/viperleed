@@ -23,11 +23,10 @@ from viperleed.tleedmlib.sections import superpos
 from viperleed.tleedmlib.sections import errorcalc
 from viperleed.tleedmlib.sections import fd_optimization
 from viperleed.tleedmlib.sections.cleanup import cleanup, move_oldruns
+from viperleed.tleedmlib.files import parameters
 from viperleed.tleedmlib.files.beams import (readBEAMLIST, readIVBEAMS,
                                              readOUTBEAMS, checkEXPBEAMS)
 from viperleed.tleedmlib.files.displacements import readDISPLACEMENTS
-from viperleed.tleedmlib.files.parameters import (modifyPARAMETERS,
-                                                  updatePARAMETERS)
 from viperleed.tleedmlib.files.phaseshifts import readPHASESHIFTS
 from viperleed.tleedmlib.files.vibrocc import readVIBROCC, writeVIBROCC
 
@@ -103,19 +102,7 @@ def run_section(index, sl, rp):
             continue
         # try loading files
         if filename == "EXPBEAMS":
-            enrange = [-1 if e is rp.no_value else e
-                       for e in rp.THEO_ENERGIES[:2]]
-            initialization._get_expbeams(rp)
-            try:
-                rp.expbeams = readOUTBEAMS(rp.EXPBEAMS_INPUT_FILE,
-                                           enrange=enrange)
-            except Exception as e:  # e.g. FileNotFoundError
-                # do NOT raise, as we can run until Deltas without EXPBEAMS
-                logger.error("Error while reading required file "
-                             f"{rp.EXPBEAMS_INPUT_FILE}",
-                             exc_info=(type(e) != FileNotFoundError))
-            if len(rp.expbeams) > 0:
-                rp.fileLoaded["EXPBEAMS"] = True
+            rp.try_loading_expbeams_file()
             if index != 0:
                 checkEXPBEAMS(sl, rp)
         elif filename == "IVBEAMS":
@@ -165,11 +152,11 @@ def run_section(index, sl, rp):
                 writeVIBROCC(sl, rp, "VIBROCC")
                 rp.manifest.append("VIBROCC")
             if rp.T_EXPERIMENT is not None:
-                modifyPARAMETERS(rp, "T_EXPERIMENT", new="")
+                parameters.comment_out(rp, "T_EXPERIMENT")
             if rp.T_DEBYE is not None:
-                modifyPARAMETERS(rp, "T_DEBYE", new="")
+                parameters.comment_out(rp, "T_DEBYE")
             if len(rp.VIBR_AMP_SCALE) > 0:
-                modifyPARAMETERS(rp, "VIBR_AMP_SCALE", new="")
+                parameters.comment_out(rp, "VIBR_AMP_SCALE")
         elif filename == "PHASESHIFTS":
             try:
                 (rp.phaseshifts_firstline, rp.phaseshifts,
@@ -347,7 +334,7 @@ def section_loop(rp, sl):
                     "will stop, check log for warnings and errors."
                     )
             break
-        updatePARAMETERS(rp)
+        parameters.update(rp)  # Look for a user STOP
         if rp.RUN and rp.STOP and not rp.RUN[0] in [11, 12, 31]:
             logger.info("# Stopped by user STOP command.")
             break

@@ -39,15 +39,15 @@ We will use the :ref:`BULK_LIKE_BELOW` parameter to declare everything below thi
 
     * - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_a.png
 
-            POSCAR rendered in :term:`VESTA` view along :math:`a`.
+            POSCAR rendered in :term:`VESTA`, view along :math:`a`.
 
       - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_b.png
 
-            POSCAR rendered in :term:`VESTA` view along :math:`b` (slightly off-axis).
+            POSCAR rendered in :term:`VESTA`, view along :math:`b` (slightly off-axis).
 
       - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_c.png
 
-            POSCAR rendered in :term:`VESTA` view along :math:`c`.
+            POSCAR rendered in :term:`VESTA`, view along :math:`c`.
 
 .. hint::
    Of course there are other possible structural models like adsorption at hollow, top or Ir-sharing bridge sites.
@@ -78,6 +78,7 @@ PARAMETERS FOR INTERPRETING THE POSCAR
     For this, we set the :ref:`BULK_LIKE_BELOW` parameter at the height where we drew the plane previously.
 
     Using the :ref:`SITE_DEF<sitedef>` parameter, we specify that the topmost Iridium atoms should be treated separately.
+    These Ir atoms are differently coordinated than bulk Ir atoms and thus will presumably have a different vibrational amplitude.
     For completeness, we also specify the site type ``O_ads`` for the adsorbed oxygen atom.
     However, since there is only one oxygen atom in the structure, this will not change the behaviour and we could also skip that line.
 
@@ -91,7 +92,7 @@ PARAMETERS FOR VIBROCC
 
 
 For the delta-amplitudes and structure-optimization, we also need to set up a :ref:`DISPLACEMENTS file<displacements>`.
-Since this is the first run starting from a fresh POSCAR file we begin with a rather large range and a rather rough grid.
+Since this is the first run starting from a totally un-relaxed model, we begin with a rather large range and a rather rough grid.
 
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_rough
    :language: console
@@ -99,10 +100,12 @@ Since this is the first run starting from a fresh POSCAR file we begin with a ra
 
 By setting multiple search blocks in DISPLACEMENTS, we can tell ViPErLEED to execute them one after the other.
 When starting to optimize a new system such as here, it is generally a good idea to start with a geometric optimization perpendicular to the surface (:math:`z`). This is because the LEED :math:`I(V)` curves are most sensitive to out-of-plane displacements.
-Here, we then follow up with rough optimizations of in-plane positions and vibrational amplitudes.
+Here, we then follow up with rough optimizations of in-plane positions and vibrational amplitudes of surface atoms [1]_.
+For the in-plane optimization, we use a simplified assignment for all four layers although for 2nd and 4th layer Ir atoms any movement in x-direction is forbidden by symmetry.
+ViPErLEED will automatically sort out any symmetry-forbidden displacements, cf. numref:`fig_Ir_O_search_progress_2`.
 
 .. note::
-   Note that TensErLEED cannot simultaneously optimize displacements in different directions for a given atom.
+   TensErLEED cannot simultaneously optimize displacements in different directions for a given atom.
    Vibrational amplitudes can be optimized together with one geometric displacement; here we do it separately to speed up the calculation.
 
 With the files set up, we can start the ViPErLEED calculation.
@@ -115,8 +118,8 @@ During the first initialization ViPErLEED will generate :ref:`IVBEAMS<ivbeams>` 
 
     You will need to **restart the run manually** after making these checks.
 
-When run is finished (takes ~ TODO), we will see in the log file that the R-factor has decreased quite a bit.
-The first reference calculation gave a values  :math:`\approx 0.55`, but it has dropped to around :math:`\approx 0.21` over the search - very promising!
+When the run is finished, we will see in the log file that the R-factor has decreased quite a bit.
+The first reference calculation gave a values of :math:`R_P \approx 0.55`, but :math:`R_P` has dropped to around :math:`\approx 0.21` over the search - very promising!
 We can get a better idea of how the search has converged by taking a look at the file :ref:`Search-progress.pdf<searchprogresspdf>` in the ``SUPP`` directory.
 
 .. _fig_Ir_O_search_progress_1:
@@ -126,8 +129,8 @@ We can get a better idea of how the search has converged by taking a look at the
 
    Upper half of page 1 for ``Search-progress.pdf``.
 
-The upper half of :numref:`fig_Ir_O_search_progress_1`  shows a plot of the decreasing R-factor during the various stages of the search.
-We clearly see that both geometric optimizations made quick progress in terms of convergence - as should be expected when starting from an un-relaxed surface slab such as here.
+:numref:`fig_Ir_O_search_progress_1` shows a plot of the decreasing R-factor during the various stages of the search.
+We clearly see that both geometric optimizations made quick progress in terms of convergence - as should be expected when starting from an unrelaxed surface slab such as here.
 The other pages of the file give us some insight into how each atomic parameter developed during the structure optimization.
 
 .. _fig_Ir_O_search_progress_2:
@@ -142,7 +145,7 @@ Further, we see that the vibrational amplitude of the oxygen atom has gone down,
 
 .. important::
     We want to accept the optimized positions as the new starting configuration, so we need to replace our old :ref:`POSCAR<poscar>` and :ref:`VIBROCC<viboccin>` files with the optimized ones.
-    This can be done automatically by calling the :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag:
+    This can be done either manually or automatically by calling the :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag:
 
     .. code-block:: console
 
@@ -162,8 +165,8 @@ This is advisable, because parameter deviations during the previous fit were not
    :caption: DISPLACEMENTS
 
 When looking at the log file after the reference calculation, we further notice something important:
-The R-factor of the reference calculation(:math:`\approx 0.18`) *is different* from the one we obtained from the superposition calculation at the end of the previous run (:math:`\approx 0.21`).
-This comes from the **error of the tensor leed approximation** used for the structure-optimization!
+The R-factor of the reference calculation (:math:`R_P \approx 0.18`) *is different* from the one we obtained from the superposition calculation at the end of the previous run (:math:`R_P \approx 0.21`).
+This comes from the **error of the Tensor LEED approximation** used for the structure-optimization!
 Fortunately – in this case – the real R-factor (as obtained from the reference calculation) is lower.
 However, this is not always the case.
 You should **never** rely on the R-factor produced by the superposition calculation as a final result, but rather run a final reference calculation at the end of your analysis.
@@ -205,7 +208,7 @@ ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the ``OUT`` dir
     ViPErLEED will also automatically add the new, optimized value to the :ref:`PARAMETERS file<parameters>` and comment out the line containing the previous value.
 
 Following the :math:`V_{0\text{i}}` optimization we can also run a final structure-optimization, since the new value for :math:`V_{0\text{i}}` may have slightly affected the optimal positions.
-Using a (very fine) :math:`0.002` Å grid (``DISPLACEMENTS_very_fine`` in the provided example files) we manage to get a final R-factor of around :math:`\approx 0.088`.
+Using a (very fine) :math:`0.002` Å grid (``DISPLACEMENTS_very_fine`` in the provided example files) we manage to get a final R-factor of around :math:`R_P \approx 0.088`.
 
 Error calculation
 =================
@@ -248,3 +251,5 @@ Error plots for vibrational amplitude tend to be more asymmetric, as these ampli
 .. warning::
    Error curves are also subject to **errors of the tensor LEED approximation**.
    R-factor values obtained for large deviations should be taken with care.
+
+.. [1] It is not recommended to fit any vibrational amplitude of bulk atoms as long as reliable information about the substrate Debye temperature is available.

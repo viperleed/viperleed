@@ -164,7 +164,7 @@ def main():
 
     rpars = Rparams()
     rpars.BULK_LIKE_BELOW = cut = ask_user_bulk_cut()
-    rpars.SYMMETRY_EPS = rpars.SYMMETRY_EPS_Z = ask_user_symmetry_eps()
+    rpars.SYMMETRY_EPS = rpars.SYMMETRY_EPS.from_value(ask_user_symmetry_eps())
 
     print('Checking bulk unit cell...')
     try:
@@ -189,12 +189,7 @@ def main():
 
     ask_user_confirmation_to_cut(bulk_interlayer, bulk_cuts)
 
-    # Update with newly detected info
-    rpars.LAYER_CUTS = slab.createLayers(rpars, bulk_cuts=bulk_cuts)
-    rpars.N_BULK_LAYERS = len(bulk_cuts)
-
     # write POSCAR_bulk
-    slab.make_bulk_slab(rpars)
     try:
         poscar.write(slab.bulkslab, filename='POSCAR_bulk', comments='none')
     except OSError:

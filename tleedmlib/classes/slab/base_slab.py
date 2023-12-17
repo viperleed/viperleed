@@ -403,80 +403,69 @@ class BaseSlab(AtomContainer):
         self.foundplanegroup = self.planegroup = 'unknown'
         self.orisymplane = None
 
-    def createLayers(self, rparams, bulk_cuts=[]):
-        """Creates a list of Layer objects based on the N_BULK_LAYERS and
-        LAYER_CUTS parameters in rparams. If layers were already defined,
-        overwrite. The bulk_cuts kwarg allows specifically inserting
-        automatically detected bulk layer cuts. Returns the cuts as a sorted
-        list of floats."""
-        # first interpret LAYER_CUTS parameter - can be a list of strings
-        self.check_a_b_in_plane()
+    def _get_layer_cut_positions(self, rpars, bulk_cuts):
+        """Return crystal-cut positions from rpars.LAYER_CUTS."""
+        # rpars.LAYER_CUTS is a 'list' of LayerCutTokens. Each either
+        # .is_numeric (fractional positions) or .is_auto_cut (dc/dz).
+        # We can collect the fractional ones immediately.
+        cuts = [token.value for token in rpars.LAYER_CUTS if token.is_numeric]
 
+        # The dc/dz need a bit of work. We use as cut
+        # position the midpoints between atoms that are
+        # further than the desired z-distance cut-off
+        auto_cuts = (token for token in rpars.LAYER_CUTS if token.is_auto_cut)
+        _c_to_z = self.ucell[2, 2] / np.linalg.norm(self.ucell[:, 2])
+        atoms = sorted(self, key=lambda atom: atom.pos[2])
+        for token in auto_cuts:
+            cutoff = token.value
+            cutoff *= _c_to_z if token.is_auto_cut_dc else 1
+            try:
+                lower, upper = token.get_bounds(bulk_cuts)
+            except ValueError:
+                # bulk_cuts > upper. This auto-cut is useless
+                continue
+            cuts.extend(
+                sum(at.pos[2] for at in pair) / 2
+                for pair in pairwise(atoms)
+                if (all(lower < at.pos[2] < upper for at in pair)
+                    and _z_distance(*pair) > cutoff)
+                )
+        if bulk_cuts:
+            cuts = [v for v in cuts if v > max(bulk_cuts) + 1e-6] + bulk_cuts
+        cuts.sort()
+        return cuts
+
+    def createLayers(self, rparams, bulk_cuts=()):
+        """Create a list of Layer objects based on `rparams`.
+
+        After this call, the `layers` attribute contains a list of
+        the layers created. If layers were already defined, they
+        are overwritten.
+
+        Parameters
+        ----------
+        rparams : Rparams
+            The PARAMETERS to be used to create layers. The
+            N_BULK_LAYERS and LAYER_CUTS attributes are used.
+        bulk_cuts : Sequence, optional
+            Sequence of fractional positions representing
+            automatically detected bulk layer cuts. Default
+            is an empty tuple.
+
+        Returns
+        -------
+        cuts : list
+            Fractional coordinates (sorted) of the cuts performed.
+            Notice that the number of layers created may be smaller
+            than `len(cuts)`, as layers without atoms are deleted.
+        """
+        self.check_a_b_in_plane()
         if self.is_bulk:
             bulk_cuts = ()
 
-        ct = []
-        rgx = re.compile(r'\s*(dz|dc)\s*\(\s*(?P<cutoff>[0-9.]+)\s*\)')
-        al = self.atlist[:]
-        al.sort(key=lambda atom: atom.pos[2])
-        for (i, s) in enumerate(rparams.LAYER_CUTS):
-            if type(s) == float:
-                ct.append(s)
-                continue
-            s = s.lower()
-            if 'dz' in s or 'dc' in s:
-                m = rgx.match(s)
-                if not m:
-                    _LOGGER.warning('Error parsing part of LAYER_CUTS: ' + s)
-                    continue
-                cutoff = float(m.group('cutoff'))
-                lowbound = 0.
-                if bulk_cuts:
-                    lowbound = max(bulk_cuts)
-                highbound = 1.
-                val = None
-                if (i > 1) and (rparams.LAYER_CUTS[i-1] in ['<', '>']):
-                    try:
-                        val = float(rparams.LAYER_CUTS[i-2])
-                    except ValueError:
-                        _LOGGER.warning('LAYER_CUTS: Error parsing left-hand '
-                                        'boundary for ' + s)
-                    if val is not None:
-                        if rparams.LAYER_CUTS[i-1] == '<':
-                            lowbound = val
-                        else:
-                            highbound = val
-                if i < len(rparams.LAYER_CUTS) - 2 and (rparams.LAYER_CUTS[i+1]
-                                                        in ['<', '>']):
-                    try:
-                        val = float(rparams.LAYER_CUTS[i+2])
-                    except ValueError:
-                        _LOGGER.warning('LAYER_CUTS: Error parsing right-hand '
-                                        'boundary for ' + s)
-                    if val is not None:
-                        if rparams.LAYER_CUTS[i+1] == '>':
-                            lowbound = val
-                        else:
-                            highbound = val
-                if 'dc' in s:
-                    cutoff *= (self.ucell[2, 2]
-                               / np.linalg.norm(self.ucell[:, 2]))
-                for i in range(1, len(al)):
-                    if ((abs(al[i].cartpos[2]-al[i-1].cartpos[2]) > cutoff)
-                            and al[i].pos[2] > lowbound
-                            and al[i].pos[2] < highbound
-                            and al[i-1].pos[2] > lowbound
-                            and al[i-1].pos[2] < highbound):
-                        ct.append(abs((al[i].pos[2]+al[i-1].pos[2])/2))
-            elif s not in ['<', '>']:
-                try:
-                    ct.append(float(s))
-                except ValueError:
-                    _LOGGER.warning('LAYER_CUTS: Could not parse value: ' + s)
-                    continue
-        if bulk_cuts:
-            ct = [v for v in ct if v > max(bulk_cuts) + 1e-6] + bulk_cuts
-        ct.sort()
+        # Get a sorted list of fractional cut positions
+        ct = self._get_layer_cut_positions(rparams, bulk_cuts)
+
         self.layers = []
         tmplist = AtomList(*self.atlist)
         self.sort_by_z()

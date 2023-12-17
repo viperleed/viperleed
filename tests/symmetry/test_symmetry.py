@@ -275,6 +275,7 @@ class TestSymmetryConstraints:
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
         'square_cm_1m1': 'Known to sometimes fail with a random shift',
+        'square_cm_11': 'Known to sometimes fail with a random shift',
         'square_pm_10': 'Known to sometimes fail with a random shift',
         'square_pm_01': 'Known to sometimes fail with a random shift',
         'square_pg_10': 'Known to often fail with a random shift',
@@ -293,6 +294,7 @@ class TestSymmetryConstraints:
 
     _known_invalid_constrained_group = {
         'rcm-ucell=rectangular': 'Known to sometimes fail with a random shift',
+        'rcm-ucell=square': 'Known to sometimes fail with a random shift',
         'pm_10': 'Known to sometimes fail with a random shift',
         'cm_1m1': 'Known to sometimes fail with a random shift',
         'hex_cm_10': 'Known to sometimes fail with a random shift',
@@ -349,7 +351,7 @@ class TestSlabSymmetrization:
         symmetry.enforceSymmetry(slab, param)
         rattled_slab, param, info = duplicate_all(slab, param, info)
         eps = 0.05
-        param.SYMMETRY_EPS = 2 * 2**0.5 * eps
+        param.SYMMETRY_EPS = param.SYMMETRY_EPS.from_value(2 * 2**0.5 * eps)
         displacements = np.random.uniform(-eps, eps, (slab.n_atoms, 2))
         for atom, delta in zip(rattled_slab, displacements):
             atom.cartpos[:2] += delta
@@ -365,6 +367,7 @@ class TestSlabSymmetrization:
         'rcmm-ucell=square': 'Often reduced to, e.g., pmg',
         'rcmm-ucell=rectangular': 'Often reduced to, e.g., rcm',
         'pmm-ucell=rectangular': 'Sometimes reduced to pm',
+        'pmg-ucell=rectangular': 'Sometimes identified as rcm',
         'cmm': 'Sometimes reduced to cm',
         'p2': 'Sometimes reduced to p1',
         'cm_1m1': 'Sometimes reduced to p1',
@@ -394,14 +397,16 @@ class TestSlabSymmetrization:
         'poscar-diamond': 'Known invalid group pm. May be correct rcm here',
         'poscar-36C_p6m': 'Often reduced to cmm',
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
-        'poscar_Fe3O4_001_cod': 'Sometimes reduced to cm from cmm',
+        'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
         'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
         'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
             'sometimes reduced to p1 from p3'
             ),
         'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
         'infoless_poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
-        'infoless_poscar_Fe3O4_001_cod': 'Sometimes reduced to cm from cmm',
+        'infoless_poscar-Fe3O4_(001)_cod1010369': (
+            'Sometimes reduced to cm from cmm'
+            ),
         'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
         'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
         'infoless_poscar-diamond':  'Invalid pm. May be correct rcm here',

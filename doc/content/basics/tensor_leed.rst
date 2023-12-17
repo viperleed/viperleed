@@ -22,7 +22,7 @@ In principle, this calculation only yields the scattering amplitudes
 :math:`A_{\mathrm{out}}^{\mathrm{ref}}` (and intensities via :math:`I = |A|^2`) of all diffracted beams of interest for the requested reference structure.
 However, as shown by Rous and Pendry :cite:p:`rousTensorLEEDTechnique1986`, 
 using a first-order perturbation theory approach, it is possible to obtain rather accurate diffraction amplitudes for small deviations from this reference structure.
-These deviations may be geometrical (altered atom positions), changes to the vibrational amplitude or chemical substitutions.
+These deviations may be geometrical (altered atom positions), changes to the vibrational amplitude or chemical substitutions :cite:p:`kottckeNewApproachAutomated1997`.
 
 Each atom :math:`i` is assigned an atomic :math:`t`-matrix, :math:`t_i`, based on phaseshifts and positions within the unit cell.
 The perturbed structure is consequently characterized by altered atomic 
@@ -113,12 +113,12 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
     For larger displacements the search might still give the right trends but equally might be misleading.
 
     To extend the range of the structural search, it is possible to run a new reference calculation and delta-amplitudes calculation when the structure optimization trajectory approaches this limit.
-    You can use the the :ref:`RUN parameter<run>` to execute multiple reference calculations, delta-amplitude calculations, and structure searches in series.
+    You can use the the :ref:`RUN parameter<run>` to chain multiple reference calculations, delta-amplitude calculations and structure searches together.
 
 -   The parameter space grows quickly for larger unit cells.
     Luckily, many symmetries inherent to the surface structure can be exploited to eliminate redundant parameters.
     For example, geometric displacements of symmetry-linked atoms must always happen in a concerted fashion.
-    If that were not the case, the symmetry would be broken and usually\ [1]_ a different LEED pattern would result.
+    If that were not the case, the symmetry would be broken and a different LEED pattern would result.
 
     To make use for these symmetries and the resulting reduced parameter space, it is necessary to know and enforce the surface slab symmetry.
     While manually finding out the surface slab symmetry is generally an easy task, enforcement is not.
@@ -160,6 +160,3 @@ ViPErLEED enables more sophisticated control over the search process than is pos
 Different types of convergence criteria and an automatic scaling of the probability distribution can be set using :ref:`SEARCH_CONVERGENCE<search_convergence>`.
 Furthermore, as defined by the parameter :ref:`SEARCH_CULL<search_cull>`, whenever :ref:`partial convergence<search_convergence>` is reached, a portion of the search population can be dropped and re-initialized to get out of local minima.
 By default, the search population is partially re-initialized using a custom genetic algorithm (see :ref:`SEARCH_CULL<search_cull>` for details).
-
-
-.. [1] There are exceptions, in which the same LEED pattern can result. For example, on an fcc(111) surface, a (:math:`2\times2`) reconstruction and a (:math:`1\times2`) with domains would give the same qualitative pattern.

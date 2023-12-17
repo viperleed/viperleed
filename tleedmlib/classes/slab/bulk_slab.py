@@ -223,7 +223,7 @@ class BulkSlab(BaseSlab):
         ----------
         rpars : Rparams
             The PARAMETERS read from file. Attributes used:
-            read-only: SYMMETRY_EPS, SYMMETRY_EPS_Z.
+            read-only: SYMMETRY_EPS.
             overwritten: BULK_REPEAT. The minimal c vector
             found is stored in the BULK_REPEAT attribute of
             `rpars`.
@@ -245,16 +245,16 @@ class BulkSlab(BaseSlab):
         AlreadyMinimalError
             If no shorter c vector is found.
         """
-        self.create_sublayers(rpars.SYMMETRY_EPS_Z)
+        self.create_sublayers(rpars.SYMMETRY_EPS.z)
 
         # May raise AlreadyMinimalError
         rpars.BULK_REPEAT = self.get_minimal_c_vector(rpars.SYMMETRY_EPS,
-                                                      rpars.SYMMETRY_EPS_Z,
+                                                      rpars.SYMMETRY_EPS.z,
                                                       z_periodic=z_periodic)
         self.apply_bulk_cell_reduction(rpars.SYMMETRY_EPS,
-                                       epsz=rpars.SYMMETRY_EPS_Z,
+                                       epsz=rpars.SYMMETRY_EPS.z,
                                        new_c_vec=rpars.BULK_REPEAT)
-        self.create_sublayers(rpars.SYMMETRY_EPS_Z)
+        self.create_sublayers(rpars.SYMMETRY_EPS.z)
         return rpars.BULK_REPEAT
 
     def get_bulk_3d_str(self):

@@ -157,7 +157,7 @@ def _get_emax_for_evanescent_beams(slab, rpars, domains):
                     for dp in rpars.domainParams)
     d_min *= 0.7                                                                # TODO: may want to complain if this is small as it will give a huge load of beams (and may mean different LAYER_CUTS should be used).
 
-    e_max = rpars.THEO_ENERGIES[1]
+    e_max = rpars.THEO_ENERGIES.max
     e_max += H_BAR_SQ_OVER_2M * (np.log(rpars.ATTENUATION_EPS) / d_min)**2
     return e_max
 

@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
+"""Moule _rparams of viperleed.tleedmlib.classes.rparams.
+
+Created on 2023-10-23, originally Jun 13 2019
+
+@author: Florian Kraushofer (@fkraushofer)
+@author: Michele Riva (@michele-riva)
+
+This is the module defining the core class of this package, i.e.,
+Rparams. The class contains parameters read from the PARAMETERS
+file, and some parameters defined at runtime. The attributes that
+represent not-so-obvious user parameters are instances of classes
+defined as part of the special sub-package of rparams.
 """
-Created on Jun 13 2019
 
-@author: Florian Kraushofer
-
-Class containing parameters read from the PARAMETERS file, and some parameters
-defined at runtime. Most default values are defined here.
-"""
-
+from collections import defaultdict
+import copy
 import logging
 import os
 from pathlib import Path
@@ -16,140 +23,29 @@ import shutil
 from timeit import default_timer as timer
 
 import numpy as np
-
-import viperleed
-from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import available_cpu_count
-from viperleed.tleedmlib.checksums import (KNOWN_TL_VERSIONS,
-                                           UnknownTensErLEEDVersionError)
-from viperleed.tleedmlib.files.iodeltas import checkDelta
-
 try:
-    import matplotlib.pyplot as plt                                             # TODO: we should make a general PLOTTING parameter to turn plotting on/off. If plotting is enabled but we can't import matplotlib, we should rather raise an error.
-except Exception:
+    import matplotlib.pyplot as plt
+except ImportError:
     _CAN_PLOT = False
 else:
     _CAN_PLOT = True
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import available_cpu_count
+from viperleed.tleedmlib.checksums import KNOWN_TL_VERSIONS
+from viperleed.tleedmlib.checksums import UnknownTensErLEEDVersionError
+from viperleed.tleedmlib.classes.searchpar import SearchPar
+from viperleed.tleedmlib.files import beams as tl_beams
+from viperleed.tleedmlib.files.iodeltas import checkDelta
+from viperleed.tleedmlib.sections._sections import EXPBEAMS_NAMES
+
+from ._defaults import NO_VALUE, DEFAULTS
+from ._limits import PARAM_LIMITS
+from .special._base import SpecialParameter, NotASpecialParameterError
+
+_LOGGER = logging.getLogger('tleedm.rparams')
+if _CAN_PLOT:
     plt.style.use('viperleed.tleedm')
-
-logger = logging.getLogger("tleedm.rparams")
-
-NO_VALUE = None  # This needs to be a singleton, so "is NO_VALUE" works
-
-# Notice that the defaults in here that may be mutated during execution
-# are saved as immutable types to prevent inadvertent modification of
-# this global, and are rather converted to their mutable equivalent
-# in the relevant places
-DEFAULTS = {
-    'EXPBEAMS_INPUT_FILE' : None,
-    'FILAMENT_WF': {
-        "lab6": 2.65,  # This is the default if nothing is given
-        "w": 4.5,
-        },
-    'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: init from data
-    'LOG_LEVEL' : {
-        NO_VALUE: logging.INFO,
-        'debug': logging.DEBUG,
-        'v' : 5,
-        'verbose' : 5,
-        'vv' : 1,
-        'vverbose' : 1,
-    },
-    'PHASESHIFT_EPS': {
-        'r': 0.1,
-        'n': 0.05,
-        'f': 0.01,  # This is the default if nothing is given
-        'e': 0.001,
-        },
-    'RUN': (0, 1, 2, 3),
-    'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
-    'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
-    'THEO_ENERGIES - no experiments': (20, 800, 3),
-    'THETA': 0,   # perpendicular incidence
-    'PHI': 0,     # not needed in case of perpendicular incidence
-    'ZIP_COMPRESSION_LEVEL': 2,
-    }
-
-                                                                                # TODO: fill dict of parameter limits here (e.g. LMAX etc.)
-# parameter limits
-# either tuple of (min, max) or list of allowed values                          # TODO: allowed would be cleaner as set. It's not great that things are mixed though. Would be better to have a separate global
-PARAM_LIMITS = {
-    'LMAX': (1, 18),
-    'INTPOL_DEG': ['3', '5'],
-    }
-
-
-###############################################
-#                CLASSES                      #
-###############################################
-
-
-class RParamsError(Exception):
-    """Generic exception concerning PARAMETERS."""
-
-
-class SearchPar:
-    """Stores properties of ONE parameter of the search, i.e. what variation
-    of what atom is linked to this parameter."""
-
-    def __init__(self, atom, mode, el, deltaname):
-        self.atom = atom
-        self.mode = mode
-        self.el = el
-        self.deltaname = deltaname
-        self.steps = 1
-        self.edges = (None, None)  # the first and last value in the range
-        self.center = 1  # the index closest to "no change" (Fortran index starting at 1)
-        self.non_zero = False   # whether the center is truly "unchanged"
-        self.restrictTo = None  # None, Index, or other search par
-        self.linkedTo = None    # other search par linked via 'atom number'
-        self.parabolaFit = {"min": None,
-                            "err_co": np.nan, "err_unco": np.nan}
-        d = {}
-        if mode == "occ":
-            el = next(iter(atom.disp_occ.keys()))  # look at any element
-            self.steps = len(atom.disp_occ[el])
-            self.center = atom.disp_center_index[mode][el] + 1 # (Fortran index starting at 1)
-            self.non_zero = (abs(atom.disp_occ[el][self.center-1]
-                                 - atom.site.occ[el]) >= 1e-4)
-            edges = []
-            for ind in (0, -1):
-                edges.append(" + ".join("{:.2f} {}".format(
-                    atom.disp_occ[e][ind], e) for e in atom.disp_occ
-                    if atom.disp_occ[e][ind] > 0.005))
-                if edges[-1] == "":
-                    edges[-1] = "vac"
-            self.edges = tuple(edges)
-        else:
-            if mode == "geo":
-                d = atom.disp_geo
-            elif mode == "vib":
-                d = atom.disp_vib
-        if len(d) > 0 and el != "vac":  # if vac: use defaults
-            if el in d:
-                k = el
-            else:
-                k = "all"
-            self.steps = len(d[k])
-            self.edges = (d[k][0], d[k][-1])
-            if k not in atom.disp_center_index[mode]:
-                self.center = atom.disp_center_index[mode]["all"] + 1
-            else:
-                self.center = atom.disp_center_index[mode][k] + 1
-            self.non_zero = (np.linalg.norm(d[k][self.center-1]) >= 1e-4)
-
-
-class DomainParameters:
-    """Stores workdir, slab and runparams objects for each domain"""
-
-    def __init__(self, workdir, homedir, name):
-        self.workdir = Path(workdir)  # path to sub-directory for domain calculation
-        self.homedir = Path(homedir)  # path to main tleedm working directory
-        self.name = name        # domain name as defined by user
-        self.sl = None
-        self.rp = None
-        self.refcalcRequired = False
-        self.tensorDir = None
 
 
 class Rparams:
@@ -157,7 +53,7 @@ class Rparams:
     __init__), as well as some parameters defined at runtime."""
 
     def __init__(self):
-        self.readParams = {}    # original parameters as read from file
+        self.readParams = defaultdict(list)  # Raw PARAMETERS from file
 
         # FROM PARAMETERS FILE
         self.ATTENUATION_EPS = 0.001
@@ -166,31 +62,31 @@ class Rparams:
         self.BULKDOUBLING_MAX = 10
         self.BULK_LIKE_BELOW = 0.
         self.BULK_REPEAT = None
-        self.DOMAINS = []         # list of domains (name, path)
+        self.DOMAINS = {}         # {name: path_to_tensors_zip_or_dir}
         self.DOMAIN_STEP = 1      # area step in percent for domain search
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
-        self.EXPBEAMS_INPUT_FILE = DEFAULTS["EXPBEAMS_INPUT_FILE"]
-        self.FILAMENT_WF = DEFAULTS["FILAMENT_WF"]["lab6"]   # work function of emitting cathode
-        self.FORTRAN_COMP = ["", ""]      # before files, after files
-        self.FORTRAN_COMP_MPI = ["", ""]  # before files, after files
+        self.FILAMENT_WF = DEFAULTS['FILAMENT_WF']['lab6']   # work function of emitting cathode
+        self.FORTRAN_COMP = ['', '']      # before files, after files
+        self.FORTRAN_COMP_MPI = ['', '']  # before files, after files
         self.GAUSSIAN_WIDTH = 0.5
         self.GAUSSIAN_WIDTH_SCALING = 0.5
         self.HALTING = 2    # 2: major concerns, 1: minor warnings, 0: always
         self.INTPOL_DEG = 3 # Degree of interpolation spline used in R-factor calculation
         self.IV_SHIFT_RANGE = self.get_default('IV_SHIFT_RANGE')
-        self.LAYER_CUTS = ["dz(1.2)"]  # list of either str or c coordinates
+        self.LAYER_CUTS = self.get_default('LAYER_CUTS')
         self.LAYER_STACK_VERTICAL = True
-        self.LMAX = [0, 0]    # minimum and maximum LMAX
-        self.LOG_LEVEL = DEFAULTS["LOG_LEVEL"][NO_VALUE]
+        self.LMAX = self.get_default('LMAX')
+        self.LOG_LEVEL = DEFAULTS['LOG_LEVEL'][NO_VALUE]
         self.LOG_SEARCH = True
         self.N_BULK_LAYERS = 1           # number of bulk layers
         self.N_CORES = 0                 # number of cores
-        self.OPTIMIZE = {"which": "none", "step": 0., "minpoints": 4,
-                         "maxpoints": 10, "convergence": 0., "maxstep": 0.}
-                    # settings for fd optimization
-        self.PARABOLA_FIT = {"type": "none", "alpha": 1e-2, "mincurv": 5e-3,
-                             "localize": 0}
+        self.OPTIMIZE = {  # settings for fd optimization
+            'which': 'none', 'step': 0., 'minpoints': 4,
+            'maxpoints': 10, 'convergence': 0., 'maxstep': 0.
+            }
+        self.PARABOLA_FIT = {'type': 'none', 'alpha': 1e-2, 'mincurv': 5e-3,
+                             'localize': 0}
         self.PHASESHIFT_EPS = DEFAULTS['PHASESHIFT_EPS']['f'] # changed in updateDerivedParams
         self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
         self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
@@ -204,28 +100,28 @@ class Rparams:
         self.S_OVL = 0.3 # Muffin tin overlap parameter after Rundgren 2021, default is 0.3 - set or optimize in FD
         self.SCREEN_APERTURE = 110.
         self.SEARCH_BEAMS = 0   # 0: average, 1: integer, 2: fractional
-        self.SEARCH_CULL = 0.1  # fraction of all, or absolute N if >1
-        self.SEARCH_CULL_TYPE = "genetic"  # clone, genetic, random
+        # SEARCH_CULL: fraction of population, or absolute nr. if >1
+        # SEARCH_CULL.type_: clone, genetic, random
+        self.SEARCH_CULL = self.get_default('SEARCH_CULL')
         self.SEARCH_MAX_GEN = 100000  # maximum number of generations in search
-        self.SEARCH_MAX_DGEN = {"all": 0, "best": 0, "dec": 100}
+        self.SEARCH_MAX_DGEN = self.get_default('SEARCH_MAX_DGEN')
         # maximum number of generations without change before search
         #   is stopped. All: all configs, best: only 1, dec: best 10%
         #    0: don't use parameter
-        self.SEARCH_MAX_DGEN_SCALING = {"all": None, "best": None, "dec": None}
+        self.SEARCH_MAX_DGEN_SCALING = {'all': None, 'best': None, 'dec': None}
         # will be defined in updateDerivedParams
         self.SEARCH_LOOP = False
         self.SEARCH_POPULATION = 0  # trial structures in search
-        self.SEARCH_START = "crandom"
+        self.SEARCH_START = 'crandom'
         self.SITE_DEF = {}   # {element_name: {sitename, [atom.num]}}
         self.STOP = False
         self.SUPERLATTICE = np.identity(2, dtype=float)
         self.SUPPRESS_EXECUTION = False
         self.SYMMETRIZE_INPUT = True
         self.SYMMETRY_CELL_TRANSFORM = np.identity(2, dtype=float)
-        self.SYMMETRY_EPS = 0.1
-        self.SYMMETRY_EPS_Z = 0.1
+        self.SYMMETRY_EPS = self.get_default('SYMMETRY_EPS')
         self.SYMMETRY_FIND_ORI = True
-        self.SYMMETRY_FIX = ''
+        self.SYMMETRY_FIX = self.get_default('SYMMETRY_FIX')
         self.SYMMETRY_BULK = {}   # keys: group, rotation, mirror
         self.TENSOR_INDEX = None  # default: pick highest in Tensors folder
         self.TENSOR_OUTPUT = []  # per layer: write Tensor output? (0/1)
@@ -239,7 +135,7 @@ class Rparams:
         self.T_EXPERIMENT = None
         self.T_DEBYE = None
         self.V0_IMAG = 4.5
-        self.V0_REAL = "default"   # 'default' will read from PHASESHIFTS
+        self.V0_REAL = 'default'   # 'default' will read from PHASESHIFTS
         self.V0_Z_ONSET = 1.0
         self.VIBR_AMP_SCALE = []   # read as list of strings, interpret later
         self.ZIP_COMPRESSION_LEVEL = DEFAULTS['ZIP_COMPRESSION_LEVEL']
@@ -250,28 +146,29 @@ class Rparams:
         self.workdir = Path(os.getcwd())  # MAIN WORK DIRECTORY; where to find input
         self.compile_logs_dir = None
         self.searchConvInit = {
-            "gaussian": None, "dgen": {"all": None, "best": None, "dec": None}}
+            'gaussian': None, 'dgen': {'all': None, 'best': None, 'dec': None}}
         self.searchEvalTime = DEFAULTS['SEARCH_EVAL_TIME']  # time interval for reading SD.TL
         self.output_interval = None # changed in updateDerivedParams
         self.searchMaxGenInit = self.SEARCH_MAX_GEN
         self.searchStartInit = None
-        self.search_convergence_known = False  # used by parameter.py
+
         # script progress tracking
         self.halt = 0
-        self.systemName = ""
-        self.timestamp = ""
-        self.manifest = ["SUPP", "OUT"]
+        self.systemName = ''
+        self.timestamp = ''
+        self.manifest = ['SUPP', 'OUT']
         self.fileLoaded = {
-            "PARAMETERS": True, "POSCAR": False,
-            "IVBEAMS": False, "VIBROCC": False, "PHASESHIFTS": False,
-            "DISPLACEMENTS": False, "BEAMLIST": False, "EXPBEAMS": False}
+            'PARAMETERS': True, 'POSCAR': False,
+            'IVBEAMS': False, 'VIBROCC': False, 'PHASESHIFTS': False,
+            'DISPLACEMENTS': False, 'BEAMLIST': False, 'EXPBEAMS': False
+            }
         self.runHistory = []   # sections that have been executed before
         self.lastOldruns = []
         # copy of runHistory when last oldruns folder was created
         self.superlattice_defined = False
         self.ivbeams_sorted = False
         self.last_R = None
-        self.stored_R = {"refcalc": None, "superpos": None}
+        self.stored_R = {'refcalc': None, 'superpos': None}
         self.checklist = []  # output strings of things to check at program end
 
         # domains
@@ -282,12 +179,15 @@ class Rparams:
         self.beamlist = []  # lines as strings from BEAMLIST
         self.ivbeams = []   # uses Beam class; list of beams only
         self.expbeams = []  # uses Beam class; contains intensities
-        self.theobeams = {"refcalc": [], "superpos": None}
-        # uses Beam class; contains intensities
+        self.theobeams = {  # uses Beam class; contains intensities
+            'refcalc': None,
+            'superpos': None
+            }
+        self.expbeams_file_name = ''     # EXPBEAMS or EXPBEAMS.csv?
         self.phaseshifts = []
-        self.phaseshifts_firstline = ""  # contains parameters for MUFTIN
-        self.refcalc_fdout = ""
-        self.superpos_specout = ""
+        self.phaseshifts_firstline = ''  # contains parameters for MUFTIN
+        self.refcalc_fdout = ''
+        self.superpos_specout = ''
         self.best_v0r = None     # best value for v0r from previous R-factor
         self.disp_blocks = []    # tuples (lines, name) in DISPLACEMENTS file
         self.disp_block_read = False  # current displacements block read?
@@ -300,7 +200,7 @@ class Rparams:
         self.search_atlist = []    # atoms that are relevant for the search
         self.search_maxfiles = 0   # maximum number of delta files for one atom
         self.search_maxconc = 1    # maximum number of concentration steps
-        self.indyPars = 0        # number of independent parameters
+        self.indyPars = 0          # number of independent parameters
         self.mncstep = 0    # max. steps (geo. times therm.) for one atom
         self.search_index = 0      # which DISPLACEMENTS block is being done
 
@@ -309,7 +209,7 @@ class Rparams:
         self.rfacscatter = []       # same, but thinned out along gens
         self.parScatter = [[]]
         # tuples (gen, mean scatter, max scatter) per search
-        self.searchplots = [("", [], [], [], [])]
+        self.searchplots = [('', [], [], [], [])]
         # (name, gens, min, max, mean) for each search
         self.lastParScatterFigs = {}
         # complete figures for each search, with search names as keys
@@ -322,34 +222,94 @@ class Rparams:
     def no_value(self):
         return NO_VALUE
 
-    def get_default(self, param):
+    def try_loading_expbeams_file(self):
+        """Read an EXPBEAMS file if not already available."""
+        if self.fileLoaded['EXPBEAMS']:
+            return
+
+        exp_files_provided = (f for f in EXPBEAMS_NAMES if Path(f).is_file())
+        try:
+            self.expbeams_file_name = next(exp_files_provided)
+        except StopIteration:  # Nothing to load
+            self.expbeams_file_name = ''
+            return
+
+        # Warn if multiple experimental input files were provided
+        if next(exp_files_provided, False):
+            self.setHaltingLevel(1)
+            _LOGGER.warning(
+                'Multiple files with experimental I(V) curves were provided. '
+                'Check if the root directory contains the correct files. '
+                f'Using file {self.expbeams_file_name!r}.'
+                )
+        err_msg = f'Error while reading file {self.expbeams_file_name}'
+        enrange = self.THEO_ENERGIES.as_floats()[:2]
+        try:
+            self.expbeams = tl_beams.readOUTBEAMS(self.expbeams_file_name,
+                                                  enrange=enrange)
+        except OSError:
+            _LOGGER.error(f'{err_msg}.', exc_info=True)
+            return
+
+        if self.expbeams:
+            self.fileLoaded['EXPBEAMS'] = True
+        else:
+            _LOGGER.error(f'{err_msg}: No data was read.')
+
+    @classmethod
+    def get_default(cls, param):
         """Return the default value of param."""
         try:
             value = DEFAULTS[param]
         except KeyError as err:
-            raise ValueError(f"No default found for parameter {param}.") from err
+            raise ValueError(f'No default found for parameter {param}') from err
         if isinstance(value, tuple):
             value = list(value)
-        return value
+        elif isinstance(value, dict):
+            value = copy.deepcopy(value)
 
-    def get_limits(self, param):
+        # See if param is a special one
+        return cls._to_simple_or_special_param(param, value)
+
+    @staticmethod
+    def _to_simple_or_special_param(param, value):
+        """Return the value of a standard or special parameter."""
+        try:
+            special = SpecialParameter.get_subclass(param)
+        except NotASpecialParameterError:
+            return value
+        return special.from_value(value)
+
+    def reset_default(self, param):
+        """Reset param to its default value."""
+        default = self.get_default(param)
+        setattr(self, param, default)
+
+    @staticmethod
+    def get_limits(param):
         """Return the smallest and largest acceptable values of param."""
         try:
             return PARAM_LIMITS[param]
         except KeyError as err:
-            raise ValueError(f"No limits found for parameter {param}.") from err
+            raise ValueError(f'No limits found for parameter {param}') from err
+
+    def update(self, presets):
+        """Load presets into this Rparams object."""
+        for param_name, param_value in presets.items():
+            param_name = param_name.upper()
+            getattr(self, param_name)  # Raise AttributeError if wrong
+            value = self._to_simple_or_special_param(param_name, param_value)
+            setattr(self, param_name, value)
 
     def total_energy_range(self):
         """Return the total overlapping energy range of experiment and
         theory. Note that this may change if experimental beams are dropped."""
         if not self.expbeams:
             return 0.
-        expEnergies = []
         totalrange = 0.
         for b in self.expbeams:
-            expEnergies.extend([k for k in b.intens if k not in expEnergies])
-            totalrange += (min(max(b.intens), self.THEO_ENERGIES[1])
-                           - max(min(b.intens), self.THEO_ENERGIES[0]))
+            totalrange += (min(max(b.intens), self.THEO_ENERGIES.max)
+                           - max(min(b.intens), self.THEO_ENERGIES.min))
         return totalrange
 
     def storeRfacScatter(self, x, y, s, c):
@@ -365,7 +325,6 @@ class Rparams:
         Returns
         -------
         None.
-
         """
         spacing = x[-1]/50
         pg = x[-1]
@@ -376,6 +335,65 @@ class Rparams:
                 self.rfacscatter.append(p)
                 pg = p[0]
 
+    def get_tenserleed_directory(self, version=None):                           # TODO: replace the default for TL_VERSION with Version('unknown')
+        """Return the Path to a TensErLEED directory.
+
+        The directory is looked up in Rparams.source_dir.
+
+        Parameters
+        ----------
+        version : float or None, optional
+            Which specific version of TensErLEED should be looked
+            up. If not given or None, `Rparams.TL_VERSION` is used.
+            If `version == 0`, the highest version is returned.
+            Default is None.
+
+        Returns
+        -------
+        tenserleed_path : Path
+            Path to the desired 'TensErLEED' directory.
+
+        Raises
+        ------
+        RuntimeError
+            If this method is called before `Rparams.source_dir` is set
+        FileNotFoundError
+            If `Rparams.source_dir` has no 'TensErLEED' subdirectories
+        FileNotFoundError
+            If `version` is given, but the corresponding directory
+            was not found
+        """
+        if not self.source_dir:
+            raise RuntimeError(
+                f'{type(self).__name__}.get_tenserleed_directory: '
+                'source_dir is not set'
+                )
+        source_tree = self.source_dir.resolve()
+        version = version or self.TL_VERSION
+
+        highest = foundversion = 0.0
+        founddir = None
+        for directory in source_tree.glob('TensErLEED*'):
+            if not directory.is_dir():
+                continue
+            try:
+                foundversion = float(directory.name.split('v')[-1])
+            except (ValueError, IndexError):
+                continue
+            if foundversion == version:
+                return directory
+            if foundversion > highest:
+                highest = foundversion
+                founddir = directory
+
+        if not founddir:
+            raise FileNotFoundError('Could not find TensErLEED code')
+        if version > 0 and foundversion != version:
+            raise FileNotFoundError(
+                f'Could not find TensErLEED version={version}'
+                )
+        return founddir
+
     def updateDerivedParams(self):
         """
         Checks which derivative parameters (which cannot be calculated at
@@ -384,25 +402,23 @@ class Rparams:
         Returns
         -------
         None.
-
         """
         # TENSOR_INDEX:
         if self.TENSOR_INDEX is None:
             self.TENSOR_INDEX = leedbase.getMaxTensorIndex()
         # TL_VERSION:
         if self.source_dir is None:
-            raise RuntimeError("Cannot determine highest TensErLEED version "
-                               "without specifying a source directory.")
+            raise RuntimeError('Cannot determine highest TensErLEED version '
+                               'without specifying a source directory')
         if self.TL_VERSION == 0.:
-            # fetch most recent TensErLEED version
-            newest_tl_path = leedbase.getTLEEDdir(self.source_dir, version=None)
-            self.TL_VERSION = float(newest_tl_path.name.split('-v')[1])
-            # Log used TensErLEED version
-            logger.info(f"Detected TensErLEED version {self.TL_VERSION:.2f}")
+            # Fetch most recent TensErLEED version
+            _, version = self.get_tenserleed_directory().name.split('v')
+            self.TL_VERSION = float(version)
+            _LOGGER.debug(f'Detected TensErLEED version {self.TL_VERSION:.2f}')
 
         # TL_VERSION_STR
         # try simple conversion to string
-        self.TL_VERSION_STR = f"{self.TL_VERSION:.2f}"
+        self.TL_VERSION_STR = f'{self.TL_VERSION:.2f}'
         if self.TL_VERSION_STR not in KNOWN_TL_VERSIONS:
             # try again without trailing zero
             if self.TL_VERSION_STR.endswith('0'):
@@ -410,86 +426,85 @@ class Rparams:
         if (self.TL_VERSION_STR not in KNOWN_TL_VERSIONS
                 and not self.TL_IGNORE_CHECKSUM):
             raise UnknownTensErLEEDVersionError(
-                f"Unrecognized TensErLEED version: {self.TL_VERSION_STR}. "
-                "Consider editing KNOWN_TL_VERSIONS global in checksums.py "
-                "or setting TL_IGNORE_CHECKSUM = True."
-            )
+                f'Unrecognized TensErLEED version: {self.TL_VERSION_STR}. '
+                'Consider editing KNOWN_TL_VERSIONS global in checksums.py '
+                'or setting TL_IGNORE_CHECKSUM = True'
+                )
 
         # SEARCH_CONVERGENCE:
-        if self.searchConvInit["gaussian"] is None:
-            self.searchConvInit["gaussian"] = self.GAUSSIAN_WIDTH
-        for k in ["all", "best", "dec"]:
+        if self.searchConvInit['gaussian'] is None:
+            self.searchConvInit['gaussian'] = self.GAUSSIAN_WIDTH
+        for k in ['all', 'best', 'dec']:
             if self.SEARCH_MAX_DGEN_SCALING[k] is None:
                 self.SEARCH_MAX_DGEN_SCALING[k] = int(
                                               1 / self.GAUSSIAN_WIDTH_SCALING)
-            if self.searchConvInit["dgen"][k] is None:
-                self.searchConvInit["dgen"][k] = self.SEARCH_MAX_DGEN[k]
+            if self.searchConvInit['dgen'][k] is None:
+                self.searchConvInit['dgen'][k] = self.SEARCH_MAX_DGEN[k]
         if self.output_interval is None:
             # set output interval to SEARCH_CONVERGENCE dgen, but cap at 1000
-            use_dgen = min(dgen for dgen in self.searchConvInit["dgen"].values() if dgen > 0) or 1000
+            use_dgen = min(dgen for dgen in self.searchConvInit['dgen'].values() if dgen > 0) or 1000
             self.output_interval = int(min(use_dgen or 1000, 1000))  # default to 1000 if all dgen are 0 (default)
         if self.searchStartInit is None:
             self.searchStartInit = self.SEARCH_START
         # Phaseshifts-based:
-        if self.fileLoaded["PHASESHIFTS"]:
+        if self.fileLoaded['PHASESHIFTS']:
             # get highest required energy index
             hi = len(self.phaseshifts)-1
-            if self.THEO_ENERGIES[1] is not NO_VALUE:
+            if self.THEO_ENERGIES.max is not NO_VALUE:
                 for i in range(0, len(self.phaseshifts)):
                     if (self.phaseshifts[i][0]*leedbase.HARTREE_TO_EV
-                            > self.THEO_ENERGIES[1]):
+                            > self.THEO_ENERGIES.max):
                         hi = i
                         break
             # LMAX
-            min_set = True
             if self.PHASESHIFT_EPS == 0:
                 self.PHASESHIFT_EPS = DEFAULTS['PHASESHIFT_EPS']['f']
-            if self.LMAX[0] <= 0:
-                self.LMAX[0] = 6
-                min_set = False
-            if self.LMAX[1] == 0:  # determine value from PHASESHIFT_EPS
+            min_set = self.LMAX.has_min
+            if not min_set:
+                self.LMAX.min = 6
+            if not self.LMAX.has_max:  # determine value from PHASESHIFT_EPS
                 lmax = 1
                 for el in self.phaseshifts[hi][1]:  # only check highest energy
                     for i, val in enumerate(el):
                         if abs(val) > self.PHASESHIFT_EPS and (i+1) > lmax:
                             lmax = i+1
                 if lmax < 8 and not min_set:
-                    logger.debug(
-                        "Found small LMAX value based on "
-                        "PHASESHIFT_EPS parameter (LMAX="+str(lmax)+").")
+                    _LOGGER.debug('Found small LMAX value based on '
+                                  f'PHASESHIFT_EPS parameter (LMAX={lmax})')
                 if lmax > 18:
                     lmax = 18
-                    logger.info(
-                        "The LMAX found based on the PHASESHIFT_EPS "
-                        "parameter is greater than 18, which is currently "
-                        "not supported. LMAX was set to 18.")
-                self.LMAX[1] = lmax
+                    _LOGGER.info(
+                        'The LMAX found based on the PHASESHIFT_EPS '
+                        'parameter is greater than 18, which is currently '
+                        'not supported. LMAX was set to 18.'
+                        )
+                self.LMAX.max = lmax
             else:       # sanity check: are large values ignored?
                 warn = False
                 highval = 0
                 for el in self.phaseshifts[hi][1]:   # highest energy
                     for i, val in enumerate(el):
-                        if abs(val) > 0.1 and (i+1) > self.LMAX[1]:
+                        if abs(val) > 0.1 and (i+1) > self.LMAX.max:
                             warn = True
                             highval = max(highval, abs(val))
                 if warn:
-                    logger.warning(
-                        "The LMAX value defined in the PARAMETERS "
-                        "file leads to large phaseshift values being ignored "
-                        "(highest value: {}). Consider using a higher LMAX, "
-                        "or defining LMAX indirectly via PHASESHIFT_EPS."
-                        .format(highval))
+                    _LOGGER.warning(
+                        'The LMAX value defined in the PARAMETERS '
+                        'file leads to large phaseshift values being ignored '
+                        f'(highest value: {highval}). Consider using a higher '
+                        'LMAX, or defining LMAX indirectly via PHASESHIFT_EPS.'
+                        )
                     self.setHaltingLevel(1)
             # V0_REAL
-            if self.V0_REAL == "default":
+            if self.V0_REAL == 'default':
                 llist = self.phaseshifts_firstline.split()
                 c = []
                 try:
                     for i in range(0, 4):
                         c.append(float(llist[i + 1]))
                 except ValueError:
-                    logger.error("Could not read Muftin parameters from "
-                                 "PHASESHIFTS file.")
+                    _LOGGER.error('Could not read Muftin parameters from '
+                                  'PHASESHIFTS file.')
                     raise
                 self.V0_REAL = c
 
@@ -505,22 +520,20 @@ class Rparams:
         Returns
         -------
         None
-
         """
-        if self.N_CORES != 0:
+        if self.N_CORES:
             return
         try:
             self.N_CORES = available_cpu_count()
         except Exception:
-            logger.error("Failed to detect number of cores.")
+            _LOGGER.error('Failed to detect number of cores.')
             raise
-        else:
-            logger.info("Automatically detected number of available CPUs: {}"
-                        .format(self.N_CORES))
-        if self.N_CORES == 0:
-            logger.error("Failed to detect number of cores.")
-            raise RuntimeError("N_CORES undefined, automatic detection failed")
-        return
+
+        _LOGGER.info('Automatically detected number '
+                     f'of available CPUs: {self.N_CORES}')
+        if not self.N_CORES:
+            _LOGGER.error('Failed to detect number of cores.')
+            raise RuntimeError('N_CORES undefined, automatic detection failed')
 
     def resetSearchConv(self):
         """
@@ -530,24 +543,22 @@ class Rparams:
         Returns
         -------
         None.
-
         """
         self.controlChemBackup = None
         self.disp_block_read = False
         self.rfacscatter_all = []
-        self.searchplots.append(("", [], [], [], []))
+        self.searchplots.append(('', [], [], [], []))
         self.parScatter.append([])
         self.SEARCH_MAX_GEN = self.searchMaxGenInit
-        if self.searchConvInit["gaussian"] is not None:
-            self.GAUSSIAN_WIDTH = self.searchConvInit["gaussian"]
+        if self.searchConvInit['gaussian'] is not None:
+            self.GAUSSIAN_WIDTH = self.searchConvInit['gaussian']
         if self.searchStartInit is not None:
             self.SEARCH_START = self.searchStartInit
-        if self.SEARCH_START == "control":
-            self.SEARCH_START = "crandom"
-        for k in ["best", "all", "dec"]:
-            if self.searchConvInit["dgen"][k] is not None:
-                self.SEARCH_MAX_DGEN[k] = self.searchConvInit["dgen"][k]
-        return
+        if self.SEARCH_START == 'control':
+            self.SEARCH_START = 'crandom'
+        for k in ['best', 'all', 'dec']:
+            if self.searchConvInit['dgen'][k] is not None:
+                self.SEARCH_MAX_DGEN[k] = self.searchConvInit['dgen'][k]
 
     def setHaltingLevel(self, set_to):
         """
@@ -562,12 +573,10 @@ class Rparams:
         Returns
         -------
         None.
-
         """
         if set_to > self.halt:
-            logger.debug("Raising halting level to {}".format(set_to))
+            _LOGGER.debug(f'Raising halting level to {set_to}')
             self.halt = set_to
-        return
 
     def initTheoEnergies(self):
         """
@@ -578,39 +587,26 @@ class Rparams:
         Returns
         -------
         None.
-
         """
-        if NO_VALUE not in self.THEO_ENERGIES:
+        energies = self.THEO_ENERGIES
+        if energies.defined:
             return
-        info = False
-        if self.fileLoaded["EXPBEAMS"]:
-            minen = min(self.expbeams[0].intens)
-            maxen = max(self.expbeams[0].intens)
-            for beam in self.expbeams:
-                if min(beam.intens) < minen:
-                    minen = min(beam.intens)
-                if max(beam.intens) > maxen:
-                    maxen = max(beam.intens)
+        info = self.fileLoaded['EXPBEAMS'] and not energies.has_bounds
+        if self.fileLoaded['EXPBEAMS']:
+            minen = min(en for beam in self.expbeams for en in beam.intens)
+            maxen = max(en for beam in self.expbeams for en in beam.intens)
             values = [minen - 3, maxen + 3, 3]
-            if NO_VALUE in self.THEO_ENERGIES[:2]:
-                info = True
         else:
-            values = list(DEFAULTS['THEO_ENERGIES - no experiments'])
-        for i in range(0, 3):
-            if self.THEO_ENERGIES[i] is NO_VALUE:
-                self.THEO_ENERGIES[i] = values[i]
+            values = self.get_default('THEO_ENERGIES - no experiments')
+
+        energies.set_undefined_values(values)
         if info:
-            logger.debug(
-                "Initialized energy range from experimental beams file: "
-                "{:.2f} to {:.2f} eV".format(self.THEO_ENERGIES[0],
-                                             self.THEO_ENERGIES[1]))
-        d = ((self.THEO_ENERGIES[1] - self.THEO_ENERGIES[0])
-             % self.THEO_ENERGIES[2])
-        if d != 0:
-            self.THEO_ENERGIES[1] += (self.THEO_ENERGIES[2] - d)
+            _LOGGER.debug('Initialized energy range from experimental '
+                          f'beams file: {energies.start:.2f} to '
+                          f'{energies.stop:.2f} eV')
 
     # TODO: eventually, these default values should be moved to some constant or other file
-    def getFortranComp(self, comp="auto", skip_check=False):                    # TODO: combine with FortranCompMPI from below; lots of repeated code
+    def getFortranComp(self, comp='auto'):                                      # TODO: combine with FortranCompMPI from below; lots of repeated code
         """
         Checks whether ifort or gfortran are present, and sets FORTRAN_COMP
         accordingly.
@@ -620,58 +616,50 @@ class Rparams:
         comp : str, optional
             'auto' (default): will check ifort first, then gfortran.
             'ifort' or 'gfortran': only that compiler will be checked.
-        skip_check : bool, optional
-            If True, will not check if the compiler is present. Default False.
+
         Raises
         ------
-        RuntimeError
-            If the given compiler is not supported, or if no compiler is found.
-
-        Returns
-        -------
-        None.
-
+        ValueError
+            If the given compiler is not supported
+        FileNotFoundError
+            If the desired compiler was not found
         """
         # supported compilers, in order of priority
-        supported = ["ifort", "gfortran"]
-        found = ""
-        if comp == "auto":
+        supported = ['ifort', 'gfortran']
+        found = ''
+        if comp == 'auto':
             check = supported
         elif comp in supported:
             check = [comp]
         else:
-            logger.error("Rparams.getFortranComp: requested compiler is not "
-                         "supported.")
-            raise RuntimeError("Fortran compiler not supported.")
-        if not skip_check:
-            for c in check:
-                if shutil.which(c, os.X_OK) is not None:
-                    found = c
-                    break
-        else:
-            found = check[0]
-        if found == "":
-            if comp == "auto":
-                logger.error("Rparams.getFortranComp: No fortran compiler "
-                             "found.")
+            _LOGGER.error('Rparams.getFortranComp: requested compiler is not '
+                          'supported.')
+            raise ValueError('Fortran compiler not supported')
+        for c in check:
+            if shutil.which(c, os.X_OK) is not None:
+                found = c
+                break
+        if found == '':
+            if comp == 'auto':
+                _LOGGER.error('Rparams.getFortranComp: No fortran compiler '
+                              'found.')
             else:
-                logger.error("Rparams.getFortranComp: Requested fortran "
-                             "compiler not found.")
-            raise RuntimeError("Fortran compiler not found.")
-        if found == "ifort":
+                _LOGGER.error('Rparams.getFortranComp: Requested fortran '
+                              'compiler not found.')
+            raise FileNotFoundError('Fortran compiler not found')
+        if found == 'ifort':
             self.FORTRAN_COMP = [
-                "ifort -O2 -I/opt/intel/mkl/include",
-                "-L/opt/intel/mkl/lib/intel64 -lmkl_intel_lp64 "
-                "-lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl "
-                "-traceback"]  # backtrace should not affect performance
-            logger.debug("Using fortran compiler: ifort")
-        elif found == "gfortran":
-            self.FORTRAN_COMP = ["gfortran -O2", "-llapack -lpthread -lblas "
-                                 "-fbacktrace"]  # should not affect performance
-            logger.debug("Using fortran compiler: gfortran")
-        return
+                'ifort -O2 -I/opt/intel/mkl/include',
+                '-L/opt/intel/mkl/lib/intel64 -lmkl_intel_lp64 '
+                '-lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl '
+                '-traceback']  # backtrace should not affect performance
+            _LOGGER.debug('Using fortran compiler: ifort')
+        elif found == 'gfortran':
+            self.FORTRAN_COMP = ['gfortran -O2', '-llapack -lpthread -lblas '
+                                 '-fbacktrace']  # should not affect performance
+            _LOGGER.debug('Using fortran compiler: gfortran')
 
-    def getFortranMpiComp(self, comp="auto", skip_check=False):
+    def getFortranMpiComp(self, comp='auto'):
         """
         Checks whether mpiifort or mpifort are present, and sets FORTRAN_COMP
         mpi accordingly.
@@ -681,52 +669,46 @@ class Rparams:
         comp : str, optional
             'auto' (default): will check mpiifort first, then mpifort.
             'mpiifort' or 'mpifort': only that compiler will be checked.
-        skip_check : bool, optional
-            If True, will not check if the compiler is present. Default False.
 
         Raises
         ------
-        RuntimeError
-            If the given compiler is not supported, or if no compiler is found.
-
-        Returns
-        -------
-        None.
-
+        ValueError
+            If the given compiler is not supported
+        FileNotFoundError
+            If the desired compiler was not found
         """
         # supported compilers, in order of priority
-        supported = ["mpiifort", "mpifort"]
-        found = ""
-        if comp == "auto":
+        supported = ['mpiifort', 'mpifort']
+        found = ''
+        if comp == 'auto':
             check = supported
         elif comp in supported:
             check = [comp]
         else:
-            logger.error("Rparams.getFortranMpiComp: requested compiler is "
-                         "not supported.")
-            raise RuntimeError("Fortran MPI compiler not supported.")
-        if not skip_check:
-            for c in check:
-                if shutil.which(c, os.X_OK) is not None:
-                    found = c
-                    break
-        else:
-            found = check[0]
-        if found == "":
-            if comp == "auto":
-                logger.error("Rparams.getFortranMpiComp: No fortran compiler "
-                             "found.")
+            _LOGGER.error('Rparams.getFortranMpiComp: requested compiler is '
+                          'not supported.')
+            raise ValueError('Fortran MPI compiler not supported')
+        for c in check:
+            if shutil.which(c, os.X_OK) is not None:
+                found = c
+                break
+        if found == '':
+            if comp == 'auto':
+                _LOGGER.error('Rparams.getFortranMpiComp: No fortran compiler '
+                              'found.')
             else:
-                logger.error("Rparams.getFortranMpiComp: Requested fortran "
-                             "compiler not found.")
-            raise RuntimeError("Fortran MPI compiler not found.")
-        if found == "mpiifort":
-            self.FORTRAN_COMP_MPI = ["mpiifort -Ofast", ""]
-            logger.debug("Using fortran compiler: mpiifort")
-        elif found == "mpifort":
-            self.FORTRAN_COMP_MPI = ["mpifort -Ofast -no-pie -fallow-argument-mismatch", ""]
-            logger.debug("Using fortran compiler: mpifort")
-        return
+                _LOGGER.error('Rparams.getFortranMpiComp: Requested fortran '
+                              'compiler not found.')
+            raise FileNotFoundError('Fortran MPI compiler not found')
+        if found == 'mpiifort':
+            self.FORTRAN_COMP_MPI = ['mpiifort -Ofast', '']
+            _LOGGER.debug('Using fortran compiler: mpiifort')
+        elif found == 'mpifort':
+            self.FORTRAN_COMP_MPI = [
+                'mpifort -Ofast -no-pie -fallow-argument-mismatch',
+                ''
+                ]
+            _LOGGER.debug('Using fortran compiler: mpifort')
 
     def renormalizeDomainParams(self, config):
         """Takes a list of parameter indices as produced by e.g.
@@ -735,12 +717,12 @@ class Rparams:
         range, returns the list with multiplied values; else, returns the
         unchanged list."""
         domain_indices = [i for (i, sp) in enumerate(self.searchpars)
-                          if sp.mode == "dom"]
-        if not domain_indices or all([config[i] == 1 for i in domain_indices]):
+                          if sp.mode == 'dom']
+        if not domain_indices or all(config[i] == 1 for i in domain_indices):
             return config
         mult = 1
         domain_steps = self.searchpars[domain_indices[0]].steps
-        while (sum([config[i]-1 for i in domain_indices]) * (mult+1)
+        while (sum(config[i]-1 for i in domain_indices) * (mult + 1)
                <= domain_steps-1):
             mult += 1
         for i in domain_indices:
@@ -750,7 +732,7 @@ class Rparams:
     def getCenteredConfig(self):
         """Returns a list of 'centered' parameter indices, i.e. all as close
         to 'no displacement' as possible."""
-        return ([sp.center for sp in self.searchpars])
+        return [sp.center for sp in self.searchpars]
 
     def getPredictConfig(self, best_config=None, curv_cutoff=1e-4):
         """
@@ -775,16 +757,15 @@ class Rparams:
         -------
         list of int
             Parameter values for a new configuration.
-
         """
         out = []
         for (i, sp) in enumerate(self.searchpars):
-            if (sp.parabolaFit["min"] is not None and
-                    not np.isnan(sp.parabolaFit["err_co"]) and
-                    not np.isnan(sp.parabolaFit["err_unco"])):
-                # sp.parabolaFit["curv"] is not None and
-                # sp.parabolaFit["curv"] > curv_cutoff):
-                out.append(int(round(sp.parabolaFit["min"])))
+            if (sp.parabolaFit['min'] is not None and
+                    not np.isnan(sp.parabolaFit['err_co']) and
+                    not np.isnan(sp.parabolaFit['err_unco'])):
+                # sp.parabolaFit['curv'] is not None and
+                # sp.parabolaFit['curv'] > curv_cutoff):
+                out.append(int(round(sp.parabolaFit['min'])))
             else:
                 if best_config is not None:
                     out.append(best_config[i])
@@ -801,7 +782,6 @@ class Rparams:
         -------
         list of int
             Parameter values for a new configuration.
-
         """
         out = [-1] * len(self.searchpars)
         for i, sp in enumerate(self.searchpars):
@@ -815,7 +795,7 @@ class Rparams:
                 else:
                     out[i] = out[self.searchpars.index(sp.restrictTo)]
         if -1 in out:
-            logger.error("Rparams.getRandomConfig failed: {}".format(out))
+            _LOGGER.error(f'Rparams.getRandomConfig failed: {out}')
             return []
         return self.renormalizeDomainParams(out)
 
@@ -836,19 +816,19 @@ class Rparams:
         -------
         list of int
             Parameter values for a new configuration.
-
         """
+        if not parents:
+            _LOGGER.warning('Rparams.getOffspringConfig: Cannot create '
+                            'offspring configuration without parents. '
+                            'Returning random configuration')
+            return self.getRandomConfig()
+
+        if len(parents) == 1:
+            _LOGGER.warning('Rparams.getOffspringConfig: Only one parent '
+                            'passed. Returning clone.')
+            return parents[0]
+
         parents = parents[:]
-        if len(parents) < 2:
-            if len(parents) == 0:
-                logger.warning("Rparams.getOffspringConfig: Cannot create "
-                               "offspring configuration without parents. "
-                               "Returning random configuration")
-                return self.getRandomConfig()
-            else:
-                logger.warning("Rparams.getOffspringConfig: Only one parent "
-                               "passed. Returning clone.")
-                return parents[0]
         i = random.randint(0, len(parents)-1)
         p2 = [parents.pop(i)]
         while len(p2) == 1:
@@ -872,7 +852,7 @@ class Rparams:
             elif sp.linkedTo is not None:
                 out[i] = out[self.searchpars.index(sp.linkedTo)+1]
         if -1 in out:
-            logger.error("Rparams.getOffspringConfig failed: {}".format(out))
+            _LOGGER.error(f'Rparams.getOffspringConfig failed: {out}')
             return []
         return self.renormalizeDomainParams(out)
 
@@ -884,19 +864,16 @@ class Rparams:
         Returns
         -------
         None.
-
         """
-        global _CAN_PLOT
         if not _CAN_PLOT:
             return
 
-        for searchname in self.lastParScatterFigs:
-            for f in self.lastParScatterFigs[searchname]:
+        for figures in self.lastParScatterFigs.values():
+            for figure in figures:
                 try:
-                    plt.close(f)
+                    plt.close(figure)
                 except Exception:
                     pass
-        return
 
     def generateSearchPars(self, sl, subdomain=False):
         """
@@ -921,14 +898,15 @@ class Rparams:
         Returns
         -------
         None.
-
         """
         if self.domainParams:
-            return(self.generateSearchPars_domains())
+            self.generateSearchPars_domains()
+            return
+
         self.searchpars = []
         self.search_maxfiles = 0   # maximum number of delta files for one atom
         self.search_maxconc = 1
-        self.indyPars = 0        # number of independent parameters
+        self.indyPars = 0          # number of independent parameters
         self.mncstep = 0     # max. steps (geo. times therm.) for one atom
         # track which atoms are symmetry-linked to the ones already done to
         #   not double-count indyPars
@@ -939,10 +917,10 @@ class Rparams:
             # if delta has been run, information what deltas exist is stored
             atlist = [at for at in sl if not at.is_bulk and at.known_deltas]
         else:
-            logger.debug("Delta-amplitudes were not calculated in current "
-                         "run; looking for delta files by name.")
+            _LOGGER.debug('Delta-amplitudes were not calculated in current '
+                          'run; looking for delta files by name.')
             # see what delta files are present
-            filelist = [filename for filename in os.listdir(".") if
+            filelist = [filename for filename in os.listdir('.') if
                         filename.startswith('DEL_')]
             delN = []
             for filename in filelist:
@@ -963,27 +941,28 @@ class Rparams:
                     totalocc = 0.
                     for ol in occlists:
                         if len(ol) <= i:
-                            logger.error("Inconsistent occupancy lists for {}"
-                                         .format(at))
-                            raise ValueError("Inconsistent input")
+                            _LOGGER.error(
+                                f'Inconsistent occupancy lists for {at}'
+                                )
+                            raise ValueError('Inconsistent input')
                         else:
                             totalocc += ol[i]
                     if totalocc < 1 - 1e-4:
-                        checkEls.append("vac")
+                        checkEls.append('vac')
                         break
                 # now check if all deltas are there:
                 for el in checkEls:
                     found = False
                     for df in [f for f in deltaCandidates
-                               if f.split("_")[2] == el]:
+                               if f.split('_')[2] == el]:
                         if checkDelta(df, at, el, self):
                             found = True
                             at.known_deltas.append(df)
                             break
                     if not found:
-                        logger.error("No appropriate Delta file found for "
-                                     "{}, element {}".format(at, el))
-                        raise RuntimeError("Missing Delta file")
+                        _LOGGER.error('No appropriate Delta file found '
+                                      f'for {at}, element {el}')
+                        raise RuntimeError('Missing Delta file')
             # sanity check: are displacements defined but deltas missing?
             for at in sl:
                 # check whether at has non-trivial displacements:
@@ -1018,9 +997,9 @@ class Rparams:
                             found = True
                             break
                 if found and at not in atlist:
-                    logger.error(f'{at} has displacements defined, but no '
-                                 'delta file was found! Run Delta-Amplitudes.')
-                    raise RuntimeError("Delta file not found")
+                    _LOGGER.error(f'{at} has displacements defined, but no '
+                                  'delta file was found! Run Delta-Amplitudes.')
+                    raise RuntimeError('Delta file not found')
                 elif not found and at in atlist:
                     # delta file is there, but no displacements
                     atlist.remove(at)
@@ -1031,30 +1010,30 @@ class Rparams:
             al2.extend([a for a in atlist if a in dl])
         al2.extend([a for a in atlist if a not in al2])
         atlist = al2
-        md = {"geo": 1, "vib": 2, "occ": 3}
+        md = {'geo': 1, 'vib': 2, 'occ': 3}
         splToRestrict = []
         indep = []
         for at in atlist:
             if len(at.known_deltas) > self.search_maxfiles:
                 self.search_maxfiles = len(at.known_deltas)
             for fn in at.known_deltas:
-                el = fn.split("_")[2]
-                if el == "vac":
-                    self.searchpars.append(SearchPar(at, "geo", "vac", fn))
+                el = fn.split('_')[2]
+                if el == 'vac':
+                    self.searchpars.append(SearchPar(at, 'geo', 'vac', fn))
                     continue
                 mult = 1
                 pars = 0
-                for (mode, d) in [("vib", at.disp_vib),
-                                  ("geo", at.disp_geo)]:
+                for (mode, d) in [('vib', at.disp_vib),
+                                  ('geo', at.disp_geo)]:
                     if el in d:
                         k = el
                     else:
-                        k = "all"
+                        k = 'all'
                     if len(d[k]) > 1 or (len(d[k]) == 1 and
-                                         ((mode == "geo"
+                                         ((mode == 'geo'
                                           # and np.linalg.norm(d[k][0]) >= 1e-4
                                            )
-                                          or (mode == "vib" and
+                                          or (mode == 'vib' and
                                                       d[k][0] != 0.))):
                         pars += 1
                         sp = SearchPar(at, mode, el, fn)
@@ -1062,7 +1041,7 @@ class Rparams:
                         if el in at.constraints[md[mode]]:
                             k2 = el
                         else:
-                            k2 = "all"
+                            k2 = 'all'
                         if k2 in at.constraints[md[mode]]:
                             c = at.constraints[md[mode]][k2]
                             if type(c) == int:
@@ -1077,15 +1056,15 @@ class Rparams:
                                    if at in s.atom.displist
                                    and s.mode == sp.mode
                                    and (s.el == el
-                                        or el in ["", "all"])]
+                                        or el in ['', 'all'])]
                             if spl:
                                 sp.linkedTo = spl[0]
                     mult *= len(d[k])
                 if pars == 0:
-                    self.searchpars.append(SearchPar(at, "geo", el, fn))
+                    self.searchpars.append(SearchPar(at, 'geo', el, fn))
                 if mult > self.mncstep:
                     self.mncstep = mult
-            sp = SearchPar(at, "occ", "", fn)
+            sp = SearchPar(at, 'occ', '', fn)
             self.searchpars.append(sp)
             occsteps = len(next(iter(at.disp_occ.values())))
             if occsteps > 1:
@@ -1103,7 +1082,7 @@ class Rparams:
                         indep.append(sp)
                 if at in eqlist:
                     spl = [s for s in self.searchpars if at
-                           in s.atom.displist and s.mode == "occ"]
+                           in s.atom.displist and s.mode == 'occ']
                     if spl:
                         sp.linkedTo = spl[0]
             eqlist.extend(at.displist)  # do not consider for future indyPars
@@ -1112,8 +1091,8 @@ class Rparams:
             # ind = self.searchpars.index(sp)
             spl = [s for s in self.searchpars if s != sp and s.atom == at and
                    s.mode == sp.mode and (s.el == el or
-                                          el in ["", "all"] or
-                                          sp.mode == "occ")]
+                                          el in ['', 'all'] or
+                                          sp.mode == 'occ')]
             if spl:
                 sp.restrictTo = spl[0]
                 splTargets.add(spl[0])
@@ -1123,7 +1102,7 @@ class Rparams:
         for (sp, (at, el)) in [tup for tup in splToRestrict
                                if tup[0].restrictTo is None
                                and tup[0] not in splTargets]:
-            logger.warning(
+            _LOGGER.warning(
                 f'Restricting search parameter for atom {sp.atom.num}, '
                 f'element {sp.el}, mode {sp.mode} failed: Could not identify '
                 f'target search parameter (atom {at.num}, element {el}).'
@@ -1154,19 +1133,11 @@ class Rparams:
                     sp.restrictTo = None  # remove references to higher indices
         self.search_atlist = atlist
         if not subdomain:
-            self.searchpars.append(SearchPar(None, "dom", "", ""))
+            self.searchpars.append(SearchPar(None, 'dom', '', ''))
             self.searchpars[-1].steps = 2
-        return
 
     def generateSearchPars_domains(self):
-        """
-        Runs generateSearchPars for every domain, then collates results.
-
-        Returns
-        -------
-        None.
-
-        """
+        """Call generateSearchPars for every domain and collate results."""
         self.searchpars = []
         self.indyPars = len(self.domainParams) - 1
         home = os.getcwd()
@@ -1175,22 +1146,22 @@ class Rparams:
                 os.chdir(dp.workdir)
                 dp.rp.generateSearchPars(dp.sl, subdomain=True)
             except Exception:
-                logger.error("Error while creating delta input for domain {}"
-                             .format(dp.name))
+                _LOGGER.error('Error while creating delta '
+                              f'input for domain {dp.name}')
                 raise
             finally:
                 os.chdir(home)
-            for sp in [sp for sp in dp.rp.searchpars
-                       if type(sp.restrictTo) == int]:
+            for sp in dp.rp.searchpars:
+                if not isinstance(sp.restrictTo, int):
+                    continue
                 sp.restrictTo += len(self.searchpars)
             self.searchpars.extend(dp.rp.searchpars)
             self.indyPars += dp.rp.indyPars
         for dp in self.domainParams:
-            self.searchpars.append(SearchPar(None, "dom", "", ""))
+            self.searchpars.append(SearchPar(None, 'dom', '', ''))
             self.searchpars[-1].steps = int(100 / self.DOMAIN_STEP) + 1
-        self.search_maxfiles = max([dp.rp.search_maxfiles
-                                    for dp in self.domainParams])
-        self.search_maxconc = max([dp.rp.search_maxconc
-                                   for dp in self.domainParams])
-        self.mncstep = max([dp.rp.mncstep for dp in self.domainParams])
-        return
+        self.search_maxfiles = max(dp.rp.search_maxfiles
+                                   for dp in self.domainParams)
+        self.search_maxconc = max(dp.rp.search_maxconc
+                                  for dp in self.domainParams)
+        self.mncstep = max(dp.rp.mncstep for dp in self.domainParams)

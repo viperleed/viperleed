@@ -33,7 +33,7 @@ The major steps are listed below in order of execution.
     The original structure will be written to 
     :ref:`POSCAR_oricell<poscar_oricell>`.
 #.  If not specified, try to determine the 
-    :ref:`bulk repeat vector<BULK_REPEAT>` and the minimum bulk plane 
+    :ref:`bulk repeat vector<BULK_REPEAT>` and the bulk plane 
     group. Following this, :ref:`poscar_bulk` and 
     :ref:`POSCAR_bulk_appended<poscar_bulk>` will be written.
 #.  Check whether a :ref:`PHASESHIFTS file<phaseshifts>` is present and

@@ -26,10 +26,7 @@ for import_path in (str(cd), str(vpr_path)):
 from viperleed import GLOBALS
 from viperleed.tleedmlib.base import CustomLogFormatter
 from viperleed.tleedmlib.classes import rparams
-from viperleed.tleedmlib.files import poscar
-from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
-                                                  interpretPARAMETERS)
-from viperleed.tleedmlib.files.parameter_errors import ParameterError
+from viperleed.tleedmlib.files import parameters, poscar
 from viperleed.tleedmlib.sections.run_sections import section_loop
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 
@@ -94,7 +91,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
 
     tmpmanifest = ["SUPP", "OUT", logname]
     try:
-        rp = readPARAMETERS()
+        rp = parameters.read()
     except FileNotFoundError:
         if not preset_params:
             logger.error("No PARAMETERS file found, and no preset parameters "
@@ -142,8 +139,15 @@ def run_tleedm(system_name="", console_output=True, slab=None,
                 return 2
     try:
         # interpret the PARAMETERS file
-        interpretPARAMETERS(rp, slab=slab, silent=False)
-    except ParameterError:
+        parameters.interpret(rp, slab=slab, silent=False)
+    except (parameters.errors.ParameterNeedsSlabError,
+            parameters.errors.SuperfluousParameterError):
+        # Domains calculation is the only case in which slab is None
+        logger.error('Main PARAMETERS file contains an invalid parameter '
+                     'for a multi-domain calculation', exc_info=True)
+        cleanup(tmpmanifest)
+        return 2
+    except parameters.errors.ParameterError:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
         return 2
@@ -154,12 +158,11 @@ def run_tleedm(system_name="", console_output=True, slab=None,
 
     rp.timestamp = timestamp
     rp.manifest = tmpmanifest
-    for p in preset_params:
-        try:
-            setattr(rp, p, preset_params[p])
-        except Exception:
-            logger.warning(f"Error applying preset parameter {p}: ",
-                           exc_info=True)
+    try:
+        rp.update(preset_params)
+    except (ValueError, TypeError):
+        logger.warning(f"Error applying preset parameters: ",
+                       exc_info=True)
     if not domains:
         slab.full_update(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True

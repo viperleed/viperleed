@@ -29,9 +29,6 @@ from viperleed.tleedmlib.classes.slab import NoBulkRepeatError
 from viperleed.tleedmlib.classes.slab import BulkSlab, Slab
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
 from viperleed.tleedmlib.files import patterninfo, phaseshifts, poscar, vibrocc
-from viperleed.tleedmlib.files.parameter_errors import (
-    InconsistentParametersError
-    )
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
 from viperleed.tleedmlib.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.tleedmlib.sections._sections import (ALL_INPUT_FILES,
@@ -46,7 +43,7 @@ ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
-        _get_expbeams(rp)
+        rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
@@ -60,7 +57,7 @@ def initialization(sl, rp, subdomain=False):
 
     # check whether the slab unit cell is minimal:
     try:
-        mincell = sl.get_minimal_ab_cell(rp.SYMMETRY_EPS, rp.SYMMETRY_EPS_Z)
+        mincell = sl.get_minimal_ab_cell(rp.SYMMETRY_EPS, rp.SYMMETRY_EPS.z)
     except AlreadyMinimalError:
         transform = np.identity(2)
         reducible = False
@@ -68,20 +65,18 @@ def initialization(sl, rp, subdomain=False):
         transform = np.dot(sl.ab_cell.T, np.linalg.inv(mincell)).round()
         reducible = True
     ws = writeWoodsNotation(transform)
+    if ws:
+        ws = f"= {ws}"
+    else:
+        ws = "M = {} {}, {} {}".format(*transform.astype(int).ravel())
     if reducible and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
                                 np.identity(2)).all():
-        if ws:
-            ws = f"= {ws}"
-        else:
-            ws = "M = {} {}, {} {}".format(*transform.astype(int).ravel())
         ssl = sl.make_subcell(rp, transform=transform)
         if subdomain:
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info(f"Found SYMMETRY_CELL_TRANSFORM {ws}")
             sl.symbaseslab = ssl
-            parameters.modifyPARAMETERS(rp, "SYMMETRY_CELL_TRANSFORM",
-                                        new=f"SYMMETRY_CELL_TRANSFORM {ws}",
-                                        include_left=True)
+            parameters.modify(rp, "SYMMETRY_CELL_TRANSFORM")                    #TODO: there should probably a comment in the PARAMETERS file?
         else:
             logger.warning(
                 f"POSCAR unit cell is not minimal (supercell {ws}). "
@@ -136,26 +131,21 @@ def initialization(sl, rp, subdomain=False):
             logger.warning('Both BULK_LIKE_BELOW and BULK_REPEAT are defined.'
                            'BULK_LIKE_BELOW will be ignored in favour of the '
                            'explicitly defined bulk repeat vector.')
-        else:                                                                   # TODO: The modifications to the PARAMETERS file below are currently not in the docs. Should we add that?
+        else:
             # If successful, the next call updates the relevant rpars
             # attributes: SUPERLATTICE (not written to file),
             # BULK_REPEAT, LAYER_CUTS, and N_BULK_LAYERS (written
             # to file below). The slab will have .layers and the
             # freshly detected .bulkslab.
             sl.detect_bulk(rp)
-            vec_str = '[{:.5f} {:.5f} {:.5f}]'.format(*rp.BULK_REPEAT)
-            logger.info(f'Detected bulk repeat vector: {vec_str}')
-            parameters.modifyPARAMETERS(
-                rp, 'BULK_REPEAT', vec_str,
+            vec_str = parameters.modify(
+                rp, 'BULK_REPEAT',
                 comment='Automatically detected repeat vector'
                 )
-            parameters.modifyPARAMETERS(
-                rp, 'LAYER_CUTS',
-                ' '.join(f'{c:.4f}' for c in rp.LAYER_CUTS)
-                )
-            parameters.modifyPARAMETERS(rp, 'N_BULK_LAYERS',
-                                        str(rp.N_BULK_LAYERS))
-        parameters.modifyPARAMETERS(rp, 'BULK_LIKE_BELOW', new='')
+            parameters.modify(rp, 'LAYER_CUTS')
+            parameters.modify(rp, 'N_BULK_LAYERS')
+            logger.info(f'Detected bulk repeat vector: {vec_str}')
+        parameters.comment_out(rp, 'BULK_LIKE_BELOW')
 
     # create bulk slab:
     if sl.bulkslab is None:
@@ -166,13 +156,12 @@ def initialization(sl, rp, subdomain=False):
     if rp.BULK_REPEAT is None:
         try:
             rp.BULK_REPEAT = sl.identify_bulk_repeat(rp.SYMMETRY_EPS,
-                                                     rp.SYMMETRY_EPS_Z)
+                                                     rp.SYMMETRY_EPS.z)
         except NoBulkRepeatError:
             pass
         else:
-            vec_str = '[{:.5f} {:.5f} {:.5f}]'.format(*rp.BULK_REPEAT)
-            parameters.modifyPARAMETERS(
-                rp, 'BULK_REPEAT', vec_str,
+            vec_str = parameters.modify(
+                rp, 'BULK_REPEAT',
                 comment='Automatically detected repeat vector'
                 )
             logger.info(f'Detected bulk repeat vector: {vec_str}')
@@ -186,8 +175,8 @@ def initialization(sl, rp, subdomain=False):
         # bulk layer is the same as between bulk units. Save
         # BULK_REPEAT value for later runs, in case atom above moves
         rp.BULK_REPEAT = sl.get_bulk_repeat(rp, only_z_distance=True)
-        parameters.modifyPARAMETERS(
-            rp, 'BULK_REPEAT', f'{rp.BULK_REPEAT:.5f}',
+        parameters.modify(
+            rp, 'BULK_REPEAT',
             comment='Automatically detected spacing. Check POSCAR_bulk.'
             )
         logger.warning(
@@ -213,7 +202,7 @@ def initialization(sl, rp, subdomain=False):
                 f'{exc}\n# User-defined SUPERLATTICE will be used instead.'
                 )
             rp.setHaltingLevel(2)
-        except InconsistentParametersError as exc:
+        except parameters.errors.InconsistentParameterError as exc:
             # SUPERLATTICE does not match auto-detected one
             logger.warning(exc)
             rp.setHaltingLevel(2)
@@ -259,6 +248,9 @@ def initialization(sl, rp, subdomain=False):
 
     # Check for an ambiguous angle phi
     _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1)
+
+    # Check that layer cuts are not too close together
+    _check_and_warn_layer_cuts(rp, sl)
 
     # check whether PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
@@ -372,49 +364,10 @@ def initialization(sl, rp, subdomain=False):
     return
 
 
-def _get_expbeams(rp):                                                          # TODO: could become an RParams method
-    """Load an EXPBEAMS file into rp."""
-    # if already loaded, do nothing
-    if rp.fileLoaded["EXPBEAMS"]:
-        return
-    # Check if multiple experimental input files were provided
-    exp_files_provided = [fn for fn in EXPBEAMS_NAMES if Path(fn).is_file()]
-    if len(exp_files_provided) > 1:
-        logger.warning(
-            "Multiple files with experimental I(V) curves were provided. "
-            "Check if the root directory contains the correct files. "
-            f"ViPErLEED will preferentially use '{exp_files_provided[0]}'."
-            )
-        rp.setHaltingLevel(1)
-
-    # Check for experimental beams
-    try:
-        rp.EXPBEAMS_INPUT_FILE = exp_files_provided[0]
-    except IndexError:
-        # reset the default
-        rp.EXPBEAMS_INPUT_FILE = rp.get_default("EXPBEAMS_INPUT_FILE")
-        return
-
-    err_msg = f"Error while reading file {rp.EXPBEAMS_INPUT_FILE}"
-    enrange = [-1 if e is rp.no_value else e
-               for e in rp.THEO_ENERGIES[:2]]
-    try:
-        rp.expbeams = tl_beams.readOUTBEAMS(filename=rp.EXPBEAMS_INPUT_FILE,
-                                            enrange=enrange)
-    except Exception:                                                           # TODO: catch better
-        logger.error(f"{err_msg}.", exc_info=True)
-        return
-
-    if len(rp.expbeams):
-        rp.fileLoaded["EXPBEAMS"] = True
-    else:
-        logger.error(f"{err_msg}: No data was read.")
-
-
 def init_domains(rp):
     """Runs an alternative initialization for the domain search. This will
     include running the 'normal' initialization for each domain."""
-    _get_expbeams(rp)
+    rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
     if len(rp.DOMAINS) < 2:
         logger.error("A domain search was defined, but less than two domains "
@@ -423,7 +376,7 @@ def init_domains(rp):
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
     home = Path.cwd()
-    for (name, path) in rp.DOMAINS:
+    for name, path in rp.DOMAINS.items():
         # determine the target path
         target = Path(f"Domain_{name}").resolve()
         dp = DomainParameters(target, home, name)
@@ -508,14 +461,13 @@ def init_domains(rp):
             logger.info(f"Reading input files for domain {name}")
             try:
                 dp.sl = poscar.read()
-                dp.rp = parameters.readPARAMETERS()                             # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
+                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
-                interpret_domain_params_silent = rp.LOG_LEVEL > logging.DEBUG
-                parameters.interpretPARAMETERS(dp.rp, slab=dp.sl,
-                                               silent=interpret_domain_params_silent)
-                dp.sl.full_update(dp.rp)   # gets PARAMETERS data into slab
+                parameters.interpret(dp.rp, slab=dp.sl,
+                                     silent=rp.LOG_LEVEL > logging.DEBUG)
+                dp.sl.full_update(dp.rp)
                 dp.rp.fileLoaded["POSCAR"] = True
                 dp.rp.updateDerivedParams()
                 try:
@@ -624,21 +576,12 @@ def init_domains(rp):
                     dp.rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans
-                    ws = writeWoodsNotation(trans)
-                    if ws:
-                        ws = f"= {ws}"
-                    else:
-                        ws = ("M = {:.0f} {:.0f}, "
-                              "{:.0f} {:.0f}".format(*trans.ravel()))
-                    parameters.modifyPARAMETERS(
-                        dp.rp, "SYMMETRY_CELL_TRANSFORM",
-                        new=f"SYMMETRY_CELL_TRANSFORM {ws}",
-                        path=dp.workdir, include_left=True
-                        )
+                    parameters.modify(dp.rp, "SYMMETRY_CELL_TRANSFORM",
+                                      path=dp.workdir)
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
-    rp.pseudoSlab = Slab()                                                      # Do we really still need this pseudo-slab?
+    rp.pseudoSlab = Slab()
     rp.pseudoSlab.ucell = largestDomain.sl.ucell.copy()
     rp.pseudoSlab.bulkslab = BulkSlab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
@@ -672,24 +615,20 @@ def init_domains(rp):
         rp.ivbeams = tl_beams.sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
 
-    rp.updateDerivedParams()
-    if rp.LMAX[1] == 0:
-        rp.LMAX[1] = max([dp.rp.LMAX[1] for dp in rp.domainParams])
+    rp.updateDerivedParams()  # Also sets LMAX
+    if not rp.LMAX.has_max:
+        rp.LMAX.max = max(dp.rp.LMAX.max for dp in rp.domainParams)
     for dp in rp.domainParams:
         if dp.refcalcRequired:
             continue
         cmessage = f"Reference calculation required for domain {dp.name}: "
         # check energies
-        if (rp.THEO_ENERGIES[0] < dp.rp.THEO_ENERGIES[0] or
-            rp.THEO_ENERGIES[1] > dp.rp.THEO_ENERGIES[1] or
-            rp.THEO_ENERGIES[2] != dp.rp.THEO_ENERGIES[2] or
-            (rp.THEO_ENERGIES[0] % rp.THEO_ENERGIES[2]
-             != dp.rp.THEO_ENERGIES[0] % dp.rp.THEO_ENERGIES[2])):
+        if not dp.rp.THEO_ENERGIES.contains(rp.THEO_ENERGIES):
             logger.info("%sEnergy range is mismatched.", cmessage)
             dp.refcalcRequired = True
             continue
         # check LMAX - should be obsolete since TensErLEED version 1.6
-        if rp.LMAX[1] != dp.rp.LMAX[1] and rp.TL_VERSION <= 1.6:
+        if rp.TL_VERSION <= 1.6 and rp.LMAX.max != dp.rp.LMAX.max:
             logger.info("%sLMAX is mismatched.", cmessage)
             dp.refcalcRequired = True
         # check beam incidence
@@ -717,7 +656,7 @@ def init_domains(rp):
                         "sourcedir"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
             if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
-                dp.rp.LMAX[1] = rp.LMAX[1]
+                dp.rp.LMAX.max = rp.LMAX.max
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:
@@ -762,11 +701,12 @@ def preserve_original_input(rp, init_logger, path=""):
                            f"{ORIGINAL_INPUTS_DIR_NAME}. "
                            "Check disk permissions.") from exc
 
-    # make sure the correct version of EXPBEAMS is stored (if used)
+    # We will copy all files that have potentially been used as
+    # inputs. Make sure the correct version of EXPBEAMS is stored
     files_to_preserve = ALL_INPUT_FILES.copy()
     files_to_preserve.remove('EXPBEAMS')
-    if rp.EXPBEAMS_INPUT_FILE:
-        files_to_preserve.add(rp.EXPBEAMS_INPUT_FILE)
+    if rp.expbeams_file_name:
+        files_to_preserve.add(rp.expbeams_file_name)
 
     # copy all files to orig_inputs that were used as original input
     for file in files_to_preserve:
@@ -813,4 +753,16 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
             f"{(rp.PHI+ angle_between_first_uc_vec_and_x):.2f}° from a.\n"
             "See the ViPErLEED documentation for the parameter BEAM_INCDIDENCE "
             "for details."
+            )
+
+def _check_and_warn_layer_cuts(rpars, slab):
+    """Check if layer cuts are too close together and warn if so."""
+    layer_cuts = rpars.LAYER_CUTS
+    min_spacing = slab.getMinLayerSpacing()
+    if min_spacing < 1.0:
+        logger.warning(
+            f"Layer cuts are very close together. The minimum spacing "
+            f"between layers is {min_spacing:.2f} Å. This may lead to "
+            "covergence issues in the reference calculation. Check the "
+            "LAYERS_CUTS parameter in the PARAMETERS file."
             )

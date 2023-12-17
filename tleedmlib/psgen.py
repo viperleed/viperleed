@@ -19,7 +19,6 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.tleedmlib.classes.sitetype import Atom_type
-from viperleed.tleedmlib.classes.rparams import PARAM_LIMITS
 from viperleed.tleedmlib.leedbase import EV_TO_HARTREE
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE
 
@@ -42,37 +41,34 @@ def runPhaseshiftGen_old(sl, rp,
     files and extracts information for PHASESHIFTS file, then returns that
     information (without writing PHASESHIFTS)."""
 
-    test_new = True
-    '''
-    if test_new:
-        runPhaseshiftGen_new(sl, rp,
-                            psgensource='EEASiSSS.x',
-                            excosource='seSernelius',
-                            atdenssource='atom_density_files')
-    '''
     if rp.source_dir is None:
-        raise RuntimeError("No source tensorleed source directory specified")
-    shortpath = rp.source_dir
-    try:
-        rel_path = rp.source_dir.resolve().relative_to(Path.cwd().resolve())
-    except ValueError:
-        # Path.relative_to() can raise ValueError if not on same drive
-        rel_path = rp.source_dir
-    if len(str(rel_path)) < len(str(shortpath)):
-        shortpath = rel_path
+        raise RuntimeError("No tensorleed source directory specified")
 
-    if len(str(shortpath)) > 62:
-        # too long - need to copy stuff here
-        manual_copy = True
-        os.makedirs("tensorleed", exist_ok=True)
-        shutil.copy2(shortpath / excosource, excosource)
-        shortpath = Path(".")
-    else:
-        manual_copy = False
+    # Since there's a limit on the path length, pick the shortest one
+    # we can find around. Use './' and '../' shorthands if necessary.
+    # Notice that we use os.path.rel_path and not Path.relative_to as
+    # the latter does not produce './' and '../' shorthands
+    shortpath = str(rp.source_dir)
+    if len(os.path.relpath(rp.source_dir)) < len(shortpath):
+        shortpath = os.path.relpath(rp.source_dir)
 
-    psgensource = rp.source_dir / psgensource
-    excosource = shortpath / excosource
-    excosource = excosource.resolve()
+    manual_copy = len(shortpath) > 62
+    if manual_copy:
+        # Copy over files. Charge densities will be copied later
+        # in _collect_eeasisss_input when we know which elements
+        shutil.copy2(Path(shortpath, excosource), excosource)
+        shortpath = '.'
+
+    # Here it is important NOT TO .resolve() excosource that will
+    # end up in the input file. Otherwise all the mess above with
+    # deciding what's the shortest possible way is useless
+    psgensource = Path(rp.source_dir, psgensource)
+    excosource = Path(shortpath, excosource)
+
+    if not psgensource.is_file():
+        raise FileNotFoundError('Could not find PAHSESHIFTS executable at '
+                                f'{psgensource}. Did you forget to compile it? '
+                                'Try running make in the tensorleed directory')
 
     _, lmax = rp.get_limits('LMAX')
     nsl, newbulkats = sl.with_extra_bulk_units(rp, 1)
@@ -270,8 +266,8 @@ def runPhaseshiftGen_old(sl, rp,
 
     # Energy step used for phaseshift calculation eeasisss.
     # Does not need to match theory energy step as phaseshifts will be interpolated anyways.
-    ps_energy_step = max(1.0, round(float(rp.THEO_ENERGIES[2]), 0))
-    output += ("0.0," + str(round(float(rp.THEO_ENERGIES[1]) + 20, 1)) # hardcoded lower boundary of 0
+    ps_energy_step = max(1.0, round(rp.THEO_ENERGIES.step))
+    output += ("0.0," + str(round(rp.THEO_ENERGIES.max + 20, 1)) # hardcoded lower boundary of 0
                + ","+str(ps_energy_step)
                + " |'phaseshift'/'dataflow' run: E1->E2,PS_Estep\n")
     output += "100.,100.,1  |'sigma' run: E1->E2,NumVals\n"
@@ -300,7 +296,7 @@ def runPhaseshiftGen_old(sl, rp,
     phaseshifts_log_name = f"phaseshifts-{rp.timestamp}"
     phaseshifts_log_path = (rp.workdir / phaseshifts_log_name).with_suffix(".log")
 
-    # RUNS phaseshift programm
+    # RUNS phaseshift program
     ps_output = subprocess.run(psgensource,
                                cwd=rp.workdir,
                                input=output,
@@ -500,8 +496,8 @@ def runPhaseshiftGen(sl, rp, psgensource=os.path.join('tensorleed', 'eeasisss_ne
     remove_outdir = False # INFO: useful for debugging
 
     # Energy grid paramenters
-    E2 = round(float(rp.THEO_ENERGIES[1]) + 20, 2)  # add 20 eV to energy range
-    Estep = round(float(rp.THEO_ENERGIES[2]), 2) # may need a lower limit of 1.0 like the old eeasisss version
+    E2 = round(rp.THEO_ENERGIES.max + 20, 2)  # add 20 eV to energy range
+    Estep = round(rp.THEO_ENERGIES.step, 2) # may need a lower limit of 1.0 like the old eeasisss version
 
     ###############################################
     #                 Start code                  #

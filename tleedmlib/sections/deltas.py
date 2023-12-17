@@ -411,8 +411,7 @@ def deltas(sl, rp, subdomain=False):
     deltaCompTasks = []  # keep track of what versions to compile
     deltaRunTasks = []   # which deltas to run
     tensordir = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
-    tl_path = leedbase.getTLEEDdir(tensorleed_path=rp.source_dir,
-                                   version=rp.TL_VERSION)
+    tl_path = rp.get_tenserleed_directory()
     for (at, el) in atElTodo:
         din, din_short, param = tl_io.generateDeltaInput(
             at, el, sl, rp, dbasic, auxbeams, phaseshifts)

@@ -23,8 +23,8 @@ from viperleed.tleedmlib.base import NonIntegerMatrixError
 from viperleed.tleedmlib.base import ensure_integer_matrix, pairwise
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
-from viperleed.tleedmlib.files.parameter_errors import (
-    InconsistentParametersError
+from viperleed.tleedmlib.files.parameters.errors import (
+    InconsistentParameterError
     )
 from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
@@ -201,7 +201,7 @@ class SurfaceSlab(BaseSlab):
         rpars : Rparams
             The PARAMETERS to be used and updated. Attributes accessed:
             (read/write) SUPERLATTICE; (read) BULK_REPEAT, SYMMETRY_EPS,
-            SYMMETRY_EPS_Z, superlattice_defined.
+            superlattice_defined.
         newcell : Sequence
             Shape (2, 2), representing the new 2D unit cell in
             Cartesian coordinates. The new unit vectors should
@@ -212,7 +212,7 @@ class SurfaceSlab(BaseSlab):
         NonIntegerMatrixError
             If `newcell` gives a superlattice matrix that is not
             integer-valued.
-        tleedmlib.files.parameter_errors.InconsistentParametersError
+        tleedmlib.files.parameters.errors.InconsistentParameterError
             If `newcell` gives a different superlattice matrix than
             the one in `rpars`.
         """
@@ -227,7 +227,7 @@ class SurfaceSlab(BaseSlab):
                 ) from None
         if (rpars.superlattice_defined
                 and not np.allclose(superlattice, rpars.SUPERLATTICE)):
-            raise InconsistentParametersError(
+            raise InconsistentParameterError(
                 'Automatically detected minimum-area bulk unit cell differs '
                 'from the cell defined by the SUPERLATTICE parameter. '
                 'Consider changing the SUPERLATTICE parameter. Found matrix: '
@@ -240,7 +240,7 @@ class SurfaceSlab(BaseSlab):
         # Notice that there is no need to re-center along
         # bulk c, as we're only modifying the in-plane cell.
         self.bulkslab.apply_bulk_cell_reduction(rpars.SYMMETRY_EPS,
-                                                epsz=rpars.SYMMETRY_EPS_Z,
+                                                epsz=rpars.SYMMETRY_EPS.z,
                                                 new_ab_cell=new_ab_cell,
                                                 recenter=False)
 
@@ -258,7 +258,7 @@ class SurfaceSlab(BaseSlab):
         ----------
         rpars : Rparams
             Run parameters object. Attributes accessed:
-            (read)  BULK_LIKE_BELOW, SYMMETRY_EPS, SYMMETRY_EPS_Z,
+            (read)  BULK_LIKE_BELOW, SYMMETRY_EPS,
                     SUPERLATTICE, superlattice_defined
             (write) BULK_REPEAT, LAYER_CUTS, N_BULK_LAYERS,
                     SUPERLATTICE.
@@ -295,7 +295,7 @@ class SurfaceSlab(BaseSlab):
         # procedure is successful
         self_copy = copy.deepcopy(self)
         rpars_copy = copy.deepcopy(rpars)
-        rpars_copy.LAYER_CUTS = [rpars.BULK_LIKE_BELOW]
+        rpars_copy.LAYER_CUTS.update_from_sequence([rpars.BULK_LIKE_BELOW])
         rpars_copy.N_BULK_LAYERS = 1
         self_copy.createLayers(rpars_copy)
 
@@ -324,13 +324,14 @@ class SurfaceSlab(BaseSlab):
 
         # Identify the cut positions that give bulk layers
         # pylint: disable-next=protected-access
-        bulk_cuts, bulk_dist = self_copy._get_bulk_cuts(rpars.SYMMETRY_EPS_Z,
+        bulk_cuts, bulk_dist = self_copy._get_bulk_cuts(rpars.SYMMETRY_EPS.z,
                                                         second_cut_min_spacing)
 
         # Finally, update self and rpars with the new information
         rpars.BULK_REPEAT = rpars_copy.BULK_REPEAT
         rpars.SUPERLATTICE = rpars_copy.SUPERLATTICE
-        rpars.LAYER_CUTS = self.createLayers(rpars, bulk_cuts=bulk_cuts)        # TODO: I (MRiva) dislike this. It does not preserve the user input: e.g., LAYER_CUTS = 0.1 0.2 < dz(1.3) is replaced with a list of floats instead of replacing only the part relevant for the bulk.
+        new_cuts = self.createLayers(rpars, bulk_cuts=bulk_cuts)                # TODO: Issue #121
+        rpars.LAYER_CUTS.update_from_sequence(new_cuts)
         rpars.N_BULK_LAYERS = len(bulk_cuts)
         self.make_bulk_slab(rpars)
         return bulk_cuts, bulk_dist
@@ -383,7 +384,7 @@ class SurfaceSlab(BaseSlab):
         rpars : Rparams
             The PARAMETERS to be used and updated. Attributes accessed:
             (read/write) SUPERLATTICE; (read) BULK_REPEAT, SYMMETRY_EPS,
-            SYMMETRY_EPS_Z, superlattice_defined; setHaltingLevel method
+            superlattice_defined; setHaltingLevel method
         warn_convention : bool, optional
             Whether warnings should be logged in case the reduced cell
             could not be made to follow standard conventions.
@@ -393,14 +394,14 @@ class SurfaceSlab(BaseSlab):
         NonIntegerMatrixError
             If reduction to a minimal cell would give a SUPERLATTICE
             matrix with non-integer values.
-        tleedmlib.file.parameter_errors.InconsistentParametersError
+        tleedmlib.files.parameters.errors.InconsistentParameterError
             If reduction to a minimal cell would give a SUPERLATTICE
             different from the one in `rpars`.
         """
         bulk = self.bulkslab or self.make_bulk_slab(rpars)
-        eps, epsz = rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS_Z
+        eps = rpars.SYMMETRY_EPS
         try:
-            mincell = bulk.get_minimal_ab_cell(eps, epsz, warn_convention)
+            mincell = bulk.get_minimal_ab_cell(eps, eps.z, warn_convention)
         except AlreadyMinimalError:
             return
         self._change_bulk_cell(rpars, mincell)
@@ -619,7 +620,7 @@ class SurfaceSlab(BaseSlab):
         rpars : Rparams
             The PARAMETERS used for making the new slab. Attributes
             used (read-only): SUPERLATTICE, superlattice_defined,
-            BULK_REPEAT, SYMMETRY_EPS, SYMMETRY_EPS_Z.
+            BULK_REPEAT, SYMMETRY_EPS.
         recenter : bool, optional
             Whether the fractional coordinates of the bulk slab
             that is created should be adjusted so that the topmost
@@ -671,7 +672,7 @@ class SurfaceSlab(BaseSlab):
 
         kwargs = {
             'eps': rpars.SYMMETRY_EPS,
-            'epsz': rpars.SYMMETRY_EPS_Z,
+            'epsz': rpars.SYMMETRY_EPS.z,
             'new_c_vec': self.get_bulk_repeat(rpars),
             'new_ab_cell': np.dot(np.linalg.inv(rpars.SUPERLATTICE),
                                   self.ab_cell.T),
@@ -761,7 +762,7 @@ class SurfaceSlab(BaseSlab):
         ----------
         rpars : Rparams
             The PARAMETERS used to determine how the copy is to be
-            prepared. Attributes used: SYMMETRY_EPS, SYMMETRY_EPS_Z.
+            prepared. Attributes used: SYMMETRY_EPS.
             Both attributes are used as Cartesian tolerances for
             removal of duplicate atoms resulting from the reduction
             of size.
@@ -822,7 +823,7 @@ class SurfaceSlab(BaseSlab):
                                          np.linalg.inv(transform).T)
         subcell_slab.collapse_cartesian_coordinates(update_origin=True)
         subcell_slab.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
-                                            rpars.SYMMETRY_EPS_Z,
+                                            rpars.SYMMETRY_EPS.z,
                                             other_slab=self)
         # Now make sure that transform actually gave a subcell
         supercell_atoms = subcell_slab.n_atoms * abs(np.linalg.det(transform))
