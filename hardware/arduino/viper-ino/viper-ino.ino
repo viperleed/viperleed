@@ -525,7 +525,7 @@ void debugMsg(const char *message, ...){  // can be a format string
     n_chars += vsnprintf(_buffer+n_chars, 255-n_chars, message, args);
     va_end(args);
 
-    encodeAndSend(_buffer, MIN(n_chars, 255));
+    encodeAndSend(reinterpret_cast<byte*>(_buffer), MIN(n_chars, 255));
 }
 
 
