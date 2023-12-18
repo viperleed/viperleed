@@ -1432,6 +1432,10 @@ void reset(){
     // Reset DAC and set the output voltage to zero
     AD5683reset(CS_DAC);
     AD5683setVoltage(CS_DAC, 0x0000);
+
+    for (int iDevice=0; iDevice<N_MAX_MEAS; iDevice++){
+        fDataOutput[iDevice].asFloat = 0.0;  
+    }
 }
 
 
