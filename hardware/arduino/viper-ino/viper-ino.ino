@@ -1118,7 +1118,7 @@ void sendMeasuredValues(){
     the messages contains 4 data bytes that, after being re-packed
     (MSB first) correspond to the analog values measured in physical
     units like so:
-    - I0(@LEED)   ADC#0, ch0: Volts
+    - I0(@LEED)   ADC#0, ch0: uAmps
     - HV          ADC#0, ch1: Volts
     - I0(@sample) ADC#1, ch0: uAmps
     - AUX         ADC#1, ch1: Volts
@@ -1128,8 +1128,11 @@ void sendMeasuredValues(){
     The sequence of returned results is: LM35, ADC#0, ADC#1
 
     Notice that the I0 value (measured at the LEED electronics, i.e.,
-    ADC#0, channel 0) will be returned in Volts, thus, the conversion
-    to uAmps is delegated to the PC.
+    ADC#0, channel 0) is returned in uAmps under the assumption that:
+     (i) in 0--2.5V range 1mA produces 1V (i.e., we use 1kOhm)
+    (ii) in 0--10V range 1uA produces 1V
+    If, a different conversion impedance is used, this correction is
+    delegated to the PC.
 
     Reads
     -----
@@ -1961,10 +1964,6 @@ void getFloatMeasurements() {
     /**
     Convert the global summedMeasurements to float in physical units
     (Volts, uAmps, degC), setting the value in the fDataOutput array.
-
-    Notice that the I0 value (measured at the LEED electronics) will
-    be returned in Volts, thus, the conversion to uAmps is delegated
-    to the PC.
 
     Reads
     -----
