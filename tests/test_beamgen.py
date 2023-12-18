@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.beamgen.
+"""Tests for module viperleed.calc.files.beamgen.
 
 Created on 2023-06-09
 
@@ -11,17 +11,11 @@ import sys
 
 from pytest_cases import fixture, parametrize_with_cases
 
-VPR_PATH = str(Path(__file__).resolve().parents[2])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Will be fixed in installable
-from viperleed.tleedmlib import beamgen, symmetry
+from viperleed.files import beamgen
+from viperleed.calc.lib import symmetry
 
 from .helpers import CaseTag, exclude_tags
 from .poscar_slabs import CasePOSCARSlabs
-# pylint: enable=wrong-import-position
 
 
 class TestBeamScatteringSubsets:

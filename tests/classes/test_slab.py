@@ -1,4 +1,4 @@
-"""Tests for viperleed.tleedmlib.classes.slab.
+"""Tests for viperleed.calc.classes.slab.
 
 Created on 2023-07-28
 

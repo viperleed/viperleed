@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.classes.layer.
+"""Tests for module viperleed.calc.classes.layer.
 
 Created on 2023-10-04
 
@@ -20,10 +20,10 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Will be fixed in installable
-from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.layer import Layer, SubLayer
-from viperleed.tleedmlib.classes.layer import LayerHasNoAtomsError
-from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.calc.classes.atom import Atom
+from viperleed.calc.classes.layer import Layer, SubLayer
+from viperleed.calc.classes.layer import LayerHasNoAtomsError
+from viperleed.calc.classes.slab import Slab
 
 from ..helpers import InfoBase, duplicate_all
 # pylint: enable=wrong-import-position

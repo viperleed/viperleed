@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.files.poscar.
+"""Tests for module viperleed.calc.files.poscar.
 
 Created on 2023-07-12
 

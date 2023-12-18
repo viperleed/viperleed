@@ -10,7 +10,7 @@ Contains definitions of collections (i.e., containers) of Atoms.
 from abc import abstractmethod
 from collections.abc import Container, Iterable, MutableSequence, Sequence
 
-from viperleed.tleedmlib.classes import atom
+from viperleed.calc.classes import atom
 
 
 class AtomContainerError(Exception):

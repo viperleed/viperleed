@@ -1,4 +1,4 @@
-"""Tests for viperleed.tleedmlib.files.displacements.
+"""Tests for viperleed.calc.files.displacements.
 
 Created on 2023-07-28
 

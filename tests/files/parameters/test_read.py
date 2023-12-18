@@ -1,4 +1,4 @@
-"""Tests for modules _read/_reader of viperleed.tleedmlib.files.parameters.
+"""Tests for modules _read/_reader of viperleed.calc.files.parameters.
 
 Created on 2023-10-17
 
@@ -10,15 +10,15 @@ import logging
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
-from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.files.parameters.errors import (
+from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.files.parameters.errors import (
     ParameterNotRecognizedError, ParameterHasNoValueError
     )
-from viperleed.tleedmlib.files.parameters._read import read, update
-from viperleed.tleedmlib.files.parameters._reader import (
+from viperleed.calc.files.parameters._read import read, update
+from viperleed.calc.files.parameters._reader import (
     ParametersReader, RawLineParametersReader
     )
-from viperleed.tleedmlib.files.parameters._utils import Assignment
+from viperleed.calc.files.parameters._utils import Assignment
 
 from ...helpers import exclude_tags, duplicate_all, CaseTag
 from .case_parameters import CasesParametersFile

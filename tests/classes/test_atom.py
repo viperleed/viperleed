@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.classes.atom.
+"""Tests for module viperleed.calc.classes.atom.
 
 Created on 2023-07-28
 

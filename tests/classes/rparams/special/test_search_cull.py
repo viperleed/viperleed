@@ -1,4 +1,4 @@
-"""Tests for module search_cull of viperleed.tleedmlib.classes.rparams.special.
+"""Tests for module search_cull of viperleed.calc.classes.rparams.special.
 
 Created on 2023-12-14
 
@@ -9,7 +9,7 @@ Created on 2023-12-14
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.tleedmlib.classes.rparams.special.search_cull import (
+from viperleed.calc.classes.rparams.special.search_cull import (
     SearchCull, SearchCullType
     )
 

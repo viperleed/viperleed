@@ -1,4 +1,4 @@
-"""Tests for module l_max of viperleed.tleedmlib.classes.rparams.special.
+"""Tests for module l_max of viperleed.calc.classes.rparams.special.
 
 Created on 2023-12-16
 
@@ -8,8 +8,8 @@ Created on 2023-12-16
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.tleedmlib.classes.rparams import LMax
-from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
+from viperleed.calc.classes.rparams import LMax
+from viperleed.calc.classes.rparams._defaults import NO_VALUE
 
 from ....helpers import not_raises
 

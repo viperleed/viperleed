@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.symmetry.
+"""Tests for module viperleed.calc.lib.symmetry.
 
 Created on 2023-03-26
 
@@ -26,8 +26,8 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
-from viperleed.tleedmlib import symmetry
-from viperleed.tleedmlib.base import angle as angle_radians
+from viperleed.calc.lib import symmetry
+from viperleed.calc.base import angle as angle_radians
 
 from ..helpers import duplicate_all, CaseTag
 from ..poscar_slabs import make_poscar_ids

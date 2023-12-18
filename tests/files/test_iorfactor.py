@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.files.iorfactor.
+"""Tests for module viperleed.calc.files.iorfactor.
 
 Created on 2023-12-11
 
@@ -17,10 +17,10 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Will be fixed in installable version
-from viperleed.tleedmlib.classes.rparams import Rparams, TheoEnergies
-from viperleed.tleedmlib.files.beams import readOUTBEAMS
+from viperleed.calc.classes.rparams import Rparams, TheoEnergies
+from viperleed.calc.files.beams import readOUTBEAMS
 
-from viperleed.tleedmlib.files import iorfactor
+from viperleed.calc.files import iorfactor
 # pylint: enable=wrong-import-position
 
 

@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.files.phaseshifts.
+"""Tests for module viperleed.calc.files.phaseshifts.
 
 Created on 2023-07-28
 
@@ -9,14 +9,7 @@ Created on 2023-07-28
 from pathlib import Path
 import sys
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Will be fixed in installable version
-from viperleed.tleedmlib.files import phaseshifts
-# pylint: enable=wrong-import-position
+from viperleed.calc.files import phaseshifts
 
 
 def test_write_phaseshifts(run_phaseshift):

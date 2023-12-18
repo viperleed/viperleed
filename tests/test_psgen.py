@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.psgen.
+"""Tests for module viperleed.calc.files.psgen.
 
 Created on 2023-07-28
 

@@ -1,4 +1,4 @@
-"""Tests for module layer_cuts of viperleed.tleedmlib.classes.rparams.special.
+"""Tests for module layer_cuts of viperleed.calc.classes.rparams.special.
 
 Created on 2023-10-22
 
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import pytest
 from pytest_cases import parametrize, fixture
 
-from viperleed.tleedmlib.classes.rparams.special.layer_cuts import (
+from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut,
     LayerCutTokenType as CutType,
     LayerCuts

@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.files.vibrocc.
+"""Tests for module viperleed.calc.files.vibrocc.
 
 Created on 2023-07-28
 

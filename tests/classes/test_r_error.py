@@ -1,4 +1,4 @@
-"""Tests for viperleed.tleedmlib.classes.RError.
+"""Tests for viperleed.calc.classes.RError.
 
 Created on 2023
 

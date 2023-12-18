@@ -1,4 +1,4 @@
-"""Tests for module symmetry_eps of viperleed.tleedmlib.classes.rparams.special.
+"""Tests for module symmetry_eps of viperleed.calc.classes.rparams.special.
 
 Created on 2023-12-11
 
@@ -10,7 +10,7 @@ import operator
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.tleedmlib.classes.rparams import SymmetryEps
+from viperleed.calc.classes.rparams import SymmetryEps
 
 
 @fixture(name='value_and_z')

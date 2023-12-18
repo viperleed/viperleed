@@ -1,4 +1,4 @@
-"""Tests for module _known_parameters of viperleed.tleedmlib.files.parameters.
+"""Tests for module _known_parameters of viperleed.calc.files.parameters.
 
 Created on 2023-10-15
 
@@ -10,11 +10,11 @@ import logging
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.tleedmlib.files.parameters._known_parameters import (
+from viperleed.calc.files.parameters._known_parameters import (
     from_alias, did_you_mean, warn_if_deprecated,
     _PARAM_ALIAS, KNOWN_PARAMS
     )
-from viperleed.tleedmlib.files.parameters import errors
+from viperleed.calc.files.parameters import errors
 
 
 class TestFromAlias:

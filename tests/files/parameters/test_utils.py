@@ -1,4 +1,4 @@
-"""Tests for module _utils of viperleed.tleedmlib.files.parameters.
+"""Tests for module _utils of viperleed.calc.files.parameters.
 
 Created on 2023-10-15
 
@@ -8,8 +8,8 @@ Created on 2023-10-15
 from pytest_cases import parametrize
 import pytest
 
-from viperleed.tleedmlib.files.parameters._utils import Assignment
-from viperleed.tleedmlib.files.parameters._utils import NumericBounds as Bounds
+from viperleed.calc.files.parameters._utils import Assignment
+from viperleed.calc.files.parameters._utils import NumericBounds as Bounds
 
 from ...helpers import not_raises
 

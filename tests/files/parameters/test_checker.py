@@ -1,4 +1,4 @@
-"""Tests for module _checker of viperleed.tleedmlib.files.parameters.
+"""Tests for module _checker of viperleed.calc.files.parameters.
 
 Created on 2023-10-25
 
@@ -8,9 +8,9 @@ Created on 2023-10-25
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.files.parameters._checker import ParametersChecker
-from viperleed.tleedmlib.files.parameters.errors import ParameterConflictError
+from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.files.parameters._checker import ParametersChecker
+from viperleed.calc.files.parameters.errors import ParameterConflictError
 
 from ...helpers import not_raises
 

@@ -14,6 +14,7 @@ import numpy as np
 
 from viperleed.calc.files.displacements import (readDISPLACEMENTS,
                                                 readDISPLACEMENTS_block)
+from viperleed.calc.files.phaseshifts import writePHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC
 from viperleed.calc.lib.symmetry import findSymmetry, enforceSymmetry
 from viperleed.calc.files.psgen import runPhaseshiftGen_old
@@ -61,7 +62,6 @@ def test_phaseshift_log_exists(run_phaseshift):
 
 @pytest.mark.xfail(reason="Relative path problem. Fixed on installable branch.")
 def test_write_phaseshifts(run_phaseshift):
-    from tleedmlib.files.phaseshifts import writePHASESHIFTS
     param, _, firstline, phaseshift = run_phaseshift
     writePHASESHIFTS(firstline, phaseshift, file_path=param.workdir/'PHASESHIFTS')
     assert len(list(param.workdir.glob('PHASESHIFTS'))) > 0

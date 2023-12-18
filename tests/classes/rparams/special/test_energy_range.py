@@ -1,4 +1,4 @@
-"""Tests for EnergyRange(+subclasses) of viperleed.tleedmlib.rparams.special.
+"""Tests for EnergyRange(+subclasses) of viperleed.calc.rparams.special.
 
 Created on 2023-10-27
 
@@ -14,11 +14,11 @@ import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.tleedmlib.classes.rparams import EnergyRange
-from viperleed.tleedmlib.classes.rparams import IVShiftRange
-from viperleed.tleedmlib.classes.rparams import TheoEnergies
-from viperleed.tleedmlib.classes.rparams.special.energy_range import EPS
-from viperleed.tleedmlib.classes.rparams._defaults import NO_VALUE
+from viperleed.calc.classes.rparams import EnergyRange
+from viperleed.calc.classes.rparams import IVShiftRange
+from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.classes.rparams.special.energy_range import EPS
+from viperleed.calc.classes.rparams._defaults import NO_VALUE
 
 
 # Makes no sense to complain about too many methods in a test class

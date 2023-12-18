@@ -1,4 +1,4 @@
-"""Tests for module viperleed.tleedmlib.classes.atom_containers.
+"""Tests for module viperleed.calc.classes.atom_containers.
 
 Created on 2023-10-06
 
@@ -18,10 +18,10 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
-from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.atom_containers import AtomList
-from viperleed.tleedmlib.classes.atom_containers import AtomListOutOfDateError
-from viperleed.tleedmlib.classes.atom_containers import DuplicateAtomsError
+from viperleed.calc.classes.atom import Atom
+from viperleed.calc.classes.atom_containers import AtomList
+from viperleed.calc.classes.atom_containers import AtomListOutOfDateError
+from viperleed.calc.classes.atom_containers import DuplicateAtomsError
 # pylint: enable=wrong-import-position
 
 

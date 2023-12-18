@@ -18,7 +18,7 @@ from viperleed.calc.files.parameters import (readPARAMETERS,
                                                   Assignment, NumericBounds)
 from viperleed.calc.files import poscar
 from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.files.parameter_errors import (
+from viperleed.calc.files.parameter import (
     ParameterError, ParameterValueError, ParameterParseError,
     ParameterIntConversionError, ParameterFloatConversionError,
     ParameterBooleanConversionError, ParameterNotRecognizedError,

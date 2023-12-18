@@ -1,4 +1,4 @@
-"""Tests for module _write of viperleed.tleedmlib.files.parameters.
+"""Tests for module _write of viperleed.calc.files.parameters.
 
 Created on 2023-10-18
 
@@ -9,11 +9,11 @@ import numpy as np
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.tleedmlib.base import strip_comments
-from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts, LMax
-from viperleed.tleedmlib.files.parameters._write import ModifiedParameterValue
-from viperleed.tleedmlib.files.parameters._write import ParametersFileEditor
-from viperleed.tleedmlib.files.parameters._write import comment_out, modify
+from viperleed.calc.base import strip_comments
+from viperleed.calc.classes.rparams import Rparams, LayerCuts, LMax
+from viperleed.calc.files.parameters._write import ModifiedParameterValue
+from viperleed.calc.files.parameters._write import ParametersFileEditor
+from viperleed.calc.files.parameters._write import comment_out, modify
 
 from ...helpers import execute_in_dir
 
