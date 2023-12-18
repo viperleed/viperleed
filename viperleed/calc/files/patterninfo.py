@@ -12,7 +12,7 @@ logger = logging.getLogger("tleedm.files.patterninfo")
 def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):
     """Writes a PatternInfo file that can be used by the TLEEDMAP GUI utility
     to display the expected LEED pattern and show beam labelling."""
-    output = "eMax = {:.2f}\n".format(rp.THEO_ENERGIES[1])
+    output = "eMax = {:.2f}\n".format(rp.THEO_ENERGIES.max)
     mstring = "[[{}, {}], [{}, {}]]".format(sl.ucell[0, 0], sl.ucell[1, 0],
                                             sl.ucell[0, 1], sl.ucell[1, 1])
     output += "surfBasis = "+mstring+"\n"

@@ -19,12 +19,11 @@ import viperleed
 from viperleed.calc import run_tleedm
 from viperleed.calc.lib.base import rotation_matrix
 from viperleed.calc.classes.slab import Slab
-from viperleed.calc.files import poscar
-from viperleed.calc.files.parameters import (readPARAMETERS,
-                                                  interpretPARAMETERS)
+from viperleed.calc.files import parameters, poscar
+from viperleed.calc.classes.rparams import Rparams, TheoEnergies
 # for rfactor_from_csv
+from viperleed.tleedmlib.files import iorfactor as rf_io
 from viperleed.calc.files.beams import readOUTBEAMS
-from viperleed.calc.files.iorfactor import beamlist_to_array
 from viperleed.calc.files.ivplot import plot_iv  # for plot_iv_from_csv
 from viperleed.extensions.error_codes import check_ierr
 
@@ -282,8 +281,8 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
     os.chdir(work_path)
 
     # Get temporary parameters object
-    rparams = readPARAMETERS(parameters_file)
-    interpretPARAMETERS(rparams, slab=slab, silent=False)
+    rparams = parameters.read(parameters_file)
+    parameters.interpret(rparams, slab=slab, silent=False)
 
     # We are ready to run ViPErLEED! Have fun!
     try:
@@ -407,7 +406,7 @@ def _make_preset_params(rparams, slab):
     preset_params = {}
     site_def = defaultdict(list)
     for atom in slab.getSurfaceAtoms(rparams):
-        site_def[atom.el].append(atom.oriN)
+        site_def[atom.el].append(atom.num)
     preset_params["SITE_DEF"] = {
         element: {"surf": atom_numbers}
         for element, atom_numbers in site_def.items()
@@ -493,8 +492,9 @@ def rfactor_from_csv(                                                           
     v0r_shift_range : Sequence of two float, default=(-3, 3)
         During R-factor calculation, the two beam sets can be shifted
         in energy relative to one another. v0r_shift_range determines
-        the minimum and maximum shifts (given in eV). The closest
-        integer multiple of intpol_step will be used for the bounds.
+        the minimum and maximum shifts (given in eV). The values
+        should be integer multiples of intpol_step. If they are not,
+        v0r_shift_range is expanded to the next integer multiples.
     intpol_deg : int, default=5
         Either 3 or 5; degree of the interpolating spline polynomial
     intpol_step : float, default=0.5
@@ -594,24 +594,31 @@ def rfactor_from_csv(                                                           
         corr_beams2.append(value)
 
     # Now get beams into arrays
-    beams1_en, beams1_id_start, beams1_n_E_beams, beams1_arr = beamlist_to_array(
-        corr_beams1
-    )
-    beams2_en, beams2_id_start, beams2_n_E_beams, beams2_arr = beamlist_to_array(
-        corr_beams2
-    )
+    (beams1_en,
+     beams1_id_start,
+     beams1_n_E_beams,
+     beams1_arr) = rf_io.beamlist_to_array(corr_beams1)
 
-    minen1, minen2 = beams1_en.min(), beams2_en.min()
-    minen = max(minen1, minen2)
-    if abs(minen1 - minen2) < abs(v0r_shift_range[0]):
-        minen -= v0r_shift_range[0]
+    (beams2_en,
+     beams2_id_start,
+     beams2_n_E_beams,
+     beams2_arr) = rf_io.beamlist_to_array(corr_beams2)
 
-    maxen1, maxen2 = beams1_en.max(), beams2_en.max()
-    maxen = min(maxen1, maxen2)
-    if abs(maxen1 - maxen2) < abs(v0r_shift_range[1]):
-        maxen += v0r_shift_range[1]
+    # Prepare an Rparams object to get the energy ranges right.
+    # Treat corr_beams1 as 'experiment' and corr_beams2 as 'theory'
+    rpars = Rparams()
+    rpars.expbeams = corr_beams1
+    rpars.THEO_ENERGIES = TheoEnergies.from_sorted_grid(beams2_en)
+    rpars.IV_SHIFT_RANGE = IVShiftRange(*v0r_shift_range, intpol_step)
 
-    grid = np.arange(minen, maxen + intpol_step, intpol_step)
+    # Finally, get the right energies
+    _, theo_range, *_ = rf_io.prepare_rfactor_energy_ranges(
+        rpars,
+        n_expand=(intpol_deg - 1) // 2
+        )
+    grid = np.arange(theo_range.min,
+                     theo_range.max + 0.1*intpol_step,
+                     intpol_step)
 
     averaging_scheme = np.int32(np.arange(n_beams) + 1)  # don't average
     n_derivs = 1
@@ -692,7 +699,8 @@ def rfactor_from_csv(                                                           
     )
 
     # Ready to calculate R-factor
-    v0r_shift_range_int = np.int32([round(v / intpol_step) for v in v0r_shift_range])
+    *bounds, _ = rpars.IV_SHIFT_RANGE
+    v0r_shift_range_int = np.int32([round(b / intpol_step) for b in bounds])
     v0r_center = sum(v0r_shift_range_int) // 2
     start_guess = np.int32([v0r_shift_range_int[0], v0r_center, v0r_shift_range_int[1]])
 

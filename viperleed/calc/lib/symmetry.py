@@ -97,7 +97,6 @@ def getSymPosLists(sl, rp, pointlist, output=False):
 def findBulkSymmetry(sl, rp):
     """Checks the bulk slab for screw axes and glide planes."""
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
     uct = np.transpose(copy.copy(sl.ucell))
     abt = uct[:2, :2]
     rotsfound = []
@@ -105,7 +104,7 @@ def findBulkSymmetry(sl, rp):
     ts = copy.deepcopy(sl)
     ts.sort_by_z()
     ts.collapseCartesianCoordinates()
-    ts.createSublayers(epsz)
+    ts.createSublayers(eps.z)
     # optimize C vector
     newC = ts.getMinC(rp)
     if newC is not None:
@@ -116,7 +115,7 @@ def findBulkSymmetry(sl, rp):
                      if at.cartpos[2] > ts.topat_ori_z - abs(newC[2])]
         ts.layers[0].atlist = ts.atlist
         ts.layers = [ts.layers[0]]
-        ts.layers[0].isBulk = True
+        ts.layers[0].is_bulk = True
         rp2 = copy.deepcopy(rp)
         rp2.SUPERLATTICE = np.array([[1, 0], [0, 1]], dtype=float)
         rp2.BULK_REPEAT = -newC
@@ -166,7 +165,6 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     celltype = "ERROR - not recognized"
     planegroup = ""  # plane group will be stored in Hermann-Mauguin notation
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
     # reduce surface unit cell
     abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
 #        usurf = np.array([[1,0],[0,1]])
@@ -204,10 +202,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         if not bulk and rp.superlattice_defined:
             rp.SUPERLATTICE = np.dot(usurf, np.dot(rp.SUPERLATTICE,
                                                    np.linalg.inv(ubulk)))
-            newsl = ("SUPERLATTICE M = {:.0f} {:.0f}, {:.0f} {:.0f}"
-                     .format(*[x for y in rp.SUPERLATTICE for x in y]))
-            parameters.modifyPARAMETERS(rp, "SUPERLATTICE", newsl,
-                                        include_left=True)
+            parameters.modify(rp, "SUPERLATTICE")
         # MODIFY SYMMETRY_FIX PARAMETER
         if "[" in rp.SYMMETRY_FIX and not bulk:
             rgx = re.compile(r'\s*(?P<group>(pm|pg|cm|rcm|pmg))\s*\[\s*'
@@ -220,7 +215,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             newdir = np.dot(np.linalg.inv(newab), cartdir)
             newdir = newdir / min(newdir)
             s = (targetsym+"[{:.0f} {:.0f}]".format(newdir[0], newdir[1]))
-            parameters.modifyPARAMETERS(rp, "SYMMETRY_FIX", s)
+            parameters.modify(rp, "SYMMETRY_FIX", s)
         # MODIFY UNIT CELL
         sl.getCartesianCoordinates()
         sl.ucell_mod.append(('rmul', utr.T))
@@ -242,7 +237,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     # create a testslab: C projected to Z
     ts = copy.deepcopy(sl)
     if bulk:        # check whether there are at least 2 atomic layers
-        ts.createSublayers(epsz)
+        ts.createSublayers(eps.z)
         if len(ts.sublayers) < 2:
             ts = ts.doubleBulkSlab()
     ts.projectCToZ()
@@ -261,12 +256,12 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     tmpat.pos[1] += j
     bigslab.getCartesianCoordinates(updateOrigin=True)
     # bigslab.fullUpdate(rp)   can't do this - would collapse coordinates!
-    bigslab.createSublayers(epsz)
+    bigslab.createSublayers(eps.z)
 
     # find the lowest occupancy sublayer; comparing candidate
     #   axes / planes to this one will be fastest
     lowocclayer = bigslab.getLowOccLayer()
-    minlen = len(lowocclayer.atlist)
+    minlen = lowocclayer.n_atoms
 
     # find candidate positions for symmetry points / planes:
     if not rp.SYMMETRY_FIND_ORI and not forceFindOri and not bulk:
@@ -284,7 +279,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 "avoid this, either decrease the z component of the "
                 "SYMMETRY_EPS parameter, or set the SYMMETRY_FIND_ORI "
                 "parameter to False.")
-        pl = [at.cartpos[0:2] for at in lowocclayer.atlist]
+        pl = [at.cartpos[0:2] for at in lowocclayer]
         symposlist, hexsymposlist = getSymPosLists(sl, rp, pl, output)
 
     comsymposlist = addUnequalPoints(symposlist, hexsymposlist, eps,
@@ -292,7 +287,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
 
     # we're done with the bigger slab, actually testing symmetry operations
     #   can be done just on the basic one.
-    ts.createSublayers(epsz)
+    ts.createSublayers(eps.z)
     lowocclayer = ts.sublayers[bigslab.sublayers.index(lowocclayer)]
     del bigslab
 
@@ -995,7 +990,6 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             logger.warning("enforceSymmetry: Invalid 'movement' variable "
                            "passed. Using SYMMETRIZE_INPUT parameter instead.")
     eps = rp.SYMMETRY_EPS
-    epsz = rp.SYMMETRY_EPS_Z
     abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
 
     # FIND ATOM LINKING - HERE WORK WITH sl INSTEAD OF ts, SINCE WE WANT
@@ -1004,7 +998,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
         at.linklist = [at]
         at.symrefm = np.identity(2)
     if not planegroup == "p1":  # p1 has no symmetry to check for
-        sl.createSublayers(epsz)
+        sl.createSublayers(eps.z)
         sl.sortOriginal()
         sl.collapseCartesianCoordinates()
         # TEST ROTATION AT ORIGIN - TESTING ONLY HIGHEST ROTATIONAL ORDER
@@ -1027,13 +1021,12 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             tmpslab.collapseCartesianCoordinates()
             m = np.linalg.inv(rotation_matrix_order(toprotsym))
             for (sli, sl1) in enumerate(sl.sublayers):
-                for (ati, at1) in enumerate(sl1.atlist):
-                    for (atj, at2) in enumerate(tmpslab.sublayers[sli]
-                                                .atlist):
+                for (ati, at1) in enumerate(sl1):
+                    for (atj, at2) in enumerate(tmpslab.sublayers[sli]):
                         if sl1.atlist[atj] in at1.linklist:
                             # don't check atoms that are already linked
                             continue
-                        if not at1.isSameXY(at2.cartpos[:2], eps):
+                        if not at1.is_same_xy(at2, eps):
                             continue
                         # combine the two linklists
                         at1.linklist.extend(sl1.atlist[atj].linklist)
@@ -1075,13 +1068,12 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             m = np.dot(rotm, np.dot(np.array([[1, 0], [0, -1]]),
                                     np.linalg.inv(rotm)))
             for (sli, sl1) in enumerate(sl.sublayers):
-                for (ati, at1) in enumerate(sl1.atlist):
-                    for (atj, at2) in enumerate(tmpslab.sublayers[sli]
-                                                .atlist):
+                for (ati, at1) in enumerate(sl1):
+                    for (atj, at2) in enumerate(tmpslab.sublayers[sli]):
                         # don't check atoms that are already linked
                         if sl1.atlist[atj] in at1.linklist:
                             continue
-                        if not at1.isSameXY(at2.cartpos[:2], eps):
+                        if not at1.is_same_xy(at2, eps):
                             continue
                         # combine the two linklists
                         at1.linklist.extend(sl1.atlist[atj].linklist)
@@ -1203,7 +1195,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
     for at in ts.atlist:
         # first check points
         for p in lockpoints:
-            if at.isSameXY(p, eps):
+            if at.is_same_xy(p, eps):
                 if not nomove:
                     at.cartpos[0:2] = p
                 at.freedir = 0  # lock completely
@@ -1223,7 +1215,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         at.cartpos[:2] += shiftv
                     break
     for at in sl.atlist:
-        at2 = [a for a in ts.atlist if a.oriN == at.oriN][0]
+        at2 = [a for a in ts.atlist if a.num == at.num][0]
         at.freedir = at2.freedir
         at.cartpos = at2.cartpos
     # average positions for linked atoms
@@ -1328,10 +1320,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             if rp.THETA != 0:
                 logger.debug("Modifying BEAM_INCIDENCE parameter")
                 rp.PHI += np.degrees(ang)
-                parameters.modifyPARAMETERS(
-                    rp, "BEAM_INCIDENCE",
-                    "{:.3f} {:.3f}".format(rp.THETA, rp.PHI)
-                    )
+                parameters.modify(rp, "BEAM_INCIDENCE")
     return
 
 
@@ -1349,19 +1338,19 @@ def getSymBaseSymmetry(sl, rp):
     for ll in sl.symbaseslab.linklists:
         newll = []
         for ssl_at in ll:
-            at = [a for a in sl.atlist if a.oriN == ssl_at.oriN][0]
+            at = [a for a in sl.atlist if a.num == ssl_at.num][0]
             newll.append(at)
             at.linklist = newll
             at.symrefm = np.copy(ssl_at.symrefm)
-    for at in [at for at in sl.atlist if at.duplicateOf is not None]:
-        at.duplicateOf.linklist.append(at)
-        at.linklist = at.duplicateOf.linklist
-        at.symrefm = np.copy(at.duplicateOf.symrefm)
+    for at in [at for at in sl.atlist if at.duplicate_of]:
+        at.duplicate_of.linklist.append(at)
+        at.linklist = at.duplicate_of.linklist
+        at.symrefm = np.copy(at.duplicate_of.symrefm)
         if rp.SYMMETRIZE_INPUT:
-            cv = at.cartpos[:2] - at.duplicateOf.cartpos[:2]
+            cv = at.cartpos[:2] - at.duplicate_of.cartpos[:2]
             v = np.append(np.round(np.dot(np.linalg.inv(
                                      sl.symbaseslab.ucell[:2, :2]), cv)), 0.)
-            at.cartpos = (at.duplicateOf.cartpos
+            at.cartpos = (at.duplicate_of.cartpos
                           + np.dot(sl.symbaseslab.ucell, v))
     sl.getFractionalCoordinates()
     sl.linklists = []

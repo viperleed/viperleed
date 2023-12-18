@@ -499,7 +499,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                     'bounds, skipping line: '+pside)
                                 rp.setHaltingLevel(2)
                                 break
-                            numlist.extend([at.oriN for at in sl.atlist
+                            numlist.extend([at.num for at in sl.atlist
                                             if at.layer == sl.layers[ln-1]])
                 else:  # loop finished without beak
                     _break = False
@@ -579,8 +579,8 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     rp.setHaltingLevel(2)
                     break
             for at in sl.atlist:
-                if ((at.oriN in numlist or len(numlist) == 0)
-                        and at.site in targetsites and not at.layer.isBulk):
+                if ((at.num in numlist or len(numlist) == 0)
+                        and at.site in targetsites and not at.is_bulk):
                     targetAtEls.append((at, targetel))
         else:  # loop finished without break
             _break = False
@@ -703,14 +703,14 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                         deltas_required = True
                     else:
                         logger.warning(
-                            "In-plane displacement assignment for "
-                            "atom {} is forbidden by symmetry and will be "
-                            "skipped. See 'FreeDir' in POSCAR file. To "
-                            "apply this displacement, use either the "
-                            "SYMMETRY_FIX parameter to lower the symmetry, "
-                            "or use SYM_DELTA in the DISPLACEMENTS file to "
-                            "allow symmetry breaking for this atom."
-                            .format(at.oriN))
+                            f'In-plane displacement assignment for {at} is '
+                            'forbidden by symmetry and will be skipped. See '
+                            '"FreeDir" in POSCAR file. To apply this '
+                            'displacement, use either the SYMMETRY_FIX '
+                            'parameter to lower the symmetry, or use '
+                            'SYM_DELTA in the DISPLACEMENTS file to allow '
+                            'symmetry breaking for this atom.'
+                            )
             else:
                 if "xy" in dr:
                     c = np.array(dirfloats)
@@ -761,14 +761,14 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             deltas_required = True
                         else:
                             logger.warning(
-                                "In-plane azimuthal displacement "
-                                "assignment for atom {} is forbidden by "
-                                "symmetry and will be skipped. See 'FreeDir' "
-                                "in POSCAR file. To apply this displacement, "
-                                "use either the SYMMETRY_FIX parameter to "
-                                "lower the symmetry, or use SYM_DELTA in the "
-                                "DISPLACEMENTS file to allow symmetry "
-                                "breaking for this atom.".format(at.oriN))
+                                'In-plane azimuthal displacement assignment '
+                                f'for {at} is forbidden by symmetry and will '
+                                'be skipped. See "FreeDir" in POSCAR file. '
+                                'To apply this displacement, use either the '
+                                'SYMMETRY_FIX parameter to lower the symmetry,'
+                                ' or use SYM_DELTA in the DISPLACEMENTS file '
+                                'to allow symmetry breaking for this atom.'
+                                )
         elif mode == 2:
             # vibrational displacement, apply:
             for (at, targetel) in targetAtEls:
@@ -904,7 +904,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 #                 else:
                 #                     logger.warning('DISPLACEMENTS file: '
                 #                         'trying to address atom number '
-                #                         +str(at.oriN)+' with wrong element. '
+                #                         +str(at.num)+' with wrong element. '
                 #                         'Atom will be skipped.')
                 #                     rp.setHaltingLevel(1)
         elif mode == 4:

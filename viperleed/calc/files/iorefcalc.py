@@ -218,6 +218,8 @@ def readFdOut(readfile="fd.out", for_error=False, ampfile="amp.out"):
             return theobeams, fdout
         # now read the rest
         parse_data(amplines[nbeams+2:], "amp", ampfile, theobeams, nbeams)
+    if not theobeams:
+        raise RuntimeError(f"No beams found in {readfile}")
     return theobeams, fdout
 
 
@@ -225,7 +227,7 @@ def writePARAM(sl, rp, lmax=-1):
     """Creats the contents of the PARAM file for the reference calculation.
     If no LMAX is passed, will use maximum LMAX from rp. Returns str."""
     if lmax == -1:
-        lmax = rp.LMAX[1]
+        lmax = rp.LMAX.max
     try:
         beamlist, beamblocks, beamN = writeAUXBEAMS(
             ivbeams=rp.ivbeams, beamlist=rp.beamlist, write=False)
@@ -289,17 +291,17 @@ def writePARAM(sl, rp, lmax=-1):
     mnstack = 0
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
-    for layer in [lay for lay in sl.layers if not lay.isBulk]:
+    for layer in [lay for lay in sl.layers if not lay.is_bulk]:
         mnstack += 1
-        if len(layer.atlist) == 1:
+        if layer.n_atoms == 1:
             mnbrav += 1
-        if len(layer.atlist) > mnsub:
-            mnsub = len(layer.atlist)
-    for i, layer in enumerate([lay for lay in sl.layers if lay.isBulk]):
-        if len(sl.bulkslab.layers[i].atlist) == 1:
+        if layer.n_atoms > mnsub:
+            mnsub = layer.n_atoms
+    for i, layer in enumerate([lay for lay in sl.layers if lay.is_bulk]):
+        if sl.bulkslab.layers[i].n_atoms == 1:
             mnbrav += 1
-        if len(sl.bulkslab.layers[i].atlist) > mnsub:
-            mnsub = len(layer.atlist)
+        if sl.bulkslab.layers[i].n_atoms > mnsub:
+            mnsub = layer.n_atoms
     output += '      PARAMETER (MNBRAV  = '+str(mnbrav)+')\n'
     output += '      PARAMETER (MNSUB   = '+str(mnsub)+')\n'
     output += '      PARAMETER (MNSTACK = '+str(mnstack)+')\n'
@@ -362,7 +364,9 @@ def writeAUXLATGEO(sl, rp):
         lj = 30  # ljust spacing
     output = ''
     output += rp.systemName+' '+rp.timestamp+'\n'
-    ens = [rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01, rp.THEO_ENERGIES[2]]
+    ens = [rp.THEO_ENERGIES.start,
+           rp.THEO_ENERGIES.stop + 0.01,
+           rp.THEO_ENERGIES.step]
     output += formatter['energies'].write(ens).ljust(lj) + 'EI,EF,DE\n'
     ucsurf = np.transpose(sl.ucell[:2, :2])
     if sl.bulkslab is None:
@@ -433,7 +437,7 @@ def writeAUXNONSTRUCT(sl, rp):
     output += formatter['eps'].write([rp.BULKDOUBLING_EPS]).ljust(45) + 'EPS\n'
     output += (formatter['ints'].write([rp.BULKDOUBLING_MAX]).ljust(45)
                + 'LITER\n')
-    output += formatter['ints'].write([rp.LMAX[1]]).ljust(45) + 'LMAX\n'
+    output += formatter['ints'].write([rp.LMAX.max]).ljust(45) + 'LMAX\n'
     if rp.TL_VERSION >= 1.7:
         # TODO: if phaseshifts are calculated differently, change format here
         output += (formatter['ints'].write([1]).ljust(45)
@@ -514,28 +518,28 @@ def writeAUXGEO(sl, rp):
                '--------------\n')
     ol = i3.write([len(sl.layers)]).ljust(lj)
     output += ol + 'NLTYPE: number of different layer types\n'
-    blayers = [lay for lay in sl.layers if lay.isBulk]
-    nblayers = [lay for lay in sl.layers if not lay.isBulk]
+    blayers = [lay for lay in sl.layers if lay.is_bulk]
+    nblayers = [lay for lay in sl.layers if not lay.is_bulk]
     layerOffsets = [np.zeros(3) for _ in range(len(sl.layers) + 1)]
     if sl.bulkslab is None:
         sl.bulkslab = sl.makeBulkSlab(rp)
     for i, layer in enumerate(sl.layers):
         output += '-   layer type '+str(i+1)+' ---\n'
-        if layer.isBulk:
+        if layer.is_bulk:
             output += ('  2'.ljust(lj) + 'LAY = 2: layer type no. '
                        + str(i+1) + ' has bulk lateral periodicity\n')
         else:
             output += ('  1'.ljust(lj) + 'LAY = 1: layer type no. '
                        + str(i+1) + ' has overlayer lateral periodicity\n')
-        if layer.isBulk:
+        if layer.is_bulk:
             bl = sl.bulkslab.layers[blayers.index(layer)]
-            bulknums = [at.oriN for at in bl.atlist]
-            bulkUnique = [at for at in layer.atlist if at.oriN in bulknums]
+            bulknums = {at.num for at in bl}
+            bulkUnique = [at for at in layer if at.num in bulknums]
             natoms = len(bulkUnique)
             # sanity check: ratio of unit cell areas (given simply by
             #  SUPERLATTICE) should match ratio of written vs skipped atoms:
             arearatio = 1 / abs(np.linalg.det(rp.SUPERLATTICE))
-            atomratio = len(bulkUnique) / len(layer.atlist)
+            atomratio = len(bulkUnique) / layer.n_atoms
             if abs(arearatio - atomratio) > 1e-3:
                 logger.warning(
                     'Ratio of bulk atoms inside/outside the bulk unit cell '
@@ -545,10 +549,10 @@ def writeAUXGEO(sl, rp):
                     'Check SUPERLATTICE parameter and bulk symmetry!')
                 rp.setHaltingLevel(2)
         else:
-            natoms = len(layer.atlist)
+            natoms = layer.n_atoms
         ol = i3.write([natoms]).ljust(lj)
         output += ol+'number of Bravais sublayers in layer '+str(i+1)+'\n'
-        if layer.isBulk:
+        if layer.is_bulk:
             writelist = bulkUnique
         else:
             writelist = layer.atlist
@@ -567,7 +571,7 @@ def writeAUXGEO(sl, rp):
                 layerOffsets[layer.num] += writepos
                 layerOffsets[layer.num + 1] -= writepos
             ol = ol.ljust(lj)
-            output += ol+'Atom N='+str(atom.oriN)+' ('+atom.el+')\n'
+            output += f'{ol}Atom N={atom.num} ({atom.el})\n'
     output += ('--------------------------------------------------------------'
                '-----\n')
     output += ('--- define bulk stacking sequence                             '
@@ -660,8 +664,8 @@ def writeAUXGEO(sl, rp):
                    '(TENSOR_OUTPUT)\n')
         if rp.TENSOR_OUTPUT[layer.num] == 0:
             continue   # don't write the Tensor file names
-        for i, atom in enumerate(layer.atlist):
-            ol = ('T_'+str(atom.oriN)).ljust(lj)
+        for i, atom in enumerate(layer):
+            ol = f'T_{atom.num}'.ljust(lj)
             output += (ol + 'Tensor file name, current layer, sublayer '
                        + str(i+1) + '\n')
     output += ('--------------------------------------------------------------'

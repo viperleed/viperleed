@@ -50,12 +50,8 @@ import viperleed
 from viperleed import GLOBALS
 from viperleed.calc.lib.base import CustomLogFormatter
 from viperleed.calc.classes import rparams
-from viperleed.calc.files.parameter_errors import ParameterError
-from viperleed.calc.files.parameters import (readPARAMETERS,
-                                                  interpretPARAMETERS)
+from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files import poscar
-from viperleed.calc.lib.leedbase import getMaxTensorIndex
-from viperleed.calc.sections._sections import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import prerun_clean, cleanup
 from viperleed.calc.sections.run_sections import section_loop
 
@@ -122,7 +118,7 @@ def run_tleedm(system_name=None,
                 "DISTRIBUTION !\n")
     tmp_manifest = ["SUPP", "OUT", log_name]
     try:
-        rp = readPARAMETERS()
+        rp = parameters.read()
     except FileNotFoundError:
         if not preset_params:
             logger.error("No PARAMETERS file found, and no preset parameters "
@@ -167,8 +163,15 @@ def run_tleedm(system_name=None,
                 return 2
     try:
         # interpret the PARAMETERS file
-        interpretPARAMETERS(rp, slab=slab, silent=False)
-    except ParameterError:
+        parameters.interpret(rp, slab=slab, silent=False)
+    except (parameters.errors.ParameterNeedsSlabError,
+            parameters.errors.SuperfluousParameterError):
+        # Domains calculation is the only case in which slab is None
+        logger.error('Main PARAMETERS file contains an invalid parameter '
+                     'for a multi-domain calculation', exc_info=True)
+        cleanup(tmpmanifest)
+        return 2
+    except parameters.errors.ParameterError:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmp_manifest)
         return 2

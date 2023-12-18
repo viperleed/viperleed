@@ -52,7 +52,7 @@ ViPErLEED documentation
 Welcome to the manual for :term:`ViPErLEED` and the :term:`Python` package :term:`tleedm`.
 See the :ref:`Getting Started page<getting_started>`.
 
-The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims at drastically reducing the effort for LEED-:math:`I(V)` studies, both on the computational and on the experimental side.
+The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims at drastically reducing the effort for a intensity [LEED-:math:`I(V)`] analysis, both on the computational and on the experimental side.
 
 The package consists of:
 
@@ -64,15 +64,15 @@ The package consists of:
 For details please see the ViPErLEED publication series (**TODO**).
 This manual primarily deals with part **iii**.
 
-The goal of any :term:`LEED-I(V)` calculation is the calculation of energy-dependent electron-scattering amplitudes and intensities.
-These intensity curves [often referred to as :math:`I(V)` curves or spectra]  are very sensitive to the precise position and vibrational amplitudes of each atom in the surface unit cell.
+The goal of any :term:`LEED-I(V)` calculation is the calculation of energy-dependent electron-scattering amplitudes and intensities of diffracted beams.
+These intensity curves, taken as a function of the primary beam energy, [often referred to as :math:`I(V)` curves or spectra] are very sensitive to the precise position and vibrational amplitudes of each atom in the surface unit cell.
 For more details consult works that cover the basics of :term:`LEED` and :term:`LEED-I(V)`, e.g.
 Chapter 4 in :cite:t:`fausterSurfacePhysicsFundamentals2020,fausterOberflachenphysikGrundlagenUnd2013` or the overview by :cite:t:`heinzElectronBasedMethods2013`.
 In ViPErLEED, these calculations are performed by the TensErLEED manager :term:`tleedm`.
-tleedm is a Python package that acts as a comprehensive wrapper and feature extension to :term:`TensErLEED`.
+tleedm is a Python package that acts as a comprehensive wrapper and feature extension to the :term:`TensErLEED` program package.
 
 TensErLEED is used for the calculation of diffraction intensities of surface slabs (see also :ref:`reference calculation<ref-calc>`) and structure optimization using the :ref:`tensor LEED approach<tensor_leed>`.
-For computational details please have a look at the ViPErLEED paper (**TODO**) and the original work describing TensErLEED by Blum, and Heinz :cite:p:`blumFastLEEDIntensity2001a`.
+For computational details please have a look at the ViPErLEED paper (**TODO**) and the original work describing TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`.
 
 
 .. Table of contents in LaTeX pdf called Contents

@@ -1,39 +1,57 @@
-"""Module conftest of viperleed.tests.
+"""Test configuration for viperleed.tests.
 
 Created on 2023-02-28
 
-@author: Michele Riva
-@author: Alexander M. Imre
+@author: Michele Riva (@michele-riva)
+@author: Alexander M. Imre (@amimre)
 
-Contains some useful general definitions that can be used when creating
-or running tests.
+Defines fixtures and fixture factories used in multiple tests.
+
+Fixtures
+--------
+ag100
+    A Ag(100) slab, an Rparams, and a TestInfo.
+ag100_with_displacements_and_offsets
+    A Ag(100) Slab and an Rparams, after reading a DISPLACEMENTS block.
+data_path
+    Path to the top-level folder containing test data.
+make_poscar (factory)
+    Return a Slab from POSCAR, an Rparams and a TestInfo from a TestInfo.
+poscars_path
+    Path to the data directory containing POSCAR files.
+re_match (factory)
+    Return a match object from a pattern and a string.
+run_phaseshift
+    An Rparams, a Slab, and the results of generating phaseshifts
+    with them.
+tensorleed_path
+    Path to the top-level tree with tensor-LEED source code.
 """
 
-
-# Think about a decorator for injecting fixtures.
-# Some ideas at
-# https://github.com/pytest-dev/pytest/issues/2424
-# https://github.com/pytest-dev/pytest/issues/6322
-# https://github.com/nteract/testbook/issues/4
-
-from pathlib import Path
 import os
+from pathlib import Path
+import re
 import sys
-import shutil
-from zipfile import ZipFile
 
 import pytest
-import numpy as np
+import pytest_cases
 
 from viperleed.calc import run_tleedm
 from viperleed.calc.lib import symmetry
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.classes.slab import Slab
+from viperleed.calc.files import displacements, vibrocc
 from viperleed.calc.files import parameters, poscar
-from viperleed.calc.files.vibrocc import readVIBROCC
-from viperleed.calc.files.displacements import readDISPLACEMENTS, readDISPLACEMENTS_block
+from viperleed.calc.files import psgen
 
+
+from .helpers import TEST_DATA, POSCAR_PATH
+from .helpers import CaseTag, exclude_tags
+from . import poscar_slabs
+
+VPR_PATH = str(Path(__file__).resolve().parents[2])
+TENSORLEED_PATH = Path(VPR_PATH) / 'viperleed' / 'tensorleed'                   # TODO: this will need to be dynamic!
 
 _FIXTURES_PATH = Path('tests/fixtures/')
 _POSCARs_PATH = _FIXTURES_PATH / 'POSCARs'
@@ -59,257 +77,104 @@ AG_100_DISPLACEMENTS_NAMES = ['DISPLACEMENTS_z', 'DISPLACEMENTS_vib', 'DISPLACEM
 AG_100_DELTAS_NAMES = ['Deltas_z.zip', 'Deltas_vib.zip', 'Deltas_z+vib.zip']
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
+def re_match():  # This is actually a fixture factory
+    """Return a re.match object from a pattern and a string."""
+    def _match(pattern, string):
+        return re.match(pattern, string)
+    return _match
+
+
+@pytest.fixture(scope='session')
 def poscars_path():
-    """Return the path to a POSCAR file."""
-    return POSCAR_PATHS
+    """Return the Path to the directory containing POSCAR files."""
+    return POSCAR_PATH
+
+
+@pytest.fixture(scope='session', name='data_path')
+def fixture_data_path():
+    """Return the Path to the top-level folder containing test data."""
+    return TEST_DATA
+
+
+@pytest.fixture(scope='session', name='tensorleed_path')
+def fixture_tensorleed_path():
+    """Return the Path to the top-level tree with tensor-LEED source code."""
+    return TENSORLEED_PATH
+
+
+@pytest.fixture(name='make_poscar', scope='session')
+def factory_make_poscar():
+    """Return a POSCAR from a TestInfo."""
+    def _make(info):
+        return poscar_slabs.CasePOSCARSlabs().case_poscar(info)
+    return _make
+
+
+@pytest.fixture(name='ag100')
+def fixture_ag100(make_poscar):
+    """Return a Ag(100) slab, an Rparams, and a TestInfo."""
+    return make_poscar(poscar_slabs.AG_100)
+
 
 @pytest.fixture
-def inputs_path():
-    """Return the path to an input file."""
-    return INPUTS_ORIGIN
+def ag100_with_displacements_and_offsets(ag100, data_path):
+    """Return a Slab and Rparams after reading a DISPLACEMENTS block."""
+    slab, param, *_ = ag100
 
-@pytest.fixture
-def source_path():
-    """Return the path to the tensorleed executable."""
-    return Path(SOURCE_STR)
-
-
-@pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
-def init_files(request, tmp_path_factory, scope="function"):
-    surface_name = request.param
-    tmp_dir_name = f'{surface_name}_init'
-    tmp_path = tmp_path_factory.mktemp(basename=surface_name, numbered=True)
-    run = [0,] # only initialization
-    files = BaseTleedmFilesSetup(surface_dir=surface_name,
-                                tmp_test_path=tmp_path,
-                                required_files=["PHASESHIFTS",],
-                                copy_dirs=["initialization"])
-    files.run_tleedm_from_setup(source=SOURCE_STR,
-                                preset_params={
-                                    "RUN":run,
-                                    "TL_VERSION":1.73,
-                                })
-    return files
-
-
-class BaseTleedmFilesSetup():
-    def __init__(self, surface_dir, tmp_test_path, required_files=(), copy_dirs=()):
-        self.surface_name = surface_dir
-        self.required_files = set(ALWAYS_REQUIRED_FILES)
-        self.required_files.update(required_files)
-        self.copy_dirs = copy_dirs
-        self.test_path = tmp_test_path
-
-        self.work_path = self.test_path / "work"
-        self.inputs_path = INPUTS_ORIGIN / self.surface_name
-        self.input_files_paths = []
-
-        for pth in self.copy_dirs:
-            cur_input_dir = self.inputs_path / pth
-            self.input_files_paths.append(cur_input_dir)
-            shutil.copytree(cur_input_dir, self.test_path, dirs_exist_ok=True)
-            shutil.copytree(cur_input_dir, self.work_path, dirs_exist_ok=True)
-
-        self.home = os.getcwd()
-        self.exit_code = None
-
-    def run_tleedm_from_setup(self, source, preset_params):
-        os.chdir(self.work_path)
-        exit_code = run_tleedm(source=source,
-                                preset_params=preset_params)
-        self.exit_code = exit_code
-        self.work_files_after_run = [file.name for file in Path(self.work_path).glob('*')]
-        os.chdir(self.home)
-
-    def expected_file_exists(self, expected_file):
-        expected_path = Path(self.work_path) / expected_file
-        return expected_path.exists()
-
-    def copy_displacements(self, displacements_path):
-        shutil.copy(displacements_path, self.work_path / 'DISPLACEMENTS')
-
-    def copy_deltas(self, deltas_path):
-        shutil.copy(deltas_path, self.test_path / "Deltas" / "Deltas_001.zip")
-        shutil.copy(deltas_path, self.work_path / "Deltas" / "Deltas_001.zip")
-        shutil.copy(deltas_path, self.work_path / "Deltas_001.zip")
-        ZipFile(deltas_path, 'r').extractall(self.work_path)
-
-
-
-class TestSetup:
-    def test_work_path_exists(self, init_files):
-        """Check that work_path was created properly."""
-        assert init_files.work_path.is_dir()
-
-    def test_files_copied_correctly(self, init_files):
-        """Check if all files were copied correctly."""
-        input_files = [file.name for file in init_files.test_path.glob('*')]
-        source_copied = all(file in input_files for file in init_files.required_files)
-        input_files = [file.name for file in Path(init_files.work_path).glob('*')]
-        work_copied = all(file in input_files for file in init_files.required_files)
-        assert source_copied and work_copied
-
-@pytest.fixture()
-def ag100_parameters_example():
-    # read Ag(100) POSCAR and PARAMETERS files
-    slab = poscar.read(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'POSCAR')
-    rpars = parameters.readPARAMETERS(_FIXTURES_PATH / 'Ag(100)' / 'initialization' / 'PARAMETERS')
-    # interpret PARAMETERS file
-    interpreter = parameters.ParameterInterpreter(rpars)
-    interpreter.interpret(slab)
-    symmetry.findSymmetry(slab, rpars)
-    symmetry.findBulkSymmetry(slab, rpars)
-    return (rpars, slab)
-
-
-@pytest.fixture()
-def ag100_rename_ax(request, tmp_path):
-    dir = INPUTS_ORIGIN / "Ag(100)_el_rename"
-    run = [0,] # only initialization
-    files = BaseTleedmFilesSetup(surface_dir=dir,
-                                tmp_test_path=tmp_path,
-                                required_files=["PHASESHIFTS",],
-                                copy_dirs=["initialization"])
-    files.run_tleedm_from_setup(source=SOURCE_STR,
-                                preset_params={
-                                    "RUN":run,
-                                    "TL_VERSION":1.73,
-                                })
-    return files
-
-
-@pytest.fixture(scope="function", params=_EXAMPLE_POSCARs)
-def example_poscars(request):
-    file_path = _POSCARs_PATH / request.param
-    slab = poscar.read(file_path)
-    return slab
-
-@pytest.fixture(scope="function", params=_EXAMPLE_POSCAR_EXPECTATIONS)
-def slab_and_expectations(request):
-    filename, expected_n_atoms, expected_pg, offset_at = request.param
-    file_path = _POSCARs_PATH / filename
-    pos_slab = poscar.read(file_path)
-    return (pos_slab, expected_n_atoms, expected_pg, offset_at)
-
-@pytest.fixture(scope="function")
-def slab_pg_rp(slab_and_expectations):
-    slab, *_ = slab_and_expectations
-    rp = Rparams()
-    slab.fullUpdate(rp)
-    pg = symmetry.findSymmetry(slab, rp, output=False)
-    symmetry.enforceSymmetry(slab, rp)
-    return slab, pg, rp
-
-
-@pytest.fixture(scope='function')
-def manual_slab_3_atoms():
-    slab = Slab()
-    slab.ucell = np.diag([3., 4., 5.])
-    positions = (np.array([-0.25, 0, 0]),
-                 np.array([0.00, 0, 0]),
-                 np.array([0.25, 0, 0]))
-    slab.atlist = [Atom('C', pos, i+1, slab)
-                   for i, pos in enumerate(positions)]
-    param = Rparams()
-    slab.fullUpdate(param)
-    return slab
-
-
-@pytest.fixture()
-def manual_slab_1_atom_trigonal():
-    slab = Slab()
-    slab.ucell = np.array([[ 1, 0, 0],
-                           [-2.3, 3, 0],
-                           [ 1, 2, 3]],dtype=float).T
-    slab.atlist = [Atom('C', np.array([0.2, 0.7, 0.1]), 1, slab),]  # "random" position
-    param = Rparams()
-    slab.fullUpdate(param)
-    return slab
-
-
-@pytest.fixture()
-def ag100_slab_param(poscars_path):
-    slab = poscar.read(poscars_path /"POSCAR_Ag(100)")
-    param = Rparams()
-    param.N_BULK_LAYERS = 1
-    slab.fullUpdate(param)
+    inputs_path = data_path / 'Ag(100)/mergeDisp'
+    vibrocc_path = inputs_path / 'VIBROCC'
+    displacements_path = inputs_path / 'DISPLACEMENTS_mixed'
+    vibrocc.readVIBROCC(param, slab, str(vibrocc_path))
+    displacements.readDISPLACEMENTS(param, str(displacements_path))
+    displacements.readDISPLACEMENTS_block(param, slab, param.disp_blocks[0])
     return slab, param
 
 
-@pytest.fixture()
-def ag100_slab_with_displacements_and_offsets(ag100_slab_param, inputs_path):
-    slab, param = ag100_slab_param
-    vibrocc_path = inputs_path / "Ag(100)" / "mergeDisp" / "VIBROCC"
-    displacements_path = inputs_path / "Ag(100)" / "mergeDisp" / "DISPLACEMENTS_mixed"
-    readVIBROCC(param, slab, str(vibrocc_path))
-    readDISPLACEMENTS(param, str(displacements_path))
-    readDISPLACEMENTS_block(param, slab, param.disp_blocks[param.search_index])
-    return slab, param
+# Notice that we need to exclude POSCARs without information as some
+# are known to make this fail because of "too small interlayer spacing"
+# For Fe3O4 this is because parameter presets are needed. For graphene,
+# only one layer is present in the POSCAR.
+_PHASESHIFT_SETTINGS = {'cases': poscar_slabs.CasePOSCARSlabs,
+                        'filter': exclude_tags(CaseTag.NO_INFO),
+                        'scope': 'session'}
 
+@pytest_cases.fixture(scope='session')
+@pytest_cases.parametrize_with_cases('args', **_PHASESHIFT_SETTINGS)
+def run_phaseshift(args, tensorleed_path, tmp_path_factory):
+    """Execute a PHASESHIFTS calculation.
 
-@pytest.fixture(params=[('Ag(100)')], ids=['Ag(100)',])
-def refcalc_files(request, tmp_path_factory, scope="session"):
-    surface_name = request.param
-    tmp_dir_name = f'{surface_name}_refcalc'
-    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
-    run = [0, 1] # initialization and refcalc
-    files = BaseTleedmFilesSetup(surface_dir=surface_name,
-                                tmp_test_path=tmp_path,
-                                required_files=["PHASESHIFTS",],
-                                copy_dirs=["initialization"])
-    files.run_tleedm_from_setup(source=SOURCE_STR,
-                                preset_params={
-                                    "RUN":run,
-                                    "TL_VERSION":1.74,
-                                })
-    return files
+    Parameters
+    ----------
+    args : pytest_cases.Case
+        Slab, Rparams and other (unused) info.
+    tensorleed_path : pytest.fixture
+        The path to the directory containing the Fortran code.
+    tmp_path_factory : pytest.fixture
+        To run the PHASESHIFTS calculation in a fresh directory.
 
-@pytest.fixture(params=AG_100_DISPLACEMENTS_NAMES, ids=AG_100_DISPLACEMENTS_NAMES)
-def delta_files_ag100(request, tmp_path_factory, scope="session"):
-    displacements_name = request.param
-    surface_name = 'Ag(100)'
-    tmp_dir_name = tmp_dir_name = f'{surface_name}_deltas_{displacements_name}'
-    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
-    run = [0, 2] # init and deltas
-    required_files = ["PHASESHIFTS",]
-    copy_dirs=["initialization", "deltas"]
-    # correct DISPLACEMENTS
-    files = BaseTleedmFilesSetup(surface_dir=surface_name,
-                                tmp_test_path=tmp_path,
-                                required_files=required_files,
-                                copy_dirs=copy_dirs)
-    disp_source = files.inputs_path / "displacements" / displacements_name
-    files.copy_displacements(displacements_path=disp_source)
-    files.run_tleedm_from_setup(source=SOURCE_STR,
-                                preset_params={
-                                    "RUN":run,
-                                    "TL_VERSION":1.74,
-                                })
-    return files
+    Yields
+    ------
+    param : Rparams
+        The PARAMETERS used during the PHASESHIFTS calculation.
+    slab : Slab
+        The Slab for which PHASESHIFTS were calculated.
+    firstline : str
+        The first line of the PHASESHIFTS file, that contains the
+        coefficients for the real part of the inner potential.
+    phaseshift : list
+        The PHASESHIFTS that were generated.
+    """
+    slab, param, *_ = args
+    param.source_dir = tensorleed_path
+    param.workdir = tmp_path_factory.mktemp(basename='phaseshifts',
+                                            numbered=True)
+    param.initTheoEnergies()
+    executable = 'EEASiSSS' + ('.exe' if 'nt' in os.name else '.x')             # TODO: does this cover it or should we use 'win' in sys.platform()?
 
-
-@pytest.fixture(params=list(zip(AG_100_DISPLACEMENTS_NAMES, AG_100_DELTAS_NAMES)),
-                ids=AG_100_DISPLACEMENTS_NAMES)
-def search_files_ag100(request, tmp_path_factory, scope="session"):
-    surface_name = 'Ag(100)'
-    displacements_name, deltas_name = request.param
-    tmp_dir_name = tmp_dir_name = f'{surface_name}_search_{displacements_name}'
-    tmp_path = tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
-    run = [0, 3] # init and search
-    required_files = []
-    copy_dirs=["initialization", "deltas", "search"]
-    files = BaseTleedmFilesSetup(surface_dir=surface_name,
-                                tmp_test_path=tmp_path,
-                                required_files=required_files,
-                                copy_dirs=copy_dirs)
-    disp_source = files.inputs_path / "displacements" / displacements_name
-    deltas_source = files.inputs_path / "search" / "Deltas" / deltas_name
-    files.copy_displacements(disp_source)
-    files.copy_deltas(deltas_source)
-    files.run_tleedm_from_setup(source=SOURCE_STR,
-                                preset_params={
-                                    "RUN":run,
-                                    "TL_VERSION":1.74,
-                                })
-    return files
+    # run EEASISSS in the temporary directory
+    home = Path()
+    os.chdir(param.workdir)
+    results = psgen.runPhaseshiftGen_old(slab, param, psgensource=executable)
+    yield param, slab, *results
+    os.chdir(home)

@@ -78,11 +78,10 @@ def main(args=None):
                     print("Value has to be greater than zero.")
 
     rp = Rparams()
-    rp.LAYER_CUTS = [cut]
+    rp.LAYER_CUTS.update_from_sequence([cut])
     rp.N_BULK_LAYERS = 1
-    rp.SYMMETRY_EPS = eps
-    rp.SYMMETRY_EPS_Z = eps
-    slab.fullUpdate(rp)
+    rp.SYMMETRY_EPS = rp.SYMMETRY_EPS.from_value(eps)
+    sl.fullUpdate(rp)
 
     slab.bulkslab = slab.makeBulkSlab(rp)
     bsl = slab.bulkslab

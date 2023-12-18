@@ -132,7 +132,7 @@ class R_Error():
         r_min = self.get_r_min
         if self.var_r is None:
             logger.warning("Cannot calculate statistical errors for "
-                           f'atoms {range_to_str([at.oriN for at in self.atoms])}')
+                           f'atoms {range_to_str([at.num for at in self.atoms])}')
             return (None, None)
 
         if self.lin_disp is None:
@@ -264,7 +264,7 @@ def get_zero_crossing(x_arr, y_arr, eps=1e-6):
     # find location of zero crossing
     for id in range(len(x_arr)-1):
         if y_arr[id]*y_arr[id+1] <= 0:
-            R_jump = y_arr[id+1]-y_arr[id]
+            R_jump = abs(y_arr[id+1]-y_arr[id])
             if R_jump < eps:  # avoid division by zero
                 return (x_arr[id]+x_arr[id+1])/2
             return x_arr[id]-y_arr[id]*(x_arr[id+1]-x_arr[id])/(y_arr[id+1]-y_arr[id])

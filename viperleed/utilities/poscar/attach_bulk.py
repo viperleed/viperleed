@@ -111,7 +111,7 @@ def main(args=None):
     # recalculate c for the slab atoms (undistort & shift)
     for atom in slab.atlist:
         atom.pos[2] = (atom.pos[2]*(cfact/(cfact+1)))+(1/(cfact+1))
-        atom.oriN += batoms
+        atom.num += batoms
     # copy atoms from bulk and add them to the slab
     for atom in bulk.atlist:
         newat = copy.copy(atom)

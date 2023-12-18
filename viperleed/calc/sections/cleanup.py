@@ -11,7 +11,7 @@ import shutil
 import re
 from zipfile import ZipFile, ZIP_DEFLATED
 
-from viperleed.calc.lib.base import get_elapsed_time_str
+from viperleed.calc.lib.base import copytree_exists_ok,get_elapsed_time_str
 from viperleed.calc.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
@@ -190,8 +190,7 @@ def _organize_supp_out(path, outfiles):
             if not _dir.is_dir():
                 continue
             try:
-                shutil.copytree(_dir, out_path / _dir.name,
-                                dirs_exist_ok=True)
+                copytree_exists_ok(_dir, out_path / _dir.name)
             except OSError:
                 logger.error(f"Error moving {folder} directory {_dir.name}: ",
                              exc_info=True)

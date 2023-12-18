@@ -297,7 +297,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                             el = par.el
                         else:
                             el = par.atom.el
-                        xlabels.append("#{}\n{}".format(par.atom.oriN, el))
+                        xlabels.append(f'#{par.atom.num}\n{el}')
                         edgetext = ["", ""]
                         if isinstance(par.edges[0], (np.floating, float)):
                             edgetext = [str(round(v, 4)) for v in par.edges]

@@ -150,7 +150,7 @@ def ensure_away_from_c_edges(positions, eps):
         rigidly to fit the (eps, 1 - eps) range.
     """
     if not 0 < eps < 1:
-        raise ValueError(f'ensure_away_from_c_edges: Invalid {eps=}. '
+        raise ValueError(f'ensure_away_from_c_edges: Invalid eps={eps}. '
                          'Should be between zero and one.')
     positions = np.asarray(positions)
     min_c, max_c = positions[:, 2].min(), positions[:, 2].max()
@@ -616,7 +616,7 @@ class POSCARWriter:
             return line
         #                                              # FreeDir
         _free_dir = ""
-        if atom.layer.isBulk:
+        if atom.is_bulk:
             _free_dir = 'bulk'
         elif isinstance(atom.freedir, np.ndarray):
             _free_dir = str(atom.freedir)  # has to be made into a string

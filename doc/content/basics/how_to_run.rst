@@ -120,7 +120,7 @@ The directory tree after a run may look something like this:
     │   └── Deltas_001.zip
     └── tleedm-$timestamp.log
 
-ViPErLEED will create the additional input files :ref:`IVBEAMS<ivbeams>`, :ref:`BEAMLSIT<beamlist>`, :ref:`PHASESHIFTS<phaseshifts>`, and :ref:`VIBROCC<viboccin>` under certain conditions; see the respective pages for details.
+ViPErLEED will create the additional input files :ref:`IVBEAMS<ivbeams>`, :ref:`BEAMLIST<beamlist>`, :ref:`PHASESHIFTS<phaseshifts>`, and :ref:`VIBROCC<viboccin>` under certain conditions; see the respective pages for details.
 
 The original :ref:`POSCAR file<poscar>` is renamed to ``POSCAR_user`` while the new ``POSCAR`` contains the structure as interpreted by ViPErLEED. For details see the page on the :ref:`POSCAR file<poscar>`.
 

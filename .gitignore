@@ -31,7 +31,7 @@ doc/_build
 doc/content/api/**/viperleed.calc.**.rst
 
 # files from docs spell checker
-*.spelling 
+*.spelling
 .cspell/
 
 # Ignore compiled versions of random_.c, beamgen, .x files and .so files
@@ -58,3 +58,6 @@ tensorleed/eeasisss_new/Fortran_quicktests
 *.plist
 *.mod
 **/_lint
+
+# Ignore test results
+**/.pytest_cache/

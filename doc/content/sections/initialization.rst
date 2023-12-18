@@ -33,7 +33,7 @@ The major steps are listed below in order of execution.
     The original structure will be written to 
     :ref:`POSCAR_oricell<poscar_oricell>`.
 #.  If not specified, try to determine the 
-    :ref:`bulk repeat vector<BULK_REPEAT>` and the minimum bulk plane 
+    :ref:`bulk repeat vector<BULK_REPEAT>` and the bulk plane 
     group. Following this, :ref:`poscar_bulk` and 
     :ref:`POSCAR_bulk_appended<poscar_bulk>` will be written.
 #.  Check whether a :ref:`PHASESHIFTS file<phaseshifts>` is present and
@@ -42,9 +42,8 @@ The major steps are listed below in order of execution.
     generated automatically.
 #.  Generate the :ref:`BEAMLIST<beamlist>`, 
     :ref:`PatternInfo.tld<patterninfo>`, and 
-    :ref:`IVBEAMS<ivbeams>` files.
-#.  Create the directory ``original_imputs`` in which all files used to 
+    :ref:`IVBEAMS<ivbeams>` files (:ref:`IVBEAMS<ivbeams>` is only generated if not provided by the user).
+#.  Create the directory ``original_inputs`` in which all files used to 
     start the calculation are stored.
     This way it is possible to look up the used settings, even if, for example, the 
     PARAMETERS file was altered by the user during the run.
-    
