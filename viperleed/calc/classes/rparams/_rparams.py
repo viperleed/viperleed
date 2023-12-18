@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
-<<<<<<<< HEAD:viperleed/calc/classes/rparams.py
-"""Class containing parameters and values used during the ViPErLEED calculation.
-
-Most parameters are read from the PARAMETERS file, though some are
-defined at runtime. Most default values are defined here.
-========
-"""Moule _rparams of viperleed.tleedmlib.classes.rparams.
+"""Module _rparams of viperleed.tleedmlib.classes.rparams.
 
 Created on 2023-10-23, originally Jun 13 2019
 
@@ -17,7 +11,6 @@ Rparams. The class contains parameters read from the PARAMETERS
 file, and some parameters defined at runtime. The attributes that
 represent not-so-obvious user parameters are instances of classes
 defined as part of the special sub-package of rparams.
->>>>>>>> master:viperleed/calc/classes/rparams/_rparams.py
 """
 
 from collections import defaultdict
@@ -30,17 +23,19 @@ import shutil
 from timeit import default_timer as timer
 
 import numpy as np
-<<<<<<<< HEAD:viperleed/calc/classes/rparams.py
+
 
 import viperleed
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import (KNOWN_TL_VERSIONS,
                                            UnknownTensErLEEDVersionError)
+from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.files import beams as tl_beams
 from viperleed.calc.files.iodeltas import checkDelta
+from viperleed.calc.sections._sections import EXPBEAMS_NAMES
 
-========
->>>>>>>> master:viperleed/calc/classes/rparams/_rparams.py
+
 try:
     import matplotlib.pyplot as plt
 except ImportError:
@@ -48,14 +43,6 @@ except ImportError:
 else:
     _CAN_PLOT = True
 
-from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import available_cpu_count
-from viperleed.tleedmlib.checksums import KNOWN_TL_VERSIONS
-from viperleed.tleedmlib.checksums import UnknownTensErLEEDVersionError
-from viperleed.tleedmlib.classes.searchpar import SearchPar
-from viperleed.tleedmlib.files import beams as tl_beams
-from viperleed.tleedmlib.files.iodeltas import checkDelta
-from viperleed.tleedmlib.sections._sections import EXPBEAMS_NAMES
 
 from ._defaults import NO_VALUE, DEFAULTS
 from ._limits import PARAM_LIMITS
@@ -65,128 +52,11 @@ _LOGGER = logging.getLogger('tleedm.rparams')
 if _CAN_PLOT:
     plt.style.use('viperleed.tleedm')
 
-<<<<<<<< HEAD:viperleed/calc/classes/rparams.py
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)",
                "Michele Riva (@michele-riva)"]
 __created__ = "2019-06-13"
 
-logger = logging.getLogger("tleedm.rparams")
-
-NO_VALUE = None  # This needs to be a singleton, so "is NO_VALUE" works
-
-# Notice that the defaults in here that may be mutated during execution
-# are saved as immutable types to prevent inadvertent modification of
-# this global, and are rather converted to their mutable equivalent
-# in the relevant places
-DEFAULTS = {
-    'EXPBEAMS_INPUT_FILE' : None,
-    'FILAMENT_WF': {
-        "lab6": 2.65,  # This is the default if nothing is given
-        "w": 4.5,
-        },
-    'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: init from data
-    'LOG_LEVEL' : {
-        NO_VALUE: logging.INFO,
-        'debug': logging.DEBUG,
-        'v' : 5,
-        'verbose' : 5,
-        'vv' : 1,
-        'vverbose' : 1,
-    },
-    'PHASESHIFT_EPS': {
-        'r': 0.1,
-        'n': 0.05,
-        'f': 0.01,  # This is the default if nothing is given
-        'e': 0.001,
-        },
-    'RUN': (0, 1, 2, 3),
-    'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
-    'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
-    'THEO_ENERGIES - no experiments': (20, 800, 3),
-    'THETA': 0,   # perpendicular incidence
-    'PHI': 0,     # not needed in case of perpendicular incidence
-    'ZIP_COMPRESSION_LEVEL': 2,
-    }
-
-                                                                                # TODO: fill dict of parameter limits here (e.g. LMAX etc.)
-# parameter limits
-# either tuple of (min, max) or list of allowed values                          # TODO: allowed would be cleaner as set. It's not great that things are mixed though. Would be better to have a separate global
-PARAM_LIMITS = {
-    'LMAX': (1, 18),
-    'INTPOL_DEG': ['3', '5'],
-    }
-
-
-###############################################
-#                CLASSES                      #
-###############################################
-
-class SearchPar:
-    """Stores properties of ONE parameter of the search, i.e. what variation
-    of what atom is linked to this parameter."""
-
-    def __init__(self, atom, mode, el, deltaname):
-        self.atom = atom
-        self.mode = mode
-        self.el = el
-        self.deltaname = deltaname
-        self.steps = 1
-        self.edges = (None, None)  # the first and last value in the range
-        self.center = 1  # the index closest to "no change" (Fortran index starting at 1)
-        self.non_zero = False   # whether the center is truly "unchanged"
-        self.restrictTo = None  # None, Index, or other search par
-        self.linkedTo = None    # other search par linked via 'atom number'
-        self.parabolaFit = {"min": None,
-                            "err_co": np.nan, "err_unco": np.nan}
-        d = {}
-        if mode == "occ":
-            el = next(iter(atom.disp_occ.keys()))  # look at any element
-            self.steps = len(atom.disp_occ[el])
-            self.center = atom.disp_center_index[mode][el] + 1 # (Fortran index starting at 1)
-            self.non_zero = (abs(atom.disp_occ[el][self.center-1]
-                                 - atom.site.occ[el]) >= 1e-4)
-            edges = []
-            for ind in (0, -1):
-                edges.append(" + ".join("{:.2f} {}".format(
-                    atom.disp_occ[e][ind], e) for e in atom.disp_occ
-                    if atom.disp_occ[e][ind] > 0.005))
-                if edges[-1] == "":
-                    edges[-1] = "vac"
-            self.edges = tuple(edges)
-        else:
-            if mode == "geo":
-                d = atom.disp_geo
-            elif mode == "vib":
-                d = atom.disp_vib
-        if len(d) > 0 and el != "vac":  # if vac: use defaults
-            if el in d:
-                k = el
-            else:
-                k = "all"
-            self.steps = len(d[k])
-            self.edges = (d[k][0], d[k][-1])
-            if k not in atom.disp_center_index[mode]:
-                self.center = atom.disp_center_index[mode]["all"] + 1
-            else:
-                self.center = atom.disp_center_index[mode][k] + 1
-            self.non_zero = (np.linalg.norm(d[k][self.center-1]) >= 1e-4)
-
-
-class DomainParameters:
-    """Stores workdir, slab and runparams objects for each domain"""
-
-    def __init__(self, workdir, homedir, name):
-        self.workdir = Path(workdir)  # path to sub-directory for domain calculation
-        self.homedir = Path(homedir)  # path to main tleedm working directory
-        self.name = name        # domain name as defined by user
-        self.sl = None
-        self.rp = None
-        self.refcalcRequired = False
-        self.tensorDir = None
-
-========
->>>>>>>> master:viperleed/calc/classes/rparams/_rparams.py
 
 class Rparams:
     """Stores the parameters found in a PARAMETERS file (default values in
@@ -551,31 +421,11 @@ class Rparams:
             raise RuntimeError('Cannot determine highest TensErLEED version '
                                'without specifying a source directory')
         if self.TL_VERSION == 0.:
-<<<<<<<< HEAD:viperleed/calc/classes/rparams.py
-                               # TODO: use functionality from leedbase and refactor; use pathlib
-            ls = [dn for dn in list(self.source_dir.iterdir())
-                  if ((self.source_dir / dn).is_dir()
-                  and dn.name.startswith("TensErLEED"))]
-            highest = 0.0
-            namestr = ""
-            for dn in ls:
-                try:
-                    s = dn.name.split('v')[-1]
-                    f = float(s)
-                    if f > highest:
-                        highest = f
-                        namestr = s
-                except Exception:
-                    pass
-            self.TL_VERSION = highest
-            if highest > 0.:
-                logger.debug("Detected TensErLEED version " + namestr)
-========
+
             # Fetch most recent TensErLEED version
             _, version = self.get_tenserleed_directory().name.split('v')
             self.TL_VERSION = float(version)
             _LOGGER.debug(f'Detected TensErLEED version {self.TL_VERSION:.2f}')
->>>>>>>> master:viperleed/calc/classes/rparams/_rparams.py
 
         # TL_VERSION_STR
         # try simple conversion to string
