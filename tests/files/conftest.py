@@ -26,7 +26,7 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Will be fixed in installable version
-from viperleed.tleedmlib import symmetry
+from viperleed.calc.lib import symmetry
 
 from ..poscar_slabs import CasePOSCARSlabs
 # pylint: enable=wrong-import-position

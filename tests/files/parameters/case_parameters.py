@@ -17,8 +17,8 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Will be fixed in installable version
-from viperleed.tleedmlib.classes.rparams import LMax
-from viperleed.tleedmlib.files import parameters
+from viperleed.calc.classes.rparams import LMax
+from viperleed.calc.files import parameters
 
 from ...helpers import TestInfo, CaseTag
 from ...poscar_slabs import POSCARS_WITHOUT_INFO, AG_100

@@ -11,7 +11,7 @@ import sys
 
 from pytest_cases import fixture, parametrize_with_cases
 
-from viperleed.files import beamgen
+from viperleed.calc.files import beamgen
 from viperleed.calc.lib import symmetry
 
 from .helpers import CaseTag, exclude_tags

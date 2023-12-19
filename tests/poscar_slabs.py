@@ -22,8 +22,8 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
-from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts, SymmetryEps
-from viperleed.tleedmlib.files import poscar
+from viperleed.calc.classes.rparams import Rparams, LayerCuts, SymmetryEps
+from viperleed.calc.files import poscar
 
 from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo, CaseTag as Tag
 from .helpers import duplicate_all

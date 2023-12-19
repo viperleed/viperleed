@@ -27,7 +27,7 @@ if VPR_PATH not in sys.path:
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
 from viperleed.calc.lib import symmetry
-from viperleed.calc.base import angle as angle_radians
+from viperleed.calc.lib.base import angle as angle_radians
 
 from ..helpers import duplicate_all, CaseTag
 from ..poscar_slabs import make_poscar_ids

@@ -37,7 +37,7 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Will be fixed in installable version
-from viperleed.tleedm import run_tleedm
+from viperleed.calc import run_tleedm
 
 from ..helpers import TEST_DATA
 # pylint: enable=wrong-import-position

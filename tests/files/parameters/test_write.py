@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.base import strip_comments
+from viperleed.calc.lib.base import strip_comments
 from viperleed.calc.classes.rparams import Rparams, LayerCuts, LMax
 from viperleed.calc.files.parameters._write import ModifiedParameterValue
 from viperleed.calc.files.parameters._write import ParametersFileEditor

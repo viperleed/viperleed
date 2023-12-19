@@ -1,4 +1,4 @@
-"""Test configuration for viperleed.tleedmlib.files.parameters.
+"""Test configuration for viperleed.calc.files.parameters.
 
 Created on 2023-10-18
 
@@ -9,7 +9,7 @@ import shutil
 
 from pytest_cases import fixture
 
-from viperleed.tleedmlib.files.parameters._read import read
+from viperleed.calc.files.parameters._read import read
 
 from .case_parameters import CasesParametersFile
 
