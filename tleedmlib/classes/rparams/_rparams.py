@@ -80,8 +80,8 @@ def apply_scaling(sl, rp, which, scale):
 
 
 # parameters accessible in the full dynamic optimization	
-# must specify bounds, function for altering the parameter and initial guess 	
-# x0	
+# must specify bounds, function for altering the parameter and initial guess 
+# x0
 FD_PARAMETERS = {
     'v0i': {
         'bounds': (0, 15),

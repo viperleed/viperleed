@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from abc import ABC, abstractmethod
 import copy
 import csv
@@ -878,6 +879,8 @@ def store_fd_param_to_file(sl, rp, which, new_min):
         if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
             parameters.modify(rp, "BULK_REPEAT", comment=comment)
         poscar.write(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
+
+    # TODO: create parameter to toggle this
 
     # clean up tmpdirs
     # for path in tmpdirs:
