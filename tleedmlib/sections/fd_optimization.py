@@ -1041,7 +1041,6 @@ class ParameterMinimizer(FDOptimizer):
         result = super().evaluate(x_val)
         logger.info(
             f"{self._eval_point_string(x_val)}: "
-            f"R = {result:.4f}")
             f"R = {result[0]:.4f}")
         return result
 
