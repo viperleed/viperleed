@@ -26,9 +26,9 @@ from quicktions import Fraction
 from viperleed.guilib import get_equivalent_beams
 from viperleed.tleedmlib.base import cosvec
 
-# The following imports are potentially the cause of ciclic
+# The following imports are potentially the cause of cyclic
 # imports. They are used exclusively as part of getTensorOriStates
-# which could potentially be split off somewhere else 
+# which could potentially be split off somewhere else
 from viperleed.tleedmlib.files import parameters, poscar, vibrocc
 
 
@@ -99,7 +99,8 @@ def monitoredPool(rp, poolsize, function, tasks, update_from=Path()):
         while not all(r.ready() for r in results):
             if killed:
                 break
-            parameters.updatePARAMETERS(rp, update_from=update_from)
+            # See if user wants to STOP
+            parameters.update(rp, update_from=update_from)
             if rp.STOP:
                 kill_pool(pool)
                 logger.info("Stopped by STOP parameter.")
@@ -169,48 +170,6 @@ def getYfunc(ivfunc, v0i):
             else:
                 raise
     return yfunc
-
-
-def _version_from_dirname(dirname):
-    try:
-        return float(dirname.split('v')[-1])
-    except Exception:
-        logger.debug("Could not parse version number "
-                     f"for directory {dirname}")
-        return np.nan
-
-
-def getTLEEDdir(tensorleed_path, version=None):
-    """Finds directories in the 'tensorleed' folder that have names starting
-    with 'TensErLEED', then picks the one with the highest version number.
-    Returns an absolute path to that directory, eg
-    './tensorleed/TensErLEED-v1.6'."""
-    if tensorleed_path is None:
-        raise RuntimeError("tensorleed_path is None")
-    source_dir = tensorleed_path.resolve()
-    tl_version_dirs = [dir.resolve() for dir in source_dir.iterdir()
-                       if ((source_dir / dir).is_dir()
-                       and dir.name.startswith('TensErLEED'))]
-    logger.log(1, f"getTLEEDdir: available TensErLEED directories: "
-                 f"{[d.name for d in tl_version_dirs]}")
-    if not tl_version_dirs:
-        raise FileNotFoundError("Could not find any TensErLEED directory.")
-    if version:
-        logger.log(5, f"getTLEEDdir: Looking for TensErLEED version {version}")
-        for tl_dir in tl_version_dirs:
-            if np.isclose(version, _version_from_dirname(tl_dir.name)):
-                return tl_dir
-        # if we get here, we didn't find the requested version
-        raise RuntimeError("Could not find requested TensErLEED version "
-                           f"{version}.")
-    # if no version is specified, return the highest version
-    version_numbers = [_version_from_dirname(d.name) for d in tl_version_dirs]
-    if all(np.isnan(version_numbers)):
-        raise RuntimeError("Could not find any TensErLEED version.")
-    highest_tl_version_dir = tl_version_dirs[np.nanargmax(version_numbers)]
-    logger.log(1, "getTLEEDdir: highest TensErLEED version is "
-               f"{highest_tl_version_dir.name}")
-    return highest_tl_version_dir
 
 
 def getMaxTensorIndex(home=".", zip_only=False):
@@ -317,46 +276,45 @@ def getTensorOriStates(sl, path):
     """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the
     original state of the atoms and sites, and stores them in the given
     slab's atom/site oriState variables."""
-    _path = Path(path).resolve()
+    path = Path(path).resolve()
     for fn in ["POSCAR", "PARAMETERS", "VIBROCC"]:
-        if not (_path / fn).is_file():
-            logger.error("File "+fn+" is missing in "+path)
-            raise RuntimeError("Could not check Tensors: File missing")
-    dn = os.path.basename(path)
+        if not (path / fn).is_file():
+            logger.error(f"No {fn} file in {path}")
+            raise RuntimeError("Could not check Tensors: File missing")         # TODO: FileNotFoundError?
+    dn = path.parent
     try:
-        tsl = poscar.readPOSCAR(_path / "POSCAR")
-        trp = parameters.readPARAMETERS(filename=_path / "PARAMETERS")
-        parameters.interpretPARAMETERS(trp, slab =tsl, silent=True)
+        tsl = poscar.read(path / "POSCAR")
+        trp = parameters.read(filename=path/"PARAMETERS")
+        parameters.interpret(trp, slab=tsl, silent=True)
         tsl.fullUpdate(trp)
-        vibrocc.readVIBROCC(trp, tsl, filename=_path / "VIBROCC", silent=True)
+        vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
         tsl.fullUpdate(trp)
-    except Exception:
+    except Exception as exc:
         logger.error("Error checking Tensors: Error while reading "
-                     "input files in "+dn)
+                     f"input files in {dn}")
         logger.debug("Exception:", exc_info=True)
         raise RuntimeError("Could not check Tensors: Error loading old input "
-                           "files")
+                           "files") from exc
     if len(tsl.atlist) != len(sl.atlist):
-        logger.error("POSCAR from "+dn+" is incompatible with "
+        logger.error(f"POSCAR from {dn} is incompatible with "
                      "current POSCAR.")
         raise RuntimeError("Tensors file incompatible")
     for at in sl.atlist:
-        tal = [tat for tat in tsl.atlist if at.oriN == tat.oriN]
+        tal = [tat for tat in tsl.atlist if at.num == tat.num]
         if len(tal) != 1:
-            logger.error("POSCAR from "+dn+" is incompatible with "
+            logger.error(f"POSCAR from {dn} is incompatible with "
                          "current POSCAR.")
             raise RuntimeError("Tensors file incompatible")
         at.copyOriState(tal[0])
     if len(tsl.sitelist) != len(sl.sitelist):
-        logger.error("Sites from "+dn+" input differ from current input.")
+        logger.error(f"Sites from {dn} input differ from current input.")
         raise RuntimeError("Tensors file incompatible")
     for site in sl.sitelist:
         tsitel = [s for s in tsl.sitelist if site.label == s.label]
         if len(tsitel) != 1:
-            logger.error("Sites from "+dn+" input differ from current input.")
+            logger.error(f"Sites from {dn} input differ from current input.")
             raise RuntimeError("Tensors file incompatible")
         site.oriState = copy.deepcopy(tsitel[0])
-    return None
 
 
 def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):
@@ -564,7 +522,7 @@ def getLEEDdict(sl, rp):
         logger.error("getLEEDdict: SUPERLATTICE contains non-integer-valued "
                      "entries.")
         return None
-    d = {"eMax": rp.THEO_ENERGIES[1],
+    d = {"eMax": rp.THEO_ENERGIES.max,
          "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
          "surfBasis": sl.ucell[:2, :2].T,
          "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,

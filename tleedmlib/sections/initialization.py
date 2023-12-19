@@ -40,7 +40,7 @@ ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
-        _get_expbeams(rp)
+        rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
@@ -57,20 +57,18 @@ def initialization(sl, rp, subdomain=False):
     transform = np.dot(np.transpose(sl.ucell[:2, :2]),
                        np.linalg.inv(mincell)).round()
     ws = writeWoodsNotation(transform)
+    if ws:
+        ws = f"= {ws}"
+    else:
+        ws = "M = {} {}, {} {}".format(*transform.astype(int).ravel())
     if changecell and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
                                  np.identity(2)).all():
-        if ws:
-            ws = f"= {ws}"
-        else:
-            ws = "M = {} {}, {} {}".format(*transform.astype(int).ravel())
         ssl = sl.makeSymBaseSlab(rp, transform=transform)
         if subdomain:
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info(f"Found SYMMETRY_CELL_TRANSFORM {ws}")
             sl.symbaseslab = ssl
-            parameters.modifyPARAMETERS(rp, "SYMMETRY_CELL_TRANSFORM",
-                                        new=f"SYMMETRY_CELL_TRANSFORM {ws}",
-                                        include_left=True)
+            parameters.modify(rp, "SYMMETRY_CELL_TRANSFORM")                    #TODO: there should probably a comment in the PARAMETERS file?
         else:
             logger.warning(
                 f"POSCAR unit cell is not minimal (supercell {ws}). "
@@ -79,7 +77,7 @@ def initialization(sl, rp, subdomain=False):
                 "or setting SYMMETRY_CELL_TRANSFORM to conserve "
                 "translational symmetry."
                 )
-            poscar.writePOSCAR(ssl, filename="POSCAR_mincell")
+            poscar.write(ssl, filename='POSCAR_mincell')
             rp.setHaltingLevel(1)
     elif not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
         if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, transform).all():
@@ -93,8 +91,8 @@ def initialization(sl, rp, subdomain=False):
                     "slab symmetry search using base unit cell...")
         tl_symmetry.getSymBaseSymmetry(sl, rp)
         try:
-            poscar.writePOSCAR(sl.symbaseslab, filename='POSCAR_mincell',
-                               comments='all')
+            poscar.write(sl.symbaseslab, filename='POSCAR_mincell',
+                         comments='all')
         except Exception:
             logger.warning("Exception occurred while writing POSCAR_mincell")
 
@@ -102,7 +100,7 @@ def initialization(sl, rp, subdomain=False):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
-        poscar.writePOSCAR(tmpslab, filename='POSCAR', comments='all')
+        poscar.write(tmpslab, filename='POSCAR', comments='all')
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
@@ -110,7 +108,7 @@ def initialization(sl, rp, subdomain=False):
     # generate POSCAR_oricell
     tmpslab.revertUnitCell()
     try:
-        poscar.writePOSCAR(tmpslab, filename='POSCAR_oricell', comments='nodir')
+        poscar.write(tmpslab, filename='POSCAR_oricell', comments='nodir')
     except Exception:
         logger.error("Exception occurred while writing POSCAR_oricell, "
                      "execution will continue...")
@@ -124,20 +122,17 @@ def initialization(sl, rp, subdomain=False):
             # The modifications to the PARAMETERS file below are currently not in the docs. Should we add that?
             cvec, cuts = sl.detectBulk(rp)
             rp.BULK_REPEAT = cvec
-            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            parameters.modifyPARAMETERS(
-                rp, "BULK_REPEAT", vec_str,
+            vec_str = parameters.modify(
+                rp, "BULK_REPEAT",
                 comment="Automatically detected repeat vector"
                 )
             logger.info(f"Detected bulk repeat vector: {vec_str}")
-            layer_cuts = sl.createLayers(rp, bulk_cuts=cuts)
-            parameters.modifyPARAMETERS(
-                rp, "LAYER_CUTS",
-                " ".join(f"{c:.4f}" for c in layer_cuts)
-                )
+            new_cuts = sl.createLayers(rp, bulk_cuts=cuts)
+            rp.LAYER_CUTS.update_from_sequence(new_cuts)
+            parameters.modify(rp, "LAYER_CUTS")
             rp.N_BULK_LAYERS = len(cuts)
-            parameters.modifyPARAMETERS(rp, "N_BULK_LAYERS", str(len(cuts)))
-        parameters.modifyPARAMETERS(rp, "BULK_LIKE_BELOW", new="")
+            parameters.modify(rp, "N_BULK_LAYERS")
+        parameters.comment_out(rp, "BULK_LIKE_BELOW")
 
     # create bulk slab:
     if sl.bulkslab is None:
@@ -149,9 +144,8 @@ def initialization(sl, rp, subdomain=False):
         rvec = sl.getBulkRepeat(rp)
         if rvec is not None:
             rp.BULK_REPEAT = rvec
-            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            parameters.modifyPARAMETERS(
-                rp, "BULK_REPEAT", vec_str,
+            vec_str = parameters.modify(
+                rp, "BULK_REPEAT",
                 comment="Automatically detected repeat vector"
                 )
             logger.info(f"Detected bulk repeat vector: {vec_str}")
@@ -161,7 +155,7 @@ def initialization(sl, rp, subdomain=False):
             sl.bulkslab.collapseCartesianCoordinates()
     if rp.BULK_REPEAT is None:
         # failed to detect repeat vector, use fixed distance instead
-        blayers = [lay for lay in sl.layers if lay.isBulk]
+        blayers = [lay for lay in sl.layers if lay.is_bulk]
         # assume that interlayer vector from bottom non-bulk to
         # top bulk layer is the same as between bulk units
         # save BULK_REPEAT value for later runs, in case atom above moves
@@ -171,8 +165,8 @@ def initialization(sl, rp, subdomain=False):
         else:
             rp.BULK_REPEAT = (blayers[0].cartbotz
                               - sl.layers[blayers[0].num-1].cartbotz)
-        parameters.modifyPARAMETERS(
-            rp, "BULK_REPEAT", f"{rp.BULK_REPEAT:.5f}",
+        parameters.modify(
+            rp, "BULK_REPEAT",
             comment="Automatically detected spacing. Check POSCAR_bulk."
             )
         logger.warning(
@@ -215,7 +209,7 @@ def initialization(sl, rp, subdomain=False):
         bsl = copy.deepcopy(sl.bulkslab)
         bsl.sortOriginal()
         try:
-            poscar.writePOSCAR(bsl, filename='POSCAR_bulk', comments='bulk')
+            poscar.write(bsl, filename='POSCAR_bulk', comments='bulk')
         except Exception:
             logger.error("Exception occurred while writing POSCAR_bulk")
             raise
@@ -229,13 +223,16 @@ def initialization(sl, rp, subdomain=False):
         if len(bsl.sublayers) <= len(bsl.elements):
             n += 1
     try:
-        poscar.writePOSCAR(sl.addBulkLayers(rp, n=n)[0],
-                           filename='POSCAR_bulk_appended')
+        poscar.write(sl.addBulkLayers(rp, n=n)[0],
+                     filename='POSCAR_bulk_appended')
     except Exception:
         logger.warning("Exception occurred while writing POSCAR_bulk_appended")
 
     # Check for an ambiguous angle phi
     _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1)
+
+    # Check that layer cuts are not too close together
+    _check_and_warn_layer_cuts(rp, sl)
 
     # check whether PHASESHIFTS are present & consistent:
     newpsGen, newpsWrite = True, True
@@ -349,49 +346,10 @@ def initialization(sl, rp, subdomain=False):
     return
 
 
-def _get_expbeams(rp):                                                          # TODO: could become an RParams method
-    """Load an EXPBEAMS file into rp."""
-    # if already loaded, do nothing
-    if rp.fileLoaded["EXPBEAMS"]:
-        return
-    # Check if multiple experimental input files were provided
-    exp_files_provided = [fn for fn in EXPBEAMS_NAMES if Path(fn).is_file()]
-    if len(exp_files_provided) > 1:
-        logger.warning(
-            "Multiple files with experimental I(V) curves were provided. "
-            "Check if the root directory contains the correct files. "
-            f"ViPErLEED will preferentially use '{exp_files_provided[0]}'."
-            )
-        rp.setHaltingLevel(1)
-
-    # Check for experimental beams
-    try:
-        rp.EXPBEAMS_INPUT_FILE = exp_files_provided[0]
-    except IndexError:
-        # reset the default
-        rp.EXPBEAMS_INPUT_FILE = rp.get_default("EXPBEAMS_INPUT_FILE")
-        return
-
-    err_msg = f"Error while reading file {rp.EXPBEAMS_INPUT_FILE}"
-    enrange = [-1 if e is rp.no_value else e
-               for e in rp.THEO_ENERGIES[:2]]
-    try:
-        rp.expbeams = tl_beams.readOUTBEAMS(filename=rp.EXPBEAMS_INPUT_FILE,
-                                            enrange=enrange)
-    except Exception:                                                           # TODO: catch better
-        logger.error(f"{err_msg}.", exc_info=True)
-        return
-
-    if len(rp.expbeams):
-        rp.fileLoaded["EXPBEAMS"] = True
-    else:
-        logger.error(f"{err_msg}: No data was read.")
-
-
 def init_domains(rp):
     """Runs an alternative initialization for the domain search. This will
     include running the 'normal' initialization for each domain."""
-    _get_expbeams(rp)
+    rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
     if len(rp.DOMAINS) < 2:
         logger.error("A domain search was defined, but less than two domains "
@@ -400,7 +358,7 @@ def init_domains(rp):
         return
     checkFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "PHASESHIFTS"]
     home = Path.cwd()
-    for (name, path) in rp.DOMAINS:
+    for name, path in rp.DOMAINS.items():
         # determine the target path
         target = Path(f"Domain_{name}").resolve()
         dp = DomainParameters(target, home, name)
@@ -484,14 +442,14 @@ def init_domains(rp):
             os.chdir(target)
             logger.info(f"Reading input files for domain {name}")
             try:
-                dp.sl = poscar.readPOSCAR()
-                dp.rp = parameters.readPARAMETERS()                             # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
+                dp.sl = poscar.read()
+                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
                 interpret_domain_params_silent = rp.LOG_LEVEL > logging.DEBUG
-                parameters.interpretPARAMETERS(dp.rp, slab=dp.sl,
-                                               silent=interpret_domain_params_silent)
+                parameters.interpret(dp.rp, slab=dp.sl,
+                                     silent=interpret_domain_params_silent)
                 dp.sl.fullUpdate(dp.rp)   # gets PARAMETERS data into slab
                 dp.rp.fileLoaded["POSCAR"] = True
                 dp.rp.updateDerivedParams()
@@ -601,21 +559,12 @@ def init_domains(rp):
                     dp.rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans
-                    ws = writeWoodsNotation(trans)
-                    if ws:
-                        ws = f"= {ws}"
-                    else:
-                        ws = ("M = {:.0f} {:.0f}, "
-                              "{:.0f} {:.0f}".format(*trans.ravel()))
-                    parameters.modifyPARAMETERS(
-                        dp.rp, "SYMMETRY_CELL_TRANSFORM",
-                        new=f"SYMMETRY_CELL_TRANSFORM {ws}",
-                        path=dp.workdir, include_left=True
-                        )
+                    parameters.modify(dp.rp, "SYMMETRY_CELL_TRANSFORM",
+                                      path=dp.workdir)
         logger.info("Domain surface unit cells are mismatched, but can be "
                     "matched by integer transformations.")
     # store some information about the supercell in rp:
-    rp.pseudoSlab = Slab()                                                      # Do we really still need this pseudo-slab?
+    rp.pseudoSlab = Slab()
     rp.pseudoSlab.ucell = largestDomain.sl.ucell.copy()
     rp.pseudoSlab.bulkslab = Slab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
@@ -649,24 +598,20 @@ def init_domains(rp):
         rp.ivbeams = tl_beams.sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
 
-    rp.updateDerivedParams()
-    if rp.LMAX[1] == 0:
-        rp.LMAX[1] = max([dp.rp.LMAX[1] for dp in rp.domainParams])
+    rp.updateDerivedParams()  # Also sets LMAX
+    if not rp.LMAX.has_max:
+        rp.LMAX.max = max(dp.rp.LMAX.max for dp in rp.domainParams)
     for dp in rp.domainParams:
         if dp.refcalcRequired:
             continue
         cmessage = f"Reference calculation required for domain {dp.name}: "
         # check energies
-        if (rp.THEO_ENERGIES[0] < dp.rp.THEO_ENERGIES[0] or
-            rp.THEO_ENERGIES[1] > dp.rp.THEO_ENERGIES[1] or
-            rp.THEO_ENERGIES[2] != dp.rp.THEO_ENERGIES[2] or
-            (rp.THEO_ENERGIES[0] % rp.THEO_ENERGIES[2]
-             != dp.rp.THEO_ENERGIES[0] % dp.rp.THEO_ENERGIES[2])):
+        if not dp.rp.THEO_ENERGIES.contains(rp.THEO_ENERGIES):
             logger.info("%sEnergy range is mismatched.", cmessage)
             dp.refcalcRequired = True
             continue
         # check LMAX - should be obsolete since TensErLEED version 1.6
-        if rp.LMAX[1] != dp.rp.LMAX[1] and rp.TL_VERSION <= 1.6:
+        if rp.TL_VERSION <= 1.6 and rp.LMAX.max != dp.rp.LMAX.max:
             logger.info("%sLMAX is mismatched.", cmessage)
             dp.refcalcRequired = True
         # check beam incidence
@@ -694,7 +639,7 @@ def init_domains(rp):
                         "sourcedir"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
             if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
-                dp.rp.LMAX[1] = rp.LMAX[1]
+                dp.rp.LMAX.max = rp.LMAX.max
 
     # repeat initialization for all slabs that require a supercell
     for dp in supercellRequired:
@@ -739,11 +684,12 @@ def preserve_original_input(rp, init_logger, path=""):
                            f"{ORIGINAL_INPUTS_DIR_NAME}. "
                            "Check disk permissions.") from exc
 
-    # make sure the correct version of EXPBEAMS is stored (if used)
+    # We will copy all files that have potentially been used as
+    # inputs. Make sure the correct version of EXPBEAMS is stored
     files_to_preserve = ALL_INPUT_FILES.copy()
     files_to_preserve.remove('EXPBEAMS')
-    if rp.EXPBEAMS_INPUT_FILE:
-        files_to_preserve.add(rp.EXPBEAMS_INPUT_FILE)
+    if rp.expbeams_file_name:
+        files_to_preserve.add(rp.expbeams_file_name)
 
     # copy all files to orig_inputs that were used as original input
     for file in files_to_preserve:
@@ -790,4 +736,16 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
             f"{(rp.PHI+ angle_between_first_uc_vec_and_x):.2f}° from a.\n"
             "See the ViPErLEED documentation for the parameter BEAM_INCDIDENCE "
             "for details."
+            )
+
+def _check_and_warn_layer_cuts(rpars, slab):
+    """Check if layer cuts are too close together and warn if so."""
+    layer_cuts = rpars.LAYER_CUTS
+    min_spacing = slab.getMinLayerSpacing()
+    if min_spacing < 1.0:
+        logger.warning(
+            f"Layer cuts are very close together. The minimum spacing "
+            f"between layers is {min_spacing:.2f} Å. This may lead to "
+            "covergence issues in the reference calculation. Check the "
+            "LAYERS_CUTS parameter in the PARAMETERS file."
             )

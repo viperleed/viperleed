@@ -20,13 +20,15 @@ import numpy as np
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import BackwardsReader, readIntLine
-
+from viperleed.tleedmlib.files import poscar
 from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
-from viperleed.tleedmlib.files.poscar import writePOSCAR
+from viperleed.tleedmlib.files.iorfactor import largest_nr_grid_points
+from viperleed.tleedmlib.files.iorfactor import prepare_rfactor_energy_ranges
 from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
 
 
 logger = logging.getLogger("tleedm.files.iosearch")
+
 
 class SearchIORaceConditionError(Exception):
     """Raised if reading of control.chem does not return the expected number
@@ -34,10 +36,12 @@ class SearchIORaceConditionError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
+
 class SearchIOEmptyFileError(Exception):
     """Raised if file read for the search has no content"""
     def __init__(self, message):
         super().__init__(message)
+
 
 def readSDTL_next(filename="SD.TL", offset=0):
     """
@@ -347,27 +351,9 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
     -------
     output : str
         Content of the output file.
-
     """
-    expEnergies = []
-    for b in rp.expbeams:
-        expEnergies.extend([k for k in b.intens if k not in expEnergies])
-    expEnergies.sort()
-    minen = max(min(expEnergies), rp.THEO_ENERGIES[0])
-    maxen = min(max(expEnergies), rp.THEO_ENERGIES[1])
-    # extend energy range if they are close together
-    if abs(min(expEnergies) - rp.THEO_ENERGIES[0]) < abs(rp.IV_SHIFT_RANGE[0]):
-        minen = (max(min(expEnergies), rp.THEO_ENERGIES[0])
-                 - rp.IV_SHIFT_RANGE[0])
-    if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(rp.IV_SHIFT_RANGE[1]):
-        maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
-                 + rp.IV_SHIFT_RANGE[1]) + 0.01
-    step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
-    if rp.IV_SHIFT_RANGE[2] is rp.no_value:
-        vincr = step
-    else:
-        vincr = rp.IV_SHIFT_RANGE[2]
-        # step = min(step, vincr)
+    _, theo_range, _, vincr = prepare_rfactor_energy_ranges(rp)
+
     # find correspondence experimental to theoretical beams:
     beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
@@ -390,17 +376,21 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
                      'beams': ff.FortranRecordWriter("25I4"),
                      'weights': ff.FortranRecordWriter("25F4.1")
                      }
-    output = (formatter['energies'].write([minen]).ljust(16) + "EMIN\n")
-    output += (formatter['energies'].write([maxen]).ljust(16) + "EMAX\n")
-    # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES
-    output += (formatter['energies'].write([step]).ljust(16) + "EINCR\n")
+    output = (formatter['energies'].write([theo_range.min]).ljust(16)
+              + "EMIN\n")
+    output += (
+        formatter['energies'].write([theo_range.max + 0.1 * vincr]).ljust(16)
+        + "EMAX\n"
+        )
+    # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES                # TODO: Issue #138
+    output += (formatter['energies'].write([vincr]).ljust(16) + "EINCR\n")
     output += (formatter['int'].write([0]).ljust(16)
                + "IPR - determines amount of output to stdout\n")
     output += (formatter['energies'].write([rp.V0_IMAG]).ljust(16) + "VI\n")
     output += (formatter['energies'].write([0.]).ljust(16) + "V0RR\n")
-    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE[0]]).ljust(16)
+    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE.start]).ljust(16)
                + "V01\n")
-    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE[1]]).ljust(16)
+    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE.stop]).ljust(16)
                + "V02\n")
     output += (formatter['energies'].write([vincr]).ljust(16) + "VINCR\n")
     output += (formatter['int'].write([rp.R_FACTOR_SMOOTH]).ljust(16)
@@ -481,9 +471,8 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
                     "{:.2g} eV ({} independent fit parameters, {:.2g} eV per "
                     "parameter)"
                     .format(totalrange, rp.indyPars, totalrange / rp.indyPars))
-    theoEnergies = int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
-                       / rp.THEO_ENERGIES[2]) + 1
-    if theoEnergies >= len(expEnergies):
+    n_theo_energies = rp.THEO_ENERGIES.n_energies
+    if n_theo_energies >= len(expEnergies):
         logger.warning("Theoretical beams have more data points than "
                        "experimental beams")
         rp.setHaltingLevel(1)
@@ -537,13 +526,15 @@ C MNBMD IS MAX(MNBED,MNBTD)
     output += "      PARAMETER(MNBTD = {})\n".format(len(rp.ivbeams))
     output += "      PARAMETER(MNBMD = {})".format(max(len(rp.expbeams),
                                                        len(rp.ivbeams)))
+    max_nr_data_points = largest_nr_grid_points(rp, rp.theobeams['refcalc'],
+                                                False)
     output += """
 C MNDATA IS MAX. NUMBER OF DATA POINTS IN EXPERIMENTAL BEAMS
-      PARAMETER(MNDATA = {})""".format(int(len(expEnergies)*1.1))
+      PARAMETER(MNDATA = {})""".format(max_nr_data_points)
     # array size parameter only - add some buffer -> *1.1
     output += """
 C MNDATT IS NUMBER OF THEORETICAL DATA POINTS IN EACH BEAM
-      PARAMETER(MNDATT = {})""".format(int(theoEnergies*1.1))
+      PARAMETER(MNDATT = {})""".format(max_nr_data_points)
     output += """
 C MPS IS POPULATION SIZE (number of independent trial structures)
       PARAMETER(MPS = {})""".format(rp.SEARCH_POPULATION)
@@ -669,9 +660,9 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             output += (formatter['int'].write([dlind]).ljust(16)
                        + "Atom number\n")
             output += (
-                formatter['int'].write([len(at.deltasGenerated)]).ljust(16)
+                formatter['int'].write([len(at.known_deltas)]).ljust(16)
                 + "No. of different files for Atom no. {}\n".format(i+1))
-            for (j, deltafile) in enumerate(at.deltasGenerated):
+            for (j, deltafile) in enumerate(at.known_deltas):
                 name = deltafile
                 if frompath:  # need to get the file; if True frompath is Path
                     name = "D{}_".format(k+1) + deltafile
@@ -747,7 +738,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                "vibrational steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
-                             + str(at.oriN).rjust(7) + el.rjust(7)
+                             + str(at.num).rjust(7) + el.rjust(7)
                              + "vib".rjust(7) + str(vib).rjust(7)
                              + constr["vib"].rjust(7) + "\n")
                     nsteps.append(vib)
@@ -756,7 +747,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                "geometrical steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
-                             + str(at.oriN).rjust(7) + el.rjust(7)
+                             + str(at.num).rjust(7) + el.rjust(7)
                              + "geo".rjust(7) + str(geo).rjust(7)
                              + constr["geo"].rjust(7) + "\n")
                     nsteps.append(geo)
@@ -788,7 +779,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             elif spl and spl[0].linkedTo is not None:
                 constr = "#"+str(crp.searchpars.index(spl[0].linkedTo)+1)
             info += (str(parcount).rjust(4) + ("C"+label).rjust(7)
-                     + str(at.oriN).rjust(7) + "-".rjust(7) + "occ".rjust(7)
+                     + str(at.num).rjust(7) + "-".rjust(7) + "occ".rjust(7)
                      + str(occsteps).rjust(7) + constr.rjust(7) + "\n")
             nsteps.append(occsteps)
     # add info for domain step parameters
@@ -855,17 +846,15 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         output += (formatter['int'].write([1]).ljust(16) +
                    "Certain start position (1) or random configuration (0)\n")
         if rp.SEARCH_START == "control":
-            if cull and rp.SEARCH_CULL > 0:
-                if rp.SEARCH_CULL < 1:
-                    ncull = int(round(rp.SEARCH_POPULATION * rp.SEARCH_CULL))
-                else:
-                    if rp.SEARCH_CULL < rp.SEARCH_POPULATION:
-                        ncull = rp.SEARCH_CULL
-                    else:
-                        logger.warning(
-                            "SEARCH_CULL parameter too large: would cull "
-                            "entire population. Culling will be skipped.")
-                        ncull = 0
+            if cull and rp.SEARCH_CULL:
+                try:
+                    ncull = rp.SEARCH_CULL.nr_individuals(rp.SEARCH_POPULATION)
+                except ValueError:  # Too small population
+                    ncull = 0
+                    logger.warning(
+                        "SEARCH_CULL parameter too large: would cull "
+                        "entire population. Culling will be skipped."
+                        )
                 if any([sp.parabolaFit["min"] is not None
                         for sp in rp.searchpars]):
                     # replace one by predicted best
@@ -875,24 +864,25 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 nsurvive = rp.SEARCH_POPULATION - ncull
                 clines = controllines[2:]
                 csurvive = []
-                if (rp.SEARCH_CULL_TYPE == "genetic" or
-                        getPredicted):  # prepare readable clines
+                if rp.SEARCH_CULL.type_.is_genetic or getPredicted:
+                    # prepare readable clines
                     try:
                         csurvive = [readIntLine(s, width=ctrl_width)
                                     for s in clines[:nsurvive]]
                     except ValueError:
-                        if rp.SEARCH_CULL_TYPE == "genetic":
+                        if rp.SEARCH_CULL.type_.is_genetic:
                             logger.warning(
                                 "SEARCH_CULL: Failed to read old "
                                 "configuration from control.chem, cannot run "
-                                "genetic algorithm. Defaulting to cloning.")
+                                "genetic algorithm. Defaulting to cloning."
+                                )
                             rp.setHaltingLevel(1)
                             csurvive = []
                 for (i, line) in enumerate(clines):
                     if i < nsurvive:
                         output += line
-                    elif (rp.SEARCH_CULL_TYPE == "random" or
-                          (rp.SEARCH_CULL_TYPE == "genetic" and csurvive)
+                    elif (rp.SEARCH_CULL.type_.is_random or
+                          (rp.SEARCH_CULL.type_.is_genetic and csurvive)
                           or getPredicted):
                         if getPredicted:
                             bc = None
@@ -902,7 +892,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                 best_config=bc,
                                 mincurv=rp.PARABOLA_FIT["mincurv"])
                             getPredicted = False
-                        elif rp.SEARCH_CULL_TYPE == "random":
+                        elif rp.SEARCH_CULL.type_.is_random:
                             nc = rp.getRandomConfig()
                         else:  # "genetic"
                             nc = rp.getOffspringConfig(csurvive)
@@ -1172,7 +1162,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     # now update site occupations and vibrations:
     for site in sl.sitelist:
         siteats = [at for at in sl.atlist if at.site == site
-                   and not at.layer.isBulk]
+                   and not at.is_bulk]
         if not siteats: # site is only found in bulk
             continue
         for el in site.occ:
@@ -1206,7 +1196,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sortOriginal()
     try:
-        writePOSCAR(tmpslab, filename=fn, comments="all", silent=silent)
+        poscar.write(tmpslab, filename=fn, comments="all", silent=silent)
     except Exception:
         logger.error("Exception occured while writing POSCAR_OUT" + suffix,
                      exc_info=rp.is_debug_mode)
@@ -1215,7 +1205,7 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         tmpslab = sl.makeSymBaseSlab(rp)
         fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
         try:
-            writePOSCAR(tmpslab, filename=fn, silent=silent)
+            poscar.write(tmpslab, filename=fn, silent=silent)
         except Exception:
             logger.warning(
                 "Exception occured while writing POSCAR_OUT_mincell" + suffix,

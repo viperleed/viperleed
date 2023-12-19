@@ -24,14 +24,14 @@ Fortran compilers
 The tleedm (TensErLEED manager) package acts as a wrapper and feature extension to the :term:`TensErLEED` package.
 It requires TensErLEED source files to be present and will compile them (with task-specific adjustments) *at run-time*.
 This requires the presence of a suitable :term:`Fortran` 77 & 90 compiler on the system.
-Unlike the original version of TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`, all TensErLEED versions supported by ViPErLEED (TensErLEED >= 1.6) also require :term:`BLAS` and :term:`LAPACK` libraries to be available.
+Unlike the original version of TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`, all TensErLEED versions supported by ViPErLEED (TensErLEED :math:`\ge` 1.6) also require :term:`BLAS` and :term:`LAPACK` libraries to be available.
 ViPErLEED supports :term:`gfortran` from the GNU Compiler Collection (:term:`gcc`) and the Intel Fortran compiler :term:`ifort` without additional configuration.
 You can use the :ref:`FORTRAN_COMP<fortran_comp>` parameter to use any other Fortran compiler installed on your system.
 ViPErLEED will default to using :term:`ifort` if available.
 Use the parameter :ref:`FORTRAN_COMP<fortran_comp>` to adjust this behavior.
 
 
-The :ref:`structure-search section<sec_search>`, which is the computationally most expensive part of ViPErLEED and TensErLEED, supports compilation and execution with :term:`MPI`.
+The :ref:`structure-search section<sec_search>`, which is usually the computationally most expensive part of ViPErLEED and TensErLEED, supports compilation and execution with :term:`MPI`.
 To use the :term:`MPI` version of TensErLEED, you need to also install an :term:`MPI` implementation and the :term:`MPI` compiler corresponding to your Fortran compiler.
 We recommend using Open MPI on Linux and MacOS.
 The MPI compiler for :term:`gfortran` is :term:`mpifort`, for :term:`ifort` it is :term:`mpiifort` (sic!).
@@ -88,7 +88,7 @@ First, we need to make sure the required build tools (such as Cmake) are present
 
     $ sudo apt install cmake pkg-config build-essential -y
 
-Then, we finally need to configure the Intel one API installation such that it is discovered by by our environment.
+Then, we finally need to configure the Intel one API installation such that it is discovered by our environment.
 For this, we need to source the file `/opt/intel/oneapi/setvars.sh` which sets the required :term:`CLI` arguments.
 We recommend you do this by adding the following line to the end of your shell startup script (usually `~/.bashrc`):
 
@@ -320,7 +320,7 @@ Beamgen and eeasisss
 --------------------
 
 These scripts are used by ViPErLEED during the :ref:`initialization`, to generate :ref:`BEAMLIST<beamlist>` and :ref:`PHASESHIFTS<phaseshifts>`.
-If they are not present, ViPErLEED cannot create these files if required.
+If they are not present, ViPErLEED cannot create this file if required.
 
 To compile these scripts from source, go into the ``viperleed/tensorleed`` directory.
 From there call either ``make intel`` or ``make gcc``, to compile using the Intel or GCC Fortran compilers, respecitvely.
@@ -328,7 +328,7 @@ From there call either ``make intel`` or ``make gcc``, to compile using the Inte
 
 .. _mpirandom:
 
-Randomizer library for TensErLEED <= 1.73
+Randomizer library for TensErLEED < 1.74
 -----------------------------------------
 
 TensErLEED versions up to 1.73 need the :term:`C`-object files called ``random_.o`` and/or ``MPIrandom_.o``.

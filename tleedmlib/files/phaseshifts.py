@@ -15,7 +15,6 @@ from pathlib import Path
 import fortranformat as ff
 import numpy as np
 
-import viperleed
 from viperleed.tleedmlib.leedbase import HARTREE_TO_EV
 from viperleed.tleedmlib.periodic_table import (get_atomic_number,
                                                 get_element_symbol)
@@ -260,7 +259,7 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
         newpsGen, newpsWrite = False, False
 
     # Check that the phaseshifts read in have sufficient lmax
-    elif n_l_values < rp.LMAX[1] + 1:
+    elif n_l_values < rp.LMAX.max + 1:  # +1 because of L=0
         logger.warning(
             "Maximum angular momentum LMAX in PHASESHIFTS "
             "file is lower than required by PARAMETERS. A "
@@ -310,9 +309,9 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen):
     """Check that the energy range of phaseshifts is large enough for rp."""
     checkfail = False
 
-    er = np.arange(rp.THEO_ENERGIES[0],
-                   rp.THEO_ENERGIES[1] + 1e-4,
-                   rp.THEO_ENERGIES[2])
+    er = np.arange(rp.THEO_ENERGIES.start,
+                   rp.THEO_ENERGIES.stop + 1e-4,
+                   rp.THEO_ENERGIES.step)
     psmin = round(phaseshifts[0][0] * HARTREE_TO_EV, 2)
     psmax = round(phaseshifts[-1][0] * HARTREE_TO_EV, 2)
 
@@ -549,7 +548,7 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
 
     figsize = (7, 4)
     linewidth = 1
-    nlplot = min(np.shape(ps_vals)[-1], rp.LMAX[1]+1)
+    nlplot = min(np.shape(ps_vals)[-1], rp.LMAX.max+1)
 
     figs = []
     # colors = ["#000000", "#004949", "#009292", "#ff6db6", "#ffb6db",
@@ -574,7 +573,7 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         ax.set_xlim((np.min(energies), np.max(energies)))
         for j in range(0, nlplot):
             ax.plot(energies, ps_vals[:, i, j],
-                    linewidth=linewidth, label="L = {}".format(j),
+                    linewidth=linewidth, label=f"$\ell$ = {j}",
                     c=colors[j % len(colors)],
                     ls=styles[(j // len(colors)) % len(styles)])
         legend = ax.legend(ncol=(nlplot // 8 + 1))

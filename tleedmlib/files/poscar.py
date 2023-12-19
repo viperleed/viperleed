@@ -11,9 +11,9 @@ Functions for reading and writing POSCAR files. Also defines the
 POSCARError specific exception, as well as some subclasses.
 """
 
-from io import TextIOBase
 from collections import defaultdict
 from contextlib import AbstractContextManager
+from io import TextIOBase
 import logging
 from pathlib import Path
 
@@ -22,7 +22,7 @@ import numpy as np
 from viperleed.tleedmlib.classes import atom as tl_atom, slab as tl_slab
 
 
-_LOGGER = logging.getLogger("tleedm.files.poscar")
+_LOGGER = logging.getLogger('tleedm.files.poscar')
 
 
 class POSCARError(Exception):
@@ -33,13 +33,14 @@ class POSCARSyntaxError(POSCARError):
     """An exceptions for syntax errors in POSCAR files."""
 
 
-def readPOSCAR(filename='POSCAR'):
+def read(filename='POSCAR'):
     """Return a Slab with the contents of a POSCAR file.
 
     Parameters
     ----------
-    filename : str or Path, optional
-        The file to read from. The default is 'POSCAR'.
+    filename : str or Path or TextIOBase, optional
+        The file to read from. May be an (open) file object.
+        The default is 'POSCAR'.
 
     Returns
     -------
@@ -66,19 +67,15 @@ def readPOSCAR(filename='POSCAR'):
         If no (or too few) atomic coordinate is read.
     """
     if isinstance(filename, TextIOBase):
-        filepath = filename
-    else:
-        filepath = Path(filename)
-        if not filepath.is_file():
-            _LOGGER.error("POSCAR not found.")
-            raise FileNotFoundError(f"POSCAR file at {filepath} not found.")
+        poscar = POSCARStreamReader(filename)
+        return poscar.read()
 
-    with POSCARReader(filepath) as poscar:
+    with POSCARFileReader(filename) as poscar:
         return poscar.read()
 
 
-def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
-                silent=False, relax_info=None):
+def write(slab, filename='CONTCAR', reorder=False,
+          comments='none', silent=False):
     """Write a POSCAR-style file from a slab.
 
     If a file named 'POSCAR' exists in the current folder, its first,
@@ -88,8 +85,8 @@ def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
     ----------
     slab : Slab
         The Slab object to write.
-    filename : str or Path, optional
-        The file name to write to. The default is 'CONTCAR'.
+    filename : str or Path or TextIOBase, optional
+        The file(name) to write to. The default is 'CONTCAR'.
     reorder : bool, optional
         If True, atoms will be sorted by z coordinate; in all
         cases atoms are sorted by original-element order. The
@@ -103,7 +100,6 @@ def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
           to a or b (meant to be used with POSCAR_oricell)
         - 'bulk' is like 'none' but writes the space group
           (meant to be used with POSCAR_bulk).
-        - 'relax'
     silent : bool, optional
         If True, will print less to log.
 
@@ -114,17 +110,21 @@ def writePOSCAR(slab, filename='CONTCAR', reorder=False, comments='none',
     """
     if reorder:
         slab.sort_by_z()
-    slab.sort_by_element()   # this is the minimum that has to happen
+    slab.sort_by_element()   # This is the minimum that has to happen
+
+    if isinstance(filename, TextIOBase):
+        poscar = POSCARStreamWriter(filename, comments=comments)
+        poscar.write(slab)
+        return
 
     try:  # pylint: disable=too-many-try-statements
-        with POSCARWriter(filename, comments, relax_info) as poscar:
+        with POSCARFileWriter(filename, comments=comments) as poscar:
             poscar.write(slab)
     except OSError:
-        _LOGGER.error(f"Failed to write {filename}")
+        _LOGGER.error(f'Failed to write {filename}')
         raise
     if not silent:
-        _LOGGER.log(1, f"writePOSCAR() comments: {comments}")
-        _LOGGER.debug(f"Wrote to {filename} successfully")
+        _LOGGER.debug(f'Wrote to {filename} successfully')
 
 
 def ensure_away_from_c_edges(positions, eps):
@@ -153,14 +153,14 @@ def ensure_away_from_c_edges(positions, eps):
         rigidly to fit the (eps, 1 - eps) range.
     """
     if not 0 < eps < 1:
-        raise ValueError(f"ensure_away_from_c_edges: Invalid {eps=}. "
-                         "Should be between zero and one.")
+        raise ValueError(f'ensure_away_from_c_edges: Invalid eps={eps}. '
+                         'Should be between zero and one.')
     positions = np.asarray(positions)
     min_c, max_c = positions[:, 2].min(), positions[:, 2].max()
     if max_c - min_c > 1 - 2*eps:                                               # TODO: couldn't we expand the unit cell?
         raise ValueError(
-            "ensure_away_from_c_edges: Cannot shift positions "
-            f"to fit between {eps} and {1-eps} along the c axis."
+            'ensure_away_from_c_edges: Cannot shift positions '
+            f'to fit between {eps} and {1-eps} along the c axis.'
             )
     offset = np.zeros(3)
     if max_c < eps or max_c > 1 - eps:
@@ -171,16 +171,17 @@ def ensure_away_from_c_edges(positions, eps):
     return positions
 
 
-class POSCARReader(AbstractContextManager):
-    """A context manager for reading POSCAR files into a slab."""
+class POSCARReader:
+    """Base class for reading POSCAR structures into a Slab."""
 
-    def __init__(self, filename, ucell_eps=1e-4, min_frac_dist=1e-4):
+    def __init__(self, source, *, ucell_eps=1e-4, min_frac_dist=1e-4):
         """Initialize instance.
 
         Parameters
         ----------
-        filename : str or Path
-            The path to the file to be read.
+        source : object
+            Positional-only. The source from which the POSCAR
+            structure should be read.
         ucell_eps : float, optional
             Cartesian tolerance (Angstrom). All the unit cell
             Cartesian components smaller than ucell_eps will
@@ -190,42 +191,21 @@ class POSCARReader(AbstractContextManager):
             edges of the unit cell. If atoms are closer, they
             are shifted, if possible.
         """
-        super().__init__()
-        if isinstance(filename, TextIOBase):
-            self.filename = filename
-        else:
-            self.filename = Path(filename)
-        self.file_object = None
+        self._source = source
         self.ucell_eps = ucell_eps
         self.min_frac_dist = min_frac_dist
 
-    def __enter__(self):
-        """Enter context."""
-        if not isinstance(self.filename, TextIOBase):
-            self.file_object = self.filename.open('r', encoding='utf-8')
-        else:
-            self.file_object = self.filename
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Close file object when exiting."""
-        if not isinstance(self.filename, TextIOBase):
-            self.file_object.close()
-            super().__exit__(exc_type, exc_val, exc_tb)
+    @property
+    def stream(self):
+        """Return the stream from which to read structure information."""
+        raise NotImplementedError
 
     def read(self):
-        """Return a slab with info read from file."""
-        if self.file_object is None or self.file_object.closed:
-            raise ValueError(
-                "I/O operation on closed file. Use\n"
-                "with POSCARReader(filename) as poscar:\n"
-                "    slab = poscar.read()"
-                )
-
+        """Return a slab with info read from source."""
         slab = tl_slab.Slab()
 
-        next(self.file_object, None)  # Skip first line: comment
-        slab.poscar_scaling = float(next(self.file_object, '1').split()[0])     # TODO: POSCAR wiki says it's more complex!
+        next(self.stream, None)  # Skip first line: comment
+        slab.poscar_scaling = float(next(self.stream, '1').split()[0])          # TODO: POSCAR wiki says it's more complex!
 
         self._read_unit_cell(slab)    # Three lines of unit cell
         element_info = self._read_elements(slab)
@@ -237,9 +217,9 @@ class POSCARReader(AbstractContextManager):
             positions = ensure_away_from_c_edges(positions, self.min_frac_dist)
         except ValueError:
             _LOGGER.warning(
-                "POSCAR contains atoms close to c=0 and atoms close "
-                "to c=1. This cannot be corrected automatically and "
-                "will likely cause problems with layer assignment!"
+                'POSCAR contains atoms close to c=0 and atoms close '
+                'to c=1. This cannot be corrected automatically and '
+                'will likely cause problems with layer assignment!'
                 )
 
         # And add them to the slab
@@ -276,16 +256,16 @@ class POSCARReader(AbstractContextManager):
         """
         n_positions, n_coords = np.shape(positions)
         if n_positions != sum(element_counts):
-            raise ValueError("Inconsistent number of atomic fractional "
-                             f"coordinates ({n_positions}) and chemical "
-                             f"element counts ({sum(element_counts)}).")
+            raise ValueError('Inconsistent number of atomic fractional '
+                             f'coordinates ({n_positions}) and chemical '
+                             f'element counts ({sum(element_counts)}).')
         if n_coords != 3:
-            raise ValueError("Invalid fractional coordinates. Expected "
-                             f"3 components, found {n_coords}.")
+            raise ValueError('Invalid fractional coordinates. Expected '
+                             f'3 components, found {n_coords}.')
         if len(elements) != len(element_counts):
-            raise ValueError("Inconsistent number of items in elements "
-                             f"({len(elements)} and in element_counts "
-                             f"({len(element_counts)}")
+            raise ValueError('Inconsistent number of items in elements '
+                             f'({len(elements)} and in element_counts '
+                             f'({len(element_counts)}')
 
         positions = iter(positions)
         atoms = defaultdict(list)  # Merge same-element blocks
@@ -305,27 +285,27 @@ class POSCARReader(AbstractContextManager):
         """Return an array of fractional atomic coordinates read from file_."""
         n_atoms = sum(slab.n_per_elem.values())
         positions = []
-        for line in self.file_object:
+        for line in self.stream:
             coordinates = line.split()
             if not coordinates:
-                _LOGGER.debug("POSCAR: Empty line found; "
-                             "stopping position readout")
+                _LOGGER.debug('POSCAR: Empty line found; '
+                              'stopping position readout')
                 break
             try:
                 positions.append([float(c) for c in coordinates[:3]])
             except ValueError:  # Reached the optional "Lattice velocities"
-                _LOGGER.debug(f"POSCAR: no coordinates in {line!r}; "
-                             "stopping position readout")
+                _LOGGER.debug(f'POSCAR: no coordinates in {line!r}; '
+                              'stopping position readout')
                 break
             if len(positions) >= n_atoms:
                 break
 
         if not positions:
-            raise POSCARSyntaxError("POSCAR: No atomic coordinates found.")
+            raise POSCARSyntaxError('POSCAR: No atomic coordinates found.')
         if len(positions) < n_atoms:
             raise POSCARSyntaxError(
-                "POSCAR: Too few atomic coordinates. Found "
-                f"{len(positions)}, expected {n_atoms}"
+                'POSCAR: Too few atomic coordinates. Found '
+                f'{len(positions)}, expected {n_atoms}'
                 )
 
         # pylint: disable=redefined-variable-type
@@ -339,10 +319,8 @@ class POSCARReader(AbstractContextManager):
 
     def _read_elements(self, slab):
         """Return chemical elements and counts, and update slab."""
-        file_ = self.file_object
-
         # Line of element labels, then their counts
-        elements = [el.capitalize() for el in next(file_, '').split()]
+        elements = [el.capitalize() for el in next(self.stream, '').split()]
 
         # Element labels line is optional, but we need it
         try:
@@ -353,11 +331,11 @@ class POSCARReader(AbstractContextManager):
             elements = []
         if not elements:
             raise POSCARSyntaxError(
-                "POSCAR: Element labels line not found. This is an optional "
-                "line in the POSCAR specification, but ViPErLEED needs it."
+                'POSCAR: Element labels line not found. This is an optional '
+                'line in the POSCAR specification, but ViPErLEED needs it.'
                 )
 
-        element_counts = [int(c) for c in next(file_, '').split()]
+        element_counts = [int(c) for c in next(self.stream, '').split()]
         if len(element_counts) != len(elements):
             raise POSCARSyntaxError('Length of element list does not match '
                                     'length of atoms-per-element list')
@@ -367,12 +345,12 @@ class POSCARReader(AbstractContextManager):
         slab.n_per_elem = dict(n_per_elem)
         if len(slab.n_per_elem) != len(elements):
             logging.warning(
-                "POSCAR: atoms are not element-contiguous, i.e., "
-                "there are multiple blocks with the same chemical-"
-                f"species label ({elements}). This structure will "
-                "not be preserved, i.e., atoms will be re-sorted "
-                f"(to {list(slab.n_per_elem.keys())}) so that only "
-                "one block for each element is present."
+                'POSCAR: atoms are not element-contiguous, i.e., '
+                'there are multiple blocks with the same chemical-'
+                f'species label ({elements}). This structure will '
+                'not be preserved, i.e., atoms will be re-sorted '
+                f'(to {list(slab.n_per_elem.keys())}) so that only '
+                'one block for each element is present.'
                 )
         return elements, element_counts
 
@@ -395,20 +373,20 @@ class POSCARReader(AbstractContextManager):
             case the information read is not a valid plane group.
         """
         # Skip the optional "S[elective Dynamics]" line
-        cartesian_line = next(self.file_object, '').lower()
+        cartesian_line = next(self.stream, '').lower()
         if cartesian_line.startswith('s'):
             _LOGGER.debug("POSCAR: skipping 'Selective dynamics' line (no. 9)")
-            cartesian_line = next(self.file_object, '').lower()
+            cartesian_line = next(self.stream, '').lower()
         cartesian = cartesian_line.startswith(('c', 'k'))
 
         # Check whether POSCAR was pre-processed, i.e., whether
         # the 'Plane group = ...' comment is already there
         plane_group = 'unknown'
-        if all(s in cartesian_line for s in ("plane group = ", "  n")):
-            _, plane_group_str = cartesian_line.split("plane group = ")
-            plane_group_str = plane_group_str.split("  n")[0]
+        if all(s in cartesian_line for s in ('plane group = ', '  n')):
+            _, plane_group_str = cartesian_line.split('plane group = ')
+            plane_group_str = plane_group_str.split('  n')[0]
             plane_group_str = plane_group_str.split('(')[0].strip()
-            if not plane_group_str.startswith("*"):
+            if not plane_group_str.startswith('*'):
                 slab.preprocessed = True
             plane_group = plane_group_str
         return cartesian, plane_group
@@ -416,7 +394,7 @@ class POSCARReader(AbstractContextManager):
     def _read_unit_cell(self, slab):
         """Read unit-cell vectors into slab from the next three lines."""
         ucell = []
-        for line in self.file_object:
+        for line in self.stream:
             try:
                 ucell.append([float(coord) for coord in line.split()])
             except ValueError:
@@ -426,9 +404,9 @@ class POSCARReader(AbstractContextManager):
         slab.ucell = np.array(ucell).T * slab.poscar_scaling
         if slab.ucell.shape != (3, 3):
             n_vec, n_comp = slab.ucell.shape
-            _err = ("Invalid unit-cell vectors: not enough vectors "
-                    f"({n_vec}/3) or not enough Cartesian components "
-                    f"({n_comp}/3).")
+            _err = ('Invalid unit-cell vectors: not enough vectors '
+                    f'({n_vec}/3) or not enough Cartesian components '
+                    f'({n_comp}/3).')
             _LOGGER.error(_err)
             raise POSCARSyntaxError(_err)
 
@@ -436,68 +414,131 @@ class POSCARReader(AbstractContextManager):
         slab.ucell[abs(slab.ucell) < self.ucell_eps] = 0.                       # TODO: was done only in x,y. OK to do all?
 
 
-class POSCARWriter(AbstractContextManager):
-    """A context manager for writing a slab to POSCAR."""
+class POSCARFileReader(AbstractContextManager, POSCARReader):
+    """A context manager for reading POSCAR files into a slab."""
 
-    def __init__(self, filename, comments='none', relax_info=None):
-        """Initialize instance."""
-        super().__init__()
-        if isinstance(filename, TextIOBase):
-            self.filename = filename
-        else:
-            self.filename = Path(filename)
-        self.comments = comments
-        self.file_object = None
-        self.slab = None
-        self.relax_info = relax_info
-        if self.comments == 'relax':
-            self._check_relax_info()
+    def __init__(self, filename, *, ucell_eps=1e-4, min_frac_dist=1e-4):
+        """Initialize instance.
 
-        if not isinstance(self.filename, TextIOBase):
-            # Take header line from existing POSCAR, or use a dummy header
-            poscar = Path('POSCAR')
-            if poscar.is_file():
-                with poscar.open('r', encoding='utf-8') as _file:
-                    self.header = _file.readline()
-            else:
-                self.header = 'unknown'
-            if not self.header.endswith('\n'):
-                self.header += '\n'
-        else:
-            self.header = '\n'
+        Parameters
+        ----------
+        filename : str or Path
+            The path to the file to be read.
+        ucell_eps : float, optional
+            Cartesian tolerance (Angstrom). All the unit cell
+            Cartesian components smaller than ucell_eps will
+            be zeroed exactly. Default is 1e-4.
+        min_frac_dist : float, optional
+            Smallest fractional distance from the c=0 and c=1
+            edges of the unit cell. If atoms are closer, they
+            are shifted, if possible.
+        """
+        super().__init__(Path(filename),
+                         ucell_eps=ucell_eps,
+                         min_frac_dist=min_frac_dist)
+        self._file_object = None
+
+    @property
+    def filename(self):
+        """Return the name of the file from which to read."""
+        return self._source  # From POSCARReader
+
+    @property
+    def stream(self):
+        """Return the stream from which to read structure information."""
+        return self._file_object
 
     def __enter__(self):
         """Enter context."""
-        if isinstance(self.filename, TextIOBase):
-            self.file_object = self.filename
-        else:
-            self.file_object = self.filename.open('w', encoding='utf-8')
+        if not self.filename.is_file():
+            _LOGGER.error('POSCAR not found.')
+            raise FileNotFoundError(
+                f'POSCAR file at {self.filename} not found.'
+                )
+        self._file_object = self.filename.open('r', encoding='utf-8')
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Close file object when exiting."""
-        if isinstance(self.filename, TextIOBase):
-            return
-        self.file_object.close()
+        try:
+            self._file_object.close()
+        except AttributeError:
+            pass
         super().__exit__(exc_type, exc_val, exc_tb)
 
-    def write(self, slab):
-        """Write the info contained in slab to file."""
-        if self.file_object is None or self.file_object.closed:
+    def read(self):
+        """Return a slab with info read from file."""
+        if self._file_object is None or self._file_object.closed:
             raise ValueError(
-                "I/O operation on closed file. Use\n"
-                "with POSCARWriter(filename) as poscar:\n"
-                "    poscar.write(slab)"
+                'I/O operation on closed file. Use\n'
+                f'with {type(self).__name__}(filename) as poscar:\n'
+                '    slab = poscar.read()'
                 )
+        return super().read()
 
-        self.file_object.writelines(self.header)
-        self.file_object.writelines(self._get_scaling(slab))
-        self.file_object.writelines(self._get_unit_cell(slab))
-        self.file_object.writelines(self._get_elements_and_numbers(slab))
-        if self.comments == 'relax':
-            self.file_object.writelines("Selective dynamics\n")
-        self.file_object.writelines(self._get_cartesian_and_group_line(slab))
-        self.file_object.writelines(self._get_atom_coordinates(slab))
+
+class POSCARStreamReader(POSCARReader):
+    """Class for reading a POSCAR structure from an open stream."""
+
+    @property
+    def stream(self):
+        """Return the stream from which to read structure information."""
+        return self._source
+
+    def read(self):
+        """Return a slab with info read from file."""
+        if self.stream.closed:
+            raise ValueError('I/O operation on closed stream.')
+        return super().read()
+
+
+class POSCARWriter:
+    """Base class for writing a Slab to POSCAR format."""
+
+    def __init__(self, target, *, comments='none', **__kwargs):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        target : object
+            Positional-only. An object to be used for writing the
+            structure in POSCAR format. Subclasses are more specific
+            as to which objects they require.
+        comments : str, optional
+            Defines whether additional information for each atom
+            should be printed:
+            - 'none' writes a normal POSCAR (Default)
+            - 'all' all annotations
+            - 'nodir' all annotations except directions relating
+              to a or b (meant to be used with POSCAR_oricell)
+            - 'bulk' is like 'none' but writes the space group
+              (meant to be used with POSCAR_bulk).
+        **__kwargs : object, optional
+            Other unused keyword-only arguments.
+
+        Returns
+        -------
+        None.
+        """
+        self._target = target
+        self.comments = comments
+        self.slab = None
+        self.header = '\n'  # Default is no header
+
+    @property
+    def stream(self):
+        """Return the stream to which the POSCAR should be written."""
+        raise NotImplementedError
+
+    def write(self, slab):
+        """Write the info in slab to the self.stream as a POSCAR."""
+        self.stream.write(self.header)
+        self.stream.writelines(self._get_scaling(slab))
+        self.stream.writelines(self._get_unit_cell(slab))
+        self.stream.writelines(self._get_elements_and_numbers(slab))
+        self._write_selective_dynamics_line()
+        self.stream.writelines(self._get_cartesian_and_group_line(slab))
+        self.stream.writelines(self._get_atom_coordinates(slab))
 
     @staticmethod
     def _get_scaling(slab):
@@ -517,20 +558,14 @@ class POSCARWriter(AbstractContextManager):
         yield ''.join(f'{el:>5}' for el in slab.elements) + '\n'
         yield ''.join(f'{n:>5}' for n in slab.n_per_elem.values()) + '\n'
 
-    def _check_relax_info(self):
-        if self.relax_info is None and self.comments == 'relax':
-            raise ValueError("Specified comments='relax' but missing "
-                             "relaxation_info.")
-        if self.relax_info is not None and self.comments != 'relax':
-            _LOGGER.warning("Specified relaxation_info but comments is not"
-                           "'relax'.")
-        if (self.relax_info is not None
-            and (self.relax_info['above_c'] <= 0.0
-            or self.relax_info['above_c'] >= 1.0)):
-            raise ValueError("Invalid relaxation_info: above_c must be in range"
-                             "[0,1].")
-        self.above_c = self.relax_info['above_c']
-        self.relax_c_only = self.relax_info['c_only']
+    def _get_atom_coordinates(self, slab):
+        """Yield a line of coordinates and other info for each atom in slab."""
+        more_than_one = (link for link in slab.linklists if len(link) > 1)
+        linklists = {id(link): i+1 for i, link in enumerate(more_than_one)}
+        for i, atom in enumerate(slab.atlist):
+            line = ''.join(f'{coord:20.16f}' for coord in atom.pos)
+            line += self._get_comments_for_atom(atom, i, linklists)
+            yield line + '\n'
 
     def _get_cartesian_and_group_line(self, slab):
         """Yield the line for "Direct", group and other column headers."""
@@ -565,47 +600,191 @@ class POSCARWriter(AbstractContextManager):
                      f'{"Linking":>9}{"FreeDir":>12}: see POSCAR')
         yield line + '\n'
 
-    def _get_atom_coordinates(self, slab):
-        """Yield a line of coordinates and other info for each atom in slab."""
-        more_than_one = (link for link in slab.linklists if len(link) > 1)
-        linklists = {id(link): i+1 for i, link in enumerate(more_than_one)}
-        for i, atom in enumerate(slab.atlist):
-            line = ''.join(f"{coord:20.16f}" for coord in atom.pos)
-            if self.comments in ('none', 'bulk'):
-                # Only coordinates
-                yield line + '\n'
-                continue
-            if self.comments == 'relax':
-                if atom.pos[2] <= self.above_c:
-                    relax_pos_flags = "   F   F   F"
-                elif atom.pos[2] > self.above_c and self.relax_c_only:
-                    relax_pos_flags = "   F   F   T"
-                else:
-                    relax_pos_flags = "   T   T   T"
-                yield line + relax_pos_flags + '\n'
-                continue
+    def _get_comments_for_atom(self, atom, atom_index, linklists):
+        """Return a line of comments for atom at atom_index."""
+        if self.comments in ('none', 'bulk'):
+            # Only coordinates
+            return ''
 
-            line += (f"{i+1:>5}"                           # N
-                     # f"{atom.el}{NperElCount}".rjust(9)  # NperEl
-                     f"{atom.site.label:>12}"              # SiteLabel
-                     f"{atom.layer.num + 1:>7}")           # Layer
-            if len(atom.linklist) <= 1:                    # Linking
-                linked = 'none'
-            else:
-                linked = linklists[id(atom.linklist)]
-            line += f"{linked:>9}"
-            if self.comments == 'nodir':
-                yield line + '\n'
-                continue
-            #                                              # FreeDir
-            _free_dir = ""
-            if atom.layer.isBulk:
-                _free_dir = 'bulk'
-            elif isinstance(atom.freedir, np.ndarray):
-                _free_dir = str(atom.freedir)  # has to be made into a string
-            elif atom.freedir == 0:
-                _free_dir = 'locked'
-            else:
-                _free_dir = 'free'
-            line += f"{_free_dir:>12}"
-            yield line + '\n'
+        line = (f'{atom_index+1:>5}'                  # N
+                # f'{atom.el}{NperElCount}'.rjust(9)  # NperEl
+                f'{atom.site.label:>12}'              # SiteLabel
+                f'{atom.layer.num + 1:>7}')           # Layer
+        if len(atom.linklist) <= 1:                   # Linking
+            linked = 'none'
+        else:
+            linked = linklists[id(atom.linklist)]
+        line += f'{linked:>9}'
+        if self.comments == 'nodir':
+            return line
+        #                                              # FreeDir
+        _free_dir = ""
+        if atom.is_bulk:
+            _free_dir = 'bulk'
+        elif isinstance(atom.freedir, np.ndarray):
+            _free_dir = str(atom.freedir)  # has to be made into a string
+        elif atom.freedir == 0:
+            _free_dir = 'locked'
+        else:
+            _free_dir = 'free'
+        line += f"{_free_dir:>12}"
+        return line
+
+    def _write_selective_dynamics_line(self):
+        """Write the 'Selective dynamics' line needed for DFT relaxation."""
+
+
+class POSCARFileWriter(AbstractContextManager, POSCARWriter):
+    """A context manager for writing a slab to POSCAR."""
+
+    def __init__(self, filename, *, comments='none'):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        filename : str or Path
+            The path to the file to be read.
+        comments : str, optional
+            Defines whether additional information for each atom
+            should be printed:
+            - 'none' writes a normal POSCAR (Default)
+            - 'all' all annotations
+            - 'nodir' all annotations except directions relating
+              to a or b (meant to be used with POSCAR_oricell)
+            - 'bulk' is like 'none' but writes the space group
+              (meant to be used with POSCAR_bulk).
+
+        Returns
+        -------
+        None.
+        """
+        super().__init__(Path(filename), comments=comments)
+        self._file_object = None
+
+        # Take header line from existing POSCAR, or use a dummy header
+        poscar = Path('POSCAR')
+        if poscar.is_file():
+            with poscar.open('r', encoding='utf-8') as _file:
+                self.header = _file.readline()
+        else:
+            self.header = 'unknown'
+        if not self.header.endswith('\n'):
+            self.header += '\n'
+
+    @property
+    def filename(self):
+        """Return the path to the file to be written."""
+        return self._target
+
+    @property
+    def stream(self):
+        """Return the stream to which the POSCAR should be written."""
+        return self._file_object
+
+    def __enter__(self):
+        """Enter context."""
+        self._file_object = self.filename.open('w', encoding='utf-8')
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Close file object when exiting."""
+        try:
+            self._file_object.close()
+        except AttributeError:
+            pass
+        super().__exit__(exc_type, exc_val, exc_tb)
+
+    def write(self, slab):
+        """Write the info contained in slab to file."""
+        if self._file_object is None or self._file_object.closed:
+            raise ValueError(
+                'I/O operation on closed file. Use\n'
+                f'with {type(self).__name__}(filename) as poscar:\n'
+                '    poscar.write(slab)'
+                )
+        super().write(slab)
+
+
+class POSCARStreamWriter(POSCARWriter):
+    """Class for writing a Slab to an open stream in POSCAR format."""
+
+    @property
+    def stream(self):
+        """Return the stream to which the POSCAR should be written."""
+        return self._target
+
+    def write(self, slab):
+        """Write the info contained in slab to the current stream."""
+        if self.stream.closed:
+            raise ValueError('I/O operation on closed stream')
+        super().write(slab)
+
+
+class VASPPOSCARWriter(POSCARStreamWriter):
+    """Class for writing a Slab to a POSCAR, ready for VASP relaxation."""
+
+    def __init__(self, stream, *, comments='none', relax_info=None):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        stream : TextIOBase
+            The stream to which the POSCAR will be written.
+        comments : str, optional
+            Defines whether additional information for each atom
+            should be printed:
+            - 'none' writes a normal POSCAR (Default)
+            - 'all' all annotations
+            - 'nodir' all annotations except directions relating
+              to a or b (meant to be used with POSCAR_oricell)
+            - 'bulk' is like 'none' but writes the space group
+              (meant to be used with POSCAR_bulk).
+            This argument is ignored if relax_info is given.
+        relax_info : dict or None, optional
+            Contains optional information on how the slab should
+            be relaxed. Keys in use:
+            - 'above_c' : float, optional
+                Only atoms above this c fraction are allowed to move.
+                Should be between zero and one (both included). If not
+                given, all atoms can move.
+            - 'c_only' : bool, optional
+                Are movements allowed only along c (True) or also in
+                plane (False)? Default is True.
+
+        Raises
+        ------
+        ValueError
+            If the 'above_c' key of relax_info is not a
+            floating-point number between 0 and 1 (included)
+        """
+        super().__init__(stream, comments=comments)
+        if relax_info is None:
+            relax_info = {}
+        self.relax_info = relax_info
+        self._check_relax_info()
+
+    def _check_relax_info(self):
+        """Raise if self.relax_info contains inappropriate values."""
+        above_c = self.relax_info.get('above_c', 0)
+        if not 0 <= above_c <= 1:
+            raise ValueError('Invalid relax_info: "above_c" '
+                             'must be in range [0, 1].')
+
+    def _write_selective_dynamics_line(self):
+        """Write the 'Selective dynamics' line needed for DFT relaxation."""
+        if self.relax_info:
+            self.stream.write('Selective dynamics\n')
+
+    def _get_comments_for_atom(self, atom, atom_index, linklists):
+        """Return a line of comments for atom at atom_index."""
+        if not self.relax_info:
+            return super()._get_comments_for_atom(atom, atom_index, linklists)
+
+        c_cutoff = self.relax_info.get('above_c', -np.inf)
+        relax_only_along_c = self.relax_info.get('c_only', True)
+
+        if atom.pos[2] <= c_cutoff:
+            return '   F   F   F'
+        if relax_only_along_c:
+            return '   F   F   T'
+        return '   T   T   T'

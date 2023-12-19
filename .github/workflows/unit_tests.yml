@@ -3,7 +3,7 @@ name: Run unit tests
 on: workflow_dispatch
 
 jobs:
-  build-linux:
+  pytest-linux:
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 5
@@ -38,8 +38,11 @@ jobs:
         cd TensErLEED-v1.73
         make gcc
         cd ../..
+    - name: Install pytest dependencies
+      run: |
+        conda install wrapt parameterized
+        pip install ase pytest pytest-cases pytest-subtests
     - name: Test with pytest
       run: |
-        conda install pytest wrapt parameterized
         cd tests
         pytest

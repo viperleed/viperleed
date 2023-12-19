@@ -69,8 +69,6 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`OPTIMIZE<OPTIMIZE>`                               | Controls behaviour of :ref:`full-dynamic optimization<Fdoptimization>` runs                                                             |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`PARABOLA_FIT<PARABOLA_FIT>`                       | Parameters for N-dimensional parabola fit during the search (experimental)                                                              |
-  +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`PHASESHIFT_EPS<PHASESHIFTMIN>`                    | Cutoff in phaseshifts magnitudes to determine :ref:`LMAX<LMAX>`                                                                         |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`                     | Change appearance of I(V) plot files like :ref:`Rfactor_plots.pdf<Rfactorplots>`                                                        |

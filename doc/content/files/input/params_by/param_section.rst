@@ -187,8 +187,6 @@ Behaviour is also governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`. The 
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
   | **→** :ref:`N_CORES<NCORES>`                   | The number of CPUs to use                                                                        |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
-  | :ref:`PARABOLA_FIT<PARABOLA_FIT>`              | Parameters for N-dimensional parabola fit during the search                                      |
-  +------------------------------------------------+--------------------------------------------------------------------------------------------------+
   | :ref:`R_FACTOR_TYPE<RFACTORTYPE>`              | Which definition of the R-factor to use                                                          |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
   | :ref:`R_FACTOR_SMOOTH<RFACTORSMOOTH>`          | How strongly experimental beams are smoothed                                                     |

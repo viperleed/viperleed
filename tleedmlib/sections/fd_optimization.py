@@ -42,7 +42,7 @@ from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
 from viperleed.tleedmlib.files.ioerrorcalc import plot_r_plus_var_r, draw_error
 from viperleed.tleedmlib.files.parameters import modifyPARAMETERS, FD_PARAMETERS, AVAILABLE_MINIMIZERS, apply_scaling
-from viperleed.tleedmlib.files.poscar import writePOSCAR
+from viperleed.tleedmlib.files import parameters, poscar
 from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
 from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 
@@ -120,6 +120,26 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     finally:
         os.chdir(home_dir)
     return rp.last_R, rfaclist
+
+
+def apply_scaling(sl, rp, which, scale):
+    m = np.eye(3)
+    if "a" in which:
+        m[0, 0] *= scale
+    if "b" in which:
+        m[1, 1] *= scale
+    if "c" in which:
+        m[2, 2] *= scale
+    sl.getFractionalCoordinates()
+    sl.ucell = np.dot(sl.ucell, m)
+    sl.getCartesianCoordinates(updateOrigin=True)
+    sl.bulkslab.getFractionalCoordinates()
+    sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
+    sl.bulkslab.getCartesianCoordinates()
+    if isinstance(rp.BULK_REPEAT, (np.floating, float)):
+        rp.BULK_REPEAT *= scale
+    elif rp.BULK_REPEAT is not None:
+        rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
 
 
 def fd_optimization(sl, rp):
@@ -298,22 +318,19 @@ def store_fd_param_to_file(sl, rp, which, new_min):
     comment = "Found by full-dynamic optimization"
     if which == "v0i":
         rp.V0_IMAG = new_min
-        modifyPARAMETERS(rp, "V0_IMAG", new=f"{new_min:.4f}", comment=comment)
+        parameters.modify(rp, "V0_IMAG", comment=comment)
     elif which in ("theta", "phi"):
         setattr(rp, which.upper(), new_min)
         if rp.THETA < 0:
             rp.THETA = abs(rp.THETA)
             rp.PHI += 180
         rp.PHI = rp.PHI % 360
-        modifyPARAMETERS(rp, "BEAM_INCIDENCE",
-                         new=f"THETA {rp.THETA:.4f}, PHI {rp.PHI:.4f}",
-                         comment=comment)
+        parameters.modify(rp, "BEAM_INCIDENCE", comment=comment)
     else:       # geometry: x is a scaling factor for the unit cell
         apply_scaling(sl, rp, which, new_min)
         if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
-            vec_str = "[{:.5f} {:.5f} {:.5f}]".format(*rp.BULK_REPEAT)
-            modifyPARAMETERS(rp, "BULK_REPEAT", new=vec_str, comment=comment)
-        writePOSCAR(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
+            parameters.modify(rp, "BULK_REPEAT", comment=comment)
+        poscar.write(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
 
     # clean up tmpdirs
     # for path in tmpdirs:
