@@ -8,77 +8,13 @@ Created on Oct 22 2021
 
 Tensor LEED Manager section Full-dynamic Optimization
 """
-from pathlib import Path
-
 import logging
-import os
-import shutil
 
 from viperleed.tleedmlib.classes.rparams._rparams import FD_PARAMETERS, AVAILABLE_MINIMIZERS, apply_scaling
 from viperleed.tleedmlib.files import parameters, poscar
-from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
-from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 from viperleed.tleedmlib.classes.fd_optimizer import *
 
 logger = logging.getLogger("tleedm.fdopt")
-
-
-def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
-    """
-    Runs reference calculation and r-factor calculation, returns R.
-
-    Parameters
-    ----------
-    sl : Slab
-        Object containing atomic configuration
-    rp : Rparams
-        Object containing run parameters
-    work_dir : pathlike, optional
-        The directory to execute the calculations in. The default is ".".
-    home_dir : pathlike, optional
-        The directory to return to after finishing. The default is the current
-        working directory.
-
-    Returns
-    -------
-    rfactor : float
-        The r-factor obtained for the sl, rp combination
-    """
-    rp.TENSOR_OUTPUT = [0]
-    rp.workdir = Path(work_dir)
-    # internally transform theta, phi to within range
-    if rp.THETA < 0:
-        rp.THETA = abs(rp.THETA)
-        rp.PHI += 180
-    rp.THETA = min(rp.THETA, 90.)
-    rp.PHI = rp.PHI % 360
-    # create work directory, go there, execute
-    try:
-        if work_dir != ".":
-            os.makedirs(work_dir, exist_ok=True)
-            os.chdir(work_dir)
-        for fn in ["BEAMLIST", "PHASESHIFTS"]:
-            try:
-                shutil.copy2(home_dir / fn, fn)
-            except Exception:
-                logger.error(f"Error copying {fn} to subfolder.")
-                raise
-        logger.info("Starting full-dynamic calculation")
-        try:
-            section_refcalc(sl, rp, parent_dir=home_dir)
-        except Exception:
-            logger.error("Error running reference calculation")
-            raise
-        logger.info("Starting R-factor calculation...")
-        try:
-            rfaclist = section_rfactor(sl, rp, 11)                              # TODO: disable plotting
-        except Exception:
-            logger.error("Error running rfactor calculation")
-            raise
-    finally:
-        os.chdir(home_dir)
-    return rp.last_R, rfaclist
-
 
 
 def fd_optimization(sl, rp):
@@ -208,35 +144,3 @@ def fd_optimization(sl, rp):
         optimizer.write_beams_pdf()
     except Exception as exc:
         logger.warning(f"Failed to plot I(V) curves from optimization:\n{exc}")
-
-
-
-
-def store_fd_param_to_file(sl, rp, which, new_min):
-    comment = "Found by full-dynamic optimization"
-    if which == "v0i":
-        rp.V0_IMAG = new_min
-        parameters.modify(rp, "V0_IMAG", comment=comment)
-    elif which in ("theta", "phi"):
-        setattr(rp, which.upper(), new_min)
-        if rp.THETA < 0:
-            rp.THETA = abs(rp.THETA)
-            rp.PHI += 180
-        rp.PHI = rp.PHI % 360
-        parameters.modify(rp, "BEAM_INCIDENCE", comment=comment)
-    else:       # geometry: x is a scaling factor for the unit cell
-        apply_scaling(sl, rp, which, new_min)
-        if not isinstance(rp.BULK_REPEAT, float) or "c" in which:
-            parameters.modify(rp, "BULK_REPEAT", comment=comment)
-        poscar.write(sl, filename=f"POSCAR_OUT_{rp.timestamp}", comments="all")
-
-    # clean up tmpdirs
-    # for path in tmpdirs:
-    #     try:
-    #         shutil.rmtree(path)
-    #     except Exception as e:
-    #         logger.warning("Failed to delete temporary directory {}: "
-    #                        .format(path) + str(e))
-
-
-
