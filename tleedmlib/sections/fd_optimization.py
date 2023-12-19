@@ -1042,6 +1042,7 @@ class ParameterMinimizer(FDOptimizer):
         logger.info(
             f"{self._eval_point_string(x_val)}: "
             f"R = {result:.4f}")
+            f"R = {result[0]:.4f}")
         return result
 
     def _eval_point_string(self, x_val):
