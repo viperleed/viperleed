@@ -1,4 +1,4 @@
-"""Module energy_range of viperleed.tleedmlib.classes.rparams.special.
+"""Module energy_range of viperleed.calc.classes.rparams.special.
 
 Created on 2023-10-23
 

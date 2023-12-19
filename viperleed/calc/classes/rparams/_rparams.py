@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module _rparams of viperleed.tleedmlib.classes.rparams.
+"""Module _rparams of viperleed.calc.classes.rparams.
 
 Created on 2023-10-23, originally Jun 13 2019
 

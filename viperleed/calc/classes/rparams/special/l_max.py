@@ -1,4 +1,4 @@
-"""Module l_max of viperleed.tleedmlib.calsses.rparams.special.
+"""Module l_max of viperleed.calc.calsses.rparams.special.
 
 Created on 2023-12-16
 

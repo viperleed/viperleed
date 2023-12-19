@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module searchpar of viperleed.tleedmlib.classes.
+"""Module searchpar of viperleed.calc.classes.
 
 Created on 2023-10-23, originally Jun 13 2019
 

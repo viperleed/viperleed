@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Moule _domain_params of viperleed.tleedmlib.classes.rparams.
+"""Moule _domain_params of viperleed.calc.classes.rparams.
 
 Created on 2023-10-23, originally Jun 13 2019
 

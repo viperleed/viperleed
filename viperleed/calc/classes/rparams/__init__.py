@@ -1,4 +1,4 @@
-"""Package rparams of viperleed.tleedmlib.classes.
+"""Package rparams of viperleed.calc.classes.
 
 Created on 2023-10-23
 

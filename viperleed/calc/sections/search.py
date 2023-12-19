@@ -22,11 +22,10 @@ import scipy
 
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
-from viperleed.calc.classes.rparams import SearchPar
+from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import iosearch as tl_io
 from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
-from viperleed.calc.files.parameters import updatePARAMETERS
 
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)",

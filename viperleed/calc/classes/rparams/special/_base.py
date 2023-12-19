@@ -1,4 +1,4 @@
-"""Module _base of viperleed.tleedmlib.classes.rparams.special.
+"""Module _base of viperleed.calc.classes.rparams.special.
 
 Created on 2023-10-27
 

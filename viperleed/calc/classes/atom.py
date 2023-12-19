@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module atom of viperleed.tleedmlib.classes.
+"""Module atom of viperleed.calc.classes.
 
 Created on Jun 13 2019
 

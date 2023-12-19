@@ -1,4 +1,4 @@
-"""Module layer_cuts of viperleed.tleedmlib.classes.rparams.special.
+"""Module layer_cuts of viperleed.calc.classes.rparams.special.
 
 Created on 2023-10-21
 

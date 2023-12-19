@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 
 from viperleed.calc.classes.r_error import R_Error
-from viperleed.calc.classes.rparams import SearchPar
+from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import ioerrorcalc as tl_io
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.sections.deltas import deltas as section_deltas

@@ -1,4 +1,4 @@
-"""Module search_cull of viperleed.tleedmlib.classes.rparams.special.
+"""Module search_cull of viperleed.calc.classes.rparams.special.
 
 Created on 2023-12-14
 
