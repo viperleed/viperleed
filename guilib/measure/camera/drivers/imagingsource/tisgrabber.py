@@ -25,7 +25,7 @@ Created on Mon Nov 21 09:44:40 2016
 # lines limit.
 
 from enum import IntEnum
-from ctypes import (Structure as CStructure, WinDLL, CFUNCTYPE, cast as c_cast,
+from ctypes import (Structure as CStructure, windll, CFUNCTYPE, cast as c_cast,
                     c_int, c_long, c_ulong, c_ubyte, c_float, py_object,
                     POINTER, c_char_p, c_void_p, c_char)
 import os
@@ -44,12 +44,12 @@ from viperleed.guilib.measure.camera.drivers.imagingsource.models import (
     )
 
 
-dll_path = Path(__file__).parent.resolve()
+dll_path = Path(__file__).resolve().parent
 try:
     os.add_dll_directory(dll_path)
 except AttributeError:
     pass
-sys.path.append(dll_path)
+sys.path.append(str(dll_path))
 
 
 c_float_p = POINTER(c_float)
@@ -249,9 +249,11 @@ class WindowsCamera:
     # omitted below where this is the case.
 
     if sys.maxsize > 2**32:
-        _dll = WinDLL("tisgrabber_x64.dll")
+        windll.LoadLibrary(str(dll_path / "TIS_UDSHL11_x64.dll"))
+        _dll = windll.LoadLibrary(str(dll_path / "tisgrabber_x64.dll"))
     else:
-        _dll = WinDLL("tisgrabber.dll")
+        windll.LoadLibrary(str(dll_path / "TIS_UDSHL11.dll"))
+        _dll = windll.LoadLibrary("tisgrabber.dll")
 
     __initalized = False
 
@@ -1663,7 +1665,7 @@ class WindowsCamera:
             name = self._dll_unique_name_from_index(index)
         except ImagingSourceError as err:
             # Probably some fuckup with the index.
-            print(f"IS driver warning: {err}. {index=} {self.__n_devices=}")    # TODO: remove this
+            print(f"IS driver warning: {err}. index={index} self.__n_devices={self.__n_devices}")    # TODO: remove this
             name = None
         if name is not None:
             return name.decode()

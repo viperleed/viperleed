@@ -152,7 +152,7 @@ class MainWindow(qtw.QWidget):
         else:
             msg = (msg_command,)
 
-        print(f"{msg=}")
+        print(f"msg={msg}")
         self.__port.send_message(*msg, timeout=TIMEOUT)
 
     def on_data_received(self, data):

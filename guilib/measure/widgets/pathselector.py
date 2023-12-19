@@ -35,7 +35,7 @@ class PathSelector(qtw.QWidget):
 
     path_changed = qtc.pyqtSignal(Path)  # New full path
 
-    def __init__(self, /, **kwargs):
+    def __init__(self, **kwargs):
         """Initialize instance.
 
         Parameters
