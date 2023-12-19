@@ -47,6 +47,71 @@ _LOGGER = logging.getLogger('tleedm.rparams')
 if _CAN_PLOT:
     plt.style.use('viperleed.tleedm')
 
+# TODO: move the FD related stuff to a more appropriate place
+AVAILABLE_MINIMIZERS = (
+    'nelder-mead',
+    'powell',
+    'cg',
+    'bfgs',
+    'l-bfgs-b',
+    'cobyla',
+    'TNC'
+)
+
+# TODO: move to a more appropriate place
+def apply_scaling(sl, rp, which, scale):
+    m = np.eye(3)
+    if "a" in which:
+        m[0, 0] *= scale
+    if "b" in which:
+        m[1, 1] *= scale
+    if "c" in which:
+        m[2, 2] *= scale
+    sl.getFractionalCoordinates()
+    sl.ucell = np.dot(sl.ucell, m)
+    sl.getCartesianCoordinates(updateOrigin=True)
+    sl.bulkslab.getFractionalCoordinates()
+    sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
+    sl.bulkslab.getCartesianCoordinates()
+    if isinstance(rp.BULK_REPEAT, (np.floating, float)):
+        rp.BULK_REPEAT *= scale
+    elif rp.BULK_REPEAT is not None:
+        rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
+
+
+# parameters accessible in the full dynamic optimization	
+# must specify bounds, function for altering the parameter and initial guess 	
+# x0	
+FD_PARAMETERS = {
+    'v0i': {
+        'bounds': (0, 15),
+        'eval': lambda r, s, v: setattr(r, "V0_IMAG", v),
+        'x0': lambda rp: rp.V0_IMAG,
+    },
+    'theta': {
+        'bounds': (-20, 20),
+        'eval': lambda r, s, v: setattr(r, "THETA", v),
+        'x0': lambda rp: rp.THETA,
+    },
+    'phi': {
+        'bounds': (0, 360),
+        'eval': lambda r, s, v: setattr(r, "PHI", v),
+        'x0': lambda rp: rp.PHI,
+    }
+}
+
+for scaling in ('a', 'b', 'c', 'ab', 'bc', 'abc'): # scaling of lattice vectors
+    FD_PARAMETERS[scaling] = {
+        'bounds': (0.1, 10),
+        'eval': lambda r, s, v: apply_scaling(s, r, scaling, v),
+        'x0': lambda rp: 1,
+    }
+
+
+# parameters that can be optimized in FD optimization
+_FD_OPTIONS = tuple(FD_PARAMETERS.keys())
+
+
 
 class Rparams:
     """Stores the parameters found in a PARAMETERS file (default values in
