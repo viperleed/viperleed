@@ -22,7 +22,7 @@ from viperleed.calc.classes.slab import Slab
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.classes.rparams import Rparams, TheoEnergies
 # for rfactor_from_csv
-from viperleed.tleedmlib.files import iorfactor as rf_io
+from viperleed.calc.files import iorfactor as rf_io
 from viperleed.calc.files.beams import readOUTBEAMS
 from viperleed.calc.files.ivplot import plot_iv  # for plot_iv_from_csv
 from viperleed.extensions.error_codes import check_ierr
@@ -516,7 +516,7 @@ def rfactor_from_csv(                                                           
         raise ModuleNotFoundError(
             "Missing R-factor compiled Fortran extension module. "
             "Run make in viperleed/tleedmlib/wrapped, then try again",
-            name='viperleed.tleedmlib.wrapped.rfactor'
+            name='viperleed.calc.extensions.rfactor'
             )
 
     # Use Pendry R-factor - TODO: discuss if this should be a user
