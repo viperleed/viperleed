@@ -131,7 +131,6 @@ class Rparams:
         self.DOMAIN_STEP = 1      # area step in percent for domain search
         self.ELEMENT_MIX = {}     # {element_name: splitlist}
         self.ELEMENT_RENAME = {}  # {element_name: chemical_element}
-        self.EXPBEAMS_INPUT_FILE = DEFAULTS["EXPBEAMS_INPUT_FILE"]
         self.FD_PARAMS = []       # parameters for FD optimization
         self.FD_PARABOLA = {"step": 0.,
                             "minpoints": 4,
