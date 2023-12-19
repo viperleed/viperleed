@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+Module fd_parameter of viperleed.tleedmlib.classes.fd_optimizer.
+
+Created on 2023-12-19
+
+@author: Alexander M. Imre (@amimre)
+
+Defines the FDParameter class, which is used to store information about
+parameters that are optimized in the full-dynamic calculation.
+"""
 class FDParameter():
     """Base class for parameters accessible via full dynamic calculation."""
 

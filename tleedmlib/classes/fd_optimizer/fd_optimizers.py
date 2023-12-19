@@ -1,4 +1,17 @@
 # -*- coding: utf-8 -*-
+"""
+Module fd_optimizers of viperleed.tleedmlib.classes.fd_optimizer.
+
+Created on 2023-12-19
+
+@author: Alexander M. Imre (@amimre)
+
+This module contains the classes that perform the actual optimization of
+the full-dynamic calculation. The base class is FDOptimizer, which is
+abstract and cannot be instantiated. The subclasses implement the
+different optimization strategies for one- and multi-dimensional
+optimization.
+"""
 from abc import ABC, abstractmethod
 import copy
 import csv
