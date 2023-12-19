@@ -1,7 +1,12 @@
 from abc import ABC, abstractmethod
 import copy
 import csv
+from collections.abc import Iterable
+import shutil
 
+import numpy as np
+from numpy.polynomial import Polynomial
+import scipy.optimize
 import logging
 
 from .fd_parameter import FDParameter
@@ -12,7 +17,24 @@ from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
 from viperleed.tleedmlib.files.ioerrorcalc import plot_r_plus_var_r, draw_error
 
+
+# TODO: move to io_fd_optimization ?
+try:
+    import matplotlib
+    matplotlib.rcParams.update({'figure.max_open_warning': 0})
+    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
+    from matplotlib.backends.backend_pdf import PdfPages
+    import matplotlib.pyplot as plt
+    plt.style.use('viperleed.tleedm')
+    from matplotlib import cm
+except Exception:
+    _CAN_PLOT = False
+else:
+    _CAN_PLOT = True
+
 logger = logging.getLogger("tleedm.fdopt")
+
+_DEFAULT_MINIMIZER_TOL = 1e-4
 
 
 class FDOptimizer(ABC):

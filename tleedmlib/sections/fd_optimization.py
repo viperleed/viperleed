@@ -8,31 +8,11 @@ Created on Oct 22 2021
 
 Tensor LEED Manager section Full-dynamic Optimization
 """
-from abc import ABC, abstractmethod
-from collections.abc import Iterable
-from functools import lru_cache
 from pathlib import Path
 
 import logging
 import os
 import shutil
-
-try:
-    import matplotlib
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-    plt.style.use('viperleed.tleedm')
-    from matplotlib import cm
-except Exception:
-    _CAN_PLOT = False
-else:
-    _CAN_PLOT = True
-
-import numpy as np
-from numpy.polynomial import Polynomial
-import scipy.optimize
 
 from viperleed.tleedmlib.classes.rparams._rparams import FD_PARAMETERS, AVAILABLE_MINIMIZERS, apply_scaling
 from viperleed.tleedmlib.files import parameters, poscar
@@ -41,9 +21,6 @@ from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
 from viperleed.tleedmlib.classes.fd_optimizer import *
 
 logger = logging.getLogger("tleedm.fdopt")
-
-_DEFAULT_MINIMIZER_TOL = 1e-4
-
 
 
 def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
