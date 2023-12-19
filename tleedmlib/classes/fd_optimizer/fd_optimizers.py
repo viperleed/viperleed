@@ -13,13 +13,14 @@ import logging
 
 from .fd_parameter import FDParameter
 
-from viperleed.tleedmlib.classes.rparams._rparams import AVAILABLE_MINIMIZERS
+from viperleed.tleedmlib.classes.rparams._rparams import AVAILABLE_MINIMIZERS, apply_scaling
 from viperleed.tleedmlib.classes.r_error import get_zero_crossing, get_n_zero_crossings
 from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
 from viperleed.tleedmlib.files.ioerrorcalc import plot_r_plus_var_r, draw_error
 from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
 from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
+from viperleed.tleedmlib.files import parameters, poscar
 
 
 # TODO: move to io_fd_optimization ?

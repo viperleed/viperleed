@@ -10,8 +10,7 @@ Tensor LEED Manager section Full-dynamic Optimization
 """
 import logging
 
-from viperleed.tleedmlib.classes.rparams._rparams import FD_PARAMETERS, AVAILABLE_MINIMIZERS, apply_scaling
-from viperleed.tleedmlib.files import parameters, poscar
+from viperleed.tleedmlib.classes.rparams._rparams import FD_PARAMETERS, AVAILABLE_MINIMIZERS
 from viperleed.tleedmlib.classes.fd_optimizer import *
 
 logger = logging.getLogger("tleedm.fdopt")
