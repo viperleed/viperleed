@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module _known_parameters of viperleed.tleedmlib.files.parameters.
+"""Module _known_parameters of viperleed.calc.files.parameters.
 
 Created on Tue Aug 18 16:56:39 2020
 

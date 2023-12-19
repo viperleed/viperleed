@@ -1,4 +1,4 @@
-"""Module symmetry_eps of viperleed.tleedmlib.classes.rparams.special.
+"""Module symmetry_eps of viperleed.calc.classes.rparams.special.
 
 Created on 2023-12-11
 

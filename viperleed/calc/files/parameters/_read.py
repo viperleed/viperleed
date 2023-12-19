@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module _read of viperleed.tleedmlib.files.parameters.
+"""Module _read of viperleed.calc.files.parameters.
 
 Created on Tue Aug 18 16:56:39 2020
 
@@ -18,7 +18,7 @@ an Rparams object at runtime from a user-modified PARAMETERS file.
 import logging
 from pathlib import Path
 
-from viperleed.tleedmlib.classes import rparams
+from viperleed.calc.classes import rparams
 
 from .errors import MissingEqualsError
 from ._interpret import ParameterInterpreter

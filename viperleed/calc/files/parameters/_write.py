@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module _modify of viperleed.tleedmlib.files.parameters.
+"""Module _modify of viperleed.calc.files.parameters.
 
 Created on Tue Aug 18 16:56:39 2020
 
@@ -22,8 +22,8 @@ import shutil
 
 import numpy as np
 
-from viperleed.tleedmlib.base import strip_comments
-from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
+from viperleed.calc.lib.base import strip_comments
+from viperleed.calc.lib.woods_notation import writeWoodsNotation
 
 from ._reader import RawLineParametersReader
 

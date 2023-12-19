@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module beamgen of viperleed.tleedmlib.
+"""Module beamgen of viperleed.calc.files
 
 @author: Alexander Imre (@amimre)
 @author: Florian Kraushofer (@fkraushofer)

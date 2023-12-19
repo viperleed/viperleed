@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module errors of viperleed.tleedmlib.files.parameters.
+"""Module errors of viperleed.calc.files.parameters.
 
 Created in June 2023
 

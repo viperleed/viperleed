@@ -1,4 +1,4 @@
-"""Package parameters of viperleed.tleedmlib.files.
+"""Package parameters of viperleed.calc.files.
 
 Created on 2023-10-13
 

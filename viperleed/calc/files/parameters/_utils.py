@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module _utils of viperleed.tleedmlib.files.parameters.
+"""Module _utils of viperleed.calc.files.parameters.
 
 Created on Tue Aug 18 16:56:39 2020
 
@@ -12,7 +12,7 @@ and @michele-riva in June 2023. This module used to be part of
 parameters.py. Refactored in October 2023.
 
 Contains functions and classes used in multiple submodules of
-the viperleed.tleedmlib.files.parameters package.
+the viperleed.calc.files.parameters package.
 """
 
 from collections.abc import Sequence

@@ -1,4 +1,4 @@
-"""Module _sections of viperleed.tleedmlib.sections.
+"""Module _sections of viperleed.calc.sections.
 
 Defines an enumeration of calculation sections.
 """

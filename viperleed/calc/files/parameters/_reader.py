@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module _reader of viperleed.tleedmlib.files.parameters.
+"""Module _reader of viperleed.calc.files.parameters.
 
 Created on 2023-10-16
 
@@ -21,7 +21,7 @@ import logging
 from pathlib import Path
 import re
 
-from viperleed.tleedmlib.base import strip_comments
+from viperleed.calc.lib.base import strip_comments
 
 from .errors import ParameterNotRecognizedError, MissingEqualsError
 from .errors import ParameterHasNoValueError

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module _interpret of viperleed.tleedmlib.files.parameters.
+"""Module _interpret of viperleed.calc.files.parameters.
 
 Created on Tue Aug 18 16:56:39 2020
 
@@ -31,16 +31,16 @@ else:
     _CAN_PLOT = True
 
 from viperleed import __version__
-from viperleed.tleedmlib import periodic_table
-from viperleed.tleedmlib.base import readIntRange, readVector
-from viperleed.tleedmlib.base import recombineListElements, splitSublists
-from viperleed.tleedmlib.classes.rparams import EnergyRange
-from viperleed.tleedmlib.classes.rparams import IVShiftRange
-from viperleed.tleedmlib.classes.rparams import LayerCuts
-from viperleed.tleedmlib.classes.rparams import SymmetryEps
-from viperleed.tleedmlib.classes.rparams import TheoEnergies
-from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
-from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
+from viperleed.calc.lib import periodic_table
+from viperleed.calc.lib.base import readIntRange, readVector
+from viperleed.calc.lib.base import recombineListElements, splitSublists
+from viperleed.calc.classes.rparams import EnergyRange
+from viperleed.calc.classes.rparams import IVShiftRange
+from viperleed.calc.classes.rparams import LayerCuts
+from viperleed.calc.classes.rparams import SymmetryEps
+from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.lib.woods_notation import readWoodsNotation
+from viperleed.calc.sections._sections import TLEEDMSection as Section
 
 from .errors import ParameterError
 from .errors import ParameterBooleanConversionError

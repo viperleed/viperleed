@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module _checker of viperleed.tleedmlib.files.parameters.
+"""Module _checker of viperleed.calc.files.parameters.
 
 Created on 2023-10-25
 
