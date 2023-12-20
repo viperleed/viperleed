@@ -674,7 +674,7 @@ class _Adjustments(MutableSequence):
     'ends of transients'
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, /, *args, **kwargs):
         """Initialize instance."""
         self.__params = {'alpha': 0, 'beta': 0,
                          'thresholds': kwargs.get('thresholds', (7/100, 0.1))}

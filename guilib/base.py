@@ -991,7 +991,7 @@ class BeamIndex(tuple):
                         f"'BeamIndex' and {type(factor).__name__!r}")
 
     def __rmul__(self, factor):
-        return self.__class__.__mul__(factor, self)
+        return self.__mul__(factor, self)
 
     def __imul__(self, factor):
         return self * factor
