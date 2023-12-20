@@ -202,8 +202,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # in the measurement cycle can be done.
         self.__busy = False
         
-        # Is used to calculate times of measurements. Even a
-        # non-measuring primary controller needs it to enable
+        # self.time_stamp is used to calculate times of measurements.
+        # Even a non-measuring primary controller needs it to enable
         # time calculation for the secondary controllers.
         self.time_stamp = None
 
