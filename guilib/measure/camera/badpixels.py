@@ -55,13 +55,34 @@ def _report_progress(func):
     return _wrapper
 
 
+def _complain_too_little_memory(func):
+    """Emit an error if there is not enough memory to execute func."""
+    @functools.wraps(func)
+    def _wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except MemoryError as exc:
+            err_code, err_msg = BadPixelsFinderErrors.TOO_MANY_PIXELS
+            err_msg.format(camera=self.camera, exc=exc)
+            self.emit_error(err_code, err_msg)
+        return None
+    return _wrapper
+
+
 class BadPixelsFinderErrors(base.ViPErLEEDErrorEnum):
     """Class for bad-pixel-finder errors."""
 
     FLAT_FRAME_WRONG_LIGHT = (
         211,
         "Flat frame is too {}. Cannot automatically "
-        "adjust exposure time and gain.")
+        "adjust exposure time and gain."
+        )
+    TOO_MANY_PIXELS = (
+        212,
+        "Camera {camera} has too many pixels for the available RAM. "
+        "Cannot allocate arrays for bad-pixels calculations. You can "
+        "free some resources and try again. More info: {exc}"
+        )
 
 
 class _FinderSection(CalibrationTaskOperation):
@@ -286,6 +307,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         """Find bad pixels in the camera."""
         self.start()
 
+    @_complain_too_little_memory
     @_report_progress
     def find_bad_and_replacements(self):  # too-many-locals
         """Find bad pixels and their optimal replacements.
@@ -367,6 +389,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
             uncorrectable=uncorrectable
             )
 
+    @_complain_too_little_memory
     @_report_progress
     def find_dead_pixels(self):
         """Detect dead pixels from flat frame.
@@ -422,6 +445,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
 
         self.__badness += delta_badness
 
+    @_complain_too_little_memory
     @_report_progress
     def find_flickery_pixels(self):
         """Prepare badness based on how flickery pixels are.
@@ -457,6 +481,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         if long_mean:
             self.__badness += long_flicker / long_mean - 1
 
+    @_complain_too_little_memory
     @_report_progress
     def find_hot_pixels(self):
         """Set badness of hot pixels to infinity."""
@@ -492,11 +517,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
                                              "bad_pixels_path",
                                              fallback='')
         self.__bad_pixels.write(bp_path)
-        self.restore_device()
-        done = _FinderSection.DONE
-        self.progress_occurred.emit(self.progress_name, *done,
-                                    done.n_steps, done.n_steps)
-        self.mark_as_done(True)
+        self._clean_up()
 
     @qtc.pyqtSlot()
     def start(self):
@@ -540,11 +561,7 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         self.__current_section = self.__current_section.next_()
         if self.__current_section is _FinderSection.CALCULATE_FLICKERY:
             # Done with all sections. Can proceed to calculations.
-            self.find_flickery_pixels()
-            self.find_hot_pixels()
-            self.find_dead_pixels()
-            self.find_bad_and_replacements()
-            self.save_and_cleanup()
+            self._calculate_and_save_bad_pixels()
             return
         # Proceed with the next acquisition
         self._frames_done = 0
@@ -583,6 +600,21 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
         self.__report_acquisition_progress(exposure)
         self.start_camera()
 
+    def _calculate_and_save_bad_pixels(self):
+        """Calculate and save bad-pixels information from acquired images."""
+        finder_names = ('find_flickery_pixels',
+                        'find_hot_pixels',
+                        'find_dead_pixels',
+                        'find_bad_and_replacements')
+        for finder_name in finder_names:
+            find = getattr(self, finder_name)
+            try:
+                find()
+            except MemoryError:
+                self._clean_up()  # Without saving anything
+                return
+        self.save_and_cleanup()
+
     def __correct_exposure_gain(self, exposure, gain):
         """Return in-range exposure and gain."""
         exposure_min, exposure_max = self._limits['exposure']
@@ -610,6 +642,14 @@ class BadPixelsFinder(_calib.CameraCalibrationTask):
                             'dark')
             return None, 0
         return exposure, gain
+
+    def _clean_up(self):
+        """Finish this task after resetting the camera."""
+        self.restore_device()
+        done = _FinderSection.DONE
+        self.progress_occurred.emit(self.progress_name, *done,
+                                    done.n_steps, done.n_steps)
+        self.mark_as_done(True)
 
     def __frame_acceptable(self, frame):
         """Return whether frame has acceptable intensity.
