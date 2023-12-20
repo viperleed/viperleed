@@ -218,7 +218,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
     @property
     def devices(self):
         """Return all controllers and cameras."""
-        return *self.controllers, *self.cameras
+        return (*self.controllers, *self.cameras)
 
     @property
     def hv_settle_time(self):
