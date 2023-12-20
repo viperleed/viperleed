@@ -201,6 +201,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # Is used to determine if the next step
         # in the measurement cycle can be done.
         self.__busy = False
+        
+        # self.time_stamp is used to calculate times of measurements.
+        # Even a non-measuring primary controller needs it to enable
+        # time calculation for the secondary controllers.
+        self.time_stamp = None
 
         # These dictionaries must be filled in subclasses.
         # They must contain all functions the MeasureController has
@@ -910,7 +915,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """Set electron energy on LEED controller.
 
         This method must be extended in subclasses by calling super()
-        ant some point. The reimplementation should take the energy
+        and some point. The reimplementation should take the energy
         value(s) in eV, the waiting times (in msec) and the keyword
         argument trigger_meas, together with other optional data to be
         read from self.settings, and turn them into messages that can
@@ -920,6 +925,11 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         energy that the electrons will have when exiting the gun) to
         the set-point value to be sent to the controller can be done
         inside this method by calling .true_energy_to_setpoint(energy).
+
+        self.time_stamp has to be set in reimplementations at the
+        end of this method. Reimplementations must store the
+        time_stamp via time.perf_counter() before returning. To
+        use this library one has to import time.
 
         Parameters
         ----------
@@ -1192,7 +1202,7 @@ class MeasureControllerABC(ControllerABC):
     def time_to_first_measurement(self):
         """Return the interval between trigger and 1st measurement (msec).
 
-        Notice that this duffers from self.initial_delay. This is
+        Notice that this differs from self.initial_delay. This is
         the total amount of time the controller requires to return
         its measurement. self.initial_delay is instead the time
         the measurement was acquired (relative to triggering). The
@@ -1202,7 +1212,7 @@ class MeasureControllerABC(ControllerABC):
         A typical implementation:
         >>> n_ave = self.nr_samples
         >>> return (self.initial_delay
-                    + (n_ave - 1)/2 * self.measurement_interval)
+                    + (n_ave - 1) * self.measurement_interval)
 
         Must be overridden in subclasses.
 
@@ -1275,7 +1285,7 @@ class MeasureControllerABC(ControllerABC):
         """
         self.busy = False
         self.measurements[QuantityInfo.TIMESTAMPS].append(
-            self.serial.time_stamp + self.time_to_trigger / 1000
+            self.time_stamp + self.time_to_trigger / 1000
             )
         self.data_ready.emit(deepcopy(self.measurements))
         for key in self.measurements:
@@ -1297,6 +1307,11 @@ class MeasureControllerABC(ControllerABC):
         the controller for a measurement and after an energy
         has been set on the controller. It should only trigger
         measurements (and send additional data if needed).
+        
+        self.time_stamp has to be set in reimplementations at the
+        end of this method. Reimplementations must store the
+        time_stamp via time.perf_counter() before returning. To
+        use this library one has to import time.
 
         It should take all required data for this operation from
         self.settings (and other attributes of self).
@@ -1357,6 +1372,11 @@ class MeasureControllerABC(ControllerABC):
         energy that the electrons will have when exiting the gun) to
         the set-point value to be sent to the controller can be done
         inside this method by calling .true_energy_to_setpoint(energy).
+        
+        self.time_stamp has to be set in reimplementations at the
+        end of this method. Reimplementations must store the
+        time_stamp via time.perf_counter() before returning. To
+        use this library one has to import time.
 
         If this function does not already trigger a measurement
         it should call the measure_now function.

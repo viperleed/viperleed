@@ -14,6 +14,7 @@ which gives commands to the ViPErinoSerialWorker class.
 """
 import threading
 import re
+import time
 
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
@@ -565,6 +566,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         super().measure_now()
         cmd = self.settings.get('available_commands', 'PC_MEASURE_ONLY')
         self.send_message(cmd)
+        self.time_stamp = time.perf_counter()
 
     @qtc.pyqtSlot(object)
     def on_data_ready(self, data):
@@ -725,6 +727,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             timeout = 0
         timeout = max(timeout, 0) + sum(energies_and_times[1::2])
         self.send_message(cmd, energies_and_times, timeout=timeout)
+        self.time_stamp = time.perf_counter()
 
     def set_measurements(self, quantities):  # too-complex
         """Decide what to measure.

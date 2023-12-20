@@ -18,6 +18,7 @@ from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
                                                       MeasurementErrors)
+from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure import hardwarebase as base
 
 
@@ -60,6 +61,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         trigger = self.__trigger_one_measurement = qtc.QTimer(parent=self)
         for ctrl in self.controllers:
             self.__connect_trigger_timeout(ctrl)
+
+        # Whenever the timer runs out, the primary controller has
+        # to store a time stamp.
+        trigger.timeout.connect(self.store_primary_time_stamp)
 
         # Finally, set the _camera_timer interval to zero, so
         # we can fire it at the same time as measurements are
@@ -434,7 +439,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             # Recalculate the times in the last data point, in case
             # secondary controllers returned more data in the meantime
             # Notice that we do not allow any errors to be emitted at
-            # this point, since we may end up in an infinite loop
+            # this point, since we may end up in an infinite loop.
             self.data_points.calculate_times(complain=False)
         super()._finalize()
 
@@ -450,7 +455,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         bool
         """
         super()._is_finished()
-        ramp_finished = self.current_energy > self.__end_energy
+        ramp_finished = self.energy_generator() > self.__end_energy
         if self.__delta_energy < 0:
             ramp_finished = self.current_energy < self.__end_energy
         if ramp_finished:
@@ -501,7 +506,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         -------
         None.
         """
-        self.data_points.add_data(data, self.sender())
+        controller = self.sender()
+        if controller is self.primary_controller:
+            data.pop(QuantityInfo.TIMESTAMPS)
+        self.data_points.add_data(data, controller)
 
     def __prepare_continuous_mode(self):
         """Adjust the preparations to fit continuous mode.
@@ -553,6 +561,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             else:
                 base.safe_disconnect(about_to_trigger, trigger.start)
                 base.safe_disconnect(trigger.timeout, self._camera_timer.start)
+                base.safe_disconnect(trigger.timeout,
+                                     self.store_primary_time_stamp)
 
         super()._prepare_finalization()
 

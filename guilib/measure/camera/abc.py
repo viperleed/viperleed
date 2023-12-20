@@ -361,7 +361,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Returns
         -------
         exceptions : tuple
-            Each element is a Exception subclass of exceptions
+            Each element is an Exception subclass of exceptions
             that the camera may raise in case internal driver
             errors occur.
         """
@@ -1308,7 +1308,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         n_frames : int
             Number of frames used for averaging. Returns 0 if the
-            camera does not support internally frame averaging.
+            camera does not internally support frame averaging.
         """
         return 0
 
@@ -1393,7 +1393,7 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         Subclasses must retrieve the ROI information using self.roi.
         Make sure to .open() before setting.
 
-        If the camera does not support setting internally a ROI, the
+        If the camera does not internally support setting a ROI, then
         the ROI setting is used to crop the frames during processing.
 
         Parameters

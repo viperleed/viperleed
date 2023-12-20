@@ -123,7 +123,7 @@ class ViPErLEEDSerial(SerialABC):
         """
         self.__last_request_sent = ''
         self.__measurements = []
-        self.__changed_mode = False
+        self.__may_receive_stray_data = False
 
         super().__init__(settings, port_name=port_name, **kwargs)
 
@@ -453,9 +453,11 @@ class ViPErLEEDSerial(SerialABC):
 
         if command != change_mode:
             self.__last_request_sent = command
-            self.__changed_mode = False
-        else:
-            self.__changed_mode = True
+        
+        # We use this boolean while continuous mode is still active
+        # and data may return while we are ordering the controller
+        # to change its measurement mode.
+        self.__may_receive_stray_data = command == change_mode
 
         return True
 
@@ -526,7 +528,7 @@ class ViPErLEEDSerial(SerialABC):
                 for i, elem in enumerate(data.copy()):
                     data[2*i:2*i+1] = elem.to_bytes(2, self.byte_order)
             elif message == commands['PC_CHANGE_MEAS_MODE']:
-                # Here the data is [mode, time] where time
+                # Here the data is [mode, time] where time                      TODO: time is not used at this point.
                 # has to be turned into 2 bytes. We do not convert
                 # mode as it is hardcoded to 0 (off) or 1 (on).
                 data[1:] = data[1].to_bytes(2, self.byte_order)
@@ -585,8 +587,10 @@ class ViPErLEEDSerial(SerialABC):
             # If the length of the message is 1, then it has to be a
             # PC_OK byte.
             if len(message) == 1 and message == pc_ok.encode():
-                if self.__changed_mode:
-                    self.__changed_mode = False
+            # We are implicitly using __may_receive_stray_data in the elif
+            # check if the last command was pc_set_voltage.
+                if self.__may_receive_stray_data:
+                    self.__may_receive_stray_data = False
                 elif last_cmd == pc_set_voltage:
                     self.about_to_trigger.emit()
                 self.busy = False
@@ -752,10 +756,3 @@ class ViPErLEEDSerial(SerialABC):
         info['firmware'] = firmware_version
         return info
 
-    def is_measure_command(self, command):
-        """Return whether command causes the unit to return measurements."""
-        pc_set_voltage = self.port_settings.get('available_commands',
-                                                'PC_SET_VOLTAGE')
-        pc_measure_only = self.port_settings.get('available_commands',
-                                                 'PC_MEASURE_ONLY')
-        return command in (pc_set_voltage, pc_measure_only)
