@@ -1788,9 +1788,6 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
         """React to an image being saved."""
         processor = self.sender()
         if processor:
-            # Disconnect the sender processor to prevent
-            # duplicate processing of the next frame
-            base.safe_disconnect(self.__process_frame, processor.process_frame)  # TODO: this happens too late! should be done in the else of __on_frame_ready, i.e., after all frames for this image processor have been acquired. An alternative: the processor know when exactly all frames have arrived.
             try:
                 self.__image_processors.remove(processor)
             except ValueError:
