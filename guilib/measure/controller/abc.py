@@ -1383,11 +1383,6 @@ class MeasureControllerABC(ControllerABC):
         time_stamp via time.perf_counter() before returning. To
         use this library one has to import time.
 
-        self.time_stamp has to be set in reimplementations at the
-        end of this method. Reimplementations must store the
-        time_stamp via time.perf_counter() before returning. To
-        use this library one has to import time.
-
         If this function does not already trigger a measurement
         it should call the measure_now function.
 
