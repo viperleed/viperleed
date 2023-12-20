@@ -754,7 +754,8 @@ class CameraViewer(qtw.QScrollArea):
             _std = np.sqrt(_square.mean() - _mean**2)
             _min = np.uint16(max(_mean - 2.5 * _std, 0))
             _max = np.uint16(min(_mean + 2.5 *_std, _dmax))
-            _scale = np.uint16(_dmax / (_max - _min))
+            _scale = np.uint16(_dmax / (_max - _min))                          # TODO: Michael suggested having a _clip_max
+                                                                               #= _dmax/scale + _min
             img_array = img_array.clip(_min, _max, dtype=img_array.dtype)
             # Adjust range to 0 -- (2**16 - 1)
             img_array -= _min
@@ -792,11 +793,12 @@ class CameraViewer(qtw.QScrollArea):
         # taking into account auto-contrast scaling
         threshold = _min + .99*(_max - _min)
         offs, scale = self.__glob["auto_contrast_info"]
-        threshold = scale*(threshold - offs)
 
-        # TODO: here we may get it wrong if we have
-        # many bad pixels! Consider applying a bad
-        # pixels correction to images before showing.
+        threshold = scale*(threshold - offs)                                   # TODO: Make Threshold independent of scale.
+                                                                               # Just take high uint16 value.
+        # TODO: here we may get it wrong if we have                            # Currently the threshold is multiplied by
+        # many bad pixels! Consider applying a bad                             # the scale which may lower it to
+        # pixels correction to images before showing.                          # unreasonable values.
         # Alternatively: use self.camera.bad_pixels
         # to decide depending on how many there are
         saturation_arr = img_array > threshold
