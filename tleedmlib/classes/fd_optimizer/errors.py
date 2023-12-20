@@ -19,4 +19,21 @@ class FullDynamicOptimizationOutOfBoundsError(FullDynamicCalculationError):
     def __init__(self, message):
         super().__init__(message)
 
-#TODO: add more exceptions
+
+class FDParameterError(Exception):
+    """Base class for exceptions raised by FDParameter."""
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class FDInvalidParameterError(Exception):
+    """Raised when the user-requested parameter is invalid."""
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class FDParameterOutOfBoundsError(FDParameterError):
+    """Raised when the user-requested bounds are impossible."""
+    def __init__(self, message):
+        super().__init__(message)
+
