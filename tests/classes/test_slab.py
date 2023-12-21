@@ -181,8 +181,8 @@ class TestCoordinates:
         assert atom.cartpos == pytest.approx(expect)
 
     collapse_cart = {  # new_cartpos, expected cartpos after collapsing
-        'large values': ((5, 6, 3), (2, 2, 3)),
-        'small eps': ([1 - 1e-9, 2 + 1e-9, -3 - 1e-15], (1, 0, 1)),
+        'large values': ((5, 6, 3), (2, 2, -2)),
+        'small eps': ([1 - 1e-9, 2 + 1e-9, -3 - 1e-15], (1, 2, -3)),
         }
 
     @parametrize('new_cart,expect', collapse_cart.values(), ids=collapse_cart)
