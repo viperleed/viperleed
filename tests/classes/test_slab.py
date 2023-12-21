@@ -59,8 +59,9 @@ class TestAtomTransforms:
 
     def test_mirror_on_slanted_cell(self, make_poscar):
         """Test the expected outcome of mirroring atoms of a slanted slab."""
-        slab = make_poscar(SLAB_36C_cm)[0]
-        sym_plane = SymPlane((0, 0), (0, 1), abt=slab.surface_vectors)
+        slab, *_ = make_poscar(poscar_slabs.SLAB_36C_cm)
+        slab.create_sublayers(0.1)
+        sym_plane = SymPlane((0, 0), (0, 1), abt=slab.ab_cell.T)
         assert slab.is_mirror_symmetric(sym_plane, eps=1e-6)
 
     def test_180_rotation(self, manual_slab_3_atoms):
