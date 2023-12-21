@@ -330,26 +330,31 @@ class TestRevertUnitCell:
     def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates. Also test raises RuntimeError.
         """TODO"""
 
+    @staticmethod
+    def check_identical(slab, other, subtests):
+        """Check that slab and other are identical."""
+        with subtests.test('ucell'):
+            assert slab.ucell == pytest.approx(other.ucell)
+        atom_pairs = zip(slab, other)
+        with subtests.test('atom elements'):
+            assert all(at.el == at2.el for at, at2 in atom_pairs)
+        with subtests.test('atom pos'):
+            assert all(np.allclose(at.pos, at2.pos) for at, at2 in atom_pairs)
+        with subtests.test('atom cartpos'):
+            assert all(np.allclose(at.cartpos, at2.cartpos)
+                       for at, at2 in atom_pairs)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_revert_unit_cell_one_operation(self, args):
+    def test_revert_unit_cell_one_operation(self, args, subtests):
         """Check correct result of reverting one unit-cell operation."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
         slab.rotate_unit_cell(30)
         slab.revert_unit_cell()
-        assert slab.ucell == pytest.approx(slab_copy.ucell)
-        assert all(
-            np.allclose(at.cartpos, at_copy.cartpos)
-            for at, at_copy in zip(slab, slab_copy)
-            )
-        assert all(
-            np.allclose(at.pos, at_copy.pos)
-            for at, at_copy in zip(slab, slab_copy)
-            )
+        self.check_identical(slab, slab_copy, subtests)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_revert_unit_cell_few_operation(self, args):
+    def test_revert_unit_cell_few_operation(self, args, subtests):
         """Same as above, but reverting a few operations."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
@@ -357,31 +362,15 @@ class TestRevertUnitCell:
         slab.rotate_unit_cell(20)
         slab.rotate_unit_cell(40)                                               # TODO: so far, this is the only type of operation we have built in
         slab.revert_unit_cell()
-        assert slab.ucell == pytest.approx(slab_copy.ucell)
-        assert all(
-            np.allclose(at.cartpos, at_copy.cartpos)
-            for at, at_copy in zip(slab, slab_copy)
-            )
-        assert all(
-            np.allclose(at.pos, at_copy.pos)
-            for at, at_copy in zip(slab, slab_copy)
-            )
+        self.check_identical(slab, slab_copy, subtests)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_revert_unit_cell_undo_nothing(self, args):                         # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell. – @michele-riva: not sure what you mean by this
+    def test_revert_unit_cell_undo_nothing(self, args, subtests):               # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell. – @michele-riva: not sure what you mean by this
         """Check that reverting with no operations does nothing."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
         slab.revert_unit_cell()
-        assert slab.ucell == pytest.approx(slab_copy.ucell)
-        assert all(
-            np.allclose(at.cartpos, at_copy.cartpos)
-            for at, at_copy in zip(slab, slab_copy)
-            )
-        assert all(
-            np.allclose(at.pos, at_copy.pos)
-            for at, at_copy in zip(slab, slab_copy)
-            )
+        self.check_identical(slab, slab_copy, subtests)
 
 
 @pytest.mark.skip(reason='to be implemented')
