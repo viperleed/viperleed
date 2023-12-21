@@ -491,18 +491,18 @@ class TestUnitCellTransforms:
         slab.apply_scaling(*scaling)
         assert slab.ucell == pytest.approx(expected)
 
-    def test_project_c_to_z(self, make_poscar):
+    def test_project_c_to_z(self, make_poscar, subtests):
         """Check that the c vector is parallel to the z axis after projection."""
         slab, *_ = make_poscar(poscar_slabs.SLAB_36C_cm)
         slab_copy = deepcopy(slab)
         slab.project_c_to_z()
-        # check that the c vector is now parallel to the z axis
-        assert all(slab.ucell.T[2][:2] == pytest.approx(0))
-        # check that atom positions were updated correctly
-        assert all(  # atoms 4,5 are wrapped around
-            np.allclose(at.cartpos, at_copy.cartpos)
-            for at, at_copy in zip(slab.atlist[~4:5], slab_copy.atlist[~4:5])
-            )
+        with subtests.test('c along z'):
+            assert np.allclose(slab.ucell.T[2][:2], 0)
+        with subtests.test('atom positions'):
+            assert all(  # atoms 4,5 are wrapped around
+                np.allclose(at.cartpos, at_copy.cartpos)
+                for at, at_copy in zip(slab.atlist[~4:5], slab_copy.atlist[~4:5])
+                )
 
     def test_rotation_on_trigonal_slab(self, manual_slab_1_atom_trigonal):
         """Test application of a rotation to a trigonal slab."""
