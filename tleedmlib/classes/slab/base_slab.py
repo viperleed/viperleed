@@ -963,7 +963,10 @@ class BaseSlab(AtomContainer):
             True if the Cartesian coordinates of all atoms match
             (with at least one other atom, if there are duplicates),
             False otherwise. Both slabs are copied and collapsed to
-            the (0, 0) cell.
+            the (0, 0) cell. This means that this slab is considered
+            equivalent to other only if the atom positions differ
+            by a translation that is a multiple of the unit-cell
+            vectors.
         """
         if not isinstance(other, BaseSlab):
             return False
@@ -997,8 +1000,11 @@ class BaseSlab(AtomContainer):
                                                    frac_coords,
                                                    releps, ab_cell)
             # Finally compare interatomic distances
-            distances = euclid_distance(this_coords, other_coords)
+            distances = euclid_distance(other_coords, this_coords)
             if any(distances.min(axis=1) > eps):
+                # Notice that we use axis=1 as axis=0 contains
+                # this_coords, which has been expanded to add
+                # atoms at edged/corners
                 return False
         return True
 
