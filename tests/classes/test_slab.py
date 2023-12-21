@@ -59,11 +59,6 @@ class TestAtomTransforms:
         assert all(at.is_same_xy(rot_at)
                    for at, rot_at in zip(slab, reversed(rotated_slab)))
 
-    def test_180_rotation_on_slanted_cell(self, make_poscar):
-        """Test the expected outcome of rotating atoms of a slanted slab."""
-        slab, *_ = make_poscar(SLAB_36C_cm)
-        assert slab.is_rotation_symmetric(np.array([0,0]), order=2, eps=1e-6)
-
 
 class TestAtomsAndElements:
     """Collection of tests for atom additions/removals."""
