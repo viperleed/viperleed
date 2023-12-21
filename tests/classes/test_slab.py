@@ -14,7 +14,7 @@ import sys
 
 import numpy as np
 import pytest
-from pytest_cases import parametrize, parametrize_with_cases
+from pytest_cases import fixture, parametrize, parametrize_with_cases
 
 VPR_PATH = str(Path(__file__).resolve().parents[3])
 if VPR_PATH not in sys.path:
@@ -32,6 +32,18 @@ from ..helpers import not_raises
 # pylint: enable=wrong-import-position
 
 CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs
+
+
+@fixture(name='shuffle_slab', scope='session')
+def make_shuffled_slab():
+    """Shuffle the atoms of a slab at random."""
+    def _shuffle(slab):
+        slab.atlist.strict = False  # Silence duplicate errors
+        shuffle(slab.atlist)
+        slab.atlist.strict = True   # Now all atoms should be unique
+        slab.atlist.update_atoms_map()
+    return _shuffle
+
 
 class TestAtomTransforms:
     """Test simple transformations of the atoms of a slab."""
@@ -219,10 +231,42 @@ class TestDuplicateAtoms:
         with not_raises(AtomsTooCloseError):
             slab.check_atom_collisions()
 
-    @parametrize(info=poscar_slabs.WITH_DUPLICATE_ATOMS)
-    def test_remove_duplicates(self, info):                                     # TODO: n_atoms, raises, others? check method
+
+class TestEquivalence:
+    """Collection of tests for the is_equivalent method."""
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    def test_equivalent_copy(self, args, shuffle_slab):
+        """Check that a slab is equivalent to its deepcopy."""
+        slab, *_ = args
+        slab_copy = deepcopy(slab)
+        shuffle_slab(slab_copy)  # Make sure order does not matter
+        assert slab.is_equivalent(slab_copy, eps=1e-3)
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    def test_equivalent_translated_2d(self, args, shuffle_slab):
+        """Check equivalence by translating in plane by a unit vector."""
+        slab, *_ = args
+        slab_copy = deepcopy(slab)
+        shuffle_slab(slab_copy)  # Make sure order does not matter
+        for atom in slab_copy:
+            atom.pos[:2] += np.random.randint(-10, 10, size=2)
+        slab_copy.update_cartesian_from_fractional()
+        assert slab.is_equivalent(slab_copy, eps=1e-3)
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    def test_slab_not_equivalent(self, args):
+        """Check that a translated slab is not equivalent."""
+        slab, *_ = args
+        slab_copy = deepcopy(slab)
+        for atom in slab_copy:
+            atom.pos[0] -= 0.1
+        slab_copy.update_cartesian_from_fractional()
+        assert not slab.is_equivalent(slab_copy, eps=1e-10)
+
+    @pytest.mark.skip(reason='to be implemented')
+    def test_slab_equivalence_todo(self):                                       # TODO: check also cases covered by TODOs
         """TODO"""
-        slab, rpars, *_ = make_poscar(info)
 
 
 class TestProperties:
@@ -364,10 +408,10 @@ class TestSorting:
     """Collection of tests for slab sorting."""
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_element_sort(self, args):
+    def test_element_sort(self, args, shuffle_slab):
         """Check correct element-based sorting of a Slab."""
         slab, *_ = args
-        shuffle(slab)
+        shuffle_slab(slab)
         slab.sort_by_element()
         element_index_orig_order = [slab.elements.index(at.el) for at in slab]
         assert element_index_orig_order == sorted(element_index_orig_order)
@@ -377,19 +421,19 @@ class TestSorting:
         """Ensure sorting complains when elements are outdated."""
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_sort_original(self, args):
+    def test_sort_original(self, args, shuffle_slab):
         """Check correct sorting of a Slab to original atom numbers."""
         slab, *_ = args
         original_atlist = deepcopy(slab.atlist)
-        shuffle(slab)
+        shuffle_slab(slab)
         slab.sort_original()
         assert all(all(at1.pos == at2.pos) and at1.el == at2.el
                    for at1, at2 in zip(slab, original_atlist))
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_simple_sort_by_z(self, args):
+    def test_simple_sort_by_z(self, args, shuffle_slab):
         slab, *_ = args
-        shuffle(slab)
+        shuffle_slab(slab)
         slab.sort_by_z()
         assert all(at1.pos[2] <= at2.pos[2] for at1, at2 in pairwise(slab))
 
@@ -508,30 +552,6 @@ def test_ucell_ori_after_reset_symmetry():                                      
 @pytest.mark.skip(reason='to be implemented')
 def test_translation_symmetry_different_species():                              # TODO: could use something like an MgO slab and ascertain that Mg->O is not a valid translation
     """TODO"""
-
-
-@parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-def test_slab_equivalence(args):
-    """Check that a slab is equivalent to its deepcopy."""
-    slab, *_ = args
-    slab_copy = deepcopy(slab)
-    # shuffle atoms to make sure that the order is not important
-    shuffle(slab_copy)
-    for at in slab_copy:
-        at.cartpos[0] = 0
-    assert slab.is_equivalent(slab_copy, eps=1e-3)
-
-
-@parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-def test_slab_inequivalence(args):
-    """Check that a slab is equivalent to its deepcopy."""
-    slab, *_ = args
-    slab_copy = deepcopy(slab)
-    shuffle(slab_copy)
-    for at in slab_copy:
-        at.cartpos[0] -= 0.1
-        at.pos[1] += 0.1
-    assert not slab.is_equivalent(slab_copy, eps=1e-10)
 
 
 @pytest.mark.skip(reason='to be implemented')
