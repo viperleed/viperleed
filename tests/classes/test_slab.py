@@ -326,9 +326,6 @@ class TestRevertUnitCell:
     def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates. Also test raises RuntimeError.
         """TODO"""
 
-    @pytest.mark.skip(reason='to be implemented')
-    def test_revert_unit_cell_undo_nothing(self):                               # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell.
-        """TODO"""
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
     def test_revert_unit_cell_one_operation(self, args):
