@@ -435,7 +435,7 @@ class BaseSlab(AtomContainer):
         cuts.sort()
         return cuts
 
-    def createLayers(self, rparams, bulk_cuts=()):
+    def create_layers(self, rpars, bulk_cuts=()):
         """Create a list of Layer objects based on `rparams`.
 
         After this call, the `layers` attribute contains a list of
@@ -444,7 +444,7 @@ class BaseSlab(AtomContainer):
 
         Parameters
         ----------
-        rparams : Rparams
+        rpars : Rparams
             The PARAMETERS to be used to create layers. The
             N_BULK_LAYERS and LAYER_CUTS attributes are used.
         bulk_cuts : Sequence, optional
@@ -464,56 +464,43 @@ class BaseSlab(AtomContainer):
             bulk_cuts = ()
 
         # Get a sorted list of fractional cut positions
-        ct = self._get_layer_cut_positions(rparams, bulk_cuts)
+        cuts = self._get_layer_cut_positions(rpars, bulk_cuts)
+        n_cuts = len(cuts)  # For checking empty layers later
+        cuts_iter = iter(cuts)
 
+        # Remember current sorting to re-sort at the end
+        self.atlist.save_sorting()
+        self.sort_by_z()           # Bottommost atom first
+        next_cut = next(cuts_iter, 1)
+        newlayer = Layer(self, 0)  # Layer numbers are fixed later
         self.layers = []
-        tmplist = AtomList(*self.atlist)
-        self.sort_by_z()
-        laynum = 0
-        b = True if rparams.N_BULK_LAYERS > 0 else False
-        newlayer = Layer(self, 0, b)
-        self.layers.append(newlayer)
         for atom in self:
-            # only check for new layer if we're not in the top layer already
-            if laynum < len(ct):
-                if atom.pos[2] > ct[laynum]:
-                    # if atom is higher than the next cutoff, make a new layer
-                    laynum += 1
-                    b = True if rparams.N_BULK_LAYERS > laynum else False
-                    newlayer = Layer(self, laynum, b)
-                    self.layers.append(newlayer)
-                    check = True    # check for empty layer
-                    while check:
-                        if laynum >= len(ct):
-                            check = False
-                        elif atom.pos[2] <= ct[laynum]:
-                            check = False
-                        else:
-                            laynum += 1
-                            b = (True if rparams.N_BULK_LAYERS > laynum
-                                 else False)
-                            newlayer = Layer(self, laynum, b)
-                            self.layers.append(newlayer)
+            while atom.pos[2] > next_cut:
+                # May run multiple times if the user defined multiple
+                # cuts between two atoms that would give empty layers
+                next_cut = next(cuts_iter, 1)
+                newlayer = Layer(self, 0)
+            if newlayer not in self:
+                newlayer.is_bulk = self.n_layers < rpars.N_BULK_LAYERS
+                self.layers.append(newlayer)
             atom.layer = newlayer
             newlayer.atlist.append(atom)
-        dl = []
-        for layer in self.layers:
-            if not layer.atlist:
-                _LOGGER.warning('A layer containing no atoms was found. Layer '
-                                'will be deleted. Check LAYER_CUTS parameter.')
-                rparams.setHaltingLevel(2)
-                dl.append(layer)
-        for layer in dl:
-            if layer.is_bulk:
-                self.layers[layer.num+1].is_bulk = True
-            self.layers.remove(layer)
-            del layer
-        self.layers.reverse()
+
+        n_empty = (n_cuts + 1) - self.n_layers
+        if n_empty:
+            _plural = 's' if n_empty > 1 else ''
+            _LOGGER.warning(
+                f'Found {n_empty} layer{_plural} containing no atoms. '
+                f'Layer{_plural} will be deleted. Check LAYER_CUTS parameter.'
+                )
+            rpars.setHaltingLevel(2)
+
+        self.layers.reverse()  # Top to bottom from now on
         for i, layer in enumerate(self.layers):
             layer.update_position()
             layer.num = i
-        self.atlist = tmplist
-        return ct
+        self.atlist.restore_sorting()
+        return cuts
 
     def _get_sublayers_for_el(self, element, eps):
         """Yield SubLayer objects for atoms of `element` within `eps`."""
@@ -680,7 +667,7 @@ class BaseSlab(AtomContainer):
         self.collapse_fractional_coordinates()
         self.update_cartesian_from_fractional()
         if not self.layers:
-            self.createLayers(rpars)
+            self.create_layers(rpars)
         else:
             # It is only needed if there were layers already and
             # either (i) fractional coordinates had pos[2] out of

@@ -297,7 +297,7 @@ class SurfaceSlab(BaseSlab):
         rpars_copy = copy.deepcopy(rpars)
         rpars_copy.LAYER_CUTS.update_from_sequence([rpars.BULK_LIKE_BELOW])
         rpars_copy.N_BULK_LAYERS = 1
-        self_copy.createLayers(rpars_copy)
+        self_copy.create_layers(rpars_copy)
 
         # Create a pseudo-bulk slab to determine the correct repeat
         # c vector: the c vector now is very likely to be wrong (as
@@ -330,7 +330,7 @@ class SurfaceSlab(BaseSlab):
         # Finally, update self and rpars with the new information
         rpars.BULK_REPEAT = rpars_copy.BULK_REPEAT
         rpars.SUPERLATTICE = rpars_copy.SUPERLATTICE
-        new_cuts = self.createLayers(rpars, bulk_cuts=bulk_cuts)                # TODO: Issue #121
+        new_cuts = self.create_layers(rpars, bulk_cuts=bulk_cuts)               # TODO: Issue #121
         rpars.LAYER_CUTS.update_from_sequence(new_cuts)
         rpars.N_BULK_LAYERS = len(bulk_cuts)
         self.make_bulk_slab(rpars)
