@@ -274,12 +274,12 @@ class TestEquivalence:
 class TestProperties:
     """Collection of tests for various @property of Slab."""
 
-    def test_slab_thickness(self, ag100):
+    def test_thickness(self, ag100):
         """Check expected slab thickness."""
         slab, *_ = ag100
         assert slab.thickness == pytest.approx(10.18233, abs=1e-4)
 
-    def test_slab_vacuum_gap(self, ag100):
+    def test_vacuum_gap(self, ag100):
         """Check expected thickness of the vacuum gap."""
         slab, *_ = ag100
         assert slab.vacuum_gap == pytest.approx(10.18233, abs=1e-4)
