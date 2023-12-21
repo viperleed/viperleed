@@ -165,49 +165,50 @@ class TestBulkUcell:
 class TestCoordinates:
     """Collection of tests for Cartesian/fractional coordinates."""
 
-    def test_cartesian_from_fractional(self, manual_slab_3_atoms):
+    cart_from_frac = {  # update_origin, expected cartpos of 1st atom
+        'no update': (False, (0.3, 0.8, -1.5)),
+        'update': (True, (0.3, 0.8, 0)),
+        }
+
+    @parametrize('update_,expect', cart_from_frac.values(), ids=cart_from_frac)
+    def test_cartesian_from_fractional(self, update_, expect,
+                                       manual_slab_3_atoms):
         """Check correct update of Cartesian atom coordinates."""
         slab = manual_slab_3_atoms
         atom = slab.atlist[0]
         atom.pos = np.array([0.1, 0.2, 0.3])
-        slab.update_cartesian_from_fractional()
-        assert atom.cartpos == pytest.approx([0.3, 0.8, -1.5])
+        slab.update_cartesian_from_fractional(update_origin=update_)
+        assert atom.cartpos == pytest.approx(expect)
 
-    def test_cartesian_from_fractional_with_origin(self, manual_slab_3_atoms):
-        """Check correct update of Cartesian coordinates including origin."""
-        slab = manual_slab_3_atoms
-        atom = slab.atlist[0]
-        atom.pos = np.array([0.1, 0.2, 0.3])
-        slab.update_cartesian_from_fractional(update_origin=True)
-        assert atom.pos == pytest.approx([0.1, 0.2, 0.3])
-        assert atom.cartpos == pytest.approx([0.3, 0.8, 0])
+    collapse_cart = {  # new_cartpos, expected cartpos after collapsing
+        'large values': ((5, 6, 3), (2, 2, 3)),
+        'small eps': ([1 - 1e-9, 2 + 1e-9, -3 - 1e-15], (1, 0, 1)),
+        }
 
-    def test_fractional_from_cartesian(self, manual_slab_3_atoms):
-        slab = manual_slab_3_atoms
-        slab.atlist[0].cartpos = np.array([0.3, 0.8, -1.5])
-        slab.update_fractional_from_cartesian()
-        assert slab.atlist[0].pos == pytest.approx([0.1, 0.2, 0.3])
-
-    def test_collapse_cartesian(self, manual_slab_3_atoms):
+    @parametrize('new_cart,expect', collapse_cart.values(), ids=collapse_cart)
+    def test_collapse_cartesian(self, new_cart, expect, manual_slab_3_atoms):
         """Check that Cartesian coordinates are correctly collapsed."""
         slab = manual_slab_3_atoms
-        slab.atlist[0].cartpos = np.array([5, 6, 3])
+        atom = slab.atlist[0]
+        atom.cartpos = np.array(new_cart)
         slab.collapse_cartesian_coordinates()
-        assert slab.atlist[0].cartpos == pytest.approx([2, 2, 3])
+        assert atom.cartpos == pytest.approx(expect, abs=1e-8)
 
-    def test_collapse_fractional(self, manual_slab_3_atoms):
+    def test_collapse_fractional(self, manual_slab_3_atoms):                    # TODO: use both methods. Find especially cases that are 'problematic' with %1.0: e.g., 1-1e-8, 1-1e-9, 1-1e-15
         """Check that fractional coordinates are correctly collapsed."""
         slab = manual_slab_3_atoms
-        slab.atlist[0].pos = np.array([1.1, 2.2, -3.3])
+        atom = slab.atlist[0]
+        atom.pos = np.array([1.1, 2.2, -3.3])
         slab.collapse_fractional_coordinates()
-        assert slab.atlist[0].pos == pytest.approx([0.1, 0.2, 0.7])
+        assert atom.pos == pytest.approx([0.1, 0.2, 0.7])
 
-    def test_collapse_fractional_small_eps(self, manual_slab_3_atoms):
-        """Check that fractional coordinates are correctly collapsed even with small eps."""
+    def test_fractional_from_cartesian(self, manual_slab_3_atoms):
+        """Check correct update of fractional atom coordinates."""
         slab = manual_slab_3_atoms
-        slab.atlist[0].pos = np.array([1.0 - 1e-9, 2.0 + 1e-9, -3.0 -1e-15])
-        slab.collapseFractionalCoordinates()
-        assert slab.atlist[0].pos == pytest.approx([1, 0.0, 1.0], abs=1e-8)
+        atom = slab.atlist[0]
+        atom.cartpos = np.array([0.3, 0.8, -1.5])
+        slab.update_fractional_from_cartesian()
+        assert atom.pos == pytest.approx([0.1, 0.2, 0.3])
 
 
 @pytest.mark.skip(reason='to be implemented')
