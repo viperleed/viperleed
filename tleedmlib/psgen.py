@@ -418,7 +418,7 @@ def runPhaseshiftGen_old(sl, rp,
     for (site, block_element) in blocks:
         considered_atoms = [at for at in nsl.atlist if
                             at not in newbulkats  # atoms added to create supercell
-                            at in subatlists[(site, block_element)]]
+                            and at in subatlists[(site, block_element)]]
         if len(considered_atoms) == 0:
             continue
         considered_atom_indecies = [nsl.atlist.index(at) for at in considered_atoms]
