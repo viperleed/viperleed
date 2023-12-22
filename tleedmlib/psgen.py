@@ -410,7 +410,7 @@ def runPhaseshiftGen_old(sl, rp,
 
     # make phaseshifts continous and wrap the starting value
     atoms_phaseshifts = np.apply_along_axis(
-        wrap_phaseshifts, axis=1, arr=atoms_phaseshifts)
+        adjust_phaseshifts, axis=1, arr=atoms_phaseshifts)
 
     # average over atoms of site
     outvals = defaultdict(list) #TODO: clean up this messy data structure
@@ -515,7 +515,7 @@ def runPhaseshiftGen_old(sl, rp,
     return (firstline, phaseshifts)
 
 
-def wrap_phaseshifts(phaseshifts_per_energy):                                   # TODO: could be moved to lib/base.py
+def adjust_phaseshifts(phaseshifts_per_energy):                                 # TODO: could be moved to lib/base.py
     """Makes phaseshifts continous and wraps the starting value.
 
     Phaseshifts used in the LEED calculation are pi periodic in principle and
