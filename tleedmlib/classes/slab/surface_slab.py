@@ -19,7 +19,9 @@ from operator import itemgetter
 
 import numpy as np
 
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import NonIntegerMatrixError
+from viperleed.tleedmlib.base import SingularMatrixError
 from viperleed.tleedmlib.base import ensure_integer_matrix, pairwise
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
@@ -30,9 +32,12 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab
-from .slab_errors import AlreadyMinimalError, MissingBulkSlabError
-from .slab_errors import MissingLayersError, NoBulkRepeatError
-from .slab_errors import TooFewLayersError, SlabError
+from .slab_errors import AlreadyMinimalError
+from .slab_errors import MissingBulkSlabError
+from .slab_errors import MissingLayersError
+from .slab_errors import NoBulkRepeatError
+from .slab_errors import TooFewLayersError
+from .slab_errors import SlabError
 
 try:
     import ase
@@ -819,8 +824,11 @@ class SurfaceSlab(BaseSlab):
             return subcell_slab
 
         # Reduce dimensions in (x, y), then remove duplicates
-        subcell_slab.ab_cell[:] = np.dot(self.ab_cell,
-                                         np.linalg.inv(transform).T)
+        try:
+            subcell_slab.ab_cell[:] = np.dot(self.ab_cell,
+                                             np.linalg.inv(transform).T)
+        except np.linalg.LinAlgError:  # singular
+            raise SingularMatrixError(f'transform={transform} is singular')
         subcell_slab.collapse_cartesian_coordinates(update_origin=True)
         subcell_slab.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
                                             rpars.SYMMETRY_EPS.z,

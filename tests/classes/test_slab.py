@@ -14,7 +14,8 @@ import sys
 
 import numpy as np
 import pytest
-from pytest_cases import fixture, parametrize, parametrize_with_cases
+from pytest_cases import fixture, fixture_ref
+from pytest_cases import parametrize, parametrize_with_cases
 
 VPR_PATH = str(Path(__file__).resolve().parents[3])
 if VPR_PATH not in sys.path:
@@ -23,8 +24,12 @@ if VPR_PATH not in sys.path:
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
 from viperleed.tleedmlib.base import pairwise
+from viperleed.tleedmlib.base import NonIntegerMatrixError, SingularMatrixError
 from viperleed.tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.classes.slab import slab_errors as err
+from viperleed.tleedmlib.classes.slab import surface_slab
 from viperleed.tleedmlib.classes.sym_entity import SymPlane
 
 from .. import poscar_slabs
@@ -32,6 +37,7 @@ from ..helpers import not_raises
 # pylint: enable=wrong-import-position
 
 CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs
+todo = pytest.mark.skip('To be implemented')
 
 
 @fixture(name='shuffle_slab', scope='session')
@@ -64,6 +70,13 @@ class TestAtomTransforms:
         sym_plane = SymPlane((0, 0), (0, 1), abt=slab.ab_cell.T)
         assert slab.is_mirror_symmetric(sym_plane, eps=1e-6)
 
+    def test_rotation_symmetric_raises(self, ag100):
+        """Check that no symmetry checks can be performed without sublayers."""
+        slab, *_ = ag100
+        slab.sublayers.clear()
+        with pytest.raises(err.MissingSublayersError):
+            slab.is_rotation_symmetric((0, 0), 4, 1e-3)
+
     def test_180_rotation(self, manual_slab_3_atoms):
         """Test the expected outcome of rotating atoms of a simple slab."""
         slab = manual_slab_3_atoms
@@ -93,11 +106,11 @@ class TestAtomsAndElements:
         assert new_atom.el in slab.elements
         assert slab.n_per_elem[new_atom.el] == 1
 
-    @pytest.mark.skip(reason='to be implemented')
+    @todo
     def test_atlist_is_not_list(self):                                          # TODO: Should consider various situations to make sure that no Slab method messes with the atlist
         """TODO"""
 
-    @pytest.mark.skip(reason='to be implemented')
+    @todo
     def test_chemelem_upon_element_mix_changed(self):
         """Check that chemelem are changed when ELEMENT_MIX is."""
 
@@ -109,12 +122,12 @@ class TestAtomsAndElements:
         slab.update_element_count()
         assert slab.n_per_elem['Ag'] == n_ag_atoms - 1
 
-    @pytest.mark.skip(reason='to be implemented')
+    @todo
     def test_update_atom_numbers(self):                                         # Probably remove atoms from a slab, with and without bulkslab, atoms in common with, or not, with the bulkslab.
         """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
+@todo
 class TestBulk3DOperations:
     """Tests for 3D symmetry operations of BulkSlab objects."""
 
@@ -128,24 +141,53 @@ class TestBulk3DOperations:
         """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
 class TestBulkDetectAndExtraBulk:
     """Collection of tests for adding bulk units to slabs."""
 
+    @todo
     def test_detect_bulk(self):                                                 # TODO: also check that rp and sl are unchanged if it fails
         """TODO"""
 
+    def test_detect_bulk_raises(self, ag100):
+        """Check complaints for invalid inputs."""
+        slab, rpars, *_ = ag100
+        rpars.BULK_LIKE_BELOW = -0.5
+        with pytest.raises(ValueError):
+            slab.detect_bulk(rpars)
+
+    @todo
     def test_with_extra_bulk_units(self):                                       # TODO: also check the number of bulk layers
         """TODO"""
 
+    @todo
     def test_with_double_thickness_once(self):
         """TODO"""
 
+    @todo
     def test_with_double_thickness_twice(self):
         """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
+class TestBulkRepeat:
+    """Collection of test for bulk-repeat finding and returning."""
+
+    @todo
+    def test_identify(self):
+        """TODO"""
+
+    def test_identify_no_bulk_slab(self, ag100):                                # TODO: also other raises
+        """Check complaints when called without a bulk slab."""
+        slab, *_ = ag100
+        slab.bulkslab = None
+        with pytest.raises(err.MissingBulkSlabError):
+            slab.identify_bulk_repeat(.1)
+
+    @todo
+    def test_get(self):
+        """TODO"""
+
+
+@todo
 class TestBulkUcell:
     """Tests concerning reduction of bulk unit cell and C vector."""
 
@@ -211,7 +253,7 @@ class TestCoordinates:
         assert atom.pos == pytest.approx([0.1, 0.2, 0.3])
 
 
-@pytest.mark.skip(reason='to be implemented')
+@todo
 class TestDuplicateAtoms:
     """Tests for checking detection and removal of duplicate atoms."""
 
@@ -224,13 +266,13 @@ class TestDuplicateAtoms:
     def test_with_duplicate_atoms(self, info, make_poscar):
         """Check that POSCARs with duplicates are handled correctly."""
         slab, *_ = make_poscar(info)
-        with pytest.raises(AtomsTooCloseError):
+        with pytest.raises(err.AtomsTooCloseError):
             slab.check_atom_collisions()
 
     def test_without_duplicates(self, ag100):                                   # TODO: probably do it for all cases
         """Check that POSCARs without duplicates are handled correctly."""
         slab, *_ = ag100
-        with not_raises(AtomsTooCloseError):
+        with not_raises(err.AtomsTooCloseError):
             slab.check_atom_collisions()
 
 
@@ -266,9 +308,46 @@ class TestEquivalence:
         slab_copy.update_cartesian_from_fractional()
         assert not slab.is_equivalent(slab_copy, eps=1e-10)
 
-    @pytest.mark.skip(reason='to be implemented')
+    @todo
     def test_slab_equivalence_todo(self):                                       # TODO: check also cases covered by TODOs
         """TODO"""
+
+
+@pytest.mark.skipif(not surface_slab._HAS_ASE, reason='No ASE module')
+class TestFromAse:
+    """Collection of tests for the from_ase class method."""
+
+    def test_no_ase(self):
+        """Check complaints when no ase module is present."""
+        surface_slab._HAS_ASE = False
+        with pytest.raises(ModuleNotFoundError):
+            Slab.from_ase(None)
+        surface_slab._HAS_ASE = True
+
+    def test_not_an_ase_atoms(self):
+        """Check complaints for the wrong type."""
+        with pytest.raises(TypeError):
+            Slab.from_ase('invalid')
+
+
+class TestMakeBulkSlab:
+    """Collection of tests for the make_bulk_slab method."""
+
+    _invalid = {
+        'no layers': (Slab(), err.MissingLayersError),
+        'one layer': (fixture_ref('manual_slab_3_atoms'),
+                      err.TooFewLayersError),
+        }
+
+    @todo
+    def test_valid(self):
+        """TODO"""
+
+    @parametrize('slab,exc', _invalid.values(), ids=_invalid)
+    def test_invalid(self, slab, exc):
+        """Check complaints for invalid conditions when making bulk."""
+        with pytest.raises(exc):
+            slab.make_bulk_slab(Rparams())
 
 
 class TestProperties:
@@ -326,7 +405,7 @@ class TestRestoreOristate:
 class TestRevertUnitCell:
     """Tests for reverting the unit cell of a slab."""
 
-    @pytest.mark.skip(reason='to be implemented')
+    @todo
     def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates. Also test raises RuntimeError.
         """TODO"""
 
@@ -372,15 +451,22 @@ class TestRevertUnitCell:
         slab.revert_unit_cell()
         self.check_identical(slab, slab_copy, subtests)
 
+    def test_revert_unit_cell_raises(self, ag100):
+        """Check complaints for invalid operation types."""
+        slab, *_ = ag100
+        slab.ucell_mod.append(('invalid', 'invalid'))
+        with pytest.raises(RuntimeError):
+            slab.revert_unit_cell()
 
-@pytest.mark.skip(reason='to be implemented')
+
+@todo
 class TestSlabLayers:
     """Collection of tests concerning slab (sub)layers."""
 
     def test_bulk_layers(self):
         """TODO"""
 
-    def test_create_layers(self):
+    def test_create_layers(self):                                               # TODO: check also logging with cuts that (do not) create empty layers
         """Check that layers are created correctly."""
 
     def test_create_sublayers(self):                                            # TODO: also test if this works fine excluding the second sort-by-element run
@@ -396,6 +482,51 @@ class TestSlabLayers:
         """TODO"""
 
 
+class TestSlabRaises:
+    """Collection of tests for diverse exception-raising conditions."""
+
+    def test_ab_in_plane_raises(self):
+        """Check complaints when accessing an undefined unit cell."""
+        with pytest.raises(err.InvalidUnitCellError):
+            Slab().check_a_b_in_plane()
+
+    _sublayers = {  # attr_to_clear, exception
+        'no atoms': ('atlist', err.EmptySlabError),
+        'no elements': ('n_per_elem', err.MissingElementsError),
+        }
+
+    @parametrize('attr,exc', _sublayers.values(), ids=_sublayers)
+    def test_create_sublayers_raises(self, attr, exc, ag100):
+        """Check complaints when creating sublayers."""
+        slab, *_ = ag100
+        getattr(slab, attr).clear()
+        with pytest.raises(exc):
+            slab.create_sublayers()
+
+    def test_from_slab_not_a_slab(self):
+        """Check complaints when from_slab is passed a non-Slab."""
+        with pytest.raises(TypeError):
+            Slab.from_slab('invalid')
+
+    def test_interlayer_spacing_few_layers(self, manual_slab_3_atoms):
+        """Check complaints when there's not enough layers."""
+        slab = manual_slab_3_atoms
+        with pytest.raises(err.TooFewLayersError):
+            _ = slab.smallest_interlayer_spacing
+
+    _props = {
+        'ab_cell': err.InvalidUnitCellError,
+        'fewest_atoms_sublayer': err.MissingSublayersError,
+        'smallest_interlayer_spacing': err.MissingLayersError,
+        }
+
+    @parametrize('attr_name,exc', _props.items(), ids=_props)
+    def test_property_raises(self, attr_name, exc):
+        """Check complaints when accessing a property of an empty slab."""
+        with pytest.raises(exc):
+            _ = getattr(Slab(), attr_name)
+
+
 class TestSorting:
     """Collection of tests for slab sorting."""
 
@@ -408,9 +539,13 @@ class TestSorting:
         element_index_orig_order = [slab.elements.index(at.el) for at in slab]
         assert element_index_orig_order == sorted(element_index_orig_order)
 
-    @pytest.mark.skip(reason='to be implemented')
-    def test_element_sort_raises_with_outdated_elements(self):
+    def test_element_sort_raises_with_outdated_elements(self, ag100):
         """Ensure sorting complains when elements are outdated."""
+        slab, *_ = ag100
+        new_atom = slab.atlist[0].duplicate()
+        new_atom.el = 'C'
+        with pytest.raises(err.SlabError):
+            slab.sort_by_element()
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
     def test_sort_original(self, args, shuffle_slab):
@@ -424,6 +559,7 @@ class TestSorting:
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
     def test_simple_sort_by_z(self, args, shuffle_slab):
+        """Check correct outcome of sorting by z coordinates."""
         slab, *_ = args
         shuffle_slab(slab)
         slab.sort_by_z()
@@ -440,23 +576,46 @@ class TestSorting:
                    for at1, at2 in pairwise(slab))
 
 
-@pytest.mark.skip(reason='to be implemented')
 class TestSuperAndSubCell:
     """Collection of tests for creation of larger and smaller slab versions."""
 
-    def test_supercell(self):                                                   # TODO: diagonal and non-diagonal (for some weird basis cell?). I think the old version was failing under some non-diagonal situations. Explicitly test the two removed update_origin.
+    invalid = {
+        'not integer': (np.eye(2)*0.5, NonIntegerMatrixError),
+        'singular': (np.eye(2)*0, SingularMatrixError),
+        'non-2x2': (np.eye(3), ValueError),
+        }
+
+    @todo
+    def test_supercell_valid(self):                                             # TODO: diagonal and non-diagonal (for some weird basis cell?). I think the old version was failing under some non-diagonal situations. Explicitly test the two removed update_origin.
         """TODO"""
 
-    def test_subcell(self):                                                     # TODO: this is the inverse of the previous one.
+    @parametrize('matrix,exc', invalid.values(), ids=invalid)
+    def test_supercell_invalid(self, matrix, exc, ag100):
+        """Check complaints for invalid input to make_subcell."""
+        slab, *_ = ag100
+        with pytest.raises(exc):
+            slab.make_supercell(matrix)
+
+    sub_invalid = {
+        **invalid,
+        'not a subcell': (np.diag((2, 2)), ValueError),
+        }
+
+    @todo
+    def test_subcell_valid(self):
         """TODO"""
+
+    @parametrize('matrix,exc', sub_invalid.values(), ids=sub_invalid)
+    def test_subcell_invalid(self, matrix, exc, ag100):
+        """Check complaints for invalid input to make_subcell."""
+        slab, rpars, *_ = ag100
+        with pytest.raises(exc):
+            slab.make_subcell(rpars, matrix)
+
 
 
 class TestUnitCellTransforms:
     """Test simple transformations of the unit cell of a slab."""
-
-    def test_ucell_array(self, manual_slab_3_atoms):
-        """Check that the array shape of the unit cell is as expected."""
-        assert manual_slab_3_atoms.ucell.shape == (3, 3)
 
     def test_angle_between_ucell_and_coord_sys_zero(self, manual_slab_3_atoms):
         """Check correct identification of the rotation of the a vector."""
@@ -475,12 +634,42 @@ class TestUnitCellTransforms:
         'scalar': ((2,),  np.diag((6, 8, 10))),
         'vector': ((1/3, 3.14, 0.1), np.diag((1, 12.56, 0.5)))
         }
+    _scale_invalid = {
+        'too few': (tuple(), TypeError),
+        'two': ((1, 2), TypeError),
+        'too many': ((1, 2, 3, 4), TypeError),
+        'not a number': (('invalid',), TypeError),
+        'singular': ((0, 1, 1), ValueError),
+        }
 
     @parametrize('scaling,expected', _scalings.values(), ids=_scalings)
     def test_apply_scaling(self, scaling, expected, manual_slab_3_atoms):
+        """Check expected outcome of scaling the unit cell."""
         slab = manual_slab_3_atoms
+        fractionals = [at.pos.copy() for at in slab]
         slab.apply_scaling(*scaling)
         assert slab.ucell == pytest.approx(expected)
+        assert all(np.allclose(at.pos, ori_pos)
+                   for at, ori in zip(slab, fractionals))
+
+    @parametrize('scaling,exc', _scale_invalid.values(), ids=_scale_invalid)
+    def test_apply_scaling_raises(self, scaling, exc, ag100):
+        """Check complaints for invalid arguments to apply_scaling."""
+        slab, *_ = ag100
+        with pytest.raises(exc):
+            slab.apply_scaling(*scaling)
+
+    _invalid_matrix = {
+        'not a matrix': ('invalid', ValueError),
+        'not orthogonal': (np.identity(3)+1, ValueError),
+        }
+
+    @parametrize('matrix,exc', _invalid_matrix.values(), ids=_invalid_matrix)
+    def test_matrix_transform_raises(self, matrix, exc, ag100):
+        """Check complaints for unexpected inputs."""
+        slab, *_ = ag100
+        with pytest.raises(exc):
+            slab.apply_matrix_transformation(matrix)
 
     def test_project_c_to_z(self, make_poscar, subtests):
         """Check that the c vector is parallel to the z axis after projection."""
@@ -509,8 +698,12 @@ class TestUnitCellTransforms:
         assert np.allclose(slab.ucell.T, expected_cell)
         assert np.allclose(slab.atlist[0].cartpos[:2], expected_atom_cartpos)
 
+    def test_ucell_array(self, manual_slab_3_atoms):
+        """Check that the array shape of the unit cell is as expected."""
+        assert manual_slab_3_atoms.ucell.shape == (3, 3)
 
-@pytest.mark.skip(reason='to be implemented')
+
+@todo
 class TestUnitCellReduction:
     """Tests for minimization of various bits of the unit cell."""
 
@@ -521,43 +714,28 @@ class TestUnitCellReduction:
         """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
+@todo
 def test_contains():
     """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
+@todo
 def test_check_ab_in_plane():
     """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
+@todo
 def test_nearest_neighbors():
     """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
+@todo
 def test_ucell_ori_after_reset_symmetry():                                      # TODO: ucell_ori should not change when transforming the unit cell after resetSymmetry was called
     """TODO"""
 
 
-@pytest.mark.skip(reason='to be implemented')
+@todo
 def test_translation_symmetry_different_species():                              # TODO: could use something like an MgO slab and ascertain that Mg->O is not a valid translation
-    """TODO"""
-
-
-@pytest.mark.skip(reason='to be implemented')
-def test_identify_bulk_repeat():
-    """TODO"""
-
-
-@pytest.mark.skip(reason='to be implemented')
-def test_get_bulk_repeat():
-    """TODO"""
-
-
-@pytest.mark.skip(reason='to be implemented')
-def test_make_bulk_slab():
     """TODO"""
 
 

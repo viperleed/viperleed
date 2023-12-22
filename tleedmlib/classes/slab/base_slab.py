@@ -36,9 +36,14 @@ from viperleed.tleedmlib.classes.atom_containers import AtomContainer, AtomList
 from viperleed.tleedmlib.classes.layer import Layer, SubLayer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
-from .slab_errors import AlreadyMinimalError, EmptySlabError
-from .slab_errors import InvalidUnitCellError, MissingElementsError
-from .slab_errors import MissingLayersError, MissingSublayersError, SlabError
+from .slab_errors import AlreadyMinimalError
+from .slab_errors import EmptySlabError
+from .slab_errors import InvalidUnitCellError
+from .slab_errors import MissingElementsError
+from .slab_errors import MissingLayersError
+from .slab_errors import MissingSublayersError
+from .slab_errors import SlabError
+from .slab_errors import TooFewLayersError
 from .slab_utils import _left_handed, _z_distance
 
 
@@ -161,7 +166,7 @@ class BaseSlab(AtomContainer):
             return self.ucell[:2, :2]
         except IndexError:  # Uninitialized
             raise InvalidUnitCellError(
-                f'{type(self).__name__} has no unit cell defined.'
+                f'{type(self).__name__} has no unit cell defined'
                 ) from None
 
     @property
@@ -277,7 +282,8 @@ class BaseSlab(AtomContainer):
             raise MissingLayersError
 
         if self.n_layers == 1:
-            raise TooFewLayersError(f'{type(self).__name} has only one layer')
+            raise TooFewLayersError(f'{type(self).__name__} '
+                                    'has only one layer')
 
         # Recall that z increases moving deeper into the solid
         return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2]
@@ -378,7 +384,12 @@ class BaseSlab(AtomContainer):
 
     def check_a_b_in_plane(self):
         """Raise InvalidUnitCellError if a, b have out-of-plane components."""
-        if any(self.ucell[2, :2]):
+        try:
+            a_b_z_component = self.ucell[2, :2]
+        except IndexError:
+            raise InvalidUnitCellError(f'{type(self).__name__} has no '
+                                       'unit cell defined') from None
+        if any(a_b_z_component):
             _err = ('Unit cell a and b vectors must not '
                     'have an out-of-surface (Z) component!')
             _LOGGER.error(_err)
