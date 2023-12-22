@@ -428,7 +428,7 @@ def runPhaseshiftGen_old(sl, rp,
         # - may help identify averaging of different coordination environments
         if np.max(
             np.var(atoms_phaseshifts[considered_atom_indecies, ...], axis=0)
-            ) > 1e-2:                                                           #TODO: is this a sensible threshold?
+            ) > 1e-1:                                                           #TODO: is this a sensible threshold?
             logger.warning("Large variance in phaseshifts for atoms of type "
                            f"{block_element} at site {site}. This may indicate"
                            " averaging of non-equivalent atom environments.")
