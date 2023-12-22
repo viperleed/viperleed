@@ -36,7 +36,7 @@ logger = logging.getLogger("tleedm.rfactor")
 def rfactor(sl, rp, index, for_error=False, only_vary=None):                    # TODO: Parameters __doc__
     """Runs the r-factor calculation for either the reference calculation
     (index 11) or the superpos (index 12)."""
-    if int((rp.THEO_ENERGIES[1] - rp.THEO_ENERGIES[0]) / rp.THEO_ENERGIES[2]) + 1 < 2:
+    if rp.THEO_ENERGIES.n_energies < 2:
         logger.info("Only one theoretical energy found: Cannot "
                     "calculate a meaningful R-Factor. Stopping...")
         return []
@@ -122,7 +122,6 @@ def _fetch_and_check_spectra(rp, index, name):
 def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     logger.debug("Using new R-factor calculation. This is still experimental!")
     which_r = rp.R_FACTOR_TYPE
-    real_iv_shift = rp.IV_SHIFT_RANGE[:2]
 
     if which_r == 1:
         n_derivs = 1
@@ -131,39 +130,15 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     else:
         check_ierr(701, logger)
 
-    theo_energies = []
-    for b in theobeams:
-        theo_energies.extend([k for k in b.intens if k not in theo_energies])
-    theo_energies.sort()
-    exp_energies = []
-    for b in rp.expbeams:
-        exp_energies.extend([k for k in b.intens if k not in exp_energies])
-    exp_energies.sort()
-
-    if not for_error:
-        real_iv_shift = rp.IV_SHIFT_RANGE[:2]
-    else:
-        real_iv_shift = [rp.best_v0r] * 2
-
-        # extend energy range if they are close together
-    if abs(min(exp_energies) - rp.THEO_ENERGIES[0]) < abs(real_iv_shift[0]):
-        minen = max(min(exp_energies), rp.THEO_ENERGIES[0]) + real_iv_shift[0]
-    else:
-        minen = max(min(exp_energies), rp.THEO_ENERGIES[0])
-    if abs(max(exp_energies) - rp.THEO_ENERGIES[1]) < abs(real_iv_shift[1]):
-        maxen = (
-            min(max(exp_energies), rp.THEO_ENERGIES[1]) + real_iv_shift[1]
-        )  # TODO: should this be + or - ? I think + ...
-    else:
-        maxen = min(max(exp_energies), rp.THEO_ENERGIES[1])
-        
-    intpol_step = min(
-        exp_energies[1] - exp_energies[0], theo_energies[1] - theo_energies[0]
+    (_, theo_range,
+     iv_shift,
+     intpol_step) = tl_io.prepare_rfactor_energy_ranges(
+        rp, theobeams, for_error,
+        n_expand=(rp.INTPOL_DEG - 1) // 2
         )
-    if rp.IV_SHIFT_RANGE[2] is not rp.no_value:
-        intpol_step = min(intpol_step, rp.IV_SHIFT_RANGE[2])
-
-    out_grid = np.arange(minen, maxen + intpol_step, intpol_step)
+    out_grid = np.arange(theo_range.min,
+                         theo_range.max + 0.1 * intpol_step,
+                         intpol_step)
 
     # find correspondence experimental to theoretical beams:
     beamcorr = tl_io.getBeamCorrespondence(sl, rp)
@@ -281,8 +256,9 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
         # optimize V0r and calculate R factor
 
         ## settings for V0r optimization
+    bounds = iv_shift.min, iv_shift.max
     v0r_range = np.array(
-        [int(bound / intpol_step) for bound in rp.IV_SHIFT_RANGE[:2]], dtype="int32"
+        [round(bound / intpol_step) for bound in bounds], dtype="int32"
     )
     v0r_center = int((v0r_range[0] + v0r_range[1]) / 2)
     start_guess = np.array([v0r_range[0], v0r_center, v0r_range[1]], dtype="int32")
@@ -463,7 +439,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
 
     # get fortran files and compile
     try:
-        tldir = leedbase.getTLEEDdir(tensorleed_path=rp.source_dir, version=rp.TL_VERSION)
+        tldir = rp.get_tenserleed_directory()
         libpath = tldir / "lib"
         libname = next(libpath.glob("rfacsb*"))                                 # StopIteration??
         srcpath = tldir / "src"

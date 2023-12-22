@@ -5,6 +5,10 @@ SYMMETRY_CELL_TRANSFORM
 
 SYMMETRY_CELL_TRANSFORM defines the base unit cell on which symmetry operations should be found and used for linking atom movements. All other atoms are assumed to be translationally symmetric, and will be linked to the base cell accordingly. The relationship between the symmetry base cell and the :ref:`POSCAR<POSCAR>`  unit cell is defined by SYMMETRY_CELL_TRANSFORM in the same way as the relationship between the bulk unit cell and the :ref:`POSCAR<POSCAR>`  unit cell is defined by :ref:`SUPERLATTICE<SUPERLATTICE>`.
 
+.. note:
+
+        SYMMETRY_CELL_TRANSFORM may be updated automatically during initialization if a reducible supercell is detected.
+
 **Default:** (1x1)
 
 **Syntax examples:** see :ref:`SUPERLATTICE page<SUPERLATTICE>` 

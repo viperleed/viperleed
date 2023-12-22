@@ -99,7 +99,8 @@ def monitoredPool(rp, poolsize, function, tasks, update_from=Path()):
         while not all(r.ready() for r in results):
             if killed:
                 break
-            parameters.updatePARAMETERS(rp, update_from=update_from)
+            # See if user wants to STOP
+            parameters.update(rp, update_from=update_from)
             if rp.STOP:
                 kill_pool(pool)
                 logger.info("Stopped by STOP parameter.")
@@ -169,48 +170,6 @@ def getYfunc(ivfunc, v0i):
             else:
                 raise
     return yfunc
-
-
-def _version_from_dirname(dirname):
-    try:
-        return float(dirname.split('v')[-1])
-    except Exception:
-        logger.debug("Could not parse version number "
-                     f"for directory {dirname}")
-        return np.nan
-
-
-def getTLEEDdir(tensorleed_path, version=None):
-    """Finds directories in the 'tensorleed' folder that have names starting
-    with 'TensErLEED', then picks the one with the highest version number.
-    Returns an absolute path to that directory, eg
-    './tensorleed/TensErLEED-v1.6'."""
-    if tensorleed_path is None:
-        raise RuntimeError("tensorleed_path is None")
-    source_dir = tensorleed_path.resolve()
-    tl_version_dirs = [dir.resolve() for dir in source_dir.iterdir()
-                       if ((source_dir / dir).is_dir()
-                       and dir.name.startswith('TensErLEED'))]
-    logger.log(1, f"getTLEEDdir: available TensErLEED directories: "
-                 f"{[d.name for d in tl_version_dirs]}")
-    if not tl_version_dirs:
-        raise FileNotFoundError("Could not find any TensErLEED directory.")
-    if version:
-        logger.log(5, f"getTLEEDdir: Looking for TensErLEED version {version}")
-        for tl_dir in tl_version_dirs:
-            if np.isclose(version, _version_from_dirname(tl_dir.name)):
-                return tl_dir
-        # if we get here, we didn't find the requested version
-        raise RuntimeError("Could not find requested TensErLEED version "
-                           f"{version}.")
-    # if no version is specified, return the highest version
-    version_numbers = [_version_from_dirname(d.name) for d in tl_version_dirs]
-    if all(np.isnan(version_numbers)):
-        raise RuntimeError("Could not find any TensErLEED version.")
-    highest_tl_version_dir = tl_version_dirs[np.nanargmax(version_numbers)]
-    logger.log(1, "getTLEEDdir: highest TensErLEED version is "
-               f"{highest_tl_version_dir.name}")
-    return highest_tl_version_dir
 
 
 def getMaxTensorIndex(home=".", zip_only=False):
@@ -325,8 +284,8 @@ def getTensorOriStates(sl, path):
     dn = path.parent
     try:
         tsl = poscar.read(path / "POSCAR")
-        trp = parameters.readPARAMETERS(filename=path/"PARAMETERS")
-        parameters.interpretPARAMETERS(trp, slab=tsl, silent=True)
+        trp = parameters.read(filename=path/"PARAMETERS")
+        parameters.interpret(trp, slab=tsl, silent=True)
         tsl.fullUpdate(trp)
         vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
         tsl.fullUpdate(trp)
@@ -563,7 +522,7 @@ def getLEEDdict(sl, rp):
         logger.error("getLEEDdict: SUPERLATTICE contains non-integer-valued "
                      "entries.")
         return None
-    d = {"eMax": rp.THEO_ENERGIES[1],
+    d = {"eMax": rp.THEO_ENERGIES.max,
          "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
          "surfBasis": sl.ucell[:2, :2].T,
          "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,

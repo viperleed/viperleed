@@ -10,6 +10,7 @@ Contains definition of pytest cases generated from POSCAR files.
 from pathlib import Path
 import copy
 import inspect
+import io
 import sys
 
 import numpy as np
@@ -21,13 +22,14 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
-from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts, SymmetryEps
 from viperleed.tleedmlib.files import poscar
 
 from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo, CaseTag as Tag
 from .helpers import duplicate_all
 # pylint: enable=wrong-import-position
 
+POSCAR_FILES = tuple(POSCAR_PATH.glob('POSCAR*'))
 
 def _get_poscar_info(*args):
     """Return a TestInfo object appropriately filled with args.
@@ -117,10 +119,9 @@ def make_poscar_ids(suffix=None):
 
 # PARAMETERS presets for slabs
 _PRESETS = {
-    'Fe3O4': {'LAYER_CUTS': [0.1, 0.2, '<', 'dz(1.0)'],
+    'Fe3O4': {'LAYER_CUTS': LayerCuts.from_string('0.1 0.2 <dz(1.0)'),
               'N_BULK_LAYERS': 2,
-              'SYMMETRY_EPS': 0.3,
-              'SYMMETRY_EPS_Z': 0.3,
+              'SYMMETRY_EPS': SymmetryEps(0.3),
               'BULK_REPEAT': np.array([0.0, -4.19199991, 4.19199991]),
               'SUPERLATTICE': np.array(((1, 1), (1, -1))),
               'superlattice_defined': True},
@@ -140,14 +141,36 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_Al2O3_NiAl(111)_cHole_20061025',
                      {'Ni': 402, 'Al': 134+132+188, 'O': 188+213},
                      'p3'),
+    _get_poscar_info('POSCAR_Cu2O(111)_1x1_surplus_oxygen', 66, 'p3m1'),
     )
 
-AG_100 = POSCARS_WITH_LITTLE_SYMMETRY_INFO[0]
-SLAB_36C_cm = POSCARS_WITH_LITTLE_SYMMETRY_INFO[5]
+def _get_info_by_name(name):
+    """Return a TestInfo object by name."""
+    return next(i for i in POSCARS_WITH_LITTLE_SYMMETRY_INFO
+                if name in i.poscar.name)
+
+AG_100 = _get_info_by_name('Ag(100)')
+SLAB_36C_cm = _get_info_by_name('36C_cm')
+SLAB_Cu2O_111 = _get_info_by_name('Cu2O(111)')
 
 POSCARS_WITHOUT_INFO = [
     _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
     ]
+
+
+class CasePOSCARFiles:
+    @staticmethod
+    def _string(file):
+        """Return the string of a POSCAR file name."""
+        with open(POSCAR_PATH / file, 'r', encoding='utf-8') as file:
+            contents = file.read()
+        return contents
+
+    @parametrize(file=POSCAR_FILES)
+    def case_poscar_file(self, file):
+        """Return a POSCAR file name."""
+        content = self._string(file)
+        return file, content
 
 
 class CasePOSCARSlabs:
