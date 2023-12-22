@@ -412,20 +412,21 @@ def runPhaseshiftGen_old(sl, rp,
 
     # average over atoms of site
     outvals = defaultdict(list)  # This is outvals[energy][block][L]            # TODO: clean up this messy data structure
-    for site, block_element in blocks:
+    for block in blocks:
         equivalent_atoms = [at for at in nsl
-                            if at.site is site
-                            and at.el == block_element
-                            and at not in newbulkats]
+                            if at not in newbulkats
+                            and at in subatlists[block]]
         if not equivalent_atoms:
             continue
         equivalent_atoms_ind = [nsl.atlist.index(at)
                                 for at in equivalent_atoms]
 
-        # check variance of phaseshifts for "equivalent" atoms – warn if it's very large
-        # - may help identify averaging of different coordination environments
+        site, block_element = block
+        # Check variance of phaseshifts for "equivalent" atoms. Warn
+        # if it's very large. May help identify averaging of different
+        # coordination environments
         equivalent_atoms_ps = atoms_phaseshifts[equivalent_atoms_ind, ...]
-        if equivalent_atoms_ps.var(axis=0).max() > 1e-2:                        # TODO: is this a sensible threshold?
+        if equivalent_atoms_ps.var(axis=0).max() > 1e-1:                        # TODO: is this a sensible threshold?
             logger.warning("Large variance in phaseshifts for atoms of type "
                            f"{block_element} at site {site}. This may indicate"
                            " averaging of non-equivalent atom environments.")
