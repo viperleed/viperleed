@@ -416,10 +416,9 @@ def runPhaseshiftGen_old(sl, rp,
     outvals = defaultdict(list) #TODO: clean up this messy data structure
 
     for (site, block_element) in blocks:
-        considered_atoms = [at for at in nsl.atlist
-                            if at.site == site
-                            and at.el == block_element
-                            and at not in newbulkats]
+        considered_atoms = [at for at in nsl.atlist if
+                            at not in newbulkats  # atoms added to create supercell
+                            at in subatlists[(site, block_element)]]
         if len(considered_atoms) == 0:
             continue
         considered_atom_indecies = [nsl.atlist.index(at) for at in considered_atoms]
