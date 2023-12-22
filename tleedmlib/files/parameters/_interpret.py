@@ -39,6 +39,7 @@ from viperleed.tleedmlib.classes.rparams import IVShiftRange
 from viperleed.tleedmlib.classes.rparams import LayerCuts
 from viperleed.tleedmlib.classes.rparams import SymmetryEps
 from viperleed.tleedmlib.classes.rparams import TheoEnergies
+from viperleed.tleedmlib.classes.fd_optimizer.fd_optimizers import AVAILABLE_METHODS
 from viperleed.tleedmlib.files.woods_notation import readWoodsNotation
 from viperleed.tleedmlib.sections._sections import TLEEDMSection as Section
 
@@ -111,9 +112,6 @@ _SIMPLE_NUMERICAL_PARAMS = {
     'ZIP_COMPRESSION_LEVEL' : NumericBounds(type_=int, range_=(0, 9))
     }
 
-
-# parameters that can be optimized in FD optimization
-_OPTIMIZE_OPTIONS = {'theta', 'phi', 'v0i', 'a', 'b', 'c', 'ab', 'abc',}
 
 
 def interpret(rpars, slab=None, silent=False):
@@ -678,6 +676,52 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         self._ensure_chemical_elements(param, assignment.values)
         self.rpars.ELEMENT_RENAME[element] = assignment.value.capitalize()
 
+    def interpret_fd(self, assignment):
+        """Interprets parameter FD.
+
+        This parameter is used to declare a parameter for full-dynamic
+        calculation. It can be used multiple times to vary multiple parameters.
+        """
+        param = 'FD'
+        message = (f'Only one parameter allowed for {param} per line. '
+                   'Use multiple lines to declare more parameters for full-'
+                   'dynamic calculation.')
+        # flag should be parameter under variation
+        self._ensure_single_flag_assignment(assignment, message=message,
+                                            must_have_exaclty_one=True)
+        # there should 2 values for the parameter
+        if len(assignment.values) not in (2,):  #TODO decide if we want to allow 3 values; one for step here or at FD_METHOD
+            self.rpars.setHaltingLevel(3)
+            raise ParameterNumberOfInputsError(parameter=param)
+        # check that the parameter is not already under variation
+        if assignment.flag in (fd_params.name for fd_params in self.rpars.FD.parameters):
+            self.rpars.setHaltingLevel(3)
+            raise ParameterValueError(parameter=param,
+                                      message=(f'Parameter {assignment.flag}'
+                                               'was specified multiple times'))
+        self.rpars.FD.add_fd_parameter(self.rpars,
+                                       parameter=assignment.flag,
+                                       bounds=assignment.values)
+
+    def interpret_fd_method(self, assignment):
+        """Assign parameter FD_METHOD."""
+        param = 'FD_METHOD'
+        self._ensure_no_flags_assignment(assignment)
+        # check that the method was not already specified
+        if self.rpars.FD.user_defined_method:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterValueError(parameter=param,
+                                      message=(f'Parameter {param} was '
+                                               'specified multiple times'))
+        method, *settings = assignment.values_str.strip().split(",")
+        # first value should be the method
+        if method not in AVAILABLE_METHODS:
+            self.rpars.setHaltingLevel(3)
+            raise ParameterValueError(parameter=param,
+                                      message=(f'Unknown algorithm for {param}: '
+                                               '{method}'))
+        self.rpars.FD.set_method(method, settings)
+
     def interpret_filament_wf(self, assignment):
         """Assign parameter FILAMENT_WF."""
         param = 'FILAMENT_WF'
@@ -904,51 +948,6 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         except ParameterError as exc:
             raise ParameterValueError(param, assignment.values_str) from exc
         self.rpars.LOG_LEVEL = log_level
-
-    def interpret_optimize(self, assignment):
-        """Assign parameter OPTIMIZE."""
-        param = 'OPTIMIZE'
-        if not assignment.flag:
-            message = 'Parameter to optimize not defined'
-            self.rpars.setHaltingLevel(3)
-            raise ParameterNeedsFlagError(param, message)
-        which = assignment.flag.lower()
-        if which not in _OPTIMIZE_OPTIONS:
-            self.rpars.setHaltingLevel(3)
-            raise ParameterUnknownFlagError(param, f'{which!r}')
-        if Section.FD_OPTIMIZATION.value not in self.rpars.RUN:                 # TODO: remove .value when using TLEEDMSection in RUN
-            err_ = ('RUN does not include a full-dynamic-optimization section '
-                    f'(RUN = {Section.FD_OPTIMIZATION.value}). It makes no '
-                    'sense to provide an OPTIMIZE parameter')
-            raise SuperfluousParameterError(param, message=err_)
-        self.rpars.OPTIMIZE['which'] = which
-        if not assignment.other_values:
-            try:
-                self.rpars.OPTIMIZE['step'] = float(assignment.value)
-            except ValueError:
-                self.rpars.setHaltingLevel(1)
-                raise ParameterFloatConversionError(param,
-                                                    assignment.value) from None
-            return
-        for flag_value_pair in assignment.values_str.split(','):
-            self._interpret_optimize_flag_value_pair(param, flag_value_pair)
-
-    def _interpret_optimize_flag_value_pair(self, param, flag_value_pair):
-        """Interpret one 'flag value' pair for OPTIMIZE."""
-        flag, value = self._get_flag_value_from_pair(param, flag_value_pair)
-        value_error = f'Value {value!r} is invalid for flag {flag!r}'
-        partype = {'step': float, 'convergence': float,
-                   'minpoints': int, 'maxpoints': int,
-                   'maxstep': float}
-        try:
-            numeric = partype[flag](value)
-        except ValueError as exc:
-            self.rpars.setHaltingLevel(1)
-            raise ParameterValueError(param, message=value_error) from exc
-        except KeyError:
-            self.rpars.setHaltingLevel(2)
-            raise ParameterUnknownFlagError(param, f'{flag!r}') from None
-        self.rpars.OPTIMIZE[flag] = numeric
 
     def interpret_parabola_fit(self, assignment):                               # TODO: Issue #137
         """Assign parameter PARABOLA_FIT."""

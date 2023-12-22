@@ -54,6 +54,7 @@ DEFAULTS = {
     'ZIP_COMPRESSION_LEVEL': 2,
 
     # SPECIAL PARAMETERS
+    'FD' : NO_VALUE,
     'IV_SHIFT_RANGE': (-3, 3, NO_VALUE),  # NO_VALUE step: from data
     'LAYER_CUTS': 'dz(1.2)',
     'LMAX': (NO_VALUE, NO_VALUE),

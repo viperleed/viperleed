@@ -27,7 +27,7 @@ import logging
 
 from .fd_parameter import FDParameter
 
-from viperleed.tleedmlib.classes.rparams._rparams import AVAILABLE_MINIMIZERS, apply_scaling
+from viperleed.tleedmlib.classes.fd_optimizer.fd_parameter import apply_scaling
 from viperleed.tleedmlib.classes.r_error import get_zero_crossing, get_n_zero_crossings
 from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
@@ -54,6 +54,23 @@ else:
 logger = logging.getLogger("tleedm.fdopt")
 
 _DEFAULT_MINIMIZER_TOL = 1e-4
+
+AVAILABLE_MINIMIZERS = (
+    'nelder-mead',
+    'powell',
+    'cg',
+    'bfgs',
+    'l-bfgs-b',
+    'cobyla',
+    'TNC'
+)
+
+AVAILABLE_METHODS = (
+    'error',
+    'brute-force',
+    'parabola',
+    *AVAILABLE_MINIMIZERS
+)
 
 
 def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):

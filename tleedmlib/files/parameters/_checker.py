@@ -64,3 +64,11 @@ class ParametersChecker:
         pre, post = self._rpars.FORTRAN_COMP_MPI
         if not post and pre in {'mpifort', 'mpiifort'}:
             self._rpars.getFortranMpiComp(comp=pre)
+
+    def _check_no_fd_method_without_fd_params(self):
+        """Check FD_METHOD is not defined without parameters to use."""
+        # TODO
+        if self._rpars.FD.user_defined_method and not self._rpars.FD:
+            raise RuntimeError('FD_METHOD is defined, but no parameters were '
+                               'selected for full-dynamic optimization.') 
+
