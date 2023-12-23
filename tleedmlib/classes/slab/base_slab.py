@@ -17,19 +17,16 @@ used to be contained in the original slab module by F. Kraushofer.
 from abc import abstractmethod
 from collections import Counter
 import copy
-import itertools
 import logging
 from numbers import Real
 from operator import attrgetter, itemgetter
-import re
 
 import numpy as np
-from scipy.spatial import KDTree
 from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import add_edges_and_corners, collapse
-from viperleed.tleedmlib.base import collapse_fractional, ensure_integer_matrix
+from viperleed.tleedmlib.base import collapse_fractional
 from viperleed.tleedmlib.base import pairwise, rotation_matrix_order
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomContainer, AtomList
@@ -867,45 +864,6 @@ class BaseSlab(AtomContainer):
         if _left_handed(mincell):
             mincell = np.dot([[1, 0], [0, -1]], mincell)
         return mincell
-
-    def get_nearest_neigbours(self):
-        """Return the nearest-neighbour distance for all atoms.
-
-        Returns
-        -------
-        nn_distances : dict
-            Form is {`atom`: `nn_distance`}, with `nn_distance`
-            the shortest distance between `atom` and all its
-            neighbours, taking into account the periodicity of
-            the slab in the direction parallel to the surface.
-        """
-        # Work with a supercell to account for atoms at edges/corners.
-        # Decide based on unit vector lengths how many times we want
-        # to repeat in each direction: the more the unit vectors are
-        # mismatched the more repetitions.                                      # TODO: there may be a better way taking angle into account as well.
-        *ab_cell, _ = self.ucell.T  # ab_cell is 2x3
-        ab_norms = np.linalg.norm(ab_cell, axis=1)
-        repeats = np.ceil(ab_norms.max() / ab_norms)  # '+' direction
-        repeats = 2*repeats + 1           # '+', '-', and centre cell
-        supercell = self.make_supercell(np.diag(repeats))
-
-        # For NN query use KDTree from scipy.spatial
-        atom_coords_supercell = [atom.cartpos for atom in supercell]
-        tree = KDTree(atom_coords_supercell)
-
-        # Coordinates of all atoms in the centre cell:
-        center_cell_offset = (repeats + 1) / 2  # Indices only
-        center_cell_offset = center_cell_offset.dot(ab_cell)
-        atom_coords_center = [atom.cartpos + center_cell_offset
-                              for atom in self]
-
-        # Get all distances. Use k==2 as k==1 would just return
-        # a bunch of zeros since all atom_coords_center are a
-        # subset of atom_coords_supercell: their first nearest
-        # neighbour is themselves
-        distances, _ =  tree.query(atom_coords_center, k=2)
-        distances = distances[:, 1]  # First column is zeros
-        return dict(zip(self, distances))
 
     def initSites(self, rp):
         """Goes through the atom list and supplies them with appropriate
