@@ -507,8 +507,7 @@ class SurfaceSlab(BaseSlab):
                     return []
             r *= 1.2    # TODO: !!! test if this is enough
             surfats.update(a for a in self
-                           if (a.pos[2] >= atom.pos[2]
-                               and a not in covered))
+                           if a.pos[2] >= atom.pos[2] and a not in covered)
             covered.update(
                 a for a in self
                 if a.pos[2] < atom.pos[2] and a.is_same_xy(atom, eps=r)
@@ -827,8 +826,9 @@ class SurfaceSlab(BaseSlab):
         try:
             subcell_slab.ab_cell[:] = np.dot(self.ab_cell,
                                              np.linalg.inv(transform).T)
-        except np.linalg.LinAlgError:  # singular
-            raise SingularMatrixError(f'transform={transform} is singular')
+        except np.linalg.LinAlgError as exc:  # singular
+            raise SingularMatrixError(f'transform={transform} '
+                                      'is singular') from exc
         subcell_slab.collapse_cartesian_coordinates(update_origin=True)
         subcell_slab.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
                                             rpars.SYMMETRY_EPS.z,

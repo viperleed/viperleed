@@ -1559,7 +1559,6 @@ class BaseSlab(AtomContainer):
         #   p' = c' @ u_inv = p @ (u_cell @ T @ u_inv) + frac_offset
         # where
         #   frac_offset = (center @ (I - T) + shift) @ u_inv
-        #
         # Important note: All the operations above are in principle
         # meant to be done using the full 3D unit cells, fractional
         # and Cartesian positions. However we can stick to using only

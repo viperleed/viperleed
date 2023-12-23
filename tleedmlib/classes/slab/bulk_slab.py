@@ -327,9 +327,8 @@ class BulkSlab(BaseSlab):
         ucell_h = self.ucell[2, 2]
         ref_lay = self.sublayers[0]
         for i, lay in enumerate(self.sublayers[1:], start=1):
-            if i > n_layers / 2:
-                break
-            if abs(lay.cartbotz - ref_lay.cartbotz) > ucell_h / 2 + epsz:
+            if (abs(lay.cartbotz - ref_lay.cartbotz) > ucell_h / 2 + epsz
+                    or i > n_layers / 2):
                 break
             if (lay.element == ref_lay.element
                     and lay.n_atoms == ref_lay.n_atoms):
@@ -457,7 +456,7 @@ class BulkSlab(BaseSlab):
         # subtracting '1' in either in-plane direction:
         repeat_c[:2] = min(
             (np.dot(self.ab_cell, c_frac_ab - f)
-             for f in [(0, 0), (0, 1), (1, 0), (1, 1)]),
+             for f in ((0, 0), (0, 1), (1, 0), (1, 1))),
             key=np.linalg.norm
             )
         return repeat_c
