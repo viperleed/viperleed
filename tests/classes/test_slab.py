@@ -92,9 +92,9 @@ class TestAtomsAndElements:
     def test_empty_slab(self):
         """Check that an empty slab has no atoms, layers, etc..."""
         slab = Slab()
-        assert slab.atlist == []
-        assert slab.elements == ()
-        assert slab.layers == []
+        assert not slab.atlist
+        assert not slab.elements
+        assert not slab.layers
         assert slab.planegroup == 'unknown'
 
     def test_add_one_atom_n_elements(self):
@@ -313,12 +313,14 @@ class TestEquivalence:
         """TODO"""
 
 
+# pylint: disable-next=protected-access
 @pytest.mark.skipif(not surface_slab._HAS_ASE, reason='No ASE module')
 class TestFromAse:
     """Collection of tests for the from_ase class method."""
 
     def test_no_ase(self):
         """Check complaints when no ase module is present."""
+        # pylint: disable=protected-access
         surface_slab._HAS_ASE = False
         with pytest.raises(ModuleNotFoundError):
             Slab.from_ase(None)
@@ -650,7 +652,7 @@ class TestUnitCellTransforms:
         slab.apply_scaling(*scaling)
         assert slab.ucell == pytest.approx(expected)
         assert all(np.allclose(at.pos, ori_pos)
-                   for at, ori in zip(slab, fractionals))
+                   for at, ori_pos in zip(slab, fractionals))
 
     @parametrize('scaling,exc', _scale_invalid.values(), ids=_scale_invalid)
     def test_apply_scaling_raises(self, scaling, exc, ag100):
