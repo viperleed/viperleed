@@ -110,9 +110,12 @@ class TestAtomsAndElements:
     def test_atlist_is_not_list(self):                                          # TODO: Should consider various situations to make sure that no Slab method messes with the atlist
         """TODO"""
 
-    @todo
-    def test_chemelem_upon_element_mix_changed(self):
+    def test_chemelem_upon_element_mix_changed(self, ag100):
         """Check that chemelem are changed when ELEMENT_MIX is."""
+        slab, rpars, *_ = ag100
+        rpars.ELEMENT_MIX = {'Ag': {'Fe', 'Co'}}
+        slab.full_update(rpars)
+        assert slab.chemelem == {'Fe', 'Co'}
 
     def test_remove_one_atom_n_elements(self, ag100):
         """Check that removing one atom updates elements correctly."""
