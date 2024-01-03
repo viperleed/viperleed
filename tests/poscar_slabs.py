@@ -10,7 +10,6 @@ Contains definition of pytest cases generated from POSCAR files.
 from pathlib import Path
 import copy
 import inspect
-import io
 import sys
 
 import numpy as np
@@ -118,7 +117,7 @@ def make_poscar_ids(suffix=None):
 
 
 # PARAMETERS presets for slabs
-_PRESETS = {
+_PRESETS = {  # pylint: disable=consider-using-namedtuple-or-dataclass
     'Fe3O4': {'LAYER_CUTS': LayerCuts.from_string('0.1 0.2 <dz(1.0)'),
               'N_BULK_LAYERS': 2,
               'SYMMETRY_EPS': SymmetryEps(0.3),
@@ -159,16 +158,17 @@ POSCARS_WITHOUT_INFO = [
 
 
 class CasePOSCARFiles:
+    """Collection of POSCAR files. NOT the slab read from them."""
+
     @staticmethod
-    def _string(file):
+    def _string(file_name):
         """Return the string of a POSCAR file name."""
-        with open(POSCAR_PATH / file, 'r', encoding='utf-8') as file:
-            contents = file.read()
-        return contents
+        with (POSCAR_PATH / file_name).open('r', encoding='utf-8') as file:
+            return file.read()
 
     @parametrize(file=POSCAR_FILES)
     def case_poscar_file(self, file):
-        """Return a POSCAR file name."""
+        """Return a POSCAR file name and its contents."""
         content = self._string(file)
         return file, content
 

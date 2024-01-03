@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 import pytest
-from pytest_cases import parametrize_with_cases, fixture
+from pytest_cases import fixture
 
 VPR_PATH = str(Path(__file__).resolve().parents[3])
 if VPR_PATH not in sys.path:
@@ -24,8 +24,8 @@ from viperleed.tleedmlib.files import iorfactor
 # pylint: enable=wrong-import-position
 
 
-@pytest.fixture
-def ag100_expbeams(data_path):
+@fixture(name='ag100_expbeams')
+def fixture_ag100_expbeams(data_path):
     """Return a list of experimental beam energies for Ag(100)."""
     _expbeams_path = data_path / 'Ag(100)' / 'initialization' / 'EXPBEAMS.csv'
     return readOUTBEAMS(str(_expbeams_path))

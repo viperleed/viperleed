@@ -47,8 +47,8 @@ def hermann(group):
     return group.split('[', maxsplit=1)[0]
 
 
-@fixture
-def first_case(current_cases):
+@fixture(name='first_case')
+def fixture_first_case(current_cases):
     """Return the first of the current cases."""
     def _find_case(cases_dict):
         for value in cases_dict.values():
@@ -63,7 +63,7 @@ def first_case(current_cases):
                 pass
             else:
                 return value
-        raise ValueError("No case found")
+        raise ValueError('No case found')
     return _find_case(current_cases)
 
 
@@ -139,6 +139,7 @@ class TestPlaneGroupFinding:
     @parametrize_with_cases('args',
                             cases=get_cases('all'),
                             has_tag=CaseTag.NEED_ROTATION)
+    # pylint: disable-next=too-many-arguments  # All fixtures
     def test_cell_rotated(self, args, caplog, re_match, subtests, first_case):
         """Check rotation of slabs that need one to get the group right."""
         slab, param, info, *_ = args
@@ -497,10 +498,7 @@ class TestSymmetryReduction:
         """Make sure SlabSymmetrizer finds all atoms it should."""
         slab, param, *_ = with_plane_group()
         hermann_ = hermann(slab.foundplanegroup)
-        if hermann_ == 'p6m':
-            invalid_group = 'p4'
-        else:
-            invalid_group = 'p6m'
+        invalid_group = 'p4' if hermann_ == 'p6m' else 'p6m'
         with pytest.raises(ValueError) as exc:
             symmetry.setSymmetry(slab, param, invalid_group)
         assert exc.match('.*not a valid symmetry reduction.*')
