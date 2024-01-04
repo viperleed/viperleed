@@ -1227,6 +1227,10 @@ class BaseSlab(AtomContainer):
         self.n_per_elem = {el: n_per_elem[el]
                            for el in elements
                            if el in n_per_elem}
+        try:
+            self.bulkslab.update_element_count()
+        except AttributeError:  # BulkSlab or no bulkslab available
+            pass
 
     def update_fractional_from_cartesian(self):
         """Calculate atoms' fractional coordinates from Cartesian ones.
