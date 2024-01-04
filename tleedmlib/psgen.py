@@ -409,13 +409,13 @@ def runPhaseshiftGen_old(sl, rp,
 
     # average over atoms of site
     outvals = defaultdict(list)  # This is outvals[energy][block][L]            # TODO: clean up this messy data structure
+    atom_index_map = {at: i for i, at in enumerate(nsl)}
     for block in blocks:
-        equivalent_atoms = [at for at in nsl
-                            if at not in newbulkats
-                            and at in subatlists[block]]
+        equivalent_atoms = [at for at in subatlists[block]
+                            if at not in newbulkats]
         if not equivalent_atoms:
             continue
-        equivalent_atoms_ind = [nsl.atlist.index(at)
+        equivalent_atoms_ind = [atom_index_map[at]
                                 for at in equivalent_atoms]
 
         site, block_element = block
