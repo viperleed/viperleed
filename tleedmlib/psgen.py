@@ -508,26 +508,41 @@ def runPhaseshiftGen_old(sl, rp,
     return (firstline, phaseshifts)
 
 
-def adjust_phaseshifts(phaseshifts_per_energy):                                 # TODO: could be moved to lib/base.py
-    """Makes phaseshifts continous and wraps the starting value.
+def adjust_phaseshifts(phaseshifts_per_energy):
+    r"""Make phase-shifts continuous and wraps the starting value.
 
-    Phaseshifts used in the LEED calculation are pi periodic in principle and
-    may be retured with jumps of pi by the phaseshift generation code.
-    However, the subsequent calculation may interpolate the phaseshifts and
-    thus may not be able to deal with these jumps. This function removes the
-    jumps and wraps the first value to the interval [-pi/2, pi/2].
-    This is done by transforming the input phaseshifts $p_n$ to the output
-    phaseshifts $p'_n$ by
+    Phase-shifts used in the LEED calculation are $\pi$ periodic
+    in principle and may be returned with jumps of $\pi$ by the
+    generation code. However, the subsequent calculation may
+    interpolate the phase shifts and thus may not be able to
+    deal with these jumps. This function removes the jumps and
+    wraps the first value to the interval $[-\pi/2, \pi/2]$.
+    This is done by transforming the input phaseshifts $p_n$
+    to the output phaseshifts $p'_n$ by
     $$
     p'_0 = (p_0% + \pi/2) % \pi - \pi/2
     p'_n = p'_{n-1} + (p_n - p_{n-1}) % \pi
          = p'_0 + \sum_{i=1}^{n} (p_i - p_{i-1}) % \pi
     $$
+
+    Parameters
+    ----------
+    phaseshifts_per_energy : numpy.ndarray
+        The energy-dependent phase shifts for one atom to be
+        jump-corrected. Shape (N,).
+
+    Returns
+    -------
+    adjusted_phaseshifts : numpy.ndarray
+        A jump-corrected and wrapped version of phaseshifts_per_energy.
+        Shape (N,).
     """
     adjusted_phaseshifts = np.empty_like(phaseshifts_per_energy)
-    adjusted_phaseshifts[0] = (phaseshifts_per_energy[0] + np.pi/2) % np.pi - np.pi/2
+    adjusted_phaseshifts[0] = (phaseshifts_per_energy[0] + np.pi/2) % np.pi
+    adjusted_phaseshifts[0] -= np.pi/2
 
-    ps_deltas_mod_pi = (np.diff(phaseshifts_per_energy) + np.pi/2) % np.pi - np.pi/2
+    ps_deltas_mod_pi = (np.diff(phaseshifts_per_energy) + np.pi/2) % np.pi
+    ps_deltas_mod_pi -= np.pi/2
     ps_deltas_sum_mod_pi = np.cumsum(ps_deltas_mod_pi)
 
     adjusted_phaseshifts[1:] = adjusted_phaseshifts[0] + ps_deltas_sum_mod_pi
