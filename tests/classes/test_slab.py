@@ -125,10 +125,44 @@ class TestAtomsAndElements:
         slab.update_element_count()
         assert slab.n_per_elem['Ag'] == n_ag_atoms - 1
 
-    @todo
-    def test_update_atom_numbers(self):                                         # Probably remove atoms from a slab, with and without bulkslab, atoms in common with, or not, with the bulkslab.
-        """TODO"""
+    remove_ats = {  # fe_atom_num_to_remove, is_bulk_atom
+        'non bulk': (19, False),
+        'bulk': (33, True),
+        }
 
+    @parametrize(make_bulk=(True, False))
+    @parametrize('to_remove,in_bulk', remove_ats.values(), ids=remove_ats)
+    def test_update_atom_numbers(self, make_bulk, in_bulk, to_remove, subtests):
+        """Check correct removal of an Fe atom, with and without bulk."""
+        fe3o4, rpars, *_ = CasePOSCARSlabs().case_poscar_fe3o4_001_cod()
+        elems = 'Fe', 'O'
+        n_fe, n_oxygen = (fe3o4.n_per_elem[k] for k in elems)
+        if make_bulk:
+            bulk = fe3o4.make_bulk_slab(rpars)
+            n_fe_bulk, n_oxygen_bulk = (bulk.n_per_elem[k] for k in elems)
+            old_at_nrs_bulk = [at.num for at in bulk]
+        fe3o4.atlist.remove(fe3o4.atlist.get(to_remove))
+        fe3o4.update_element_count()
+        if make_bulk and in_bulk:
+            bulk.atlist.remove(bulk.atlist.get(to_remove))
+            bulk.update_element_count()
+
+        fe3o4.update_atom_numbers()
+        with subtests.test('nr. atoms'):
+            assert fe3o4.n_per_elem['Fe'] == n_fe - 1
+            assert fe3o4.n_per_elem['O'] == n_oxygen
+        new_at_nrs = [at.num for at in fe3o4]
+        with subtests.test('atom.num'):
+            assert new_at_nrs == list(range(1, n_fe + n_oxygen))
+        if not make_bulk:
+            return
+        with subtests.test('nr. atoms, bulk'):
+            assert bulk.n_per_elem['O'] == n_oxygen_bulk
+            assert bulk.n_per_elem['Fe'] == n_fe_bulk - (1 if in_bulk else 0)
+        with subtests.test('atom.num, bulk'):
+            assert all(at.num in new_at_nrs for at in bulk)
+        with subtests.test('atom.num, bulk, changed'):
+            assert [at.num for at in bulk] != old_at_nrs_bulk
 
 @todo
 class TestBulk3DOperations:
