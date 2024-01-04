@@ -390,21 +390,18 @@ def runPhaseshiftGen_old(sl, rp,
     # data from all the PS files
     processed_files = [PSFile(at, filename, ps_energy_step)
                        for (at, filename) in zip(nsl, filelist)]
-    # discard all atoms that were added to create a large enough supercell
-    real_processed_files = [psfile for psfile in processed_files
-                            if psfile.atom not in newbulkats]
-    firstline = real_processed_files[0].firstline
+    firstline = processed_files[0].firstline
 
     # make energies into array, check that energies are the same for all atoms
     phaseshift_energies = np.array([psfile.energies
-                                    for psfile in real_processed_files])
+                                    for psfile in processed_files])
     if any(np.var(phaseshift_energies, axis=0) > 1e-6):
         raise RuntimeError("Phaseshift energies are not the same for all atoms.")
     phaseshift_energies = phaseshift_energies[0]
 
     # make phaseshifts into an array for further processing
     atoms_phaseshifts = np.array([psfile.phaseshifts
-                                  for psfile in real_processed_files])
+                                  for psfile in processed_files])
 
     # make phaseshifts continuos and wrap the starting value
     atoms_phaseshifts = np.apply_along_axis(adjust_phaseshifts, axis=1,
