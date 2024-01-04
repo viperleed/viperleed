@@ -150,7 +150,7 @@ class TestPOSCARStreamReader:
         file, reader = poscar_stream
         stream_slab = reader.read()
         file_slab = poscar.read(file)
-        assert len(stream_slab.atlist) == len(file_slab.atlist)
+        assert stream_slab.n_atoms == file_slab.n_atoms
         assert stream_slab.n_per_elem == file_slab.n_per_elem
 
 
@@ -181,7 +181,7 @@ class TestPOSCARStreamWriter:
         written_contents = output_stream.getvalue()
         written_slab = poscar.read(io.StringIO(written_contents))
         assert written_slab.atlist
-        assert len(written_slab.atlist) == len(slab.atlist)
+        assert written_slab.n_atoms == slab.n_atoms
         assert written_slab.n_per_elem == slab.n_per_elem
 
 
