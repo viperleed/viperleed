@@ -178,7 +178,7 @@ class TestBulkRepeat:
     def test_identify(self):
         """TODO"""
 
-    def test_identify_no_bulk_slab(self, ag100):                                # TODO: also other raises
+    def test_identify_raises_without_bulkslab(self, ag100):                     # TODO: also other raises
         """Check complaints when called without a bulk slab."""
         slab, *_ = ag100
         slab.bulkslab = None
