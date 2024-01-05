@@ -1,0 +1,30 @@
+"""Tests for FDSettings of viperleed.tleedmlib.rparams.special.
+
+Created on 2024-01-05
+
+@author: Alexander M. Imre (@amimre)
+"""
+
+import itertools
+
+import numpy as np
+import pytest
+from pytest_cases import fixture, parametrize
+
+
+from viperleed.tleedmlib.classes.rparams.special.full_dynamic import FDSettings
+
+def test_FDSettings_bool():
+    """Test that FDSettings evaluates to False when no parameters are set."""
+    
+    fd_settings = FDSettings()
+    assert not fd_settings
+    
+
+out_of_bounds = {
+    'v0i_below_0': -1.0,
+    'v0i_above_15': 16.0,
+    'phi_above_360': 361.0,
+    'abc_below_0.1': 0.01,
+    'a_above_10': 100,
+}
