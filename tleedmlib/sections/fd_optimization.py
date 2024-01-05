@@ -16,7 +16,7 @@ from viperleed.tleedmlib.classes.fd_optimizer import *
 logger = logging.getLogger("tleedm.fdopt")
 
 
-def fd_optimization(sl, rp):
+def fd_optimization(slab, rp):
     """
     Runs multiple consecutive reference calculations and r-factor calculations
     optimizing a parameter, as defined by OPTIMIZE in PARAMETERS.
@@ -41,7 +41,7 @@ def fd_optimization(sl, rp):
         )
 
     logger.info("FD optimization of parameter(s): "
-                f"{', '.join(rp.FD.parameters)}")
+                f"{', '.join(param.name for param in rp.FD.parameters)}")
 
     # make sure there's a compiler ready, and we know the number of cores:      # TODO: this is repeated in multiple locations; refactor into base
     if rp.FORTRAN_COMP[0] == "":
@@ -52,20 +52,18 @@ def fd_optimization(sl, rp):
             raise
     rp.updateCores()  # if number of cores is not defined, try to find it
 
-    # Initialize optimizer - it was already defined during parameter interpretation
+    # Initialize optimizer - it was already set during parameter interpretation
     optimizer = rp.FD.optimizer_class(
         rp.FD.parameters,
-        sl,
+        slab,
         rp,
         **rp.FD.settings,
     )
 
-    
+    # Perform optimization
+    optimizer.optimize(x0=rp.FD.start_values)
 
-
-    # perform optimization
-    optimizer.optimize(x0=start_value)
-    # finalize by plotting and printing results
+    # Finalize by plotting and printing results
     opt_x, opt_R = optimizer.finalize()
 
     result_msg = f"Optimization finished. Best result with R = {opt_R:.4f}:"
