@@ -769,7 +769,6 @@ class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
 
 
 class SingleParameterMinimizer(OneDimensionalFDOptimizer):
-
     required_settings = {
         'method': str,
     }
@@ -778,7 +777,7 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):
         'options': dict,
     }
 
-    def __init__(self, fd_parameter, sl, rp, method, tol):
+    def __init__(self, fd_parameter, sl, rp, method, tol=None, options=None):
         super().__init__(fd_parameter, sl, rp)
 
         if method not in AVAILABLE_MINIMIZERS:
@@ -787,6 +786,9 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):
                              f"{AVAILABLE_MINIMIZERS}")
         self.minimizer_method = method
         self.tol = tol
+        self.minimizer_options = options if options is not None else {}
+        if "disp" not in self.minimizer_options:
+            self.minimizer_options["disp"] = logger.level <= logging.DEBUG
 
     def optimize(self, x0):
         logger.info(f"Starting full dynamic calculation using "
@@ -799,7 +801,7 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):
             x0=float(x0[0]),
             method=self.minimizer_method,
             bounds=(self.bounds,),
-            options={"disp": True},
+            options=self.minimizer_options,
             tol=self.tol,
             callback=self.updated_intermediate_output,
         )
@@ -842,7 +844,7 @@ class ParameterMinimizer(FDOptimizer):
         'options': dict,
     }
 
-    def __init__(self, fd_parameters, sl, rp, method, tol):
+    def __init__(self, fd_parameters, sl, rp, method, tol=None, options=None):
         super().__init__(fd_parameters, sl, rp)
 
         if method not in AVAILABLE_MINIMIZERS:
@@ -850,15 +852,15 @@ class ParameterMinimizer(FDOptimizer):
                              f"available. Available methods are: "
                              f"{AVAILABLE_MINIMIZERS}")
         self.minimizer_method = method
-        self.tol = tol
+        self.tol = tol  # tolerance for minimizer, passed to scipy
+        self.minimizer_options = options  # kwargs for minimizer, passed to scipy
         self.scipy_bounds = scipy.optimize.Bounds(
             lb=[param.bounds[0] for param in self.fd_parameters],
             ub=[param.bounds[1] for param in self.fd_parameters],
         )
-        self.minimizer_options = {key: val for key, val
-                                  in rp.FD_MINIMIZER.items()
-                                  if key not in ("method", "tol")}
-        self.minimizer_options["disp"] = logger.level <= logging.DEBUG
+        self.minimizer_options = options if options is not None else {}
+        if "disp" not in self.minimizer_options:
+            self.minimizer_options["disp"] = logger.level <= logging.DEBUG
 
     def optimize(self, x0):
         logger.info(f"Starting full dynamic calculation using "
