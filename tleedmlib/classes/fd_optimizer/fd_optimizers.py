@@ -89,6 +89,7 @@ AVAILABLE_METHODS = (
 )
 
 
+#TODO: should probably be moved to a more appropriate location
 def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
     """
     Runs reference calculation and r-factor calculation, returns R.
