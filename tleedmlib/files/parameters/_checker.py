@@ -4,6 +4,7 @@
 Created on 2023-10-25
 
 @author: Michele Riva (@michele-riva)
+@author: Alexander M. Imre (@amimre)
 
 Defines the ParametersChecker class, useful for checking that parameters
 read from a PARAMETERS file do not clash with one another.
@@ -72,3 +73,10 @@ class ParametersChecker:
             raise RuntimeError('FD_METHOD is defined, but no parameters were '
                                'selected for full-dynamic optimization.') 
 
+    def _check_apply_and_validate_fd_optimizer_settings(self):
+        """Apply and validate FD optimizer settings.
+        
+        Must be done after FD_METHOD and all FD parameters are defined."""
+        if self._rpars.FD:
+            self._rpars.FD.apply_method_settings()
+            self._rpars.FD.validate_optimizer_options(self._rpars.FD.optimizer_class)

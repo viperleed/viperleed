@@ -41,7 +41,7 @@ from viperleed.tleedmlib.files import parameters, poscar
 try:
     import matplotlib
     matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
+    matplotlib.use('Agg')                                                       # TODO: check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     plt.style.use('viperleed.tleedm')
@@ -65,11 +65,27 @@ AVAILABLE_MINIMIZERS = (
     'TNC'
 )
 
-AVAILABLE_METHODS = (
-    'error',
-    'brute-force',
+PARABOLA_SYNONYMS = (
     'parabola',
-    *AVAILABLE_MINIMIZERS
+    'parabolic',
+)
+
+ERROR_SYNONYMS = (
+    'error',
+    'errors',
+    'brute-force',
+)
+
+SCIPY_SYNONYMS = (
+    'scipy',
+    'scipy.optimize',
+    'scipy.optimize.minimize',
+)
+
+AVAILABLE_METHODS = (
+    *PARABOLA_SYNONYMS,
+    *ERROR_SYNONYMS,
+    *SCIPY_SYNONYMS
 )
 
 
@@ -319,7 +335,11 @@ class FDOptimizer(ABC):
 class OneDimensionalFDOptimizer(FDOptimizer):
     """Base class for full-dynamic optimization."""
 
-    def __init__(self, fd_parameter, sl, rp):
+    def __init__(self, fd_parameters, sl, rp):
+        if len(fd_parameters) != 1:
+            raise ValueError("OneDimensionalFDOptimizer can only optimize "
+                             "one parameter. Multiple parameters given.")
+        fd_parameter = fd_parameters[0]
         super().__init__(fd_parameter, sl, rp)
         self.eval_dirs = [] # directories where evaluations are preformed
         self.param_name = fd_parameter.name # name of parameter to optimize
@@ -429,6 +449,17 @@ class OneDimensionalFDOptimizer(FDOptimizer):
 
 
 class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
+
+    required_settings = {
+        'convergence': float,
+        'step': float,
+    }
+    optional_settings = {
+        'min_points': int,
+        'max_points': int,
+        'max_step': float,
+    }
+
     def __init__(self, fd_parameter, sl, rp, convergence, step, min_points, max_points, max_step=None):
         super().__init__(fd_parameter, sl, rp)
         self.convergence = convergence
@@ -647,6 +678,15 @@ class SingleParameterParabolaFit(OneDimensionalFDOptimizer):
 
 class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
 
+    required_settings = {
+        'min_val': float,
+        'max_val': float,
+        'steps': int,
+    }
+    optional_settings = {
+        'error': bool,
+    }
+
     def __init__(self, fd_parameter, sl, rp, min_val, max_val, steps, error=True):
         super().__init__(fd_parameter, sl, rp)
         if None in (min_val, max_val, steps):
@@ -729,22 +769,34 @@ class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
 
 
 class SingleParameterMinimizer(OneDimensionalFDOptimizer):
-    def __init__(self, fd_parameter, sl, rp, minimizer_method, tol):
+
+    required_settings = {
+        'method': str,
+    }
+    optional_settings = {
+        'tol': float,
+        'options': dict,
+    }
+
+    def __init__(self, fd_parameter, sl, rp, method, tol):
         super().__init__(fd_parameter, sl, rp)
 
-        if minimizer_method not in AVAILABLE_MINIMIZERS:
-            raise ValueError(f"Minimizer method {minimizer_method} not "
+        if method not in AVAILABLE_MINIMIZERS:
+            raise ValueError(f"Minimizer method {method} not "
                              f"available. Available methods are: "
                              f"{AVAILABLE_MINIMIZERS}")
-        self.minimizer_method = minimizer_method
+        self.minimizer_method = method
         self.tol = tol
 
     def optimize(self, x0):
         logger.info(f"Starting full dynamic calculation using "
                     f"{self.minimizer_method} minimizer method.")
+        if len(x0) > 1:
+            raise ValueError("Multiple start values x0 given for "
+                             "SingleParameterMinimizer.")
         self.res = scipy.optimize.minimize(
             fun=self.evaluate,
-            x0=float(x0),
+            x0=float(x0[0]),
             method=self.minimizer_method,
             bounds=(self.bounds,),
             options={"disp": True},
@@ -781,14 +833,23 @@ class SingleParameterMinimizer(OneDimensionalFDOptimizer):
 
 
 class ParameterMinimizer(FDOptimizer):
-    def __init__(self, fd_parameters, sl, rp, minimizer_method, tol):
+
+    required_settings = {
+        'method': str,
+    }
+    optional_settings = {
+        'tol': float,
+        'options': dict,
+    }
+
+    def __init__(self, fd_parameters, sl, rp, method, tol):
         super().__init__(fd_parameters, sl, rp)
 
-        if minimizer_method not in AVAILABLE_MINIMIZERS:
-            raise ValueError(f"Minimizer method {minimizer_method} not "
+        if method not in AVAILABLE_MINIMIZERS:
+            raise ValueError(f"Minimizer method {method} not "
                              f"available. Available methods are: "
                              f"{AVAILABLE_MINIMIZERS}")
-        self.minimizer_method = minimizer_method
+        self.minimizer_method = method
         self.tol = tol
         self.scipy_bounds = scipy.optimize.Bounds(
             lb=[param.bounds[0] for param in self.fd_parameters],

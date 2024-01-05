@@ -31,7 +31,7 @@ class FDParameter():
         self.transform_func(rparams, slab, val)
 
 
-# parameters accessible in the full dynamic optimization	
+# parameters accessible in the full dynamic optimization
 # must specify bounds, function for altering the parameter and initial guess 
 # x0
 FD_PARAMETERS = {

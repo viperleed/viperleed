@@ -715,11 +715,18 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                                                'specified multiple times'))
         method, *settings = assignment.values_str.strip().split(",")
         # first value should be the method
-        if method not in AVAILABLE_METHODS:
+        if method.lower() not in AVAILABLE_METHODS:
             self.rpars.setHaltingLevel(3)
             raise ParameterValueError(parameter=param,
                                       message=(f'Unknown algorithm for {param}: '
-                                               '{method}'))
+                                               f'{method}'))
+        # Split settings into key-value pairs.
+        # Each setting should be a key-value pair separated whitespace.
+        # Settings will be type cast and validated by the parameter._checker
+        # at the end of the interpretation.
+        settings = {
+            key:value for key, value in (s.split() for s in settings)
+        }
         self.rpars.FD.set_method(method, settings)
 
     def interpret_filament_wf(self, assignment):
