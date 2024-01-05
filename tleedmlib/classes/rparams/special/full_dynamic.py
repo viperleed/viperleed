@@ -151,7 +151,10 @@ class FDSettings(SpecialParameter, param='FD'):
                     f'Unknown setting {setting} for method {self.method}.')
             # Type cast all the settings
             try:
-                processed_settings[setting] = available_settings[setting](value)
+                if available_settings[setting] is dict:  # needed for scipy options
+                    processed_settings[setting] = eval(value)
+                else:
+                    processed_settings[setting] = available_settings[setting](value)
             except ValueError:
                 raise ValueError(
                     f'Invalid value {value} for setting {setting} of FD_METHOD.')
