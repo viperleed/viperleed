@@ -32,8 +32,8 @@ class FDParameter():
 
 
 # parameters accessible in the full dynamic optimization
-# must specify bounds, function for altering the parameter and initial guess 
-# x0
+# must specify bounds, a function for altering the parameter and an initial 
+# guess x0
 FD_PARAMETERS = {
     'v0i': {
         'max_bounds': (0, 15),
