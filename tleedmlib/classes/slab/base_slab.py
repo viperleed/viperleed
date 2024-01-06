@@ -935,7 +935,7 @@ class BaseSlab(AtomContainer):
             # Reorder sublayers by Z to then compare by index                   # TODO: is this necessary? Test for a system with two chemical species close in z.
             slab.sublayers.sort(key=attrgetter('cartbotz'))
 
-        if self.n_sublayers != other.n_sublayers:
+        if slabs[0].n_sublayers != slabs[1].n_sublayers:
             return False
 
         ab_cell = self.ab_cell.T

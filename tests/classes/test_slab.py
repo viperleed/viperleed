@@ -345,6 +345,23 @@ class TestEquivalence:
         slab_copy.update_cartesian_from_fractional()
         assert not slab.is_equivalent(slab_copy, eps=1e-10)
 
+    def test_non_slab_not_equivalent(self, ag100):
+        """Check equivalence with a non-slab object."""
+        slab, *_ = ag100
+        assert not slab.is_equivalent('not a slab')
+
+    def test_more_layers_not_equivalent(self, ag100):
+        """Check (in)equivalence of two slabs with different nr. of layers."""
+        slab, rpars, *_ = ag100
+        thicker, _ = slab.with_extra_bulk_units(rpars, 1)
+        assert not slab.is_equivalent(thicker)
+
+    def test_more_atoms_not_equivalent(self, ag100):
+        """Check (in)equivalence of two slabs with different nr. of atoms."""
+        slab, *_ = ag100
+        two_by_one = np.diag((2, 1))
+        assert not slab.is_equivalent(slab.make_supercell(two_by_one))
+
     @todo
     def test_slab_equivalence_todo(self):                                       # TODO: check also cases covered by TODOs
         """TODO"""
