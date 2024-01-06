@@ -181,6 +181,10 @@ class AtomList(AtomContainer, MutableSequence):
         self._map = {}
         self._sort_map = {}
 
+    def copy(self):
+        """Return a copy of this AtomList."""
+        return self.__class__(*self, strict=self.strict)
+
     def count(self, value):
         """Return the number of occurrences of value."""
         try:
