@@ -775,15 +775,16 @@ class SurfaceSlab(BaseSlab):
                 ) from None
 
         if any(r > 1 for r in repeats):  # Need to duplicate atoms
+            repeat_ranges = [range(r) for r in repeats]
             for atom in super_slab.atlist.copy():
-                for i, j in itertools.product(*repeats):
+                for i, j in itertools.product(*repeat_ranges):
                     # pylint: disable=compare-to-zero
                     if i == j == 0:  # Skip already existing atom
                         continue
                     # Duplicate the atom, and implicitly store it
                     # in super_slab. Then change its fractional pos
                     duplicate_atom = atom.duplicate()
-                    duplicate_atom.pos[:1] += (i, j)
+                    duplicate_atom.pos[:2] += (i, j)
 
         # We now may have added new atoms that will have fractional
         # coordinates outside the original cell. Make sure we have
