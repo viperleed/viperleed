@@ -362,10 +362,6 @@ class TestEquivalence:
         two_by_one = np.diag((2, 1))
         assert not slab.is_equivalent(slab.make_supercell(two_by_one))
 
-    @todo
-    def test_slab_equivalence_todo(self):                                       # TODO: check also cases covered by TODOs
-        """TODO"""
-
 
 # pylint: disable-next=protected-access
 @pytest.mark.skipif(not surface_slab._HAS_ASE, reason='No ASE module')

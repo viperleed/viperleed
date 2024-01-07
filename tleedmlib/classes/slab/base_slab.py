@@ -932,7 +932,7 @@ class BaseSlab(AtomContainer):
             slab.collapse_cartesian_coordinates()
             if not slab.sublayers:
                 slab.create_sublayers(eps)
-            # Reorder sublayers by Z to then compare by index                   # TODO: is this necessary? Test for a system with two chemical species close in z.
+            # Reorder sublayers by Z to then compare by index
             slab.sublayers.sort(key=attrgetter('cartbotz'))
 
         if slabs[0].n_sublayers != slabs[1].n_sublayers:
