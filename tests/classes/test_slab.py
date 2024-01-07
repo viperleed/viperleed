@@ -296,8 +296,15 @@ class TestDuplicateAtoms:
 
     @parametrize(info=poscar_slabs.WITH_DUPLICATE_ATOMS)
     def test_remove_duplicates(self, info, make_poscar):                        # TODO: n_atoms, raises, others? check method
-        """TODO"""
+        """Check correct removal of duplicate atoms."""
         slab, rpars, *_ = make_poscar(info)
+        n_atoms_before = slab.n_atoms
+        with not_raises(err.SlabError):
+            slab.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
+                                        rpars.SYMMETRY_EPS.z)
+        assert n_atoms_before > slab.n_atoms
+        with not_raises(err.AtomsTooCloseError):
+            slab.check_atom_collisions()
 
     @parametrize(info=poscar_slabs.WITH_DUPLICATE_ATOMS)
     def test_with_duplicate_atoms(self, info, make_poscar):
@@ -306,9 +313,10 @@ class TestDuplicateAtoms:
         with pytest.raises(err.AtomsTooCloseError):
             slab.check_atom_collisions()
 
-    def test_without_duplicates(self, ag100):                                   # TODO: probably do it for all cases
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    def test_without_duplicates(self, args):
         """Check that POSCARs without duplicates are handled correctly."""
-        slab, *_ = ag100
+        slab, *_ = args
         with not_raises(err.AtomsTooCloseError):
             slab.check_atom_collisions()
 
