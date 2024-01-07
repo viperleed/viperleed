@@ -336,7 +336,7 @@ class TestEquivalence:
         assert slab.is_equivalent(slab_copy, eps=1e-3)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_slab_not_equivalent(self, args):
+    def test_slab_translated_not_equivalent(self, args):
         """Check that a translated slab is not equivalent."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
@@ -392,7 +392,7 @@ class TestMakeBulkSlab:
         }
 
     @todo
-    def test_valid(self):
+    def test_valid(self):                                                       # TODO: also LOG of warning if a_bulk > b_bulk
         """TODO"""
 
     @parametrize('slab,exc', _invalid.values(), ids=_invalid)
@@ -458,7 +458,7 @@ class TestRevertUnitCell:
     """Tests for reverting the unit cell of a slab."""
 
     @todo
-    def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates. Also test raises RuntimeError.
+    def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates
         """TODO"""
 
     @staticmethod
