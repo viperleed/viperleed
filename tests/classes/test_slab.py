@@ -476,34 +476,34 @@ class TestRevertUnitCell:
                        for at, at2 in atom_pairs)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_revert_unit_cell_one_operation(self, args, subtests):
+    def test_one_operation(self, args, subtests):
         """Check correct result of reverting one unit-cell operation."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
-        slab.rotate_unit_cell(30)
+        slab.rotate_unit_cell(6)
         slab.revert_unit_cell()
         self.check_identical(slab, slab_copy, subtests)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_revert_unit_cell_few_operation(self, args, subtests):
+    def test_few_operation(self, args, subtests):
         """Same as above, but reverting a few operations."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
-        slab.rotate_unit_cell(30)
-        slab.rotate_unit_cell(20)
-        slab.rotate_unit_cell(40)                                               # TODO: so far, this is the only type of operation we have built in
+        slab.rotate_unit_cell(6)
+        slab.rotate_unit_cell(4)
+        slab.rotate_unit_cell(8)                                                # TODO: so far, this is the only type of operation we have built in
         slab.revert_unit_cell()
         self.check_identical(slab, slab_copy, subtests)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_revert_unit_cell_undo_nothing(self, args, subtests):               # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell. – @michele-riva: not sure what you mean by this
+    def test_nothing_to_undo(self, args, subtests):                             # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell. – @michele-riva: not sure what you mean by this
         """Check that reverting with no operations does nothing."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
         slab.revert_unit_cell()
         self.check_identical(slab, slab_copy, subtests)
 
-    def test_revert_unit_cell_raises(self, ag100):
+    def test_raises(self, ag100):
         """Check complaints for invalid operation types."""
         slab, *_ = ag100
         slab.ucell_mod.append(('invalid', 'invalid'))
