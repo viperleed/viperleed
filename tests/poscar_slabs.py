@@ -28,7 +28,6 @@ from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo, CaseTag as Tag
 from .helpers import duplicate_all
 # pylint: enable=wrong-import-position
 
-POSCAR_FILES = tuple(POSCAR_PATH.glob('POSCAR*'))
 
 def _get_poscar_info(*args):
     """Return a TestInfo object appropriately filled with args.
@@ -157,22 +156,6 @@ POSCARS_WITHOUT_INFO = [
     _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
     ]
 SLAB_MgO = _get_info_by_name('MgO')
-
-
-class CasePOSCARFiles:
-    """Collection of POSCAR files. NOT the slab read from them."""
-
-    @staticmethod
-    def _string(file_name):
-        """Return the string of a POSCAR file name."""
-        with (POSCAR_PATH / file_name).open('r', encoding='utf-8') as file:
-            return file.read()
-
-    @parametrize(file=POSCAR_FILES)
-    def case_poscar_file(self, file):
-        """Return a POSCAR file name and its contents."""
-        content = self._string(file)
-        return file, content
 
 
 class CasePOSCARSlabs:

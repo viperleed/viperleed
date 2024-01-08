@@ -23,7 +23,8 @@ from viperleed.tleedmlib import symmetry
 from viperleed.tleedmlib.base import pairwise
 from viperleed.tleedmlib.files import poscar
 
-from ..poscar_slabs import CasePOSCARSlabs, CasePOSCARFiles
+from . import case_poscar_files
+from ..poscar_slabs import CasePOSCARSlabs
 from ..helpers import exclude_tags, CaseTag
 # pylint: enable=wrong-import-position
 
@@ -128,7 +129,7 @@ class TestPOSCARWrite:
 
 
 @fixture(name='poscar_stream')
-@parametrize_with_cases('args', cases=CasePOSCARFiles)
+@parametrize_with_cases('args', cases=case_poscar_files)
 def fixture_poscar_stream(args):
     """Return a POSCARStreamReader object."""
     file, contents = args
