@@ -794,9 +794,11 @@ def test_ucell_ori_after_reset_symmetry():                                      
     """TODO"""
 
 
-@todo
-def test_translation_symmetry_different_species():                              # TODO: could use something like an MgO slab and ascertain that Mg->O is not a valid translation
-    """TODO"""
+def test_translation_symmetry_different_species(make_poscar):
+    """Check that an MgO slab is not equivalent upon Mg->O translation."""
+    slab, rpars, *_ = make_poscar(poscar_slabs.SLAB_MgO)
+    mg_to_oxygen = slab.ab_cell.T[0] / 2
+    assert not slab.is_translation_symmetric(mg_to_oxygen, rpars.SYMMETRY_EPS)
 
 
 @pytest.mark.xfail(reason='Issue #140')
