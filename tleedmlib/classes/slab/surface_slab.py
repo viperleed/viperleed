@@ -882,21 +882,6 @@ class SurfaceSlab(BaseSlab):
                              'as its superlattice matrix'.replace('\n', ', '))
         return subcell_slab
 
-    def project_c_to_z(self):
-        """Make the c vector of the unit cell perpendicular to the surface.
-
-        All atom coordinates are updated to fit the new basis.
-
-        Returns
-        -------
-        None.
-        """
-        c_vec_xy = self.ucell.T[2, :2]
-        if any(c_vec_xy):  # Non-zero components
-            self.update_cartesian_from_fractional()
-            c_vec_xy[:] = 0
-            self.collapse_cartesian_coordinates()  # Also updates fractional
-
     def restoreOriState(self, keepDisp=False):
         """Resets the atom positions and site vibrational amplitudes to the
         original state, and stores the deviations as offset instead."""

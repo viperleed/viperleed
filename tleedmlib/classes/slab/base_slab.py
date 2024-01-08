@@ -964,6 +964,21 @@ class BaseSlab(AtomContainer):
                 return False
         return True
 
+    def project_c_to_z(self):
+        """Make the c vector of the unit cell perpendicular to the surface.
+
+        All atom coordinates are updated to fit the new basis.
+
+        Returns
+        -------
+        None.
+        """
+        c_vec_xy = self.ucell.T[2, :2]
+        if any(c_vec_xy):  # Non-zero components
+            self.update_cartesian_from_fractional()
+            c_vec_xy[:] = 0
+            self.collapse_cartesian_coordinates()  # Also updates fractional
+
     def remove_duplicate_atoms(self, eps=1e-3, epsz=1e-3, other_slab=None):
         """Remove atoms with same positions and chemical element.
 
