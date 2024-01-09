@@ -51,6 +51,29 @@ def make_shuffled_slab():
     return _shuffle
 
 
+class TestABInPlane:
+    """Tests for checking that the first two unit vectors have no z."""
+
+    def test_not_in_plane(self, ag100):
+        """Check complaints when one unit vector has z component."""
+        slab, *_ = ag100
+        slab.ucell.T[0, 2] = 1
+        with pytest.raises(err.InvalidUnitCellError):
+            slab.check_a_b_in_plane()
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs)
+    def test_successful(self, args):
+        """Check that a slab has no z component of a & b."""
+        slab, *_ = args
+        with not_raises(err.InvalidUnitCellError):
+            slab.check_a_b_in_plane()
+
+    def test_undefined_cell_raises(self):
+        """Check complaints when accessing an undefined unit cell."""
+        with pytest.raises(err.InvalidUnitCellError):
+            Slab().check_a_b_in_plane()
+
+
 class TestAtomTransforms:
     """Test simple transformations of the atoms of a slab."""
 
@@ -607,11 +630,6 @@ class TestSlabLayers:
 class TestSlabRaises:
     """Collection of tests for diverse exception-raising conditions."""
 
-    def test_ab_in_plane_raises(self):
-        """Check complaints when accessing an undefined unit cell."""
-        with pytest.raises(err.InvalidUnitCellError):
-            Slab().check_a_b_in_plane()
-
     _sublayers = {  # attr_to_clear, exception
         'no atoms': ('atlist', err.EmptySlabError),
         'no elements': ('n_per_elem', err.MissingElementsError),
@@ -833,11 +851,6 @@ class TestUnitCellReduction:
 
     def test_ab_cell_already_minimal(self):
         """TODO"""
-
-
-@todo
-def test_check_ab_in_plane():
-    """TODO"""
 
 
 @todo
