@@ -673,7 +673,6 @@ class TestSuperAndSubCell:
             slab.make_subcell(rpars, matrix)
 
 
-
 class TestUnitCellTransforms:
     """Test simple transformations of the unit cell of a slab."""
 
