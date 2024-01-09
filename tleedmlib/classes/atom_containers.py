@@ -85,7 +85,11 @@ class AtomList(AtomContainer, MutableSequence):
         """Return whether an atom is in this list."""
         if not isinstance(value, atom.Atom):
             return False
-        return value.num in self._map
+        try:
+            atom_in_self = self.get(value.num)
+        except KeyError:
+            return False
+        return value is atom_in_self
 
     def __delitem__(self, index):
         """Remove atom(s) at index (or slice)."""

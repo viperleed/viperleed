@@ -241,6 +241,18 @@ class TestBulkUcell:
         """TODO"""
 
 
+class TestContains:
+    """Collection of tests for the __contains__ method."""
+
+    def test_contains_atom(self, ag100, subtests):
+        """Check that an Atom is/isn't part of a slab."""
+        slab, *_ = ag100
+        with subtests.test('Contains first atom'):
+            assert slab.atlist[0] in slab
+        with subtests.test('Does not contain another atom'):
+            assert Atom('C', (0, 0, 0), 1, slab) not in slab
+
+
 class TestCoordinates:
     """Collection of tests for Cartesian/fractional coordinates."""
 
