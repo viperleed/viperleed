@@ -788,9 +788,14 @@ def test_nearest_neighbors():
     """TODO"""
 
 
-@todo
-def test_ucell_ori_after_reset_symmetry():                                      # TODO: ucell_ori should not change when transforming the unit cell after resetSymmetry was called
-    """TODO"""
+def test_ucell_ori_after_clear_symmetry_and_ucell_history(ag100):
+    """Ensure modifications to the unit cell don't go into ucell_ori."""
+    slab, *_ = ag100
+    assert slab.celltype == 'unknown'
+    ucell_ori = slab.ucell.copy()
+    slab.clear_symmetry_and_ucell_history()
+    slab.ucell *= 3
+    assert np.allclose(ucell_ori, slab.ucell_ori)
 
 
 def test_translation_symmetry_different_species(make_poscar):
