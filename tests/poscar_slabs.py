@@ -143,18 +143,25 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_MgO_cod_9006456', {'Mg': 14, 'O': 14}, 'p4m'),
     )
 
+POSCARS_WITHOUT_INFO = [
+    _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
+    if 'duplicate' not in f.name
+    ]
+
+WITH_DUPLICATE_ATOMS = [
+    _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*duplicate*')
+    ]
+
+
 def _get_info_by_name(name):
     """Return a TestInfo object by name."""
     return next(i for i in POSCARS_WITH_LITTLE_SYMMETRY_INFO
                 if name in i.poscar.name)
 
+
 AG_100 = _get_info_by_name('Ag(100)')
 SLAB_36C_cm = _get_info_by_name('36C_cm')
 SLAB_Cu2O_111 = _get_info_by_name('Cu2O(111)')
-
-POSCARS_WITHOUT_INFO = [
-    _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
-    ]
 SLAB_MgO = _get_info_by_name('MgO')
 
 
