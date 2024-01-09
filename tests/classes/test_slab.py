@@ -252,6 +252,56 @@ class TestContains:
         with subtests.test('Does not contain another atom'):
             assert Atom('C', (0, 0, 0), 1, slab) not in slab
 
+    def test_contains_element(self, ag100, subtests):
+        """Check that a chemical element is/isn't part of a slab."""
+        slab, *_ = ag100
+        with subtests.test('Contains Ag'):
+            assert 'Ag' in slab
+        with subtests.test('Does not contain other element'):
+            assert 'Fe' not in slab
+        with subtests.test('Does not contain invalid element'):
+            assert 'invalid' not in slab
+
+    def test_contains_layer(self, ag100, subtests):
+        """Check that a Layer is/isn't part of a slab."""
+        slab, rpars, *_ = ag100
+        slab.create_layers(rpars)
+        lay = slab.layers[0]
+        with subtests.test('Contains first sublayer'):
+            assert lay in slab
+        with subtests.test('Does not contain another SubLayer'):
+            assert lay.__class__(slab, 0) not in slab
+        with subtests.test('Does not contain sublayer after clearing'):
+            slab.layers.clear()
+            assert lay not in slab
+
+    def test_contains_site(self, ag100, subtests):
+        """Check that a Site is/isn't part of a slab."""
+        slab, *_ = ag100
+        site = slab.sitelist[0]
+        with subtests.test('Contains first site'):
+            assert site in slab
+        with subtests.test('Does not contain another site'):
+            assert site.__class__('C', 'non_existing') not in slab
+
+    def test_contains_sublayer(self, ag100, subtests):
+        """Check that a Sublayer is/isn't part of a slab."""
+        slab, rpars, *_ = ag100
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        sub_lay = slab.sublayers[0]
+        with subtests.test('Contains first sublayer'):
+            assert sub_lay in slab
+        with subtests.test('Does not contain another SubLayer'):
+            assert sub_lay.__class__(slab, 0) not in slab
+        with subtests.test('Does not contain sublayer after clearing'):
+            slab.sublayers.clear()
+            assert sub_lay not in slab
+
+    def test_does_not_contain(self, ag100):
+        """Check that an object is not part of a slab."""
+        slab, *_ = ag100
+        assert object() not in slab
+
 
 class TestCoordinates:
     """Collection of tests for Cartesian/fractional coordinates."""
@@ -783,11 +833,6 @@ class TestUnitCellReduction:
 
     def test_ab_cell_already_minimal(self):
         """TODO"""
-
-
-@todo
-def test_contains():
-    """TODO"""
 
 
 @todo
