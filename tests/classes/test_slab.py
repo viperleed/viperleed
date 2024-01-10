@@ -26,18 +26,23 @@ if VPR_PATH not in sys.path:
 from viperleed.tleedmlib.base import pairwise
 from viperleed.tleedmlib.base import NonIntegerMatrixError, SingularMatrixError
 from viperleed.tleedmlib.classes.atom import Atom
+from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.classes.rparams import Rparams
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.classes.slab import slab_errors as err
 from viperleed.tleedmlib.classes.slab import surface_slab
 from viperleed.tleedmlib.classes.sym_entity import SymPlane
 
-from .. import poscar_slabs
 from ..helpers import not_raises
+from .. import cases_ase, poscar_slabs
 # pylint: enable=wrong-import-position
 
 CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs
 todo = pytest.mark.skip('To be implemented')
+if_ase = pytest.mark.skipif(
+    not surface_slab._HAS_ASE,  # pylint: disable=protected-access
+    reason='No ASE module'
+    )
 
 
 @fixture(name='shuffle_slab', scope='session')
@@ -72,6 +77,53 @@ class TestABInPlane:
         """Check complaints when accessing an undefined unit cell."""
         with pytest.raises(err.InvalidUnitCellError):
             Slab().check_a_b_in_plane()
+
+
+class TestAtlistIsNotList:
+    """Test for methods that may potentially transform .atlist into a list."""
+
+    def _check_not_list(self, slab):
+        """Check that slab.atlist is not a list."""
+        assert isinstance(slab.atlist, AtomList)
+        assert not isinstance(slab.atlist, list)
+        assert not isinstance(slab.atlist, tuple)
+
+    def test__add_one_bulk_cell(self, ag100):
+        """Check that _add_one_bulk_cell does not mess with atlist."""
+        slab, rpars, *_ = ag100
+        # Easier to use with_extra_bulk_units which calls the
+        # _add_one_bulk_cell method rather than fiddling with
+        # all the input arguments to _add_one_bulk_cell
+        thicker, _ = slab.with_extra_bulk_units(rpars, 5)
+        self._check_not_list(slab)
+        self._check_not_list(thicker)
+
+    def test_create_layers(self, ag100):
+        """Check that create_layers does not mess with atlist."""
+        slab, rpars, *_ = ag100
+        slab.create_layers(rpars)
+        self._check_not_list(slab)
+
+    @if_ase
+    @parametrize_with_cases('args', cases=cases_ase)
+    def test_from_ase(self, args):
+        """Check that from_ase does not mess with atlist."""
+        slab = Slab.from_ase(args[0])
+        self._check_not_list(slab)
+
+    def test_make_bulk_slab(self, ag100):
+        """Check that make_bulk_slab does not mess with atlist."""
+        slab, rpars, *_ = ag100
+        bulk = slab.make_bulk_slab(rpars)
+        self._check_not_list(slab)
+        self._check_not_list(bulk)
+
+    def test_remove_duplicate_atoms(self, ag100):
+        """Check that remove_duplicate_atoms does not mess with atlist."""
+        slab, rpars, *_ = ag100
+        slab.atlist[0].duplicate()
+        slab.remove_duplicate_atoms(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
+        self._check_not_list(slab)
 
 
 class TestAtomTransforms:
@@ -128,10 +180,6 @@ class TestAtomsAndElements:
         slab.update_element_count()
         assert new_atom.el in slab.elements
         assert slab.n_per_elem[new_atom.el] == 1
-
-    @todo
-    def test_atlist_is_not_list(self):                                          # TODO: Should consider various situations to make sure that no Slab method messes with the atlist
-        """TODO"""
 
     def test_chemelem_upon_element_mix_changed(self, ag100):
         """Check that chemelem are changed when ELEMENT_MIX is."""
@@ -456,8 +504,7 @@ class TestEquivalence:
         assert not slab.is_equivalent(slab.make_supercell(two_by_one))
 
 
-# pylint: disable-next=protected-access
-@pytest.mark.skipif(not surface_slab._HAS_ASE, reason='No ASE module')
+@if_ase
 class TestFromAse:
     """Collection of tests for the from_ase class method."""
 
