@@ -246,7 +246,6 @@ class TestBulk3DOperations:
         direction = np.random.randn(2)
         direction /= np.linalg.norm(direction)
         atom.cartpos[:2] += distance * direction
-        print(direction)
         slab.update_fractional_from_cartesian()
 
     @parametrize_with_cases('bulk', cases=poscar_slabs, has_tag=Tag.BULK)
@@ -292,16 +291,24 @@ class TestBulk3DOperations:
     @pytest.mark.xfail(reason='Known bug. Will be fixed in better-symmetry',
                        strict=False)  # Sometimes they succeed
     @parametrize(atoms_to_move=((1,), (3,), (1, 3)))
-    def test_bulk_glide_symmetric(self, atoms_to_move,
-                                  bulk_slab_with_glide,
-                                  subtests):
-        """Check correct identification of bulk glide plane."""
+    def test_bulk_glide_symmetric_atom_moved(self, atoms_to_move,
+                                             bulk_slab_with_glide,
+                                             subtests):
+        """Check identification of bulk glide plane with atoms a bit off."""
         slab, glide, eps = bulk_slab_with_glide()
         for atom_ind in atoms_to_move:
             self.move_atom(slab, atom_ind, 0.99*eps)
         assert slab.is_bulk_glide_symmetric(glide, 2, eps)
 
     fe3o4_bulk = poscar_slabs.CaseBulkSlabs.case_fe3o4_bulk
+
+    @parametrize_with_cases('bulk', cases=fe3o4_bulk)
+    def test_bulk_glide_symmetric(self, bulk):
+        """Check correct identification of bulk glide plane."""
+        slab, rpars, *_ = bulk
+        ab_cell = slab.ab_cell.T
+        glide = SymPlane(np.array([0, 0]), ab_cell[0] + ab_cell[1], ab_cell)
+        assert slab.is_bulk_glide_symmetric(glide, 3, rpars.SYMMETRY_EPS)
 
     @parametrize_with_cases('bulk', cases=fe3o4_bulk)
     def test_bulk_screw_symmetric(self, bulk, subtests):
