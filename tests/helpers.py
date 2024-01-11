@@ -280,7 +280,8 @@ class BulkInfo(InfoBase):
 
     screw_orders: Set[int] = None    # Rotation orders of screw axes
     n_glide_planes: int = None       # Number of 3D glide planes
-    repeat: (float,)*3 = None         # Repeat vector
+    repeat: (float,)*3 = None        # Repeat vector
+    periods: list = None             # Candidate periods
 
 
 @dataclass(repr=False)

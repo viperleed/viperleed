@@ -28,12 +28,12 @@ from viperleed.tleedmlib.base import NonIntegerMatrixError, SingularMatrixError
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.classes.rparams import Rparams
-from viperleed.tleedmlib.classes.slab import Slab
+from viperleed.tleedmlib.classes.slab import Slab, BulkSlab
 from viperleed.tleedmlib.classes.slab import slab_errors as err
 from viperleed.tleedmlib.classes.slab import surface_slab
 from viperleed.tleedmlib.classes.sym_entity import SymPlane
 
-from ..helpers import not_raises
+from ..helpers import not_raises, CaseTag as Tag
 from .. import cases_ase, poscar_slabs
 # pylint: enable=wrong-import-position
 
@@ -235,18 +235,103 @@ class TestAtomsAndElements:
         with subtests.test('atom.num, bulk, changed'):
             assert [at.num for at in bulk] != old_at_nrs_bulk
 
-@todo
+
 class TestBulk3DOperations:
     """Tests for 3D symmetry operations of BulkSlab objects."""
 
-    def test_get_candidate_layer_periods(self):
-        """TODO"""
+    @staticmethod
+    def move_atom(slab, atom_index, distance):
+        """Move the atom at a given index by distance in a random direction."""
+        atom = slab.atlist.get(atom_index)
+        direction = np.random.randn(2)
+        direction /= np.linalg.norm(direction)
+        atom.cartpos[:2] += distance * direction
+        print(direction)
+        slab.update_fractional_from_cartesian()
 
-    def test_bulk_screw_symmetric(self):                                        # TODO: especially consider the cases where an should be on an axis but it is away, and those where it should be at an n-fold position but it isn't.
-        """TODO"""
+    @parametrize_with_cases('bulk', cases=poscar_slabs, has_tag=Tag.BULK)
+    def test_get_candidate_layer_periods(self, bulk):
+        """Check correct identification of sublayer periods."""
+        slab, rpars, info = bulk
+        if not slab.sublayers:
+            slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        periods = slab.get_candidate_layer_periods(rpars.SYMMETRY_EPS.z)
+        assert periods == info.bulk.periods
 
-    def test_bulk_glide_symmetric(self):                                        # TODO: especially consider the cases where an should be on an plane but it is away, and those where it should be at a glide-symmetric position but it isn't.
-        """TODO"""
+    @parametrize_with_cases('bulk', cases=poscar_slabs.case_double_bulk)
+    def test_get_candidate_layer_periods_raises(self, bulk):
+        """Check correct identification of sublayer periods."""
+        slab, rpars, *_ = bulk
+        with pytest.raises(err.MissingSublayersError):
+            slab.get_candidate_layer_periods(rpars.SYMMETRY_EPS.z)
+
+    def test_get_candidate_layer_periods_thin(self, ag100):
+        """Check that a slab with few layers has no candidate periods."""
+        slab, rpars, *_ = ag100
+        bulk = slab.make_bulk_slab(rpars)
+        assert not bulk.get_candidate_layer_periods(rpars.SYMMETRY_EPS.z)
+
+    @fixture(name='bulk_slab_with_glide')
+    def fixture_bulk_slab_with_glide():
+        """Return a very basic BulkSlab with a 3D glide plane."""
+        slab = BulkSlab()
+        slab.ucell = 4.0*np.diag((1, 1, 2))
+        slab.atlist.extend((
+            Atom('Fe', np.array([0.0, 0, 0.0]), 1, slab),
+            Atom('Fe', np.array([0.5, 0, 0.5]), 2, slab),
+            Atom('C', np.array([0.25, 0, 0.0]), 3, slab),  # on glide
+            Atom('C', np.array([0.25, 0, 0.5]), 4, slab),  # on glide
+            ))
+        slab.update_element_count()
+        slab.update_cartesian_from_fractional()
+        slab.create_sublayers(eps)
+        ab_cell = slab.ab_cell.T
+        glide = SymPlane(np.array([0.25, 0]), ab_cell[1], ab_cell)
+        return slab, glide, eps
+
+    @pytest.mark.xfail(reason='Known bug. Will be fixed in better-symmetry',
+                       strict=False)  # Sometimes they succeed
+    @parametrize(atoms_to_move=((1,), (3,), (1, 3)))
+    def test_bulk_glide_symmetric(self, atoms_to_move,
+                                  bulk_slab_with_glide,
+                                  subtests):
+        """Check correct identification of bulk glide plane."""
+        slab, glide, eps = bulk_slab_with_glide()
+        for atom_ind in atoms_to_move:
+            self.move_atom(slab, atom_ind, 0.99*eps)
+        assert slab.is_bulk_glide_symmetric(glide, 2, eps)
+
+    fe3o4_bulk = poscar_slabs.CaseBulkSlabs.case_fe3o4_bulk
+
+    @parametrize_with_cases('bulk', cases=fe3o4_bulk)
+    def test_bulk_screw_symmetric(self, bulk, subtests):
+        """Check correct identification of bulk screw axis."""
+        slab, rpars, *_ = bulk
+        kwargs = {'order': 4, 'sublayer_period': 3, 'eps': rpars.SYMMETRY_EPS}
+        with subtests.test('Move atom that is transformed by 4-fold screw'):
+            # Atom nr. 49 (oxygen) is not on the 4-fold screw
+            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS)
+            assert slab.is_bulk_screw_symmetric(**kwargs)
+        with subtests.test('Move atom at 4-fold screw'):
+            # Atom nr. 33 (tetrahedral Fe) is on the 4-fold screw
+            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
+            try:
+                assert slab.is_bulk_screw_symmetric(**kwargs)
+            except AssertionError:
+                pytest.xfail('Known bug. Will be fixed in better-symmetry')
+            else:
+                raise AssertionError(f'XPASS: This test should FAIL unless '
+                                     'this is the better-symmetry branch')
+        with subtests.test('Move both atoms'):
+            self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
+            self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS)
+            try:
+                assert slab.is_bulk_screw_symmetric(**kwargs)
+            except AssertionError:
+                pytest.xfail('Known bug. Will be fixed in better-symmetry')
+            else:
+                raise AssertionError(f'XPASS: This test should FAIL unless '
+                                     'this is the better-symmetry branch')
 
 
 class TestBulkDetectAndExtraBulk:

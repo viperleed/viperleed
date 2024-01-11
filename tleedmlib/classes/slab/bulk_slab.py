@@ -23,6 +23,7 @@ from viperleed.tleedmlib.base import rotation_matrix_order
 
 from .base_slab import BaseSlab
 from .slab_errors import AlreadyMinimalError
+from .slab_errors import MissingSublayersError
 from .slab_utils import _cycle
 
 
@@ -313,7 +314,14 @@ class BulkSlab(BaseSlab):
             a period for the slab. They are 'potential' in
             that only consistency of chemical elements and
             number of atoms are considered.
+
+        Raises
+        ------
+        MissingSublayersError
+            If this slab has no sublayers defined.
         """
+        if not self.sublayers:
+            raise MissingSublayersError
         if self.n_sublayers < 2:
             return []
 

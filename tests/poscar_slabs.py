@@ -262,6 +262,7 @@ class CaseBulkSlabs:
             )
         info.bulk.screw_orders = {4}  # {2, 4} would make more sense!
         info.bulk.n_glide_planes = 2
+        info.bulk.periods = [3]
         return slab, param, info
 
 
@@ -275,6 +276,9 @@ def case_double_bulk(bulk):
     param, info = duplicate_all(param, info)
     param.BULK_REPEAT *= 2
     info.bulk.repeat = tuple(param.BULK_REPEAT)
+
+    # Propagate sublayer periods information
+    info.bulk.periods += [2*p for p in info.bulk.periods]
 
     # Propagate symmetry information by using duplicate atoms
     sym_info = info.symmetry
