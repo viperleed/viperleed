@@ -37,6 +37,7 @@ doc/_build
 *.mod
 *.o
 *.pyf
+*.exe
 
 
 tleedmlib/wrapped/source/wrapf2py
@@ -49,6 +50,7 @@ test_exec
 tleedmlib/**/*.ipynb
 tensorleed/eeasisss_new/eeasisss
 tensorleed/eeasisss_new/Fortran_quicktests
+tensorleed/eeasisss
 *.plist
 *.mod
 
