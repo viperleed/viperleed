@@ -293,7 +293,13 @@ def initialization(sl, rp, subdomain=False):
                     + rp.phaseshifts_firstline[36:]
                     )
     if newpsGen:
-        rundgrenpath = 'EEASiSSS.x'
+        # check for old eeasisss executable which used to be called EEASiSSS.x
+        if (not Path(rp.sourcedir / "eeasisss").is_file() and 
+            Path(rp.sourcedir / "EEASiSSS.x").is_file()):
+            rundgrenpath = 'EEASiSSS.x'
+        else:
+            # let psgen catch the error if neither executable is found
+            rundgrenpath = 'eeasisss'
         serneliuspath = 'seSernelius'
         logger.info("Generating phaseshifts data... ")
         ps_gen, kwargs = runPhaseshiftGen, {}

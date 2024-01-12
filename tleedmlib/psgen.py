@@ -76,10 +76,10 @@ class PSFile:
 
 
 def runPhaseshiftGen_old(sl, rp,
-                     psgensource='EEASiSSS.x',
+                     psgensource='eeasisss',
                      excosource='seSernelius',
                      atdenssource='atom_density_files'):
-    """Creates required input for EEASiSSS.x, then runs it. Reads the output
+    """Creates required input for eeasisss, then runs it. Reads the output
     files and extracts information for PHASESHIFTS file, then returns that
     information (without writing PHASESHIFTS)."""
 
@@ -497,7 +497,7 @@ def runPhaseshiftGen_old(sl, rp,
     if firstline == "":
         logger.error("Could not find first line for PHASESHIFTS file "
                      "(should contain MUFTIN parameters).")
-        firstline = "ERROR: first line not found in EEASiSSS.x output\n"
+        firstline = "ERROR: first line not found in eeasisss output\n"
         rp.setHaltingLevel(2)
     else:
         # add number of blocks to firstline
@@ -1150,7 +1150,7 @@ def convert_eeasisss_output(sl, rp, atom_types, lmax, Emax, Estep, ps_outdir):
     if firstline == "":
         logger.error("Could not find first line for PHASESHIFTS file "
                      "(should contain MUFTIN parameters).")
-        firstline = "ERROR: first line not found in EEASiSSS.x output\n"
+        firstline = "ERROR: first line not found in eeasisss output\n"
         rp.setHaltingLevel(2)
     else:
         # add number of blocks to firstline
