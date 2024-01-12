@@ -29,13 +29,13 @@ gcc: eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasiss
 	$(gcc_fcomp) eeasisss_code/modified/imported_routines.f90 eeasisss_code/modified/eeasisss.f90 -o EEASiSSS.x $(GCC_FFLAGS)
 
 correct_sha256:
-	IMPORTED_ROUTINES_ACTUAL_SHA256=`$(SHA256_CMD) eeasisss_code/modified/imported_routines.f90`; \
+	IMPORTED_ROUTINES_ACTUAL_SHA256=`cat eeasisss_code/modified/imported_routines.f90 | tr -d '\r' | $(SHA256_CMD)`; \
 		case "$$IMPORTED_ROUTINES_ACTUAL_SHA256 " in \
 			($(EEASISS_IMPORTED_ROUTINES_SHA256)\ *) : ok ;; \
 			(*) echo eeasisss_code/modified/imported_routines.f90 checksum mismatch, expected=\"$(EEASISS_IMPORTED_ROUTINES_SHA256)\" actual=\"$$IMPORTED_ROUTINES_ACTUAL_SHA256\"; \
 			exit 1 ;; \
 		esac
-	EEASISS_ACTUAL_SHA256=`$(SHA256_CMD) eeasisss_code/modified/eeasisss.f90`; \
+	EEASISS_ACTUAL_SHA256=`cat eeasisss_code/modified/eeasisss.f90 | tr -d '\r' | $(SHA256_CMD)`; \
 		case "$$EEASISS_ACTUAL_SHA256 " in \
 			($(EEASISS_SHA256)\ *) : ok ;; \
 			(*) echo eeasisss_code/modified/eeasisss.f90 checksum mismatch, expected=\"$(EEASISS_SHA256)\" actual=\"$$EEASISS_ACTUAL_SHA256\"; \
