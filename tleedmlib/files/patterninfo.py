@@ -31,7 +31,7 @@ def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):
         logger.error("PatternInfo.tlm: bulk slab has not been initialized.")
         raise RuntimeError("writePatternInfo called without bulk slab.")
     output += "bulkGroup = "+sl.bulkslab.foundplanegroup+"\n"
-    output += "bulk3Dsym = "+sl.bulkslab.getBulk3Dstr()
+    output += "bulk3Dsym = "+sl.bulkslab.get_bulk_3d_str()
     # write output
     try:
         with open(filename, 'w') as wf:
