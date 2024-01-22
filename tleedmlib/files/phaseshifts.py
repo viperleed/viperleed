@@ -207,7 +207,7 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
     Returns
     -------
     phaseshifts: list of tuple
-        Each element is (energy, pahseshifts_at_energy) with 
+        Each element is (energy, phaseshifts_at_energy) with 
         phaseshifts_at_energy = [[el0_L0, el0_L1, ...], [el1_L0, ...], ...]
         where eli_Lj is the phaseshift for element i and angular momentum j.
         Therefore, len(phaseshifts) is the number of energies found, 

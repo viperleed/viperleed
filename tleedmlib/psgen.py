@@ -108,7 +108,7 @@ def runPhaseshiftGen_old(sl, rp,
     excosource = Path(shortpath, excosource)
 
     if not psgensource.is_file():
-        raise FileNotFoundError('Could not find PAHSESHIFTS executable at '
+        raise FileNotFoundError('Could not find PHASESHIFTS executable at '
                                 f'{psgensource}. Did you forget to compile it? '
                                 'Try running make in the tensorleed directory')
 
