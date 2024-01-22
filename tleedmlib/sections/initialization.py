@@ -294,8 +294,8 @@ def initialization(sl, rp, subdomain=False):
                     )
     if newpsGen:
         # check for old eeasisss executable which used to be called EEASiSSS.x
-        if (not Path(rp.sourcedir / "eeasisss").is_file() and 
-            Path(rp.sourcedir / "EEASiSSS.x").is_file()):
+        if (not Path(rp.source_dir / "eeasisss").is_file() and 
+            Path(rp.source_dir / "EEASiSSS.x").is_file()):
             rundgrenpath = 'EEASiSSS.x'
         else:
             # let psgen catch the error if neither executable is found
@@ -764,7 +764,7 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
 def _check_and_warn_layer_cuts(rpars, slab):
     """Check if layer cuts are too close together and warn if so."""
     layer_cuts = rpars.LAYER_CUTS
-    min_spacing = slab.getMinLayerSpacing()
+    min_spacing = slab.smallest_interlayer_spacing
     if min_spacing < 1.0:
         logger.warning(
             f"Layer cuts are very close together. The minimum spacing "
