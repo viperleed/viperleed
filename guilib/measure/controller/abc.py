@@ -31,6 +31,7 @@ from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
+_QUEUED_UNIQUE = qtc.Qt.QueuedConnection | _UNIQUE
 
 
 def ensure_connected(method):
@@ -201,7 +202,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # Is used to determine if the next step
         # in the measurement cycle can be done.
         self.__busy = False
-        
+
         # self.time_stamp is used to calculate times of measurements.
         # Even a non-measuring primary controller needs it to enable
         # time calculation for the secondary controllers.
@@ -237,7 +238,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__unsent_messages = []
         if self.serial:
             self.serial.serial_busy.connect(self.send_unsent_messages,
-                                            type=_UNIQUE)
+                                            type=_QUEUED_UNIQUE)
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
@@ -694,6 +695,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.busy = True
         base.safe_disconnect(self.serial.serial_busy,
                              self.send_unsent_messages)
+        # Note that here we do not need to use a _QUEUED_UNIQUE
+        # connection, as preparation steps never cause the
+        # accumulation of unsent messages
         base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
                           type=_UNIQUE)
         self.__do_preparation_step()
@@ -723,6 +727,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.busy = True
         base.safe_disconnect(self.serial.serial_busy,
                              self.send_unsent_messages)
+        # Note that here we do not need to use a _QUEUED_UNIQUE
+        # connection, as preparation steps never cause the
+        # accumulation of unsent messages
         base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
                           type=_UNIQUE)
         self.__do_preparation_step()
@@ -975,8 +982,9 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """
         serial_busy = self.serial.serial_busy
         base.safe_disconnect(serial_busy, self.__do_preparation_step)
-        base.safe_connect(serial_busy, self.send_unsent_messages, type=_UNIQUE)
-        base.safe_connect(serial_busy, self.set_busy, type=_UNIQUE)
+        base.safe_connect(serial_busy, self.send_unsent_messages,
+                          type=_QUEUED_UNIQUE)
+        base.safe_connect(serial_busy, self.set_busy, type=_QUEUED_UNIQUE)
         self.__force_stop_timer.start()
 
     def true_energy_to_setpoint(self, energy):
@@ -1053,7 +1061,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             # while the preparation was running is now sent.
             base.safe_connect(self.serial.serial_busy,
                               self.send_unsent_messages,
-                              type=_UNIQUE)
+                              type=_QUEUED_UNIQUE)
         self.busy = False
 
     @qtc.pyqtSlot(tuple)
@@ -1307,7 +1315,7 @@ class MeasureControllerABC(ControllerABC):
         the controller for a measurement and after an energy
         has been set on the controller. It should only trigger
         measurements (and send additional data if needed).
-        
+
         self.time_stamp has to be set in reimplementations at the
         end of this method. Reimplementations must store the
         time_stamp via time.perf_counter() before returning. To
@@ -1372,7 +1380,7 @@ class MeasureControllerABC(ControllerABC):
         energy that the electrons will have when exiting the gun) to
         the set-point value to be sent to the controller can be done
         inside this method by calling .true_energy_to_setpoint(energy).
-        
+
         self.time_stamp has to be set in reimplementations at the
         end of this method. Reimplementations must store the
         time_stamp via time.perf_counter() before returning. To
@@ -1454,7 +1462,7 @@ class MeasureControllerABC(ControllerABC):
         """
         try:
             base.safe_connect(self.serial.serial_busy, self.set_busy,
-                              type=_UNIQUE)
+                              type=_QUEUED_UNIQUE)
         except AttributeError:
             # Probably arrived here due to an __init__ error
             pass
