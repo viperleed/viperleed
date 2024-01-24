@@ -10,7 +10,7 @@ slabs, they would mess up other tests (e.g., tests/symmetry).
 
 from pytest_cases import parametrize
 
-from .helpers import POSCAR_PATH
+from ..helpers import POSCAR_PATH
 
 POSCAR_FILES = tuple(POSCAR_PATH.glob('POSCAR*'))
 
