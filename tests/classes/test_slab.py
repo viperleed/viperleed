@@ -348,8 +348,8 @@ class TestBulkDetectAndExtraBulk:
     def test_detect_bulk(self):                                                 # TODO: also check that rp and sl are unchanged if it fails
         """TODO"""
 
-    def test_detect_bulk_raises(self, ag100):
-        """Check complaints for invalid inputs."""
+    def test_detect_bulk_raises_negative_bulk_like_below(self, ag100):
+        """Check complaints for negative BULK_LIKE_BELOW."""
         slab, rpars, *_ = ag100
         rpars.BULK_LIKE_BELOW = -0.5
         with pytest.raises(ValueError):
