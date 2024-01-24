@@ -355,6 +355,15 @@ class TestBulkDetectAndExtraBulk:
         with pytest.raises(ValueError):
             slab.detect_bulk(rpars)
 
+    def test_detect_bulk_raises_with_defined_bulk_repeat(self, ag100):
+        """Check complaints for existing BULK_REPEAT."""
+        slab, rpars, *_ = ag100
+        rpars.BULK_LIKE_BELOW = 0.65
+        rpars.BULK_REPEAT = np.array([1, 1, 1])
+        with pytest.raises(ValueError):
+            slab.detect_bulk(rpars)
+
+
     @todo
     def test_with_extra_bulk_units(self):                                       # TODO: also check the number of bulk layers
         """TODO"""

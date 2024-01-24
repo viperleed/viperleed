@@ -288,13 +288,18 @@ class SurfaceSlab(BaseSlab):
         Raises
         ------
         ValueError
-            If no `BULK_LIKE_BELOW` was defined in `rpars`.
+            If no `BULK_LIKE_BELOW` was defined in `rpars` or if
+            `BULK_REPEAT` is already defined.
         NoBulkRepeatError
             If no repeat vector is found.
         """
         if rpars.BULK_LIKE_BELOW <= 0:
             raise ValueError(f'{type(self).__name__}.detect_bulk: rpars '
                              'must have a positive BULK_LIKE_BELOW defined')
+        if rpars.BULK_REPEAT is not None:
+            raise ValueError(f'{type(self).__name__}.detect_bulk: rpars '
+                             'already has a BULK_REPEAT defined')
+
         # Work with a temporary copy of this slab to mess up layers,
         # and a temporary copy of rpars to modify LAYER_CUTS, and
         # N_BULK_LAYERS. This copy will also store the correct
@@ -718,7 +723,7 @@ class SurfaceSlab(BaseSlab):
         kwargs = {
             'eps': rpars.SYMMETRY_EPS,
             'epsz': rpars.SYMMETRY_EPS.z,
-            'new_c_vec': self.get_bulk_repeat(rpars),
+            'new_c_vec': bulk_slab.get_bulk_repeat(rpars),
             'new_ab_cell': np.dot(np.linalg.inv(rpars.SUPERLATTICE),
                                   self.ab_cell.T),
             'recenter': recenter
