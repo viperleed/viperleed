@@ -27,7 +27,7 @@ from viperleed.tleedmlib.base import pairwise
 from viperleed.tleedmlib.base import NonIntegerMatrixError, SingularMatrixError
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
-from viperleed.tleedmlib.classes.rparams import Rparams
+from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts
 from viperleed.tleedmlib.classes.slab import Slab, BulkSlab
 from viperleed.tleedmlib.classes.slab import slab_errors as err
 from viperleed.tleedmlib.classes.slab import surface_slab
@@ -484,19 +484,58 @@ class TestBulkRepeat:
         rpars.BULK_REPEAT = None
         assert np.allclose(slab.get_bulk_repeat(rpars), np.array([0, 0, 2.0365]), atol=1e-3)
 
-@todo
+
+
 class TestBulkUcell:
     """Tests concerning reduction of bulk unit cell and C vector."""
 
-    def test_get_min_c(self):                                                   # TODO: also various raises
-        """TODO"""
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_get_min_c(self, args):
+        """Test that get_minimal_c_vector works as expected."""
+        slab, rpars, info = args
+        # strip out existing layers and make a single "fake" cut at
+        # BULK_LIKE_BELOW. This gives us a bulk slab with (at least) two bulk
+        # layers, which is what we need to test get_min_c.
+        rpars.LAYER_CUTS = LayerCuts.from_string(f'{info.bulk_properties.bulk_like_below}')
+        slab.create_layers(rpars)
+        bulk_slab = slab.make_bulk_slab(rpars, recenter=False)
+        bulk_slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        # z_periodic=False is needed because we use the original unit cell
+        min_c = bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS, z_periodic=False)
+        assert min_c == (
+            pytest.approx(-info.bulk_properties.expected_bulk_repeat, abs=1e-4)
+        )
 
-    def test_ensure_min_c(self):
-        """TODO"""
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_ensure_min_c(self, args):
+        """Test that ensure_minimal_c_vector works as expected."""
+        slab, rpars, info = args
+        rpars.LAYER_CUTS = LayerCuts.from_string(f'{info.bulk_properties.bulk_like_below}')
+        slab.create_layers(rpars)
+        bulk_slab = slab.make_bulk_slab(rpars)
+        bulk_slab.ensure_minimal_c_vector(rpars)
+        assert bulk_slab.ucell[2, 2] == (
+            pytest.approx(-info.bulk_properties.expected_bulk_repeat[2],
+                          abs=1e-4)
+        )
+        assert bulk_slab.n_atoms == info.bulk_properties.expected_n_bulk_atoms
 
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_get_min_c_raises_already_minimal(self, args):
+        """Test that get_minimal_c_vector raises AlreadyMinimalError."""
+        slab, rpars, info = args
+        rpars.LAYER_CUTS = LayerCuts.from_string(f'{info.bulk_properties.bulk_like_below}')
+        slab.create_layers(rpars)
+        bulk_slab = slab.make_bulk_slab(rpars)
+        bulk_slab.ensure_minimal_c_vector(rpars)
+        with pytest.raises(err.AlreadyMinimalError):
+            bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS)
+
+    @todo
     def test_apply_bulk_ucell_reduction(self):                                  # TODO: separately ab only and c_vec. Both with recenter==True/False
         """TODO"""
 
+    @todo
     def test_minimal_bulk_ab(self):                                             # TODO: SurfaceSlab
         """TODO"""
 
