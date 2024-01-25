@@ -415,13 +415,29 @@ class TestBulkDetectAndExtraBulk:
         assert len(bulk_appended.atlist) == len(slab.atlist) + len(new_bulk_atoms)
         assert len(new_bulk_atoms) == n_cells * info.bulk_properties.expected_n_bulk_atoms
 
-    @todo
-    def test_with_double_thickness_once(self):
-        """TODO"""
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_with_double_thickness_twice(self, args):
+        """Check repeated calls to with_extra_bulk_units work correctly."""
+        slab, rpars, info = args
+        rpars.BULK_LIKE_BELOW = info.bulk_properties.bulk_like_below
+        rpars.BULK_REPEAT = None
+        slab.create_layers(rpars)
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        slab.detect_bulk(rpars)
+        n_bulk_layers_before = rpars.N_BULK_LAYERS
 
-    @todo
-    def test_with_double_thickness_twice(self):
-        """TODO"""
+        doubled, new_bulk_atoms = slab.with_extra_bulk_units(rpars, 1)
+        assert rpars.N_BULK_LAYERS == n_bulk_layers_before
+        assert len(doubled.atlist) == len(slab.atlist) + len(new_bulk_atoms)
+        assert len(new_bulk_atoms) == (
+            info.bulk_properties.expected_n_bulk_atoms
+        )
+
+        quadrupled, new_bulk_atoms = doubled.with_extra_bulk_units(rpars, 1)
+        assert rpars.N_BULK_LAYERS == n_bulk_layers_before
+        assert len(quadrupled.atlist) == (
+            len(slab.atlist) + 2*info.bulk_properties.expected_n_bulk_atoms
+        )
 
 
 class TestBulkRepeat:
