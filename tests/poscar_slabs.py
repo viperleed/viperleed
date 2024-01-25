@@ -190,7 +190,7 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
 
 POSCAR_WITH_LAYER_INFO = (
     _add_known_layer_properties(
-        _get_info_by_name('Ag(100)'),
+        POSCAR_WITH_KNOWN_BULK_REPEAT[0],
         LayerInfo(
             layer_cuts = LayerCuts.from_string('dz(1.2)'),
             n_bulk_layers = 1,

@@ -817,9 +817,16 @@ class TestRevertUnitCell:
 class TestSlabLayers:
     """Collection of tests concerning slab (sub)layers."""
 
-    @todo
-    def test_bulk_layers(self):
-        """TODO"""
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    def test_bulk_layers(self, args):
+        """Test Slab.bulk_layers property."""
+        slab, rpars, info = args
+        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
+        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
+        slab.create_layers(rpars)
+        assert len(slab.bulk_layers) == info.layer_properties.n_bulk_layers
+        assert (np.sum([lay.n_atoms for lay in slab.bulk_layers])
+                == info.bulk_properties.expected_n_bulk_atoms)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
     def test_create_layers(self, args):                                               # TODO: check also logging with cuts that (do not) create empty layers
