@@ -707,9 +707,18 @@ class TestMakeBulkSlab:
                       err.TooFewLayersError),
         }
 
-    @todo
-    def test_valid(self):                                                       # TODO: also LOG of warning if a_bulk > b_bulk
-        """TODO"""
+    _valid  = {
+        # name : (poscar, n_bulk_atoms)
+        'Ag(100)' : (poscar_slabs.AG_100, 1),
+        'Fe3O4'   : (poscar_slabs.SLAB_Fe3O4, 8),
+    }
+
+    @parametrize('poscar,n_bulk_atoms', _valid.values(), ids=_valid)
+    def test_valid_nr_of_atoms(self, poscar, n_bulk_atoms, make_poscar):        # TODO: also LOG of warning if a_bulk > b_bulk
+        """Test expected number of atoms in bulk slab for valid POSCARs."""
+        slab, rpars, *_ = make_poscar(poscar)
+        bulk_slab = slab.make_bulk_slab(rpars)
+        assert bulk_slab.n_atoms == n_bulk_atoms  # number of bulk atoms
 
     @parametrize('slab,exc', _invalid.values(), ids=_invalid)
     def test_invalid(self, slab, exc):
