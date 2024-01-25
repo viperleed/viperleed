@@ -398,9 +398,22 @@ class TestBulkDetectAndExtraBulk:
         with pytest.raises(ValueError):
             slab.detect_bulk(rpars)
 
-    @todo
-    def test_with_extra_bulk_units(self):                                       # TODO: also check the number of bulk layers
-        """TODO"""
+    @parametrize('n_cells', (1, 2, 3, 5))
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_with_extra_bulk_units(self, n_cells, args):
+        """Test function for appending bulk units to a slab."""
+        slab, rpars, info = args
+        rpars.BULK_LIKE_BELOW = info.bulk_properties.bulk_like_below
+        rpars.BULK_REPEAT = None
+        slab.create_layers(rpars)
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        slab.detect_bulk(rpars)
+
+        n_bulk_layers_before = rpars.N_BULK_LAYERS
+        bulk_appended, new_bulk_atoms = slab.with_extra_bulk_units(rpars,n_cells=n_cells)
+        assert rpars.N_BULK_LAYERS == n_bulk_layers_before
+        assert len(bulk_appended.atlist) == len(slab.atlist) + len(new_bulk_atoms)
+        assert len(new_bulk_atoms) == n_cells * info.bulk_properties.expected_n_bulk_atoms
 
     @todo
     def test_with_double_thickness_once(self):
