@@ -853,13 +853,16 @@ void prepareADCsForMeasurement(){
               high byte, [1] the low byte. Interpreted as an uint16_t.
     - [2] channel of ADC#0
     - [3] channel of ADC#1
+    The ADC gains are set to 0 before the calibration is applied.
+
     Reads
     -----
     data_received
 
     Writes
     ------
-    newMessage, adc0Channel, adc1Channel, numMeasurementsToDo
+    newMessage, adc0Channel, adc1Channel, numMeasurementsToDo, adc0Gain,
+    adc1Gain
 
     Msg to PC
     ---------
@@ -915,6 +918,9 @@ void prepareADCsForMeasurement(){
     }
     adc0Channel = data_received[2];
     adc1Channel = data_received[3];
+
+    adc0Gain = 0;
+    adc1Gain = 0;
 
     setAllADCgainsAndCalibration();
     if (currentState == STATE_ERROR)   // Some channel was not calibrated
