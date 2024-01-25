@@ -817,23 +817,41 @@ class TestRevertUnitCell:
 class TestSlabLayers:
     """Collection of tests concerning slab (sub)layers."""
 
+    @todo
     def test_bulk_layers(self):
         """TODO"""
 
-    def test_create_layers(self, make_poscar):                                               # TODO: check also logging with cuts that (do not) create empty layers
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    def test_create_layers(self, args):                                               # TODO: check also logging with cuts that (do not) create empty layers
         """Check that layers are created correctly."""
-        slab, rpars, *_ = make_poscar(poscar_slabs.AG_100)
+        slab, rpars, info = args
+        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
+        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
         cuts = slab.create_layers(rpars)
+        assert len(slab.layers) == info.layer_properties.expected_n_layers
+        assert np.allclose(cuts, info.layer_properties.expected_cuts)
+        assert np.allclose([lay.n_atoms for lay in slab.layers],
+                           info.layer_properties.expected_n_atoms_per_layer)
 
-    def test_create_sublayers(self):                                            # TODO: also test if this works fine excluding the second sort-by-element run
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    def test_create_sublayers(self, args):                                            # TODO: also test if this works fine excluding the second sort-by-element run
         """Check that sublayers are created correctly."""
+        slab, rpars, info = args
+        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
+        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
+        slab.create_layers(rpars)
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        assert len(slab.sublayers) == info.layer_properties.expected_n_sublayers
 
+    @todo
     def test_full_update_with_layers_defined(self):                             # TODO: test correct behaviour for (i) coords initially outside the unit cell, and (ii) no topat_ori_z available
         """TODO"""
 
+    @todo
     def test_interlayer_spacing(self):                                          # TODO: also raises.
         """TODO"""
 
+    @todo
     def test_slab_lowocc_sublayer(self):
         """TODO"""
 

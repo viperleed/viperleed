@@ -23,6 +23,8 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases.filters import get_case_tags
 
+from viperleed.tleedmlib.classes.rparams import LayerCuts
+
 
 # Think about a decorator for injecting fixtures.
 # Some ideas at
@@ -318,3 +320,13 @@ class BulkSlabAndRepeatInfo(InfoBase):
     expected_n_bulk_atoms: int
     expected_bulk_cuts: List[float]
     expected_bulk_dist: float
+
+@dataclass(repr=False)
+class LayerInfo(InfoBase):
+    """Container for information about expected layer properties."""
+    layer_cuts: LayerCuts
+    n_bulk_layers: int
+    expected_cuts: List[float]
+    expected_n_layers: int
+    expected_n_sublayers: int
+    expected_n_atoms_per_layer: List[int]

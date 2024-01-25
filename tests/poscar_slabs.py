@@ -25,7 +25,7 @@ from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts, SymmetryEps
 from viperleed.tleedmlib.files import poscar
 
 from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo
-from .helpers import BulkSlabAndRepeatInfo, CaseTag as Tag
+from .helpers import BulkSlabAndRepeatInfo, LayerInfo, CaseTag as Tag
 from .helpers import duplicate_all
 # pylint: enable=wrong-import-position
 
@@ -170,6 +170,10 @@ def _add_known_bulk_properties(info, bulk_info):
     info.bulk_properties = bulk_info
     return info
 
+def _add_known_layer_properties(info, layer_info):
+    """Add layer properties to a TestInfo object."""
+    info.layer_properties = layer_info
+    return info
 
 POSCAR_WITH_KNOWN_BULK_REPEAT = (
     _add_known_bulk_properties(
@@ -181,6 +185,20 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
             expected_bulk_cuts = [0.35],
             expected_bulk_dist = 0.0,
             ),
+    ),
+)
+
+POSCAR_WITH_LAYER_INFO = (
+    _add_known_layer_properties(
+        _get_info_by_name('Ag(100)'),
+        LayerInfo(
+            layer_cuts = LayerCuts.from_string('dz(1.2)'),
+            n_bulk_layers = 1,
+            expected_cuts = [0.35, 0.45, 0.55, 0.65, 0.75],
+            expected_n_layers = 6,
+            expected_n_atoms_per_layer = [1, 1, 1, 1, 1, 1],
+            expected_n_sublayers = 6,
+        )
     ),
 )
 
@@ -227,11 +245,11 @@ class CasePOSCARSlabs:
         """Return a slab, an Rparams and info on expected bulk properties."""
         return self.case_poscar(info)
 
-    # @parametrize(info=POSCAR_WITH_LAYERS_INFO, idgen=make_poscar_ids())
-    # @case(tags=Tag.LAYER_INFO)
-    # def case_bulk_info_poscar(self, info):
-    #     """Return a slab, an Rparams and info on expected layers."""
-    #     return self.case_poscar(info)
+    @parametrize(info=POSCAR_WITH_LAYER_INFO, idgen=make_poscar_ids())
+    @case(tags=Tag.LAYER_INFO)
+    def case_layer_info_poscar(self, info):
+        """Return a slab, an Rparams and info on expected layers."""
+        return self.case_poscar(info)
 
     def case_poscar_fe3o4_001_cod(self):
         """Return a slab from a bulk-truncated Fe3O4(001) POSCAR."""
