@@ -344,9 +344,55 @@ class TestBulk3DOperations:
 class TestBulkDetectAndExtraBulk:
     """Collection of tests for adding bulk units to slabs."""
 
-    @todo
-    def test_detect_bulk(self):                                                 # TODO: also check that rp and sl are unchanged if it fails
-        """TODO"""
+    expected_bulk_cuts_and_dist = (
+        (poscar_slabs.AG_100, 0.65, ([0.35], 0.0)),
+        (poscar_slabs.SLAB_MgO, 0.55, ([0.0626], 0.0)),
+    )
+
+    @parametrize('poscar_and_bulk_values',
+                 expected_bulk_cuts_and_dist,
+                 ids=[p[0].poscar.name for p in expected_bulk_cuts_and_dist])
+    def test_detect_bulk(self, poscar_and_bulk_values, make_poscar):
+        """Test function for detecting bulk cuts and distances."""
+        poscar, bulk_like_below, expected = poscar_and_bulk_values
+        slab, rpars, *_ = make_poscar(poscar)
+        rpars.BULK_LIKE_BELOW = bulk_like_below
+        rpars.BULK_REPEAT = None
+        slab.create_layers(rpars)
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+
+        bulk_cuts, bulk_dist = slab.detect_bulk(rpars)
+        assert len(bulk_cuts) == len(expected[0])
+        assert np.allclose(bulk_cuts, expected[0], atol=1e-4)
+        assert bulk_dist == pytest.approx(expected[1], abs=1e-4)
+
+    @parametrize('poscar_and_bulk_values',
+                 expected_bulk_cuts_and_dist,
+                 ids=[p[0].poscar.name for p in expected_bulk_cuts_and_dist])
+    def test_detect_bulk_fail_leaves_rp_sl_unchanged(self, poscar_and_bulk_values, make_poscar):
+        """Test function for detecting bulk cuts and distances."""
+        poscar, _, expected = poscar_and_bulk_values
+        slab, rpars, *_ = make_poscar(poscar)
+        rpars.BULK_LIKE_BELOW = 0.01
+        rpars.BULK_REPEAT = None
+        sl_copy, rp_copy = deepcopy(slab), deepcopy(rpars)
+
+        slab.create_layers(rpars)
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+
+        with pytest.raises((err.TooFewLayersError, err.NoBulkRepeatError)):
+            slab.detect_bulk(rpars)
+        # Check that slab and rpars are unchanged
+        assert slab.n_atoms == sl_copy.n_atoms
+        # sort atoms for comparison
+        slab.sort_by_z()
+        sl_copy.sort_by_z()
+        assert np.allclose([at.pos for at in slab.atlist], [at.pos for at in sl_copy.atlist])
+        assert np.allclose(slab.ucell, sl_copy.ucell)
+        assert rpars.BULK_LIKE_BELOW == rp_copy.BULK_LIKE_BELOW
+        assert str(rpars.LAYER_CUTS) == str(rp_copy.LAYER_CUTS)
+        assert rpars.BULK_REPEAT == rp_copy.BULK_REPEAT
+        assert np.allclose(rpars.SUPERLATTICE, rp_copy.SUPERLATTICE)
 
     def test_detect_bulk_raises_negative_bulk_like_below(self, ag100):
         """Check complaints for negative BULK_LIKE_BELOW."""
@@ -362,7 +408,6 @@ class TestBulkDetectAndExtraBulk:
         rpars.BULK_REPEAT = np.array([1, 1, 1])
         with pytest.raises(ValueError):
             slab.detect_bulk(rpars)
-
 
     @todo
     def test_with_extra_bulk_units(self):                                       # TODO: also check the number of bulk layers
