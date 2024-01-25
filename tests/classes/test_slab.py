@@ -344,35 +344,24 @@ class TestBulk3DOperations:
 class TestBulkDetectAndExtraBulk:
     """Collection of tests for adding bulk units to slabs."""
 
-    expected_bulk_cuts_and_dist = (
-        (poscar_slabs.AG_100, 0.65, ([0.35], 0.0)),
-        (poscar_slabs.SLAB_MgO, 0.55, ([0.0626], 0.0)),
-    )
-
-    @parametrize('poscar_and_bulk_values',
-                 expected_bulk_cuts_and_dist,
-                 ids=[p[0].poscar.name for p in expected_bulk_cuts_and_dist])
-    def test_detect_bulk(self, poscar_and_bulk_values, make_poscar):
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_detect_bulk(self, args):
         """Test function for detecting bulk cuts and distances."""
-        poscar, bulk_like_below, expected = poscar_and_bulk_values
-        slab, rpars, *_ = make_poscar(poscar)
-        rpars.BULK_LIKE_BELOW = bulk_like_below
+        slab, rpars, info = args
+        rpars.BULK_LIKE_BELOW = info.bulk_properties.bulk_like_below
         rpars.BULK_REPEAT = None
         slab.create_layers(rpars)
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
 
         bulk_cuts, bulk_dist = slab.detect_bulk(rpars)
-        assert len(bulk_cuts) == len(expected[0])
-        assert np.allclose(bulk_cuts, expected[0], atol=1e-4)
-        assert bulk_dist == pytest.approx(expected[1], abs=1e-4)
+        assert len(bulk_cuts) == len(info.bulk_properties.expected_bulk_cuts)
+        assert np.allclose(bulk_cuts, info.bulk_properties.expected_bulk_cuts, atol=1e-4)
+        assert bulk_dist == pytest.approx(info.bulk_properties.expected_bulk_dist, abs=1e-4)
 
-    @parametrize('poscar_and_bulk_values',
-                 expected_bulk_cuts_and_dist,
-                 ids=[p[0].poscar.name for p in expected_bulk_cuts_and_dist])
-    def test_detect_bulk_fail_leaves_rp_sl_unchanged(self, poscar_and_bulk_values, make_poscar):
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_detect_bulk_fail_leaves_rp_sl_unchanged(self, args):
         """Test function for detecting bulk cuts and distances."""
-        poscar, _, expected = poscar_and_bulk_values
-        slab, rpars, *_ = make_poscar(poscar)
+        slab, rpars, *_ = args
         rpars.BULK_LIKE_BELOW = 0.01
         rpars.BULK_REPEAT = None
         sl_copy, rp_copy = deepcopy(slab), deepcopy(rpars)
@@ -425,21 +414,16 @@ class TestBulkDetectAndExtraBulk:
 class TestBulkRepeat:
     """Collection of test for bulk-repeat finding and returning."""
 
-    known_bulk_repeats = (
-        (poscar_slabs.AG_100, np.array([1.44, 1.44, -2.03647])),
-        #(poscar_slabs.SLAB_Fe3O4, np.array([0.0, -4.19199991, 4.19199991]))    # TODO: ask Michele
-    )
-
-    @parametrize('slab_and_expected', known_bulk_repeats,
-                 ids=[p[0].poscar.name for p in known_bulk_repeats])
-    def test_identify(self, slab_and_expected, make_poscar):
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_identify(self, args):
         """Tests identify_bulk_repeat method."""
-        poscar, expected_bulk_repeat = slab_and_expected
-        slab, rpars, *_ = make_poscar(poscar)
+        slab, rpars, info = args
         slab.BULK_REPEAT = None
         slab.make_bulk_slab(rpars)
         repeat_vector = slab.identify_bulk_repeat(eps=1e-3)
-        assert np.allclose(repeat_vector, -expected_bulk_repeat, atol=1e-3)
+        assert np.allclose(repeat_vector,
+                           -info.bulk_properties.expected_bulk_repeat,
+                           atol=1e-3)
 
     def test_identify_raises_without_bulkslab(self, ag100):
         """Check complaints when called without a bulk slab."""
@@ -448,16 +432,16 @@ class TestBulkRepeat:
         with pytest.raises(err.MissingBulkSlabError):
             slab.identify_bulk_repeat(.1)
 
-    @parametrize('slab_and_expected', known_bulk_repeats,
-                 ids=[p[0].poscar.name for p in known_bulk_repeats])
-    def test_get(self, slab_and_expected, make_poscar):
-        """TODO"""
-        poscar, expected_bulk_repeat = slab_and_expected
-        slab, rpars, *_ = make_poscar(poscar)
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_get(self, args):
+        """Test get_bulk_repeat method."""
+        slab, rpars, info = args
         slab.BULK_REPEAT = None
         slab.make_bulk_slab(rpars)
-        repeat_vectror = slab.get_bulk_repeat(rpars)
-        assert np.allclose(repeat_vectror, -expected_bulk_repeat, atol=1e-3)
+        repeat_vector = slab.get_bulk_repeat(rpars)
+        assert np.allclose(repeat_vector,
+                           -info.bulk_properties.expected_bulk_repeat,
+                           atol=1e-3)
 
     def test_get_returns_stored_bulk_repeat(self, make_poscar):
         """Test get_bulk_repeat returns stored bulk repeat if available."""
@@ -707,18 +691,12 @@ class TestMakeBulkSlab:
                       err.TooFewLayersError),
         }
 
-    _valid  = {
-        # name : (poscar, n_bulk_atoms)
-        'Ag(100)' : (poscar_slabs.AG_100, 1),
-        'Fe3O4'   : (poscar_slabs.SLAB_Fe3O4, 8),
-    }
-
-    @parametrize('poscar,n_bulk_atoms', _valid.values(), ids=_valid)
-    def test_valid_nr_of_atoms(self, poscar, n_bulk_atoms, make_poscar):        # TODO: also LOG of warning if a_bulk > b_bulk
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_valid_nr_of_atoms(self, args):                                     # TODO: also LOG of warning if a_bulk > b_bulk
         """Test expected number of atoms in bulk slab for valid POSCARs."""
-        slab, rpars, *_ = make_poscar(poscar)
+        slab, rpars, info = args
         bulk_slab = slab.make_bulk_slab(rpars)
-        assert bulk_slab.n_atoms == n_bulk_atoms  # number of bulk atoms
+        assert bulk_slab.n_atoms == info.bulk_properties.expected_n_bulk_atoms
 
     @parametrize('slab,exc', _invalid.values(), ids=_invalid)
     def test_invalid(self, slab, exc):
@@ -836,15 +814,16 @@ class TestRevertUnitCell:
             slab.revert_unit_cell()
 
 
-@todo
 class TestSlabLayers:
     """Collection of tests concerning slab (sub)layers."""
 
     def test_bulk_layers(self):
         """TODO"""
 
-    def test_create_layers(self):                                               # TODO: check also logging with cuts that (do not) create empty layers
+    def test_create_layers(self, make_poscar):                                               # TODO: check also logging with cuts that (do not) create empty layers
         """Check that layers are created correctly."""
+        slab, rpars, *_ = make_poscar(poscar_slabs.AG_100)
+        cuts = slab.create_layers(rpars)
 
     def test_create_sublayers(self):                                            # TODO: also test if this works fine excluding the second sort-by-element run
         """Check that sublayers are created correctly."""
@@ -1074,7 +1053,7 @@ class TestUnitCellTransforms:
         assert manual_slab_3_atoms.ucell.shape == (3, 3)
 
 
-@todo
+@todo # done by michele
 class TestUnitCellReduction:
     """Tests for minimization of various bits of the unit cell."""
 

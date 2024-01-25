@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Set, Tuple, Mapping
 
+import numpy as np
 import pytest
 from pytest_cases import fixture
 from pytest_cases.filters import get_case_tags
@@ -190,6 +191,8 @@ class CaseTag(IntEnum):
     THICK_BULK = auto()
     NO_INFO = auto()
     RAISES = auto()
+    BULK_PROPERTIES = auto()
+    LAYER_INFO = auto()
 
 
 @dataclass
@@ -306,3 +309,12 @@ class TestInfo(InfoBase):
         """Update an Rparam with the presets stored."""
         for attr_name, attr_value in self.param_presets.items():
             setattr(param, attr_name, attr_value)
+
+@dataclass(repr=False)
+class BulkSlabAndRepeatInfo(InfoBase):
+    """Container for information about bulk atoms and repeat vector."""
+    bulk_like_below: float
+    expected_bulk_repeat: np.ndarray
+    expected_n_bulk_atoms: int
+    expected_bulk_cuts: List[float]
+    expected_bulk_dist: float

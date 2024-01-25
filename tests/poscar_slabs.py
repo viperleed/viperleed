@@ -24,12 +24,13 @@ if VPR_PATH not in sys.path:
 from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts, SymmetryEps
 from viperleed.tleedmlib.files import poscar
 
-from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo, CaseTag as Tag
+from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo
+from .helpers import BulkSlabAndRepeatInfo, CaseTag as Tag
 from .helpers import duplicate_all
 # pylint: enable=wrong-import-position
 
 
-def _get_poscar_info(*args):
+def _get_poscar_info(*args, bulk_repeat_info=None):
     """Return a TestInfo object appropriately filled with args.
 
     Parameters
@@ -153,11 +154,35 @@ WITH_DUPLICATE_ATOMS = [
     ]
 
 
+# POSCAR_WITH_LAYERS_INFO = [poscar_info for poscar_info in
+#                            POSCARS_WITH_LITTLE_SYMMETRY_INFO
+#                            if poscar_info.]
+
+
 def _get_info_by_name(name):
     """Return a TestInfo object by name."""
     return next(i for i in POSCARS_WITH_LITTLE_SYMMETRY_INFO
                 if name in i.poscar.name)
 
+
+def _add_known_bulk_properties(info, bulk_info):
+    """Add bulk properties to a TestInfo object."""
+    info.bulk_properties = bulk_info
+    return info
+
+
+POSCAR_WITH_KNOWN_BULK_REPEAT = (
+    _add_known_bulk_properties(
+        _get_info_by_name('Ag(100)'),
+        BulkSlabAndRepeatInfo(
+            bulk_like_below = 0.65,
+            expected_bulk_repeat=np.array([1.44, 1.44, -2.03647]),
+            expected_n_bulk_atoms = 1,
+            expected_bulk_cuts = [0.35],
+            expected_bulk_dist = 0.0,
+            ),
+    ),
+)
 
 AG_100 = _get_info_by_name('Ag(100)')
 SLAB_36C_cm = _get_info_by_name('36C_cm')
@@ -195,6 +220,18 @@ class CasePOSCARSlabs:
     def case_infoless_poscar(self, info):
         """Return a slab, an Rparams and an (essentially) empty info."""
         return self.case_poscar(info)
+
+    @parametrize(info=POSCAR_WITH_KNOWN_BULK_REPEAT, idgen=make_poscar_ids())
+    @case(tags=Tag.BULK_PROPERTIES)
+    def case_bulk_repeat_poscar(self, info):
+        """Return a slab, an Rparams and info on expected bulk properties."""
+        return self.case_poscar(info)
+
+    # @parametrize(info=POSCAR_WITH_LAYERS_INFO, idgen=make_poscar_ids())
+    # @case(tags=Tag.LAYER_INFO)
+    # def case_bulk_info_poscar(self, info):
+    #     """Return a slab, an Rparams and info on expected layers."""
+    #     return self.case_poscar(info)
 
     def case_poscar_fe3o4_001_cod(self):
         """Return a slab from a bulk-truncated Fe3O4(001) POSCAR."""
