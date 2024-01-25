@@ -163,6 +163,7 @@ AG_100 = _get_info_by_name('Ag(100)')
 SLAB_36C_cm = _get_info_by_name('36C_cm')
 SLAB_Cu2O_111 = _get_info_by_name('Cu2O(111)')
 SLAB_MgO = _get_info_by_name('MgO')
+SLAB_Fe3O4 = _get_info_by_name('Fe3O4_SCV')
 
 
 class CasePOSCARSlabs:

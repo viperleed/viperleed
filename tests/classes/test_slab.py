@@ -425,21 +425,51 @@ class TestBulkDetectAndExtraBulk:
 class TestBulkRepeat:
     """Collection of test for bulk-repeat finding and returning."""
 
-    @todo
-    def test_identify(self):
-        """TODO"""
+    known_bulk_repeats = (
+        (poscar_slabs.AG_100, np.array([1.44, 1.44, -2.03647])),
+        #(poscar_slabs.SLAB_Fe3O4, np.array([0.0, -4.19199991, 4.19199991]))    # TODO: ask Michele
+    )
 
-    def test_identify_raises_without_bulkslab(self, ag100):                     # TODO: also other raises
+    @parametrize('slab_and_expected', known_bulk_repeats,
+                 ids=[p[0].poscar.name for p in known_bulk_repeats])
+    def test_identify(self, slab_and_expected, make_poscar):
+        """Tests identify_bulk_repeat method."""
+        poscar, expected_bulk_repeat = slab_and_expected
+        slab, rpars, *_ = make_poscar(poscar)
+        slab.BULK_REPEAT = None
+        slab.make_bulk_slab(rpars)
+        repeat_vector = slab.identify_bulk_repeat(eps=1e-3)
+        assert np.allclose(repeat_vector, -expected_bulk_repeat, atol=1e-3)
+
+    def test_identify_raises_without_bulkslab(self, ag100):
         """Check complaints when called without a bulk slab."""
         slab, *_ = ag100
         slab.bulkslab = None
         with pytest.raises(err.MissingBulkSlabError):
             slab.identify_bulk_repeat(.1)
 
-    @todo
-    def test_get(self):
+    @parametrize('slab_and_expected', known_bulk_repeats,
+                 ids=[p[0].poscar.name for p in known_bulk_repeats])
+    def test_get(self, slab_and_expected, make_poscar):
         """TODO"""
+        poscar, expected_bulk_repeat = slab_and_expected
+        slab, rpars, *_ = make_poscar(poscar)
+        slab.BULK_REPEAT = None
+        slab.make_bulk_slab(rpars)
+        repeat_vectror = slab.get_bulk_repeat(rpars)
+        assert np.allclose(repeat_vectror, -expected_bulk_repeat, atol=1e-3)
 
+    def test_get_returns_stored_bulk_repeat(self, make_poscar):
+        """Test get_bulk_repeat returns stored bulk repeat if available."""
+        slab, rpars, *_ = make_poscar(poscar_slabs.AG_100)
+        rpars.BULK_REPEAT = np.array([1, 2, 3])
+        assert np.allclose(slab.get_bulk_repeat(rpars), np.array([1, 2, 3]))
+
+    def test_get_returns_vector(self, make_poscar):
+        """Test get_bulk_repeat returns a z-only vector if BULK_REPEAT is not defined."""
+        slab, rpars, *_ = make_poscar(poscar_slabs.AG_100)
+        rpars.BULK_REPEAT = None
+        assert np.allclose(slab.get_bulk_repeat(rpars), np.array([0, 0, 2.0365]), atol=1e-3)
 
 @todo
 class TestBulkUcell:
