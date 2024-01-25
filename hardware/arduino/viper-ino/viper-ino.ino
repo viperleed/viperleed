@@ -111,7 +111,9 @@ void updateState() {
     If there is an unprocessed serial message, decide whether
     this requires us to change the state of the Arduino, and
     do some preparation that may be needed before entering
-    the new state.
+    the new state. All data messages have to be at least two
+    bytes long. Messages that are one byte long are assumed
+    to be commands.
 
     Reads
     -----
@@ -128,6 +130,8 @@ void updateState() {
     if (not newMessage) return;
 
     if (msgLength > 1) return; //We received data
+    // Note that all data messages have
+    // to be at least two bytes long.
 
     if (data_received[0] != PC_CONFIGURATION
         and data_received[0] != PC_RESET
