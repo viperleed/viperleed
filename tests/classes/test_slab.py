@@ -1050,7 +1050,7 @@ class TestSuperAndSubCell:
 
     @parametrize('transform', valid.values(), ids=valid)
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_supercell_valid(self, transform, args):                            # TODO: diagonal and non-diagonal (for some weird basis cell?). I think the old version was failing under some non-diagonal situations. Explicitly test the two removed update_origin.
+    def test_supercell_valid(self, transform, args):
         """Check that supercell is created correctly.
 
         Checks ucell & n_atoms"""
@@ -1084,9 +1084,18 @@ class TestSuperAndSubCell:
         'not a subcell': (np.diag((2, 2)), ValueError),
         }
 
-    @todo
-    def test_subcell_valid(self):
-        """TODO"""
+    @parametrize('transform', valid.values(), ids=valid)
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    def test_make_subcell_reverses_make_supercell(self, transform, args):
+        """Test that make_subcell reverses make_supercell."""
+        slab, rpars, *_ = args
+        supercell = slab.make_supercell(transform)
+        subcell = supercell.make_subcell(rpars, transform)
+        slab.sort_by_z()
+        subcell.sort_by_z()
+        assert np.allclose(slab.ucell, subcell.ucell)
+        assert np.allclose([at.cartpos for at in subcell.atlist], 
+                    [at.cartpos for at in slab.atlist])
 
     @parametrize('matrix,exc', sub_invalid.values(), ids=sub_invalid)
     def test_subcell_invalid(self, matrix, exc, ag100):
