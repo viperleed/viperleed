@@ -1029,9 +1029,48 @@ class TestSuperAndSubCell:
         'non-2x2': (np.eye(3), ValueError),
         }
 
-    @todo
-    def test_supercell_valid(self):                                             # TODO: diagonal and non-diagonal (for some weird basis cell?). I think the old version was failing under some non-diagonal situations. Explicitly test the two removed update_origin.
-        """TODO"""
+    valid = {
+        'identity': np.diag((1, 1)),
+        '2x2': np.diag((2, 2)),
+        '2x1': np.diag((2, 1)),
+        'off-diagonal': np.array([[1, 1], [0, 1]]),
+    }
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    def test_make_supercell_identity_does_nothing(self, args):
+        """Check that identity matrix does not change the slab."""
+        slab, *_ = args
+        slab_copy = deepcopy(slab)
+        supercell = slab.make_supercell(np.diag((1, 1)))
+        assert np.allclose(slab.ucell, slab_copy.ucell)
+        supercell.sort_by_z()
+        slab_copy.sort_by_z()
+        assert np.allclose([at.cartpos for at in supercell.atlist], 
+                           [at.cartpos for at in slab_copy.atlist])
+
+    @parametrize('transform', valid.values(), ids=valid)
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    def test_supercell_valid(self, transform, args):                            # TODO: diagonal and non-diagonal (for some weird basis cell?). I think the old version was failing under some non-diagonal situations. Explicitly test the two removed update_origin.
+        """Check that supercell is created correctly.
+
+        Checks ucell & n_atoms"""
+        slab, *_ = args
+        supercell = slab.make_supercell(transform)
+        assert np.allclose(supercell.ab_cell[:], slab.ab_cell.dot(transform.T))
+        assert supercell.n_atoms == slab.n_atoms * np.linalg.det(transform)
+
+    @parametrize('transform', valid.values(), ids=valid)
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    def test_supercell_does_not_change_original_slab(self, transform, args):
+        """Check that supercell creation does not affect input slab."""
+        slab, *_ = args
+        slab_copy = deepcopy(slab)
+        _ = slab.make_supercell(transform)
+        assert np.allclose(slab.ucell, slab_copy.ucell)
+        slab.sort_by_z()
+        slab_copy.sort_by_z()
+        assert np.allclose([at.cartpos for at in slab.atlist], 
+                           [at.cartpos for at in slab_copy.atlist])
 
     @parametrize('matrix,exc', invalid.values(), ids=invalid)
     def test_supercell_invalid(self, matrix, exc, ag100):
