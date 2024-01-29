@@ -456,6 +456,14 @@ class TestBulkDetectAndExtraBulk:
             len(slab.atlist) + 2*info.bulk_properties.n_bulk_atoms
             )
 
+    @pytest.mark.xfail(reason='Issue #140')
+    def test_layer_cutting_for_slab_with_incomplete_bulk_layer(make_poscar):
+        """Test for issue #140."""
+        slab, rpars, *_ = make_poscar(poscar_slabs.SLAB_Cu2O_111)
+        rpars.BULK_LIKE_BELOW = 0.35
+        slab.detect_bulk(rpars)
+        assert slab.smallest_interlayer_spacing >= 1.0
+
 
 class TestBulkRepeat:
     """Collection of test for bulk-repeat finding and returning."""
@@ -1287,12 +1295,3 @@ def test_translation_symmetry_different_species():
     slab, rpars, *_ = CasePOSCARSlabs().case_poscar_mgo()
     mg_to_oxygen = slab.ab_cell.T[0] / 2
     assert not slab.is_translation_symmetric(mg_to_oxygen, rpars.SYMMETRY_EPS)
-
-
-@pytest.mark.xfail(reason='Issue #140')
-def test_layer_cutting_for_slab_with_incomplete_bulk_layer(make_poscar):        # TODO: move to TestBulkDetectAndExtraBulk
-    """Test for issue #140."""
-    slab, rpars, *_ = make_poscar(poscar_slabs.SLAB_Cu2O_111)
-    rpars.BULK_LIKE_BELOW = 0.35
-    slab.detect_bulk(rpars)
-    assert slab.smallest_interlayer_spacing >= 1.0
