@@ -862,6 +862,13 @@ class TestMakeBulkSlab:
         bulk_slab = slab.make_bulk_slab(rpars)
         assert bulk_slab.n_atoms == info.bulk_properties.n_bulk_atoms
 
+    @with_bulk_repeat
+    def test_valid_ucell(self, args):
+        """Test expected number of atoms in bulk slab for valid POSCARs."""
+        slab, rpars, info = args
+        bulk_slab = slab.make_bulk_slab(rpars)
+        assert np.allclose(bulk_slab.ucell, info.bulk_properties.bulk_ucell)
+
     def test_valid_warning_a_larger_b(self, ag100, caplog):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, info = ag100
