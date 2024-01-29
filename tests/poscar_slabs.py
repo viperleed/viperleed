@@ -198,6 +198,7 @@ POSCAR_WITH_LAYER_INFO = (
             expected_n_layers = 6,
             expected_n_atoms_per_layer = [1, 1, 1, 1, 1, 1],
             expected_n_sublayers = 6,
+            expected_smallest_interlayer_spacing = 2.03646,
         )
     ),
 )
