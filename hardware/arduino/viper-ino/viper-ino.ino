@@ -165,6 +165,7 @@ void updateState() {
             currentState = STATE_SET_VOLTAGE;
             break;
         case PC_AUTOGAIN:
+            encodeAndSend(PC_OK);
             initialTime = millis();
             prepareForAutogain();
             currentState = STATE_AUTOGAIN_ADCS;
@@ -1311,7 +1312,8 @@ void findOptimalADCGains(){
     setAllADCgainsAndCalibration();
     if (currentState == STATE_ERROR)   // Some channel was not calibrated
         return;
-    encodeAndSend(PC_OK);
+    byte ADCgains[2] = {adc0Gain, adc1Gain};
+    encodeAndSend(ADCgains, 2);
     currentState = STATE_IDLE;
 }
 

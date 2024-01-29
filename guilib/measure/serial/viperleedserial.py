@@ -573,6 +573,8 @@ class ViPErLEEDSerial(SerialABC):
         pc_measure_only = self.port_settings.get('available_commands',
                                                  'PC_MEASURE_ONLY')
         pc_ok = self.port_settings.get('available_commands', 'PC_OK')
+        pc_autogain = self.port_settings.get('available_commands',
+                                             'PC_AUTOGAIN')
 
         pc_debug = None
         if self.firmware_version >= "0.7":
@@ -603,6 +605,10 @@ class ViPErLEEDSerial(SerialABC):
                     self.__may_receive_stray_data = False
                 elif last_cmd == pc_set_voltage:
                     self.about_to_trigger.emit()
+                elif last_cmd == pc_autogain:
+                    continue
+                self.busy = False
+            elif len(message) == 2 and last_cmd == pc_autogain:
                 self.busy = False
             # Hardware config and measurement values are both 4 bytes long.
             # Both commands are differentiated by the __last_request_sent
