@@ -469,7 +469,7 @@ class SurfaceSlab(BaseSlab):
             return zdiff
         return cvec * zdiff / cvec[2]
 
-    def get_nearest_neigbours(self):
+    def get_nearest_neighbours(self):
         """Return the nearest-neighbour distance for all atoms.
 
         Returns

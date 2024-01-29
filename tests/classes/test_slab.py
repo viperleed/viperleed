@@ -1343,7 +1343,7 @@ class TestUnitCellReduction:
 def test_nearest_neighbors(args):
     """Test function get_nearest_neighbors."""
     slab, _, info = args
-    nearest_neighbors = slab.get_nearest_neigbours()
+    nearest_neighbors = slab.get_nearest_neighbours()
     assert len(nearest_neighbors) == len(
         info.nearest_neighbors.nearest_neighbor_distances)
     for at in slab:
