@@ -723,7 +723,7 @@ class SurfaceSlab(BaseSlab):
         kwargs = {
             'eps': rpars.SYMMETRY_EPS,
             'epsz': rpars.SYMMETRY_EPS.z,
-            'new_c_vec': bulk_slab.get_bulk_repeat(rpars),
+            'new_c_vec': self.get_bulk_repeat(rpars),
             'new_ab_cell': np.dot(np.linalg.inv(rpars.SUPERLATTICE),
                                   self.ab_cell.T),
             'recenter': recenter
