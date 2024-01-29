@@ -154,11 +154,6 @@ WITH_DUPLICATE_ATOMS = [
     ]
 
 
-# POSCAR_WITH_LAYERS_INFO = [poscar_info for poscar_info in
-#                            POSCARS_WITH_LITTLE_SYMMETRY_INFO
-#                            if poscar_info.]
-
-
 def _get_info_by_name(name):
     """Return a TestInfo object by name."""
     return next(i for i in POSCARS_WITH_LITTLE_SYMMETRY_INFO
