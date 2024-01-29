@@ -193,6 +193,7 @@ class CaseTag(IntEnum):
     LAYER_INFO = auto()
     NEED_ROTATION = auto()
     NO_INFO = auto()
+    NON_MINIMAL_CELL = auto()
     RAISES = auto()
     THICK_BULK = auto()
 
@@ -247,6 +248,7 @@ class POSCARInfo(InfoBase):
     name: str = ''
     n_atoms: int = None
     n_atoms_by_elem: dict = field(init=False, default_factory=dict)
+    n_cells: int = 1  # How many 2D cells are in the POSCAR?
 
     def __post_init__(self):
         """Post-process initialization values."""

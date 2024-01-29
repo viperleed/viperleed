@@ -33,7 +33,7 @@ from viperleed.tleedmlib.classes.slab import slab_errors as err
 from viperleed.tleedmlib.classes.slab import surface_slab
 from viperleed.tleedmlib.classes.sym_entity import SymPlane
 
-from ..helpers import not_raises, CaseTag as Tag
+from ..helpers import exclude_tags, not_raises, CaseTag as Tag
 from .. import cases_ase, poscar_slabs
 # pylint: enable=wrong-import-position
 
@@ -1206,15 +1206,30 @@ class TestUnitCellTransforms:
         assert manual_slab_3_atoms.ucell.shape == (3, 3)
 
 
-@todo # done by michele
 class TestUnitCellReduction:
     """Tests for minimization of various bits of the unit cell."""
 
-    def test_ab_cell_minimization(self):                                        # TODO: Use also "Sb on Si(111)" case from Max Buchta
-        """TODO"""
+    @parametrize_with_cases('args', cases=poscar_slabs,
+                            has_tag=Tag.NON_MINIMAL_CELL)
+    def test_ab_cell_minimization(self, args):
+        """Check correct identification of minimal ab cell (by area)."""
+        slab, rpars, info = args
+        ab_slab = slab.ab_cell.T.copy()
+        ab_small = slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS,
+                                            rpars.SYMMETRY_EPS.z)
+        area_ratio = np.linalg.det(ab_slab)/np.linalg.det(ab_small)
+        assert area_ratio == pytest.approx(info.poscar.n_cells)
 
-    def test_ab_cell_already_minimal(self):
-        """TODO"""
+    _minimal = {'cases': poscar_slabs,
+                'filter': exclude_tags(Tag.NON_MINIMAL_CELL,
+                                       Tag.NO_INFO)}
+
+    @parametrize_with_cases('args', **_minimal)
+    def test_ab_cell_already_minimal(self, args):
+        """Check correct identification of slabs with already minimal ab."""
+        slab, rpars, *_ = args
+        with pytest.raises(err.AlreadyMinimalError):
+            slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
 
 
 @todo

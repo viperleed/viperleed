@@ -116,7 +116,7 @@ class TestPlaneGroupFinding:
     _known_incorrect_groups = {
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
-        'poscar-diamond': 'Known incorrect plane group pm instead of rcm',
+        'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
         }
 
     def test_correct_plane_group(self, with_plane_group, first_case):
@@ -309,7 +309,7 @@ class TestSymmetryConstraints:
         'square_pm_01': 'Known to often fail with a random shift',
         'square_cm_11': 'Known to often fail with a random shift',
         'square_cm_1m1': 'Known to often fail with a random shift',
-        'poscar-diamond': 'Known incorrect plane group pm instead of rcm',
+        'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
         }
 
     def test_correct_group_after_constraint(self, with_symmetry_constraints,
@@ -395,7 +395,7 @@ class TestSlabSymmetrization:
         'square_pmm': 'Sometimes reduced to pm',
         'square_cmm': 'Sometimes reduced to cm',
         'poscar-Ag(100)':  'Often reduced from p4m to cm',
-        'poscar-diamond': 'Known invalid group pm. May be correct rcm here',
+        'poscar_diamond': 'Known invalid group pm. May be correct rcm here',
         'poscar-36C_p6m': 'Often reduced to cmm',
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',

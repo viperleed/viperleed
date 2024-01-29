@@ -17,6 +17,7 @@ used to be contained in the original slab module by F. Kraushofer.
 from abc import abstractmethod
 from collections import Counter
 import copy
+import itertools
 import logging
 from numbers import Real
 from operator import attrgetter, itemgetter
@@ -817,22 +818,35 @@ class BaseSlab(AtomContainer):
         # 1 / n_atoms (which would give one atom per reduced cell)
         ab_cell_area = abs(np.linalg.det(ab_cell))
         smallest_area = ab_cell_area / n_atoms
-        smaller = False
-        for vec in candidate_unit_vectors:
-            # Try first replacing the current second unit vector
-            tcell = np.array([ab_cell[0], vec])
-            tcell_area = abs(np.linalg.det(tcell))
-            if smallest_area < tcell_area + eps**2 < ab_cell_area:
-                ab_cell, ab_cell_area = tcell, tcell_area
-                smaller = True
-                continue
-            # Try replacing the current first unit vector instead
-            tcell = np.array([ab_cell[1], vec])
-            tcell_area = abs(np.linalg.det(tcell))
-            if smallest_area < tcell_area + eps**2 < ab_cell_area:
-                ab_cell, ab_cell_area = tcell, tcell_area
-                smaller = True
-        return smaller, ab_cell
+
+        candidate_unit_vectors = itertools.chain(ab_cell,
+                                                 candidate_unit_vectors)
+        candidate_ab_cells = itertools.combinations(candidate_unit_vectors, 2)
+        candidate_ab_cells_and_areas = ((ab, abs(np.linalg.det(ab)))
+                                        for ab in candidate_ab_cells)
+        candidate_ab_cells_and_areas = (
+            (ab, area) for ab, area in candidate_ab_cells_and_areas
+            if smallest_area < area + eps**2 < ab_cell_area
+            )
+
+        # Finally, consider that the new unit cell area
+        # must be an integer divisor of the current one
+        candidate_ab_cells_and_area_ratios = (
+            (ab, ab_cell_area/area)
+            for ab, area in candidate_ab_cells_and_areas
+            )
+        acceptable_ab_cells_and_ratios = (
+            (ab, round(ratio))
+            for ab, ratio in candidate_ab_cells_and_area_ratios
+            if abs(round(ratio) - ratio) < 1e-6
+            )
+
+        try:
+            # Pick the one that realizes the largest area reduction
+            mincell, _ = max(acceptable_ab_cells_and_ratios, key=itemgetter(1))
+        except ValueError:  # No smaller cell
+            return False, ab_cell
+        return True, mincell
 
     @staticmethod
     def _reduce_mincell(mincell, eps, warn_convention):

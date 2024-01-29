@@ -132,7 +132,6 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_Ag(100)', 6, 'p4m', (1, True), _PRESETS['Ag']),
     _get_poscar_info('POSCAR_STO(110)-4x1', 136, 'pm', (1, False)),
     _get_poscar_info('POSCAR_TiO2', 540, 'pmm', (540, False)),
-    _get_poscar_info('POSCAR_diamond', 96, 'rcm', (90, False)),
     _get_poscar_info('POSCAR_36C_p6m', 36, 'p6m', (1, False)),
     _get_poscar_info('POSCAR_36C_cm', 36, 'cm', (1, False)),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
@@ -141,7 +140,6 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
                      {'Ni': 402, 'Al': 134+132+188, 'O': 188+213},
                      'p3'),
     _get_poscar_info('POSCAR_Cu2O(111)_1x1_surplus_oxygen', 66, 'p3m1'),
-    _get_poscar_info('POSCAR_MgO_cod_9006456', {'Mg': 14, 'O': 14}, 'p4m'),
     )
 
 POSCARS_WITHOUT_INFO = [
@@ -203,8 +201,6 @@ POSCAR_WITH_LAYER_INFO = (
 AG_100 = _get_info_by_name('Ag(100)')
 SLAB_36C_cm = _get_info_by_name('36C_cm')
 SLAB_Cu2O_111 = _get_info_by_name('Cu2O(111)')
-SLAB_MgO = _get_info_by_name('MgO')
-SLAB_Fe3O4 = _get_info_by_name('Fe3O4_SCV')
 
 
 class CasePOSCARSlabs:
@@ -249,10 +245,19 @@ class CasePOSCARSlabs:
         """Return a slab, an Rparams and info on expected layers."""
         return self.case_poscar(info)
 
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_diamond(self):
+        """Return a non-minimal diamond(111) slab."""
+        info = _get_poscar_info('POSCAR_diamond', 96, 'rcm', (90, False))
+        info.poscar.n_cells = 4
+        return self.case_poscar(info)
+
+    @case(tags=Tag.NON_MINIMAL_CELL)
     def case_poscar_fe3o4_001_cod(self):
         """Return a slab from a bulk-truncated Fe3O4(001) POSCAR."""
         info = TestInfo()
         info.poscar.set('POSCAR_Fe3O4_(001)_cod1010369', 112)
+        info.poscar.n_cells = 2
         info.param_presets = copy.deepcopy(_PRESETS['Fe3O4'])
         info.symmetry.hermann = 'cmm'
         info.symmetry.on_planes = (
@@ -280,6 +285,23 @@ class CasePOSCARSlabs:
         info.displacements.extend((DisplacementInfo(8, False),
                                    DisplacementInfo(36, True)))
         info.bulk.repeat = tuple(info.param_presets['BULK_REPEAT'])
+        return self.case_poscar(info)
+
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_mgo(self):
+        """Return a non-minimal Mg(001) slab."""
+        info = _get_poscar_info('POSCAR_MgO_cod_9006456',
+                                {'Mg': 14, 'O': 14}, 'p4m')
+        info.poscar.n_cells = 2
+        return self.case_poscar(info)
+
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_sb_si_111(self):
+        """Return a non-minimal, rectangular slab of Sb/Si(111)."""
+        info = _get_poscar_info('POSCAR_Sb_Si(111)_rect', 106+12, 'pm')
+        # While it looks like there are 4 cells (rt3 of Si), some
+        # of the Sb atoms are not quite in the right position
+        info.poscar.n_cells = 2
         return self.case_poscar(info)
 
 
