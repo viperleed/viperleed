@@ -918,9 +918,34 @@ class TestSlabLayers:
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         assert len(slab.sublayers) == info.layer_properties.expected_n_sublayers
 
-    @todo
-    def test_full_update_with_layers_defined(self):                             # TODO: test correct behaviour for (i) coords initially outside the unit cell, and (ii) no topat_ori_z available
-        """TODO"""
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    def test_full_update_with_layers_defined(self, args):                             
+        """Test full_update method with layers already defined."""
+        slab, rpars, info = args
+        n_layers_orignal = len(slab.layers)
+        n_atoms_per_layer_original = [lay.n_atoms for lay in slab.layers]
+        # shift some atoms out of the unit cell
+        for atom in slab:
+            atom.pos[:] += 0.5
+        # full update
+        slab.full_update(rpars)
+        assert len(slab.layers) == n_layers_orignal
+        assert np.allclose([lay.n_atoms for lay in slab.layers], n_atoms_per_layer_original)
+        # check that all atoms are in the unit cell
+        atom_positions = np.array([at.pos for at in slab.atlist])
+        eps = 1e-8
+        assert np.all(atom_positions >= -eps) and np.all(atom_positions <= 1+eps)
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    def test_full_update_without_topat_ori_z(self, args):                             
+        """Test full_update when topat_ori_z is not available."""
+        slab, rpars, info = args
+        slab.topat_ori_z = None
+        slab.full_update(rpars)
+        assert slab.topat_ori_z is not None
+        assert len(slab.layers) == info.layer_properties.expected_n_layers
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        assert len(slab.sublayers) == info.layer_properties.expected_n_sublayers
 
     @todo
     def test_interlayer_spacing(self):                                          # TODO: also raises.
