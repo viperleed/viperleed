@@ -790,11 +790,19 @@ class TestMakeBulkSlab:
         }
 
     @with_bulk_repeat
-    def test_valid_nr_of_atoms(self, args):                                     # TODO: also LOG of warning if a_bulk > b_bulk
+    def test_valid_nr_of_atoms(self, args):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, info = args
         bulk_slab = slab.make_bulk_slab(rpars)
         assert bulk_slab.n_atoms == info.bulk_properties.n_bulk_atoms
+
+    def test_valid_warning_a_larger_b(self, ag100, caplog):
+        """Test expected number of atoms in bulk slab for valid POSCARs."""
+        slab, rpars, info = ag100
+        rpars.superlattice_defined = True  # Needed for check to happen
+        slab.ucell *= np.diag((2, 1, 1))
+        bulk_slab = slab.make_bulk_slab(rpars)
+        assert "does not follow standard convention" in caplog.text
 
     @parametrize('slab,exc', _invalid.values(), ids=_invalid)
     def test_invalid(self, slab, exc):
