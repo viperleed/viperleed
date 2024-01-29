@@ -189,8 +189,21 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
                                  [ 0.     ,  2.88   , -1.44   ],
                                  [ 0.     ,  0.     ,  2.03647]]),
             ),
+    ),
+    _add_known_bulk_properties(
+        _get_poscar_info('POSCAR_Cu2O_111'),
+        BulkSlabAndRepeatInfo(
+            bulk_like_below=0.6,
+            bulk_repeat=np.array([0, 0, -2.4584]),
+            n_bulk_atoms=6,
+            bulk_cuts=[0.08333],
+            bulk_dist=0.46642,
+            bulk_ucell=np.array([[ 6.02172136, -3.01086068,  0.        ],
+                                 [ 0.        ,  5.21496367,  0.        ],
+                                 [ 0.        ,  0.        ,  2.45835787]]),
         ),
     )
+)
 
 POSCAR_WITH_LAYER_INFO = (
     _add_known_layer_properties(
