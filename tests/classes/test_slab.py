@@ -616,9 +616,25 @@ class TestBulkUcell:
             highest_atom_after = thick_slab.atlist[0]
             assert highest_atom_before.num == highest_atom_after.num
 
-    @todo
-    def test_minimal_bulk_ab(self):                                             # TODO: SurfaceSlab
-        """TODO"""
+    @with_bulk_repeat
+    def test_minimal_bulk_ab(self, args):
+        """Test surface_slab method ensure_minimal_bulk_ab_cell()
+
+        This is a test for the surface slab method only. The bulk slab method
+        get_minimal_ab_cell is tested in TestBulkSlab.test_minimal_ab_cell."""
+        slab, rpars, info = args
+        slab.make_bulk_slab(rpars)  # create bulk slab
+        try:
+            original_minimal_ab_cell = (slab.bulkslab.
+                                        get_minimal_ab_cell(rpars.SYMMETRY_EPS).
+                                        copy())
+        except err.AlreadyMinimalError:
+            original_minimal_ab_cell = slab.bulkslab.ab_cell.copy()
+        slab.bulkslab = slab.make_supercell(np.diag((2, 2))
+                                            ).make_bulk_slab(rpars)
+        slab.ensure_minimal_bulk_ab_cell(rpars)
+        assert np.allclose(slab.bulkslab.ab_cell,
+                           original_minimal_ab_cell, atol=1e-6)
 
 
 class TestContains:
