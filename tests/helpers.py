@@ -336,4 +336,5 @@ class LayerInfo(InfoBase):
     n_layers: int
     n_sublayers: int
     n_atoms_per_layer: List[int]
+    n_atoms_per_sublayer: List[int]
     smallest_interlayer_spacing: float

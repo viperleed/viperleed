@@ -965,7 +965,7 @@ class TestSlabLayers:
         assert np.all(atom_positions >= -eps) and np.all(atom_positions <= 1+eps)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
-    def test_full_update_without_topat_ori_z(self, args):                             
+    def test_full_update_without_topat_ori_z(self, args):
         """Test full_update when topat_ori_z is not available."""
         slab, rpars, info = args
         slab.topat_ori_z = None
@@ -991,9 +991,18 @@ class TestSlabLayers:
         with pytest.raises(err.MissingLayersError):
             _ = slab.smallest_interlayer_spacing
 
-    @todo
-    def test_slab_lowocc_sublayer(self):
-        """TODO"""
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    def test_slab_lowocc_sublayer_assignment(self, args):
+        """Test the number of atoms per sublayer.
+
+        Generally, when multiple sublayer assignments are possible, the one
+        with the lowest occupancy should be chosen.
+        """
+        slab, rpars, info = args
+        slab.create_layers(rpars)
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        n_atoms_per_sublayer = [sublay.n_atoms for sublay in slab.sublayers]
+        assert n_atoms_per_sublayer == info.layer_properties.n_atoms_per_sublayer
 
 
 class TestSlabRaises:

@@ -192,6 +192,7 @@ POSCAR_WITH_LAYER_INFO = (
             cuts=[0.35, 0.45, 0.55, 0.65, 0.75],
             n_layers=6,
             n_atoms_per_layer=[1, 1, 1, 1, 1, 1],
+            n_atoms_per_sublayer=[1, 1, 1, 1, 1, 1],
             n_sublayers=6,
             smallest_interlayer_spacing=2.03646,
             )
