@@ -1230,8 +1230,8 @@ class TestSuperAndSubCell:
         slab, rpars, *_ = args
         supercell = slab.make_supercell(transform)
         subcell = supercell.make_subcell(rpars, transform)
-        slab.sort_by_z()
-        subcell.sort_by_z()
+        slab.sort_original()
+        subcell.sort_original()
         check_identical(slab, subcell)
 
     @parametrize('matrix,exc', sub_invalid.values(), ids=sub_invalid)
