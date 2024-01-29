@@ -222,7 +222,8 @@ class TestAtomsAndElements:
 
     @parametrize(make_bulk=(True, False))
     @parametrize('to_remove,in_bulk', remove_ats.values(), ids=remove_ats)
-    def test_update_atom_numbers(self, make_bulk, in_bulk, to_remove, subtests):
+    def test_update_atom_numbers(self, make_bulk, in_bulk,
+                                 to_remove, subtests):
         """Check correct removal of an Fe atom, with and without bulk."""
         fe3o4, rpars, *_ = CasePOSCARSlabs().case_poscar_fe3o4_001_cod()
         elems = 'Fe', 'O'
@@ -290,7 +291,7 @@ class TestBulk3DOperations:
         assert not bulk.get_candidate_layer_periods(rpars.SYMMETRY_EPS.z)
 
     @fixture(name='bulk_slab_with_glide')
-    def fixture_bulk_slab_with_glide():
+    def fixture_bulk_slab_with_glide(self):
         """Return a very basic BulkSlab with a 3D glide plane."""
         slab = BulkSlab()
         slab.ucell = 4.0*np.diag((1, 1, 2))
@@ -302,6 +303,7 @@ class TestBulk3DOperations:
             ))
         slab.update_element_count()
         slab.update_cartesian_from_fractional()
+        eps = 0.1
         slab.create_sublayers(eps)
         ab_cell = slab.ab_cell.T
         glide = SymPlane(np.array([0.25, 0]), ab_cell[1], ab_cell)
@@ -311,8 +313,7 @@ class TestBulk3DOperations:
                        strict=False)  # Sometimes they succeed
     @parametrize(atoms_to_move=((1,), (3,), (1, 3)))
     def test_bulk_glide_symmetric_atom_moved(self, atoms_to_move,
-                                             bulk_slab_with_glide,
-                                             subtests):
+                                             bulk_slab_with_glide):
         """Check identification of bulk glide plane with atoms a bit off."""
         slab, glide, eps = bulk_slab_with_glide()
         for atom_ind in atoms_to_move:
@@ -346,7 +347,7 @@ class TestBulk3DOperations:
             except AssertionError:
                 pytest.xfail('Known bug. Will be fixed in better-symmetry')
             else:
-                raise AssertionError(f'XPASS: This test should FAIL unless '
+                raise AssertionError('XPASS: This test should FAIL unless '
                                      'this is the better-symmetry branch')
         with subtests.test('Move both atoms'):
             self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
@@ -356,7 +357,7 @@ class TestBulk3DOperations:
             except AssertionError:
                 pytest.xfail('Known bug. Will be fixed in better-symmetry')
             else:
-                raise AssertionError(f'XPASS: This test should FAIL unless '
+                raise AssertionError('XPASS: This test should FAIL unless '
                                      'this is the better-symmetry branch')
 
 
@@ -460,7 +461,8 @@ class TestBulkDetectAndExtraBulk:
             )
 
     @pytest.mark.xfail(reason='Issue #140')
-    def test_layer_cutting_for_slab_with_incomplete_bulk_layer(make_poscar):
+    def test_layer_cutting_for_slab_with_incomplete_bulk_layer(self,
+                                                               make_poscar):
         """Test for issue #140."""
         slab, rpars, *_ = make_poscar(poscar_slabs.SLAB_Cu2O_111)
         rpars.BULK_LIKE_BELOW = 0.35
@@ -507,7 +509,7 @@ class TestBulkRepeat:
         assert np.allclose(slab.get_bulk_repeat(rpars), np.array([1, 2, 3]))
 
     def test_get_returns_vector(self, make_poscar):
-        """Test get_bulk_repeat returns a z-only vector if BULK_REPEAT is not defined."""
+        """Test get_bulk_repeat gives a z-only vector without BULK_REPEAT."""
         slab, rpars, *_ = make_poscar(poscar_slabs.AG_100)
         rpars.BULK_REPEAT = None
         assert np.allclose(slab.get_bulk_repeat(rpars),
@@ -531,12 +533,12 @@ class TestBulkUcell:
         slab, rpars, info = args
         bulk_info = info.bulk_properties
         # strip out existing layers and make a single "fake" cut at
-        # BULK_LIKE_BELOW. This gives us a bulk slab with (at least) two bulk
-        # layers, which is what we need to test get_min_c.
+        # BULK_LIKE_BELOW. This gives us a bulk slab with (at least)
+        # two bulk layers, which is what we need to test get_min_c.
         self.with_one_thick_bulk(slab, rpars, bulk_info.bulk_like_below)
         bulk_slab = slab.make_bulk_slab(rpars, recenter=False)
         bulk_slab.create_sublayers(rpars.SYMMETRY_EPS.z)
-        # z_periodic=False is needed because we use the original unit cell
+        # z_periodic=False because we use the original unit cell
         min_c = bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS,
                                                rpars.SYMMETRY_EPS.z,
                                                z_periodic=False)
@@ -622,7 +624,7 @@ class TestBulkUcell:
 
         This is a test for the surface slab method only. The bulk slab method
         get_minimal_ab_cell is tested in TestBulkSlab.test_minimal_ab_cell."""
-        slab, rpars, info = args
+        slab, rpars, *_ = args
         slab.make_bulk_slab(rpars)  # create bulk slab
         try:
             original_minimal_ab_cell = (slab.bulkslab.
@@ -871,12 +873,12 @@ class TestMakeBulkSlab:
 
     def test_valid_warning_a_larger_b(self, ag100, caplog):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
-        slab, rpars, info = ag100
+        slab, rpars, *_ = ag100
         rpars.superlattice_defined = True  # Needed for check to happen
         slab.ucell *= np.diag((2, 1, 1))
         slab.update_cartesian_from_fractional()
-        bulk_slab = slab.make_bulk_slab(rpars)
-        assert "does not follow standard convention" in caplog.text
+        slab.make_bulk_slab(rpars)
+        assert 'does not follow standard convention' in caplog.text
 
     @parametrize('slab,exc', _invalid.values(), ids=_invalid)
     def test_invalid(self, slab, exc):
@@ -996,7 +998,7 @@ class TestSlabLayers:
         assert (np.sum([lay.n_atoms for lay in slab.bulk_layers])
                 == info.bulk_properties.n_bulk_atoms)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    @parametrize_with_cases('args', **with_layers)
     def test_create_layers(self, args):
         """Check that layers are created correctly."""
         slab, rpars, info = args
@@ -1013,12 +1015,11 @@ class TestSlabLayers:
         slab, rpars, *_ = ag100
         rpars.LAYER_CUTS = LayerCuts.from_string('dz(1.2) < 0.72 0.78')
         rpars.N_BULK_LAYERS = 1
-        cuts = slab.create_layers(rpars)
+        slab.create_layers(rpars)
         # check that we log a warning about the empty layer
-        assert "will be deleted" in caplog.text
+        assert 'will be deleted' in caplog.text
 
-
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    @parametrize_with_cases('args', **with_layers)
     def test_create_sublayers(self, args):                                            # TODO: also test if this works fine excluding the second sort-by-element run
         """Check that sublayers are created correctly."""
         slab, rpars, info = args
@@ -1028,25 +1029,24 @@ class TestSlabLayers:
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         assert slab.n_sublayers == info.layer_properties.n_sublayers
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    @parametrize_with_cases('args', **with_layers)
     def test_full_update_with_layers_defined(self, args):
         """Test full_update method with layers already defined."""
-        slab, rpars, info = args
-        n_layers_orignal = len(slab.layers)
+        slab, rpars, *_ = args
+        n_layers_orignal = slab.n_layers
         n_atoms_per_layer_original = [lay.n_atoms for lay in slab.layers]
-        # shift some atoms out of the unit cell
+        # Shift some atoms out of the unit cell
         for atom in slab:
-            atom.pos[:] += 0.5
-        # full update
+            atom.pos += 0.5
         slab.full_update(rpars)
-        assert len(slab.layers) == n_layers_orignal
-        assert np.allclose([lay.n_atoms for lay in slab.layers], n_atoms_per_layer_original)
-        # check that all atoms are in the unit cell
-        atom_positions = np.array([at.pos for at in slab.atlist])
+        n_atoms_per_layer_after = [lay.n_atoms for lay in slab.layers]
+        assert slab.n_layers == n_layers_orignal
+        assert n_atoms_per_layer_after == n_atoms_per_layer_original
+        # Check that all atoms are in the unit cell
         eps = 1e-8
-        assert np.all(atom_positions >= -eps) and np.all(atom_positions <= 1+eps)
+        assert all(-eps <= at.pos <= 1 + eps for at in slab)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    @parametrize_with_cases('args', **with_layers)
     def test_full_update_without_topat_ori_z(self, args):
         """Test full_update when topat_ori_z is not available."""
         slab, rpars, info = args
@@ -1057,34 +1057,30 @@ class TestSlabLayers:
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         assert len(slab.sublayers) == info.layer_properties.n_sublayers
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    @parametrize_with_cases('args', **with_layers)
     def test_interlayer_spacing(self, args):
         """Test that interlayer spacing is correctly calculated."""
-        slab, rpars, info = args
+        slab, _, info = args
         expected = info.layer_properties.smallest_interlayer_spacing
         spacing = slab.smallest_interlayer_spacing
         assert spacing == pytest.approx(expected, abs=1e-5)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    @parametrize_with_cases('args', **with_layers)
     def test_interlayer_spacing_raises_without_layers(self, args):
         """Test that interlayer spacing raises without layers defined."""
-        slab, rpars, info = args
+        slab, *_ = args
         slab.layers.clear()
         with pytest.raises(err.MissingLayersError):
             _ = slab.smallest_interlayer_spacing
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    @parametrize_with_cases('args', **with_layers)
     def test_slab_lowocc_sublayer_assignment(self, args):
-        """Test the number of atoms per sublayer.
-
-        Generally, when multiple sublayer assignments are possible, the one
-        with the lowest occupancy should be chosen.
-        """
+        """Test the expected number of atoms per sublayer."""
         slab, rpars, info = args
         slab.create_layers(rpars)
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
-        n_atoms_per_sublayer = [sublay.n_atoms for sublay in slab.sublayers]
-        assert n_atoms_per_sublayer == info.layer_properties.n_atoms_per_sublayer
+        n_atoms_sublayers = [sublay.n_atoms for sublay in slab.sublayers]
+        assert n_atoms_sublayers == info.layer_properties.n_atoms_per_sublayer
 
 
 class TestSlabRaises:
@@ -1366,17 +1362,18 @@ class TestUnitCellReduction:
             slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
 
 
-@parametrize_with_cases('args', cases=CasePOSCARSlabs.case_nearest_neighbors_poscar)
+@parametrize_with_cases(
+    'args',
+    cases=CasePOSCARSlabs.case_nearest_neighbors_poscar
+    )
 def test_nearest_neighbors(args):
     """Test function get_nearest_neighbors."""
     slab, _, info = args
     nearest_neighbors = slab.get_nearest_neighbours()
-    assert len(nearest_neighbors) == len(
-        info.nearest_neighbors.nearest_neighbor_distances)
-    for at in slab:
-        assert (nearest_neighbors[at] == 
-                pytest.approx(
-                    info.nearest_neighbors.nearest_neighbor_distances[at.num]))
+    expected = info.nearest_neighbors.nearest_neighbor_distances
+    assert len(nearest_neighbors) == len(expected)
+    for atom in slab:
+        assert nearest_neighbors[atom] == pytest.approx(expected[atom.num])
 
 
 def test_ucell_ori_after_clear_symmetry_and_ucell_history(ag100):
