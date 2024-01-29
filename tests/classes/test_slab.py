@@ -434,8 +434,8 @@ class TestBulkDetectAndExtraBulk:
         assert bulk_appended.n_atoms == slab.n_atoms + len(new_atoms)
         assert len(new_atoms) == n_cells * info.bulk_properties.n_bulk_atoms
 
-    def test_with_double_thickness_twice(self, args):
     @with_bulk_repeat
+    def test_with_double_thickness_twice(self, args):                           # WRONG. Should test the BulkSlab method, not the SurfaceSlab one
         """Check repeated calls to with_extra_bulk_units work correctly."""
         slab, rpars, info = args
         rpars.BULK_LIKE_BELOW = info.bulk_properties.bulk_like_below
@@ -448,15 +448,13 @@ class TestBulkDetectAndExtraBulk:
         doubled, new_bulk_atoms = slab.with_extra_bulk_units(rpars, 1)
         assert rpars.N_BULK_LAYERS == n_bulk_layers_before
         assert len(doubled.atlist) == len(slab.atlist) + len(new_bulk_atoms)
-        assert len(new_bulk_atoms) == (
-            info.bulk_properties.expected_n_bulk_atoms
-        )
+        assert len(new_bulk_atoms) == info.bulk_properties.n_bulk_atoms
 
         quadrupled, new_bulk_atoms = doubled.with_extra_bulk_units(rpars, 1)
         assert rpars.N_BULK_LAYERS == n_bulk_layers_before
         assert len(quadrupled.atlist) == (
-            len(slab.atlist) + 2*info.bulk_properties.expected_n_bulk_atoms
-        )
+            len(slab.atlist) + 2*info.bulk_properties.n_bulk_atoms
+            )
 
 
 class TestBulkRepeat:
