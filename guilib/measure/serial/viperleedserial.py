@@ -124,6 +124,8 @@ class ViPErLEEDSerial(SerialABC):
         self.__last_request_sent = ''
         self.__measurements = []
         self.__may_receive_stray_data = False
+        self.__is_waiting_for_debug_msg = False
+        self.__should_emit_debug_msg = False
 
         super().__init__(settings, port_name=port_name, **kwargs)
 
@@ -327,8 +329,11 @@ class ViPErLEEDSerial(SerialABC):
         if self.firmware_version >= "0.7":
             _debug = self.port_settings.getint("available_commands",
                                                "pc_debug")
-            if msg_data[0] == _debug:
+            if self.__is_waiting_for_debug_msg:
+                self.__is_waiting_for_debug_msg = False
                 return True
+            if msg_length == 1 and msg_data[0] == _debug:
+               self.__is_waiting_for_debug_msg = True
 
         # Check if message length is one of the expected lengths
         if msg_length not in (1, 2, 4, 8):
@@ -584,9 +589,14 @@ class ViPErLEEDSerial(SerialABC):
             return
 
         for message in self.unprocessed_messages:
+            if self.__should_emit_debug_msg:
+                self.__should_emit_debug_msg = False
+                # The debug_info_arrived signal can be used to display
+                # debug messages that have been sent by the hardware.
+                self.debug_info_arrived.emit(message.decode('utf-8'))
             # If the length of the message is 1, then it has to be a
             # PC_OK byte.
-            if len(message) == 1 and message == pc_ok.encode():
+            elif len(message) == 1 and message == pc_ok.encode():
             # We are implicitly using __may_receive_stray_data in the elif
             # check if the last command was pc_set_voltage.
                 if self.__may_receive_stray_data:
@@ -628,8 +638,10 @@ class ViPErLEEDSerial(SerialABC):
                 base.emit_error(
                     self, ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH
                     )
-            elif message[0] == pc_debug:
-                self.debug_info_arrived.emit(message[1:].decode('utf-8'))
+            # If the message we received is a PC_DEBUG, then the next message
+            # will be a debug message.
+            elif len(message) == 1  and message[0] == pc_debug:
+                self.__should_emit_debug_msg = True
             # If the message does not fit one of the lengths above, it
             # is no known message type.
             else:

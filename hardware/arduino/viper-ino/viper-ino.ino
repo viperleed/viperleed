@@ -515,20 +515,28 @@ void debugMsg(const char *message, ...){  // can be a format string
         variable number of arguments, interpreted as the values
         to be formatted into message.
 
-    The message sent to the PC is "<PC_DEBUG><message % ...>\0", and
-    should be at most 255 characters long. It is encoded like all others.
+    First a PC_DEBUG is sent to the PC, then the actual message is
+    sent. The message is formatted like "<message % ...>\0", and
+    should be at most 255 characters long. It is encoded like all
+    others.
     **/
     va_list args;
     va_start(args, message);
 
     byte n_chars;
-    char _buffer[255];  // PC_DEBUG + max 253 characters + '\0' at end
+    char _buffer[255];  // max 254 characters + '\0' at end
 
-    _buffer[0] = PC_DEBUG;
-    n_chars = 1;  // the PC_DEBUG
-    n_chars += vsnprintf(_buffer+n_chars, 255-n_chars, message, args);
+    n_chars = 0;
+    // n_chars += vsnprintf(_buffer+n_chars, 255-n_chars, message, args);
+    // Adding n_chars to the pointer to the buffer is no longer necessary
+    // as the message does no longer start with a PC_DEBUG.
+    // Therefore one also does not need to subtract n_chars from the
+    // maximal number of bytes one can write.
+
+    n_chars += vsnprintf(_buffer, 255, message, args);
     va_end(args);
 
+    encodeAndSend(PC_DEBUG);
     encodeAndSend(reinterpret_cast<byte*>(_buffer), MIN(n_chars, 255));
 }
 
