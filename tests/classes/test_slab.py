@@ -561,10 +561,55 @@ class TestBulkUcell:
         with pytest.raises(err.AlreadyMinimalError):
             bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS)
 
-    @todo
-    def test_apply_bulk_ucell_reduction(self):                                  # TODO: separately ab only and c_vec. Both with recenter==True/False
-        """TODO"""
-        # using apply_transform, create a non-minimal bulk cell
+    transform = {
+        '2x2': np.diag((2,2)),
+    }
+    recenter = {'recenter': True,
+                'no recenter': False}
+
+    @parametrize('recenter', recenter.values(), ids=recenter)
+    @parametrize('transform', transform.values(), ids=transform)
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_apply_bulk_ucell_reduction_ab(self, recenter, transform, args):
+        """Test that apply_bulk_cell_reduction works as expected for ab."""
+        slab, rpars, info = args
+        original_ab_cell = slab.ab_cell
+        supercell = slab.make_supercell(transform)
+        bulkcell = supercell.make_bulk_slab(rpars)
+        bulkcell.sort_by_z()
+        highest_atom_before = bulkcell.atlist[0]
+        bulkcell.apply_bulk_cell_reduction(  # apply the reduction
+            eps=rpars.SYMMETRY_EPS,
+            new_ab_cell=original_ab_cell,
+            recenter=recenter,)
+        assert bulkcell.ucell == pytest.approx(slab.ucell, abs=1e-4)
+        assert bulkcell.n_atoms == info.bulk_properties.n_bulk_atoms
+        if recenter:
+            slab.sort_by_z()
+            highest_atom_after = slab.atlist[0]
+            assert highest_atom_before.num == highest_atom_after.num
+
+    @parametrize('recenter', recenter.values(), ids=recenter)
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    def test_apply_bulk_ucell_reduction_c(self, recenter, args):
+        """Test that apply_bulk_cell_reduction works as expected for c."""
+        slab, rpars, info = args
+        slab.sort_by_z()
+        original_ucell = slab.ucell
+        highest_atom_before = slab.atlist[0]
+        bulkslab = slab.make_bulk_slab(rpars)
+        original_c_vec = bulkslab.ucell[:, 2].copy()
+        bulkslab.ucell[:, 2] *= 2
+        bulkslab.apply_bulk_cell_reduction(  # apply the reduction
+            eps=rpars.SYMMETRY_EPS,
+            new_c_vec=original_c_vec,
+            recenter=recenter,)
+        assert bulkslab.ucell == pytest.approx(original_ucell, abs=1e-4)
+        assert bulkslab.n_atoms == info.bulk_properties.n_bulk_atoms
+        if recenter:
+            slab.sort_by_z()
+            highest_atom_after = slab.atlist[0]
+            assert highest_atom_before.num == highest_atom_after.num
 
     @todo
     def test_minimal_bulk_ab(self):                                             # TODO: SurfaceSlab
