@@ -338,3 +338,10 @@ class LayerInfo(InfoBase):
     n_atoms_per_layer: List[int]
     n_atoms_per_sublayer: List[int]
     smallest_interlayer_spacing: float
+
+
+@dataclass(repr=False)
+class NearestNeighborInfo(InfoBase):
+    """Container for information about nearest neighbors."""
+    # Keys are atom number
+    nearest_neighbor_distances: Dict[int, float]

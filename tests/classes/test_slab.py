@@ -1339,9 +1339,17 @@ class TestUnitCellReduction:
             slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
 
 
-@todo
-def test_nearest_neighbors():
-    """TODO"""
+@parametrize_with_cases('args', cases=CasePOSCARSlabs.case_nearest_neighbors_poscar)
+def test_nearest_neighbors(args):
+    """Test function get_nearest_neighbors."""
+    slab, _, info = args
+    nearest_neighbors = slab.get_nearest_neigbours()
+    assert len(nearest_neighbors) == len(
+        info.nearest_neighbors.nearest_neighbor_distances)
+    for at in slab:
+        assert (nearest_neighbors[at] == 
+                pytest.approx(
+                    info.nearest_neighbors.nearest_neighbor_distances[at.num]))
 
 
 def test_ucell_ori_after_clear_symmetry_and_ucell_history(ag100):
