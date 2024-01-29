@@ -573,16 +573,17 @@ class TestBulkUcell:
     def test_apply_bulk_ucell_reduction_ab(self, recenter, transform, args):
         """Test that apply_bulk_cell_reduction works as expected for ab."""
         slab, rpars, info = args
-        original_ab_cell = slab.ab_cell
+        original_ab_cell = slab.ab_cell.copy()
         supercell = slab.make_supercell(transform)
         bulkcell = supercell.make_bulk_slab(rpars)
+        slab.make_bulk_slab(rpars)
         bulkcell.sort_by_z()
         highest_atom_before = bulkcell.atlist[0]
         bulkcell.apply_bulk_cell_reduction(  # apply the reduction
             eps=rpars.SYMMETRY_EPS,
             new_ab_cell=original_ab_cell,
             recenter=recenter,)
-        assert bulkcell.ucell == pytest.approx(slab.ucell, abs=1e-4)
+        assert bulkcell.ucell == pytest.approx(slab.bulkslab.ucell, abs=1e-4)
         assert bulkcell.n_atoms == info.bulk_properties.n_bulk_atoms
         if recenter:
             slab.sort_by_z()
@@ -599,13 +600,14 @@ class TestBulkUcell:
         highest_atom_before = slab.atlist[0]
         bulkslab = slab.make_bulk_slab(rpars)
         original_c_vec = bulkslab.ucell[:, 2].copy()
-        bulkslab.ucell[:, 2] *= 2
-        bulkslab.apply_bulk_cell_reduction(  # apply the reduction
+        thick_slab = bulkslab.with_double_thickness()
+
+        thick_slab.apply_bulk_cell_reduction(  # apply the reduction
             eps=rpars.SYMMETRY_EPS,
             new_c_vec=original_c_vec,
             recenter=recenter,)
-        assert bulkslab.ucell == pytest.approx(original_ucell, abs=1e-4)
-        assert bulkslab.n_atoms == info.bulk_properties.n_bulk_atoms
+        assert thick_slab.ucell == pytest.approx(original_ucell, abs=1e-4)
+        assert thick_slab.n_atoms == info.bulk_properties.n_bulk_atoms
         if recenter:
             slab.sort_by_z()
             highest_atom_after = slab.atlist[0]
