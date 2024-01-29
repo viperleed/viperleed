@@ -934,9 +934,24 @@ class TestSlabLayers:
     def test_full_update_with_layers_defined(self):                             # TODO: test correct behaviour for (i) coords initially outside the unit cell, and (ii) no topat_ori_z available
         """TODO"""
 
-    @todo
-    def test_interlayer_spacing(self):                                          # TODO: also raises.
-        """TODO"""
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    def test_interlayer_spacing(self, args):
+        """Test that interlayer spacing is correctly calculated."""
+        slab, rpars, info = args
+        assert (
+            slab.smallest_interlayer_spacing ==
+            pytest.approx(
+                info.layer_properties.expected_smallest_interlayer_spacing,
+                abs=1e-5)
+        )
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    def test_interlayer_spacing_raises_without_layers(self, args):
+        """Test that interlayer spacing raises without layers defined."""
+        slab, rpars, info = args
+        slab.layers.clear()
+        with pytest.raises(err.MissingLayersError):
+            _ = slab.smallest_interlayer_spacing
 
     @todo
     def test_slab_lowocc_sublayer(self):
