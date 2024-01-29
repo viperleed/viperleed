@@ -360,7 +360,10 @@ class TestBulk3DOperations:
                                      'this is the better-symmetry branch')
 
 
-with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+with_bulk_repeat = parametrize_with_cases(
+    'args',
+    cases=CasePOSCARSlabs.case_bulk_repeat_poscar
+    )
 
 class TestBulkDetectAndExtraBulk:
     """Collection of tests for adding bulk units to slabs."""
@@ -517,7 +520,9 @@ class TestBulkUcell:
     @staticmethod
     def with_one_thick_bulk(slab, rpars, cut):
         """Prepare slab and rpars to have one thick bulk layer below cut."""
-        rpars.LAYER_CUTS = LayerCuts.from_string(f'{cut}')
+        rpars.LAYER_CUTS.update_from_sequence([cut])
+        rpars.N_BULK_LAYERS = 1
+        rpars.BULK_REPEAT = None
         slab.create_layers(rpars)
 
     @with_bulk_repeat
@@ -533,8 +538,10 @@ class TestBulkUcell:
         bulk_slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         # z_periodic=False is needed because we use the original unit cell
         min_c = bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS,
+                                               rpars.SYMMETRY_EPS.z,
                                                z_periodic=False)
-        assert min_c == pytest.approx(-bulk_info.bulk_repeat, abs=1e-4)
+        assert min_c[:2] == pytest.approx(bulk_info.bulk_repeat[:2], abs=1e-4)
+        assert min_c[2] == pytest.approx(-bulk_info.bulk_repeat[2], abs=1e-4)
 
     @with_bulk_repeat
     def test_ensure_min_c(self, args):
@@ -562,50 +569,46 @@ class TestBulkUcell:
             bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS)
 
     transform = {
-        '2x2': np.diag((2,2)),
-    }
+        '2x2': np.diag((2, 2)),
+        }
     recenter = {'recenter': True,
                 'no recenter': False}
 
     @parametrize('recenter', recenter.values(), ids=recenter)
     @parametrize('transform', transform.values(), ids=transform)
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    @with_bulk_repeat
     def test_apply_bulk_ucell_reduction_ab(self, recenter, transform, args):
         """Test that apply_bulk_cell_reduction works as expected for ab."""
         slab, rpars, info = args
         original_ab_cell = slab.ab_cell.copy()
         supercell = slab.make_supercell(transform)
-        bulkcell = supercell.make_bulk_slab(rpars)
+        supercell_bulk = supercell.make_bulk_slab(rpars)
         slab.make_bulk_slab(rpars)
-        bulkcell.sort_by_z()
-        highest_atom_before = bulkcell.atlist[0]
-        bulkcell.apply_bulk_cell_reduction(  # apply the reduction
-            eps=rpars.SYMMETRY_EPS,
-            new_ab_cell=original_ab_cell,
-            recenter=recenter,)
-        assert bulkcell.ucell == pytest.approx(slab.bulkslab.ucell, abs=1e-4)
-        assert bulkcell.n_atoms == info.bulk_properties.n_bulk_atoms
+        supercell_bulk.sort_by_z()
+        highest_atom_before = supercell_bulk.atlist[0]                          # TODO: I'm not sure this stuff with the highest atom is correct
+        supercell_bulk.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS,
+                                                 new_ab_cell=original_ab_cell,
+                                                 recenter=recenter)
+        assert supercell_bulk.ucell == pytest.approx(slab.bulkslab.ucell)
+        assert supercell_bulk.n_atoms == info.bulk_properties.n_bulk_atoms
         if recenter:
             slab.sort_by_z()
             highest_atom_after = slab.atlist[0]
             assert highest_atom_before.num == highest_atom_after.num
 
     @parametrize('recenter', recenter.values(), ids=recenter)
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    @with_bulk_repeat
     def test_apply_bulk_ucell_reduction_c(self, recenter, args):
         """Test that apply_bulk_cell_reduction works as expected for c."""
         slab, rpars, info = args
         slab.sort_by_z()
-        original_ucell = slab.ucell
-        highest_atom_before = slab.atlist[0]
+        highest_atom_before = slab.atlist[0]                                    # TODO: I'm not sure this stuff with the highest atom is correct
         bulkslab = slab.make_bulk_slab(rpars)
-        original_c_vec = bulkslab.ucell[:, 2].copy()
+        original_ucell = bulkslab.ucell
         thick_slab = bulkslab.with_double_thickness()
-
-        thick_slab.apply_bulk_cell_reduction(  # apply the reduction
-            eps=rpars.SYMMETRY_EPS,
-            new_c_vec=original_c_vec,
-            recenter=recenter,)
+        thick_slab.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS,
+                                             new_c_vec=original_ucell.T[2],
+                                             recenter=recenter)
         assert thick_slab.ucell == pytest.approx(original_ucell, abs=1e-4)
         assert thick_slab.n_atoms == info.bulk_properties.n_bulk_atoms
         if recenter:
