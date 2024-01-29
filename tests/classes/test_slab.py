@@ -938,12 +938,9 @@ class TestSlabLayers:
     def test_interlayer_spacing(self, args):
         """Test that interlayer spacing is correctly calculated."""
         slab, rpars, info = args
-        assert (
-            slab.smallest_interlayer_spacing ==
-            pytest.approx(
-                info.layer_properties.expected_smallest_interlayer_spacing,
-                abs=1e-5)
-        )
+        expected = info.layer_properties.smallest_interlayer_spacing
+        spacing = slab.smallest_interlayer_spacing
+        assert spacing == pytest.approx(expected, abs=1e-5)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
     def test_interlayer_spacing_raises_without_layers(self, args):

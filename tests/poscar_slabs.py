@@ -170,10 +170,12 @@ def _add_known_bulk_properties(info, bulk_info):
     info.bulk_properties = bulk_info
     return info
 
+
 def _add_known_layer_properties(info, layer_info):
     """Add layer properties to a TestInfo object."""
     info.layer_properties = layer_info
     return info
+
 
 POSCAR_WITH_KNOWN_BULK_REPEAT = (
     _add_known_bulk_properties(
