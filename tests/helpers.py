@@ -324,6 +324,7 @@ class BulkSlabAndRepeatInfo(InfoBase):
     n_bulk_atoms: int
     bulk_cuts: List[float]
     bulk_dist: float
+    bulk_ucell: np.ndarray
 
 
 @dataclass(repr=False)

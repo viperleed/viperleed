@@ -142,6 +142,7 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_Cu2O(111)_1x1_surplus_oxygen', 66, 'p3m1'),
     )
 
+
 POSCARS_WITHOUT_INFO = [
     _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
     if 'duplicate' not in f.name
@@ -184,6 +185,9 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
             n_bulk_atoms=1,
             bulk_cuts=[0.35],
             bulk_dist=0.0,
+            bulk_ucell=np.array([[ 2.88   ,  0.     , -1.44   ],
+                                 [ 0.     ,  2.88   , -1.44   ],
+                                 [ 0.     ,  0.     ,  2.03647]]),
             ),
         ),
     )
