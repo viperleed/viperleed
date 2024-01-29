@@ -585,15 +585,15 @@ class TestBulkUcell:
         supercell_bulk = supercell.make_bulk_slab(rpars)
         slab.make_bulk_slab(rpars)
         supercell_bulk.sort_by_z()
-        highest_atom_before = supercell_bulk.atlist[0]                          # TODO: I'm not sure this stuff with the highest atom is correct
+        highest_atom_before = supercell_bulk.atlist[0]
         supercell_bulk.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS,
                                                  new_ab_cell=original_ab_cell,
                                                  recenter=recenter)
         assert supercell_bulk.ucell == pytest.approx(slab.bulkslab.ucell)
         assert supercell_bulk.n_atoms == info.bulk_properties.n_bulk_atoms
         if recenter:
-            slab.sort_by_z()
-            highest_atom_after = slab.atlist[0]
+            # Might need sorting by z again
+            highest_atom_after = supercell_bulk.atlist[0]
             assert highest_atom_before.num == highest_atom_after.num
 
     @parametrize('recenter', recenter.values(), ids=recenter)
@@ -601,19 +601,19 @@ class TestBulkUcell:
     def test_apply_bulk_ucell_reduction_c(self, recenter, args):
         """Test that apply_bulk_cell_reduction works as expected for c."""
         slab, rpars, info = args
-        slab.sort_by_z()
-        highest_atom_before = slab.atlist[0]                                    # TODO: I'm not sure this stuff with the highest atom is correct
         bulkslab = slab.make_bulk_slab(rpars)
         original_ucell = bulkslab.ucell
         thick_slab = bulkslab.with_double_thickness()
+        thick_slab.sort_by_z()
+        highest_atom_before = thick_slab.atlist[0]
         thick_slab.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS,
                                              new_c_vec=original_ucell.T[2],
                                              recenter=recenter)
         assert thick_slab.ucell == pytest.approx(original_ucell, abs=1e-4)
         assert thick_slab.n_atoms == info.bulk_properties.n_bulk_atoms
         if recenter:
-            slab.sort_by_z()
-            highest_atom_after = slab.atlist[0]
+            # Might need sorting by z again
+            highest_atom_after = thick_slab.atlist[0]
             assert highest_atom_before.num == highest_atom_after.num
 
     @todo
