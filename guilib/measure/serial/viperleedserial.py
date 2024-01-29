@@ -83,10 +83,21 @@ class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
         "has power, but ADC#0 was not detected. This likely indicates a "
         "hardware fault on the board. Check that ADC#0 has power."
         )
+    ERROR_WRONG_BOX_ID = (
+        18,
+        "The box ID {arduino_id} of the hardware does not match the ID "
+        "{local_id} of the software. Most likely the wrong controller type "
+        "has been instantiated for the hardware."
+        )
 
 
 class ViPErLEEDSerial(SerialABC):
     """Class for communication with Arduino Micro ViPErLEED controller."""
+
+    # The box ID is the identifier that differentiates viperleed
+    # controller types from each other. The ID of the class must
+    # match the box ID returned by the hardware controller.
+    box_id = 0
 
     debug_info_arrived = qtc.pyqtSignal(str)
 
@@ -295,8 +306,8 @@ class ViPErLEEDSerial(SerialABC):
         """Check whether a decoded message is ok.
 
         Check if message length is consistent with the length given
-        in the first byte and if message is one of the three possible
-        lengths sent by the Arduino (1, 2, 4).
+        in the first byte and if message is one of the five possible
+        lengths sent by the Arduino (1, 2, 4, 8, 9).
 
         Parameters
         ----------
@@ -336,7 +347,7 @@ class ViPErLEEDSerial(SerialABC):
                self.__is_waiting_for_debug_msg = True
 
         # Check if message length is one of the expected lengths
-        if msg_length not in (1, 2, 4, 8):
+        if msg_length not in (1, 2, 4, 8, 9):
             base.emit_error(self,
                             ViPErLEEDHardwareError.ERROR_MSG_RCVD_INVALID)
             return False
@@ -458,7 +469,7 @@ class ViPErLEEDSerial(SerialABC):
 
         if command != change_mode:
             self.__last_request_sent = command
-        
+
         # We use this boolean while continuous mode is still active
         # and data may return while we are ordering the controller
         # to change its measurement mode.
@@ -610,7 +621,7 @@ class ViPErLEEDSerial(SerialABC):
                 self.busy = False
             elif len(message) == 2 and last_cmd == pc_autogain:
                 self.busy = False
-            # Hardware config and measurement values are both 4 bytes long.
+            # Hardware config and measurement values both can be 4 bytes long.
             # Both commands are differentiated by the __last_request_sent
             # attribute and get processed accordingly. If continuous mode
             # is on and data got returned after a new request has been
@@ -633,7 +644,10 @@ class ViPErLEEDSerial(SerialABC):
                     # ADC measurements. Throw them all away. This
                     # may swallow stray 4-long messages.
                     self.__measurements = []
-            elif len(message) == 8:
+            # Firmware versions before 0.9 may return 8 bytes long
+            # hardware configurations. Version 0.9 and onwards will
+            # return 9 bytes long hardware configurations.
+            elif len(message) in (8, 9):
                 if last_cmd == pc_configuration:
                     info = self.__firmware_and_hardware(message)
                     self.data_received.emit(info)
@@ -699,10 +713,10 @@ class ViPErLEEDSerial(SerialABC):
         Parameters
         ----------
         message : bytearray
-            Should have length 8
-            Contains firmware as bytes 0 and 1 and hardware
-            configuration as bytes 2 and 3
-            serial number as bytes 4 to 7
+            Should have length 9
+            Contains box ID as byte 0, firmware as bytes 1 and 2,
+            hardware configuration as bytes 3 and 4, and serial
+            number as bytes 5 to 8
 
         Returns
         -------
@@ -725,6 +739,16 @@ class ViPErLEEDSerial(SerialABC):
             the hardware do not match up or if the hardware did
             not detect any ADCs to take measurements with.
         """
+        # TODO: from version 1.0 onwards we do not want to pop the
+        # first byte of the message. We only do this for now to
+        # ensure backwards compatibility.
+        if len(message) == 9:
+            arduino_id = message.pop(0)
+            if arduino_id != self.box_id:
+                base.emit_error(self,
+                                ViPErLEEDHardwareError.ERROR_WRONG_BOX_ID,
+                                arduino_id=arduino_id,
+                                local_id=self.box_id)
         local_version = self.firmware_version
         major, minor, *hardware = message[:4]
         firmware_version = base.Version(major, minor)

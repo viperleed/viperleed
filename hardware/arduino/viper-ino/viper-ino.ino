@@ -16,9 +16,14 @@ Date: 09.02.2022
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
-// Firmware version (MAX: v255.255). CURENTLY: v0.8
+// The box ID is an indentifier that is necessary for the PC to know what type of
+// Arduino it is handling. 0 is the identifier of a ViPErino controller that performs
+// LEED measurements.
+#define BOX_ID  0
+
+// Firmware version (MAX: v255.255). CURENTLY: v0.9
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    8  // max 255
+#define FIRMWARE_VERSION_MINOR    9  // max 255
 
 
 
@@ -617,7 +622,7 @@ void triggerMeasurements() {
 
 /** Handler of STATE_GET_CONFIGURATION */
 void getConfiguration(){
-    /**Send firmware version, hardware configuration and serial number to PC.
+    /**Send box ID, firmware version, hardware configuration and serial number to PC.
     The serial number is read from the EEPROM.
 
     Writes
@@ -626,8 +631,9 @@ void getConfiguration(){
 
     Msg to PC
     ---------
-    8 data bytes
-        first two are the firmware version (M, m)
+    9 data bytes
+        the first one is the box ID
+        two are the firmware version (M, m)
         two are the hardware configuration as bitmask
         last 4 are the serial number
 
@@ -647,13 +653,14 @@ void getConfiguration(){
     // little-endian memory layout, i.e., LSB is
     // at lower memory index
     hardwareDetected.asInt = getHardwarePresent();
-    byte configuration[8] = {FIRMWARE_VERSION_MAJOR,
+    byte configuration[9] = {BOX_ID,
+                             FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR,
                              hardwareDetected.asBytes[1],
                              hardwareDetected.asBytes[0]};
     int address = 0;
     while(address <= 3){
-      configuration[address + 4] = EEPROM.read(address);
+      configuration[address + 5] = EEPROM.read(address);
       address += 1;
     }
     encodeAndSend(configuration, LENGTH(configuration));
@@ -1237,7 +1244,8 @@ void findOptimalADCGains(){
 
     Msg to PC
     ---------
-    PC_OK : before returning to STATE_IDLE
+    PC_OK : when receiving the PC_AUTOGAIN command
+    adc0Gain, adc1Gain : before returning to STATE_IDLE
 
     Goes to state
     -------------
