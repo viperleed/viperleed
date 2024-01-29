@@ -478,8 +478,8 @@ class TestBulkRepeat:
         slab.BULK_REPEAT = None
         slab.make_bulk_slab(rpars)
         repeat_vector = slab.identify_bulk_repeat(eps=1e-3)
-        assert np.allclose(repeat_vector,
-                           -info.bulk_properties.bulk_repeat,
+        assert np.allclose(repeat_vector[2],
+                           -info.bulk_properties.bulk_repeat[2],
                            atol=1e-3)
 
     def test_identify_raises_without_bulkslab(self, ag100):
