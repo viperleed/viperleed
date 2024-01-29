@@ -874,6 +874,7 @@ class TestMakeBulkSlab:
         slab, rpars, info = ag100
         rpars.superlattice_defined = True  # Needed for check to happen
         slab.ucell *= np.diag((2, 1, 1))
+        slab.update_cartesian_from_fractional()
         bulk_slab = slab.make_bulk_slab(rpars)
         assert "does not follow standard convention" in caplog.text
 
@@ -1237,8 +1238,8 @@ class TestSuperAndSubCell:
         slab, rpars, *_ = args
         supercell = slab.make_supercell(transform)
         subcell = supercell.make_subcell(rpars, transform)
-        slab.sort_by_z()
-        subcell.sort_by_z()
+        slab.sort_original()
+        subcell.sort_original()
         check_identical(slab, subcell)
 
     @parametrize('matrix,exc', sub_invalid.values(), ids=sub_invalid)

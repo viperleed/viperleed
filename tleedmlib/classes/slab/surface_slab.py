@@ -883,8 +883,10 @@ class SurfaceSlab(BaseSlab):
         # Now make sure that transform actually gave a subcell
         supercell_atoms = subcell_slab.n_atoms * abs(np.linalg.det(transform))
         if self.n_atoms != supercell_atoms:
-            raise ValueError(f'Slab is not a supercell with {transform=} '
-                             'as its superlattice matrix'.replace('\n', ', '))
+            raise ValueError(
+                f'Slab is not a supercell with transform={transform} '
+                'as its superlattice matrix'.replace('\n', ',')
+                )
         return subcell_slab
 
     def restoreOriState(self, keepDisp=False):
