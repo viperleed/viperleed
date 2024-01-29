@@ -189,12 +189,12 @@ def not_raises(exception):
 class CaseTag(IntEnum):
     """Enumeration of tags to use for cases."""
     BULK = auto()
-    NEED_ROTATION = auto()
-    THICK_BULK = auto()
-    NO_INFO = auto()
-    RAISES = auto()
     BULK_PROPERTIES = auto()
     LAYER_INFO = auto()
+    NEED_ROTATION = auto()
+    NO_INFO = auto()
+    RAISES = auto()
+    THICK_BULK = auto()
 
 
 @dataclass
@@ -312,21 +312,25 @@ class TestInfo(InfoBase):
         for attr_name, attr_value in self.param_presets.items():
             setattr(param, attr_name, attr_value)
 
+
 @dataclass(repr=False)
 class BulkSlabAndRepeatInfo(InfoBase):
     """Container for information about bulk atoms and repeat vector."""
     bulk_like_below: float
-    expected_bulk_repeat: np.ndarray
-    expected_n_bulk_atoms: int
-    expected_bulk_cuts: List[float]
-    expected_bulk_dist: float
+    # Here the expected values:
+    bulk_repeat: np.ndarray
+    n_bulk_atoms: int
+    bulk_cuts: List[float]
+    bulk_dist: float
+
 
 @dataclass(repr=False)
 class LayerInfo(InfoBase):
     """Container for information about expected layer properties."""
     layer_cuts: LayerCuts
     n_bulk_layers: int
-    expected_cuts: List[float]
-    expected_n_layers: int
-    expected_n_sublayers: int
-    expected_n_atoms_per_layer: List[int]
+    # Here the expected values:
+    cuts: List[float]
+    n_layers: int
+    n_sublayers: int
+    n_atoms_per_layer: List[int]

@@ -179,28 +179,28 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
     _add_known_bulk_properties(
         _get_info_by_name('Ag(100)'),
         BulkSlabAndRepeatInfo(
-            bulk_like_below = 0.65,
-            expected_bulk_repeat=np.array([1.44, 1.44, -2.03647]),
-            expected_n_bulk_atoms = 1,
-            expected_bulk_cuts = [0.35],
-            expected_bulk_dist = 0.0,
+            bulk_like_below=0.65,
+            bulk_repeat=np.array([1.44, 1.44, -2.03647]),
+            n_bulk_atoms=1,
+            bulk_cuts=[0.35],
+            bulk_dist=0.0,
             ),
-    ),
-)
+        ),
+    )
 
 POSCAR_WITH_LAYER_INFO = (
     _add_known_layer_properties(
         POSCAR_WITH_KNOWN_BULK_REPEAT[0],
         LayerInfo(
-            layer_cuts = LayerCuts.from_string('dz(1.2)'),
-            n_bulk_layers = 1,
-            expected_cuts = [0.35, 0.45, 0.55, 0.65, 0.75],
-            expected_n_layers = 6,
-            expected_n_atoms_per_layer = [1, 1, 1, 1, 1, 1],
-            expected_n_sublayers = 6,
-        )
-    ),
-)
+            layer_cuts=LayerCuts.from_string('dz(1.2)'),
+            n_bulk_layers=1,
+            cuts=[0.35, 0.45, 0.55, 0.65, 0.75],
+            n_layers=6,
+            n_atoms_per_layer=[1, 1, 1, 1, 1, 1],
+            n_sublayers=6,
+            )
+        ),
+    )
 
 AG_100 = _get_info_by_name('Ag(100)')
 SLAB_36C_cm = _get_info_by_name('36C_cm')

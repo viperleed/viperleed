@@ -56,6 +56,25 @@ def make_shuffled_slab():
     return _shuffle
 
 
+@fixture(name='check_identical')
+def factory_check_identical(subtests):
+    """Check that slab and other are identical."""
+    def check_identical(slab, other):
+        with subtests.test('n_atoms'):
+            assert slab.n_atoms == other.n_atoms
+        with subtests.test('ucell'):
+            assert slab.ucell == pytest.approx(other.ucell)
+        atom_pairs = zip(slab, other)
+        with subtests.test('atom elements'):
+            assert all(at.el == at2.el for at, at2 in atom_pairs)
+        with subtests.test('atom pos'):
+            assert all(np.allclose(at.pos, at2.pos) for at, at2 in atom_pairs)
+        with subtests.test('atom cartpos'):
+            assert all(np.allclose(at.cartpos, at2.cartpos)
+                       for at, at2 in atom_pairs)
+    return check_identical
+
+
 class TestABInPlane:
     """Tests for checking that the first two unit vectors have no z."""
 
@@ -341,43 +360,45 @@ class TestBulk3DOperations:
                                      'this is the better-symmetry branch')
 
 
+with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+
 class TestBulkDetectAndExtraBulk:
     """Collection of tests for adding bulk units to slabs."""
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
-    def test_detect_bulk(self, args):
+    @staticmethod
+    def prepare_to_detect(slab, rpars, bulk_like_below):
+        """Prepare slab and rpars to detect_bulk."""
+        rpars.BULK_LIKE_BELOW = bulk_like_below
+        rpars.BULK_REPEAT = None
+        slab.create_layers(rpars)
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+
+    @with_bulk_repeat
+    def test_detect_bulk(self, args):                                           # TODO: add xfailing for TiO2
         """Test function for detecting bulk cuts and distances."""
         slab, rpars, info = args
-        rpars.BULK_LIKE_BELOW = info.bulk_properties.bulk_like_below
-        rpars.BULK_REPEAT = None
-        slab.create_layers(rpars)
-        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        bulk_info = info.bulk_properties
+        self.prepare_to_detect(slab, rpars, bulk_info.bulk_like_below)
 
         bulk_cuts, bulk_dist = slab.detect_bulk(rpars)
-        assert len(bulk_cuts) == len(info.bulk_properties.expected_bulk_cuts)
-        assert np.allclose(bulk_cuts, info.bulk_properties.expected_bulk_cuts, atol=1e-4)
-        assert bulk_dist == pytest.approx(info.bulk_properties.expected_bulk_dist, abs=1e-4)
+        assert len(bulk_cuts) == len(bulk_info.bulk_cuts)
+        assert np.allclose(bulk_cuts, bulk_info.bulk_cuts, atol=1e-4)
+        assert bulk_dist == pytest.approx(bulk_info.bulk_dist, abs=1e-4)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
-    def test_detect_bulk_fail_leaves_rp_sl_unchanged(self, args):
+    @with_bulk_repeat
+    def test_detect_bulk_fail_leaves_rp_sl_unchanged(self, args,
+                                                     check_identical):
         """Test function for detecting bulk cuts and distances."""
         slab, rpars, *_ = args
-        rpars.BULK_LIKE_BELOW = 0.01
-        rpars.BULK_REPEAT = None
+        self.prepare_to_detect(slab, rpars, 0.01)
+
         sl_copy, rp_copy = deepcopy(slab), deepcopy(rpars)
-
-        slab.create_layers(rpars)
-        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
-
         with pytest.raises((err.TooFewLayersError, err.NoBulkRepeatError)):
             slab.detect_bulk(rpars)
+
         # Check that slab and rpars are unchanged
-        assert slab.n_atoms == sl_copy.n_atoms
-        # sort atoms for comparison
-        slab.sort_by_z()
-        sl_copy.sort_by_z()
-        assert np.allclose([at.pos for at in slab.atlist], [at.pos for at in sl_copy.atlist])
-        assert np.allclose(slab.ucell, sl_copy.ucell)
+        check_identical(slab, sl_copy)
+
         assert rpars.BULK_LIKE_BELOW == rp_copy.BULK_LIKE_BELOW
         assert str(rpars.LAYER_CUTS) == str(rp_copy.LAYER_CUTS)
         assert rpars.BULK_REPEAT == rp_copy.BULK_REPEAT
@@ -399,24 +420,22 @@ class TestBulkDetectAndExtraBulk:
             slab.detect_bulk(rpars)
 
     @parametrize('n_cells', (1, 2, 3, 5))
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    @with_bulk_repeat
     def test_with_extra_bulk_units(self, n_cells, args):
         """Test function for appending bulk units to a slab."""
         slab, rpars, info = args
-        rpars.BULK_LIKE_BELOW = info.bulk_properties.bulk_like_below
-        rpars.BULK_REPEAT = None
-        slab.create_layers(rpars)
-        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        self.prepare_to_detect(slab, rpars,
+                               info.bulk_properties.bulk_like_below)
         slab.detect_bulk(rpars)
 
         n_bulk_layers_before = rpars.N_BULK_LAYERS
-        bulk_appended, new_bulk_atoms = slab.with_extra_bulk_units(rpars,n_cells=n_cells)
-        assert rpars.N_BULK_LAYERS == n_bulk_layers_before
-        assert len(bulk_appended.atlist) == len(slab.atlist) + len(new_bulk_atoms)
-        assert len(new_bulk_atoms) == n_cells * info.bulk_properties.expected_n_bulk_atoms
+        bulk_appended, new_atoms = slab.with_extra_bulk_units(rpars, n_cells)
+        assert len(slab.bulk_layers) == n_bulk_layers_before
+        assert bulk_appended.n_atoms == slab.n_atoms + len(new_atoms)
+        assert len(new_atoms) == n_cells * info.bulk_properties.n_bulk_atoms
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
     def test_with_double_thickness_twice(self, args):
+    @with_bulk_repeat
         """Check repeated calls to with_extra_bulk_units work correctly."""
         slab, rpars, info = args
         rpars.BULK_LIKE_BELOW = info.bulk_properties.bulk_like_below
@@ -443,7 +462,7 @@ class TestBulkDetectAndExtraBulk:
 class TestBulkRepeat:
     """Collection of test for bulk-repeat finding and returning."""
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    @with_bulk_repeat
     def test_identify(self, args):
         """Tests identify_bulk_repeat method."""
         slab, rpars, info = args
@@ -451,7 +470,7 @@ class TestBulkRepeat:
         slab.make_bulk_slab(rpars)
         repeat_vector = slab.identify_bulk_repeat(eps=1e-3)
         assert np.allclose(repeat_vector,
-                           -info.bulk_properties.expected_bulk_repeat,
+                           -info.bulk_properties.bulk_repeat,
                            atol=1e-3)
 
     def test_identify_raises_without_bulkslab(self, ag100):
@@ -461,7 +480,7 @@ class TestBulkRepeat:
         with pytest.raises(err.MissingBulkSlabError):
             slab.identify_bulk_repeat(.1)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    @with_bulk_repeat
     def test_get(self, args):
         """Test get_bulk_repeat method."""
         slab, rpars, info = args
@@ -469,7 +488,7 @@ class TestBulkRepeat:
         slab.make_bulk_slab(rpars)
         repeat_vector = slab.get_bulk_repeat(rpars)
         assert np.allclose(repeat_vector,
-                           -info.bulk_properties.expected_bulk_repeat,
+                           -info.bulk_properties.bulk_repeat,
                            atol=1e-3)
 
     def test_get_returns_stored_bulk_repeat(self, make_poscar):
@@ -482,50 +501,55 @@ class TestBulkRepeat:
         """Test get_bulk_repeat returns a z-only vector if BULK_REPEAT is not defined."""
         slab, rpars, *_ = make_poscar(poscar_slabs.AG_100)
         rpars.BULK_REPEAT = None
-        assert np.allclose(slab.get_bulk_repeat(rpars), np.array([0, 0, 2.0365]), atol=1e-3)
-
+        assert np.allclose(slab.get_bulk_repeat(rpars),
+                           np.array([0, 0, 2.0365]), atol=1e-3)
 
 
 class TestBulkUcell:
     """Tests concerning reduction of bulk unit cell and C vector."""
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    @staticmethod
+    def with_one_thick_bulk(slab, rpars, cut):
+        """Prepare slab and rpars to have one thick bulk layer below cut."""
+        rpars.LAYER_CUTS = LayerCuts.from_string(f'{cut}')
+        slab.create_layers(rpars)
+
+    @with_bulk_repeat
     def test_get_min_c(self, args):
         """Test that get_minimal_c_vector works as expected."""
         slab, rpars, info = args
+        bulk_info = info.bulk_properties
         # strip out existing layers and make a single "fake" cut at
         # BULK_LIKE_BELOW. This gives us a bulk slab with (at least) two bulk
         # layers, which is what we need to test get_min_c.
-        rpars.LAYER_CUTS = LayerCuts.from_string(f'{info.bulk_properties.bulk_like_below}')
-        slab.create_layers(rpars)
+        self.with_one_thick_bulk(slab, rpars, bulk_info.bulk_like_below)
         bulk_slab = slab.make_bulk_slab(rpars, recenter=False)
         bulk_slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         # z_periodic=False is needed because we use the original unit cell
-        min_c = bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS, z_periodic=False)
-        assert min_c == (
-            pytest.approx(-info.bulk_properties.expected_bulk_repeat, abs=1e-4)
-        )
+        min_c = bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS,
+                                               z_periodic=False)
+        assert min_c == pytest.approx(-bulk_info.bulk_repeat, abs=1e-4)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    @with_bulk_repeat
     def test_ensure_min_c(self, args):
         """Test that ensure_minimal_c_vector works as expected."""
         slab, rpars, info = args
-        rpars.LAYER_CUTS = LayerCuts.from_string(f'{info.bulk_properties.bulk_like_below}')
-        slab.create_layers(rpars)
+        bulk_info = info.bulk_properties
+        self.with_one_thick_bulk(slab, rpars, bulk_info.bulk_like_below)
         bulk_slab = slab.make_bulk_slab(rpars)
         bulk_slab.ensure_minimal_c_vector(rpars)
         assert bulk_slab.ucell[2, 2] == (
-            pytest.approx(-info.bulk_properties.expected_bulk_repeat[2],
+            pytest.approx(-bulk_info.bulk_repeat[2],
                           abs=1e-4)
-        )
-        assert bulk_slab.n_atoms == info.bulk_properties.expected_n_bulk_atoms
+            )
+        assert bulk_slab.n_atoms == bulk_info.n_bulk_atoms
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    @with_bulk_repeat
     def test_get_min_c_raises_already_minimal(self, args):
         """Test that get_minimal_c_vector raises AlreadyMinimalError."""
         slab, rpars, info = args
-        rpars.LAYER_CUTS = LayerCuts.from_string(f'{info.bulk_properties.bulk_like_below}')
-        slab.create_layers(rpars)
+        self.with_one_thick_bulk(slab, rpars,
+                                 info.bulk_properties.bulk_like_below)
         bulk_slab = slab.make_bulk_slab(rpars)
         bulk_slab.ensure_minimal_c_vector(rpars)
         with pytest.raises(err.AlreadyMinimalError):
@@ -759,12 +783,12 @@ class TestMakeBulkSlab:
                       err.TooFewLayersError),
         }
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_bulk_repeat_poscar)
+    @with_bulk_repeat
     def test_valid_nr_of_atoms(self, args):                                     # TODO: also LOG of warning if a_bulk > b_bulk
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, info = args
         bulk_slab = slab.make_bulk_slab(rpars)
-        assert bulk_slab.n_atoms == info.bulk_properties.expected_n_bulk_atoms
+        assert bulk_slab.n_atoms == info.bulk_properties.n_bulk_atoms
 
     @parametrize('slab,exc', _invalid.values(), ids=_invalid)
     def test_invalid(self, slab, exc):
@@ -832,31 +856,17 @@ class TestRevertUnitCell:
     def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates
         """TODO"""
 
-    @staticmethod
-    def check_identical(slab, other, subtests):
-        """Check that slab and other are identical."""
-        with subtests.test('ucell'):
-            assert slab.ucell == pytest.approx(other.ucell)
-        atom_pairs = zip(slab, other)
-        with subtests.test('atom elements'):
-            assert all(at.el == at2.el for at, at2 in atom_pairs)
-        with subtests.test('atom pos'):
-            assert all(np.allclose(at.pos, at2.pos) for at, at2 in atom_pairs)
-        with subtests.test('atom cartpos'):
-            assert all(np.allclose(at.cartpos, at2.cartpos)
-                       for at, at2 in atom_pairs)
-
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_one_operation(self, args, subtests):
+    def test_one_operation(self, args, check_identical):
         """Check correct result of reverting one unit-cell operation."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
         slab.rotate_unit_cell(6)
         slab.revert_unit_cell()
-        self.check_identical(slab, slab_copy, subtests)
+        check_identical(slab, slab_copy)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_few_operation(self, args, subtests):
+    def test_few_operation(self, args, check_identical):
         """Same as above, but reverting a few operations."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
@@ -864,15 +874,15 @@ class TestRevertUnitCell:
         slab.rotate_unit_cell(4)
         slab.rotate_unit_cell(8)                                                # TODO: so far, this is the only type of operation we have built in
         slab.revert_unit_cell()
-        self.check_identical(slab, slab_copy, subtests)
+        check_identical(slab, slab_copy)
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_nothing_to_undo(self, args, subtests):                             # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell. – @michele-riva: not sure what you mean by this
+    def test_nothing_to_undo(self, args, check_identical):                      # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell. – @michele-riva: not sure what you mean by this
         """Check that reverting with no operations does nothing."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
         slab.revert_unit_cell()
-        self.check_identical(slab, slab_copy, subtests)
+        check_identical(slab, slab_copy)
 
     def test_raises(self, ag100):
         """Check complaints for invalid operation types."""
@@ -885,7 +895,9 @@ class TestRevertUnitCell:
 class TestSlabLayers:
     """Collection of tests concerning slab (sub)layers."""
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
+    with_layers = {'cases': CasePOSCARSlabs.case_layer_info_poscar}
+
+    @parametrize_with_cases('args', **with_layers)
     def test_bulk_layers(self, args):
         """Test Slab.bulk_layers property."""
         slab, rpars, info = args
@@ -894,58 +906,33 @@ class TestSlabLayers:
         slab.create_layers(rpars)
         assert len(slab.bulk_layers) == info.layer_properties.n_bulk_layers
         assert (np.sum([lay.n_atoms for lay in slab.bulk_layers])
-                == info.bulk_properties.expected_n_bulk_atoms)
+                == info.bulk_properties.n_bulk_atoms)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
-    def test_create_layers(self, args):                                               # TODO: check also logging with cuts that (do not) create empty layers
+    @parametrize_with_cases('args', **with_layers)
+    def test_create_layers(self, args):                                         # TODO: check also logging with cuts that (do not) create empty layers
         """Check that layers are created correctly."""
         slab, rpars, info = args
         rpars.LAYER_CUTS = info.layer_properties.layer_cuts
         rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
         cuts = slab.create_layers(rpars)
-        assert len(slab.layers) == info.layer_properties.expected_n_layers
-        assert np.allclose(cuts, info.layer_properties.expected_cuts)
+        assert slab.n_layers == info.layer_properties.n_layers
+        assert np.allclose(cuts, info.layer_properties.cuts)
         assert np.allclose([lay.n_atoms for lay in slab.layers],
-                           info.layer_properties.expected_n_atoms_per_layer)
+                           info.layer_properties.n_atoms_per_layer)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
-    def test_create_sublayers(self, args):                                            # TODO: also test if this works fine excluding the second sort-by-element run
+    @parametrize_with_cases('args', **with_layers)
+    def test_create_sublayers(self, args):                                      # TODO: also test if this works fine excluding the second sort-by-element run
         """Check that sublayers are created correctly."""
         slab, rpars, info = args
         rpars.LAYER_CUTS = info.layer_properties.layer_cuts
         rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
         slab.create_layers(rpars)
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
-        assert len(slab.sublayers) == info.layer_properties.expected_n_sublayers
+        assert slab.n_sublayers == info.layer_properties.n_sublayers
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
-    def test_full_update_with_layers_defined(self, args):                             
-        """Test full_update method with layers already defined."""
-        slab, rpars, info = args
-        n_layers_orignal = len(slab.layers)
-        n_atoms_per_layer_original = [lay.n_atoms for lay in slab.layers]
-        # shift some atoms out of the unit cell
-        for atom in slab:
-            atom.pos[:] += 0.5
-        # full update
-        slab.full_update(rpars)
-        assert len(slab.layers) == n_layers_orignal
-        assert np.allclose([lay.n_atoms for lay in slab.layers], n_atoms_per_layer_original)
-        # check that all atoms are in the unit cell
-        atom_positions = np.array([at.pos for at in slab.atlist])
-        eps = 1e-8
-        assert np.all(atom_positions >= -eps) and np.all(atom_positions <= 1+eps)
-
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_layer_info_poscar)
-    def test_full_update_without_topat_ori_z(self, args):                             
-        """Test full_update when topat_ori_z is not available."""
-        slab, rpars, info = args
-        slab.topat_ori_z = None
-        slab.full_update(rpars)
-        assert slab.topat_ori_z is not None
-        assert len(slab.layers) == info.layer_properties.expected_n_layers
-        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
-        assert len(slab.sublayers) == info.layer_properties.expected_n_sublayers
+    @todo
+    def test_full_update_with_layers_defined(self):                             # TODO: test correct behaviour for (i) coords initially outside the unit cell, and (ii) no topat_ori_z available
+        """TODO"""
 
     @todo
     def test_interlayer_spacing(self):                                          # TODO: also raises.
@@ -1058,44 +1045,34 @@ class TestSuperAndSubCell:
         'identity': np.diag((1, 1)),
         '2x2': np.diag((2, 2)),
         '2x1': np.diag((2, 1)),
-        'off-diagonal': np.array([[1, 1], [0, 1]]),
-    }
+        'off-diagonal': np.array([[1, 1], [0, 1]]),                             # TODO: is this one that fails on master?
+        }
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_make_supercell_identity_does_nothing(self, args):
+    def test_make_supercell_identity_does_nothing(self, args, check_identical):
         """Check that identity matrix does not change the slab."""
         slab, *_ = args
-        slab_copy = deepcopy(slab)
         supercell = slab.make_supercell(np.diag((1, 1)))
-        assert np.allclose(slab.ucell, slab_copy.ucell)
-        supercell.sort_by_z()
-        slab_copy.sort_by_z()
-        assert np.allclose([at.cartpos for at in supercell.atlist], 
-                           [at.cartpos for at in slab_copy.atlist])
+        check_identical(slab, supercell)
 
     @parametrize('transform', valid.values(), ids=valid)
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
     def test_supercell_valid(self, transform, args):
-        """Check that supercell is created correctly.
-
-        Checks ucell & n_atoms"""
+        """Check that supercell is created correctly."""
         slab, *_ = args
         supercell = slab.make_supercell(transform)
-        assert np.allclose(supercell.ab_cell[:], slab.ab_cell.dot(transform.T))
+        assert np.allclose(supercell.ab_cell, slab.ab_cell.dot(transform.T))
         assert supercell.n_atoms == slab.n_atoms * np.linalg.det(transform)
 
     @parametrize('transform', valid.values(), ids=valid)
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_supercell_does_not_change_original_slab(self, transform, args):
+    def test_supercell_does_not_change_original_slab(self, transform, args,
+                                                     check_identical):
         """Check that supercell creation does not affect input slab."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
         _ = slab.make_supercell(transform)
-        assert np.allclose(slab.ucell, slab_copy.ucell)
-        slab.sort_by_z()
-        slab_copy.sort_by_z()
-        assert np.allclose([at.cartpos for at in slab.atlist], 
-                           [at.cartpos for at in slab_copy.atlist])
+        check_identical(slab, slab_copy)
 
     @parametrize('matrix,exc', invalid.values(), ids=invalid)
     def test_supercell_invalid(self, matrix, exc, ag100):
@@ -1111,16 +1088,15 @@ class TestSuperAndSubCell:
 
     @parametrize('transform', valid.values(), ids=valid)
     @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_make_subcell_reverses_make_supercell(self, transform, args):
+    def test_make_subcell_reverses_make_supercell(self, transform, args,
+                                                  check_identical):
         """Test that make_subcell reverses make_supercell."""
         slab, rpars, *_ = args
         supercell = slab.make_supercell(transform)
         subcell = supercell.make_subcell(rpars, transform)
         slab.sort_by_z()
         subcell.sort_by_z()
-        assert np.allclose(slab.ucell, subcell.ucell)
-        assert np.allclose([at.cartpos for at in subcell.atlist], 
-                    [at.cartpos for at in slab.atlist])
+        check_identical(slab, subcell)
 
     @parametrize('matrix,exc', sub_invalid.values(), ids=sub_invalid)
     def test_subcell_invalid(self, matrix, exc, ag100):
@@ -1188,17 +1164,18 @@ class TestUnitCellTransforms:
             slab.apply_matrix_transformation(matrix)
 
     def test_project_c_to_z(self, make_poscar, subtests):
-        """Check that the c vector is parallel to the z axis after projection."""
+        """Check that c is along z after projection."""
         slab, *_ = make_poscar(poscar_slabs.SLAB_36C_cm)
         slab_copy = deepcopy(slab)
         slab.project_c_to_z()
         with subtests.test('c along z'):
             assert np.allclose(slab.ucell.T[2][:2], 0)
+
+        # Atoms 4 & 5 are wrapped around
+        atom_pairs = zip(slab.atlist[~4:5], slab_copy.atlist[~4:5])
         with subtests.test('atom positions'):
-            assert all(  # atoms 4,5 are wrapped around
-                np.allclose(at.cartpos, at_copy.cartpos)
-                for at, at_copy in zip(slab.atlist[~4:5], slab_copy.atlist[~4:5])
-                )
+            assert all(np.allclose(at.cartpos, at_copy.cartpos)
+                       for at, at_copy in atom_pairs)
 
     def test_rotation_on_trigonal_slab(self, manual_slab_1_atom_trigonal):
         """Test application of a rotation to a trigonal slab."""
@@ -1245,15 +1222,15 @@ def test_ucell_ori_after_clear_symmetry_and_ucell_history(ag100):
     assert np.allclose(ucell_ori, slab.ucell_ori)
 
 
-def test_translation_symmetry_different_species(make_poscar):
+def test_translation_symmetry_different_species():
     """Check that an MgO slab is not equivalent upon Mg->O translation."""
-    slab, rpars, *_ = make_poscar(poscar_slabs.SLAB_MgO)
+    slab, rpars, *_ = CasePOSCARSlabs().case_poscar_mgo()
     mg_to_oxygen = slab.ab_cell.T[0] / 2
     assert not slab.is_translation_symmetric(mg_to_oxygen, rpars.SYMMETRY_EPS)
 
 
 @pytest.mark.xfail(reason='Issue #140')
-def test_layer_cutting_for_slab_with_incomplete_bulk_layer(make_poscar):
+def test_layer_cutting_for_slab_with_incomplete_bulk_layer(make_poscar):        # TODO: move to TestBulkDetectAndExtraBulk
     """Test for issue #140."""
     slab, rpars, *_ = make_poscar(poscar_slabs.SLAB_Cu2O_111)
     rpars.BULK_LIKE_BELOW = 0.35
