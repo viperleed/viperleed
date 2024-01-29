@@ -867,6 +867,7 @@ class TestMakeBulkSlab:
         slab, rpars, info = ag100
         rpars.superlattice_defined = True  # Needed for check to happen
         slab.ucell *= np.diag((2, 1, 1))
+        slab.update_cartesian_from_fractional()
         bulk_slab = slab.make_bulk_slab(rpars)
         assert "does not follow standard convention" in caplog.text
 
