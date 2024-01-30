@@ -132,6 +132,7 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_Ag(100)', 6, 'p4m', (1, True), _PRESETS['Ag']),
     _get_poscar_info('POSCAR_STO(110)-4x1', 136, 'pm', (1, False)),
     _get_poscar_info('POSCAR_TiO2', 540, 'pmm', (540, False)),
+    _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
     _get_poscar_info('POSCAR_36C_p6m', 36, 'p6m', (1, False)),
     _get_poscar_info('POSCAR_36C_cm', 36, 'cm', (1, False)),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
