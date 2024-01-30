@@ -282,7 +282,7 @@ class CasePOSCARSlabs:
         return self.case_poscar(info)
 
     @parametrize(info=[
-        pytest.param(info, marks=pytest.mark.xfail)
+        pytest.param(info, marks=pytest.mark.xfail(strict=False))
         if 'TiO2' in info.poscar.name
         else info for info in POSCAR_WITH_KNOWN_BULK_REPEAT
         ], idgen=make_poscar_ids())
