@@ -378,7 +378,7 @@ class TestBulkDetectAndExtraBulk:
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
 
     @with_bulk_repeat
-    def test_detect_bulk(self, args):                                           # TODO: add xfailing for TiO2
+    def test_detect_bulk(self, args):
         """Test function for detecting bulk cuts and distances."""
         slab, rpars, info = args
         bulk_info = info.bulk_properties

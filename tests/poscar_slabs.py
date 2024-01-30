@@ -13,6 +13,7 @@ import inspect
 import sys
 
 import numpy as np
+import pytest
 from pytest_cases import parametrize, lazy_value, case
 
 VPR_PATH = str(Path(__file__).resolve().parents[2])
@@ -131,7 +132,6 @@ _PRESETS = {  # pylint: disable=consider-using-namedtuple-or-dataclass
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_Ag(100)', 6, 'p4m', (1, True), _PRESETS['Ag']),
     _get_poscar_info('POSCAR_STO(110)-4x1', 136, 'pm', (1, False)),
-    _get_poscar_info('POSCAR_TiO2', 540, 'pmm', (540, False)),
     _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
     _get_poscar_info('POSCAR_36C_p6m', 36, 'p6m', (1, False)),
     _get_poscar_info('POSCAR_36C_cm', 36, 'cm', (1, False)),
@@ -204,7 +204,20 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
                                  [ 0.        ,  5.21496367,  0.        ],
                                  [ 0.        ,  0.        ,  2.45835787]]),
         ),
-    )
+    ),
+    _add_known_bulk_properties(
+        _get_poscar_info('POSCAR_TiO2_small'),
+        BulkSlabAndRepeatInfo(
+            bulk_like_below=0.3,
+            bulk_repeat=np.array([-3.24845, 0.00000, 3.21016]),
+            n_bulk_atoms=6,
+            bulk_cuts=[0.1627, 0.2281, 0.2699],
+            bulk_dist=0.0,
+            bulk_ucell=np.array([[6.4969000816, 0.000000000, 0.00000000],
+                                 [0.0000000000, 2.959000111, 0.00000000],
+                                 [-3.248450000, 0.000000000, 3.21016000]]),
+            ),
+    ),
 )
 
 POSCAR_WITH_LAYER_INFO = (
@@ -268,7 +281,11 @@ class CasePOSCARSlabs:
         """Return a slab, an Rparams and an (essentially) empty info."""
         return self.case_poscar(info)
 
-    @parametrize(info=POSCAR_WITH_KNOWN_BULK_REPEAT, idgen=make_poscar_ids())
+    @parametrize(info=[
+        pytest.param(info, marks=pytest.mark.xfail)
+        if 'TiO2' in info.poscar.name
+        else info for info in POSCAR_WITH_KNOWN_BULK_REPEAT
+        ], idgen=make_poscar_ids())
     @case(tags=Tag.BULK_PROPERTIES)
     def case_bulk_repeat_poscar(self, info):
         """Return a slab, an Rparams and info on expected bulk properties."""
