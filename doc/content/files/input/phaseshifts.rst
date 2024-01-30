@@ -3,7 +3,7 @@
 PHASESHIFTS
 ===========
 
-The ``PHASESHIFTS`` file is generated automatically with the EEASiSSS.x script during initialization if needed.
+The ``PHASESHIFTS`` file is generated automatically with the eeasisss script during initialization if needed.
 If a ``PHASESHIFTS`` file is already present, a consistency check will be performed for the following features:
 
 -   The energy range in the PHASESHIFTS file must be at least as large 

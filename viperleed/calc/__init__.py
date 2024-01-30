@@ -200,7 +200,7 @@ def run_tleedm(system_name=None,
         rp.source_dir = _source
     elif _source.parent.name == "tensorleed":
         logger.warning(f"tensorleed directory found in {_source.parent}, "
-                       "using that instead of {_source}.")
+                       f"using that instead of {_source}.")
         rp.source_dir = _source.parent
     elif (_source / "tensorleed").is_dir():
         logger.warning(f"tensorleed directory found in {_source}, using that "
