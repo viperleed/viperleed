@@ -511,12 +511,14 @@ class TestBulkRepeat:
         rpars.BULK_REPEAT = np.array([1, 2, 3])
         assert np.allclose(slab.get_bulk_repeat(rpars), np.array([1, 2, 3]))
 
-    def test_get_returns_vector(self, make_poscar):
+    @with_bulk_repeat
+    def test_get_returns_vector(self, args):
         """Test get_bulk_repeat gives a z-only vector without BULK_REPEAT."""
-        slab, rpars, *_ = make_poscar(poscar_slabs.AG_100)
+        slab, rpars, info = args
         rpars.BULK_REPEAT = None
         assert np.allclose(slab.get_bulk_repeat(rpars),
-                           np.array([0, 0, 2.0365]), atol=1e-3)
+                           [0, 0, info.bulk_properties.bulk_repeat[2]],
+                           atol=1e-3)
 
 
 class TestBulkUcell:
