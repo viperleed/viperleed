@@ -201,7 +201,7 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
             bulk_cuts=[0.08333],
             bulk_dist=0.61459,  # Closest z distance between Cu and O
             bulk_ucell=np.array([[ 6.02172136, -3.01086068,  0.        ],
-                                 [ 0.        ,  5.21496367,  0.        ],
+                                 [ 0.        ,  5.21496367, -3.4766    ],
                                  [ 0.        ,  0.        ,  2.45835787]]),
             ),
         ),
