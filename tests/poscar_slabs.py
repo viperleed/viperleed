@@ -289,7 +289,9 @@ class CasePOSCARSlabs:
     @case(tags=Tag.BULK_PROPERTIES)
     def case_bulk_repeat_poscar(self, info):
         """Return a slab, an Rparams and info on expected bulk properties."""
-        return self.case_poscar(info)
+        slab, rpars, info = self.case_poscar(info)
+        rpars.BULK_REPEAT = info.bulk_properties.bulk_repeat
+        return slab, rpars, info
 
     @parametrize(info=POSCAR_WITH_LAYER_INFO, idgen=make_poscar_ids())
     @case(tags=Tag.LAYER_INFO)
