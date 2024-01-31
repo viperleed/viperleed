@@ -378,16 +378,19 @@ class TestBulkDetectAndExtraBulk:
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
 
     @with_bulk_repeat
-    def test_detect_bulk(self, args):
+    def test_detect_bulk(self, args, subtests):
         """Test function for detecting bulk cuts and distances."""
         slab, rpars, info = args
         bulk_info = info.bulk_properties
         self.prepare_to_detect(slab, rpars, bulk_info.bulk_like_below)
 
         bulk_cuts, bulk_dist = slab.detect_bulk(rpars)
-        assert len(bulk_cuts) == len(bulk_info.bulk_cuts)
-        assert np.allclose(bulk_cuts, bulk_info.bulk_cuts, atol=1e-4)
-        assert bulk_dist == pytest.approx(bulk_info.bulk_dist, abs=1e-4)
+        with subtests.test('nr. bulk cuts'):
+            assert len(bulk_cuts) == len(bulk_info.bulk_cuts)
+        with subtests.test('bulk cut values'):
+            assert np.allclose(bulk_cuts, bulk_info.bulk_cuts, atol=1e-4)
+        with subtests.test('distance between bulk layers'):
+            assert bulk_dist == pytest.approx(bulk_info.bulk_dist, abs=1e-4)
 
     @with_bulk_repeat
     def test_detect_bulk_fail_leaves_rp_sl_unchanged(self, args,
@@ -546,18 +549,18 @@ class TestBulkUcell:
         assert min_c[2] == pytest.approx(-bulk_info.bulk_repeat[2], abs=1e-4)
 
     @with_bulk_repeat
-    def test_ensure_min_c(self, args):
+    def test_ensure_min_c(self, args, subtests):
         """Test that ensure_minimal_c_vector works as expected."""
         slab, rpars, info = args
         bulk_info = info.bulk_properties
         self.with_one_thick_bulk(slab, rpars, bulk_info.bulk_like_below)
-        bulk_slab = slab.make_bulk_slab(rpars)
+        bulk_slab = slab.bulkslab
         bulk_slab.ensure_minimal_c_vector(rpars)
-        assert bulk_slab.ucell[2, 2] == (
-            pytest.approx(-bulk_info.bulk_repeat[2],
-                          abs=1e-4)
-            )
-        assert bulk_slab.n_atoms == bulk_info.n_bulk_atoms
+        c_vec = bulk_slab.ucell.T[2]
+        with subtests.test('bulk unit-cell c'):
+            assert c_vec == pytest.approx(bulk_info.bulk_repeat, abs=1e-4)
+        with subtests.test('nr. bulk atoms'):
+            assert bulk_slab.n_atoms == bulk_info.n_bulk_atoms
 
     @with_bulk_repeat
     def test_get_min_c_raises_already_minimal(self, args):
