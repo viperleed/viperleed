@@ -533,10 +533,7 @@ class TestBulkUcell:
 
         # Shift the bottom atom to c=0 to prevent back-folding
         # of the top ones when creating the thick bulk
-        bottom_atom_c = slab.bottom_atom.pos[2]
-        for atom in slab:
-            atom.pos[2] -= bottom_atom_c
-        slab.update_cartesian_from_fractional(update_origin=True)
+        slab.remove_vacuum_at_bottom(rpars)
         slab.make_bulk_slab(rpars, recenter=False)
 
     @with_bulk_repeat

@@ -1102,6 +1102,45 @@ class BaseSlab(AtomContainer):
                 'to appropriately create_layers and update rparams before?'
                 )
 
+    def remove_vacuum_at_bottom(self, rpars):
+        """Move all atoms along c to remove any vacuum at the bottom.
+
+        This method **will update the origin of the z coordinates**.
+        It should be called **before** a reference calculation.
+
+        Parameters
+        ----------
+        rpars : Rparams
+            The current run parameters. Attributes read: SYMMETRY_EPS
+
+        Returns
+        -------
+        fractional_c_shift : float
+            How much atoms have been moved down along c.
+
+        Notes
+        -----
+        The atoms are moved down slightly less than what would be
+            necessary to bring the bottom-most atom(s) at c == 0
+            to avoid possible floating-point rounding issues when
+            collapsing coordinates.
+        This method does not check whether the coordinates are
+            collapsed to the base cell. Make sure they are before
+            calling this.
+        """
+        # Skip movements if the bottom atom is closer to zero than eps
+        eps = (rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
+        releps = np.dot(eps, np.linalg.inv(self.ucell.T))
+        bottom_atom = self.bottom_atom
+        if bottom_atom.pos[2] < releps[2]:
+            return 0.
+
+        delta_c = bottom_atom.pos[2] - 0.1 * releps[2]
+        for atom in self:
+            atom.pos[2] -= delta_c
+        self.update_cartesian_from_fractional(update_origin=True)
+        return delta_c
+
     def revert_unit_cell(self, restore_to=None):
         """Revert unit-cell and coordinate modifications.
 

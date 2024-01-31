@@ -315,10 +315,7 @@ class SurfaceSlab(BaseSlab):
         # important to prevent the topmost bulk atoms from being
         # back-folded to the bottom when creating the 'thick' bulk
         # slab below.
-        bottom_atom_c = self_copy.bottom_atom.pos[2]
-        for atom in self_copy:
-            atom.pos[2] -= bottom_atom_c
-        self_copy.update_cartesian_from_fractional(update_origin=True)
+        bottom_atom_c = self_copy.remove_vacuum_at_bottom(rpars_copy)
 
         # Create a pseudo-bulk slab to determine the correct repeat
         # c vector: the c vector now is very likely to be wrong (as
