@@ -1861,7 +1861,7 @@ class BaseSlab(AtomContainer):
         shifted_coords, _ = collapse(shifted_coords, ucell, ucell_inv)
 
         # Include replicas of atoms close to edges/corners, then
-        # convert element_per_atom to array for use it as a mask
+        # convert element_per_atom to array to use it as a mask
         (cart_coords,
          element_per_atom) = add_edges_and_corners(cart_coords,
                                                    frac_coords,

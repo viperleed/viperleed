@@ -281,9 +281,9 @@ class SurfaceSlab(BaseSlab):
         bulk_cuts : list of float
             Layer cuts for self that generate the bulk.
         bulk_dist : float
-            Zero if `bulk_cuts` contains only a single cut position.
-            Otherwise it is the largest distance found between bulk
-            sublayers, where the second bulk cut position is placed.
+            The largest distance found between bulk sublayers. The
+            second bulk cut position is placed there if `bulk_dist`
+            is larger than `second_cut_min_spacing`.
 
         Raises
         ------

@@ -232,9 +232,8 @@ class BulkSlab(BaseSlab):
             Whether the slab is to be considered periodic along
             the direction perpendicular to the surface while the
             c vector is minimized. Typically False, unless the
-            current c vector is not a repeat vector for this slab
-            (e.g., the slab contains non-bulk parts that need to
-            be ignored). Default is False.
+            current c vector is already a repeat vector for this
+            slab. Default is False.
 
         Returns
         -------

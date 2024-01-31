@@ -620,10 +620,20 @@ class TestBulkUcell:
 
     @with_bulk_repeat
     def test_minimal_bulk_ab(self, args):
-        """Test surface_slab method ensure_minimal_bulk_ab_cell()
+        """Test surface_slab method ensure_minimal_bulk_ab_cell().
 
         This is a test for the surface slab method only. The bulk slab method
-        get_minimal_ab_cell is tested in TestBulkSlab.test_minimal_ab_cell."""
+        get_minimal_ab_cell is tested in TestBulkSlab.test_minimal_ab_cell.
+
+        Parameters
+        ----------
+        args : tuple
+            Items are Slab, Rparams and TestInfo objects.
+
+        Returns
+        -------
+        None.
+        """
         slab, rpars, *_ = args
         slab.make_bulk_slab(rpars)  # create bulk slab
         try:

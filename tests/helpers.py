@@ -320,7 +320,7 @@ class BulkSlabAndRepeatInfo(InfoBase):
     """Container for information about bulk atoms and repeat vector."""
     bulk_like_below: float
     # Here the expected values:
-    bulk_repeat: np.ndarray
+    bulk_repeat: np.ndarray   # From bulk to surface
     n_bulk_atoms: int
     bulk_cuts: List[float]
     bulk_dist: float
