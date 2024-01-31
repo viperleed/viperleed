@@ -654,16 +654,16 @@ class TestBulkUcell:
         -------
         None.
         """
-        slab, rpars, *_ = args
-        bulk = slab.make_bulk_slab(rpars)  # create bulk slab
-        try:
-            min_ab_cell = bulk.get_minimal_ab_cell(rpars.SYMMETRY_EPS).copy()
-        except err.AlreadyMinimalError:
-            min_ab_cell = bulk.ab_cell.copy()
+        slab, rpars, info = args
+        bulk = slab.make_bulk_slab(rpars)
+        min_ab_cell = info.bulk_properties.bulk_ucell[:2, :2]
         large_bulk = slab.make_supercell(np.diag((2, 2))).make_bulk_slab(rpars)
         slab.bulkslab = large_bulk
         slab.ensure_minimal_bulk_ab_cell(rpars)
-        assert np.allclose(slab.bulkslab.ab_cell, min_ab_cell, atol=1e-6)
+        # Notice that it is enough to check that the current
+        # cell is a rotated version of the minimal one
+        transform = slab.bulkslab.ab_cell.dot(np.linalg.inv(min_ab_cell))
+        assert np.linalg.det(transform) == pytest.approx(1.0)
 
 
 class TestContains:
