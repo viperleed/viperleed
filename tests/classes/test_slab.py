@@ -594,7 +594,7 @@ class TestBulkUcell:
                                            subtests):
         """Test that apply_bulk_cell_reduction works as expected for ab."""
         slab, rpars, info = args
-        original_ab_cell = slab.ab_cell.copy()
+        original_ab_cell = slab.ab_cell.T.copy()
         slab.make_bulk_slab(rpars)
         supercell = slab.make_supercell(transform)
         supercell_bulk = supercell.make_bulk_slab(rpars)
