@@ -24,6 +24,7 @@ from viperleed.tleedmlib.base import rotation_matrix_order
 from .base_slab import BaseSlab
 from .slab_errors import AlreadyMinimalError
 from .slab_errors import MissingSublayersError
+from .slab_errors import SlabError
 from .slab_utils import _cycle
 
 
@@ -251,6 +252,18 @@ class BulkSlab(BaseSlab):
         rpars.BULK_REPEAT = self.get_minimal_c_vector(rpars.SYMMETRY_EPS,
                                                       rpars.SYMMETRY_EPS.z,
                                                       z_periodic=z_periodic)
+        bottom_atom = self.bottom_atom
+        delta_z = self.topat_ori_z - bottom_atom.cartpos[2]                     # TODO: flip with .cartpos[2]
+        if not z_periodic and delta_z > rpars.SYMMETRY_EPS.z:
+            # TODO: in principle, here we could also do it ourselves,
+            # but it is a bit of a pain as we would need to shift
+            # things back up later in order to keep the z centering
+            raise SlabError(
+                f'{type(self).__name__}.ensure_minimal_c_vector: cannot '
+                'reduce c vector for a non-z-periodic slab that has a large '
+                'vacuum gap at the bottom. Shift all atoms down along z by '
+                f'calling slab.remove_vacuum_at_bottom(rpars)'
+                )
         self.apply_bulk_cell_reduction(rpars.SYMMETRY_EPS,
                                        epsz=rpars.SYMMETRY_EPS.z,
                                        new_c_vec=rpars.BULK_REPEAT)
