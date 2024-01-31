@@ -188,6 +188,20 @@ class BaseSlab(AtomContainer):
         return np.degrees(np.arctan2(a_vec[1], a_vec[0]))
 
     @property
+    def bottom_atom(self):
+        """Return the atom currently at the bottom of this slab."""
+        # Do it the most efficient way possible, i.e., with the
+        # atom container that should have the fewest atoms. We
+        # rely on the z-sorting of layers and sublayers.
+        if self.sublayers:
+            container = self.sublayers[-1]
+        elif self.layers:
+            container = self.layers[-1]
+        else:
+            container = self
+        return min(container, key=lambda at: at.pos[2])
+
+    @property
     def bulk_atoms(self):
         """Return atoms in this Slab that belong to its bulk."""
         return [at for at in self if at.is_bulk]

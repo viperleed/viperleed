@@ -311,6 +311,15 @@ class SurfaceSlab(BaseSlab):
         rpars_copy.N_BULK_LAYERS = 1
         self_copy.create_layers(rpars_copy)
 
+        # Make sure that the bottom-most atom is at c=0. This is
+        # important to prevent the topmost bulk atoms from being
+        # back-folded to the bottom when creating the 'thick' bulk
+        # slab below.
+        bottom_atom_c = self_copy.bottom_atom.pos[2]
+        for atom in self_copy:
+            atom.pos[2] -= bottom_atom_c
+        self_copy.update_cartesian_from_fractional(update_origin=True)
+
         # Create a pseudo-bulk slab to determine the correct repeat
         # c vector: the c vector now is very likely to be wrong (as
         # it is just chopped off from the one of self). Notice that
@@ -338,6 +347,7 @@ class SurfaceSlab(BaseSlab):
         # pylint: disable-next=protected-access
         bulk_cuts, bulk_dist = self_copy._get_bulk_cuts(rpars.SYMMETRY_EPS.z,
                                                         second_cut_min_spacing)
+        bulk_cuts = [b + bottom_atom_c for b in bulk_cuts]
 
         # Finally, update self and rpars with the new information
         rpars.BULK_REPEAT = rpars_copy.BULK_REPEAT
