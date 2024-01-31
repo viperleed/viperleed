@@ -532,6 +532,8 @@ class TestBulkUcell:
         rpars.BULK_REPEAT = None
         slab.create_layers(rpars)
 
+        slab.make_bulk_slab(rpars, recenter=False)
+
     @with_bulk_repeat
     def test_get_min_c(self, args):
         """Test that get_minimal_c_vector works as expected."""
@@ -541,7 +543,7 @@ class TestBulkUcell:
         # BULK_LIKE_BELOW. This gives us a bulk slab with (at least)
         # two bulk layers, which is what we need to test get_min_c.
         self.with_one_thick_bulk(slab, rpars, bulk_info.bulk_like_below)
-        bulk_slab = slab.make_bulk_slab(rpars, recenter=False)
+        bulk_slab = slab.bulkslab
         bulk_slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         # z_periodic=False because we use the original unit cell
         min_c = bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS,
@@ -570,7 +572,7 @@ class TestBulkUcell:
         slab, rpars, info = args
         self.with_one_thick_bulk(slab, rpars,
                                  info.bulk_properties.bulk_like_below)
-        bulk_slab = slab.make_bulk_slab(rpars)
+        bulk_slab = slab.bulkslab
         bulk_slab.ensure_minimal_c_vector(rpars)
         with pytest.raises(err.AlreadyMinimalError):
             bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS)
