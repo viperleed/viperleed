@@ -1054,7 +1054,7 @@ class TestSlabLayers:
         assert n_atoms_per_layer_after == n_atoms_per_layer_original
         # Check that all atoms are in the unit cell
         eps = 1e-8
-        assert all(-eps <= at.pos <= 1 + eps for at in slab)
+        assert np.all(-eps <= at.pos <= 1 + eps for at in slab)
 
     @parametrize_with_cases('args', **with_layers)
     def test_full_update_without_topat_ori_z(self, args):
