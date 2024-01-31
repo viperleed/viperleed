@@ -480,12 +480,11 @@ class TestBulkRepeat:
     def test_identify(self, args):
         """Tests identify_bulk_repeat method."""
         slab, rpars, info = args
-        slab.BULK_REPEAT = None
+        bulk_info = info.bulk_properties
+        rpars.BULK_REPEAT = None
         slab.make_bulk_slab(rpars)
         repeat_vector = slab.identify_bulk_repeat(eps=1e-3)
-        assert np.allclose(repeat_vector[2],
-                           -info.bulk_properties.bulk_repeat[2],
-                           atol=1e-3)
+        assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=1e-3)
 
     def test_identify_raises_without_bulkslab(self, ag100):
         """Check complaints when called without a bulk slab."""
@@ -498,12 +497,12 @@ class TestBulkRepeat:
     def test_get(self, args):
         """Test get_bulk_repeat method."""
         slab, rpars, info = args
-        slab.BULK_REPEAT = None
-        slab.make_bulk_slab(rpars)
+        bulk_info = info.bulk_properties
+        TestBulkDetectAndExtraBulk.prepare_to_detect(slab, rpars,
+                                                     bulk_info.bulk_like_below)
+        slab.detect_bulk(rpars)
         repeat_vector = slab.get_bulk_repeat(rpars)
-        assert np.allclose(repeat_vector,
-                           -info.bulk_properties.bulk_repeat,
-                           atol=1e-3)
+        assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=1e-3)
 
     def test_get_returns_stored_bulk_repeat(self, make_poscar):
         """Test get_bulk_repeat returns stored bulk repeat if available."""
@@ -549,8 +548,7 @@ class TestBulkUcell:
         min_c = bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS,
                                                rpars.SYMMETRY_EPS.z,
                                                z_periodic=False)
-        assert min_c[:2] == pytest.approx(bulk_info.bulk_repeat[:2], abs=1e-4)
-        assert min_c[2] == pytest.approx(-bulk_info.bulk_repeat[2], abs=1e-4)
+        assert min_c == pytest.approx(bulk_info.bulk_repeat, abs=1e-4)
 
     @with_bulk_repeat
     def test_ensure_min_c(self, args, subtests):

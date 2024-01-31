@@ -183,7 +183,7 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
         _get_info_by_name('Ag(100)'),
         BulkSlabAndRepeatInfo(
             bulk_like_below=0.65,
-            bulk_repeat=np.array([1.44, 1.44, -2.03647]),
+            bulk_repeat=np.array([-1.44, -1.44, 2.03647]),
             n_bulk_atoms=1,
             bulk_cuts=[0.35],
             bulk_dist=0.0,
@@ -195,11 +195,11 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
     _add_known_bulk_properties(
         _get_poscar_info('POSCAR_Cu2O_111'),
         BulkSlabAndRepeatInfo(
-            bulk_like_below=0.6,
-            bulk_repeat=np.array([0, 0, -2.4584]),
+            bulk_like_below=0.55,
+            bulk_repeat=np.array([0, -3.4766, 2.4584]),
             n_bulk_atoms=6,
             bulk_cuts=[0.08333],
-            bulk_dist=0.46642,
+            bulk_dist=0.61459,  # Closest z distance between Cu and O
             bulk_ucell=np.array([[ 6.02172136, -3.01086068,  0.        ],
                                  [ 0.        ,  5.21496367,  0.        ],
                                  [ 0.        ,  0.        ,  2.45835787]]),
