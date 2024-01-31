@@ -191,7 +191,7 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
                                  [ 0.     ,  2.88   , -1.44   ],
                                  [ 0.     ,  0.     ,  2.03647]]),
             ),
-    ),
+        ),
     _add_known_bulk_properties(
         _get_poscar_info('POSCAR_Cu2O_111'),
         BulkSlabAndRepeatInfo(
@@ -203,8 +203,8 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
             bulk_ucell=np.array([[ 6.02172136, -3.01086068,  0.        ],
                                  [ 0.        ,  5.21496367,  0.        ],
                                  [ 0.        ,  0.        ,  2.45835787]]),
+            ),
         ),
-    ),
     _add_known_bulk_properties(
         _get_poscar_info('POSCAR_TiO2_small'),
         BulkSlabAndRepeatInfo(
@@ -217,8 +217,8 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
                                  [0.0000000000, 2.959000111, 0.00000000],
                                  [-3.248450000, 0.000000000, 3.21016000]]),
             ),
-    ),
-)
+        ),
+    )
 
 POSCAR_WITH_LAYER_INFO = (
     _add_known_layer_properties(

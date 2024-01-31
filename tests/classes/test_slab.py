@@ -642,18 +642,15 @@ class TestBulkUcell:
         None.
         """
         slab, rpars, *_ = args
-        slab.make_bulk_slab(rpars)  # create bulk slab
+        bulk = slab.make_bulk_slab(rpars)  # create bulk slab
         try:
-            original_minimal_ab_cell = (slab.bulkslab.
-                                        get_minimal_ab_cell(rpars.SYMMETRY_EPS).
-                                        copy())
+            min_ab_cell = bulk.get_minimal_ab_cell(rpars.SYMMETRY_EPS).copy()
         except err.AlreadyMinimalError:
-            original_minimal_ab_cell = slab.bulkslab.ab_cell.copy()
-        slab.bulkslab = slab.make_supercell(np.diag((2, 2))
-                                            ).make_bulk_slab(rpars)
+            min_ab_cell = bulk.ab_cell.copy()
+        large_bulk = slab.make_supercell(np.diag((2, 2))).make_bulk_slab(rpars)
+        slab.bulkslab = large_bulk
         slab.ensure_minimal_bulk_ab_cell(rpars)
-        assert np.allclose(slab.bulkslab.ab_cell,
-                           original_minimal_ab_cell, atol=1e-6)
+        assert np.allclose(slab.bulkslab.ab_cell, min_ab_cell, atol=1e-6)
 
 
 class TestContains:
