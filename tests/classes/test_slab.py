@@ -590,28 +590,33 @@ class TestBulkUcell:
     @parametrize('recenter', recenter.values(), ids=recenter)
     @parametrize('transform', transform.values(), ids=transform)
     @with_bulk_repeat
-    def test_apply_bulk_ucell_reduction_ab(self, recenter, transform, args):
+    def test_apply_bulk_ucell_reduction_ab(self, recenter, transform, args,
+                                           subtests):
         """Test that apply_bulk_cell_reduction works as expected for ab."""
         slab, rpars, info = args
         original_ab_cell = slab.ab_cell.copy()
+        slab.make_bulk_slab(rpars)
         supercell = slab.make_supercell(transform)
         supercell_bulk = supercell.make_bulk_slab(rpars)
-        slab.make_bulk_slab(rpars)
         supercell_bulk.sort_by_z()
         highest_atom_before = supercell_bulk.atlist[0]
         supercell_bulk.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS,
                                                  new_ab_cell=original_ab_cell,
                                                  recenter=recenter)
-        assert supercell_bulk.ucell == pytest.approx(slab.bulkslab.ucell)
-        assert supercell_bulk.n_atoms == info.bulk_properties.n_bulk_atoms
-        if recenter:
-            # Might need sorting by z again
-            highest_atom_after = supercell_bulk.atlist[0]
-            assert highest_atom_before.num == highest_atom_after.num
+        with subtests.test('ucell'):
+            assert supercell_bulk.ucell == pytest.approx(slab.bulkslab.ucell)
+        with subtests.test('nr. atoms'):
+            assert supercell_bulk.n_atoms == info.bulk_properties.n_bulk_atoms
+        if not recenter:
+            return
+        supercell_bulk.sort_by_z()
+        highest_atom_after = supercell_bulk.atlist[0]
+        with subtests.test('highest atom is'):
+            assert highest_atom_before is highest_atom_after
 
     @parametrize('recenter', recenter.values(), ids=recenter)
     @with_bulk_repeat
-    def test_apply_bulk_ucell_reduction_c(self, recenter, args):
+    def test_apply_bulk_ucell_reduction_c(self, recenter, args, subtests):
         """Test that apply_bulk_cell_reduction works as expected for c."""
         slab, rpars, info = args
         bulkslab = slab.make_bulk_slab(rpars)
@@ -622,12 +627,16 @@ class TestBulkUcell:
         thick_slab.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS,
                                              new_c_vec=original_ucell.T[2],
                                              recenter=recenter)
-        assert thick_slab.ucell == pytest.approx(original_ucell, abs=1e-4)
-        assert thick_slab.n_atoms == info.bulk_properties.n_bulk_atoms
-        if recenter:
-            # Might need sorting by z again
-            highest_atom_after = thick_slab.atlist[0]
-            assert highest_atom_before.num == highest_atom_after.num
+        with subtests.test('ucell'):
+            assert thick_slab.ucell == pytest.approx(original_ucell, abs=1e-4)
+        with subtests.test('nr. atoms'):
+            assert thick_slab.n_atoms == info.bulk_properties.n_bulk_atoms
+        if not recenter:
+            return
+        thick_slab.sort_by_z()
+        highest_atom_after = thick_slab.atlist[0]
+        with subtests.test('highest atom is'):
+            assert highest_atom_before is highest_atom_after
 
     @with_bulk_repeat
     def test_minimal_bulk_ab(self, args):
