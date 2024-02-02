@@ -596,13 +596,13 @@ class BaseSlab(AtomContainer):
             raise EmptySlabError(f'{type(self).__name__} has no atoms')
         if not self.elements:
             raise MissingElementsError(
-                f'{type(self).__name__} has no eleemtns.'
-                ' Did you forget to update_element_count()?'
+                f'{type(self).__name__} has no elements. '
+                'Did you forget to update_element_count()?'
                 )
 
         self.sort_by_z()
         subl = []
-        for element in self.elements:                                           # TODO: should we complain if there's no elements?
+        for element in self.elements:
             subl.extend(self._get_sublayers_for_el(element, eps))
 
         # subl is sorted element-first. Re-sort it as in the __doc__

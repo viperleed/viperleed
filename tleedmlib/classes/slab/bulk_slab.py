@@ -162,7 +162,8 @@ class BulkSlab(BaseSlab):
         recenter : bool, optional
             Whether atom coordinates along the c axis should be
             modified so that the atom that was highest when this
-            method was called is also highest afterwards. Default
+            method was called (or one equivalent to it upon
+            translation) is also highest afterwards. Default
             is True.
 
         Returns
