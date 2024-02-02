@@ -481,8 +481,10 @@ class TestBulkRepeat:
         bulk_info = info.bulk_properties
         rpars.BULK_REPEAT = None
         slab.make_bulk_slab(rpars)
-        repeat_vector = slab.identify_bulk_repeat(eps=1e-3)
-        assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=1e-3)
+        repeat_vector = slab.identify_bulk_repeat(eps=rpars.SYMMETRY_EPS,
+                                                  epsz=rpars.SYMMETRY_EPS.z)
+        atol = float(0.2*rpars.SYMMETRY_EPS)
+        assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=atol)
 
     def test_identify_raises_without_bulkslab(self, ag100):
         """Check complaints when called without a bulk slab."""
@@ -500,7 +502,8 @@ class TestBulkRepeat:
                                                      bulk_info.bulk_like_below)
         slab.detect_bulk(rpars)
         repeat_vector = slab.get_bulk_repeat(rpars)
-        assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=1e-3)
+        atol = float(0.2*rpars.SYMMETRY_EPS)
+        assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=atol)
 
     def test_get_returns_stored_bulk_repeat(self, make_poscar):
         """Test get_bulk_repeat returns stored bulk repeat if available."""
@@ -509,13 +512,14 @@ class TestBulkRepeat:
         assert np.allclose(slab.get_bulk_repeat(rpars), np.array([1, 2, 3]))
 
     @with_bulk_repeat
-    def test_get_returns_vector(self, args):
+    def test_get_returns_z_vector(self, args):
         """Test get_bulk_repeat gives a z-only vector without BULK_REPEAT."""
         slab, rpars, info = args
         rpars.BULK_REPEAT = None
+        atol = float(0.2*rpars.SYMMETRY_EPS)
         assert np.allclose(slab.get_bulk_repeat(rpars),
                            [0, 0, info.bulk_properties.bulk_repeat[2]],
-                           atol=1e-3)
+                           atol=atol)
 
 
 class TestBulkUcell:
@@ -549,7 +553,8 @@ class TestBulkUcell:
         min_c = bulk_slab.get_minimal_c_vector(rpars.SYMMETRY_EPS,
                                                rpars.SYMMETRY_EPS.z,
                                                z_periodic=False)
-        assert min_c == pytest.approx(bulk_info.bulk_repeat, abs=1e-4)
+        atol = float(0.2*rpars.SYMMETRY_EPS)
+        assert min_c == pytest.approx(bulk_info.bulk_repeat, abs=atol)
 
     @with_bulk_repeat
     def test_ensure_min_c(self, args, subtests):
@@ -561,7 +566,8 @@ class TestBulkUcell:
         bulk_slab.ensure_minimal_c_vector(rpars)
         c_vec = bulk_slab.ucell.T[2]
         with subtests.test('bulk unit-cell c'):
-            assert c_vec == pytest.approx(bulk_info.bulk_repeat, abs=1e-4)
+            atol = float(0.2*rpars.SYMMETRY_EPS)
+            assert c_vec == pytest.approx(bulk_info.bulk_repeat, abs=atol)
         with subtests.test('nr. bulk atoms'):
             assert bulk_slab.n_atoms == bulk_info.n_bulk_atoms
 
@@ -892,8 +898,9 @@ class TestMakeBulkSlab:
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, info = args
         bulk_slab = slab.make_bulk_slab(rpars)
+        atol = float(0.2*rpars.SYMMETRY_EPS)
         assert np.allclose(bulk_slab.ucell, info.bulk_properties.bulk_ucell,
-                           atol=1e-4)
+                           atol=atol)
 
     def test_valid_warning_a_larger_b(self, ag100, caplog):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
