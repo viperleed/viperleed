@@ -643,7 +643,7 @@ class BaseSlab(AtomContainer):
         self.collapse_fractional_coordinates()
         self.update_cartesian_from_fractional(update_origin=update_origin)
 
-    def collapse_fractional_coordinates(self):                                  # TODO: would be nicer to have the public method update everything correctly, and rather make this a private one.  USED ONLY IN SLABs and in iosearch
+    def collapse_fractional_coordinates(self, releps=None):                     # TODO: would be nicer to have the public method update everything correctly, and rather make this a private one.  USED ONLY IN SLABs and in iosearch
         """Ensure all atoms are inside the unit cell.
 
         Atoms whose fractional positions are outside the unit cell
@@ -654,6 +654,15 @@ class BaseSlab(AtomContainer):
         a call to `update_cartesian_from_fractional` to ensure that
         fractional and Cartesian coordinates are up to date.
 
+        Parameters
+        ----------
+        releps : float, Sequence, or None, optional
+            Fractional tolerance for collapsing coordinates. If
+            not None, coordinates are collapsed to the (fractional)
+            interval [-releps, 1-releps]. If a sequence, it should
+            have three items, corresponding to the fractional
+            tolerances along the three unit vectors. Default is None.
+
         Returns
         -------
         None.
@@ -662,8 +671,11 @@ class BaseSlab(AtomContainer):
         --------
         collapse_cartesian_coordinates
         """
+        kwargs = {'in_place': True}
+        if releps is not None:
+            kwargs['eps'] = releps
         for atom in self:
-            collapse_fractional(atom.pos, in_place=True)
+            collapse_fractional(atom.pos, **kwargs)
 
     def full_update(self, rpars):
         """Update atoms and layers from `rpars`.

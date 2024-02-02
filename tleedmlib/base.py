@@ -224,12 +224,14 @@ def collapse(cartesians, ucell, ucell_inv=None, method='floor'):
     return fractional.dot(ucell), fractional
 
 
-def _floor_eps(values):
-    """Return the floored-int version of values after adding 1e-8."""
-    return np.floor(values + 1e-8)
+def _floor_eps(eps):
+    """Return the floored-int version of values after adding eps."""
+    def _floor(values):
+        return np.floor(values + eps)
+    return _floor
 
 
-def collapse_fractional(coordinates, method='floor', in_place=False):
+def collapse_fractional(coordinates, method='floor', eps=1e-8, in_place=False):
     """Collapse fractional coordinates to the base cell.
 
     Parameters
@@ -240,11 +242,14 @@ def collapse_fractional(coordinates, method='floor', in_place=False):
         Which method should be used for collapsing.  'round' collapses
         the coordinates so that they are as close to zero as possible.
         Fractional coordinates are then in range [-0.5, 0.5]. 'floor'
-        returns fractional coordinates collapsed to the (0, 0)
-        cell, that is, with all fractional coordinates in range
-        [-eps, 1-eps], with eps=1e-8. This is to make sure that
-        collapsing a fractional coordinate of (essentially) 1
-        gives (essentially) zero. Default is 'floor'.
+        returns fractional coordinates collapsed to the (0, 0) cell,
+        that is, with all fractional coordinates in range [-`eps`,
+        1-`eps`]. This ensures that collapsing a fractional coordinate
+        of (essentially) 1 gives (essentially) zero. Default is 'floor'.
+    eps : float or Sequence, optional
+        Used only if method == 'floor'. The (fractional) tolerance
+        for collapsing. If a sequence, it should have as many items
+        as the second axis of coordinates. Default is 1e-8.
     in_place : bool, optional
         If True, the function modifies directly `coordinates`. Can be
         used to save some memory. Default is False.
@@ -260,7 +265,7 @@ def collapse_fractional(coordinates, method='floor', in_place=False):
     ValueError
         If method is not one of the valid methods.
     """
-    _methods = {'f': _floor_eps, 'r': np.round}
+    _methods = {'f': _floor_eps(eps), 'r': np.round}
     try:
         round_ = _methods[method[0]]
     except (TypeError, IndexError, KeyError):
