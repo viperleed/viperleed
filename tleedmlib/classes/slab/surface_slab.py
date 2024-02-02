@@ -244,12 +244,14 @@ class SurfaceSlab(BaseSlab):
 
         if not self.bulkslab:
             raise MissingBulkSlabError
-        # Notice that there is no need to re-center along
-        # bulk c, as we're only modifying the in-plane cell.
+        # Notice that there is no need to re-center along bulk c, as
+        # we're only modifying the in-plane cell. There's also no
+        # reason to modify the c coordinates, hence z_periodic=False
         self.bulkslab.apply_bulk_cell_reduction(rpars.SYMMETRY_EPS,
                                                 epsz=rpars.SYMMETRY_EPS.z,
                                                 new_ab_cell=new_ab_cell,
-                                                recenter=False)
+                                                recenter=False,
+                                                z_periodic=False)
 
     def detect_bulk(self, rpars, second_cut_min_spacing=1.2):
         """Determine the minimal bulk repeat vector from BULK_LIKE_BELOW.
@@ -733,7 +735,8 @@ class SurfaceSlab(BaseSlab):
             'new_c_vec': self.get_bulk_repeat(rpars),
             'new_ab_cell': np.dot(np.linalg.inv(rpars.SUPERLATTICE),
                                   self.ab_cell.T),
-            'recenter': recenter
+            'recenter': recenter,
+            'z_periodic': False,  # We cannot guarantee that it will be
             }
         bulk_slab.apply_bulk_cell_reduction(**kwargs)
         a_norm, b_norm = np.linalg.norm(bulk_slab.ab_cell.T, axis=1)

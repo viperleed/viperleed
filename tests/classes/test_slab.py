@@ -623,7 +623,8 @@ class TestBulkUcell:
         highest_atom_before = thick_slab.atlist[0]
         thick_slab.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS,
                                              new_c_vec=original_ucell.T[2],
-                                             recenter=recenter)
+                                             recenter=recenter,
+                                             z_periodic=True)
         with subtests.test('ucell'):
             assert thick_slab.ucell == pytest.approx(original_ucell, abs=1e-4)
         with subtests.test('nr. atoms'):

@@ -121,14 +121,15 @@ class BulkSlab(BaseSlab):
             return self.ucell.T[2] - self.layers[0].thickness
         return super().smallest_interlayer_spacing
 
-    # Disabled too-many-arguments below because 6/5 seem better than
+    # Disabled too-many-arguments below because 7/5 seem better than
     # packing these arguments into some data structure which would
     # make the call to this method harder to follow.
     # pylint: disable-next=too-many-arguments
     def apply_bulk_cell_reduction(self, eps, epsz=None,
                                   new_c_vec=None,
                                   new_ab_cell=None,
-                                  recenter=True):
+                                  recenter=True,
+                                  z_periodic=True):
         """Reduce bulk unit cell in- and/or out-of-plane.
 
         Extra atoms left after reduction of the unit cell size
@@ -165,6 +166,9 @@ class BulkSlab(BaseSlab):
             method was called (or one equivalent to it upon
             translation) is also highest afterwards. Default
             is True.
+        z_periodic : bool, optional
+            Whether the new_c_vec assigned will make this BulkSlab
+            periodic along the z direction. Default is True.
 
         Returns
         -------
@@ -193,7 +197,22 @@ class BulkSlab(BaseSlab):
         # Reduce in-plane dimension
         if new_ab_cell is not None:
             self.ab_cell[:] = new_ab_cell.T
-        self.collapse_cartesian_coordinates(update_origin=update_origin)
+
+        # Collapse the atom coordinates to the new cell. We collapse
+        # the coordinates in a different manner if this slab is turned
+        # into a periodic one: atoms close to the edges in z are
+        # collapsed towards c=0. This prevents atoms closer to the
+        # edges than eps/epsz from being assigned different sublayers
+        # later on.
+        if not z_periodic:
+            self.collapse_cartesian_coordinates(update_origin=update_origin)
+        else:
+            # Here we do a version of collapse_cartesian_coordinates
+            # that accounts for eps.
+            releps = np.dot((eps, eps, epsz), np.linalg.inv(self.ucell.T))
+            self.update_fractional_from_cartesian()
+            self.collapse_fractional_coordinates(releps=releps)
+            self.update_cartesian_from_fractional(update_origin=update_origin)
 
         # Get rid of duplicates resulting from the size reduction
         self.remove_duplicate_atoms(eps, epsz)
@@ -265,9 +284,13 @@ class BulkSlab(BaseSlab):
                 'vacuum gap at the bottom. Shift all atoms down along z by '
                 f'calling slab.remove_vacuum_at_bottom(rpars)'
                 )
+
+        # Now we're sure that this slab will become
+        # periodic after modifying the c vector
         self.apply_bulk_cell_reduction(rpars.SYMMETRY_EPS,
                                        epsz=rpars.SYMMETRY_EPS.z,
-                                       new_c_vec=rpars.BULK_REPEAT)
+                                       new_c_vec=rpars.BULK_REPEAT,
+                                       z_periodic=True)
         self.create_sublayers(rpars.SYMMETRY_EPS.z)
         return rpars.BULK_REPEAT
 
