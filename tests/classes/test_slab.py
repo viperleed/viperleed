@@ -1228,7 +1228,7 @@ class TestSuperAndSubCell:
         'identity': np.diag((1, 1)),
         '2x2': np.diag((2, 2)),
         '2x1': np.diag((2, 1)),
-        'off-diagonal': np.array([[1, 1], [0, 1]]),                             # TODO: is this one that fails on master?
+        'off-diagonal': np.array([[2, 1], [2, 2]]),
         }
 
     @infoless_poscar
