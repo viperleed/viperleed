@@ -95,7 +95,8 @@ def get_superlattice_repetitions(matrix):
     if not matrix[1, 1]:  # The matrix is upper-triangular. Swap.
         matrix[[0, 1]] = matrix[[1, 0]]
     if matrix[0, 1]:      # The matrix is not triangular. Gauss.
-        multiple = lcm(abs(matrix[0, 1]), abs(matrix[1, 1]))
+        multiple = lcm(abs(round(matrix[0, 1])),  # lcm needs integers
+                       abs(round(matrix[1, 1])))
         first_row, second_row = matrix
         first_row /= first_row[1]
         first_row -= second_row/second_row[1]
