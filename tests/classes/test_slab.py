@@ -1238,12 +1238,47 @@ class TestSuperAndSubCell:
         supercell = slab.make_supercell(np.identity(2))
         check_identical(slab, supercell)
 
+    @fixture(name='with_supercell', scope='class')
     @parametrize('transform', valid.values(), ids=valid)
-    @infoless_poscar
-    def test_supercell_valid(self, transform, args, subtests):
-        """Check that supercell is created correctly."""
-        slab, *_ = args
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar,
+                            scope='class')
+    def fixture_with_supercell(self, transform, args):
+        """Return a supercell of a slab.
+
+        Parameters
+        ----------
+        transform : numpy.ndarray
+            (Integer) transformation matrix to create a supercell.
+        args : tuple
+            Items are the slab whose supercell is created, an Rparams
+            object to be used, and a TestInfo.
+
+        Returns
+        -------
+        supercell : SurfaceSlab
+            The supercell version of slab.
+        transform : numpy.ndarray
+            The transformation matrix used.
+        slab : SurfaceSlab
+            The slab whose supercell is created
+        rpars : Rparams
+            Run parameters object for slab
+        info : TestInfo
+            Information for tests relative to slab.
+        """
+        slab, rpars, info = args
         supercell = slab.make_supercell(transform)
+        return supercell, transform, slab, rpars, info
+
+    def test_supercell_valid(self, with_supercell, subtests):
+        """Check that supercell is created correctly."""
+        supercell, transform, slab, rpars, *_ = with_supercell
+        # The original implementation on master from commit
+        # f3512ce30cf93f78e12ffc63224a4f285625269e caused
+        # duplicate atoms upon creating supercells with
+        # some off-diagonal supercell matrices
+        supercell.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
+                                         rpars.SYMMETRY_EPS.z)
         n_cells = abs(np.linalg.det(transform))
         with subtests.test('ab cell'):
             assert np.allclose(supercell.ab_cell,
@@ -1261,6 +1296,15 @@ class TestSuperAndSubCell:
         _ = slab.make_supercell(transform)
         check_identical(slab, slab_copy)
 
+    def test_make_subcell_reverses_make_supercell(self, with_supercell,
+                                                  check_identical):
+        """Test that make_subcell reverses make_supercell."""
+        supercell, transform, slab, rpars, *_ = with_supercell
+        subcell = supercell.make_subcell(rpars, transform)
+        slab.sort_original()
+        subcell.sort_original()
+        check_identical(slab, subcell)
+
     @parametrize('matrix,exc', invalid.values(), ids=invalid)
     def test_supercell_invalid(self, matrix, exc, ag100):
         """Check complaints for invalid input to make_subcell."""
@@ -1272,18 +1316,6 @@ class TestSuperAndSubCell:
         **invalid,
         'not a subcell': (np.diag((2, 2)), ValueError),
         }
-
-    @parametrize('transform', valid.values(), ids=valid)
-    @infoless_poscar
-    def test_make_subcell_reverses_make_supercell(self, transform, args,
-                                                  check_identical):
-        """Test that make_subcell reverses make_supercell."""
-        slab, rpars, *_ = args
-        supercell = slab.make_supercell(transform)
-        subcell = supercell.make_subcell(rpars, transform)
-        slab.sort_original()
-        subcell.sort_original()
-        check_identical(slab, subcell)
 
     @parametrize('matrix,exc', sub_invalid.values(), ids=sub_invalid)
     def test_subcell_invalid(self, matrix, exc, ag100):
