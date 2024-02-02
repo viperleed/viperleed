@@ -298,7 +298,7 @@ class CasePOSCARSlabs:
     def case_poscar_lsmo_001_rt2(self):
         """Return a sqrt(2) x sqrt(2) LSMO (001) A-site bulk-truncated slab."""
         info = _get_poscar_info('POSCAR_LSMO_001_A_site', 56)
-        info.poscar.n_cells = 4
+        info.poscar.n_cells = 2
         return self.case_poscar(info)
 
     @case(tags=Tag.NON_MINIMAL_CELL)
