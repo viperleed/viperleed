@@ -689,7 +689,7 @@ class BaseSlab(AtomContainer):
         """
         self.collapse_fractional_coordinates()
         self.update_cartesian_from_fractional()
-        if not self.layers:
+        if not self.layers or len(self.bulk_layers) != rpars.N_BULK_LAYERS:
             self.create_layers(rpars)
         else:
             # It is only needed if there were layers already and
