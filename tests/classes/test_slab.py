@@ -43,6 +43,12 @@ if_ase = pytest.mark.skipif(
     not surface_slab._HAS_ASE,  # pylint: disable=protected-access
     reason='No ASE module'
     )
+with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                                          has_tag=Tag.BULK_PROPERTIES)
+infoless_poscar = parametrize_with_cases(
+    'args',
+    cases=CasePOSCARSlabs.case_infoless_poscar
+    )
 
 
 @fixture(name='shuffle_slab', scope='session')
@@ -239,7 +245,7 @@ class TestAtomsAndElements:
             bulk.update_element_count()
 
         fe3o4.update_atom_numbers()
-        with subtests.test('nr. atoms'):
+        with subtests.test('no. atoms'):
             assert fe3o4.n_per_elem['Fe'] == n_fe - 1
             assert fe3o4.n_per_elem['O'] == n_oxygen
         new_at_nrs = [at.num for at in fe3o4]
@@ -247,7 +253,7 @@ class TestAtomsAndElements:
             assert new_at_nrs == list(range(1, n_fe + n_oxygen))
         if not make_bulk:
             return
-        with subtests.test('nr. atoms, bulk'):
+        with subtests.test('no. atoms, bulk'):
             assert bulk.n_per_elem['O'] == n_oxygen_bulk
             assert bulk.n_per_elem['Fe'] == n_fe_bulk - (1 if in_bulk else 0)
         with subtests.test('atom.num, bulk'):
@@ -336,11 +342,11 @@ class TestBulk3DOperations:
         slab, rpars, *_ = bulk
         kwargs = {'order': 4, 'sublayer_period': 3, 'eps': rpars.SYMMETRY_EPS}
         with subtests.test('Move atom that is transformed by 4-fold screw'):
-            # Atom nr. 49 (oxygen) is not on the 4-fold screw
+            # Atom no. 49 (oxygen) is not on the 4-fold screw
             self.move_atom(slab, 49, 0.99*rpars.SYMMETRY_EPS)
             assert slab.is_bulk_screw_symmetric(**kwargs)
         with subtests.test('Move atom at 4-fold screw'):
-            # Atom nr. 33 (tetrahedral Fe) is on the 4-fold screw
+            # Atom no. 33 (tetrahedral Fe) is on the 4-fold screw
             self.move_atom(slab, 33, 0.99*rpars.SYMMETRY_EPS)
             try:
                 assert slab.is_bulk_screw_symmetric(**kwargs)
@@ -361,9 +367,6 @@ class TestBulk3DOperations:
                                      'this is the better-symmetry branch')
 
 
-with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs,
-                                          has_tag=Tag.BULK_PROPERTIES)
-
 class TestBulkDetectAndExtraBulk:
     """Collection of tests for adding bulk units to slabs."""
 
@@ -383,7 +386,7 @@ class TestBulkDetectAndExtraBulk:
         self.prepare_to_detect(slab, rpars, bulk_info.bulk_like_below)
 
         bulk_cuts, bulk_dist = slab.detect_bulk(rpars)
-        with subtests.test('nr. bulk cuts'):
+        with subtests.test('no. bulk cuts'):
             assert len(bulk_cuts) == len(bulk_info.bulk_cuts)
         with subtests.test('bulk cut values'):
             assert np.allclose(bulk_cuts, bulk_info.bulk_cuts, atol=1e-4)
@@ -581,7 +584,7 @@ class TestBulkUcell:
         with subtests.test('bulk unit-cell c'):
             atol = float(0.2*rpars.SYMMETRY_EPS)
             assert c_vec == pytest.approx(bulk_info.bulk_repeat, abs=atol)
-        with subtests.test('nr. bulk atoms'):
+        with subtests.test('no. bulk atoms'):
             assert bulk_slab.n_atoms == bulk_info.n_bulk_atoms
 
     @with_bulk_repeat
@@ -624,7 +627,7 @@ class TestBulkUcell:
                                                  recenter=recenter)
         with subtests.test('ucell'):
             assert supercell_bulk.ucell == pytest.approx(slab.bulkslab.ucell)
-        with subtests.test('nr. atoms'):
+        with subtests.test('no. atoms'):
             assert supercell_bulk.n_atoms == info.bulk_properties.n_bulk_atoms
         if recenter:
             with subtests.test('atoms are centred'):
@@ -644,7 +647,7 @@ class TestBulkUcell:
                                              z_periodic=True)
         with subtests.test('ucell'):
             assert thick_slab.ucell == pytest.approx(original_ucell, abs=1e-4)
-        with subtests.test('nr. atoms'):
+        with subtests.test('no. atoms'):
             assert thick_slab.n_atoms == info.bulk_properties.n_bulk_atoms
         if recenter:
             with subtests.test('atoms are centred'):
@@ -667,7 +670,7 @@ class TestBulkUcell:
         None.
         """
         slab, rpars, info = args
-        bulk = slab.make_bulk_slab(rpars)
+        slab.make_bulk_slab(rpars)
         min_ab_cell = info.bulk_properties.bulk_ucell[:2, :2]
         large_bulk = slab.make_supercell(np.diag((2, 2))).make_bulk_slab(rpars)
         slab.bulkslab = large_bulk
@@ -811,7 +814,7 @@ class TestDuplicateAtoms:
         with pytest.raises(err.AtomsTooCloseError):
             slab.check_atom_collisions()
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_without_duplicates(self, args):
         """Check that POSCARs without duplicates are handled correctly."""
         slab, *_ = args
@@ -822,7 +825,7 @@ class TestDuplicateAtoms:
 class TestEquivalence:
     """Collection of tests for the is_equivalent method."""
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_equivalent_copy(self, args, shuffle_slab):
         """Check that a slab is equivalent to its deepcopy."""
         slab, *_ = args
@@ -830,7 +833,7 @@ class TestEquivalence:
         shuffle_slab(slab_copy)  # Make sure order does not matter
         assert slab.is_equivalent(slab_copy, eps=1e-3)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_equivalent_translated_2d(self, args, shuffle_slab):
         """Check equivalence by translating in plane by a unit vector."""
         slab, *_ = args
@@ -841,7 +844,7 @@ class TestEquivalence:
         slab_copy.update_cartesian_from_fractional()
         assert slab.is_equivalent(slab_copy, eps=1e-3)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_slab_translated_not_equivalent(self, args):
         """Check that a translated slab is not equivalent."""
         slab, *_ = args
@@ -857,13 +860,13 @@ class TestEquivalence:
         assert not slab.is_equivalent('not a slab')
 
     def test_more_layers_not_equivalent(self, ag100):
-        """Check (in)equivalence of two slabs with different nr. of layers."""
+        """Check (in)equivalence of two slabs with different no. of layers."""
         slab, rpars, *_ = ag100
         thicker, _ = slab.with_extra_bulk_units(rpars, 1)
         assert not slab.is_equivalent(thicker)
 
     def test_more_atoms_not_equivalent(self, ag100):
-        """Check (in)equivalence of two slabs with different nr. of atoms."""
+        """Check (in)equivalence of two slabs with different no. of atoms."""
         slab, *_ = ag100
         two_by_one = np.diag((2, 1))
         assert not slab.is_equivalent(slab.make_supercell(two_by_one))
@@ -987,7 +990,7 @@ class TestRevertUnitCell:
     def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates
         """TODO"""
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_one_operation(self, args, check_identical):
         """Check correct result of reverting one unit-cell operation."""
         slab, *_ = args
@@ -996,7 +999,7 @@ class TestRevertUnitCell:
         slab.revert_unit_cell()
         check_identical(slab, slab_copy)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_few_operation(self, args, check_identical):
         """Same as above, but reverting a few operations."""
         slab, *_ = args
@@ -1007,7 +1010,7 @@ class TestRevertUnitCell:
         slab.revert_unit_cell()
         check_identical(slab, slab_copy)
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_nothing_to_undo(self, args, check_identical):                      # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell. – @michele-riva: not sure what you mean by this
         """Check that reverting with no operations does nothing."""
         slab, *_ = args
@@ -1167,7 +1170,7 @@ class TestSlabRaises:
 class TestSorting:
     """Collection of tests for slab sorting."""
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_element_sort(self, args, shuffle_slab):
         """Check correct element-based sorting of a Slab."""
         slab, *_ = args
@@ -1184,7 +1187,7 @@ class TestSorting:
         with pytest.raises(err.SlabError):
             slab.sort_by_element()
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_sort_original(self, args, shuffle_slab):
         """Check correct sorting of a Slab to original atom numbers."""
         slab, *_ = args
@@ -1194,7 +1197,7 @@ class TestSorting:
         assert all(all(at1.pos == at2.pos) and at1.el == at2.el
                    for at1, at2 in zip(slab, original_atlist))
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_simple_sort_by_z(self, args, shuffle_slab):
         """Check correct outcome of sorting by z coordinates."""
         slab, *_ = args
@@ -1202,7 +1205,7 @@ class TestSorting:
         slab.sort_by_z()
         assert all(at1.pos[2] <= at2.pos[2] for at1, at2 in pairwise(slab))
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     @parametrize(bottom_to_top=(True, False))
     def test_z_sort(self, args, bottom_to_top):
         """Check successful sorting of atoms by out-of-plane position."""
@@ -1221,7 +1224,6 @@ class TestSuperAndSubCell:
         'singular': (np.eye(2)*0, SingularMatrixError),
         'non-2x2': (np.eye(3), ValueError),
         }
-
     valid = {
         'identity': np.diag((1, 1)),
         '2x2': np.diag((2, 2)),
@@ -1229,24 +1231,28 @@ class TestSuperAndSubCell:
         'off-diagonal': np.array([[1, 1], [0, 1]]),                             # TODO: is this one that fails on master?
         }
 
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_make_supercell_identity_does_nothing(self, args, check_identical):
         """Check that identity matrix does not change the slab."""
         slab, *_ = args
-        supercell = slab.make_supercell(np.diag((1, 1)))
+        supercell = slab.make_supercell(np.identity(2))
         check_identical(slab, supercell)
 
     @parametrize('transform', valid.values(), ids=valid)
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
-    def test_supercell_valid(self, transform, args):
+    @infoless_poscar
+    def test_supercell_valid(self, transform, args, subtests):
         """Check that supercell is created correctly."""
         slab, *_ = args
         supercell = slab.make_supercell(transform)
-        assert np.allclose(supercell.ab_cell, slab.ab_cell.dot(transform.T))
-        assert supercell.n_atoms == slab.n_atoms * np.linalg.det(transform)
+        n_cells = abs(np.linalg.det(transform))
+        with subtests.test('ab cell'):
+            assert np.allclose(supercell.ab_cell,
+                               slab.ab_cell.dot(transform.T))
+        with subtests.test('no. atoms'):
+            assert supercell.n_atoms == slab.n_atoms * n_cells
 
     @parametrize('transform', valid.values(), ids=valid)
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_supercell_does_not_change_original_slab(self, transform, args,
                                                      check_identical):
         """Check that supercell creation does not affect input slab."""
@@ -1268,7 +1274,7 @@ class TestSuperAndSubCell:
         }
 
     @parametrize('transform', valid.values(), ids=valid)
-    @parametrize_with_cases('args', cases=CasePOSCARSlabs.case_infoless_poscar)
+    @infoless_poscar
     def test_make_subcell_reverses_make_supercell(self, transform, args,
                                                   check_identical):
         """Test that make_subcell reverses make_supercell."""
