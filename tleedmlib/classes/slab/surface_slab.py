@@ -351,9 +351,9 @@ class SurfaceSlab(BaseSlab):
         # Finally, update self and rpars with the new information
         rpars.BULK_REPEAT = rpars_copy.BULK_REPEAT
         rpars.SUPERLATTICE = rpars_copy.SUPERLATTICE
+        rpars.N_BULK_LAYERS = len(bulk_cuts)
         new_cuts = self.create_layers(rpars, bulk_cuts=bulk_cuts)               # TODO: Issue #121
         rpars.LAYER_CUTS.update_from_sequence(new_cuts)
-        rpars.N_BULK_LAYERS = len(bulk_cuts)
         self.make_bulk_slab(rpars)
         return bulk_cuts, bulk_dist
 
