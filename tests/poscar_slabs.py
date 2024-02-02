@@ -205,19 +205,6 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
                                  [ 0.        ,  0.        ,  2.45835787]]),
             ),
         ),
-    _add_known_bulk_properties(
-        _get_poscar_info('POSCAR_TiO2_small'),
-        BulkSlabAndRepeatInfo(
-            bulk_like_below=0.3,
-            bulk_repeat=np.array([-3.24845, 0.00000, 3.21016]),
-            n_bulk_atoms=6,
-            bulk_cuts=[0.1627, 0.2281, 0.2699],
-            bulk_dist=0.0,
-            bulk_ucell=np.array([[6.4969000816, 0.000000000, 0.00000000],
-                                 [0.0000000000, 2.959000111, 0.00000000],
-                                 [-3.248450000, 0.000000000, 3.21016000]]),
-            ),
-        ),
     )
 
 POSCAR_WITH_LAYER_INFO = (
@@ -281,11 +268,7 @@ class CasePOSCARSlabs:
         """Return a slab, an Rparams and an (essentially) empty info."""
         return self.case_poscar(info)
 
-    @parametrize(info=[
-        pytest.param(info, marks=pytest.mark.xfail(strict=False))
-        if 'TiO2' in info.poscar.name
-        else info for info in POSCAR_WITH_KNOWN_BULK_REPEAT
-        ], idgen=make_poscar_ids())
+    @parametrize(info=POSCAR_WITH_KNOWN_BULK_REPEAT, idgen=make_poscar_ids())
     @case(tags=Tag.BULK_PROPERTIES)
     def case_bulk_repeat_poscar(self, info):
         """Return a slab, an Rparams and info on expected bulk properties."""
@@ -369,6 +352,28 @@ class CasePOSCARSlabs:
         # of the Sb atoms are not quite in the right position
         info.poscar.n_cells = 2
         return self.case_poscar(info)
+    
+    @case(tags=Tag.BULK_PROPERTIES)
+    def case_poscar_tio2_small(self):
+        """Return a rutile TiO2(110) with a few bulk layers."""
+        info = _get_poscar_info('POSCAR_TiO2_small')
+        _add_known_bulk_properties(
+            info,
+            BulkSlabAndRepeatInfo(
+                bulk_like_below=0.43,
+                bulk_repeat=np.array([-3.24845, 0.00000, 3.24876]),
+                n_bulk_atoms=6,
+                bulk_cuts=[0.2281, 0.1628],
+                bulk_dist=1.2682,
+                bulk_ucell=np.array([[6.4969, 0.000, -3.24845],
+                                     [0.0000, 2.959,  0.00000],
+                                     [0.0000, 0.000,  3.24876]]),
+                ),
+            )
+        slab, rpars, info = self.case_bulk_repeat_poscar(info)
+        rpars.N_BULK_LAYERS = 2
+        slab.full_update(rpars)
+        return slab, rpars, info
 
 
 class CaseBulkSlabs:
