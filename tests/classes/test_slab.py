@@ -361,10 +361,8 @@ class TestBulk3DOperations:
                                      'this is the better-symmetry branch')
 
 
-with_bulk_repeat = parametrize_with_cases(
-    'args',
-    cases=CasePOSCARSlabs.case_bulk_repeat_poscar
-    )
+with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                                          has_tag=Tag.BULK_PROPERTIES)
 
 class TestBulkDetectAndExtraBulk:
     """Collection of tests for adding bulk units to slabs."""
