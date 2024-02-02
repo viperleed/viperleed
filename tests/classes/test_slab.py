@@ -23,7 +23,7 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
-from viperleed.tleedmlib.base import pairwise
+from viperleed.tleedmlib.base import collapse, pairwise
 from viperleed.tleedmlib.base import NonIntegerMatrixError, SingularMatrixError
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
@@ -475,7 +475,7 @@ class TestBulkRepeat:
     """Collection of test for bulk-repeat finding and returning."""
 
     @with_bulk_repeat
-    def test_identify(self, args):
+    def test_identify(self, args, subtests):
         """Tests identify_bulk_repeat method."""
         slab, rpars, info = args
         bulk_info = info.bulk_properties
@@ -484,7 +484,20 @@ class TestBulkRepeat:
         repeat_vector = slab.identify_bulk_repeat(eps=rpars.SYMMETRY_EPS,
                                                   epsz=rpars.SYMMETRY_EPS.z)
         atol = float(0.2*rpars.SYMMETRY_EPS)
-        assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=atol)
+        with subtests.test('z component'):
+            assert repeat_vector[2] == pytest.approx(bulk_info.bulk_repeat[2],
+                                                     abs=atol)
+        # Compare unit-cell-collapsed versions of the bulk repeat
+        # vector to get the in-plane components right. This way we
+        # maintain the test independent of the exact atom in the
+        # sublayers that is used to determine the repeat vector.
+        # E.g., in orthorhombic cells one may get a (also acceptable)
+        # opposite sign for the in-plane components.
+        collapsed_repeat, _ = collapse(repeat_vector, slab.ucell.T)
+        collapsed_expected, _ = collapse(bulk_info.bulk_repeat, slab.ucell.T)
+        with subtests.test('collapsed'):
+            assert collapsed_repeat == pytest.approx(collapsed_expected,
+                                                     abs=atol)
 
     def test_identify_raises_without_bulkslab(self, ag100):
         """Check complaints when called without a bulk slab."""
