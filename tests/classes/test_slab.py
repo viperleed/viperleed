@@ -163,12 +163,17 @@ class TestAtomTransforms:
         assert all(at.is_same_xy(mir_at)
                    for at, mir_at in zip(slab, reversed(mirrored_slab)))
 
-    def test_mirror_on_slanted_cell(self, make_poscar):
+    def test_mirror_on_slanted_cell(self, make_poscar, subtests):
         """Test the expected outcome of mirroring atoms of a slanted slab."""
         slab, *_ = make_poscar(poscar_slabs.SLAB_36C_cm)
         slab.create_sublayers(0.1)
-        sym_plane = SymPlane((0, 0), (0, 1), abt=slab.ab_cell.T)
-        assert slab.is_mirror_symmetric(sym_plane, eps=1e-6)
+        with subtests.test('valid mirror plane'):
+            sym_plane = SymPlane((0, 0), (0, 1), abt=slab.ab_cell.T)
+            assert slab.is_mirror_symmetric(sym_plane, eps=1e-6)
+        with subtests.test('not a glide'):
+            sym_plane = SymPlane((0, 0), (1, 0), abt=slab.ab_cell.T,
+                                 ty='glide')
+            assert not slab.is_mirror_symmetric(sym_plane, eps=1e-6)
 
     def test_rotation_symmetric_raises(self, ag100):
         """Check that no symmetry checks can be performed without sublayers."""
