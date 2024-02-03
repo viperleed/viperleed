@@ -552,8 +552,9 @@ class TestBulkUcell:
 
         # Shift the bottom atom to c=0 to prevent back-folding
         # of the top ones when creating the thick bulk
-        slab.remove_vacuum_at_bottom(rpars)
+        c_shift = slab.remove_vacuum_at_bottom(rpars)
         slab.make_bulk_slab(rpars, recenter=False)
+        return c_shift
 
     @with_bulk_repeat
     def test_get_min_c(self, args):
