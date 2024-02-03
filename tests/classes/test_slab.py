@@ -1157,9 +1157,9 @@ class TestSlabLayers:
         slab.topat_ori_z = None
         slab.full_update(rpars)
         assert slab.topat_ori_z is not None
-        assert len(slab.layers) == info.layer_properties.n_layers
+        assert slab.n_layers == info.layer_properties.n_layers
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
-        assert len(slab.sublayers) == info.layer_properties.n_sublayers
+        assert slab.n_sublayers == info.layer_properties.n_sublayers
 
     @parametrize_with_cases('args', **with_layers)
     def test_interlayer_spacing(self, args):
