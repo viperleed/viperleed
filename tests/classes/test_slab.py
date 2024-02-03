@@ -1091,6 +1091,16 @@ class TestSlabLayers:
         cuts = slab.create_layers(rpars)
         check_layers_correct(slab, cuts, info)
 
+    def test_auto_cut_below_bulk_cut(self, ag100, check_layers_correct):
+        """Check correct layer identification with a useless auto-cut."""
+        slab, rpars, info = ag100
+        bulk_cuts = info.bulk_properties.bulk_cuts
+        rpars.LAYER_CUTS = LayerCuts.from_string(
+            f'dz(0.2) < {max(bulk_cuts) - .02} < dz(1.2)'
+            )
+        cuts = slab.create_layers(rpars, bulk_cuts=bulk_cuts)
+        check_layers_correct(slab, cuts, info)
+
     def test_empty_layer_warning(self, ag100, caplog):
         """Check that layers are created correctly."""
         slab, rpars, *_ = ag100
