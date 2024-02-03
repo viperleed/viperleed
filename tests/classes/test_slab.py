@@ -589,6 +589,20 @@ class TestBulkUcell:
         with subtests.test('no. bulk atoms'):
             assert bulk_slab.n_atoms == bulk_info.n_bulk_atoms
 
+    def test_ensure_min_c_raises_with_vacuum_below(self, ag100):
+        """Check complaints of ensure_minimal_c_vector when there's vacuum."""
+        c_shift = self.with_one_thick_bulk(*ag100)
+        slab, rpars, *_ = ag100
+        cart_shift = c_shift * slab.ucell.T[2, 2]
+        cart_shift *= -1                                                        # TODO: remove with .cartpos[2] flip
+        bulk = slab.bulkslab
+        for atom in bulk:
+            atom.cartpos[2] += cart_shift  # Shift back upwards
+        bulk.update_fractional_from_cartesian()
+        with pytest.raises(err.SlabError) as exc:
+            bulk.ensure_minimal_c_vector(rpars, z_periodic=False)
+        assert exc.match(r'.*vacuum')
+
     @with_bulk_repeat
     def test_get_min_c_raises_already_minimal(self, args):
         """Test that get_minimal_c_vector raises AlreadyMinimalError."""
