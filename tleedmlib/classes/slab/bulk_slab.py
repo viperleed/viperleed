@@ -275,9 +275,9 @@ class BulkSlab(BaseSlab):
         bottom_atom = self.bottom_atom
         delta_z = self.topat_ori_z - bottom_atom.cartpos[2]                     # TODO: flip with .cartpos[2]
         if not z_periodic and delta_z > rpars.SYMMETRY_EPS.z:
-            # TODO: in principle, here we could also do it ourselves,
-            # but it is a bit of a pain as we would need to shift
-            # things back up later in order to keep the z centering
+            # Here we could also remove_vacuum_at_bottom ourselves, but
+            # it is a bit of a pain as we would need to shift things
+            # back up later in order to keep the z centering.
             raise SlabError(
                 f'{type(self).__name__}.ensure_minimal_c_vector: cannot '
                 'reduce c vector for a non-z-periodic slab that has a large '
