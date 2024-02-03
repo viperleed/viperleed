@@ -280,7 +280,11 @@ class CasePOSCARSlabs:
     @case(tags=Tag.LAYER_INFO)
     def case_layer_info_poscar(self, info):
         """Return a slab, an Rparams and info on expected layers."""
-        return self.case_poscar(info)
+        slab, rpars, info = self.case_poscar(info)
+        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
+        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
+        slab.create_layers(rpars)
+        return slab, rpars, info
 
     @parametrize(info=POSCAR_WITH_NEAREST_NEIGHBOR_INFO, idgen=make_poscar_ids())
     def case_nearest_neighbors_poscar(self, info):

@@ -1063,8 +1063,6 @@ class TestSlabLayers:
     def test_bulk_layers(self, args):
         """Test Slab.bulk_layers property."""
         slab, rpars, info = args
-        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
-        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
         slab.create_layers(rpars)
         assert len(slab.bulk_layers) == info.layer_properties.n_bulk_layers
         assert (np.sum([lay.n_atoms for lay in slab.bulk_layers])
@@ -1074,8 +1072,6 @@ class TestSlabLayers:
     def test_create_layers(self, args):
         """Check that layers are created correctly."""
         slab, rpars, info = args
-        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
-        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
         cuts = slab.create_layers(rpars)
         assert slab.n_layers == info.layer_properties.n_layers
         assert np.allclose(cuts, info.layer_properties.cuts)
