@@ -1070,15 +1070,26 @@ class TestSlabLayers:
             n_bulk_atoms = sum(lay.n_atoms for lay in slab.bulk_layers)
             assert n_bulk_atoms == info.bulk_properties.n_bulk_atoms
 
+    @fixture(name='check_layers_correct')
+    def fixture_check_layers_correct(self, subtests):
+        """Check correct identification of layers from known info."""
+        def _check(slab, cuts, info):
+            lay_info = info.layer_properties
+            with subtests.test('no. layers'):
+                assert slab.n_layers == pytest.approx(lay_info.n_layers)
+            with subtests.test('cut positions'):
+                assert cuts == pytest.approx(lay_info.cuts)
+            with subtests.test('atoms per layer'):
+                n_atoms = [lay.n_atoms for lay in slab.layers]
+                assert n_atoms == pytest.approx(lay_info.n_atoms_per_layer)
+        return _check
+
     @parametrize_with_cases('args', **with_layers)
-    def test_create_layers(self, args):
+    def test_create_layers(self, args, check_layers_correct):
         """Check that layers are created correctly."""
         slab, rpars, info = args
         cuts = slab.create_layers(rpars)
-        assert slab.n_layers == info.layer_properties.n_layers
-        assert np.allclose(cuts, info.layer_properties.cuts)
-        assert np.allclose([lay.n_atoms for lay in slab.layers],
-                           info.layer_properties.n_atoms_per_layer)
+        check_layers_correct(slab, cuts, info)
 
     def test_empty_layer_warning(self, ag100, caplog):
         """Check that layers are created correctly."""
