@@ -265,6 +265,8 @@ class BulkSlab(BaseSlab):
         ------
         AlreadyMinimalError
             If no shorter c vector is found.
+        SlabError
+            If this slab has too large of a vacuum gap at the bottom.
         """
         self.create_sublayers(rpars.SYMMETRY_EPS.z)
 
