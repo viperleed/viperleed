@@ -657,6 +657,16 @@ class TestBulkUcell:
         check_reduced_correctly(thick_slab, original_ucell, info, recenter)
 
     @with_bulk_repeat
+    def test_apply_bulk_ucell_reduction_nothing(self, args,
+                                                check_reduced_correctly):
+        """Test that apply_bulk_cell_reduction does nothing."""
+        slab, rpars, info = args
+        bulkslab = slab.make_bulk_slab(rpars)
+        slab_copy = deepcopy(bulkslab)
+        slab_copy.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS)
+        check_reduced_correctly(slab_copy, bulkslab.ucell, info, True)
+
+    @with_bulk_repeat
     def test_minimal_bulk_ab(self, args):
         """Test surface_slab method ensure_minimal_bulk_ab_cell().
 
