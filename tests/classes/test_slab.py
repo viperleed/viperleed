@@ -542,8 +542,9 @@ class TestBulkUcell:
     """Tests concerning reduction of bulk unit cell and C vector."""
 
     @staticmethod
-    def with_one_thick_bulk(slab, rpars, cut):
+    def with_one_thick_bulk(slab, rpars, info):
         """Prepare slab and rpars to have one thick bulk layer below cut."""
+        cut = info.bulk_properties.bulk_like_below
         rpars.LAYER_CUTS.update_from_sequence([cut])
         rpars.N_BULK_LAYERS = 1
         rpars.BULK_REPEAT = None
@@ -558,11 +559,10 @@ class TestBulkUcell:
     def test_get_min_c(self, args):
         """Test that get_minimal_c_vector works as expected."""
         slab, rpars, info = args
-        bulk_info = info.bulk_properties
         # strip out existing layers and make a single "fake" cut at
         # BULK_LIKE_BELOW. This gives us a bulk slab with (at least)
         # two bulk layers, which is what we need to test get_min_c.
-        self.with_one_thick_bulk(slab, rpars, bulk_info.bulk_like_below)
+        self.with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
         bulk_slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         # z_periodic=False because we use the original unit cell
@@ -570,17 +570,18 @@ class TestBulkUcell:
                                                rpars.SYMMETRY_EPS.z,
                                                z_periodic=False)
         atol = float(0.2*rpars.SYMMETRY_EPS)
-        assert min_c == pytest.approx(bulk_info.bulk_repeat, abs=atol)
+        assert min_c == pytest.approx(info.bulk_properties.bulk_repeat,
+                                      abs=atol)
 
     @with_bulk_repeat
     def test_ensure_min_c(self, args, subtests):
         """Test that ensure_minimal_c_vector works as expected."""
         slab, rpars, info = args
-        bulk_info = info.bulk_properties
-        self.with_one_thick_bulk(slab, rpars, bulk_info.bulk_like_below)
+        self.with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
         bulk_slab.ensure_minimal_c_vector(rpars)
         c_vec = bulk_slab.ucell.T[2]
+        bulk_info = info.bulk_properties
         with subtests.test('bulk unit-cell c'):
             atol = float(0.2*rpars.SYMMETRY_EPS)
             assert c_vec == pytest.approx(bulk_info.bulk_repeat, abs=atol)
@@ -591,8 +592,7 @@ class TestBulkUcell:
     def test_get_min_c_raises_already_minimal(self, args):
         """Test that get_minimal_c_vector raises AlreadyMinimalError."""
         slab, rpars, info = args
-        self.with_one_thick_bulk(slab, rpars,
-                                 info.bulk_properties.bulk_like_below)
+        self.with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
         bulk_slab.ensure_minimal_c_vector(rpars)
         with pytest.raises(err.AlreadyMinimalError):
