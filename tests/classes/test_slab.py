@@ -1181,7 +1181,6 @@ class TestSlabLayers:
     def test_slab_lowocc_sublayer_assignment(self, args):
         """Test the expected number of atoms per sublayer."""
         slab, rpars, info = args
-        slab.create_layers(rpars)
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         n_atoms_sublayers = [sublay.n_atoms for sublay in slab.sublayers]
         assert n_atoms_sublayers == info.layer_properties.n_atoms_per_sublayer
