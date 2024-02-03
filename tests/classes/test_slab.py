@@ -1348,8 +1348,7 @@ class TestSuperAndSubCell:
         _ = slab.make_supercell(transform)
         check_identical(slab, slab_copy)
 
-    def test_make_subcell_reverses_make_supercell(self, with_supercell,
-                                                  check_identical):
+    def test_subcell_reverses_supercell(self, with_supercell, check_identical):
         """Test that make_subcell reverses make_supercell."""
         supercell, transform, slab, rpars, *_ = with_supercell
         subcell = supercell.make_subcell(rpars, transform)
