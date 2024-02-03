@@ -619,6 +619,7 @@ class BaseSlab(AtomContainer):
                     same_z.append(subl.pop())
                 else:
                     break
+            same_z.sort(key=attrgetter('element'))
             self.sublayers.extend(same_z)
         for i, layer in enumerate(self.sublayers):
             layer.num = i

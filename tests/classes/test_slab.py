@@ -1064,11 +1064,48 @@ class TestSlabLayers:
         assert 'will be deleted' in caplog.text
 
     @parametrize_with_cases('args', **with_layers)
-    def test_create_sublayers(self, args):                                            # TODO: also test if this works fine excluding the second sort-by-element run
+    def test_create_sublayers(self, args):
         """Check that sublayers are created correctly."""
         slab, rpars, info = args
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         assert slab.n_sublayers == info.layer_properties.n_sublayers
+
+    @infoless_poscar
+    def test_sublayer_sorting(self, args, subtests):
+        """Check that sublayers are created with the expected sort order."""
+        slab, rpars, *_ = args
+        eps = rpars.SYMMETRY_EPS.z
+        slab.create_sublayers(eps)
+
+        # Expect: (i) top to bottom, (ii) alphabetically
+        # by element at same z (within eps)
+        # Group by same z (within eps)
+        z_above = slab.sublayers[0].cartbotz
+        same_z = []
+        by_z = [same_z]
+        for layer in slab.sublayers:
+            this_z = layer.cartbotz
+            if abs(z_above - this_z) < eps:
+                same_z.append(layer)
+                z_above = min(z_above, this_z)                                  # TODO: max when flipping .cartpos[2]
+            else:
+                same_z = [layer]
+                by_z.append(same_z)
+                z_above = this_z
+        # Compute min and max z positions
+        z_min_max = []
+        for same_z_group in by_z:
+            pos = [lay.cartbotz for lay in same_z_group]
+            z_min_max.append((min(pos), max(pos)))                              # TODO: redo when flipping .cartpos[2]
+        with subtests.test('z sorting'):
+            assert all(bottom_of_above <= top_of_below                          # TODO: redo when flipping .cartpos[2]
+                       for (_, bottom_of_above), (top_of_below, _)
+                       in pairwise(z_min_max))
+        for same_z_group in by_z:
+            z_approx = same_z_group[0].pos[2]
+            elements = [lay.element for lay in same_z_group]
+            with subtests.test(f'element-sort at pos~{z_approx:.4f}'):
+                assert sorted(elements) == elements
 
     @parametrize_with_cases('args', **with_layers)
     def test_full_update_with_layers_defined(self, args):
