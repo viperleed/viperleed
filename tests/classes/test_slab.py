@@ -1080,7 +1080,7 @@ class TestSlabLayers:
         assert np.allclose([lay.n_atoms for lay in slab.layers],
                            info.layer_properties.n_atoms_per_layer)
 
-    def test_create_layers_empty_layer_warning(self, ag100, caplog):
+    def test_empty_layer_warning(self, ag100, caplog):
         """Check that layers are created correctly."""
         slab, rpars, *_ = ag100
         rpars.LAYER_CUTS = LayerCuts.from_string('dz(1.2) < 0.72 0.78')
