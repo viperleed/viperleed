@@ -611,11 +611,24 @@ class TestBulkUcell:
         midpos = (max(atom_c_frac) + min(atom_c_frac)) / 2
         assert 0.48 < midpos < 0.52
 
+    @fixture(name='check_reduced_correctly')
+    def factory_check_reduced_correctly(self, subtests):
+        """Assert correct application of apply_bulk_cell_reduction."""
+        def _check(reduced, expected_ucell, info, recenter):
+            with subtests.test('ucell'):
+                assert reduced.ucell == pytest.approx(expected_ucell)
+            with subtests.test('no. atoms'):
+                assert reduced.n_atoms == info.bulk_properties.n_bulk_atoms
+            if recenter:
+                with subtests.test('atoms are centred'):
+                    self._check_centred(reduced)
+        return _check
+
     @parametrize('recenter', recenter.values(), ids=recenter)
     @parametrize('transform', transform.values(), ids=transform)
     @with_bulk_repeat
     def test_apply_bulk_ucell_reduction_ab(self, recenter, transform, args,
-                                           subtests):
+                                           check_reduced_correctly):
         """Test that apply_bulk_cell_reduction works as expected for ab."""
         slab, rpars, info = args
         original_ab_cell = slab.ab_cell.T.copy()
@@ -625,17 +638,13 @@ class TestBulkUcell:
         supercell_bulk.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS,
                                                  new_ab_cell=original_ab_cell,
                                                  recenter=recenter)
-        with subtests.test('ucell'):
-            assert supercell_bulk.ucell == pytest.approx(slab.bulkslab.ucell)
-        with subtests.test('no. atoms'):
-            assert supercell_bulk.n_atoms == info.bulk_properties.n_bulk_atoms
-        if recenter:
-            with subtests.test('atoms are centred'):
-                self._check_centred(supercell_bulk)
+        check_reduced_correctly(supercell_bulk, slab.bulkslab.ucell,
+                                info, recenter)
 
     @parametrize('recenter', recenter.values(), ids=recenter)
     @with_bulk_repeat
-    def test_apply_bulk_ucell_reduction_c(self, recenter, args, subtests):
+    def test_apply_bulk_ucell_reduction_c(self, recenter, args,
+                                          check_reduced_correctly):
         """Test that apply_bulk_cell_reduction works as expected for c."""
         slab, rpars, info = args
         bulkslab = slab.make_bulk_slab(rpars)
@@ -645,13 +654,7 @@ class TestBulkUcell:
                                              new_c_vec=original_ucell.T[2],
                                              recenter=recenter,
                                              z_periodic=True)
-        with subtests.test('ucell'):
-            assert thick_slab.ucell == pytest.approx(original_ucell, abs=1e-4)
-        with subtests.test('no. atoms'):
-            assert thick_slab.n_atoms == info.bulk_properties.n_bulk_atoms
-        if recenter:
-            with subtests.test('atoms are centred'):
-                self._check_centred(thick_slab)
+        check_reduced_correctly(thick_slab, original_ucell, info, recenter)
 
     @with_bulk_repeat
     def test_minimal_bulk_ab(self, args):
@@ -1006,7 +1009,7 @@ class TestRevertUnitCell:
         slab_copy = deepcopy(slab)
         slab.rotate_unit_cell(6)
         slab.rotate_unit_cell(4)
-        slab.rotate_unit_cell(8)                                                # TODO: so far, this is the only type of operation we have built in
+        slab.rotate_unit_cell(8)                                                # TODO: so far, this is the only type of operation we have built in --> now also transform_unit_cell_2d and translate_atoms
         slab.revert_unit_cell()
         check_identical(slab, slab_copy)
 
@@ -1199,6 +1202,11 @@ class TestSlabRaises:
         """Check complaints when accessing a property of an empty slab."""
         with pytest.raises(exc):
             _ = getattr(Slab(), attr_name)
+
+
+@todo
+class TestSlabSites:                                                            # TODO: probably better before reworking initSites
+    """Collection of tests for generation of sites."""
 
 
 class TestSorting:
