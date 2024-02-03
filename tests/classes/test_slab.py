@@ -1067,9 +1067,6 @@ class TestSlabLayers:
     def test_create_sublayers(self, args):                                            # TODO: also test if this works fine excluding the second sort-by-element run
         """Check that sublayers are created correctly."""
         slab, rpars, info = args
-        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
-        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
-        slab.create_layers(rpars)
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         assert slab.n_sublayers == info.layer_properties.n_sublayers
 
