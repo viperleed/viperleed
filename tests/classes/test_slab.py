@@ -1060,13 +1060,15 @@ class TestSlabLayers:
     with_layers = {'cases': CasePOSCARSlabs.case_layer_info_poscar}
 
     @parametrize_with_cases('args', **with_layers)
-    def test_bulk_layers(self, args):
+    def test_bulk_layers(self, args, subtests):
         """Test Slab.bulk_layers property."""
         slab, rpars, info = args
         slab.create_layers(rpars)
-        assert len(slab.bulk_layers) == info.layer_properties.n_bulk_layers
-        assert (np.sum([lay.n_atoms for lay in slab.bulk_layers])
-                == info.bulk_properties.n_bulk_atoms)
+        with subtests.test('no. bulk layers'):
+            assert len(slab.bulk_layers) == info.layer_properties.n_bulk_layers
+        with subtests.test('no. atoms in bulk layers'):
+            n_bulk_atoms = sum(lay.n_atoms for lay in slab.bulk_layers)
+            assert n_bulk_atoms == info.bulk_properties.n_bulk_atoms
 
     @parametrize_with_cases('args', **with_layers)
     def test_create_layers(self, args):
