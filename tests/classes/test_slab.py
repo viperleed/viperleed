@@ -464,9 +464,8 @@ class TestBulkDetectAndExtraBulk:
         slab.detect_bulk(rpars)
 
         n_bulk_layers_before = rpars.N_BULK_LAYERS
-        expected_extra_atoms = n_cells * info.bulk_properties.n_bulk_atoms
-        if rpars.superlattice_defined:
-            expected_extra_atoms *= abs(np.linalg.det(rpars.SUPERLATTICE))
+        expected_extra_atoms = (n_cells * info.bulk_properties.n_bulk_atoms
+                                * abs(np.linalg.det(rpars.SUPERLATTICE)))
         bulk_appended, new_atoms = slab.with_extra_bulk_units(rpars, n_cells)
         with subtests.test('no. bulk layers unchanged'):
             assert len(slab.bulk_layers) == n_bulk_layers_before
