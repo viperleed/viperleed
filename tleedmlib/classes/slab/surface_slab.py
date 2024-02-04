@@ -209,7 +209,7 @@ class SurfaceSlab(BaseSlab):
             The PARAMETERS to be used and updated. Attributes accessed:
             (read/write) SUPERLATTICE; (read) BULK_REPEAT, SYMMETRY_EPS,
             superlattice_defined.
-        newcell : Sequence
+        new_ab_cell : Sequence
             Shape (2, 2), representing the new 2D unit cell in
             Cartesian coordinates. The new unit vectors should
             be rows. A tentative SUPERCELL is calculated from it.
@@ -217,11 +217,11 @@ class SurfaceSlab(BaseSlab):
         Raises
         ------
         NonIntegerMatrixError
-            If `newcell` gives a superlattice matrix that is not
+            If `new_ab_cell` gives a superlattice matrix that is not
             integer-valued.
         tleedmlib.files.parameters.errors.InconsistentParameterError
-            If `newcell` gives a different superlattice matrix than
-            the one in `rpars`.
+            If `new_ab_cell` gives a different superlattice matrix
+            than the one in `rpars`.
         """
         # Calculate new SUPERLATTICE matrix
         superlattice = self.ab_cell.T.dot(np.linalg.inv(new_ab_cell))
