@@ -614,7 +614,7 @@ class TestBulkUcell:
     @with_bulk_repeat
     def test_get_min_c_raises_already_minimal(self, args):
         """Test that get_minimal_c_vector raises AlreadyMinimalError."""
-        slab, rpars, info = args
+        slab, rpars, *_ = args
         self.with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
         bulk_slab.ensure_minimal_c_vector(rpars)
