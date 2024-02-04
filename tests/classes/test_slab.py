@@ -532,9 +532,9 @@ class TestBulkRepeat:
         atol = float(0.2*rpars.SYMMETRY_EPS)
         assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=atol)
 
-    def test_get_returns_stored_bulk_repeat(self, make_poscar):
+    def test_get_returns_stored_bulk_repeat(self, ag100):
         """Test get_bulk_repeat returns stored bulk repeat if available."""
-        slab, rpars, *_ = make_poscar(poscar_slabs.AG_100)
+        slab, rpars, *_ = ag100
         rpars.BULK_REPEAT = np.array([1, 2, 3])
         assert np.allclose(slab.get_bulk_repeat(rpars), np.array([1, 2, 3]))
 
