@@ -32,6 +32,9 @@ from viperleed.tleedmlib.classes.slab import Slab, BulkSlab
 from viperleed.tleedmlib.classes.slab import slab_errors as err
 from viperleed.tleedmlib.classes.slab import surface_slab
 from viperleed.tleedmlib.classes.sym_entity import SymPlane
+from viperleed.tleedmlib.files.parameters.errors import (
+    InconsistentParameterError
+    )
 
 from ..helpers import exclude_tags, not_raises, CaseTag as Tag
 from .. import cases_ase, poscar_slabs
@@ -716,6 +719,17 @@ class TestBulkUcell:
         # cell is a rotated version of the minimal one
         transform = slab.bulkslab.ab_cell.dot(np.linalg.inv(min_ab_cell))
         assert np.linalg.det(transform) == pytest.approx(1.0)
+
+    def test_inconsistent_superlattice(self, ag100):
+        """Check complaints if an invalid superlattice is given."""
+        slab, rpars, *_ = ag100
+        slab.make_bulk_slab(rpars)
+        large_bulk = slab.make_supercell(np.diag((2, 2))).make_bulk_slab(rpars)
+        slab.bulkslab = large_bulk
+        rpars.SUPERLATTICE = np.arange(4).reshape(2, 2)
+        rpars.superlattice_defined = True
+        with pytest.raises(InconsistentParameterError):
+            slab.ensure_minimal_bulk_ab_cell(rpars)
 
 
 class TestContains:
