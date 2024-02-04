@@ -654,8 +654,8 @@ class TestBulkUcell:
                                            check_reduced_correctly):
         """Test that apply_bulk_cell_reduction works as expected for ab."""
         slab, rpars, info = args
-        original_ab_cell = slab.ab_cell.T.copy()
         slab.make_bulk_slab(rpars)
+        original_ab_cell = slab.bulkslab.ab_cell.T.copy()
         supercell = slab.make_supercell(transform)
         supercell_bulk = supercell.make_bulk_slab(rpars)
         supercell_bulk.apply_bulk_cell_reduction(eps=rpars.SYMMETRY_EPS,
