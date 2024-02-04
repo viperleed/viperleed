@@ -974,7 +974,7 @@ class SurfaceSlab(BaseSlab):
 
         Raises
         ------
-        SlabError
+        MissingLayersError
             If this method is called before any layer was identified,
             or if none of the layers is labelled as bulk.
         SlabError
@@ -994,7 +994,7 @@ class SurfaceSlab(BaseSlab):
         bulk_appended = copy.deepcopy(self)
         bulk_layers = bulk_appended.bulk_layers
         if not bulk_layers:
-            raise SlabError('No bulk layers to duplicate')
+            raise MissingLayersError('No bulk layers to duplicate')
 
         # First get the bulk repeat vector (with positive z). Take into
         # account that there already may be multiple bulk layers at the
