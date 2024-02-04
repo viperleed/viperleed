@@ -970,7 +970,7 @@ class TestMakeBulkSlab:
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, *_ = ag100
         rpars.superlattice_defined = True  # Needed for check to happen
-        slab.ucell *= np.diag((2, 1, 1))
+        slab.ab_cell.T[0] *= 2
         slab.update_cartesian_from_fractional()
         slab.make_bulk_slab(rpars)
         assert 'does not follow standard convention' in caplog.text
