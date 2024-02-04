@@ -1548,6 +1548,11 @@ class TestUnitCellReduction:
             slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
 
 
+@todo
+def test_get_surface_atoms():
+    """Check correct identification of atoms visible from vacuum."""
+
+
 @parametrize_with_cases(
     'args',
     cases=CasePOSCARSlabs.case_nearest_neighbors_poscar
