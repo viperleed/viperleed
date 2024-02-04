@@ -710,6 +710,7 @@ class TestBulkUcell:
         min_ab_cell = info.bulk_properties.bulk_ucell[:2, :2]
         large_bulk = slab.make_supercell(np.diag((2, 2))).make_bulk_slab(rpars)
         slab.bulkslab = large_bulk
+        rpars.superlattice_defined = False  # Avoid consistency checks
         slab.ensure_minimal_bulk_ab_cell(rpars)
         # Notice that it is enough to check that the current
         # cell is a rotated version of the minimal one
