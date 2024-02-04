@@ -531,6 +531,22 @@ class TestBulkRepeat:
             assert collapsed_repeat == pytest.approx(collapsed_expected,
                                                      abs=atol)
 
+    _invalid_cuts = {
+        'too few layers': 0.41,
+        'no repeat vector': 0.32,
+        'elements mismatched': 0.30,
+        }
+
+    @parametrize(cut=_invalid_cuts.values(), ids=_invalid_cuts)
+    def test_identify_raises(self, cut, with_one_thick_bulk):
+        """Check complaints if there's not enough layers for identification."""
+        slab, rpars, info = CasePOSCARSlabs().case_poscar_tio2_small()
+        info.bulk_properties.bulk_like_below = cut
+        with_one_thick_bulk(slab, rpars, info)
+        with pytest.raises(err.NoBulkRepeatError):
+            slab.identify_bulk_repeat(eps=rpars.SYMMETRY_EPS,
+                                      epsz=rpars.SYMMETRY_EPS.z)
+
     def test_identify_raises_without_bulkslab(self, ag100):
         """Check complaints when called without a bulk slab."""
         slab, *_ = ag100
