@@ -636,8 +636,10 @@ class TestBulkRepeat:
                                                      bulk_info.bulk_like_below)
         slab.detect_bulk(rpars)
         repeat_vector = slab.get_bulk_repeat(rpars)
+        repeat_vector_bulk = slab.bulkslab.get_bulk_repeat(rpars)
         atol = float(0.2*rpars.SYMMETRY_EPS)
         assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=atol)
+        assert repeat_vector_bulk == pytest.approx(repeat_vector)
 
     def test_get_returns_stored_bulk_repeat(self, ag100):
         """Test get_bulk_repeat returns stored bulk repeat if available."""
