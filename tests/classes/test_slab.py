@@ -473,6 +473,10 @@ class TestBulkDetectAndExtraBulk:
             assert bulk_appended.n_atoms == slab.n_atoms + len(new_atoms)
         with subtests.test('no. added atoms'):
             assert len(new_atoms) == expected_extra_atoms
+        with subtests.test('no atom.num duplicates'):
+            # This would fail before PR #114
+            at_num_counts = Counter(at.num for at in bulk_appended)
+            assert all(c == 1 for c in at_num_counts.values())
 
     @with_bulk_repeat
     def test_with_double_thickness_twice(self, args):                           # WRONG. Should test the BulkSlab method, not the SurfaceSlab one
