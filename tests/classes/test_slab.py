@@ -84,6 +84,24 @@ def factory_check_identical(subtests):
     return check_identical
 
 
+@fixture(name='with_one_thick_bulk', scope='session')
+def factory_with_one_thick_bulk():
+    """Prepare slab and rpars to have a one-layer thick bulk slab."""
+    def _make(slab, rpars, info):
+        cut = info.bulk_properties.bulk_like_below
+        rpars.LAYER_CUTS.update_from_sequence([cut])
+        rpars.N_BULK_LAYERS = 1
+        rpars.BULK_REPEAT = None
+        slab.create_layers(rpars)
+
+        # Shift the bottom atom to c=0 to prevent back-folding
+        # of the top ones when creating the thick bulk
+        c_shift = slab.remove_vacuum_at_bottom(rpars)
+        slab.make_bulk_slab(rpars, recenter=False)
+        return c_shift
+    return _make
+
+
 class TestABInPlane:
     """Tests for checking that the first two unit vectors have no z."""
 
@@ -552,29 +570,14 @@ class TestBulkRepeat:
 class TestBulkUcell:
     """Tests concerning reduction of bulk unit cell and C vector."""
 
-    @staticmethod
-    def with_one_thick_bulk(slab, rpars, info):
-        """Prepare slab and rpars to have one thick bulk layer below cut."""
-        cut = info.bulk_properties.bulk_like_below
-        rpars.LAYER_CUTS.update_from_sequence([cut])
-        rpars.N_BULK_LAYERS = 1
-        rpars.BULK_REPEAT = None
-        slab.create_layers(rpars)
-
-        # Shift the bottom atom to c=0 to prevent back-folding
-        # of the top ones when creating the thick bulk
-        c_shift = slab.remove_vacuum_at_bottom(rpars)
-        slab.make_bulk_slab(rpars, recenter=False)
-        return c_shift
-
     @with_bulk_repeat
-    def test_get_min_c(self, args):
+    def test_get_min_c(self, args, with_one_thick_bulk):
         """Test that get_minimal_c_vector works as expected."""
         slab, rpars, info = args
         # strip out existing layers and make a single "fake" cut at
         # BULK_LIKE_BELOW. This gives us a bulk slab with (at least)
         # two bulk layers, which is what we need to test get_min_c.
-        self.with_one_thick_bulk(*args)
+        with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
         bulk_slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         # z_periodic=False because we use the original unit cell
@@ -586,10 +589,10 @@ class TestBulkUcell:
                                       abs=atol)
 
     @with_bulk_repeat
-    def test_ensure_min_c(self, args, subtests):
+    def test_ensure_min_c(self, args, with_one_thick_bulk, subtests):
         """Test that ensure_minimal_c_vector works as expected."""
         slab, rpars, info = args
-        self.with_one_thick_bulk(*args)
+        with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
         bulk_slab.ensure_minimal_c_vector(rpars)
         c_vec = bulk_slab.ucell.T[2]
@@ -600,9 +603,10 @@ class TestBulkUcell:
         with subtests.test('no. bulk atoms'):
             assert bulk_slab.n_atoms == bulk_info.n_bulk_atoms
 
-    def test_ensure_min_c_raises_with_vacuum_below(self, ag100):
+    def test_ensure_min_c_raises_with_vacuum_below(self, ag100,
+                                                   with_one_thick_bulk):
         """Check complaints of ensure_minimal_c_vector when there's vacuum."""
-        c_shift = self.with_one_thick_bulk(*ag100)
+        c_shift = with_one_thick_bulk(*ag100)
         slab, rpars, *_ = ag100
         cart_shift = c_shift * slab.ucell.T[2, 2]
         cart_shift *= -1                                                        # TODO: remove with .cartpos[2] flip
@@ -615,10 +619,10 @@ class TestBulkUcell:
         assert exc.match(r'.*vacuum')
 
     @with_bulk_repeat
-    def test_get_min_c_raises_already_minimal(self, args):
+    def test_get_min_c_raises_already_minimal(self, args, with_one_thick_bulk):
         """Test that get_minimal_c_vector raises AlreadyMinimalError."""
         slab, rpars, *_ = args
-        self.with_one_thick_bulk(*args)
+        with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
         bulk_slab.ensure_minimal_c_vector(rpars)
         with pytest.raises(err.AlreadyMinimalError):
