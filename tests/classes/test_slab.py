@@ -455,7 +455,7 @@ class TestBulkDetectAndExtraBulk:
 
     @parametrize('n_cells', (1, 2, 3, 5))
     @with_bulk_repeat
-    def test_with_extra_bulk_units(self, n_cells, args):
+    def test_with_extra_bulk_units(self, n_cells, args, subtests):
         """Test function for appending bulk units to a slab."""
         slab, rpars, info = args
         self.prepare_to_detect(slab, rpars,
@@ -467,9 +467,12 @@ class TestBulkDetectAndExtraBulk:
         if rpars.superlattice_defined:
             expected_extra_atoms *= abs(np.linalg.det(rpars.SUPERLATTICE))
         bulk_appended, new_atoms = slab.with_extra_bulk_units(rpars, n_cells)
-        assert len(slab.bulk_layers) == n_bulk_layers_before
-        assert bulk_appended.n_atoms == slab.n_atoms + len(new_atoms)
-        assert len(new_atoms) == expected_extra_atoms
+        with subtests.test('no. bulk layers unchenged'):
+            assert len(slab.bulk_layers) == n_bulk_layers_before
+        with subtests.test('no. atoms'):
+            assert bulk_appended.n_atoms == slab.n_atoms + len(new_atoms)
+        with subtests.test('no. added atoms'):
+            assert len(new_atoms) == expected_extra_atoms
 
     @with_bulk_repeat
     def test_with_double_thickness_twice(self, args):                           # WRONG. Should test the BulkSlab method, not the SurfaceSlab one
