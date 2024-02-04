@@ -1562,6 +1562,13 @@ def test_nearest_neighbors(args):
         assert nearest_neighbors[atom] == pytest.approx(expected[atom.num])
 
 
+def test_translation_symmetry_different_species():
+    """Check that an MgO slab is not equivalent upon Mg->O translation."""
+    slab, rpars, *_ = CasePOSCARSlabs().case_poscar_mgo()
+    mg_to_oxygen = slab.ab_cell.T[0] / 2
+    assert not slab.is_translation_symmetric(mg_to_oxygen, rpars.SYMMETRY_EPS)
+
+
 def test_ucell_ori_after_clear_symmetry_and_ucell_history(ag100):
     """Ensure modifications to the unit cell don't go into ucell_ori."""
     slab, *_ = ag100
@@ -1570,10 +1577,3 @@ def test_ucell_ori_after_clear_symmetry_and_ucell_history(ag100):
     slab.clear_symmetry_and_ucell_history()
     slab.ucell *= 3
     assert np.allclose(ucell_ori, slab.ucell_ori)
-
-
-def test_translation_symmetry_different_species():
-    """Check that an MgO slab is not equivalent upon Mg->O translation."""
-    slab, rpars, *_ = CasePOSCARSlabs().case_poscar_mgo()
-    mg_to_oxygen = slab.ab_cell.T[0] / 2
-    assert not slab.is_translation_symmetric(mg_to_oxygen, rpars.SYMMETRY_EPS)
