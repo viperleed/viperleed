@@ -123,7 +123,7 @@ _PRESETS = {  # pylint: disable=consider-using-namedtuple-or-dataclass
               'N_BULK_LAYERS': 2,
               'SYMMETRY_EPS': SymmetryEps(0.3),
               'BULK_REPEAT': np.array([0.0, -4.19199991, 4.19199991]),
-              'SUPERLATTICE': np.array(((1, 1), (1, -1))),
+              'SUPERLATTICE': np.array(((1, -1), (1, 1))),
               'superlattice_defined': True},
     'Ag': {'N_BULK_LAYERS': 1,
            'BULK_REPEAT': np.array([1.44, 1.44, -2.03647])},
@@ -305,7 +305,7 @@ class CasePOSCARSlabs:
         info.poscar.n_cells = 2
         return self.case_poscar(info)
 
-    @case(tags=Tag.NON_MINIMAL_CELL)
+    @case(tags=(Tag.NON_MINIMAL_CELL, Tag.BULK_PROPERTIES))
     def case_poscar_fe3o4_001_cod(self):
         """Return a slab from a bulk-truncated Fe3O4(001) POSCAR."""
         info = TestInfo()
@@ -338,6 +338,16 @@ class CasePOSCARSlabs:
         info.displacements.extend((DisplacementInfo(8, False),
                                    DisplacementInfo(36, True)))
         info.bulk.repeat = tuple(info.param_presets['BULK_REPEAT'])
+        info.bulk_properties = BulkSlabAndRepeatInfo(
+            bulk_like_below=0.7,
+            bulk_repeat=np.array([0, 4.192, 4.192]),
+            n_bulk_atoms=14,
+            bulk_cuts=[0.21885],
+            bulk_dist=1.048,  # Z distance between Fe_tet and Fe_oct
+            bulk_ucell=np.array([[ 4.192, -4.192,  0.000],
+                                 [ 4.192,  4.192, -4.192],
+                                 [ 0.000,  0.000,  4.192]]),
+            )
         return self.case_poscar(info)
 
     @case(tags=Tag.NON_MINIMAL_CELL)
