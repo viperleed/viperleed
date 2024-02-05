@@ -1648,23 +1648,18 @@ class TestUnitCellReduction:
             slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
 
 
-@parametrize_with_cases(
-    'args',
-    cases=CasePOSCARSlabs.case_surface_atom_poscar
-    )
+@parametrize_with_cases('args',
+                        cases=CasePOSCARSlabs.case_surface_atom_poscar)
 def test_get_surface_atoms(args):
     """Check correct identification of atoms visible from vacuum."""
-    slab, _, info = args
-    surface_atoms = slab.get_surface_atoms()
-    expected = info.surface_atoms.surface_atom_numbers
-    assert len(surface_atoms) == len(expected)
-    for atom in surface_atoms:
-        assert atom.num in expected
+    slab, rpars, info = args
+    surface_atoms = slab.getSurfaceAtoms(rpars)
+    surface_atoms_nums = {at.num for at in surface_atoms}
+    assert surface_atoms_nums == set(info.surface_atoms.surface_atom_nums)
 
-@parametrize_with_cases(
-    'args',
-    cases=CasePOSCARSlabs.case_nearest_neighbors_poscar
-    )
+
+@parametrize_with_cases('args',
+                        cases=CasePOSCARSlabs.case_nearest_neighbors_poscar)
 def test_nearest_neighbors(args):
     """Test function get_nearest_neighbors."""
     slab, _, info = args
