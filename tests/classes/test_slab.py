@@ -1250,6 +1250,17 @@ class TestSlabLayers:
         cuts = slab.create_layers(rpars)
         check_layers_correct(slab, cuts, info)
 
+    def test_bulkslab_layers_always_bulk(self, with_one_thick_bulk):
+        """Check that all layers of a BulkSlab are bulk."""
+        args = CasePOSCARSlabs().case_poscar_fe3o4_001_cod()
+        with_one_thick_bulk(*args)
+        slab, rpars, *_ = args
+        bulk = slab.bulkslab
+        rpars.LAYER_CUTS = LayerCuts.from_string('dz(1.0)')
+        bulk.create_layers(rpars)  # 12 layers
+        assert bulk.n_layers == 12
+        assert all(lay.is_bulk for lay in bulk.layers)
+
     def test_auto_cut_below_bulk_cut(self, ag100, check_layers_correct):
         """Check correct layer identification with a useless auto-cut."""
         slab, rpars, info = ag100

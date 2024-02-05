@@ -504,7 +504,8 @@ class BaseSlab(AtomContainer):
                 next_cut = next(cuts_iter, 1)
                 newlayer = Layer(self, 0)
             if newlayer not in self:
-                newlayer.is_bulk = self.n_layers < rpars.N_BULK_LAYERS
+                newlayer.is_bulk = (self.is_bulk
+                                    or self.n_layers < rpars.N_BULK_LAYERS)
                 self.layers.append(newlayer)
             atom.layer = newlayer
             newlayer.atlist.append(atom)
