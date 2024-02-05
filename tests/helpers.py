@@ -346,3 +346,9 @@ class NearestNeighborInfo(InfoBase):
     """Container for information about nearest neighbors."""
     # Keys are atom number
     nearest_neighbor_distances: Dict[int, float]
+
+@dataclass(repr=False)
+class SurfaceAtomInfo(InfoBase):
+    """Container for information about which atoms are at the surface."""
+    # Keys are atom number
+    surface_atom_nums: Tuple[int]

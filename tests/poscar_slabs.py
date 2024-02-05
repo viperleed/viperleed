@@ -27,7 +27,7 @@ from viperleed.tleedmlib.files import poscar
 
 from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo
 from .helpers import BulkSlabAndRepeatInfo, LayerInfo, CaseTag as Tag
-from .helpers import NearestNeighborInfo, duplicate_all
+from .helpers import NearestNeighborInfo, SurfaceAtomInfo, duplicate_all
 # pylint: enable=wrong-import-position
 
 
@@ -177,6 +177,11 @@ def _add_nearest_neighbor_info(info, nn_info):
     info.nearest_neighbors = nn_info
     return info
 
+def _add_surface_atom_info(info, surface_atom_info):
+    """Add info about surface atoms to a TestInfo objext."""
+    info.surface_atoms = surface_atom_info
+    return info
+
 
 POSCAR_WITH_KNOWN_BULK_REPEAT = (
     _add_known_bulk_properties(
@@ -229,6 +234,15 @@ POSCAR_WITH_NEAREST_NEIGHBOR_INFO = (
         NearestNeighborInfo(
             nearest_neighbor_distances={1: 2.88, 2: 2.88, 3: 2.88,
                                         4: 2.88, 5: 2.88, 6: 2.88,},
+            )
+        ),
+    )
+
+POSCAR_WITH_SURFACE_ATOM_INFO = (
+    _add_surface_atom_info(
+        POSCAR_WITH_KNOWN_BULK_REPEAT[0],
+        SurfaceAtomInfo(
+            surface_atom_nums=(1,),
             )
         ),
     )
@@ -289,6 +303,11 @@ class CasePOSCARSlabs:
     @parametrize(info=POSCAR_WITH_NEAREST_NEIGHBOR_INFO, idgen=make_poscar_ids())
     def case_nearest_neighbors_poscar(self, info):
         """Return a slab, an Rparams and info on expected nearest neighbors."""
+        return self.case_poscar(info)
+
+    @parametrize(info=POSCAR_WITH_SURFACE_ATOM_INFO, idgen=make_poscar_ids())
+    def case_surface_atom_poscar(self, info):
+        """Return a slab, an Rparams and info on expected surface atoms."""
         return self.case_poscar(info)
 
     @case(tags=Tag.NON_MINIMAL_CELL)
