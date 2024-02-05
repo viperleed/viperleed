@@ -1313,6 +1313,23 @@ class TestSlabLayers:
             with subtests.test(f'element-sort at pos~{z_approx:.4f}'):
                 assert sorted(elements) == elements
 
+    def test_sublayer_sorting_small_dz(self):
+        """Check that small z displacements of sublayers maintain sorting."""
+        slab, rpars, *_ = CasePOSCARSlabs().case_poscar_tio2_small()
+        eps = rpars.SYMMETRY_EPS.z
+        slab.create_sublayers(eps)
+        sorting_before = [lay.element for lay in slab.sublayers]
+
+        # Layers 15 and 19 are translation-equivalent (both with 2 O)
+        for atom in slab.sublayers[15]:
+            atom.cartpos[2] += 0.05*eps
+        for atom in slab.sublayers[19]:
+            atom.cartpos[2] -= 0.05*eps
+        slab.update_fractional_from_cartesian()
+        slab.create_sublayers(eps)
+        sorting_after = [lay.element for lay in slab.sublayers]
+        assert sorting_after == sorting_before
+
     @parametrize_with_cases('args', **with_layers)
     def test_full_update_with_layers_defined(self, args):
         """Test full_update method with layers already defined."""
