@@ -910,29 +910,36 @@ class TestEquivalence:
 class TestExtraBulk:
     """Collection of tests for adding additional bulk units to slabs."""
 
-    @parametrize('n_cells', (1, 2, 3, 5))
+    @fixture(name='check_extra_bulk')
+    def fixture_check_extra_bulk(self, subtests):
+        """Check correct addition of bulk units."""
+        def _check(bulk_appended, new_atoms, n_cells, slab, rpars, n_bulk_atoms):
+            n_bulk_layers_before = len(slab.bulk_layers)
+            expected_extra_atoms = (n_cells * n_bulk_atoms
+                                    * abs(np.linalg.det(rpars.SUPERLATTICE)))
+            with subtests.test('no. bulk layers unchanged'):
+                assert len(slab.bulk_layers) == n_bulk_layers_before
+            with subtests.test('no. atoms'):
+                assert bulk_appended.n_atoms == slab.n_atoms + len(new_atoms)
+            with subtests.test('no. added atoms'):
+                assert len(new_atoms) == expected_extra_atoms
+            with subtests.test('no atom.num duplicates'):
+                # This would fail before PR #114
+                at_num_counts = Counter(at.num for at in bulk_appended)
+                assert all(c == 1 for c in at_num_counts.values())
+        return _check
+
+    @parametrize(n_cells=(1, 2, 3, 5))
     @with_bulk_repeat
-    def test_extra_bulk(self, n_cells, args, subtests):
+    def test_extra_bulk(self, n_cells, args, check_extra_bulk):
         """Test function for appending bulk units to a slab."""
         slab, rpars, info = args
         TestBulkDetect.prepare_to_detect(slab, rpars,
                                          info.bulk_properties.bulk_like_below)
         slab.detect_bulk(rpars)
-
-        n_bulk_layers_before = rpars.N_BULK_LAYERS
-        expected_extra_atoms = (n_cells * info.bulk_properties.n_bulk_atoms
-                                * abs(np.linalg.det(rpars.SUPERLATTICE)))
         bulk_appended, new_atoms = slab.with_extra_bulk_units(rpars, n_cells)
-        with subtests.test('no. bulk layers unchanged'):
-            assert len(slab.bulk_layers) == n_bulk_layers_before
-        with subtests.test('no. atoms'):
-            assert bulk_appended.n_atoms == slab.n_atoms + len(new_atoms)
-        with subtests.test('no. added atoms'):
-            assert len(new_atoms) == expected_extra_atoms
-        with subtests.test('no atom.num duplicates'):
-            # This would fail before PR #114
-            at_num_counts = Counter(at.num for at in bulk_appended)
-            assert all(c == 1 for c in at_num_counts.values())
+        check_extra_bulk(bulk_appended, new_atoms, n_cells, slab, rpars,
+                         info.bulk_properties.n_bulk_atoms)
 
     def test_extra_bulk_raises_no_layers(self, ag100, subtests):
         """Check correct repeated addition of bulk units."""
