@@ -478,6 +478,27 @@ class TestBulkDetectAndExtraBulk:
             at_num_counts = Counter(at.num for at in bulk_appended)
             assert all(c == 1 for c in at_num_counts.values())
 
+    def test_with_extra_bulk_units_raises_no_layers(self, ag100, subtests):
+        """Check correct repeated addition of bulk units."""
+        slab, rpars, *_ = ag100
+        with subtests.test('no bulk layers'):
+            for layer in slab.layers:
+                layer.is_bulk = False
+            with pytest.raises(err.MissingLayersError):
+                slab.with_extra_bulk_units(rpars, 1)
+        with subtests.test('no layers'):
+            slab.layers.clear()
+            with pytest.raises(err.MissingLayersError):
+                slab.with_extra_bulk_units(rpars, 1)
+
+    def test_with_extra_bulk_units_raises_no_repeat(self, ag100):
+        """Check correct repeated addition of bulk units."""
+        slab, rpars, *_ = ag100
+        rpars.BULK_REPEAT = rpars.BULK_REPEAT.copy()
+        rpars.BULK_REPEAT[2] = 0
+        with pytest.raises(err.SlabError):
+            slab.with_extra_bulk_units(rpars, 1)
+
     def test_with_extra_bulk_units_twice(self, ag100, subtests):
         """Check correct repeated addition of bulk units."""
         slab, rpars, *_ = ag100
@@ -615,8 +636,10 @@ class TestBulkRepeat:
                                                      bulk_info.bulk_like_below)
         slab.detect_bulk(rpars)
         repeat_vector = slab.get_bulk_repeat(rpars)
+        repeat_vector_bulk = slab.bulkslab.get_bulk_repeat(rpars)
         atol = float(0.2*rpars.SYMMETRY_EPS)
         assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=atol)
+        assert repeat_vector_bulk == pytest.approx(repeat_vector)
 
     def test_get_returns_stored_bulk_repeat(self, ag100):
         """Test get_bulk_repeat returns stored bulk repeat if available."""
