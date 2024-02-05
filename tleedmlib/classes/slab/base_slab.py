@@ -657,7 +657,7 @@ class BaseSlab(AtomContainer):
 
         Parameters
         ----------
-        releps : float, Sequence, or None, optional
+        releps : float or Sequence or None, optional
             Fractional tolerance for collapsing coordinates. If
             not None, coordinates are collapsed to the (fractional)
             interval [-releps, 1-releps]. If a sequence, it should
