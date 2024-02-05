@@ -394,8 +394,8 @@ class TestBulk3DOperations:
                                      'this is the better-symmetry branch')
 
 
-class TestBulkDetectAndExtraBulk:
-    """Collection of tests for adding bulk units to slabs."""
+class TestBulkDetect:
+    """Collection of tests for detecting bulk below a cutoff."""
 
     @staticmethod
     def prepare_to_detect(slab, rpars, bulk_like_below):
@@ -453,118 +453,6 @@ class TestBulkDetectAndExtraBulk:
         rpars.BULK_REPEAT = np.array([1, 1, 1])
         with pytest.raises(ValueError):
             slab.detect_bulk(rpars)
-
-    @parametrize('n_cells', (1, 2, 3, 5))
-    @with_bulk_repeat
-    def test_with_extra_bulk_units(self, n_cells, args, subtests):
-        """Test function for appending bulk units to a slab."""
-        slab, rpars, info = args
-        self.prepare_to_detect(slab, rpars,
-                               info.bulk_properties.bulk_like_below)
-        slab.detect_bulk(rpars)
-
-        n_bulk_layers_before = rpars.N_BULK_LAYERS
-        expected_extra_atoms = (n_cells * info.bulk_properties.n_bulk_atoms
-                                * abs(np.linalg.det(rpars.SUPERLATTICE)))
-        bulk_appended, new_atoms = slab.with_extra_bulk_units(rpars, n_cells)
-        with subtests.test('no. bulk layers unchanged'):
-            assert len(slab.bulk_layers) == n_bulk_layers_before
-        with subtests.test('no. atoms'):
-            assert bulk_appended.n_atoms == slab.n_atoms + len(new_atoms)
-        with subtests.test('no. added atoms'):
-            assert len(new_atoms) == expected_extra_atoms
-        with subtests.test('no atom.num duplicates'):
-            # This would fail before PR #114
-            at_num_counts = Counter(at.num for at in bulk_appended)
-            assert all(c == 1 for c in at_num_counts.values())
-
-    def test_with_extra_bulk_units_raises_no_layers(self, ag100, subtests):
-        """Check correct repeated addition of bulk units."""
-        slab, rpars, *_ = ag100
-        with subtests.test('no bulk layers'):
-            for layer in slab.layers:
-                layer.is_bulk = False
-            with pytest.raises(err.MissingLayersError):
-                slab.with_extra_bulk_units(rpars, 1)
-        with subtests.test('no layers'):
-            slab.layers.clear()
-            with pytest.raises(err.MissingLayersError):
-                slab.with_extra_bulk_units(rpars, 1)
-
-    def test_with_extra_bulk_units_raises_no_repeat(self, ag100):
-        """Check correct repeated addition of bulk units."""
-        slab, rpars, *_ = ag100
-        rpars.BULK_REPEAT = rpars.BULK_REPEAT.copy()
-        rpars.BULK_REPEAT[2] = 0
-        with pytest.raises(err.SlabError):
-            slab.with_extra_bulk_units(rpars, 1)
-
-    def test_with_extra_bulk_units_twice(self, ag100, subtests):
-        """Check correct repeated addition of bulk units."""
-        slab, rpars, *_ = ag100
-        once, added_once = slab.with_extra_bulk_units(rpars, 1)
-        twice, added_twice = once.with_extra_bulk_units(rpars, 1)
-        _, added_two = slab.with_extra_bulk_units(rpars, 2)
-        n_once = len(added_once)
-        n_twice = len(added_twice)
-        n_two_at_once = len(added_two)
-        # All of these subtests failed before PR #114
-        with subtests.test('same no. atoms each time'):
-            assert n_once == n_twice
-        with subtests.test('same no. atoms twice and two at once'):
-            assert n_two_at_once == n_once + n_twice
-        with subtests.test('no duplicates'):
-            n_before_removal = twice.n_atoms
-            twice.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
-                                         rpars.SYMMETRY_EPS.z)
-            assert twice.n_atoms == n_before_removal
-
-    @fixture(name='check_doubled')
-    def fixture_check_doubled(self, subtests):
-        """Check correct outcome of doubling a bulk slab."""
-        def _check(double, bulk, extra=''):
-            with subtests.test(f'no. atoms{extra}'):
-                assert double.n_atoms == 2*bulk.n_atoms
-            with subtests.test(f'ab_cell unchanged{extra}'):
-                assert double.ab_cell == pytest.approx(bulk.ab_cell)
-            with subtests.test(f'c vector{extra}'):
-                bulk_c = bulk.ucell.T[2]
-                assert double.ucell.T[2] == pytest.approx(2*bulk_c)
-            with subtests.test(f'no. layers{extra}'):
-                assert double.n_layers == 2*bulk.n_layers
-            with subtests.test(f'no atom.num duplicates{extra}'):
-                at_num_counts = Counter(at.num for at in double)
-                assert all(c == 1 for c in at_num_counts.values())
-            if not bulk.layers:
-                return
-            with subtests.test(f'all{extra} layers are bulk'):
-                assert all(lay.is_bulk for lay in double)
-        return _check
-
-    @with_bulk_repeat
-    def test_with_double_thickness_no_layers(self, args, check_doubled):
-        """Check correct doubling of a bulk slab that has no layers."""
-        slab, rpars, info = args
-        self.prepare_to_detect(slab, rpars,
-                               info.bulk_properties.bulk_like_below)
-        slab.detect_bulk(rpars)
-        bulk = slab.bulkslab
-        bulk.layers.clear()
-        double = bulk.with_double_thickness()
-        check_doubled(double, bulk)
-
-    @with_bulk_repeat
-    def test_with_double_thickness_twice(self, args, check_doubled):
-        """Check repeated calls to with_extra_bulk_units work correctly."""
-        slab, rpars, info = args
-        self.prepare_to_detect(slab, rpars,
-                               info.bulk_properties.bulk_like_below)
-        slab.detect_bulk(rpars)
-        bulk = slab.bulkslab
-        double = bulk.with_double_thickness()
-        quadruple = double.with_double_thickness()
-        check_doubled(double, bulk, extra=' double')
-        check_doubled(quadruple, double, extra=' quadruple')
 
     @pytest.mark.xfail(reason='Issue #140')
     def test_layer_cutting_for_slab_with_incomplete_bulk_layer(self,
@@ -937,6 +825,7 @@ class TestCoordinates:
         slab.update_fractional_from_cartesian()
         assert atom.pos == pytest.approx([0.1, 0.2, 0.3])
 
+
 @todo
 class TestDuplicateAtoms:
     """Tests for checking detection and removal of duplicate atoms."""
@@ -1016,6 +905,122 @@ class TestEquivalence:
         slab, *_ = ag100
         two_by_one = np.diag((2, 1))
         assert not slab.is_equivalent(slab.make_supercell(two_by_one))
+
+
+class TestExtraBulk:
+    """Collection of tests for adding additional bulk units to slabs."""
+
+    @parametrize('n_cells', (1, 2, 3, 5))
+    @with_bulk_repeat
+    def test_extra_bulk(self, n_cells, args, subtests):
+        """Test function for appending bulk units to a slab."""
+        slab, rpars, info = args
+        TestBulkDetect.prepare_to_detect(slab, rpars,
+                                         info.bulk_properties.bulk_like_below)
+        slab.detect_bulk(rpars)
+
+        n_bulk_layers_before = rpars.N_BULK_LAYERS
+        expected_extra_atoms = (n_cells * info.bulk_properties.n_bulk_atoms
+                                * abs(np.linalg.det(rpars.SUPERLATTICE)))
+        bulk_appended, new_atoms = slab.with_extra_bulk_units(rpars, n_cells)
+        with subtests.test('no. bulk layers unchanged'):
+            assert len(slab.bulk_layers) == n_bulk_layers_before
+        with subtests.test('no. atoms'):
+            assert bulk_appended.n_atoms == slab.n_atoms + len(new_atoms)
+        with subtests.test('no. added atoms'):
+            assert len(new_atoms) == expected_extra_atoms
+        with subtests.test('no atom.num duplicates'):
+            # This would fail before PR #114
+            at_num_counts = Counter(at.num for at in bulk_appended)
+            assert all(c == 1 for c in at_num_counts.values())
+
+    def test_extra_bulk_raises_no_layers(self, ag100, subtests):
+        """Check correct repeated addition of bulk units."""
+        slab, rpars, *_ = ag100
+        with subtests.test('no bulk layers'):
+            for layer in slab.layers:
+                layer.is_bulk = False
+            with pytest.raises(err.MissingLayersError):
+                slab.with_extra_bulk_units(rpars, 1)
+        with subtests.test('no layers'):
+            slab.layers.clear()
+            with pytest.raises(err.MissingLayersError):
+                slab.with_extra_bulk_units(rpars, 1)
+
+    def test_extra_bulk_raises_no_repeat(self, ag100):
+        """Check correct repeated addition of bulk units."""
+        slab, rpars, *_ = ag100
+        rpars.BULK_REPEAT = rpars.BULK_REPEAT.copy()
+        rpars.BULK_REPEAT[2] = 0
+        with pytest.raises(err.SlabError):
+            slab.with_extra_bulk_units(rpars, 1)
+
+    def test_extra_bulk_twice(self, ag100, subtests):
+        """Check correct repeated addition of bulk units."""
+        slab, rpars, *_ = ag100
+        once, added_once = slab.with_extra_bulk_units(rpars, 1)
+        twice, added_twice = once.with_extra_bulk_units(rpars, 1)
+        _, added_two = slab.with_extra_bulk_units(rpars, 2)
+        n_once = len(added_once)
+        n_twice = len(added_twice)
+        n_two_at_once = len(added_two)
+        # All of these subtests failed before PR #114
+        with subtests.test('same no. atoms each time'):
+            assert n_once == n_twice
+        with subtests.test('same no. atoms twice and two at once'):
+            assert n_two_at_once == n_once + n_twice
+        with subtests.test('no duplicates'):
+            n_before_removal = twice.n_atoms
+            twice.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
+                                         rpars.SYMMETRY_EPS.z)
+            assert twice.n_atoms == n_before_removal
+
+    @fixture(name='check_doubled')
+    def fixture_check_doubled(self, subtests):
+        """Check correct outcome of doubling a bulk slab."""
+        def _check(double, bulk, extra=''):
+            with subtests.test(f'no. atoms{extra}'):
+                assert double.n_atoms == 2*bulk.n_atoms
+            with subtests.test(f'ab_cell unchanged{extra}'):
+                assert double.ab_cell == pytest.approx(bulk.ab_cell)
+            with subtests.test(f'c vector{extra}'):
+                bulk_c = bulk.ucell.T[2]
+                assert double.ucell.T[2] == pytest.approx(2*bulk_c)
+            with subtests.test(f'no. layers{extra}'):
+                assert double.n_layers == 2*bulk.n_layers
+            with subtests.test(f'no atom.num duplicates{extra}'):
+                at_num_counts = Counter(at.num for at in double)
+                assert all(c == 1 for c in at_num_counts.values())
+            if not bulk.layers:
+                return
+            with subtests.test(f'all{extra} layers are bulk'):
+                assert all(lay.is_bulk for lay in double)
+        return _check
+
+    @with_bulk_repeat
+    def test_double_thickness_no_layers(self, args, check_doubled):
+        """Check correct doubling of a bulk slab that has no layers."""
+        slab, rpars, info = args
+        TestBulkDetect.prepare_to_detect(slab, rpars,
+                                         info.bulk_properties.bulk_like_below)
+        slab.detect_bulk(rpars)
+        bulk = slab.bulkslab
+        bulk.layers.clear()
+        double = bulk.with_double_thickness()
+        check_doubled(double, bulk)
+
+    @with_bulk_repeat
+    def test_double_thickness_twice(self, args, check_doubled):
+        """Check repeated calls to with_extra_bulk_units work correctly."""
+        slab, rpars, info = args
+        TestBulkDetect.prepare_to_detect(slab, rpars,
+                                         info.bulk_properties.bulk_like_below)
+        slab.detect_bulk(rpars)
+        bulk = slab.bulkslab
+        double = bulk.with_double_thickness()
+        quadruple = double.with_double_thickness()
+        check_doubled(double, bulk, extra=' double')
+        check_doubled(quadruple, double, extra=' quadruple')
 
 
 @if_ase
