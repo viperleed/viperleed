@@ -948,7 +948,7 @@ class TestExtraBulk:
                 slab.with_extra_bulk_units(rpars, 1)
 
     def test_extra_bulk_raises_no_repeat(self, ag100):
-        """Check correct repeated addition of bulk units."""
+        """Check complaints if the bulk repeat has no z."""
         slab, rpars, *_ = ag100
         rpars.BULK_REPEAT = rpars.BULK_REPEAT.copy()
         rpars.BULK_REPEAT[2] = 0
