@@ -118,7 +118,7 @@ class BulkSlab(BaseSlab):
             If no layers are available
         """
         if self.n_layers == 1:
-            return self.ucell.T[2] - self.layers[0].thickness
+            return self.ucell.T[2, 2] - self.layers[0].thickness
         return super().smallest_interlayer_spacing
 
     # Disabled too-many-arguments below because 7/5 seem better than
