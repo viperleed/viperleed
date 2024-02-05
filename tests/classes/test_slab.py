@@ -962,6 +962,35 @@ class TestExtraBulk:
         with pytest.raises(err.SlabError):
             slab.with_extra_bulk_units(rpars, 1)
 
+    @parametrize(n_cells=(1, 2, 3, 5))
+    @with_bulk_repeat
+    def test_extra_bulk_thick_bulk(self, args, n_cells, check_extra_bulk,
+                                   subtests, with_one_thick_bulk):
+        """Check correct addition of a thicker-than-repeat bulk."""
+        def _get_interlayers(_slab):
+            return [lay_below.cartori[2] - lay_above.cartbotz                   # TODO: flip with .cartpos[2]
+                    for lay_above, lay_below in pairwise(_slab.layers)]
+
+        with_one_thick_bulk(*args)
+        slab, rpars, info = args
+        rpars.BULK_REPEAT = info.bulk_properties.bulk_repeat
+        try:
+            extra, added = slab.with_extra_bulk_units(rpars, n_cells)
+        except err.SlabError as exc:
+            if 'integer multiple' in exc.args[0]:
+                pytest.skip(reason=str(exc))
+            raise
+        n_bulk_atoms = slab.bulkslab.n_atoms
+        check_extra_bulk(extra, added, n_cells, slab, rpars, n_bulk_atoms)
+
+        # Ensure we haven't added any gaps or partly overlapping layers
+        dists = _get_interlayers(slab)
+        dists_extra = _get_interlayers(extra)
+        with subtests.test('same min interlayer'):
+            assert min(dists_extra) == pytest.approx(min(dists), abs=1e-3)
+        with subtests.test('same max interlayer'):
+            assert max(dists_extra) == pytest.approx(max(dists), abs=1e-3)
+
     def test_extra_bulk_twice(self, ag100, subtests):
         """Check correct repeated addition of bulk units."""
         slab, rpars, *_ = ag100

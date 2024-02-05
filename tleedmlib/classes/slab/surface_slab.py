@@ -995,6 +995,11 @@ class SurfaceSlab(BaseSlab):
         bulk_layers = bulk_appended.bulk_layers
         if not bulk_layers:
             raise MissingLayersError('No bulk layers to duplicate')
+        try:
+            first_non_bulk = bulk_appended.non_bulk_layers[-1]
+        except IndexError:
+            raise MissingLayersError('Need at least one '
+                                     'non-bulk layer') from None
 
         # First get the bulk repeat vector (with positive z). Take into
         # account that there already may be multiple bulk layers at the
@@ -1004,11 +1009,15 @@ class SurfaceSlab(BaseSlab):
         if abs(bulk_c[2]) < 0.1:
             raise SlabError('Bulk interlayer distance is too small: '
                             f'{bulk_c[2]}. Check LAYER_CUTS.')
-        bulk_thickness = abs(bulk_layers[0].cartori[2]
+        bulk_thickness = abs(first_non_bulk.cartbotz
                              - bulk_layers[-1].cartbotz)
+        if (bulk_thickness > bulk_c[2]
+                and abs(round_remainder(bulk_thickness, bulk_c[2])) > 1e-3):
+            raise SlabError(f'Thickness of bulk ({bulk_thickness:.4f}) is not '
+                            'an integer multiple of the z component of bulk '
+                            f'repeat ({bulk_c[2]:.4f})')
         if bulk_thickness > bulk_c[2]:
-            assert abs(round_remainder(bulk_thickness, bulk_c[2])) < 1e-3
-            bulk_c *= round(bulk_thickness/bulk_c[2]) + 1
+            bulk_c *= round(bulk_thickness/bulk_c[2])
 
         # Now take the component of bulk_c parallel to unit-cell c.
         # This will be used for expanding the unit cell.
