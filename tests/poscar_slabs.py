@@ -177,6 +177,7 @@ def _add_nearest_neighbor_info(info, nn_info):
     info.nearest_neighbors = nn_info
     return info
 
+
 def _add_surface_atom_info(info, surface_atom_info):
     """Add info about surface atoms to a TestInfo objext."""
     info.surface_atoms = surface_atom_info
@@ -242,7 +243,7 @@ POSCAR_WITH_SURFACE_ATOM_INFO = (
     _add_surface_atom_info(
         POSCAR_WITH_KNOWN_BULK_REPEAT[0],
         SurfaceAtomInfo(
-            surface_atom_nums=(1,),
+            surface_atom_nums=(1, 2),
             )
         ),
     )
