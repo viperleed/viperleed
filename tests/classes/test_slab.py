@@ -1173,10 +1173,6 @@ class TestRestoreOristate:
 class TestRevertUnitCell:
     """Tests for reverting the unit cell of a slab."""
 
-    @todo
-    def test_revert_unit_cell(self):                                            # TODO: Probably best to pick a few random operations and make sure that reverting one+rest, a few+rest, or all of them at once gives the same result. This should include unit cell as well as all atom frac and cart coordinates
-        """TODO"""
-
     @infoless_poscar
     def test_one_operation(self, args, check_identical):
         """Check correct result of reverting one unit-cell operation."""
@@ -1214,6 +1210,25 @@ class TestRevertUnitCell:
         slab_copy = deepcopy(slab)
         slab.revert_unit_cell()
         check_identical(slab, slab_copy)
+
+    @parametrize(n_undo=(1, 3, 5))
+    @infoless_poscar
+    def test_revert_in_two_steps(self, args, n_undo, check_identical,
+                                 with_few_operations):
+        """Check that reverting all operations in two steps is equivalent."""
+        slab, *_ = args
+        slab_copy = deepcopy(slab)
+        with_few_operations(slab)
+        modified = deepcopy(slab)
+
+        # Undo a few operations, then the rest...
+        slab.revert_unit_cell(restore_to=slab.ucell_mod[:-n_undo])
+        slab.revert_unit_cell()
+        # ...and also all of them at once
+        modified.revert_unit_cell()
+
+        check_identical(slab, slab_copy)
+        check_identical(slab, modified)
 
     def test_raises(self, ag100):
         """Check complaints for invalid operation types."""
