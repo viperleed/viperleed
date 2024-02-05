@@ -520,8 +520,8 @@ class TestBulkRepeat:
         """Test get_bulk_repeat method."""
         slab, rpars, info = args
         bulk_info = info.bulk_properties
-        TestBulkDetectAndExtraBulk.prepare_to_detect(slab, rpars,
-                                                     bulk_info.bulk_like_below)
+        TestBulkDetect.prepare_to_detect(slab, rpars,
+                                         bulk_info.bulk_like_below)
         slab.detect_bulk(rpars)
         repeat_vector = slab.get_bulk_repeat(rpars)
         repeat_vector_bulk = slab.bulkslab.get_bulk_repeat(rpars)
