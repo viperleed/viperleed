@@ -1719,10 +1719,11 @@ class BaseSlab(AtomContainer):
         This operation can be undone with a call to `revert_unit_cell`,
             as the shift is registered as one of the `ucell_mod`.
         """
+        shift = np.asarray(shift)
         # Since fractional positions and Cartesian positions are
         #    frac = cart @ ab_inv,
         # we can move Cartesian by shift, and fractional by:
-        frac_shift = np.dot(shift, np.linalg.inv(self.ab_cell.T))
+        frac_shift = shift.dot(np.linalg.inv(self.ab_cell.T))
         for atom in self:
             atom.translate_2d(shift, frac_shift)
         self.ucell_mod.append(('add', shift))
