@@ -49,12 +49,11 @@ class BulkSlab(BaseSlab):
         The number of atoms per POSCAR element.
     atlist : AtomList
         List of all atoms in the slab.
-    layers : list of Layer
-        List of Layer objects, where each `layer` is a composite
-        of sublayers, as in TensErLEED
     sublayers : list of SubLayer
         List of SubLayer objects, each containing atoms of equal
         element and Z coordinate
+    layers : tuple of Layer
+        Each `layer` is a composite of sublayers, as in TensErLEED
     sitelist : list of Sitetype
         List of distinct sites as Sitetype, storing information
         on vibration and concentration

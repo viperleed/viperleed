@@ -760,7 +760,7 @@ class TestContains:
         with subtests.test('Does not contain another SubLayer'):
             assert lay.__class__(slab, 0) not in slab
         with subtests.test('Does not contain sublayer after clearing'):
-            slab.layers.clear()
+            slab.layers = ()
             assert lay not in slab
 
     def test_contains_site(self, ag100, subtests):
@@ -964,7 +964,7 @@ class TestExtraBulk:
             with pytest.raises(err.MissingLayersError):
                 slab.with_extra_bulk_units(rpars, 1)
         with subtests.test('no layers'):
-            slab.layers.clear()
+            slab.layers = ()
             with pytest.raises(err.MissingLayersError):
                 slab.with_extra_bulk_units(rpars, 1)
 
@@ -1055,7 +1055,7 @@ class TestExtraBulk:
                                          info.bulk_properties.bulk_like_below)
         slab.detect_bulk(rpars)
         bulk = slab.bulkslab
-        bulk.layers.clear()
+        bulk.layers = ()
         double = bulk.with_double_thickness()
         check_doubled(double, bulk)
 
@@ -1455,7 +1455,7 @@ class TestSlabLayers:
     def test_interlayer_spacing_raises_without_layers(self, args):
         """Test that interlayer spacing raises without layers defined."""
         slab, *_ = args
-        slab.layers.clear()
+        slab.layers = ()
         with pytest.raises(err.MissingLayersError):
             _ = slab.smallest_interlayer_spacing
 

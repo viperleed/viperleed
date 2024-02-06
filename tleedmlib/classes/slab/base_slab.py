@@ -80,9 +80,8 @@ class BaseSlab(AtomContainer):
         The number of atoms per POSCAR element.
     atlist : AtomList
         List of all atoms in the slab.
-    layers : list of Layer
-        List of Layer objects, where each `layer` is a composite
-        of sublayers, as in TensErLEED
+    layers : tuple of Layer
+        Each `layer` is a composite of sublayers, as in TensErLEED
     sublayers : list of SubLayer
         List of SubLayer objects, each containing atoms of equal
         element and Z coordinate
@@ -118,7 +117,7 @@ class BaseSlab(AtomContainer):
         self.chemelem = set()
         self.n_per_elem = {}
         self.atlist = AtomList()
-        self.layers = []
+        self.layers = ()
         self.sublayers = []
         self.sitelist = []
         self.ucell_mod = []
@@ -209,7 +208,7 @@ class BaseSlab(AtomContainer):
     @property
     def bulk_layers(self):
         """Return the layers of self that are bulk."""
-        return [lay for lay in self.layers if lay.is_bulk]
+        return tuple(lay for lay in self.layers if lay.is_bulk)
 
     @property
     def elements(self):
@@ -247,8 +246,8 @@ class BaseSlab(AtomContainer):
 
     @property
     def non_bulk_layers(self):
-        """Return a list of the non-bulk layers in this slab."""
-        return [lay for lay in self.layers if not lay.is_bulk]
+        """Return a tuple of the non-bulk layers in this slab."""
+        return tuple(lay for lay in self.layers if not lay.is_bulk)
 
     #                                                                           TODO: remove. Used only once. Also confusing because it's only in-plane
     @property
@@ -354,7 +353,7 @@ class BaseSlab(AtomContainer):
         -------
         new_atoms : list
             The atoms added to this slab.
-        new_layers : list
+        new_layers : tuple
             The Layer objects added to this slab.
         """
         if new_atoms_start_index is None:
@@ -368,11 +367,11 @@ class BaseSlab(AtomContainer):
         self.ucell.T[2] += bulkc_par  # Expand unit cell
         new_atoms = []
         new_layers = []
-        for layer in bulk_layers.copy():  # .copy avoids infinite loop
+        for layer in bulk_layers:
             # Add a new bulk layer and duplicate of all its atoms
             new_layer = Layer(self, self.n_layers, is_bulk=True)
             new_layers.append(new_layer)
-            self.layers.append(new_layer)
+            self.layers += (new_layer,)
             for atom in layer:
                 new_atom = atom.duplicate(add_to_atlists=False,
                                           num=new_atoms_start_index)
@@ -392,7 +391,7 @@ class BaseSlab(AtomContainer):
 
         # Finally, recalculate the positions of all layers
         self.update_layer_coordinates()
-        return new_atoms, new_layers
+        return new_atoms, tuple(new_layers)
 
     def check_a_b_in_plane(self):
         """Raise InvalidUnitCellError if a, b have out-of-plane components."""
@@ -496,7 +495,7 @@ class BaseSlab(AtomContainer):
         self.sort_by_z()           # Bottommost atom first
         next_cut = next(cuts_iter, 1)
         newlayer = Layer(self, 0)  # Layer numbers are fixed later
-        self.layers = []
+        self.layers = ()
         for atom in self:
             while atom.pos[2] > next_cut:
                 # May run multiple times if the user defined multiple
@@ -506,7 +505,7 @@ class BaseSlab(AtomContainer):
             if newlayer not in self:
                 newlayer.is_bulk = (self.is_bulk
                                     or self.n_layers < rpars.N_BULK_LAYERS)
-                self.layers.append(newlayer)
+                self.layers += (newlayer,)
             atom.layer = newlayer
             newlayer.atlist.append(atom)
 
@@ -519,7 +518,8 @@ class BaseSlab(AtomContainer):
                 )
             rpars.setHaltingLevel(2)
 
-        self.layers.reverse()  # Top to bottom from now on
+        # Sort layers in the final order: top to bottom
+        self.layers = tuple(reversed(self.layers))
         for i, layer in enumerate(self.layers):
             layer.update_position()
             layer.num = i
@@ -1104,7 +1104,8 @@ class BaseSlab(AtomContainer):
 
         # Then keep only non-empty layers. Some layers may
         # be completely empty, e.g., when detecting bulk
-        self.layers = [layer for layer in self.layers if layer.n_atoms]
+        self.layers = tuple(layer for layer in self.layers
+                            if layer.n_atoms)
         for i, layer in enumerate(self.layers):
             layer.update_position()
             layer.num = i
@@ -1422,7 +1423,7 @@ class BaseSlab(AtomContainer):
         # Update also 'layers', sublayers and bulkslab: if the
         # transformation touched 'z' we invalidate everything
         if changes_z:
-            self.layers.clear()
+            self.layers = ()
             self.sublayers.clear()
 
         if self.is_bulk:
