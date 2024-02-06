@@ -190,7 +190,7 @@ def _prepare_beam_groups(bulk, beam_subsets):
         len(indices) == len(energies). indices[i] is a numpy.ndarray
         version of the indices in beam_subsets[i], converted to float.
     """
-    reciprocal_bulk = bulk.reciprocal_vectors
+    reciprocal_bulk = 2*np.pi*np.linalg.inv(bulk.ab_cell.T).T
     all_energies = []
     all_indices = []
     for beam_indices in beam_subsets:

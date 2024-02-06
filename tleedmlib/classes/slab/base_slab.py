@@ -248,26 +248,6 @@ class BaseSlab(AtomContainer):
         """Return a tuple of the non-bulk layers in this slab."""
         return tuple(lay for lay in self.layers if not lay.is_bulk)
 
-    #                                                                           TODO: remove. Used only once. Also confusing because it's only in-plane
-    @property
-    def reciprocal_vectors(self):
-        """Returns the reciprocal lattice vectors as an array.
-
-        Reciprocal vectors are defined by
-        $a_i \dot$ b_j = 2\pi\delta_{ij}$.
-        We need to transpose here again, because of swap row <-> col
-        when going between real and reciprocal space.
-        TensErLEED always does this calculation explicitly and
-        normalizes to area, but here the inverse already contains a
-        factor of 1/det.
-
-        Returns
-        -------
-        np.ndarray, shape=(2, 2)
-            Array of *reciprocal* lattice vectors *as rows*.
-        """
-        return 2*np.pi*np.linalg.inv(self.ab_cell.T).T
-
     @property
     def smallest_interlayer_spacing(self):
         """Return the smallest z gap between two adjacent layers.
