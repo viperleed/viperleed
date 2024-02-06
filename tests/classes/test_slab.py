@@ -1786,8 +1786,8 @@ class TestUnitCellReduction:
             slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
 
 
-@parametrize_with_cases('args',
-                        cases=CasePOSCARSlabs.case_surface_atom_poscar)
+@parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                        has_tag=Tag.SURFACE_ATOMS)
 def test_get_surface_atoms(args):
     """Check correct identification of atoms visible from vacuum."""
     slab, rpars, info = args

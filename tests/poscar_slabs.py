@@ -242,9 +242,7 @@ POSCAR_WITH_NEAREST_NEIGHBOR_INFO = (
 POSCAR_WITH_SURFACE_ATOM_INFO = (
     _add_surface_atom_info(
         POSCAR_WITH_KNOWN_BULK_REPEAT[0],
-        SurfaceAtomInfo(
-            surface_atom_nums=(1, 2),
-            )
+        SurfaceAtomInfo(surface_atom_nums=(1, 2),)
         ),
     )
 
@@ -301,7 +299,9 @@ class CasePOSCARSlabs:
         slab.create_layers(rpars)
         return slab, rpars, info
 
-    @parametrize(info=POSCAR_WITH_NEAREST_NEIGHBOR_INFO, idgen=make_poscar_ids())
+    @parametrize(info=POSCAR_WITH_NEAREST_NEIGHBOR_INFO,
+                 idgen=make_poscar_ids())
+    @case(tags=Tag.SURFACE_ATOMS)
     def case_nearest_neighbors_poscar(self, info):
         """Return a slab, an Rparams and info on expected nearest neighbors."""
         return self.case_poscar(info)

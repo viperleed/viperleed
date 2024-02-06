@@ -195,6 +195,7 @@ class CaseTag(IntEnum):
     NO_INFO = auto()
     NON_MINIMAL_CELL = auto()
     RAISES = auto()
+    SURFACE_ATOMS = auto()
     THICK_BULK = auto()
 
 
@@ -346,6 +347,7 @@ class NearestNeighborInfo(InfoBase):
     """Container for information about nearest neighbors."""
     # Keys are atom number
     nearest_neighbor_distances: Dict[int, float]
+
 
 @dataclass(repr=False)
 class SurfaceAtomInfo(InfoBase):
