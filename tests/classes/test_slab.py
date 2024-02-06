@@ -1195,7 +1195,7 @@ class TestRevertUnitCell:
         return _apply
 
     @infoless_poscar
-    def test_few_operation(self, args, with_few_operations, check_identical):
+    def test_few_operations(self, args, with_few_operations, check_identical):
         """Same as above, but reverting a few operations."""
         slab, *_ = args
         slab_copy = deepcopy(slab)
