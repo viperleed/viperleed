@@ -318,13 +318,6 @@ class CasePOSCARSlabs:
         info.poscar.n_cells = 4
         return self.case_poscar(info)
 
-    @case(tags=Tag.NON_MINIMAL_CELL)
-    def case_poscar_lsmo_001_rt2(self):
-        """Return a sqrt(2) x sqrt(2) LSMO (001) A-site bulk-truncated slab."""
-        info = _get_poscar_info('POSCAR_LSMO_001_A_site', 60)
-        info.poscar.n_cells = 2
-        return self.case_poscar(info)
-
     @case(tags=(Tag.NON_MINIMAL_CELL, Tag.BULK_PROPERTIES))
     def case_poscar_fe3o4_001_cod(self):
         """Return a slab from a bulk-truncated Fe3O4(001) POSCAR."""
@@ -371,6 +364,13 @@ class CasePOSCARSlabs:
         return self.case_poscar(info)
 
     @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_lsmo_001_rt2(self):
+        """Return a sqrt(2) x sqrt(2) LSMO (001) A-site bulk-truncated slab."""
+        info = _get_poscar_info('POSCAR_LSMO_001_A_site', 60)
+        info.poscar.n_cells = 2
+        return self.case_poscar(info)
+
+    @case(tags=Tag.NON_MINIMAL_CELL)
     def case_poscar_mgo(self):
         """Return a non-minimal Mg(001) slab."""
         info = _get_poscar_info('POSCAR_MgO_cod_9006456',
@@ -386,7 +386,7 @@ class CasePOSCARSlabs:
         # of the Sb atoms are not quite in the right position
         info.poscar.n_cells = 2
         return self.case_poscar(info)
-    
+
     @case(tags=Tag.BULK_PROPERTIES)
     def case_poscar_tio2_small(self):
         """Return a rutile TiO2(110) with a few bulk layers."""
