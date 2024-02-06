@@ -907,7 +907,7 @@ class BaseSlab(AtomContainer):
             mincell = np.dot([[1, 0], [0, -1]], mincell)
         return mincell
 
-    def initSites(self, rp):
+    def initSites(self, rp):                                                    # BUG: No sites if called twice
         """Goes through the atom list and supplies them with appropriate
         SiteType objects, based on the SITE_DEF parameters from the supplied
         Rparams."""

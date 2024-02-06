@@ -363,12 +363,25 @@ class CasePOSCARSlabs:
             )
         return self.case_poscar(info)
 
-    @case(tags=Tag.NON_MINIMAL_CELL)
+    @case(tags=(Tag.NON_MINIMAL_CELL, Tag.SURFACE_ATOMS))
     def case_poscar_lsmo_001_rt2(self):
         """Return a sqrt(2) x sqrt(2) LSMO (001) A-site bulk-truncated slab."""
         info = _get_poscar_info('POSCAR_LSMO_001_A_site', 60)
         info.poscar.n_cells = 2
-        return self.case_poscar(info)
+        info.surface_atoms = SurfaceAtomInfo((2, 6, 9, 11,      # A
+                                              19, 26, 38, 47))  # O
+        slab, rpars, info = self.case_poscar(info)
+
+        # Assign mixed sites. Notice that, due to a bug in initSites,
+        # we have to clear the current atomic sites before making new
+        # ones. Otherwise we'd get an empty sitelist.
+        rpars.ELEMENT_MIX = {'A': ['La', 'Sr']}
+        for atom in slab:
+            atom.site = None
+        slab.initSites(rpars)
+        a_site = next(s for s in slab.sitelist if s.el == 'A')
+        a_site.occ = {'La': 0.8, 'Sr': 0.2}
+        return slab, rpars, info
 
     @case(tags=Tag.NON_MINIMAL_CELL)
     def case_poscar_mgo(self):
