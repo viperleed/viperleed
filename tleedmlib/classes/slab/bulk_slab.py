@@ -281,10 +281,11 @@ class BulkSlab(BaseSlab):
             # it is a bit of a pain as we would need to shift things
             # back up later in order to keep the z centering.
             raise SlabError(
-                f'{type(self).__name__}.ensure_minimal_c_vector: cannot '
-                'reduce c vector for a non-z-periodic slab that has a large '
-                'vacuum gap at the bottom. Shift all atoms down along z by '
-                f'calling slab.remove_vacuum_at_bottom(rpars)'
+                f'{type(self).__name__}.ensure_minimal_c_vector: cannot reduce'
+                ' c vector for a non-z-periodic slab that has a vacuum gap at '
+                f'the bottom (gap={delta_z:.3f} > {rpars.SYMMETRY_EPS.z:.3f}).'
+                f' Shift all atoms down along z using '
+                'slab.remove_vacuum_at_bottom(rpars)'
                 )
 
         # Now we're sure that this slab will become
