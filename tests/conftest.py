@@ -147,7 +147,7 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
     param.workdir = tmp_path_factory.mktemp(basename='phaseshifts',
                                             numbered=True)
     param.initTheoEnergies()
-    executable = 'EEASiSSS' + ('.exe' if 'nt' in os.name else '.x')             # TODO: does this cover it or should we use 'win' in sys.platform()?
+    executable = 'EEASiSSS' + ('.exe' if 'nt' in os.name else '')               # TODO: does this cover it or should we use 'win' in sys.platform()?
 
     # run EEASISSS in the temporary directory
     home = Path()
