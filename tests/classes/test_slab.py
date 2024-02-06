@@ -1727,6 +1727,15 @@ class TestUnitCellTransforms:
         with pytest.raises(exc):
             slab.apply_matrix_transformation(matrix)
 
+    @todo
+    def test_matrix_transform_changes_z(self):
+        """Check outcome of a matrix transformation that mixes a, b, and c."""
+        # Also check: non-None .bulkslab becomes None upon application
+
+    @todo
+    def test_matrix_transform_propagated_to_bulk(self):
+        """Check that applying a matrix transform is reflected on bulkslab."""
+
     def test_project_c_to_z(self, make_poscar, subtests):
         """Check that c is along z after projection."""
         slab, *_ = make_poscar(poscar_slabs.SLAB_36C_cm)
