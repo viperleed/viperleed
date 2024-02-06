@@ -1204,11 +1204,31 @@ class TestRevertUnitCell:
         check_identical(slab, slab_copy)
 
     @infoless_poscar
-    def test_nothing_to_undo(self, args, check_identical):                      # TODO: both by having nothing to undo, and by passing as many as there are operations. Check especially by manually translating atoms out of the base cell. – @michele-riva: not sure what you mean by this
-        """Check that reverting with no operations does nothing."""
+    def test_nothing_to_undo_collapses(self, args, check_identical):
+        """Check that reverting with no operations collapses coordinates."""
         slab, *_ = args
+        # Translate some atoms out of the unit cell
+        for atom in slab:
+            atom.pos = atom.pos + (0.52, -0.58, 1.7)
+        slab.update_cartesian_from_fractional(update_origin=True)
         slab_copy = deepcopy(slab)
+        slab_copy.collapse_cartesian_coordinates()
         slab.revert_unit_cell()
+        check_identical(slab, slab_copy)
+
+    @infoless_poscar
+    def test_undo_none_collapses(self, args, with_few_operations,
+                                 check_identical):
+        """Check that reverting no operations always collapses coordinates."""
+        slab, *_ = args
+        # Translate some atoms out of the unit cell
+        for atom in slab:
+            atom.pos = atom.pos + (0.52, -0.58, 1.7)
+        slab.update_cartesian_from_fractional(update_origin=True)
+        with_few_operations(slab)
+        slab_copy = deepcopy(slab)
+        slab_copy.collapse_cartesian_coordinates()
+        slab.revert_unit_cell(slab.ucell_mod)
         check_identical(slab, slab_copy)
 
     @parametrize(n_undo=(1, 3, 5))
