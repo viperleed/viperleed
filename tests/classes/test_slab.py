@@ -1246,7 +1246,7 @@ class TestRevertUnitCell:
         slab.revert_unit_cell(slab.ucell_mod)
         check_identical(slab, slab_copy)
 
-    @parametrize(n_undo=(1, 3, 5))
+    @parametrize(n_undo=(1, 3, 4))
     @infoless_poscar
     def test_revert_in_two_steps(self, args, n_undo, check_identical,
                                  with_few_operations):
