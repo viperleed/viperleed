@@ -82,9 +82,8 @@ class BaseSlab(AtomContainer):
         List of all atoms in the slab.
     layers : tuple of Layer
         Each `layer` is a composite of sublayers, as in TensErLEED
-    sublayers : list of SubLayer
-        List of SubLayer objects, each containing atoms of equal
-        element and Z coordinate
+    sublayers : tuple of SubLayer
+        Each SubLayer contains atoms of equal element and Z coordinate
     sitelist : list of Sitetype
         List of distinct sites as Sitetype, storing information
         on vibration and concentration
@@ -118,7 +117,7 @@ class BaseSlab(AtomContainer):
         self.n_per_elem = {}
         self.atlist = AtomList()
         self.layers = ()
-        self.sublayers = []
+        self.sublayers = ()
         self.sitelist = []
         self.ucell_mod = []
         self.ucell_ori = np.array([])
@@ -607,7 +606,7 @@ class BaseSlab(AtomContainer):
             subl.extend(self._get_sublayers_for_el(element, eps))
 
         # subl is sorted element-first. Re-sort it as in the __doc__
-        self.sublayers = []
+        sorted_sublayers = []
 
         # Work with subl sorted from bottom to top, and pop the last
         # element each time (i.e., the topmost layer to be processed)
@@ -621,7 +620,8 @@ class BaseSlab(AtomContainer):
                 else:
                     break
             same_z.sort(key=attrgetter('element'))
-            self.sublayers.extend(same_z)
+            sorted_sublayers.extend(same_z)
+        self.sublayers = tuple(sorted_sublayers)
         for i, layer in enumerate(self.sublayers):
             layer.num = i
 
@@ -972,11 +972,11 @@ class BaseSlab(AtomContainer):
         slabs = copy.deepcopy(self), copy.deepcopy(other)
         for slab in slabs:
             slab.collapse_cartesian_coordinates()
-            if not slab.sublayers:
-                slab.create_sublayers(eps)
+            # Always re-create sublayers as eps may differ
+            slab.create_sublayers(eps)
             # Reorder sublayers by Z to then compare by index
-            slab.sublayers.sort(key=attrgetter('cartbotz'))
-
+            slab.sublayers = tuple(sorted(slab.sublayers,
+                                          key=attrgetter('cartbotz')))
         if slabs[0].n_sublayers != slabs[1].n_sublayers:
             return False
 
@@ -1002,7 +1002,7 @@ class BaseSlab(AtomContainer):
             if any(distances.min(axis=1) > eps):
                 # Notice that we use axis=1 as axis=0 contains
                 # this_coords, which has been expanded to add
-                # atoms at edged/corners
+                # atoms at edges/corners
                 return False
         return True
 
@@ -1424,7 +1424,7 @@ class BaseSlab(AtomContainer):
         # transformation touched 'z' we invalidate everything
         if changes_z:
             self.layers = ()
-            self.sublayers.clear()
+            self.sublayers = ()
 
         if self.is_bulk:
             return

@@ -214,7 +214,7 @@ class TestAtomTransforms:
     def test_rotation_symmetric_raises(self, ag100):
         """Check that no symmetry checks can be performed without sublayers."""
         slab, *_ = ag100
-        slab.sublayers.clear()
+        slab.sublayers = ()
         with pytest.raises(err.MissingSublayersError):
             slab.is_rotation_symmetric((0, 0), 4, 1e-3)
 
@@ -782,7 +782,7 @@ class TestContains:
         with subtests.test('Does not contain another SubLayer'):
             assert sub_lay.__class__(slab, 0) not in slab
         with subtests.test('Does not contain sublayer after clearing'):
-            slab.sublayers.clear()
+            slab.sublayers = ()
             assert sub_lay not in slab
 
     def test_does_not_contain(self, ag100):

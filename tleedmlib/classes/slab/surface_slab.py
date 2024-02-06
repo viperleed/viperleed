@@ -75,11 +75,10 @@ class SurfaceSlab(BaseSlab):
         The number of atoms per POSCAR element.
     atlist : AtomList
         List of all atoms in the slab.
-    sublayers : list of SubLayer
-        List of SubLayer objects, each containing atoms of equal
-        element and Z coordinate
     layers : tuple of Layer
         Each `layer` is a composite of sublayers, as in TensErLEED
+    sublayers : tuple of SubLayer
+        Each SubLayer contains atoms of equal element and Z coordinate
     sitelist : list of Sitetype
         List of distinct sites as Sitetype, storing information
         on vibration and concentration
@@ -1056,7 +1055,7 @@ class SurfaceSlab(BaseSlab):
 
         bulk_appended.sort_original()
         # Invalidate outdated information
-        bulk_appended.sublayers = []
+        bulk_appended.sublayers = ()
 
         if not bulk_appended.is_bulk:
             bulk_appended.bulkslab = None

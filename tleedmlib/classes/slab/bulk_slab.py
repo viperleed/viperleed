@@ -49,11 +49,10 @@ class BulkSlab(BaseSlab):
         The number of atoms per POSCAR element.
     atlist : AtomList
         List of all atoms in the slab.
-    sublayers : list of SubLayer
-        List of SubLayer objects, each containing atoms of equal
-        element and Z coordinate
     layers : tuple of Layer
         Each `layer` is a composite of sublayers, as in TensErLEED
+    sublayers : tuple of SubLayer
+        Each SubLayer contains atoms of equal element and Z coordinate
     sitelist : list of Sitetype
         List of distinct sites as Sitetype, storing information
         on vibration and concentration
@@ -692,5 +691,5 @@ class BulkSlab(BaseSlab):
                 new_atoms_start_idx += 1
             c_vec *= 2
         double_slab.collapse_cartesian_coordinates(update_origin=True)
-        double_slab.sublayers.clear()  # They are outdated
+        double_slab.sublayers = ()  # They are outdated
         return double_slab
