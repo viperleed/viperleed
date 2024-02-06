@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 from pytest_cases import fixture, fixture_ref
 from pytest_cases import parametrize, parametrize_with_cases
+from scipy.spatial.distance import cdist as euclid_distance
 
 VPR_PATH = str(Path(__file__).resolve().parents[3])
 if VPR_PATH not in sys.path:
@@ -24,7 +25,8 @@ if VPR_PATH not in sys.path:
 
 # pylint: disable=wrong-import-position
 # Cannot do anything about it until we make viperleed installable
-from viperleed.tleedmlib.base import collapse, pairwise
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import add_edges_and_corners, collapse, pairwise
 from viperleed.tleedmlib.base import NonIntegerMatrixError, SingularMatrixError
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
@@ -69,19 +71,31 @@ def make_shuffled_slab():
 @fixture(name='check_identical')
 def factory_check_identical(subtests):
     """Check that slab and other are identical."""
+    def _get_frac_and_cart(slab):
+        frac = np.array([at.pos for at in slab])
+        cart = frac.dot(slab.ucell.T)
+        return frac, cart
+
     def check_identical(slab, other):
         with subtests.test('n_atoms'):
             assert slab.n_atoms == other.n_atoms
         with subtests.test('ucell'):
             assert slab.ucell == pytest.approx(other.ucell)
-        atom_pairs = zip(slab, other)
         with subtests.test('atom elements'):
-            assert all(at.el == at2.el for at, at2 in atom_pairs)
+            assert all(at.el == at2.el for at, at2 in zip(slab, other))
+
+        # Compare coordinates including replicas for edge/corner atoms
+        frac_slab, cart_slab = _get_frac_and_cart(slab)
+        frac_other, cart_other = _get_frac_and_cart(other)
+        cart_other, _ = add_edges_and_corners(cart_other, frac_other,
+                                              (1e-4,)*3, other.ucell.T)
+        frac_other = cart_other.dot(np.linalg.inv(other.ucell.T))
         with subtests.test('atom pos'):
-            assert all(np.allclose(at.pos, at2.pos) for at, at2 in atom_pairs)
+            frac_dist = euclid_distance(frac_slab, frac_other).min(axis=1)
+            assert all(frac_dist <= 1e-4)
         with subtests.test('atom cartpos'):
-            assert all(np.allclose(at.cartpos, at2.cartpos)
-                       for at, at2 in atom_pairs)
+            cart_dist = euclid_distance(cart_slab, cart_other).min(axis=1)
+            assert all(cart_dist <= 1e-4)
     return check_identical
 
 
