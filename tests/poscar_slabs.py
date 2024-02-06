@@ -199,7 +199,7 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
             ),
         ),
     _add_known_bulk_properties(
-        _get_poscar_info('POSCAR_Cu2O_111'),
+        _get_poscar_info('POSCAR_Cu2O_111', 22+43),
         BulkSlabAndRepeatInfo(
             bulk_like_below=0.55,
             bulk_repeat=np.array([0, -3.4766, 2.4584]),
@@ -394,7 +394,7 @@ class CasePOSCARSlabs:
     @case(tags=Tag.NON_MINIMAL_CELL)
     def case_poscar_sb_si_111(self):
         """Return a non-minimal, rectangular slab of Sb/Si(111)."""
-        info = _get_poscar_info('POSCAR_Sb_Si(111)_rect', 106+12, 'pm')
+        info = _get_poscar_info('POSCAR_Sb_Si(111)_rect', 72+12, 'pm')
         # While it looks like there are 4 cells (rt3 of Si), some
         # of the Sb atoms are not quite in the right position
         info.poscar.n_cells = 2
@@ -403,7 +403,7 @@ class CasePOSCARSlabs:
     @case(tags=Tag.BULK_PROPERTIES)
     def case_poscar_tio2_small(self):
         """Return a rutile TiO2(110) with a few bulk layers."""
-        info = _get_poscar_info('POSCAR_TiO2_small')
+        info = _get_poscar_info('POSCAR_TiO2_small', 29)
         _add_known_bulk_properties(
             info,
             BulkSlabAndRepeatInfo(
