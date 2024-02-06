@@ -106,7 +106,10 @@ def findBulkSymmetry(sl, rp):
     glidesfound = []
     ts = copy.deepcopy(sl)
     rp2 = copy.deepcopy(rp)
-    # optimize C vector
+    # optimize C vector, removing vacuum below first. Notice that
+    # this is the safer way, as it allows us to relax assumptions
+    # on the z periodicity of sl
+    ts.remove_vacuum_at_bottom(rp2)
     try:
         ts.ensure_minimal_c_vector(rp2)
     except AlreadyMinimalError:
