@@ -1185,12 +1185,27 @@ class TestRevertUnitCell:
     @fixture(name='with_few_operations')
     def fixture_with_few_operations(self):
         """Apply a bunch of unit-cell operations to slab."""
+        rot_orders_for_cell = {
+            'oblique': (),
+            'rectangular': (2,),
+            'hexagonal': (2, 3, 6),
+            'rhombic': (2,),
+            'square': (2, 4)
+            }
+        def _rotate_once(slab, orders):
+            order = next(orders, None)
+            if not order:
+                return
+            slab.rotate_unit_cell(order)
+
         def _apply(slab):
-            slab.rotate_unit_cell(6)
-            slab.rotate_unit_cell(4)
-            slab.rotate_unit_cell(8)
+            cell_shape, _ = leedbase.checkLattice(slab.ab_cell.T)
+            rot_orders = iter(rot_orders_for_cell[cell_shape])
+            _rotate_once(slab, rot_orders)
             slab.transform_unit_cell_2d(((1, 1), (1, -1)))
+            _rotate_once(slab, rot_orders)
             slab.translate_atoms((0.25, 0.32))
+            _rotate_once(slab, rot_orders)
             slab.collapse_cartesian_coordinates()
         return _apply
 
