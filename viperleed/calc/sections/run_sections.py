@@ -17,6 +17,7 @@ from viperleed.calc.sections import superpos
 from viperleed.calc.sections import errorcalc
 from viperleed.calc.sections import fd_optimization
 from viperleed.calc.sections.cleanup import cleanup, move_oldruns
+from viperleed.calc.files import parameters
 from viperleed.calc.files.beams import (readBEAMLIST, readIVBEAMS,
                                         readOUTBEAMS, checkEXPBEAMS)
 from viperleed.calc.files.displacements import readDISPLACEMENTS
