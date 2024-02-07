@@ -1635,7 +1635,7 @@ class Slab:
         superlattice[:2, :2] = rp.SUPERLATTICE.T
         bsl.ucell = np.dot(bsl.ucell, np.linalg.inv(superlattice))
         if (rp.superlattice_defined and np.linalg.norm(bsl.ucell[:2, 0]) >
-                np.linalg.norm(bsl.ucell[:2, 1]) + 1e-4):
+                np.linalg.norm(bsl.ucell[:2, 1]) + 1e-2):
             logger.warning(
                 "The bulk unit cell defined by SUPERLATTICE does "
                 "not follow standard convention: the first vector is larger "
