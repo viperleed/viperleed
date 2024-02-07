@@ -1727,10 +1727,22 @@ class TestUnitCellTransforms:
         with pytest.raises(exc):
             slab.apply_matrix_transformation(matrix)
 
-    @todo
-    def test_matrix_transform_changes_z(self):
+    _z_changing_matrix = {
+        'reflect': np.array([[0, 1, 0], [-1, 0, 0], [0, 0, -1]]),
+        'mixing a, b, c': np.array([[1/np.sqrt(2), 0, 1/np.sqrt(2)],
+                                    [0, 1, 0],
+                                    [-1/np.sqrt(2), 0, 1/np.sqrt(2)]]),
+    }
+
+    @parametrize('matrix', _z_changing_matrix.values(), ids=_z_changing_matrix)
+    def test_matrix_transform_changes_z(self, matrix, ag100):
         """Check outcome of a matrix transformation that mixes a, b, and c."""
-        # Also check: non-None .bulkslab becomes None upon application
+        slab, *_ = ag100
+        original_ucell = slab.ucell.copy()
+        slab.apply_matrix_transformation(matrix)
+        assert np.allclose(slab.ucell, matrix.dot(original_ucell))
+        # check that bulkslab is reset to None in this case
+        assert slab.bulkslab is None
 
     @todo
     def test_matrix_transform_propagated_to_bulk(self):
