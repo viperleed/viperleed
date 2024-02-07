@@ -1744,9 +1744,23 @@ class TestUnitCellTransforms:
         # check that bulkslab is reset to None in this case
         assert slab.bulkslab is None
 
-    @todo
-    def test_matrix_transform_propagated_to_bulk(self):
+    _non_z_changing_matrix = {
+        'mixing': np.array([[1/np.sqrt(2), -1/np.sqrt(2), 0],
+                            [1/np.sqrt(2), 1/np.sqrt(2), 0],
+                            [0, 0, 1]]),
+    }
+
+    @parametrize('matrix', _non_z_changing_matrix.values(), ids=_non_z_changing_matrix)
+    def test_matrix_transform_propagated_to_bulk(self, matrix, ag100):
         """Check that applying a matrix transform is reflected on bulkslab."""
+        slab, rpars, _ = ag100
+        slab.make_bulk_slab(rpars)
+        original_ucell = slab.ucell.copy()
+        orignal_bulk_ucell = slab.bulkslab.ucell.copy()
+        slab.apply_matrix_transformation(matrix)
+        assert slab.bulkslab is not None
+        assert np.allclose(slab.bulkslab.ucell, matrix.dot(orignal_bulk_ucell))
+        assert np.allclose(slab.ucell, matrix.dot(original_ucell))
 
     def test_project_c_to_z(self, make_poscar, subtests):
         """Check that c is along z after projection."""
