@@ -31,7 +31,7 @@ from .helpers import NearestNeighborInfo, SurfaceAtomInfo, duplicate_all
 # pylint: enable=wrong-import-position
 
 
-def _get_poscar_info(*args, bulk_repeat_info=None):
+def _get_poscar_info(*args):
     """Return a TestInfo object appropriately filled with args.
 
     Parameters
