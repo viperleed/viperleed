@@ -51,7 +51,7 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
         "Cannot measure {} and {} at the same time. "
         "Measurements are performed by the same ADC."
         )
-    INVALID_REQUEST = (
+    UNSUPPORTED_QUANTITY = (
         152,
         "Cannot measure {0}. If your hardware can measure {0}, "
         "update its corresponding configuration file (check also typos!)."
@@ -781,7 +781,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                 self.__adc_measurement_types[i] = _quantity
                 break
             else:
-                base.emit_error(self, ViPErinoErrors.INVALID_REQUEST, quantity)
+                base.emit_error(self, ViPErinoErrors.UNSUPPORTED_QUANTITY, quantity)
                 return
 
         # Now see if we should also measure the cold-junction

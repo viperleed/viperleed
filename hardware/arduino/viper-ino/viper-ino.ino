@@ -16,9 +16,14 @@ Date: 09.02.2022
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
-// Firmware version (MAX: v255.255). CURENTLY: v0.8
+// The box ID is an indentifier that is necessary for the PC to know what
+// type of Arduino it is handling. 0 is the identifier of a ViPErino
+// controller that performs LEED measurements.
+#define BOX_ID  0
+
+// Firmware version (MAX: v255.255). CURENTLY: v0.9
 #define FIRMWARE_VERSION_MAJOR    0  // max 255
-#define FIRMWARE_VERSION_MINOR    8  // max 255
+#define FIRMWARE_VERSION_MINOR    9  // max 255
 
 
 
@@ -111,7 +116,9 @@ void updateState() {
     If there is an unprocessed serial message, decide whether
     this requires us to change the state of the Arduino, and
     do some preparation that may be needed before entering
-    the new state.
+    the new state. All data messages have to be at least two
+    bytes long. Messages that are one byte long are assumed
+    to be commands.
 
     Reads
     -----
@@ -128,6 +135,8 @@ void updateState() {
     if (not newMessage) return;
 
     if (msgLength > 1) return; //We received data
+    // Note that all data messages have
+    // to be at least two bytes long.
 
     if (data_received[0] != PC_CONFIGURATION
         and data_received[0] != PC_RESET
@@ -161,6 +170,7 @@ void updateState() {
             currentState = STATE_SET_VOLTAGE;
             break;
         case PC_AUTOGAIN:
+            encodeAndSend(PC_OK);
             initialTime = millis();
             prepareForAutogain();
             currentState = STATE_AUTOGAIN_ADCS;
@@ -511,20 +521,21 @@ void debugMsg(const char *message, ...){  // can be a format string
         variable number of arguments, interpreted as the values
         to be formatted into message.
 
-    The message sent to the PC is "<PC_DEBUG><message % ...>\0", and
-    should be at most 255 characters long. It is encoded like all others.
+    First a PC_DEBUG is sent to the PC, then the actual message is
+    sent. The message is formatted like "<message % ...>\0", and
+    should be at most 255 characters long, including the terminating
+    \0. It is encoded like all others.
     **/
     va_list args;
     va_start(args, message);
 
     byte n_chars;
-    char _buffer[255];  // PC_DEBUG + max 253 characters + '\0' at end
+    char _buffer[255];  // max 254 characters + '\0' at end
 
-    _buffer[0] = PC_DEBUG;
-    n_chars = 1;  // the PC_DEBUG
-    n_chars += vsnprintf(_buffer+n_chars, 255-n_chars, message, args);
+    n_chars = vsnprintf(_buffer, 255, message, args);
     va_end(args);
 
+    encodeAndSend(PC_DEBUG);
     encodeAndSend(reinterpret_cast<byte*>(_buffer), MIN(n_chars, 255));
 }
 
@@ -604,7 +615,7 @@ void triggerMeasurements() {
 
 /** Handler of STATE_GET_CONFIGURATION */
 void getConfiguration(){
-    /**Send firmware version, hardware configuration and serial number to PC.
+    /**Send box ID, firmware version, hardware config and serial nr. to PC.
     The serial number is read from the EEPROM.
 
     Writes
@@ -613,8 +624,9 @@ void getConfiguration(){
 
     Msg to PC
     ---------
-    8 data bytes
-        first two are the firmware version (M, m)
+    9 data bytes
+        the first one is the box ID
+        two are the firmware version (M, m)
         two are the hardware configuration as bitmask
         last 4 are the serial number
 
@@ -634,13 +646,14 @@ void getConfiguration(){
     // little-endian memory layout, i.e., LSB is
     // at lower memory index
     hardwareDetected.asInt = getHardwarePresent();
-    byte configuration[8] = {FIRMWARE_VERSION_MAJOR,
+    byte configuration[9] = {BOX_ID,
+                             FIRMWARE_VERSION_MAJOR,
                              FIRMWARE_VERSION_MINOR,
                              hardwareDetected.asBytes[1],
                              hardwareDetected.asBytes[0]};
     int address = 0;
     while(address <= 3){
-      configuration[address + 4] = EEPROM.read(address);
+      configuration[address + 5] = EEPROM.read(address);
       address += 1;
     }
     encodeAndSend(configuration, LENGTH(configuration));
@@ -853,13 +866,16 @@ void prepareADCsForMeasurement(){
               high byte, [1] the low byte. Interpreted as an uint16_t.
     - [2] channel of ADC#0
     - [3] channel of ADC#1
+    The ADC gains are set to 0 before the calibration is applied.
+
     Reads
     -----
     data_received
 
     Writes
     ------
-    newMessage, adc0Channel, adc1Channel, numMeasurementsToDo
+    newMessage, adc0Channel, adc1Channel, numMeasurementsToDo,
+    adc0Gain, adc1Gain
 
     Msg to PC
     ---------
@@ -915,6 +931,9 @@ void prepareADCsForMeasurement(){
     }
     adc0Channel = data_received[2];
     adc1Channel = data_received[3];
+
+    adc0Gain = 0;
+    adc1Gain = 0;
 
     setAllADCgainsAndCalibration();
     if (currentState == STATE_ERROR)   // Some channel was not calibrated
@@ -1218,7 +1237,8 @@ void findOptimalADCGains(){
 
     Msg to PC
     ---------
-    PC_OK : before returning to STATE_IDLE
+    PC_OK : at the state change when receiving the PC_AUTOGAIN command
+    adc0Gain, adc1Gain : before returning to STATE_IDLE
 
     Goes to state
     -------------
@@ -1293,7 +1313,8 @@ void findOptimalADCGains(){
     setAllADCgainsAndCalibration();
     if (currentState == STATE_ERROR)   // Some channel was not calibrated
         return;
-    encodeAndSend(PC_OK);
+    byte ADCgains[2] = {adc0Gain, adc1Gain};
+    encodeAndSend(ADCgains, 2);
     currentState = STATE_IDLE;
 }
 
