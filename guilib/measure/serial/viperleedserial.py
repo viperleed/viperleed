@@ -345,6 +345,7 @@ class ViPErLEEDSerial(SerialABC):
                 return True
             if msg_length == 1 and msg_data[0] == _debug:
                self.__is_waiting_for_debug_msg = True
+               return True
 
         # Check if message length is one of the expected lengths
         if msg_length not in (1, 2, 4, 8, 9):
