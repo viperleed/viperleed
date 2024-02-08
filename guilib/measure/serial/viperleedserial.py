@@ -647,7 +647,7 @@ class ViPErLEEDSerial(SerialABC):
                     self.__measurements = []
             # Firmware versions before 0.9 may return 8-bytes-long
             # hardware configurations. Version 0.9 and onwards will
-            # return 9 bytes long hardware configurations.
+            # return 9-bytes-long hardware configurations.
             elif len(message) in (8, 9):
                 if last_cmd == pc_configuration:
                     info = self.__firmware_and_hardware(message)
