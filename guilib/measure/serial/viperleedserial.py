@@ -659,8 +659,8 @@ class ViPErLEEDSerial(SerialABC):
                 base.emit_error(
                     self, ViPErLEEDHardwareError.ERROR_ERROR_SLIPPED_THROUGH
                     )
-            # If the message we received is a PC_DEBUG, then the next message
-            # will be a debug message.
+            # If the message we received is a PC_DEBUG, then
+            # the next message will be a debug message.
             elif len(message) == 1  and message[0] == pc_debug:
                 self.__should_emit_debug_msg = True
             # If the message does not fit one of the lengths above, it
