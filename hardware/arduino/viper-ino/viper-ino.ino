@@ -532,14 +532,7 @@ void debugMsg(const char *message, ...){  // can be a format string
     byte n_chars;
     char _buffer[255];  // max 254 characters + '\0' at end
 
-    n_chars = 0;
-    // n_chars += vsnprintf(_buffer+n_chars, 255-n_chars, message, args);
-    // Adding n_chars to the pointer to the buffer is no longer necessary
-    // as the message does no longer start with a PC_DEBUG.
-    // Therefore one also does not need to subtract n_chars from the
-    // maximal number of bytes one can write.
-
-    n_chars += vsnprintf(_buffer, 255, message, args);
+    n_chars = vsnprintf(_buffer, 255, message, args);
     va_end(args);
 
     encodeAndSend(PC_DEBUG);
