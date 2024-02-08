@@ -658,6 +658,7 @@ class ViPErLEEDSerial(SerialABC):
         elif self.__last_request_sent == pc_set_voltage:
             self.about_to_trigger.emit()
         elif self.__last_request_sent == pc_autogain:
+            # Autogain just started. Will return gains when done.
             return
         self.busy = False
 
