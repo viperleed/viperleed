@@ -874,8 +874,8 @@ void prepareADCsForMeasurement(){
 
     Writes
     ------
-    newMessage, adc0Channel, adc1Channel, numMeasurementsToDo, adc0Gain,
-    adc1Gain
+    newMessage, adc0Channel, adc1Channel, numMeasurementsToDo,
+    adc0Gain, adc1Gain
 
     Msg to PC
     ---------
