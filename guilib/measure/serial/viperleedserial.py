@@ -663,7 +663,7 @@ class ViPErLEEDSerial(SerialABC):
         self.busy = False
 
     def _process_numerical_data(self, message):
-        """Process measurements and old hardware configuration."""
+        """Process ADC measurements."""
         pc_set_voltage = self.port_settings.get('available_commands',
                                                 'PC_SET_VOLTAGE')
         pc_measure_only = self.port_settings.get('available_commands',
