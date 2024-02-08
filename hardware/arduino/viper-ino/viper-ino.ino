@@ -16,9 +16,9 @@ Date: 09.02.2022
 
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
-// The box ID is an indentifier that is necessary for the PC to know what type of
-// Arduino it is handling. 0 is the identifier of a ViPErino controller that performs
-// LEED measurements.
+// The box ID is an indentifier that is necessary for the PC to know what
+// type of Arduino it is handling. 0 is the identifier of a ViPErino
+// controller that performs LEED measurements.
 #define BOX_ID  0
 
 // Firmware version (MAX: v255.255). CURENTLY: v0.9
@@ -523,8 +523,8 @@ void debugMsg(const char *message, ...){  // can be a format string
 
     First a PC_DEBUG is sent to the PC, then the actual message is
     sent. The message is formatted like "<message % ...>\0", and
-    should be at most 255 characters long. It is encoded like all
-    others.
+    should be at most 255 characters long, including the terminating
+    \0. It is encoded like all others.
     **/
     va_list args;
     va_start(args, message);
@@ -1237,7 +1237,7 @@ void findOptimalADCGains(){
 
     Msg to PC
     ---------
-    PC_OK : when receiving the PC_AUTOGAIN command
+    PC_OK : at the state change when receiving the PC_AUTOGAIN command
     adc0Gain, adc1Gain : before returning to STATE_IDLE
 
     Goes to state
