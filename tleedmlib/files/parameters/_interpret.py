@@ -1355,7 +1355,6 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 reverse=True
                 )
 
-        atom_map = {at.num: at for at in self.slab}
         site_def_dict = {}
         for flag_and_values in assignment.values_str.strip().split(','):
             site_label, site_specs = self._get_valid_sitedef_spec(
@@ -1369,8 +1368,9 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 err_ = f'Invalid syntax in {assignment.values_str!r}: {exc!r}'
                 raise ParameterParseError(param, message=err_) from None
             try:
-                self._ensure_sitedef_makes_sense(site_element, site_label,
-                                                 atnums, atom_map)
+                self._ensure_sitedef_makes_sense(site_element,
+                                                 site_label,
+                                                 atnums)
             except ValueError as exc:
                 self.rpars.setHaltingLevel(3)
                 raise ParameterValueError(assignment.parameter,
@@ -1435,14 +1435,13 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ValueError(site_spec)
         return atnums
 
-    @staticmethod
-    def _ensure_sitedef_makes_sense(poscar_el, site_label, atom_nrs, atom_map):
+    def _ensure_sitedef_makes_sense(self, poscar_el, site_label, atom_nrs):
         """Raise ValueError if the atom_nrs selected for a site are wrong."""
         invalid_atom_nums = []
         invalid_elements = []
         for num in atom_nrs:
             try:
-                atom = atom_map[num]
+                atom = self.slab.atlist.get(num)
             except KeyError:
                 invalid_atom_nums.append(num)
                 continue

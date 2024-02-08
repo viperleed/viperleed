@@ -171,26 +171,16 @@ def runPhaseshiftGen_old(sl, rp,
                 minsize = max(minsize, int(np.ceil(2*els / ats)))
             supercell_size = max(minsize, int(maxats / nsl.n_atoms))
 
-    subatlists = {}     # atlist per block tuple
     if supercell_size > 1:  # construct supercell to get enough atoms
-        xsize = int(np.ceil(np.sqrt(supercell_size)))  # if scsize is not prime, try
-        while supercell_size % xsize != 0:             # making it close to square
-            xsize += 1
-        ysize = int(supercell_size / xsize)
-        cpatlist = nsl.atlist[:]
-        for at in cpatlist:
-            for i in range(0, xsize):
-                for j in range(0, ysize):
-                    if i == j == 0:
-                        continue
-                    tmpat = at.duplicate()
-                    tmpat.pos[0] += i
-                    tmpat.pos[1] += j
-        nsl.update_cartesian_from_fractional()
-        nsl.ucell = np.dot(np.array([[xsize, 0, 0], [0, ysize, 0], [0, 0, 1]]),
-                           nsl.ucell)
-        nsl.update_fractional_from_cartesian()
+        # Try to get similar number of repeats
+        # along the two unit-cell directions
+        a_size = int(np.ceil(np.sqrt(supercell_size)))
+        while supercell_size % a_size:
+            a_size += 1
+        b_size = supercell_size // a_size
+        nsl = nsl.make_supercell(np.diag(a_size, b_size))
 
+    subatlists = {}     # atlist per block tuple
     for site in nsl.sitelist:
         if site.el in rp.ELEMENT_MIX:
             occdict = {}
@@ -715,24 +705,14 @@ def make_atom_types(rp, sl, additional_layers):
             scsize = max(minsize, int(maxats / nsl.n_atoms))
 
 
-    if scsize > 1:  # construct supercell to get enough atoms
-        xsize = int(np.ceil(np.sqrt(scsize)))  # if scsize is not prime, try
-        while scsize % xsize != 0:  # making it close to square
-            xsize += 1
-        ysize = int(scsize / xsize)
-        cpatlist = nsl.atlist[:]  # seems to be deep copy even though not explicit
-        for at in cpatlist:
-            for i in range(0, xsize):
-                for j in range(0, ysize):
-                    if i == j == 0:
-                        continue
-                    tmpat = at.duplicate()
-                    tmpat.pos[0] += i
-                    tmpat.pos[1] += j
-        nsl.update_cartesian_from_fractional()
-        nsl.ucell = np.dot(np.array([[xsize, 0, 0], [0, ysize, 0], [0, 0, 1]]),
-                           nsl.ucell)
-        nsl.update_fractional_from_cartesian()
+    if scsize > 1:  # construct supercell to get enough atoms                   # TODO: code repeated from runPhaseshiftGen_old
+        # Try to get similar number of repeats
+        # along the two unit-cell directions
+        a_size = int(np.ceil(np.sqrt(scsize)))
+        while scsize % a_size:
+            a_size += 1
+        b_size = scsize // a_size
+        nsl = nsl.make_supercell(np.diag(a_size, b_size))
 
     # Write new unit cell vectors; to be used for input
     uct = nsl.ucell.transpose()

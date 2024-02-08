@@ -96,19 +96,10 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
 
 
 def apply_scaling(sl, rp, which, scale):
-    m = np.eye(3)
-    if "a" in which:
-        m[0, 0] *= scale
-    if "b" in which:
-        m[1, 1] *= scale
-    if "c" in which:
-        m[2, 2] *= scale
-    sl.update_fractional_from_cartesian()
-    sl.ucell = np.dot(sl.ucell, m)
-    sl.update_cartesian_from_fractional(update_origin=True)
-    sl.bulkslab.update_fractional_from_cartesian()
-    sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
-    sl.bulkslab.update_cartesian_from_fractional()
+    scaling = (scale if char in which else 1 for char in 'abc')
+    sl.update_fractional_from_cartesian()                                       # TODO: needed?
+    sl.bulkslab.update_fractional_from_cartesian()                              # TODO: needed?
+    sl.apply_scaling(*scaling)
     rp.BULK_REPEAT = sl.bulkslab.get_bulk_repeat(rp)
 
 

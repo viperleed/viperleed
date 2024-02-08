@@ -528,15 +528,8 @@ def init_domains(rp):
             logger.info(f"Bulk unit cells of domain {rp.domainParams[0].name} "
                         f"and domain {dp.name} are mismatched, but can be "
                         f"matched by rotating domain {dp.name}.")
-            ang = angle(bulkuc0[0], bulkuc[0])
-            rotm = rotation_matrix(ang, dim=3)
-            rotm_t = np.transpose(rotm)
-            # dp.sl.ucell = np.transpose(np.dot(np.transpose(dp.sl.ucell),
-            #                                   rotuc))
-            dp.sl.ucell = np.dot(rotm_t, dp.sl.ucell)
-            dp.sl.update_cartesian_from_fractional()
-            dp.sl.bulkslab.ucell = np.dot(rotm_t, dp.sl.bulkslab.ucell)
-            dp.sl.bulkslab.update_cartesian_from_fractional()
+            ang = angle(bulkuc[0], bulkuc0[0])
+            dp.sl.apply_matrix_transformation(rotation_matrix(ang, dim=3))      # TODO: this changes the coordinate frame. We need to modify BEAM_INCIDENCE!
         else:
             logger.error(f"Bulk unit cells of domain {rp.domainParams[0].name}"
                          f" and domain {dp.name} are mismatched, and cannot be"
