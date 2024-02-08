@@ -615,7 +615,7 @@ void triggerMeasurements() {
 
 /** Handler of STATE_GET_CONFIGURATION */
 void getConfiguration(){
-    /**Send box ID, firmware version, hardware configuration and serial number to PC.
+    /**Send box ID, firmware version, hardware config and serial nr. to PC.
     The serial number is read from the EEPROM.
 
     Writes
