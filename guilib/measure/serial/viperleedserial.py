@@ -86,8 +86,7 @@ class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
     ERROR_WRONG_BOX_ID = (
         18,
         "The box ID {arduino_id} of the hardware does not match the ID "
-        "{local_id} of the software. Most likely the wrong controller type "
-        "has been instantiated for the hardware."
+        "{local_id} of the software."
         )
 
 
