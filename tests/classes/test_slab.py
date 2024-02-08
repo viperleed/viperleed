@@ -1732,13 +1732,15 @@ class TestUnitCellTransforms:
         'mixing a, b, c': np.array([[1/np.sqrt(2), 0, 1/np.sqrt(2)],
                                     [0, 1, 0],
                                     [-1/np.sqrt(2), 0, 1/np.sqrt(2)]]),
-    }
+        }
 
     @parametrize('matrix', _z_changing_matrix.values(), ids=_z_changing_matrix)
     def test_matrix_transform_changes_z(self, matrix, ag100):
         """Check outcome of a matrix transformation that mixes a, b, and c."""
-        slab, *_ = ag100
+        slab, rpars, *_ = ag100
         original_ucell = slab.ucell.copy()
+        slab.make_bulk_slab(rpars)
+        assert slab.bulkslab is not None
         slab.apply_matrix_transformation(matrix)
         assert np.allclose(slab.ucell, matrix.dot(original_ucell))
         # check that bulkslab is reset to None in this case
@@ -1748,7 +1750,7 @@ class TestUnitCellTransforms:
         'mixing': np.array([[1/np.sqrt(2), -1/np.sqrt(2), 0],
                             [1/np.sqrt(2), 1/np.sqrt(2), 0],
                             [0, 0, 1]]),
-    }
+        }
 
     @parametrize('matrix', _non_z_changing_matrix.values(), ids=_non_z_changing_matrix)
     def test_matrix_transform_propagated_to_bulk(self, matrix, ag100):
