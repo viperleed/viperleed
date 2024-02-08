@@ -467,7 +467,7 @@ class POSCARFileReader(AbstractContextManager, POSCARReader):
             self._file_object.close()
         except AttributeError:
             pass
-        super().__exit__(exc_type, exc_val, exc_tb)
+        return super().__exit__(exc_type, exc_val, exc_tb)
 
     def read(self):
         """Return a slab with info read from file."""
