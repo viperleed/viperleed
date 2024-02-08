@@ -645,7 +645,7 @@ class ViPErLEEDSerial(SerialABC):
                     # ADC measurements. Throw them all away. This
                     # may swallow stray 4-long messages.
                     self.__measurements = []
-            # Firmware versions before 0.9 may return 8 bytes long
+            # Firmware versions before 0.9 may return 8-bytes-long
             # hardware configurations. Version 0.9 and onwards will
             # return 9 bytes long hardware configurations.
             elif len(message) in (8, 9):
