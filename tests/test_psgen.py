@@ -43,7 +43,7 @@ class TestPhaseshiftsGen:
 
     def test_phaseshift_log_exists(self, run_phaseshift):
         """Ensure a log file was written to disk."""
-        param, *_, = run_phaseshift
+        param, *_ = run_phaseshift
         assert any(param.workdir.glob('phaseshift*.log'))
 
 
