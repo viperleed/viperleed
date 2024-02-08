@@ -717,7 +717,9 @@ class ViPErLEEDSerial(SerialABC):
             Should have length 8 or 9
             Contains box ID as byte 0, firmware as bytes 1 and 2,
             hardware configuration as bytes 3 and 4, and serial
-            number as bytes 5 to 8
+            number as bytes 5 to 8. The box ID is not present for
+            versions earlier than 0.9. Then the message is 8-bytes
+            long. All other bytes are shifted back by one.
 
         Returns
         -------
