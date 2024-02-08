@@ -714,7 +714,7 @@ class ViPErLEEDSerial(SerialABC):
         Parameters
         ----------
         message : bytearray
-            Should have length 9
+            Should have length 8 or 9
             Contains box ID as byte 0, firmware as bytes 1 and 2,
             hardware configuration as bytes 3 and 4, and serial
             number as bytes 5 to 8
