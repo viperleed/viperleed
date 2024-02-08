@@ -1461,11 +1461,11 @@ class BaseSlab(AtomContainer):
         if len(scaling) not in (1, 3):
             raise TypeError(f'{type(self).__name__}.apply_scaling: '
                             'invalid number of arguments. Expected '
-                            f'one or three, got {len(scaling)}.')
+                            f'one or three, got {len(scaling)}')
         if not all(isinstance(s, Real) for s in scaling):
             raise TypeError(f'{type(self).__name__}.apply_scaling: '
                             f'invalid scaling factor. Expected one '
-                            'or three numbers.')
+                            'or three numbers')
         if len(scaling) == 1:
             scaling *= 3
         if any(abs(s) < 1e-5 for s in scaling):
