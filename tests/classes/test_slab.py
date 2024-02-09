@@ -362,7 +362,7 @@ class TestBulk3DOperations:
     def test_bulk_glide_symmetric_atom_moved(self, atoms_to_move,
                                              bulk_slab_with_glide):
         """Check identification of bulk glide plane with atoms a bit off."""
-        slab, glide, eps = bulk_slab_with_glide()
+        slab, glide, eps = bulk_slab_with_glide
         for atom_ind in atoms_to_move:
             self.move_atom(slab, atom_ind, 0.99*eps)
         assert slab.is_bulk_glide_symmetric(glide, 2, eps)
