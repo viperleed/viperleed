@@ -269,7 +269,7 @@ def collapse_fractional(coordinates, method='floor', eps=1e-8, in_place=False):
     try:
         round_ = _methods[method[0]]
     except (TypeError, IndexError, KeyError):
-        raise ValueError(f'collapse_fractional: Unknown {method=}')
+        raise ValueError(f'collapse_fractional: Unknown method={method}')
     if in_place:
         collapsed = coordinates
         collapsed -= round_(coordinates)

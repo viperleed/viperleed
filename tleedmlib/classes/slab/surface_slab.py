@@ -926,7 +926,8 @@ class SurfaceSlab(BaseSlab):
 
         transform = ensure_integer_matrix(transform)
         if transform.shape != (2, 2):
-            raise ValueError(f'Invalid {transform.shape=}. Expected (2, 2)')
+            raise ValueError(f'Invalid transform.shape={transform.shape}. '
+                             'Expected transform.shape=(2, 2)')
         if np.allclose(transform, np.identity(2)):
             return subcell_slab
 

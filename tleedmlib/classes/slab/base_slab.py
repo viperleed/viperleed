@@ -1191,7 +1191,7 @@ class BaseSlab(AtomContainer):
             _LOGGER.error(_err)
             raise SlabError(
                 'Perhaps you added some atoms and did not '
-                f'update_element_count()? {self.elements=}'
+                f'update_element_count()? elements={self.elements}'
                 ) from missing_el
 
     def sort_by_z(self, bottom_to_top=True):
