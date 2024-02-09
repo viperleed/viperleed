@@ -284,7 +284,7 @@ class BaseSlab(AtomContainer):
         """Return a `cls` instance with attributes deep-copied from `other`."""
         if not isinstance(other, BaseSlab):
             raise TypeError(f'{cls.__name__}.from_slab: other is not a slab.')
-        if type(other) is cls:
+        if other.__class__ is cls:
             return copy.deepcopy(other)
 
         instance = cls()
@@ -761,14 +761,14 @@ class BaseSlab(AtomContainer):
             epsz = eps
 
         # Create a test slab: C projected to Z
-        ts = copy.deepcopy(self)
-        ts.project_c_to_z()
-        ts.sort_by_z()
-        ts.create_sublayers(epsz)
+        self_copy = copy.deepcopy(self)
+        self_copy.project_c_to_z()
+        self_copy.sort_by_z()
+        self_copy.create_sublayers(epsz)
 
         # Use the lowest-occupancy sublayer (the one
         # with fewest atoms of the same chemical element)
-        lowocclayer = ts.fewest_atoms_sublayer
+        lowocclayer = self_copy.fewest_atoms_sublayer
         n_atoms = lowocclayer.n_atoms
         if n_atoms < 2:
             # Cannot be smaller if there's only 1 atom
@@ -784,10 +784,12 @@ class BaseSlab(AtomContainer):
         # all atoms must have a 'copy'. We take the first one.
         plist = [at.cartpos[:2] for at in lowocclayer]
         candidate_unit_vectors = (p - plist[0] for p in plist[1:])              # TODO: since is_translation_symmetric is somewhat expensive, would it make sense to pre-filter the vectors keeping only the shortest ones among those parallel to one another?
-        candidate_unit_vectors = (vec for vec in candidate_unit_vectors
-                                  if ts.is_translation_symmetric(vec, eps))
+        candidate_unit_vectors = (
+            vec for vec in candidate_unit_vectors
+            if self_copy.is_translation_symmetric(vec, eps)
+            )
         # Try to reduce the cell
-        smaller, mincell = self._minimize_ab_area(ts.ab_cell.T, n_atoms,
+        smaller, mincell = self._minimize_ab_area(self.ab_cell.T, n_atoms,
                                                   candidate_unit_vectors, eps)
         if not smaller:
             raise AlreadyMinimalError(
