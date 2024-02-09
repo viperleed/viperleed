@@ -19,11 +19,12 @@ from math import remainder as round_remainder
 from operator import itemgetter
 
 import numpy as np
-from scipy.spatial import KDTree
+from scipy.spatial import KDTree, distance as sp_distance
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import NonIntegerMatrixError
 from viperleed.tleedmlib.base import SingularMatrixError
+from viperleed.tleedmlib.base import add_edges_and_corners, collapse
 from viperleed.tleedmlib.base import ensure_integer_matrix, pairwise
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
@@ -35,6 +36,7 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab
 from .slab_errors import AlreadyMinimalError
+from .slab_errors import AtomsTooCloseError
 from .slab_errors import MissingBulkSlabError
 from .slab_errors import MissingLayersError
 from .slab_errors import NoBulkRepeatError
@@ -250,6 +252,57 @@ class SurfaceSlab(BaseSlab):
                                                 new_ab_cell=new_ab_cell,
                                                 recenter=False,
                                                 z_periodic=False)
+
+    def check_atom_collisions(self, eps=0.05):
+        """Raise if any pairs of Atoms are too close to one another.
+
+        Parameters
+        ----------
+        eps : float, optional
+            Minimum Cartesian distance (Angstrom) for Atoms to be
+            considered colliding. Default is 0.05.
+
+        Raises
+        ------
+        MissingLayersError
+            If this method is called before this Slab has layers.
+        AtomsTooCloseError
+            If any pair of atoms, including 2D replicas, are too
+            close to one another.
+        """
+        if not self.layers:
+            raise MissingLayersError('Cannot check_atom_collisions '
+                                     'without layers')
+
+        ucell = self.ucell.T
+        ucell_inv = np.linalg.inv(ucell)
+        releps = eps / np.linalg.norm(self.ab_cell.T, axis=1)
+
+        # We will check atoms including 2D replicas. We should take
+        # atoms from two adjacent layers if the layers are close
+        # enough (most of the times this will not be the case).
+        layers = (*self.layers, None)
+        for upper_layer, lower_layer in pairwise(layers):
+            cartesians = [at.cartpos for at in upper_layer]
+            try:
+                layer_dist = abs(lower_layer.cartori[2] - upper_layer.cartbotz)
+            except AttributeError:  # lower_layer is None
+                layer_dist = 2*eps  # Just to skip the next check
+            if layer_dist < eps:
+                cartesians.extend(at.cartpos for at in lower_layer)
+            cartesians = np.array(cartesians)
+            cartesians[:, 2] = self.topat_ori_z - cartesians[:, 2]              # TODO: .cartpos[2]. We can entirely skip this when we flip
+            cartesians, fractionals = collapse(cartesians, ucell, ucell_inv)
+            cartesians, _ = add_edges_and_corners(cartesians, fractionals,
+                                                  releps, ucell)
+            too_close = sp_distance.pdist(cartesians, 'euclidean') <= eps
+            if any(too_close):
+                raise AtomsTooCloseError(
+                    f'{type(self).__name__} contains atoms closer than {eps} '
+                    'angstrom. This is problematic for a LEED calculation. '
+                    'Are there duplicate atoms? Remove duplicates, e.g., '
+                    f'via slab.remove_duplicate_atoms(eps={eps}, epsz={eps})'
+                    )
 
     def detect_bulk(self, rpars, second_cut_min_spacing=1.2):
         """Determine the minimal bulk repeat vector from BULK_LIKE_BELOW.

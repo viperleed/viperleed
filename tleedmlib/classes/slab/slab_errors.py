@@ -19,6 +19,10 @@ class AlreadyMinimalError(SlabError, RuntimeError):
     """A minimization was requested, but the quantity is already minimal."""
 
 
+class AtomsTooCloseError(SlabError):
+    """Exception for when (at least) two atoms are too close."""
+
+
 class EmptySlabError(SlabError):
     """The slab has no atoms."""
 

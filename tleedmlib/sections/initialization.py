@@ -50,6 +50,9 @@ def initialization(sl, rp, subdomain=False):
         init_domains(rp)
         return
 
+    # Make sure that there are no duplicate atoms
+    sl.check_atom_collisions(rp.SYMMETRY_EPS)
+
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
         tl_symmetry.findSymmetry(sl, rp)

@@ -840,7 +840,6 @@ class TestCoordinates:
         assert atom.pos == pytest.approx([0.1, 0.2, 0.3])
 
 
-@todo
 class TestDuplicateAtoms:
     """Tests for checking detection and removal of duplicate atoms."""
 
@@ -854,6 +853,13 @@ class TestDuplicateAtoms:
                                         rpars.SYMMETRY_EPS.z)
         assert n_atoms_before > slab.n_atoms
         with not_raises(err.AtomsTooCloseError):
+            slab.check_atom_collisions()
+
+    def test_check_collisions_raises_without_layers(self, ag100):
+        """Check complaints if layers are not available."""
+        slab, *_ = ag100
+        slab.layers = ()
+        with pytest.raises(err.MissingLayersError):
             slab.check_atom_collisions()
 
     @parametrize(info=poscar_slabs.WITH_DUPLICATE_ATOMS)
