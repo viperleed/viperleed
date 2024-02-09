@@ -121,17 +121,17 @@ class BaseSlab(AtomContainer):
         self.sitelist = []
         self.ucell_mod = []
         self.ucell_ori = np.array([])
-        self.topat_ori_z = None                                                 # base (non-bulk after we fix the cartpos[2] flip)
+        self.topat_ori_z = None                                                 # TODO: SurfaceSlab only after we fix the .cartpos[2]
         self.celltype = 'unknown'
         self.planegroup = 'unknown'
         self.foundplanegroup = 'unknown'
         self.orisymplane = None
-        self.linklists = []                                                     # non-bulk?
+        self.linklists = []
         self.bulkslab = None  # Deleted in BulkSlab.__init__
 
         # Remember the last value of the ELEMENT_MIX parameter that
         # was applied. Prevents repeated applications
-        self._last_element_mix = None                                           # base?
+        self._last_element_mix = None
 
     def __contains__(self, item):
         """Return whether an atom, layer, site, ... is in this slab."""
@@ -728,7 +728,7 @@ class BaseSlab(AtomContainer):
             non-bulk layers.
         """
 
-    def get_minimal_ab_cell(self, eps, epsz=None, warn_convention=False):       # TODO: write a test case for the reduction of POSCAR Sb on Si(111)
+    def get_minimal_ab_cell(self, eps, epsz=None, warn_convention=False):
         """Check if there is a 2D unit cell smaller than the current one.
 
         Parameters

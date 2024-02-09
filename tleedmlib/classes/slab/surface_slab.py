@@ -611,7 +611,7 @@ class SurfaceSlab(BaseSlab):
                                   f'identify {atom.el} as a chemical element.')
                     rp.setHaltingLevel(2)
                     return []
-            r *= 1.2    # TODO: !!! test if this is enough
+            r *= 1.2
             surfats.update(a for a in self
                            if a.pos[2] >= atom.pos[2] and a not in covered)
             covered.update(
