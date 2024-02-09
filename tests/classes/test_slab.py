@@ -844,7 +844,7 @@ class TestDuplicateAtoms:
     """Tests for checking detection and removal of duplicate atoms."""
 
     @parametrize(info=poscar_slabs.WITH_DUPLICATE_ATOMS)
-    def test_remove_duplicates(self, info, make_poscar):                        # TODO: n_atoms, raises, others? check method
+    def test_remove_duplicates(self, info, make_poscar):
         """Check correct removal of duplicate atoms."""
         slab, rpars, *_ = make_poscar(info)
         n_atoms_before = slab.n_atoms
@@ -933,7 +933,11 @@ class TestExtraBulk:
     @fixture(name='check_extra_bulk')
     def fixture_check_extra_bulk(self, subtests):
         """Check correct addition of bulk units."""
-        def _check(bulk_appended, new_atoms, n_cells, slab, rpars, n_bulk_atoms):
+        # There are indeed quite a lot of arguments, but packing
+        # them into a dedicated class seems a bit of an overkill
+        # pylint: disable-next=too-many-arguments
+        def _check(bulk_appended, new_atoms, n_cells,
+                   slab, rpars, n_bulk_atoms):
             n_bulk_layers_before = len(slab.bulk_layers)
             expected_extra_atoms = (n_cells * n_bulk_atoms
                                     * abs(np.linalg.det(rpars.SUPERLATTICE)))
@@ -984,6 +988,7 @@ class TestExtraBulk:
 
     @parametrize(n_cells=(1, 2, 3, 5))
     @with_bulk_repeat
+    # pylint: disable-next=too-many-arguments  # Mostly fixtures
     def test_extra_bulk_thick_bulk(self, args, n_cells, check_extra_bulk,
                                    subtests, with_one_thick_bulk):
         """Check correct addition of a thicker-than-repeat bulk."""
@@ -1000,8 +1005,8 @@ class TestExtraBulk:
             if 'integer multiple' in exc.args[0]:
                 pytest.skip(reason=str(exc))
             raise
-        n_bulk_atoms = slab.bulkslab.n_atoms
-        check_extra_bulk(extra, added, n_cells, slab, rpars, n_bulk_atoms)
+        check_extra_bulk(extra, added, n_cells, slab,
+                         rpars, slab.bulkslab.n_atoms)
 
         # Ensure we haven't added any gaps or partly overlapping layers
         dists = _get_interlayers(slab)
@@ -1371,8 +1376,7 @@ class TestSlabLayers:
     def test_sublayer_sorting(self, args, subtests):
         """Check that sublayers are created with the expected sort order."""
         slab, rpars, *_ = args
-        eps = rpars.SYMMETRY_EPS.z
-        slab.create_sublayers(eps)
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
 
         # Expect: (i) top to bottom, (ii) alphabetically
         # by element at same z (within eps)
@@ -1382,7 +1386,7 @@ class TestSlabLayers:
         by_z = [same_z]
         for layer in slab.sublayers:
             this_z = layer.cartbotz
-            if abs(z_above - this_z) < eps:
+            if abs(z_above - this_z) < rpars.SYMMETRY_EPS.z:
                 same_z.append(layer)
                 z_above = min(z_above, this_z)                                  # TODO: max when flipping .cartpos[2]
             else:
@@ -1758,7 +1762,8 @@ class TestUnitCellTransforms:
                             [0, 0, 1]]),
         }
 
-    @parametrize('matrix', _non_z_changing_matrix.values(), ids=_non_z_changing_matrix)
+    @parametrize('matrix', _non_z_changing_matrix.values(),
+                 ids=_non_z_changing_matrix)
     def test_matrix_transform_propagated_to_bulk(self, matrix, ag100):
         """Check that applying a matrix transform is reflected on bulkslab."""
         slab, rpars, _ = ag100
