@@ -465,7 +465,7 @@ void encodeAndSend(byte singleByte){
 }
 
 
-void encodeAndSend(byte *byteArray, byte numBytesBeforeEncoding){
+void encodeAndSend(byte *byteArray, uint16_t numBytesBeforeEncoding){
 /*
  * Prepares message before sending it to the PC. Changes every
  * byte which happens to have the same value as a MSG_START, and MSG_END or
@@ -477,6 +477,10 @@ void encodeAndSend(byte *byteArray, byte numBytesBeforeEncoding){
  * byteArray : byte*
  *     Pointer to message to be sent
  */
+    if (numBytesBeforeEncoding >= MSG_SPECIAL_BYTE){
+        raise(ERROR_MSG_SENT_TOO_LONG);
+        return;
+        }
     byte encodedMessage[2*numBytesBeforeEncoding]; // Worst-case: each byte encoded as two
     byte numBytesAfterEncoding = 0;
     for(int i=0; i < numBytesBeforeEncoding; i++){
@@ -523,20 +527,22 @@ void debugMsg(const char *message, ...){  // can be a format string
 
     First a PC_DEBUG is sent to the PC, then the actual message is
     sent. The message is formatted like "<message % ...>\0", and
-    should be at most 255 characters long, including the terminating
-    \0. It is encoded like all others.
+    should be at most MSG_SPECIAL_BYTE - 1 characters long, including
+    the terminating \0. It is encoded like all others.
     **/
     va_list args;
     va_start(args, message);
 
-    byte n_chars;
-    char _buffer[255];  // max 254 characters + '\0' at end
+    uint16_t n_chars;
+    // Note that the buffer size is larger than the maximal message
+    // length of MSG_SPECIAL_BYTE - 1
+    char _buffer[255];
 
     n_chars = vsnprintf(_buffer, 255, message, args);
     va_end(args);
 
     encodeAndSend(PC_DEBUG);
-    encodeAndSend(reinterpret_cast<byte*>(_buffer), MIN(n_chars, 255));
+    encodeAndSend(reinterpret_cast<byte*>(_buffer), n_chars);
 }
 
 

@@ -88,6 +88,11 @@ class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
         "The box ID {arduino_id} of the hardware does not match the ID "
         "{local_id} of the software."
         )
+    ERROR_MSG_SENT_TOO_LONG = (
+        254,
+        "The controller tried to send a message that was longer "
+        "than MSG_SPECIAL_BYTE. This means the firmware has a bug."
+        )
 
 
 class ViPErLEEDSerial(SerialABC):
@@ -168,6 +173,15 @@ class ViPErLEEDSerial(SerialABC):
         return base.Version(
             self.port_settings.get("controller", "firmware_version")
             )
+
+    def clear_errors(self):
+        """Clear all errors and reset to the same state as a fresh instance."""
+        super().clear_errors()
+        self.__last_request_sent = ''
+        self.__measurements = []
+        self.__may_receive_stray_data = False
+        self.__is_waiting_for_debug_msg = False
+        self.__should_emit_debug_msg = False
 
     def decode(self, message):
         """Return a decoded version of message.
