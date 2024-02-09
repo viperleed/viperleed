@@ -580,10 +580,6 @@ class ViPErLEEDSerial(SerialABC):
         pc_configuration = self.port_settings.get('available_commands',
                                                   'PC_CONFIGURATION')
 
-        pc_debug = None
-        if self.firmware_version >= "0.7":
-            pc_debug = self.port_settings.getint('available_commands',
-                                                 'PC_DEBUG')
         # The following check catches data that is received
         # from setting up a connection to the microcontroller.
         if (self.__last_request_sent == pc_configuration                       # TODO: This may swallow a configuration response that arrives before we enter this check.
@@ -603,6 +599,11 @@ class ViPErLEEDSerial(SerialABC):
         pc_autogain = self.port_settings.get('available_commands',
                                              'PC_AUTOGAIN')
         last_cmd = self.__last_request_sent
+
+        pc_debug = None
+        if self.firmware_version >= "0.7":
+            pc_debug = self.port_settings.getint('available_commands',
+                                                 'PC_DEBUG')
 
         if self.__should_emit_debug_msg:
             self._process_debug_message(message)
