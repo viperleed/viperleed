@@ -381,32 +381,50 @@ class BulkSlab(BaseSlab):
 
         # Now make sure that also the layers
         # in between have the same periods
-        i = 0
-        while i < len(candidate_periods):
-            period_is_ok = True
-            period = candidate_periods[i]
+        return [p for p in candidate_periods
+                if self._is_candidate_period_acceptable(p, epsz)]
 
-            # Keep track of the distance between layers that
-            # we know match: the first one and the one at period.
-            # All pairs of layers in between must also be at the
-            # same distance.
-            z_dist = self.sublayers[period].cartbotz - ref_lay.cartbotz
-            layer_pairs = zip(self.sublayers, _cycle(self.sublayers, period))
-            for j, (lay, lay_plus_period) in enumerate(layer_pairs, start=1):
-                if j > n_layers / 2:
-                    break
-                z_dist_this = lay_plus_period.cartbotz - lay.cartbotz
-                z_dist_this %= ucell_h
-                if (lay_plus_period.element != lay.element
-                        or lay_plus_period.n_atoms != lay.n_atoms
-                        or abs(z_dist - z_dist_this) > epsz):
-                    period_is_ok = False
-                    break
-            if period_is_ok:  # Period passed the tests
-                i += 1
-            else:
-                candidate_periods.pop(i)
-        return candidate_periods
+    def _is_candidate_period_acceptable(self, period, epsz):
+        """Return whether a sublayer period is an acceptable candidate.
+
+        Parameters
+        ----------
+        period : int
+            Index distance between sublayers to be checked. This method
+            assumes that self.sublayers[0] and self.sublayers[period]
+            are consistent (same element and number of atoms).
+        epsz : float
+            Tolerance (Cartesian) on z distances.
+
+        Returns
+        -------
+        acceptable : bool
+            Whether `period` is a suitable sublayer period. This
+            means that all the pairs of sublayers of the form
+            (self.sublayers[0<i<period], self.sublayers[i+period])
+            match one another (same element and number of atoms),
+            and have the same z distance as the one between
+            self.sublayers[0] and self.sublayers[period].
+        """
+        n_layers = self.n_sublayers
+        ucell_h = self.ucell[2, 2]
+
+        # Keep track of the distance between layers that
+        # we know match: the first one and the one at period.
+        # All pairs of layers in between must also be at the
+        # same distance.
+        z_dist = self.sublayers[period].cartbotz - self.sublayers[0].cartbotz
+        layer_pairs = zip(self.sublayers, _cycle(self.sublayers, period))
+        for i, (lay, lay_plus_period) in enumerate(layer_pairs, start=1):
+            if i > n_layers / 2:
+                return True
+            z_dist_this = lay_plus_period.cartbotz - lay.cartbotz
+            z_dist_this %= ucell_h
+            if (lay_plus_period.element != lay.element
+                    or lay_plus_period.n_atoms != lay.n_atoms
+                    or abs(z_dist - z_dist_this) > epsz):
+                return False
+        return True
 
     def get_minimal_c_vector(self, eps, epsz=None, z_periodic=True):
         """Return the smallest bulk c vector, if any.
