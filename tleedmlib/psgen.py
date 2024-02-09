@@ -747,7 +747,7 @@ def make_atom_types(rp, sl, additional_layers):
                 while reqats > 0 and len(al) > 0:
                     atom = random.choice(al)
                     new_bulk = True if atom.cartpos[2] > max_z_sl else False
-                    NN_dist = NN_dict[at]
+                    NN_dist = NN_dict[atom]
                     if not new_bulk:
                         if (site, el, new_bulk) not in atom_types.keys():
                             atom_types[(site, el, new_bulk)] = Atom_type(el, str(site), new_bulk)
