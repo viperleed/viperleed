@@ -548,14 +548,14 @@ class Atom:                                                                     
         newat.disp_occ = self.disp_occ
 
         if add_to_atlists:
-            self.slab.atlist.append(newat)
+            self.slab.atlist.append(newat)                                      # TODO: consider an AtomContainer.add_atom(atom) abstract method!
             self.slab.n_per_elem[self.el] += 1
             if self.layer is not None:
                 self.layer.atlist.append(newat)
                 newat.layer = self.layer
         return newat
 
-    def initDisp(self, force=False):
+    def initDisp(self, force=False):                                            # TODO: all the DISP stuff should complain if .is_bulk
         """Initialize displacement dictionaries based on self.site.
 
         This method should not be called before a site has been
