@@ -508,20 +508,11 @@ class BulkSlab(BaseSlab):
 
         # Flip z, because we store it opposed in Atom.cartpos[2], but
         # want repeat_c with the same coordinate system as unit cell
-        repeat_c[2] *= -1
+        repeat_c[2] *= -1                                                       # TODO: .cartpos[2]
 
-        # Optimize c vector to be close to z and overall
-        # shortest by collapsing the in-plane components
-        c_frac_ab = np.dot(np.linalg.inv(self.ab_cell), repeat_c[:2]) % 1.0
-
-        # Since % returns always the same sign as the divider,                  # TODO: @fkraushofer: is this the reason? That's the only thing I could think of. Actually, a bit of testing with some random values for ab_cell and c_frac_ab suggests that subtracting one is not enough to guarantee it is 'most vertical' and 'shortest'. I think we would need a proper Minkowski reduction. An example: c_frac_ab=[0.58074159 0.14628345] ab_cell.T=[[-6.40112636 -1.13022286],  [ 7.43491281 -0.45727906]] is minimized by subtracting (-3, -2)
-        # it may still be possible to get a shorter vector by
-        # subtracting '1' in either in-plane direction:
-        repeat_c[:2] = min(
-            (np.dot(self.ab_cell, c_frac_ab - f)
-             for f in ((0, 0), (0, 1), (1, 0), (1, 1))),
-            key=np.linalg.norm
-            )
+        # Minkowski-reduce the repeat vector to have
+        # it shortest and as close to z as possible
+        leedbase.reduce_c_vector(repeat_c, self.ab_cell.T)
         return repeat_c
 
     def _get_top_atom_c_pos(self):

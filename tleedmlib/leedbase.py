@@ -566,6 +566,47 @@ def reduceUnitCell(ab, eps=1e-3):
     return ab, t, lat
 
 
+def reduce_c_vector(c_vec, ab_cell):
+    """Compute a Minkowski-reduced version of the third unit-cell vector.
+
+    Parameters
+    ----------
+    c_vec : numpy.ndarray
+        The unit-cell vector to be reduced. Only the first
+        two components are taken into consideration. They
+        are modified in place.
+    ab_cell : numpy.ndarray
+        The in-plane unit cell to be used for reducing c.
+        Unit vectors are rows, i.e., a, b == ab_cell.
+
+    Returns
+    -------
+    None.
+    """
+    # The problem is essentially the closest-vector problem (CVP) that
+    # is common in the theory of lattices: we have to find the lattice
+    # vector (of the a,b lattice) that is closest to the projection
+    # of c on the plane formed by ab_cell. That's the quantity to be
+    # removed from c to make it shortest. The trick is that the ab_cell
+    # should be Minkowski-reduced beforehand to ensure that also the c
+    # vector will be Minkowski-reduced. The theory behind this can be
+    # found in doi.org/10.1007/978-3-540-24847-7_26.
+    ab_cell, *_ = reduceUnitCell(ab_cell)
+    c_frac_ab = c_vec[:2].dot(np.linalg.inv(ab_cell))
+
+    # The closest projection is an integer version of c_par_frac.
+    # It's easiest to take the floor, then consider also -a, -b,
+    # and -(a+b), whichever gives the shortest vector. Otherwise
+    # we'd have to also consider +a, +b, a-b, b-a, etc...
+    c_frac_ab -= np.floor(c_frac_ab)
+
+    increments = (0, 0), (1, 0), (0, 1), (1, 1)
+    c_vec[:2] = min(
+        ((c_frac_ab - f).dot(ab_cell) for f in increments),
+        key=np.linalg.norm
+        )
+
+
 def bulk_3d_string(screws, glides):
     """Return info about bulk screw axes and glide planes as a string.
 
