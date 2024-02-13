@@ -173,6 +173,10 @@ def fd_optimization(sl, rp):
     while True:
         if rp.STOP:
             break
+        # Make sure that there are no duplicate atoms. This is more
+        # a safeguard for the future, if we allow also full-dynamic
+        # optimization of atoms.
+        sl.check_atom_collisions(rp.SYMMETRY_EPS)
         if len(known_points) == 0:
             x = x0   # x will be the value of the parameter under variation
         elif len(known_points) == 1:
