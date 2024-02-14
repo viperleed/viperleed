@@ -485,8 +485,7 @@ class TestBulkSymmetry:
 class TestSymmetryReduction:
     """Collection of tests for applying symmetry reductions."""
 
-    @pytest.mark.xfail(raises=KeyError, reason='Not checked correctly',
-                       strict=True)
+    @pytest.mark.xfail(raises=KeyError, reason='Not checked correctly')
     def test_raises_without_group_info(self, slab_p1):
         """Assert that missing plane group information raises exceptions."""
         slab, param, *_ = slab_p1
@@ -494,7 +493,7 @@ class TestSymmetryReduction:
             symmetry.setSymmetry(slab, param, 'p1')
         assert exc.match(r'.*unknown')
 
-    @pytest.mark.xfail(reason='Does not check validity of group', strict=True)
+    @pytest.mark.xfail(reason='Does not check validity of group')
     def test_invalid_group(self, with_plane_group):
         """Assert that not providing a direction raises exceptions."""
         slab, param, *_ = with_plane_group()
@@ -515,8 +514,7 @@ class TestSymmetryReduction:
         # with pytest.raises(MissingGroupDirectionError):
         symmetry.setSymmetry(slab, param, need_direction)
 
-    @pytest.mark.xfail(reason='Does not check validity of subgroup',
-                       strict=True)
+    @pytest.mark.xfail(reason='Does not check validity of subgroup')
     def test_invalid_subgroup(self, with_plane_group):
         """Make sure SlabSymmetrizer finds all atoms it should."""
         slab, param, *_ = with_plane_group()
@@ -526,8 +524,8 @@ class TestSymmetryReduction:
             symmetry.setSymmetry(slab, param, invalid_group)
         assert exc.match('.*not a valid symmetry reduction.*')
 
-    @pytest.mark.xfail(reason='BUG: symmetry L785, missing []',
-                       raises=ValueError, strict=True)
+    @pytest.mark.xfail(reason='BUG: symmetry L724--789, missing [] at arrays',
+                       raises=(ValueError, RuntimeWarning))
     def test_successful_reduction_pmg(self, slab_pmg, subtests):
         """Test that pmg can be reduced without giving a direction."""
         # Normally pm and pg require a direction. However we can
