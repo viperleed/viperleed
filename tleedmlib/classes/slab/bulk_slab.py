@@ -116,7 +116,7 @@ class BulkSlab(BaseSlab):
             If no layers are available
         """
         if self.n_layers == 1:
-            return self.ucell.T[2, 2] - self.layers[0].thickness
+            return self.c_vector[2] - self.layers[0].thickness
         return super().smallest_interlayer_spacing
 
     # Disabled too-many-arguments below because 7/5 seem better than
@@ -190,7 +190,7 @@ class BulkSlab(BaseSlab):
         # then reduce c direction if needed
         self.update_cartesian_from_fractional()
         if new_c_vec is not None:
-            self.ucell.T[2] = new_c_vec
+            self.c_vector[:] = new_c_vec
 
         # Reduce in-plane dimension
         if new_ab_cell is not None:
@@ -327,7 +327,7 @@ class BulkSlab(BaseSlab):
             Bulk repeat vector pointing from the bulk to the surface,
             or its component along z.
         """
-        bulkc = self.ucell.T[2].copy()
+        bulkc = self.c_vector.copy()
         if bulkc[2] < 0:
             bulkc *= -1
 
@@ -369,7 +369,7 @@ class BulkSlab(BaseSlab):
         # The same is true for the number of sublayers.
         n_layers = self.n_sublayers
         candidate_periods = []
-        ucell_h = self.ucell[2, 2]
+        ucell_h = self.c_vector[2]
         ref_lay = self.sublayers[0]
         for i, lay in enumerate(self.sublayers[1:], start=1):
             if (abs(lay.cartbotz - ref_lay.cartbotz) > ucell_h / 2 + epsz
@@ -407,7 +407,7 @@ class BulkSlab(BaseSlab):
             self.sublayers[0] and self.sublayers[period].
         """
         n_layers = self.n_sublayers
-        ucell_h = self.ucell[2, 2]
+        ucell_h = self.c_vector[2]
 
         # Keep track of the distance between layers that
         # we know match: the first one and the one at period.

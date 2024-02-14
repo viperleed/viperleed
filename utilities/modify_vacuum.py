@@ -78,7 +78,7 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
 
     new_c_z = new_vacuum_gap_size + slab_thickness
 
-    processed_slab.ucell[:, 2] = new_c_z / processed_slab.ucell[2, 2]
+    processed_slab.ucell[:, 2] = new_c_z / processed_slab.c_vector[2]           # TODO: @amimre is this (and the next line) correct??
     processed_slab.ucell[2, 2] = new_c_z
     processed_slab.collapse_cartesian_coordinates()
     return processed_slab

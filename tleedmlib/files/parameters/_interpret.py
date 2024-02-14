@@ -600,7 +600,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         except ValueError:
             raise ParameterFloatConversionError(parameter=param) from None
 
-        val = self.slab.ucell[2, 2] * val if 'c' in bulk_repeat_str else val
+        val = self.slab.c_vector[2] * val if 'c' in bulk_repeat_str else val
         self.rpars.BULK_REPEAT = val
 
     def interpret_domain(self, assignment):

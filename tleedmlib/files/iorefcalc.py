@@ -457,7 +457,7 @@ def writeAUXGEO(sl, rp):
                      'geo': ff.FortranRecordWriter('3F9.4'),
                      }
         lj = 32
-    slab_c = np.copy(sl.ucell[:, 2])
+    slab_c = sl.c_vector.copy()
     if rp.LAYER_STACK_VERTICAL:
         sl = copy.deepcopy(sl)
         sl.project_c_to_z()

@@ -170,7 +170,7 @@ def initialization(sl, rp, subdomain=False):
             logger.info(f'Detected bulk repeat vector: {vec_str}')
             # update bulk slab vector
             sl.bulkslab.update_cartesian_from_fractional()
-            sl.bulkslab.ucell[:, 2] = rp.BULK_REPEAT
+            sl.bulkslab.c_vector[:] = rp.BULK_REPEAT
             sl.bulkslab.collapse_cartesian_coordinates()
     if rp.BULK_REPEAT is None:
         # Failed to detect repeat vector, use fixed distance instead.

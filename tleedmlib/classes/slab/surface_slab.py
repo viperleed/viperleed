@@ -146,7 +146,7 @@ class SurfaceSlab(BaseSlab):
     @property
     def vacuum_gap(self):
         """Return the z distance that does not not contain atoms."""
-        return self.ucell[2, 2] - self.thickness
+        return self.c_vector[2] - self.thickness
 
     @classmethod
     def from_ase(cls, ase_atoms, sort_elements=True):                           # TODO: ensure atoms are not too close to edges in c (could use poscar function, but beware of cyclic imports)
@@ -417,11 +417,11 @@ class SurfaceSlab(BaseSlab):
         # (nor their bulk or non-bulk nature)
         frac_atoms_z = [at.pos[2] for at in self]
 
-        bulk_height = abs(self.bulkslab.ucell[2, 2])
-        frac_bulk_thickness = bulk_height / abs(self.ucell[2, 2])
+        bulk_height = abs(self.bulkslab.c_vector[2])
+        frac_bulk_thickness = bulk_height / abs(self.c_vector[2])
         frac_lowest_pos = min(frac_atoms_z)
         frac_bulk_onset = (frac_lowest_pos + frac_bulk_thickness
-                           - (epsz / self.ucell[2, 2]))
+                           - (epsz / self.c_vector[2]))
         slab_cuts = [(max(f for f in frac_atoms_z if f < frac_bulk_onset)
                      + min(f for f in frac_atoms_z if f > frac_bulk_onset))
                      / 2]
@@ -514,7 +514,6 @@ class SurfaceSlab(BaseSlab):
                 bulkc *= -1
             return bulkc
 
-        cvec = self.ucell.T[2]
         if rpars.BULK_REPEAT is None:
             # Use the distance between the bottommost bulk layer
             # and the bottommost non-bulk layer, i.e., the current
@@ -527,7 +526,7 @@ class SurfaceSlab(BaseSlab):
             zdiff = rpars.BULK_REPEAT
         if only_z_distance:
             return zdiff
-        return cvec * zdiff / cvec[2]
+        return self.c_vector * zdiff / self.c_vector[2]
 
     def get_nearest_neighbours(self):
         """Return the nearest-neighbour distance for all atoms.
@@ -1073,7 +1072,7 @@ class SurfaceSlab(BaseSlab):
 
         # Now take the component of bulk_c parallel to unit-cell c.
         # This will be used for expanding the unit cell.
-        slab_c = bulk_appended.ucell.T[2]
+        slab_c = bulk_appended.c_vector
         slab_c_direction = slab_c / np.linalg.norm(slab_c)
         bulk_c_par = bulk_c.dot(slab_c_direction) * slab_c_direction
 

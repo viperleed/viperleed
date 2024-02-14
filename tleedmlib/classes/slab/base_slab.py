@@ -210,6 +210,16 @@ class BaseSlab(AtomContainer):
         return tuple(lay for lay in self.layers if lay.is_bulk)
 
     @property
+    def c_vector(self):
+        """Return the out-of-plane unit-cell vector."""
+        try:
+            return self.ucell.T[2]
+        except IndexError:  # Uninitialized
+            raise InvalidUnitCellError(
+                f'{type(self).__name__} has no unit cell defined'
+                ) from None
+
+    @property
     def elements(self):
         """Return a tuple of elements in this slab, as originally read."""
         return tuple(self.n_per_elem.keys())
@@ -343,7 +353,7 @@ class BaseSlab(AtomContainer):
         # ones relative to the current unit cell. This is useful
         # because the 'old atoms' appear then at the same in-plane
         # position in, e.g., VESTA.
-        self.ucell.T[2] += bulkc_par  # Expand unit cell
+        self.c_vector[:] += bulkc_par  # Expand unit cell
         new_atoms = []
         new_layers = []
         for layer in bulk_layers:
@@ -415,7 +425,7 @@ class BaseSlab(AtomContainer):
         # position the midpoints between atoms that are
         # further than the desired z-distance cut-off
         auto_cuts = (token for token in rpars.LAYER_CUTS if token.is_auto_cut)
-        _c_to_z = self.ucell[2, 2] / np.linalg.norm(self.ucell[:, 2])
+        _c_to_z = self.c_vector[2] / np.linalg.norm(self.c_vector)
         atoms = sorted(self, key=lambda atom: atom.pos[2])
         for token in auto_cuts:
             cutoff = token.value
@@ -997,7 +1007,7 @@ class BaseSlab(AtomContainer):
         -------
         None.
         """
-        c_vec_xy = self.ucell.T[2, :2]
+        c_vec_xy = self.c_vector[:2]
         if any(c_vec_xy):  # Non-zero components
             self.update_cartesian_from_fractional()
             c_vec_xy[:] = 0

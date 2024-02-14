@@ -104,9 +104,7 @@ class Layer(AtomContainer):                                                     
         botat = sorted_atoms[0]
 
         self.cartbotz = botat.cartpos[2]
-
-        c_vec = self.slab.ucell.T[2]
-        self.cartori = topat.pos[2] * c_vec
+        self.cartori = topat.pos[2] * self.slab.c_vector
         # So far x and y are correct, but z is still in the wrong               # TODO: this will not be necessary when we flip .cartpos[2]
         # direction and with origin as POSCAR. Take the z directly
         # from the highest atom

@@ -42,7 +42,7 @@ def remove_atoms(slab, param, *atom_nrs):
 
 def tilt_c_axis(slab, direction):
     """Modify slab's c vector to tilt in a fractional direction."""
-    slab.ucell.T[2, :2] = 0.3 * np.dot(direction, slab.ab_cell.T)
+    slab.c_vector[:2] = 0.3 * np.dot(direction, slab.ab_cell.T)
     slab.ucell_ori = slab.ucell.copy()
     slab.update_cartesian_from_fractional()
 

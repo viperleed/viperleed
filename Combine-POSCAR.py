@@ -98,8 +98,8 @@ def main():
     else:
         logging.debug("Slab and bulk elements are identical.")
 
-    cfact = slab.ucell[2][2]/bulk.ucell[2][2]
-    slab.ucell[:, 2] *= (cfact + 1) / cfact        # resize the slab unit cell
+    cfact = slab.c_vector[2]/bulk.c_vector[2]
+    slab.c_vector[:] *= (cfact + 1) / cfact        # resize the slab unit cell
     # recalculate c for the slab atoms (undistort & shift)
     for atom in slab:
         atom.pos[2] = (atom.pos[2]*(cfact/(cfact+1)))+(1/(cfact+1))

@@ -588,7 +588,7 @@ class TestBulkUcell:
         with_one_thick_bulk(*args)
         bulk_slab = slab.bulkslab
         bulk_slab.ensure_minimal_c_vector(rpars)
-        c_vec = bulk_slab.ucell.T[2]
+        c_vec = bulk_slab.c_vector
         bulk_info = info.bulk_properties
         with subtests.test('bulk unit-cell c'):
             atol = float(0.2*rpars.SYMMETRY_EPS)
@@ -601,7 +601,7 @@ class TestBulkUcell:
         """Check complaints of ensure_minimal_c_vector when there's vacuum."""
         c_shift = with_one_thick_bulk(*ag100)
         slab, rpars, *_ = ag100
-        cart_shift = c_shift * slab.ucell.T[2, 2]
+        cart_shift = c_shift * slab.c_vector[2]
         cart_shift *= -1                                                        # TODO: remove with .cartpos[2] flip
         bulk = slab.bulkslab
         for atom in bulk:
@@ -1045,8 +1045,7 @@ class TestExtraBulk:
             with subtests.test(f'ab_cell unchanged{extra}'):
                 assert double.ab_cell == pytest.approx(bulk.ab_cell)
             with subtests.test(f'c vector{extra}'):
-                bulk_c = bulk.ucell.T[2]
-                assert double.ucell.T[2] == pytest.approx(2*bulk_c)
+                assert double.c_vector == pytest.approx(2*bulk.c_vector)
             with subtests.test(f'no. layers{extra}'):
                 assert double.n_layers == 2*bulk.n_layers
             with subtests.test(f'no atom.num duplicates{extra}'):
@@ -1781,7 +1780,7 @@ class TestUnitCellTransforms:
         slab_copy = deepcopy(slab)
         slab.project_c_to_z()
         with subtests.test('c along z'):
-            assert np.allclose(slab.ucell.T[2][:2], 0)
+            assert np.allclose(slab.c_vector[:2], 0)
 
         # Atoms 4 & 5 are wrapped around
         atom_pairs = zip(slab.atlist[~4:5], slab_copy.atlist[~4:5])
