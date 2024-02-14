@@ -1694,7 +1694,7 @@ class BaseSlab(AtomContainer):
             self.ucell_mod.append((side, transform_3d))
         self.update_fractional_from_cartesian()
 
-    def translate_atoms(self, shift):
+    def translate_atoms_2d(self, shift):
         """Add a 2D Cartesian shift to all atomic coordinates.
 
         Parameters

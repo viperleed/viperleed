@@ -382,8 +382,8 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 mindist = min(np.linalg.norm(p-c) for c in corners)
                 topsympoint = p
         # shift origin
-        sl.translate_atoms(-topsympoint)
-        ts.translate_atoms(-topsympoint)
+        sl.translate_atoms_2d(-topsympoint)
+        ts.translate_atoms_2d(-topsympoint)
 
     if toprotsym == 0: # should be an else
         # identify group:
@@ -435,7 +435,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 shiftv = -1*shiftv
             # ts is not used any more in this case, otherwise those atoms
             #  would have to be shifted as well.
-            sl.translate_atoms(-shiftv)
+            sl.translate_atoms_2d(-shiftv)
         if oriplane:
             oriplane.pos = np.array([0, 0])
             sl.orisymplane = oriplane
@@ -446,13 +446,13 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         #  there (potentially), test
         if toprotsym == 2 and celltype in ["hexagonal", "rhombic"]:
             shiftslab = copy.deepcopy(ts)
-            shiftslab.translate_atoms(-abst[0]/2)
+            shiftslab.translate_atoms_2d(-abst[0]/2)
             # test diagonal mirror at shifted origin
             spl = SymPlane(np.array([0, 0]), (abst[0]+abst[1]), abst)
             if shiftslab.is_mirror_symmetric(spl, eps):
                 planegroup = "cmm"
                 ts = shiftslab
-                sl.translate_atoms(-abst[0]/2)  # correct origin
+                sl.translate_atoms_2d(-abst[0]/2)  # correct origin
 
     if not planegroup:
         efftype = ""    # effective cell type
@@ -731,7 +731,7 @@ def setSymmetry(sl, rp, targetsym):
                               * np.dot(np.array(sl.orisymplane.par[1],
                                                 -sl.orisymplane.par[0]),
                                        abst))
-                    sl.translate_atoms(-shiftv)
+                    sl.translate_atoms_2d(-shiftv)
                     sl.orisymplane.type = "glide"
                     # since the origin shifts and the direction stays the
                     #  same, nothing needs to be changed about the symplane
@@ -754,7 +754,7 @@ def setSymmetry(sl, rp, targetsym):
             elif planegroup == 'pmg':   # reducing to: pm, pg
                 if targetsym == 'pm':  # needs origin shift
                     shiftv = 0.25*np.dot(sl.orisymplane.par, abst)
-                    sl.translate_atoms(-shiftv)
+                    sl.translate_atoms_2d(-shiftv)
                     sl.orisymplane = SymPlane(
                         np.array([0, 0]), np.array(sl.orisymplane.dir[1],
                                                    -sl.orisymplane.dir[0]),
@@ -763,7 +763,7 @@ def setSymmetry(sl, rp, targetsym):
             elif planegroup == 'pgg':   # reducing to: pg
                 if (tspar[0], tspar[1]) in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
                     shiftv = 0.25*np.dot(np.array(tspar[1], -tspar[0]), abst)
-                    sl.translate_atoms(-shiftv)
+                    sl.translate_atoms_2d(-shiftv)
                     sl.orisymplane = SymPlane(np.array([0, 0]),
                                               np.dot(tspar, abst), abst)
                     sl.orisymplane.type = "glide"
@@ -788,12 +788,12 @@ def setSymmetry(sl, rp, targetsym):
                             # shift origin to glide plane
                             shiftv = 0.25*np.dot(np.array(tspar[1],
                                                           -tspar[0]), abst)
-                            sl.translate_atoms(-shiftv)
+                            sl.translate_atoms_2d(-shiftv)
                             sl.orisymplane.type = "glide"
                         sl.planegroup = targetsym
                     elif targetsym == "pmg":
                         shiftv = 0.25*(abst[0]+abst[1])
-                        sl.translate_atoms(-shiftv)
+                        sl.translate_atoms_2d(-shiftv)
                         sl.orisymplane = SymPlane(np.array([0, 0]),
                                                   np.dot(tspar, abst), abst)
                         sl.orisymplane.type = "glide"
@@ -842,7 +842,7 @@ def setSymmetry(sl, rp, targetsym):
                     else:
                         allowed = False
                 if allowed:
-                    sl.translate_atoms(-shiftv)
+                    sl.translate_atoms_2d(-shiftv)
                     sl.planegroup = targetsym
                 else:
                     invalidDirectionMessage(rp, planegroup, targetsym)

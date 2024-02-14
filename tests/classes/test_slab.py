@@ -1228,7 +1228,7 @@ class TestRevertUnitCell:
             _rotate_once(slab, rot_orders)
             slab.transform_unit_cell_2d(((1, 1), (1, -1)))
             _rotate_once(slab, rot_orders)
-            slab.translate_atoms((0.25, 0.32))
+            slab.translate_atoms_2d((0.25, 0.32))
             _rotate_once(slab, rot_orders)
             slab.collapse_cartesian_coordinates()
         return _apply
