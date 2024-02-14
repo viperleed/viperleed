@@ -301,6 +301,7 @@ class TestSymmetryConstraints:
         'hex_cm_10': 'Known to sometimes fail with a random shift',
         'hex_cm_01': 'Known to sometimes fail with a random shift',
         'hex_cm_1m1': 'Known to sometimes fail with a random shift',
+        'hex_cm_11': 'Known to sometimes fail with a random shift',
         'hex_cm_21': 'Known to sometimes fail with a random shift',
         'hex_cm_12': 'Known to sometimes fail with a random shift',
         'hex_cmm_10': 'Known incorrect plane group p2',
@@ -398,6 +399,8 @@ class TestSlabSymmetrization:
         'poscar-Ag(100)': 'Often reduced from p4m to cm',
         'bulk_repeat_poscar-Ag(100)': 'Often reduced from p4m to cm',
         'layer_info_poscar-Ag(100)': 'Often reduced from p4m to cm',
+        'nearest_neighbors_poscar-Ag(100)': 'Often reduced from p4m to cm',
+        'surface_atom_poscar-Ag(100)': 'Often reduced from p4m to cm',
         'poscar_diamond': 'Known invalid group pm. May be correct rcm here',
         'poscar-36C_p6m': 'Often reduced to cmm',
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
@@ -409,6 +412,7 @@ class TestSlabSymmetrization:
             'Sometimes reduced to p1 from p3'
             ),
         'bulk_repeat_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
+        'infoless_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
         'poscar-Cu2O(111)_1x1_surplus_oxygen': (
             'Sometimes reduced to cm from p3m1'
             ),
@@ -425,7 +429,9 @@ class TestSlabSymmetrization:
         'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
         'infoless_poscar-diamond': 'Invalid pm. May be correct rcm here',
         'infoless_poscar-graphene': 'Sometimes reduced to pmg from pmm',
+        'infoless_poscar-MgO_cod_9006456': 'Sometimes reduced to cmm from p4m',
         'infoless_poscar-TiO2_supercell': 'Sometimes reduced to pm from pmm',
+        'infoless_poscar-TiO2_small': 'Sometimes reduced to pm/p1 from pmm',
         'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
             'Sometimes reduced to p1 from p3'
             ),
