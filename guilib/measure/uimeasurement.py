@@ -264,6 +264,8 @@ class Measure(ViPErLEEDPluginBase):
             'camera_viewers': [],
             'error_box': _QMSG(self),                                           # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
             'device_settings': {},     # keys: unique names; No cameras
+            'firmware_upgrade':
+                dialogs.firmwareupgradedialog.FirmwareUpgradeDialog(self),
             }
         self._glob = {
             'plot': MeasurementPlot(),
@@ -526,8 +528,8 @@ class Measure(ViPErLEEDPluginBase):
         act.triggered.connect(self.__on_bad_pixels_selected)
 
         act = tools_menu.addAction("Upload/upgrade firmware...")
-        act.setEnabled(False)                                                   # TODO: fix when implemented
-        # act.triggered.connect(self._dialogs['firmware_upgrade'].show)
+        act.setEnabled(True)
+        act.triggered.connect(self._dialogs['firmware_upgrade'].open)
 
         # System settings
         act = self._ctrls['menus']['sys_settings']
