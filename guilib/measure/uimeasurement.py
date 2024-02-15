@@ -401,11 +401,14 @@ class Measure(ViPErLEEDPluginBase):
         cameras.clear()
         controllers.clear()
 
-        for cam_name, cam_cls in base.get_devices("camera").items():
+        # The get_devices method does return the device name, class and,
+        # additional information, but we discard the information as we
+        # are only interested in populating the menu.
+        for cam_name, (cam_cls, _) in base.get_devices("camera").items():
             act = cameras.addAction(cam_name)
             act.setData(cam_cls)
             act.triggered.connect(self.__on_camera_clicked)
-        for ctrl_name, ctrl_cls in base.get_devices("controller").items():
+        for ctrl_name, (ctrl_cls, _) in base.get_devices("controller").items():
             act = controllers.addAction(ctrl_name)
             act.setData(ctrl_cls)
             act.triggered.connect(self.__on_controller_clicked)

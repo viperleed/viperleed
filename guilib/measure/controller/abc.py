@@ -809,7 +809,24 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @abstractmethod
     def list_devices(self):
-        """List all devices of this class."""
+        """List all devices of this class.
+
+        This method must return a list of tuples. Each controller
+        is represented by a single tuple. The first element of
+        the tuple is a string identifying the controller. This
+        string must contain the COM port at the end of it
+        separeted from the remainder by a space. The second
+        element of the tuple is a dict containing additional
+        information about the controller. If there is no
+        additional information about the controller, then this
+        dict can be empty.
+
+        Returns
+        -------
+        devices : list
+            Each element is a tuple containing the name of a
+            controller device and additional information as a dict.
+        """
         return
 
     # pylint: disable=unused-argument

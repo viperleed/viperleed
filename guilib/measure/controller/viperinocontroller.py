@@ -77,8 +77,7 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
 class ViPErinoController(abc.MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
-    _devices = {}
-    cls_lock = threading.Lock()  # Access to _devices thread safe
+    cls_lock = threading.Lock()  # Thread safe access to class properties
     _mandatory_settings = [
         # pylint: disable=protected-access
         *abc.MeasureControllerABC._mandatory_settings,
@@ -496,12 +495,6 @@ class ViPErinoController(abc.MeasureControllerABC):
         """List Arduino Micro VipErLEED hardware -- can be slow."""
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]
-        with self.cls_lock:
-            for port in self._devices.copy():
-                if port not in port_names:
-                    del self._devices[port]
-            if all(p in self._devices for p in port_names):
-                return list(self._devices.values())
 
         device_list = []
         threads = []
@@ -536,9 +529,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
                 txt = f"{ctrl.name} ({ctrl.port_name})"
-                with self.cls_lock:
-                    self._devices[ctrl.port_name] = txt
-                device_list.append(txt)
+                device_list.append((txt, hardware))
             else:
                 print("Not a ViPErLEED controller at", ctrl.port_name,
                       hardware, flush=True)
@@ -898,10 +889,8 @@ class ViPErinoController(abc.MeasureControllerABC):
         settings_name = self.settings.get("controller", "device_name",
                                           fallback='')
         if settings_name != self.name:
-            self._devices.clear()
-            self.list_devices()
-            ports = {name.split(' (')[0]: port
-                     for port, name in self._devices.items()}
+            ports = {name.split(' (')[0]: name.split(' (')[1][:-1]
+                     for name, _ in self.list_devices()}
             correct_port = ports.get(self.name, '')
             if correct_port:
                 self.port_name = correct_port  # Also connects

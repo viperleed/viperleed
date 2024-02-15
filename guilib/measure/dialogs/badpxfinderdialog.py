@@ -449,7 +449,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         if not self.__camera_busy.isVisible():
             self.__camera_busy.show()
-        cls = self.__available_cameras[camera_name]
+        cls, _ = self.__available_cameras[camera_name]
         self.active_camera = cls()
         self.active_camera.error_occurred.connect(self.__on_error_occurred)
         self.active_camera.started.connect(self.adjustSize)

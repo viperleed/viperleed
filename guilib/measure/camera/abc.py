@@ -981,13 +981,20 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @abstractmethod
     def list_devices(self):
-        """Return a list of available device names.
+        """Return a list of available devices.
+
+        This method must return a list of tuples. Each camera is
+        represented by a single tuple. The first element of the tuple
+        is a string identifying the camera. The second element of the
+        tuple is a dict containing additional information about the
+        camera. If there is no additional information about the camera,
+        then this dict can be empty.
 
         Returns
         -------
         devices : list
-            Each element is a string representing
-            the name of a camera device.
+            Each element is a tuple containing the name of a
+            camera device and additional information as a dict.
         """
         return
 

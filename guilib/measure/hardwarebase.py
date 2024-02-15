@@ -395,9 +395,10 @@ def get_devices(package):
     -------
     devices : dict
         Dictionary of available, supported devices. Keys are
-        names of available devices, values are the driver classes
-        that can be used to handle the devices (one class per
-        device).
+        names of available devices, values are tuples containing
+        the driver classes that can be used to handle the devices
+        (one class per device) and additional information about the
+        device as a dict.
 
     Raises
     ------
@@ -417,8 +418,8 @@ def get_devices(package):
         if hasattr(cls, 'list_devices'):
             dummy_instance = cls()
             dev_list = dummy_instance.list_devices()
-            for dev_name in dev_list:
-                devices[dev_name] = cls
+            for dev_name, dev_info in dev_list:
+                devices[dev_name] = (cls, dev_info)
     return devices
 
 

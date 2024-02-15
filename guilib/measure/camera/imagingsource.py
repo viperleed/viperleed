@@ -583,15 +583,20 @@ class ImagingSourceCamera(abc.CameraABC):
         return handler
 
     def list_devices(self):
-        """Return a list of available device names.
+        """Return a list of available devices.
 
         Returns
         -------
         devices : list
-            Each element is a string representing
-            the name of a camera device.
+            Each element is a tuple containing the name of a
+            camera device and additional information as a dict.
         """
-        return self.driver.devices
+        device_list = []
+        for name in self.driver.devices:
+            # We append empty dicts as there is no additional
+            # information to pass along.
+            device_list.append((name, {}))
+        return device_list
 
     def open(self):
         """Open the camera device.
