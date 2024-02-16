@@ -20,7 +20,7 @@ class AlreadyMinimalError(SlabError, RuntimeError):
 
 
 class AtomsTooCloseError(SlabError):
-    """Exception for when (at least) two atoms are too close."""
+    """At least two atoms are too close, irrespective of their element."""
 
 
 class EmptySlabError(SlabError):
