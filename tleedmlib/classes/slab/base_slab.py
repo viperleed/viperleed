@@ -317,7 +317,7 @@ class BaseSlab(AtomContainer):
 
         Parameters
         ----------
-        bulk_layers : list of Layer
+        bulk_layers : tuple of Layer
             The layers of the bottommost bulk cell to be repeated.
         bulkc_par : numpy.ndarray
             Component of the bulk repeat vector parallel to the
