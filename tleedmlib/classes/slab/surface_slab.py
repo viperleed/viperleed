@@ -398,7 +398,7 @@ class SurfaceSlab(BaseSlab):
         err_msg = (
             f'The slab has a {current_vacuum:.2f} A vacuum gap, which is '
             f'smaller than the minimum ({_MIN_VACUUM} A). Will assume '
-            f'that {bot_atom} is at the bottom and {top_atom} at the top.'
+            f'that {bot_atom} is at the bottom and {top_atom} at the top'
             )
         exc = NoVacuumError if no_vacuum else NotEnoughVacuumError
         raise exc(err_msg, fixed_slab)
@@ -439,7 +439,7 @@ class SurfaceSlab(BaseSlab):
 
         info_msg += f' The bottom atom is {bottom_atom}, at c={-c_shift:.5f}'
         if abs(c_shift) < _VACUUM_EPS:
-            # Vacuum is close too the top, but the bottom atom is very
+            # Vacuum is close to the top, but the bottom atom is very
             # close to the c edge. Move it up, at c == _VACUUM_EPS
             c_shift += _VACUUM_EPS
             _LOGGER.info(info_msg + '. Atoms were shifted along c (by '
