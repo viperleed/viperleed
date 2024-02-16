@@ -20,6 +20,7 @@ import numpy as np
 import scipy.spatial as sps
 
 logger = logging.getLogger("tleedm.base")
+COLLAPSE_EPS = 1e-8  # Default for collapsing fractional coordinates
 
 ###############################################
 #                EXCEPTIONS                   #
@@ -231,7 +232,8 @@ def _floor_eps(eps):
     return _floor
 
 
-def collapse_fractional(coordinates, method='floor', eps=1e-8, in_place=False):
+def collapse_fractional(coordinates, method='floor',
+                        eps=COLLAPSE_EPS, in_place=False):
     """Collapse fractional coordinates to the base cell.
 
     Parameters
