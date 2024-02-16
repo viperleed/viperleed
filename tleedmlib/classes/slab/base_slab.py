@@ -1184,7 +1184,7 @@ class BaseSlab(AtomContainer):
                     atom.translate_2d(-op_array, -frac_shift)
             elif op_type == 'c_shift':
                 for atom in self:
-                    atom.pos[2] -= c_shift
+                    atom.pos[2] -= op_array
                     collapse_fractional(atom.pos, in_place=True)
                 self.update_cartesian_from_fractional(update_origin=True)
             elif op_type == 'lmul':
