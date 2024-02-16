@@ -347,9 +347,9 @@ class SurfaceSlab(BaseSlab):
         # Collect all the Cartesian coordinates. Also include
         # a periodic replica of the bottom-most atom at the top
         z_cartpos = [self_copy.topat_ori_z - at.cartpos[2] for at in self_copy]
-        replica = self_copy.topat_ori_z - self_copy.atlist[0].cartpos           # TODO: .cartpos[2]
-        replica += self_copy.c_vector
-        z_cartpos.append(replica[2])
+        replica_z = self_copy.topat_ori_z - self_copy.atlist[0].cartpos[2]        # TODO: .cartpos[2]
+        replica_z += self_copy.c_vector[2]  # Don't care about in-plane
+        z_cartpos.append(replica)
 
         # Notice that taking the max on both the distance and the index
         # ensures that ind_above is always the largest index (i.e., the
