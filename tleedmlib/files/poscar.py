@@ -130,7 +130,7 @@ def write(slab, filename='CONTCAR', reorder=False,
 class POSCARReader:
     """Base class for reading POSCAR structures into a Slab."""
 
-    def __init__(self, source, *, ucell_eps=1e-4, min_frac_dist=1e-4):
+    def __init__(self, source, *, ucell_eps=1e-4):
         """Initialize instance.
 
         Parameters
@@ -142,14 +142,9 @@ class POSCARReader:
             Cartesian tolerance (Angstrom). All the unit cell
             Cartesian components smaller than ucell_eps will
             be zeroed exactly. Default is 1e-4.
-        min_frac_dist : float, optional
-            Smallest fractional distance from the c=0 and c=1
-            edges of the unit cell. If atoms are closer, they
-            are shifted, if possible.
         """
         self._source = source
         self.ucell_eps = ucell_eps
-        self.min_frac_dist = min_frac_dist
 
     @property
     def stream(self):
@@ -364,7 +359,7 @@ class POSCARReader:
 class POSCARFileReader(AbstractContextManager, POSCARReader):
     """A context manager for reading POSCAR files into a slab."""
 
-    def __init__(self, filename, *, ucell_eps=1e-4, min_frac_dist=1e-4):
+    def __init__(self, filename, *, ucell_eps=1e-4):
         """Initialize instance.
 
         Parameters
@@ -375,14 +370,8 @@ class POSCARFileReader(AbstractContextManager, POSCARReader):
             Cartesian tolerance (Angstrom). All the unit cell
             Cartesian components smaller than ucell_eps will
             be zeroed exactly. Default is 1e-4.
-        min_frac_dist : float, optional
-            Smallest fractional distance from the c=0 and c=1
-            edges of the unit cell. If atoms are closer, they
-            are shifted, if possible.
         """
-        super().__init__(Path(filename),
-                         ucell_eps=ucell_eps,
-                         min_frac_dist=min_frac_dist)
+        super().__init__(Path(filename), ucell_eps=ucell_eps)
         self._file_object = None
 
     @property
