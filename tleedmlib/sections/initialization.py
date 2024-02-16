@@ -802,5 +802,5 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
         # is, instead, the acceptable case in which we warn below
         if exc_type in (NoVacuumError, WrongVacuumPositionError):
             raise exc_type(_msg, exc.fixed_slab) from None
-        rpars.setHaltingLevel(2)                                                # TODO: level OK?
+        rpars.setHaltingLevel(1)
         logger.warning(_msg)
