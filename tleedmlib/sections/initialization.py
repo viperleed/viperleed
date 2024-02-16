@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
+"""Module initialization of viperleed.tleedmlib.sections.
+
 Created on Aug 11 2020
 
-@author: Florian Kraushofer
-@author: Alexander M. Imre
-@author: Michele Riva
+@author: Florian Kraushofer (@fkraushofer)
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 
 Tensor LEED Manager section Initialization
 """
@@ -24,9 +25,12 @@ from viperleed.tleedmlib.base import NonIntegerMatrixError
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
 from viperleed.tleedmlib.classes.rparams import DomainParameters
+from viperleed.tleedmlib.classes.slab import BulkSlab, Slab
 from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
 from viperleed.tleedmlib.classes.slab import NoBulkRepeatError
-from viperleed.tleedmlib.classes.slab import BulkSlab, Slab
+from viperleed.tleedmlib.classes.slab import NoVacuumError
+from viperleed.tleedmlib.classes.slab import VacuumError
+from viperleed.tleedmlib.classes.slab import WrongVacuumPositionError
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
 from viperleed.tleedmlib.files import patterninfo, phaseshifts, poscar, vibrocc
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
@@ -50,8 +54,7 @@ def initialization(sl, rp, subdomain=False):
         init_domains(rp)
         return
 
-    # Make sure that there are no duplicate atoms
-    sl.check_atom_collisions(rp.SYMMETRY_EPS)
+    _check_slab_duplicates_and_vacuum(sl, rp)
 
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
@@ -757,6 +760,7 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
             "for details."
             )
 
+
 def _check_and_warn_layer_cuts(rpars, slab):
     """Check if layer cuts are too close together and warn if so."""
     layer_cuts = rpars.LAYER_CUTS
@@ -768,3 +772,35 @@ def _check_and_warn_layer_cuts(rpars, slab):
             "covergence issues in the reference calculation. Check the "
             "LAYERS_CUTS parameter in the PARAMETERS file."
             )
+
+
+def _check_slab_duplicates_and_vacuum(slab, rpars):
+    """Complain if slab has duplicate atoms or an inadequate vacuum gap."""
+    # Make sure that there are no duplicate atoms
+    slab.check_atom_collisions(rpars.SYMMETRY_EPS)
+
+    # Make sure that there's enough vacuum. Stop in complex situations
+    try:
+        slab.check_vacuum_gap()
+    except VacuumError as exc:
+        exc.fixed_slab.sort_original()  # Rather than by z
+        poscar.write(exc.fixed_slab, 'POSCAR_vacuum_corrected')
+        exc_type = type(exc)
+        _msg = exc.message
+        _msg += '. This may cause problems with layer assignment! '
+        _msg += 'You can find a POSCAR_vacuum_corrected file in SUPP with '
+        _msg += ('the correct position of vacuum. '
+                 if exc_type is WrongVacuumPositionError
+                 else 'a large enough vacuum gap. ')
+        _msg += (
+            'If you intend to use it for a new run, be careful to edit any '
+            'PARAMETERS expressed as fractions of the c unit vector (e.g., '
+            'LAYERS_CUTS, BULK_LIKE_BELOW, BULK_REPEAT, ...)'
+            )
+        # Notice the straight type check rather than isinstance, as
+        # NoVacuumError is a subclass of NotEnoughVacuumError, which
+        # is, instead, the acceptable case in which we warn below
+        if exc_type in (NoVacuumError, WrongVacuumPositionError):
+            raise exc_type(_msg, exc.fixed_slab) from None
+        rpars.setHaltingLevel(2)                                                # TODO: level OK?
+        logger.warning(_msg)

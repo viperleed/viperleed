@@ -127,50 +127,6 @@ def write(slab, filename='CONTCAR', reorder=False,
         _LOGGER.debug(f'Wrote to {filename} successfully')
 
 
-def ensure_away_from_c_edges(positions, eps):
-    """Ensure positions are not closer than eps to unit-cell edges along c.
-
-    Parameters
-    ----------
-    positions : Sequence
-        Shape (n, 3), n > 0. Fractional coordinates to be checked.
-    eps : float
-        Fractional distance from 0 and 1 edges. Should be in range
-        (0, 1).
-
-    Returns
-    -------
-    positions : numpy.ndarray
-        Shape (n, 3). Modified in place if an array was passed.
-        The new fractional coordinates. All elements are such
-        that their z fractional coordinate is between eps and
-        1 - eps.
-
-    Raises
-    ------
-    ValueError
-        If eps is out of range, or if positions cannot be shifted
-        rigidly to fit the (eps, 1 - eps) range.
-    """
-    if not 0 < eps < 1:
-        raise ValueError(f'ensure_away_from_c_edges: Invalid eps={eps}. '
-                         'Should be between zero and one.')
-    positions = np.asarray(positions)
-    min_c, max_c = positions[:, 2].min(), positions[:, 2].max()
-    if max_c - min_c > 1 - 2*eps:                                               # TODO: couldn't we expand the unit cell?
-        raise ValueError(
-            'ensure_away_from_c_edges: Cannot shift positions '
-            f'to fit between {eps} and {1-eps} along the c axis.'
-            )
-    offset = np.zeros(3)
-    if max_c < eps or max_c > 1 - eps:
-        offset[2] = 1 - eps - max_c
-    elif min_c < eps:
-        offset[2] = eps - min_c
-    positions += offset
-    return positions
-
-
 class POSCARReader:
     """Base class for reading POSCAR structures into a Slab."""
 
@@ -211,18 +167,6 @@ class POSCARReader:
         element_info = self._read_elements(slab)
         cartesian, _ = self._read_cartesian_and_group(slab)
         positions = self._read_atom_coordinates(slab, cartesian)
-
-        try:
-            # Move atoms away from edges in z to avoid conflicts
-            positions = ensure_away_from_c_edges(positions, self.min_frac_dist)
-        except ValueError:
-            _LOGGER.warning(
-                'POSCAR contains atoms close to c=0 and atoms close '
-                'to c=1. This cannot be corrected automatically and '
-                'will likely cause problems with layer assignment!'
-                )
-
-        # And add them to the slab
         self._make_atoms(slab, positions, *element_info)
         return slab
 

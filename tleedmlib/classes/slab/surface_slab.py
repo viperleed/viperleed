@@ -26,6 +26,7 @@ from viperleed.tleedmlib.base import NonIntegerMatrixError
 from viperleed.tleedmlib.base import SingularMatrixError
 from viperleed.tleedmlib.base import add_edges_and_corners
 from viperleed.tleedmlib.base import collapse
+from viperleed.tleedmlib.base import collapse_fractional
 from viperleed.tleedmlib.base import ensure_integer_matrix
 from viperleed.tleedmlib.base import pairwise
 from viperleed.tleedmlib.classes.atom import Atom
@@ -42,8 +43,11 @@ from .slab_errors import AtomsTooCloseError
 from .slab_errors import MissingBulkSlabError
 from .slab_errors import MissingLayersError
 from .slab_errors import NoBulkRepeatError
+from .slab_errors import NotEnoughVacuumError
+from .slab_errors import NoVacuumError
 from .slab_errors import TooFewLayersError
 from .slab_errors import SlabError
+from .slab_errors import WrongVacuumPositionError
 
 try:
     import ase
@@ -54,6 +58,8 @@ else:
 
 
 _LOGGER = logging.getLogger('tleedm.slab')
+_MIN_VACUUM = 5.0   # Angstrom
+_VACUUM_EPS = 1e-4  # In fractional c coordinates
 
 
 class SurfaceSlab(BaseSlab):
@@ -151,7 +157,7 @@ class SurfaceSlab(BaseSlab):
         return self.c_vector[2] - self.thickness
 
     @classmethod
-    def from_ase(cls, ase_atoms, sort_elements=True):                           # TODO: ensure atoms are not too close to edges in c (could use poscar function, but beware of cyclic imports)
+    def from_ase(cls, ase_atoms, sort_elements=True):
         """Return a slab initialized from an ase.Atoms object.
 
         Parameters
@@ -305,6 +311,145 @@ class SurfaceSlab(BaseSlab):
                     'Are there duplicate atoms? Remove duplicates, e.g., '
                     f'via slab.remove_duplicate_atoms(eps={eps}, epsz={eps})'
                     )
+
+    def check_vacuum_gap(self):
+        """Complain if there's not enough vacuum or it is not at the top.
+
+        An interatomic z distance of at least 5 angstrom is considered
+        an acceptable vacuum gap if it is in the top part of the slab.
+
+        This slab is modified only if there is a large-enough vacuum
+        gap very close to the top, i.e., if the atom right above the
+        vacuum gap is closer to c=1 than 1e-4.
+
+        Raises
+        ------
+        NoVacuumError
+            If the vacuum gap found is extremely small, i.e., if
+            the top and bottom atoms are less than 2e-4 apart along
+            the c vector.
+        NotEnoughVacuumError
+            If a small vacuum gap is found (< 5 angstrom).
+        WrongVacuumPositionError
+            If there is enough vacuum, but it is somewhere in
+            the middle of the slab rather than at the top.
+        """
+        # Work with a copy not to mess around sorting and positions.
+        # This will also become the vacuum-fixed version of self.
+        self_copy = copy.deepcopy(self)
+
+        # Ensure the c fractional coordinates are in [0, 1).
+        # Also keep the Cartesians up to date, as we will look
+        # for the pair of atoms that are furthest along z.
+        self_copy.collapse_cartesian_coordinates(update_origin=True)
+        self_copy.sort_by_z()  # From bottom to top
+
+        # Collect all the Cartesian coordinates. Also include
+        # a periodic replica of the bottom-most atom at the top
+        z_cartpos = [self_copy.topat_ori_z - at.cartpos[2] for at in self_copy]
+        replica = self_copy.topat_ori_z - self_copy.atlist[0].cartpos           # TODO: .cartpos[2]
+        replica += self_copy.c_vector
+        z_cartpos.append(replica[2])
+
+        # Notice that taking the max on both the distance and the index
+        # ensures that ind_above is always the largest index (i.e., the
+        # highest atom) that realizes a certain vacuum gap. This is
+        # also the reason for the round(..., 5): avoids float errors
+        vacuum_gap, ind_above = max(
+            ((round(c_above - c_below, 5), i+1)
+             for i, (c_below, c_above) in enumerate(pairwise(z_cartpos)))
+            )
+        already_at_top = ind_above == self.n_atoms
+        if vacuum_gap >= _MIN_VACUUM:
+            bottom_atom = self_copy.atlist[0 if already_at_top else ind_above]
+            info_msg = (
+                f'The slab has a {vacuum_gap:.2f} A vacuum gap above '
+                f'{self_copy.atlist[ind_above-1]}, which is not at the top. '
+                )
+            self._move_vacuum_to_the_top(bottom_atom, already_at_top,
+                                         self_copy, info_msg)
+            return
+
+        # Not enough vacuum. Assume top/bottom atoms are at top/bottom
+        current_vacuum = (z_cartpos[-1]     # Replica of bottom atom
+                          - z_cartpos[-2])  # The actual top one
+        self._complain_about_small_vacuum(self_copy, current_vacuum)
+
+    @staticmethod
+    def _complain_about_small_vacuum(fixed_slab, current_vacuum):
+        """Raise VacumError(s) for a slab with too little vacuum."""
+        # Assume that the top/bottom atoms are the actual top/bottom.
+        # Remember whether the gap is very very small.
+        top_atom = fixed_slab.atlist[-1]
+        bot_atom = fixed_slab.atlist[0]
+        no_vacuum = (bot_atom.pos[2] - top_atom.pos[2]) % 1.0 < 2*_VACUUM_EPS
+
+        # Produce a fixed version: Expand c vector, then ensure
+        # that the bottom atom is at least at c==_VACUUM_EPS.
+        extra_vacuum = _MIN_VACUUM + _VACUUM_EPS - current_vacuum
+        c_extra = fixed_slab.c_vector * extra_vacuum / fixed_slab.c_vector[2]
+        fixed_slab.c_vector[:] += c_extra
+        fixed_slab.update_fractional_from_cartesian()
+        if bot_atom.pos[2] < _VACUUM_EPS:
+            fixed_slab.translate_atoms_c(_VACUUM_EPS - bot_atom.pos[2])
+        err_msg = (
+            f'The slab has a {current_vacuum:.2f} A vacuum gap, which is '
+            f'smaller than the minimum ({_MIN_VACUUM} A). Will assume '
+            f'that {bot_atom} is at the bottom and {top_atom} at the top.'
+            )
+        exc = NoVacuumError if no_vacuum else NotEnoughVacuumError
+        raise exc(err_msg, fixed_slab)
+
+    def _move_vacuum_to_the_top(self, bottom_atom, already_at_top,
+                                fixed_slab, info_msg):
+        """Move atoms along c, if possible, to have vacuum at the top.
+
+        After a successful call to this method, self has its bottom
+        atom at c >= 1e-4. This method **does not** check that the
+        vacuum gap is large enough!
+
+        Parameters
+        ----------
+        bottom_atom : Atom
+            The atom that was detected as the one right above vacuum.
+        already_at_top : bool
+            Whether the vacuum gap of self is already in the top
+            part of the slab, i.e., there is no atom above it.
+        fixed_slab : SurfaceSlab
+            A copy of self to be used for producing a vacuum-
+            corrected version. Used for error reporting.
+        info_msg : str
+            Partial error message to be reported in case this slab
+            cannot be automatically corrected (i.e., the vacuum is
+            somewhere in the middle).
+
+        Raises
+        ------
+        WrongVacuumPositionError
+            If the vacuum gap is somewhere in the middle of self.
+        """
+        c_shift = collapse_fractional(-bottom_atom.pos[2], eps=_VACUUM_EPS)
+        if abs(c_shift) > _VACUUM_EPS and already_at_top:
+            # Vacuum is already at the top, and the bottom atom is
+            # far enough from the bottom edge. Leave all as is.
+            return
+
+        info_msg += f' The bottom atom is {bottom_atom}, at c={-c_shift:.5f}'
+        if abs(c_shift) < _VACUUM_EPS:
+            # Vacuum is close too the top, but the bottom atom is very
+            # close to the c edge. Move it up, at c == _VACUUM_EPS
+            c_shift += _VACUUM_EPS
+            _LOGGER.info(info_msg + '. Atoms were shifted along c (by '
+                         f'{c_shift:.5f}) so that {bottom_atom} is at the '
+                         f'bottom (at c={_VACUUM_EPS:.5f}). PARAMETERS (e.g., '
+                         'LAYER_CUTS, BULK_LIKE_BELOW, BULK_REPEAT, ...) '
+                         'may need adjustment.')
+            self.translate_atoms_c(c_shift)
+            return
+
+        # The vacuum is somewhere in the middle. Complain.
+        fixed_slab.translate_atoms_c(c_shift + _VACUUM_EPS)
+        raise WrongVacuumPositionError(info_msg, fixed_slab)
 
     def detect_bulk(self, rpars, second_cut_min_spacing=1.2):
         """Determine the minimal bulk repeat vector from BULK_LIKE_BELOW.

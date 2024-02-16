@@ -20,6 +20,10 @@ from .slab_errors import MissingElementsError
 from .slab_errors import MissingLayersError
 from .slab_errors import MissingSublayersError
 from .slab_errors import NoBulkRepeatError
+from .slab_errors import NotEnoughVacuumError
+from .slab_errors import NoVacuumError
 from .slab_errors import SlabError
 from .slab_errors import TooFewLayersError
+from .slab_errors import VacuumError
+from .slab_errors import WrongVacuumPositionError
 from .surface_slab import SurfaceSlab as Slab

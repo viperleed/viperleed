@@ -53,3 +53,38 @@ class NoBulkRepeatError(SlabError, RuntimeError):
 
 class TooFewLayersError(SlabError):
     """Some layers are present, but it's too few for the operation."""
+
+
+class VacuumError(SlabError):
+    """Something is wrong with the vacuum gap of a slab."""
+
+    def __init__(self, message, fixed_slab):
+        """Initialize exception instance.
+
+        Parameters
+        ----------
+        message : str
+            Textual message to be displayed for this exception
+        fixed_slab : SurfaceSlab
+            A slab that has been modified to fix the problem with
+            the vacuum gap.
+
+        Returns
+        -------
+        None.
+        """
+        self.message = message
+        self.fixed_slab = fixed_slab
+        super().__init__(message)
+
+
+class NotEnoughVacuumError(VacuumError):
+    """A slab has too little vacuum."""
+
+
+class NoVacuumError(NotEnoughVacuumError):
+    """A slab has no vacuum gap at all."""
+
+
+class WrongVacuumPositionError(VacuumError):
+    """A slab has enough vacuum, but it's somewhere in the middle."""

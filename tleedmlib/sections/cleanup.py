@@ -39,6 +39,7 @@ _SUPP_FILES = (
     "POSCAR_bulk_appended",
     "POSCAR_mincell",
     "POSCAR_oricell",
+    "POSCAR_vacuum_corrected",
     "refcalc-FIN",
     "refcalc-PARAM",
     "restrict.f",
