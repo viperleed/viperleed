@@ -316,7 +316,8 @@ class SurfaceSlab(BaseSlab):
         """Complain if there's not enough vacuum or it is not at the top.
 
         An interatomic z distance of at least 5 angstrom is considered
-        an acceptable vacuum gap if it is in the top part of the slab.
+        an acceptable vacuum gap if it is between the topmost atom and
+        the (periodic replica of the) bottommost atom.
 
         This slab is modified only if there is a large-enough vacuum
         gap very close to the top, i.e., if the atom right above the
