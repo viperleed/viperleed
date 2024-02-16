@@ -1180,6 +1180,11 @@ class BaseSlab(AtomContainer):
                 frac_shift = np.dot(op_array, np.linalg.inv(self.ab_cell.T))
                 for atom in self:
                     atom.translate_2d(-op_array, -frac_shift)
+            elif op_type == 'c_shift':
+                for atom in self:
+                    atom.pos[2] -= c_shift
+                    collapse_fractional(atom.pos, in_place=True)
+                self.update_cartesian_from_fractional(update_origin=True)
             elif op_type == 'lmul':
                 self.ucell = np.dot(np.linalg.inv(op_array), self.ucell)
             elif op_type == 'rmul':
@@ -1720,6 +1725,30 @@ class BaseSlab(AtomContainer):
         for atom in self:
             atom.translate_2d(shift, frac_shift)
         self.ucell_mod.append(('add', shift))
+
+    def translate_atoms_c(self, c_fraction):
+        """Move all atoms up by `c_fraction` along the c vector.
+
+        Parameters
+        ----------
+        c_fraction : float
+            The rigid shift in fractional coordinates to be
+            added to all the atoms.
+
+        Notes
+        -----
+        At variance with other atom- and unit-cell-transforming
+            operations, this method **does collapse** the atom
+            coordinates to the base unit cell and **updates the
+            stored position of the topmost atom**.
+        This operation can be undone with a call to `revert_unit_cell`,
+            as the shift is registered as one of the `ucell_mod`.
+        """
+        for atom in self:
+            atom.pos[2] += c_fraction
+            collapse_fractional(atom.pos, in_place=True)
+        self.update_cartesian_from_fractional(update_origin=True)
+        self.ucell_mod.append(('c_shift', c_fraction))
 
     # ----------------- SYMMETRY UPON TRANSFORMATION ------------------
 
