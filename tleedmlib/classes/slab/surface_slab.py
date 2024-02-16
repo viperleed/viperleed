@@ -24,8 +24,10 @@ from scipy.spatial import KDTree, distance as sp_distance
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import NonIntegerMatrixError
 from viperleed.tleedmlib.base import SingularMatrixError
-from viperleed.tleedmlib.base import add_edges_and_corners, collapse
-from viperleed.tleedmlib.base import ensure_integer_matrix, pairwise
+from viperleed.tleedmlib.base import add_edges_and_corners
+from viperleed.tleedmlib.base import collapse
+from viperleed.tleedmlib.base import ensure_integer_matrix
+from viperleed.tleedmlib.base import pairwise
 from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.files.parameters.errors import (
