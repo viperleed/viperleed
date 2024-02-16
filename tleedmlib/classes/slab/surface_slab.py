@@ -350,7 +350,7 @@ class SurfaceSlab(BaseSlab):
         z_cartpos = [self_copy.topat_ori_z - at.cartpos[2] for at in self_copy]
         replica_z = self_copy.topat_ori_z - self_copy.atlist[0].cartpos[2]        # TODO: .cartpos[2]
         replica_z += self_copy.c_vector[2]  # Don't care about in-plane
-        z_cartpos.append(replica)
+        z_cartpos.append(replica_z)
 
         # Notice that taking the max on both the distance and the index
         # ensures that ind_above is always the largest index (i.e., the
