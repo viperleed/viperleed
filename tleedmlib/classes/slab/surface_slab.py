@@ -386,7 +386,9 @@ class SurfaceSlab(BaseSlab):
         no_vacuum = (bot_atom.pos[2] - top_atom.pos[2]) % 1.0 < 2*_VACUUM_EPS
 
         # Produce a fixed version: Expand c vector, then ensure
-        # that the bottom atom is at least at c==_VACUUM_EPS.
+        # that the bottom atom is at least at c==_VACUUM_EPS. Also,
+        # give a bit more vacuum than needed to avoid floating-point
+        # precision issues. We don't fixed_slab to cause complaints.
         extra_vacuum = _MIN_VACUUM + _VACUUM_EPS - current_vacuum
         c_extra = fixed_slab.c_vector * extra_vacuum / fixed_slab.c_vector[2]
         fixed_slab.c_vector[:] += c_extra
