@@ -223,6 +223,7 @@ def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):
             else:
                 value = values[0]
             targetdict[el] = value
+    rf.close()
     if not silent:
         logger.debug("VIBROCC file was read successfully")
     # now fill up default values & do consistency checks:

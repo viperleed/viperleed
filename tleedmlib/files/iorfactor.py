@@ -621,6 +621,7 @@ def read_rfactor_columns(cols_dir=''):
             return []
 
         cols = np.array([[float(col) for col in line.split()] for line in f])
+        f.close()
         xy = np.split(cols, np.shape(cols)[1]/2, axis=1)
         # xy is now a list of 2D arrays.
         # Each array has the form [[en1, intens1], ...]
