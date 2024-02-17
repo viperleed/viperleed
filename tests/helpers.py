@@ -191,6 +191,7 @@ class CaseTag(IntEnum):
     BULK = auto()
     BULK_PROPERTIES = auto()
     LAYER_INFO = auto()
+    NEAREST_NEIGHBOURS = auto()
     NEED_ROTATION = auto()
     NO_INFO = auto()
     NON_MINIMAL_CELL = auto()

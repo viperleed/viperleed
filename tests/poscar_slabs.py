@@ -125,12 +125,9 @@ _PRESETS = {  # pylint: disable=consider-using-namedtuple-or-dataclass
               'BULK_REPEAT': np.array([0.0, -4.19199991, 4.19199991]),
               'SUPERLATTICE': np.array(((1, -1), (1, 1))),
               'superlattice_defined': True},
-    'Ag': {'N_BULK_LAYERS': 1,
-           'BULK_REPEAT': np.array([1.44, 1.44, -2.03647])},
     }
 
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
-    _get_poscar_info('POSCAR_Ag(100)', 6, 'p4m', (1, True), _PRESETS['Ag']),
     _get_poscar_info('POSCAR_STO(110)-4x1', 136, 'pm', (1, False)),
     _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
     _get_poscar_info('POSCAR_36C_p6m', 36, 'p6m', (1, False)),
@@ -154,10 +151,9 @@ WITH_DUPLICATE_ATOMS = [
     ]
 
 
-def _get_info_by_name(name):
+def get_info_by_name(name, container=POSCARS_WITH_LITTLE_SYMMETRY_INFO):
     """Return a TestInfo object by name."""
-    return next(i for i in POSCARS_WITH_LITTLE_SYMMETRY_INFO
-                if name in i.poscar.name)
+    return next(i for i in container if name in i.poscar.name)
 
 
 def _add_known_bulk_properties(info, bulk_info):
@@ -186,19 +182,6 @@ def _add_surface_atom_info(info, surface_atom_info):
 
 POSCAR_WITH_KNOWN_BULK_REPEAT = (
     _add_known_bulk_properties(
-        _get_info_by_name('Ag(100)'),
-        BulkSlabAndRepeatInfo(
-            bulk_like_below=0.65,
-            bulk_repeat=np.array([-1.44, -1.44, 2.03647]),
-            n_bulk_atoms=1,
-            bulk_cuts=[0.35],
-            bulk_dist=0.0,
-            bulk_ucell=np.array([[ 2.88   ,  0.     , -1.44   ],
-                                 [ 0.     ,  2.88   , -1.44   ],
-                                 [ 0.     ,  0.     ,  2.03647]]),
-            ),
-        ),
-    _add_known_bulk_properties(
         _get_poscar_info('POSCAR_Cu2O_111', 22+43),
         BulkSlabAndRepeatInfo(
             bulk_like_below=0.55,
@@ -213,42 +196,12 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
         ),
     )
 
-POSCAR_WITH_LAYER_INFO = (
-    _add_known_layer_properties(
-        POSCAR_WITH_KNOWN_BULK_REPEAT[0],
-        LayerInfo(
-            layer_cuts=LayerCuts.from_string('dz(1.2)'),
-            n_bulk_layers=1,
-            cuts=[0.35, 0.45, 0.55, 0.65, 0.75],
-            n_layers=6,
-            n_atoms_per_layer=[1, 1, 1, 1, 1, 1],
-            n_atoms_per_sublayer=[1, 1, 1, 1, 1, 1],
-            n_sublayers=6,
-            smallest_interlayer_spacing=2.03646,
-            )
-        ),
-    )
+POSCAR_WITH_LAYER_INFO = ()
+POSCAR_WITH_NEAREST_NEIGHBOR_INFO = ()
+POSCAR_WITH_SURFACE_ATOM_INFO = ()
 
-POSCAR_WITH_NEAREST_NEIGHBOR_INFO = (
-    _add_nearest_neighbor_info(
-        POSCAR_WITH_KNOWN_BULK_REPEAT[0],
-        NearestNeighborInfo(
-            nearest_neighbor_distances={1: 2.88, 2: 2.88, 3: 2.88,
-                                        4: 2.88, 5: 2.88, 6: 2.88,},
-            )
-        ),
-    )
-
-POSCAR_WITH_SURFACE_ATOM_INFO = (
-    _add_surface_atom_info(
-        POSCAR_WITH_KNOWN_BULK_REPEAT[0],
-        SurfaceAtomInfo(surface_atom_nums=(1, 2),)
-        ),
-    )
-
-AG_100 = _get_info_by_name('Ag(100)')
-SLAB_36C_cm = _get_info_by_name('36C_cm')
-SLAB_Cu2O_111 = _get_info_by_name('Cu2O(111)')
+SLAB_36C_cm = get_info_by_name('36C_cm')
+SLAB_Cu2O_111 = get_info_by_name('Cu2O(111)')
 
 
 class CasePOSCARSlabs:
@@ -301,14 +254,51 @@ class CasePOSCARSlabs:
 
     @parametrize(info=POSCAR_WITH_NEAREST_NEIGHBOR_INFO,
                  idgen=make_poscar_ids())
-    @case(tags=Tag.SURFACE_ATOMS)
+    @case(tags=Tag.NEAREST_NEIGHBOURS)
     def case_nearest_neighbors_poscar(self, info):
         """Return a slab, an Rparams and info on expected nearest neighbors."""
         return self.case_poscar(info)
 
     @parametrize(info=POSCAR_WITH_SURFACE_ATOM_INFO, idgen=make_poscar_ids())
+    @case(tags=Tag.SURFACE_ATOMS)
     def case_surface_atom_poscar(self, info):
         """Return a slab, an Rparams and info on expected surface atoms."""
+        return self.case_poscar(info)
+
+    @case(tags=(Tag.BULK_PROPERTIES,
+                Tag.LAYER_INFO,
+                Tag.NEAREST_NEIGHBOURS,
+                Tag.SURFACE_ATOMS,))
+    def case_poscar_ag100(self):
+        """Return a Ag(100) slab."""
+        info = _get_poscar_info('POSCAR_Ag(100)', 6, 'p4m', (1, True))
+        info.param_presets = {'N_BULK_LAYERS': 1,
+                              'BULK_REPEAT': np.array([1.44, 1.44, -2.03647])}
+        info.bulk_properties = BulkSlabAndRepeatInfo(
+            bulk_like_below=0.65,
+            bulk_repeat=np.array([-1.44, -1.44, 2.03647]),
+            n_bulk_atoms=1,
+            bulk_cuts=[0.35],
+            bulk_dist=0.0,
+            bulk_ucell=np.array([[ 2.88   ,  0.     , -1.44   ],
+                                 [ 0.     ,  2.88   , -1.44   ],
+                                 [ 0.     ,  0.     ,  2.03647]]),
+            )
+        info.layer_properties = LayerInfo(
+            layer_cuts=LayerCuts.from_string('dz(1.2)'),
+            n_bulk_layers=1,
+            cuts=[0.35, 0.45, 0.55, 0.65, 0.75],
+            n_layers=6,
+            n_atoms_per_layer=[1, 1, 1, 1, 1, 1],
+            n_atoms_per_sublayer=[1, 1, 1, 1, 1, 1],
+            n_sublayers=6,
+            smallest_interlayer_spacing=2.03646,
+            )
+        info.nearest_neighbors = NearestNeighborInfo(
+            nearest_neighbor_distances={1: 2.88, 2: 2.88, 3: 2.88,
+                                        4: 2.88, 5: 2.88, 6: 2.88,},
+            )
+        info.surface_atoms = SurfaceAtomInfo(surface_atom_nums=(1, 2),)
         return self.case_poscar(info)
 
     @case(tags=Tag.NON_MINIMAL_CELL)
