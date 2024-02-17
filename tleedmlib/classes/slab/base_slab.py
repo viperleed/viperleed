@@ -455,6 +455,9 @@ class BaseSlab(AtomContainer):
         the layers created. If layers were already defined, they
         are overwritten.
 
+        Notice that this method assumes that fractional coordinates
+        of the atoms are **collapsed to the base cell**.
+
         Parameters
         ----------
         rpars : Rparams
@@ -679,8 +682,8 @@ class BaseSlab(AtomContainer):
 
         The method ensures that all atoms are within the (0, 0) unit
         cell, then, if needed, uses the information from `rpars` to
-        create layers calculate Cartesian coordinates (absolute and
-        per layer), and to update elements and sites.
+        create layers and calculate Cartesian coordinates (absolute
+        and per layer), and to update elements and sites.
         Notice that atom displacements are NOT cleared, unless
         rpars.fileLoaded['VIBROCC'] is True-thy.
 
