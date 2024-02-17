@@ -1895,8 +1895,8 @@ def test_get_surface_atoms(args):
     assert surface_atoms_nums == set(info.surface_atoms.surface_atom_nums)
 
 
-@parametrize_with_cases('args',
-                        cases=CasePOSCARSlabs.case_nearest_neighbors_poscar)
+@parametrize_with_cases('args', cases=CasePOSCARSlabs,
+                        has_tag=Tag.NEAREST_NEIGHBOURS)
 def test_nearest_neighbors(args):
     """Test function get_nearest_neighbors."""
     slab, _, info = args
