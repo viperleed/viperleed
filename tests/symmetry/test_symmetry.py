@@ -311,7 +311,7 @@ class TestSymmetryConstraints:
         'square_cm_11': 'Known to often fail with a random shift',
         'square_cm_1m1': 'Known to often fail with a random shift',
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
-        'poscar-STO(110)-4x1': 'Known to sometimes fail with a random shift',
+        'poscar_sto110_4x1': 'Known to sometimes fail with a random shift',
         }
 
     def test_correct_group_after_constraint(self, with_symmetry_constraints,
@@ -398,7 +398,7 @@ class TestSlabSymmetrization:
         'square_cmm': 'Sometimes reduced to cm',
         'poscar_ag100': 'Often reduced from p4m to cm',
         'poscar_diamond': 'Known invalid group pm. May be correct rcm here',
-        'poscar-36C_p6m': 'Often reduced to cmm',
+        'poscar_36carbon_atoms_p6m': 'Often reduced to cmm',
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
         'poscar_mgo': 'Sometimes reduced to cmm from p4m',

@@ -8,6 +8,7 @@ Created on 2023-07-28
 
 from collections import Counter
 from copy import deepcopy
+import logging
 import operator
 from random import shuffle
 from pathlib import Path
@@ -199,9 +200,9 @@ class TestAtomTransforms:
         assert all(at.is_same_xy(mir_at)
                    for at, mir_at in zip(slab, reversed(mirrored_slab)))
 
-    def test_mirror_on_slanted_cell(self, make_poscar, subtests):
+    def test_mirror_on_slanted_cell(self, subtests):
         """Test the expected outcome of mirroring atoms of a slanted slab."""
-        slab, *_ = make_poscar(poscar_slabs.SLAB_36C_cm)
+        slab, *_ = CasePOSCARSlabs().case_poscar_36carbon_atoms_cm()
         slab.create_sublayers(0.1)
         with subtests.test('valid mirror plane'):
             sym_plane = SymPlane((0, 0), (0, 1), abt=slab.ab_cell.T)
@@ -1775,9 +1776,9 @@ class TestUnitCellTransforms:
         assert np.allclose(slab.bulkslab.ucell, matrix.dot(orignal_bulk_ucell))
         assert np.allclose(slab.ucell, matrix.dot(original_ucell))
 
-    def test_project_c_to_z(self, make_poscar, subtests):
+    def test_project_c_to_z(self, subtests):
         """Check that c is along z after projection."""
-        slab, *_ = make_poscar(poscar_slabs.SLAB_36C_cm)
+        slab, *_ = CasePOSCARSlabs().case_poscar_36carbon_atoms_cm()
         slab_copy = deepcopy(slab)
         slab.project_c_to_z()
         with subtests.test('c along z'):
@@ -1832,6 +1833,56 @@ class TestUnitCellReduction:
         slab, rpars, *_ = args
         with pytest.raises(err.AlreadyMinimalError):
             slab.get_minimal_ab_cell(rpars.SYMMETRY_EPS, rpars.SYMMETRY_EPS.z)
+
+
+class TestVacuumGap:
+    """Collection of tests for checking the extent and position of vacuum."""
+
+    @staticmethod
+    def _check_raises(slab, exc):
+        """Ensure that slab.check_vacuum_gap raises exc."""
+        with pytest.raises(exc):
+            slab.check_vacuum_gap()
+
+    @parametrize_with_cases(
+        'args', cases=CasePOSCARSlabs,
+        filter=exclude_tags(Tag.VACUUM_GAP_MIDDLE,
+                            Tag.VACUUM_GAP_SMALL,
+                            Tag.VACUUM_GAP_ZERO,
+                            Tag.NO_INFO)
+        )
+    def test_vacuum_ok(self, args, caplog):
+        """Check no complaints if there is no problem with vacuum."""
+        slab, _, info = args
+        has_atoms_at_edges = any(at.pos[2] <= 1e-4  # slab is collapsed
+                                 for at in slab)
+        with not_raises(err.VacuumError), caplog.at_level(logging.INFO):
+            slab.check_vacuum_gap()
+        if has_atoms_at_edges:
+            assert 'Atoms were shifted' in caplog.text
+
+    @parametrize_with_cases('args', cases=poscar_slabs,
+                            has_tag=Tag.VACUUM_GAP_MIDDLE)
+    def test_vacuum_gap_mid_slab(self, args):
+        """Check complaints when the vacuum is in the middle of a slab."""
+        slab, *_ = args
+        self._check_raises(slab, err.WrongVacuumPositionError)
+
+    @if_ase
+    def test_no_vacuum_gap(self):
+        """Check complaints when atoms are very close to both c=0 and c=1."""
+        slab = Slab.from_ase(
+            cases_ase.ase.build.fcc110('Ni', size=(1, 1, 6), vacuum=0.0005)
+            )
+        with pytest.raises(err.NoVacuumError):
+            slab.check_vacuum_gap()
+
+    @parametrize_with_cases('args', cases=poscar_slabs,
+                            has_tag=Tag.VACUUM_GAP_SMALL)
+    def test_vacuum_gap_small(self, args):
+        """Check complaints with a small vacuum gap."""
+        slab, *_ = args
+        self._check_raises(slab, err.NotEnoughVacuumError)
 
 
 @parametrize_with_cases('args', cases=CasePOSCARSlabs,

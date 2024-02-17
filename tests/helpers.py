@@ -198,6 +198,9 @@ class CaseTag(IntEnum):
     RAISES = auto()
     SURFACE_ATOMS = auto()
     THICK_BULK = auto()
+    VACUUM_GAP_MIDDLE = auto()  # Not at top
+    VACUUM_GAP_SMALL = auto()   # < 5A
+    VACUUM_GAP_ZERO = auto()
 
 
 @dataclass

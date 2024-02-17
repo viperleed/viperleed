@@ -128,10 +128,7 @@ _PRESETS = {  # pylint: disable=consider-using-namedtuple-or-dataclass
     }
 
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
-    _get_poscar_info('POSCAR_STO(110)-4x1', 136, 'pm', (1, False)),
     _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
-    _get_poscar_info('POSCAR_36C_p6m', 36, 'p6m', (1, False)),
-    _get_poscar_info('POSCAR_36C_cm', 36, 'cm', (1, False)),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
                      _PRESETS['Fe3O4']),
     _get_poscar_info('POSCAR_Al2O3_NiAl(111)_cHole_20061025',
@@ -195,12 +192,10 @@ POSCAR_WITH_KNOWN_BULK_REPEAT = (
             ),
         ),
     )
-
 POSCAR_WITH_LAYER_INFO = ()
 POSCAR_WITH_NEAREST_NEIGHBOR_INFO = ()
 POSCAR_WITH_SURFACE_ATOM_INFO = ()
 
-SLAB_36C_cm = get_info_by_name('36C_cm')
 SLAB_Cu2O_111 = get_info_by_name('Cu2O(111)')
 
 
@@ -301,6 +296,18 @@ class CasePOSCARSlabs:
         info.surface_atoms = SurfaceAtomInfo(surface_atom_nums=(1, 2),)
         return self.case_poscar(info)
 
+    @case(tags=Tag.VACUUM_GAP_SMALL)
+    def case_poscar_36carbon_atoms_p6m(self):
+        """Return a 6-fold symmetric slab with 36 carbon atoms."""
+        info = _get_poscar_info('POSCAR_36C_p6m', 36, 'p6m', (1, False))
+        return self.case_poscar(info)
+
+    @case(tags=Tag.VACUUM_GAP_SMALL)
+    def case_poscar_36carbon_atoms_cm(self):
+        """Return a slanted slab with 36 carbon atoms and cm group."""
+        info = _get_poscar_info('POSCAR_36C_cm', 36, 'cm', (1, False))
+        return self.case_poscar(info)
+
     @case(tags=Tag.NON_MINIMAL_CELL)
     def case_poscar_diamond(self):
         """Return a non-minimal diamond(111) slab."""
@@ -308,7 +315,9 @@ class CasePOSCARSlabs:
         info.poscar.n_cells = 4
         return self.case_poscar(info)
 
-    @case(tags=(Tag.NON_MINIMAL_CELL, Tag.BULK_PROPERTIES))
+    @case(tags=(Tag.NON_MINIMAL_CELL,
+                Tag.BULK_PROPERTIES,
+                Tag.VACUUM_GAP_SMALL))
     def case_poscar_fe3o4_001_cod(self):
         """Return a slab from a bulk-truncated Fe3O4(001) POSCAR."""
         info = TestInfo()
@@ -373,7 +382,7 @@ class CasePOSCARSlabs:
         a_site.occ = {'La': 0.8, 'Sr': 0.2}
         return slab, rpars, info
 
-    @case(tags=Tag.NON_MINIMAL_CELL)
+    @case(tags=(Tag.NON_MINIMAL_CELL, Tag.VACUUM_GAP_SMALL))
     def case_poscar_mgo(self):
         """Return a non-minimal Mg(001) slab."""
         info = _get_poscar_info('POSCAR_MgO_cod_9006456',
@@ -381,13 +390,19 @@ class CasePOSCARSlabs:
         info.poscar.n_cells = 2
         return self.case_poscar(info)
 
-    @case(tags=Tag.NON_MINIMAL_CELL)
+    @case(tags=(Tag.NON_MINIMAL_CELL, Tag.VACUUM_GAP_SMALL))
     def case_poscar_sb_si_111(self):
         """Return a non-minimal, rectangular slab of Sb/Si(111)."""
         info = _get_poscar_info('POSCAR_Sb_Si(111)_rect', 72+12, 'pm')
         # While it looks like there are 4 cells (rt3 of Si), some
         # of the Sb atoms are not quite in the right position
         info.poscar.n_cells = 2
+        return self.case_poscar(info)
+
+    @case(tags=Tag.VACUUM_GAP_MIDDLE)
+    def case_poscar_sto110_4x1(self):
+        """Return a symmetric slab of SrTiO3(110)-4x1."""
+        info = _get_poscar_info('POSCAR_STO(110)-4x1', 136, 'pm', (1, False))
         return self.case_poscar(info)
 
     @case(tags=Tag.BULK_PROPERTIES)
