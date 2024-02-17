@@ -1165,9 +1165,9 @@ class BaseSlab(AtomContainer):
         whether any unit-cell modification was actually reverted
         or not.
 
-        This method will not revert the state of, e.g., .layers.
+        This method will not revert the state of, e.g., layers.
         If an operation that can (potentially) change layers is
-        reverted, the .layers attribute is cleared.
+        reverted, the layers and sublayers attributes are cleared.
 
         Parameters
         ----------
@@ -1198,7 +1198,8 @@ class BaseSlab(AtomContainer):
                     atom.pos[2] -= op_array
                     collapse_fractional(atom.pos, in_place=True)
                 self.update_cartesian_from_fractional(update_origin=True)
-                self.layers = ()  # They're probably wrong
+                self.layers = ()     # They're probably wrong
+                self.sublayers = ()  # Probably wrong sorting
             elif op_type == 'lmul':
                 self.ucell = np.dot(np.linalg.inv(op_array), self.ucell)
             elif op_type == 'rmul':
@@ -1756,8 +1757,9 @@ class BaseSlab(AtomContainer):
             coordinates to the base unit cell and **updates the
             stored position of the topmost atom**.
         As translating atoms along c has the potential to modify
-            layers, the `.layers` attribute is always cleared. Call
-            `create_layers(rpars)` again to recreate them.
+            layers and sublayers, the `.layers` ans `.sublayers`
+            attributes are always cleared. Call `create_(sub)layers`
+            again to recreate them.
         This operation can be undone with a call to `revert_unit_cell`,
             as the shift is registered as one of the `ucell_mod`. The
             clearing of layers cannot be automatically undone.
@@ -1768,6 +1770,7 @@ class BaseSlab(AtomContainer):
         self.update_cartesian_from_fractional(update_origin=True)
         self.ucell_mod.append(('c_shift', c_fraction))
         self.layers = ()
+        self.sublayers = ()
 
     # ----------------- SYMMETRY UPON TRANSFORMATION ------------------
 

@@ -228,11 +228,13 @@ class TestAtomTransforms:
                    for at, rot_at in zip(slab, reversed(rotated_slab)))
 
     def test_translate_c_clears_layers(self, ag100):
-        """Check that no layers are present after a c shift."""
+        """Check that no (sub)layers are present after a c shift."""
         slab, *_ = ag100
+        slab.create_sublayers(0.1)
         assert slab.layers
         slab.translate_atoms_c(0.15)
         assert not slab.layers
+        assert not slab.sublayers
 
 
 class TestAtomsAndElements:
