@@ -177,6 +177,10 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     else:
         lowbound = rfmin
     rYrange = [lowbound-(rfmax-lowbound)*0.1, rfmax+(rfmax-rfmin)*0.1]
+    if abs(rYrange[1] - rYrange[0]) < 1e-5:
+        same = rYrange[0]
+        rYrange[0] -= 0.05*same
+        rYrange[1] += 0.05*same
     labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
     xoff = gens[-1]*0.005
     for (xpos, label) in markers:
@@ -520,7 +524,7 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
             part = len(allgens) - i
             break
     part = max(50, part)
-    rfmin, rfmax = min(allmin[-part:]), max(allmean[-part:])
+    rfmin, rfmax = min(allmin[-part:]), max(allmean[-part:])                    # TODO: why not max of max?
     if rfmax <= rfmin:
         rfmin *= 0.95
         rfmax *= 1.05
@@ -551,6 +555,8 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
             meanline.set_label('Mean parameter \u03C3')    # sigma
             maxline.set_label('Highest parameter \u03C3')  # sigma
             labelled = True
+    if scattermax <= 1e-5:                                                      # TODO: here scattermax may remain zero. Does this make sense?
+        scattermax = 0.05
 
     # layout
     rfp.set_ylim(rYrange)
