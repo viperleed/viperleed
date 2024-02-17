@@ -1506,6 +1506,7 @@ class TestSlabRaises:
 
     _props = {
         'ab_cell': err.InvalidUnitCellError,
+        'c_vector': err.InvalidUnitCellError,
         'fewest_atoms_sublayer': err.MissingSublayersError,
         'smallest_interlayer_spacing': err.MissingLayersError,
         }
