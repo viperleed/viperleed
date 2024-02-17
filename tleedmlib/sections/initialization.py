@@ -804,3 +804,6 @@ def _check_slab_duplicates_and_vacuum(slab, rpars):
             raise exc_type(_msg, exc.fixed_slab) from None
         rpars.setHaltingLevel(1)
         logger.warning(_msg)
+    if not slab.layers:
+        # May have been cleared by shifting slab away from c==0
+        slab.create_layers(rpars)

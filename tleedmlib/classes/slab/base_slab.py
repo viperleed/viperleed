@@ -1158,6 +1158,10 @@ class BaseSlab(AtomContainer):
         whether any unit-cell modification was actually reverted
         or not.
 
+        This method will not revert the state of, e.g., .layers.
+        If an operation that can (potentially) change layers is
+        reverted, the .layers attribute is cleared.
+
         Parameters
         ----------
         restore_to : Sequence or None, optional
@@ -1187,6 +1191,7 @@ class BaseSlab(AtomContainer):
                     atom.pos[2] -= op_array
                     collapse_fractional(atom.pos, in_place=True)
                 self.update_cartesian_from_fractional(update_origin=True)
+                self.layers = ()  # They're probably wrong
             elif op_type == 'lmul':
                 self.ucell = np.dot(np.linalg.inv(op_array), self.ucell)
             elif op_type == 'rmul':
@@ -1743,14 +1748,19 @@ class BaseSlab(AtomContainer):
             operations, this method **does collapse** the atom
             coordinates to the base unit cell and **updates the
             stored position of the topmost atom**.
+        As translating atoms along c has the potential to modify
+            layers, the `.layers` attribute is always cleared. Call
+            `create_layers(rpars)` again to recreate them.
         This operation can be undone with a call to `revert_unit_cell`,
-            as the shift is registered as one of the `ucell_mod`.
+            as the shift is registered as one of the `ucell_mod`. The
+            clearing of layers cannot be automatically undone.
         """
         for atom in self:
             atom.pos[2] += c_fraction
             collapse_fractional(atom.pos, in_place=True)
         self.update_cartesian_from_fractional(update_origin=True)
         self.ucell_mod.append(('c_shift', c_fraction))
+        self.layers = ()
 
     # ----------------- SYMMETRY UPON TRANSFORMATION ------------------
 

@@ -227,6 +227,13 @@ class TestAtomTransforms:
         assert all(at.is_same_xy(rot_at)
                    for at, rot_at in zip(slab, reversed(rotated_slab)))
 
+    def test_translate_c_clears_layers(self, ag100):
+        """Check that no layers are present after a c shift."""
+        slab, *_ = ag100
+        assert slab.layers
+        slab.translate_atoms_c(0.15)
+        assert not slab.layers
+
 
 class TestAtomsAndElements:
     """Collection of tests for atom additions/removals."""
@@ -1231,6 +1238,7 @@ class TestRevertUnitCell:
             _rotate_once(slab, rot_orders)
             slab.translate_atoms_2d((0.25, 0.32))
             _rotate_once(slab, rot_orders)
+            slab.translate_atoms_c(0.29)
             slab.collapse_cartesian_coordinates()
         return _apply
 
