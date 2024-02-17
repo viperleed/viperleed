@@ -26,6 +26,7 @@ import numpy as np
 from scipy.spatial.distance import cdist as euclid_distance
 
 from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import COLLAPSE_EPS
 from viperleed.tleedmlib.base import add_edges_and_corners
 from viperleed.tleedmlib.base import collapse
 from viperleed.tleedmlib.base import collapse_fractional
@@ -437,6 +438,9 @@ class BaseSlab(AtomContainer):
             except ValueError:
                 # bulk_cuts > upper. This auto-cut is useless
                 continue
+            if lower < COLLAPSE_EPS:
+                # Avoid mistreating atoms that are very close to c==0
+                lower = -2*COLLAPSE_EPS
             cuts.extend(
                 sum(at.pos[2] for at in pair) / 2
                 for pair in pairwise(atoms)
