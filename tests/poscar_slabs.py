@@ -169,13 +169,13 @@ def _add_known_layer_properties(info, layer_info):
 
 
 def _add_nearest_neighbor_info(info, nn_info):
-    """Add nearest-neighbor information to a TestInfo object."""
+    """Add nearest-neighbour information to a TestInfo object."""
     info.nearest_neighbors = nn_info
     return info
 
 
 def _add_surface_atom_info(info, surface_atom_info):
-    """Add info about surface atoms to a TestInfo objext."""
+    """Add info about surface atoms to a TestInfo object."""
     info.surface_atoms = surface_atom_info
     return info
 
@@ -273,10 +273,10 @@ class CasePOSCARSlabs:
         """Return a Ag(100) slab."""
         info = _get_poscar_info('POSCAR_Ag(100)', 6, 'p4m', (1, True))
         info.param_presets = {'N_BULK_LAYERS': 1,
-                              'BULK_REPEAT': np.array([1.44, 1.44, -2.03647])}
+                              'BULK_REPEAT': np.array([-1.44, -1.44, 2.03647])}
         info.bulk_properties = BulkSlabAndRepeatInfo(
             bulk_like_below=0.65,
-            bulk_repeat=np.array([-1.44, -1.44, 2.03647]),
+            bulk_repeat=info.param_presets['BULK_REPEAT'],
             n_bulk_atoms=1,
             bulk_cuts=[0.35],
             bulk_dist=0.0,
@@ -286,7 +286,7 @@ class CasePOSCARSlabs:
             )
         info.layer_properties = LayerInfo(
             layer_cuts=LayerCuts.from_string('dz(1.2)'),
-            n_bulk_layers=1,
+            n_bulk_layers=info.param_presets['N_BULK_LAYERS'],
             cuts=[0.35, 0.45, 0.55, 0.65, 0.75],
             n_layers=6,
             n_atoms_per_layer=[1, 1, 1, 1, 1, 1],
