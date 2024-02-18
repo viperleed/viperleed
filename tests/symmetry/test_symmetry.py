@@ -103,7 +103,9 @@ def may_fail(case, known_failures, strict=False):
         raise
     # No failure if we get here
     if reason and strict:
-        raise AssertionError(f'XPASS: This test should FAIL with {reason=}')
+        raise AssertionError(
+            f'XPASS: This test should FAIL with reason={reason!r}'
+            )
 
 
 class TestPlaneGroupFinding:

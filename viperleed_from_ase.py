@@ -255,7 +255,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
     exec_path = Path(exec_path).resolve()
     if not exec_path.is_dir():
         raise FileNotFoundError(
-            f"Invalid {exec_path=}: not "
+            f"Invalid exec_path={exec_path}: not "
             + "existent" if not exec_path.exists() else "a directory"
             )
 
