@@ -121,7 +121,7 @@ class _ImmutableSlabTransform(SlabTransform):
         object.__setattr__(self, 'uc_scaling', None)
         object.__setattr__(self, 'cut_cell_c_fraction', 0.)
 
-    def __setattr__(self, name, value, /):
+    def __setattr__(self, name, value):
         """Raise FrozenInstanceError."""
         if name == '__doc__':
             # One exception to allow nicer 'help' for instances
@@ -129,7 +129,7 @@ class _ImmutableSlabTransform(SlabTransform):
             return
         raise FrozenInstanceError(f"cannot assign to field {name!r}")
 
-    def __delattr__(self, name, /):
+    def __delattr__(self, name):
         """Raise FrozenInstanceError."""
         raise FrozenInstanceError(f"cannot assign to field {name!r}")
 
