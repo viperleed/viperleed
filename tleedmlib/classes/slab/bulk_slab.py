@@ -22,10 +22,10 @@ from viperleed.tleedmlib.base import add_edges_and_corners, collapse
 from viperleed.tleedmlib.base import rotation_matrix_order
 
 from .base_slab import BaseSlab
-from .slab_errors import AlreadyMinimalError
-from .slab_errors import MissingSublayersError
-from .slab_errors import SlabError
 from .slab_utils import _cycle
+from .errors import AlreadyMinimalError
+from .errors import MissingSublayersError
+from .errors import SlabError
 
 
 class BulkSlab(BaseSlab):

@@ -38,17 +38,17 @@ from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab
-from .slab_errors import AlreadyMinimalError
-from .slab_errors import AtomsTooCloseError
-from .slab_errors import EmptySlabError
-from .slab_errors import MissingBulkSlabError
-from .slab_errors import MissingLayersError
-from .slab_errors import NoBulkRepeatError
-from .slab_errors import NotEnoughVacuumError
-from .slab_errors import NoVacuumError
-from .slab_errors import TooFewLayersError
-from .slab_errors import SlabError
-from .slab_errors import WrongVacuumPositionError
+from .errors import AlreadyMinimalError
+from .errors import AtomsTooCloseError
+from .errors import EmptySlabError
+from .errors import MissingBulkSlabError
+from .errors import MissingLayersError
+from .errors import NoBulkRepeatError
+from .errors import NotEnoughVacuumError
+from .errors import NoVacuumError
+from .errors import TooFewLayersError
+from .errors import SlabError
+from .errors import WrongVacuumPositionError
 
 try:
     import ase

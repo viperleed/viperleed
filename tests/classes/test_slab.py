@@ -33,7 +33,7 @@ from viperleed.tleedmlib.classes.atom import Atom
 from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts
 from viperleed.tleedmlib.classes.slab import Slab, BulkSlab
-from viperleed.tleedmlib.classes.slab import slab_errors as err
+from viperleed.tleedmlib.classes.slab import errors as err
 from viperleed.tleedmlib.classes.slab import surface_slab
 from viperleed.tleedmlib.classes.sym_entity import SymPlane
 from viperleed.tleedmlib.files.parameters.errors import (

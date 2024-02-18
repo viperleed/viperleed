@@ -37,15 +37,15 @@ from viperleed.tleedmlib.classes.atom_containers import AtomContainer, AtomList
 from viperleed.tleedmlib.classes.layer import Layer, SubLayer
 from viperleed.tleedmlib.classes.sitetype import Sitetype
 
-from .slab_errors import AlreadyMinimalError
-from .slab_errors import EmptySlabError
-from .slab_errors import InvalidUnitCellError
-from .slab_errors import MissingElementsError
-from .slab_errors import MissingLayersError
-from .slab_errors import MissingSublayersError
-from .slab_errors import SlabError
-from .slab_errors import TooFewLayersError
 from .slab_utils import _left_handed, _z_distance
+from .errors import AlreadyMinimalError
+from .errors import EmptySlabError
+from .errors import InvalidUnitCellError
+from .errors import MissingElementsError
+from .errors import MissingLayersError
+from .errors import MissingSublayersError
+from .errors import SlabError
+from .errors import TooFewLayersError
 
 
 _LOGGER = logging.getLogger('tleedm.slab')

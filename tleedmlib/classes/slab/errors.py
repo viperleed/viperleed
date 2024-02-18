@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module slab_errors of viperleed.tleedmlib.classes.slab.
+"""Module errors of viperleed.tleedmlib.classes.slab.
 
 Created on 2023-02-21
 
