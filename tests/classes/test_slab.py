@@ -350,7 +350,7 @@ class TestAtomsInMultipleCells:
         """Check correct detection of atoms in multiple cells."""
         slab, *_ = ag100
         for atom in slab:
-            shift_cell = 0
+            shift_cell = np.random.randint(-5, 5)
             while not shift_cell:
                 shift_cell = np.random.randint(-5, 5)
             atom.pos[2] = atom.pos[2] + shift_cell
@@ -1921,7 +1921,7 @@ class TestVacuumGap:
         )
     def test_vacuum_ok(self, args, caplog):
         """Check no complaints if there is no problem with vacuum."""
-        slab, _, info = args
+        slab, *_ = args
         has_atoms_at_edges = any(at.pos[2] <= 1e-4  # slab is collapsed
                                  for at in slab)
         with not_raises(err.VacuumError), caplog.at_level(logging.INFO):
