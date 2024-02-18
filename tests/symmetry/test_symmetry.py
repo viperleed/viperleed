@@ -360,7 +360,7 @@ class TestSlabSymmetrization:
         for atom, delta in zip(rattled_slab.atlist, displacements):
             atom.cartpos[:2] += delta
         rattled_slab.collapseCartesianCoordinates()
-        return rattled_slab, slab, param, info, *rest
+        return (rattled_slab, slab, param, info, *rest)
 
     _known_incorrect_rattled = {
         'pmm-ucell=square': 'Often reduced to pm',

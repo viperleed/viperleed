@@ -316,7 +316,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
             _LOGGER.warning(
                 f"Failed to remove work directory {work_path}. Info: {err}"
                 )
-    return *content_list, rparams.V0_IMAG
+    return (*content_list, rparams.V0_IMAG)
 
 
 def _copy_inputs_to_exec_path(inputs_path, exec_path):
