@@ -474,6 +474,7 @@ def init_domains(rp):
             try:
                 dp.sl = poscar.read()
                 dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
+                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
@@ -742,6 +743,42 @@ def make_compile_logs_dir(rp):
     except OSError:
         logger.warning(f"Could not create directory {rp.compile_logs_dir}")
         rp.setHaltingLevel(1)
+
+
+def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
+    """Log a WARNING if slab's atoms do not all belong to the same cell.
+
+    It only makes sense to use this function right after `slab` has
+    been loaded (e.g., via poscar.read or .from_ase) and before any
+    of the c-collapsing functions are called. These include:
+        .collapse_cartesian_coordinates
+        .collapse_fractional_coordinates
+        .full_update
+
+    Parameters
+    ----------
+    slab : SurfaceSlab
+        The slab to be checked.
+    rpars : Rparams
+        The current PARAMETERS object. Used for logging purposes only.
+    domain_name : str, optional
+        The name of the structural domain to which slab belongs.
+        Used only for logging purposes. Default is an empty string.
+
+    Returns
+    -------
+    None.
+    """
+    _msg = 'POSCAR file ' + f'of domain {domain_name} ' if domain_name else ''
+    _msg += ('has some atoms outside the base unit cell along the third unit '
+             'vector (i.e., they have fractional c coordinates smaller/larger '
+             'than 0/1). These atoms will be back-folded into the base unit '
+             'cell assuming periodicity along c. This will impact layer '
+             'creation and may modify the thickness of the vacuum gap '
+             'detected. Check POSCAR to ensure correct layer assignment.')
+    if slab.has_atoms_in_multiple_c_cells():
+        logger.warning(_msg)                                                    # TODO: or INFO? Disadvantage of INFO: would not be highlighted after fixing Issue #78. If we decide for INFO, then we don't really need domain_name
+        rpars.setHaltingLevel(1)
 
 
 def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):

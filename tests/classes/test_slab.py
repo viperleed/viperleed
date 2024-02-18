@@ -313,6 +313,64 @@ class TestAtomsAndElements:
             assert [at.num for at in bulk] != old_at_nrs_bulk
 
 
+class TestAtomsInMultipleCells:
+    """Check correct behaviour of .has_atoms_in_multiple_c_cells()."""
+
+    def test_all_at_edges(self):
+        """Check correct outcome when all atoms are at cell edges."""
+        slab, *_ = CasePOSCARSlabs().case_poscar_mgo()
+        edge_atoms = [slab.atlist.get(num) for num in (1, 4, 17, 19)]
+        other_atom = slab.atlist.get(12)
+        for atom in (other_atom, *edge_atoms):
+            atom.pos[2] += 3
+        assert slab.has_atoms_in_multiple_c_cells()
+        # Keep only atoms at c edges
+        slab.atlist.clear()
+        slab.atlist.extend(edge_atoms)
+        assert not slab.has_atoms_in_multiple_c_cells()
+
+    @parametrize_with_cases('args', cases=CasePOSCARSlabs)
+    def test_all_in_first(self, args):
+        """Check that all atoms belong to the same cell."""
+        slab, *_ = args
+        # Notice that they all are because we full_update when
+        # creating the case, which collapses to the base cell
+        assert not slab.has_atoms_in_multiple_c_cells()
+
+    @parametrize(shift_cell=(1, -8, 27))
+    def test_all_in_same(self, ag100, shift_cell):
+        """Check that all atoms belong to the same cell (although not base)."""
+        slab, *_ = ag100
+        for atom in slab:
+            atom.pos[2] = atom.pos[2] + shift_cell
+        slab.update_cartesian_from_fractional()
+        assert not slab.has_atoms_in_multiple_c_cells()
+
+    def test_in_multiple_cells(self, ag100):
+        """Check correct detection of atoms in multiple cells."""
+        slab, *_ = ag100
+        for atom in slab:
+            shift_cell = 0
+            while not shift_cell:
+                shift_cell = np.random.randint(-5, 5)
+            atom.pos[2] = atom.pos[2] + shift_cell
+        slab.update_cartesian_from_fractional()
+        assert slab.has_atoms_in_multiple_c_cells()
+
+    def test_in_same_except_edges(self):
+        """Ensure that cell-belonging checks discard atoms at edges."""
+        slab, *_ = CasePOSCARSlabs().case_poscar_mgo()
+        atom_at_edge = slab.atlist.get(1)  # First atom at c=1e-5
+        atom_at_edge.pos[2] += 7
+        slab.update_cartesian_from_fractional()
+        assert not slab.has_atoms_in_multiple_c_cells()
+
+    def test_raises_with_no_atoms(self):
+        """Check complaints if there's no atoms in a slab."""
+        with pytest.raises(err.EmptySlabError):
+            Slab().has_atoms_in_multiple_c_cells()
+
+
 class TestBulk3DOperations:
     """Tests for 3D symmetry operations of BulkSlab objects."""
 

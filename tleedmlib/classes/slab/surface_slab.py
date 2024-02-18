@@ -40,6 +40,7 @@ from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab
 from .slab_errors import AlreadyMinimalError
 from .slab_errors import AtomsTooCloseError
+from .slab_errors import EmptySlabError
 from .slab_errors import MissingBulkSlabError
 from .slab_errors import MissingLayersError
 from .slab_errors import NoBulkRepeatError
@@ -770,6 +771,38 @@ class SurfaceSlab(BaseSlab):
             if len(covered) + len(surfats) >= len(atoms):
                 break   # that's all of them
         return surfats
+
+    def has_atoms_in_multiple_c_cells(self):
+        """Return whether atoms appear in multiple cells along c.
+
+        It makes sense to call this method only before the
+        first call to collapse_cartesian_coordinates() or
+        collapse_fractional_coordinates(). After that, this
+        method will always return True.
+
+        Returns
+        -------
+        has_multiple_cells : bool
+            Whether the fractional coordinates of the atoms in this
+            slab are found in more than one base unit cell along c.
+            Atoms very close (<1e-4) to cell boundaries are not taken
+            into consideration for the test.
+
+        Raises
+        ------
+        EmptySlabError
+            If this method is called before this slab has any atom.
+        """
+        if not self.n_atoms:
+            raise EmptySlabError
+        cells = (at.pos[2] // 1
+                 for at in self
+                 if _VACUUM_EPS < at.pos[2] % 1.0 < 1 - _VACUUM_EPS)
+        try:
+            first_cell = next(cells)
+        except StopIteration:  # All atoms close to the edges
+            return False
+        return any(cell != first_cell for cell in cells)
 
     def identify_bulk_repeat(self, eps, epsz=None):
         """Find a repeat vector for which the bulk matches the slab above.
