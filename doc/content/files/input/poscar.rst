@@ -81,12 +81,15 @@ After executing a search, a POSCAR_OUT file will be produced in the OUT folder. 
 POSCAR_vacuum_corrected
 -----------------------
 
-A **POSCAR_vacuum_corrected** file is provided (in folder SUPP) if the original POSCAR file does not have a suitable vacuum gap (> 5 Å) between its topmost and (a c-periodic replica of its) bottommost atom. The following POSCAR input files will be considered unsuitable for ViPErLEED:
+A **POSCAR_vacuum_corrected** file is provided (in folder SUPP) if the original POSCAR file does not have a suitable vacuum gap (> 5 Å) between its topmost and (a **c**-periodic replica of its) bottommost atom. The following POSCAR input files will be considered unsuitable for ViPErLEED:
 
-* The vacuum gap is somewhere in the middle. This means that there are multiple atoms above a large (> 5 Å) vacuum gap. A typical example is a 'symmetric' slab centred at c=0;
-* There are atoms very close (< 1e-4 in fractional coordinates) to both c=0 and c=1.
+* The vacuum gap is somewhere in the middle. This means that there are multiple atoms above a large (> 5 Å) vacuum gap. A typical example is a 'symmetric' slab centred at :math:`c=0`;
+* There are atoms very close (:math:`< 1\times10^{-4}` in fractional coordinates) to both :math:`c=0` and :math:`c=1`.
 
 In these cases, the POSCAR_vacuum_corrected file may be used as a starting point to produce an acceptable input POSCAR for a subsequent run.
+
+.. note::
+    When preparing a new set of input files from POSCAR_vacuum_corrected, be careful to adapt any :ref:`PARAMETERS<parameters>` that are defined as fractions of the unit-cell c vector (e.g., :ref:`LAYER_CUTS<CTRUNC>`, :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`, :ref:`BULK_REPEAT<BULK_REPEAT>`).
 
 A POSCAR file with a gap smaller than 5 Å will not cause ViPErLEED to stop, but a POSCAR_vacuum_corrected file is nonetheless generated. It can be used, e.g., to judge the appropriate identification of which atoms are at the top and which ones belong to the bulk-like portion of the input POSCAR.
 
