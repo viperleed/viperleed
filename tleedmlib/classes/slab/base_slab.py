@@ -55,7 +55,7 @@ _LOGGER = logging.getLogger('tleedm.slab')
 # TODO: too-many-instance-attributes
 #   Perhaps there's a way to group attributes and methods
 #   into some logical mix-in base classes?
-# TODO: layer coordinates may not be up to date after we do update_origin
+# TODO: layer coordinates may not be up to date after we update_origin
 #   This is also partly related to Issue #174. It would be solved if
 #   we (i) use the same frame for atoms, layers, and slab, (ii) we
 #   store topat_ori_z only right before a refcalc (with a dedicated
@@ -807,7 +807,7 @@ class BaseSlab(AtomContainer):
         # atom as a 'reference' as, if the unit cell can be reduced,
         # all atoms must have a 'copy'. We take the first one.
         plist = [at.cartpos[:2] for at in lowocclayer]
-        candidate_unit_vectors = (p - plist[0] for p in plist[1:])              # TODO: since is_translation_symmetric is somewhat expensive, would it make sense to pre-filter the vectors keeping only the shortest ones among those parallel to one another?
+        candidate_unit_vectors = (p - plist[0] for p in plist[1:])              # TODO: since is_translation_symmetric is somewhat expensive, would it make sense to pre-filter the vectors keeping only the shortest ones among those parallel to one another? Perhaps it would even make sense to filter the candidates keeping only those that give an integer area reduction.
         candidate_unit_vectors = (
             vec for vec in candidate_unit_vectors
             if self_copy.is_translation_symmetric(vec, eps)
