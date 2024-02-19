@@ -459,7 +459,7 @@ class BaseSlab(AtomContainer):
         return cuts
 
     def create_layers(self, rpars, bulk_cuts=()):
-        """Create a list of Layer objects based on `rparams`.
+        """Create a list of Layer objects based on `rpars`.
 
         After this call, the `layers` attribute contains a list of
         the layers created. If layers were already defined, they

@@ -816,7 +816,7 @@ class SurfaceSlab(BaseSlab):
         of sublayers), the vector returned will not be the shortest
         possible. If you are after the absolutely shortest vector, use
         `slab.bulkslab.get_minimal_c_vector(eps, epsz)`, or
-        `slab.bulkslab.ensure_minimal_c_vector(rparams)`.
+        `slab.bulkslab.ensure_minimal_c_vector(rpars)`.
 
         Parameters
         ----------
