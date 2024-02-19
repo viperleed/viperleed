@@ -447,8 +447,7 @@ class Rparams:
             self.searchConvInit['gaussian'] = self.GAUSSIAN_WIDTH
         for k in ['all', 'best', 'dec']:
             if self.SEARCH_MAX_DGEN_SCALING[k] is None:
-                self.SEARCH_MAX_DGEN_SCALING[k] = int(
-                                              1 / self.GAUSSIAN_WIDTH_SCALING)
+                self.SEARCH_MAX_DGEN_SCALING[k] = 1 / self.GAUSSIAN_WIDTH_SCALING
             if self.searchConvInit['dgen'][k] is None:
                 self.searchConvInit['dgen'][k] = self.SEARCH_MAX_DGEN[k]
         if self.output_interval is None:

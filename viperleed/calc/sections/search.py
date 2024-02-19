@@ -24,6 +24,7 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import iosearch as tl_io
+from viperleed.calc.files import parameters
 from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 
@@ -1136,7 +1137,8 @@ def search(sl, rp):
                                 comment = ("GAUSSIAN_WIDTH = {}".format(
                                     round(rp.GAUSSIAN_WIDTH, 4)))
                             for k in ["dec", "best", "all"]:
-                                rp.SEARCH_MAX_DGEN[k] *= (
+                                rp.SEARCH_MAX_DGEN[k] = int(
+                                            rp.SEARCH_MAX_DGEN[k] *
                                             rp.SEARCH_MAX_DGEN_SCALING[k])
                                 realLastConfigGen[k] = gens[-1] if gens else 0
         except KeyboardInterrupt:                                               # TODO: would probably be nicer to install a custom signal handler for SIGINT, CTRL_C_EVENT, and CTRL_BREAK_EVENT, then place back the previous handler when done processing.
