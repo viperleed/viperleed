@@ -53,7 +53,14 @@ _LOGGER = logging.getLogger('tleedm.slab')
 
 # TODO: .cartpos[2] Issue #174
 # TODO: too-many-instance-attributes
+#   Perhaps there's a way to group attributes and methods
+#   into some logical mix-in base classes?
 # TODO: layer coordinates may not be up to date after we do update_origin
+#   This is also partly related to Issue #174. It would be solved if
+#   we (i) use the same frame for atoms, layers, and slab, (ii) we
+#   store topat_ori_z only right before a refcalc (with a dedicated
+#   method. Perhaps save_refcalc_state), (iii) we remove all of the
+#   instances of update_origin.
 # TODO: a huge fraction of the time spent when dealing with slab symmetry
 #       operations is actually taken up by calls to deepcopy. It would help
 #       quite a bit to have a .light_copy(which_purpose) method that makes
