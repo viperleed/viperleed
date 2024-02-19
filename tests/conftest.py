@@ -153,5 +153,5 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
     home = Path()
     os.chdir(param.workdir)
     results = psgen.runPhaseshiftGen_old(slab, param, psgensource=executable)
-    yield param, slab, *results
+    yield (param, slab, *results)
     os.chdir(home)

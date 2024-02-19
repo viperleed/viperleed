@@ -103,7 +103,9 @@ def may_fail(case, known_failures, strict=False):
         raise
     # No failure if we get here
     if reason and strict:
-        raise AssertionError(f'XPASS: This test should FAIL with {reason=}')
+        raise AssertionError(
+            f'XPASS: This test should FAIL with reason={reason!r}'
+            )
 
 
 class TestPlaneGroupFinding:
@@ -360,7 +362,7 @@ class TestSlabSymmetrization:
         for atom, delta in zip(rattled_slab.atlist, displacements):
             atom.cartpos[:2] += delta
         rattled_slab.collapseCartesianCoordinates()
-        return rattled_slab, slab, param, info, *rest
+        return (rattled_slab, slab, param, info, *rest)
 
     _known_incorrect_rattled = {
         'pmm-ucell=square': 'Often reduced to pm',
