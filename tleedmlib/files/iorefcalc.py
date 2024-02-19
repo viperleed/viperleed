@@ -547,7 +547,7 @@ def writeAUXGEO(sl, rp):
             writelist = layer.atlist
         writelist.sort(key=lambda atom: -atom.pos[2])
         for atom in writelist:
-            writepos = atom.cartpos - atom.layer.cartori
+            writepos = atom.cartpos - atom.layer.cartori                        # TODO: .cartpos[2]. Issue #174
             ol = i3.write([sl.sitelist.index(atom.site)+1])
             if natoms != 1:
                 ol += formatter['geo'].write([writepos[2],
@@ -581,16 +581,16 @@ def writeAUXGEO(sl, rp):
         bvectors_ASA = -slab_c * bulkc/slab_c[2]
     # bulkc is now the repeat length along c. now correct for layer thickness:
     if rp.N_BULK_LAYERS == 2:
-        bvectors_ASA[2] = bulkc - (blayers[1].cartbotz - blayers[0].cartori[2])
+        bvectors_ASA[2] = bulkc - (blayers[1].cartbotz - blayers[0].cartori[2])  # TODO: .cartpos[2]. Issue #174
     else:
-        bvectors_ASA[2] = bulkc - (blayers[0].cartbotz - blayers[0].cartori[2])
+        bvectors_ASA[2] = bulkc - (blayers[0].cartbotz - blayers[0].cartori[2])  # TODO: .cartpos[2]. Issue #174
 
     # determine ASBULK - interlayer vector between bulk layers
     if rp.N_BULK_LAYERS == 2:
         # add layerOffsets for Bravais layers:
         bvectors_ASA += layerOffsets[blayers[0].num+1]
         # calculate ASBULK:
-        bvectors_ASBULK = blayers[1].cartori - blayers[0].cartori
+        bvectors_ASBULK = blayers[1].cartori - blayers[0].cartori               # TODO: .cartpos[2]. Issue #174
         bvectors_ASBULK[2] = blayers[1].cartori[2] - blayers[0].cartbotz
         bl2num = blayers[1].num
         # add layerOffsets for Bravais layers:
@@ -642,7 +642,7 @@ def writeAUXGEO(sl, rp):
     for layer in reversed(sl.non_bulk_layers):
         n = layer.num + 1
         v = sl.layers[n].cartori - layer.cartori
-        v[2] = sl.layers[n].cartori[2] - layer.cartbotz
+        v[2] = sl.layers[n].cartori[2] - layer.cartbotz                         # TODO: .cartpos[2]. Issue #174
         v = v + layerOffsets[n]   # add layerOffsets for Bravais layers
         ol = i3.write([n]) + formatter['geo'].write([v[2],
                                                      v[0], v[1]])
