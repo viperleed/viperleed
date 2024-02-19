@@ -1300,7 +1300,7 @@ class BaseSlab(AtomContainer):
             atom.cartpos = np.dot(self.ucell, atom.pos)
             atom.cartpos[2] = self.topat_ori_z - atom.cartpos[2]                # TODO: Remove with Issue #174
 
-    def _update_chem_elements(self, rpars):                                     # TODO: @fkraushofer why aren't we also taking into account ELEMENT_RENAME here?
+    def _update_chem_elements(self, rpars):                                     # TODO: Why aren't we also taking into account ELEMENT_RENAME here? Issue #108
         """Update elements based on the ELEMENT_MIX parameter.
 
         Issue warnings in case of a naming conflict.
@@ -1703,7 +1703,7 @@ class BaseSlab(AtomContainer):
         else:
             transform_3d = np.asarray(transform)
 
-        if on_row_vectors:                                                      # TODO: this has to be turned around when switching ucell.T
+        if on_row_vectors:                                                      # TODO: this has to be turned around when switching ucell.T -- Issue #175
             # transform_3d is to be multiplied to the left for a unit
             # cell with unit vectors as rows. However, we use columns:
             #    ucell.T = transform_3d @ ucell.T
