@@ -51,9 +51,7 @@ from .utils import _left_handed, _z_distance
 _LOGGER = logging.getLogger('tleedm.slab')
 
 
-# TODO: would it make sense to have cartpos[2] go the other way? Watch out for the
-#       'reference' z in LEED that should always be the z of the topmost atom AFTER REFCALC
-#       Could store the top_z, then have a .leed_pos attribute that returns top_z - cartpos[2]
+# TODO: .cartpos[2] Issue #174
 # TODO: too-many-instance-attributes
 # TODO: layer coordinates may not be up to date after we do update_origin
 # TODO: a huge fraction of the time spent when dealing with slab symmetry
@@ -124,7 +122,7 @@ class BaseSlab(AtomContainer):
         self.sitelist = []
         self.ucell_mod = []
         self.ucell_ori = np.array([])
-        self.topat_ori_z = None                                                 # TODO: SurfaceSlab only after we fix the .cartpos[2]
+        self.topat_ori_z = None                                                 # TODO: SurfaceSlab only after we fix the .cartpos[2] -- Issue #174
         self.celltype = 'unknown'
         self.planegroup = 'unknown'
         self.foundplanegroup = 'unknown'
@@ -289,7 +287,7 @@ class BaseSlab(AtomContainer):
                                     'has only one layer')
 
         # Recall that z increases moving deeper into the solid
-        return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2]
+        return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2] -- Issue #174
                    for lay_above, lay_below in pairwise(self.layers))
 
     @classmethod
@@ -309,7 +307,7 @@ class BaseSlab(AtomContainer):
             setattr(instance, attr, copy.deepcopy(value, memo))
         return instance
 
-    def _add_one_bulk_cell(self, bulk_layers, bulkc_par,
+    def _add_one_bulk_cell(self, bulk_layers, bulkc_par,                        # TODO: Issue #174
                            bulkc_par_atoms, bulkc_perp_atoms,
                            new_atoms_start_index=None):
         """Add one bulk unit cell and return the new atoms.
@@ -609,7 +607,7 @@ class BaseSlab(AtomContainer):
 
         # Work with subl sorted from bottom to top, and pop the last
         # element each time (i.e., the topmost layer to be processed)
-        subl.sort(key=attrgetter('cartbotz'), reverse=True)
+        subl.sort(key=attrgetter('cartbotz'), reverse=True)                     # TODO: Issue #174
         while subl:
             same_z = [subl.pop()]  # accumulate sublayers with same z
             this_z = same_z[0].cartbotz
@@ -1258,7 +1256,7 @@ class BaseSlab(AtomContainer):
         bulk_atoms.update_atoms_map()
         self.atlist.update_atoms_map()
 
-    def update_cartesian_from_fractional(self, update_origin=False):
+    def update_cartesian_from_fractional(self, update_origin=False):            # TODO: Issue #174
         """Assign absolute Cartesian coordinates to all atoms.
 
         The frame of reference has (x, y) as defined by the a and b
@@ -1292,7 +1290,7 @@ class BaseSlab(AtomContainer):
             self.topat_ori_z = np.dot(self.ucell, topat.pos)[2]
         for atom in self:
             atom.cartpos = np.dot(self.ucell, atom.pos)
-            atom.cartpos[2] = self.topat_ori_z - atom.cartpos[2]
+            atom.cartpos[2] = self.topat_ori_z - atom.cartpos[2]                # TODO: Remove with Issue #174
 
     def _update_chem_elements(self, rpars):                                     # TODO: @fkraushofer why aren't we also taking into account ELEMENT_RENAME here?
         """Update elements based on the ELEMENT_MIX parameter.
@@ -1361,7 +1359,7 @@ class BaseSlab(AtomContainer):
             # Flip over the z Cartesian coordinate, as
             # we store it as 'positive going down'
             cartpos = atom.cartpos.copy()
-            cartpos[2] = self.topat_ori_z - cartpos[2]                          # TODO: edit when flipping .cartpos[2]
+            cartpos[2] = self.topat_ori_z - cartpos[2]                          # TODO: Remove when flipping .cartpos[2] -- Issue #174
             atom.pos = np.dot(uci, cartpos)
 
     def update_layer_coordinates(self):
@@ -1925,7 +1923,7 @@ class BaseSlab(AtomContainer):
         if translation.shape == (2,):  # 2D. Use zero for z component.
             translation = np.append(translation, 0.)
 
-        # Let's work in the coordinate frame of the unit cell,                  # TODO: change when flipping cartpos[2]
+        # Let's work in the coordinate frame of the unit cell,                  # TODO: change when flipping .cartpos[2] -- Issue #174
         # i.e., with z axis directed from bulk to surface. This
         # requires updating the translation vector and z_range
         translation[2] *= -1

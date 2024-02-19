@@ -148,7 +148,7 @@ class SurfaceSlab(BaseSlab):
     @property
     def thickness(self):
         """Return the thickness of this slab along z."""
-        top_atom_z = min(at.cartpos[2] for at in self)                          # TODO: swap min and max with .cartpos[2]
+        top_atom_z = min(at.cartpos[2] for at in self)                          # TODO: swap min and max with .cartpos[2] -- Issue #174
         bottom_atom_z = max(at.cartpos[2] for at in self)
         return abs(top_atom_z - bottom_atom_z)
 
@@ -300,7 +300,7 @@ class SurfaceSlab(BaseSlab):
             if layer_dist < eps:
                 cartesians.extend(at.cartpos for at in lower_layer)
             cartesians = np.array(cartesians)
-            cartesians[:, 2] = self.topat_ori_z - cartesians[:, 2]              # TODO: .cartpos[2]. We can entirely skip this when we flip
+            cartesians[:, 2] = self.topat_ori_z - cartesians[:, 2]              # TODO: .cartpos[2]. We can entirely skip this when we flip -- Issue #174
             cartesians, fractionals = collapse(cartesians, ucell, ucell_inv)
             cartesians, _ = add_edges_and_corners(cartesians, fractionals,
                                                   releps, ucell)
@@ -349,7 +349,7 @@ class SurfaceSlab(BaseSlab):
         # Collect all the Cartesian coordinates. Also include
         # a periodic replica of the bottom-most atom at the top
         z_cartpos = [self_copy.topat_ori_z - at.cartpos[2] for at in self_copy]
-        replica_z = self_copy.topat_ori_z - self_copy.atlist[0].cartpos[2]        # TODO: .cartpos[2]
+        replica_z = self_copy.topat_ori_z - self_copy.atlist[0].cartpos[2]        # TODO: .cartpos[2] -- Issue #174
         replica_z += self_copy.c_vector[2]  # Don't care about in-plane
         z_cartpos.append(replica_z)
 
@@ -671,7 +671,7 @@ class SurfaceSlab(BaseSlab):
             # 'thickness of bulk', plus the gap between 'bulk' and
             # 'non-bulk' parts.
             blayers = self.bulk_layers
-            zdiff = (blayers[-1].cartbotz
+            zdiff = (blayers[-1].cartbotz                                       # TODO: Issue #174?
                      - self.layers[blayers[0].num - 1].cartbotz)
         else:  # rpars.BULK_REPEAT is float
             zdiff = rpars.BULK_REPEAT
@@ -869,7 +869,7 @@ class SurfaceSlab(BaseSlab):
         # from self.bulkslab, as that one may have a different frame
         # if it was re-centred along z when creating it.
         z_range = (
-            self.sublayers[-n_bulk_lay].cartbotz,  # topmost bulk               # TODO: .cartpos[2]
+            self.sublayers[-n_bulk_lay].cartbotz,  # topmost bulk               # TODO: .cartpos[2] -- Issue #174
             self.sublayers[-1].cartbotz            # bottommost
             )
 
@@ -885,7 +885,7 @@ class SurfaceSlab(BaseSlab):
                 f' and bottommost sublayer ({self.sublayers[-1].element})'
                 )
 
-        ori = first_non_bulk_layer.cartpos                                      # TODO: need to flip with .cartpos[2]?
+        ori = first_non_bulk_layer.cartpos                                      # TODO: need to flip with .cartpos[2]? Issue #174
         repeat_vectors = []
         for atom in self.sublayers[-1]:
             test_v = atom.cartpos - ori          # From slab to bulk
@@ -901,7 +901,7 @@ class SurfaceSlab(BaseSlab):
         # Pick the shortest repeat vector, and return it with the
         # 'conventional' z direction (positive from bulk to surface)
         shortest = min(repeat_vectors, key=np.linalg.norm)
-        shortest[2] *= -1                                                       # TODO: .cartpos[2]
+        shortest[2] *= -1                                                       # TODO: .cartpos[2] -- Issue #174
         return shortest
 
     def make_bulk_slab(self, rpars, recenter=True):
@@ -1263,7 +1263,7 @@ class SurfaceSlab(BaseSlab):
         # need the two components with flipped z. We will move old
         # atoms up along unit-cell c, while new atoms will be shifted
         # only perpendicular to it.
-        bulk_c[2] *= -1                                                          # TODO: .cartpos[2]
+        bulk_c[2] *= -1                                                          # TODO: .cartpos[2] -- Issue #174
         bulk_c_par_atoms = bulk_c.dot(slab_c_direction) * slab_c_direction
         bulk_c_perp_atoms = bulk_c - bulk_c_par_atoms
 

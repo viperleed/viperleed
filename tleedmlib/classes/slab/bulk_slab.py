@@ -76,9 +76,6 @@ class BulkSlab(BaseSlab):
         vector the symmetry plane at the origin is parallel to
     linklists : list of list of Atom
         List of lists of atoms which are linked by a symmetry operation
-    symbaseslab : Slab or None                                                  # TODO: do we need one??
-        Slab with the smallest in-plane unit-cell area that shows
-        the full symmetry of the slab.
     bulk_screws : list of int
         Integer list of rotation orders present in the bulk.
     bulk_glides : list of SymPlane
@@ -273,7 +270,7 @@ class BulkSlab(BaseSlab):
                                                       rpars.SYMMETRY_EPS.z,
                                                       z_periodic=z_periodic)
         bottom_atom = self.bottom_atom
-        delta_z = self.topat_ori_z - bottom_atom.cartpos[2]                     # TODO: flip with .cartpos[2]
+        delta_z = self.topat_ori_z - bottom_atom.cartpos[2]                     # TODO: flip with .cartpos[2] -- Issue #174
         if not z_periodic and delta_z > rpars.SYMMETRY_EPS.z:
             # Here we could also remove_vacuum_at_bottom ourselves, but
             # it is a bit of a pain as we would need to shift things
@@ -508,7 +505,7 @@ class BulkSlab(BaseSlab):
 
         # Flip z, because we store it opposed in Atom.cartpos[2], but
         # want repeat_c with the same coordinate system as unit cell
-        repeat_c[2] *= -1                                                       # TODO: .cartpos[2]
+        repeat_c[2] *= -1                                                       # TODO: .cartpos[2] -- Issue #174
 
         # Minkowski-reduce the repeat vector to have
         # it shortest and as close to z as possible
@@ -674,7 +671,7 @@ class BulkSlab(BaseSlab):
         double_slab = copy.deepcopy(self)
         c_vec = double_slab.c_vector
 
-        # For atoms that are added, because we use z flipped                    # TODO: .cartpos[2]
+        # For atoms that are added, because we use z flipped                    # TODO: .cartpos[2] -- Issue #174
         c_vec_atoms = c_vec.copy()
         c_vec_atoms[2] *= -1
         double_slab.update_cartesian_from_fractional(update_origin=True)

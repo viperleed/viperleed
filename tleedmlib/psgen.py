@@ -657,7 +657,7 @@ def make_atom_types(rp, sl, additional_layers):
     nsl = extended_cell
 
     # lowest z position from original slab: (anything below is new bulk) !!! LEED coordinates
-    max_z_sl = max([atom.cartpos[2] for atom in sl])
+    max_z_sl = max([atom.cartpos[2] for atom in sl])                            # TODO: Issue #174
 
     blocks = []
     #        (same as POSCAR if no ELEMENT_MIX, ELEMENT_MIX elements if not)
@@ -746,7 +746,7 @@ def make_atom_types(rp, sl, additional_layers):
                 reqats = max(2, reqats)
                 while reqats > 0 and len(al) > 0:
                     atom = random.choice(al)
-                    new_bulk = True if atom.cartpos[2] > max_z_sl else False
+                    new_bulk = True if atom.cartpos[2] > max_z_sl else False    # TODO: Issue #174
                     NN_dist = NN_dict[atom]
                     if not new_bulk:
                         if (site, el, new_bulk) not in atom_types.keys():
@@ -764,7 +764,7 @@ def make_atom_types(rp, sl, additional_layers):
         else:
             for atom in NN_dict.keys():
                 if atom.site == site:
-                    new_bulk = True if atom.cartpos[2] > max_z_sl else False
+                    new_bulk = True if atom.cartpos[2] > max_z_sl else False    # TODO: Issue #174
                     NN_dist = NN_dict[atom]
                     if not new_bulk:
                         if (atom.site, atom.el, new_bulk) not in atom_types.keys():
@@ -930,7 +930,7 @@ def organize_atoms_by_types(newbulkats, nsl, sl, rp, additional_layers):
     return atom_types
 
 
-def estimate_bulk_layer(atom, nsl, max_z_sl, additional_layers):
+def estimate_bulk_layer(atom, nsl, max_z_sl, additional_layers):                # TODO: Issue #174
     """Returns the bulk layer the atom belongs to based on the z coordinate."""
     max_z_nsl = max([atom.cartpos[2] for atom in nsl])
     bulk_layer_thickness = (max_z_nsl - max_z_sl) / additional_layers

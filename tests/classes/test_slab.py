@@ -670,7 +670,7 @@ class TestBulkUcell:
         c_shift = with_one_thick_bulk(*ag100)
         slab, rpars, *_ = ag100
         cart_shift = c_shift * slab.c_vector[2]
-        cart_shift *= -1                                                        # TODO: remove with .cartpos[2] flip
+        cart_shift *= -1                                                        # TODO: remove with .cartpos[2] flip -- Issue #174
         bulk = slab.bulkslab
         for atom in bulk:
             atom.cartpos[2] += cart_shift  # Shift back upwards
@@ -863,7 +863,7 @@ class TestCoordinates:
     """Collection of tests for Cartesian/fractional coordinates."""
 
     cart_from_frac = {  # update_origin, expected cartpos of 1st atom
-        'no update': (False, (0.3, 0.8, -1.5)),
+        'no update': (False, (0.3, 0.8, -1.5)),                                 # TODO: Issue #174
         'update': (True, (0.3, 0.8, 0)),
         }
 
@@ -878,7 +878,7 @@ class TestCoordinates:
         assert atom.cartpos == pytest.approx(expect)
 
     collapse_cart = {  # new_cartpos, expected cartpos after collapsing
-        'large values': ((5, 6, 3), (2, 2, -2)),
+        'large values': ((5, 6, 3), (2, 2, -2)),                                # TODO: Issue #174
         'small eps': ([1 - 1e-9, 2 + 1e-9, -3 - 1e-15], (1, 2, -3)),
         }
 
@@ -903,7 +903,7 @@ class TestCoordinates:
         """Check correct update of fractional atom coordinates."""
         slab = manual_slab_3_atoms
         atom = slab.atlist[0]
-        atom.cartpos = np.array([0.3, 0.8, -1.5])
+        atom.cartpos = np.array([0.3, 0.8, -1.5])                               # TODO: Issue #174
         slab.update_fractional_from_cartesian()
         assert atom.pos == pytest.approx([0.1, 0.2, 0.3])
 
@@ -1061,7 +1061,7 @@ class TestExtraBulk:
                                    subtests, with_one_thick_bulk):
         """Check correct addition of a thicker-than-repeat bulk."""
         def _get_interlayers(_slab):
-            return [lay_below.cartori[2] - lay_above.cartbotz                   # TODO: flip with .cartpos[2]
+            return [lay_below.cartori[2] - lay_above.cartbotz                   # TODO: flip with .cartpos[2] -- Issue #174
                     for lay_above, lay_below in pairwise(_slab.layers)]
 
         with_one_thick_bulk(*args)
@@ -1456,7 +1456,7 @@ class TestSlabLayers:
             this_z = layer.cartbotz
             if abs(z_above - this_z) < rpars.SYMMETRY_EPS.z:
                 same_z.append(layer)
-                z_above = min(z_above, this_z)                                  # TODO: max when flipping .cartpos[2]
+                z_above = min(z_above, this_z)                                  # TODO: max when flipping .cartpos[2] -- Issue #174
             else:
                 same_z = [layer]
                 by_z.append(same_z)
@@ -1465,9 +1465,9 @@ class TestSlabLayers:
         z_min_max = []
         for same_z_group in by_z:
             pos = [lay.cartbotz for lay in same_z_group]
-            z_min_max.append((min(pos), max(pos)))                              # TODO: redo when flipping .cartpos[2]
+            z_min_max.append((min(pos), max(pos)))                              # TODO: redo when flipping .cartpos[2] -- Issue #174
         with subtests.test('z sorting'):
-            assert all(bottom_of_above <= top_of_below                          # TODO: redo when flipping .cartpos[2]
+            assert all(bottom_of_above <= top_of_below                          # TODO: redo when flipping .cartpos[2] -- Issue #174
                        for (_, bottom_of_above), (top_of_below, _)
                        in pairwise(z_min_max))
         for same_z_group in by_z:
@@ -1483,7 +1483,7 @@ class TestSlabLayers:
         slab.create_sublayers(eps)
         sorting_before = [lay.element for lay in slab.sublayers]
 
-        # Layers 15 and 19 are translation-equivalent (both with 2 O)
+        # Layers 15 and 19 are translation-equivalent (both with 2 O)           # TODO: Issue #174
         for atom in slab.sublayers[15]:
             atom.cartpos[2] += 0.05*eps
         for atom in slab.sublayers[19]:
@@ -1636,7 +1636,7 @@ class TestSorting:
         """Check successful sorting of atoms by out-of-plane position."""
         slab, *_ = args
         slab.sort_by_z(bottom_to_top=bottom_to_top)
-        _ordered = operator.ge if bottom_to_top else operator.le                # TODO: swap when flipping .cartpos
+        _ordered = operator.ge if bottom_to_top else operator.le                # TODO: swap when flipping .cartpos -- Issue #174
         assert all(_ordered(at1.cartpos[2], at2.cartpos[2])
                    for at1, at2 in pairwise(slab))
 

@@ -25,7 +25,7 @@ class AtomError(Exception):
     """Base exception for Atom objects."""
 
 
-class Atom:                                                                     # TODO: change description of cartpos when flipping .cartpos[2]
+class Atom:                                                                     # TODO: Issue #174 -- change description of cartpos when flipping .cartpos[2]
     """Class storing information about a single atom.
 
     Attributes
@@ -97,7 +97,7 @@ class Atom:                                                                     
         """Initialize instance."""
         self.el = el
         self.pos = np.asarray(pos, dtype=float)
-        self.cartpos = None
+        self.cartpos = None                                                     # TODO: Issue #174 -- calculate right away
         self.num = num
         self.slab = slab
         self.layer = None
