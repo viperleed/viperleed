@@ -97,7 +97,8 @@ class BaseSlab(AtomContainer):
         on vibration and concentration
     ucell_mod : list of tuples (str, numpy.ndarray)
         Stored modifications made to the unit cell; each is a tuple
-        of (type, array), where type is 'lmul', 'rmul', or 'add'
+        of (type, array), where type is 'lmul', 'rmul', 'add', or
+        'c_shift'.
     topat_ori_z : float
         Stores the original position of the topmost atom in Cartesian
         coordinates
