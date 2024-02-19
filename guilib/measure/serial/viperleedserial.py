@@ -773,15 +773,25 @@ class ViPErLEEDSerial(SerialABC):
             the hardware do not match up or if the hardware did
             not detect any ADCs to take measurements with.
         """
+        info = {'adc_0': False,
+                'adc_1': False,
+                'lm35': False,
+                'relay': False,
+                'i0_range': '0 \u2013 10 V',
+                'aux_range': '0 \u2013 10 V',
+                'serial_nr': 'NO_SERIAL_NR',
+                'firmware': None,
+                'box_id': None}
+
         # TODO: from version 1.0 onwards we do not want to pop the
         # first byte of the message. We only do this for now to
         # ensure backwards compatibility.
         if len(message) == 9:
-            arduino_id = message.pop(0)
-            if arduino_id != self.box_id:
+            info['box_id'] = message.pop(0)
+            if info['box_id'] != self.box_id:
                 base.emit_error(self,
                                 ViPErLEEDHardwareError.ERROR_WRONG_BOX_ID,
-                                arduino_id=arduino_id,
+                                arduino_id=info['box_id'],
                                 local_id=self.box_id)
         local_version = self.firmware_version
         major, minor, *hardware = message[:4]
@@ -794,16 +804,8 @@ class ViPErLEEDSerial(SerialABC):
         # TODO: here we may want to report a (non fatal) warning in
         # case the firmware version in the hardware is newer than the
         # one of the settings.
-        hardware_bits = self.port_settings['hardware_bits']
-        info = {'adc_0': False,
-                'adc_1': False,
-                'lm35': False,
-                'relay': False,
-                'i0_range': '0 \u2013 10 V',
-                'aux_range': '0 \u2013 10 V',
-                'serial_nr': 'NO_SERIAL_NR',
-                'firmware': None}
 
+        hardware_bits = self.port_settings['hardware_bits']
         hardware = int.from_bytes(hardware, self.byte_order)
         for key, value in hardware_bits.items():
             present_or_closed = bool(int(value) & hardware)

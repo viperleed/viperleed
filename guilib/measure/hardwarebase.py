@@ -662,6 +662,7 @@ class Version:
         if not _as_string:
             # Empty version
             raise ValueError(f"{_name}: version cannot be an empty string")
+        _as_string = _as_string.replace('v', '')
         if not _DOTS_OR_DIGITS.match(_as_string):
             raise ValueError(
                 f"{_name}: version can contain only digits and dots"

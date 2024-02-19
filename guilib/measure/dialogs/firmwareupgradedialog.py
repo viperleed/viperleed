@@ -19,21 +19,22 @@ https://github.com/arduino/arduino-cli/releases
 # to (1) create a copy of the boards.txt file that comes with the CLI
 # AFTER installing the avr core (TODO: check where it is, see also the
 # notex.txt file) -- call it boards.txt.ViPErLEED; (2) in boards.txt.ViPErLEED
-# replace "Arduino Micro" with "ViPErLEED" (unless the file was already there)
+# replace 'Arduino Micro' with 'ViPErLEED' (unless the file was already there)
 # (3) rename boards.txt to boards.txt.bak, and boards.txt.ViPErLEED to
 # boards.txt; (4) compile and upload; (5) undo no.3.
-# latest = requests.get("https://api.github.com/repos/arduino"
-                      # "/arduino-cli/releases/latest").json()
-# Use print(latest["tag_name"]) to get the latestest version string of the
+# latest = requests.get('https://api.github.com/repos/arduino'
+                      # '/arduino-cli/releases/latest').json()
+# Use print(latest['tag_name']) to get the latestest version string of the
 # arduino-cli. Get arduino-cli version --format json -> convert to dict and
 # and compare versions -> update if they don't match. arduino-cli update
 # and upgrade only update the cores
 
-from pathlib import Path
-import subprocess
-import shutil
-import sys
+from collections import namedtuple
 import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
 from zipfile import ZipFile
 
 from PyQt5 import (QtWidgets as qtw,
@@ -45,7 +46,11 @@ from viperleed.guilib.measure import hardwarebase as base
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
-NOT_SET = "\u2014"
+NOT_SET = '\u2014'
+
+
+FirmwareVersionInfo = namedtuple('FirmwareVersionInfo',
+                                 ('folder_name', 'version', 'path'))
 
 
 class FirmwareUpgradeDialog(qtw.QDialog):
@@ -61,14 +66,16 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 'firmware_version': qtw.QComboBox(),
                 },
             'buttons' : {
-                'refresh': qtw.QPushButton("&Refresh"),
-                'upload': qtw.QPushButton("&Upload"),
-                'done': qtw.QPushButton("&Done"),
+                'refresh': qtw.QPushButton('&Refresh'),
+                'upload': qtw.QPushButton('&Upload'),
+                'done': qtw.QPushButton('&Done'),
                 },
             'controller_info': {
-                'ctrl_type': qtw.QLabel(f"Controller type: {NOT_SET}"),
-                'firmware_version': qtw.QLabel(f"Installed firmware version: {NOT_SET}"),
-                'highest_version': qtw.QLabel(f"Most recent firmware version: {NOT_SET}"),
+                'ctrl_type': qtw.QLabel(f'Controller type: {NOT_SET}'),
+                'firmware_version': qtw.QLabel(
+                    f'Installed firmware version: {NOT_SET}'),
+                'highest_version': qtw.QLabel(
+                    f'Most recent firmware version: {NOT_SET}'),
                 },
             'timers': {
                 #TODO: maybe add timers (trigger detect devices instead of button)
@@ -80,7 +87,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.__uploader.moveToThread(self.__upload_thread)
         self.__upload_thread.start()
 
-        self.setWindowTitle("Upgrade ViPErLEED box firmware")
+        self.setWindowTitle('Upgrade ViPErLEED box firmware')
         self.__children['ctrls']['firmware_path'].path = Path().resolve()
         self.__compose()
         self.__connect()
@@ -114,20 +121,20 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
     def __compose_controller_selection(self):
         layout = qtw.QHBoxLayout()
-        layout.addWidget(qtw.QLabel("Select controller:"))
+        layout.addWidget(qtw.QLabel('Select controller:'))
         layout.addWidget(self.__children['ctrls']['controllers'], stretch=1)
         layout.addWidget(self.__children['buttons']['refresh'])
         return layout
 
     def __compose_path_selection(self):
         layout = qtw.QHBoxLayout()
-        layout.addWidget(qtw.QLabel("Select firmware folder:"))
+        layout.addWidget(qtw.QLabel('Select firmware folder:'))
         layout.addWidget(self.__children['ctrls']['firmware_path'])
         return layout
 
     def __compose_firmware_selection(self):
         layout = qtw.QHBoxLayout()
-        layout.addWidget(qtw.QLabel("Select firmware version:"))
+        layout.addWidget(qtw.QLabel('Select firmware version:'))
         layout.addWidget(self.__children['ctrls']['firmware_version'],
                          stretch=1)
         layout.addWidget(self.__children['buttons']['upload'])
@@ -150,6 +157,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             )
         self.__children['ctrls']['controllers'].currentTextChanged.connect(
                     self.__get_firmware_versions
+            )
+        self.__children['ctrls']['controllers'].currentTextChanged.connect(
+                    self.__update_ctrl_labels
             )
         self.__uploader.controllers_detected.connect(self.__update_combo_box)
         self.__uploader.upload_finished.connect(self.__btn_enable)
@@ -175,32 +185,67 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         f_path = self.__children['ctrls']['firmware_path'].path
         ctrl = self.__children['ctrls']['controllers'].currentData()
 
-        if not f_path or f_path == Path():
-            self.__children['buttons']['upload'].setEnabled(False)
-            return
-        if not ctrl:
+        self.__children['controller_info']['highest_version'].setText(
+            f'Most recent firmware version: {NOT_SET}'
+            )
+
+        if not ctrl or not f_path or f_path == Path():
             self.__children['buttons']['upload'].setEnabled(False)
             return
 
-        all_files = [f for f in f_path.glob("*.zip")]
-        for file in all_files:
-            with ZipFile(file, mode="r") as zf:
+        for file in f_path.glob('*.zip'):
+            with ZipFile(file, mode='r') as zf:
                 # !!! We are assuming here that the first folder in the
                 # .zip file matches the name of the firmware version.
-                version = zf.namelist()[0].split('/')[0]
-                firmware_dict[version] = [version, file]
-        self.__update_combo_box(['firmware_version', firmware_dict])
+                folder_name, *_ = zf.namelist()[0].split('/')
+                *_, version_str = folder_name.split('_')
+                try:
+                    version = base.Version(version_str)
+                except ValueError:
+                    # Some non-firmware zip file
+                    continue
+                firmware_dict[folder_name] = FirmwareVersionInfo(folder_name,
+                                                                 version, file)
+        self.__update_combo_box('firmware_version', firmware_dict)
+
         if not firmware_dict:
             self.__children['buttons']['upload'].setEnabled(False)
-        else:
-            self.__children['buttons']['upload'].setEnabled(True)
+            return
+        if ctrl['name_raw']:
+            nr_versions = self.__children['ctrls']['firmware_version'].count()
+            i = 0
+            max_version = base.Version('0.0')
+            while i < nr_versions:
+                v = self.__children['ctrls']['firmware_version'].itemData(i)
+                if ctrl['name_raw'] in v.folder_name:
+                    if v.version > max_version:
+                        max_version = v.version
+                i += 1
 
-    def __update_combo_box(self, data):
+            self.__children['controller_info']['highest_version'].setText(
+                f'Most recent firmware version: {max_version}'
+                )
+
+        self.__children['buttons']['upload'].setEnabled(True)
+
+    def __update_ctrl_labels(self, *args):
+        """Display controller firmware version."""
+        ctrl = self.__children['ctrls']['controllers'].currentData() or {}
+        version = ctrl.get('version', NOT_SET)
+        box_id = ctrl.get('box_id', NOT_SET)
+        self.__children['controller_info']['firmware_version'].setText(
+            f'Installed firmware version: {version}'
+            )
+        self.__children['controller_info']['ctrl_type'].setText(
+            f'Controller type: {box_id}'
+            )
+
+    @qtc.pyqtSlot(str, dict)
+    def __update_combo_box(self, which_combo, data_dict):
         """Replace displayed items with the detected ones."""
-        box, working_dict = data
-        self.__children['ctrls'][box].clear()
-        for key, value in working_dict.items():
-            self.__children['ctrls'][box].addItem(key, value)
+        self.__children['ctrls'][which_combo].clear()
+        for key, value in data_dict.items():
+            self.__children['ctrls'][which_combo].addItem(key, userData=value)
 
     def __upload(self):
         """Upload selected firmware to selected controller."""
@@ -215,8 +260,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         upload = True
 
         _INVOKE(self.__uploader, '__compile', qtc.Q_ARG(dict, selected_ctrl),
-                qtc.Q_ARG(list, firmware), qtc.Q_ARG(Path, tmp_path),
-                qtc.Q_ARG(bool, upload))
+                qtc.Q_ARG(FirmwareVersionInfo, firmware),
+                qtc.Q_ARG(Path, tmp_path), qtc.Q_ARG(bool, upload))
         self.__btn_enable(False)
 
     @qtc.pyqtSlot(bool)
@@ -227,18 +272,19 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         for slct in self.__children['ctrls']:
             self.__children['ctrls'][slct].setEnabled(enable)
 
+
 class FirmwareUploader(qtc.QObject):
     """Worker that handles firmware uploads in another thread."""
     upload_finished = qtc.pyqtSignal(bool)
 
-    controllers_detected = qtc.pyqtSignal(list)
+    controllers_detected = qtc.pyqtSignal(str, dict)
 
     def __init__(self, parent=None):
         """Initialise the firmware uploader."""
         self.base_path = Path().resolve() / 'hardware/arduino/arduino-cli'
         super().__init__(parent=parent)
 
-    @qtc.pyqtSlot(dict, list, Path, bool)
+    @qtc.pyqtSlot(dict, FirmwareVersionInfo, Path, bool)
     def __compile(self, s_ctrl, firmware, tmp_path, upload):
         """Compile viper-ino for the specified board.
 
@@ -251,15 +297,15 @@ class FirmwareUploader(qtc.QObject):
         if not any(available_ctrls[c]['name'] == s_ctrl['name'] and
                    available_ctrls[c]['port'] == s_ctrl['port']
                    for c in available_ctrls):
-            print("Selected controller is no longer present.")
-            self.controllers_detected.emit(['controllers', available_ctrls])
+            print('Selected controller is no longer present.')
+            self.controllers_detected.emit('controllers', available_ctrls)
             self.upload_finished.emit(True)
             return
 
         cli = self.get_arduino_cli()
-        with ZipFile(firmware[1]) as firmware_zip:
+        with ZipFile(firmware.path) as firmware_zip:
             firmware_zip.extractall(tmp_path)
-        firmware_extracted = tmp_path / firmware[0] / 'viper-ino'
+        firmware_extracted = tmp_path / firmware.folder_name / 'viper-ino'
         # Add generic inner folder structure to find .ino file
         argv = ['compile', '--clean', '-b', s_ctrl['fqbn'], firmware_extracted]
         if upload:
@@ -269,10 +315,13 @@ class FirmwareUploader(qtc.QObject):
         try:
             cli.check_returncode()
         except subprocess.CalledProcessError as err:
-            raise RuntimeError("Arduino CLI failed. Return code="
-                               f"{cli.returncode}. The error was:\n"
+            raise RuntimeError('Arduino CLI failed. Return code='
+                               f'{cli.returncode}. The error was:\n'
                                + cli.stderr.decode())
+        # Remove extracted archive
         shutil.rmtree(tmp_path)
+        # Update controller list
+        self.get_viperleed_hardware(True)
         self.upload_finished.emit(True)
 
     def upgrade_arduino_cli(self):                                                      # TODO: add progress bar
@@ -282,8 +331,8 @@ class FirmwareUploader(qtc.QObject):
         try:
             cli.check_returncode()
         except subprocess.CalledProcessError as err:
-            raise RuntimeError("Arduino CLI failed. Return code="
-                               f"{cli.returncode}. The error was:\n{cli.stderr}")
+            raise RuntimeError('Arduino CLI failed. Return code='
+                               f'{cli.returncode}. The error was:\n{cli.stderr}')
 
     def get_arduino_cores(self):
         """Return a dictionary of the cores currently installed.
@@ -316,8 +365,8 @@ class FirmwareUploader(qtc.QObject):
         try:
             cli.check_returncode()
         except subprocess.CalledProcessError as err:
-            raise RuntimeError("Arduino CLI failed. Return code="
-                               f"{cli.returncode}. The error was:\n{cli.stderr}")
+            raise RuntimeError('Arduino CLI failed. Return code='
+                               f'{cli.returncode}. The error was:\n{cli.stderr}')
         return json.loads(cli.stdout)
 
     def install_arduino_core(self, core_name):                                            # TODO: add progress bar
@@ -336,8 +385,8 @@ class FirmwareUploader(qtc.QObject):
         try:
             cli.check_returncode()
         except subprocess.CalledProcessError as err:
-            raise RuntimeError(f"Failed to install {core_name}. Return code="
-                               f"{cli.returncode}. The error was:\n{cli.stderr}")
+            raise RuntimeError(f'Failed to install {core_name}. Return code='
+                               f'{cli.returncode}. The error was:\n{cli.stderr}')
 
     def get_arduino_cli_from_git(self):
         """Obtain the latest version of Arduino CLI from GitHub.
@@ -351,8 +400,8 @@ class FirmwareUploader(qtc.QObject):
         -------
         None.
         """
-        latest = requests.get("https://api.github.com/repos/arduino"
-                              "/arduino-cli/releases/latest").json()
+        latest = requests.get('https://api.github.com/repos/arduino'
+                              '/arduino-cli/releases/latest').json()
         platform = sys.platform
         if 'darwin' in platform:
             correct_name = 'macOS'
@@ -361,10 +410,10 @@ class FirmwareUploader(qtc.QObject):
         elif 'linux' in platform:
             correct_name = 'Linux'
         else:
-            raise RuntimeError("Could not find a suitable precompiled "
-                               "version of the Arduino CLI. You may have"
-                               "to compile from the source at "
-                               "https://github.com/arduino/arduino-cli")
+            raise RuntimeError('Could not find a suitable precompiled '
+                               'version of the Arduino CLI. You may have '
+                               'to compile from the source at '
+                               'https://github.com/arduino/arduino-cli')
         url_latest = ''
         for asset in latest['assets']:
             # This should always pick the 32 bit version if
@@ -374,10 +423,10 @@ class FirmwareUploader(qtc.QObject):
                 correct_name = asset['name']
                 break
         else:
-            raise RuntimeError("Could not find a suitable precompiled "
-                               "version of the Arduino CLI. You may have "
-                               "to compile from the source at "
-                               "https://github.com/arduino/arduino-cli")
+            raise RuntimeError('Could not find a suitable precompiled '
+                               'version of the Arduino CLI. You may have '
+                               'to compile from the source at '
+                               'https://github.com/arduino/arduino-cli')
 
         with open(self.base_path / correct_name, 'wb') as archive:
             archive.write(requests.get(url_latest).content)
@@ -420,9 +469,9 @@ class FirmwareUploader(qtc.QObject):
                 # Get the executables from github
                 self.get_arduino_cli_from_git()
             else:
-                raise RuntimeError("Arduino command-line interface not found. "
-                                   f"It should be available in {self.base_path}, "
-                                   "but the directory does not exists.")
+                raise RuntimeError('Arduino command-line interface not found. '
+                                   f'It should be available in {self.base_path}, '
+                                   'but the directory does not exists.')
 
         # See if there is the correct executable in arduino-cli
         arduino_cli = 'arduino-cli'
@@ -430,9 +479,9 @@ class FirmwareUploader(qtc.QObject):
             arduino_cli += '.exe'
         arduino_cli = self.base_path.joinpath(arduino_cli)
         if not arduino_cli.is_file():
-            raise RuntimeError("Arduino CLI not found. You can download it "
-                               "from https://github.com/arduino/arduino-cli "
-                               f"and unpack it inside {self.base_path}")
+            raise RuntimeError('Arduino CLI not found. You can download it '
+                               'from https://github.com/arduino/arduino-cli '
+                               f'and unpack it inside {self.base_path}')
         return arduino_cli
 
     def get_boards(self):
@@ -449,11 +498,11 @@ class FirmwareUploader(qtc.QObject):
             cli.check_returncode()
         except subprocess.CalledProcessError as err:
             raise RuntimeError(
-                "Arduino CLI failed with return code "
-                f"{cli.returncode}. The error was:\n{cli.stderr}"
+                'Arduino CLI failed with return code '
+                f'{cli.returncode}. The error was:\n{cli.stderr}'
                 ) from err
         boards = json.loads(cli.stdout)
-        return [b for b in boards if "matching_boards" in b]
+        return [b for b in boards if 'matching_boards' in b]
 
     @qtc.pyqtSlot(bool)
     def get_viperleed_hardware(self, emit_controllers):
@@ -471,6 +520,7 @@ class FirmwareUploader(qtc.QObject):
         viperleed_names = ('ViPErLEED', 'Arduino Micro')
         boards = self.get_boards()
 
+        # Get all available Arduino Micro controllers.
         board_names = [b['matching_boards'][0]['name'] for b in boards]
         viper_boards = []
         for name in viperleed_names:
@@ -478,6 +528,7 @@ class FirmwareUploader(qtc.QObject):
                 if name in board_name:
                     viper_boards.append(boards[i])
 
+        # Extract data from controller list.
         ctrl_dict = {}
         for b in viper_boards:
             ctrl = b['port']['address'] + ' ' + b['matching_boards'][0]['name']
@@ -485,11 +536,34 @@ class FirmwareUploader(qtc.QObject):
             ctrl_dict[ctrl]['port'] = b['port']['address']
             ctrl_dict[ctrl]['name'] = b['matching_boards'][0]['name']
             ctrl_dict[ctrl]['fqbn'] = b['matching_boards'][0]['fqbn']
+            ctrl_dict[ctrl]['version'] = NOT_SET
+            ctrl_dict[ctrl]['box_id'] = NOT_SET
+            # name_raw is used for firmware detection.
+            ctrl_dict[ctrl]['name_raw'] = None
 
         if not emit_controllers:
             return ctrl_dict
 
-        self.controllers_detected.emit(['controllers', ctrl_dict])
+        # Detect ViPErLEED controllers.
+        ctrl_with_id = []
+        for name, (cls, info) in base.get_devices('controller').items():
+            for ctrl in ctrl_dict:
+                if ctrl_dict[ctrl]['port'] == name.split(' (')[1][:-1]:
+                    if info.get('firmware'):
+                        ctrl_dict[ctrl]['version'] = info['firmware']
+                    if 'box_id' in info:
+                        ctrl_dict[ctrl]['box_id'] = info['box_id']
+                        ctrl_with_id.append(ctrl)
+
+        # Adjust name for ViPErLEED controllers.
+        for ctrl in ctrl_with_id:
+            new_ctrl_name = ctrl_dict[ctrl]['port'] + ' '
+            if ctrl_dict[ctrl]['box_id'] == 0:
+                new_ctrl_name += 'ViPErLEED Data Acquisition'
+                ctrl_dict[ctrl]['name_raw'] = 'ViPErLEED_Data_Acquisition'
+            ctrl_dict[new_ctrl_name] = ctrl_dict.pop(ctrl)
+
+        self.controllers_detected.emit('controllers', ctrl_dict)
 
 
 
