@@ -777,7 +777,7 @@ def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
              'creation and may modify the thickness of the vacuum gap '
              'detected. Check POSCAR to ensure correct layer assignment.')
     if slab.has_atoms_in_multiple_c_cells():
-        logger.warning(_msg)                                                    # TODO: or INFO? Disadvantage of INFO: would not be highlighted after fixing Issue #78. If we decide for INFO, then we don't really need domain_name
+        logger.warning(_msg)
         rpars.setHaltingLevel(1)
 
 
