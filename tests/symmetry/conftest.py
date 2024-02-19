@@ -101,5 +101,5 @@ def with_symmetry_constraints(with_plane_group):
     def _make(random_shifts=True):
         slab, param, *rest = with_plane_group(random_shifts)
         symmetry.enforceSymmetry(slab, param)
-        return slab, param, *rest
+        return (slab, param, *rest)
     return _make

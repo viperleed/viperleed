@@ -63,6 +63,7 @@ all_tensors = False      # copy all tensor files or just highest number?
 import viperleed
 import viperleed.tleedmlib
 from viperleed.tleedm import run_tleedm
+from viperleed.tleedmlib.base import copytree_exists_ok
 
 
 def main():
@@ -84,13 +85,11 @@ def main():
     # copy Tensors and Deltas to work directory
     if all_tensors:
         try:
-            shutil.copytree("Tensors", os.path.join(work_path, "Tensors"),
-                            dirs_exist_ok=True)
+            copytree_exists_ok("Tensors", os.path.join(work_path, "Tensors"))
         except FileNotFoundError:
             pass
         try:
-            shutil.copytree("Deltas", os.path.join(work_path, "Deltas"),
-                            dirs_exist_ok=True)
+            copytree_exists_ok("Deltas", os.path.join(work_path, "Deltas"))
         except FileNotFoundError:
             pass
     else:
@@ -130,7 +129,7 @@ def main():
             if os.path.isfile(p):
                 shutil.copy2(p, os.path.join(home, p))
             elif os.path.isdir(p):
-                shutil.copytree(p, os.path.join(home, p), dirs_exist_ok=True)
+                copytree_exists_ok(p, os.path.join(home, p))
         except Exception as e:
             print("Error copying " + p + " to home directory: " + str(e))
 

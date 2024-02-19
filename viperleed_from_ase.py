@@ -122,7 +122,7 @@ class _ImmutableSlabTransform(SlabTransform):
         object.__setattr__(self, 'uc_scaling', None)
         object.__setattr__(self, 'cut_cell_c_fraction', 0.)
 
-    def __setattr__(self, name, value, /):
+    def __setattr__(self, name, value):
         """Raise FrozenInstanceError."""
         if name == '__doc__':
             # One exception to allow nicer 'help' for instances
@@ -130,7 +130,7 @@ class _ImmutableSlabTransform(SlabTransform):
             return
         raise FrozenInstanceError(f"cannot assign to field {name!r}")
 
-    def __delattr__(self, name, /):
+    def __delattr__(self, name):
         """Raise FrozenInstanceError."""
         raise FrozenInstanceError(f"cannot assign to field {name!r}")
 
@@ -256,7 +256,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
     exec_path = Path(exec_path).resolve()
     if not exec_path.is_dir():
         raise FileNotFoundError(
-            f"Invalid {exec_path=}: not "
+            f"Invalid exec_path={exec_path}: not "
             + "existent" if not exec_path.exists() else "a directory"
             )
 
@@ -317,7 +317,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
             _LOGGER.warning(
                 f"Failed to remove work directory {work_path}. Info: {err}"
                 )
-    return *content_list, rparams.V0_IMAG
+    return (*content_list, rparams.V0_IMAG)
 
 
 def _copy_inputs_to_exec_path(inputs_path, exec_path):
