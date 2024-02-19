@@ -123,8 +123,7 @@ def write_poscar_min(slab, rpars, cut, bulk_cuts):
     for atom in slab:
         atom.pos[2] -= new_zero
     slab.update_cartesian_from_fractional()
-    *_, c_vec = slab.ucell.T
-    c_vec *= 1 - new_zero
+    slab.c_vector[:] *= 1 - new_zero
     slab.update_fractional_from_cartesian()
 
     # Finally, convert the cut positions

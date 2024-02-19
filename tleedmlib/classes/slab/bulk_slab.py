@@ -672,7 +672,7 @@ class BulkSlab(BaseSlab):
     def with_double_thickness(self, new_atoms_start_idx=None):
         """Return a copy of this bulk slab which is twice as thick."""
         double_slab = copy.deepcopy(self)
-        *_, c_vec = double_slab.ucell.T
+        c_vec = double_slab.c_vector
 
         # For atoms that are added, because we use z flipped                    # TODO: .cartpos[2]
         c_vec_atoms = c_vec.copy()
@@ -698,7 +698,7 @@ class BulkSlab(BaseSlab):
                 atom.duplicate(num=new_atoms_start_idx)
                 atom.cartpos += c_vec_atoms
                 new_atoms_start_idx += 1
-            c_vec *= 2
+            c_vec[:] *= 2
         double_slab.collapse_cartesian_coordinates(update_origin=True)
         double_slab.sublayers = ()  # They are outdated
         return double_slab
