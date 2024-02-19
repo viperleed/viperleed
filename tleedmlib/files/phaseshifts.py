@@ -444,7 +444,7 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
             "Could not check consistency of PHASESHIFTS file: All "
             f"PHASESHIFTS are smaller than {eps} at the largest energy."
             )
-        rp.raiseHaltingLevel(1)
+        rp.setHaltingLevel(1)
         return
 
     affected_elements = set()

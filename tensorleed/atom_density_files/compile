@@ -1,4 +1,4 @@
-gfortran -O3 -march=nocona -o atom.x atomic.f
+gfortran -O3 -march=nocona -o atom.x atomic.f -fallow-argument-mismatch
 rm *.o *.mod
 
 

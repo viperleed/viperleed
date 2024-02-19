@@ -1,5 +1,4 @@
 i
-La
 57 2000                   !Z, #points in radial grid.
 d
 1                         !1=relativistic, 0=nonrel.
@@ -26,5 +25,5 @@ a
 5 1 1 -1.5 1  4.          !5p6 Xe54
 5 2 2 -1.5 1  0.4
 5 2 2 -2.5 1  0.6         !5d1
-6 0 0 -0.5 1  1.          !6s2
+6 0 0 -0.5 1  2.          !6s2
 w
