@@ -85,8 +85,6 @@ class CaseSimpleSlabs:  # pylint: disable=too-many-public-methods
         """Add atoms to a slab."""
         slab.atlist.extend(atoms)
         slab.update_element_count()
-        for atom in atoms:
-            atom.pos = np.asarray(atom.pos)
 
     @staticmethod
     def make_slab(ucell):
