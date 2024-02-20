@@ -21,12 +21,7 @@ from typing import Any
 
 from ._base import SpecialParameter
 
-
-def pairwise(iterable):
-    """Yield pairs of items from iterable."""
-    orig, shifted = itertools.tee(iterable, 2)
-    next(shifted, None)
-    yield from zip(orig, shifted)
+from viperleed.tleedmlib.base import pairwise
 
 
 def threewise(iterable):
