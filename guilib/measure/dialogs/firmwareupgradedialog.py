@@ -156,13 +156,11 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             self.__get_firmware_versions
             )
         self.__children['ctrls']['controllers'].currentTextChanged.connect(
-                    self.__get_firmware_versions
-            )
-        self.__children['ctrls']['controllers'].currentTextChanged.connect(
                     self.__update_ctrl_labels
             )
         self.__uploader.controllers_detected.connect(self.__update_combo_box)
-        self.__uploader.upload_finished.connect(self.__btn_enable)
+        self.__uploader.controllers_detected.connect(self.__allow_refresh)
+        self.__uploader.upload_finished.connect(self.__ctrl_enable)
 
     def accept(self):
         """Clean up, then accept."""
@@ -173,9 +171,25 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         """Clean up before closing dialog."""
         # No-op for now
 
+    @qtc.pyqtSlot(str, dict)
+    def __allow_refresh(self, *args):
+        """Allow refreshing and uploading again."""
+        for btn in self.__children['buttons']:
+            self.__children['buttons'][btn].setEnabled(True)
+
+    @qtc.pyqtSlot(bool)
+    def __ctrl_enable(self, enable):
+        """Enable/disable controls."""
+        for btn in self.__children['buttons']:
+            self.__children['buttons'][btn].setEnabled(enable)
+        for slct in self.__children['ctrls']:
+            self.__children['ctrls'][slct].setEnabled(enable)
+
     def __detect(self):
         """Detect connected ViPErLEED controllers."""
         emit_controllers = True
+        for btn in self.__children['buttons']:
+            self.__children['buttons'][btn].setEnabled(False)
         _INVOKE(self.__uploader, 'get_viperleed_hardware',
                 qtc.Q_ARG(bool, emit_controllers))
 
@@ -183,14 +197,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         """Search for available firmware versions."""
         firmware_dict = {}
         f_path = self.__children['ctrls']['firmware_path'].path
-        ctrl = self.__children['ctrls']['controllers'].currentData()
 
-        self.__children['controller_info']['highest_version'].setText(
-            f'Most recent firmware version: {NOT_SET}'
-            )
-
-        if not ctrl or not f_path or f_path == Path():
-            self.__children['buttons']['upload'].setEnabled(False)
+        if not f_path or f_path == Path():
+            self.__update_combo_box('firmware_version', firmware_dict)
             return
 
         for file in f_path.glob('*.zip'):
@@ -207,26 +216,31 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 firmware_dict[folder_name] = FirmwareVersionInfo(folder_name,
                                                                  version, file)
         self.__update_combo_box('firmware_version', firmware_dict)
+        self.__get_most_recent_firmware_version()
 
-        if not firmware_dict:
-            self.__children['buttons']['upload'].setEnabled(False)
+    def __get_most_recent_firmware_version(self, *args):
+        """Detect most recent firmware suitable for controller."""
+        ctrl = self.__children['ctrls']['controllers'].currentData()
+        nr_versions = self.__children['ctrls']['firmware_version'].count()
+        max_version = base.Version('0.0')
+
+        if not ctrl or not ctrl['name_raw']:
             return
-        if ctrl['name_raw']:
-            nr_versions = self.__children['ctrls']['firmware_version'].count()
-            i = 0
-            max_version = base.Version('0.0')
-            while i < nr_versions:
-                v = self.__children['ctrls']['firmware_version'].itemData(i)
-                if ctrl['name_raw'] in v.folder_name:
-                    if v.version > max_version:
-                        max_version = v.version
-                i += 1
 
-            self.__children['controller_info']['highest_version'].setText(
-                f'Most recent firmware version: {max_version}'
-                )
+        i = 0
+        while i < nr_versions:
+            firm_ver = self.__children['ctrls']['firmware_version'].itemData(i)
+            if ctrl['name_raw'] in firm_ver.folder_name:
+                if firm_ver.version > max_version:
+                    max_version = firm_ver.version
+            i += 1
 
-        self.__children['buttons']['upload'].setEnabled(True)
+        if max_version == base.Version('0.0'):
+            max_version = NOT_SET
+
+        self.__children['controller_info']['highest_version'].setText(
+            f'Most recent firmware version: {max_version}'
+            )
 
     def __update_ctrl_labels(self, *args):
         """Display controller firmware version."""
@@ -239,6 +253,10 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.__children['controller_info']['ctrl_type'].setText(
             f'Controller type: {box_id}'
             )
+        self.__children['controller_info']['highest_version'].setText(
+            f'Most recent firmware version: {NOT_SET}'
+            )
+        self.__get_most_recent_firmware_version()
 
     @qtc.pyqtSlot(str, dict)
     def __update_combo_box(self, which_combo, data_dict):
@@ -246,6 +264,12 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.__children['ctrls'][which_combo].clear()
         for key, value in data_dict.items():
             self.__children['ctrls'][which_combo].addItem(key, userData=value)
+        ctrl = self.__children['ctrls']['controllers'].currentData()
+        version = self.__children['ctrls']['firmware_version'].currentData()
+        if not ctrl or not version:
+            self.__children['buttons']['upload'].setEnabled(False)
+        else:
+            self.__children['buttons']['upload'].setEnabled(True)
 
     def __upload(self):
         """Upload selected firmware to selected controller."""
@@ -262,15 +286,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         _INVOKE(self.__uploader, '__compile', qtc.Q_ARG(dict, selected_ctrl),
                 qtc.Q_ARG(FirmwareVersionInfo, firmware),
                 qtc.Q_ARG(Path, tmp_path), qtc.Q_ARG(bool, upload))
-        self.__btn_enable(False)
-
-    @qtc.pyqtSlot(bool)
-    def __btn_enable(self, enable):
-        """Enable buttons after an upload is finished."""
-        for btn in self.__children['buttons']:
-            self.__children['buttons'][btn].setEnabled(enable)
-        for slct in self.__children['ctrls']:
-            self.__children['ctrls'][slct].setEnabled(enable)
+        self.__ctrl_enable(False)
 
 
 class FirmwareUploader(qtc.QObject):
@@ -551,7 +567,7 @@ class FirmwareUploader(qtc.QObject):
                 if ctrl_dict[ctrl]['port'] == name.split(' (')[1][:-1]:
                     if info.get('firmware'):
                         ctrl_dict[ctrl]['version'] = info['firmware']
-                    if 'box_id' in info:
+                    if info.get('box_id') != None:
                         ctrl_dict[ctrl]['box_id'] = info['box_id']
                         ctrl_with_id.append(ctrl)
 
