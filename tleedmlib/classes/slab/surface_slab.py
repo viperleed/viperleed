@@ -1264,7 +1264,7 @@ class SurfaceSlab(BaseSlab):
         # need the two components with flipped z. We will move old
         # atoms up along unit-cell c, while new atoms will be shifted
         # only perpendicular to it.
-        bulk_c[2] *= -1                                                          # TODO: .cartpos[2] -- Issue #174
+        bulk_c[2] *= -1                                                         # TODO: .cartpos[2] -- Issue #174
         bulk_c_par_atoms = bulk_c.dot(slab_c_direction) * slab_c_direction
         bulk_c_perp_atoms = bulk_c - bulk_c_par_atoms
 

@@ -594,7 +594,7 @@ def reduce_c_vector(c_vec, ab_cell):
     ab_cell, *_ = reduceUnitCell(ab_cell)
     c_frac_ab = c_vec[:2].dot(np.linalg.inv(ab_cell))
 
-    # The closest projection is an integer version of c_par_frac.
+    # The closest projection is an integer version of c_frac_ab.
     # It's easiest to take the floor, then consider also -a, -b,
     # and -(a+b), whichever gives the shortest vector. Otherwise
     # we'd have to also consider +a, +b, a-b, b-a, etc...

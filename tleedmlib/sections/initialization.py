@@ -536,7 +536,7 @@ def init_domains(rp):
                         f"and domain {dp.name} are mismatched, but can be "
                         f"matched by rotating domain {dp.name}.")
             ang = angle(bulkuc[0], bulkuc0[0])
-            dp.sl.apply_matrix_transformation(rotation_matrix(ang, dim=3))      # TODO: this changes the coordinate frame. We need to modify BEAM_INCIDENCE!
+            dp.sl.apply_matrix_transformation(rotation_matrix(ang, dim=3))      # TODO: this changes the coordinate frame. We need to modify BEAM_INCIDENCE! Issue #69, PR #73
         else:
             logger.error(f"Bulk unit cells of domain {rp.domainParams[0].name}"
                          f" and domain {dp.name} are mismatched, and cannot be"
