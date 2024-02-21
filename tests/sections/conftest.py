@@ -38,6 +38,8 @@ if VPR_PATH not in sys.path:
 # pylint: disable=wrong-import-position
 # Will be fixed in installable version
 from viperleed.calc import run_tleedm
+from viperleed.calc import run_tleedm
+from viperleed.calc.lib.base import copytree_exists_ok
 
 from ..helpers import TEST_DATA
 # pylint: enable=wrong-import-position
@@ -101,8 +103,8 @@ class BaseTleedmFilesSetup:
         base_dir = self.inputs_path
         self.input_files_paths = [base_dir / pth for pth in copy_dirs]
         for input_dir in self.input_files_paths:
-            shutil.copytree(input_dir, self.test_path, dirs_exist_ok=True)
-            shutil.copytree(input_dir, self.work_path, dirs_exist_ok=True)
+            copytree_exists_ok(input_dir, self.test_path)
+            copytree_exists_ok(input_dir, self.work_path)
 
         self.home = Path().resolve()
         self.failed = -1

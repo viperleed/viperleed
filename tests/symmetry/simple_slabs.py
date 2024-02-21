@@ -32,24 +32,19 @@ from ..helpers import TestInfo, DisplacementInfo, CaseTag as Tag
 # pylint: enable=wrong-import-position
 
 
-def get_atom(atlist, atom_nr):
-    """Return the atom with a certain num."""
-    return next(at for at in atlist if at.num == atom_nr)
-
-
 def remove_atoms(slab, param, *atom_nrs):
     """Remove atoms with the given numbers from slab."""
     for atom_nr in atom_nrs:
-        slab.atlist.remove(get_atom(slab.atlist, atom_nr))
-    slab.updateElementCount()
-    slab.fullUpdate(param)
+        slab.atlist.remove(slab.atlist.get(atom_nr))
+    slab.update_element_count()
+    slab.full_update(param)
 
 
 def tilt_c_axis(slab, direction):
     """Modify slab's c vector to tilt in a fractional direction."""
-    slab.ucell.T[2, :2] = 0.3 * np.dot(direction, slab.surface_vectors)
+    slab.c_vector[:2] = 0.3 * np.dot(direction, slab.ab_cell.T)
     slab.ucell_ori = slab.ucell.copy()
-    slab.getCartesianCoordinates()
+    slab.update_cartesian_from_fractional()
 
 
 def set_displacement_infos(test_info, *displaced_atoms):
@@ -89,15 +84,7 @@ class CaseSimpleSlabs:  # pylint: disable=too-many-public-methods
     def add_atoms(slab, atoms):
         """Add atoms to a slab."""
         slab.atlist.extend(atoms)
-        for atom in atoms:
-            atom.pos = np.asarray(atom.pos)
-
-            # Update element counts manually bacause updateElementCount
-            # is buggy: only considers elements that have been there
-            # already
-            if atom.el not in slab.n_per_elem:
-                slab.n_per_elem[atom.el] = 0
-            slab.n_per_elem[atom.el] += 1
+        slab.update_element_count()
 
     @staticmethod
     def make_slab(ucell):
@@ -116,7 +103,7 @@ class CaseSimpleSlabs:  # pylint: disable=too-many-public-methods
         """Update a slab from param, and return the latter."""
         if not param:
             param = Rparams()
-        slab.fullUpdate(param)
+        slab.full_update(param)
         return param
 
     def case_p1(self):

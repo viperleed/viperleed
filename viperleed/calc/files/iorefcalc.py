@@ -10,7 +10,7 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import fortranContLine, lcm, splitMaxRight
+from viperleed.calc.lib.base import fortranContLine, splitMaxRight
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
 
@@ -246,19 +246,7 @@ def writePARAM(sl, rp, lmax=-1):
     output = ('C  Dimension statements for Tensor LEED reference calculation, '
               '\nC  version v1.2\n\n')
     output += 'C  1. lattice symmetry\n\n'
-    m = rp.SUPERLATTICE.copy()
-    if m[1, 1] != 0:      # m[1] not parallel to a_bulk
-        if m[0, 1] != 0:  # m[0] not parallel to a_bulk
-            # find basis in which m[0] is parallel to a_bulk
-            f = lcm(abs(int(m[0, 1])), abs(int(m[1, 1])))
-            m[0] *= f/m[0, 1]
-            m[1] *= f/m[1, 1]
-            m[0] -= m[1]*np.sign(m[0, 1])*np.sign(m[1, 1])
-        nl1 = abs(int(round(m[0, 0])))
-        nl2 = abs(int(round(abs(np.linalg.det(rp.SUPERLATTICE))/nl1)))
-    else:               # m[1] already parallel to a_bulk
-        nl2 = abs(int(round(m[1, 0])))
-        nl1 = abs(int(round(abs(np.linalg.det(rp.SUPERLATTICE))/nl2)))
+    nl1, nl2 = leedbase.get_superlattice_repetitions(rp.SUPERLATTICE)
     ideg = 2  # any 2D point grid is at least 2fold symmetric
     # if sl.planegroup in ['p2','pmm','pmg','pgg','cmm','rcmm']:
     #     ideg = 2
@@ -285,19 +273,19 @@ def writePARAM(sl, rp, lmax=-1):
                + str(mnlm[lmax-1])+')\n')
     output += '\nC  3. Parameters for (3D) geometry within (2D) unit mesh\n\n'
     output += '      PARAMETER (MNSITE  = '+str(len(sl.sitelist))+')\n'
-    output += '      PARAMETER (MNLTYPE = '+str(len(sl.layers))+')\n'
+    output += '      PARAMETER (MNLTYPE = '+str(sl.n_layers)+')\n'
     mnbrav = 0
     mnsub = 0
     mnstack = 0
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
-    for layer in [lay for lay in sl.layers if not lay.is_bulk]:
+        sl.make_bulk_slab(rp)
+    for layer in sl.non_bulk_layers:
         mnstack += 1
         if layer.n_atoms == 1:
             mnbrav += 1
         if layer.n_atoms > mnsub:
             mnsub = layer.n_atoms
-    for i, layer in enumerate([lay for lay in sl.layers if lay.is_bulk]):
+    for i, layer in enumerate(sl.bulk_layers):
         if sl.bulkslab.layers[i].n_atoms == 1:
             mnbrav += 1
         if sl.bulkslab.layers[i].n_atoms > mnsub:
@@ -368,10 +356,10 @@ def writeAUXLATGEO(sl, rp):
            rp.THEO_ENERGIES.stop + 0.01,
            rp.THEO_ENERGIES.step]
     output += formatter['energies'].write(ens).ljust(lj) + 'EI,EF,DE\n'
-    ucsurf = np.transpose(sl.ucell[:2, :2])
+    ucsurf = sl.ab_cell.T
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
-    ucbulk = sl.bulkslab.ucell[:2, :2].T
+        sl.make_bulk_slab(rp)
+    ucbulk = sl.bulkslab.ab_cell.T
     output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
     output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
     if rp.TL_VERSION < 1.7:
@@ -467,11 +455,11 @@ def writeAUXGEO(sl, rp):
                      'geo': ff.FortranRecordWriter('3F9.4'),
                      }
         lj = 32
-    slab_c = np.copy(sl.ucell[:, 2])
+    slab_c = sl.c_vector.copy()
     if rp.LAYER_STACK_VERTICAL:
         sl = copy.deepcopy(sl)
-        sl.projectCToZ()
-        sl.updateLayerCoordinates()
+        sl.project_c_to_z()
+        sl.update_layer_coordinates()
     output = ''
     output += ('---------------------------------------------------------'
                '----------\n')
@@ -516,13 +504,12 @@ def writeAUXGEO(sl, rp):
                '           ---\n')
     output += ('-----------------------------------------------------'
                '--------------\n')
-    ol = i3.write([len(sl.layers)]).ljust(lj)
+    ol = i3.write([sl.n_layers]).ljust(lj)
     output += ol + 'NLTYPE: number of different layer types\n'
-    blayers = [lay for lay in sl.layers if lay.is_bulk]
-    nblayers = [lay for lay in sl.layers if not lay.is_bulk]
-    layerOffsets = [np.zeros(3) for _ in range(len(sl.layers) + 1)]
+    blayers = sl.bulk_layers
+    layerOffsets = [np.zeros(3) for _ in range(sl.n_layers + 1)]
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
+        sl.make_bulk_slab(rp)
     for i, layer in enumerate(sl.layers):
         output += '-   layer type '+str(i+1)+' ---\n'
         if layer.is_bulk:
@@ -558,7 +545,7 @@ def writeAUXGEO(sl, rp):
             writelist = layer.atlist
         writelist.sort(key=lambda atom: -atom.pos[2])
         for atom in writelist:
-            writepos = atom.cartpos - atom.layer.cartori
+            writepos = atom.cartpos - atom.layer.cartori                        # TODO: .cartpos[2]. Issue #174
             ol = i3.write([sl.sitelist.index(atom.site)+1])
             if natoms != 1:
                 ol += formatter['geo'].write([writepos[2],
@@ -592,16 +579,16 @@ def writeAUXGEO(sl, rp):
         bvectors_ASA = -slab_c * bulkc/slab_c[2]
     # bulkc is now the repeat length along c. now correct for layer thickness:
     if rp.N_BULK_LAYERS == 2:
-        bvectors_ASA[2] = bulkc - (blayers[1].cartbotz - blayers[0].cartori[2])
+        bvectors_ASA[2] = bulkc - (blayers[1].cartbotz - blayers[0].cartori[2])  # TODO: .cartpos[2]. Issue #174
     else:
-        bvectors_ASA[2] = bulkc - (blayers[0].cartbotz - blayers[0].cartori[2])
+        bvectors_ASA[2] = bulkc - (blayers[0].cartbotz - blayers[0].cartori[2])  # TODO: .cartpos[2]. Issue #174
 
     # determine ASBULK - interlayer vector between bulk layers
     if rp.N_BULK_LAYERS == 2:
         # add layerOffsets for Bravais layers:
         bvectors_ASA += layerOffsets[blayers[0].num+1]
         # calculate ASBULK:
-        bvectors_ASBULK = blayers[1].cartori - blayers[0].cartori
+        bvectors_ASBULK = blayers[1].cartori - blayers[0].cartori               # TODO: .cartpos[2]. Issue #174
         bvectors_ASBULK[2] = blayers[1].cartori[2] - blayers[0].cartbotz
         bl2num = blayers[1].num
         # add layerOffsets for Bravais layers:
@@ -630,7 +617,7 @@ def writeAUXGEO(sl, rp):
                '  ---\n')
     output += ('--------------------------------------------------------------'
                '-----\n')
-    nonbulk = len(sl.layers)-rp.N_BULK_LAYERS
+    nonbulk = sl.n_layers - rp.N_BULK_LAYERS
     if len(rp.TENSOR_OUTPUT) < nonbulk:    # check TENSOR_OUTPUT parameter
         if len(rp.TENSOR_OUTPUT) == 1:
             # interpret one value as concerning all
@@ -648,12 +635,12 @@ def writeAUXGEO(sl, rp):
             'Parameters TENSOR_OUTPUT is defined, but contains more values '
             'than there are non-bulk layers. Excess values will be ignored.')
         rp.setHaltingLevel(1)
-    ol = i3.write([len(sl.layers)-rp.N_BULK_LAYERS]).ljust(lj)
+    ol = i3.write([sl.n_layers - rp.N_BULK_LAYERS]).ljust(lj)
     output += ol + 'NSTACK: number of layers stacked onto bulk\n'
-    for layer in list(reversed(nblayers)):
+    for layer in reversed(sl.non_bulk_layers):
         n = layer.num + 1
         v = sl.layers[n].cartori - layer.cartori
-        v[2] = sl.layers[n].cartori[2] - layer.cartbotz
+        v[2] = sl.layers[n].cartori[2] - layer.cartbotz                         # TODO: .cartpos[2]. Issue #174
         v = v + layerOffsets[n]   # add layerOffsets for Bravais layers
         ol = i3.write([n]) + formatter['geo'].write([v[2],
                                                      v[0], v[1]])

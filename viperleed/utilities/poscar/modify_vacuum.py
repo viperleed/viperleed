@@ -22,16 +22,16 @@ logger = logging.getLogger(
 
 
 def modify_vacuum(slab, vacuum_gap_size, absolute=False):
-    """modify the vacuum gap size of a slab
+    """Modify the vacuum gap size of a slab.
 
     Parameters
     ----------
     slab : Slab
-        slab to prepare for relaxation
+        Slab to prepare for relaxation,
     vacuum_gap_size : float
-        size of the vacuum gap in Angstroms. If absolute is True, this is the
-        absolute size of the vacuum gap, else it is the amount of vacuum to add
-        or remove from the slab.
+        Size of the vacuum gap in Angstroms. If absolute is True, this
+        is the absolute size of the vacuum gap, else it is the amount
+        of vacuum to add or remove from the slab.
     absolute : bool, optional
         If True, vacuum_gap_size is the absolute size of the vacuum gap.
 
@@ -46,8 +46,8 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
         If the resulting vacuum gap size is negative.
     """
     processed_slab = deepcopy(slab)
-    processed_slab.check_a_b_out_of_plane()
-    processed_slab.getCartesianCoordinates()
+    processed_slab.check_a_b_in_plane()
+    processed_slab.update_cartesian_from_fractional()
 
     slab_thickness = processed_slab.thickness
     current_gap_size = processed_slab.vacuum_gap
@@ -66,10 +66,9 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
 
     new_c_z = new_vacuum_gap_size + slab_thickness
 
-    processed_slab.ucell[:, 2] = new_c_z / processed_slab.ucell[2, 2]
+    processed_slab.ucell[:, 2] = new_c_z / processed_slab.c_vector[2]           # TODO: @amimre is this (and the next line) correct??
     processed_slab.ucell[2, 2] = new_c_z
-    processed_slab.getFractionalCoordinates()
-    processed_slab.collapseFractionalCoordinates()
+    processed_slab.collapse_cartesian_coordinates()
     return processed_slab
 
 

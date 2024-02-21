@@ -19,15 +19,36 @@ __authors__ = ["Florian Kraushofer (@fkraushofer)",
 __created__ = "2021-06-04"
 
 # files to go in SUPP
-_SUPP_FILES = ("AUXBEAMS", "AUXGEO", "AUXLATGEO", "AUXNONSTRUCT", "BEAMLIST",
-               "POSCAR_oricell", "POSCAR_bulk", "muftin.f",
-               "refcalc-PARAM", "refcalc-FIN", "rfactor-WEXPEL",
-               "rfactor-PARAM", "delta-input", "search.steu",
-               "search-rf.info", "search-PARAM", "AUXEXPBEAMS",
-               "EEASISSS-input.txt", "EEASISSS-log.txt",
-               "eeasisss-input", "searchpars.info", "superpos-PARAM",
-               "superpos-CONTRIN", "POSCAR_bulk_appended", "POSCAR_mincell",
-               "restrict.f", "Phaseshifts_plots.pdf")
+_SUPP_FILES = (
+    "AUXBEAMS",
+    "AUXEXPBEAMS",
+    "AUXGEO",
+    "AUXLATGEO",
+    "AUXNONSTRUCT",
+    "BEAMLIST",
+    "delta-input",
+    "EEASISSS-input.txt",
+    "eeasisss-input",
+    "EEASISSS-log.txt",
+    "muftin.f",
+    "Phaseshifts_plots.pdf",
+    "POSCAR_bulk",
+    "POSCAR_bulk_appended",
+    "POSCAR_mincell",
+    "POSCAR_oricell",
+    "POSCAR_vacuum_corrected",
+    "refcalc-FIN",
+    "refcalc-PARAM",
+    "restrict.f",
+    "rfactor-WEXPEL",
+    "rfactor-PARAM",
+    "search-PARAM",
+    "search-rf.info",
+    "search.steu",
+    "searchpars.info",
+    "superpos-CONTRIN",
+    "superpos-PARAM",
+    )
 
 _SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
 

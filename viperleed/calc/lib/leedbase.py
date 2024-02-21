@@ -17,7 +17,8 @@ import psutil
 from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
-from viperleed.calc.lib.base import cosvec
+from viperleed.calc.lib.base import cosvec, ensure_integer_matrix, lcm
+from viperleed.calc.lib.base import SingularMatrixError
 
 # The following imports are potentially the cause of cyclic
 # imports. They are used exclusively as part of getTensorOriStates
@@ -40,6 +41,64 @@ logger = logging.getLogger("tleedm.leedbase")
 ###############################################
 #                FUNCTIONS                    #
 ###############################################
+
+def get_superlattice_repetitions(matrix):
+    """Return the number of repeats in 2D to cover a superlattice.
+
+    Parameters
+    ----------
+    matrix : Sequence
+        Shape (2, 2). The matrix representing the transformation
+        between the "base" lattice and the super-lattice. The
+        relation is suprlattice_basis = matrix @ base_basis,
+        with the _basis matrices such that in-plane unit vectors
+        are rows, i.e., a, b = _basis. Must be non-singular, and
+        with all entries (close to) integers.
+
+    Returns
+    -------
+    repeats : tuple
+        Two elements, each corresponds to the number of repetitions
+        of the "base" cell along its two unit vectors so as to
+        completely cover the superlattice area when back-folded.
+
+    Raises
+    ------
+    ValueError
+        If matrix is singular or an inappropriate shape.
+    NonIntegerMatrixError
+        If matrix has non-integer elements.
+    """
+    # Work on a numpy-array copy of the input. Ensure it's float
+    # to avoid UFuncTypeError when doing in-place divisions below
+    matrix = ensure_integer_matrix(np.copy(matrix).astype(float))
+    if matrix.shape != (2, 2):
+        raise ValueError(f'Unexpected shape {matrix.shape} for superlattice '
+                         'transform matrix. Should be (2, 2)')
+    n_repeats = abs(matrix[0, 0] * matrix[1, 1] - matrix[1, 0] * matrix[0, 1])
+    n_repeats = round(n_repeats)
+    if not n_repeats:
+        raise SingularMatrixError('Superlattice transform matrix is singular')
+
+    if n_repeats == 1:  # No area change
+        return 1, 1
+
+    # The trick is making the input matrix into a lower-triangular
+    # matrix by Gauss elimination. Then we read off the 'number of
+    # repeats along the first base vector' from the only non-zero
+    # element of the first row. The other direction is just the
+    # ratio of n_repeats and the one we already know.
+    if not matrix[1, 1]:  # The matrix is upper-triangular. Swap.
+        matrix[[0, 1]] = matrix[[1, 0]]
+    if matrix[0, 1]:      # The matrix is not triangular. Gauss.
+        multiple = lcm(abs(round(matrix[0, 1])),  # lcm needs integers
+                       abs(round(matrix[1, 1])))
+        first_row, second_row = matrix
+        first_row /= first_row[1]
+        first_row -= second_row/second_row[1]
+        first_row *= multiple  # Ensure integer
+    return abs(round(matrix[0, 0])), abs(round(n_repeats / matrix[0, 0]))
+
 
 def monitoredPool(rp, poolsize, function, tasks, update_from=Path()):
     """
@@ -207,7 +266,7 @@ def getTensors(index, base_dir=".", target_dir=".", required=True):
     tensor_dir = (Path(base_dir) / "Tensors").resolve()
     unpack_path = (Path(target_dir) / "Tensors" / dn).resolve()
     zip_path = (tensor_dir / dn).with_suffix(".zip")
-    
+
     if (os.path.basename(base_dir) == "Tensors"
             and not tensor_dir.is_dir()):
         base_dir = os.path.dirname(base_dir)
@@ -282,26 +341,26 @@ def getTensorOriStates(sl, path):
         tsl = poscar.read(path / "POSCAR")
         trp = parameters.read(filename=path/"PARAMETERS")
         parameters.interpret(trp, slab=tsl, silent=True)
-        tsl.fullUpdate(trp)
+        tsl.full_update(trp)
         vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
-        tsl.fullUpdate(trp)
+        tsl.full_update(trp)
     except Exception as exc:
         logger.error("Error checking Tensors: Error while reading "
                      f"input files in {dn}")
         logger.debug("Exception:", exc_info=True)
         raise RuntimeError("Could not check Tensors: Error loading old input "
                            "files") from exc
-    if len(tsl.atlist) != len(sl.atlist):
+    if tsl.n_atoms != sl.n_atoms:
         logger.error(f"POSCAR from {dn} is incompatible with "
                      "current POSCAR.")
         raise RuntimeError("Tensors file incompatible")
-    for at in sl.atlist:
-        tal = [tat for tat in tsl.atlist if at.num == tat.num]
-        if len(tal) != 1:
+    for at in sl:
+        tat = tsl.atlist.get(at.num, None)
+        if tat is None:
             logger.error(f"POSCAR from {dn} is incompatible with "
                          "current POSCAR.")
             raise RuntimeError("Tensors file incompatible")
-        at.copyOriState(tal[0])
+        at.copyOriState(tat)
     if len(tsl.sitelist) != len(sl.sitelist):
         logger.error(f"Sites from {dn} input differ from current input.")
         raise RuntimeError("Tensors file incompatible")
@@ -503,102 +562,166 @@ def reduceUnitCell(ab, eps=1e-3):
     return ab, t, lat
 
 
+def reduce_c_vector(c_vec, ab_cell):
+    """Compute a Minkowski-reduced version of the third unit-cell vector.
+
+    Parameters
+    ----------
+    c_vec : numpy.ndarray
+        The unit-cell vector to be reduced. Only the first
+        two components are taken into consideration. They
+        are modified in place.
+    ab_cell : numpy.ndarray
+        The in-plane unit cell to be used for reducing c.
+        Unit vectors are rows, i.e., a, b == ab_cell.
+
+    Returns
+    -------
+    None.
+    """
+    # The problem is essentially the closest-vector problem (CVP) that
+    # is common in the theory of lattices: we have to find the lattice
+    # vector (of the a,b lattice) that is closest to the projection
+    # of c on the plane formed by ab_cell. That's the quantity to be
+    # removed from c to make it shortest. The trick is that the ab_cell
+    # should be Minkowski-reduced beforehand to ensure that also the c
+    # vector will be Minkowski-reduced. The theory behind this can be
+    # found in doi.org/10.1007/978-3-540-24847-7_26.
+    ab_cell, *_ = reduceUnitCell(ab_cell)
+    c_frac_ab = c_vec[:2].dot(np.linalg.inv(ab_cell))
+
+    # The closest projection is an integer version of c_frac_ab.
+    # It's easiest to take the floor, then consider also -a, -b,
+    # and -(a+b), whichever gives the shortest vector. Otherwise
+    # we'd have to also consider +a, +b, a-b, b-a, etc...
+    c_frac_ab -= np.floor(c_frac_ab)
+
+    increments = (0, 0), (1, 0), (0, 1), (1, 1)
+    c_vec[:2] = min(
+        ((c_frac_ab - f).dot(ab_cell) for f in increments),
+        key=np.linalg.norm
+        )
+
+
+def bulk_3d_string(screws, glides):
+    """Return info about bulk screw axes and glide planes as a string.
+
+    Parameters
+    ----------
+    screws : Sequence
+        Items are orders of rotation for screw axes.
+    glides : Sequence
+        Items are 2-tuples representing fractional coordinates
+        of direction vectors of the glide planes.
+
+    Returns
+    -------
+    bulk_3d_str : str
+        Format is 'r(2, 4), m([1,1], [ 1,-1])' if there is
+        any screw axes or glide planes, otherwise 'None'.
+    """
+    b3ds = ''
+    if screws:
+        screws_str = ', '.join(str(v) for v in screws)
+        b3ds += f'r({screws_str})'
+    if glides:
+        if b3ds:
+            b3ds += ', '
+        glides_str = ', '.join(np.array2string(direction, separator=',')
+                               for direction in glides)
+        if glides_str:
+            b3ds += f'm({glides_str})'
+    return b3ds or 'None'
+
+
 def getLEEDdict(sl, rp):
-    """Returns a LEED dict containing information needed by guilib functions"""
-    if sl.planegroup == "unknown":
-        logger.warning("Generating LEED dictionary for slab with unknown "
-                       "plane group!")
-    if sl.planegroup in ["pm", "pg", "cm", "rcm", "pmg"]:
-        pgstring = sl.planegroup+"[{} {}]".format(sl.orisymplane.par[0],
-                                                  sl.orisymplane.par[1])
+    """Return a LEED dict containing information needed by guilib functions."""
+    if sl.planegroup == 'unknown':
+        logger.warning('Generating LEED dictionary for slab with unknown '
+                       'plane group!')
+    if sl.planegroup in ['pm', 'pg', 'cm', 'rcm', 'pmg']:
+        pgstring = sl.planegroup + '[{} {}]'.format(*sl.orisymplane.par)
     else:
         pgstring = sl.planegroup
     if not (abs(np.round(rp.SUPERLATTICE).astype(int) - rp.SUPERLATTICE)
             < 1e-3).all():
-        logger.error("getLEEDdict: SUPERLATTICE contains non-integer-valued "
-                     "entries.")
+        logger.error('getLEEDdict: SUPERLATTICE contains non-integer-valued '
+                     'entries.')
         return None
-    d = {"eMax": rp.THEO_ENERGIES.max,
-         "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
-         "surfBasis": sl.ucell[:2, :2].T,
-         "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,
-         "bulk3Dsym": sl.bulkslab.getBulk3Dstr(),
-         "screenAperture": rp.SCREEN_APERTURE,
-         "beamIncidence": (rp.THETA, rp.PHI)}
+    # Some values can be overwritten via parameters:
+    d = {'eMax': rp.THEO_ENERGIES.max,
+         'SUPERLATTICE': rp.SUPERLATTICE.astype(int),
+         'surfBasis': sl.ab_cell.T,
+         'surfGroup': pgstring,
+         'bulkGroup': sl.bulkslab.foundplanegroup,
+         'bulk3Dsym': sl.bulkslab.get_bulk_3d_str(),
+         'screenAperture': rp.SCREEN_APERTURE,
+         'beamIncidence': (rp.THETA, rp.PHI)}
     # some values can be overwritten via parameters:
     if isinstance(rp.AVERAGE_BEAMS, tuple):
-        d["beamIncidence"] = rp.AVERAGE_BEAMS
-    # some definitions for bulk symmetry. # TODO: use guilib functions
+        d['beamIncidence'] = rp.AVERAGE_BEAMS
+    if 'group' not in rp.SYMMETRY_BULK:
+        return d
+
+    # Some definitions for bulk symmetry.                                       # TODO: use guilib functions
     allowed_groups = {
-        "oblique": ("p1", "p2"),
-        "rhombic": ("p1", "p2", "cm", "cmm"),
-        "rectangular": (
-            "p1", "p2", "pm", "pg", "rcm", "pmm", "pmg", "pgg", "rcmm"),
-        "square": (
-            "p1", "p2", "pm", "pg", "cm", "cmm", "rcm", "pmm", "pmg", "pgg",
-            "rcmm", "p4", "p4m", "p4g"),
-        "hexagonal": (
-            "p1", "p2", "cm", "cmm", "p3", "p3m1", "p31m", "p6", "p6m")
+        'oblique': ('p1', 'p2'),
+        'rhombic': ('p1', 'p2', 'cm', 'cmm'),
+        'rectangular': (
+            'p1', 'p2', 'pm', 'pg', 'rcm', 'pmm', 'pmg', 'pgg', 'rcmm'),
+        'square': (
+            'p1', 'p2', 'pm', 'pg', 'cm', 'cmm', 'rcm', 'pmm', 'pmg', 'pgg',
+            'rcmm', 'p4', 'p4m', 'p4g'),
+        'hexagonal': (
+            'p1', 'p2', 'cm', 'cmm', 'p3', 'p3m1', 'p31m', 'p6', 'p6m')
         }
     allowed_rotations = {
-        "oblique": (2,),
-        "rhombic": (2,),
-        "rectangular": (2,),
-        "square": (2, 4),
-        "hexagonal": (2, 3, 4)
+        'oblique': (2,),
+        'rhombic': (2,),
+        'rectangular': (2,),
+        'square': (2, 4),
+        'hexagonal': (2, 3, 4)
         }
     allowed_mirrors = {
-        "oblique": (),
-        "rhombic": ((1, 1), (1, -1)),
-        "rectangular": ((1, 0), (0, 1)),
-        "square": ((1, 0), (0, 1), (1, 1), (1, -1)),
-        "hexagonal": ((1, 0), (0, 1), (1, 1), (1, -1), (1, 2), (2, 1))
+        'oblique': (),
+        'rhombic': ((1, 1), (1, -1)),
+        'rectangular': ((1, 0), (0, 1)),
+        'square': ((1, 0), (0, 1), (1, 1), (1, -1)),
+        'hexagonal': ((1, 0), (0, 1), (1, 1), (1, -1), (1, 2), (2, 1))
         }
-    if "group" in rp.SYMMETRY_BULK:
-        if (rp.SYMMETRY_BULK["group"].split("[")[0]
-                not in allowed_groups[sl.bulkslab.celltype]):
-            logger.warning("Group {} given in SYMMETRY_BULK is not allowed "
-                           "for bulk cell type '{}'.".format(
-                               rp.SYMMETRY_BULK["group"].split("[")[0],
-                               sl.bulkslab.celltype))
-            rp.setHaltingLevel(2)
-        else:
-            d["bulkGroup"] = rp.SYMMETRY_BULK["group"]
-        bulk_rotations = []
-        bulk_mirrors = []
-        if "rotation" in rp.SYMMETRY_BULK:
-            for order in rp.SYMMETRY_BULK["rotation"]:
-                if order not in allowed_rotations[sl.bulkslab.celltype]:
-                    logger.warning(
-                        "Rotation order {} given in SYMMETRY_BULK is not "
-                        "allowed for bulk cell type '{}'.".format(
-                            order, sl.bulkslab.celltype))
-                    rp.setHaltingLevel(2)
-                else:
-                    bulk_rotations.append(order)
-        if "mirror" in rp.SYMMETRY_BULK:
-            for par in rp.SYMMETRY_BULK["mirror"]:
-                if par not in allowed_mirrors[sl.bulkslab.celltype]:
-                    logger.warning(
-                        "Mirror direction {} given in SYMMETRY_BULK is not "
-                        "allowed for bulk cell type '{}'.".format(
-                            par, sl.bulkslab.celltype))
-                    rp.setHaltingLevel(2)
-                else:
-                    bulk_mirrors.append(par)
-        b3ds = ""
-        if bulk_rotations:
-            b3ds += "r({})".format(", ".join([str(v) for v in bulk_rotations]))
-        if bulk_mirrors:
-            if b3ds:
-                b3ds += ", "
-            b3ds += "m({})".format(", ".join([np.array2string(np.array(par),
-                                                              separator=",")
-                                              for par in bulk_mirrors]))
-        if not b3ds:
-            d["bulk3Dsym"] = "None"
-        else:
-            d["bulk3Dsym"] = b3ds
+    if (rp.SYMMETRY_BULK['group'].split('[')[0]
+            not in allowed_groups[sl.bulkslab.celltype]):
+        hermann, *_ = rp.SYMMETRY_BULK['group'].split('[')
+        logger.warning(
+            f'Group {hermann} given in SYMMETRY_BULK is not allowed '
+            f'for bulk cell shape {sl.bulkslab.celltype!r}.'
+            )
+        rp.setHaltingLevel(2)
+    else:
+        d['bulkGroup'] = rp.SYMMETRY_BULK['group']
+    bulk_rotations = []
+    bulk_mirrors = []
+    if 'rotation' in rp.SYMMETRY_BULK:
+        for order in rp.SYMMETRY_BULK['rotation']:
+            if order not in allowed_rotations[sl.bulkslab.celltype]:
+                logger.warning(
+                    f'Rotation order {order} given in SYMMETRY_BULK is not '
+                    f'allowed for bulk cell shape {sl.bulkslab.celltype!r}.'
+                    )
+                rp.setHaltingLevel(2)
+            else:
+                bulk_rotations.append(order)
+    if 'mirror' in rp.SYMMETRY_BULK:
+        for par in rp.SYMMETRY_BULK['mirror']:
+            if par not in allowed_mirrors[sl.bulkslab.celltype]:
+                logger.warning(
+                    f'Mirror direction {par} given in SYMMETRY_BULK is not '
+                    f'allowed for bulk cell shape {sl.bulkslab.celltype!r}.'
+                    )
+                rp.setHaltingLevel(2)
+            else:
+                bulk_mirrors.append(par)
+    d['bulk3Dsym'] = bulk_3d_string(bulk_rotations, bulk_mirrors)
     return d
 
 

@@ -161,7 +161,7 @@ class TestLayer:
                                          cases=case_one_atom_layer)
     def test_atom_displaced_no_update(self, layer_and_info):
         """Check that layer positions do not change if atoms are moved."""
-        layer, info = layer_and_info
+        layer, _ = layer_and_info
         ori_before, z_before = duplicate_all(layer.cartori, layer.cartbotz)
         move_atom(layer.atlist[0], (0.1, 0.1, 0.1))
         assert all(layer.cartori == ori_before)

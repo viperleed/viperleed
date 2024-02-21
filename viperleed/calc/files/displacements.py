@@ -241,7 +241,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
 
     """
     deltas_required = False
-    abst = np.transpose(sl.ucell[:2, :2])
+    abst = sl.ab_cell.T
     # if the unit cell gets modified by SYM_DELTA, restore it afterwards
     uCellState = sl.ucell_mod
     (lines, name) = dispblock
@@ -363,7 +363,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                'parse given value. Input will be ignored.')
                 rp.setHaltingLevel(2)
             if targetsym != "":
-                sl.revertUnitCell(uCellState)
+                sl.revert_unit_cell(uCellState)
                 setSymmetry(sl, rp, targetsym)
                 enforceSymmetry(sl, rp, movement=False, rotcell=False)
             continue
@@ -493,13 +493,13 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             rp.setHaltingLevel(2)
                             break
                         for ln in il:
-                            if ln > len(sl.layers):
+                            if ln > sl.n_layers:
                                 logger.warning(
                                     'DISPLACEMENTS file: layer number out of '
                                     'bounds, skipping line: '+pside)
                                 rp.setHaltingLevel(2)
                                 break
-                            numlist.extend([at.num for at in sl.atlist
+                            numlist.extend([at.num for at in sl
                                             if at.layer == sl.layers[ln-1]])
                 else:  # loop finished without beak
                     _break = False
@@ -578,7 +578,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                         'element or site label, skipping line.')
                     rp.setHaltingLevel(2)
                     break
-            for at in sl.atlist:
+            for at in sl:
                 if ((at.num in numlist or len(numlist) == 0)
                         and at.site in targetsites and not at.is_bulk):
                     targetAtEls.append((at, targetel))
@@ -909,7 +909,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 #                     rp.setHaltingLevel(1)
         elif mode == 4:
             constraints.append((targetAtEls, ctype, value))
-    sl.revertUnitCell(uCellState)  # if modified by SYM_DELTA, go back
+    sl.revert_unit_cell(uCellState)  # if modified by SYM_DELTA, go back
     # now read constraints
     for (targetAtEls, ctype, value) in constraints:
         if value.lower().startswith("link"):
@@ -944,7 +944,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
     if name:
         o = " "+name
     logger.debug("DISPLACEMENTS block{} was read successfully".format(o))
-    for at in sl.atlist:
+    for at in sl:
         if len(at.disp_occ) > 5:
             logger.error(
                 'DISPLACEMENTS file: '+str(at)+' has occupations defined for '

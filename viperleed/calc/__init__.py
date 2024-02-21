@@ -48,16 +48,16 @@ import time
 
 import viperleed
 from viperleed import GLOBALS
+
 from viperleed.calc.lib.base import CustomLogFormatter
 from viperleed.calc.classes import rparams
 from viperleed.calc.files import parameters, poscar
-from viperleed.calc.files import poscar
-from viperleed.calc.sections.cleanup import prerun_clean, cleanup
 from viperleed.calc.sections.run_sections import section_loop
+from viperleed.calc.sections.initialization import (
+    warn_if_slab_has_atoms_in_multiple_c_cells
+    )
+from viperleed.calc.sections.cleanup import prerun_clean, cleanup
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
 
 logger = logging.getLogger("tleedm")
 
@@ -190,7 +190,8 @@ def run_tleedm(system_name=None,
             logger.warning(f"Error applying preset parameter {p}: ",
                            exc_info=True)
     if not domains:
-        slab.fullUpdate(rp)   # gets PARAMETERS data into slab
+        warn_if_slab_has_atoms_in_multiple_c_cells(slab, rp)
+        slab.full_update(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
     # set source directory
     _source = Path(source).resolve()

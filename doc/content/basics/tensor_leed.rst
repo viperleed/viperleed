@@ -154,7 +154,7 @@ The starting points for the optimization is defined by :ref:`SEARCH_START<search
 
 For each search step (called "generation" based on the terminology of genetic algorithms), a new grid point in the parameter space is selected *randomly*, but based on a probability distribution centered on the current position.
 The R-factor is calculated for the selected parameter combination and the new parameter set is accepted **only if** the R-factor for the new configuration is lower then for the previous configuration.
-The width of the probability distribution is determined by the current R-factor and the parameters :ref:`SEARCH_CONVERGENCE<search_convergence>` and :ref:`GAUSSIAN_WIDTH<rmut>`.
+The width of the probability distribution is determined by the current R-factor and the parameter:ref:`SEARCH_CONVERGENCE<search_convergence>` (in particular the ``gaussian`` flag).
 
 ViPErLEED enables more sophisticated control over the search process than is possible with TensErLEED alone.
 Different types of convergence criteria and an automatic scaling of the probability distribution can be set using :ref:`SEARCH_CONVERGENCE<search_convergence>`.

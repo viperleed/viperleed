@@ -13,11 +13,14 @@ import sys
 import pytest
 from pytest_cases import parametrize_with_cases, fixture
 
-from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.files import poscar
+# pylint: disable=wrong-import-position
+# Will be fixed in installable version
 from viperleed.calc.lib import symmetry
+from viperleed.calc.lib.base import pairwise
+from viperleed.calc.files import poscar
 
-from ..poscar_slabs import CasePOSCARSlabs, CasePOSCARFiles
+from . import case_poscar_files
+from ..poscar_slabs import CasePOSCARSlabs
 from ..helpers import exclude_tags, CaseTag
 # pylint: enable=wrong-import-position
 
@@ -39,7 +42,7 @@ class TestPOSCARRead:
     def test_nr_atom_correct(self, args):
         """Ensure that the correct number of atoms was read."""
         slab, *_, info = args
-        assert len(slab.atlist) == info.poscar.n_atoms
+        assert slab.n_atoms == info.poscar.n_atoms
 
     @parametrize_with_cases('args', **_WITH_INFO)
     def test_nr_atom_by_elem_correct(self, args):
@@ -79,16 +82,16 @@ class TestPOSCARWrite:
     def test_ori_slab_nr_atoms_unchanged(self, args, tmp_poscar):
         """Ensure that writing does not change the number of atoms."""
         slab, *_ = args
-        n_atoms_original = len(slab.atlist)
+        n_atoms_original = slab.n_atoms
         poscar.write(slab, tmp_poscar)
-        assert len(slab.atlist) == n_atoms_original
+        assert slab.n_atoms == n_atoms_original
 
     @parametrize_with_cases('args', **_WITH_INFO)
     def test_nr_atoms_expected(self, args, write_and_read):
         """Check that a written slab has the expected n_atoms."""
         slab, *_, info = args
         written_slab = write_and_read(slab)
-        assert len(written_slab.atlist) == info.poscar.n_atoms
+        assert written_slab.n_atoms == info.poscar.n_atoms
 
     def test_write_slab_with_symmetry(self, poscar_with_group, tmp_poscar):
         """Ensure symmetry information are written without errors."""
@@ -104,7 +107,7 @@ class TestPOSCARWrite:
         """Ensure that writing a slab conserves the number of atoms."""
         slab, *_ = poscar_with_group
         written_slab = write_and_read(slab, comments='all')
-        assert len(written_slab.atlist) == len(slab.atlist)
+        assert written_slab.n_atoms == slab.n_atoms
 
     def test_group_conserved(self, poscar_with_group, write_and_read):
         """Ensure that writing a slab conserves its detected plane group."""
@@ -114,16 +117,16 @@ class TestPOSCARWrite:
         assert written_slab.foundplanegroup == slab.foundplanegroup
 
     def test_reorder(self, poscar_with_group, write_and_read):
-        """Ensure that writing a slab conserves the number of atoms."""
+        """Ensure that writing a slab sorts atoms by z."""
         slab, *_ = poscar_with_group
         written_slab = write_and_read(slab, reorder=True, comments='all')
-        assert all(a1.pos[2] <= a2.pos[2] or a1.el != a2.el for a1, a2 in 
-                   zip(written_slab.atlist[:-1], written_slab.atlist[1:]))
+        assert all(a1.pos[2] <= a2.pos[2] or a1.el != a2.el
+                   for a1, a2 in pairwise(written_slab))
 
 
-@fixture
-@parametrize_with_cases('args', cases=CasePOSCARFiles)
-def poscar_stream(args):
+@fixture(name='poscar_stream')
+@parametrize_with_cases('args', cases=case_poscar_files)
+def fixture_poscar_stream(args):
     """Return a POSCARStreamReader object."""
     file, contents = args
     stream = io.StringIO(contents)
@@ -140,21 +143,23 @@ class TestPOSCARStreamReader:
         assert slab.atlist
 
     def test_slab_matches_read_from_file(self, poscar_stream):
+        """Check consistency when reading the same file as a stream or file."""
         file, reader = poscar_stream
         stream_slab = reader.read()
         file_slab = poscar.read(file)
-        assert len(stream_slab.atlist) == len(file_slab.atlist)
+        assert stream_slab.n_atoms == file_slab.n_atoms
         assert stream_slab.n_per_elem == file_slab.n_per_elem
 
 
-@pytest.fixture
-def output_stream():
+@fixture(name='output_stream')
+def fixture_output_stream():
     """Return a StringIO object to write to."""
     return io.StringIO()
 
 
 class TestPOSCARStreamWriter:
     """Collection of tests for writing a POSCAR file to a stream."""
+
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_stream_written(self, args, output_stream):
         """Ensure that a POSCAR file exists after writing."""
@@ -173,11 +178,13 @@ class TestPOSCARStreamWriter:
         written_contents = output_stream.getvalue()
         written_slab = poscar.read(io.StringIO(written_contents))
         assert written_slab.atlist
-        assert len(written_slab.atlist) == len(slab.atlist)
+        assert written_slab.n_atoms == slab.n_atoms
         assert written_slab.n_per_elem == slab.n_per_elem
 
 
 class TestPOSCARVaspWrite:
+    """Collection of tests for writing a VASP-style POSCAR file."""
+
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_selective_dynamics_tag_is_added(self, args, output_stream):
         """Ensure that the Selective Dynamics line is added to the POSCAR."""
@@ -190,6 +197,7 @@ class TestPOSCARVaspWrite:
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_flag_c_only(self, args, output_stream):
+        """Check correct constraints for displacing only along z.""" 
         slab, *_ = args
         vasp_writer = poscar.VASPPOSCARWriter(output_stream,
                                               relax_info={'c_only': True})
@@ -200,6 +208,7 @@ class TestPOSCARVaspWrite:
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_flag_c_only_off(self, args, output_stream):
+        """Check correct constraints for displacing in all 3 directions.""" 
         slab, *_ = args
         vasp_writer = poscar.VASPPOSCARWriter(output_stream,
                                               relax_info={'c_only': False})
@@ -210,12 +219,12 @@ class TestPOSCARVaspWrite:
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_flag_above_c(self, args, output_stream):
+        """Check correct constraints for displacing only above a given c.""" 
         slab, *_ = args
         above_c = 0.3
-        vasp_writer = poscar.VASPPOSCARWriter(output_stream, relax_info={
-            'c_only': True,
-            'above_c': above_c
-        })
+        vasp_writer = poscar.VASPPOSCARWriter(output_stream,
+                                              relax_info={'c_only': True,
+                                                          'above_c': above_c})
         vasp_writer.write(slab)
         content = output_stream.getvalue()
         content_lines = content.split('\n')
@@ -230,10 +239,10 @@ class TestPOSCARVaspWrite:
 
     @parametrize_with_cases('args', cases=CasePOSCARSlabs)
     def test_flag_c_between_0_and_1(self, args, output_stream):
+        """Check complaints for invalid c value.""" 
         slab, *_ = args
         with pytest.raises(ValueError):
-            vasp_writer = poscar.VASPPOSCARWriter(output_stream, relax_info={
-                'c_only': True,
-                'above_c': 1.2
-            })
+            vasp_writer = poscar.VASPPOSCARWriter(output_stream,
+                                                  relax_info={'c_only': True,
+                                                              'above_c': 1.2})
             vasp_writer.write(slab)

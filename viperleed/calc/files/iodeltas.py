@@ -387,10 +387,10 @@ def generateDeltaBasic(sl, rp):
     output += (formatter['energies'].write(
         [rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01]).ljust(lj)
         + 'EI,EF\n')
-    ucsurf = sl.ucell[:2, :2].T
+    ucsurf = sl.ab_cell.T
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
-    ucbulk = sl.bulkslab.ucell[:2, :2].T
+        sl.make_bulk_slab(rp)
+    ucbulk = sl.bulkslab.ab_cell.T
     output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
     output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
     output += formatter['uc'].write(ucsurf[0]).ljust(lj) + 'ARB1\n'

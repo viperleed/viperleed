@@ -14,10 +14,11 @@ import copy
 import logging
 import numpy as np
 
+from viperleed.calc.lib.base import add_edges_and_corners
+
 __authors__ = ["Florian Kraushofer (@fkraushofer)",
                "Alexander M. Imre (@amimre)"]
 __created__ = "2019-06-13"
-
 
 _LOGGER = logging.getLogger('tleedm.atom')
 
@@ -26,7 +27,7 @@ class AtomError(Exception):
     """Base exception for Atom objects."""
 
 
-class Atom:                                                                     # TODO: change description of cartpos when flipping .cartpos[2]
+class Atom:                                                                     # TODO: Issue #174 -- change description of cartpos when flipping .cartpos[2]
     """Class storing information about a single atom.
 
     Attributes
@@ -98,7 +99,7 @@ class Atom:                                                                     
         """Initialize instance."""
         self.el = el
         self.pos = np.asarray(pos, dtype=float)
-        self.cartpos = None
+        self.cartpos = None                                                     # TODO: Issue #174 -- calculate right away
         self.num = num
         self.slab = slab
         self.layer = None
@@ -513,7 +514,7 @@ class Atom:                                                                     
         self.oriState.offset_vib = copy.deepcopy(other.offset_vib)
         self.oriState.offset_occ = copy.deepcopy(other.offset_occ)
 
-    def duplicate(self, add_to_atlists=True):
+    def duplicate(self, add_to_atlists=True, num=None):
         """Return a somewhat lightweight copy of this Atom.
 
         Attributes position and elements are deep-copied, all others
@@ -527,30 +528,36 @@ class Atom:                                                                     
         add_to_atlists : bool, optional
             Whether the duplicate atom should be added to atom lists
             in the existing Slab and Layer objects. Default is True.
+        num : int or None, optional
+            Progressive number to give to the new atom returned.
+            If not given or None, it is taken from the slab of
+            this Atom. Default is None.
 
         Returns
         -------
         newat : Atom
             The duplicate atom that was created.
         """
-        newat = Atom(self.el, self.pos.copy(), len(self.slab.atlist),
-                     self.slab)
-        if add_to_atlists:
-            self.slab.atlist.append(newat)
-            if self.layer is not None:
-                self.layer.atlist.append(newat)
-                newat.layer = self.layer
-            self.slab.n_per_elem[self.el] += 1
+        if num is None:
+            num = self.slab.n_atoms + 1
+        newat = Atom(self.el, self.pos.copy(), num, self.slab)
+        newat.cartpos = self.cartpos.copy()
         newat.duplicate_of = self
         newat.site = self.site
         newat.dispInitialized = True
         newat.disp_vib = self.disp_vib
         newat.disp_geo = self.disp_geo
         newat.disp_occ = self.disp_occ
-        newat.cartpos = self.cartpos.copy()
+
+        if add_to_atlists:
+            self.slab.atlist.append(newat)                                      # TODO: consider an AtomContainer.add_atom(atom) abstract method!
+            self.slab.n_per_elem[self.el] += 1
+            if self.layer is not None:
+                self.layer.atlist.append(newat)
+                newat.layer = self.layer
         return newat
 
-    def initDisp(self, force=False):
+    def initDisp(self, force=False):                                            # TODO: all the DISP stuff should complain if .is_bulk
         """Initialize displacement dictionaries based on self.site.
 
         This method should not be called before a site has been
@@ -612,18 +619,10 @@ class Atom:                                                                     
         """
         if isinstance(cartpos, Atom):
             cartpos = cartpos.cartpos[:2]
-        abt = self.slab.ucell[:2, :2].T
-        complist = [self.cartpos[0:2]]
-        # if we're close to an edge or corner, also check translations:
-        for j in range(0, 2):
-            releps = eps / np.linalg.norm(abt[j])
-            if abs(self.pos[j]) < releps:
-                complist.append(self.cartpos[0:2]+abt[j])
-            if abs(self.pos[j]-1) < releps:
-                complist.append(self.cartpos[0:2]-abt[j])
-        if len(complist) == 3:
-            # corner - add the diagonally opposed one
-            complist.append(complist[1]+complist[2]-complist[0])
+        abt = self.slab.ab_cell.T
+        releps = eps / np.linalg.norm(abt, axis=1)
+        complist, _ = add_edges_and_corners([self.cartpos[:2]], (self.pos,),
+                                            releps, abt)
         return any(np.linalg.norm(cartpos - complist, axis=1) < eps)
 
     def mergeDisp(self, el):

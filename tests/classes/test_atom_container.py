@@ -74,10 +74,9 @@ class TestAtomList:
     def test_count(self, strict, expected_counts, make_atomlist):
         """Ensure atom counts are as expected."""
         first, second, _ = all_atoms = THREE_ATOMS()
-        if strict:
-            atoms = first, second
-        else:
-            atoms = first, second, first
+        atoms = first, second
+        if not strict:
+            atoms += (first,)
         atom_list = make_atomlist(*atoms, strict=strict)
         counts = tuple(atom_list.count(at) for at in all_atoms)
         assert counts == expected_counts

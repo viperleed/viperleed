@@ -3,33 +3,18 @@
 POSCAR
 ======
 
-A POSCAR file describes the structure: The unit cell, the atom types 
-(and the number of atoms for each type), and their coordinates. Note 
-that the atom names in a POSCAR file ("POSCAR elements") need not be 
-actual chemical elements (as given in the periodic table). See 
-:ref:`element name collision<ElementNameCollision>`  for the distinction
-between POSCAR elements and chemical elements, and the 
-:ref:`ELEMENT_MIX<ELSPLIT>`  and :ref:`ELEMENT_RENAME<ELDEF>` 
-parameters for mapping between POSCAR element names and chemical 
-elements.
+A POSCAR file describes the structure: The unit cell, the atom types (and the number of atoms for each type), and their coordinates. Note that the atom names in a POSCAR file ("POSCAR elements") need not be actual chemical elements (as given in the periodic table). See :ref:`element name collision<ElementNameCollision>`  for the distinction between POSCAR elements and chemical elements, and the :ref:`ELEMENT_MIX<ELSPLIT>`  and :ref:`ELEMENT_RENAME<ELDEF>` parameters for mapping between POSCAR element names and chemical elements.
 
-The POSCAR file format is the same as used in VASP input, and can be 
+The POSCAR file format is the same as used in VASP input, and can be
 exported directly from VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011` (File -> Export Data -> file type 'VASP (POSCAR;*.vasp)' -> Fractional coordinates).
-The atoms in the POSCAR file are ordered by element, but otherwise, their order does not matter. In the data lines containing coordinates, only the first three columns are read by ViPErLEED, so anything to the right will be ignored. POSCAR files with "Cartesian" coordiantes will be accepted, but ViPErLEED uses fractional ("Direct") coordinates in all output files, so it is recommended to follow this convention in the input as well.
+The atoms in the POSCAR file are ordered by element, but otherwise, their order does not matter. In the data lines containing coordinates, only the first three columns are read by ViPErLEED, so anything to the right will be ignored. POSCAR files with "Cartesian" coordinates will be accepted, but ViPErLEED uses fractional ("Direct") coordinates in all output files, so it is recommended to follow this convention in the input as well.
 
 **See also:** `POSCAR in the VASP wiki <https://www.vasp.at/wiki/index.php/POSCAR>`__
 
-ViPErLEED has some requirements concerning the orientation of the 
-structure in the POSCAR file. The first two unit cell vectors a and b 
-must be parallel to the surface plane, i.e. their z component 
-(perpendicular to the surface) must be zero. The third unit cell vector 
-c must have a non-zero component in the z direction, but does not 
-necessarily have to be perpendicular to the surface. Slabs must be 
-asymmetric, with +z pointing away from the surface and the lowest-lying 
-layers (i.e. smallest z coordinates) bulk-like.
+ViPErLEED has some requirements concerning the orientation of the structure in the POSCAR file. The first two unit cell vectors a and b must be parallel to the surface plane, i.e. their z component (perpendicular to the surface) must be zero. The third unit cell vector c must have a non-zero component in the z direction, but does not necessarily have to be perpendicular to the surface. Slabs must be asymmetric, with +z pointing away from the surface and the lowest-lying layers (i.e. smallest z coordinates) bulk-like.
 
-After the TLEEDM :ref:`initialization` is run for the first time, the 
-original POSCAR file will be copied to POSCAR_user. The following 
+After the TLEEDM :ref:`initialization` is run for the first time, the
+original POSCAR file will be copied to POSCAR_user. The following
 changes are then made to POSCAR:
 
 -  The unit cell will be simplified to a higher-symmetry / lower-circumference form, if possible. If this happens, a warning will appear in the log together with the transformation matrix.
@@ -45,13 +30,8 @@ Comment lines
 
 The POSCAR file contains the following **comment lines** after initialization:
 
--  **Plane group**: planar symmetry group of the slab. 
-   If :ref:`SYMMETRY_FIX<ISYM>`  is used to select a certain group, 
-   this will be indicated, while the full symmetry of the slab is 
-   mentioned in brackets. In the AUXPOSCAR_oricell file, this is 
-   prepended by stars, since the original cell might not display the 
-   correct symmetry. See also the :ref:`list of planegroups below<planegroups>`,
-   or |click|.
+-  **Plane group**: planar symmetry group of the slab.
+   If :ref:`SYMMETRY_FIX<ISYM>` is used to select a certain group, this will be indicated, while the full symmetry of the slab is mentioned in brackets. In the POSCAR_oricell file, this is prepended by stars, since the original cell might not display the correct symmetry. See also the :ref:`list of planegroups below<planegroups>`, or |click|.
 
 The atoms are then listed one per line, grouped by element.
 For each atom the following information is given:
@@ -94,6 +74,24 @@ POSCAR_OUT
 ----------
 
 After executing a search, a POSCAR_OUT file will be produced in the OUT folder. This takes the same format as the POSCAR file after intialization, and the new positions are those of the best-fit structure found during the search (i.e. corresponding to the lowest R-factor).
+
+
+.. _poscar_vacuum_corrected:
+
+POSCAR_vacuum_corrected
+-----------------------
+
+A **POSCAR_vacuum_corrected** file is provided (in folder SUPP) if the original POSCAR file does not have a suitable vacuum gap (> 5 Å) between its topmost and (a **c**-periodic replica of its) bottommost atom. The following POSCAR input files will be considered unsuitable for ViPErLEED:
+
+* The vacuum gap is somewhere in the middle. This means that there are multiple atoms above a large (> 5 Å) vacuum gap. A typical example is a 'symmetric' slab centred at :math:`c=0`;
+* There are atoms very close (:math:`< 1\times10^{-4}` in fractional coordinates) to both :math:`c=0` and :math:`c=1`.
+
+In these cases, the POSCAR_vacuum_corrected file may be used as a starting point to produce an acceptable input POSCAR for a subsequent run.
+
+.. note::
+    When preparing a new set of input files from POSCAR_vacuum_corrected, be careful to adapt any :ref:`PARAMETERS<parameters>` that are defined as fractions of the unit-cell c vector (e.g., :ref:`LAYER_CUTS<CTRUNC>`, :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`, :ref:`BULK_REPEAT<BULK_REPEAT>`).
+
+A POSCAR file with a gap smaller than 5 Å will not cause ViPErLEED to stop, but a POSCAR_vacuum_corrected file is nonetheless generated. It can be used, e.g., to judge the appropriate identification of which atoms are at the top and which ones belong to the bulk-like portion of the input POSCAR.
 
 
 .. _planegroups:

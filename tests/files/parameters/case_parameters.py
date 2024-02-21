@@ -21,14 +21,37 @@ from viperleed.calc.classes.rparams import LMax
 from viperleed.calc.files import parameters
 
 from ...helpers import TestInfo, CaseTag
-from ...poscar_slabs import POSCARS_WITHOUT_INFO, AG_100
+from ...poscar_slabs import POSCARS_WITHOUT_INFO
+from ...poscar_slabs import CasePOSCARSlabs, get_info_by_name
 # pylint: enable=wrong-import-position
 
 
+def _get_poscar_info(name):
+    """Return a POSCAR info from a multitude of possible sources."""
+    try:
+        return get_info_by_name(name)
+    except StopIteration:  # Not one of those in the default container
+        pass
+
+    # See if there's an explicit case with that name
+    try:
+        case_func = getattr(CasePOSCARSlabs(), name)
+    except AttributeError:
+        pass
+    else:
+        *_, info = case_func()
+        return info
+
+    try:
+        return get_info_by_name(name, container=POSCARS_WITHOUT_INFO)
+    except StopIteration:  # Also not one without info
+        pass
+    raise ValueError(f'{name!r} not found in poscar_slabs')
+
+
 _POSCAR_INFO = {
-    'Ag': AG_100,
-    'Ir': next(info for info in POSCARS_WITHOUT_INFO
-               if info.poscar.name.endswith('Ir(100)-(2x1)-O')),
+    'Ag': _get_poscar_info('case_poscar_ag100'),
+    'Ir': _get_poscar_info('Ir(100)-(2x1)-O'),
     }
 _READ = {
     'Ag': {'V0_IMAG': 5.0, 'THEO_ENERGIES': [50, 350, 3],

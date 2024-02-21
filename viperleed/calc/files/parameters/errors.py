@@ -28,6 +28,10 @@ class ParameterError(Exception):
         super().__init__(_message)
 
 
+class InconsistentParameterError(ParameterError):
+    """A user parameter conflicts with the one derived by us."""
+
+
 class MissingEqualsError(ParameterError):
     """A known parameter is present on a line without an '='."""
 

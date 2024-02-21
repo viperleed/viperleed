@@ -25,7 +25,7 @@ class LayerHasNoAtomsError(LayerError):
     """Operation cannot be performed as the layer is empty."""
 
 
-class Layer(AtomContainer):                                                     # TODO: modify description of .cartori when flipping .cartpos[2]
+class Layer(AtomContainer):                                                     # TODO: modify description of .cartori when flipping .cartpos[2] -- Issue #174
     """A container of atoms residing close to one another along z.
 
     This is intended to be used with Slab objects. Has origin, atoms
@@ -106,16 +106,14 @@ class Layer(AtomContainer):                                                     
         botat = sorted_atoms[0]
 
         self.cartbotz = botat.cartpos[2]
-
-        c_vec = self.slab.ucell.T[2]
-        self.cartori = topat.pos[2] * c_vec
-        # So far x and y are correct, but z is still in the wrong               # TODO: this will not be necessary when we flip .cartpos[2]
+        self.cartori = topat.pos[2] * self.slab.c_vector
+        # So far x and y are correct, but z is still in the wrong               # TODO: this will not be necessary when we flip .cartpos[2] -- Issue #174
         # direction and with origin as POSCAR. Take the z directly
         # from the highest atom
         self.cartori[2] = topat.cartpos[2]
 
 
-class SubLayer(Layer):                                                          # TODO: modify description of .cartori when flipping .cartpos[2]
+class SubLayer(Layer):                                                          # TODO: modify description of .cartori when flipping .cartpos[2] -- Issue #174
     """A Layer with the same chemical element and the same z position.
 
     Attributes

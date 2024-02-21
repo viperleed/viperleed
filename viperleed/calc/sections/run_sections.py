@@ -139,7 +139,7 @@ def run_section(index, sl, rp):
                 _not_found = not isinstance(exc, FileNotFoundError)
                 logger.error("Error while reading required file VIBROCC",
                              exc_info=_not_found)
-            sl.fullUpdate(rp)
+            sl.full_update(rp)
             if changeVIBROCC:
                 if os.path.isfile("VIBROCC"):
                     os.rename("VIBROCC", "VIBROCC_user")
