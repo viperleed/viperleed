@@ -3,29 +3,49 @@
 Hematite (012)-(1×1)
 ====================
 
-Hematite (:math:`\alpha \text{-Fe}_2\text{O}_3`) is a very common iron oxide and a popular model system for (single-atom) catalysis :cite:p:`kraushoferAtomicscaleStructureHematite2018,franceschiModelSystemPhotocatalysis2020`.
-The :math:`(1\bar{1}02)` surface (also referred to as :math:`(012)`) exhibits two stable terminations under :term:`UHV` conditions: a stoichiometric (1×1) bulk-truncated termination, and a reduced (2×1) reconstruction :cite:p:`kraushoferAtomicscaleStructureHematite2018`.
-Here we use the bulk-truncated (1×1) surface as an example system of a "medium complexity" oxide surface and will compare experimental LEED :math:`I(V)` data with a theory calculation.
+Hematite (:math:`\alpha \text{-Fe}_2\text{O}_3`) is the one of them most common
+naturally occurring iron oxides. Its surfaces are popular model
+systems for (single-atom) catalysis
+:cite:p:`kraushoferAtomicscaleStructureHematite2018,franceschiModelSystemPhotocatalysis2020`,
+photocatalysis and the study of mineral-water interfaces.
 
+The :math:`(1\bar{1}02)` surface (also referred to as :math:`(012)`, or r-cut)
+exhibits two stable terminations under :term:`UHV` conditions: a stoichiometric
+(1×1) bulk-truncated termination, and a reduced (2×1) reconstruction
+:cite:p:`kraushoferAtomicscaleStructureHematite2018`.
+Here we use the bulk-truncated (1×1) surface as an example system of a "medium
+complexity" oxide surface and will compare experimental LEED :math:`I(V)` data
+with a theory calculation in ViPErLEED.
 
-All input files needed to follow along on your own machine can be found :download:`here</_static/example_systems/Fe2O3-(1x1)/input_files.zip>`.
+All input files needed to follow along on your own machine can be found
+:download:`here</_static/example_systems/Fe2O3-(1x1)/input_files.zip>`.
 
 .. tip:: 
-   If you are new to ViPErLEED, check out :ref:`this tutorial<example_ag_100>` first, which explains the basics in more detail.
+   If you are new to ViPErLEED, check out :ref:`this tutorial<example_ag_100>`
+   first, which explains how to set up a calculation in more detail.
 
 Introduction
 ============
 
-We start from experimental data [#]_ stored in an :ref:`EXPBEAMS.csv file<expbeams>`.
-On the calculation side, we need to start from a structure model of the (1×1) surface in the POSCAR format, which we can build this ourselves from a (:math:`\alpha \text{-Fe}_2\text{O}_3`) bulk structure.
-For this example, we use a structure by :cite:t:`fingerCrystalStructureIsothermal1980`, which can be found on the `Crystallography Open Database (entry 9000139) <http://www.crystallography.net/cod/9000139.html>`_.
+We start from experimental data [#]_ stored in an
+:ref:`EXPBEAMS.csv file<expbeams>`.
+On the calculation side, we need to start from a structure model of the (1×1)
+surface in the POSCAR format, which we can build this ourselves from a
+(:math:`\alpha \text{-Fe}_2\text{O}_3`) bulk structure.
+For this example, we use a structure by
+:cite:t:`fingerCrystalStructureIsothermal1980`, which can be found on the
+`Crystallography Open Database (entry 9000139) <http://www.crystallography.net/cod/9000139.html>`_.
 
 .. warning:: 
     Bulk structures can be found in various online databases, but you should be careful to choose a model with the correct **experimental** lattice parameters (as determined by :term:`XRD`).
-    Lattice parameters from e.g. :term:`DFT` calculations may be off by ~1%, which will strongly affect the R-factor.
-    The lattice parameters are not accessible in the :ref:`tensor LEED approximation<tensor_leed>`, but they can be optimized in a :ref:`full-dynamic optimization<fdoptimization>`.
+    Lattice parameters from e.g. :term:`DFT` calculations may be off by ~1%,
+    which will strongly affect the R-factor.
+    The lattice parameters are not accessible in the
+    :ref:`tensor LEED approximation<tensor_leed>`, but they can be optimized in
+    a :ref:`full-dynamic optimization<fdoptimization>`.
 
-To go from the rhombohedral bulk unit cell (fig. ??) to the unit cell for the :math:`(1\bar{1}02)` (r-cut) surface (fig ??), we need to apply a suitable change of basis:
+To go from the rhombohedral bulk unit cell to the unit cell for the
+:math:`(1\bar{1}02)` (r-cut) surface, we need to apply a suitable change of basis:
 
 .. math::
     (a', b', c') = (a,b,c) P
@@ -36,32 +56,40 @@ To go from the rhombohedral bulk unit cell (fig. ??) to the unit cell for the :m
                         0 & -1 & 1
                      \end{pmatrix}
 
-To create a suitable surface slab (as expected by ViPErLEED), we can then replicate the unit cell along :math:`\vec{c}` and (optionally) remove the topmost layer to create a vacuum interface.
+To create a suitable surface slab (as expected by ViPErLEED), we can then
+replicate the unit cell along :math:`\vec{c}` and (optionally) remove the
+topmost layer to create a vacuum interface.
 
-.. note:: 
-For this system, we also use an existing :ref:`PHASESHIFTS file<phaseshifts>` and place it in the directory.
-This file contains phaseshifts calculated for bulk ferrous oxide (:math:`\text{FeO}`), which the authors have found to perform better than the automatically generated phaseshifts for the case of hematite. **TODO Michele/Florian: any physical explanation for this?**
 
 PARAMETERS
 ==========
 
-As in pervious examples, we begin with a simple :ref:`PARAMETERS file<parameters>`:
+As in pervious examples, we begin with a simple
+:ref:`PARAMETERS file<parameters>`:
 
 .. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/PARAMETERS
    :language: console
    :caption: PARAMETERS
 
-The options concerning global parameters and the :ref:`VIBROCC file<viboccin>` have been discussed in detail elsewhere (see e.g. :ref:`here<example_ag_100>`).
+The options concerning global parameters and the :ref:`VIBROCC file<viboccin>`
+have been discussed in detail elsewhere (see e.g. :ref:`here<example_ag_100>`).
 Note, however, the parameters concerning the structure interpretation.
-To let ViPErLEED know what we consider bulk structure, we define the parameters :ref:`BULK_REPEAT` and :ref:`N_BULK_LAYERS`.
-Alternatively, we could also specify the parameter :ref:`BULK_LIKE_BELOW` with a suitable value (for the given POSCAR file 0.2 would work).
+To let ViPErLEED know what we consider bulk structure, we define the parameters
+:ref:`BULK_REPEAT` and :ref:`N_BULK_LAYERS`.
+Alternatively, we could also specify the parameter :ref:`BULK_LIKE_BELOW` with a
+suitable value (for the given POSCAR file 0.2 would work).
 
-We then use the :ref:`SITE_DEF<sitedef>` parameter to define which sites should be treated separately by ViPErLEED.
+We then use the :ref:`SITE_DEF<sitedef>` parameter to define which sites should
+be treated separately by ViPErLEED.
 In this case, we declare two ``surface`` sites each for iron and oxygen.
-In the case of hematite, we know (from experience) that we also want the other atoms in the first stoichiometric :math:`\text{Fe}_2\text{O}_3` layer to be treated differently.
-We therefore further specify two types of ``sub``surface types for oxygen and one such type for iron.
+In the case of hematite, we know (from experience) that we also want the other
+atoms in the first stoichiometric :math:`\text{Fe}_2\text{O}_3` layer to be
+treated differently.
+We therefore further specify two types of ``sub``surface types for oxygen and
+one such type for iron.
 
-Let's run the initialization to check if all input files are interpreted correctly.
+Let's run the initialization to check if all input files are interpreted
+correctly.
 If so, the :ref:`log<log_files_tleedm>` should look similar to this:
 
 .. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/log_init.txt
@@ -77,5 +105,10 @@ Full-dynamic Optimization
 =========================
 
 
+.. [#] The data was obtained by Alexander M. Imre and Michele Riva, with further
+support provided by Florian Kraushofer, Giada Franceschi, Tilman Kißlinger and
+Lutz Hammer.
 
-.. [#] The data was obtained by Alexander M. Imre and Michele Riva, with further support provided by Florian Kraushofer, Giada Franceschi, Tilman Kißlinger and Lutz Hammer. **TODO** add ORCID?; **TODO** refer to ViPErLEED paper where we put it as SI (if that is still the plan?)
+**TODO** add ORCID?
+
+**TODO** refer to the ViPErLEED paper
