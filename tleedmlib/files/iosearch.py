@@ -1045,7 +1045,7 @@ def _read_control_chem(control_chem_path,
             return control_lines
         elif n_control_lines > expected_lines:
             raise RuntimeError(f"Expected at maximum {expected_lines} lines "
-                               "in control.chem, but found {n_control_lines}.")
+                               f"in control.chem, but found {n_control_lines}.")
         time.sleep(sleep_time/1000)  # in milliseconds
     raise SearchIORaceConditionError("Could not read complete "
                                      "control.chem file")
