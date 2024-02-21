@@ -18,12 +18,12 @@ try:
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
+    plt.style.use('viperleed.tleedm')
     from matplotlib import cm
-    matplotlib.rcParams["mathtext.default"] = "regular"
 except Exception:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
 
 from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
 from viperleed.tleedmlib.files.ivplot import plot_iv
@@ -94,8 +94,8 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
 
     """
 
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "error plotting.")
         return
@@ -120,8 +120,9 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
         ylims = (min(points[:, 1]), max(points[:, 1]))   # data range y
         namePos = ((xlims[1] + xlims[0])*0.5,
                    ylims[1] - 0.1*(ylims[1] - ylims[0]))
-        ax.annotate("Minimum at {:.4f}\nR = {:.4f}".format(p_min, p_r),
-                    namePos, fontsize=10, ha="center")
+        if coefs[2] > 0:
+            ax.annotate("Minimum at {:.4f}\nR = {:.4f}".format(p_min, p_r),
+                        namePos, fontsize=10, ha="center")
     ax.plot(points[:, 0], points[:, 1], 'o', c='darkslategray')
     fig.tight_layout()
 
@@ -174,8 +175,8 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
 
     """
 
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "error plotting.")
         return

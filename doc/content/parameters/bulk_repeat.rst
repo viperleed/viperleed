@@ -3,7 +3,12 @@
 BULK_REPEAT
 ===========
 
-BULK_REPEAT defines how the bulk layers (as defined by :ref:`LAYER_CUTS<CTRUNC>`  and :ref:`N_BULK_LAYERS<BLAY>`) are repeated after reaching the bottom of the :ref:`POSCAR file<POSCAR>`. If the **c** vector of the POSCAR is oriented parallel to a bulk repeat vector, BULK_REPEAT can be defined simply as a bulk "layer thickness" (which may be equivalent to step height). Note that the :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`  parameters offers an easy way to detect the bulk repeat unit automatically.
+BULK_REPEAT defines how the bulk layers (as defined by :ref:`LAYER_CUTS<CTRUNC>`  and :ref:`N_BULK_LAYERS<BLAY>`) are repeated after reaching the bottom of the :ref:`POSCAR file<POSCAR>`. If the **c** vector of the POSCAR is oriented parallel to a bulk repeat vector, BULK_REPEAT can be defined simply as a bulk "layer thickness" (which may be equivalent to step height). Note that the :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` parameter offers an easy way to detect the bulk repeat unit automatically.
+
+.. note::
+
+   If :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` is defined, BULK_REPEAT and :ref:`N_BULK_LAYERS<BLAY>` can be automatically detected from the :ref:`POSCAR<POSCAR>` file.
+   The :ref:`PARAMETERS<parameters>` file will automatically be updated accordingly.
 
 **Default:** Detected automatically from :ref:`POSCAR<POSCAR>`  and :ref:`N_BULK_LAYERS<BLAY>`: If as many non-bulk layers as bulk layers are "bulk-like" (i.e. unrelaxed), automatically detects the minimal repeat vector. Otherwise, assumes that the bulk repeat vector is parallel to **c** and defines BULK_REPEAT as a bulk layer thickness. This is done by detecting the cartesian distance in z direction between bottom atom in bottom bulk layer and bottom atom in bottom non-bulk layer.
 
@@ -31,6 +36,7 @@ Depending on your initial POSCAR file, three cases can be distinguished:
 
 When defining BULK_REPEAT manually as a single float value, a definition in *cartesian coordinates* will be interpreted as a bulk thickness, i.e. along z. The bulk layers will be repeated along c such that their total "thickness" (including spacing) equals the defined value. If the value is given as ``c(value)``, i.e. in fractional coordinates, the bulk layers will simply be repeated along c, with the value again defining the total "thickness" of a bulk repeat unit.
 
-When BULK_REPEAT is defined in vector form, the vector does not have to be parallel to c. The given repeat vector defines how each individual atom should be displaced to get the repeat unit. The vector can point either up or down, but note that it is defined in *coordinates as in the :ref:`POSCAR file<POSCAR>` *, that is with **c** *pointing out of the surface*.
+When BULK_REPEAT is defined in vector form, the vector does not have to be parallel to c. The given repeat vector defines how each individual atom should be displaced to get the repeat unit.
+The vector can point either up or down, but note that it is defined in coordinates as in the :ref:`POSCAR file<POSCAR>`, that is with **c** *pointing out of the surface*.
 
 **Note:** If BULK_REPEAT is not defined, the calculated value will be written to the :ref:`PARAMETERS<PARAMETERS>`  file during the initialization to ensure that in future runs, the bulk repeat value is conserved even if the bottom-most non-bulk layers are varied.

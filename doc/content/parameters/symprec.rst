@@ -17,5 +17,3 @@ SYMMETRY_EPS defines the minimum distance (in angstrom) that is used to determin
 **Acceptable values**: One or two floating point values greater than 0. A warning will be displayed for values > 1.0
 
 For atoms that are recognized as symmetry-equivalent within SYMMETRY_EPS, atomic positions will be averaged during initialization to fully reflect that symmetry. The choice of SYMMETRY_EPS, in combination with :ref:`SYMMETRY_FIX<ISYM>`, will therefore determine how strongly the atom positions in the :ref:`POSCAR<POSCAR>`  file are modified during initialization. You can use :ref:`SYMMETRIZE_INPUT<SYMMETRY_NOMOVE>`  to suppress symmetrization.
-
-**TODO**: accept also "``_ float``" and "``float _``" to use the default for one and change the other. <I think this is not really necessary -ms>

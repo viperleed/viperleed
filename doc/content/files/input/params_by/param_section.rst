@@ -3,11 +3,8 @@
 List of parameters by section
 =============================
 
-This page lists parameters for ViPErLEED by which section of 
-ViPErLEED/TensErLEED they are (most) relevant for. Parameters may occur 
-multiple times, and not all parameters are listed.
-See the :ref:`main PARAMETERS page<PARAMETERS>`  for a complete 
-alphabetical list and other groupings.
+This page lists parameters for ViPErLEED by which section of ViPErLEED/TensErLEED they are (most) relevant for. Parameters may occur multiple times, and not all parameters are listed.
+See the :ref:`main PARAMETERS page<PARAMETERS>` for a complete alphabetical list and other groupings.
 
 .. note::
     While all parameters have a default value, parameters marked with a 
@@ -189,8 +186,6 @@ Behaviour is also governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`. The 
   | :ref:`LOG_SEARCH<LOG_SEARCH>`                  | Output the search log file (may be very large, mostly for debugging)                             |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
   | **→** :ref:`N_CORES<NCORES>`                   | The number of CPUs to use                                                                        |
-  +------------------------------------------------+--------------------------------------------------------------------------------------------------+
-  | :ref:`PARABOLA_FIT<PARABOLA_FIT>`              | Parameters for N-dimensional parabola fit during the search                                      |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+
   | :ref:`R_FACTOR_TYPE<RFACTORTYPE>`              | Which definition of the R-factor to use                                                          |
   +------------------------------------------------+--------------------------------------------------------------------------------------------------+

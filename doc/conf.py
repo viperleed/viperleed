@@ -12,7 +12,7 @@ import sphinx_rtd_theme
 project = 'ViPErLEED'
 copyright = f'{datetime.date.today().year}, ViPErLEED-developers'
 author = 'ViPErLEED-developers'
-release = '0.7.2'
+release = '0.11.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -26,11 +26,14 @@ extensions = [
               'sphinx.ext.intersphinx',
               'sphinx_rtd_theme',
               'sphinxcontrib.bibtex',       # to use .bib files for bibliography
+              'sphinxcontrib.inkscapeconverter', # for SVG images
               'sphinxcontrib.spelling',     # spell checking for the docs ;)
               'myst_nb',                    # for including Jupyter notebooks
               ]
 
 source_suffix = '.rst'
+
+numfig = True # enumerate figures
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
@@ -71,17 +74,22 @@ html_css_files = [
 
 # -- Options for LaTeX output ------------------------------------------------
 # https://www.sphinx-doc.org/en/master/latex.html
+latex_engine = 'xelatex'
+nb_output_stderr = "remove-warn" # remove matplotlib user warnings
 latex_show_urls = 'inline'
 latex_show_pagerefs = False # show page numbers
+inkscape_converter_args = ['--export-area-page']
 latex_elements = {
     'papersize': 'a4paper',
     'passoptionstopackages': r'\PassOptionsToPackage{svgnames}{xcolor}',
+    'figure_align': 'H', # Latex figure (float) alignment
     'preamble': r'''
     \usepackage{braket}
     \usepackage[overlay,absolute]{textpos}% for header in PDF screen version
     \usepackage{everypage}
     \usepackage{newunicodechar}
     \newunicodechar{α}{$\alpha$}
+    \newunicodechar{Δ}{$\Delta$}
     
     \textblockorigin{28mm}{16.5mm} % position x,y wrt top-left corner of page
     %\setlength{\TPHorizModule}{\pdfpagewidth} % text block width = page width

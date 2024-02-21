@@ -14,7 +14,7 @@ performs the name-giving superposition, i.e. summing up of delta-amplitudes
 to a final set of beam-amplitudes and intensities.
 Then, it generates an output of theoretical beams in the same format as yielded by the
 :ref:`refercence Calculation<ref-calc>` (see :ref:`file FITBEAMS<fitbeams>`).
-Finall, an R-factor is calculated based on this file and the files :ref:`Rfactor_plots_superpos.pdf<rfactorplots>` and :ref:`Rfactor_analysis_superpos.pdf<rfactoranalysis>` are produced.
+Finall, an R-factor is calculated based on this file and the files :ref:`Rfactor_plots_superpos.pdf<rfactorplots>` and :ref:`Rfactor_analysis_superpos.pdf<rfactoranalysis>` are produced (see the corresponding sections for details/examples).
 
 .. note::
     It is recommended to run another reference calculation for the final

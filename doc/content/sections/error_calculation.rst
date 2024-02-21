@@ -5,11 +5,8 @@ Error calculations
 
 Once a best-fit structure has been determined, it is useful to see how 
 strongly small changes to specific parameters affect the R-factor. 
-In the error calculation, displacements (given by the 
-:ref:`DISPLACEMENTS file<DISPLACEMENTS>`) are applied one parameter at a 
-time, and the R-factor is output for each step of the variation range. 
-If multiple parameters are linked (e.g. by symmetry), these parameters are 
-treated as one, and varied together.
+In the error calculation, displacements (given by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`) are applied to one parameter at a time, and the R-factor is output for each step of the variation range.
+If multiple parameters are linked (e.g. by symmetry), these parameters are treated as one, and varied together.
 
 To run the error calculation, set :ref:`RUN<run>` as ``RUN = 5`` in the 
 :ref:`PARAMETERS<PARAMETERS>` file. It is recommended to first run a 
@@ -55,6 +52,5 @@ The results of the error calculation will be output into the files :ref:`Errors.
        can be strongly correlated :cite:p:`blumSegregationOrderingFe12001`.
        In such a case, the increase of the R factor when changing one of 
        these parameters is not a good indication for the error of that parameter.
-
-
-**TODO - Florian** : Are there any cases where this is not possible? (e.g., mixed atoms with different displacements)
+    -  Simultaneous geometrical/vibrational variation of multiple chemical elements occupying the same site is possible, and the displacement ranges for the different elements may differ.
+       However, all displacement ranges must have the same length.

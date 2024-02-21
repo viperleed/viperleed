@@ -15,9 +15,8 @@ logger = logging.getLogger("tleedm.files.patterninfo")
 def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):
     """Writes a PatternInfo file that can be used by the TLEEDMAP GUI utility
     to display the expected LEED pattern and show beam labelling."""
-    output = "eMax = {:.2f}\n".format(rp.THEO_ENERGIES[1])
-    mstring = "[[{}, {}], [{}, {}]]".format(sl.ucell[0, 0], sl.ucell[1, 0],
-                                            sl.ucell[0, 1], sl.ucell[1, 1])
+    output = f"eMax = {rp.THEO_ENERGIES.max:.2f}\n"
+    mstring = "[[{}, {}], [{}, {}]]".format(*sl.ab_cell.T.ravel())
     output += "surfBasis = "+mstring+"\n"
     mstring = ("[[{:.0f}, {:.0f}], [{:.0f}, {:.0f}]]"
                .format(rp.SUPERLATTICE[0, 0], rp.SUPERLATTICE[0, 1],
@@ -32,7 +31,7 @@ def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):
         logger.error("PatternInfo.tlm: bulk slab has not been initialized.")
         raise RuntimeError("writePatternInfo called without bulk slab.")
     output += "bulkGroup = "+sl.bulkslab.foundplanegroup+"\n"
-    output += "bulk3Dsym = "+sl.bulkslab.getBulk3Dstr()
+    output += "bulk3Dsym = "+sl.bulkslab.get_bulk_3d_str()
     # write output
     try:
         with open(filename, 'w') as wf:

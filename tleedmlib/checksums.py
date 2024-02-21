@@ -30,6 +30,8 @@ KNOWN_TL_VERSIONS = (
     "1.72",
     "1.73",  # TODO: use Version when available
     "1.74",
+    "1.75",
+    "1.76",
     "1.8",
 )
 
@@ -186,6 +188,11 @@ def get_file_checksum(file_path):
         )
     with file_path.open(mode="rb") as open_file:
         content = open_file.read()
+    # Make sure we always have '\n' for line endings, and not '\r\n'.
+    # The latter seems to appear in files synced with git on Windows:
+    # line endings are automatically changed with the default
+    # git/GitHub Desktop configuration.
+    content = content.replace(b'\r\n', b'\n')
     return hashlib.sha256(content).hexdigest()
 
 
@@ -349,9 +356,9 @@ def decode_checksums(encoded_checksums):
             MemoryError, RecursionError,
             SyntaxError, UnicodeDecodeError) as err:
         raise InvalidChecksumFileError(
-            "Looks like the TensErLEED source checksum file "
-            "has been tampered with!"
-        ) from err
+            "Looks like the TensErLEED source "
+            "checksum file has been tampered with!"
+            ) from err
 
 
 def read_encoded_checksums(encoded_file_path=None):
@@ -415,11 +422,11 @@ def _add_checksums_for_dir(path,
     Parameters
     ----------
     path : str, or path-like
-        Directory contaning the files. Typically one of the
+        Directory containing the files. Typically one of the
         "TensErLEED-vXXX" directories in tensorleed.
     checksum_dict_ : dict
-        Checksums dict to start with. Should be {path:{checksums}}.
-        New checksums will be appended to existing values.
+        Checksums dict to start with. Should be {path: {checksums}}.
+        New checksums will be added to existing values.
         Modified in place.
     patterns : tuple of str, optional
         File patterns used to select files (e.g., extension).
@@ -435,7 +442,7 @@ def _add_checksums_for_dir(path,
     for pattern in patterns:
         for file in path.glob(pattern):
             checksum = get_file_checksum(file)
-            key = str(file.relative_to(base_path))
+            key = str(file.relative_to(base_path).as_posix())
             if key not in checksum_dict_:
                 checksum_dict_[key] = set()
             checksum_dict_[key].add(checksum)
@@ -485,9 +492,9 @@ def _parse_args(args):
     if not args.no_append:
         try:
             checksum_dict = read_encoded_checksums()
-        except (FileNotFoundError, InvalidChecksumFileError) as err:
-            warn("Could not read _checksums.dat file. Creating a new one. "
-                 f"Info: {err}")
+        except (FileNotFoundError, InvalidChecksumFileError) as exc:
+            warn("Could not read _checksums.dat file. "
+                 f"Creating a new one. Info: {exc}")
 
     return tl_base_path, tl_folders, checksum_dict
 
@@ -530,7 +537,7 @@ else:  # Write new checksum file when executed as a module
         if version_ not in KNOWN_TL_VERSIONS:
             raise UnknownTensErLEEDVersionError(
                     f"Unknown TensErLEED version {version_} in {_tl_base_path}"
-            )
+                    )
         _add_checksums_for_dir(folder, _checksum_dict)
 
     # write to file

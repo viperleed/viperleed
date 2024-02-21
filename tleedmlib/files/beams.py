@@ -8,16 +8,19 @@ Functions for reading and writing beams files: BEAMLIST, IVBEAMS, EXPBEAMS,
 AUXEXPBEAMS
 """
 
-import logging
-import numpy as np
-import re
-import os
-from viperleed import fortranformat as ff
 import copy
 from io import StringIO
+import logging
+import os
+import re
 
-import viperleed.tleedmlib as tl
+import fortranformat as ff
+import numpy as np
+
 from viperleed.guilib import project_to_first_domain
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import parseMathSqrt
+from viperleed.tleedmlib.classes.beam import Beam
 
 logger = logging.getLogger("tleedm.files.beams")
 
@@ -25,6 +28,8 @@ logger = logging.getLogger("tleedm.files.beams")
 def averageBeams(beams, weights=None):
     """Takes a list of parcentages and a list of lists of Beam objects.
     Returns a new list of Beam obects with weighted averaged intensities."""
+    if beams is None:
+        raise ValueError("averageBeams: No beams passed.")
     if weights is None or len(weights) == 0:
         weights = [1/len(beams)] * len(beams)
     avbeams = copy.deepcopy(beams[0])
@@ -110,7 +115,7 @@ def readIVBEAMS(filename='IVBEAMS'):
         linenum += 1
     beams = []
     for hk in hklist:
-        beams.append(tl.Beam(hk))
+        beams.append(Beam(hk))
     logger.debug("IVBEAMS file was read successfully")
     return beams
 
@@ -129,7 +134,7 @@ def sortIVBEAMS(sl, rp):
             logger.error("BEAMLIST not found.")
             raise
     err = 1e-3          # since beams are saved as floats, give error tolerance
-    symeq = tl.leedbase.getSymEqBeams(sl, rp)
+    symeq = leedbase.getSymEqBeams(sl, rp)
     # first, get beamlist as floats
     blfs = []
     for line in rp.beamlist:
@@ -162,7 +167,7 @@ def sortIVBEAMS(sl, rp):
                             for ib2 in rp.ivbeams]):
                         found_equivalent.append(ib.label)
                     else:
-                        b = tl.Beam(eqb)
+                        b = Beam(eqb)
                         logger.debug(
                             "Beam " + ib.label + " is not in "
                             "BEAMLIST, renaming to equivalent beam "
@@ -270,7 +275,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
                     logger.error("readOUTBEAMS: Could not parse h/k in "
                                  "label: "+label)
                     return []
-                beams.append(tl.Beam((h, k)))
+                beams.append(Beam((h, k)))
         elif len(line) > 1:
             try:
                 en = float(llist[0])
@@ -348,7 +353,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
 
 def checkEXPBEAMS(sl, rp, domains=False):
     remlist = []
-    symeq = tl.leedbase.getSymEqBeams(sl, rp)
+    symeq = leedbase.getSymEqBeams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue
@@ -401,12 +406,12 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                 sh = m.group("h")   # string h
                 sk = m.group("k")   # string k
                 try:
-                    h = tl.base.parseMathSqrt(sh)
-                    k = tl.base.parseMathSqrt(sk)
+                    h = parseMathSqrt(sh)
+                    k = parseMathSqrt(sk)
                 except Exception:
                     failedToRead = True
                 else:
-                    newbeam = tl.Beam((h, k))
+                    newbeam = Beam((h, k))
                     expbeams.append(newbeam)
             else:
                 failedToRead = True
@@ -428,12 +433,12 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                             return []
                         if hks and len(hks.split()) > 1:
                             try:
-                                h = tl.base.parseMathSqrt(hks.split()[0])
-                                k = tl.base.parseMathSqrt(hks.split()[1])
+                                h = parseMathSqrt(hks.split()[0])
+                                k = parseMathSqrt(hks.split()[1])
                             except Exception:
                                 print("Could not parse h/k")
                             else:
-                                newbeam = tl.Beam((h, k))
+                                newbeam = Beam((h, k))
                                 expbeams.append(newbeam)
                                 break
         elif read and topline:
@@ -460,9 +465,9 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     """Writes an IVBEAMS file based on rp.exbeams. Returns
     those beams in IVBEAMS form."""
     if not domains:
-        d = [tl.leedbase.getLEEDdict(sl, rp)]
+        d = [leedbase.getLEEDdict(sl, rp)]
     else:
-        d = [tl.leedbase.getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+        d = [leedbase.getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
     if any([v is None for v in d]):
         logger.error("Failed to write IVBEAMS")
         return []
@@ -471,9 +476,9 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     if rp.AVERAGE_BEAMS is not False:
         makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams],
                                             *d)
-        ivbeams = [tl.Beam(hk) for hk in makebeams]
+        ivbeams = [Beam(hk) for hk in makebeams]
     else:
-        ivbeams = [tl.Beam(b.hkfrac) for b in rp.expbeams]
+        ivbeams = [Beam(b.hkfrac) for b in rp.expbeams]
     for b in ivbeams:
         output += "{: 10.6f} {: 10.6f}\n".format(b.hk[0], b.hk[1])
     try:

@@ -20,10 +20,11 @@ try:
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
+    plt.style.use('viperleed.tleedm')
 except Exception:
-    plotting = False
+    _CAN_PLOT = False
 else:
-    plotting = True
+    _CAN_PLOT = True
 
 
 def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
@@ -64,8 +65,8 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     None.
 
     """
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         return None
 
     markers = markers or []
@@ -176,6 +177,10 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     else:
         lowbound = rfmin
     rYrange = [lowbound-(rfmax-lowbound)*0.1, rfmax+(rfmax-rfmin)*0.1]
+    if abs(rYrange[1] - rYrange[0]) < 1e-5:
+        same = rYrange[0]
+        rYrange[0] -= 0.05*same
+        rYrange[1] += 0.05*same
     labely = rYrange[0] + (rYrange[1]-rYrange[0])*0.99
     xoff = gens[-1]*0.005
     for (xpos, label) in markers:
@@ -193,7 +198,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     rfp.plot(gens, rfacsMean, label="Mean")
     (x, y, s, c) = list(zip(*rp.rfacscatter))
     rfp.scatter(x, y, s=s, c=c)
-    scatcol = {"all": "black", "dec": "tab:green", "best": "tab:red"}
+    scatcol = {"all": "black", "dec": "tab:blue", "best": "tab:red"}
     labels = {"all": "Changes to any", "dec": "Changes in best 10%",
               "best": "Changes to best"}
     sizes = {"all": 4, "dec": 5, "best": 6}
@@ -298,7 +303,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                             el = par.el
                         else:
                             el = par.atom.el
-                        xlabels.append("#{}\n{}".format(par.atom.oriN, el))
+                        xlabels.append(f'#{par.atom.num}\n{el}')
                         edgetext = ["", ""]
                         if isinstance(par.edges[0], (np.floating, float)):
                             edgetext = [str(round(v, 4)) for v in par.edges]
@@ -481,8 +486,8 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
     None.
 
     """
-    global plotting
-    if not plotting:
+    global _CAN_PLOT
+    if not _CAN_PLOT:
         return None
     allmin = []
     allmax = []
@@ -519,6 +524,11 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
             part = len(allgens) - i
             break
     part = max(50, part)
+
+    # Notice that we take max(mean) rather than max(max) in order
+    # to zoom-in in the interesting region. Using max(max) would
+    # normally obscure this region, as the worst R could be
+    # seriously worse than the mean.
     rfmin, rfmax = min(allmin[-part:]), max(allmean[-part:])
     if rfmax <= rfmin:
         rfmin *= 0.95
@@ -550,6 +560,11 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
             meanline.set_label('Mean parameter \u03C3')    # sigma
             maxline.set_label('Highest parameter \u03C3')  # sigma
             labelled = True
+    # Avoid matplotlib warnings if scattermax remained == 0. This
+    # simply means that the all the individuals in the population
+    # converged to the same configuration.
+    if scattermax <= 1e-5:
+        scattermax = 0.05
 
     # layout
     rfp.set_ylim(rYrange)

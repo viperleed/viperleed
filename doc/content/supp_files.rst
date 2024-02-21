@@ -29,7 +29,7 @@ These files are stored in the ``SUPP`` subfolder of the ``work`` directory.
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
 | Files for user information and troubleshooting                                               |                                                                                           |
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`POSCAR_bulk, POSCAR_bulk_appended, POSCAR_oricell<POSCAR>`                             | Modified POSCAR files to check structure                                                  |
+| :ref:`POSCAR_bulk, POSCAR_bulk_appended, POSCAR_oricell, POSCAR_vacuum_corrected<POSCAR>`    | Modified POSCAR files to check structure                                                  |
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
 | :ref:`searchpars.info<searchparsinfo>`                                                       | Information on search parameters used in the search                                       |
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+

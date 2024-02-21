@@ -511,17 +511,17 @@ C  initialize population here (may change in readsc)
 !  initialize random function 
 !  AMI: changed to do this in Fortran directly, rather than C
 
-      call random_seed(size=seed_size) ! set seed size (= number of random numbers) to 1
-      allocate(seed(seed_size)) ! allocate size = 1
-
-      if (INIT == 0) then
-            seed = time()
-      else
-            seed = INIT
-      end if
 
       ! seed random number generator
-      call random_seed(put=seed)
+      if (INIT == 0) then
+            call random_seed()
+      else
+            call random_seed(size=seed_size) ! set seed size (= number of random numbers) to 1
+            allocate(seed(seed_size)) ! allocate size = 1
+            seed = INIT
+            call random_seed(put=seed)
+      end if
+
 
 C Modul 1: READIN INFORMATION FOR rfactor determination from WEXPEL,
 C          such as beam grouping, energy ranges etc.

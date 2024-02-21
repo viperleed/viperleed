@@ -70,7 +70,7 @@ OR
    FORTRAN_COMP mpi = mpifort
    FORTRAN_COMP mpi = mpiifort
 
-**Acceptable values**: Either ``ifort`` or ``gfortran`` (or ``mpifort`` for ``mpiifort`` for ``FORTRAN_COMP mpi``) without quotation marks (this will add the default flags listed above for both ``FORTRAN_COMP`` and ``FORTRAN_COMP post``), or any string, with quotation marks on the left and right.
+**Acceptable values**: Either ``ifort`` or ``gfortran`` (or ``mpifort`` for ``mpiifort`` for ``FORTRAN_COMP mpi``) (this will add the default flags listed above for both ``FORTRAN_COMP`` and ``FORTRAN_COMP post``), or a string containing the full compile statement, including optimization flags, libraries, etc. Quotation marks are optional and will be stripped from the string.
 
 This compile statement will be used for all Fortran code compiled while the program runs. Any optimization statements should be included in the string. Needless to say, the Fortran compiler needs to be installed on the computer that executes the script.
 

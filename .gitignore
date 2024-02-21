@@ -25,7 +25,7 @@ calculations/
 doc/_build
 
 # files from docs spell checker
-*.spelling 
+*.spelling
 .cspell/
 
 # Ignore compiled versions of random_.c, beamgen, .x files and .so files
@@ -37,6 +37,7 @@ doc/_build
 *.mod
 *.o
 *.pyf
+*.exe
 
 
 tleedmlib/wrapped/source/wrapf2py
@@ -49,5 +50,10 @@ test_exec
 tleedmlib/**/*.ipynb
 tensorleed/eeasisss_new/eeasisss
 tensorleed/eeasisss_new/Fortran_quicktests
+tensorleed/eeasisss
 *.plist
 *.mod
+
+# Ignore test and coverage results
+**/.pytest_cache/
+.coverage

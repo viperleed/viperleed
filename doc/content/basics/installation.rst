@@ -24,14 +24,14 @@ Fortran compilers
 The tleedm (TensErLEED manager) package acts as a wrapper and feature extension to the :term:`TensErLEED` package.
 It requires TensErLEED source files to be present and will compile them (with task-specific adjustments) *at run-time*.
 This requires the presence of a suitable :term:`Fortran` 77 & 90 compiler on the system.
-Unlike the original version of TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`, all TensErLEED versions supported by ViPErLEED (TensErLEED >= 1.6) also require :term:`BLAS` and :term:`LAPACK` libraries to be available.
+Unlike the original version of TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`, all TensErLEED versions supported by ViPErLEED (TensErLEED :math:`\ge` 1.6) also require :term:`BLAS` and :term:`LAPACK` libraries to be available.
 ViPErLEED supports :term:`gfortran` from the GNU Compiler Collection (:term:`gcc`) and the Intel Fortran compiler :term:`ifort` without additional configuration.
 You can use the :ref:`FORTRAN_COMP<fortran_comp>` parameter to use any other Fortran compiler installed on your system.
 ViPErLEED will default to using :term:`ifort` if available.
 Use the parameter :ref:`FORTRAN_COMP<fortran_comp>` to adjust this behavior.
 
 
-The :ref:`structure-search section<sec_search>`, which is the computationally most expensive part of ViPErLEED and TensErLEED, supports compilation and execution with :term:`MPI`.
+The :ref:`structure-search section<sec_search>`, which is usually the computationally most expensive part of ViPErLEED and TensErLEED, supports compilation and execution with :term:`MPI`.
 To use the :term:`MPI` version of TensErLEED, you need to also install an :term:`MPI` implementation and the :term:`MPI` compiler corresponding to your Fortran compiler.
 We recommend using Open MPI on Linux and MacOS.
 The MPI compiler for :term:`gfortran` is :term:`mpifort`, for :term:`ifort` it is :term:`mpiifort` (sic!).
@@ -81,23 +81,23 @@ For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel 
 
 The :term:`BLAS` and :term:`LAPACK` libraries are packaged in the Intel Math Kernel Library (MKL), which is part of the Base Toolkit, while an :term:`MPI` implementation is packaged with the HPC Toolkit.
 
-After installation, we still need to configure the system and add the compilers to our path (see also `here <https://www.intel.com/content/www/us/en/develop/documentation/get-started-with-intel-oneapi-hpc-linux/top/before-you-begin.html#before-you-begin>`__).
+After installation, we still need to configure the system and add the compilers to our system path (see also `here <https://www.intel.com/content/www/us/en/develop/documentation/get-started-with-intel-oneapi-hpc-linux/top/before-you-begin.html#before-you-begin>`__).
 First, we need to make sure the required build tools (such as Cmake) are present:
 
 .. code-block:: console
 
     $ sudo apt install cmake pkg-config build-essential -y
 
-Then, we finally need to configure the Intel one API installation such that it is discovered by by our environment.
+Then, we finally need to configure the Intel one API installation such that it is discovered by our environment.
 For this, we need to source the file `/opt/intel/oneapi/setvars.sh` which sets the required :term:`CLI` arguments.
 We recommend you do this by adding the following line to the end of your shell startup script (usually `~/.bashrc`):
 
 .. code-block:: console
 
-    . /opt/intel/oneapi/setvars.sh
+    source /opt/intel/oneapi/setvars.sh
 
 Afterwards, the required compilers should be available for use.
-You can check if :term:`ifort` is present using:
+You can check whether :term:`ifort` is present using:
 
 .. code-block:: console
 
@@ -148,7 +148,7 @@ In this manual, we use ``apt``, the standard package-manager for Debian based di
     $ sudo apt install gfortran -y
 
 The compiler can be invoked with the ``gfortran`` command.
-You can show the version and check if :term:`gfortran` was installed properly using
+You can show the version and check whether :term:`gfortran` was installed properly using
 
 .. code-block:: console
     
@@ -160,7 +160,7 @@ In addition to :term:`gfortran`, you also need to install the :term:`BLAS` and :
     
     $ sudo apt install libblas-dev liblapack-dev
 
-Next install Open MPI (or alternatively another MPI implementation of your choosing) to make ``mpirun`` available:
+Next install Open MPI (or alternatively another MPI implementation of your choice) to make ``mpirun`` available:
 
 .. code-block:: console
     
@@ -218,7 +218,7 @@ Windows
 Natively running on (64-bit) Windows
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Here are some notes on which steps are needed to run (tested up to refcalc) natively on Windows (test only from python source), i.e., get a working Fortran compiler with LAPACK/BLAS.
+Here are some notes on which steps are needed to run (tested up to refcalc) natively on Windows (tested only from python source), i.e., get a working Fortran compiler with LAPACK/BLAS.
 The notes below are for gfortran (gcc), and for the very basic, un-optimized LAPACK/BLAS versions.
 Hence, execution of the code will be rather slow.
 
@@ -258,7 +258,7 @@ Hence, execution of the code will be rather slow.
    .. code-block:: console
 
         $ cd MINGW-packages/mingw-w64-lapack
--  Build LAPACK and BLAS pacakges with 
+-  Build LAPACK and BLAS packages with 
 
    .. code-block:: console
 
@@ -314,13 +314,13 @@ Compiling static files
 ======================
 
 In addition to the TensErLEED source code, which is compiled *at run-time*, ViPErLEED needs a few auxilary programs that need compiling before a calculation can be started.
-These can be compiled automatically using a provided Makefile.
+These can be compiled automatically using a provided Makefile (see below).
 
 Beamgen and eeasisss
 --------------------
 
 These scripts are used by ViPErLEED during the :ref:`initialization`, to generate :ref:`BEAMLIST<beamlist>` and :ref:`PHASESHIFTS<phaseshifts>`.
-If they are not present, ViPErLEED cannot create these files if required.
+If they are not present, ViPErLEED cannot create this file if required.
 
 To compile these scripts from source, go into the ``viperleed/tensorleed`` directory.
 From there call either ``make intel`` or ``make gcc``, to compile using the Intel or GCC Fortran compilers, respecitvely.
@@ -328,7 +328,7 @@ From there call either ``make intel`` or ``make gcc``, to compile using the Inte
 
 .. _mpirandom:
 
-Randomizer library for TensErLEED <= 1.73
+Randomizer library for TensErLEED < 1.74
 -----------------------------------------
 
 TensErLEED versions up to 1.73 need the :term:`C`-object files called ``random_.o`` and/or ``MPIrandom_.o``.
@@ -336,7 +336,7 @@ This file needs to be compiled with a C and C MPI compiler before running.
 Makefiles are also provided for this file.
 If you followed the instructions for obtaining the Fortran compilers, a C compiler is already installed as well from either GCC or Intel.
 
-To compile for TensErLEED version ``x.yy``, go into the directory ``viperleed/tensorleed/TensErLEED-x.yy`` and call either ``make intel`` or ``make gcc`` to compile using the Intel or GCC :term:`C` compilers, respecitvely.
+To compile the randomizer library for TensErLEED version ``x.yy``, go into the directory ``viperleed/tensorleed/TensErLEED-x.yy`` and call either ``make intel`` or ``make gcc`` to compile using the Intel or GCC :term:`C` compilers, respecitvely.
 
 
 
