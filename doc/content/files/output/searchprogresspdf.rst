@@ -12,12 +12,12 @@ The total number of generations is a reasonably good measure of the elapsed time
 
 At regular intervals, the R-factor scatter for the entire population is plotted as points. The best-fit population is black, the worst-fit population is red, and the rest is shaded relative to their distance from the two. If multiple population members share the same R-factor, they are drawn as a bigger point.
 
-Whenever the search is stopped to reduce the GAUSSIAN_WIDTH parameter (see :ref:`SEARCH_CONVERGENCE<SEARCH_CONVERGENCE>`), a vertical line is drawn and the new GAUSSIAN_WIDTH value is indicated at the top of the plot.
+Whenever the search is stopped to reduce the :ref:`SEARCH_CONVERGENCE gaussian<rmut>` parameter, a vertical line is drawn and the new width of the new value is indicated at the top of the plot.
 
 Generations since change
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The x-axis is shared with the R-factor plot above. On the y-axis is the number of generations that have passed since the last improvement to any structure. So, every time any structure improves, a point is added to the scatter plot, marking how many generations had passed before this improvement. Color indicates whether the improvement occured in the best structure, in one of the best 10% of structures, or any other structure (reflecting the :ref:`SEARCH_CONVERGENCE<SEARCH_CONVERGENCE>`  criteria). If the delta values become very large, then this means that few improvements are being found, so the search is either converged or the current settings are badly suited for finding improvements. These situations may automatically be handled by the :ref:`SEARCH_CONVERGENCE<SEARCH_CONVERGENCE>`  settings, i.e. by decreasing the GAUSSIAN_WIDTH parameter whenever the generation delta becomes large.
+The x-axis is shared with the R-factor plot above. On the y-axis is the number of generations that have passed since the last improvement to any structure. So, every time any structure improves, a point is added to the scatter plot, marking how many generations had passed before this improvement. Color indicates whether the improvement occured in the best structure, in one of the best 10% of structures, or any other structure (reflecting the :ref:`SEARCH_CONVERGENCE gaussian<rmut>` criteria). If the delta values become very large, then this means that few improvements are being found, so the search is either converged or the current settings are badly suited for finding improvements. These situations may automatically be handled by the :ref:`SEARCH_CONVERGENCE<SEARCH_CONVERGENCE>`  settings, i.e. by decreasing the :ref:`SEARCH_CONVERGENCE gaussian<rmut>` parameter whenever the generation delta becomes large.
 
 Parameter scatter plots
 ~~~~~~~~~~~~~~~~~~~~~~~
