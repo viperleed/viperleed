@@ -10,10 +10,10 @@ This page covers how the input file structure for ViPErLEED changes when domains
 While domain calculations can be run from scratch (i.e. including the reference calculations) from two sets of input files, a way to get more user control is to first execute reference calculations separately for the different structures, then start the domain calculation from the Tensors.zip files from those pre-calculations.
 This way, you can convince yourself that initializations have run correctly, that the detected symmetries are sensible, that the theoretical beam sets for the different domains are as expected, etc., before launching into the simultaneous optimization of the structures.
 
-Note that TensErLEED requires the different structures to be calculated on the same surface supercell, i.e. with the same unit cell in the :ref:`POSCAR file<POSCAR>`, and the same :ref:`SUPERLATTICE<SUPERLATTICE>`  parameter for each domain.
+Note that TensErLEED requires the different structures to be calculated on the same surface supercell, i.e. with the same unit cell in the :ref:`POSCAR file<POSCAR>`, and the same :ref:`SUPERLATTICE<SUPERLATTICE>` parameter for each domain.
 Since changing the unit cell size may change the detected symmetry, the :ref:`SYMMETRY_CELL_TRANSFORM<SYMMETRY_CELL_TRANSFORM>`  parameter allows defining a base unit cell and linking redundant atoms by translational symmetry.
 
-In addition to the surface unit cell and SUPERLATTICE, the following settings must also be the same in each of the reference calculations (it is recommended to fix the :ref:`PARAMETERS<PARAMETERS>`  explicitly):
+In addition to the surface unit cell and :ref:`the SUPERLATTICE parameter<SUPERLATTICE>`, the following settings must also be the same in each of the reference calculations (it is recommended to fix the :ref:`PARAMETERS<PARAMETERS>` explicitly):
 
 -  :ref:`THEO_ENERGIES<theo_energies>` 
 -  :ref:`LMAX<LMAX>` 

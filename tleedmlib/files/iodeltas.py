@@ -9,9 +9,10 @@ Functions for reading and writing files relevant to the delta calculation
 
 import logging
 import numpy as np
-from viperleed import fortranformat as ff
 import os
 import shutil
+
+import fortranformat as ff
 
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
@@ -289,13 +290,13 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         ol = f74x3.write([disp[2], disp[0], disp[1]])
         din += ol.ljust(29)+"CDISP(z,x,y) - z pointing towards bulk\n"
         # TODO: should we allow this if e.g. HALTING = 1 and just warn instead?
-        if any([abs(d) >= 1. for d in disp]):
+        if any([abs(d) > 1. for d in disp]):
             logger.error(
                 "Displacements for delta amplitudes have to be smaller than "
                 "one Angstrom! Larger displacements are not reasonable "
                 "within the tensor LEED approximation.\n"
                 "Found displacement {} for {}.".format(disp, atom))
-            raise ValueError("Excessive displacements (>=1A) detected.")
+            raise ValueError("Excessive displacements (>1A) detected.")
     din += (
         """-------------------------------------------------------------------
 --- vibrational displacements of atomic site in question        ---
@@ -355,8 +356,8 @@ C      TLEED beams for a superlattice not present in the reference structure
 C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
 C  MNCSTEP: number of geometric variation steps to be performed """
              + "(inner var. loop)\n\n")
-    param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX[1])
-    param += "      PARAMETER( MNLMB = {} )\n".format(MNLMB[rp.LMAX[1]-1])
+    param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX.max)
+    param += "      PARAMETER( MNLMB = {} )\n".format(MNLMB[rp.LMAX.max-1])
     param += ("      PARAMETER( MNPSI = {}, MNEL = {} )\n"
               .format(len(rp.phaseshifts), (len(rp.phaseshifts[0][1]))))
     param += "      PARAMETER( MNT0 = {} )\n".format(len(beamlist))
@@ -385,12 +386,12 @@ def generateDeltaBasic(sl, rp):
     output = ""
     output += rp.systemName+" "+rp.timestamp+"\n"
     output += (formatter['energies'].write(
-        [rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01]).ljust(lj)
-        + 'EI,EF,DE\n')
-    ucsurf = sl.ucell[:2, :2].T
+        [rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01]).ljust(lj)
+        + 'EI,EF\n')
+    ucsurf = sl.ab_cell.T
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
-    ucbulk = sl.bulkslab.ucell[:2, :2].T
+        sl.make_bulk_slab(rp)
+    ucbulk = sl.bulkslab.ab_cell.T
     output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
     output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
     output += formatter['uc'].write(ucsurf[0]).ljust(lj) + 'ARB1\n'

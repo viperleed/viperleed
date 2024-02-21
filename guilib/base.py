@@ -1264,7 +1264,7 @@ class PlaneGroup():
         group_re = re.compile(
             r"""
             (?P<hermann>[\w]+)      # hermann mauguin
-            (?:[\[]                 # optional direction opening bracket
+            (?:[\[]\s*              # optional direction opening bracket
             (?P<dir1> [-]*[\d]+)    # first direction
             [\s]*                   # optional space
             (?P<dir2> [-]*[\d]+)    # second direction

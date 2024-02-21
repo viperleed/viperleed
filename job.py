@@ -46,8 +46,11 @@ if args.work:
 if not (vpr_path and work_path):
     raise ValueError("ViPErLEED source and/or work directory not defined!")
 
+if os.path.abspath(vpr_path) not in sys.path:
+    sys.path.append(os.path.abspath(vpr_path))
+
 try:
-    from bookkeeper import bookkeeper
+    from viperleed.utilities.bookkeeper import bookkeeper
     bookie_exists = True
 except ModuleNotFoundError:
     bookie_exists = False
@@ -56,12 +59,11 @@ delete_workdir = False   # delete the work_path after copying back?
 all_tensors = False      # copy all tensor files or just highest number?
 # !!! TODO: it would be nice if all_tensors automatically checked PARAMETERS
 
-if os.path.abspath(vpr_path) not in sys.path:
-    sys.path.append(os.path.abspath(vpr_path))
 
 import viperleed
 import viperleed.tleedmlib
 from viperleed.tleedm import run_tleedm
+from viperleed.tleedmlib.base import copytree_exists_ok
 
 
 def main():
@@ -83,13 +85,11 @@ def main():
     # copy Tensors and Deltas to work directory
     if all_tensors:
         try:
-            shutil.copytree("Tensors", os.path.join(work_path, "Tensors"),
-                            dirs_exist_ok=True)
+            copytree_exists_ok("Tensors", os.path.join(work_path, "Tensors"))
         except FileNotFoundError:
             pass
         try:
-            shutil.copytree("Deltas", os.path.join(work_path, "Deltas"),
-                            dirs_exist_ok=True)
+            copytree_exists_ok("Deltas", os.path.join(work_path, "Deltas"))
         except FileNotFoundError:
             pass
     else:
@@ -108,7 +108,7 @@ def main():
 
     # copy input files to work directory
     for file in ["PARAMETERS", "VIBROCC", "IVBEAMS", "DISPLACEMENTS", "POSCAR",
-                 "PHASESHIFTS", "EXPBEAMS.csv"]:
+                 "PHASESHIFTS", "EXPBEAMS.csv", "EXPBEAMS"]:
         try:
             shutil.copy2(file, os.path.join(work_path, file))
         except FileNotFoundError:
@@ -129,7 +129,7 @@ def main():
             if os.path.isfile(p):
                 shutil.copy2(p, os.path.join(home, p))
             elif os.path.isdir(p):
-                shutil.copytree(p, os.path.join(home, p), dirs_exist_ok=True)
+                copytree_exists_ok(p, os.path.join(home, p))
         except Exception as e:
             print("Error copying " + p + " to home directory: " + str(e))
 

@@ -23,7 +23,7 @@ The command follows a slightly different syntax than those for the
 Syntax
 ======
 
-:ref:`See also the example below!<occdelta_example>`
+:ref:`See also the example below<occdelta_example>`
 
 
 ::
@@ -33,8 +33,8 @@ Syntax
 
 where
 
--  ``POSCAREL`` is the :ref:`POSCAR<POSCAR>` element (and **not** the :ref:`ELEMENT_MIX<ELSPLIT>` one!). 
-   Take a look at the :ref:`AUXLATGEO file<AUXLATGEO>` **correct?** to make sure you use the right labels.
+-  ``POSCAREL`` is the :ref:`POSCAR<POSCAR>` element (and **not** the :ref:`ELEMENT_MIX<ELSPLIT>` one).
+   Take a look at the :ref:`AUXLATGEO file<AUXLATGEO>` **correct?** to make sure you use the right labels. **TODO**
 -  ``site`` is optional, and has the same functionality as the one in the :ref:`Geometrical displacements<GEODELTA>`.
 -  ``number(s)`` also behave as in the :ref:`Geometrical displacements<GEODELTA>`.
 

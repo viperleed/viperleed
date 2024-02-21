@@ -30,7 +30,9 @@ For some applications, it can be useful to apply a static displacement, without 
    = VIB_DELTA
    O 1 = 0.02         ! Vibrational amplitude of oxygen atom 1 (and symmetry-equivalent atoms) will be offset from the value in VIBROCC by 0.02
 
-When multiple searches are executed consecutively or looping, the displacement ranges are per default centered around the optimized vibrational amplitude from previous searches. However, if you give a single-valued (static) displacement for an atom, the optimized vibrational amplitude from previous searches is *discarded* instead, and the static displacement is applied to its original position (to avoid "displacement creep" when the search is repeated). If you want to center the displacement range around the original vibrational amplitude of the atom, you can also clear the offset manually:
+When multiple searches are executed consecutively or in a loop, the displacement ranges are per default centered around the optimized vibrational amplitude from previous searches per default.
+However, if you give a single-valued (static) displacement for an atom, the optimized vibrational amplitude from previous searches is *discarded* instead, and the static displacement is applied to its original position (to avoid "displacement creep" when the search is repeated).
+If you want to center the displacement range around the original vibrational amplitude of the atom, you can also clear the offset manually:
 
 ..  code-block:: none
 

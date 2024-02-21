@@ -21,7 +21,7 @@ depending on the work-segment (:ref:`see above<work-segments>`).
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | :ref:`EXPBEAMS.csv<EXPBEAMS>`        | Experimental I(V) curves                          | Required for R-factor calculations and search                     |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-| :ref:`PHASESHIFTS<PHASESHIFTS>`      | Phase shifts per energy \* site \* L              | Generated automatically if needed                                 |
+| :ref:`PHASESHIFTS<PHASESHIFTS>`      | Contains elastic electron scattering phaseshifts  | Generated automatically if needed                                 |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | :ref:`job.py<job_script>`            | Job script used as entry point.                   | Always required                                                   |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+

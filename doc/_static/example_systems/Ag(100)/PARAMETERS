@@ -1,3 +1,5 @@
+! Comments can start with either ! or #
+
 ! ####### GLOBAL PARAMETERS #######
 RUN = 0
 THEO_ENERGIES = 45 700 3

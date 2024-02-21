@@ -7,29 +7,31 @@ Created on Nov 12 2019
 Master script running the TensErLEED Manager.
 """
 
+import logging
+import multiprocessing
+import os
+from pathlib import Path
+import shutil
 import sys
 import time
-import logging
-import os
-import shutil
-import multiprocessing
 
-cd = os.path.realpath(os.path.dirname(__file__))
 # NB: it's necessary to add vpr_path to sys.path so that viperleed
 #     can be loaded correctly at the top-level package
-vpr_path = os.path.realpath(os.path.join(cd, '..'))
-for import_path in (cd, vpr_path):
+cd = Path(__file__).resolve().parent
+vpr_path = cd.parent
+for import_path in (str(cd), str(vpr_path)):
     if import_path not in sys.path:
         sys.path.append(import_path)
 
-from viperleed.tleedmlib import Rparams
-from viperleed.tleedmlib.base import CustomLogFormatter
-from viperleed.tleedmlib.sections.run_sections import section_loop
-from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 from viperleed import GLOBALS
-from viperleed.tleedmlib.files.parameters import (readPARAMETERS,
-                                                  interpretPARAMETERS)
-from viperleed.tleedmlib.files.poscar import readPOSCAR
+from viperleed.tleedmlib.base import CustomLogFormatter
+from viperleed.tleedmlib.classes import rparams
+from viperleed.tleedmlib.files import parameters, poscar
+from viperleed.tleedmlib.sections.run_sections import section_loop
+from viperleed.tleedmlib.sections.initialization import (
+    warn_if_slab_has_atoms_in_multiple_c_cells
+    )
+from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 
 logger = logging.getLogger("tleedm")
 
@@ -92,14 +94,14 @@ def run_tleedm(system_name="", console_output=True, slab=None,
 
     tmpmanifest = ["SUPP", "OUT", logname]
     try:
-        rp = readPARAMETERS()
+        rp = parameters.read()
     except FileNotFoundError:
         if not preset_params:
             logger.error("No PARAMETERS file found, and no preset parameters "
                          "passed. Execution will stop.")
             cleanup(tmpmanifest)
             return 2
-        rp = Rparams()
+        rp = rparams.Rparams()
     except Exception:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
@@ -113,11 +115,11 @@ def run_tleedm(system_name="", console_output=True, slab=None,
     if domains:  # no POSCAR in main folder for domain searches
         slab = None
     elif slab is None:
-        if os.path.isfile(os.path.join(".", "POSCAR")):
-            poscarfile = os.path.join(".", "POSCAR")
+        poscarfile = Path("POSCAR")
+        if poscarfile.is_file():
             logger.info("Reading structure from file POSCAR")
             try:
-                slab = readPOSCAR(filename=poscarfile)
+                slab = poscar.read(filename=poscarfile)
             except Exception:
                 logger.error("Exception while reading POSCAR", exc_info=True)
                 cleanup(tmpmanifest)
@@ -139,32 +141,59 @@ def run_tleedm(system_name="", console_output=True, slab=None,
                 cleanup(tmpmanifest)
                 return 2
     try:
-        interpretPARAMETERS(rp, slab=slab)
-        if rp.LOG_DEBUG:
-            logger.setLevel(logging.DEBUG)
-            logger.debug("PARAMETERS file was read successfully")
-    except Exception:
+        # interpret the PARAMETERS file
+        parameters.interpret(rp, slab=slab, silent=False)
+    except (parameters.errors.ParameterNeedsSlabError,
+            parameters.errors.SuperfluousParameterError):
+        # Domains calculation is the only case in which slab is None
+        logger.error('Main PARAMETERS file contains an invalid parameter '
+                     'for a multi-domain calculation', exc_info=True)
+        cleanup(tmpmanifest)
+        return 2
+    except parameters.errors.ParameterError:
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmpmanifest)
         return 2
+
+    # set logging level
+    logger.setLevel(rp.LOG_LEVEL)
+    logger.debug("PARAMETERS file was read successfully")
+
     rp.timestamp = timestamp
     rp.manifest = tmpmanifest
-    for p in preset_params:
-        try:
-            setattr(rp, p, preset_params[p])
-        except Exception:
-            logger.warning("Error applying preset parameter {}: ".format(p),
-                           exc_info=True)
+    try:
+        rp.update(preset_params)
+    except (ValueError, TypeError):
+        logger.warning(f"Error applying preset parameters: ",
+                       exc_info=True)
     if not domains:
-        slab.fullUpdate(rp)   # gets PARAMETERS data into slab
+        warn_if_slab_has_atoms_in_multiple_c_cells(slab, rp)
+        slab.full_update(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
 
+    # set source directory
+    _source = Path(source).resolve()
+    if not _source.is_dir():
+        logger.warning(f"tensorleed directory {source} not found.")
+    if _source.name == "tensorleed":
+        rp.source_dir = _source
+    elif _source.parent.name == "tensorleed":
+        logger.warning(f"tensorleed directory found in {_source.parent}, "
+                       f"using that instead of {_source}.")
+        rp.source_dir = _source.parent
+    elif (_source / "tensorleed").is_dir():
+        logger.warning(f"tensorleed directory found in {_source}, using that "
+                       "instead of {_source}.")
+        rp.source_dir = _source / "tensorleed"
+    else:
+        logger.warning(f"Could not find a tensorleed directory at {_source}. "
+                       "This may cause errors.")
+        rp.source_dir = _source
+
     rp.systemName = system_name
-    rp.sourcedir = os.path.abspath(source)
     if not rp.systemName:
         # use name of parent folder
-        rp.systemName = os.path.basename(os.path.abspath(
-            os.path.join(os.getcwd(), os.pardir)))
+        rp.systemName = str(Path.cwd().parent.name)
     # check if halting condition is already in effect:
     if rp.halt >= rp.HALTING:
         logger.info("Halting execution...")
@@ -172,10 +201,16 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         return 0
 
     rp.updateDerivedParams()
+    logger.info(f"ViPErLEED is using TensErLEED version {rp.TL_VERSION_STR}.")
 
     prerun_clean(rp, logname)
+    exit_code = section_loop(rp, slab)
 
-    return section_loop(rp, slab)
+    # Finalize logging - if not done, will break unit testing
+    logger.handlers.clear()
+    logging.shutdown()
+
+    return exit_code
 
 
 if __name__ == "__main__":

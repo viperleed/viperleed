@@ -20,3 +20,6 @@ plotting the integral over
 which is the exact term used in the R-factor.
 This allows quick identification of the areas contributing most to the 
 R-factor.
+
+
+**TODO Alex: include an example here; possibly from Hematite once ready**
