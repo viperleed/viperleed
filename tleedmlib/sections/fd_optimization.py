@@ -96,25 +96,11 @@ def get_fd_r(sl, rp, work_dir=Path(), home_dir=Path()):
 
 
 def apply_scaling(sl, rp, which, scale):
-    m = np.eye(3)
-    if "a" in which:
-        m[0, 0] *= scale
-    if "b" in which:
-        m[1, 1] *= scale
-    if "c" in which:
-        m[2, 2] *= scale
-    sl.getFractionalCoordinates()
-    sl.ucell = np.dot(sl.ucell, m)
-    sl.getCartesianCoordinates(updateOrigin=True)
-    sl.bulkslab.getFractionalCoordinates()
-    sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
-    sl.bulkslab.getCartesianCoordinates()
-    if isinstance(rp.BULK_REPEAT, (np.floating, float)):
-        rp.BULK_REPEAT *= scale
-    elif rp.BULK_REPEAT is not None:
-        rp.BULK_REPEAT = np.dot(rp.BULK_REPEAT, m)
-
-
+    scaling = (scale if char in which else 1 for char in 'abc')
+    sl.update_fractional_from_cartesian()                                       # TODO: needed?
+    sl.bulkslab.update_fractional_from_cartesian()                              # TODO: needed?
+    sl.apply_scaling(*scaling)
+    rp.BULK_REPEAT = sl.bulkslab.get_bulk_repeat(rp)
 
 
 def fd_optimization(sl, rp):
@@ -187,6 +173,10 @@ def fd_optimization(sl, rp):
     while True:
         if rp.STOP:
             break
+        # Make sure that there are no duplicate atoms. This is more
+        # a safeguard for the future, if we allow also full-dynamic
+        # optimization of atoms.
+        sl.check_atom_collisions(rp.SYMMETRY_EPS)
         if len(known_points) == 0:
             x = x0   # x will be the value of the parameter under variation
         elif len(known_points) == 1:

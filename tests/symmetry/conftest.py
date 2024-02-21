@@ -23,7 +23,6 @@ from viperleed.tleedmlib import symmetry
 
 from ..helpers import flat_fixture
 from . import simple_slabs
-from .simple_slabs import get_atom
 from .. import poscar_slabs
 # pylint: enable=wrong-import-position
 
@@ -41,18 +40,6 @@ def get_cases(which='all'):
     return cases
 
 
-def translate_atoms(slab, shift):
-    """Add a 2D Cartesian shift to all atomic coordinates."""
-    # Since fractional positions and Cartesian positions are
-    #    frac = cart @ ab_inv,
-    # we can move Cartesians by shift, and fractional by:
-    frac_shift = np.dot(shift, np.linalg.inv(slab.surface_vectors))
-    for atom in slab.atlist:
-        atom.cartpos[:2] += shift
-        atom.pos[:2] += frac_shift
-    slab.ucell_mod.append(('add', shift))
-
-
 slab_p1 = flat_fixture(simple_slabs.CaseSimpleSlabs().case_p1)
 slab_pmg = flat_fixture(simple_slabs.CaseSimpleSlabs().case_pmg)
 slab_p6m = flat_fixture(simple_slabs.CaseSimpleSlabs().case_p6m)
@@ -67,8 +54,8 @@ def fixture_factory_with_plane_group(args):
 
     def _make(random_shifts=True):
         if random_shifts:
-            translate_atoms(slab, shift)
-            slab.collapseCartesianCoordinates()
+            slab.translate_atoms_2d(shift)
+            slab.collapse_cartesian_coordinates()
         symmetry.findSymmetry(slab, param, forceFindOri=True)
         return slab, param, info
     return _make
@@ -89,21 +76,21 @@ def displace_atoms():
     def _displace(slab, param, info, displacements, check_raises=True):
         for (displ_info, displ) in zip(info.displacements, displacements):
             displ = (displ,)
-            atom = get_atom(slab.atlist, displ_info.atom_nr)
+            atom = slab.atlist.get(displ_info.atom_nr)
             if check_raises and _is_displacement_forbidden(displ, displ_info):
                 pytest.xfail('No complaint about invalid directions yet')
                 with pytest.raises(Exception):
                     atom.assignDisp(_mode, displ)
             else:
                 atom.assignDisp(_mode, displ)
-        for atom in slab.atlist:
+        for atom in slab:
             try:
                 disp = atom.disp_geo_offset[atom.el]
             except KeyError:
                 disp = atom.disp_geo_offset['all']
             disp = disp[0]
             atom.cartpos += disp
-        slab.getFractionalCoordinates()
+        slab.update_fractional_from_cartesian()
         symmetry.findSymmetry(slab, param)
     return _displace
 

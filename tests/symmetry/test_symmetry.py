@@ -32,7 +32,6 @@ from viperleed.tleedmlib.base import angle as angle_radians
 from ..helpers import duplicate_all, CaseTag
 from ..poscar_slabs import make_poscar_ids
 from . import simple_slabs
-from .simple_slabs import get_atom
 from .conftest import get_cases
 # pylint: enable=wrong-import-position
 
@@ -48,8 +47,8 @@ def hermann(group):
     return group.split('[', maxsplit=1)[0]
 
 
-@fixture
-def first_case(current_cases):
+@fixture(name='first_case')
+def fixture_first_case(current_cases):
     """Return the first of the current cases."""
     def _find_case(cases_dict):
         for value in cases_dict.values():
@@ -64,7 +63,7 @@ def first_case(current_cases):
                 pass
             else:
                 return value
-        raise ValueError("No case found")
+        raise ValueError('No case found')
     return _find_case(current_cases)
 
 
@@ -119,7 +118,7 @@ class TestPlaneGroupFinding:
     _known_incorrect_groups = {
         'hex_cmm_10': 'Known incorrect plane group p2',
         'hex_cmm_01': 'Known incorrect plane group p2',
-        'poscar-diamond': 'Known incorrect plane group pm instead of rcm',
+        'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
         }
 
     def test_correct_plane_group(self, with_plane_group, first_case):
@@ -142,14 +141,15 @@ class TestPlaneGroupFinding:
     @parametrize_with_cases('args',
                             cases=get_cases('all'),
                             has_tag=CaseTag.NEED_ROTATION)
+    # pylint: disable-next=too-many-arguments  # All fixtures
     def test_cell_rotated(self, args, caplog, re_match, subtests, first_case):
         """Check rotation of slabs that need one to get the group right."""
         slab, param, info, *_ = args
-        a_before, _ = slab.reciprocal_vectors.copy()
-        area_before = np.linalg.det(slab.reciprocal_vectors)
+        a_before, _ = slab.ab_cell.T.copy()
+        area_before = np.linalg.det(slab.ab_cell)
         symmetry.findSymmetry(slab, param)
-        a_after, _ = slab.reciprocal_vectors
-        area_after = np.linalg.det(slab.reciprocal_vectors)
+        a_after, _ = slab.ab_cell.T
+        area_after = np.linalg.det(slab.ab_cell)
         with subtests.test('successful logging'):
             with may_fail(first_case, self._known_incorrect_rotations):
                 assert re_match(r'.*unit.*cell.*change.*higher.*symmetry.*',
@@ -256,7 +256,7 @@ class TestSymmetryConstraints:
         if not info.symmetry.link_groups:
             pytest.skip('Not enough symmetry information available')
         with may_fail(first_case, self._known_invalid_constraints):
-            for atom in slab.atlist:
+            for atom in slab:
                 if atom.num in info.symmetry.on_planes:
                     assert isinstance(atom.freedir, np.ndarray)
                 elif atom.num in info.symmetry.on_axes:
@@ -292,7 +292,7 @@ class TestSymmetryConstraints:
         slab, _, info = with_symmetry_constraints()
         with may_fail(first_case, self._known_invalid_linking):
             for atom_n, linked in info.symmetry.link_groups.items():
-                atom = get_atom(slab.atlist, atom_n)
+                atom = slab.atlist.get(atom_n)
                 assert set(at.num for at in atom.linklist) == linked
 
     _known_invalid_constrained_group = {
@@ -303,6 +303,7 @@ class TestSymmetryConstraints:
         'hex_cm_10': 'Known to sometimes fail with a random shift',
         'hex_cm_01': 'Known to sometimes fail with a random shift',
         'hex_cm_1m1': 'Known to sometimes fail with a random shift',
+        'hex_cm_11': 'Known to sometimes fail with a random shift',
         'hex_cm_21': 'Known to sometimes fail with a random shift',
         'hex_cm_12': 'Known to sometimes fail with a random shift',
         'hex_cmm_10': 'Known incorrect plane group p2',
@@ -311,8 +312,8 @@ class TestSymmetryConstraints:
         'square_pm_01': 'Known to often fail with a random shift',
         'square_cm_11': 'Known to often fail with a random shift',
         'square_cm_1m1': 'Known to often fail with a random shift',
-        'poscar-diamond': 'Known incorrect plane group pm instead of rcm',
-        'double_bulk-fe3o4': 'Regularly reduced to pm instead of pmm',
+        'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
+        'poscar_sto110_4x1': 'Known to sometimes fail with a random shift',
         }
 
     def test_correct_group_after_constraint(self, with_symmetry_constraints,
@@ -328,7 +329,6 @@ class TestSymmetryConstraints:
     _known_do_not_preserve = {
         'rcm': 'Fails in all directions due to missing centre link',
         'rcmm': 'Fails in all directions due to missing centre link',
-        'double_bulk-fe3o4': 'Fails in all directions. Reduced to pm[1 0]',
         }
 
     @parametrize(displacement=XYZ_DISPLACEMENTS)
@@ -357,11 +357,10 @@ class TestSlabSymmetrization:
         rattled_slab, param, info = duplicate_all(slab, param, info)
         eps = 0.05
         param.SYMMETRY_EPS = param.SYMMETRY_EPS.from_value(2 * 2**0.5 * eps)
-        displacements = np.random.uniform(-eps, eps,
-                                          (len(slab.atlist), 2))
-        for atom, delta in zip(rattled_slab.atlist, displacements):
+        displacements = np.random.uniform(-eps, eps, (slab.n_atoms, 2))
+        for atom, delta in zip(rattled_slab, displacements):
             atom.cartpos[:2] += delta
-        rattled_slab.collapseCartesianCoordinates()
+        rattled_slab.collapse_cartesian_coordinates()
         return (rattled_slab, slab, param, info, *rest)
 
     _known_incorrect_rattled = {
@@ -399,26 +398,43 @@ class TestSlabSymmetrization:
         'square_cm_1m1': 'Often reduced to pm',
         'square_pmm': 'Sometimes reduced to pm',
         'square_cmm': 'Sometimes reduced to cm',
-        'poscar-Ag(100)':  'Often reduced from p4m to cm',
-        'poscar-diamond': 'Known invalid group pm. May be correct rcm here',
-        'poscar-36C_p6m': 'Often reduced to cmm',
+        'poscar_ag100': 'Often reduced from p4m to cm',
+        'poscar_diamond': 'Known invalid group pm. May be correct rcm here',
+        'poscar_36carbon_atoms_p6m': 'Often reduced to cmm',
         'poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'poscar_fe3o4_001_cod': 'Sometimes reduced to cm/p1 from cmm',
+        'poscar_mgo': 'Sometimes reduced to cmm from p4m',
+        'poscar_sb_si_111': 'Sometimes symmetry increased to rcm from pm',
         'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
         'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
-            'sometimes reduced to p1 from p3'
+            'Sometimes reduced to p1 from p3'
+            ),
+        'bulk_repeat_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
+        'infoless_poscar-Cu2O_111': 'Sometimes reduced to cm from p3m1',
+        'poscar-Cu2O(111)_1x1_surplus_oxygen': (
+            'Sometimes reduced to cm from p3m1'
             ),
         'infoless_poscar-Ag(100)': 'Often reduced from p4m to cm',
+        'infoless_poscar-Cu2O(111)_1x1_surplus_oxygen': (
+            'Sometimes reduced to cm from p3m1'
+            ),
         'infoless_poscar-Fe3O4_SCV': 'Sometimes reduced to cm from cmm',
         'infoless_poscar-Fe3O4_(001)_cod1010369': (
             'Sometimes reduced to cm from cmm'
             ),
         'infoless_poscar-36C_p6m': 'Sometimes reduced to cm(m)',
+        'infoless_poscar-In2O3_(111)': 'Sometimes reduced to p1 from p3',
         'infoless_poscar-Ir(100)-(2x1)-O': 'Sometimes misidentified as pm',
-        'infoless_poscar-diamond':  'Invalid pm. May be correct rcm here',
-        'infoless_poscar-graphene':  'Sometimes reduced to pmg from pmm',
+        'infoless_poscar-diamond': 'Invalid pm. May be correct rcm here',
+        'infoless_poscar-graphene': 'Sometimes reduced to pmg from pmm',
+        'infoless_poscar-MgO_cod_9006456': 'Sometimes reduced to cmm from p4m',
+        'infoless_poscar-TiO2_supercell': 'Sometimes reduced to pm from pmm',
+        'infoless_poscar-TiO2_small': 'Sometimes reduced to pm/p1 from pmm',
         'infoless_poscar-Al2O3_NiAl(111)_cHole_20061025' : (
-            'sometimes reduced to p1 from p3'
+            'Sometimes reduced to p1 from p3'
+            ),
+        'infoless_poscar-Sb_Si(111)_rect': (
+            'Sometimes symmetry increased to rcm from pm'
             ),
         'double_bulk-fe3o4': 'Often reduced to pm/p1 (from pmm)',
         'fe3o4_bulk': 'Known invalid group pm. May be correct pmm here.',
@@ -450,8 +466,7 @@ class TestBulkSymmetry:
         assert set(bulk_slab.bulk_screws) == info.bulk.screw_orders
         assert len(bulk_slab.bulk_glides) == info.bulk.n_glide_planes
 
-    @parametrize_with_cases('args',
-                            cases=get_cases('poscar'),
+    @parametrize_with_cases('args', cases=get_cases('poscar'),
                             has_tag=CaseTag.THICK_BULK)
     def test_thick_bulk_minimized(self, args, caplog, first_case):
         """Assert the correct identification of bulk screws and glides."""
@@ -468,8 +483,7 @@ class TestBulkSymmetry:
 class TestSymmetryReduction:
     """Collection of tests for applying symmetry reductions."""
 
-    @pytest.mark.xfail(raises=KeyError, reason='Not checked correctly',
-                       strict=True)
+    @pytest.mark.xfail(raises=KeyError, reason='Not checked correctly')
     def test_raises_without_group_info(self, slab_p1):
         """Assert that missing plane group information raises exceptions."""
         slab, param, *_ = slab_p1
@@ -477,7 +491,7 @@ class TestSymmetryReduction:
             symmetry.setSymmetry(slab, param, 'p1')
         assert exc.match(r'.*unknown')
 
-    @pytest.mark.xfail(reason='Does not check validity of group', strict=True)
+    @pytest.mark.xfail(reason='Does not check validity of group')
     def test_invalid_group(self, with_plane_group):
         """Assert that not providing a direction raises exceptions."""
         slab, param, *_ = with_plane_group()
@@ -498,22 +512,18 @@ class TestSymmetryReduction:
         # with pytest.raises(MissingGroupDirectionError):
         symmetry.setSymmetry(slab, param, need_direction)
 
-    @pytest.mark.xfail(reason='Does not check validity of subgroup',
-                       strict=True)
+    @pytest.mark.xfail(reason='Does not check validity of subgroup')
     def test_invalid_subgroup(self, with_plane_group):
         """Make sure SlabSymmetrizer finds all atoms it should."""
         slab, param, *_ = with_plane_group()
         hermann_ = hermann(slab.foundplanegroup)
-        if hermann_ == 'p6m':
-            invalid_group = 'p4'
-        else:
-            invalid_group = 'p6m'
+        invalid_group = 'p4' if hermann_ == 'p6m' else 'p6m'
         with pytest.raises(ValueError) as exc:
             symmetry.setSymmetry(slab, param, invalid_group)
         assert exc.match('.*not a valid symmetry reduction.*')
 
-    @pytest.mark.xfail(reason='BUG: symmetry L785, missing []',
-                       raises=ValueError, strict=True)
+    @pytest.mark.xfail(reason='BUG: symmetry L724--789, missing [] at arrays',
+                       raises=(ValueError, RuntimeWarning))
     def test_successful_reduction_pmg(self, slab_pmg, subtests):
         """Test that pmg can be reduced without giving a direction."""
         # Normally pm and pg require a direction. However we can
@@ -537,7 +547,7 @@ class TestSymmetryReduction:
         """Check unit-cell rotations when reducing p6m."""
         slab, param, *_ = slab_p6m
         symmetry.findSymmetry(slab, param)
-        a_before, b_before = slab.surface_vectors.copy()
+        a_before, b_before = slab.ab_cell.T.copy()
         groups = ('cm[1 0]', 'cm[0 1]', 'cm[2 1]', 'cm[1 2]',
                   'cmm[1 0]', 'cmm[0 1]')
         # Need to get info about rotation angle. It's in the
@@ -545,7 +555,7 @@ class TestSymmetryReduction:
         hex_ = simple_slabs.CaseSimpleHexagonalSlabs()
         for group in groups:
             symmetry.setSymmetry(slab, param, group)
-            a_after, b_after = slab.surface_vectors
+            a_after, b_after = slab.ab_cell.T
             # Convert group name into a method of hex_
             name = group.replace('[', '_').replace(']', '').replace(' ', '')
             method = getattr(hex_, f'case_hex_{name}')

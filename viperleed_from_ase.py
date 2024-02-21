@@ -24,6 +24,7 @@ import numpy as np
 import viperleed
 from viperleed.tleedm import run_tleedm
 from viperleed.tleedmlib.base import rotation_matrix
+from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.classes.rparams import Rparams, TheoEnergies
 from viperleed.tleedmlib.classes.rparams import IVShiftRange
@@ -343,7 +344,8 @@ def _apply_transform(slab, transform, apply_cut=False):
 
     if indices:
         # Swapping axes will require to make a new bulk slab for sure
-        slab.bulkslab = None
+        if not slab.is_bulk:
+            slab.bulkslab = None
         new_axes, old_axes = ((ind,) for ind in indices)
         slab.ucell.T[new_axes] = slab.ucell.T[old_axes]
         for atom in slab:
@@ -362,15 +364,15 @@ def _apply_transform(slab, transform, apply_cut=False):
 
     # Cut the slab as given in cut_cell_c_fraction - very important
     if transform.cut_cell_c_fraction:
-        slab.atlist = [at for at in slab.atlist
-                       if at.pos[2] >= transform.cut_cell_c_fraction]
-    slab.updateAtomNumbers()
-    slab.updateElementCount()
+        slab.atlist = AtomList(at for at in slab
+                               if at.pos[2] >= transform.cut_cell_c_fraction)
+    slab.update_atom_numbers()
+    slab.update_element_count()
 
 
 def _make_and_check_slab(ase_object, transforms):
     """Return a Slab from ase.Atoms with transformations applied."""
-    slab = Slab(ase_atoms=ase_object)
+    slab = Slab.from_ase(ase_object)
 
     # Transformations of slab:
     # Mirror/rotation/swapping and/or stretching/shrinking

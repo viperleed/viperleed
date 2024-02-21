@@ -22,7 +22,7 @@ class TestReadVIBROCC:
     def test_interpret_offset_allowed(self, displaced_atom):
         """Interpret correctly an allowed occupation offset."""
         slab = displaced_atom.slab
-        for atom in slab.atlist:
+        for atom in slab:
             atom.dispInitialized = True
             atom.mergeDisp(atom.el)
         atom = displaced_atom

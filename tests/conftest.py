@@ -89,9 +89,9 @@ def factory_make_poscar():
 
 
 @pytest.fixture(name='ag100')
-def fixture_ag100(make_poscar):
+def fixture_ag100():
     """Return a Ag(100) slab, an Rparams, and a TestInfo."""
-    return make_poscar(poscar_slabs.AG_100)
+    return poscar_slabs.CasePOSCARSlabs().case_poscar_ag100()
 
 
 @pytest.fixture
@@ -147,7 +147,7 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
     param.workdir = tmp_path_factory.mktemp(basename='phaseshifts',
                                             numbered=True)
     param.initTheoEnergies()
-    executable = 'EEASiSSS' + ('.exe' if 'nt' in os.name else '.x')             # TODO: does this cover it or should we use 'win' in sys.platform()?
+    executable = 'EEASiSSS' + ('.exe' if 'nt' in os.name else '')               # TODO: does this cover it or should we use 'win' in sys.platform()?
 
     # run EEASISSS in the temporary directory
     home = Path()

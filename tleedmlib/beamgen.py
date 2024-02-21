@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger('tleedm.beamgen')
 
 def calc_and_write_beamlist(slab, rpars, domains=False,
                             beamlist_name='BEAMLIST'):
-    """Calculates and writes the contents for the file BEAMLIST.
+    """Calculate and write the contents for file BEAMLIST.
 
     BEAMLIST contains a list of all diffraction beams that will be
     used for internal calculations (as opposed to IVBEAMS, which
@@ -70,7 +70,7 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
         Filename to be written, by default "BEAMLIST".
     """
     if slab.bulkslab is None:
-        slab.bulkslab = slab.makeBulkSlab(rpars)
+        slab.make_bulk_slab(rpars)
         symmetry.findSymmetry(slab.bulkslab, rpars)
 
     # Use guilib to generate list of beams
@@ -90,23 +90,11 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
     beam_subsets = _split_into_subsets([BeamIndex(hk)  # str->Fraction
                                         for hk, *_ in equivalent_beams])
 
-    inv_bulk_surf_vectors = slab.bulkslab.reciprocal_vectors
-    all_energies = []
-    all_indices_arr = []
-    for beam_indices in beam_subsets.values():
-        indices_arr = np.array(beam_indices, dtype='float64')  # from Fraction
-        # Calculate cutoff energy for each beam
-        energies = (                                                            # TODO: we could probably remove the energies from BEAMLIST completely. It seems they are not used in TensErLEED (see subroutine READIN in lib.tleed.f). Would need to remove it from here, and readBEAMLIST in beams.py.
-            H_BAR_SQ_OVER_2M
-            * np.sum(np.dot(indices_arr, inv_bulk_surf_vectors)**2, axis=1)
-            )
-
-        # generate file contents for beam subset
-        all_indices_arr.append(indices_arr)
-        all_energies.append(energies)
+    energies, indices = _prepare_beam_groups(slab.bulkslab,
+                                             beam_subsets.values())
 
     # get highest energy considered; groups may have different shapes
-    max_energy = max(np.max(group) for group in all_energies)
+    max_energy = max(np.max(group) for group in energies)
     _LOGGER.debug(f'Highest energy considered in '
                   f'BEAMLIST: {max_energy:.2f} eV')
 
@@ -114,9 +102,7 @@ def calc_and_write_beamlist(slab, rpars, domains=False,
     try:  # pylint: disable=too-many-try-statements
         with open(beamlist_name, 'w', encoding='utf-8') as file:
             file.writelines(
-                make_beamlist_lines(all_indices_arr,
-                                    all_energies,
-                                    rpars.TL_VERSION)
+                make_beamlist_lines(indices, energies, rpars.TL_VERSION)
                 )
     except OSError:  # Do not handle ValueError on purpose
         _LOGGER.error(f'Unable to write file {beamlist_name}')
@@ -151,9 +137,10 @@ def _get_emax_for_evanescent_beams(slab, rpars, domains):
         correct evanescent beams.
     """
     if not domains:
-        d_min = slab.getMinLayerSpacing()
+        d_min = slab.smallest_interlayer_spacing
     else:
-        d_min = min(dp.sl.getMinLayerSpacing() for dp in rpars.domainParams)
+        d_min = min(dp.sl.smallest_interlayer_spacing
+                    for dp in rpars.domainParams)
     d_min *= 0.7                                                                # TODO: may want to complain if this is small as it will give a huge load of beams (and may mean different LAYER_CUTS should be used).
 
     e_max = rpars.THEO_ENERGIES.max
@@ -178,6 +165,46 @@ def _log_beamgroups(equivalent_beams):
     _LOGGER.log(level=5, msg='\n'.join(full_log_msg[:15]))
     # ...the rest only at very verbose
     _LOGGER.log(level=1, msg='\n'.join(full_log_msg[15:]))
+
+
+def _prepare_beam_groups(bulk, beam_subsets):
+    """Return energies and indices of beams in beam_subsets as groups.
+
+    Parameters
+    ----------
+    bulk : BulkSlab
+        The bulk slab to which the indices in beam_subsets refer.
+    beam_subsets : Iterable
+        One element per beam group. Each element should contain
+        the indices of the beams to be prepared for the output.
+        Each beam index is expected to be a 2-sequence of
+        numbers, which will be converted to float.
+
+    Returns
+    -------
+    energies : list
+        len(energies) == len(beam_subsets). Each element is a
+        numpy.ndarray of the vacuum energies (in electronvolts)
+        of the beams in the group.
+    indices : list
+        len(indices) == len(energies). indices[i] is a numpy.ndarray
+        version of the indices in beam_subsets[i], converted to float.
+    """
+    reciprocal_bulk = 2*np.pi*np.linalg.inv(bulk.ab_cell.T).T
+    all_energies = []
+    all_indices = []
+    for beam_indices in beam_subsets:
+        indices_arr = np.array(beam_indices, dtype='float64')  # from Fraction
+        # Calculate cut-off energy for each beam
+        energies = (                                                            # TODO: we could probably remove the energies from BEAMLIST completely. It seems they are not used in TensErLEED (see subroutine READIN in lib.tleed.f). Would need to remove it from here, and readBEAMLIST in beams.py.
+            H_BAR_SQ_OVER_2M
+            * np.sum(np.dot(indices_arr, reciprocal_bulk)**2, axis=1)
+            )
+
+        # generate file contents for beam subset
+        all_indices.append(indices_arr)
+        all_energies.append(energies)
+    return all_energies, all_indices
 
 
 def make_beamlist_lines(all_indices, all_energies, tl_version):

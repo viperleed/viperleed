@@ -28,6 +28,9 @@ from viperleed.tleedmlib.base import CustomLogFormatter
 from viperleed.tleedmlib.classes import rparams
 from viperleed.tleedmlib.files import parameters, poscar
 from viperleed.tleedmlib.sections.run_sections import section_loop
+from viperleed.tleedmlib.sections.initialization import (
+    warn_if_slab_has_atoms_in_multiple_c_cells
+    )
 from viperleed.tleedmlib.sections.cleanup import prerun_clean, cleanup
 
 logger = logging.getLogger("tleedm")
@@ -164,7 +167,8 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         logger.warning(f"Error applying preset parameters: ",
                        exc_info=True)
     if not domains:
-        slab.fullUpdate(rp)   # gets PARAMETERS data into slab
+        warn_if_slab_has_atoms_in_multiple_c_cells(slab, rp)
+        slab.full_update(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
 
     # set source directory

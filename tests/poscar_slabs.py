@@ -10,10 +10,10 @@ Contains definition of pytest cases generated from POSCAR files.
 from pathlib import Path
 import copy
 import inspect
-import io
 import sys
 
 import numpy as np
+import pytest
 from pytest_cases import parametrize, lazy_value, case
 
 VPR_PATH = str(Path(__file__).resolve().parents[2])
@@ -25,11 +25,11 @@ if VPR_PATH not in sys.path:
 from viperleed.tleedmlib.classes.rparams import Rparams, LayerCuts, SymmetryEps
 from viperleed.tleedmlib.files import poscar
 
-from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo, CaseTag as Tag
-from .helpers import duplicate_all
+from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo
+from .helpers import BulkSlabAndRepeatInfo, LayerInfo, CaseTag as Tag
+from .helpers import NearestNeighborInfo, SurfaceAtomInfo, duplicate_all
 # pylint: enable=wrong-import-position
 
-POSCAR_FILES = tuple(POSCAR_PATH.glob('POSCAR*'))
 
 def _get_poscar_info(*args):
     """Return a TestInfo object appropriately filled with args.
@@ -118,24 +118,17 @@ def make_poscar_ids(suffix=None):
 
 
 # PARAMETERS presets for slabs
-_PRESETS = {
+_PRESETS = {  # pylint: disable=consider-using-namedtuple-or-dataclass
     'Fe3O4': {'LAYER_CUTS': LayerCuts.from_string('0.1 0.2 <dz(1.0)'),
               'N_BULK_LAYERS': 2,
               'SYMMETRY_EPS': SymmetryEps(0.3),
               'BULK_REPEAT': np.array([0.0, -4.19199991, 4.19199991]),
-              'SUPERLATTICE': np.array(((1, 1), (1, -1))),
+              'SUPERLATTICE': np.array(((1, -1), (1, 1))),
               'superlattice_defined': True},
-    'Ag': {'N_BULK_LAYERS': 1,
-           'BULK_REPEAT': np.array([1.44, 1.44, -2.03647])},
     }
 
 POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
-    _get_poscar_info('POSCAR_Ag(100)', 6, 'p4m', (1, True), _PRESETS['Ag']),
-    _get_poscar_info('POSCAR_STO(110)-4x1', 136, 'pm', (1, False)),
-    _get_poscar_info('POSCAR_TiO2', 540, 'pmm', (540, False)),
-    _get_poscar_info('POSCAR_diamond', 96, 'rcm', (90, False)),
-    _get_poscar_info('POSCAR_36C_p6m', 36, 'p6m', (1, False)),
-    _get_poscar_info('POSCAR_36C_cm', 36, 'cm', (1, False)),
+    _get_poscar_info('POSCAR_TiO2_supercell', 540, 'pmm', (540, False)),
     _get_poscar_info('POSCAR_Fe3O4_SCV', 83, 'cmm', (51, False),
                      _PRESETS['Fe3O4']),
     _get_poscar_info('POSCAR_Al2O3_NiAl(111)_cHole_20061025',
@@ -144,33 +137,66 @@ POSCARS_WITH_LITTLE_SYMMETRY_INFO = (
     _get_poscar_info('POSCAR_Cu2O(111)_1x1_surplus_oxygen', 66, 'p3m1'),
     )
 
-def _get_info_by_name(name):
-    """Return a TestInfo object by name."""
-    return next(i for i in POSCARS_WITH_LITTLE_SYMMETRY_INFO
-                if name in i.poscar.name)
-
-AG_100 = _get_info_by_name('Ag(100)')
-SLAB_36C_cm = _get_info_by_name('36C_cm')
-SLAB_Cu2O_111 = _get_info_by_name('Cu2O(111)')
 
 POSCARS_WITHOUT_INFO = [
     _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*')
+    if 'duplicate' not in f.name
+    ]
+
+WITH_DUPLICATE_ATOMS = [
+    _get_poscar_info(f.name) for f in POSCAR_PATH.glob('POSCAR*duplicate*')
     ]
 
 
-class CasePOSCARFiles:
-    @staticmethod
-    def _string(file):
-        """Return the string of a POSCAR file name."""
-        with open(POSCAR_PATH / file, 'r', encoding='utf-8') as file:
-            contents = file.read()
-        return contents
+def get_info_by_name(name, container=POSCARS_WITH_LITTLE_SYMMETRY_INFO):
+    """Return a TestInfo object by name."""
+    return next(i for i in container if name in i.poscar.name)
 
-    @parametrize(file=POSCAR_FILES)
-    def case_poscar_file(self, file):
-        """Return a POSCAR file name."""
-        content = self._string(file)
-        return file, content
+
+def _add_known_bulk_properties(info, bulk_info):
+    """Add bulk properties to a TestInfo object."""
+    info.bulk_properties = bulk_info
+    return info
+
+
+def _add_known_layer_properties(info, layer_info):
+    """Add layer properties to a TestInfo object."""
+    info.layer_properties = layer_info
+    return info
+
+
+def _add_nearest_neighbor_info(info, nn_info):
+    """Add nearest-neighbour information to a TestInfo object."""
+    info.nearest_neighbors = nn_info
+    return info
+
+
+def _add_surface_atom_info(info, surface_atom_info):
+    """Add info about surface atoms to a TestInfo object."""
+    info.surface_atoms = surface_atom_info
+    return info
+
+
+POSCAR_WITH_KNOWN_BULK_REPEAT = (
+    _add_known_bulk_properties(
+        _get_poscar_info('POSCAR_Cu2O_111', 22+43),
+        BulkSlabAndRepeatInfo(
+            bulk_like_below=0.55,
+            bulk_repeat=np.array([0, -3.4766, 2.4584]),
+            n_bulk_atoms=6,
+            bulk_cuts=[0.08333],
+            bulk_dist=0.61459,  # Closest z distance between Cu and O
+            bulk_ucell=np.array([[ 6.02172136, -3.01086068,  0.        ],
+                                 [ 0.        ,  5.21496367, -3.4766    ],
+                                 [ 0.        ,  0.        ,  2.45835787]]),
+            ),
+        ),
+    )
+POSCAR_WITH_LAYER_INFO = ()
+POSCAR_WITH_NEAREST_NEIGHBOR_INFO = ()
+POSCAR_WITH_SURFACE_ATOM_INFO = ()
+
+SLAB_Cu2O_111 = get_info_by_name('Cu2O(111)')
 
 
 class CasePOSCARSlabs:
@@ -194,7 +220,7 @@ class CasePOSCARSlabs:
         """Return a slab, an Rparams and information for tests."""
         slab = self._read(info.poscar.name)
         param = self._updated_param(info)
-        slab.fullUpdate(param)
+        slab.full_update(param)
         return slab, param, info
 
     @parametrize(info=POSCARS_WITHOUT_INFO, idgen=make_poscar_ids())
@@ -203,10 +229,100 @@ class CasePOSCARSlabs:
         """Return a slab, an Rparams and an (essentially) empty info."""
         return self.case_poscar(info)
 
+    @parametrize(info=POSCAR_WITH_KNOWN_BULK_REPEAT, idgen=make_poscar_ids())
+    @case(tags=Tag.BULK_PROPERTIES)
+    def case_bulk_repeat_poscar(self, info):
+        """Return a slab, an Rparams and info on expected bulk properties."""
+        slab, rpars, info = self.case_poscar(info)
+        rpars.BULK_REPEAT = info.bulk_properties.bulk_repeat
+        return slab, rpars, info
+
+    @parametrize(info=POSCAR_WITH_LAYER_INFO, idgen=make_poscar_ids())
+    @case(tags=Tag.LAYER_INFO)
+    def case_layer_info_poscar(self, info):
+        """Return a slab, an Rparams and info on expected layers."""
+        slab, rpars, info = self.case_poscar(info)
+        rpars.LAYER_CUTS = info.layer_properties.layer_cuts
+        rpars.N_BULK_LAYERS = info.layer_properties.n_bulk_layers
+        slab.create_layers(rpars)
+        return slab, rpars, info
+
+    @parametrize(info=POSCAR_WITH_NEAREST_NEIGHBOR_INFO,
+                 idgen=make_poscar_ids())
+    @case(tags=Tag.NEAREST_NEIGHBOURS)
+    def case_nearest_neighbors_poscar(self, info):
+        """Return a slab, an Rparams and info on expected nearest neighbors."""
+        return self.case_poscar(info)
+
+    @parametrize(info=POSCAR_WITH_SURFACE_ATOM_INFO, idgen=make_poscar_ids())
+    @case(tags=Tag.SURFACE_ATOMS)
+    def case_surface_atom_poscar(self, info):
+        """Return a slab, an Rparams and info on expected surface atoms."""
+        return self.case_poscar(info)
+
+    @case(tags=(Tag.BULK_PROPERTIES,
+                Tag.LAYER_INFO,
+                Tag.NEAREST_NEIGHBOURS,
+                Tag.SURFACE_ATOMS,))
+    def case_poscar_ag100(self):
+        """Return a Ag(100) slab."""
+        info = _get_poscar_info('POSCAR_Ag(100)', 6, 'p4m', (1, True))
+        info.param_presets = {'N_BULK_LAYERS': 1,
+                              'BULK_REPEAT': np.array([-1.44, -1.44, 2.03647])}
+        info.bulk_properties = BulkSlabAndRepeatInfo(
+            bulk_like_below=0.65,
+            bulk_repeat=info.param_presets['BULK_REPEAT'],
+            n_bulk_atoms=1,
+            bulk_cuts=[0.35],
+            bulk_dist=0.0,
+            bulk_ucell=np.array([[ 2.88   ,  0.     , -1.44   ],
+                                 [ 0.     ,  2.88   , -1.44   ],
+                                 [ 0.     ,  0.     ,  2.03647]]),
+            )
+        info.layer_properties = LayerInfo(
+            layer_cuts=LayerCuts.from_string('dz(1.2)'),
+            n_bulk_layers=info.param_presets['N_BULK_LAYERS'],
+            cuts=[0.35, 0.45, 0.55, 0.65, 0.75],
+            n_layers=6,
+            n_atoms_per_layer=[1, 1, 1, 1, 1, 1],
+            n_atoms_per_sublayer=[1, 1, 1, 1, 1, 1],
+            n_sublayers=6,
+            smallest_interlayer_spacing=2.03646,
+            )
+        info.nearest_neighbors = NearestNeighborInfo(
+            nearest_neighbor_distances={1: 2.88, 2: 2.88, 3: 2.88,
+                                        4: 2.88, 5: 2.88, 6: 2.88,},
+            )
+        info.surface_atoms = SurfaceAtomInfo(surface_atom_nums=(1, 2),)
+        return self.case_poscar(info)
+
+    @case(tags=Tag.VACUUM_GAP_SMALL)
+    def case_poscar_36carbon_atoms_p6m(self):
+        """Return a 6-fold symmetric slab with 36 carbon atoms."""
+        info = _get_poscar_info('POSCAR_36C_p6m', 36, 'p6m', (1, False))
+        return self.case_poscar(info)
+
+    @case(tags=Tag.VACUUM_GAP_SMALL)
+    def case_poscar_36carbon_atoms_cm(self):
+        """Return a slanted slab with 36 carbon atoms and cm group."""
+        info = _get_poscar_info('POSCAR_36C_cm', 36, 'cm', (1, False))
+        return self.case_poscar(info)
+
+    @case(tags=Tag.NON_MINIMAL_CELL)
+    def case_poscar_diamond(self):
+        """Return a non-minimal diamond(111) slab."""
+        info = _get_poscar_info('POSCAR_diamond', 96, 'rcm', (90, False))
+        info.poscar.n_cells = 4
+        return self.case_poscar(info)
+
+    @case(tags=(Tag.NON_MINIMAL_CELL,
+                Tag.BULK_PROPERTIES,
+                Tag.VACUUM_GAP_SMALL))
     def case_poscar_fe3o4_001_cod(self):
         """Return a slab from a bulk-truncated Fe3O4(001) POSCAR."""
         info = TestInfo()
         info.poscar.set('POSCAR_Fe3O4_(001)_cod1010369', 112)
+        info.poscar.n_cells = 2
         info.param_presets = copy.deepcopy(_PRESETS['Fe3O4'])
         info.symmetry.hermann = 'cmm'
         info.symmetry.on_planes = (
@@ -234,7 +350,82 @@ class CasePOSCARSlabs:
         info.displacements.extend((DisplacementInfo(8, False),
                                    DisplacementInfo(36, True)))
         info.bulk.repeat = tuple(info.param_presets['BULK_REPEAT'])
+        info.bulk_properties = BulkSlabAndRepeatInfo(
+            bulk_like_below=0.7,
+            bulk_repeat=np.array([0, 4.192, 4.192]),
+            n_bulk_atoms=14,
+            bulk_cuts=[0.21885],
+            bulk_dist=1.048,  # Z distance between Fe_tet and Fe_oct
+            bulk_ucell=np.array([[ 4.192, -4.192,  0.000],
+                                 [ 4.192,  4.192, -4.192],
+                                 [ 0.000,  0.000,  4.192]]),
+            )
         return self.case_poscar(info)
+
+    @case(tags=(Tag.NON_MINIMAL_CELL, Tag.SURFACE_ATOMS))
+    def case_poscar_lsmo_001_rt2(self):
+        """Return a sqrt(2) x sqrt(2) LSMO (001) A-site bulk-truncated slab."""
+        info = _get_poscar_info('POSCAR_LSMO_001_A_site', 60)
+        info.poscar.n_cells = 2
+        info.surface_atoms = SurfaceAtomInfo((2, 6, 9, 11,      # A
+                                              19, 26, 38, 47))  # O
+        slab, rpars, info = self.case_poscar(info)
+
+        # Assign mixed sites. Notice that, due to a bug in initSites,
+        # we have to clear the current atomic sites before making new
+        # ones. Otherwise we'd get an empty sitelist.
+        rpars.ELEMENT_MIX = {'A': ['La', 'Sr']}
+        for atom in slab:
+            atom.site = None
+        slab.initSites(rpars)
+        a_site = next(s for s in slab.sitelist if s.el == 'A')
+        a_site.occ = {'La': 0.8, 'Sr': 0.2}
+        return slab, rpars, info
+
+    @case(tags=(Tag.NON_MINIMAL_CELL, Tag.VACUUM_GAP_SMALL))
+    def case_poscar_mgo(self):
+        """Return a non-minimal Mg(001) slab."""
+        info = _get_poscar_info('POSCAR_MgO_cod_9006456',
+                                {'Mg': 14, 'O': 14}, 'p4m')
+        info.poscar.n_cells = 2
+        return self.case_poscar(info)
+
+    @case(tags=(Tag.NON_MINIMAL_CELL, Tag.VACUUM_GAP_SMALL))
+    def case_poscar_sb_si_111(self):
+        """Return a non-minimal, rectangular slab of Sb/Si(111)."""
+        info = _get_poscar_info('POSCAR_Sb_Si(111)_rect', 72+12, 'pm')
+        # While it looks like there are 4 cells (rt3 of Si), some
+        # of the Sb atoms are not quite in the right position
+        info.poscar.n_cells = 2
+        return self.case_poscar(info)
+
+    @case(tags=Tag.VACUUM_GAP_MIDDLE)
+    def case_poscar_sto110_4x1(self):
+        """Return a symmetric slab of SrTiO3(110)-4x1."""
+        info = _get_poscar_info('POSCAR_STO(110)-4x1', 136, 'pm', (1, False))
+        return self.case_poscar(info)
+
+    @case(tags=Tag.BULK_PROPERTIES)
+    def case_poscar_tio2_small(self):
+        """Return a rutile TiO2(110) with a few bulk layers."""
+        info = _get_poscar_info('POSCAR_TiO2_small', 29)
+        _add_known_bulk_properties(
+            info,
+            BulkSlabAndRepeatInfo(
+                bulk_like_below=0.43,
+                bulk_repeat=np.array([-3.24845, 0.00000, 3.24876]),
+                n_bulk_atoms=6,
+                bulk_cuts=[0.2281, 0.1628],
+                bulk_dist=1.2682,
+                bulk_ucell=np.array([[6.4969, 0.000, -3.24845],
+                                     [0.0000, 2.959,  0.00000],
+                                     [0.0000, 0.000,  3.24876]]),
+                ),
+            )
+        slab, rpars, info = self.case_bulk_repeat_poscar(info)
+        rpars.N_BULK_LAYERS = 2
+        slab.full_update(rpars)
+        return slab, rpars, info
 
 
 class CaseBulkSlabs:
@@ -244,7 +435,7 @@ class CaseBulkSlabs:
     def _make_bulk(slab, param):
         """Return a bulk slab and parameters from a surface slab."""
         param = copy.deepcopy(param)
-        bulk_slab = slab.makeBulkSlab(param)
+        bulk_slab = slab.make_bulk_slab(param)
         return bulk_slab, param
 
     @classmethod
@@ -270,6 +461,7 @@ class CaseBulkSlabs:
             )
         info.bulk.screw_orders = {4}  # {2, 4} would make more sense!
         info.bulk.n_glide_planes = 2
+        info.bulk.periods = [3]
         return slab, param, info
 
 
@@ -278,16 +470,19 @@ class CaseBulkSlabs:
 def case_double_bulk(bulk):
     """Return a bulk slab with twice the thickness."""
     slab, param, info = bulk
-    thick_slab = slab.doubleBulkSlab()
+    thick_slab = slab.with_double_thickness()
 
     param, info = duplicate_all(param, info)
     param.BULK_REPEAT *= 2
     info.bulk.repeat = tuple(param.BULK_REPEAT)
 
+    # Propagate sublayer periods information
+    info.bulk.periods += [2*p for p in info.bulk.periods]
+
     # Propagate symmetry information by using duplicate atoms
     sym_info = info.symmetry
     _map = {at.duplicate_of.num: at.num
-            for at in thick_slab.atlist if at.duplicate_of}
+            for at in thick_slab if at.duplicate_of}
     on_planes = sym_info.on_planes
     on_planes += tuple(new_at for base_at, new_at in _map.items()
                        if base_at in sym_info.on_planes)

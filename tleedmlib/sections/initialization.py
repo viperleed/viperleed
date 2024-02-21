@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
+"""Module initialization of viperleed.tleedmlib.sections.
+
 Created on Aug 11 2020
 
-@author: Florian Kraushofer
-@author: Alexander M. Imre
-@author: Michele Riva
+@author: Florian Kraushofer (@fkraushofer)
+@author: Alexander M. Imre (@amimre)
+@author: Michele Riva (@michele-riva)
 
 Tensor LEED Manager section Initialization
 """
@@ -20,10 +21,16 @@ import numpy as np
 
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib import symmetry as tl_symmetry
+from viperleed.tleedmlib.base import NonIntegerMatrixError
 from viperleed.tleedmlib.base import angle, rotation_matrix
 from viperleed.tleedmlib.beamgen import calc_and_write_beamlist
-from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.classes.rparams import DomainParameters
+from viperleed.tleedmlib.classes.slab import BulkSlab, Slab
+from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
+from viperleed.tleedmlib.classes.slab import NoBulkRepeatError
+from viperleed.tleedmlib.classes.slab import NoVacuumError
+from viperleed.tleedmlib.classes.slab import VacuumError
+from viperleed.tleedmlib.classes.slab import WrongVacuumPositionError
 from viperleed.tleedmlib.files import beams as tl_beams, parameters
 from viperleed.tleedmlib.files import patterninfo, phaseshifts, poscar, vibrocc
 from viperleed.tleedmlib.files.woods_notation import writeWoodsNotation
@@ -47,23 +54,30 @@ def initialization(sl, rp, subdomain=False):
         init_domains(rp)
         return
 
+    _check_slab_duplicates_and_vacuum(sl, rp)
+
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
         tl_symmetry.findSymmetry(sl, rp)
         tl_symmetry.enforceSymmetry(sl, rp)
 
     # check whether the slab unit cell is minimal:
-    changecell, mincell = sl.getMinUnitCell(rp)
-    transform = np.dot(np.transpose(sl.ucell[:2, :2]),
-                       np.linalg.inv(mincell)).round()
+    try:
+        mincell = sl.get_minimal_ab_cell(rp.SYMMETRY_EPS, rp.SYMMETRY_EPS.z)
+    except AlreadyMinimalError:
+        transform = np.identity(2)
+        reducible = False
+    else:
+        transform = np.dot(sl.ab_cell.T, np.linalg.inv(mincell)).round()
+        reducible = True
     ws = writeWoodsNotation(transform)
     if ws:
         ws = f"= {ws}"
     else:
         ws = "M = {} {}, {} {}".format(*transform.astype(int).ravel())
-    if changecell and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
-                                 np.identity(2)).all():
-        ssl = sl.makeSymBaseSlab(rp, transform=transform)
+    if reducible and np.isclose(rp.SYMMETRY_CELL_TRANSFORM,
+                                np.identity(2)).all():
+        ssl = sl.make_subcell(rp, transform=transform)
         if subdomain:
             rp.SYMMETRY_CELL_TRANSFORM = transform
             logger.info(f"Found SYMMETRY_CELL_TRANSFORM {ws}")
@@ -85,7 +99,12 @@ def initialization(sl, rp, subdomain=False):
                            f"automatically detected supercell {ws}")
             rp.setHaltingLevel(1)
         if sl.symbaseslab is None:
-            sl.symbaseslab = sl.makeSymBaseSlab(rp)
+            try:
+                sl.symbaseslab = sl.make_subcell(rp,
+                                                 rp.SYMMETRY_CELL_TRANSFORM)
+            except ValueError as exc:
+                logger.error(f'Invalid SYMMETRY_CELL_TRANSFORM. {exc}')
+                raise exc
     if sl.symbaseslab is not None:
         logger.info("A symmetry cell transformation was found. Re-running "
                     "slab symmetry search using base unit cell...")
@@ -98,7 +117,7 @@ def initialization(sl, rp, subdomain=False):
 
     # generate new POSCAR
     tmpslab = copy.deepcopy(sl)
-    tmpslab.sortOriginal()
+    tmpslab.sort_original()
     try:
         poscar.write(tmpslab, filename='POSCAR', comments='all')
     except Exception:
@@ -106,7 +125,7 @@ def initialization(sl, rp, subdomain=False):
         raise
     rp.manifest.append('POSCAR')
     # generate POSCAR_oricell
-    tmpslab.revertUnitCell()
+    tmpslab.revert_unit_cell()
     try:
         poscar.write(tmpslab, filename='POSCAR_oricell', comments='nodir')
     except Exception:
@@ -115,80 +134,85 @@ def initialization(sl, rp, subdomain=False):
 
     if rp.BULK_LIKE_BELOW > 0:
         if rp.BULK_REPEAT is not None:
-            logger.warning("Both BULK_LIKE_BELOW and BULK_REPEAT are defined."
-                           "BULK_LIKE_BELOW will be ignored in favour of the "
-                           "explicitly defined bulk repeat vector.")
+            logger.warning('Both BULK_LIKE_BELOW and BULK_REPEAT are defined.'
+                           'BULK_LIKE_BELOW will be ignored in favour of the '
+                           'explicitly defined bulk repeat vector.')
         else:
-            # The modifications to the PARAMETERS file below are currently not in the docs. Should we add that?
-            cvec, cuts = sl.detectBulk(rp)
-            rp.BULK_REPEAT = cvec
+            # If successful, the next call updates the relevant rpars
+            # attributes: SUPERLATTICE (not written to file),
+            # BULK_REPEAT, LAYER_CUTS, and N_BULK_LAYERS (written
+            # to file below). The slab will have .layers and the
+            # freshly detected .bulkslab.
+            sl.detect_bulk(rp)
             vec_str = parameters.modify(
-                rp, "BULK_REPEAT",
-                comment="Automatically detected repeat vector"
+                rp, 'BULK_REPEAT',
+                comment='Automatically detected repeat vector'
                 )
-            logger.info(f"Detected bulk repeat vector: {vec_str}")
-            new_cuts = sl.createLayers(rp, bulk_cuts=cuts)
-            rp.LAYER_CUTS.update_from_sequence(new_cuts)
-            parameters.modify(rp, "LAYER_CUTS")
-            rp.N_BULK_LAYERS = len(cuts)
-            parameters.modify(rp, "N_BULK_LAYERS")
-        parameters.comment_out(rp, "BULK_LIKE_BELOW")
+            parameters.modify(rp, 'LAYER_CUTS')
+            parameters.modify(rp, 'N_BULK_LAYERS')
+            logger.info(f'Detected bulk repeat vector: {vec_str}')
+        parameters.comment_out(rp, 'BULK_LIKE_BELOW')
 
     # create bulk slab:
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
+        sl.make_bulk_slab(rp)
     bsl = sl.bulkslab
 
     # try identifying bulk repeat:
     if rp.BULK_REPEAT is None:
-        rvec = sl.getBulkRepeat(rp)
-        if rvec is not None:
-            rp.BULK_REPEAT = rvec
-            vec_str = parameters.modify(
-                rp, "BULK_REPEAT",
-                comment="Automatically detected repeat vector"
-                )
-            logger.info(f"Detected bulk repeat vector: {vec_str}")
-            # update bulk slab vector
-            sl.bulkslab.getCartesianCoordinates()
-            sl.bulkslab.ucell[:, 2] = np.copy(rvec)
-            sl.bulkslab.collapseCartesianCoordinates()
-    if rp.BULK_REPEAT is None:
-        # failed to detect repeat vector, use fixed distance instead
-        blayers = [lay for lay in sl.layers if lay.is_bulk]
-        # assume that interlayer vector from bottom non-bulk to
-        # top bulk layer is the same as between bulk units
-        # save BULK_REPEAT value for later runs, in case atom above moves
-        if rp.N_BULK_LAYERS == 2:
-            rp.BULK_REPEAT = (blayers[1].cartbotz
-                              - sl.layers[blayers[0].num-1].cartbotz)
+        try:
+            rp.BULK_REPEAT = sl.identify_bulk_repeat(rp.SYMMETRY_EPS,
+                                                     rp.SYMMETRY_EPS.z)
+        except NoBulkRepeatError:
+            pass
         else:
-            rp.BULK_REPEAT = (blayers[0].cartbotz
-                              - sl.layers[blayers[0].num-1].cartbotz)
+            vec_str = parameters.modify(
+                rp, 'BULK_REPEAT',
+                comment='Automatically detected repeat vector'
+                )
+            logger.info(f'Detected bulk repeat vector: {vec_str}')
+            # update bulk slab vector
+            sl.bulkslab.update_cartesian_from_fractional()
+            sl.bulkslab.c_vector[:] = rp.BULK_REPEAT
+            sl.bulkslab.collapse_cartesian_coordinates()
+    if rp.BULK_REPEAT is None:
+        # Failed to detect repeat vector, use fixed distance instead.
+        # Assume that interlayer vector from bottom non-bulk to top
+        # bulk layer is the same as between bulk units. Save
+        # BULK_REPEAT value for later runs, in case atom above moves
+        rp.BULK_REPEAT = sl.get_bulk_repeat(rp, only_z_distance=True)
         parameters.modify(
-            rp, "BULK_REPEAT",
-            comment="Automatically detected spacing. Check POSCAR_bulk."
+            rp, 'BULK_REPEAT',
+            comment='Automatically detected spacing. Check POSCAR_bulk.'
             )
         logger.warning(
-            "The BULK_REPEAT parameter was undefined, which may lead to "
-            "unintended changes in the bulk unit cell during optimization if "
-            "the lowest non-bulk atom moves.\n"
-            "# Automatic detection of a bulk repeat vector failed, possibly "
-            "because not enough bulk-like layers were found.\n"
-            "# The BULK_REPEAT vector is assumed to be parallel to the POSCAR "
-            "c vector. Check POSCAR_bulk and the BULK_REPEAT thickness "
-            "written to the PARAMETERS file."
+            'The BULK_REPEAT parameter was undefined, which may lead to '
+            'unintended changes in the bulk unit cell during optimization if '
+            'the lowest non-bulk atom moves.\n'
+            '# Automatic detection of a bulk repeat vector failed, possibly '
+            'because not enough bulk-like layers were found.\n'
+            '# The BULK_REPEAT vector is assumed to be parallel to the POSCAR '
+            'c vector. Check POSCAR_bulk and the BULK_REPEAT thickness '
+            'written to the PARAMETERS file.'
             )
-        rp.checklist.append("Check bulk repeat vector in PARAMETERS")
+        rp.checklist.append('Check bulk repeat vector in PARAMETERS')
         rp.setHaltingLevel(2)
 
     if bsl.planegroup == "unknown":
         # find minimum in-plane unit cell for bulk:
-        logger.info("Checking bulk unit cell...")
-        changecell, mincell = bsl.getMinUnitCell(rp, warn_convention=True)
-        if changecell:
-            sl.changeBulkCell(rp, mincell)
-            bsl = sl.bulkslab
+        logger.info('Checking bulk unit cell...')
+        try:
+            sl.ensure_minimal_bulk_ab_cell(rp, warn_convention=True)
+        except NonIntegerMatrixError as exc:
+            logger.error(
+                f'{exc}\n# User-defined SUPERLATTICE will be used instead.'
+                )
+            rp.setHaltingLevel(2)
+        except parameters.errors.InconsistentParameterError as exc:
+            # SUPERLATTICE does not match auto-detected one
+            logger.warning(exc)
+            rp.setHaltingLevel(2)
+
         if not rp.superlattice_defined:
             ws = writeWoodsNotation(rp.SUPERLATTICE)                   # TODO: replace writeWoodsNotation with guilib functions
             superlattice = rp.SUPERLATTICE.astype(int)
@@ -201,13 +225,13 @@ def initialization(sl, rp, subdomain=False):
         # bulk plane group detection:
         logger.info("Starting bulk symmetry search...")
         tl_symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
-        bsl.revertUnitCell()  # keep origin matched with main slab
+        bsl.revert_unit_cell()  # keep origin matched with main slab
         logger.info(f"Found bulk plane group: {bsl.foundplanegroup}")
         tl_symmetry.findBulkSymmetry(bsl, rp)
 
         # write POSCAR_bulk
         bsl = copy.deepcopy(sl.bulkslab)
-        bsl.sortOriginal()
+        bsl.sort_original()
         try:
             poscar.write(bsl, filename='POSCAR_bulk', comments='bulk')
         except Exception:
@@ -215,18 +239,18 @@ def initialization(sl, rp, subdomain=False):
             raise
 
     # write POSCAR_bulk_appended
-    n = 1
-    if len(bsl.sublayers) <= len(bsl.elements)*2:
+    n_cells = 1
+    if bsl.n_sublayers <= len(bsl.elements)*2:
         # For bulk slabs with very few layers, add a few more
         # repetitions to help the user see better the bulk part
-        n += 1
-        if len(bsl.sublayers) <= len(bsl.elements):
-            n += 1
+        n_cells += 1
+        if bsl.n_sublayers <= len(bsl.elements):
+            n_cells += 1
     try:
-        poscar.write(sl.addBulkLayers(rp, n=n)[0],
+        poscar.write(sl.with_extra_bulk_units(rp, n_cells)[0],
                      filename='POSCAR_bulk_appended')
     except Exception:
-        logger.warning("Exception occurred while writing POSCAR_bulk_appended")
+        logger.warning('Exception occurred while writing POSCAR_bulk_appended')
 
     # Check for an ambiguous angle phi
     _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1)
@@ -275,9 +299,9 @@ def initialization(sl, rp, subdomain=False):
                     + rp.phaseshifts_firstline[36:]
                     )
     if newpsGen:
-        # check for old eeasisss executable which used to be called EEASiSSS.x
-        if (not Path(rp.sourcedir / "eeasisss").is_file() and 
-            Path(rp.sourcedir / "EEASiSSS.x").is_file()):
+        # Check for old executable. Used to be called EEASiSSS.x
+        if (not Path(rp.source_dir / "eeasisss").is_file()
+                and Path(rp.source_dir / "EEASiSSS.x").is_file()):
             rundgrenpath = 'EEASiSSS.x'
         else:
             # let psgen catch the error if neither executable is found
@@ -450,13 +474,13 @@ def init_domains(rp):
             try:
                 dp.sl = poscar.read()
                 dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
+                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
-                interpret_domain_params_silent = rp.LOG_LEVEL > logging.DEBUG
                 parameters.interpret(dp.rp, slab=dp.sl,
-                                     silent=interpret_domain_params_silent)
-                dp.sl.fullUpdate(dp.rp)   # gets PARAMETERS data into slab
+                                     silent=rp.LOG_LEVEL > logging.DEBUG)
+                dp.sl.full_update(dp.rp)
                 dp.rp.fileLoaded["POSCAR"] = True
                 dp.rp.updateDerivedParams()
                 try:
@@ -465,7 +489,7 @@ def init_domains(rp):
                 except Exception:
                     logger.error("Error while reading required file VIBROCC")
                     raise
-                dp.sl.fullUpdate(dp.rp)
+                dp.sl.full_update(dp.rp)
                 try:
                     dp.rp.ivbeams = tl_beams.readIVBEAMS()
                 except FileNotFoundError:
@@ -497,10 +521,10 @@ def init_domains(rp):
         raise RuntimeError("Failed to read domain parameters")
     # check whether bulk unit cells match
     logger.info("Starting domain consistency check...")
-    bulkuc0 = rp.domainParams[0].sl.bulkslab.ucell[:2, :2].T
+    bulkuc0 = rp.domainParams[0].sl.bulkslab.ab_cell.T
     eps = 1e-4
     for dp in rp.domainParams[1:]:
-        bulkuc = dp.sl.bulkslab.ucell[:2, :2].T
+        bulkuc = dp.sl.bulkslab.ab_cell.T
         if np.all(abs(bulkuc-bulkuc0) < eps):
             continue
         # if the unit cells don't match right away, try if rotation matches
@@ -511,15 +535,8 @@ def init_domains(rp):
             logger.info(f"Bulk unit cells of domain {rp.domainParams[0].name} "
                         f"and domain {dp.name} are mismatched, but can be "
                         f"matched by rotating domain {dp.name}.")
-            ang = angle(bulkuc0[0], bulkuc[0])
-            rotm = rotation_matrix(ang, dim=3)
-            rotm_t = np.transpose(rotm)
-            # dp.sl.ucell = np.transpose(np.dot(np.transpose(dp.sl.ucell),
-            #                                   rotuc))
-            dp.sl.ucell = np.dot(rotm_t, dp.sl.ucell)
-            dp.sl.getCartesianCoordinates()
-            dp.sl.bulkslab.ucell = np.dot(rotm_t, dp.sl.bulkslab.ucell)
-            dp.sl.bulkslab.getCartesianCoordinates()
+            ang = angle(bulkuc[0], bulkuc0[0])
+            dp.sl.apply_matrix_transformation(rotation_matrix(ang, dim=3))      # TODO: this changes the coordinate frame. We need to modify BEAM_INCIDENCE! Issue #69, PR #73
         else:
             logger.error(f"Bulk unit cells of domain {rp.domainParams[0].name}"
                          f" and domain {dp.name} are mismatched, and cannot be"
@@ -528,9 +545,9 @@ def init_domains(rp):
             rp.setHaltingLevel(3)
             return
     logger.debug("Domain bulk unit cells are compatible.")
-    uc0 = rp.domainParams[0].sl.ucell[:2, :2].T
+    uc0 = rp.domainParams[0].sl.ab_cell.T
     largestDomain = rp.domainParams[0]
-    allMatched = all(np.all(abs(dp.sl.ucell[:2, :2].T - uc0) < 1e-4)
+    allMatched = all(np.all(abs(dp.sl.ab_cell.T - uc0) < 1e-4)
                      for dp in rp.domainParams[1:])
     supercellRequired = []
     if allMatched:
@@ -538,13 +555,13 @@ def init_domains(rp):
     else:
         maxArea = abs(np.linalg.det(uc0))
         for dp in rp.domainParams[1:]:
-            uc = dp.sl.ucell[:2, :2].T
+            uc = dp.sl.ab_cell.T
             if abs(np.linalg.det(uc)) > maxArea:
                 maxArea = abs(np.linalg.det(uc))
                 largestDomain = dp
-        uc0 = largestDomain.sl.ucell[:2, :2].T
+        uc0 = largestDomain.sl.ab_cell.T
         for dp in [p for p in rp.domainParams if p != largestDomain]:
-            uc = dp.sl.ucell[:2, :2].T
+            uc = dp.sl.ab_cell.T
             if not np.all(abs(uc-uc0) < 1e-4):
                 dp.refcalcRequired = True
                 trans = np.dot(uc0, np.linalg.inv(uc))
@@ -561,7 +578,7 @@ def init_domains(rp):
                 else:
                     supercellRequired.append(dp)
                     oldslab = dp.sl
-                    dp.sl = dp.sl.makeSupercell(np.round(trans))
+                    dp.sl = dp.sl.make_supercell(np.round(trans))
                     dp.rp.SUPERLATTICE = largestDomain.rp.SUPERLATTICE.copy()
                     dp.sl.symbaseslab = oldslab
                     dp.rp.SYMMETRY_CELL_TRANSFORM = trans
@@ -572,7 +589,7 @@ def init_domains(rp):
     # store some information about the supercell in rp:
     rp.pseudoSlab = Slab()
     rp.pseudoSlab.ucell = largestDomain.sl.ucell.copy()
-    rp.pseudoSlab.bulkslab = Slab()
+    rp.pseudoSlab.bulkslab = BulkSlab()
     rp.pseudoSlab.bulkslab.ucell = largestDomain.sl.bulkslab.ucell.copy()
     # run beamgen for the whole system
     logger.info("Generating BEAMLIST...")
@@ -653,7 +670,7 @@ def init_domains(rp):
                     f"supercell slab for domain {dp.name}")
         try:
             os.chdir(dp.workdir)
-            dp.sl.resetSymmetry()
+            dp.sl.clear_symmetry_and_ucell_history()
             dp.rp.SYMMETRY_FIND_ORI = True
             initialization(dp.sl, dp.rp, subdomain=True)
         except Exception:
@@ -728,6 +745,42 @@ def make_compile_logs_dir(rp):
         rp.setHaltingLevel(1)
 
 
+def warn_if_slab_has_atoms_in_multiple_c_cells(slab, rpars, domain_name=''):
+    """Log a WARNING if slab's atoms do not all belong to the same cell.
+
+    It only makes sense to use this function right after `slab` has
+    been loaded (e.g., via poscar.read or .from_ase) and before any
+    of the c-collapsing functions are called. These include:
+        .collapse_cartesian_coordinates
+        .collapse_fractional_coordinates
+        .full_update
+
+    Parameters
+    ----------
+    slab : SurfaceSlab
+        The slab to be checked.
+    rpars : Rparams
+        The current PARAMETERS object. Used for logging purposes only.
+    domain_name : str, optional
+        The name of the structural domain to which slab belongs.
+        Used only for logging purposes. Default is an empty string.
+
+    Returns
+    -------
+    None.
+    """
+    _msg = 'POSCAR file ' + f'of domain {domain_name} ' if domain_name else ''
+    _msg += ('has some atoms outside the base unit cell along the third unit '
+             'vector (i.e., they have fractional c coordinates smaller/larger '
+             'than 0/1). These atoms will be back-folded into the base unit '
+             'cell assuming periodicity along c. This will impact layer '
+             'creation and may modify the thickness of the vacuum gap '
+             'detected. Check POSCAR to ensure correct layer assignment.')
+    if slab.has_atoms_in_multiple_c_cells():
+        logger.warning(_msg)
+        rpars.setHaltingLevel(1)
+
+
 def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
     """Check if phi is ambiguous and warn if so."""
     angle_between_first_uc_vec_and_x = sl.angle_between_ucell_and_coord_sys
@@ -744,10 +797,11 @@ def _check_and_warn_ambiguous_phi(sl, rp, angle_eps=0.1):
             "for details."
             )
 
+
 def _check_and_warn_layer_cuts(rpars, slab):
     """Check if layer cuts are too close together and warn if so."""
     layer_cuts = rpars.LAYER_CUTS
-    min_spacing = slab.getMinLayerSpacing()
+    min_spacing = slab.smallest_interlayer_spacing
     if min_spacing < 1.0:
         logger.warning(
             f"Layer cuts are very close together. The minimum spacing "
@@ -755,3 +809,38 @@ def _check_and_warn_layer_cuts(rpars, slab):
             "covergence issues in the reference calculation. Check the "
             "LAYERS_CUTS parameter in the PARAMETERS file."
             )
+
+
+def _check_slab_duplicates_and_vacuum(slab, rpars):
+    """Complain if slab has duplicate atoms or an inadequate vacuum gap."""
+    # Make sure that there are no duplicate atoms
+    slab.check_atom_collisions(rpars.SYMMETRY_EPS)
+
+    # Make sure that there's enough vacuum. Stop in complex situations
+    try:
+        slab.check_vacuum_gap()
+    except VacuumError as exc:
+        exc.fixed_slab.sort_original()  # Rather than by z
+        poscar.write(exc.fixed_slab, 'POSCAR_vacuum_corrected')
+        exc_type = type(exc)
+        _msg = exc.message
+        _msg += '. This may cause problems with layer assignment! '
+        _msg += 'You can find a POSCAR_vacuum_corrected file in SUPP with '
+        _msg += ('the correct position of vacuum. '
+                 if exc_type is WrongVacuumPositionError
+                 else 'a large enough vacuum gap. ')
+        _msg += (
+            'If you intend to use it for a new run, be careful to edit any '
+            'PARAMETERS expressed as fractions of the c unit vector (e.g., '
+            'LAYERS_CUTS, BULK_LIKE_BELOW, BULK_REPEAT, ...)'
+            )
+        # Notice the straight type check rather than isinstance, as
+        # NoVacuumError is a subclass of NotEnoughVacuumError, which
+        # is, instead, the acceptable case in which we warn below
+        if exc_type in (NoVacuumError, WrongVacuumPositionError):
+            raise exc_type(_msg, exc.fixed_slab) from None
+        rpars.setHaltingLevel(1)
+        logger.warning(_msg)
+    if not slab.layers:
+        # May have been cleared by shifting slab away from c==0
+        slab.create_layers(rpars)
