@@ -19,11 +19,59 @@ from viperleed.guilib.helpers import two_by_n_array_to_tuples
 from viperleed.guilib.helpers import two_by_two_array_to_tuple
 
 
-class PlaneGroup():
-    """
-    PlaneGroup(group='p1')
+# Here some shorthands for symmetry operation matrices,
+# expressed in FRACTIONAL coordinates:
+# These two are good for all cells,...
+E = (1, 0), (0, 1)
+C2 = (-1, 0), (0, -1)    # = -E
+# ...these two are good for rectangular and square cells,...
+Mx = (1, 0), (0, -1)
+My = (-1, 0), (0, 1)     # = -Mx
+# ...these are good for square cells,...
+C4 = (0, -1), (1, 0)
+Cm4 = (0, 1), (-1, 0)    # = -C4
+M45 = (0, 1), (1, 0)
+Mm45 = (0, -1), (-1, 0)  # = -M45
+# ...these are good for rhombic and hex (both obtuse),...
+M11 = (0, 1), (1, 0)     # = M45
+M1m1 = (0, -1), (-1, 0)  # = -M11 = Mm45
+M01 = (-1, -1), (0, 1)
+M10 = (1, 0), (-1, -1)
+# ...and these are good for hex only (obtuse).
+C6 = (1, 1), (-1, 0)
+Cm6 = (0, -1), (1, 1)
+C3 = (0, 1), (-1, -1)
+Cm3 = (-1, -1), (1, 0)
+M21 = (1, 1), (0, -1)
+M12 = (-1, 0), (1, 1)
 
-    Class representing a planar 2D group
+
+_GROUP_TO_OPS = {
+    'p1': (E,),
+    'p2': (E, C2),
+    'pm[1 0]': (E, Mx), 'pm[0 1]': (E, My),
+    'pg[1 0]': (E, Mx), 'pg[0 1]': (E, My),
+    'cm[1 0]': (E, M10), 'cm[0 1]': (E, M01),
+    'cm[1 1]': (E, M11), 'cm[1 -1]': (E, M1m1),
+    'cm[1 2]': (E, M12), 'cm[2 1]': (E, M21),
+    'rcm[1 0]': (E, Mx), 'rcm[0 1]': (E, My),
+    'pmm': (E, Mx, My, C2),
+    'pmg[1 0]': (E, Mx, My, C2), 'pmg[0 1]': (E, Mx, My, C2),
+    'pgg': (E, C2, Mx, My),
+    'cmm': (E, C2, M11, M1m1), 'rcmm': (E, C2, Mx, My),
+    'p4': (E, C2, C4, Cm4),
+    'p4m': (E, Mx, My, M45, Mm45, C2, C4, Cm4),
+    'p4g': (E, Mx, My, M45, Mm45, C2, C4, Cm4),
+    'p3': (E, C3, Cm3),
+    'p3m1': (E, M12, M21, M1m1, C3, Cm3),
+    'p31m': (E, M10, M11, M01, C3, Cm3),
+    'p6': (E, C6, Cm6, C3, C2, Cm3),
+    'p6m': (E, M10, M01, M12, M21, M11, M1m1, C6, Cm6, C3, C2, Cm3)
+    }
+
+
+class PlaneGroup:
+    """Class representing a planar 2D group.
 
     Parameters
     ----------
@@ -67,56 +115,6 @@ class PlaneGroup():
                 Mij: mirror across a line through vector v = i*a + j*b,
                      where a and b are the basis unit vectors
     """
-    # These two are good for all cells
-    E = (1, 0), (0, 1)
-    C2 = (-1, 0), (0, -1)    # = -E
-
-    # These two are good for rectangular and square cells
-    Mx = (1, 0), (0, -1)
-    My = (-1, 0), (0, 1)     # = -Mx
-
-    # These are good for square cells
-    C4 = (0, -1), (1, 0)
-    Cm4 = (0, 1), (-1, 0)    # = -C4
-    M45 = (0, 1), (1, 0)
-    Mm45 = (0, -1), (-1, 0)  # = -M45
-
-    # These are good for rhombic and hex (both obtuse)
-    M11 = (0, 1), (1, 0)     # = M45
-    M1m1 = (0, -1), (-1, 0)  # = -M11 = Mm45
-    M01 = (-1, -1), (0, 1)
-    M10 = (1, 0), (-1, -1)
-
-    # And these are good for hex only (obtuse)
-    C6 = (1, 1), (-1, 0)
-    Cm6 = (0, -1), (1, 1)
-    C3 = (0, 1), (-1, -1)
-    Cm3 = (-1, -1), (1, 0)
-    M21 = (1, 1), (0, -1)
-    M12 = (-1, 0), (1, 1)
-
-    allGroups = {'p1': (E,),
-                 'p2': (E, C2),
-                 'pm[1 0]': (E, Mx), 'pm[0 1]': (E, My),
-                 'pg[1 0]': (E, Mx), 'pg[0 1]': (E, My),
-                 'cm[1 0]': (E, M10), 'cm[0 1]': (E, M01),
-                 'cm[1 1]': (E, M11), 'cm[1 -1]': (E, M1m1),
-                 'cm[1 2]': (E, M12), 'cm[2 1]': (E, M21),
-                 'rcm[1 0]': (E, Mx), 'rcm[0 1]': (E, My),
-                 'pmm': (E, Mx, My, C2),
-                 'pmg[1 0]': (E, Mx, My, C2), 'pmg[0 1]': (E, Mx, My, C2),
-                 'pgg': (E, C2, Mx, My),
-                 'cmm': (E, C2, M11, M1m1), 'rcmm': (E, C2, Mx, My),
-                 'p4': (E, C2, C4, Cm4),
-                 'p4m': (E, Mx, My, M45, Mm45, C2, C4, Cm4),
-                 'p4g': (E, Mx, My, M45, Mm45, C2, C4, Cm4),
-                 'p3': (E, C3, Cm3),
-                 'p3m1': (E, M12, M21, M1m1, C3, Cm3),
-                 'p31m': (E, M10, M11, M01, C3, Cm3),
-                 'p6': (E, C6, Cm6, C3, C2, Cm3),
-                 'p6m': (E, M10, M01, M12, M21, M11, M1m1,
-                         C6, Cm6, C3, C2, Cm3)
-                 }
     # The following two dictionaries are used in screws_glides to convert
     # 1) rotation orders of screws into a tuple of the corresponding matrices
     screw_ops = {'2': (C2,),
@@ -183,9 +181,6 @@ class PlaneGroup():
                 'cm[2 1]', 'cm[1 2]', 'p3', 'p3m1', 'p31m', 'p6', 'p6m'}
         }
 
-    allOps = (E, C2, C4, Cm4, C3, Cm3, C6, Cm6, Mx, My, M45, Mm45, M21, M12,
-              M01, M10, M11, M1m1)  # This should not be needed anymore
-
     def __init__(self, group='p1'):
         if isinstance(group, PlaneGroup):
             bulk_3d = group.screws_glides
@@ -225,7 +220,7 @@ class PlaneGroup():
 
     def __repr__(self):
         """Return a string representation of PlaneGroup."""
-        return f"PlaneGroup({self.group!r})"
+        return f'PlaneGroup({self.group!r})'
 
     @staticmethod
     def groups_compatible_with(cell_shape, operations=tuple(),
@@ -265,22 +260,22 @@ class PlaneGroup():
         try:
             compatible_with_shape = PlaneGroup.groups_for_shape[cell_shape]
         except KeyError as err:
-            raise ValueError(f"PlaneGroup: invalid cell_shape {cell_shape}. "
-                             "Should one of 'Oblique', 'Rectangular',"
-                             " 'Square', 'Rhombic', 'Hexagonal'.") from err
+            raise ValueError(f'PlaneGroup: invalid cell_shape {cell_shape}. '
+                             'Should one of "Oblique", "Rectangular", '
+                             '"Square", "Rhombic", "Hexagonal".') from err
         if not operations:
             return compatible_with_shape
 
         if not hasattr(operations, '__iter__'):
-            raise TypeError("PlaneGroup: operations should be an iterable")
+            raise TypeError('PlaneGroup: operations should be an iterable')
 
         # Convert any numpy array to tuples,
         # for the 'not in' comparison below
         operations = list(operations)
         for i, operation in enumerate(operations):
             if np.shape(operation) != (2, 2):
-                raise ValueError("PlaneGroup: operations should be "
-                                 "an iterable of (2, 2) matrices")
+                raise ValueError('PlaneGroup: operations should be '
+                                 'an iterable of (2, 2) matrices')
             if isinstance(operation, np.ndarray):
                 operations[i] = two_by_two_array_to_tuple(operation)
 
@@ -319,13 +314,13 @@ class PlaneGroup():
 
         input[0] : str or Sequence
             A string of the following forms (with or without spaces):
-                "r(#, #, ...), m([#, #], [#, #], ...)"
-                "m([#, #], [#, #], ...), r(#, #, ...)"
-                "r(#, #, ...)"
-                "m([#, #], [#, #], ...)"
-                "None"
-                For screws, the list in "r()" provides the order of
-                rotations.  For glides, an entry "[i,j]" means the
+                'r(#, #, ...), m([#, #], [#, #], ...)'
+                'm([#, #], [#, #], ...), r(#, #, ...)'
+                'r(#, #, ...)'
+                'm([#, #], [#, #], ...)'
+                'None'
+                For screws, the list in 'r()' provides the order of
+                rotations.  For glides, an entry '[i,j]' means the
                 glide plane leaves the in-plane direction i*a + j*b
                 unmodified.
             A sequence, containing a list of 2x2 matrices of integers
@@ -346,8 +341,8 @@ class PlaneGroup():
             return
         if isinstance(input, (tuple, list, np.array)):
             if len(input) > 2 or len(input) == 0:
-                raise ValueError("PlaneGroup.screws_glides: requires at most "
-                                 f"a 2-tuple. {len(input)} items found.")
+                raise ValueError('PlaneGroup.screws_glides: requires at most '
+                                 f'a 2-tuple. {len(input)} items found.')
             elif len(input) == 2:
                 shape = input[1]
                 input = input[0]
@@ -362,12 +357,12 @@ class PlaneGroup():
             return
 
         if not isinstance(input, (str, np.ndarray, tuple, list)):
-            raise ValueError("PlaneGroup.screws_glides: Invalid input. "
-                             "Need either a string or an array-like. "
-                             f"Found {type(input)} instead.")
+            raise ValueError('PlaneGroup.screws_glides: Invalid input. '
+                             'Need either a string or an array-like. '
+                             f'Found {type(input)} instead.')
 
         if isinstance(input, str):
-            if input.lower() == "none":
+            if input.lower() == 'none':
                 self.__ops_3d = tuple()
                 return
 
@@ -375,40 +370,40 @@ class PlaneGroup():
             ops = []
 
             # search the following patterns
-            screw_re = r"[rR][\(](?P<screws>[\d\,\s]+)[\)]"
-            glide_re = r"[mM][\(](?P<glides>[\d\[\]\,\-\s]+)[\)]"
+            screw_re = r'[rR][\(](?P<screws>[\d\,\s]+)[\)]'
+            glide_re = r'[mM][\(](?P<glides>[\d\[\]\,\-\s]+)[\)]'
 
             found_screws = re.search(screw_re, input)
             found_glides = re.search(glide_re, input)
             if not (found_screws or found_glides):
-                raise ValueError("PlaneGroup.screws_glides: Invalid input.")
+                raise ValueError('PlaneGroup.screws_glides: Invalid input.')
             if found_screws:
                 screws = found_screws.group('screws').replace(' ',
                                                               '').split(',')
                 if any(s not in self.screw_ops.keys() for s in screws):
-                    raise ValueError("PlaneGroup.screws_glides: Invalid "
-                                     "rotation order in the input. Only 2-, "
-                                     "3-, 4-, and 6-fold orders allowed.")
+                    raise ValueError('PlaneGroup.screws_glides: Invalid '
+                                     'rotation order in the input. Only 2-, '
+                                     '3-, 4-, and 6-fold orders allowed.')
                 [ops.extend(self.screw_ops[screw]) for screw in screws]
             if found_glides:
                 if shape is None:
-                    raise ValueError("PlaneGroup.screws_glides: cell shape is "
-                                     "required when glide planes are given.")
+                    raise ValueError('PlaneGroup.screws_glides: cell shape is '
+                                     'required when glide planes are given.')
                 # Parse glide planes by removing
                 # spaces and splitting on commas
                 glides = found_glides.group('glides').replace(' ',
                                                               '').split(',')
 
                 # Now glides should contain an even number of elements:
-                # each odd element is of the form "[#", each even "#]"
+                # each odd element is of the form '[#', each even '#]'
                 for g_odd, g_even in zip(glides[::2], glides[1::2]):
-                    if g_odd[0] != "[" or g_even[-1] != "]":
-                        raise ValueError("PlaneGroup.screws_glides: some "
-                                         "glide plane directions are not "
-                                         "in the form '[i, j]'")
-                    key = f"{g_odd},{g_even}"
+                    if g_odd[0] != '[' or g_even[-1] != ']':
+                        raise ValueError('PlaneGroup.screws_glides: some '
+                                         'glide plane directions are not '
+                                         'in the form "[i, j]"')
+                    key = f'{g_odd},{g_even}'
                     # The only keys that require special attention
-                    # are "[1,0]" and "[0,1]", since the matrices
+                    # are '[1,0]' and '[0,1]', since the matrices
                     # depend on the shape of the cell
                     if key == '[1,0]' and shape in ('Square', 'Rectangular'):
                         key = 'x'
@@ -418,10 +413,10 @@ class PlaneGroup():
                         ops.append(self.glide_ops[key])
                     except KeyError:
                         raise ValueError(
-                            "PlaneGroup.screws_glides: invalid "
-                            f"direction {key} for glide plane. "
-                            "The only allowed directions are: "
-                            f"{self.glide_ops.keys() - ['x', 'y']}")
+                            'PlaneGroup.screws_glides: invalid '
+                            f'direction {key} for glide plane. '
+                            'The only allowed directions are: '
+                            f'{self.glide_ops.keys() - ["x", "y"]}')
             self.__ops_3d = tuple(ops)
             return
 
@@ -430,13 +425,13 @@ class PlaneGroup():
 
         input = np.asarray(input)
         if len(input.shape) != 3 or input.shape[1:] != (2, 2):
-            raise ValueError("PlaneGroup.screws_glides: an array-like input "
-                             "should be a 1D 'list' of 2x2 'matrices'. Found "
-                             f"incompatible shape {np.shape(input)}.")
+            raise ValueError('PlaneGroup.screws_glides: an array-like input '
+                             'should be a 1D "list" of 2x2 "matrices". Found '
+                             f'incompatible shape {np.shape(input)}.')
 
         if np.any(np.abs(input - input.round()) > 1e-4):
-            raise ValueError("PlaneGroup.screws_glides: an array-like input "
-                             "should contain only integer-valued matrices")
+            raise ValueError('PlaneGroup.screws_glides: an array-like input '
+                             'should contain only integer-valued matrices')
 
         self.__ops_3d = two_by_n_array_to_tuples(
                 input.round().astype(int)
@@ -470,7 +465,7 @@ class PlaneGroup():
         valid_group : bool
         """
         if cell_shape not in self.groups_for_shape:
-            raise ValueError(f"PlaneGroup: unknown lattice shape {cell_shape}")
+            raise ValueError(f'PlaneGroup: unknown lattice shape {cell_shape}')
         valid_group = False
         if isinstance(group, str):
             group = self.__check_group_name(group)
@@ -495,7 +490,7 @@ class PlaneGroup():
         -------
         tuple of tuples
         """
-        ops = list(self.allGroups[self.group])
+        ops = list(_GROUP_TO_OPS[self.group])
         if include_3d:
             ops.extend(self.screws_glides)
         return tuple(ops)
@@ -555,18 +550,18 @@ class PlaneGroup():
         tuple of numpy.ndarrays
         """
         if np.shape(transform) != (2, 2):
-            raise ValueError("PlaneGroup.transform requires a 2x2 "
-                             "array-like as coordinate transform matrix. "
-                             f"Found shape {np.shape(transform)} instead.")
+            raise ValueError('PlaneGroup.transform requires a 2x2 '
+                             'array-like as coordinate transform matrix. '
+                             f'Found shape {np.shape(transform)} instead.')
         if inverse is None:
             inverse = np.linalg.inv(transform)
         elif np.shape(inverse) != (2, 2):
-            raise ValueError("PlaneGroup.transform requires a 2x2 array-like "
-                             "as the inverse of the coordinate transform. "
-                             f"Found shape {np.shape(transform)} instead.")
+            raise ValueError('PlaneGroup.transform requires a 2x2 array-like '
+                             'as the inverse of the coordinate transform. '
+                             f'Found shape {np.shape(transform)} instead.')
         elif not np.allclose(np.dot(transform, inverse), ((1, 0), (0, 1))):
-            raise ValueError("PlaneGroup.transform transformation matrix and "
-                             "inverse are inconsistent.")
+            raise ValueError('PlaneGroup.transform transformation matrix and '
+                             'inverse are inconsistent.')
         return tuple(np.linalg.multi_dot((transform,
                                           op,
                                           inverse))
@@ -596,8 +591,8 @@ class PlaneGroup():
             If group is not an acceptable Hermann-Mauguin name.
         """
         if not isinstance(group, str):
-            raise TypeError("'group' should be a string. "
-                            f"Found {type(group)} instead")
+            raise TypeError('"group" should be a string. '
+                            f'Found {type(group).__name__} instead')
         group_re = re.compile(
             r'''
             (?P<hermann>[\w]+)      # Hermann-Mauguin
@@ -611,14 +606,14 @@ class PlaneGroup():
 
         group_match = group_re.match(group)
         if group_match is None:
-            raise ValueError(f"{group} is not an acceptable plane group.")
+            raise ValueError(f'{group} is not an acceptable plane group.')
         group = group_match.group('hermann')
 
         if group_match.group('dir1') is not None:
-            group = (f"{group}[{group_match.group('dir1')} "
-                     f"{group_match.group('dir2')}]")
+            group = (f'{group}[{group_match.group("dir1")} '
+                     f'{group_match.group("dir2")}]')
 
-        if group not in self.allGroups.keys():
-            raise ValueError(f"{group} is not an acceptable plane group.")
+        if group not in _GROUP_TO_OPS:
+            raise ValueError(f'{group} is not an acceptable plane group.')
 
         return group

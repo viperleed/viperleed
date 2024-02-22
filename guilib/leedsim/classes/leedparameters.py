@@ -20,7 +20,7 @@ from warnings import warn as warning   # eventually will replace with logging
 import numpy as np
 
 from viperleed import guilib as gl
-from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.classes import planegroup
 
 non_string_keys = ('emax', 'surfbasis', 'superlattice', 'bulkgroup',
                    'surfgroup', 'beamincidence', 'screenaperture')
@@ -190,14 +190,14 @@ class LEEDParameters(MutableMapping):
         # (4) reciprocal bulk bases, accounting for sign changes
         bulk_transform = np.dot(np.linalg.inv(other['bulkReciprocalBasis']),
                                 self['bulkReciprocalBasis']).T
-        if not np.allclose(np.abs(bulk_transform), PlaneGroup.E, atol=1e-4):
+        if not np.allclose(np.abs(bulk_transform), planegroup.E, atol=1e-4):
             return NotImplemented
 
         # (5) check whether the real-space surface bases are the same,
         #     accounting for sign changes
         surf_transform = np.dot(other['surfBasis'],
                                 np.linalg.inv(self['surfBasis']))
-        if np.allclose(np.abs(surf_transform), PlaneGroup.E):
+        if np.allclose(np.abs(surf_transform), planegroup.E):
             # (5.1) in this case, for the two patterns to be the same,
             #       we need also the bulk groups to be equal, including
             #       the operations that generate domains
@@ -226,10 +226,10 @@ class LEEDParameters(MutableMapping):
         # get the matrices that transform the superlattice of self
         # into the superlattice of other. Here we also have to
         # account for sign changes of the SURFACE basis
-        sign_changes = (PlaneGroup.E,   # no sign change
-                        PlaneGroup.C2,  # both vectors change sign
-                        PlaneGroup.Mx,  # b changes sign
-                        PlaneGroup.My)  # a changes sign
+        sign_changes = (planegroup.E,   # no sign change
+                        planegroup.C2,  # both vectors change sign
+                        planegroup.Mx,  # b changes sign
+                        planegroup.My)  # a changes sign
         # super_transforms is a "list" where the i-th element equals
         # np.dot(inv_super_self, np.dot(sign_changes[i], super_other))
         super_transforms = np.einsum("ilm,jl,mk->ijk",
@@ -853,7 +853,7 @@ class LEEDParametersList(MutableSequence):
             #        T* = B'* @ B*^(-1)
             # since abs(T) == E <--> abs(T*) == E
             transform = np.dot(param['bulkReciprocalBasis'], inv_bulk_basis)
-            if not np.allclose(np.abs(transform), PlaneGroup.E):
+            if not np.allclose(np.abs(transform), planegroup.E):
                 raise ValueError("Inconsistent bulk bases "
                                  "found in the input parameters")
 

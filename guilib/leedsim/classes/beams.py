@@ -17,7 +17,7 @@ import numpy as np
 
 from viperleed import guilib as gl
 from viperleed.guilib import BeamIndex
-from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.classes import planegroup
 
 
 @gl.exec_time
@@ -119,7 +119,7 @@ def same_bases(*bases):
     # The multiplication is done with einsum for speed.
     inv_first = np.linalg.inv(bases[0])
     t_bases = np.einsum('ijk,kl->ijl', bases[1:], inv_first)
-    return np.allclose(np.abs(t_bases) - PlaneGroup.E, 0)
+    return np.allclose(np.abs(t_bases) - planegroup.E, 0)
 
 
 class LEEDEquivalentBeams:

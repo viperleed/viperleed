@@ -16,21 +16,22 @@ import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
-from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.classes import planegroup
 
+PlaneGroup = planegroup.PlaneGroup
 
-TEXT_FOR_OP = {PlaneGroup.C6: '6-fold screw/rotations',
-               PlaneGroup.C4: '4-fold screw/rotations',
-               PlaneGroup.C3: '3-fold screw/rotations',
-               PlaneGroup.C2: '2-fold screw/rotation',
-               PlaneGroup.Mx: 'mirror/glide across [1, 0]',
-               PlaneGroup.My: 'mirror/glide across [0, 1]',
-               PlaneGroup.M11: 'mirror/glide across [1, 1]',    # == M45
-               PlaneGroup.M1m1: 'mirror/glide across [1, -1]',  # == Mm45
-               PlaneGroup.M10: 'mirror/glide across [1, 0]',
-               PlaneGroup.M01: 'mirror/glide across [0, 1]',
-               PlaneGroup.M21: 'mirror/glide across [2, 1]',
-               PlaneGroup.M12: 'mirror/glide across [1, 2]'}
+TEXT_FOR_OP = {planegroup.C6: '6-fold screw/rotations',
+               planegroup.C4: '4-fold screw/rotations',
+               planegroup.C3: '3-fold screw/rotations',
+               planegroup.C2: '2-fold screw/rotation',
+               planegroup.Mx: 'mirror/glide across [1, 0]',
+               planegroup.My: 'mirror/glide across [0, 1]',
+               planegroup.M11: 'mirror/glide across [1, 1]',    # == M45
+               planegroup.M1m1: 'mirror/glide across [1, -1]',  # == Mm45
+               planegroup.M10: 'mirror/glide across [1, 0]',
+               planegroup.M01: 'mirror/glide across [0, 1]',
+               planegroup.M21: 'mirror/glide across [2, 1]',
+               planegroup.M12: 'mirror/glide across [1, 2]'}
 
 
 class Bulk3DSymDialog(qtw.QDialog):
@@ -194,8 +195,8 @@ class Bulk3DSymDialog(qtw.QDialog):
 
         return related
 
-        # if operation in (PlaneGroup.C6, PlaneGroup.C4):
-            # for related_op in (PlaneGroup.C2, PlaneGroup.C3):
+        # if operation in (planegroup.C6, planegroup.C4):
+            # for related_op in (planegroup.C2, planegroup.C3):
                 # try:
                     # related.append(self.__extra_ops.index(related_op))
                 # except ValueError:
@@ -280,7 +281,7 @@ class Bulk3DSymDialog(qtw.QDialog):
             # already present. They will always be added, but
             # we don't want the user to bother selecting both.
             # They are: Cm6 (for C6), Cm3 (for C3) and Cm4 (for C4)
-            if op in (PlaneGroup.Cm6, PlaneGroup.Cm3, PlaneGroup.Cm4):
+            if op in (planegroup.Cm6, planegroup.Cm3, planegroup.Cm4):
                 continue
             self.__extra_ops.append(op)
 
