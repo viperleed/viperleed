@@ -18,6 +18,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.planegroup import PlaneGroup
 
 ANGSTROM = ' \u212b'
 DEGREES = '\u00b0'
@@ -208,7 +209,7 @@ class LatticeInput(qtw.QWidget):
     def compatible_groups(self):
         """Return a tuple of groups compatible with lattice."""
         shape = self.lattice.cell_shape
-        return gl.PlaneGroup.groups_compatible_with(shape)
+        return PlaneGroup.groups_compatible_with(shape)
 
     def flash_high_symm_button(self):
         """Flash on/off the high-symmetry button.

@@ -16,20 +16,21 @@ import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.planegroup import PlaneGroup
 
 
-TEXT_FOR_OP = {gl.PlaneGroup.C6: '6-fold screw/rotations',
-               gl.PlaneGroup.C4: '4-fold screw/rotations',
-               gl.PlaneGroup.C3: '3-fold screw/rotations',
-               gl.PlaneGroup.C2: '2-fold screw/rotation',
-               gl.PlaneGroup.Mx: 'mirror/glide across [1, 0]',
-               gl.PlaneGroup.My: 'mirror/glide across [0, 1]',
-               gl.PlaneGroup.M11: 'mirror/glide across [1, 1]',    # == M45
-               gl.PlaneGroup.M1m1: 'mirror/glide across [1, -1]',  # == Mm45
-               gl.PlaneGroup.M10: 'mirror/glide across [1, 0]',
-               gl.PlaneGroup.M01: 'mirror/glide across [0, 1]',
-               gl.PlaneGroup.M21: 'mirror/glide across [2, 1]',
-               gl.PlaneGroup.M12: 'mirror/glide across [1, 2]'}
+TEXT_FOR_OP = {PlaneGroup.C6: '6-fold screw/rotations',
+               PlaneGroup.C4: '4-fold screw/rotations',
+               PlaneGroup.C3: '3-fold screw/rotations',
+               PlaneGroup.C2: '2-fold screw/rotation',
+               PlaneGroup.Mx: 'mirror/glide across [1, 0]',
+               PlaneGroup.My: 'mirror/glide across [0, 1]',
+               PlaneGroup.M11: 'mirror/glide across [1, 1]',    # == M45
+               PlaneGroup.M1m1: 'mirror/glide across [1, -1]',  # == Mm45
+               PlaneGroup.M10: 'mirror/glide across [1, 0]',
+               PlaneGroup.M01: 'mirror/glide across [0, 1]',
+               PlaneGroup.M21: 'mirror/glide across [2, 1]',
+               PlaneGroup.M12: 'mirror/glide across [1, 2]'}
 
 
 class Bulk3DSymDialog(qtw.QDialog):
@@ -163,7 +164,7 @@ class Bulk3DSymDialog(qtw.QDialog):
         # all the combinations of operations.
         # TODO: do this later when we figure out how to handle this.
         #
-        #       For now, look through the gl.PlaneGroups for the
+        #       For now, look through the PlaneGroups for the
         #       current bulk.cell_shape, and pick the smallest group
         #       that contains all the selected operations (+ those of
         #       the plane group itself). Then use the operations of
@@ -176,8 +177,8 @@ class Bulk3DSymDialog(qtw.QDialog):
                      if extras(i).checkState()])
 
         # Get the smallest group that contains all the operations
-        for group in gl.PlaneGroup.groups_for_shape[self.__bulk.cell_shape]:
-            group_ops = gl.PlaneGroup(group).operations()
+        for group in PlaneGroup.groups_for_shape[self.__bulk.cell_shape]:
+            group_ops = PlaneGroup(group).operations()
             if all(op in group_ops for op in all_ops):
                 break
             group_ops = []
@@ -193,8 +194,8 @@ class Bulk3DSymDialog(qtw.QDialog):
 
         return related
 
-        # if operation in (gl.PlaneGroup.C6, gl.PlaneGroup.C4):
-            # for related_op in (gl.PlaneGroup.C2, gl.PlaneGroup.C3):
+        # if operation in (PlaneGroup.C6, PlaneGroup.C4):
+            # for related_op in (PlaneGroup.C2, PlaneGroup.C3):
                 # try:
                     # related.append(self.__extra_ops.index(related_op))
                 # except ValueError:
@@ -267,7 +268,7 @@ class Bulk3DSymDialog(qtw.QDialog):
 
         # Get the plane group with most operations given the
         # current cell shape (always the last in groups_for_shape)
-        largest_group = gl.PlaneGroup(
+        largest_group = PlaneGroup(
             bulk.group.groups_for_shape[bulk.cell_shape][-1]
             )
         self.__extra_ops = []
@@ -279,7 +280,7 @@ class Bulk3DSymDialog(qtw.QDialog):
             # already present. They will always be added, but
             # we don't want the user to bother selecting both.
             # They are: Cm6 (for C6), Cm3 (for C3) and Cm4 (for C4)
-            if op in (gl.PlaneGroup.Cm6, gl.PlaneGroup.Cm3, gl.PlaneGroup.Cm4):
+            if op in (PlaneGroup.Cm6, PlaneGroup.Cm3, PlaneGroup.Cm4):
                 continue
             self.__extra_ops.append(op)
 
@@ -324,7 +325,7 @@ class Bulk3DSymDialog(qtw.QDialog):
         -------
         str
             A string in the form expected by the property setter
-            gl.PlaneGroup.screws_glides, i.e.,
+            PlaneGroup.screws_glides, i.e.,
                 "r(#, #, ...), m([#, #], [#, #], ...)"
             NB: the setter should be called with a tuple having
             this as its first element, and bulk.cell_shape as

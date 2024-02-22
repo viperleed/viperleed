@@ -28,6 +28,7 @@ from io import IOBase
 import numpy as np
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.planegroup import PlaneGroup
 
 warnings.simplefilter('always', DeprecationWarning)
 
@@ -240,7 +241,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
 
         Returns
         -------
-        viperleed.guilib.PlaneGroup
+        group : PlaneGroup
             A PlaneGroup instance with Hermann-Maugin name as
             found in the file
 
@@ -257,7 +258,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                            "converted to PlaneGroup")
         self.__check_key(structure, key)
 
-        return gl.PlaneGroup(self[structure][key])
+        return PlaneGroup(self[structure][key])
 
     # pylint: enable=missing-param-doc,missing-type-doc
     def optionxform(self, optionstr):

@@ -16,6 +16,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.planegroup import PlaneGroup
 from viperleed.guilib.leedsim.widgets import EditableMatrix, LatticeInput
 from viperleed.guilib.leedsim.classes.woods import (Woods, WoodsSyntaxError,
                                                     MatrixIncommensurateError,
@@ -113,7 +114,7 @@ def _wrap_compatible_groups(lattice_input, surface_input):
         # (2) Pick the list of compatible groups, also
         #     accounting for the operations just found
         shape = lattice_input.lattice.cell_shape
-        return gl.PlaneGroup.groups_compatible_with(shape, projected_bulk_ops)
+        return PlaneGroup.groups_compatible_with(shape, projected_bulk_ops)
 
     return _reimplemented
 
@@ -273,7 +274,7 @@ class SurfaceStructureInput(qtw.QWidget):
 
         'Appropriate' means all those groups that are compatible
         with the cell shape and the new bulk group, in the sense
-        of viperleed.PlaneGroup.groups_compatible_with().
+        of PlaneGroup.groups_compatible_with().
 
         This slot should be connected to the group_changed signal
         of the BulkInput widget that holds the same bulk lattice

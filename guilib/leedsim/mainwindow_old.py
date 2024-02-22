@@ -28,6 +28,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.planegroup import PlaneGroup
 
 
 @gl.broadcast_mouse
@@ -341,7 +342,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
 
         # Now handle the exit conditions
         try:
-            b_group = gl.PlaneGroup(par_dict['bulkGroup'])
+            b_group = PlaneGroup(par_dict['bulkGroup'])
         except ValueError:
             self.fileErr = ('ERROR: Unknown bulk group type '
                            + par_dict['bulkGroup']
@@ -351,7 +352,7 @@ class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
             par_dict['bulkGroup'] = b_group
 
         try:
-            s_group = gl.PlaneGroup(par_dict['surfGroup'])
+            s_group = PlaneGroup(par_dict['surfGroup'])
         except ValueError:
             self.fileErr = ('ERROR: Unknown surface group type '
                             + par_dict['surfGroup']
