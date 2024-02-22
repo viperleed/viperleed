@@ -339,7 +339,7 @@ class PlaneGroup:
         if not input:
             self.__ops_3d = tuple()
             return
-        if isinstance(input, (tuple, list, np.array)):
+        if isinstance(input, (tuple, list, np.ndarray)):
             if len(input) > 2 or len(input) == 0:
                 raise ValueError('PlaneGroup.screws_glides: requires at most '
                                  f'a 2-tuple. {len(input)} items found.')
@@ -433,9 +433,9 @@ class PlaneGroup:
             raise ValueError('PlaneGroup.screws_glides: an array-like input '
                              'should contain only integer-valued matrices')
 
-        self.__ops_3d = two_by_n_array_to_tuples(
+        self.__ops_3d = tuple(two_by_n_array_to_tuples(
                 input.round().astype(int)
-                )
+                ))
 
     @property
     def subgroups(self):
