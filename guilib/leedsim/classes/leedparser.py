@@ -188,12 +188,9 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                                                dtype=dtype,
                                                needs_shape=(2, 2))
         except RuntimeError as err:
-            if matrix.shape == (2, 2):
-                raise RuntimeError(f"Could not convert {key} "
-                                   f"of {structure} into a "
-                                   "numpy.ndarray.") from err
-            raise RuntimeError(f"Invalid shape of {key} "
-                               f"in {structure}") from err
+            raise RuntimeError(f"Could not convert {key} "
+                               f"of {structure} into a 2x2"
+                               "numpy.ndarray.") from err
         return matrix
 
     # pylint: enable=missing-param-doc,missing-type-doc
