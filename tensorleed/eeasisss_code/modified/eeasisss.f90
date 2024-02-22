@@ -2223,6 +2223,8 @@ i2=(int(emv0(ne)+0.001d0)/idep)*idep
 j=(i2-i1/idep)+1
   
 allocate(ep(1:j),ps(1:j,0:lmax))
+!!!!!! A. Imre 17.09.21: lmin was uninitialized? Should be 0 I assume.
+lmin = 0
 
 do n=1,nocc  
   !spline interpolation.

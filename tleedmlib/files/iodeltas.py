@@ -9,9 +9,10 @@ Functions for reading and writing files relevant to the delta calculation
 
 import logging
 import numpy as np
-from viperleed import fortranformat as ff
 import os
 import shutil
+
+import fortranformat as ff
 
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
@@ -43,9 +44,13 @@ def checkDelta(filename, at, el, rp):
     except FileNotFoundError:
         logger.error("Error reading file "+filename)
         raise
+    if rp.TL_VERSION < 1.7:  # formatting changed to I5 in version 1.7
+        intlen = 3
+    else:
+        intlen = 5
     try:
-        nbeams = int(lines[1][0:3])  # number of beams
-        nvar = int(lines[1][6:9])    # number of variations (geo*vib)
+        nbeams = int(lines[1][0:intlen])        # no. of beams
+        nvar = int(lines[1][2*intlen:3*intlen]) # no. of variations (geo*vib)
     except Exception:
         logger.error("Error parsing file " + filename)
         raise
@@ -55,9 +60,11 @@ def checkDelta(filename, at, el, rp):
         return False
     beams = []      # read beams from delta file
     atline = 2
-    for i in range(atline, len(lines)):
-        try:
-            fl = [float(s) for s in lines[i].split()]
+    for i in range(atline, len(lines)):  # read and check beams, then break
+        try:        # read hk of beams formatted as F10.5
+            fl = [float(s) for s in [lines[i][j:j+10]
+                                     for j in range(0, len(lines[i]) - 10,
+                                                    10)]]
         except Exception:
             logger.error("Error parsing file "+filename)
             raise
@@ -145,9 +152,9 @@ def checkDelta(filename, at, el, rp):
     else:
         voff = at.site.vibamp[el]
     for (i, f) in enumerate(fvib):
-        bv = round(round(dvib[i] + voff, 4) / 0.529, 4)
+        bv = round(round(dvib[i] + voff, 4) / 0.529177, 4)
         # in bohr radii; rounding twice to account for 1. writing to
-        #  delta-input, 2. reading from DELTA file. Precision 0.529 taken from
+        #  delta-input, 2. reading from DELTA file. Precision taken from
         #  TensErLEED GLOBAL
         if abs(f - bv) >= 1e-4:
             return False
@@ -217,8 +224,8 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
         except Exception:
             logger.error("generateDeltaInput: Could not read PHASESHIFTS")
             raise
-    MLMAX = [19, 126, 498, 1463, 3549, 7534, 14484, 25821, 43351, 69322,
-             106470, 158067, 227969, 320664, 441320]
+    MNLMB = [19, 126, 498, 1463, 3549, 7534, 14484, 25821, 43351, 69322,
+             106470, 158067, 227969, 320664, 441320, 595833, 790876, 1033942]
     try:
         beamlist, _, _ = writeAUXBEAMS(ivbeams=rp.ivbeams,
                                        beamlist=rp.beamlist, write=False)
@@ -254,16 +261,17 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
                     if s.isEquivalent(atom.site) and cel == targetel:
                         iel = i
     i4 = ff.FortranRecordWriter("I4")
+    f74x3 = ff.FortranRecordWriter('3F7.4')
     ol = i4.write([iel])
-    din += ol.ljust(29) + "IEL  - element in PHASESHIFT list"
-    din += """
+    din += ol.ljust(29) + "IEL  - element in PHASESHIFT list"    
+    if rp.TL_VERSION < 1.7:
+        din += """
 -------------------------------------------------------------------
 --- undisplaced position of atomic site in question             ---
 -------------------------------------------------------------------
 """
-    f74x3 = ff.FortranRecordWriter('3F7.4')
-    ol = f74x3.write([0.0, 0.0, 0.0])
-    din += ol.ljust(29) + "CUNDISP - displacement offset"
+        ol = f74x3.write([0.0, 0.0, 0.0])
+        din += ol.ljust(29) + "CUNDISP - displacement offset"
     din += """
 -------------------------------------------------------------------
 --- displaced positions of atomic site in question              ---
@@ -281,6 +289,14 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     for disp in geolist:
         ol = f74x3.write([disp[2], disp[0], disp[1]])
         din += ol.ljust(29)+"CDISP(z,x,y) - z pointing towards bulk\n"
+        # TODO: should we allow this if e.g. HALTING = 1 and just warn instead?
+        if any([abs(d) > 1. for d in disp]):
+            logger.error(
+                "Displacements for delta amplitudes have to be smaller than "
+                "one Angstrom! Larger displacements are not reasonable "
+                "within the tensor LEED approximation.\n"
+                "Found displacement {} for {}.".format(disp, atom))
+            raise ValueError("Excessive displacements (>1A) detected.")
     din += (
         """-------------------------------------------------------------------
 --- vibrational displacements of atomic site in question        ---
@@ -328,9 +344,9 @@ C  MNLMB: number of Clebsh-Gordon coefficients needed in tmatrix() subroutine -
 C         set according to current LMAX
 """
              "C         MLMAX:  1  2   3    4    5    6    7     8     9     "
-             "10    11     12     13     14     15\n"
+             "10    11     12     13     14     15     16     17     18\n"
              "C         MNLMB: 19 126 498 1463 3549 7534 14484 25821 43351 "
-             "69322 106470 158067 227969 320664 441320\n" """
+             "69322 106470 158067 227969 320664 441320 595833 790876 1033942\n" """
 C  MNPSI: number of phase shift values tabulated in phase shift file
 C  MNEL : number of elements for which phase shifts are tabulated
 C  MNT0 : number of beams for which delta amplitude calculation is required
@@ -340,8 +356,8 @@ C      TLEED beams for a superlattice not present in the reference structure
 C  MNDEB: number of thermal variation steps to be performed (outer var. loop)
 C  MNCSTEP: number of geometric variation steps to be performed """
              + "(inner var. loop)\n\n")
-    param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX[1])
-    param += "      PARAMETER( MNLMB = {} )\n".format(MLMAX[rp.LMAX[1]-1])
+    param += "      PARAMETER( MLMAX = {} )\n".format(rp.LMAX.max)
+    param += "      PARAMETER( MNLMB = {} )\n".format(MNLMB[rp.LMAX.max-1])
     param += ("      PARAMETER( MNPSI = {}, MNEL = {} )\n"
               .format(len(rp.phaseshifts), (len(rp.phaseshifts[0][1]))))
     param += "      PARAMETER( MNT0 = {} )\n".format(len(beamlist))
@@ -354,24 +370,36 @@ C  MNCSTEP: number of geometric variation steps to be performed """
 def generateDeltaBasic(sl, rp):
     """Generates the part of the input for delta-amplitudes that is the same
     for all atoms, and returns it as a string."""
+    if rp.TL_VERSION < 1.7:
+        formatter = {'energies': ff.FortranRecordWriter('3F7.2'),
+                     'uc': ff.FortranRecordWriter('2F7.4'),
+                     'angles': ff.FortranRecordWriter('2F7.4'),
+                     }
+        lj = 24  # ljust spacing
+    else:
+        formatter = {'energies': ff.FortranRecordWriter('2F9.2'),
+                     'uc': ff.FortranRecordWriter('2F9.4'),
+                     'angles': ff.FortranRecordWriter('2F9.4'),
+                     'int': ff.FortranRecordWriter('I4'),
+                     }
+        lj = 30  # ljust spacing
     output = ""
     output += rp.systemName+" "+rp.timestamp+"\n"
-    f72x2 = ff.FortranRecordWriter('2F7.2')
-    ol = f72x2.write([rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01])
-    output += ol.ljust(24) + "EI,EF\n"
-    f74x2 = ff.FortranRecordWriter('2F7.4')
-    ucsurf = sl.ucell[:2, :2].T
+    output += (formatter['energies'].write(
+        [rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01]).ljust(lj)
+        + 'EI,EF\n')
+    ucsurf = sl.ab_cell.T
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
-    ucbulk = sl.bulkslab.ucell[:2, :2].T
-    ol = f74x2.write(ucbulk[0])
-    output += ol.ljust(24) + 'ARA1\n'
-    ol = f74x2.write(ucbulk[1])
-    output += ol.ljust(24) + 'ARA2\n'
-    ol = f74x2.write(ucsurf[0])
-    output += ol.ljust(24) + 'ARB1\n'
-    ol = f74x2.write(ucsurf[1])
-    output += ol.ljust(24) + 'ARB2\n'
-    ol = f72x2.write([rp.THETA, rp.PHI])
-    output += ol.ljust(24) + "THETA PHI\n"
+        sl.make_bulk_slab(rp)
+    ucbulk = sl.bulkslab.ab_cell.T
+    output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
+    output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
+    output += formatter['uc'].write(ucsurf[0]).ljust(lj) + 'ARB1\n'
+    output += formatter['uc'].write(ucsurf[1]).ljust(lj) + 'ARB2\n'
+    output += (formatter['angles'].write([rp.THETA, rp.PHI]).ljust(lj)
+               + 'THETA PHI\n')
+    if rp.TL_VERSION >= 1.7:
+        # TODO: if phaseshifts are calculated differently, change format here
+        output += (formatter['int'].write([1]).ljust(lj)
+                   + 'PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7\n')
     return output

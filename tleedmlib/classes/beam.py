@@ -6,7 +6,7 @@ Created on Tue Dec  3 13:39:04 2019
 
 Class storing properties and data of a beam
 """
-
+import numpy as np
 from quicktions import Fraction
 import math
 
@@ -23,6 +23,8 @@ class Beam:
         The h and k coordinates of the beam as float
     intens : dict {float: float}
         contains {energy: intensity} pairs
+    complex_amplitude : dict {float: complex}
+        contains {energy: amplitude} pairs
     label : str
         Label for the beam
     """
@@ -36,8 +38,17 @@ class Beam:
             self.hkfrac = (Fraction(hk[0]).limit_denominator(maxdenom),
                            Fraction(hk[1]).limit_denominator(maxdenom))
         self.intens = {}
+        self.complex_amplitude = {}
         self.label, _ = self.getLabel()
 
+    @property
+    def energies(self):
+        return np.fromiter(self.intens.keys(), float)
+    
+    @property
+    def intensities(self):
+        return np.fromiter(self.intens.values(), float)
+    
     def updateIndex(self, hk, maxdenom=99):
         """Keep values but change indices"""
         if all([isinstance(v, Fraction) for v in hk]):

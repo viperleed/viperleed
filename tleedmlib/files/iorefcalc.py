@@ -7,14 +7,16 @@ Created on Wed Aug 19 11:55:15 2020
 Functions for reading and writing files relevant to the reference calculation
 """
 
-import numpy as np
+import copy
 import logging
 import os
-import copy
-from viperleed import fortranformat as ff
 
-import viperleed.tleedmlib as tl
-from viperleed.tleedmlib.base import splitMaxRight
+import fortranformat as ff
+import numpy as np
+
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import fortranContLine, splitMaxRight
+from viperleed.tleedmlib.classes.beam import Beam
 from viperleed.tleedmlib.files.beams import writeAUXBEAMS
 
 logger = logging.getLogger("tleedm.files.iorefcalc")
@@ -73,79 +75,132 @@ def combine_tensors(oripath=".", targetpath=".", buffer=0):
 
 
 def combine_fdout(oripath=".", targetpath="."):
-    """Combines fd.out files in oripath into a common file at targetpath."""
-    outlines = []
-    fdfiles = [f for f in os.listdir(oripath)
-               if os.path.isfile(os.path.join(oripath, f))
-               and f.startswith("fd_") and f.endswith("eV.out")]
-    i = 0
-    while i < len(fdfiles):
-        try:
-            float(fdfiles[i].split("fd_")[1].split("eV.out")[0])
-            i += 1
-        except ValueError:
-            fdfiles.pop(i)
-    if len(fdfiles) == 0:
-        logger.error("Found no fd.out files to combine.")
-        raise RuntimeError("No fd.out files found")
-    fdfiles.sort(key=lambda x: float(x.split("fd_")[1].split("eV.out")[0]))
-    nbeams = 0
-    for f in fdfiles:
-        with open(os.path.join(oripath, f), "r") as rf:
-            lines = rf.readlines()
-        lines = [s for s in lines if ".  CORRECT TERMINATION" not in s
-                 and len(s.strip()) >= 1]
-        if len(outlines) == 0:
+    """Combines fd.out and amp.out files in oripath into a common file at
+    targetpath."""
+    for filetype in ("fd", "amp"):
+        outlines = []
+        startstr = filetype + "_"
+        filelist = [f for f in os.listdir(oripath)
+                    if os.path.isfile(os.path.join(oripath, f))
+                    and f.startswith(startstr) and f.endswith("eV.out")]
+        i = 0
+        while i < len(filelist):
             try:
-                nbeams = int(lines[1].strip().split()[0])
+                float(filelist[i].split(startstr)[1].split("eV.out")[0])
+                i += 1
+            except ValueError:
+                filelist.pop(i)
+        if len(filelist) == 0:
+            if filetype == "amp":
+                return   # return without error, we don't need amp files
+            logger.error("Found no fd.out files to combine.")
+            raise RuntimeError("No fd.out files found")
+        filelist.sort(key=lambda x: float(x.split(startstr)[1]
+                                          .split("eV.out")[0]))
+        nbeams = 0
+        for f in filelist:
+            with open(os.path.join(oripath, f), "r") as rf:
+                lines = rf.readlines()
+            lines = [s for s in lines if ".  CORRECT TERMINATION" not in s
+                     and len(s.strip()) >= 1]
+            if len(outlines) == 0:
+                try:
+                    nbeams = int(lines[1].strip().split()[0])
+                except Exception:
+                    logger.error("Failed to combine {}.out".format(filetype),
+                                 exc_info=True)
+                    raise
+                outlines += lines
+            else:
+                outlines += lines[nbeams+2:]
+            if (nbeams % 5) == 4:
+                outlines += "\n"  # expects an empty line (fortran formatting)
+            try:
+                os.remove(os.path.join(oripath, f))
             except Exception:
-                logger.error("Failed to combine fd.out", exc_info=True)
-                raise
-            outlines += lines
-        else:
-            outlines += lines[nbeams+2:]
-        if (nbeams % 5) == 4:
-            outlines += "\n"  # expects an empty line (fortran formatting..)
+                logger.warning("Failed to delete file " + f)
         try:
-            os.remove(os.path.join(oripath, f))
+            with open(os.path.join(targetpath, (filetype + ".out")),
+                      "w") as wf:
+                wf.write("".join(outlines))
         except Exception:
-            logger.warning("Failed to delete file " + f)
-    try:
-        with open(os.path.join(targetpath, "fd.out"), "w") as wf:
-            wf.write("".join(outlines))
-    except Exception:
-        logger.error("Failed to write combined fd.out")
-        raise
+            logger.error("Failed to write combined {}.out".format(filetype))
+            raise
     return
 
 
-def readFdOut(readfile="fd.out", for_error=False):
+def readFdOut(readfile="fd.out", for_error=False, ampfile="amp.out"):
     """Reads the fd.out file produced by the refcalc and returns a list of
-    Beam objects."""
+    Beam objects. If 'ampfile' is set, will attempt to read complex amplitudes
+    from the given file as well."""
+
+    def parse_data(lines, which, filename, theobeams, nbeams):
+        out_str = ""
+        blocks = []
+        for line in lines:
+            if ".  CORRECT TERMINATION" in line:
+                # sometimes superpos output is not in right line. sync issue?
+                continue
+            out_str += line + "\n"
+            llist = line.split()
+            if len(llist) == 0:
+                continue  # skip empty lines
+            try:
+                float(llist[0])
+            except ValueError:
+                break  # end of data
+            blocks.extend(llist)
+
+        # Each block contains exactly nbeams+2 entries (double for amp)
+        # reshape blocks so that each line corresponds to one block
+        if which == "fd":
+            blocks = np.reshape(blocks, (-1, nbeams+2))
+        else:
+            blocks = np.reshape(blocks, (-1, 2*nbeams+2))
+
+        # and parse the data
+        warned = False
+        for block in blocks:
+            if block[1] != "0.0001":
+                if not for_error and not warned:
+                    warned = True
+                    logger.warning("File " + filename + "contains unexpected "
+                                   "data for more than one structural "
+                                   "variation. Only the first block was read.")
+                continue
+            en = float(block[0])
+            values = [float(s) for s in block[2:]]
+            for (j, beam) in enumerate(theobeams):
+                if which == "fd":
+                    beam.intens[en] = values[j]
+                else:
+                    beam.complex_amplitude[en] = complex(values[2*j],
+                                                         values[2*j + 1])
+        return out_str
+
     try:
         with open(readfile, 'r') as rf:
             filelines = [line[:-1] for line in rf.readlines()]
             rf.seek(0)
-            fdout = rf.read()
     except FileNotFoundError:
         logger.error("Error in readFdOut: file "+str(readfile)+" not found.")
         raise
     if filelines[0].startswith(" SOME ERROR OCCURED WHILE READING"):
         logger.error("File "+readfile+" reports error: "+filelines[0])
         raise Exception("File "+readfile+" reports error.")
-    if ".  CORRECT TERMINATION" in fdout:   # happens for superpos output...
-        fdout = fdout.split(".  CORRECT TERMINATION")[0]
+    fdout = ""
     theobeams = []
     i = 1   # number lines as in text editor - be careful about indexing!
     nbeams = 1e10   # some large number, just to enter the while loop
     while i < nbeams+3:
+        fdout += filelines[i-1] + "\n"
         llist = filelines[i-1].split()
         if i == 1:
             pass  # header - skip
         elif i == 2:
             nbeams = int(llist[0])
         else:
-            theobeams.append(tl.Beam((float(llist[1]), float(llist[2]))))
+            theobeams.append(Beam((float(llist[1]), float(llist[2]))))
         i += 1
 
     # re-label the beams to get the correct number of characters and formatting
@@ -153,37 +208,20 @@ def readFdOut(readfile="fd.out", for_error=False):
     for beam in theobeams:
         beam.label = beam.getLabel(lwidth=mw)[0]
 
-    # From now on, all the lines correspond to blocks of beam intensities.
-    # Collect them, skipping empty lines
-    blocks = []
-    for line in filelines[i-1:]:
-        llist = line.split()
-        if len(llist) == 0:
-            continue  # skip empty lines
-        try:
-            float(llist[0])
-        except ValueError:
-            break  # end of data
-        blocks.extend(llist)
+    fdout += parse_data(filelines[i-1:], "fd", readfile, theobeams ,nbeams)
 
-    # Each block contains exactly nbeams+2 entries
-    # reshape blocks so that each line corresponds to one block
-    blocks = np.reshape(blocks, (-1, nbeams+2))
-
-    # and parse the data
-    warned = False
-    for block in blocks:
-        if block[1] != "0.0001":
-            if not for_error and not warned:
-                warned = True
-                logger.warning("File " + readfile + "contains unexpected "
-                               "data for more than one structural "
-                               "variation. Only the first block was read.")
-            continue
-        en = float(block[0])
-        values = [float(s) for s in block[2:]]
-        for (j, beam) in enumerate(theobeams):
-            beam.intens[en] = values[j]
+    if ampfile and os.path.isfile(ampfile):
+        with open(ampfile, 'r') as rf:
+            amplines = [line[:-1] for line in rf.readlines()]
+        # check header
+        if any(amplines[i] != filelines[i] for i in range(1, nbeams + 2)):
+            logger.warning("Failed to read " + ampfile + ": Header does not "
+                           "match " + readfile)
+            return theobeams, fdout
+        # now read the rest
+        parse_data(amplines[nbeams+2:], "amp", ampfile, theobeams, nbeams)
+    if not theobeams:
+        raise RuntimeError(f"No beams found in {readfile}")
     return theobeams, fdout
 
 
@@ -191,7 +229,7 @@ def writePARAM(sl, rp, lmax=-1):
     """Creats the contents of the PARAM file for the reference calculation.
     If no LMAX is passed, will use maximum LMAX from rp. Returns str."""
     if lmax == -1:
-        lmax = rp.LMAX[1]
+        lmax = rp.LMAX.max
     try:
         beamlist, beamblocks, beamN = writeAUXBEAMS(
             ivbeams=rp.ivbeams, beamlist=rp.beamlist, write=False)
@@ -210,19 +248,7 @@ def writePARAM(sl, rp, lmax=-1):
     output = ('C  Dimension statements for Tensor LEED reference calculation, '
               '\nC  version v1.2\n\n')
     output += 'C  1. lattice symmetry\n\n'
-    m = rp.SUPERLATTICE.copy()
-    if m[1, 1] != 0:      # m[1] not parallel to a_bulk
-        if m[0, 1] != 0:  # m[0] not parallel to a_bulk
-            # find basis in which m[0] is parallel to a_bulk
-            f = tl.base.lcm(abs(int(m[0, 1])), abs(int(m[1, 1])))
-            m[0] *= f/m[0, 1]
-            m[1] *= f/m[1, 1]
-            m[0] -= m[1]*np.sign(m[0, 1])*np.sign(m[1, 1])
-        nl1 = abs(int(round(m[0, 0])))
-        nl2 = abs(int(round(abs(np.linalg.det(rp.SUPERLATTICE))/nl1)))
-    else:               # m[1] already parallel to a_bulk
-        nl2 = abs(int(round(m[1, 0])))
-        nl1 = abs(int(round(abs(np.linalg.det(rp.SUPERLATTICE))/nl2)))
+    nl1, nl2 = leedbase.get_superlattice_repetitions(rp.SUPERLATTICE)
     ideg = 2  # any 2D point grid is at least 2fold symmetric
     # if sl.planegroup in ['p2','pmm','pmg','pgg','cmm','rcmm']:
     #     ideg = 2
@@ -249,23 +275,23 @@ def writePARAM(sl, rp, lmax=-1):
                + str(mnlm[lmax-1])+')\n')
     output += '\nC  3. Parameters for (3D) geometry within (2D) unit mesh\n\n'
     output += '      PARAMETER (MNSITE  = '+str(len(sl.sitelist))+')\n'
-    output += '      PARAMETER (MNLTYPE = '+str(len(sl.layers))+')\n'
+    output += '      PARAMETER (MNLTYPE = '+str(sl.n_layers)+')\n'
     mnbrav = 0
     mnsub = 0
     mnstack = 0
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
-    for layer in [lay for lay in sl.layers if not lay.isBulk]:
+        sl.make_bulk_slab(rp)
+    for layer in sl.non_bulk_layers:
         mnstack += 1
-        if len(layer.atlist) == 1:
+        if layer.n_atoms == 1:
             mnbrav += 1
-        if len(layer.atlist) > mnsub:
-            mnsub = len(layer.atlist)
-    for i, layer in enumerate([lay for lay in sl.layers if lay.isBulk]):
-        if len(sl.bulkslab.layers[i].atlist) == 1:
+        if layer.n_atoms > mnsub:
+            mnsub = layer.n_atoms
+    for i, layer in enumerate(sl.bulk_layers):
+        if sl.bulkslab.layers[i].n_atoms == 1:
             mnbrav += 1
-        if len(sl.bulkslab.layers[i].atlist) > mnsub:
-            mnsub = len(layer.atlist)
+        if sl.bulkslab.layers[i].n_atoms > mnsub:
+            mnsub = layer.n_atoms
     output += '      PARAMETER (MNBRAV  = '+str(mnbrav)+')\n'
     output += '      PARAMETER (MNSUB   = '+str(mnsub)+')\n'
     output += '      PARAMETER (MNSTACK = '+str(mnstack)+')\n'
@@ -293,11 +319,16 @@ def writePARAM(sl, rp, lmax=-1):
     return output
 
 
-def collectFIN():
+def collectFIN(version=0.):
     """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, PHASESHIFTS, AUXBEAMS
-    and AUXGEO into one string (input for refcalc), which it returns."""
-    filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
-                 "AUXBEAMS", "AUXGEO"]
+    and AUXGEO into one string (input for refcalc), which it returns. Pass
+    beamlist to avoid reading it again."""
+    if version < 1.73:
+        filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
+                     "AUXBEAMS", "AUXGEO"]
+    else:
+        filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
+                     "AUXGEO"]
     fin = ""
     for fn in filenames:
         with open(fn, "r") as rf:
@@ -309,35 +340,49 @@ def collectFIN():
 
 def writeAUXLATGEO(sl, rp):
     """Writes AUXLATGEO, which is part of the input FIN for the refcalc."""
+    if rp.TL_VERSION < 1.7:
+        formatter = {'energies': ff.FortranRecordWriter('3F7.2'),
+                     'uc': ff.FortranRecordWriter('2F7.4'),
+                     'x_ase_wf': ff.FortranRecordWriter('2F7.4'),
+                     }
+        lj = 24  # ljust spacing
+    else:
+        formatter = {'energies': ff.FortranRecordWriter('3F9.2'),
+                     'uc': ff.FortranRecordWriter('2F9.4'),
+                     'x_ase_wf': ff.FortranRecordWriter('3F9.2'),
+                     }
+        lj = 30  # ljust spacing
     output = ''
     output += rp.systemName+' '+rp.timestamp+'\n'
-    f72x3 = ff.FortranRecordWriter('3F7.2')
-    ens = [rp.THEO_ENERGIES[0], rp.THEO_ENERGIES[1]+0.01, rp.THEO_ENERGIES[2]]
-    ol = f72x3.write(ens).ljust(24)
-    output += ol + 'EI,EF,DE\n'
-    f74x2 = ff.FortranRecordWriter('2F7.4')
-    ucsurf = np.transpose(sl.ucell[:2, :2])
+    ens = [rp.THEO_ENERGIES.start,
+           rp.THEO_ENERGIES.stop + 0.01,
+           rp.THEO_ENERGIES.step]
+    output += formatter['energies'].write(ens).ljust(lj) + 'EI,EF,DE\n'
+    ucsurf = sl.ab_cell.T
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
-    ucbulk = sl.bulkslab.ucell[:2, :2].T
-    ol = f74x2.write(ucbulk[0]).ljust(24)
-    output += ol + 'ARA1\n'
-    ol = f74x2.write(ucbulk[1]).ljust(24)
-    output += ol + 'ARA2\n'
-    output += ' 0.0    0.0             SS1\n'
-    output += ' 0.0    0.0             SS2\n'
-    output += ' 0.0    0.0             SS3\n'
-    output += ' 0.0    0.0             SS4\n'
-    ol = f74x2.write(ucsurf[0]).ljust(24)
-    output += ol + 'ARB1\n'
-    ol = f74x2.write(ucsurf[1]).ljust(24)
-    output += ol + 'ARB2\n'
-    output += ' 0.0    0.0             SO1\n'
-    output += ' 0.0    0.0             SO2\n'
-    output += ' 0.0    0.0             SO3\n'
-    ol = f74x2.write([0.5, rp.V0_Z_ONSET])
-    ol = ol.ljust(24)
-    output += ol + 'FR ASE\n'
+        sl.make_bulk_slab(rp)
+    ucbulk = sl.bulkslab.ab_cell.T
+    output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
+    output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
+    if rp.TL_VERSION < 1.7:
+        output += ' 0.0    0.0             SS1\n'
+        output += ' 0.0    0.0             SS2\n'
+        output += ' 0.0    0.0             SS3\n'
+        output += ' 0.0    0.0             SS4\n'
+    output += formatter['uc'].write(ucsurf[0]).ljust(lj) + 'ARB1\n'
+    output += formatter['uc'].write(ucsurf[1]).ljust(lj) + 'ARB2\n'
+    if rp.TL_VERSION < 1.7:
+        output += ' 0.0    0.0             SO1\n'
+        output += ' 0.0    0.0             SO2\n'
+        output += ' 0.0    0.0             SO3\n'
+    if rp.TL_VERSION < 1.7:
+        output += (formatter['x_ase_wf'].write([0.5, rp.V0_Z_ONSET]).ljust(lj)
+                   + 'FR ASE\n')
+    else:
+        # Different parameters here in version 1.7! Previously in muftin
+        output += (formatter['x_ase_wf'].write([rp.V0_IMAG, rp.V0_Z_ONSET,
+                                                rp.FILAMENT_WF]).ljust(lj)
+                   + 'V0i,ASE,WORKFN\n')
     try:
         with open('AUXLATGEO', 'w') as wf:
             wf.write(output)
@@ -358,23 +403,38 @@ def writeAUXNONSTRUCT(sl, rp):
         logger.error("generatePARAM: Exception while getting data from "
                      "writeAUXBEAMS")
         raise
+    if rp.TL_VERSION < 1.7:
+        formatter = {'tst': ff.FortranRecordWriter('F7.4'),
+                     'incidence': ff.FortranRecordWriter('(F7.2, F6.1)'),
+                     'beamnums': ff.FortranRecordWriter('15I4'),
+                     'eps': ff.FortranRecordWriter('F7.4'),
+                     'ints': ff.FortranRecordWriter('I3'),
+                     }
+    else:
+        formatter = {'tst': ff.FortranRecordWriter('F11.8'),
+                     'incidence': ff.FortranRecordWriter('2F9.4'),
+                     'beamnums': ff.FortranRecordWriter('15I5'),
+                     'eps': ff.FortranRecordWriter('F7.4'),
+                     'ints': ff.FortranRecordWriter('I3'),
+                     }
     output = ''
-    f74 = ff.FortranRecordWriter('F7.4')
-    ol = f74.write([rp.ATTENUATION_EPS])
-    output += ol+'           >>>>> ! <<<<<              TST\n'
-    i4x15 = ff.FortranRecordWriter('15I4')
-    ol = i4x15.write(beamnums)
-    output += ol+'\n'
-    f72f61 = ff.FortranRecordWriter('(F7.2, F6.1)')
-    ol = f72f61.write([rp.THETA, rp.PHI]).ljust(45)
-    output += ol+'THETA FI\n'
-    ol = f74.write([rp.BULKDOUBLING_EPS]).ljust(45)
-    output += ol+'EPS\n'
-    i3 = ff.FortranRecordWriter('I3')
-    ol = i3.write([rp.BULKDOUBLING_MAX]).ljust(45)
-    output += ol+'LITER\n'
-    ol = i3.write([rp.LMAX[1]]).ljust(45)
-    output += ol+'LMAX\n'
+
+    output += (formatter['tst'].write([rp.ATTENUATION_EPS]).ljust(18)
+               + '>>>>> ! <<<<<              TST\n')
+    output += formatter['beamnums'].write(beamnums)+'\n'
+    output += (formatter['incidence'].write([rp.THETA, rp.PHI]).ljust(45)
+               + 'THETA FI\n')
+    output += formatter['eps'].write([rp.BULKDOUBLING_EPS]).ljust(45) + 'EPS\n'
+    output += (formatter['ints'].write([rp.BULKDOUBLING_MAX]).ljust(45)
+               + 'LITER\n')
+    output += formatter['ints'].write([rp.LMAX.max]).ljust(45) + 'LMAX\n'
+    if rp.TL_VERSION >= 1.7:
+        # TODO: if phaseshifts are calculated differently, change format here
+        output += (formatter['ints'].write([1]).ljust(45)
+                   + 'PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7\n')
+    if rp.TL_VERSION >= 1.73:
+        output += (formatter['ints'].write([1]).ljust(45)
+                   + 'IFORM - formatted input and output\n')
     try:
         with open('AUXNONSTRUCT', 'w') as wf:
             wf.write(output)
@@ -387,11 +447,21 @@ def writeAUXNONSTRUCT(sl, rp):
 
 def writeAUXGEO(sl, rp):
     """Writes AUXGEO, which is part of the input FIN for the refcalc."""
-    slab_c = np.copy(sl.ucell[:, 2])
+    if rp.TL_VERSION < 1.7:
+        formatter = {'vibrocc': ff.FortranRecordWriter('2F7.4'),
+                     'geo': ff.FortranRecordWriter('3F7.4'),
+                     }
+        lj = 26
+    else:
+        formatter = {'vibrocc': ff.FortranRecordWriter('2F9.4'),
+                     'geo': ff.FortranRecordWriter('3F9.4'),
+                     }
+        lj = 32
+    slab_c = sl.c_vector.copy()
     if rp.LAYER_STACK_VERTICAL:
         sl = copy.deepcopy(sl)
-        sl.projectCToZ()
-        sl.updateLayerCoordinates()
+        sl.project_c_to_z()
+        sl.update_layer_coordinates()
     output = ''
     output += ('---------------------------------------------------------'
                '----------\n')
@@ -400,10 +470,8 @@ def writeAUXGEO(sl, rp):
     output += ('---------------------------------------------------------'
                '----------\n')
     i3 = ff.FortranRecordWriter('I3')
-    ol = i3.write([len(sl.sitelist)])
-    ol = ol.ljust(26)
+    ol = i3.write([len(sl.sitelist)]).ljust(lj)
     output += ol + 'NSITE: number of different site types\n'
-    f74x2 = ff.FortranRecordWriter('2F7.4')
     for i, site in enumerate(sl.sitelist):
         output += '-   site type '+str(i+1)+' ---\n'
 
@@ -424,13 +492,12 @@ def writeAUXGEO(sl, rp):
                         occ, vib = 0., 0.
                         comment = ''
                     try:
-                        ol = f74x2.write([occ, vib])
+                        ol = formatter['vibrocc'].write([occ, vib]).ljust(lj)
                     except Exception:
                         logger.error(
                             "Exception while trying to write occupation / "
                             "vibrational amplitude for site " + site.label,
                             exc_info=True)
-                    ol = ol.ljust(26)
                     output += ol + comment + '\n'
 
     output += ('-----------------------------------------------------'
@@ -439,32 +506,29 @@ def writeAUXGEO(sl, rp):
                '           ---\n')
     output += ('-----------------------------------------------------'
                '--------------\n')
-    ol = i3.write([len(sl.layers)])
-    ol = ol.ljust(26)
+    ol = i3.write([sl.n_layers]).ljust(lj)
     output += ol + 'NLTYPE: number of different layer types\n'
-    f74x3 = ff.FortranRecordWriter('3F7.4')
-    blayers = [lay for lay in sl.layers if lay.isBulk]
-    nblayers = [lay for lay in sl.layers if not lay.isBulk]
-    layerOffsets = [np.zeros(3) for _ in range(len(sl.layers) + 1)]
+    blayers = sl.bulk_layers
+    layerOffsets = [np.zeros(3) for _ in range(sl.n_layers + 1)]
     if sl.bulkslab is None:
-        sl.bulkslab = sl.makeBulkSlab(rp)
+        sl.make_bulk_slab(rp)
     for i, layer in enumerate(sl.layers):
         output += '-   layer type '+str(i+1)+' ---\n'
-        if layer.isBulk:
-            output += ('  2                       LAY = 2: layer type no. '
+        if layer.is_bulk:
+            output += ('  2'.ljust(lj) + 'LAY = 2: layer type no. '
                        + str(i+1) + ' has bulk lateral periodicity\n')
         else:
-            output += ('  1                       LAY = 1: layer type no. '
+            output += ('  1'.ljust(lj) + 'LAY = 1: layer type no. '
                        + str(i+1) + ' has overlayer lateral periodicity\n')
-        if layer.isBulk:
+        if layer.is_bulk:
             bl = sl.bulkslab.layers[blayers.index(layer)]
-            bulknums = [at.oriN for at in bl.atlist]
-            bulkUnique = [at for at in layer.atlist if at.oriN in bulknums]
+            bulknums = {at.num for at in bl}
+            bulkUnique = [at for at in layer if at.num in bulknums]
             natoms = len(bulkUnique)
             # sanity check: ratio of unit cell areas (given simply by
             #  SUPERLATTICE) should match ratio of written vs skipped atoms:
             arearatio = 1 / abs(np.linalg.det(rp.SUPERLATTICE))
-            atomratio = len(bulkUnique) / len(layer.atlist)
+            atomratio = len(bulkUnique) / layer.n_atoms
             if abs(arearatio - atomratio) > 1e-3:
                 logger.warning(
                     'Ratio of bulk atoms inside/outside the bulk unit cell '
@@ -474,36 +538,36 @@ def writeAUXGEO(sl, rp):
                     'Check SUPERLATTICE parameter and bulk symmetry!')
                 rp.setHaltingLevel(2)
         else:
-            natoms = len(layer.atlist)
-        ol = i3.write([natoms])
-        ol = ol.ljust(26)
+            natoms = layer.n_atoms
+        ol = i3.write([natoms]).ljust(lj)
         output += ol+'number of Bravais sublayers in layer '+str(i+1)+'\n'
-        if layer.isBulk:
+        if layer.is_bulk:
             writelist = bulkUnique
         else:
             writelist = layer.atlist
         writelist.sort(key=lambda atom: -atom.pos[2])
         for atom in writelist:
-            writepos = atom.cartpos - atom.layer.cartori
+            writepos = atom.cartpos - atom.layer.cartori                        # TODO: .cartpos[2]. Issue #174
             ol = i3.write([sl.sitelist.index(atom.site)+1])
             if natoms != 1:
-                ol += f74x3.write([writepos[2], writepos[0], writepos[1]])
+                ol += formatter['geo'].write([writepos[2],
+                                              writepos[0], writepos[1]])
             else:
                 # Bravais layers need to have coordinate (0., 0., 0.)
                 #  -> store actual position for later, it will go into the
                 #  interlayer vector
-                ol += f74x3.write([0., 0., 0.])
+                ol += formatter['geo'].write([0., 0., 0.])
                 layerOffsets[layer.num] += writepos
                 layerOffsets[layer.num + 1] -= writepos
-            ol = ol.ljust(26)
-            output += ol+'Atom N='+str(atom.oriN)+' ('+atom.el+')\n'
+            ol = ol.ljust(lj)
+            output += f'{ol}Atom N={atom.num} ({atom.el})\n'
     output += ('--------------------------------------------------------------'
                '-----\n')
     output += ('--- define bulk stacking sequence                             '
                '  ---\n')
     output += ('--------------------------------------------------------------'
                '-----\n')
-    output += ('  0                       TSLAB = 0: compute bulk using layer '
+    output += ('  0'.ljust(lj) + 'TSLAB = 0: compute bulk using layer '
                'doubling\n')
 
     # determine ASA
@@ -517,16 +581,16 @@ def writeAUXGEO(sl, rp):
         bvectors_ASA = -slab_c * bulkc/slab_c[2]
     # bulkc is now the repeat length along c. now correct for layer thickness:
     if rp.N_BULK_LAYERS == 2:
-        bvectors_ASA[2] = bulkc - (blayers[1].cartbotz - blayers[0].cartori[2])
+        bvectors_ASA[2] = bulkc - (blayers[1].cartbotz - blayers[0].cartori[2])  # TODO: .cartpos[2]. Issue #174
     else:
-        bvectors_ASA[2] = bulkc - (blayers[0].cartbotz - blayers[0].cartori[2])
+        bvectors_ASA[2] = bulkc - (blayers[0].cartbotz - blayers[0].cartori[2])  # TODO: .cartpos[2]. Issue #174
 
     # determine ASBULK - interlayer vector between bulk layers
     if rp.N_BULK_LAYERS == 2:
         # add layerOffsets for Bravais layers:
         bvectors_ASA += layerOffsets[blayers[0].num+1]
         # calculate ASBULK:
-        bvectors_ASBULK = blayers[1].cartori - blayers[0].cartori
+        bvectors_ASBULK = blayers[1].cartori - blayers[0].cartori               # TODO: .cartpos[2]. Issue #174
         bvectors_ASBULK[2] = blayers[1].cartori[2] - blayers[0].cartbotz
         bl2num = blayers[1].num
         # add layerOffsets for Bravais layers:
@@ -537,19 +601,16 @@ def writeAUXGEO(sl, rp):
         bl2num = blayers[0].num
         bvectors_ASBULK = bvectors_ASA
 
-    ol = f74x3.write([bvectors_ASA[2], bvectors_ASA[0], bvectors_ASA[1]])
-    ol = ol.ljust(26)
+    ol = formatter['geo'].write([bvectors_ASA[2],
+                                 bvectors_ASA[0], bvectors_ASA[1]]).ljust(lj)
     output += ol + 'ASA interlayer vector between different bulk units\n'
-    ol = i3.write([blayers[0].num+1])
-    ol = ol.ljust(26)
+    ol = i3.write([blayers[0].num+1]).ljust(lj)
     output += (ol + 'top layer of bulk unit: layer type '+str(blayers[0].num+1)
                + '\n')
-    ol = i3.write([bl2num+1])
-    ol = ol.ljust(26)
+    ol = i3.write([bl2num+1]).ljust(lj)
     output += ol + 'bottom layer of bulk unit: layer type '+str(bl2num+1)+'\n'
-    ol = f74x3.write([bvectors_ASBULK[2], bvectors_ASBULK[0],
-                      bvectors_ASBULK[1]])
-    ol = ol.ljust(26)
+    ol = formatter['geo'].write([bvectors_ASBULK[2], bvectors_ASBULK[0],
+                                 bvectors_ASBULK[1]]).ljust(lj)
     output += (ol + 'ASBULK between the two bulk unit layers (may differ from '
                'ASA)\n')
     output += ('--------------------------------------------------------------'
@@ -558,7 +619,7 @@ def writeAUXGEO(sl, rp):
                '  ---\n')
     output += ('--------------------------------------------------------------'
                '-----\n')
-    nonbulk = len(sl.layers)-rp.N_BULK_LAYERS
+    nonbulk = sl.n_layers - rp.N_BULK_LAYERS
     if len(rp.TENSOR_OUTPUT) < nonbulk:    # check TENSOR_OUTPUT parameter
         if len(rp.TENSOR_OUTPUT) == 1:
             # interpret one value as concerning all
@@ -576,26 +637,24 @@ def writeAUXGEO(sl, rp):
             'Parameters TENSOR_OUTPUT is defined, but contains more values '
             'than there are non-bulk layers. Excess values will be ignored.')
         rp.setHaltingLevel(1)
-    ol = i3.write([len(sl.layers)-rp.N_BULK_LAYERS])
-    ol = ol.ljust(26)
+    ol = i3.write([sl.n_layers - rp.N_BULK_LAYERS]).ljust(lj)
     output += ol + 'NSTACK: number of layers stacked onto bulk\n'
-    for layer in list(reversed(nblayers)):
+    for layer in reversed(sl.non_bulk_layers):
         n = layer.num + 1
         v = sl.layers[n].cartori - layer.cartori
-        v[2] = sl.layers[n].cartori[2] - layer.cartbotz
+        v[2] = sl.layers[n].cartori[2] - layer.cartbotz                         # TODO: .cartpos[2]. Issue #174
         v = v + layerOffsets[n]   # add layerOffsets for Bravais layers
-        ol = i3.write([n]) + f74x3.write([v[2], v[0], v[1]])
-        ol = ol.ljust(26)
-        output += (ol + 'layer '+str(n)+': layer type '+str(n)+', interlayer '
-                   'vector below\n')     # every layer is also a layer type
-        ol = i3.write([rp.TENSOR_OUTPUT[layer.num]])
-        ol = ol.ljust(26)
+        ol = i3.write([n]) + formatter['geo'].write([v[2],
+                                                     v[0], v[1]])
+        output += (ol.ljust(lj) + 'layer '+str(n)+': layer type '+str(n)
+                   + ', interlayer vector below\n')
+        ol = i3.write([rp.TENSOR_OUTPUT[layer.num]]).ljust(lj)
         output += (ol + '0/1: Tensor output is required for this layer '
                    '(TENSOR_OUTPUT)\n')
         if rp.TENSOR_OUTPUT[layer.num] == 0:
             continue   # don't write the Tensor file names
-        for i, atom in enumerate(layer.atlist):
-            ol = ('T_'+str(atom.oriN)).ljust(26)
+        for i, atom in enumerate(layer):
+            ol = f'T_{atom.num}'.ljust(lj)
             output += (ol + 'Tensor file name, current layer, sublayer '
                        + str(i+1) + '\n')
     output += ('--------------------------------------------------------------'
@@ -663,8 +722,12 @@ C  work function should be positive (added to exp. energy EEV)
 C  set real part of inner potential
 
 """
-    oline = "      VV = "+rp.V0_REAL
-    output += tl.base.fortranContLine(oline) + "\n"
+    if type(rp.V0_REAL) == list:
+        oline = ("      VV = workfn-max({:.2f}, (({:.2f})+({:.2f})/sqrt("
+                 "EEV+workfn+({:.2f}))))".format(*rp.V0_REAL))
+    else:
+        oline = "      VV = "+rp.V0_REAL
+    output += fortranContLine(oline) + "\n"
     output += """
       write(6,*) workfn, EEV
       write(6,*) VV
@@ -677,15 +740,15 @@ c  set imaginary part of inner potential - energy independent value used here
 
 """
     oline = "      VPI = "+str(rp.V0_IMAG)
-    output += tl.base.fortranContLine(oline) + "\n"
+    output += fortranContLine(oline) + "\n"
     output += """
 C  set substrate / overlayer imaginary part of inner potential
 
 """
     oline = "      VPIS = "+str(rp.V0_IMAG)
-    output += tl.base.fortranContLine(oline) + "\n"
+    output += fortranContLine(oline) + "\n"
     oline = "      VPIO = "+str(rp.V0_IMAG)
-    output += tl.base.fortranContLine(oline) + "\n"
+    output += fortranContLine(oline) + "\n"
     output += """
       return
       end"""

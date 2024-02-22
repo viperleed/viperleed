@@ -13,7 +13,7 @@ Date: 09.02.2022
 
 #include "viper-ino.h"   // Arduino-related settings. Includes ADC and DAC
 
-#define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
+#define DEBUG  false     // Debug mode, writes to serial line, for use in serial monitor
 
 // Firmware version (MAX: v255.255). CURENTLY: v0.6
 #define FIRMWARE_VERSION_MAJOR    0  // max 255

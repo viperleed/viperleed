@@ -1,10 +1,12 @@
-'''
+"""
 =================
     ViPErLEED
 =================
-'''
+"""
 
-# print('You have imported', __name__)
+__version__ = '0.11.0'
 
-GLOBALS = {'USE_GUI': None,
-           'version': '0.5.3', }
+GLOBALS = {
+    'USE_GUI': None,
+    'version': __version__,
+    }

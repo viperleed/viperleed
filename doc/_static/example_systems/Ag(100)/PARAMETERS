@@ -1,0 +1,15 @@
+! Comments can start with either ! or #
+
+! ####### GLOBAL PARAMETERS #######
+RUN = 0
+THEO_ENERGIES = 45 700 3
+
+! ####### PARAMETERS FOR INTERPRETING POSCAR #######
+BULK_LIKE_BELOW = 0.45
+
+SITE_DEF Ag = surf 1
+
+! ####### PARAMETERS FOR VIBROCC #######
+T_DEBYE = 330
+T_EXPERIMENT = 100
+VIBR_AMP_SCALE = *surf 1.3

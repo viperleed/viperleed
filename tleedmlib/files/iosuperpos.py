@@ -10,7 +10,7 @@ Functions for writing files relevant to the superpos calculation
 import logging
 import numpy as np
 
-from viperleed import fortranformat as ff
+import fortranformat as ff
 
 logger = logging.getLogger("tleedm.files.iosuperpos")
 
@@ -96,9 +96,9 @@ def writeSuperposInput(sl, rp, config, param_name="PARAM",
             occupations.append(o)
             totalocc += np.array(o)
             pl = [sp for sp in sps if sp.el == el]
-            if len(pl) == 0:
-                logger.error("No search parameters found for atom {}."
-                             "Aborting...".format(at.oriN))
+            if not pl:
+                logger.error('No search parameters found '
+                             f'for {at}. Aborting...')
                 rp.setHaltingLevel(2)
                 return ""
             deltanames.append(pl[0].deltaname)
@@ -175,21 +175,33 @@ C
         raise
 
     # collect contrin output
-    i3 = ff.FortranRecordWriter("I3")
-    i3x100 = ff.FortranRecordWriter("100I3")
-    f74x10 = ff.FortranRecordWriter('10F7.4')
-    contrin = (i3.write([mnfiles]) + "  0               no. of files, VarAll: "
-               "all possible parameter combinations? (1/0)\n")
-    contrin += i3.write([n_conc]) + ("                  "
-                                     "number of concentration steps\n")
+    if rp.TL_VERSION < 1.7:
+        formatter = {'int': ff.FortranRecordWriter('I3'),
+                     'occ': ff.FortranRecordWriter('10F7.4'),
+                     'var': ff.FortranRecordWriter('I3'),
+                     'ndelta': ff.FortranRecordWriter('100I3'),
+                     }
+    else:
+        formatter = {'int': ff.FortranRecordWriter('I4'),
+                     'occ': ff.FortranRecordWriter('10F7.4'),
+                     'var': ff.FortranRecordWriter('I3'),
+                     'ndelta': ff.FortranRecordWriter('1000I5'),
+                     }
+    contrin = ((formatter['int'].write([mnfiles])
+                + formatter['int'].write([0])).ljust(16)
+               + "no. of files, VarAll: all possible parameter combinations? "
+               "(1/0)\n")
+    contrin += (formatter['int'].write([n_conc]).ljust(16)
+                + "number of concentration steps\n")
     occ_trans = map(list, zip(*occupations))  # transpose occupations
     for occ in occ_trans:
-        contrin += f74x10.write(occ) + "\n"
+        contrin += formatter['occ'].write(occ) + "\n"
     for i in range(0, len(deltanames)):
-        contrin += deltanames[i].ljust(15) + i3.write([n_var])
-        contrin += (i3.write([surfaceChecks[i]]) + "  1  FILENAME(A15 !!!),"
-                    "VARIATIONS,SURFACE?,FORMATTED?\n")
-        contrin += i3x100.write(indices[i]) + "\n"
+        contrin += deltanames[i].ljust(15) + formatter['var'].write([n_var])
+        contrin += (formatter['var'].write([surfaceChecks[i]])
+                    + formatter['var'].write([1]) + "  FILENAME,VARIATIONS,"
+                    "SURFACE?,FORMATTED? (A15,3I3)\n")
+        contrin += formatter['ndelta'].write(indices[i]) + "\n"
     try:
         with open(contrin_name, "w") as wf:
             wf.write(contrin)

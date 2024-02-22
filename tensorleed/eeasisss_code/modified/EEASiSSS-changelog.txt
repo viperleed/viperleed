@@ -14,3 +14,10 @@
 05.01.2021 - v4:
 ### in eeasisss.f90:
 line 852 (new, original after line 845): inserted assignment for nxt for default case
+
+17.09.21 by A. Imre:
+### eeasiss.f90
+- subroutine phaseshift_tab starting at line 2202 left the integer lmin uninitialized. This probably led to an error in the phaseshift calculation when compiled with mpifort/gfortran for (at least) MacOS. Added assignment lmin = 0 before the variable is used.
+
+### imported_routines.f90:
+- made sure all DO loops end with a continue statement to get rid of warning for removed feature

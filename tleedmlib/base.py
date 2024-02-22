@@ -7,42 +7,38 @@ Created on Jun 13 2019
 Contains generic functions used in the TensErLEED scripts.
 """
 
+import itertools
 import logging
-import numpy as np
-import re
-import subprocess
 import multiprocessing
 import os
+import re
+import shutil
+import sys
+import subprocess
+
+import numpy as np
 import scipy.spatial as sps
-import itertools
 
 logger = logging.getLogger("tleedm.base")
+COLLAPSE_EPS = 1e-8  # Default for collapsing fractional coordinates
+
+###############################################
+#                EXCEPTIONS                   #
+###############################################
+
+class NonIntegerMatrixError(ValueError):                                         # TODO: move somewhere else
+    """A matrix that should have integer values does not."""
+
+
+class SingularMatrixError(ValueError, ZeroDivisionError):
+    """A matrix that needs inversion is singular."""
 
 
 ###############################################
 #                 CLASSES                     #
 ###############################################
 
-class CustomLogFormatter(logging.Formatter):
-    """Logging Formatter for level-dependent message formatting"""
-    FORMATS = {
-        logging.DEBUG: "dbg: %(msg)s",
-        logging.INFO: "%(msg)s",
-        logging.WARNING: "# WARNING: %(msg)s",
-        logging.ERROR: "### ERROR ### in %(module)s:%(funcName)s:%(lineno)s\n"
-                       "# %(msg)s \n#############",
-        logging.CRITICAL: "### CRITICAL ### in %(module)s:%(funcName)s:"
-                          "%(lineno)s\n# %(msg)s \n################",
-        "DEFAULT": "%(msg)s",
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
-
-
-class BackwardsReader:
+class BackwardsReader:                                                          # TODO: maybe better to give it __enter__ and __exit__?
     """Simple class for reading a large file in reverse without having to read
     the entire file to memory.
     From http://code.activestate.com/recipes/120686/, adapted for python 3 and
@@ -58,12 +54,12 @@ class BackwardsReader:
                 # read from end of file
                 self.f.seek(-self.blksize * self.blkcount, 2)
                 self.data = ((self.f.read(self.blksize).decode(self.encoding))
-                             + line).split("\n")
+                             + line).splitlines()
             except IOError:    # can't seek before the beginning of the file
                 self.f.seek(0)
                 self.data = (((self.f.read(self.size - (self.blksize
                                                         * (self.blkcount-1))))
-                              .decode(self.encoding) + line).split("\n"))
+                              .decode(self.encoding) + line).splitlines())
 
         if len(self.data) == 0:
             return ""
@@ -91,40 +87,236 @@ class BackwardsReader:
             # read from end of file
             self.f.seek(-self.blksize * self.blkcount, 2)
         self.data = ((self.f.read(self.blksize))
-                     .decode(self.encoding).split("\n"))
+                     .decode(self.encoding).splitlines())
+        if not self.data:  # File is empty
+            return
         # strip the last item if it's empty... a byproduct of the last line
         # having a newline at the end of it
         if not self.data[-1]:
             self.data.pop()
 
 
+class CustomLogFormatter(logging.Formatter):
+    """Logging Formatter for level-dependent message formatting"""
+    FORMATS = {
+        logging.DEBUG: "dbg: %(msg)s",
+        logging.INFO: "%(msg)s",
+        logging.WARNING: "# WARNING: %(msg)s",
+        logging.ERROR: "### ERROR ### in %(module)s:%(funcName)s:%(lineno)s\n"
+                       "# %(msg)s \n#############",
+        logging.CRITICAL: "### CRITICAL ### in %(module)s:%(funcName)s:"
+                          "%(lineno)s\n# %(msg)s \n################",
+        "DEFAULT": "%(msg)s",
+    }
+
+    def format(self, record):
+        # debug log format for everything at DEBUG level or lower
+        if record.levelno < logging.DEBUG:
+            log_fmt = self.FORMATS.get(logging.DEBUG)
+        else:
+            log_fmt = self.FORMATS.get(record.levelno, self.FORMATS['DEFAULT'])
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
 ###############################################
 #                FUNCTIONS                    #
 ###############################################
 
-def rotMatrix(order):
-    """Returns a (2x2) matrix for in-plane rotation of the given rotation
-    order."""
-    # these explicit definitions are likely useless, but sqrts might be
-    #  marginally more accurate than sin/cos
-    if order == 2:
-        return np.array([[-1, 0], [0, -1]])
-    elif order == -3:
-        return np.array([[-0.5, -np.sqrt(3)/2], [np.sqrt(3)/2, -0.5]])
-    elif order == 3:
-        return np.array([[-0.5, np.sqrt(3)/2], [-np.sqrt(3)/2, -0.5]])
-    elif order == -4:
-        return np.array([[0, 1], [-1, 0]])
-    elif order == 4:
-        return np.array([[0, -1], [1, 0]])
-    elif order == -6:
-        return np.array([[0.5, np.sqrt(3)/2], [-np.sqrt(3)/2, 0.5]])
-    elif order == 6:
-        return np.array([[0.5, -np.sqrt(3)/2], [np.sqrt(3)/2, 0.5]])
+def add_edges_and_corners(cartesian, fractional, releps, ucell, props=None):
+    """Add atoms at edges and corners to the Cartesian coordinates given.
+
+    Notice that edges and corners will be added only for dimensions
+    up to the smallest among: shape(fractional)[1], len(releps),
+    len(ucell). The only requirements are that `fractional` contains
+    at most the same number of elements as `cartesian`, and that the
+    second axis of `cartesian` and `ucell` are broadcastable. This
+    allows, e.g., to pass in 3D coordinates but only add repeats
+    for 2D edges and corners.
+
+    Parameters
+    ----------
+    cartesian : Sequence
+        The Cartesian coordinates to which replicas of atoms at
+        edges and corners will be appended. Shape (N, 2) or (N, 3).
+    fractional : Sequence
+        Fractional coordinates corresponding to `cartesian`. Should
+        have shape (M, m), with M <= N.
+    releps : Sequence
+        Tolerance on fractional coordinates to consider an atom from
+        `cartesian` to be close to an edge. Shape (2,) or (3,).
+    ucell : Sequence
+        Unit cell to be used for the displacement of atoms close to
+        edges/corners. Shape (2, 2) or (3, 3), and such that unit
+        cell vectors are rows. The second dimension should match
+        the second one of `cartesian`.
+    props : list or None, optional
+        If given, it should have the same length as `cartesian`. It
+        is interpreted as a list of properties that should also be
+        duplicated whenever an atom is duplicated. Default is None.
+
+    Returns
+    -------
+    cartesian_extended : numpy.ndarray
+        Cartesian atomic coordinates to which extra atoms have been
+        appended at the end for all those atoms in `cartesian` that
+        were at edges/corners.
+    props_extended : list or None
+        Corresponding properties of the added atoms. None if `props`
+        was not given to begin with.
+    """
+    for i, pos in enumerate(fractional):
+        addlist = []
+        for posj, epsj, uvec in zip(pos, releps, ucell):
+            if abs(posj) < epsj:        # 'left' edge
+                addlist.append(cartesian[i] + uvec)
+            elif abs(posj - 1) < epsj:  # 'right' edge
+                addlist.append(cartesian[i] - uvec)
+        if len(addlist) == 2:
+            # 2D corner - add the diagonally opposed one
+            addlist.append(sum(addlist) - cartesian[i])
+        elif len(addlist) == 3:
+            # 3D corner - add all diagonally opposed points
+            addlist.extend(
+                p1 + p2 - cartesian[i]
+                for p1, p2 in itertools.combinations(addlist, 2)
+                )
+            addlist.append(sum(addlist[:3]) - 2 * cartesian[i])
+
+        if not addlist:
+            continue
+        cartesian = np.concatenate((cartesian, addlist))
+        if props is not None:
+            props.extend([props[i]]*len(addlist))
+    return cartesian, props
+
+
+def collapse(cartesians, ucell, ucell_inv=None, method='floor'):
+    """Collapse Cartesian coordinates to the base cell.
+
+    Parameters
+    ----------
+    cartesians : numpy.ndarray
+        Cartesian coordinates to be collapsed. Shape (N, 2) or (N, 3).
+    ucell : numpy.ndarray
+        Basis vectors (rows) of the unit cell to be used for collapsing.
+    ucell_inv : numpy.ndarray or None, optional
+        The inverse of ucell. If not given or None, it is computed
+        on the fly. Default is None.
+    method : {'floor', 'round'}, optional
+        Which method should be used for collapsing. 'floor'
+        returns Cartesian coordinates collapsed to the (0, 0)
+        cell, i.e., with all fractional coordinates in range
+        [0, 1]. 'round' collapses the coordinates so that they
+        are as close to zero as possible. Fractional coordinates
+        are then in range [-0.5, 0.5].
+
+    Returns
+    -------
+    collapsed_cartesians : numpy.ndarray
+        The Cartesian coordinates, collapsed according to method
+    fractional_coordinates : numpy.ndarray
+        The corresponding fractional coordinates
+    """
+    if ucell_inv is None:
+        ucell_inv = np.linalg.inv(ucell)
+    fractional = collapse_fractional(cartesians.dot(ucell_inv),
+                                     method=method)
+    return fractional.dot(ucell), fractional
+
+
+def _floor_eps(eps):
+    """Return the floored-int version of values after adding eps."""
+    def _floor(values):
+        return np.floor(values + eps)
+    return _floor
+
+
+def collapse_fractional(coordinates, method='floor',
+                        eps=COLLAPSE_EPS, in_place=False):
+    """Collapse fractional coordinates to the base cell.
+
+    Parameters
+    ----------
+    coordinates : numpy.ndarray
+        Fractional coordinates to be collapsed. Shape (N, 2) or (N, 3).
+    method : {'floor', 'round'}, optional
+        Which method should be used for collapsing.  'round' collapses
+        the coordinates so that they are as close to zero as possible.
+        Fractional coordinates are then in range [-0.5, 0.5]. 'floor'
+        returns fractional coordinates collapsed to the (0, 0) cell,
+        that is, with all fractional coordinates in range [-`eps`,
+        1-`eps`]. This ensures that collapsing a fractional coordinate
+        of (essentially) 1 gives (essentially) zero. Default is 'floor'.
+    eps : float or Sequence, optional
+        Used only if method == 'floor'. The (fractional) tolerance
+        for collapsing. If a sequence, it should have as many items
+        as the second axis of coordinates. Default is 1e-8.
+    in_place : bool, optional
+        If True, the function modifies directly `coordinates`. Can be
+        used to save some memory. Default is False.
+
+    Returns
+    -------
+    collapsed : numpy.ndarray
+        The collapsed fractional coordinates. Will be the same object
+        passed in if in_place is True-thy.
+
+    Raises
+    ------
+    ValueError
+        If method is not one of the valid methods.
+    """
+    _methods = {'f': _floor_eps(eps), 'r': np.round}
+    try:
+        round_ = _methods[method[0]]
+    except (TypeError, IndexError, KeyError):
+        raise ValueError(f'collapse_fractional: Unknown method={method}')
+    if in_place:
+        collapsed = coordinates
+        collapsed -= round_(coordinates)
     else:
-        angle = 2*np.pi/order
-        return np.array([[np.cos(angle), np.sin(angle)],
-                         [-np.sin(angle), np.cos(angle)]])
+        collapsed = coordinates - round_(coordinates)
+    return collapsed
+
+
+def ensure_integer_matrix(matrix, eps=1e-6):
+    """Return a rounded version of matrix. Raise if matrix isn't integer."""
+    rounded = np.round(matrix)
+    if np.any(abs(matrix - rounded) > eps):
+        raise NonIntegerMatrixError(matrix)
+    return rounded
+
+
+def pairwise(iterable):
+    """Return a generator of pairs of subsequent elements."""
+    try:
+        # pairwise is available in py >= 3.10
+        return itertools.pairwise(iterable)
+    except AttributeError:
+        pass
+    # Rough equivalent from the python docs
+    orig, offset = itertools.tee(iterable)
+    next(offset, None)
+    return zip(orig, offset)
+
+
+def rotation_matrix(angle, dim=2):
+    """Returns a (2x2) matrix for in-plane rotation of the given rotation
+    angle. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
+    if dim < 2:
+        raise ValueError('Rotation matrix needs at least dimension 2')
+    m = np.eye(dim, dtype=float)
+    m[:2, :2] = np.array([[np.cos(angle), -np.sin(angle)],
+                          [np.sin(angle), np.cos(angle)]])
+    return m
+
+
+def rotation_matrix_order(order, dim=2):
+    """Returns a (2x2) matrix for in-plane rotation of the given rotation
+    order. Set dim=3 to get a 3x3 matrix with rotation in [:2, :2]."""
+    angle = 2*np.pi/order
+    return rotation_matrix(angle, dim=dim)
 
 
 def fortranContLine(s):
@@ -171,19 +363,29 @@ def readIntRange(s):
         try:
             out.append(int(ss))
         except ValueError:
-            if "-" in ss:
-                spl = ss.split("-")
-                try:
-                    out.extend(list(range(int(spl[0]), int(spl[1])+1)))
-                except (ValueError, IndexError):
-                    return []
-            elif ":" in ss:
-                spl = ss.split(":")
-                try:
-                    out.extend(list(range(int(spl[0]), int(spl[1])+1)))
-                except (ValueError, IndexError):
-                    return []
-    return list(set(out))
+            try:
+                start, stop = split_string_range(ss)
+            except ValueError:
+                return []
+
+            try:
+                out.extend(range(int(start), int(stop)+1))
+            except ValueError:
+                return []
+    return list(dict.fromkeys(out))  # Like set, but keep order
+
+
+def split_string_range(range_string):
+    """Return start and stop as strings from "start:stop" or "start-stop"."""
+    range_list = []
+    if '-' in range_string:
+        range_list = range_string.split('-')
+    elif ':' in range_string:
+        range_list = range_string.split(':')
+    try:
+        return range_list[0], range_list[-1]
+    except IndexError:
+        raise ValueError(f"Invalid range string: {range_string}") from None
 
 
 def range_to_str(il):
@@ -191,9 +393,10 @@ def range_to_str(il):
     For example, [1, 6, 4, 5, 2, 8] will return "1-2, 4-6, 8". Double entries
     will be ignored."""
     if not all(isinstance(v, int) for v in il):
-        t = [type(v) for v in il if type(v) is not int]
-        raise TypeError("range_to_str: expected list of int, found type "
-                        + str(t[0].__name__))
+        t = next(type(v) for v in il if not isinstance(v, int))
+        raise TypeError(
+            f"range_to_str: expected list of int, found type {t.__name__}"
+            )
     sl = sorted(il, reverse=True)
     prev = sl.pop()
     rmin = prev
@@ -206,13 +409,13 @@ def range_to_str(il):
             prev = v
             continue
         if prev != rmin:
-            out += "-{}, {}".format(prev, v)
+            out += f"-{prev}, {v}"
         else:
-            out += ", {}".format(v)
+            out += f", {v}"
         prev = v
         rmin = v
     if prev != rmin:
-        out += "-{}".format(prev)
+        out += f"-{prev}"
     return out
 
 
@@ -233,14 +436,13 @@ def readVector(s, ucell=None, defRelaltive=False):
     if "abc" in s:
         if ucell is None:
             return None
-        uct = ucell.transpose()
-        vec = (v1*uct[0] + v2*uct[1] + v3*uct[2])
-    else:  # xyz
-        vec = np.array([v1, v2, v3])
-    return vec
+        uct = ucell.T
+        return np.dot((v1, v2, v3), ucell.T)
+    # xyz
+    return np.array([v1, v2, v3])
 
 
-def readIntLine(line, width=3):
+def readIntLine(line, width=3):                                                 # TODO: Probably better ways with list comprehension
     """
     Reads an (arbitrary length) line of integers with fixed width. Will try
     to interpret everything as integers until the line ends.
@@ -255,16 +457,12 @@ def readIntLine(line, width=3):
     Returns
     -------
     Tuple of integers
-
     """
     line = line.rstrip()
     out = []
-    try:
-        while len(line) > 0:
-            out.append(int(line[:width]))
-            line = line[width:]
-    except (ValueError, IndexError):
-        raise
+    while line:
+        chunk, line = line[:width], line[width:]
+        out.append(int(chunk))
     return tuple(out)
 
 
@@ -288,7 +486,7 @@ def cosvec(x, y):
     return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 
-def dict_equal(d1, d2):
+def dict_equal(d1, d2):                                                         # TODO: d1 == d2 works the same
     """
     Checks whether two dictionaries are equal, i.e. contain the same set of
     keys with the same values
@@ -304,7 +502,6 @@ def dict_equal(d1, d2):
     -------
     bool
         True if all keys and values match, False otherwise
-
     """
     if len({k: d1[k] for k in d1 if k in d2 and d1[k] == d2[k]})-len(d1) == 0:
         return True
@@ -383,10 +580,7 @@ def parseMathSqrt(s):
 
 def angle(v1, v2):
     """Returns the angle between two 2D vectors"""
-    # angle = np.arctan2(v2[1],v2[0]) - np.arctan2(v1[1],v1[0])
-    # if abs(angle) > np.pi:
-    #     angle += -np.sign(angle) * 2*np.pi
-    # return angle
+    # Use cross product for sine, dot product for cosine
     return np.arctan2(v1[0]*v2[1] - v1[1]*v2[0], v1[0]*v2[0] + v1[1]*v2[1])
 
 
@@ -406,21 +600,28 @@ def dist_from_line(p1, p2, r):
     -------
     float
         The distance.
-
     """
-
     if len(p1) == 2:
         return (abs((p2[1] - p1[1]) * r[0] - (p2[0] - p1[0]) * r[1]
                     + p2[0] * p1[1] - p2[1] * p1[0])
                 / np.sqrt((p2[1] - p1[1])**2 + (p2[0] - p1[0])**2))
-    elif len(p1) == 3:
+    if len(p1) == 3:
         return (np.linalg.norm(np.cross((r - p1), (p2 - p1)))
                 / np.linalg.norm(p2 - p1))
-    else:
-        raise ValueError("Vector dimensions have to be either 2 or 3.")
+    raise ValueError("Vector dimensions have to be either 2 or 3.")
 
 
-def readToExc(llist):
+def strip_comments(line):
+    """Return the part of line to the left of comments."""
+    for comment_char in "!#%":
+        try:
+            line, *_ = line.split(comment_char)
+        except ValueError:  # Nothing left to split
+            return ''
+    return line.strip()
+
+
+def readToExc(llist):                                                           # TODO: unused; could be an iterator
     """For reading PARAMETERS files; takes a list, returns elements until the
     first one that starts with an exclamation mark."""
     read = True
@@ -434,7 +635,7 @@ def readToExc(llist):
     return newlist
 
 
-def splitSublists(llist, sep):
+def splitSublists(llist, sep):                                                  # TODO: could be an iterator
     """Takes a list and a separator, splits strings in the list by the
     separator, returns results as list of lists"""
     newlist = []
@@ -601,3 +802,59 @@ def available_cpu_count():
         pass
 
     return -1
+
+
+def copytree_exists_ok(source, destination):
+    """Copy the whole tree at the `source` directory to `destination`.
+
+    This is a wrapper around the shutil.copytree function that
+    maintains backwards compatibility down to python v3.5.
+
+    Parameters
+    ----------
+    source : Path
+        Base of the directory tree to be copied. Notice that symlinks
+        in `source` will NOT be handled correctly for python < 3.8.
+    destination : Path
+        Path to the directory that will mirror source and its contents.
+        It is created if it does not exist yet.
+
+    Returns
+    -------
+    None.
+    """
+    if sys.version_info >= (3, 8):
+        # dirs_exist_ok was introduced in python 3.8:
+        # https://docs.python.org/3/library/shutil.html#shutil.copytree
+        # pylint: disable-next=unexpected-keyword-arg
+        shutil.copytree(source, destination, dirs_exist_ok=True)
+        return
+    # For earlier python versions, we need to do things manually. We
+    # use a simplified version of the implementation of copytree from
+    # shutil for py3.8. We assume that source and destination are Path
+    # objects, and that we don't have anything special like symlinks.
+    # The next line will not work in py<3.5 because of exist_ok.
+    destination.mkdir(parents=True, exist_ok=True)
+    for srcentry in source.glob('*'):
+        dstentry = destination / srcentry.name
+        if srcentry.is_dir():
+            copytree_exists_ok(srcentry, dstentry)
+        else:  # file
+            shutil.copy2(srcentry, dstentry)
+    shutil.copystat(source, destination)
+
+
+def make_unique_list(w_duplicates):                                             # TODO: better function in guilib.helpers
+    """Helper function to remove duplicates from list. Does same as creating a set but preservers order.
+
+    Args:
+        w_duplicates (iterable): list with duplicates
+
+    Returns:
+        list: list with duplictes removed
+    """
+    unique_list = []
+    for item in w_duplicates:
+        if item not in unique_list:
+            unique_list.append(item)
+    return unique_list

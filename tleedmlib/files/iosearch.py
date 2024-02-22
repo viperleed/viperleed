@@ -7,21 +7,40 @@ Created on Wed Aug 19 13:35:50 2020
 Functions for reading, processing and writing files relevant to the search
 """
 
-import logging
-import numpy as np
-from viperleed import fortranformat as ff
 import copy
+import logging
 import os
+from pathlib import Path
 import random
 import shutil
+import time
 
-from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
-from viperleed.tleedmlib.files.poscar import writeCONTCAR
-from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
+import fortranformat as ff
+import numpy as np
+
+from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import BackwardsReader, readIntLine
-from viperleed.tleedmlib.leedbase import getBeamCorrespondence
+from viperleed.tleedmlib.files import poscar
+from viperleed.tleedmlib.files.beams import writeAUXEXPBEAMS
+from viperleed.tleedmlib.files.iorfactor import largest_nr_grid_points
+from viperleed.tleedmlib.files.iorfactor import prepare_rfactor_energy_ranges
+from viperleed.tleedmlib.files.vibrocc import writeVIBROCC
+
 
 logger = logging.getLogger("tleedm.files.iosearch")
+
+
+class SearchIORaceConditionError(Exception):
+    """Raised if reading of control.chem does not return the expected number
+    of lines"""
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class SearchIOEmptyFileError(Exception):
+    """Raised if file read for the search has no content"""
+    def __init__(self, message):
+        super().__init__(message)
 
 
 def readSDTL_next(filename="SD.TL", offset=0):
@@ -56,7 +75,7 @@ def readSDTL_next(filename="SD.TL", offset=0):
         return (offset, "")     # return old offset, no content
 
 
-def readSDTL_blocks(content, whichR=0, logInfo=False):
+def readSDTL_blocks(content, whichR=0, print_info=False, n_expect=0):
     """
     Attempts to interpret a given string as one or more blocks of an SD.TL
     file.
@@ -67,8 +86,12 @@ def readSDTL_blocks(content, whichR=0, logInfo=False):
         A block of data as read from SD.TL.
     whichR : int, optional
         Which r-factor values to use (average / integer / fractional)
-    logInfo : bool, optional
-        Whether some basic information should be printed to logger.info
+    print_info : bool, optional
+        Whether some basic information should be printed to logger.info and
+        logger.warning. The default is False.
+    n_expect : int, optional
+        Number of configurations expected per block. If a block contains
+        fewer, it will be ignored.
 
     Returns
     -------
@@ -86,12 +109,13 @@ def readSDTL_blocks(content, whichR=0, logInfo=False):
         gen = 0
         try:
             gen = int(block[:13])
-            if logInfo:
+            if print_info:
                 logger.info("Reading search results from SD.TL, "
                             "generation {}".format(gen))
         except ValueError:
-            logger.warning("While reading SD.TL, could not interpret "
-                           "generation number "+block[:13])
+            if print_info:
+                logger.warning("While reading SD.TL, could not interpret "
+                            "generation number "+block[:13])
         lines = block.split("\n")
         rfacs = []
         configs = []
@@ -108,30 +132,89 @@ def readSDTL_blocks(content, whichR=0, logInfo=False):
                         rav = float(line.split("|")[2 + whichR])  # average R
                         rfacs.append(rav)
                     except ValueError:
-                        logger.error("Could not read R-factor in SD.TL line:\n"
-                                     + line)
+                        if print_info:
+                            logger.error("Could not read R-factor in SD.TL line:\n"
+                                        + line)
                 try:
                     percent = int(line.split("|")[-2].strip()[:-1])
                     valstring = line.split("|")[-1].rstrip()
                     pars = readIntLine(valstring, width=4)
                     dpars.append((percent, pars))
                 except ValueError:
-                    logger.error("Could not read values in SD.TL line:\n"
-                                 + line)
+                    if print_info:
+                        logger.error("Could not read values in SD.TL line:\n"
+                                    + line)
         if dpars:
             configs.append(tuple(dpars))
         if not all([len(dp) == len(configs[0]) for dp in configs]):
-            logger.warning("A line in SD.TL contains fewer values than "
-                           "the others. Skipping SD.TL block.")
+            if print_info:
+                logger.warning("A line in SD.TL contains fewer values than "
+                            "the others. Skipping SD.TL block.")
             continue
         if gen != 0 and len(rfacs) > 0 and len(configs) > 0:
             returnList.append((gen, rfacs, tuple(configs)))
+        elif len(configs) < n_expect:
+            if print_info:
+                logger.warning("A block in SD.TL contains fewer configurations "
+                            "than expected.")
         else:
-            logger.warning("A block in SD.TL was read but not understood.")
+            if print_info:
+                logger.warning("A block in SD.TL was read but not understood.")
     return returnList
 
 
-def readSDTL_end(filename="SD.TL"):
+def repeat_fetch_SDTL_last_block(which_beams,
+                                 expected_params,
+                                 final,
+                                 max_repeats=2000,
+                                 wait_time=5):
+    print_info = final
+    content = None
+    for repeat in range(max_repeats):
+        content = _fetch_SDTL_last_block(which_beams,
+                                         expected_params,
+                                         print_info)
+        try:  # try again if content is not complete
+            n_search_params_found = len(content[0][2])
+        except IndexError:
+            continue
+        if n_search_params_found == expected_params:
+            logger.debug("Read complete block from SD.TL file after "
+                         f"{repeat+1} read attempt(s).")
+            return content
+        elif n_search_params_found >= expected_params:
+            raise RuntimeError(f"Expected a maximum of {expected_params} "
+                               f"parameters in SD.TL, but found "
+                               "{n_search_params_found}.")
+        # wait and try again
+        time.sleep(wait_time/1000)
+        print_info = False
+    if not content:
+        raise SearchIOEmptyFileError("No data found in SD.TL file.")
+    # if we get here, we have exceeded the maximum number of repeats
+    raise SearchIORaceConditionError(f"Could not read complete block from "
+                                     "SD.TL file.")
+
+def _fetch_SDTL_last_block(which_beams, n_expect, print_info=False):
+    try:
+        lines = readSDTL_end(n_expect=n_expect)
+    except FileNotFoundError:
+        logger.error("Could not process Search results: SD.TL file not "
+                     "found.")
+        raise
+    except Exception:
+        logger.error("Failed to get last block from SD.TL file.")
+        raise
+    # check if the last block contains the expected number of lines
+    lines_str = "\n".join(lines)
+    sdtl_content = readSDTL_blocks("\n".join(lines),
+                                   whichR=which_beams,
+                                   print_info=print_info,
+                                   n_expect=n_expect)
+    return sdtl_content
+
+
+def readSDTL_end(filename="SD.TL", n_expect=0):
     """
     Reads the last generation block from the SD.TL file, starting from the
     last line containing a GENERATION label.
@@ -140,6 +223,10 @@ def readSDTL_end(filename="SD.TL"):
     ----------
     filename : str, optional
         Which file to read
+    n_expect : int, optional
+        Number of configurations expected per block. If the last block contains
+        fewer, it will be ignored, instead reading the second-to-last. Set to
+        0 to read the last block irrespective of length.
 
     Returns
     -------
@@ -150,11 +237,18 @@ def readSDTL_end(filename="SD.TL"):
     """
     # get the last block from SD.TL:
     bwr = BackwardsReader(filename)
-    lines = [""]
-    while "CCCCCCCCCCC    GENERATION" not in lines[-1] and len(bwr.data) > 0:
-        lines.append(bwr.readline().rstrip())
-    lines.reverse()
-    bwr.close()
+    try:
+        lines = [""]
+        while len(bwr.data) > 0:
+            while ("CCCCCCCCCCC    GENERATION" not in lines[-1]
+                   and len(bwr.data) > 0):
+                lines.append(bwr.readline().rstrip())
+            if len([line for line in lines if "|" in line]) > n_expect:
+                break
+            lines = [""]
+        lines.reverse()
+    finally:
+        bwr.close()
     return lines
 
 
@@ -229,14 +323,14 @@ def readDataChem(rp, source, cutoff=0, max_configs=0):
             dp_vals = pars[-len(rp.domainParams):]
             percent = getPercent(rp.DOMAIN_STEP, dp_vals)
             dpars = []
-            for v in dp_vals:
+            for v in [len(dp.rp.searchpars) for dp in rp.domainParams]:
                 dpars.append(tuple(pars[:v]))
                 pars = pars[v:]
             returnList.append((rfac, tuple(zip(percent, dpars))))
     return returnList
 
 
-def writeRfInfo(sl, rp, filename="rf.info"):
+def writeRfInfo(sl, rp, file_path="rf.info"):
     """
     Generates r-factor parameters for the search, combines them with the
     experimental beams in AUXEXPBEAMS format to make the entire input for the
@@ -249,36 +343,19 @@ def writeRfInfo(sl, rp, filename="rf.info"):
         equivalent beams.
     rp : Rparams
         Run parameters.
-    filename : str, optional
-        Name of the output file. The default is "rf.info".
+    file_path : pathlike or str
+        Pathlike to or name of the output file. If str uses
+        rp.workdir /filename. The default is "rf.info".
 
     Returns
     -------
     output : str
         Content of the output file.
-
     """
-    expEnergies = []
-    for b in rp.expbeams:
-        expEnergies.extend([k for k in b.intens if k not in expEnergies])
-    expEnergies.sort()
-    minen = max(min(expEnergies), rp.THEO_ENERGIES[0])
-    maxen = min(max(expEnergies), rp.THEO_ENERGIES[1])
-    # extend energy range if they are close together
-    if abs(min(expEnergies) - rp.THEO_ENERGIES[0]) < abs(rp.IV_SHIFT_RANGE[0]):
-        minen = (max(min(expEnergies), rp.THEO_ENERGIES[0])
-                 - rp.IV_SHIFT_RANGE[0])
-    if abs(max(expEnergies) - rp.THEO_ENERGIES[1]) < abs(rp.IV_SHIFT_RANGE[1]):
-        maxen = (min(max(expEnergies), rp.THEO_ENERGIES[1])
-                 + rp.IV_SHIFT_RANGE[1]) + 0.01
-    step = min(expEnergies[1]-expEnergies[0], rp.THEO_ENERGIES[2])
-    if rp.IV_SHIFT_RANGE[2] > 0:
-        vincr = rp.IV_SHIFT_RANGE[2]
-        # step = min(step, vincr)
-    else:
-        vincr = step
+    _, theo_range, _, vincr = prepare_rfactor_energy_ranges(rp)
+
     # find correspondence experimental to theoretical beams:
-    beamcorr = getBeamCorrespondence(sl, rp)
+    beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for beam in rp.expbeams:
@@ -287,43 +364,66 @@ def writeRfInfo(sl, rp, filename="rf.info"):
         else:
             iorf.append(1)
 
-    f72 = ff.FortranRecordWriter("F7.2")
-    i3 = ff.FortranRecordWriter("I3")
-    i3x25 = ff.FortranRecordWriter("25I3")
-    f31x25 = ff.FortranRecordWriter("25F3.1")
-    output = (f72.write([minen]).ljust(16) + "EMIN\n")
-    output += (f72.write([maxen]).ljust(16) + "EMAX\n")
-    # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES
-    output += (f72.write([step]).ljust(16) + "EINCR\n")
-    output += "  0             IPR - determines amount of output to stdout  \n"
-    output += (f72.write([rp.V0_IMAG]).ljust(16) + "VI\n")
-    # !!! bulk or surface V0_IMAG?
-    output += "   0.00         V0RR\n"
-    output += (f72.write([rp.IV_SHIFT_RANGE[0]]).ljust(16) + "V01\n")
-    output += (f72.write([rp.IV_SHIFT_RANGE[1]]).ljust(16) + "V02\n")
-    output += (f72.write([vincr]).ljust(16) + "VINCR\n")
-    output += (i3.write([rp.R_FACTOR_SMOOTH]) + "             ISMOTH\n")
-    output += "  0             EOT - 0: exp format, 1: van Hove format\n"
-    output += ((i3.write([len(rp.ivbeams)]) + i3.write([len(rp.expbeams)]))
-               .ljust(16) + "NTH NEX\n")
+    if rp.TL_VERSION < 1.7:
+        formatter = {'energies': ff.FortranRecordWriter('F7.2'),
+                     'int': ff.FortranRecordWriter('I3'),
+                     'beams': ff.FortranRecordWriter("25I3"),
+                     'weights': ff.FortranRecordWriter("25F3.1")
+                     }
+    else:
+        formatter = {'energies': ff.FortranRecordWriter('F7.2'),
+                     'int': ff.FortranRecordWriter('I4'),
+                     'beams': ff.FortranRecordWriter("25I4"),
+                     'weights': ff.FortranRecordWriter("25F4.1")
+                     }
+    output = (formatter['energies'].write([theo_range.min]).ljust(16)
+              + "EMIN\n")
+    output += (
+        formatter['energies'].write([theo_range.max + 0.1 * vincr]).ljust(16)
+        + "EMAX\n"
+        )
+    # !!! BULLSHIT RESULTS WHEN EMAX > MAX ENERGY IN DELTA FILES                # TODO: Issue #138
+    output += (formatter['energies'].write([vincr]).ljust(16) + "EINCR\n")
+    output += (formatter['int'].write([0]).ljust(16)
+               + "IPR - determines amount of output to stdout\n")
+    output += (formatter['energies'].write([rp.V0_IMAG]).ljust(16) + "VI\n")
+    output += (formatter['energies'].write([0.]).ljust(16) + "V0RR\n")
+    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE.start]).ljust(16)
+               + "V01\n")
+    output += (formatter['energies'].write([rp.IV_SHIFT_RANGE.stop]).ljust(16)
+               + "V02\n")
+    output += (formatter['energies'].write([vincr]).ljust(16) + "VINCR\n")
+    output += (formatter['int'].write([rp.R_FACTOR_SMOOTH]).ljust(16)
+               + "ISMOTH\n")
+    output += (formatter['int'].write([0]).ljust(16)
+               + "EOT - 0: exp format, 1: van Hove format\n")
+    output += ((formatter['int'].write([len(rp.ivbeams)])
+                + formatter['int'].write([len(rp.expbeams)])).ljust(16)
+               + "NTH NEX\n")
     # numbers of theoretical beams, as they correspond to experimental beams
-    output += (i3x25.write([n+1 for n in beamcorr]) + "\n")
-    output += " DATA MITTEL (integer & half order beams) :\n"
-    output += i3x25.write(iorf) + "\n"
+    output += (formatter['beams'].write([n+1 for n in beamcorr]) + "\n")
+    output += " DATA MITTEL (integer & fractional beams) :\n"
+    output += formatter['beams'].write(iorf) + "\n"
     output += " exp - th relationship IBP, beam weights WB\n"
-    output += i3x25.write([n + 1 for n in range(0, len(rp.expbeams))]) + "\n"
-    output += f31x25.write([1]*len(rp.expbeams))+"\n"
+    output += formatter['beams'].write([n + 1 for n
+                                        in range(0, len(rp.expbeams))]) + "\n"
+    output += formatter['weights'].write([1]*len(rp.expbeams))+"\n"
     auxexpbeams = writeAUXEXPBEAMS(rp.expbeams, header=rp.systemName,
-                                   write=True, numbers=True)
+                                   write=True, numbers=True,
+                                   version=rp.TL_VERSION)
     output += auxexpbeams
 
+    if isinstance(file_path, str):
+        _file_path = rp.workdir / file_path
+    else:
+        _file_path = file_path
     try:
-        with open(filename, 'w') as wf:
+        with open(_file_path, 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error("Failed to write "+filename)
+        logger.error(f"Failed to write {_file_path}")
         raise
-    logger.debug("Wrote to "+filename+" successfully")
+    logger.debug(f"Wrote to {_file_path} successfully")
     return output
 
 
@@ -371,9 +471,8 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
                     "{:.2g} eV ({} independent fit parameters, {:.2g} eV per "
                     "parameter)"
                     .format(totalrange, rp.indyPars, totalrange / rp.indyPars))
-    theoEnergies = int((rp.THEO_ENERGIES[1]-rp.THEO_ENERGIES[0])
-                       / rp.THEO_ENERGIES[2]) + 1
-    if theoEnergies >= len(expEnergies):
+    n_theo_energies = rp.THEO_ENERGIES.n_energies
+    if n_theo_energies >= len(expEnergies):
         logger.warning("Theoretical beams have more data points than "
                        "experimental beams")
         rp.setHaltingLevel(1)
@@ -402,19 +501,19 @@ def generateSearchInput(sl, rp, steuOnly=False, cull=False, info=True):
                 else:
                     at.disp_occ[el] = [v + at.offset_occ[el]
                                        for v in at.disp_occ[el]]
-                    del at.disp_occ[el]
-            for (d, o) in [(at.disp_geo, at.offset_geo),
+                    del at.disp_occ[el] # TODO: why? we write and then delete? Should be offset_occ? If yes, loop should go over .copy
+            for (disp, offset) in [(at.disp_geo, at.offset_geo),
                            (at.disp_vib, at.offset_vib),
                            (at.disp_geo, at.disp_geo_offset)]:
                 dl = []
-                for el in o:
-                    if el not in d:
-                        d[el] = copy.copy(d["all"])
-                    d[el] = [v + o[el] for v in d[el]]
+                for el in offset:
+                    if el not in disp:
+                        disp[el] = copy.copy(disp["all"])
+                    disp[el] = [v + offset[el] for v in disp[el]]
                     dl.append(el)
                 for el in dl:
-                    if o != at.disp_geo_offset:
-                        del o[el]
+                    if offset != at.disp_geo_offset:
+                        del offset[el]
             at.disp_geo_offset = {"all": [np.array([0., 0., 0.])]}
 
     # PARAM
@@ -427,13 +526,15 @@ C MNBMD IS MAX(MNBED,MNBTD)
     output += "      PARAMETER(MNBTD = {})\n".format(len(rp.ivbeams))
     output += "      PARAMETER(MNBMD = {})".format(max(len(rp.expbeams),
                                                        len(rp.ivbeams)))
+    max_nr_data_points = largest_nr_grid_points(rp, rp.theobeams['refcalc'],
+                                                False)
     output += """
 C MNDATA IS MAX. NUMBER OF DATA POINTS IN EXPERIMENTAL BEAMS
-      PARAMETER(MNDATA = {})""".format(int(len(expEnergies)*1.1))
+      PARAMETER(MNDATA = {})""".format(max_nr_data_points)
     # array size parameter only - add some buffer -> *1.1
     output += """
 C MNDATT IS NUMBER OF THEORETICAL DATA POINTS IN EACH BEAM
-      PARAMETER(MNDATT = {})""".format(int(theoEnergies*1.1))
+      PARAMETER(MNDATT = {})""".format(max_nr_data_points)
     output += """
 C MPS IS POPULATION SIZE (number of independent trial structures)
       PARAMETER(MPS = {})""".format(rp.SEARCH_POPULATION)
@@ -474,28 +575,56 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
 
     nsteps = []     # keep track of number of steps per parameter for init
     parcount = 0
-    i3 = ff.FortranRecordWriter("I3")
+    # i3 = ff.FortranRecordWriter("I3")
     i1 = ff.FortranRecordWriter("I1")
-    output += (i3.write([rp.indyPars]).ljust(16)
+    maxgen = rp.SEARCH_MAX_GEN
+    if rp.TL_VERSION < 1.7:
+        formatter = {'int': ff.FortranRecordWriter('I3'),
+                     'gens': ff.FortranRecordWriter('I6'),
+                     'rmut': ff.FortranRecordWriter('F7.4'),
+                     'ctrl': ff.FortranRecordWriter('I3'),
+                     }
+        if maxgen > 999999:
+            maxgen = 999999
+        ctrl_width = 3
+    else:
+        formatter = {'int': ff.FortranRecordWriter('I5'),
+                     'gens': ff.FortranRecordWriter('I7'),
+                     'rmut': ff.FortranRecordWriter('F7.4'),
+                     'ctrl': ff.FortranRecordWriter('I4'),
+                     }
+        if maxgen > 9999999:
+            maxgen = 9999999
+        ctrl_width = 4
+    output += (formatter['int'].write([rp.indyPars]).ljust(16)
                + "number of independent parameters\n")
     f74 = ff.FortranRecordWriter('F7.4')
-    output += (f74.write([rp.GAUSSIAN_WIDTH]).ljust(16)
+    output += (formatter['rmut'].write([rp.GAUSSIAN_WIDTH]).ljust(16)
                + "gaussian width control parameter RMUT\n")
-    output += ("  0             initialisation for random number generator - "
-               "0: use system time, 1,...: use init\n")
-    output += (i3.write([rp.R_FACTOR_TYPE]).ljust(16)
+    output += (formatter['int'].write([0]).ljust(16) + "initialisation for "
+               "random number generator - 0: use system time, 1,...: use"
+               " init\n")
+    output += (formatter['int'].write([rp.R_FACTOR_TYPE]).ljust(16)
                + "1: use RPe -- 2: use R2\n")
-    output += (i3.write([rp.SEARCH_BEAMS]).ljust(16)
+    output += (formatter['int'].write([rp.SEARCH_BEAMS]).ljust(16)
                + "Optimization of which beam group do you want? "
                "(0=Aver,1=Int,2=Half)\n")
-    output += " 1000           output intervall\n"
-    output += (str(rp.SEARCH_MAX_GEN).ljust(16) + "desired number of "
-               "generations to be performed\n")
-    output += i3.write([astep]).ljust(16) + "area fraction step width (%)\n"
+    if rp.TL_VERSION >= 1.71:
+        outdata = 0
+        if rp.PARABOLA_FIT["type"] != "none":
+            outdata = 1
+        output += (formatter['int'].write([outdata]).ljust(16)
+                   + "Store configurations and write data.chem files for "
+                   "parabola fit (0=false)\n")
+    output += formatter['gens'].write([rp.output_interval]).ljust(16) + "output interval\n"
+    output += (formatter['gens'].write([maxgen]).ljust(16)
+               + "desired number of generations to be performed\n")
+    output += (formatter['int'].write([astep]).ljust(16)
+               + "area fraction step width (%)\n")
     output += ("SD.TL           name of search document file "
                "(max. 10 characters)\n")
-    output += i3.write([ndom]).ljust(16) + ("Number of domains under "
-                                            "consideration\n")
+    output += (formatter['int'].write([ndom]).ljust(16)
+               + "Number of domains under consideration\n")
     uniquenames = []
     for k in range(0, ndom):
         if ndom == 1:
@@ -511,8 +640,8 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
         output += ("======= Information about Domain {}: ====================="
                    "=======================\n").format(k+1)
         output += (
-            i3.write([len(crp.search_atlist)]).ljust(16) + "Number of atomic "
-            "sites in variation: Domain {}\n".format(k+1))
+            formatter['int'].write([len(crp.search_atlist)]).ljust(16)
+            + "Number of atomic sites in variation: Domain {}\n".format(k+1))
         displistcount = len(csl.displists)+1
         surfats = csl.getSurfaceAtoms(crp)
         for (i, at) in enumerate(crp.search_atlist):
@@ -520,20 +649,22 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             output += (
                 "------- Information about site {}: -----------------------"
                 "-----------------------\n".format(i+1))
-            surf = 1 if at in surfats else 0
-            output += (i3.write([surf]).ljust(16) + "Surface (0/1)\n")
+            surf = 1 if at in surfats else 0 # Flag that goes into variable NSURF used by search in GetInt
+            output += (formatter['int'].write([surf]).ljust(16)
+                       + "Surface (0/1)\n")
             if at.displist in csl.displists:
                 dlind = csl.displists.index(at.displist) + 1
             else:
                 dlind = displistcount
                 displistcount += 1
-            output += (i3.write([dlind]).ljust(16) + "Atom number\n")
+            output += (formatter['int'].write([dlind]).ljust(16)
+                       + "Atom number\n")
             output += (
-                i3.write([len(at.deltasGenerated)]).ljust(16) + "No. of "
-                "different files for Atom no. {}\n".format(i+1))
-            for (j, deltafile) in enumerate(at.deltasGenerated):
+                formatter['int'].write([len(at.known_deltas)]).ljust(16)
+                + "No. of different files for Atom no. {}\n".format(i+1))
+            for (j, deltafile) in enumerate(at.known_deltas):
                 name = deltafile
-                if frompath:  # need to get the file
+                if frompath:  # need to get the file; if True frompath is Path
                     name = "D{}_".format(k+1) + deltafile
                     if len(name) > 15:
                         un = 1
@@ -542,16 +673,17 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                         name = "D{}_DEL_{}".format(k+1, un)
                         uniquenames.append(name)
                     try:
-                        shutil.copy2(os.path.join(frompath, deltafile), name)
+                        shutil.copy2(frompath / deltafile, name)
                     except Exception:
                         logger.error("Error getting Delta file {} for search"
                                      .format(os.path.relpath(
-                                         os.path.join(frompath, deltafile))))
+                                         frompath / deltafile)))
                         raise
                 output += "****Information about file {}:\n".format(j+1)
                 output += (name.ljust(16) + "Name of file {} (max. 15 "
                            "characters)\n".format(j+1))
-                output += "  1             Formatted(0/1)\n"
+                output += (formatter['int'].write([1]).ljust(16)
+                           + "Formatted(0/1)\n")
                 el = deltafile.split("_")[-2]
                 if el.lower() == "vac":
                     geo = 1
@@ -561,11 +693,11 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 else:
                     # geo0 = True
                     vib0 = True
-                    for (mode, d) in [(1, at.disp_geo), (2, at.disp_vib)]:
-                        if el in d:
-                            dl = d[el]
+                    for (mode, disp) in [(1, at.disp_geo), (2, at.disp_vib)]:
+                        if el in disp:
+                            dl = disp[el]
                         else:
-                            dl = d["all"]
+                            dl = disp["all"]
                         if mode == 1:
                             geo = len(dl)
                             # if geo == 1 and np.linalg.norm(dl[0]) >= 1e-4:
@@ -582,8 +714,8 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                         types = 2
                     else:
                         types = 1
-                output += (i3.write([types]).ljust(16) + "Types of parameters "
-                           "in file {}\n".format(j+1))
+                output += (formatter['int'].write([types]).ljust(16)
+                           + "Types of parameters in file {}\n".format(j+1))
                 label = i1.write([i+1])+i1.write([j+1])
                 constr = {"vib": "-", "geo": "-"}
                 for mode in ["vib", "geo"]:
@@ -602,27 +734,27 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                             crp.searchpars.index(spl[0].linkedTo)
                             + prev_parcount + 1)
                 if vib > 0:
-                    output += (i3.write([vib]).ljust(16) +
+                    output += (formatter['int'].write([vib]).ljust(16) +
                                "vibrational steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
-                             + str(at.oriN).rjust(7) + el.rjust(7)
+                             + str(at.num).rjust(7) + el.rjust(7)
                              + "vib".rjust(7) + str(vib).rjust(7)
                              + constr["vib"].rjust(7) + "\n")
                     nsteps.append(vib)
                 if geo > 0:
-                    output += (i3.write([geo]).ljust(16) +
+                    output += (formatter['int'].write([geo]).ljust(16) +
                                "geometrical steps\n")
                     parcount += 1
                     info += (str(parcount).rjust(4) + ("P"+label).rjust(7)
-                             + str(at.oriN).rjust(7) + el.rjust(7)
+                             + str(at.num).rjust(7) + el.rjust(7)
                              + "geo".rjust(7) + str(geo).rjust(7)
                              + constr["geo"].rjust(7) + "\n")
                     nsteps.append(geo)
             output += "****concentration steps for site no. {}\n".format(i+1)
             occsteps = len(next(iter(at.disp_occ.values())))
-            output += (i3.write([occsteps]).ljust(16) + "no. of concentration "
-                       "steps - sum must equal 1 !\n")
+            output += (formatter['int'].write([occsteps]).ljust(16)
+                       + "no. of concentration steps - sum must equal 1 !\n")
             for j in range(0, occsteps):
                 ol = ""
                 totalocc = 0
@@ -647,7 +779,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             elif spl and spl[0].linkedTo is not None:
                 constr = "#"+str(crp.searchpars.index(spl[0].linkedTo)+1)
             info += (str(parcount).rjust(4) + ("C"+label).rjust(7)
-                     + str(at.oriN).rjust(7) + "-".rjust(7) + "occ".rjust(7)
+                     + str(at.num).rjust(7) + "-".rjust(7) + "occ".rjust(7)
                      + str(occsteps).rjust(7) + constr.rjust(7) + "\n")
             nsteps.append(occsteps)
     # add info for domain step parameters
@@ -678,44 +810,51 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             rp.SEARCH_START = "random"
             rp.setHaltingLevel(2)
     if rp.SEARCH_START == "control":
-        # try reading control
+        # try reading control.chem
+        # length = population +1 for header; +1 for empty line at the end
+        control_chem_expected_length = rp.SEARCH_POPULATION + 2
         try:
-            with open(controlpath, "r") as rf:
-                controllines = rf.readlines()
-        except Exception:
-            logger.error("Error reading control.chem file. Defaulting to "
-                         "random starting configuration.")
-            rp.SEARCH_START = "random"
-            rp.setHaltingLevel(2)
-        if len(controllines) < rp.SEARCH_POPULATION + 2:
+            controllines = _read_control_chem(controlpath,
+                                              control_chem_expected_length)
+        except SearchIORaceConditionError:
+            # Could not read last generation from control.chem
+            # use backup from SD.TL instead
             if not rp.controlChemBackup:
-                logger.error("Information in control.chem is incomplete. "
+                logger.error("Information in control.chem is incomplete "
+                             "and no SD.TL data is stored. "
                              "Defaulting to random starting configuration.")
                 rp.SEARCH_START = "random"
                 rp.setHaltingLevel(2)
             else:
-                logger.debug("Information in control.chem is incomplete. "
-                             "Loading from stored data...")
+                logger.debug("Failed to read current configuration from "
+                             "control.chem. "
+                             "Loading last known configuraiton from stored "
+                             "SD.TL data instead...")
                 controllines = [s+"\n"
                                 for s in rp.controlChemBackup.split("\n")]
+            pass
+        except OSError:
+            logger.error("Error reading control.chem file. Defaulting to "
+                         "random starting configuration.")
+            rp.SEARCH_START = "random"
+            rp.setHaltingLevel(2)
+
     if rp.SEARCH_START == "random":
-        output += ("  0             Certain start position (1) or random "
-                   "configuration (0)")
+        output += (formatter['int'].write([0]).ljust(16) +
+                   "Certain start position (1) or random configuration (0)\n")
     else:
-        output += ("  1             Certain start position (1) or random "
-                   "configuration (0)\n")
+        output += (formatter['int'].write([1]).ljust(16) +
+                   "Certain start position (1) or random configuration (0)\n")
         if rp.SEARCH_START == "control":
-            if cull and rp.SEARCH_CULL > 0:
-                if rp.SEARCH_CULL < 1:
-                    ncull = int(round(rp.SEARCH_POPULATION * rp.SEARCH_CULL))
-                else:
-                    if rp.SEARCH_CULL < rp.SEARCH_POPULATION:
-                        ncull = rp.SEARCH_CULL
-                    else:
-                        logger.warning(
-                            "SEARCH_CULL parameter too large: would cull "
-                            "entire population. Culling will be skipped.")
-                        ncull = 0
+            if cull and rp.SEARCH_CULL:
+                try:
+                    ncull = rp.SEARCH_CULL.nr_individuals(rp.SEARCH_POPULATION)
+                except ValueError:  # Too small population
+                    ncull = 0
+                    logger.warning(
+                        "SEARCH_CULL parameter too large: would cull "
+                        "entire population. Culling will be skipped."
+                        )
                 if any([sp.parabolaFit["min"] is not None
                         for sp in rp.searchpars]):
                     # replace one by predicted best
@@ -725,24 +864,25 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                 nsurvive = rp.SEARCH_POPULATION - ncull
                 clines = controllines[2:]
                 csurvive = []
-                if (rp.SEARCH_CULL_TYPE == "genetic" or
-                        getPredicted):  # prepare readable clines
+                if rp.SEARCH_CULL.type_.is_genetic or getPredicted:
+                    # prepare readable clines
                     try:
-                        csurvive = [readIntLine(s, width=3)
+                        csurvive = [readIntLine(s, width=ctrl_width)
                                     for s in clines[:nsurvive]]
                     except ValueError:
-                        if rp.SEARCH_CULL_TYPE == "genetic":
+                        if rp.SEARCH_CULL.type_.is_genetic:
                             logger.warning(
                                 "SEARCH_CULL: Failed to read old "
                                 "configuration from control.chem, cannot run "
-                                "genetic algorithm. Defaulting to cloning.")
+                                "genetic algorithm. Defaulting to cloning."
+                                )
                             rp.setHaltingLevel(1)
                             csurvive = []
                 for (i, line) in enumerate(clines):
                     if i < nsurvive:
                         output += line
-                    elif (rp.SEARCH_CULL_TYPE == "random" or
-                          (rp.SEARCH_CULL_TYPE == "genetic" and csurvive)
+                    elif (rp.SEARCH_CULL.type_.is_random or
+                          (rp.SEARCH_CULL.type_.is_genetic and csurvive)
                           or getPredicted):
                         if getPredicted:
                             bc = None
@@ -752,13 +892,13 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
                                 best_config=bc,
                                 mincurv=rp.PARABOLA_FIT["mincurv"])
                             getPredicted = False
-                        elif rp.SEARCH_CULL_TYPE == "random":
+                        elif rp.SEARCH_CULL.type_.is_random:
                             nc = rp.getRandomConfig()
                         else:  # "genetic"
                             nc = rp.getOffspringConfig(csurvive)
                         ol = ""
                         for v in nc:
-                            ol += i3.write([v])
+                            ol += formatter['ctrl'].write([v])
                         output += ol + "\n"
                     else:    # "cloning"
                         output += clines[random.randrange(0, nsurvive)]
@@ -770,7 +910,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             for i in range(0, rp.SEARCH_POPULATION):
                 ol = ""
                 for n in nsteps:
-                    ol += i3.write([(n+1)/2])
+                    ol += formatter['ctrl'].write([(n+1)/2])
                 output += ol + "\n"
         else:    # rp.SEARCH_START == "crandom"
             pop = [rp.getCenteredConfig()]
@@ -779,7 +919,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
             for p in pop:
                 ol = ""
                 for v in p:
-                    ol += i3.write([v])
+                    ol += formatter['ctrl'].write([v])
                 output += ol + "\n"
     # write search.steu
     try:
@@ -852,6 +992,63 @@ C  end restrictions
                  "restrict.f")
     return None
 
+def _read_control_chem(control_chem_path,
+                       expected_lines,
+                       max_repeats=2000,
+                       sleep_time=5):
+    """
+    Read the content of the control.chem file located at the specified path and
+    return its lines.
+
+    Parameters
+    ----------
+    control_chem_path : path-like
+        The path to the control.chem file.
+    expected_lines : int
+        The expected number of lines in the control.chem file.
+    max_repeats : int, optional
+        The maximum number of repetitions to read the file before giving up.
+        Defaults is 1000.
+    sleep_time : int, optional
+        The time in milliseconds to sleep between each attempt. Default is 1.
+
+    Returns
+    -------
+    list of str
+        The lines of the control.chem file.
+
+    Raises
+    ------
+    ValueError
+        If max_repeats is less than 1 or sleep_time is less than 0.
+    RuntimeError
+        If the number of lines in the control.chem file exceeds the
+        expected_lines. This should not happen and indicates that expected_lines
+        was set incorrectly.
+    SearchIORaceConditionError
+        If the complete control.chem file could not be read after the
+        maximum number of repetitions.
+
+    """
+    if max_repeats < 1:
+        raise ValueError("max_repeats must be >= 1")
+    if sleep_time < 0:
+        raise ValueError("sleep_time must be >= 0 ms")
+    _control_chem_path = Path(control_chem_path)
+    for repeat in range(max_repeats):
+        with open(_control_chem_path, "r") as rf:
+            control_lines = rf.readlines()
+        n_control_lines = len(control_lines)
+        if n_control_lines == expected_lines:
+            logger.debug(f"Read complete control.chem file after {repeat+1} "
+                         "read attempt(s).")
+            return control_lines
+        elif n_control_lines > expected_lines:
+            raise RuntimeError(f"Expected at maximum {expected_lines} lines "
+                               f"in control.chem, but found {n_control_lines}.")
+        time.sleep(sleep_time/1000)  # in milliseconds
+    raise SearchIORaceConditionError("Could not read complete "
+                                     "control.chem file")
 
 def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     """
@@ -894,16 +1091,16 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         else:
             parinds = rp.searchResultConfig[0]
     # If atom and site original states are not yet saved, do it now:
-    for at in sl.atlist:
+    for at in sl:
         at.storeOriState()
     for site in sl.sitelist:
         if site.oriState is None:
             tmp = copy.deepcopy(site)
             site.oriState = tmp
 
-    sl.getCartesianCoordinates()
+    sl.update_cartesian_from_fractional()
     uci = np.linalg.inv(sl.ucell)
-    for at in sl.atlist:
+    for at in sl:
         # make list of searchpars addressing this atom:
         sps = [sp for sp in rp.searchpars if sp.atom == at and sp.el != "vac"]
         if len(sps) > 0:
@@ -959,13 +1156,14 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                 off = np.dot(sl.ucell, rel_off)
                 off[2] *= -1
                 at.offset_geo[el] = off
-    sl.collapseFractionalCoordinates()
-    sl.getCartesianCoordinates()
-    sl.updateLayerCoordinates()
+    sl.collapse_fractional_coordinates()
+    sl.update_cartesian_from_fractional()
+    sl.update_layer_coordinates()
     # now update site occupations and vibrations:
     for site in sl.sitelist:
-        siteats = [at for at in sl.atlist if at.site == site
-                   and not at.layer.isBulk]
+        siteats = [at for at in sl if at.site == site and not at.is_bulk]
+        if not siteats: # site is only found in bulk
+            continue
         for el in site.occ:
             total_occ = 0
             # n_occ = 0
@@ -995,27 +1193,27 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                     at.offset_vib[el] -= offset_vib
     fn = "POSCAR_OUT" + suffix + "_" + rp.timestamp
     tmpslab = copy.deepcopy(sl)
-    tmpslab.sortOriginal()
+    tmpslab.sort_original()
     try:
-        writeCONTCAR(tmpslab, filename=fn, comments="all", silent=silent)
+        poscar.write(tmpslab, filename=fn, comments="all", silent=silent)
     except Exception:
         logger.error("Exception occured while writing POSCAR_OUT" + suffix,
-                     exc_info=rp.LOG_DEBUG)
+                     exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
-        tmpslab = sl.makeSymBaseSlab(rp)
+        tmpslab = sl.make_subcell(rp, rp.SYMMETRY_CELL_TRANSFORM)
         fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
         try:
-            writeCONTCAR(tmpslab, filename=fn, silent=silent)
+            poscar.write(tmpslab, filename=fn, silent=silent)
         except Exception:
             logger.warning(
                 "Exception occured while writing POSCAR_OUT_mincell" + suffix,
-                exc_info=rp.LOG_DEBUG)
+                exc_info=rp.is_debug_mode)
     fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
     try:
         writeVIBROCC(sl, rp, filename=fn, silent=silent)
     except Exception:
         logger.error("Exception occured while writing VIBROCC_OUT" + suffix,
-                     exc_info=rp.LOG_DEBUG)
+                     exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     return

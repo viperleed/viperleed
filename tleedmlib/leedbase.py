@@ -3,93 +3,108 @@
 Created on Jun 13 2019
 
 @author: Florian Kraushofer
+@author: Alexander M. Imre
 
 Contains LEED- and TLEEDM-specific functions used throughout the tleedm module
 """
 
+import copy
 import logging
-import numpy as np
+import multiprocessing
+import os
+from pathlib import Path
 import re
 import subprocess
-import os
 import shutil
-import copy
-import psutil
-import multiprocessing
 import time
+from zipfile import ZipFile
+
+import numpy as np
+import psutil
 from quicktions import Fraction
 
 from viperleed.guilib import get_equivalent_beams
-from viperleed.tleedmlib.base import parseMathSqrt, angle, cosvec
-from viperleed.tleedmlib.files.parameters import (
-    readPARAMETERS, interpretPARAMETERS, updatePARAMETERS)
-from viperleed.tleedmlib.files.poscar import readPOSCAR
-from viperleed.tleedmlib.files.vibrocc import readVIBROCC
+from viperleed.tleedmlib.base import cosvec, ensure_integer_matrix, lcm
+from viperleed.tleedmlib.base import SingularMatrixError
+
+# The following imports are potentially the cause of cyclic
+# imports. They are used exclusively as part of getTensorOriStates
+# which could potentially be split off somewhere else
+from viperleed.tleedmlib.files import parameters, poscar, vibrocc
+
+
+# constants for conversion Angstrom and eV <-> atomic units
+HARTREE_TO_EV = 27.211396
+EV_TO_HARTREE = 1/HARTREE_TO_EV
+BOHR_TO_ANGSTROM = 0.529177210903
+ANGSTROM_TO_BOHR = 1/BOHR_TO_ANGSTROM
 
 logger = logging.getLogger("tleedm.leedbase")
-
-###############################################
-#                 GLOBALS                     #
-###############################################
-periodic_table = [
-    'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na',
-    'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr',
-    'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr',
-    'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd',
-    'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd',
-    'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf',
-    'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po',
-    'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm',
-    'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs',
-    'Mt', 'Ds', 'Rg', 'Cn', 'Nh', 'Fl', 'Mc', 'Lv', 'Ts', 'Og']
-
-elementCovalentRadii = {
-    "H": 0.31, "He": 0.28, "Li": 1.28, "Be": 0.96,
-    "B": 0.84, "C": 0.76, "N": 0.71, "O": 0.66, "F": 0.57, "Ne": 0.58,
-    "Na": 1.66, "Mg": 1.41, "Al": 1.21, "Si": 1.11, "P": 1.07, "S": 1.05,
-    "Cl": 1.02, "Ar": 1.06, "K": 2.03, "Ca": 1.76, "Sc": 1.70, "Ti": 1.60,
-    "V": 1.53, "Cr": 1.39, "Mn": 1.39, "Fe": 1.32, "Co": 1.26, "Ni": 1.24,
-    "Cu": 1.32, "Zn": 1.22, "Ga": 1.22, "Ge": 1.20, "As": 1.19, "Se": 1.20,
-    "Br": 1.20, "Kr": 1.16, "Rb": 2.20, "Sr": 1.95, "Y": 1.90, "Zr": 1.75,
-    "Nb": 1.64, "Mo": 1.54, "Tc": 1.47, "Ru": 1.46, "Rh": 1.42, "Pd": 1.39,
-    "Ag": 1.45, "Cd": 1.44, "In": 1.42, "Sn": 1.39, "Sb": 1.39, "Te": 1.38,
-    "I": 1.39, "Xe": 1.40, "Cs": 2.44, "Ba": 2.15, "La": 2.07, "Ce": 2.04,
-    "Pr": 2.03, "Nd": 2.01, "Pm": 1.99, "Sm": 1.98, "Eu": 1.98, "Gd": 1.96,
-    "Tb": 1.94, "Dy": 1.92, "Ho": 1.92, "Er": 1.89, "Tm": 1.90, "Yb": 1.87,
-    "Lu": 1.87, "Hf": 1.75, "Ta": 1.70, "W": 1.62, "Re": 1.51, "Os": 1.44,
-    "Ir": 1.41, "Pt": 1.36, "Au": 1.36, "Hg": 1.32, "Tl": 1.45, "Pb": 1.46,
-    "Bi": 1.48, "Po": 1.40, "At": 1.50, "Rn": 1.50, "Fr": 2.60, "Ra": 2.21,
-    "Ac": 2.15, "Th": 2.06, "Pa": 2.00, "U": 1.96, "Np": 1.90, "Pu": 1.87,
-    "Am": 1.80, "Cm": 1.69}
-# from Cordero et al., 2008 (DOI: 10.1039/B801115J)
-
-elementAtomicMass = {
-    "H": 1.00797, "He": 4.00260, "Li": 6.941, "Be": 9.01218,
-    "B": 10.81, "C": 12.011, "N": 14.0067, "O": 15.9994, "F": 18.998403,
-    "Ne": 20.179, "Na": 22.98977, "Mg": 24.305, "Al": 26.98154, "Si": 28.0855,
-    "P": 30.97376, "S": 32.06, "Cl": 35.453, "K": 39.0983, "Ar": 39.948,
-    "Ca": 40.08, "Sc": 44.9559, "Ti": 47.90, "V": 50.9415, "Cr": 51.996,
-    "Mn": 54.9380, "Fe": 55.847, "Ni": 58.70, "Co": 58.9332, "Cu": 63.546,
-    "Zn": 65.38, "Ga": 69.72, "Ge": 72.59, "As": 74.9216, "Se": 78.96,
-    "Br": 79.904, "Kr": 83.80, "Rb": 85.4678, "Sr": 87.62, "Y": 88.9059,
-    "Zr": 91.22, "Nb": 92.9064, "Mo": 95.94, "Tc": 98, "Ru": 101.07,
-    "Rh": 102.9055, "Pd": 106.4, "Ag": 107.868, "Cd": 112.41, "In": 114.82,
-    "Sn": 118.69, "Sb": 121.75, "I": 126.9045, "Te": 127.60, "Xe": 131.30,
-    "Cs": 132.9054, "Ba": 137.33, "La": 138.9055, "Ce": 140.12,
-    "Pr": 140.9077, "Nd": 144.24, "Pm": 145, "Sm": 150.4, "Eu": 151.96,
-    "Gd": 157.25, "Tb": 158.9254, "Dy": 162.50, "Ho": 164.9304, "Er": 167.26,
-    "Tm": 168.9342, "Yb": 173.04, "Lu": 174.967, "Hf": 178.49, "Ta": 180.9479,
-    "W": 183.85, "Re": 186.207, "Os": 190.2, "Ir": 192.22, "Pt": 195.09,
-    "Au": 196.9665, "Hg": 200.59, "Tl": 204.37, "Pb": 207.2, "Bi": 208.9804,
-    "Po": 209, "At": 210, "Rn": 222, "Fr": 223, "Ra": 226.0254, "Ac": 227.0278,
-    "Pa": 231.0359, "Th": 232.0381, "Np": 237.0482, "U": 238.029}
 
 
 ###############################################
 #                FUNCTIONS                    #
 ###############################################
 
-def monitoredPool(rp, poolsize, function, tasks):
+def get_superlattice_repetitions(matrix):
+    """Return the number of repeats in 2D to cover a superlattice.
+
+    Parameters
+    ----------
+    matrix : Sequence
+        Shape (2, 2). The matrix representing the transformation
+        between the "base" lattice and the super-lattice. The
+        relation is suprlattice_basis = matrix @ base_basis,
+        with the _basis matrices such that in-plane unit vectors
+        are rows, i.e., a, b = _basis. Must be non-singular, and
+        with all entries (close to) integers.
+
+    Returns
+    -------
+    repeats : tuple
+        Two elements, each corresponds to the number of repetitions
+        of the "base" cell along its two unit vectors so as to
+        completely cover the superlattice area when back-folded.
+
+    Raises
+    ------
+    ValueError
+        If matrix is singular or an inappropriate shape.
+    NonIntegerMatrixError
+        If matrix has non-integer elements.
+    """
+    # Work on a numpy-array copy of the input. Ensure it's float
+    # to avoid UFuncTypeError when doing in-place divisions below
+    matrix = ensure_integer_matrix(np.copy(matrix).astype(float))
+    if matrix.shape != (2, 2):
+        raise ValueError(f'Unexpected shape {matrix.shape} for superlattice '
+                         'transform matrix. Should be (2, 2)')
+    n_repeats = abs(matrix[0, 0] * matrix[1, 1] - matrix[1, 0] * matrix[0, 1])
+    n_repeats = round(n_repeats)
+    if not n_repeats:
+        raise SingularMatrixError('Superlattice transform matrix is singular')
+
+    if n_repeats == 1:  # No area change
+        return 1, 1
+
+    # The trick is making the input matrix into a lower-triangular
+    # matrix by Gauss elimination. Then we read off the 'number of
+    # repeats along the first base vector' from the only non-zero
+    # element of the first row. The other direction is just the
+    # ratio of n_repeats and the one we already know.
+    if not matrix[1, 1]:  # The matrix is upper-triangular. Swap.
+        matrix[[0, 1]] = matrix[[1, 0]]
+    if matrix[0, 1]:      # The matrix is not triangular. Gauss.
+        multiple = lcm(abs(round(matrix[0, 1])),  # lcm needs integers
+                       abs(round(matrix[1, 1])))
+        first_row, second_row = matrix
+        first_row /= first_row[1]
+        first_row -= second_row/second_row[1]
+        first_row *= multiple  # Ensure integer
+    return abs(round(matrix[0, 0])), abs(round(n_repeats / matrix[0, 0]))
+
+
+def monitoredPool(rp, poolsize, function, tasks, update_from=Path()):
     """
     The 'function' and 'tasks' arguments are passed on to a multiprocessing
     pool of size 'poolsize' with apply_async. While waiting for the pool to
@@ -107,6 +122,8 @@ def monitoredPool(rp, poolsize, function, tasks):
     tasks : list of arguments
         treated like the arguments of pool.map, i.e. each element is passed on
         in a seperate call of 'function' via multiprocessing.Pool.apply_async
+    update_from : pathlike
+        directory from which PARAMETERS should be read for updates
 
     Returns
     -------
@@ -141,7 +158,8 @@ def monitoredPool(rp, poolsize, function, tasks):
         while not all(r.ready() for r in results):
             if killed:
                 break
-            updatePARAMETERS(rp)
+            # See if user wants to STOP
+            parameters.update(rp, update_from=update_from)
             if rp.STOP:
                 kill_pool(pool)
                 logger.info("Stopped by STOP parameter.")
@@ -213,44 +231,14 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
-def getTLEEDdir(home="", version=0.):
-    """Finds directories in the 'tensorleed' folder that have names starting
-    with 'TensErLEED', then picks the one with the highest version number.
-    Returnsa relative path to that directory, eg
-    './tensorleed/TensErLEED-v1.6'."""
-    sd = os.path.join(home, 'tensorleed')
-    ls = [dn for dn in os.listdir(sd) if (os.path.isdir(os.path.join(sd, dn))
-                                          and dn.startswith('TensErLEED'))]
-    highest = 0.0
-    founddir = ''
-    for dn in ls:
-        try:
-            f = float(dn.split('v')[-1])
-            if f == version:
-                founddir = dn
-                break
-            if f > highest:
-                highest = f
-                founddir = dn
-        except Exception:
-            pass
-    if founddir != '':
-        if version != 0 and f != version:
-            logger.error("getTLEEDdir: Could not find requested "
-                         "TensErLEED version {}".format(version))
-            return ''
-        return os.path.join(sd, dn)
-    else:
-        return ''
-
-
 def getMaxTensorIndex(home=".", zip_only=False):
     """
     Checks the Tensors folder for the highest Tensor index there,
     returns that value, or zero if there is no Tensors folder or no valid
     Tensors zip file. zip_only looks only for zip files, ignoring directories.
     """
-    if not os.path.isdir(os.path.join(home, "Tensors")):
+    tensor_dir = (Path(home) / "Tensors").resolve()
+    if not tensor_dir.is_dir():
         return 0
     indlist = []
     rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
@@ -263,8 +251,7 @@ def getMaxTensorIndex(home=".", zip_only=False):
     if not zip_only:
         rgx = re.compile(r'Tensors_[0-9]{3}')
         for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
-                  if (os.path.isdir(os.path.join(home, "Tensors", f))
-                      and rgx.match(f))]:
+                  if ((tensor_dir / f).is_dir() and rgx.match(f))]:
             m = rgx.match(f)
             if m.span()[1] == 11:  # exact match
                 indlist.append(int(m.group(0)[-3:]))
@@ -273,38 +260,40 @@ def getMaxTensorIndex(home=".", zip_only=False):
     return 0
 
 
-def getTensors(index, basedir=".", targetdir=".", required=True):
+def getTensors(index, base_dir=".", target_dir=".", required=True):
     """Fetches Tensor files from Tensors or archive with specified tensor
     index. If required is set True, an error will be printed if no Tensor
     files are found.
-    basedir is the directory in which the Tensor directory is based.
-    targetdir is the directory to which the Tensor files should be moved."""
+    base_dir is the directory in which the Tensor directory is based.
+    target_dir is the directory to which the Tensor files should be moved."""
     dn = "Tensors_"+str(index).zfill(3)
-    if (os.path.basename(basedir) == "Tensors"
-            and not os.path.isdir(os.path.join(basedir, "Tensors"))):
-        basedir = os.path.dirname(basedir)
-    if not os.path.isdir(os.path.join(basedir, "Tensors", dn)):
-        if os.path.isfile(os.path.join(basedir, "Tensors", dn+".zip")):
+    tensor_dir = (Path(base_dir) / "Tensors").resolve()
+    unpack_path = (Path(target_dir) / "Tensors" / dn).resolve()
+    zip_path = (tensor_dir / dn).with_suffix(".zip")
+
+    if (os.path.basename(base_dir) == "Tensors"
+            and not tensor_dir.is_dir()):
+        base_dir = os.path.dirname(base_dir)
+    if not (tensor_dir / dn).is_dir():
+        if (tensor_dir / dn).with_suffix(".zip").is_file():
+            logger.info(f"Unpacking {dn}.zip...")
+            os.makedirs(unpack_path, exist_ok=True)
             try:
-                logger.info("Unpacking {}.zip...".format(dn))
-                os.makedirs(os.path.join(targetdir, "Tensors", dn),
-                            exist_ok=True)
-                shutil.unpack_archive(os.path.join(basedir, "Tensors",
-                                                   dn+".zip"),
-                                      os.path.join(targetdir, "Tensors", dn))
+                with ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(unpack_path)                             # TODO: maybe it would be nicer to read directly from the zip file
             except Exception:
-                logger.error("Failed to unpack {}.zip".format(dn))
+                logger.error(f"Failed to unpack {dn}.zip")
                 raise
         else:
             logger.error("Tensors not found")
             raise RuntimeError("Tensors not found")
-    elif basedir != targetdir:
+    elif base_dir != target_dir:
         try:
-            os.makedirs(os.path.join(targetdir, "Tensors", dn), exist_ok=True)
-            for file in os.path.listdir(os.path.join(basedir, "Tensors", dn)):
-                shutil.copy2(file, os.path.join(targetdir, "Tensors", dn))
+            os.makedirs(unpack_path, exist_ok=True)
+            for file in os.path.listdir(os.path.join(base_dir, "Tensors", dn)):
+                shutil.copy2(file, unpack_path)
         except Exception:
-            logger.error("Failed to move Tensors from {}".format(dn))
+            logger.error("Failed to move Tensors from {dn}")
             raise
     return None
 
@@ -316,23 +305,25 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
     basedir is the directory in which the Delta directory is based.
     targetdir is the directory to which the Tensor files should be moved."""
     dn = "Deltas_"+str(index).zfill(3)
-    if os.path.isdir(os.path.join(basedir, "Deltas", dn)):
-        for f in [f for f in os.listdir(os.path.join(basedir, "Deltas", dn))
-                  if (os.path.isfile(os.path.join(basedir, "Deltas", dn, f))
+    _basedir, _targetdir = Path(basedir).resolve(), Path(targetdir).resolve()
+    zip_path=(_basedir / "Deltas" / dn).with_suffix(".zip")
+    if os.path.isdir(_basedir / "Deltas" / dn):
+        for f in [f for f in os.listdir(_basedir / "Deltas" / dn)
+                  if (os.path.isfile(_basedir / "Deltas" / dn / f)
                       and f.startswith("DEL_"))]:
             try:
-                shutil.copy2(os.path.join(basedir, "Deltas", dn, f), targetdir)
+                shutil.copy2(_basedir / "Deltas" / dn / f, targetdir)
             except Exception:
                 logger.error("Could not copy existing delta files to "
                              "work directory")
                 raise
-    elif os.path.isfile(os.path.join(basedir, "Deltas", dn+".zip")):
+    elif os.path.isfile(zip_path):
+        logger.info(f"Unpacking {dn}.zip...")
         try:
-            logger.info("Unpacking {}.zip...".format(dn))
-            shutil.unpack_archive(os.path.join(basedir, "Deltas", dn+".zip"),
-                                  targetdir)
+            with ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(_targetdir)                                  # TODO: maybe it would be nicer to read directly from the zip file
         except Exception:
-            logger.error("Failed to unpack {}.zip".format(dn))
+            logger.error(f"Failed to unpack {dn}.zip")
             raise
     elif required:
         logger.error("Deltas not found")
@@ -344,46 +335,45 @@ def getTensorOriStates(sl, path):
     """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the
     original state of the atoms and sites, and stores them in the given
     slab's atom/site oriState variables."""
+    path = Path(path).resolve()
     for fn in ["POSCAR", "PARAMETERS", "VIBROCC"]:
-        if not os.path.isfile(os.path.join(path, fn)):
-            logger.error("File "+fn+" is missing in "+path)
-            raise RuntimeError("Could not check Tensors: File missing")
-    dn = os.path.basename(path)
+        if not (path / fn).is_file():
+            logger.error(f"No {fn} file in {path}")
+            raise RuntimeError("Could not check Tensors: File missing")         # TODO: FileNotFoundError?
+    dn = path.parent
     try:
-        tsl = readPOSCAR(os.path.join(path, "POSCAR"))
-        trp = readPARAMETERS(filename=os.path.join(path, "PARAMETERS"))
-        interpretPARAMETERS(trp, slab=tsl, silent=True)
-        tsl.fullUpdate(trp)
-        readVIBROCC(trp, tsl, filename=os.path.join(path, "VIBROCC"),
-                    silent=True)
-        tsl.fullUpdate(trp)
-    except Exception:
+        tsl = poscar.read(path / "POSCAR")
+        trp = parameters.read(filename=path/"PARAMETERS")
+        parameters.interpret(trp, slab=tsl, silent=True)
+        tsl.full_update(trp)
+        vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
+        tsl.full_update(trp)
+    except Exception as exc:
         logger.error("Error checking Tensors: Error while reading "
-                     "input files in "+dn)
+                     f"input files in {dn}")
         logger.debug("Exception:", exc_info=True)
         raise RuntimeError("Could not check Tensors: Error loading old input "
-                           "files")
-    if len(tsl.atlist) != len(sl.atlist):
-        logger.error("POSCAR from "+dn+" is incompatible with "
+                           "files") from exc
+    if tsl.n_atoms != sl.n_atoms:
+        logger.error(f"POSCAR from {dn} is incompatible with "
                      "current POSCAR.")
         raise RuntimeError("Tensors file incompatible")
-    for at in sl.atlist:
-        tal = [tat for tat in tsl.atlist if at.oriN == tat.oriN]
-        if len(tal) != 1:
-            logger.error("POSCAR from "+dn+" is incompatible with "
+    for at in sl:
+        tat = tsl.atlist.get(at.num, None)
+        if tat is None:
+            logger.error(f"POSCAR from {dn} is incompatible with "
                          "current POSCAR.")
             raise RuntimeError("Tensors file incompatible")
-        at.copyOriState(tal[0])
+        at.copyOriState(tat)
     if len(tsl.sitelist) != len(sl.sitelist):
-        logger.error("Sites from "+dn+" input differ from current input.")
+        logger.error(f"Sites from {dn} input differ from current input.")
         raise RuntimeError("Tensors file incompatible")
     for site in sl.sitelist:
         tsitel = [s for s in tsl.sitelist if site.label == s.label]
         if len(tsitel) != 1:
-            logger.error("Sites from "+dn+" input differ from current input.")
+            logger.error(f"Sites from {dn} input differ from current input.")
             raise RuntimeError("Tensors file incompatible")
         site.oriState = copy.deepcopy(tsitel[0])
-    return None
 
 
 def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):
@@ -449,115 +439,23 @@ def fortran_compile(pre="", filename="", post="",
         logger.error("Error compiling "+filename)
         raise
     if r.returncode not in (0, 1):
-        raise RuntimeError("Fortran compiler subprocess returned {}"
-                           .format(r.returncode))
+            raise RuntimeError("Fortran compiler subprocess returned "
+                               f"{r.returncode}.")
     if r.returncode == 1 and "-mcmodel=medium" not in fc:
         mcmodel = False
         with open(logname, "r") as log:
             if "relocation truncated to fit:" in log.read():
                 mcmodel = True
-                logger.warning("Compiling file {} failed, likely due to "
-                               "missing '-mcmodel=medium' flag."
-                               .format(filename))
+                logger.warning(f"Compiling file {filename} failed, likely due to "
+                               "missing '-mcmodel=medium' flag.")
         if not mcmodel:
-            raise RuntimeError("Fortran compiler subprocess returned {}"
-                               .format(r.returncode))
+            raise RuntimeError("Fortran compiler subprocess returned "
+                               f"{r.returncode}.")
         return "mcmodel"
     if r.returncode != 0:
-        raise RuntimeError("Fortran compiler subprocess returned {}"
-                           .format(r.returncode))
+            raise RuntimeError("Fortran compiler subprocess returned "
+                               f"{r.returncode}.")
     return None
-
-
-def writeWoodsNotation(ucell):
-    """Takes a unit cell (as a (2x2) matrix) and attempts to write it in Woods
-    Notation. Returns empty string if no Woods notation is found."""
-    # !!! VERY INCOMPLETE, should at least detect simple c(a x b) cases
-    # !!! Same functionality exists in guilib; replace at some point
-    if ucell[1, 0] == 0 and ucell[0, 1] == 0:
-        return("(" + str(int(ucell[0, 0])) + "x" + str(int(ucell[1, 1])) + ")")
-    else:
-        return ""
-
-
-def readWoodsNotation(s, ucell):
-    """Takes a string that should contain the transformation from the bulk to
-    the surface unit cell in Wood notation, as well as a bulk unit cell (from
-    which only the surface vectors are read). Returns a 2x2 transformation
-    matrix."""
-    p = re.compile(r'\s*(?P<type>[PCpc]*)\s*\(\s*(?P<g1>.+)\s*[xX]\s*'
-                   + r'(?P<g2>.+)\s*\)\s*[rR]*\s*(?P<alpha>[\d.]*)')
-    # this regular expression matches if (any amount of whitespace at any
-    #                                                     point is ignored):
-    #   - optional: first character is p or c (or P or C) (-> type)
-    #   - then there is a '('
-    #   - then whatever (at least one character), interpret later (-> g1)
-    #   - then 'x' or 'X'
-    #   - then whatever (at least one character), interpret later (-> g2)
-    #   - then ')'
-    #   - then (optional) 'r' or 'R'
-    #   - then (optional) an integer or float number (-> alpha)
-    m = p.match(s)
-    if not m:
-        logging.error('Could not read woods notation input '+s)
-        return None
-    if not m.group('type'):
-        t = 'p'
-    else:
-        t = m.group('type').lower()
-    if not m.group('alpha'):
-        alpha = 0.0
-    else:
-        try:
-            alpha = float(m.group('alpha'))
-        except ValueError:
-            logger.error('Could not read Woods notation angle: '
-                         + m.group('alpha')+', setting angle to zero')
-            alpha = 0.0
-    alpha *= np.pi/180
-    g1 = parseMathSqrt(m.group('g1'))
-    g2 = parseMathSqrt(m.group('g2'))
-    # get surface unit cell vectors from bulk unit cell (has surface
-    #  periodicity!!):
-    if alpha == 0.0 and t == 'p':
-        mat = np.array([[g1, 0.], [0., g2]], dtype=float)
-    else:
-        r = [ucell[:2, 0], ucell[:2, 1]]
-        # q = np.linalg.norm(r[1])/np.linalg.norm(r[0])
-        # this would be to get from bulk vectors to surface, we have to reverse
-        q = 1/(np.linalg.norm(r[1])/np.linalg.norm(r[0]))
-        omega = abs(angle(r[0], r[1]))
-        # this is always constant in Wood notation, no need to reverse.
-        if t == 'p':
-            # matrices from: Klaus Hermann; Crystallography and Surface
-            #                               Structure (Second Edition, Wiley)
-            mat = ((1/np.sin(omega))
-                   * np.array([[g1*np.sin(omega-alpha),
-                                g1*(1/q)*np.sin(alpha)],
-                               [-g2*q*np.sin(alpha),
-                                g2*np.sin(omega+alpha)]],
-                              dtype=float))
-        else:
-            mat = ((1/(2*np.sin(omega)))
-                   * np.array([[g1*np.sin(omega-alpha)-g2*q*np.sin(alpha),
-                                g1*(1/q)*np.sin(alpha)+g2*np.sin(omega+alpha)],
-                               [-g1*np.sin(omega-alpha)-g2*q*np.sin(alpha),
-                                -g1*(1/q)*np.sin(alpha)+g2*np.sin(omega
-                                                                  + alpha)]],
-                              dtype=float))
-    warn = False
-    for i in range(0, 2):
-        for j in range(0, 2):
-            if abs(mat[i, j] - round(mat[i, j])) < 1e-4:
-                mat[i, j] = round(mat[i, j])
-            else:
-                warn = True
-    if warn:
-        logger.warning("SUPERLATTICE matrix from Woods notation was "
-                       "identified as:\n"+str(mat))
-        logger.warning("SUPERLATTICE values do not round to "
-                       "integer values. Check SUPERLATTICE parameter.")
-    return mat
 
 
 def checkLattice(ab, eps=1e-3):
@@ -668,33 +566,174 @@ def reduceUnitCell(ab, eps=1e-3):
     return ab, t, lat
 
 
+def reduce_c_vector(c_vec, ab_cell):
+    """Compute a Minkowski-reduced version of the third unit-cell vector.
+
+    Parameters
+    ----------
+    c_vec : numpy.ndarray
+        The unit-cell vector to be reduced. Only the first
+        two components are taken into consideration. They
+        are modified in place.
+    ab_cell : numpy.ndarray
+        The in-plane unit cell to be used for reducing c.
+        Unit vectors are rows, i.e., a, b == ab_cell.
+
+    Returns
+    -------
+    None.
+    """
+    # The problem is essentially the closest-vector problem (CVP) that
+    # is common in the theory of lattices: we have to find the lattice
+    # vector (of the a,b lattice) that is closest to the projection
+    # of c on the plane formed by ab_cell. That's the quantity to be
+    # removed from c to make it shortest. The trick is that the ab_cell
+    # should be Minkowski-reduced beforehand to ensure that also the c
+    # vector will be Minkowski-reduced. The theory behind this can be
+    # found in doi.org/10.1007/978-3-540-24847-7_26.
+    ab_cell, *_ = reduceUnitCell(ab_cell)
+    c_frac_ab = c_vec[:2].dot(np.linalg.inv(ab_cell))
+
+    # The closest projection is an integer version of c_frac_ab.
+    # It's easiest to take the floor, then consider also -a, -b,
+    # and -(a+b), whichever gives the shortest vector. Otherwise
+    # we'd have to also consider +a, +b, a-b, b-a, etc...
+    c_frac_ab -= np.floor(c_frac_ab)
+
+    increments = (0, 0), (1, 0), (0, 1), (1, 1)
+    c_vec[:2] = min(
+        ((c_frac_ab - f).dot(ab_cell) for f in increments),
+        key=np.linalg.norm
+        )
+
+
+def bulk_3d_string(screws, glides):
+    """Return info about bulk screw axes and glide planes as a string.
+
+    Parameters
+    ----------
+    screws : Sequence
+        Items are orders of rotation for screw axes.
+    glides : Sequence
+        Items are 2-tuples representing fractional coordinates
+        of direction vectors of the glide planes.
+
+    Returns
+    -------
+    bulk_3d_str : str
+        Format is 'r(2, 4), m([1,1], [ 1,-1])' if there is
+        any screw axes or glide planes, otherwise 'None'.
+    """
+    b3ds = ''
+    if screws:
+        screws_str = ', '.join(str(v) for v in screws)
+        b3ds += f'r({screws_str})'
+    if glides:
+        if b3ds:
+            b3ds += ', '
+        glides_str = ', '.join(np.array2string(direction, separator=',')
+                               for direction in glides)
+        if glides_str:
+            b3ds += f'm({glides_str})'
+    return b3ds or 'None'
+
+
 def getLEEDdict(sl, rp):
-    """Returns a LEED dict containing information needed by guilib functions"""
-    if sl.planegroup == "unknown":
-        logger.warning("Generating LEED dictionary for slab with unknown "
-                       "plane group!")
-    if sl.planegroup in ["pm", "pg", "cm", "rcm", "pmg"]:
-        pgstring = sl.planegroup+"[{} {}]".format(sl.orisymplane.par[0],
-                                                  sl.orisymplane.par[1])
+    """Return a LEED dict containing information needed by guilib functions."""
+    if sl.planegroup == 'unknown':
+        logger.warning('Generating LEED dictionary for slab with unknown '
+                       'plane group!')
+    if sl.planegroup in ['pm', 'pg', 'cm', 'rcm', 'pmg']:
+        pgstring = sl.planegroup + '[{} {}]'.format(*sl.orisymplane.par)
     else:
         pgstring = sl.planegroup
     if not (abs(np.round(rp.SUPERLATTICE).astype(int) - rp.SUPERLATTICE)
             < 1e-3).all():
-        logger.error("getLEEDdict: SUPERLATTICE contains non-integer-valued "
-                     "entries.")
+        logger.error('getLEEDdict: SUPERLATTICE contains non-integer-valued '
+                     'entries.')
         return None
-    d = {"eMax": rp.THEO_ENERGIES[1],
-         "SUPERLATTICE": rp.SUPERLATTICE.astype(int),
-         "surfBasis": sl.ucell[:2, :2].T,
-         "surfGroup": pgstring, "bulkGroup": sl.bulkslab.foundplanegroup,
-         "bulk3Dsym": sl.bulkslab.getBulk3Dstr(),
-         "screenAperture": rp.SCREEN_APERTURE}
+    # Some values can be overwritten via parameters:
+    d = {'eMax': rp.THEO_ENERGIES.max,
+         'SUPERLATTICE': rp.SUPERLATTICE.astype(int),
+         'surfBasis': sl.ab_cell.T,
+         'surfGroup': pgstring,
+         'bulkGroup': sl.bulkslab.foundplanegroup,
+         'bulk3Dsym': sl.bulkslab.get_bulk_3d_str(),
+         'screenAperture': rp.SCREEN_APERTURE,
+         'beamIncidence': (rp.THETA, rp.PHI)}
+    # some values can be overwritten via parameters:
+    if isinstance(rp.AVERAGE_BEAMS, tuple):
+        d['beamIncidence'] = rp.AVERAGE_BEAMS
+    if 'group' not in rp.SYMMETRY_BULK:
+        return d
+
+    # Some definitions for bulk symmetry.                                       # TODO: use guilib functions
+    allowed_groups = {
+        'oblique': ('p1', 'p2'),
+        'rhombic': ('p1', 'p2', 'cm', 'cmm'),
+        'rectangular': (
+            'p1', 'p2', 'pm', 'pg', 'rcm', 'pmm', 'pmg', 'pgg', 'rcmm'),
+        'square': (
+            'p1', 'p2', 'pm', 'pg', 'cm', 'cmm', 'rcm', 'pmm', 'pmg', 'pgg',
+            'rcmm', 'p4', 'p4m', 'p4g'),
+        'hexagonal': (
+            'p1', 'p2', 'cm', 'cmm', 'p3', 'p3m1', 'p31m', 'p6', 'p6m')
+        }
+    allowed_rotations = {
+        'oblique': (2,),
+        'rhombic': (2,),
+        'rectangular': (2,),
+        'square': (2, 4),
+        'hexagonal': (2, 3, 4)
+        }
+    allowed_mirrors = {
+        'oblique': (),
+        'rhombic': ((1, 1), (1, -1)),
+        'rectangular': ((1, 0), (0, 1)),
+        'square': ((1, 0), (0, 1), (1, 1), (1, -1)),
+        'hexagonal': ((1, 0), (0, 1), (1, 1), (1, -1), (1, 2), (2, 1))
+        }
+    if (rp.SYMMETRY_BULK['group'].split('[')[0]
+            not in allowed_groups[sl.bulkslab.celltype]):
+        hermann, *_ = rp.SYMMETRY_BULK['group'].split('[')
+        logger.warning(
+            f'Group {hermann} given in SYMMETRY_BULK is not allowed '
+            f'for bulk cell shape {sl.bulkslab.celltype!r}.'
+            )
+        rp.setHaltingLevel(2)
+    else:
+        d['bulkGroup'] = rp.SYMMETRY_BULK['group']
+    bulk_rotations = []
+    bulk_mirrors = []
+    if 'rotation' in rp.SYMMETRY_BULK:
+        for order in rp.SYMMETRY_BULK['rotation']:
+            if order not in allowed_rotations[sl.bulkslab.celltype]:
+                logger.warning(
+                    f'Rotation order {order} given in SYMMETRY_BULK is not '
+                    f'allowed for bulk cell shape {sl.bulkslab.celltype!r}.'
+                    )
+                rp.setHaltingLevel(2)
+            else:
+                bulk_rotations.append(order)
+    if 'mirror' in rp.SYMMETRY_BULK:
+        for par in rp.SYMMETRY_BULK['mirror']:
+            if par not in allowed_mirrors[sl.bulkslab.celltype]:
+                logger.warning(
+                    f'Mirror direction {par} given in SYMMETRY_BULK is not '
+                    f'allowed for bulk cell shape {sl.bulkslab.celltype!r}.'
+                    )
+                rp.setHaltingLevel(2)
+            else:
+                bulk_mirrors.append(par)
+    d['bulk3Dsym'] = bulk_3d_string(bulk_rotations, bulk_mirrors)
     return d
 
 
 def getSymEqBeams(sl, rp):
     """Returns a list of tuples ((hf,kf), index), where (hf,kf) are beams and
     index is the group of other beams they are equivalent to"""
+    if rp.AVERAGE_BEAMS is False:
+        return []
     if not rp.domainParams:
         d = [getLEEDdict(sl, rp)]
     else:
@@ -727,17 +766,17 @@ def getBeamCorrespondence(sl, rp):
     a number for each theoretical beam, indicating which experimental beam it
     corresponds to."""
     eps = 1e-5  # for comparing beams
-    #   initialize to "no corresponding beam" for all theoretical beams:
-    beamcorr = [-1]*len(rp.ivbeams)
+    #   make dictionary {theoretical_beam: experimental_beam}
+    beamcorr = {}
     # get symmetry-equivalence list:
     symeq = getSymEqBeams(sl, rp)
     # first, go through experimental beams and assign theoreticals if clear:
     remlist = []
-    for (ne, eb) in enumerate(rp.expbeams):
+    for eb in rp.expbeams:
         found = False
-        for (nt, tb) in enumerate(rp.ivbeams):
+        for tb in rp.ivbeams:
             if eb.isEqual(tb, eps=eps):
-                beamcorr[nt] = ne
+                beamcorr[tb] = eb
                 found = True
                 break
         if not found:
@@ -747,9 +786,9 @@ def getBeamCorrespondence(sl, rp):
                 if eb.isEqual_hk(hk, eps=eps):
                     eqbl.extend([hk2 for (hk2, j) in symeq if i == j])
             for hk in eqbl:
-                for (nt, tb) in enumerate(rp.ivbeams):
+                for tb in rp.ivbeams:
                     if tb.isEqual_hk(hk, eps=eps):
-                        beamcorr[nt] = ne
+                        beamcorr[tb] = eb
                         found = True
                         break
                 if found:
@@ -768,17 +807,17 @@ def getBeamCorrespondence(sl, rp):
     # now, for theoretical beams without assignment, see if there is a
     #   symmetry-equivalent beam to assign them to
     notfound = []
-    for (nt, tb) in enumerate(rp.ivbeams):
-        if beamcorr[nt] == -1:
+    for tb in rp.ivbeams:
+        if tb not in beamcorr.keys():
             found = False
             eqbl = []   # hk of equivalent beams
             for (hk, i) in symeq:
                 if tb.isEqual_hk(hk, eps=eps):
                     eqbl.extend([hk2 for (hk2, j) in symeq if i == j])
             for hk in eqbl:
-                for (ne, eb) in enumerate(rp.expbeams):
+                for eb in rp.expbeams:
                     if eb.isEqual_hk(hk, eps=eps):
-                        beamcorr[nt] = ne
+                        beamcorr[tb] = eb
                         found = True
                         break
                 if found:
@@ -788,4 +827,33 @@ def getBeamCorrespondence(sl, rp):
     if notfound:
         logger.debug("No experimental beams found for calculated beams: "
                      + ", ".join(notfound))
-    return beamcorr
+    beamcorr_list = [-1]*len(rp.ivbeams)
+    for i, tb in enumerate(rp.ivbeams):
+        if tb in beamcorr:
+            beamcorr_list[i] = rp.expbeams.index(beamcorr[tb])
+    return beamcorr_list
+
+# TODO: can eventually become part of compileTask class
+def copy_compile_log(rp, logfile, log_name="fortran-compile"):
+    """Copy compilation log file to compile_logs (will be moved to SUPP later).
+
+    Parameters
+    ----------
+    rp : RunParameters
+        rp object of the calculation.
+    logfile : pathlike or str
+        Path to the logfile that should be copied.
+    log_name : str, optional
+        Name to be used to identify logfile, eg. "refcalc". Default: "fortran-compile"
+    """
+    _logfile = Path(logfile)
+    if rp.compile_logs_dir is None:
+        # Compile directory not set. Cannot copy. Do not bother complaining.
+        return
+    target_path = (rp.compile_logs_dir / log_name).with_suffix(".log")
+    try:
+        shutil.copy2(_logfile, target_path)
+    except OSError as err:
+        logger.warning(
+            f"Unable to copy compilation log file {str(_logfile)}. Info: {err}"
+        )

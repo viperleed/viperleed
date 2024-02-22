@@ -8,15 +8,19 @@ Functions for reading and writing beams files: BEAMLIST, IVBEAMS, EXPBEAMS,
 AUXEXPBEAMS
 """
 
-import logging
-import numpy as np
-import re
-import os
-from viperleed import fortranformat as ff
 import copy
+from io import StringIO
+import logging
+import os
+import re
 
-import viperleed.tleedmlib as tl
+import fortranformat as ff
+import numpy as np
+
 from viperleed.guilib import project_to_first_domain
+from viperleed.tleedmlib import leedbase
+from viperleed.tleedmlib.base import parseMathSqrt
+from viperleed.tleedmlib.classes.beam import Beam
 
 logger = logging.getLogger("tleedm.files.beams")
 
@@ -24,6 +28,8 @@ logger = logging.getLogger("tleedm.files.beams")
 def averageBeams(beams, weights=None):
     """Takes a list of parcentages and a list of lists of Beam objects.
     Returns a new list of Beam obects with weighted averaged intensities."""
+    if beams is None:
+        raise ValueError("averageBeams: No beams passed.")
     if weights is None or len(weights) == 0:
         weights = [1/len(beams)] * len(beams)
     avbeams = copy.deepcopy(beams[0])
@@ -66,6 +72,7 @@ def readIVBEAMS(filename='IVBEAMS'):
         raise
     linenum = 1		# iterates the current line being read
     hklist = []
+    # TODO: skip commented out lines (same as PARAMETERS, etc.)
     for line in ivbeamlines:
         # ignore brackets and vbars, except as spacers
         line = line.replace("(", " ")
@@ -108,7 +115,7 @@ def readIVBEAMS(filename='IVBEAMS'):
         linenum += 1
     beams = []
     for hk in hklist:
-        beams.append(tl.Beam(hk))
+        beams.append(Beam(hk))
     logger.debug("IVBEAMS file was read successfully")
     return beams
 
@@ -127,7 +134,7 @@ def sortIVBEAMS(sl, rp):
             logger.error("BEAMLIST not found.")
             raise
     err = 1e-3          # since beams are saved as floats, give error tolerance
-    symeq = tl.leedbase.getSymEqBeams(sl, rp)
+    symeq = leedbase.getSymEqBeams(sl, rp)
     # first, get beamlist as floats
     blfs = []
     for line in rp.beamlist:
@@ -142,6 +149,8 @@ def sortIVBEAMS(sl, rp):
             if len(fl) == 2:
                 blfs.append(fl)
     # now figure out if there are beams in IVBEAMS without a partner
+    not_found = []
+    found_equivalent = []
     for (ind, ib) in enumerate(rp.ivbeams):
         found = any([ib.isEqual_hk(lb, eps=err) for lb in blfs])
         if found:
@@ -156,12 +165,9 @@ def sortIVBEAMS(sl, rp):
                     # rename the beam
                     if any([ib2.isEqual_hk(eqb, eps=err)
                             for ib2 in rp.ivbeams]):
-                        logger.debug(
-                            "Beam " + ib.label + " is not in "
-                            "BEAMLIST, but an equivalent beam already is. "
-                            "Beam will be dropped.")
+                        found_equivalent.append(ib.label)
                     else:
-                        b = tl.Beam(eqb)
+                        b = Beam(eqb)
                         logger.debug(
                             "Beam " + ib.label + " is not in "
                             "BEAMLIST, renaming to equivalent beam "
@@ -172,9 +178,16 @@ def sortIVBEAMS(sl, rp):
             if found:
                 break
         if not found:
-            logger.warning(
-                'IVBEAMS contains beam ' + ib.label + ', which '
-                'was not found in the BEAMLIST file. Beam will be dropped.')
+            not_found.append(ib.label)
+    if found_equivalent:
+        logger.debug(
+            "The following beams from IVBEAMS will be dropped because they "
+            "are not in BEAMLIST, but equivalent beams already are: "
+            + ", ".join(found_equivalent))
+    if not_found:
+        logger.warning(
+            "The following beams from IVBEAMS are not in BEAMLIST and will be "
+            "dropped: " + ", ".join(not_found))
     # now sort
     ivsorted = []
     for lb in blfs:
@@ -183,30 +196,53 @@ def sortIVBEAMS(sl, rp):
     return ivsorted
 
 
-def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
-    """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file. Returns a list
-    of Beam objects. The 'sep' parameter defines the separator. If an energy
-    range 'enrange' is passed, beams that contain no data within that range
-    will be filtered out before returning. If a Slab and Rparams object are
-    passed, will also check whether any of the experimental beams should be
-    equivalent, and if they are, warn, discard one and raise the halting
-    level."""
+def readOUTBEAMS(filename="EXPBEAMS.csv", sep=",", enrange=None):
+    #TODO: this need some optimizing; use csv and dict reader class
+    """Reads beams from an EXPBEAMS.csv or THEOBEAMS.csv file.
+    
+    The beams are returned as a list of Beam objects.
+    
+    Parameters
+    ----------
+    filename : str, StringIO, optional
+        If string, interpret as the path to the file to read. If
+        a StringIO object, assume it contains already the contents
+        of the file to be interpreted. Default is "EXPBEAMS.csv".
+    sep: str, optional
+        Separator character for splitting beams. Default is ",".
+    enrange : Sequence, or None, optional
+        Energy range to be used to filter beams. Beams that contain no
+        data within the range will be filtered out before returning.
+        If given and not None, it should be a Sequence with two elements
+        (min and max).
+    
+    Returns
+    -------
+    beams : list of Beam
+        Beam objects with info read from the input given.
+    """
     beams = []
-    try:
-        with open(filename, 'r') as rf:
-            lines = [li[:-1] for li in rf.readlines()]
-    except FileNotFoundError:
-        if filename.endswith(".csv") and os.path.isfile(filename[:-4]):
-            with open(filename[:-4], 'r') as rf:
+    # Deals with input in the form of a StingIO (can be used to feed file input as a string)
+    if isinstance(filename, StringIO):
+        lines = (li[:-1] for li in filename)
+        filename = "StringIO"
+    else:
+        try:
+            with open(filename, 'r') as rf:
                 lines = [li[:-1] for li in rf.readlines()]
-        else:
-            logger.error("Error reading "+filename)
-            raise
+        except FileNotFoundError:
+            if filename.endswith(".csv") and os.path.isfile(filename[:-4]):
+                with open(filename[:-4], 'r') as rf:
+                    lines = [li[:-1] for li in rf.readlines()]
+            else:
+                logger.error("Error reading "+filename)
+                raise
+
     firstline = True
     rgx = re.compile(r'[\*\(\s]*(?P<h>[-0-9/]+)\s*\|\s*(?P<k>[-0-9/]+)')
     for line in lines:
         if firstline and sep not in line:   # try some other separators
-            for sep2 in [s for s in [";", ","] if s != sep]:
+            for sep2 in [s for s in [",", ";"] if s != sep]:
                 if sep2 in line and len(line.split(sep2)) > 2:
                     logger.info("Found separator '"+sep2+"' in "+filename
                                 + ", expected '"+sep+"'. Attempting to read "
@@ -227,7 +263,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
                 sh = m.group("h")   # string h
                 sk = m.group("k")   # string k
                 try:
-                    if "/" in sh:
+                    if "/" in sh: # TODO if fractionals found - pass fractions already to beam
                         h = int(sh.split("/")[0]) / int(sh.split("/")[1])
                     else:
                         h = float(sh)
@@ -239,7 +275,7 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
                     logger.error("readOUTBEAMS: Could not parse h/k in "
                                  "label: "+label)
                     return []
-                beams.append(tl.Beam((h, k)))
+                beams.append(Beam((h, k)))
         elif len(line) > 1:
             try:
                 en = float(llist[0])
@@ -253,7 +289,25 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
                     if not np.isnan(f):
                         beams[i].intens[en] = f
                 except (ValueError, IndexError):
-                    f = None
+                    pass
+                
+    # cleanup of beams
+    threshold_intes = 1e-8  # threshold value of TensErLEED (rfacsb.f in subroutine grid)
+    lowest_real_en = 0
+    for beam in beams:
+
+        unfiltered_intens = copy.deepcopy(list(beam.intens.items())) 
+        # find first intensity > threshold
+        for en, intensity in unfiltered_intens:
+            if intensity > threshold_intes:
+                lowest_real_en = en
+                break
+
+        # remove parts of beam that are set to NaN or below threshhold
+        for en, intensity in unfiltered_intens:
+            if (np.isnan(intensity) or (en < lowest_real_en)):
+                beam.intens.pop(en)
+
     if enrange is not None and len(enrange) == 2:
         remlist = []
         for b in beams:
@@ -262,11 +316,22 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
                     (enrange[1] > 0 and min(b.intens) > enrange[1])):
                 # beam has no data in given interval; remove
                 remlist.append(b)
-                logger.warning("Experimental beam "+b.label+" contains no "
-                               "data in the given energy range. The beam "
-                               "will be ignored.")
+        if remlist:
+            logger.warning("The following beams contain no data in the given "
+                           "energy range and will be ignored: "
+                           + ", ".join([b.label for b in remlist]))
         for b in remlist:
             beams.remove(b)
+
+    # Add an offset such that intensities are always positive, and warn.
+    for beam in beams:
+        min_intensity = min((0, *beam.intens.values()))
+        if min_intensity < 0:
+            logger.warning(f"Negative intensity encountered in beam {beam.label} while reading {filename}."
+                           f" An offset was added so that the minimum intensity of this beam is 0.")
+            for en in beam.intens.keys():
+                beam.intens[en] += abs(min_intensity)
+
     if enrange is None:
         return beams
     totalrange = 0.
@@ -282,12 +347,13 @@ def readOUTBEAMS(filename="EXPBEAMS.csv", sep=";", enrange=None):
                        - max(min(b.intens), minmax[0]))
     logger.info("Loaded "+filename+" file containing {} beams (total energy "
                 "range: {:.2g} eV).".format(len(beams), totalrange))
+
     return beams
 
 
 def checkEXPBEAMS(sl, rp, domains=False):
     remlist = []
-    symeq = tl.leedbase.getSymEqBeams(sl, rp)
+    symeq = leedbase.getSymEqBeams(sl, rp)
     for (bi, b) in enumerate(rp.expbeams):
         if b in remlist:
             continue
@@ -340,12 +406,12 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                 sh = m.group("h")   # string h
                 sk = m.group("k")   # string k
                 try:
-                    h = tl.base.parseMathSqrt(sh)
-                    k = tl.base.parseMathSqrt(sk)
+                    h = parseMathSqrt(sh)
+                    k = parseMathSqrt(sk)
                 except Exception:
                     failedToRead = True
                 else:
-                    newbeam = tl.Beam((h, k))
+                    newbeam = Beam((h, k))
                     expbeams.append(newbeam)
             else:
                 failedToRead = True
@@ -367,12 +433,12 @@ def readAUXEXPBEAMS(filename="AUXEXPBEAMS", interactive=False):
                             return []
                         if hks and len(hks.split()) > 1:
                             try:
-                                h = tl.base.parseMathSqrt(hks.split()[0])
-                                k = tl.base.parseMathSqrt(hks.split()[1])
+                                h = parseMathSqrt(hks.split()[0])
+                                k = parseMathSqrt(hks.split()[1])
                             except Exception:
                                 print("Could not parse h/k")
                             else:
-                                newbeam = tl.Beam((h, k))
+                                newbeam = Beam((h, k))
                                 expbeams.append(newbeam)
                                 break
         elif read and topline:
@@ -399,15 +465,20 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     """Writes an IVBEAMS file based on rp.exbeams. Returns
     those beams in IVBEAMS form."""
     if not domains:
-        d = [tl.leedbase.getLEEDdict(sl, rp)]
+        d = [leedbase.getLEEDdict(sl, rp)]
     else:
-        d = [tl.leedbase.getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
+        d = [leedbase.getLEEDdict(dp.sl, dp.rp) for dp in rp.domainParams]
     if any([v is None for v in d]):
         logger.error("Failed to write IVBEAMS")
         return []
-    makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams], *d)
-    output = "This IVBEAMS file was automatically generated from EXPBEAMS\n"
-    ivbeams = [tl.Beam(hk) for hk in makebeams]
+    output = ("  h         k          Beams to calculate, automatically "
+              "generated from EXPBEAMS\n")
+    if rp.AVERAGE_BEAMS is not False:
+        makebeams = project_to_first_domain([b.hkfrac for b in rp.expbeams],
+                                            *d)
+        ivbeams = [Beam(hk) for hk in makebeams]
+    else:
+        ivbeams = [Beam(b.hkfrac) for b in rp.expbeams]
     for b in ivbeams:
         output += "{: 10.6f} {: 10.6f}\n".format(b.hk[0], b.hk[1])
     try:
@@ -421,24 +492,45 @@ def writeIVBEAMS(sl, rp, filename="IVBEAMS", domains=False):
     return ivbeams
 
 
-def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep="; "):
+def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep=", ",
+                  which="intensity"):
     """Takes a list of Beam objects and writes them to a comma-separated
-    file."""
+    file. Parameter 'which' defines what to write; set to 'amp_real' or
+    'amp_imag' to write real and imaginary parts of complex amplitudes."""
     nan = "NaN"  # what to put when no value
     output = "E".rjust(7)+sep
-    w = max(11, len(beams[0].label))
+    if which == "intensity":
+        minwidth = 11
+    else:
+        minwidth = 17
+    w = max(minwidth, len(beams[0].label))
     energies = []
     for b in beams:
         output += b.label.rjust(w)+sep
-        energies.extend([k for k in b.intens if k not in energies])
+        if which == "intensity":
+            energies.extend([k for k in b.intens if k not in energies])
+        else:
+            energies.extend([k for k in b.complex_amplitude
+                             if k not in energies])
     output = output[:-len(sep)]
     output += "\n"
     energies.sort()
     for en in energies:
         output += '{:7.2f}'.format(en) + sep
         for b in beams:
-            if en in b.intens:
-                output += '{:0.5E}'.format(b.intens[en]).rjust(w) + sep
+            if which == "intensity":
+                write_dict = b.intens
+            else:
+                write_dict = b.complex_amplitude
+            if en in write_dict:
+                if which == "intensity":
+                    output += '{:0.5E}'.format(b.intens[en]).rjust(w) + sep
+                else:
+                    if which == "amp_real":
+                        v = b.complex_amplitude[en].real
+                    else:
+                        v = b.complex_amplitude[en].imag
+                    output += '{:0.10E}'.format(v).rjust(w) + sep
             else:
                 output += nan.rjust(w) + sep
         output = output[:-len(sep)]
@@ -468,8 +560,7 @@ def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
     if ivbeams is None:         # if 'ivbeams' is empty, try to fill it
         ivbeams = readIVBEAMS(beamsfile)
 
-    output = '   1               IFORM\n'
-    # !!! WHAT IS THIS VALUE? WHERE TO GET IT FROM?
+    output = '   1               IFORM\n'  # always use formatted input+output
 
     # read BEAMLIST
     if beamlist is None:
@@ -499,9 +590,10 @@ def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
                     numlist.append(int(line.split('.')[-1]))
         else:
             blocks += 1
-    for beam in [b for b in ivbeams if b not in foundbeams]:
-        logger.warning('IVBEAMS contains beam ' + beam.label + ', which was '
-                       'not found in '+blstr)
+    not_found = [b.label for b in ivbeams if b not in foundbeams]
+    if not_found:
+        logger.warning('IVBEAMS contains beams that are not in ' + blstr + ": "
+                       + ", ".join(not_found))
     if write:
         if not writefile == 'AUXBEAMS':
             wfstr = 'AUXBEAMS file (filename '+writefile+')'
@@ -518,34 +610,49 @@ def writeAUXBEAMS(ivbeams=None, beamlist=None, beamsfile='IVBEAMS',
 
 
 def writeAUXEXPBEAMS(beams, filename="AUXEXPBEAMS", header="Unknown system",
-                     write=True, numbers=False):
+                     write=True, numbers=False, version=0, output_format='12E14.5'):
     """Takes a list of Beam objects and writes them in the format required by
     TensErLEED for experimental beam data. Returns the whole output as a
     string. 'numbers' defines whether a sequence of beam numbers in line 2
-    is expected."""
+    is expected. 'version' is to pass the TensErLEED-version, only needed for
+    new formatting styles."""
     output = header+"\n"
     if numbers:
-        i3x25 = ff.FortranRecordWriter("25I3")
-        output += i3x25.write([n+1 for n in range(0, len(beams))]) + "\n"
+        if version < 1.7:
+            bformatter = ff.FortranRecordWriter("25I3")
+        else:
+            bformatter = ff.FortranRecordWriter("25I4")
+        output += bformatter.write([n+1 for n in range(0, len(beams))]) + "\n"
         if len(beams) % 25 == 0:
             output += "\n"
-    output += " (12F6.2)\n"
-    f62x12 = ff.FortranRecordWriter('12F6.2')
-    i4 = ff.FortranRecordWriter('I4')
+    # Standard format used to be 12F6.2, but this may 
+    # have too little dynamic range for theory-theory comparisons.
+    # Instead we can use 12E14.5 which is the same as used everywhere else.
+    if output_format not in ("12F6.2", "12E14.5"):
+        logger.error(f"Incompatible format requested for AUXEXPEBAMS: {output_format}\n"
+                     f"Possible are '12F6.2' and '12E14.5'.")
+        raise RuntimeError
+    
+    output += f" ({output_format})\n"
+    decimal_writer = ff.FortranRecordWriter(output_format)
+    integer_writer = ff.FortranRecordWriter('I4')
     for beam in beams:
         # renormalize
         minintens = min(beam.intens.values())
+        # Alex March 2022: This is quite important actually!!! Will mess up otherwise if negative values in EXPBEAMS
         offset = max(0, -minintens)  # if beams contain negative values, offset
         scaling = 999.99 / (max(beam.intens.values()) + offset)
+        # working dict to hold normalized beams
+        working_beam = {}
         for k in beam.intens:
-            beam.intens[k] = (beam.intens[k] + offset) * scaling
+            working_beam[k] = (beam.intens[k] + offset) * scaling
         # write
         output += "*"+beam.label.replace("|", " ") + "*\n"
-        ol = i4.write([len(beam.intens)]).ljust(8)
+        ol = integer_writer.write([len(working_beam)]).ljust(8)
         output += ol + '{:10.4E}\n'.format(scaling)
         # zip & flatten energies and values into one list
-        outlist = [val for tup in beam.intens.items() for val in tup]
-        output += f62x12.write(outlist)
+        outlist = [val for tup in working_beam.items() for val in tup]
+        output += decimal_writer.write(outlist)
         if output[-1] != "\n":
             output += "\n"
     if write:

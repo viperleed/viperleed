@@ -52,7 +52,8 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
         logger.error("Error reading DISPLACEMENTS file.")
         raise
     for (i, line) in enumerate(lines):
-        line = line.split("!")[0].strip()
+        for c in ["!", "#", "%"]:    # start of comment
+            line = line.split(c)[0].strip()
         if re.search(r'<\s*/?\s*loop\s*>', line.lower()):
             if "=" in line:
                 logger.warning("DISPLACEMENTS file: One line cannot contain "
@@ -112,10 +113,10 @@ def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):
                 else:
                     rp.disp_blocks[-1] = ([], name)
                 continue
-            else:
+            elif line.split('==')[1].strip().lower()[0] != "d":
                 logger.warning("Found DISPLACEMENTS line starting with '==',"
                                "but could not interpret it as the start of a "
-                               "search block.")
+                               "search or domain block.")
                 rp.setHaltingLevel(2)
                 continue
         elif loopLine and not len(rp.disp_blocks) == 0:
@@ -242,7 +243,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
 
     """
     deltas_required = False
-    abst = np.transpose(sl.ucell[:2, :2])
+    abst = sl.ab_cell.T
     # if the unit cell gets modified by SYM_DELTA, restore it afterwards
     uCellState = sl.ucell_mod
     (lines, name) = dispblock
@@ -313,7 +314,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             grouplist = [
                 "p1", "p2", "pm", "pg", "cm", "rcm", "pmm", "pmg", "pgg",
                 "cmm", "rcmm", "p4", "p4m", "p4g", "p3", "p3m1", "p31m",
-                "p6", "p6m"]
+                "p6", "p6m"]  # TODO: use guilib or put as const in leedbase
             targetsym = ""
             if s[0] == "t":
                 # True - go to highest symmetry
@@ -364,7 +365,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                'parse given value. Input will be ignored.')
                 rp.setHaltingLevel(2)
             if targetsym != "":
-                sl.revertUnitCell(uCellState)
+                sl.revert_unit_cell(uCellState)
                 setSymmetry(sl, rp, targetsym)
                 enforceSymmetry(sl, rp, movement=False, rotcell=False)
             continue
@@ -373,8 +374,8 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
         if mode == 1:
             rgx = re.compile(
                 r'\s*(?P<nums>(([-:0-9]|((l|L)\([-:0-9\s]+\))'
-                r')\s*)*)(?P<dir>(z|((ab|xy)\s*)?\[[-0-9]+\s+[-0-9]+\]|'
-                r'(azi|r)\(?((ab|xy)\s*)?\[[-0-9\.]+\s+[-0-9\.]+\]\)?)?'
+                r')\s*)*)(?P<dir>(z|((ab|xy)\s*)?\[\s*[-0-9]+\s+[-0-9]+\s*\]|'
+                r'(azi|r)\(?((ab|xy)\s*)?\[\s*[-0-9\.]+\s+[-0-9\.]+\s*\]\)?)?'
                 r'(\s*offset)?)')
         else:
             rgx = re.compile(r'(?P<nums>(([-:0-9]|((l|L)\([-:0-9\s]+\)))\s*)*)'
@@ -417,8 +418,9 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 if "[" in dr:
                     if "azi" not in dr and "r" not in dr:
                         try:
-                            dirints = (int(dr.split("[")[1].split(" ")[0]),
-                                       int(dr.split(" ")[1].split("]")[0]))
+                            dirints = (
+                                int(dr.split("[")[1].strip().split()[0]),
+                                int(dr.split("]")[0].strip().split()[-1]))
                         except ValueError:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse '
@@ -428,8 +430,8 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                     else:
                         try:
                             dirfloats = (
-                                float(dr.split("[")[1].split(" ")[0]),
-                                float(dr.split(" ")[1].split("]")[0]))
+                                float(dr.split("[")[1].strip().split()[0]),
+                                float(dr.split("]")[0].strip().split()[-1]))
                         except ValueError:
                             logger.warning(
                                 'DISPLACEMENTS file: could not parse '
@@ -493,13 +495,13 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             rp.setHaltingLevel(2)
                             break
                         for ln in il:
-                            if ln > len(sl.layers):
+                            if ln > sl.n_layers:
                                 logger.warning(
                                     'DISPLACEMENTS file: layer number out of '
                                     'bounds, skipping line: '+pside)
                                 rp.setHaltingLevel(2)
                                 break
-                            numlist.extend([at.oriN for at in sl.atlist
+                            numlist.extend([at.num for at in sl
                                             if at.layer == sl.layers[ln-1]])
                 else:  # loop finished without beak
                     _break = False
@@ -578,9 +580,9 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                         'element or site label, skipping line.')
                     rp.setHaltingLevel(2)
                     break
-            for at in sl.atlist:
-                if ((at.oriN in numlist or len(numlist) == 0)
-                        and at.site in targetsites and not at.layer.isBulk):
+            for at in sl:
+                if ((at.num in numlist or len(numlist) == 0)
+                        and at.site in targetsites and not at.is_bulk):
                     targetAtEls.append((at, targetel))
         else:  # loop finished without break
             _break = False
@@ -628,7 +630,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             if fl[0] < fl[1]:
                 drange = np.arange(fl[0], fl[1] + 1e-6, abs(fl[2]))
             else:
-                drange = np.arange(fl[0], fl[0] - 1e-6, -abs(fl[2]))
+                drange = np.arange(fl[0], fl[1] - 1e-6, -abs(fl[2]))
             if min([abs(v) for v in drange]) > 5e-5:
                 logger.warning(
                     "DISPLACEMENTS: A range does not contain zero. This means "
@@ -652,6 +654,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
             drange = [offval]
         if mode == 1:
             if dr.strip() == "offset":
+                # No direction
                 if offval != 0.:
                     logger.warning('DISPLACEMENTS file: cannot assign '
                                    'geo offset : no direction given: '+pside)
@@ -693,21 +696,23 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             allowed = False
                     if allowed:
                         if "offset" not in dr:
-                            at.assignDisp(mode, disprange, targetel)
+                            at.assignDisp(mode, disprange, targetel,
+                                          disp_label=dr,
+                                          disp_lin_steps=drange)
                         else:
                             at.clearOffset(1, targetel)
                             at.assignDisp(4, disprange, targetel)
                         deltas_required = True
                     else:
                         logger.warning(
-                            "In-plane displacement assignment for "
-                            "atom {} is forbidden by symmetry and will be "
-                            "skipped. See 'FreeDir' in POSCAR file. To "
-                            "apply this displacement, use either the "
-                            "SYMMETRY_FIX parameter to lower the symmetry, "
-                            "or use SYM_DELTA in the DISPLACEMENTS file to "
-                            "allow symmetry breaking for this atom."
-                            .format(at.oriN))
+                            f'In-plane displacement assignment for {at} is '
+                            'forbidden by symmetry and will be skipped. See '
+                            '"FreeDir" in POSCAR file. To apply this '
+                            'displacement, use either the SYMMETRY_FIX '
+                            'parameter to lower the symmetry, or use '
+                            'SYM_DELTA in the DISPLACEMENTS file to allow '
+                            'symmetry breaking for this atom.'
+                            )
             else:
                 if "xy" in dr:
                     c = np.array(dirfloats)
@@ -731,7 +736,9 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                             drvec[:2] = v
                             disprange = [f*drvec for f in drange]
                             if "offset" not in dr:
-                                at.assignDisp(mode, disprange, targetel)
+                                at.assignDisp(mode, disprange, targetel,
+                                              disp_label=dr,
+                                              disp_lin_steps=drange)
                             else:
                                 at.assignDisp(4, disprange, targetel)
                             deltas_required = True
@@ -747,28 +754,32 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                                                [np.sin(ar), np.cos(ar)-1]])
                                 disprange.append(np.append(np.dot(tm, r), 0.))
                             if "offset" not in dr:
-                                at.assignDisp(mode, disprange, targetel)
+                                at.assignDisp(mode, disprange, targetel,
+                                              disp_label=dr,
+                                              disp_lin_steps=drange)
                             else:
                                 at.clearOffset(1, targetel)
                                 at.assignDisp(4, disprange, targetel)
                             deltas_required = True
                         else:
                             logger.warning(
-                                "In-plane azimuthal displacement "
-                                "assignment for atom {} is forbidden by "
-                                "symmetry and will be skipped. See 'FreeDir' "
-                                "in POSCAR file. To apply this displacement, "
-                                "use either the SYMMETRY_FIX parameter to "
-                                "lower the symmetry, or use SYM_DELTA in the "
-                                "DISPLACEMENTS file to allow symmetry "
-                                "breaking for this atom.".format(at.oriN))
+                                'In-plane azimuthal displacement assignment '
+                                f'for {at} is forbidden by symmetry and will '
+                                'be skipped. See "FreeDir" in POSCAR file. '
+                                'To apply this displacement, use either the '
+                                'SYMMETRY_FIX parameter to lower the symmetry,'
+                                ' or use SYM_DELTA in the DISPLACEMENTS file '
+                                'to allow symmetry breaking for this atom.'
+                                )
         elif mode == 2:
             # vibrational displacement, apply:
             for (at, targetel) in targetAtEls:
                 if "offset" in pside:
                     at.clearOffset(mode, targetel)
                 if not (len(drange) == 1 and drange[0] == 0.):
-                    at.assignDisp(mode, drange, targetel)
+                    at.assignDisp(mode, drange, targetel,
+                                  disp_label="N/A",
+                                  disp_lin_steps=drange)
                 deltas_required = True
         elif mode == 3:
             # occupations, get ranges:
@@ -837,14 +848,16 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 if subl[0].capitalize() in sl.chemelem:
                     targetel = subl[0]
                 else:
-                    logger.warning('DISPLACEMENTS file: '+subl[0]+'not '
+                    logger.error('DISPLACEMENTS file: '+subl[0]+' not '         # TODO: This should probably raise an exception
                                    'found in element list. No assignment '
                                    'will be made.')
-                    rp.setHaltingLevel(1)
+                    rp.setHaltingLevel(2)
                     continue
                 for (at, _) in targetAtEls:
                     if targetel in at.disp_occ:
-                        at.assignDisp(mode, drange, targetel)
+                        at.assignDisp(mode, drange, targetel,
+                                      disp_label="N/A",
+                                      disp_lin_steps=None)  # for occupation, we figure it out in r_error
                         deltas_required = True
                     else:
                         logger.warning(
@@ -893,12 +906,12 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
                 #                 else:
                 #                     logger.warning('DISPLACEMENTS file: '
                 #                         'trying to address atom number '
-                #                         +str(at.oriN)+' with wrong element. '
+                #                         +str(at.num)+' with wrong element. '
                 #                         'Atom will be skipped.')
                 #                     rp.setHaltingLevel(1)
         elif mode == 4:
             constraints.append((targetAtEls, ctype, value))
-    sl.revertUnitCell(uCellState)  # if modified by SYM_DELTA, go back
+    sl.revert_unit_cell(uCellState)  # if modified by SYM_DELTA, go back
     # now read constraints
     for (targetAtEls, ctype, value) in constraints:
         if value.lower().startswith("link"):
@@ -933,7 +946,7 @@ def readDISPLACEMENTS_block(rp, sl, dispblock, only_mode=""):
     if name:
         o = " "+name
     logger.debug("DISPLACEMENTS block{} was read successfully".format(o))
-    for at in sl.atlist:
+    for at in sl:
         if len(at.disp_occ) > 5:
             logger.error(
                 'DISPLACEMENTS file: '+str(at)+' has occupations defined for '

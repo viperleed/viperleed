@@ -373,7 +373,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
 
                     # Check if the reason why the beam was not found is that
                     # it would lie outside the LEED screen
-                    b = leed.bulk_basis()
+                    b = leed.bulk_basis
                     g = np.linalg.norm(np.dot(beam, b)) * 1e10  # 1/m
                     el_m = 9.109e-31    # kg
                     el_q = 1.60218e-19  # C
@@ -1686,7 +1686,7 @@ class PlaneGroup():
         group_re = re.compile(
             r'''
             (?P<hermann>[\w]+)      # Hermann-Mauguin
-            (?:[\[]                 # Optional direction opening bracket
+            (?:[\[]\s*              # Optional direction opening bracket
             (?P<dir1> [-]*[\d]+)    # First direction
             [\s]*                   # Optional space
             (?P<dir2> [-]*[\d]+)    # Second direction

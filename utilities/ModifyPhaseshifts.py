@@ -55,11 +55,10 @@ def main():
                     print(filename+" not found.")
                     filename = ""
                 except Exception:
-                    print("Exception while reading phaseshifts file: ",
-                          exc_info=True)
+                    print("Exception while reading phaseshifts file: ")
                     return 1
     except Exception:
-        print("Exception while reading phaseshifts file: ", exc_info=True)
+        print("Exception while reading phaseshifts file: ")
         return 1
 
     # print some info
