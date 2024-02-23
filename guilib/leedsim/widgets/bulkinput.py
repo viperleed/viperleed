@@ -107,8 +107,8 @@ class BulkInput(LatticeInput):
         if self.bulk_3d_sym_dialog.exec() == qtw.QDialog.Accepted:
             old_3d = self.lattice.group.screws_glides
             operations = self.bulk_3d_sym_dialog.extra_operations()
-            self.lattice.group.screws_glides = (operations,
-                                                self.lattice.cell_shape)
+            self.lattice.group.set_screws_glides(operations,
+                                                 self.lattice.cell_shape)
             new_3d = self.lattice.group.screws_glides
             if set(new_3d) != set(old_3d):  # Order does not matter
                 print("###     o--->", self.__class__.__name__,
@@ -136,7 +136,7 @@ class BulkInput(LatticeInput):
 
         # Edit the group
         self.lattice.group = new_group
-        self.lattice.group.screws_glides = (bulk_3d, self.lattice.cell_shape)
+        self.lattice.group.set_screws_glides(bulk_3d, self.lattice.cell_shape)
 
         # Update the options for extra bulk operations
         self.bulk_3d_sym_dialog.update_operations(self.lattice)

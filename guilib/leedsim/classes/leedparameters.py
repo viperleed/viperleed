@@ -446,7 +446,7 @@ class LEEDParameters(MutableMapping):
         bulk_shape = dummy_bulk.cell_shape
 
         # And apply the bulk operations to the bulk group
-        self['bulkGroup'].screws_glides = (self['bulk3Dsym'], bulk_shape)
+        self['bulkGroup'].set_screws_glides(self['bulk3Dsym'], bulk_shape)
 
 
 # Probably bug in pylint. Should not complain about too-many-ancestors

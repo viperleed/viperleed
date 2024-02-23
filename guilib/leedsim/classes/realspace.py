@@ -50,8 +50,8 @@ class RealSpace():
                                space='real',
                                group=params['bulkGroup'],
                                limit=self.fov)
-        self.bulk.group.screws_glides = (params['bulk3Dsym'],
-                                         self.bulk.cell_shape)
+        self.bulk.group.set_screws_glides(params['bulk3Dsym'],
+                                          self.bulk.cell_shape)
 
     @property
     def bulk_basis(self):
