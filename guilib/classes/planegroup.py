@@ -53,6 +53,26 @@ M21 = (1, 1), (0, -1)
 M12 = (-1, 0), (1, 1)
 
 
+_GROUPS_FOR_SHAPE = {
+    'Oblique': ('p1', 'p2'),
+    'Rectangular': (
+        'p1', 'p2', 'pm', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
+        'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]',
+        'pgg', 'rcmm'
+        ),
+    'Square': (
+        'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
+        'cm[1 1]', 'cm[1 -1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]',
+        'pgg', 'cmm', 'p4', 'p4m', 'p4g'
+        ),
+    'Rhombic': (
+        'p1', 'p2', 'cm[1 1]', 'cm[1 -1]', 'cmm'
+        ),
+    'Hexagonal': (
+        'p1', 'p2', 'cm[0 1]', 'cm[1 0]', 'cm[1 1]', 'cm[1 -1]', 'cm[1 2]',
+        'cm[2 1]', 'cmm', 'p3', 'p3m1', 'p31m', 'p6', 'p6m'
+        )
+    }
 _GROUP_TO_OPS = {
     'p1': (E,),
     'p2': (E, C2),
@@ -129,27 +149,6 @@ class PlaneGroup:
                  '[1,-1]': M1m1,
                  '[1,2]': M12,
                  '[2,1]': M21}
-
-    groups_for_shape = {
-        'Oblique': ('p1', 'p2'),
-        'Rectangular': (
-            'p1', 'p2', 'pm', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
-            'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]',
-            'pgg', 'rcmm'
-            ),
-        'Square': (
-            'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
-            'cm[1 1]', 'cm[1 -1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]',
-            'pgg', 'cmm', 'p4', 'p4m', 'p4g'
-            ),
-        'Rhombic': (
-            'p1', 'p2', 'cm[1 1]', 'cm[1 -1]', 'cmm'
-            ),
-        'Hexagonal': (
-            'p1', 'p2', 'cm[0 1]', 'cm[1 0]', 'cm[1 1]', 'cm[1 -1]', 'cm[1 2]',
-            'cm[2 1]', 'cmm', 'p3', 'p3m1', 'p31m', 'p6', 'p6m'
-            )
-        }
 
     def __init__(self, group='p1'):
         """Initialize plane-group instance.
@@ -241,11 +240,12 @@ class PlaneGroup:
             The Hermann-Mauguin names of compatible groups
         """
         try:
-            compatible_with_shape = PlaneGroup.groups_for_shape[cell_shape]
+            compatible_with_shape = _GROUPS_FOR_SHAPE[cell_shape]
         except KeyError as err:
-            raise ValueError(f'PlaneGroup: invalid cell_shape {cell_shape}. '
-                             'Should one of "Oblique", "Rectangular", '
-                             '"Square", "Rhombic", "Hexagonal".') from err
+            raise ValueError(
+                f'PlaneGroup: invalid cell_shape {cell_shape}. Should be one '
+                'of ' + ', '.join(repr(k) for k in _GROUPS_FOR_SHAPE)
+                ) from err
         if not operations:
             return compatible_with_shape
 
@@ -420,6 +420,12 @@ class PlaneGroup:
         """Return the 2D subgroups of self as a set of strings."""
         return set(_SUBGROUPS[self.group])
 
+    @classmethod
+    def highest_symmetry_for_shape(cls, cell_shape):
+        """Return the highest symmetry group compatible with cell_shape."""
+        *_, high_sym = cls.groups_compatible_with(cell_shape)
+        return cls(high_sym)
+
     def is_valid_group(self, group, cell_shape):
         """Checks if group is a valid group for a given cell_shape.
 
@@ -434,7 +440,7 @@ class PlaneGroup:
             The group to be checked. When a string, assume
             it is the Hermann-Mauguin name.
         cell_shape : {'Oblique', 'Rectangular', 'Square',
-                    'Hexagonal', or 'Rhombic'}
+                      'Hexagonal', 'Rhombic'}
             Shape of the lattice for which compatibility is
             checked.
 
@@ -442,15 +448,13 @@ class PlaneGroup:
         -------
         valid_group : bool
         """
-        if cell_shape not in self.groups_for_shape:
-            raise ValueError(f'PlaneGroup: unknown lattice shape {cell_shape}')
-        valid_group = False
+        valid_for_shape = self.groups_compatible_with(cell_shape)
         if isinstance(group, str):
             group = self.__check_group_name(group)
-            valid_group = group in self.groups_for_shape[cell_shape]
-        elif isinstance(group, PlaneGroup):
-            valid_group = group.group in self.groups_for_shape[cell_shape]
-        return valid_group
+            return group in valid_for_shape
+        if isinstance(group, PlaneGroup):
+            return group.group in valid_for_shape
+        return False
 
     def operations(self, include_3d=False):
         """Return point symmetry operations as 2x2 matrices.

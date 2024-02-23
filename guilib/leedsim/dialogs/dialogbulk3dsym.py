@@ -178,7 +178,7 @@ class Bulk3DSymDialog(qtw.QDialog):
                      if extras(i).checkState()])
 
         # Get the smallest group that contains all the operations
-        for group in PlaneGroup.groups_for_shape[self.__bulk.cell_shape]:
+        for group in PlaneGroup.groups_compatible_with(self.__bulk.cell_shape):
             group_ops = PlaneGroup(group).operations()
             if all(op in group_ops for op in all_ops):
                 break
@@ -267,11 +267,8 @@ class Bulk3DSymDialog(qtw.QDialog):
         self.__bulk = bulk
         bulk_ops = self.__bulk.group.operations()
 
-        # Get the plane group with most operations given the
-        # current cell shape (always the last in groups_for_shape)
-        largest_group = PlaneGroup(
-            bulk.group.groups_for_shape[bulk.cell_shape][-1]
-            )
+        # Use the group with most operations for the current cell shape
+        largest_group = PlaneGroup.highest_symmetry_for_shape(bulk.cell_shape)
         self.__extra_ops = []
         for op in largest_group.operations():
             # Skip those that are already in the bulk group
