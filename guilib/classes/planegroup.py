@@ -321,7 +321,7 @@ class PlaneGroup:
             if len(input) > 2 or len(input) == 0:
                 raise ValueError('PlaneGroup.screws_glides: requires at most '
                                  f'a 2-tuple. {len(input)} items found.')
-            elif len(input) == 2:
+            if len(input) == 2:
                 shape = input[1]
                 input = input[0]
             else:
