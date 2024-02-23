@@ -199,13 +199,13 @@ class PlaneGroup:
             return NotImplemented
         return self.group == other.group
 
-    def __str__(self):
-        """Return the Hermann-Mauguin name as a string."""
-        return self.group
-
     def __repr__(self):
         """Return a string representation of PlaneGroup."""
         return f'PlaneGroup({self.group!r})'
+
+    def __str__(self):
+        """Return the Hermann-Mauguin name as a string."""
+        return self.group
 
     @staticmethod
     def groups_compatible_with(cell_shape, operations=(), include_3d=False):
