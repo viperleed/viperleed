@@ -165,9 +165,13 @@ class PlaneGroup:
             'p3', 'p3m1', 'p31m', 'p6', 'p6m'. Default is 'p1'.
             See docs/_static/planegroups.pdf for more info.
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        TypeError
+            If group is neither a string nor a PlaneGroup.
+        ValueError
+            If group (including its direction) is not an acceptable
+            plane group.
         """
         if isinstance(group, PlaneGroup):
             bulk_3d = group.screws_glides
