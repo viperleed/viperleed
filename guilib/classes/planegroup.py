@@ -356,9 +356,8 @@ class PlaneGroup:
             if not (found_screws or found_glides):
                 raise ValueError('PlaneGroup.screws_glides: Invalid input.')
             if found_screws:
-                screws = found_screws.group('screws').replace(' ',
-                                                              '').split(',')
-                if any(s not in self.screw_ops.keys() for s in screws):
+                screws = found_screws['screws'].replace(' ', '').split(',')
+                if any(s not in self.screw_ops for s in screws):
                     raise ValueError('PlaneGroup.screws_glides: Invalid '
                                      'rotation order in the input. Only 2-, '
                                      '3-, 4-, and 6-fold orders allowed.')
