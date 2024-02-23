@@ -18,23 +18,29 @@ import numpy as np
 from viperleed.guilib.helpers import two_by_n_array_to_tuples
 from viperleed.guilib.helpers import two_by_two_array_to_tuple
 
-
-# Here some shorthands for symmetry operation matrices,
-# expressed in FRACTIONAL coordinates:
+# Here some shorthands for symmetry operation matrices, expressed in
+# FRACTIONAL coordinates. The naming convention, unless specified
+# next to the operation, is:
+# Rotations:
+#    Cn -> 2pi/n counter-clockwise rotation
+#    Cmn -> -2pi/n counter-clockwise rotation
+# Mirrors for non-orthogonal bases (a/b are the basis unit vectors):
+#    Mij: mirror across a line through vector v = i*a + j*b
+#    Mimj: mirror across a line through vector v = i*a - j*b
 # These two are good for all cells,...
-E = (1, 0), (0, 1)
-C2 = (-1, 0), (0, -1)    # = -E
+E = (1, 0), (0, 1)       # Identity
+C2 = (-1, 0), (0, -1)    # == -E
 # ...these two are good for rectangular and square cells,...
-Mx = (1, 0), (0, -1)
-My = (-1, 0), (0, 1)     # = -Mx
+Mx = (1, 0), (0, -1)     # Mirror across line through 1st unit vector
+My = (-1, 0), (0, 1)     # Mirror across line through 2nd unit vector
 # ...these are good for square cells,...
 C4 = (0, -1), (1, 0)
-Cm4 = (0, 1), (-1, 0)    # = -C4
-M45 = (0, 1), (1, 0)
-Mm45 = (0, -1), (-1, 0)  # = -M45
+Cm4 = (0, 1), (-1, 0)    # == -C4
+M45 = (0, 1), (1, 0)     # Across line at +45deg relative to 1st vector
+Mm45 = (0, -1), (-1, 0)  # Across line at -45deg relative to 1st vector
 # ...these are good for rhombic and hex (both obtuse),...
-M11 = (0, 1), (1, 0)     # = M45
-M1m1 = (0, -1), (-1, 0)  # = -M11 = Mm45
+M11 = (0, 1), (1, 0)     # == M45
+M1m1 = (0, -1), (-1, 0)  # == -M11 == Mm45
 M01 = (-1, -1), (0, 1)
 M10 = (1, 0), (-1, -1)
 # ...and these are good for hex only (obtuse).
@@ -68,55 +74,47 @@ _GROUP_TO_OPS = {
     'p6': (E, C6, Cm6, C3, C2, Cm3),
     'p6m': (E, M10, M01, M12, M21, M11, M1m1, C6, Cm6, C3, C2, Cm3)
     }
+_SUBGROUPS = {
+    'p1': ('p1'),
+    'p2': ('p1', 'p2'),
+    'pm[1 0]': ('p1', 'pm[1 0]'),
+    'pm[0 1]': ('p1', 'pm[0 1]'),
+    'pg[1 0]': ('p1', 'pg[1 0]'),
+    'pg[0 1]': ('p1', 'pg[0 1]'),
+    'cm[1 0]': ('p1', 'cm[1 0]'),
+    'cm[0 1]': ('p1', 'cm[0 1]'),
+    'cm[1 1]': ('p1', 'cm[1 1]'),
+    'cm[1 -1]': ('p1', 'cm[1 -1]'),
+    'cm[1 2]': ('p1', 'cm[1 2]'),
+    'cm[2 1]': ('p1', 'cm[2 1]'),
+    'rcm[1 0]': ('p1', 'pm[1 0]', 'pg[1 0]', 'rcm[1 0]'),
+    'rcm[0 1]': ('p1', 'pm[0 1]', 'pg[0 1]', 'rcm[0 1]'),
+    'pmm': ('p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pmm'),
+    'pmg[1 0]': ('p1', 'p2', 'pg[1 0]', 'pm[0 1]', 'pmg[1 0]'),
+    'pmg[0 1]': ('p1', 'p2', 'pg[0 1]', 'pm[1 0]', 'pmg[0 1]'),
+    'pgg': ('p1', 'p2', 'pg[1 0]', 'pg[0 1]', 'pgg'),
+    'cmm': ('p1', 'p2', 'cm[1 1]', 'cm[1 -1]', 'cmm'),
+    'rcmm': ('p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]', 'pgg',
+             'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]', 'rcmm'),
+    'p4': ('p1', 'p2', 'p4'),
+    'p4m': ('p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'cm[1 1]', 'cm[1 -1]', 'pmm',
+            'cmm', 'p4', 'p4m'),
+    'p4g': ('p1', 'p2', 'pg[1 0]', 'pg[0 1]', 'cm[1 1]', 'cm[1 -1]', 'pgg',
+            'cmm', 'p4', 'p4g'),
+    'p3': ('p1', 'p3'),
+    'p3m1': ('p1', 'cm[1 -1]', 'cm[2 1]', 'cm[1 2]', 'p3', 'p3m1'),
+    'p31m': ('p1', 'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'p3', 'p31m'),
+    'p6': ('p1', 'p2', 'p3', 'p6'),
+    'p6m': ('p1', 'p2', 'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'cm[1 -1]', 'cm[2 1]',
+            'cm[1 2]', 'cmm[1 2]', 'cmm[1 0]', 'cmm[2 1]', 'cmm[0 1]',
+            'cmm[1 -1]', 'cmm[1 1]', 'p3', 'p3m1', 'p31m', 'p6', 'p6m')
+    }
 
 
 class PlaneGroup:
-    """Class representing a planar 2D group.
-
-    Parameters
-    ----------
-    group: str, default 'p1'
-           Hermann-Mauguin notation for the 2D plane group (with some
-           extensions). Acceptable values:
-           'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]', 'cm[1 0]',
-           'cm[0 1]', 'cm[1 1]', 'cm[1 -1]', 'cm[1 2]', 'cm[2 1]', 'rcm[1 0]',
-           'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]', 'pgg', 'cmm', 'rcmm',
-           'p4', 'p4m', 'p4g', 'p3', 'p3m1', 'p31m', 'p6', 'p6m'
-
-           Please refer to viperleed/docs/plane_groups.pdf for more information
-
-    Attributes
-    ----------
-    group: str
-           same as input parameter
-
-    Methods
-    -------
-    operations() Returns tuple with group operations
-
-    subgroups() Returns set of strings with the subgroups of group
-
-    The point group operations are represented by 2x2 matrices (np ndarrays),
-    and correspond to applying the operation in 'fractional' coordinates.
-    The naming follows the following convention:
-    - identity: E
-    - rotations: Cn, Cmn
-              * Cn -> 2pi/n counterclockwise rotation
-              * Cmn -> -2pi/n counterclockwise rotation
-    - mirrors: Mx, My, M45, Mm45 or Mij
-              * Orthogonal bases:
-                Mx: mirror across line through first unit vector
-                My: mirror across line through second unit vector
-                M45: mirror across line at +45deg with respect to first
-                     unit vector
-                Mm45: mirror across line at -45deg with respect to first
-                      unit vector
-              * Other bases:
-                Mij: mirror across a line through vector v = i*a + j*b,
-                     where a and b are the basis unit vectors
-    """
-    # The following two dictionaries are used in screws_glides to convert
-    # 1) rotation orders of screws into a tuple of the corresponding matrices
+    """Class representing a planar 2D group."""
+    # The next two dictionaries are used in screws_glides to convert
+    # 1) rotation orders of screws into a tuple of their matrices
     screw_ops = {'2': (C2,),
                  '3': (C3, Cm3),
                  '4': (C4, Cm4),    # Probably need also to add C2
@@ -133,55 +131,44 @@ class PlaneGroup:
 
     groups_for_shape = {
         'Oblique': ('p1', 'p2'),
-        'Rectangular': ('p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]',
-                        'pg[0 1]', 'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]',
-                        'pmg[0 1]', 'pgg', 'rcmm'),
-        'Square': ('p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
-                   'cm[1 1]', 'cm[1 -1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]',
-                   'pgg', 'cmm', 'p4', 'p4m', 'p4g'),
-        'Rhombic': ('p1', 'p2', 'cm[1 1]', 'cm[1 -1]', 'cmm'),
-        'Hexagonal': ('p1', 'p2', 'cm[0 1]', 'cm[1 0]', 'cm[1 1]',
-                      'cm[1 -1]', 'cm[1 2]', 'cm[2 1]', 'cmm', 'p3', 'p3m1',
-                      'p31m', 'p6', 'p6m')
-        }
-
-    __subgroups = {
-        'p1': {'p1'},
-        'p2': {'p1', 'p2'},
-        'pm[1 0]': {'p1', 'pm[1 0]'},
-        'pm[0 1]': {'p1', 'pm[0 1]'},
-        'pg[1 0]': {'p1', 'pg[1 0]'},
-        'pg[0 1]': {'p1', 'pg[0 1]'},
-        'cm[1 0]': {'p1', 'cm[1 0]'},
-        'cm[0 1]': {'p1', 'cm[0 1]'},
-        'cm[1 1]': {'p1', 'cm[1 1]'},
-        'cm[1 -1]': {'p1', 'cm[1 -1]'},
-        'cm[1 2]': {'p1', 'cm[1 2]'},
-        'cm[2 1]': {'p1', 'cm[2 1]'},
-        'rcm[1 0]': {'p1', 'pm[1 0]', 'pg[1 0]', 'rcm[1 0]'},
-        'rcm[0 1]': {'p1', 'pm[0 1]', 'pg[0 1]', 'rcm[0 1]'},
-        'pmm': {'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pmm'},
-        'pmg[1 0]': {'p1', 'p2', 'pg[1 0]', 'pm[0 1]', 'pmg[1 0]'},
-        'pmg[0 1]': {'p1', 'p2', 'pg[0 1]', 'pm[1 0]', 'pmg[0 1]'},
-        'pgg': {'p1', 'p2', 'pg[1 0]', 'pg[0 1]', 'pgg'},
-        'cmm': {'p1', 'p2', 'cm[1 1]', 'cm[1 -1]', 'cmm'},
-        'rcmm': {'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]',
-                 'pg[0 1]', 'rcm[1 0]', 'rcm[0 1]', 'pmm',
-                 'pmg[1 0]', 'pmg[0 1]', 'pgg', 'rcmm'},
-        'p4': {'p1', 'p2', 'p4'},
-        'p4m': {'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'cm[1 1]',
-                'cm[1 -1]', 'pmm', 'cmm', 'p4', 'p4m'},
-        'p4g': {'p1', 'p2', 'pg[1 0]', 'pg[0 1]', 'cm[1 1]',
-                'cm[1 -1]', 'pgg', 'cmm', 'p4', 'p4g'},
-        'p3': {'p1', 'p3'},
-        'p3m1': {'p1', 'cm[1 -1]', 'cm[2 1]', 'cm[1 2]', 'p3', 'p3m1'},
-        'p31m': {'p1', 'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'p3', 'p31m'},
-        'p6': {'p1', 'p2', 'p3', 'p6'},
-        'p6m': {'p1', 'p2', 'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'cm[1 -1]',
-                'cm[2 1]', 'cm[1 2]', 'p3', 'p3m1', 'p31m', 'p6', 'p6m'}
+        'Rectangular': (
+            'p1', 'p2', 'pm', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
+            'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]',
+            'pgg', 'rcmm'
+            ),
+        'Square': (
+            'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
+            'cm[1 1]', 'cm[1 -1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]',
+            'pgg', 'cmm', 'p4', 'p4m', 'p4g'
+            ),
+        'Rhombic': (
+            'p1', 'p2', 'cm[1 1]', 'cm[1 -1]', 'cmm'
+            ),
+        'Hexagonal': (
+            'p1', 'p2', 'cm[0 1]', 'cm[1 0]', 'cm[1 1]', 'cm[1 -1]', 'cm[1 2]',
+            'cm[2 1]', 'cmm', 'p3', 'p3m1', 'p31m', 'p6', 'p6m'
+            )
         }
 
     def __init__(self, group='p1'):
+        """Initialize plane-group instance.
+
+        Parameters
+        ----------
+        group: str or PlaneGroup, optional
+            Hermann-Mauguin notation for the 2D plane group (with some
+            extensions). Acceptable values:
+            'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
+            'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'cm[1 -1]', 'cm[1 2]',
+            'cm[2 1]', 'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]',
+            'pmg[0 1]', 'pgg', 'cmm', 'rcmm', 'p4', 'p4m', 'p4g',
+            'p3', 'p3m1', 'p31m', 'p6', 'p6m'. Default is 'p1'.
+            See docs/_static/planegroups.pdf for more info.
+
+        Returns
+        -------
+        None.
+        """
         if isinstance(group, PlaneGroup):
             bulk_3d = group.screws_glides
             group = group.group
@@ -190,21 +177,19 @@ class PlaneGroup:
         group = self.__check_group_name(group)
         self.group = group
 
-        # The next one will be a tuple of the 2x2 matrices
-        # representing the isomorphism part of screws and
-        # glide planes perpendicular to the surface
+        # The next one will be a tuple of the 2x2 matrices representing
+        # the isomorphism part of screws and glide planes perpendicular
+        # to the surface
         self.__ops_3d = bulk_3d
 
     def __eq__(self, other):
         """Return whether self is equal to other.
 
-        Currently, this is a relatively simple check,
-        that only looks at whether the Hermann-Mauguin
-        names of self and other are the same.
+        This is a relatively simple check, that only looks at whether
+        the Hermann-Mauguin names of self and other are the same.
 
-        Use self.same_operations(other, inlude_3d) to
-        explicitly check the set of symmetry operations.
-
+        Use self.same_operations(other, inlude_3d) to explicitly check
+        the set of symmetry operations.
         """
         # Notice that Python 3 handles correctly (and in a
         # faster way) cases in which __ne__ is not reimplemented.
@@ -223,8 +208,7 @@ class PlaneGroup:
         return f'PlaneGroup({self.group!r})'
 
     @staticmethod
-    def groups_compatible_with(cell_shape, operations=tuple(),
-                               include_3d=False):
+    def groups_compatible_with(cell_shape, operations=(), include_3d=False):
         """Return the groups compatible with cell_shape and operations.
 
         Given a certain cell shape, the groups compatible with
@@ -234,23 +218,21 @@ class PlaneGroup:
 
         Parameters
         ----------
-        cell_shape : {'Oblique', 'Rectangular',
-                      'Square', 'Rhombic', 'Hexagonal'}
-            The shape of the cell of the lattice. Used to
-            pick initially the list of compatible groups
-        operations : iterable of operation matrices, optional
-            If not given or empty, the list selected from
-            the shape is returned. Otherwise, only those
-            groups in the list that are subgroups of the
-            operations given are returned. If given, the
-            elements of 'operations' are assumed to be
-            represented in fractional coordinates. Notice
-            that passing a generator will consume it.
-            Default is an empty tuple.
+        cell_shape : {'Oblique', 'Rectangular', 'Square',
+                      'Rhombic', 'Hexagonal'}
+            The shape of the cell of the lattice. Used to initially
+            pick the list of compatible groups.
+        operations : iterable, optional
+            Operation matrices. If not given or empty, the list
+            selected from the shape is returned. Otherwise, only
+            those groups in the list that are subgroups of the
+            list of operations given are returned. If given, the
+            elements of 'operations' are assumed to be represented
+            in fractional coordinates. Notice that passing a
+            generator will consume it. Default is an empty tuple.
         include_3d : bool, optional
-            Whether also 3D operations (screw axes, glide
-            planes) should be included in the check.
-            Default is False.
+            Whether also 3D operations (screw axes, glide planes)
+            should be included in the check. Default is False.
 
         Returns
         -------
@@ -286,7 +268,6 @@ class PlaneGroup:
                    for operation in group.operations(include_3d)):
                 continue
             compatible.append(group.group)
-
         return tuple(compatible)
 
     @property
@@ -328,10 +309,6 @@ class PlaneGroup:
                     'Hexagonal', or 'Rhombic'}
             Cell shape of the lattice. This parameter is mandatory if
             input[0] is a string containing definitions of glide planes
-
-        Returns
-        -------
-        None
         """
         # The next if/else handles the input parameter so that, if only a
         # 1-tuple or a single string is given, the shape of the unit cell is
@@ -440,7 +417,7 @@ class PlaneGroup:
     @property
     def subgroups(self):
         """Return the 2D subgroups of self as a set of strings."""
-        return self.__subgroups[self.group]
+        return set(_SUBGROUPS[self.group])
 
     def is_valid_group(self, group, cell_shape):
         """Checks if group is a valid group for a given cell_shape.
@@ -475,9 +452,7 @@ class PlaneGroup:
         return valid_group
 
     def operations(self, include_3d=False):
-        """Return symmetry operations as 2x2 matrices.
-
-        Operation of the point group.
+        """Return point symmetry operations as 2x2 matrices.
 
         Parameters
         ----------
@@ -488,7 +463,11 @@ class PlaneGroup:
 
         Returns
         -------
-        tuple of tuples
+        operations : tuple
+            Items are 2x2 tuples representing the isomorphic part
+            (i.e., excluding translations for screws/glides) of
+            the symmetry operations of this group. The matrices
+            are expressed in 'fractional' coordinates.
         """
         ops = list(_GROUP_TO_OPS[self.group])
         if include_3d:
