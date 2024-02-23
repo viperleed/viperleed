@@ -528,16 +528,22 @@ class PlaneGroup:
 
         Parameters
         ----------
-        include_3d : bool
-            If True, the comparison also includes the isomorphic
-            part of the 3D screw/glide operations.
+        other : str or PlaneGroup
+            The other group whose operations are to be compared to
+            theo ones of self.
+        include_3d : bool, optional
+            Whether the comparison should also include the isomorphic
+            part of the 3D screw/glide operations. Default is False.
 
         Returns
         -------
         bool
         """
         if not isinstance(other, PlaneGroup):
-            return NotImplemented
+            try:
+                other = PlaneGroup(other)
+            except (TypeError, ValueError):
+                return False
         self_ops = set(self.operations(include_3d))
         other_ops = set(other.operations(include_3d))
         return self_ops == other_ops
