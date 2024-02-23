@@ -12,6 +12,7 @@ The PlaneGroup class used to be part of the guilib.base module.
 """
 
 import re
+from typing import Iterable
 
 import numpy as np
 
@@ -248,7 +249,7 @@ class PlaneGroup:
         if not operations:
             return compatible_with_shape
 
-        if not hasattr(operations, '__iter__'):
+        if not isinstance(operations, Iterable):
             raise TypeError('PlaneGroup: operations should be an iterable')
 
         # Convert any numpy array to tuples,
