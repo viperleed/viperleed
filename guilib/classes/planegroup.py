@@ -199,8 +199,10 @@ class PlaneGroup:
         # faster way) cases in which __ne__ is not reimplemented.
         # This is why __ne__ is not reimplemented here.
         if not isinstance(other, PlaneGroup):
-            # Can't compare instances of other classes
-            return NotImplemented
+            try:
+                other = PlaneGroup(other)
+            except (TypeError, ValueError):
+                return NotImplemented
         return self.group == other.group
 
     def __repr__(self):
