@@ -118,9 +118,9 @@ class PlaneGroup:
     # 1) rotation orders of screws into a tuple of their matrices
     screw_ops = {'2': (C2,),
                  '3': (C3, Cm3),
-                 '4': (C4, Cm4),    # Probably need also to add C2
-                 '6': (C6, Cm6)}    # Probably also need C3, Cm3 and C2
-    # 2) direction contained in glide planes into the corresponding matrices
+                 '4': (C4, C2, Cm4),
+                 '6': (C6, C3, C2, Cm3, Cm6)}
+    # 2) direction contained in glide planes into their matrices
     glide_ops = {'[1,0]': M10,
                  '[0,1]': M01,
                  'x': Mx,
