@@ -361,7 +361,8 @@ class PlaneGroup:
                     raise ValueError('PlaneGroup.screws_glides: Invalid '
                                      'rotation order in the input. Only 2-, '
                                      '3-, 4-, and 6-fold orders allowed.')
-                [ops.extend(self.screw_ops[screw]) for screw in screws]
+                ops.extend(op for screw in screws
+                           for op in self.screw_ops[screw])
             if found_glides:
                 if shape is None:
                     raise ValueError('PlaneGroup.screws_glides: cell shape is '
