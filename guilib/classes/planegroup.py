@@ -72,7 +72,8 @@ _GROUPS_FOR_SHAPE = {
         ),
     'Hexagonal': (
         'p1', 'p2', 'cm[0 1]', 'cm[1 0]', 'cm[1 1]', 'cm[1 -1]', 'cm[1 2]',
-        'cm[2 1]', 'cmm', 'p3', 'p3m1', 'p31m', 'p6', 'p6m'
+        'cm[2 1]', 'cmm[1 0]', 'cmm[0 1]', 'cmm[1 -1]', 'p3', 'p3m1', 'p31m',
+        'p6', 'p6m'
         )
     }
 _GROUP_TO_OPS = {
@@ -87,7 +88,9 @@ _GROUP_TO_OPS = {
     'pmm': (E, Mx, My, C2),
     'pmg[1 0]': (E, Mx, My, C2), 'pmg[0 1]': (E, Mx, My, C2),
     'pgg': (E, C2, Mx, My),
-    'cmm': (E, C2, M11, M1m1), 'rcmm': (E, C2, Mx, My),
+    'cmm': (E, C2, M11, M1m1), 'cmm[1 -1]': (E, C2, M11, M1m1),
+    'cmm[1 0]': (E, C2, M10, M12), 'cmm[0 1]': (E, C2, M01, M21),
+    'rcmm': (E, C2, Mx, My),
     'p4': (E, C2, C4, Cm4),
     'p4m': (E, Mx, My, M45, Mm45, C2, C4, Cm4),
     'p4g': (E, Mx, My, M45, Mm45, C2, C4, Cm4),
@@ -145,8 +148,8 @@ _SUBGROUPS = {
     'p31m': ('p1', 'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'p3', 'p31m'),
     'p6': ('p1', 'p2', 'p3', 'p6'),
     'p6m': ('p1', 'p2', 'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'cm[1 -1]', 'cm[2 1]',
-            'cm[1 2]', 'cmm[1 2]', 'cmm[1 0]', 'cmm[2 1]', 'cmm[0 1]',
-            'cmm[1 -1]', 'cmm[1 1]', 'p3', 'p3m1', 'p31m', 'p6', 'p6m')
+            'cm[1 2]', 'cmm[1 0]', 'cmm[0 1]', 'cmm[1 -1]', 'p3', 'p3m1',
+            'p31m', 'p6', 'p6m')
     }
 
 
