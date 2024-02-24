@@ -210,7 +210,7 @@ class PlaneGroup:
 
     def __repr__(self):
         """Return a string representation of PlaneGroup."""
-        return f'PlaneGroup({self.group!r})'
+        return f'PlaneGroup(group={self.group!r})'
 
     def __str__(self):
         """Return the Hermann-Mauguin name as a string."""
@@ -295,7 +295,7 @@ class PlaneGroup:
         return self.__ops_3d
 
     def set_screws_glides(self, new_screws_glides, cell_shape=None):
-        """Set the isomorphic part of 3D symmetry operations.
+        """Set the isomorphic (i.e., point) part of 3D symmetry operations.
 
         Parameters
         ----------
@@ -463,7 +463,7 @@ class PlaneGroup:
 
     @property
     def subgroups(self):
-        """Return the 2D subgroups of self as a set of strings."""
+        """Return the 2D subgroups of this PlaneGroup as a set of strings."""
         return set(_SUBGROUPS[self.group])
 
     @classmethod
@@ -507,10 +507,9 @@ class PlaneGroup:
 
         Parameters
         ----------
-        include_3d : bool
-            Whether the returned 'list' should include also
-            the isomorphic part of the 3D screws and glides
-            perpendicular to the surface.
+        include_3d : bool, optional
+            Whether the isomorphic part of bulk screws and glides
+            should also be returned. Default is False.
 
         Returns
         -------
@@ -528,8 +527,11 @@ class PlaneGroup:
     def same_operations(self, other, include_3d=False):
         """Return whether self has the same operations as other.
 
-        The comparison does not check whether the Hermann-Mauguin
-        names are the same. Use self == other to test that. Thus
+        Notice that, since glides are replaced by their equivalent
+        mirror point-operations, groups with parallel glides and
+        mirrors are considered to have the same operations. This
+        does not check whether the Hermann-Mauguin names are the
+        same. Use self == other to test that. For example,
         PlaneGroup('pm[1, 0]').same_operations(PlaneGroup('pg[1, 0]'))
         returns True.
 
@@ -537,7 +539,7 @@ class PlaneGroup:
         ----------
         other : str or PlaneGroup
             The other group whose operations are to be compared to
-            theo ones of self.
+            the ones of self.
         include_3d : bool, optional
             Whether the comparison should also include the isomorphic
             part of the 3D screw/glide operations. Default is False.
