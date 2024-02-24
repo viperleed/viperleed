@@ -182,7 +182,7 @@ class PlaneGroup:
         else:
             bulk_3d = tuple()
         group = self.__check_group_name(group)
-        self.group = group
+        self._group = group
 
         # The next one will be a tuple of the 2x2 matrices representing
         # the isomorphism part of screws and glide planes perpendicular
@@ -279,6 +279,11 @@ class PlaneGroup:
                 continue
             compatible.append(group.group)
         return tuple(compatible)
+
+    @property
+    def group(self):
+        """Return the Hermann-Mauguin name of this PlaneGroup."""
+        return self._group
 
     @property
     def screws_glides(self):
