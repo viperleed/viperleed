@@ -587,17 +587,19 @@ class PlaneGroup:
         -------
         tuple of numpy.ndarrays
         """
-        if np.shape(transform) != (2, 2):
-            raise ValueError('PlaneGroup.transform requires a 2x2 '
-                             'array-like as coordinate transform matrix. '
-                             f'Found shape {np.shape(transform)} instead.')
+        transform = np.asarray(transform)
+        if transform.shape != (2, 2):
+            raise ValueError('PlaneGroup.transform requires a 2x2 sequence '
+                             'as coordinate transform matrix. Found shape '
+                             f'{transform.shape} instead.')
         if inverse is None:
             inverse = np.linalg.inv(transform)
-        elif np.shape(inverse) != (2, 2):
+        inverse = np.asarray(inverse)
+        if inverse.shape != (2, 2):
             raise ValueError('PlaneGroup.transform requires a 2x2 array-like '
                              'as the inverse of the coordinate transform. '
-                             f'Found shape {np.shape(transform)} instead.')
-        elif not np.allclose(np.dot(transform, inverse), ((1, 0), (0, 1))):
+                             f'Found shape {inverse.shape} instead.')
+        if not np.allclose(transform.dot(inverse), E):
             raise ValueError('PlaneGroup.transform transformation matrix and '
                              'inverse are inconsistent.')
         return tuple(np.linalg.multi_dot((transform,
