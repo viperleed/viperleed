@@ -373,7 +373,9 @@ class PlaneGroup:
         # multiple tokens in screws_spec.
         screw_re = re.compile(r'R\((\d(?:,\d)*)\)', re.I)
         try:
-            screw_orders = literal_eval(','.join(screw_re.findall(screws_spec)))
+            screw_orders = literal_eval(
+                ','.join(screw_re.findall(screws_spec)) + ','
+                )
         except (ValueError, TypeError, SyntaxError,
                 MemoryError, RecursionError):
             # Either no match, or some problem in the screws_spec
@@ -399,7 +401,9 @@ class PlaneGroup:
         glide_re = re.compile(r'M\(((?:\[-?\d,-?\d\])(?:,\[-?\d,-?\d\])*)\)',
                               re.I)
         try:
-            glides = literal_eval(','.join(glide_re.findall(glide_spec)))
+            glides = literal_eval(
+                ','.join(glide_re.findall(glide_spec)) + ','
+                )
         except (ValueError, TypeError, SyntaxError,
                 MemoryError, RecursionError):
             # Either no match, or some problem in the glide_spec
