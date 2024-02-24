@@ -472,13 +472,9 @@ class PlaneGroup:
         *_, high_sym = cls.groups_compatible_with(cell_shape)
         return cls(high_sym)
 
-    def is_valid_group(self, group, cell_shape):
-        """Checks if group is a valid group for a given cell_shape.
-
-        No type checking is done on group other than string
-        and PlaneGroup, under the assumption that group will
-        be used to create a PlaneGroup itself, which does
-        the type checking in the constructor.
+    @classmethod
+    def is_valid_group(cls, group, cell_shape):
+        """Check if group is a valid group for a given cell_shape.
 
         Parameters
         ----------
@@ -494,13 +490,12 @@ class PlaneGroup:
         -------
         valid_group : bool
         """
-        valid_for_shape = self.groups_compatible_with(cell_shape)
-        if isinstance(group, str):
-            group = self.__check_group_name(group)
-            return group in valid_for_shape
-        if isinstance(group, PlaneGroup):
-            return group.group in valid_for_shape
-        return False
+        if not isinstance(group, PlaneGroup):
+            try:
+                group = cls(group)
+            except (TypeError, ValueError):
+                return False
+        return group.group in cls.groups_compatible_with(cell_shape)
 
     def operations(self, include_3d=False):
         """Return point symmetry operations as 2x2 matrices.

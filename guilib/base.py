@@ -1237,7 +1237,7 @@ class Lattice():
         self._shape = self.__get_cell_shape()  # __get_cell_shape
 
         # check if the plane group given is consistent with the cell shape
-        if not PlaneGroup().is_valid_group(group, self.cell_shape):
+        if not PlaneGroup.is_valid_group(group, self.cell_shape):
             raise ValueError(f"Lattice: invalid group {group} for lattice "
                              f"shape {self.cell_shape}")
         self._group = PlaneGroup(group)
