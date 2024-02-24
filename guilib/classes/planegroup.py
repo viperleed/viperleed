@@ -216,6 +216,30 @@ class PlaneGroup:
         """Return the Hermann-Mauguin name as a string."""
         return self.group
 
+    @property
+    def group(self):
+        """Return the Hermann-Mauguin name of this PlaneGroup."""
+        return self._group
+
+    @property
+    def screws_glides(self):
+        """Return 3D symmetry operations as 2x2 tuples.
+
+        The 2x2 tuples of integers returned represent the isomorphic
+        part of screw axes and glide planes perpendicular to the
+        surface. Use .set_screws_glides to modify this attribute.
+
+        Returns
+        -------
+        tuple of tuples
+        """
+        return self.__ops_3d
+
+    @property
+    def subgroups(self):
+        """Return the 2D subgroups of this PlaneGroup as a set of strings."""
+        return set(_SUBGROUPS[self.group])
+
     @staticmethod
     def groups_compatible_with(cell_shape, operations=(), include_3d=False):
         """Return the groups compatible with cell_shape and operations.
@@ -279,197 +303,6 @@ class PlaneGroup:
                 continue
             compatible.append(group.group)
         return tuple(compatible)
-
-    @property
-    def group(self):
-        """Return the Hermann-Mauguin name of this PlaneGroup."""
-        return self._group
-
-    @property
-    def screws_glides(self):
-        """Return 3D symmetry operations as 2x2 tuples.
-
-        The 2x2 tuples of integers returned represent the isomorphic
-        part of screw axes and glide planes perpendicular to the
-        surface. Use .set_screws_glides to modify this attribute.
-
-        Returns
-        -------
-        tuple of tuples
-        """
-        return self.__ops_3d
-
-    def set_screws_glides(self, new_screws_glides, cell_shape=None):
-        """Set the isomorphic (i.e., point) part of 3D symmetry operations.
-
-        Parameters
-        ----------
-        new_screws_glides : str or Sequence
-            The specification to assign a new value to screws_glides.
-            May be a sequence, containing 2x2 matrices of integers,
-            or a string of the following forms (with or without spaces,
-            not case-sensitive):
-                'r(#, #, ...), m([#, #], [#, #], ...)'
-                'm([#, #], [#, #], ...), r(#, #, ...)'
-                'r(#, #, ...)'
-                'm([#, #], [#, #], ...)'
-                'None'
-            For screws, the list in 'r()' provides the order of
-            rotations.  For glides, an entry '[i,j]' means the
-            glide plane leaves the in-plane direction i*a + j*b
-            unmodified.
-        cell_shape : {None, 'Oblique', 'Rectangular', 'Square',
-                      'Hexagonal', 'Rhombic'}
-            Cell shape of the lattice. This parameter is mandatory if
-            new_screws_glides is a string and it defines glide planes.
-            Default is None.
-
-        Raises
-        ------
-        TypeError
-            If new_screws_glides is neither a string nor an iterable.
-        TypeError
-            If new_screws_glides is a string specifying glide planes,
-            but cell_shape was not given.
-        ValueError
-            If new_screws_glides does not match one of the acceptable
-            string specifications.
-        ValueError
-            If screw orders or glide-plane directions are not among the
-            acceptable ones when specified as a string.
-        ValueError
-            If new_screws_glides is a non-string sequence, but it does
-            not contain 2x2 integer matrices.
-        """
-        if not new_screws_glides:
-            self.__ops_3d = tuple()
-            return
-        if isinstance(new_screws_glides, str):
-            self._set_new_screws_glides_from_string(new_screws_glides,
-                                                    cell_shape)
-        elif isinstance(new_screws_glides, Iterable):
-            self._set_new_screws_glides_from_matrices(new_screws_glides)
-        else:
-            raise TypeError(
-                f'{type(self).__name__}.set_screws_glides: Invalid input. '
-                f'Must be string or Iterable, not {type(input).__name__}'
-                )
-
-    def _set_new_screws_glides_from_string(self, screws_glides, cell_shape):
-        """Assign a new value to .screws_glides from a string specification."""
-        if screws_glides.lower() == 'none':
-            self.__ops_3d = tuple()
-            return
-        screws_glides = re.sub(r'\s+', '', screws_glides)
-        self.__ops_3d = remove_duplicates(
-            itertools.chain(self._parse_screws_spec(screws_glides),
-                            self._parse_glide_spec(screws_glides, cell_shape)),
-            return_type=tuple
-            )
-        if not self.__ops_3d:
-            raise ValueError(f'{type(self).__name__}.set_screws_glides: '
-                             'Invalid input.')
-
-    @classmethod
-    def _parse_screws_spec(cls, screws_spec):
-        """Yield screw-axes point operations from a string specification."""
-        # Pattern: an 'r()' token containing a single digit, optionally
-        # followed by more single digits, comma separated. We accept
-        # multiple tokens in screws_spec.
-        screw_re = re.compile(r'R\((\d(?:,\d)*)\)', re.I)
-        try:
-            screw_orders = literal_eval(
-                ','.join(screw_re.findall(screws_spec)) + ','
-                )
-        except (ValueError, TypeError, SyntaxError,
-                MemoryError, RecursionError):
-            # Either no match, or some problem in the screws_spec
-            return
-        screws = (screw
-                  for order in screw_orders
-                  for screw in _MAP_SCREW_OPS[order])
-        try:
-            yield from screws
-        except KeyError as exc:
-            raise ValueError(f'{cls.__name__}.set_screws_glides: Invalid '
-                             f'rotation order {exc} in the input. Only 2-, '
-                             '3-, 4-, and 6-fold orders allowed.') from None
-
-    @classmethod
-    def _parse_glide_spec(cls, glide_spec, cell_shape):
-        """Yield glide-plane point operations from a string specification."""
-        # Pattern: an 'm()' token containing one pair of '[N,N]',
-        # optionally followed by more pairs of '[N,N]', comma separated
-        # Here N is any positive or negative single-digit number.
-        # Notice the use of non-capturing groups for the inner '[N,N]'
-        # to avoid them as separate tokens in findall.
-        glide_re = re.compile(r'M\(((?:\[-?\d,-?\d\])(?:,\[-?\d,-?\d\])*)\)',
-                              re.I)
-        try:
-            glides = literal_eval(
-                ','.join(glide_re.findall(glide_spec)) + ','
-                )
-        except (ValueError, TypeError, SyntaxError,
-                MemoryError, RecursionError):
-            # Either no match, or some problem in the glide_spec
-            return
-        if not cell_shape:
-            raise TypeError(f'{cls.__name__}.set_screws_glides: cell '
-                            'shape is required when glide planes are given.')
-        is_orthogonal = cell_shape in {'Square', 'Rectangular'}
-        for direction in glides:
-            if direction[0] < 0 or not direction[0] and direction[1] < 0:
-                direction = [-d for d in direction]
-            # The only directions that require special attention are
-            # [1, 0] and [0, 1], since the matrices depend on the shape
-            # of the cell
-            if direction == [1, 0] and is_orthogonal:
-                key = 'x'
-            elif direction == [0, 1] and is_orthogonal:
-                key = 'y'
-            else:
-                key = tuple(direction)
-            try:
-                yield _MAP_GLIDE_OPS[key]
-            except KeyError:
-                raise ValueError(
-                    f'{cls.__name__}.set_screws_glides: invalid '
-                    f'direction {direction} for glide plane. The only allowed '
-                    f'directions are: {_MAP_GLIDE_OPS.keys() - {"x", "y"}}'
-                    ) from None
-
-    def _set_new_screws_glides_from_matrices(self, matrices):
-        """Assign new screws_glides from a sequence of 2x2 integer matrices."""
-        matrices = np.asarray(matrices)
-        if len(matrices.shape) != 3 or matrices.shape[1:] != (2, 2):
-            raise ValueError(
-                f'{type(self).__name__}.set_screws_glides: a sequence input '
-                'should be a 1D "list" of 2x2 "matrices". Found incompatible '
-                f'shape {matrices.shape}.'
-                )
-        if np.any(abs(matrices - matrices.round()) > 1e-4):
-            raise ValueError(
-                f'{type(self).__name__}.set_screws_glides: a sequence input '
-                'should contain only integer-valued matrices.'
-                )
-
-        matrices = matrices.round().astype(int)
-        # Finally, check determinants
-        determinants = (abs(np.linalg.det(op)) for op in matrices)
-        if any(abs(d - 1) > 1e-4 for d in determinants):
-            raise ValueError(
-                f'{type(self).__name__}.set_screws_glides: a sequence '
-                'input should contain uni-determinant matrices.'
-                )
-        self.__ops_3d = remove_duplicates(
-            (two_by_two_array_to_tuple(op) for op in matrices),
-            return_type=tuple
-            )
-
-    @property
-    def subgroups(self):
-        """Return the 2D subgroups of this PlaneGroup as a set of strings."""
-        return set(_SUBGROUPS[self.group])
 
     @classmethod
     def highest_symmetry_for_shape(cls, cell_shape):
@@ -557,6 +390,62 @@ class PlaneGroup:
         other_ops = set(other.operations(include_3d))
         return self_ops == other_ops
 
+    def set_screws_glides(self, new_screws_glides, cell_shape=None):
+        """Set the isomorphic (i.e., point) part of 3D symmetry operations.
+
+        Parameters
+        ----------
+        new_screws_glides : str or Sequence
+            The specification to assign a new value to screws_glides.
+            May be a sequence, containing 2x2 matrices of integers,
+            or a string of the following forms (with or without spaces,
+            not case-sensitive):
+                'r(#, #, ...), m([#, #], [#, #], ...)'
+                'm([#, #], [#, #], ...), r(#, #, ...)'
+                'r(#, #, ...)'
+                'm([#, #], [#, #], ...)'
+                'None'
+            For screws, the list in 'r()' provides the order of
+            rotations.  For glides, an entry '[i,j]' means the
+            glide plane leaves the in-plane direction i*a + j*b
+            unmodified.
+        cell_shape : {None, 'Oblique', 'Rectangular', 'Square',
+                      'Hexagonal', 'Rhombic'}
+            Cell shape of the lattice. This parameter is mandatory if
+            new_screws_glides is a string and it defines glide planes.
+            Default is None.
+
+        Raises
+        ------
+        TypeError
+            If new_screws_glides is neither a string nor an iterable.
+        TypeError
+            If new_screws_glides is a string specifying glide planes,
+            but cell_shape was not given.
+        ValueError
+            If new_screws_glides does not match one of the acceptable
+            string specifications.
+        ValueError
+            If screw orders or glide-plane directions are not among the
+            acceptable ones when specified as a string.
+        ValueError
+            If new_screws_glides is a non-string sequence, but it does
+            not contain 2x2 integer matrices.
+        """
+        if not new_screws_glides:
+            self.__ops_3d = tuple()
+            return
+        if isinstance(new_screws_glides, str):
+            self._set_new_screws_glides_from_string(new_screws_glides,
+                                                    cell_shape)
+        elif isinstance(new_screws_glides, Iterable):
+            self._set_new_screws_glides_from_matrices(new_screws_glides)
+        else:
+            raise TypeError(
+                f'{type(self).__name__}.set_screws_glides: Invalid input. '
+                f'Must be string or Iterable, not {type(input).__name__}'
+                )
+
     def transform(self, transform, inverse=None, include_3d=False):
         """Transform the group operations to new coordinates.
 
@@ -606,6 +495,117 @@ class PlaneGroup:
                                           op,
                                           inverse))
                      for op in self.operations(include_3d))
+
+    @classmethod
+    def _parse_glide_spec(cls, glide_spec, cell_shape):
+        """Yield glide-plane point operations from a string specification."""
+        # Pattern: an 'm()' token containing one pair of '[N,N]',
+        # optionally followed by more pairs of '[N,N]', comma separated
+        # Here N is any positive or negative single-digit number.
+        # Notice the use of non-capturing groups for the inner '[N,N]'
+        # to avoid them as separate tokens in findall.
+        glide_re = re.compile(r'M\(((?:\[-?\d,-?\d\])(?:,\[-?\d,-?\d\])*)\)',
+                              re.I)
+        try:
+            glides = literal_eval(
+                ','.join(glide_re.findall(glide_spec)) + ','
+                )
+        except (ValueError, TypeError, SyntaxError,
+                MemoryError, RecursionError):
+            # Either no match, or some problem in the glide_spec
+            return
+        if not cell_shape:
+            raise TypeError(f'{cls.__name__}.set_screws_glides: cell '
+                            'shape is required when glide planes are given.')
+        is_orthogonal = cell_shape in {'Square', 'Rectangular'}
+        for direction in glides:
+            if direction[0] < 0 or not direction[0] and direction[1] < 0:
+                direction = [-d for d in direction]
+            # The only directions that require special attention are
+            # [1, 0] and [0, 1], since the matrices depend on the shape
+            # of the cell
+            if direction == [1, 0] and is_orthogonal:
+                key = 'x'
+            elif direction == [0, 1] and is_orthogonal:
+                key = 'y'
+            else:
+                key = tuple(direction)
+            try:
+                yield _MAP_GLIDE_OPS[key]
+            except KeyError:
+                raise ValueError(
+                    f'{cls.__name__}.set_screws_glides: invalid '
+                    f'direction {direction} for glide plane. The only allowed '
+                    f'directions are: {_MAP_GLIDE_OPS.keys() - {"x", "y"}}'
+                    ) from None
+
+    @classmethod
+    def _parse_screws_spec(cls, screws_spec):
+        """Yield screw-axes point operations from a string specification."""
+        # Pattern: an 'r()' token containing a single digit, optionally
+        # followed by more single digits, comma separated. We accept
+        # multiple tokens in screws_spec.
+        screw_re = re.compile(r'R\((\d(?:,\d)*)\)', re.I)
+        try:
+            screw_orders = literal_eval(
+                ','.join(screw_re.findall(screws_spec)) + ','
+                )
+        except (ValueError, TypeError, SyntaxError,
+                MemoryError, RecursionError):
+            # Either no match, or some problem in the screws_spec
+            return
+        screws = (screw
+                  for order in screw_orders
+                  for screw in _MAP_SCREW_OPS[order])
+        try:
+            yield from screws
+        except KeyError as exc:
+            raise ValueError(f'{cls.__name__}.set_screws_glides: Invalid '
+                             f'rotation order {exc} in the input. Only 2-, '
+                             '3-, 4-, and 6-fold orders allowed.') from None
+
+    def _set_new_screws_glides_from_matrices(self, matrices):
+        """Assign new screws_glides from a sequence of 2x2 integer matrices."""
+        matrices = np.asarray(matrices)
+        if len(matrices.shape) != 3 or matrices.shape[1:] != (2, 2):
+            raise ValueError(
+                f'{type(self).__name__}.set_screws_glides: a sequence input '
+                'should be a 1D "list" of 2x2 "matrices". Found incompatible '
+                f'shape {matrices.shape}.'
+                )
+        if np.any(abs(matrices - matrices.round()) > 1e-4):
+            raise ValueError(
+                f'{type(self).__name__}.set_screws_glides: a sequence input '
+                'should contain only integer-valued matrices.'
+                )
+
+        matrices = matrices.round().astype(int)
+        # Finally, check determinants
+        determinants = (abs(np.linalg.det(op)) for op in matrices)
+        if any(abs(d - 1) > 1e-4 for d in determinants):
+            raise ValueError(
+                f'{type(self).__name__}.set_screws_glides: a sequence '
+                'input should contain uni-determinant matrices.'
+                )
+        self.__ops_3d = remove_duplicates(
+            (two_by_two_array_to_tuple(op) for op in matrices),
+            return_type=tuple
+            )
+
+    def _set_new_screws_glides_from_string(self, screws_glides, cell_shape):
+        """Assign a new value to .screws_glides from a string specification."""
+        if screws_glides.lower() == 'none':
+            self.__ops_3d = tuple()
+            return
+        screws_glides = re.sub(r'\s+', '', screws_glides)
+        self.__ops_3d = remove_duplicates(
+            itertools.chain(self._parse_screws_spec(screws_glides),
+                            self._parse_glide_spec(screws_glides, cell_shape)),
+            return_type=tuple
+            )
+        if not self.__ops_3d:
+            raise ValueError(f'{type(self).__name__}.set_screws_glides: '
+                             'Invalid input.')
 
     @staticmethod
     def __check_group_name(group):
