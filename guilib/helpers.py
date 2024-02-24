@@ -203,7 +203,9 @@ def remove_duplicates(data, return_type=None):
     # try to use an order-preserving O(1) algorithm
     try:
         ret = dict.fromkeys(data)
-    except TypeError:
+    except TypeError as exc:
+        if 'unhashable' not in exc.args[0]:
+            raise
         # fall back to an O(n^2) algorithm in case there are
         # non-hashable elements
         ret = [d for i, d in enumerate(data) if d not in data[:i]]
