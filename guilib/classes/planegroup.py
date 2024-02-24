@@ -328,7 +328,7 @@ class PlaneGroup:
             but cell_shape was not given.
         ValueError
             If new_screws_glides does not match one of the acceptable
-            string specifications
+            string specifications.
         ValueError
             If screw orders or glide-plane directions are not among the
             acceptable ones when specified as a string.
