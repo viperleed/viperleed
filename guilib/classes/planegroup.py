@@ -393,8 +393,11 @@ class PlaneGroup:
         """Yield glide-plane point operations from a string specification."""
         # Pattern: an 'm()' token containing one pair of '[N,N]',
         # optionally followed by more pairs of '[N,N]', comma separated
-        # Here N is any positive or negative single-digit number
-        glide_re = re.compile(r'M\(((\[-?\d,-?\d\])(,\[-?\d,-?\d\])*)\)', re.I)
+        # Here N is any positive or negative single-digit number.
+        # Notice the use of non-capturing groups for the inner '[N,N]'
+        # to avoid them as separate tokens in findall.
+        glide_re = re.compile(r'M\(((?:\[-?\d,-?\d\])(?:,\[-?\d,-?\d\])*)\)',
+                              re.I)
         try:
             glides = literal_eval(','.join(glide_re.findall(glide_spec)))
         except (ValueError, TypeError, SyntaxError,
