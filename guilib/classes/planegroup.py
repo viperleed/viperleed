@@ -605,7 +605,8 @@ class PlaneGroup:
                                           inverse))
                      for op in self.operations(include_3d))
 
-    def __check_group_name(self, group):
+    @staticmethod
+    def __check_group_name(group):
         """Check that a string is an acceptable Hermann-Mauguin name.
 
         Before checking, spaces are fixed to allow checking directions.
