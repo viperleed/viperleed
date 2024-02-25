@@ -55,6 +55,14 @@ M21 = (1, 1), (0, -1)
 M12 = (-1, 0), (1, 1)
 
 
+class PlaneGroupError(Exception):
+    """Base Exception for plane-group related errors."""
+
+
+class MissingDirectionError(PlaneGroupError, ValueError):
+    """A group needs a direction, but none was given."""
+
+
 _GROUPS_FOR_SHAPE = {
     'Oblique': ('p1', 'p2'),
     'Rectangular': (
@@ -151,9 +159,7 @@ _SUBGROUPS = {
             'cm[1 2]', 'cmm[1 0]', 'cmm[0 1]', 'cmm[1 -1]', 'p3', 'p3m1',
             'p31m', 'p6', 'p6m')
     }
-
-# Regular expression for matching valid string input at construction
-_GROUP_RE = re.compile(
+_GROUP_RE = re.compile(  # Match valid string input at construction
     r"""
     (?P<hermann>\w+)   # hermann-mauguin
     \s*                # optional spaces
@@ -165,14 +171,6 @@ _GROUP_RE = re.compile(
      \s*\])?$          # closing bracket, at the end""",
     re.VERBOSE | re.IGNORECASE
     )
-
-
-class PlaneGroupError(Exception):
-    """Base Exception for plane-group related errors."""
-
-
-class MissingDirectionError(PlaneGroupError, ValueError):
-    """A group needs a direction, but none was given."""
 
 
 def _with_positive_leading_element(direction):
