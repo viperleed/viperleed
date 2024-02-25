@@ -12,26 +12,18 @@ from viperleed.guilib.classes import planegroup
 from viperleed.guilib.classes.planegroup import PlaneGroup
 
 
-def test_planegroup_p2():
-    g = PlaneGroup('p2')
-    assert g.group == 'p2'
+_equal = {
+    'valid string': (PlaneGroup('pmg[10]'), 'pmg[1 0 ] ', True),  # Fails!
+    'invalid string': (PlaneGroup('pgg'), 'p-gg', False),
+    'other': (PlaneGroup('cmm'), 1, False),
+    'different group': (PlaneGroup('cmm'), PlaneGroup('p6'), False),
+    }
 
-    E = [[1, 0], [0, 1]]
-    C2 = [[-1, 0], [0, -1]]
-    ops = g.operations()
-    assert len(ops) == 2
-    assert np.array_equal(ops[0], E)
-    assert np.array_equal(ops[1], C2)
-
-
-def test_is_valid_group(subtests):
-    """Check correct identification of group validity for a cell shape."""
-    with subtests.test('p4m, square'):
-        assert PlaneGroup.is_valid_group('p4m', cell_shape='Square')
-    with subtests.test('p3m1, square'):
-        assert not PlaneGroup.is_valid_group('p31m', 'Rectangular')
-    with subtests.test('invalid, hex'):
-        assert not PlaneGroup.is_valid_group('invalid', 'Hexagonal')
+@parametrize('group1,group2,expect', _equal.values(), ids=_equal)
+def test_equal(group1, group2, expect):
+    """Check expected outcome of equality test."""
+    _eq = group1 == group2
+    assert _eq is expect
 
 
 def test_highest_symmetry(subtests):
@@ -44,6 +36,57 @@ def test_highest_symmetry(subtests):
         assert _high('Square').same_operations('p4m')
     with subtests.test('hex'):
         assert _high('Hexagonal') == 'p6m'
+
+
+_init = {
+    'p2': ('p2', 'p2', ('E', 'C2')),
+    'cmm[10]': ('cmm[10]', 'cmm[1 0]', ('E', 'C2', 'M10', 'M12')),
+    'from p4m': (PlaneGroup('p4m'), 'p4m',
+                 ('E', 'C2', 'C4', 'Cm4', 'Mx', 'My', 'M45', 'Mm45')),
+    }
+
+@parametrize('init,expect_group,expect_ops', _init.values(), ids=_init)
+def test_init(init, expect_group, expect_ops, subtests):
+    """Check correct creation of a PlaneGroup instance."""
+    group = PlaneGroup(init)
+    with subtests.test('group'):
+        assert group.group == expect_group
+    ops = group.operations(include_3d=True)  # None defined anyway
+    with subtests.test('no. operations'):
+        assert len(ops) == len(expect_ops)
+    with subtests.test('matrices'):
+        expect_matrices = {getattr(planegroup, op) for op in expect_ops}
+        assert set(ops) == expect_matrices
+
+
+def test_is_valid_group(subtests):
+    """Check correct identification of group validity for a cell shape."""
+    with subtests.test('p4m, square'):
+        assert PlaneGroup.is_valid_group('p4m', cell_shape='Square')
+    with subtests.test('p3m1, square'):
+        assert not PlaneGroup.is_valid_group('p31m', 'Rectangular')
+    with subtests.test('invalid, hex'):
+        assert not PlaneGroup.is_valid_group('invalid', 'Hexagonal')
+
+
+class TestGroupsCompatibleWith:
+    """Tests for listing groups for a given shape and operations."""
+
+    def test_shape_only(self):
+        """Check groups compatible with a cell shape."""
+        assert 'p4' in PlaneGroup.groups_compatible_with('Square')
+
+    def test_include_operations(self):
+        operations = PlaneGroup('cmm').operations()
+        groups = PlaneGroup.groups_compatible_with('Square', operations)
+        assert 'cm[1 -1]' in groups
+
+    def test_p3m1_rt3(self):
+        """Check correct groups for a rt3xrt3 on a p3m1 bulk."""
+        rt3 = (2, 1), (-1, 1)
+        p3m1 = PlaneGroup('p3m1')
+        ops = [op.round().astype(int) for op in p3m1.transform(rt3)]
+        assert 'p31m' in PlaneGroup.groups_compatible_with('Hexagonal', ops)
 
 
 class TestProperties:
@@ -118,6 +161,29 @@ class TestRaises:
         """Check complaints for invalid inputs to .groups_compatible_with()."""
         with pytest.raises(exc):
             PlaneGroup.groups_compatible_with(shape, operations=ops)
+
+
+class TestSameOperations:
+    """Tests to verify whether groups have equivalent symmetry operations."""
+
+    _same = {
+        'same group': (PlaneGroup('p1'), 'p1', True),
+        'different groups': (PlaneGroup('p2'), 'p1', False),
+        'different equivalent groups': (PlaneGroup('p4m'), 'p4g', True),
+        'other object': (PlaneGroup('p2'), None, False),
+        }
+
+    @parametrize('group1,group2,result', _same.values(), ids=_same)
+    def test_exclude_3d(self, group1, group2, result):
+        """Check correct identification of identical operations."""
+        assert group1.same_operations(group2) is result
+
+    def test_include_3d(self):
+        """Check that screws/glides are considered among the operations."""
+        group1 = PlaneGroup('p3')
+        group2 = PlaneGroup('p3')
+        group1.set_screws_glides('r(2,6) m([1,2])', 'Hexagonal')
+        assert not group1.same_operations(group2, include_3d=True)
 
 
 class TestScrewsGlides:
