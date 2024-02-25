@@ -97,6 +97,17 @@ class TestProperties:
         group = PlaneGroup('p6')
         assert 'p3' in group.subgroups
 
+    _direction = {
+        'no direction': ('p6m', None),
+        'with direction': ('rcm[0 1]', (0, 1)),
+        }
+
+    @parametrize('group,direction', _direction.values(), ids=_direction)
+    def test_direction(self, group, direction):
+        """Check correct identification of group direction."""
+        group = PlaneGroup(group)
+        assert group.direction == direction
+
 
 class TestRaises:
     """Collection of tests for checking PlaneGroup complaints."""
