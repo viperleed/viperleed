@@ -231,3 +231,24 @@ class TestScrewsGlides:
         expect_ops = {getattr(planegroup, op) for op in expect}
         assert len(group.screws_glides) == len(expect)
         assert set(group.screws_glides) == expect_ops
+
+
+class TestStringRepr:
+    """Check correct result of string-ifying a PlaneGroup."""
+
+    def test_repr(self):
+        """Check PlaneGroup representation string."""
+        group = PlaneGroup('cm[1 2]')
+        assert repr(group) == "PlaneGroup(group='cm[1 2]')"
+
+    _format = {
+        'hermann only': ('h', 'cmm'),
+        'string only': ('', 'cmm[0 1]'),
+        }
+
+    @parametrize('fmt,expected', _format.values(), ids=_format)
+    def test_format(self, fmt, expected):
+        """Check correct result of format(PlaneGroup)."""
+        group = PlaneGroup(' cmm [ 01]  ')
+        formatted = f'{group:{fmt}}'
+        assert formatted == expected

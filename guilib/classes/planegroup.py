@@ -241,6 +241,26 @@ class PlaneGroup:
                 return NotImplemented
         return self.group == other.group
 
+    def __format__(self, format_spec):
+        """Return a formatted version of self.
+
+        Parameters
+        ----------
+        format_spec : str
+            Formatting specification. The only special format defined
+            has an 'h' as type, standing for "Hermann". This causes
+            only the Hermann-Mauguin name to be returned, even when
+            the group has a direction.
+
+        Returns
+        -------
+        formatted : str
+            The formatted version of self.
+        """
+        if format_spec.endswith("h"):
+            return format(self.hermann, format_spec[:-1])
+        return super().__format__(format_spec)
+
     def __repr__(self):
         """Return a string representation of PlaneGroup."""
         return f'PlaneGroup(group={self.group!r})'
