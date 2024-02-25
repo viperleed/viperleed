@@ -40,7 +40,7 @@ def test_highest_symmetry(subtests):
 
 _init = {
     'p2': ('p2', 'p2', ('E', 'C2')),
-    'cmm[10]': ('cmm[10]', 'cmm[1 0]', ('E', 'C2', 'M10', 'M12')),
+    'cmm[10]': ('cMm[10]', 'cmm[1 0]', ('E', 'C2', 'M10', 'M12')),
     'from p4m': (PlaneGroup('p4m'), 'p4m',
                  ('E', 'C2', 'C4', 'Cm4', 'Mx', 'My', 'M45', 'Mm45')),
     }
@@ -105,6 +105,8 @@ class TestRaises:
         'not a group string': ('invalid', ValueError),
         'not a string': (1, TypeError),
         'funny characters': ('.in,valid', ValueError),
+        'cannot have direction': ('p3m1[1 0]', ValueError),
+        'must have direction': ('pm', planegroup.MissingDirectionError),
         }
 
     @parametrize('group,exc', _init.values(), ids=_init)

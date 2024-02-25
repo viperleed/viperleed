@@ -152,6 +152,35 @@ _SUBGROUPS = {
             'p31m', 'p6', 'p6m')
     }
 
+# Regular expression for matching valid string input at construction
+_GROUP_RE = re.compile(
+    r"""
+    (?P<hermann>\w+)   # hermann-mauguin
+    \s*                # optional spaces
+    (?P<direction>     # optional direction
+     \[\s*             # opening bracket, and some space
+     (-?[012]?)        # first direction
+     \s*,?\s*          # optional comma, with optional spaces around
+     (-?[012]?)        # second direction
+     \s*\])?$          # closing bracket, at the end""",
+    re.VERBOSE | re.IGNORECASE
+    )
+
+
+class PlaneGroupError(Exception):
+    """Base Exception for plane-group related errors."""
+
+
+class MissingDirectionError(PlaneGroupError, ValueError):
+    """A group needs a direction, but none was given."""
+
+
+def _with_positive_leading_element(direction):
+    """Return a direction with a positive first non-zero element."""
+    if direction[0] < 0 or not direction[0] and direction[1] < 0:
+        return [-d for d in direction]
+    return direction
+
 
 class PlaneGroup:
     """Class representing a planar 2D group."""
@@ -184,8 +213,9 @@ class PlaneGroup:
             group = group.group
         else:
             bulk_3d = tuple()
-        group = self.__check_group_name(group)
-        self._group = group
+        (self._group,
+         self._hermann,
+         self._direction) = self._parse_group_name(group)
 
         # The next one will be a tuple of the 2x2 matrices representing
         # the isomorphism part of screws and glide planes perpendicular
@@ -216,12 +246,22 @@ class PlaneGroup:
         return f'PlaneGroup(group={self.group!r})'
 
     def __str__(self):
-        """Return the Hermann-Mauguin name as a string."""
+        """Return the full name of this PlaneGroup as a string."""
         return self.group
 
     @property
-    def group(self):
+    def direction(self):
+        """Return the direction of this PlaneGroup, or None."""
+        return self._direction
+
+    @property
+    def hermann(self):
         """Return the Hermann-Mauguin name of this PlaneGroup."""
+        return self._hermann
+
+    @property
+    def group(self):
+        """Return the full name (incl. direction) of this PlaneGroup."""
         return self._group
 
     @property
@@ -500,6 +540,16 @@ class PlaneGroup:
                      for op in self.operations(include_3d))
 
     @classmethod
+    def _may_have_direction(cls, hermann):
+        """Return whether a group hermann may possibly have a direction."""
+        return cls._needs_direction(hermann) or hermann == 'cmm'
+
+    @staticmethod
+    def _needs_direction(hermann):
+        """Return whether a group hermann requires a direction."""
+        return hermann in {'pm', 'pg', 'cm', 'rcm', 'pmg'}
+
+    @classmethod
     def _parse_glide_spec(cls, glide_spec, cell_shape):
         """Yield glide-plane point operations from a string specification."""
         # Pattern: an 'm()' token containing one pair of '[N,N]',
@@ -522,8 +572,7 @@ class PlaneGroup:
                             'shape is required when glide planes are given.')
         is_orthogonal = cell_shape in {'Square', 'Rectangular'}
         for direction in glides:
-            if direction[0] < 0 or not direction[0] and direction[1] < 0:
-                direction = [-d for d in direction]
+            direction = _with_positive_leading_element(direction)
             # The only directions that require special attention are
             # [1, 0] and [0, 1], since the matrices depend on the shape
             # of the cell
@@ -541,6 +590,66 @@ class PlaneGroup:
                     f'direction {direction} for glide plane. The only allowed '
                     f'directions are: {_MAP_GLIDE_OPS.keys() - {"x", "y"}}'
                     ) from None
+
+    @classmethod
+    def _parse_group_name(cls, group):
+        """Parse a string version of a PlaneGroup.
+
+        Parameters
+        ----------
+        group : str
+            Group name to be parsed, possibly including
+            a direction specification.
+
+        Returns
+        -------
+        full_group : str
+            A valid group name, possibly including a direction.
+        hermann : str
+            The Hermann-Mauguin part of full_group.
+        direction : tuple or None
+            The direction prt of full_group. None if `group` did not
+            have a direction.
+
+        Raises
+        ------
+        TypeError
+            If `group` is not a string.
+        ValueError
+            If `group` is not an acceptable Hermann-Mauguin name,
+            or a direction was given for a group that cannot have it.
+        MissingDirectionError
+            If `group` is a group that must have a direction specified
+            but it was not given.
+        """
+        if not isinstance(group, str):
+            raise TypeError('"group" should be a string. '
+                            f'Found {type(group).__name__} instead.')
+        _match = _GROUP_RE.match(group.strip().lower())
+        if not _match:
+            raise ValueError(f'{group} is not an acceptable plane group.')
+        hermann = _match['hermann']
+
+        # Sort out a possible direction
+        has_direction = _match['direction']
+        if has_direction and not cls._may_have_direction(hermann):
+            raise ValueError(f'Group {hermann} should not have a direction.')
+        if not has_direction and cls._needs_direction(hermann):
+            raise MissingDirectionError(f'Group {hermann} needs a direction.')
+
+        full_group = hermann
+        direction = None
+        if has_direction:
+            direction = _with_positive_leading_element(
+                # Cannot use literal_eval as we may have no comma
+                [int(v) for v in _match.groups()[-2:]]
+                )
+            full_group = f'{hermann}{direction}'.replace(',', '')
+            direction = tuple(direction)
+
+        if full_group not in _GROUP_TO_OPS:
+            raise ValueError(f'{group} is not an acceptable plane group.')
+        return full_group, hermann, direction
 
     @classmethod
     def _parse_screws_spec(cls, screws_spec):
@@ -609,55 +718,3 @@ class PlaneGroup:
         if not self.__ops_3d:
             raise ValueError(f'{type(self).__name__}.set_screws_glides: '
                              'Invalid input.')
-
-    @staticmethod
-    def __check_group_name(group):
-        """Check that a string is an acceptable Hermann-Mauguin name.
-
-        Before checking, spaces are fixed to allow checking directions.
-
-        Parameters
-        ----------
-        group : str
-            String to be fixed and checked.
-
-        Returns
-        -------
-        fixed_group : str
-            A Hermann-Mauguin with correct spacings, if the
-            string given was an acceptable PlaneGroup name.
-
-        Raises
-        ------
-        TypeError
-            If group is not a string
-        ValueError
-            If group is not an acceptable Hermann-Mauguin name.
-        """
-        if not isinstance(group, str):
-            raise TypeError('"group" should be a string. '
-                            f'Found {type(group).__name__} instead')
-        group_re = re.compile(
-            r'''
-            (?P<hermann>[\w]+)      # Hermann-Mauguin
-            (?:[\[]\s*              # Optional direction opening bracket
-            (?P<dir1> [-]*[\d]+)    # First direction
-            [\s]*                   # Optional space
-            (?P<dir2> [-]*[\d]+)    # Second direction
-            [\]])*                  # Optional direction closing bracket
-            ''',
-            re.VERBOSE)
-
-        group_match = group_re.match(group)
-        if group_match is None:
-            raise ValueError(f'{group} is not an acceptable plane group.')
-        group = group_match.group('hermann')
-
-        if group_match.group('dir1') is not None:
-            group = (f'{group}[{group_match.group("dir1")} '
-                     f'{group_match.group("dir2")}]')
-
-        if group not in _GROUP_TO_OPS:
-            raise ValueError(f'{group} is not an acceptable plane group.')
-
-        return group
