@@ -220,7 +220,7 @@ class PlaneGroup:
         # The next one will be a tuple of the 2x2 matrices representing
         # the isomorphism part of screws and glide planes perpendicular
         # to the surface
-        self.__ops_3d = bulk_3d
+        self._ops_3d = bulk_3d
 
     def __eq__(self, other):
         """Return whether self is equal to other.
@@ -276,7 +276,7 @@ class PlaneGroup:
         -------
         tuple of tuples
         """
-        return self.__ops_3d
+        return self._ops_3d
 
     @property
     def subgroups(self):
@@ -476,7 +476,7 @@ class PlaneGroup:
             not contain 2x2 integer matrices.
         """
         if not new_screws_glides:
-            self.__ops_3d = tuple()
+            self._ops_3d = tuple()
             return
         if isinstance(new_screws_glides, str):
             self._set_new_screws_glides_from_string(new_screws_glides,
@@ -699,7 +699,7 @@ class PlaneGroup:
                 f'{type(self).__name__}.set_screws_glides: a sequence '
                 'input should contain uni-determinant matrices.'
                 )
-        self.__ops_3d = remove_duplicates(
+        self._ops_3d = remove_duplicates(
             (two_by_two_array_to_tuple(op) for op in matrices),
             return_type=tuple
             )
@@ -707,14 +707,14 @@ class PlaneGroup:
     def _set_new_screws_glides_from_string(self, screws_glides, cell_shape):
         """Assign a new value to .screws_glides from a string specification."""
         if screws_glides.lower() == 'none':
-            self.__ops_3d = tuple()
+            self._ops_3d = tuple()
             return
         screws_glides = re.sub(r'\s+', '', screws_glides)
-        self.__ops_3d = remove_duplicates(
+        self._ops_3d = remove_duplicates(
             itertools.chain(self._parse_screws_spec(screws_glides),
                             self._parse_glide_spec(screws_glides, cell_shape)),
             return_type=tuple
             )
-        if not self.__ops_3d:
+        if not self._ops_3d:
             raise ValueError(f'{type(self).__name__}.set_screws_glides: '
                              'Invalid input.')
