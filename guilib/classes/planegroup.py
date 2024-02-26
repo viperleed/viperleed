@@ -180,6 +180,47 @@ def _with_positive_leading_element(direction):
     return direction
 
 
+_CMM_ALIAS_DIRECTIONS = {
+    (1, 0): (1, 2),
+    (0, 1): (2, 1),
+    (1, 1): (1, -1),
+    # None: (1, -1),  # This one complicates things a bit?
+    }
+
+
+def _from_alias(full_group_alias, hermann_alias, direction_alias):
+    """Return a known group from an alias.
+
+    Parameters
+    ----------
+    full_group_alias : str
+        Full group name, including direction, of the alias.
+    hermann_alias : str
+        Hermann-Mauguin part of `full_group_alias`.
+    direction_alias : tuple or None
+        The direction portion of `full_group_alias`, if any.
+
+    Returns
+    -------
+    full_group : str
+        Full group name, including direction, of the conventional
+        group of which `full_group_alias` is an alias.
+    hermann : str
+        Hermann-Mauguin part of `full_group`.
+    direction : tuple or None
+        The direction portion of `full_group`, if any.
+    """
+    if full_group_alias in _KNOWN_GROUPS:  # Nothing to fiddle with
+        return full_group_alias, hermann_alias, direction_alias
+
+    if hermann_alias == 'cmm':
+        direction = _CMM_ALIAS_DIRECTIONS[direction_alias]
+        full_group = f'{hermann_alias}{list(direction)}'.replace(',', '')
+        return full_group, hermann_alias, direction
+
+    return full_group_alias, hermann_alias, direction_alias
+
+
 class PlaneGroup:
     """Class representing a planar 2D group."""
 
@@ -734,6 +775,8 @@ class PlaneGroup:
             full_group = f'{hermann}{direction}'.replace(',', '')
             direction = tuple(direction)
 
+        full_group, hermann, direction = _from_alias(full_group, hermann,
+                                                     direction)
         if full_group not in _KNOWN_GROUPS:
             raise ValueError(f'{group} is not an acceptable plane group.')
         return full_group, hermann, direction

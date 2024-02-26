@@ -40,7 +40,7 @@ def test_highest_symmetry(subtests):
 
 _init = {
     'p2': ('p2', 'p2', ('E', 'C2')),
-    'cmm[10]': ('cMm[10]', 'cmm[1 0]', ('E', 'C2', 'M10', 'M12')),
+    'cmm[10]': ('cMm[10]', 'cmm[1 2]', ('E', 'C2', 'M10', 'M12')),
     'from p4m': (PlaneGroup('p4m'), 'p4m',
                  ('E', 'C2', 'C4', 'Cm4', 'Mx', 'My', 'M45', 'Mm45')),
     }
@@ -349,7 +349,7 @@ class TestStringRepr:
 
     _format = {
         'hermann only': ('h', 'cmm'),
-        'string only': ('', 'cmm[0 1]'),
+        'string only': ('', 'cmm[2 1]'),
         }
 
     @parametrize('fmt,expected', _format.values(), ids=_format)
