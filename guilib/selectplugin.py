@@ -55,7 +55,8 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
     # window of the module
     modules = {'pattern_simulator': ('pattern_simulator.png',
                                      gl.LEEDPatternSimulator),
-               'measure': ('measure.png', Measure),}
+               # 'measure': ('measure.png', Measure),}
+               'measure': ('measure.png', None),}
 
     def __init__(self, parent=None):
         """Initialize window."""
