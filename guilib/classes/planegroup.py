@@ -259,7 +259,7 @@ class PlaneGroup:
         formatted : str
             The formatted version of self.
         """
-        if format_spec.endswith("h"):
+        if format_spec.endswith('h'):
             return format(self.hermann, format_spec[:-1])
         return super().__format__(format_spec)
 
