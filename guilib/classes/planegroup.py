@@ -435,6 +435,10 @@ class PlaneGroup:
                 return False
         return group.group in cls.groups_compatible_with(cell_shape)
 
+    def is_n_fold(self, n_fold):
+        """Return whether self has an n_fold axis."""
+        return not self.rotation_order % n_fold
+
     def is_subgroup_of(self, other, include_direction=True):
         """Return whether self is a subgroup of another group."""
         if not isinstance(other, PlaneGroup):

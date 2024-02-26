@@ -88,6 +88,36 @@ def test_is_subgroup_of(subgroup, supergroup, with_dir, expected):
     assert result is expected
 
 
+class TestIsNFold:
+    """Collections of tests for checking rotation orders."""
+
+    _true = {
+        'pm[1 0]': (1,),
+        'p2': (2, 1),
+        'p4g': (4, 2),
+        'p6m': (6, 3, 2, 1),
+        }
+    _false = {
+        'rcm[0 1]': 3,
+        'p4': 6,
+        'p2': 4,
+        'p6m': 4,
+        'pmg[1 0]': 5,
+        }
+
+    @parametrize('group,orders', _true.items(), ids=_true)
+    def test_n_fold_true(self, group, orders, subtests):
+        """Check correct identification of n-fold-ness."""
+        group = PlaneGroup(group)
+        for order in orders:
+            with subtests.test(f'order={order}'):
+                assert group.is_n_fold(order)
+
+    @parametrize('group,order', _false.items(), ids=_false)
+    def test_n_fold_false(self, group, order):
+        """Check correct identification of non-n-fold-ness."""
+        assert not PlaneGroup(group).is_n_fold(order)
+
 
 class TestGroupsCompatibleWith:
     """Tests for listing groups for a given shape and operations."""
