@@ -66,8 +66,8 @@ class MissingDirectionError(PlaneGroupError, ValueError):
 _GROUPS_FOR_SHAPE = {
     'Oblique': ('p1', 'p2'),
     'Rectangular': (
-        'p1', 'p2', 'pm', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
-        'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]', 'pgg', 'rcmm'
+        'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]', 'rcm[1 0]',
+        'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]', 'pgg', 'rcmm'
         ),
     'Square': (
         'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
