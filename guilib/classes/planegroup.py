@@ -107,6 +107,7 @@ _GROUP_TO_OPS = {
     'p6': (E, C6, Cm6, C3, C2, Cm3),
     'p6m': (E, M10, M01, M12, M21, M11, M1m1, C6, Cm6, C3, C2, Cm3)
     }
+_KNOWN_GROUPS = _GROUP_TO_OPS.keys()
 _MAP_GLIDE_OPS = {  # For set_screws_glides. Direction to matrix
     (1, 0): M10,
     (0, 1): M01,
@@ -715,7 +716,7 @@ class PlaneGroup:
             full_group = f'{hermann}{direction}'.replace(',', '')
             direction = tuple(direction)
 
-        if full_group not in _GROUP_TO_OPS:
+        if full_group not in _KNOWN_GROUPS:
             raise ValueError(f'{group} is not an acceptable plane group.')
         return full_group, hermann, direction
 
