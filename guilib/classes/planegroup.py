@@ -194,8 +194,9 @@ class PlaneGroup:
             'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
             'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'cm[1 -1]', 'cm[1 2]',
             'cm[2 1]', 'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]',
-            'pmg[0 1]', 'pgg', 'cmm', 'rcmm', 'p4', 'p4m', 'p4g',
-            'p3', 'p3m1', 'p31m', 'p6', 'p6m'. Default is 'p1'.
+            'pmg[0 1]', 'pgg', 'cmm', 'cmm[1 0]', 'cmm[0 1]',
+            'cmm[1 -1]', 'rcmm', 'p4', 'p4m', 'p4g', 'p3', 'p3m1',
+            'p31m', 'p6', 'p6m'. Default is 'p1'.
             See docs/_static/planegroups.pdf for more info.
 
         Raises
@@ -205,6 +206,9 @@ class PlaneGroup:
         ValueError
             If group (including its direction) is not an acceptable
             plane group.
+        MissingDirectionError
+            If the group is ambiguous and should thus have a direction,
+            but one was not given.
         """
         if isinstance(group, PlaneGroup):
             bulk_3d = group.screws_glides
