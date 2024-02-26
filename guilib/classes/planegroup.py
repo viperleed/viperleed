@@ -273,14 +273,38 @@ class PlaneGroup:
         return self._direction
 
     @property
+    def group(self):
+        """Return the full name (incl. direction) of this PlaneGroup."""
+        return self._group
+
+    @property
+    def has_only_rotations(self):
+        """Return whether this group has only rotations."""
+        return self.hermann in {'p1', 'p2', 'p3', 'p4', 'p6'}
+
+    @property
     def hermann(self):
         """Return the Hermann-Mauguin name of this PlaneGroup."""
         return self._hermann
 
     @property
-    def group(self):
-        """Return the full name (incl. direction) of this PlaneGroup."""
-        return self._group
+    def needs_direction(self):
+        """Return whether this group is ambiguous without a direction."""
+        return self._needs_direction(self.hermann)
+
+    @property
+    def primitive(self):
+        """Return if this is a group of a "primitive" cell."""
+        return 'r' not in self.hermann
+
+    @property
+    def rotation_order(self):
+        """Return the highest rotation order of this group."""
+        if self.hermann in {'pm', 'pg', 'cm', 'rcm'}:
+            return 1
+        if self.hermann in {'pmm', 'pmg', 'pgg', 'cmm', 'rcmm'}:
+            return 2
+        return int(self.hermann.split('p')[1][:1])
 
     @property
     def screws_glides(self):

@@ -105,8 +105,55 @@ class TestProperties:
     @parametrize('group,direction', _direction.values(), ids=_direction)
     def test_direction(self, group, direction):
         """Check correct identification of group direction."""
-        group = PlaneGroup(group)
-        assert group.direction == direction
+        assert PlaneGroup(group).direction == direction
+
+    _need_dir = {
+        'cmm': False,
+        'pgg': False,
+        'pm[1 0]': True,
+        }
+    _primitive = {
+        'rcmm': False,
+        'p3': True,
+        }
+    _rotations = {
+        'p3m1': False,
+        'pm[0 1]': False,
+        'p4': True,
+        }
+
+    @staticmethod
+    def _check_bool_prop(prop, group, expected):
+        """Check the correctness of group.prop property."""
+        value = getattr(PlaneGroup(group), prop)
+        assert value is expected
+
+    @parametrize(args=_rotations.items(), ids=_rotations)
+    def test_has_only_rotations(self, args):
+        """Check correctness of has_only_rotations property."""
+        self._check_bool_prop('has_only_rotations', *args)
+
+    @parametrize(args=_need_dir.items(), ids=_need_dir)
+    def test_needs_direction(self, args):
+        """Check correctness of needs_direction property."""
+        self._check_bool_prop('needs_direction', *args)
+
+    @parametrize(args=_primitive.items(), ids=_primitive)
+    def test_primitive(self, args):
+        """Check correctness of needs_direction property."""
+        self._check_bool_prop('primitive', *args)
+
+    _rot_order = {
+        'p1': 1, 'pg[0 1]': 1,
+        'pmm': 2, 'pmg[1 0]': 2,
+        'p31m': 3,
+        'p6': 6,
+        }
+
+    @parametrize('group,expected', _rot_order.items(), ids=_rot_order)
+    def test_rotation_order(self, group, expected):
+        """Check correctness of rotation_order property."""
+        assert PlaneGroup(group).rotation_order == expected
 
 
 class TestRaises:
