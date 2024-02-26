@@ -210,18 +210,21 @@ class TestRaises:
     """Collection of tests for checking PlaneGroup complaints."""
 
     _init = {
-        'not a group string': ('invalid', ValueError),
-        'not a string': (1, TypeError),
-        'funny characters': ('.in,valid', ValueError),
-        'cannot have direction': ('p3m1[1 0]', ValueError),
-        'must have direction': ('pm', planegroup.MissingDirectionError),
+        'not a group string': (('invalid',), ValueError),
+        'not a string': ((1,), TypeError),
+        'funny characters': (('.in,valid',), ValueError),
+        'cannot have direction': (('p3m1[1 0]',), ValueError),
+        'must have direction': (('pm',), planegroup.MissingDirectionError),
+        'double direction': (('pg[0 1]', (1, 0)), ValueError),
+        'direction shape': (('pg', (1, 0, 3)), ValueError),
+        'direction not int': (('pg', (1.2, 0)), ValueError),
         }
 
-    @parametrize('group,exc', _init.values(), ids=_init)
-    def test_invalid_group(self, group, exc):
+    @parametrize('args,exc', _init.values(), ids=_init)
+    def test_invalid_group(self, args, exc):
         """Check complaints when initializing with an invalid object."""
         with pytest.raises(exc):
-            PlaneGroup(group)
+            PlaneGroup(*args)
 
     _screws_glides = {
         'string': ('invalid', '', ValueError, 'Invalid input'),

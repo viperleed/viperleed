@@ -183,7 +183,7 @@ def _with_positive_leading_element(direction):
 class PlaneGroup:
     """Class representing a planar 2D group."""
 
-    def __init__(self, group='p1'):
+    def __init__(self, group='p1', direction=None):
         """Initialize plane-group instance.
 
         Parameters
@@ -201,9 +201,16 @@ class PlaneGroup:
             'cmm[1 -1]', 'rcmm', 'p4', 'p4m', 'p4g', 'p3', 'p3m1',
             'p31m', 'p6', 'p6m'. Default is 'p1'.
             See docs/_static/planegroups.pdf for more info.
+        direction : Sequence or None, optional
+            Alternative route to provide a direction for a group.
+            If given, the direction should not be included in group.
+            Default is None.
 
         Raises
         ------
+        ValueError
+            If direction is given but it either is not (close
+            to) integer or it has unexpected shape.
         TypeError
             If group is neither a string nor a PlaneGroup.
         ValueError
@@ -218,6 +225,13 @@ class PlaneGroup:
             group = group.group
         else:
             bulk_3d = tuple()
+        if direction is not None:
+            if any(np.round(direction) - direction) > 1e-5:                     # TODO: use tleedmlib.base.ensure_integer_matrix after moving it (otherwise cyclic imports)
+                raise ValueError('Invalid non-integer direction')
+            direction = np.round(direction).astype(int)
+            if direction.shape != (2,):
+                raise ValueError(f'Invalid direction.shape={direction.shape}')
+            group = f'{group}{direction}'
         (self._group,
          self._hermann,
          self._direction) = self._parse_group_name(group)
