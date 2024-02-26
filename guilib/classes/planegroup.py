@@ -18,6 +18,7 @@ from typing import Iterable
 
 import numpy as np
 
+from viperleed.guilib.helpers import array2string
 from viperleed.guilib.helpers import remove_duplicates
 from viperleed.guilib.helpers import two_by_two_array_to_tuple
 
@@ -666,6 +667,67 @@ class PlaneGroup:
                                           op,
                                           inverse))
                      for op in self.operations(include_3d))
+
+    def with_transformed_direction(self, transform):
+        """Return a new PlaneGroup with a rotated direction.
+
+        Parameters
+        ----------
+        transform : Sequence
+            Shape (2, 2). The transformation matrix to be applied to
+            the group direction. It can typically be taken as the same
+            2x2 matrix that is used to transform a 2D unit cell with
+            vectors as rows, that is, `transform` is normally equal to
+            new_basis @ inv(old_basis).
+
+        Returns
+        -------
+        new_group : PlaneGroup
+            A plane group with the same Hermann-Mauguin name as
+            this one, and direction - and symmetry operations -
+            transformed as per `transform`.
+
+        Raises
+        ------
+        MissingDirectionError
+            If this group has no direction to be transformed.
+        ValueError
+            If the `transform` given does not lead to a
+            integer-valued direction.
+        """
+        if not self.direction:
+            raise MissingDirectionError(f'{self} has no direction '
+                                        'to be transformed.')
+        # We change the fractional direction using the
+        # fact that the Cartesian direction is the same:
+        #    cart_dir = frac_new @ ab_new == frac_old @ ab_old
+        # Thus, since ab_new == transform @ ab_old,
+        #    frac_new = frac_old @ ab_old @ inv(ab_new)
+        #             = frac_old @ ab_old @ inv(transform @ ab_old)
+        #             = frac_old @ ab_old @ inv(ab_old) @ inv(transform)
+        #             = frac_old @ inv(transform)
+        inverse = np.linalg.inv(transform)
+        frac_new = np.dot(self.direction, inverse)
+        divider = min(abs(frac_new))
+        if divider < 1e-5:
+            divider = max(abs(frac_new))
+        frac_new = frac_new / divider
+        if any(abs(frac_new - frac_new.round()) > 1e-5):                        # TODO: use ensure_integer_matrix
+            raise ValueError(
+                f'Could not convert {self} direction {self.direction} '
+                f'using matrix transform {array2string(transform)}. Not '
+                f'an integer direction: {frac_new}'
+                )
+        frac_new = frac_new.round().astype(int)
+        transformed_group = PlaneGroup(self.hermann, direction=frac_new)
+        if not self.screws_glides:
+            return transformed_group
+
+        # Also transform the 3D operations
+        transformed_ops = self.transform(transform, inverse, include_3d=True)
+        nr_ops_2d = len(self.operations())
+        transformed_group.set_screws_glides(transformed_ops[nr_ops_2d:])
+        return transformed_group
 
     @classmethod
     def _may_have_direction(cls, hermann):

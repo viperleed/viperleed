@@ -281,6 +281,19 @@ class TestRaises:
         with pytest.raises(ValueError):
             group.transform(transform, inverse)
 
+    _transform_direction = {
+        'no direction': ('p3m1', np.eye(2), planegroup.MissingDirectionError),
+        'not fractional': ('pm[10]', np.arange(4).reshape(2, 2) + 2,
+                           ValueError),
+        }
+
+    @parametrize('group,transform,exc', _transform_direction.values(),
+                 ids=_transform_direction)
+    def test_transform_direction_invalid(self, group, transform, exc):
+        """Ensure complaints when transforming a group's direction."""
+        with pytest.raises(exc):
+            PlaneGroup(group).with_transformed_direction(transform)
+
 
 class TestSameOperations:
     """Tests to verify whether groups have equivalent symmetry operations."""
@@ -358,3 +371,22 @@ class TestStringRepr:
         group = PlaneGroup(' cmm [ 01]  ')
         formatted = f'{group:{fmt}}'
         assert formatted == expected
+
+
+class TestWithTransformedDirection:
+    """Tests for modifying a group's direction."""
+
+    def test_pm_rotated_90(self):
+        """Check correct outcome of transforming a group's direction."""
+        group = PlaneGroup('pm', (1, 0))
+        group.set_screws_glides('m([0, 1])', 'Rectangular')
+        transformed = group.with_transformed_direction(planegroup.C4)
+        assert transformed == 'pm[0 1]'
+        assert transformed.screws_glides == (planegroup.Mx,)
+
+    def test_cmm_rotated_90(self):                                              # TODO: fails, but should not!
+        """Check correct outcome of transforming a group's direction."""
+        group = PlaneGroup('cmm', (1, 0))
+        c4_hex = (1, 2), (-2, -1)
+        transformed = group.with_transformed_direction(c4_hex)
+        assert transformed.same_operations(group)
