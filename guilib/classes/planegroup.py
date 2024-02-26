@@ -420,6 +420,18 @@ class PlaneGroup:
                 return False
         return group.group in cls.groups_compatible_with(cell_shape)
 
+    def is_subgroup_of(self, other, include_direction=True):
+        """Return whether self is a subgroup of another group."""
+        if not isinstance(other, PlaneGroup):
+            try:
+                other = PlaneGroup(other)
+            except (TypeError, ValueError):
+                raise TypeError('Expected a PlaneGroup instance, '
+                                f'not {type(other).__name__}.') from None
+        if include_direction:
+            return self.group in other.subgroups
+        return self.hermann in {g.split('[')[0] for g in other.subgroups}
+
     def operations(self, include_3d=False):
         """Return point symmetry operations as 2x2 matrices.
 

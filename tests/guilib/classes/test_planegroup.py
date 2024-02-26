@@ -69,6 +69,26 @@ def test_is_valid_group(subtests):
         assert not PlaneGroup.is_valid_group('invalid', 'Hexagonal')
 
 
+_is_subgroup = {  # subgroup, super-group, include_direction, expect
+    'need no direction, True 1': ('p3m1', 'p6m', True, True),
+    'need no direction, True 2': ('p3m1', 'p6m', False, True),
+    'need no direction, False 1': ('p4', 'p6m', True, False),
+    'need no direction, False 2': ('p4', 'p6m', False, False),
+    'need direction, False': ('pm[1 0]', 'pmg[1 0]', True, False),
+    'need direction, True': ('pg[1 0]', 'pmg[1 0]', True, True),
+    'can have direction, True': ('cmm', 'p6m', False, True),
+    }
+
+@parametrize('subgroup,supergroup,with_dir,expected',
+             _is_subgroup.values(), ids=_is_subgroup)
+def test_is_subgroup_of(subgroup, supergroup, with_dir, expected):
+    """Check correct result of is_subgroup_of method."""
+    subgroup, supergroup = (PlaneGroup(g) for g in (subgroup, supergroup))
+    result = subgroup.is_subgroup_of(supergroup, include_direction=with_dir)
+    assert result is expected
+
+
+
 class TestGroupsCompatibleWith:
     """Tests for listing groups for a given shape and operations."""
 
@@ -221,6 +241,12 @@ class TestRaises:
         """Check complaints for invalid inputs to .groups_compatible_with()."""
         with pytest.raises(exc):
             PlaneGroup.groups_compatible_with(shape, operations=ops)
+
+    def test_is_subgroup_of_invalid(self):
+        """Check complaints for an invalid super-group."""
+        subgroup = PlaneGroup('p1')
+        with pytest.raises(TypeError):
+            subgroup.is_subgroup_of(None)
 
 
 class TestSameOperations:
