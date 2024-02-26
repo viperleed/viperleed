@@ -226,6 +226,25 @@ class TestRaises:
         with pytest.raises(exc):
             PlaneGroup(*args)
 
+    _groups_compatible = {
+        'operations TypeError': ('Square', 1, TypeError),
+        'cell shape': ('invalid', None, ValueError),
+        'operations shape': ('Hexagonal', [np.eye(3)] * 3, ValueError),
+        }
+
+    @parametrize('shape,ops,exc', _groups_compatible.values(),
+                 ids=_groups_compatible)
+    def test_groups_compatible_invalid(self, shape, ops, exc):
+        """Check complaints for invalid inputs to .groups_compatible_with()."""
+        with pytest.raises(exc):
+            PlaneGroup.groups_compatible_with(shape, operations=ops)
+
+    def test_is_subgroup_of_invalid(self):
+        """Check complaints for an invalid super-group."""
+        subgroup = PlaneGroup('p1')
+        with pytest.raises(TypeError):
+            subgroup.is_subgroup_of(None)
+
     _screws_glides = {
         'string': ('invalid', '', ValueError, 'Invalid input'),
         'matrices wrong shape': ([np.eye(3)]*3, '', ValueError, 'shape'),
@@ -261,25 +280,6 @@ class TestRaises:
         group = PlaneGroup(group='p1')
         with pytest.raises(ValueError):
             group.transform(transform, inverse)
-
-    _groups_compatible = {
-        'operations TypeError': ('Square', 1, TypeError),
-        'cell shape': ('invalid', None, ValueError),
-        'operations shape': ('Hexagonal', [np.eye(3)] * 3, ValueError),
-        }
-
-    @parametrize('shape,ops,exc', _groups_compatible.values(),
-                 ids=_groups_compatible)
-    def test_groups_compatible_invalid(self, shape, ops, exc):
-        """Check complaints for invalid inputs to .groups_compatible_with()."""
-        with pytest.raises(exc):
-            PlaneGroup.groups_compatible_with(shape, operations=ops)
-
-    def test_is_subgroup_of_invalid(self):
-        """Check complaints for an invalid super-group."""
-        subgroup = PlaneGroup('p1')
-        with pytest.raises(TypeError):
-            subgroup.is_subgroup_of(None)
 
 
 class TestSameOperations:
