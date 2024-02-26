@@ -4,7 +4,7 @@
   ViPErLEED Graphical User Interface
 ======================================
 
-Created: 2024-02-2
+Created: 2024-02-22
 Author: Michele Riva (@michele-riva)
 
 Defines the PlaneGroup class as well as a bunch of symmetry operations.
@@ -27,7 +27,7 @@ from viperleed.guilib.helpers import two_by_two_array_to_tuple
 # Rotations:
 #    Cn -> 2pi/n counter-clockwise rotation
 #    Cmn -> -2pi/n counter-clockwise rotation
-# Mirrors for non-orthogonal bases (a/b are the basis unit vectors):
+# Mirrors for non-orthogonal bases (a & b are the basis unit vectors):
 #    Mij: mirror across a line through vector v = i*a + j*b
 #    Mimj: mirror across a line through vector v = i*a - j*b
 # These two are good for all cells,...
@@ -67,8 +67,7 @@ _GROUPS_FOR_SHAPE = {
     'Oblique': ('p1', 'p2'),
     'Rectangular': (
         'p1', 'p2', 'pm', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
-        'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]',
-        'pgg', 'rcmm'
+        'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]', 'pmg[0 1]', 'pgg', 'rcmm'
         ),
     'Square': (
         'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
@@ -188,9 +187,12 @@ class PlaneGroup:
 
         Parameters
         ----------
-        group: str or PlaneGroup, optional
-            Hermann-Mauguin notation for the 2D plane group (with some
-            extensions). Acceptable values:
+        group : str or PlaneGroup, optional
+            Hermann-Mauguin group name (with some extensions),
+            optionally including a 2D Miller-indices direction
+            for those group that are potentially ambiguous.
+            Acceptable values (case insensitive; directions may
+            have none or multiple spaces):
             'p1', 'p2', 'pm[1 0]', 'pm[0 1]', 'pg[1 0]', 'pg[0 1]',
             'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'cm[1 -1]', 'cm[1 2]',
             'cm[2 1]', 'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]',
@@ -228,14 +230,22 @@ class PlaneGroup:
         """Return whether self is equal to other.
 
         This is a relatively simple check, that only looks at whether
-        the Hermann-Mauguin names of self and other are the same.
-
-        Use self.same_operations(other, inlude_3d) to explicitly check
+        the Hermann-Mauguin names of self and other are the same. Use
+        self.same_operations(other, inlude_3d) to explicitly check
         the set of symmetry operations.
+
+        Parameters
+        ----------
+        other : str or PlaneGroup
+            The other plane group to compare to.
+
+        Returns
+        -------
+        bool or NotImplemented
         """
-        # Notice that Python 3 handles correctly (and in a
-        # faster way) cases in which __ne__ is not reimplemented.
-        # This is why __ne__ is not reimplemented here.
+        # Notice that Python 3 handles correctly (and in a faster
+        # way) cases in which __ne__ is not reimplemented. This is
+        # why __ne__ is not implemented here.
         if not isinstance(other, PlaneGroup):
             try:
                 other = PlaneGroup(other)
@@ -273,7 +283,7 @@ class PlaneGroup:
 
     @property
     def direction(self):
-        """Return the direction of this PlaneGroup, or None."""
+        """Return a tuple of the 2D Miller-indices direction, or None."""
         return self._direction
 
     @property
@@ -401,7 +411,7 @@ class PlaneGroup:
 
     @classmethod
     def is_valid_group(cls, group, cell_shape):
-        """Check if group is a valid group for a given cell_shape.
+        """Check if group is a valid group for a given `cell_shape`.
 
         Parameters
         ----------
@@ -472,8 +482,8 @@ class PlaneGroup:
         Parameters
         ----------
         other : str or PlaneGroup
-            The other group whose operations are to be compared to
-            the ones of self.
+            The other plane group whose operations are to be compared
+            to the ones of self.
         include_3d : bool, optional
             Whether the comparison should also include the isomorphic
             part of the 3D screw/glide operations. Default is False.
@@ -599,7 +609,7 @@ class PlaneGroup:
 
     @classmethod
     def _may_have_direction(cls, hermann):
-        """Return whether a group hermann may possibly have a direction."""
+        """Return whether a group `hermann` may have a direction specified."""
         return cls._needs_direction(hermann) or hermann == 'cmm'
 
     @staticmethod
