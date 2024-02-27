@@ -9,4 +9,3 @@ Getting started
     Element Names<basics/elementnamecollision>
     Installation<basics/installation>
     How to Run<basics/how_to_run>
-    Examples<basics/examples>
