@@ -89,7 +89,7 @@ The settings concerning global parameters and the :ref:`VIBROCC file<viboccin>`
 have been discussed in detail elsewhere (see e.g. :ref:`here<example_ag_100>`).
 Note, however, the parameters concerning the structure interpretation.
 To let ViPErLEED know what we consider the bulk structure, we generally need to
-define the parameters :ref:`BULK_REPEAT`, :ref:`LAYER_CUTS`
+define the parameters :ref:`BULK_REPEAT`, :ref:`LAYER_CUTS<CTRUNC>`
 and :ref:`N_BULK_LAYERS<blay>`.
 Alternatively, as is done here, we could also specify the parameter
 :ref:`BULK_LIKE_BELOW` with a suitable value (0.35 for the given POSCAR file).
