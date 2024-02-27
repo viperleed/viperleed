@@ -259,5 +259,5 @@ Full-dynamic Optimization
 
 
 .. [#] The data was obtained by Alexander M. Imre and Michele Riva, with further
-support provided by Florian Kraushofer, Giada Franceschi, Tilman Kißlinger and
-Lutz Hammer.
+       support provided by Florian Kraushofer, Giada Franceschi, Tilman
+       Kißlinger and Lutz Hammer.
