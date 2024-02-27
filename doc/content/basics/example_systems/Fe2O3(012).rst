@@ -89,7 +89,7 @@ have been discussed in detail elsewhere (see e.g. :ref:`here<example_ag_100>`).
 Note, however, the parameters concerning the structure interpretation.
 To let ViPErLEED know what we consider the bulk structure, we generally need to
 define the parameters :ref:`BULK_REPEAT`, :ref:`LAYER_CUTS`
-and :ref:`N_BULK_LAYERS`.
+and :ref:`N_BULK_LAYERS<blay>`.
 Alternatively, as is done here, we could also specify the parameter
 :ref:`BULK_LIKE_BELOW` with a suitable value (0.35 for the given POSCAR file).
 
@@ -104,8 +104,8 @@ file :ref:`PHASESHIFTS`) and different vibrational amplitudes.
 
 Initial vibrational amplitudes can be calculated based on the sample's Debye
 temperature with the parameters :ref:`T_DEBYE`, :ref:`T_EXPERIMENT` and
-:ref:`VIB_AMP_SCALE`. Instead, you can also provide the amplitudes directly in
-the :ref:`VIBROCC file<viboccin>`: 
+:ref:`VIBR_AMP_SCALE<vibr_amp_scale>`. Instead, you can also provide the
+amplitudes directly in the :ref:`VIBROCC file<viboccin>`: 
 
 .. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/VIBROCC
    :language: console
@@ -163,8 +163,8 @@ which may require a very large number of iterations.
 We can perform the optimization in a computationally more efficient way by using
 a perturbative approach, where we calculate the effect of small changes to the
 input structure.
-This is done in the :ref:`Delta-Amplitude` calculation and structure
-optimization.
+This is done in the :ref:`delta-amplitudes calculation<sec_deltas>` and
+:ref:`structure optimization<sec_search>`.
 
 To run these sections, we also need to specify which parameters we want to vary
 (i.e. the parameter space).
