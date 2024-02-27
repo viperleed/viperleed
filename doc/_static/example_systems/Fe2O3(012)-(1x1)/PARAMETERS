@@ -7,10 +7,7 @@ LMAX = 6-14
 BULK_REPEAT = [-2.51774 2.33621 3.68229]
 N_BULK_LAYERS = 1
 
-SITE_DEF O = surf top(2), sub_1 33 34, sub_2 31 32
-SITE_DEF Fe = surf top(2), sub_1 57 58
+SITE_DEF O = surf top(2)
+SITE_DEF Fe = surf top(2)
 
-# PARAMETERS FOR VIBROCC
-T_EXPERIMENT = 300
-T_DEBYE = 700
-VIBR_AMP_SCALE = *surf 1.5, *sub_1 1.4, *sub_2 1.3
+BULK_LIKE_BELOW = 0.35
