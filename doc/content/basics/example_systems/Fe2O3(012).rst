@@ -1,5 +1,6 @@
 .. _example_Fe2O3:
 
+====================
 Hematite (012)-(1×1)
 ====================
 
@@ -253,9 +254,6 @@ sensitive to the incidence angle in the
 :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` files:
 
 *TODO figure FD optimization*
-
-Full-dynamic Optimization
-=========================
 
 
 .. [#] The data was obtained by Alexander M. Imre and Michele Riva, with further
