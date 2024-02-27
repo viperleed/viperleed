@@ -189,37 +189,40 @@ _CMM_ALIAS_DIRECTIONS = {
     }
 
 
-def _from_alias(full_group_alias, hermann_alias, direction_alias):
-    """Return a known group from an alias.
+def _from_alias(hermann, direction):
+    """Return info about a group from potential aliases.
 
     Parameters
     ----------
-    full_group_alias : str
-        Full group name, including direction, of the alias.
-    hermann_alias : str
-        Hermann-Mauguin part of `full_group_alias`.
-    direction_alias : tuple or None
-        The direction portion of `full_group_alias`, if any.
+    hermann : str
+        Hermann-Mauguin part of the full group name.
+    direction : tuple or None
+        The direction part of the full group name.
 
     Returns
     -------
     full_group : str
         Full group name, including direction, of the conventional
-        group of which `full_group_alias` is an alias.
+        group of which `hermann` and/or `direction` are aliases.
     hermann : str
         Hermann-Mauguin part of `full_group`.
     direction : tuple or None
         The direction portion of `full_group`, if any.
     """
-    if full_group_alias in _KNOWN_GROUPS:  # Nothing to fiddle with
-        return full_group_alias, hermann_alias, direction_alias
+    full_group = _full_group_name(hermann, direction)
+    if full_group in _KNOWN_GROUPS:  # Nothing to fiddle with
+        return full_group, hermann, direction
+    if hermann == 'cmm':
+        direction = _CMM_ALIAS_DIRECTIONS[direction]
+        full_group = _full_group_name(hermann, direction)
+    return full_group, hermann, direction
 
-    if hermann_alias == 'cmm':
-        direction = _CMM_ALIAS_DIRECTIONS[direction_alias]
-        full_group = f'{hermann_alias}{list(direction)}'.replace(',', '')
-        return full_group, hermann_alias, direction
 
-    return full_group_alias, hermann_alias, direction_alias
+def _full_group_name(hermann, direction):
+    """Return a full group name from Hermann-Mauguin and direction parts."""
+    if not direction:
+        return hermann
+    return f'{hermann}{list(direction)}'.replace(',', '')
 
 
 class PlaneGroup:
@@ -244,9 +247,9 @@ class PlaneGroup:
             'p31m', 'p6', 'p6m'. Default is 'p1'.
             See docs/_static/planegroups.pdf for more info.
         direction : Sequence or None, optional
-            Alternative route to provide a direction for a group.
-            If given, the direction should not be included in group.
-            Default is None.
+            Alternative route to provide a direction for a
+            group. If given, the direction should not be
+            included in `group`. Default is None.
 
         Raises
         ------
@@ -827,18 +830,15 @@ class PlaneGroup:
         if not has_direction and cls._needs_direction(hermann):
             raise MissingDirectionError(f'Group {hermann} needs a direction.')
 
-        full_group = hermann
         direction = None
         if has_direction:
             direction = _with_positive_leading_element(
                 # Cannot use literal_eval as we may have no comma
                 [int(v) for v in _match.groups()[-2:]]
                 )
-            full_group = f'{hermann}{direction}'.replace(',', '')
             direction = tuple(direction)
 
-        full_group, hermann, direction = _from_alias(full_group, hermann,
-                                                     direction)
+        full_group, hermann, direction = _from_alias(hermann, direction)
         if full_group not in _KNOWN_GROUPS:
             raise ValueError(f'{group} is not an acceptable plane group.')
         return full_group, hermann, direction
