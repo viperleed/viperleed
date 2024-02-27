@@ -173,15 +173,8 @@ _GROUP_RE = re.compile(  # Match valid string input at construction
     re.VERBOSE | re.IGNORECASE
     )
 
-
-def _with_positive_leading_element(direction):
-    """Return a direction with a positive first non-zero element."""
-    if direction[0] < 0 or not direction[0] and direction[1] < 0:
-        return [-d for d in direction]
-    return direction
-
-
-_CMM_ALIAS_DIRECTIONS = {
+# Data for alias resolution
+_CMM_ALIAS_DIRECTIONS = {  # cmm alternate to conventional directions
     (1, 0): (1, 2),
     (0, 1): (2, 1),
     (1, 1): (1, -1),
@@ -223,6 +216,13 @@ def _full_group_name(hermann, direction):
     if not direction:
         return hermann
     return f'{hermann}{list(direction)}'.replace(',', '')
+
+
+def _with_positive_leading_element(direction):
+    """Return a direction with a positive first non-zero element."""
+    if direction[0] < 0 or not direction[0] and direction[1] < 0:
+        return [-d for d in direction]
+    return direction
 
 
 class PlaneGroup:
