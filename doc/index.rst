@@ -85,6 +85,7 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 .. toctree:: 
 
    Getting started<content/getting_started>
+   Examples<content/examples>
    ViPErLEED segments<content/work_segments>
    ASE Interface<content/aseapi>
 
