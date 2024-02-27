@@ -247,7 +247,12 @@ Here, we set the initial step size to 1° and converge criterion to 0.1°.
 After running the calculation, we find that we find a minimum at about 
 :math:`\theta \approx 0.87°` which already reduces the R-factor to about
 :math:`R_P \approx 0.22`.
+We can also see that the I(V) curves and consequently the R-factor are very
+sensitive to the incidence angle in the
+:ref:`FD_Optimization.pdf<fdoptimizationbeams>` and
+:ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` files:
 
+*TODO figure FD optimization*
 
 Full-dynamic Optimization
 =========================
