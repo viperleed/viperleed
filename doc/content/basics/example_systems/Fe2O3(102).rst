@@ -57,9 +57,18 @@ basis:
                         0 & -1 & 1
                      \end{pmatrix}
 
+In VESTA, you can do this by selecting "Edit" -> "Edit Data" -> "Unit cell" ->
+"Transform".
+
 To create a suitable surface slab (as expected by ViPErLEED), we can then
 replicate the unit cell along :math:`\vec{c}` and (optionally) remove the
 topmost layer to create a vacuum interface.
+In VESTA you can do this similarly, by applying a transformation which stretches
+the cell in the :math:`\vec{c}` direction.
+When doing this, VESTA may prompt you and ask what to do with the atoms in the
+new unit cell.
+Make sure to choose "Search atoms in the new unit-cell and add them as new
+sites".
 
 The our starting POSCAR file contains 40 atoms in total, which corresponds to
 4 repeat units (layers) of 4 Fe and 6 O atoms each.
