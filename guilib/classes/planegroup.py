@@ -174,6 +174,7 @@ _GROUP_RE = re.compile(  # Match valid string input at construction
     )
 
 # Data for alias resolution
+# pylint: disable-next=R6101     # Seems invalid as values are tuples
 _CMM_ALIAS_DIRECTIONS = {  # cmm alternate to conventional directions
     (1, 0): (1, 2),
     (0, 1): (2, 1),
