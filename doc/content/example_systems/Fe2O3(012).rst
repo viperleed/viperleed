@@ -65,11 +65,19 @@ To create a suitable surface slab (as expected by ViPErLEED), we can then
 replicate the unit cell along :math:`\vec{c}` and (optionally) remove the
 topmost layer to create a vacuum interface.
 In VESTA you can do this similarly, by applying a transformation which stretches
-the cell in the :math:`\vec{c}` direction.
+the cell in the :math:`\vec{c}` direction, e.g.:
+
+.. math::
+    \begin{pmatrix}
+      1 & 0 & 0 \\
+      0 & 1 & 0 \\
+      0 & 0 & 2
+    \end{pmatrix}
+
 When doing this, VESTA may prompt you and ask what to do with the atoms in the
 new unit cell.
-Make sure to choose "Search atoms in the new unit-cell and add them as new
-sites".
+Make sure to choose *"Search atoms in the new unit-cell and add them as new
+sites"*.
 
 The our starting POSCAR file contains 40 atoms in total, which corresponds to
 4 repeat units (layers) of 4 Fe and 6 O atoms each.
@@ -124,7 +132,7 @@ correctly. If so, the :ref:`log<log_files_tleedm>` should look similar to this:
    :caption: Initialization log
 
 The initialization log shows that the input files are interpreted correctly and
-that the ``pg[0 1]`` plane group is detected.
+that the right plane group (``pg[0 1]``) is detected.
 It also shows that the bulk structure and repeat vector have been identified.
 This is reflected in the PARAMETERS file, which was updated in-place and should
 now contain the following lines:
@@ -149,11 +157,11 @@ Reference Calculation and Structure Optimization
 
 If the initialization ran without errors, we can proceed to the reference
 calculation and structure optimization. You can find more details about what
-happens in each section of a ViPErLEED LEED-I(V) calculation
-:ref:`here<tleedm>`.
+happens in each section of a ViPErLEED LEED-I(V) calculation 
+:ref:`here<work-segments>`.
 
-In short, the reference calculation performs a full-dynamic LEED calculation to
-generate I(V) curves for the input structure.
+In short, the :ref:`reference calculation<ref-calc>`` performs a full-dynamic
+LEED calculation to generate I(V) curves for the input structure.
 I(V) curves are very sensitive to the exact atomic positions and vibrational
 amplitudes.
 Because of this, it is generally necessary, to optimize the structure to get the
