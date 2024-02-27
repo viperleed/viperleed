@@ -152,11 +152,18 @@ happens in each section of a ViPErLEED LEED-I(V) calculation :ref:`here<tleedm>`
 
 In short, the reference calculation performs a full-dynamic LEED calculation to
 generate I(V) curves for the input structure.
-
-
-In the structure optimization, we 
-
-We can now set up a :ref:`DISPLACEMENTS file<displacements>`:
+I(V) curves are very sensitive to the exact atomic positions and vibrational
+amplitudes.
+Because of this, it is generally necessary, to optimize the structure to get the
+best fit to the experimental I(V) data.
+The reference calculation is the starting point for this optimization, but
+full-dynamic calculations are computationally too expensive for the optimization
+which may require a very large number of iterations.
+We can perform the optimization in a computationally more efficient way by using
+a perturbative approach, where we calculate the effect of small changes to the
+input structure.
+This is done in the :ref:`Delta-Amplitude` calculation and structure
+optimization.
 
 Full-dynamic Optimization
 =========================
