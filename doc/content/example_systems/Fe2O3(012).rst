@@ -160,7 +160,7 @@ calculation and structure optimization. You can find more details about what
 happens in each section of a ViPErLEED LEED-I(V) calculation 
 :ref:`here<work-segments>`.
 
-In short, the :ref:`reference calculation<ref-calc>`` performs a full-dynamic
+In short, the :ref:`reference calculation<ref-calc>` performs a full-dynamic
 LEED calculation to generate I(V) curves for the input structure.
 I(V) curves are very sensitive to the exact atomic positions and vibrational
 amplitudes.
