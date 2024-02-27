@@ -80,7 +80,7 @@ PARAMETERS and VIBROCC
 As in pervious examples, we begin with a simple
 :ref:`PARAMETERS file<parameters>`:
 
-.. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/PARAMETERS
+.. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/PARAMETERS
    :language: console
    :caption: PARAMETERS
 
@@ -107,7 +107,7 @@ temperature with the parameters :ref:`T_DEBYE`, :ref:`T_EXPERIMENT` and
 :ref:`VIB_AMP_SCALE`. Instead, you can also provide the amplitudes directly in
 the :ref:`VIBROCC file<viboccin>`: 
 
-.. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/VIBROCC
+.. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/VIBROCC
    :language: console
    :caption: VIBROCC
 
@@ -118,7 +118,7 @@ Initialization
 We can now run the initialization to check if all input files are interpreted
 correctly. If so, the :ref:`log<log_files_tleedm>` should look similar to this:
 
-.. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/log_init.txt
+.. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/log_init.txt
    :language: console
    :caption: Initialization log
 
@@ -128,7 +128,7 @@ It also shows that the bulk structure and repeat vector have been identified.
 This is reflected in the PARAMETERS file, which was updated in-place and should
 now contain the following lines:
 
-.. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/PARAMETERS_bulk_detected
+.. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/PARAMETERS_bulk_detected
    :language: console
    :caption: PARAMETERS after initialization
 
@@ -170,7 +170,7 @@ To run these sections, we also need to specify which parameters we want to vary
 (i.e. the parameter space).
 We do this by providing a :ref:`DISPLACEMENTS file<displacements>`:
 
-.. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/DISPLACEMENTS_L1-2_looped
+.. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/DISPLACEMENTS_L1-2_looped
    :language: console
    :caption: DISPLACEMENTS
 
@@ -199,7 +199,7 @@ Once finished, you can check the log files to see if the calculation ran without
 errors.
 You can also find the final R-factor at the end of the log file:
 
-.. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/log_search_1.txt
+.. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/log_search_1.txt
    :language: console
    :caption: Final log
 
@@ -239,7 +239,7 @@ calculation at each iteration.
 To do this, we need to edit PARAMETERS to set the :ref:`RUN` as ``6`` provide
 the ``OPTIMIZE`` parameter to specify which parameter we want to optimize:
 
-.. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/PARAMETERS_optimize_theta
+.. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/PARAMETERS_optimize_theta
    :language: console
    :caption: PARAMETERS with OPTIMIZE specified for the incidence angle theta
 
