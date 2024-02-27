@@ -170,7 +170,7 @@ To run these sections, we also need to specify which parameters we want to vary
 (i.e. the parameter space).
 We do this by providing a :ref:`DISPLACEMENTS file<displacements>`:
 
-.. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/DISPLACEMENTS_looped
+.. literalinclude :: /_static/example_systems/Fe(012)-(1x1)/DISPLACEMENTS_L1-2_looped
    :language: console
    :caption: DISPLACEMENTS
 
