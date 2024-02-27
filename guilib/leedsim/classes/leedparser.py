@@ -29,6 +29,8 @@ import numpy as np
 
 from viperleed import guilib as gl
 from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.helpers import array2string
+from viperleed.guilib.helpers import conventional_angles
 
 warnings.simplefilter('always', DeprecationWarning)
 
@@ -225,7 +227,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
                 or not -90 <= angles[0] <= 90):
             raise RuntimeError("Invalid beamIncidence in "
                                f"found in structure {structure}: {angles}")
-        return gl.conventional_angles(*angles)
+        return conventional_angles(*angles)
 
     # Disabled because of bug in pylint:
     # pylint: disable=missing-param-doc,missing-type-doc
@@ -347,7 +349,7 @@ class LEEDParser(  # pylint: disable=too-many-ancestors
             for key, value in structure.items():
                 if (self.optionxform(key) in ('SUPERLATTICE', 'surfBasis')
                         and isinstance(value, np.ndarray)):
-                    structure[key] = gl.array2string(value)
+                    structure[key] = array2string(value)
                 elif self.optionxform(key) == 'bulk3Dsym':
                     structure[key] = str(value)
 

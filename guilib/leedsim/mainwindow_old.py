@@ -29,9 +29,10 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
 from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.widgetdecorators import broadcast_mouse
 
 
-@gl.broadcast_mouse
+@broadcast_mouse
 class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
     
     extension = '*.tlm'

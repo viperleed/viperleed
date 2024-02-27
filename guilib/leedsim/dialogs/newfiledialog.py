@@ -18,9 +18,12 @@ import PyQt5.QtGui as qtg
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
-from viperleed.guilib.leedsim import LEEDParametersList
 from viperleed.gui import resources_path
+from viperleed.guilib.leedsim import LEEDParametersList
+from viperleed.guilib.widgetslib import change_control_text_color
 # from viperleed.guilib.leedsim.widgets import BulkInput
+
+from viperleed.guilib import decorators as dev_
 
 
 DEFAULT_STARTUP = (
@@ -200,7 +203,7 @@ class NewFileDialog(qtw.QDialog):
         self._cleanup_before_close()
         super().reject()
 
-    @gl.print_call
+    @dev_.print_call
     def _add_surface_structure_tab(self, lattice=None, name=''):
         """Add one tab for a new lattice.
 
@@ -431,7 +434,7 @@ class NewFileDialog(qtw.QDialog):
             self._on_structures_changed
             )
 
-    @gl.print_call
+    @dev_.print_call
     def _edit_surface_name(self, index):
         """Show input for editing name of surface structure.
 
@@ -532,7 +535,7 @@ class NewFileDialog(qtw.QDialog):
                 group=param['surfGroup']
                 ))
 
-    @gl.print_call
+    @dev_.print_call
     def _on_add_structure_pressed(self, __action=None):
         """React to a user requesting a new structure to be added.
 
@@ -546,7 +549,7 @@ class NewFileDialog(qtw.QDialog):
         """
         self._add_surface_structure_tab()
 
-    @gl.print_call
+    @dev_.print_call
     def _on_bulk_high_sym_pressed(self):
         """React to a request to reduce the bulk to high symmetry.
 
@@ -591,7 +594,7 @@ class NewFileDialog(qtw.QDialog):
                                                  self.bulk_lattice.basis)
                 surf_i.pick_right_woods()
 
-    @gl.print_call
+    @dev_.print_call
     def _on_bulk_shape_changed(self, __new_shape=None):
         """React to a change of the shape of the bulk lattice.
 
@@ -618,7 +621,7 @@ class NewFileDialog(qtw.QDialog):
             self.bulk_lattice.basis
             )
 
-    @gl.print_call
+    @dev_.print_call
     def _on_energy_changed(self):
         """React to a change of energy.
 
@@ -657,8 +660,8 @@ class NewFileDialog(qtw.QDialog):
             valid = False
 
         self._glob['e_max_valid'] = valid
-        gl.change_control_text_color(self._ctrls['e_max'],
-                                     qtc.Qt.black if valid else qtc.Qt.red)
+        change_control_text_color(self._ctrls['e_max'],
+                                  qtc.Qt.black if valid else qtc.Qt.red)
         self._update_done_enabled()
 
         if not valid:
@@ -676,7 +679,7 @@ class NewFileDialog(qtw.QDialog):
         self._ctrls['e_max'].setMaximumWidth(width)
         self._ctrls['e_max'].adjustSize()
 
-    @gl.print_call
+    @dev_.print_call
     def _on_structures_changed(self, *__args, **__kwargs):
         """React on any user change of the structures.
 
@@ -716,7 +719,7 @@ class NewFileDialog(qtw.QDialog):
               "-- about to emit leed_parameters_changed")
         self.leed_parameters_changed.emit(new_params)
 
-    @gl.print_call
+    @dev_.print_call
     def _on_surface_name_changed(self):
         """React on completed edits of a surface-structure name.
 
@@ -745,7 +748,7 @@ class NewFileDialog(qtw.QDialog):
             self._glob['surface_being_edited'] = -1
         self._ctrls['edit_surf_name'].hide()
 
-    @gl.print_call
+    @dev_.print_call
     def _on_surface_tab_closed(self, index):
         """React on a request to remove a surface structure.
 
@@ -785,7 +788,7 @@ class NewFileDialog(qtw.QDialog):
         self.__lattices.pop(index + 1)     # 0 is the bulk
         tabs.removeTab(index)
 
-    @gl.print_call
+    @dev_.print_call
     def __pack_leed_parameters(self):
         """Return a LEEDParametersList for the current structures.
 
@@ -825,7 +828,7 @@ class NewFileDialog(qtw.QDialog):
 
         return parameters
 
-    @gl.print_call
+    @dev_.print_call
     def _update_done_enabled(self, *__args):
         """Update enabled/disabled state of Done button.
 

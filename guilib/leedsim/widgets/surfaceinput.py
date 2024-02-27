@@ -17,10 +17,13 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
 from viperleed.guilib.classes.planegroup import PlaneGroup
-from viperleed.guilib.leedsim.widgets import EditableMatrix, LatticeInput
 from viperleed.guilib.leedsim.classes.woods import (Woods, WoodsSyntaxError,
                                                     MatrixIncommensurateError,
                                                     WoodsNotRepresentableError)
+from viperleed.guilib.leedsim.widgets import EditableMatrix, LatticeInput
+from viperleed.guilib.widgetslib import change_control_text_color
+
+from viperleed.guilib import decorators as dev_
 
 
 def _wrap_compatible_groups(lattice_input, surface_input):
@@ -246,7 +249,7 @@ class SurfaceStructureInput(qtw.QWidget):
     @property
     def top_left_global_handle(self):
         """Return the global position of the top-left alignment handle.
-        
+
         The alignment handle is the global position of the top-left
         corner of the 'shape' control. Can be used for aligning
         with respect to the 'bulk'.
@@ -268,7 +271,7 @@ class SurfaceStructureInput(qtw.QWidget):
         """Return the Woods object used to handle Wood's notation."""
         return self.__woods
 
-    @gl.print_call
+    @dev_.print_call
     def on_bulk_group_changed(self, *__args):
         """Pick the appropriate list of groups.
 
@@ -295,7 +298,7 @@ class SurfaceStructureInput(qtw.QWidget):
         """
         self._ctrls['lattice'].group_from_lattice_and_update_options()
 
-    @gl.print_call
+    @dev_.print_call
     def on_bulk_basis_changed(self, *__args):
         """React to a change of the bulk basis.
 
@@ -335,7 +338,7 @@ class SurfaceStructureInput(qtw.QWidget):
         self.__woods.bulk_basis = self.bulk.basis
         lattice.update_controls_from_lattice()
 
-    @gl.print_call
+    @dev_.print_call
     def pick_right_woods(self):
         """Choose the appropriate Wood's representation.
 
@@ -377,7 +380,7 @@ class SurfaceStructureInput(qtw.QWidget):
 
         woods_combo.setCurrentText(new_woods)
 
-    @gl.print_call
+    @dev_.print_call
     def update_controls(self):
         """Set the values in the controls from stored attributes.
 
@@ -399,7 +402,7 @@ class SurfaceStructureInput(qtw.QWidget):
         # lattice.group_changed and/or lattice.shape_changed
         self._ctrls['lattice'].update_controls_from_lattice()
 
-    @gl.print_call
+    @dev_.print_call
     def update_woods_list_and_selection(self, bulk_shape=''):
         """Fetch examples of Wood's given a bulk-lattice shape.
 
@@ -501,7 +504,7 @@ class SurfaceStructureInput(qtw.QWidget):
             self._ctrls['lattice'].need_high_sym_reduction
             )
 
-    @gl.print_call
+    @dev_.print_call
     def _on_high_sym_pressed(self, *__args):
         """React on a request to make the lattice high symmetry.
 
@@ -524,7 +527,7 @@ class SurfaceStructureInput(qtw.QWidget):
               "-- about to emit surface_changed")
         self.surface_changed.emit()
 
-    @gl.print_call
+    @dev_.print_call
     def _on_superlattice_changed(self, new_superlattice):
         """React to a change of the superlattice matrix.
 
@@ -582,7 +585,7 @@ class SurfaceStructureInput(qtw.QWidget):
               "-- about to emit surface_changed")
         self.surface_changed.emit()
 
-    @gl.print_call
+    @dev_.print_call
     def _on_woods_selected(self, *args):
         """React on the selection of a new entry in the combo.
 
@@ -631,7 +634,7 @@ class SurfaceStructureInput(qtw.QWidget):
         except (ValueError, WoodsSyntaxError):
             # Text is not an acceptable Wood's notation
             self.user_gave_invalid_input.emit("Invalid Wood's syntax.", 1000)
-            gl.change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
+            change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
             return
 
         # Try converting to a matrix
@@ -648,15 +651,14 @@ class SurfaceStructureInput(qtw.QWidget):
                     f"{woods_txt} invalid: Lattice is incommensurate.",
                     7000
                     )
-                gl.change_control_text_color(woods_combo.lineEdit(),
-                                             qtc.Qt.red)
+                change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
                 return
 
         woods_combo.setCurrentText(self.__woods.string)
         self._ctrls['superlattice'].matrix = self.__woods.matrix
-        gl.change_control_text_color(woods_combo.lineEdit(), qtc.Qt.black)
+        change_control_text_color(woods_combo.lineEdit(), qtc.Qt.black)
 
-    @gl.print_call
+    @dev_.print_call
     def _update_superlattice_from_surf_basis(self, surf_basis=None):
         """Update superlattice control from the given surface basis.
 

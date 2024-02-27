@@ -24,6 +24,8 @@ from viperleed.guilib.pluginsbase import logo_one_line, ViPErLEEDPluginBase
 from viperleed.guilib.measure.uimeasurement import Measure
 from viperleed.guilib.widgetslib import move_to_front
 
+from viperleed.guilib import decorators as dev_
+
 PRE_RELEASE = True
 
 
@@ -128,7 +130,7 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
 
         self.move(5, 5)
 
-    @gl.print_call
+    @dev_.print_call
     def _on_module_closed(self, module):
         """React to a module being closed."""
         for name, open_module in self._open_modules.items():
@@ -136,7 +138,7 @@ class ViPErLEEDSelectPlugin(ViPErLEEDPluginBase):
                 self._open_modules[name] = None
                 break
 
-    @gl.print_call
+    @dev_.print_call
     def _on_module_open_requested(self, __checked):
         """Open the requested module.
 

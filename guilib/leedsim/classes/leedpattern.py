@@ -21,6 +21,8 @@ from viperleed.guilib.leedsim.classes.leedsubpattern import (
     )
 from viperleed.guilib.leedsim.classes.beams import sort_hk
 
+from viperleed.guilib import decorators as dev_
+
 
 # TODO: may need to implement a way to change the radii to allow
 #       non-normal incidence to work decently
@@ -57,9 +59,9 @@ class LEEDPattern:
             return args[0]
         return super().__new__(cls)
 
-    # @gl.profile_calls(print_args=[30])
-    # @gl.profile_lines
-    @gl.exec_time
+    # @dev_.profile_calls(print_args=[30])
+    # @dev_.profile_lines
+    @dev_.exec_time
     def __init__(self, leed, *other_leeds, **_kwargs):
         """Initialize LEEDPattern.
 
@@ -243,8 +245,8 @@ class LEEDPattern:
         """Return the dictionary of beam equivalences."""
         return self.domains.eq_beams_last_config.equivalent_beams_dict
 
-    # @gl.profile_lines
-    @gl.exec_time
+    # @dev_.profile_lines
+    @dev_.exec_time
     def build_subpatterns(self, domains_ids=None):
         """Build LEED subpatterns given a domain specification.
 
@@ -280,7 +282,7 @@ class LEEDPattern:
 
         self.__subpatterns = subpatts.patterns
 
-    @gl.exec_time
+    @dev_.exec_time
     def beams_equivalent_to(self, beam, in_format='', out_format=''):
         """Given a beam, return beams that are equivalent to it.
 
@@ -402,8 +404,8 @@ class LEEDPattern:
         last_eq = self.domains.eq_beams_last_config
         return beam_indices in last_eq.equivalent_beams_dict
 
-    # @gl.profile_lines
-    @gl.exec_time
+    # @dev_.profile_lines
+    @dev_.exec_time
     def domains_contributing_to_beams(self, beams_indices):
         """Return which domains contribute to given beams.
 
@@ -499,7 +501,7 @@ class LEEDPattern:
         """Radius of LEED screen at given energy."""
         return gl.screen_radius(energy, self.parameters[0]['screenAperture'])
 
-    # @gl.exec_time
+    # @dev_.exec_time
     def __build_bulk_subpatterns(self):
         """Return the subpatterns for the bulk.
 

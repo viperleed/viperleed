@@ -17,12 +17,17 @@ import itertools
 import numpy as np
 
 from viperleed import guilib as gl
+from viperleed.guilib.helpers import conventional_angles
+from viperleed.guilib.helpers import two_by_n_array_to_tuples
+from viperleed.guilib.helpers import two_by_two_array_to_tuple
+
+from viperleed.guilib import decorators as dev_
 
 
 # TODO: pylint similar lines. Here line 234; structdomains line 250
 
-# @gl.profile_lines
-# @gl.exec_time
+# @dev_.profile_lines
+# @dev_.exec_time
 def transform_beam_indices(indices, transform):
     """Transform indices to another basis.
 
@@ -72,7 +77,7 @@ def transform_beam_indices(indices, transform):
 
     # Now transform them back to a list of tuples
     transformed_indices_list = list(
-        gl.two_by_n_array_to_tuples(transformed_indices, axis=1)
+        two_by_n_array_to_tuples(transformed_indices, axis=1)
         )
 
     if not isinstance(indices, dict):
@@ -106,8 +111,8 @@ class LEEDSymmetryDomains(Sequence):
     domain
     """
 
-    @gl.exec_time
-    # @gl.profile_lines
+    @dev_.exec_time
+    # @dev_.profile_lines
     def __init__(self, leed_parameters):
         """Initialize LEEDSymmetryDomains instance.
 
@@ -416,8 +421,8 @@ class LEEDSymmetryDomains(Sequence):
                      for d_id, beam_list in zip(self.domain_ids, beam_lists)
                      if beam in beam_list)
 
-    # @gl.profile_lines
-    @gl.exec_time
+    # @dev_.profile_lines
+    @dev_.exec_time
     def equivalent_spots(self, domains=None, theta=None, phi=None):
         """Return beams grouped by equivalence, at given incidence angles.
 
@@ -459,7 +464,7 @@ class LEEDSymmetryDomains(Sequence):
             theta = self.__parameters['beamIncidence'][0]
         if phi is None:
             phi = self.__parameters['beamIncidence'][1]
-        theta, phi = gl.conventional_angles(float(theta), float(phi))
+        theta, phi = conventional_angles(float(theta), float(phi))
 
         if domains is None:
             domains = range(self.n_domains)
@@ -551,7 +556,7 @@ class LEEDSymmetryDomains(Sequence):
             theta = self.__parameters[0]['beamIncidence'][0]
         elif phi is None:
             phi = self.__parameters[0]['beamIncidence'][1]
-        theta, phi = gl.conventional_angles(theta, phi)
+        theta, phi = conventional_angles(theta, phi)
 
         # Update the underlying parameters
         self.__parameters['beamIncidence'] = (theta, phi)
@@ -739,14 +744,14 @@ class LEEDSymmetryDomains(Sequence):
             if bulk_op in coset_ops:
                 continue
             _ops.append(bulk_op)
-            coset = set(gl.two_by_two_array_to_tuple(np.dot(bulk_op, surf_op))
+            coset = set(two_by_two_array_to_tuple(np.dot(bulk_op, surf_op))
                         for surf_op in surf_ops)
             coset_ops.update(coset)
 
         return _ops
 
-    # @gl.exec_time
-    # @gl.profile_lines  # 37% beams_dict[label]; 63% return
+    # @dev_.exec_time
+    # @dev_.profile_lines  # 37% beams_dict[label]; 63% return
     def __get_spot_equivalence(self):
         """Build equivalence classes for LEED beams.
 
@@ -825,12 +830,12 @@ class LEEDSymmetryDomains(Sequence):
             hk_transformed = np.einsum('ilm,mj->jil', ops, self[0].hk.T)
 
             # convert all beams to tuples to use them as keys
-            hk_tuples = gl.two_by_n_array_to_tuples(self[0].hk)
+            hk_tuples = two_by_n_array_to_tuples(self[0].hk)
 
             # and convert to tuples also the transformed beams,
             # also using a set to remove duplicates
             beams_dict_first[label] = {
-                k: set(gl.two_by_n_array_to_tuples(v, axis=1))
+                k: set(two_by_n_array_to_tuples(v, axis=1))
                 for k, v in zip(hk_tuples, hk_transformed)
             }
         return self.__beams_dict_to_other_domains(beams_dict_first)
@@ -872,7 +877,7 @@ class LEEDSymmetryDomains(Sequence):
             beams_dict_first[90] = self[0].hk[extinct_01]
         return self.__beams_dict_to_other_domains(beams_dict_first)
 
-    # @gl.profile_lines
+    # @dev_.profile_lines
     def __beams_dict_to_other_domains(self, beams_dict_first):
         """Translate beam dictionary of first domain to all domains.
 

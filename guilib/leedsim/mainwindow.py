@@ -18,10 +18,6 @@ patterns from multiple structures, accounting for symmetry.
             support for multiple structures
 """
 
-#TESTING
-from time import perf_counter
-#TESTING
-
 import re
 import copy
 import warnings
@@ -32,6 +28,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
+from viperleed.guilib.widgetdecorators import broadcast_mouse
 
 
 DEFAULT_INPUT_FILE_EXTENSION = '*.tlm'
@@ -127,7 +124,7 @@ def default_file_menu():
 
 # TODO: remember last directories, also across sessions
 
-@gl.broadcast_mouse
+@broadcast_mouse
 class LEEDPatternSimulator(gl.ViPErLEEDPluginBase):
     """A class that allows simulating LEED Patterns."""
 

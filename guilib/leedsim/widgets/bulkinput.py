@@ -17,6 +17,8 @@ from viperleed import guilib as gl   # TODO: remove?
 from viperleed.guilib.leedsim.widgets import LatticeInput
 from viperleed.guilib.leedsim.dialogs import Bulk3DSymDialog
 
+from viperleed.guilib import decorators as dev_
+
 
 class BulkInput(LatticeInput):
     """Input of bulk lattice parameters and symmetry.
@@ -80,7 +82,7 @@ class BulkInput(LatticeInput):
         super()._connect()
         self._ctrls['3d_sym'].clicked.connect(self._on_bulk_3d_pressed)
 
-    @gl.print_call
+    @dev_.print_call
     def _on_bulk_3d_pressed(self, __checked):
         """Open the dialog for editing screws/glides.
 
@@ -115,7 +117,7 @@ class BulkInput(LatticeInput):
                       "-- about to emit bulk_3d_operations_changed")
                 self.bulk_3d_operations_changed.emit()
 
-    @gl.print_call
+    @dev_.print_call
     def _update_lattice_group(self, new_group):
         """Update the PlaneGroup of the lattice, if needed.
 

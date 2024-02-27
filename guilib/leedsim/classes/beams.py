@@ -16,13 +16,17 @@ from warnings import warn as warning  # TODO: replace with logging
 import numpy as np
 
 from viperleed import guilib as gl
-from viperleed.guilib import BeamIndex
+from viperleed.guilib.base import BeamIndex
 from viperleed.guilib.classes import planegroup
+from viperleed.guilib.helpers import equal_dicts
+from viperleed.guilib.helpers import two_by_two_array_to_tuple
+
+from viperleed.guilib import decorators as dev_
 
 
-@gl.exec_time
-# @gl.profile_lines
-# @gl.profile_calls()
+@dev_.exec_time
+# @dev_.profile_lines
+# @dev_.profile_calls()
 def beams_dict_numerators_to_fractional(beam_dict, denominator):
     """Return a dictionary of fractional indices from numerators.
 
@@ -151,8 +155,8 @@ class LEEDEquivalentBeams:
     __self_cache = {}  # instances created from LEEDEquivalentBeams
 
     # TODO: pylint too-complex mccabe=11
-    # @gl.profile_lines
-    @gl.exec_time
+    # @dev_.profile_lines
+    @dev_.exec_time
     def __init__(self, domains, **kwargs):
         """Initialize LEEDEquivalentBeams.
 
@@ -430,8 +434,8 @@ class LEEDEquivalentBeams:
                     cached = cached_domains[idx]
                     cached_dict = {k: (v if k != 'superlattice' else v[0])
                                    for k, v in cached.hash_dict.items()}
-                    if (gl.equal_dicts(cached_dict, dom.hash_dict,
-                                       ignore_keys=['domain_ids', 'caller'])
+                    if (equal_dicts(cached_dict, dom.hash_dict,
+                                    ignore_keys=['domain_ids', 'caller'])
                             and cached.has_fractional_beams):
                         domains[i] = cached
                         break
@@ -641,7 +645,7 @@ class LEEDEquivalentBeams:
         self.__indexed_beams = cached.indexed_beams
         self.__has_fract_beams = cached.has_fractional_beams
 
-    @gl.exec_time
+    @dev_.exec_time
     def __build_beam_equivalence_dict(self, beams_by_domain):
         """Split beams into beam equivalence classes.
 
@@ -760,9 +764,9 @@ class LEEDEquivalentBeams:
             append_beams(common_beams)
         return beam_equivalence
 
-    @gl.exec_time
-    # @gl.profile_lines
-    # @gl.profile_calls()
+    @dev_.exec_time
+    # @dev_.profile_lines
+    # @dev_.profile_calls()
     def __index_beams(self, beam_groups, beams_by_domain, extinct, domain_ids):
         """Index the input beams.
 
@@ -856,8 +860,8 @@ class LEEDEquivalentBeams:
                 #     )
         return indexed_beams
 
-    # @gl.profile_calls()
-    @gl.exec_time
+    # @dev_.profile_calls()
+    @dev_.exec_time
     def __sort_beams(self, beam_groups):
         """Sort beams given as a list of iterables.
 
@@ -948,6 +952,6 @@ class LEEDEquivalentBeams:
         self.__hash_dict = {k: kwargs[k] for k in self.hash_keys}
         for k, hash_component in self.__hash_dict.items():
             if k in ('basis', 'superlattice'):
-                hash_component = gl.two_by_two_array_to_tuple(hash_component)
+                hash_component = two_by_two_array_to_tuple(hash_component)
             if k in ('basis', 'superlattice', 'domain_ids'):
                 self.__hash_dict[k] = tuple(hash_component)

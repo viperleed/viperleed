@@ -16,7 +16,10 @@ import re
 
 import numpy as np
 
-from viperleed import guilib as gl
+from viperleed.guilib.helpers import array2string
+from viperleed.guilib.helpers import is_integer_matrix
+from viperleed.guilib.helpers import prime_numbers
+from viperleed.guilib.helpers import remove_duplicates
 from viperleed.guilib.mathparse import MathParser, UnsupportedMathError
 
 # TODO: allow also "rect" special Woods notation for hex lattices (ONLY??)
@@ -40,23 +43,24 @@ SQRT = '\u221a'
 #     the rotations block. Will be parsed with MathParser.
 #     Also, it may 'eat up' the closing parenthesis. This is
 #     checked for before parsing.
-# (6) optional open parenthesis
+# (6) optional closed parenthesis
 # (7) rotation block
 #     structure is 'R'<alpha> (possibly with spaces in
 #     between), optionally followed by a degrees
 #     designator ('\u00b0', or a contraction of 'deg'),
 #     with <alpha> an integer or floating-point number.
 MATCH_WOODS = re.compile(
-            r'''
-            ^(?P<prefix>((?![sqrtSQRT])[\sa-zA-Z])*)
-            \s*\(?
-            (?P<gamma1>.*)
-            [xX\u00d7]
-            (?P<gamma2>[^R]*)
-            \)?\s*
-            ([R]\s*(?P<alpha>\d+(\.\d+)?)\s*(\u00b0|d[eg]+)?)?
-            \s*$
-            ''', re.VERBOSE)
+    r'''
+    ^(?P<prefix>((?![sqrtSQRT])[\sa-zA-Z])*)
+    \s*\(?
+    (?P<gamma1>.*)
+    [xX\u00d7]
+    (?P<gamma2>[^R]*)
+    \)?\s*
+    ([R]\s*(?P<alpha>\d+(\.\d+)?)\s*(\u00b0|d[eg]+)?)?
+    \s*$''',
+    re.VERBOSE
+    )
 
 
 def is_commensurate(matrix):
@@ -72,12 +76,12 @@ def is_commensurate(matrix):
     commensurate : bool
         True if matrix is commensurate
     """
-    return gl.is_integer_matrix(matrix, 5e-3) and np.linalg.det(matrix).round()
+    return is_integer_matrix(matrix, 5e-3) and np.linalg.det(matrix).round()
 
 
 def prime_factors(number):
     """Yield the prime factors of a number, with repetition."""
-    for prime_factor in gl.prime_numbers():
+    for prime_factor in prime_numbers():
         if prime_factor*prime_factor > number:
             break
         while not number % prime_factor:
@@ -111,7 +115,7 @@ def square_to_prod_of_squares(number):
     factors = list(prime_factors(number))
     if not factors:
         factors = [1]
-    unique_factors = gl.remove_duplicates(factors)
+    unique_factors = remove_duplicates(factors)
     count_factors = [((factors.count(fac) // 2)*2, factors.count(fac) % 2)
                      for fac in unique_factors]
     pow2, rest_pow = zip(*count_factors)
@@ -127,7 +131,7 @@ class MatrixIncommensurateError(Exception):
 
     def __init__(self, matrix, message=''):
         if not message:
-            message = (f"Matrix {gl.array2string(matrix)} "
+            message = (f"Matrix {array2string(matrix)} "
                        "gives an incommensurate lattice, i.e., "
                        "it is singular or has non-integer elements")
         super().__init__(message)
@@ -138,7 +142,7 @@ class WoodsNotRepresentableError(Exception):
 
     def __init__(self, matrix, message=''):
         if not message:
-            message = (f"Matrix {gl.array2string(matrix)} "
+            message = (f"Matrix {array2string(matrix)} "
                        "is not Wood's-representable")
         super().__init__(message)
 
@@ -267,7 +271,7 @@ class Woods:
     def __repr__(self):
         """Return a representation string of self."""
         txt = self.string + ', '
-        txt += f"bulk_basis={gl.array2string(self.bulk_basis)}"
+        txt += f"bulk_basis={array2string(self.bulk_basis)}"
         return f"Woods({txt}, style={self.style})"
 
     def __str__(self):

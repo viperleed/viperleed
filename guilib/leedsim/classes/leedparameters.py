@@ -21,6 +21,10 @@ import numpy as np
 
 from viperleed import guilib as gl
 from viperleed.guilib.classes import planegroup
+from viperleed.guilib.helpers import conventional_angles
+from viperleed.guilib.helpers import remove_duplicates
+from viperleed.guilib.helpers import single_spaces_only
+from viperleed.guilib.helpers import two_by_two_array_to_tuple
 
 non_string_keys = ('emax', 'surfbasis', 'superlattice', 'bulkgroup',
                    'surfgroup', 'beamincidence', 'screenaperture')
@@ -133,7 +137,7 @@ class LEEDParameters(MutableMapping):
 
     def __repr__(self):
         """Return string representation of self."""
-        txt = gl.single_spaces_only(repr(self.__data)).replace('\n', '')
+        txt = single_spaces_only(repr(self.__data)).replace('\n', '')
         txt = txt.replace('[ ', '[').replace(' ]', ']').replace(' ,', ',')
         return f"LEEDParameters({txt})"
 
@@ -250,7 +254,7 @@ class LEEDParameters(MutableMapping):
         #       of the bulk symmetry operations
         bulk_ops = self['bulkGroup'].operations(include_3d=True)
         for transform in int_transforms:
-            transform = gl.two_by_two_array_to_tuple(transform)
+            transform = two_by_two_array_to_tuple(transform)
             if transform in bulk_ops:
                 return True
         return NotImplemented
@@ -412,7 +416,7 @@ class LEEDParameters(MutableMapping):
                     or np.shape(value) != (2,)
                         or not -90 <= value[0] <= 90):
                     raise ValueError(f"Invalid beamIncidence: {value}")
-                data_dict[key] = gl.conventional_angles(*value)
+                data_dict[key] = conventional_angles(*value)
 
     def _calculate_missing(self):
         """Calculate extra parameters that used only internally.
@@ -539,7 +543,7 @@ class LEEDParametersList(MutableSequence):
         # At first, just check whether there are duplicates within
         # the data themselves
         new_data = self._process_input_data(data, keep_duplicates=True)
-        new_data = gl.remove_duplicates(new_data)
+        new_data = remove_duplicates(new_data)
         if isinstance(idx, slice) and len(new_data) < len(data):
             raise ValueError("Data contains duplicates")
 
@@ -711,7 +715,7 @@ class LEEDParametersList(MutableSequence):
                             "Expected numbers.") from err
         if (theta, phi) == old_angles:
             return
-        new_angles = gl.conventional_angles(theta, phi)
+        new_angles = conventional_angles(theta, phi)
         if new_angles == old_angles:
             return
         for param in self:
@@ -746,7 +750,7 @@ class LEEDParametersList(MutableSequence):
         self._check_acceptable(*data)
         if not keep_duplicates:
             # first remove duplicates from data only
-            data = gl.remove_duplicates(data)
+            data = remove_duplicates(data)
             # then keep only those that are not already in the list.
             # This way, if at earlier calls we wanted to keep
             # duplicates, they remain in self

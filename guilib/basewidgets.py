@@ -43,7 +43,10 @@ else:  # 'agg'
 
 from matplotlib.figure import Figure
 
-@gl.receive_mouse_broadcast
+from viperleed.guilib.widgetdecorators import receive_mouse_broadcast
+
+
+@receive_mouse_broadcast
 class TextBox(qtw.QLineEdit):
 
     # This is the signal emitted when the user edits the text and

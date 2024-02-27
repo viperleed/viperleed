@@ -26,6 +26,9 @@ import re
 import numpy as np
 
 from viperleed import guilib as gl
+from viperleed.guilib.helpers import conventional_angles
+
+from viperleed.guilib import decorators as dev_
 
 
 DEFAULT_NAME = re.compile(r"^S\d+$")
@@ -58,7 +61,7 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
         LEEDParametersList or anything that LEEDParametersList accepts
     """
 
-    @gl.exec_time
+    @dev_.exec_time
     def __init__(self, params, keep_duplicates=False):
         """Initialize LEEDStructuralDomains instance.
 
@@ -422,8 +425,8 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
         for value in values:
             self.append(value, keep_duplicates)
 
-    @gl.exec_time
-    # @gl.profile_lines
+    @dev_.exec_time
+    # @dev_.profile_lines
     def equivalent_spots(self, domains=None, theta=None, phi=None):
         """Return spots of selected domains that are equivalent.
 
@@ -464,7 +467,7 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
             theta = self.parameters[0]['beamIncidence'][0]
         if phi is None:
             phi = self.parameters[0]['beamIncidence'][1]
-        theta, phi = gl.conventional_angles(float(theta), float(phi))
+        theta, phi = conventional_angles(float(theta), float(phi))
 
         # Call the equivalent_spots() method of each of the relevant
         # LEEDSymmetryDomains instances so that the LEEDEquivalentBeams
@@ -642,7 +645,7 @@ class LEEDStructuralDomains(  # pylint: disable=too-many-ancestors
                             f"{type(domains).__name__}")
         return domains, structures, ids
 
-    @gl.exec_time
+    @dev_.exec_time
     def __correct_beam_index(self):
         """Correct symmetry domain indices in self.indexed_beams.
 

@@ -18,6 +18,8 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
 
+from viperleed.guilib import decorators as dev_
+
 
 class EditableMatrix(qtw.QWidget):
     """An interactively editable matrix of integers or floats."""
@@ -243,7 +245,7 @@ class EditableMatrix(qtw.QWidget):
         for m_ij in self._ctrls.ravel():
             m_ij.textEdited.connect(self._on_element_edited)
 
-    @gl.print_call
+    @dev_.print_call
     def _on_element_edited(self, new_element):
         """React on a change of one of the matrix elements.
 

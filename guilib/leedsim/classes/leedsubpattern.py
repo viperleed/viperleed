@@ -18,6 +18,9 @@ import numpy as np
 from matplotlib import (cm as color_maps, colors as mpl_colors)
 
 from viperleed import guilib as gl
+from viperleed.guilib.helpers import two_d_iterable_to_array
+
+from viperleed.guilib import decorators as dev_
 
 
 class CachedLEEDSubpatternConstructor:
@@ -74,7 +77,7 @@ class CachedLEEDSubpatternConstructor:
             return cls.__cache[hash(instance)]
         return instance
 
-    @gl.exec_time
+    @dev_.exec_time
     def __init__(self, leed, **kwargs):
         """Initialize class instance.
 
@@ -136,8 +139,8 @@ class CachedLEEDSubpatternConstructor:
         """
         CachedLEEDSubpatternConstructor.__cache = {}
 
-    # @gl.profile_lines
-    @gl.exec_time
+    # @dev_.profile_lines
+    @dev_.exec_time
     def __split_beams_for_subpatterns(self):
         """Sort out beams into groups appropriate for subpatterns.
 
@@ -211,9 +214,9 @@ class CachedLEEDSubpatternConstructor:
         if not leed.domains.fractional:
             scale = 1/leed.domains[0].denominator_for_bulk_beams
         for k, beams in subpattern_beams.items():
-            beams = scale*gl.two_d_iterable_to_array(beams,
-                                                     dtype=float,
-                                                     shape=(-1, 2))
+            beams = scale*two_d_iterable_to_array(beams,
+                                                  dtype=float,
+                                                  shape=(-1, 2))
             subpattern_beams[k] = np.einsum('ij,jk->ik',
                                             beams, leed.bulk.basis)
 

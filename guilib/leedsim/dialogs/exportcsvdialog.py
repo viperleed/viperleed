@@ -18,6 +18,7 @@ import PyQt5.QtWidgets as qtw
 
 # import guilib as gl
 from viperleed import guilib as gl
+from viperleed.guilib.widgetslib import get_all_children_widgets
 
 
 class ExportCSVDialog(qtw.QDialog):
@@ -126,9 +127,9 @@ class ExportCSVDialog(qtw.QDialog):
         # In case there is only one domain, there's no reason to show all these
         # controls, except for the optional name and the buttons
         if nDoms == 1:
-            children = gl.get_all_children_widgets(diagLay)
-            keepVisible = (gl.get_all_children_widgets(nameLay)
-                           | gl.get_all_children_widgets(butsLay))
+            children = get_all_children_widgets(diagLay)
+            keepVisible = (get_all_children_widgets(nameLay)
+                           | get_all_children_widgets(butsLay))
             for child in children - keepVisible:
                 child.hide()
     

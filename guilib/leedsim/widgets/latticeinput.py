@@ -19,6 +19,9 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
 from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.widgetslib import change_control_text_color
+
+from viperleed.guilib import decorators as dev_
 
 ANGSTROM = ' \u212b'
 DEGREES = '\u00b0'
@@ -186,7 +189,7 @@ class LatticeInput(qtw.QWidget):
         """Return whether the user input is OK."""
         return self.__valid_input
 
-    @gl.print_call
+    @dev_.print_call
     def check_high_symmetry(self):
         """Check if lattice is highest symmetry and update controls.
 
@@ -222,7 +225,7 @@ class LatticeInput(qtw.QWidget):
         self._ctrls['hi_sym'].show()
         self._ctrls['hi_sym'].hide()
 
-    @gl.print_call
+    @dev_.print_call
     def group_from_lattice_and_update_options(self):
         """Update the group combo box with appropriate entries.
 
@@ -248,7 +251,7 @@ class LatticeInput(qtw.QWidget):
                   "-- about to emit group_changed")
             self.group_changed.emit(lattice_group)
 
-    @gl.print_call
+    @dev_.print_call
     def update_controls_from_lattice(self):
         """Use the underlying lattice to update the controls.
 
@@ -276,7 +279,7 @@ class LatticeInput(qtw.QWidget):
                   "-- about to emit shape_changed")
             self.shape_changed.emit(shape)
 
-    @gl.print_call
+    @dev_.print_call
     def update_lattice_basis(self, basis=None):
         """Update the basis of the underlying lattice.
 
@@ -298,7 +301,7 @@ class LatticeInput(qtw.QWidget):
         self.lattice.basis = basis
         self.__last_acceptable_basis = self.lattice.basis
 
-    @gl.print_call
+    @dev_.print_call
     def update_lattice_restrictions(self):
         """Update restrictions on the lattice, given the current shape.
 
@@ -428,7 +431,7 @@ class LatticeInput(qtw.QWidget):
         ctrl.ensurePolished()
         ctrl.setAutoDefault(False)
         ctrl.hide()
-        gl.change_control_text_color(ctrl, qtc.Qt.red)
+        change_control_text_color(ctrl, qtc.Qt.red)
 
     def _compose_ctrl_shape(self):
         """Set up 'shape' control."""
@@ -470,7 +473,7 @@ class LatticeInput(qtw.QWidget):
         self.group_changed.connect(self._update_lattice_group)
         self._ctrls['hi_sym'].clicked.connect(self._on_high_sym_pressed)
 
-    @gl.print_call
+    @dev_.print_call
     def _on_group_changed(self, new_group_index):
         """React on change of plane group.
 
@@ -502,7 +505,7 @@ class LatticeInput(qtw.QWidget):
               "-- about to emit group_changed")
         self.group_changed.emit(new_group)
 
-    @gl.print_call
+    @dev_.print_call
     def _on_high_sym_pressed(self, __checked):
         """React on a user press of the 'make high symmetry button.
 
@@ -543,7 +546,7 @@ class LatticeInput(qtw.QWidget):
               "-- about to emit lattice_parameters_changed")
         self.lattice_parameters_changed.emit(self.lattice.basis)
 
-    @gl.print_call
+    @dev_.print_call
     def _on_lattice_param_edited(self, new_param):
         """React on change of a lattice parameter input.
 
@@ -577,7 +580,7 @@ class LatticeInput(qtw.QWidget):
             # will be updated only after the editing is finished
             self.__last_acceptable_basis = basis
 
-    @gl.print_call
+    @dev_.print_call
     def _on_lattice_param_edit_finished(self):
         """React on a completed change of a lattice parameter input.
 
@@ -614,7 +617,7 @@ class LatticeInput(qtw.QWidget):
                   "-- about to emit need_high_sym_reduction")
             self.need_high_sym_reduction.emit()
 
-    @gl.print_call
+    @dev_.print_call
     def _on_shape_changed(self, shape_index):
         """Set lattice parameters editable or fixed depending on shape.
 
@@ -669,7 +672,7 @@ class LatticeInput(qtw.QWidget):
                   "-- about to emit need_high_sym_reduction")
             self.need_high_sym_reduction.emit()
 
-    @gl.print_call
+    @dev_.print_call
     def _update_lattice_group(self, new_group):
         """Update the PlaneGroup of the lattice, if needed.
 
@@ -683,7 +686,7 @@ class LatticeInput(qtw.QWidget):
         if new_group != self.lattice.group.group:
             self.lattice.group = new_group
 
-    @gl.print_call
+    @dev_.print_call
     def _update_lattice_params_ctrls_from_lattice(self):
         """Update controls of lattice parameters from lattice.
 

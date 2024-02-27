@@ -21,5 +21,4 @@ import pytest
 import numpy as np
 
 import base
-from test_planegroup import *
 from test_lattice import *

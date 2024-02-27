@@ -15,16 +15,6 @@ from viperleed import GLOBALS
 
 USE_GUI = GLOBALS['USE_GUI']
 
-from viperleed.guilib.decorators import (profile_calls, exec_time,
-                                         profile_lines, print_call)
-from viperleed.guilib.helpers import (conventional_angles,
-                                      two_by_n_array_to_tuples,
-                                      two_by_two_array_to_tuple,
-                                      two_d_iterable_to_array,
-                                      remove_duplicates,
-                                      single_spaces_only,  # probably not needed globally
-                                      array2string, prime_numbers,
-                                      equal_dicts, is_integer_matrix)
 from viperleed.guilib.base import (get_equivalent_beams,
                                    project_to_first_domain, check_type,
                                    check_leed_params, check_multi_leed_params,
@@ -47,9 +37,6 @@ else:
         BACKEND = 'mplcairo'
     else:
         BACKEND = 'agg'
-    from viperleed.guilib.decorators import ensure_decorates_class
-    from viperleed.guilib.widgetdecorators import (receive_mouse_broadcast,
-                                                   broadcast_mouse)
     from viperleed.guilib.basewidgets import (Figure, FigureCanvas,
                                               MPLFigureCanvas, PainterMatrix,
                                               TextBox, TextBoxWithButtons)
