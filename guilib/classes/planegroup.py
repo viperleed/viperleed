@@ -243,8 +243,9 @@ class PlaneGroup:
             'cm[1 0]', 'cm[0 1]', 'cm[1 1]', 'cm[1 -1]', 'cm[1 2]',
             'cm[2 1]', 'rcm[1 0]', 'rcm[0 1]', 'pmm', 'pmg[1 0]',
             'pmg[0 1]', 'pgg', 'cmm', 'cmm[1 2]', 'cmm[2 1]',
-            'cmm[1 -1]', 'rcmm', 'p4', 'p4m', 'p4g', 'p3', 'p3m1',
-            'p31m', 'p6', 'p6m'. Default is 'p1'.
+            'cmm[1 -1]', 'cmm[1 0]', 'cmm[0 1]', 'cmm[1 1]', 'rcmm',
+            'p4', 'p4m', 'p4g', 'p3', 'p3m1', 'p31m', 'p6', 'p6m'.
+            Default is 'p1'.
             See docs/_static/planegroups.pdf for more info.
         direction : Sequence or None, optional
             Alternative route to provide a direction for a
