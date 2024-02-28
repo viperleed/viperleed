@@ -8,7 +8,13 @@ import numpy as np
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.guilib.leedsim.classes import woods
+from viperleed.guilib.leedsim.classes.woods import is_commensurate
+from viperleed.guilib.leedsim.classes.woods import prime_factors
+from viperleed.guilib.leedsim.classes.woods import square_to_prod_of_squares
+from viperleed.guilib.leedsim.classes.woods import Woods
+from viperleed.guilib.leedsim.classes.woods import MatrixIncommensurateError
+from viperleed.guilib.leedsim.classes.woods import WoodsNotRepresentableError
+from viperleed.guilib.leedsim.classes.woods import WoodsSyntaxError
 
 
 _commensurate = {
@@ -21,7 +27,7 @@ _commensurate = {
 @parametrize('matrix,expect', _commensurate.values(), ids=_commensurate)
 def test_is_commensurate(matrix, expect):
     """Check correct result of is_commensurate."""
-    commensurate = woods.is_commensurate(matrix)
+    commensurate = is_commensurate(matrix)
     assert commensurate is expect
 
 
@@ -35,7 +41,7 @@ _primes = {
 @parametrize('number,expect', _primes.values(), ids=_primes)
 def test_prime_factors(number, expect):
     """Check correct splitting of a number into its prime factorization."""
-    assert tuple(woods.prime_factors(number)) == expect
+    assert tuple(prime_factors(number)) == expect
 
 _squares = {
     1: (1, 1),
@@ -46,7 +52,7 @@ _squares = {
 @parametrize('number,expect', _squares.items(), ids=_squares)
 def test_square_to_prod_of_squares(number, expect):
     """Check correct decomposition in a product of squares."""
-    squares, remainder = woods.square_to_prod_of_squares(number)
+    squares, remainder = square_to_prod_of_squares(number)
     assert (squares, remainder) == expect
 
 
@@ -56,16 +62,16 @@ class TestWoodsRaises:
     _init = {
         'invalid style': ({'style': 'invalid'}, ValueError),
         'non-string string': ({'string': 1}, TypeError),
-        'not a wood notation': ({'string': '23'}, woods.WoodsSyntaxError),
+        'not a wood notation': ({'string': '23'}, WoodsSyntaxError),
         'gamma syntax invalid character': (
             {'string': 'c(2, x 12)'},
-            woods.WoodsSyntaxError
+            WoodsSyntaxError
             ),
         'gamma syntax unmatched': (
             {'string': 'c((2 x 12)'},
-            woods.WoodsSyntaxError
+            WoodsSyntaxError
             ),
-        'unsupported math': ({'string': 'cos(2)x3'}, woods.WoodsSyntaxError),
+        'unsupported math': ({'string': 'cos(2)x3'}, WoodsSyntaxError),
         'gamma not int': ({'string': '1.3x8'}, ValueError),
         'missing bulk_basis': ({'matrix': np.eye(2)}, TypeError),
         'matrix shape': (
@@ -82,11 +88,11 @@ class TestWoodsRaises:
             ),
         'incommensurate matrix': (
             {'matrix': np.eye(2)*1.2, 'bulk_basis': np.eye(2)},
-            woods.MatrixIncommensurateError
+            MatrixIncommensurateError
             ),
         'matrix not representable': (
             {'matrix': np.arange(4).reshape(2, 2), 'bulk_basis': np.eye(2)},
-            woods.WoodsNotRepresentableError
+            WoodsNotRepresentableError
             )
         }
 
@@ -94,5 +100,5 @@ class TestWoodsRaises:
     def test_invalid_init_args(self, kwargs, exc):
         """Check that exc is raised with invalid kwargs at __init__."""
         with pytest.raises(exc):
-            woods.Woods(**kwargs)
+            Woods(**kwargs)
 
