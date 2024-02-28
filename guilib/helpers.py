@@ -345,7 +345,7 @@ def is_integer_matrix(matrix, eps=1e-3):
 
     matrix = np.asarray(matrix)
 
-    return np.all(np.abs(matrix - matrix.round()) < eps)
+    return bool(np.all(np.abs(matrix - matrix.round()) < eps))
 
 
 def justify_sequences(sequences, filler=None):

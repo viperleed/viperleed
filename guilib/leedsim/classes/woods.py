@@ -76,7 +76,8 @@ def is_commensurate(matrix):
     commensurate : bool
         True if matrix is commensurate
     """
-    return is_integer_matrix(matrix, 5e-3) and np.linalg.det(matrix).round()
+    return (is_integer_matrix(matrix, 5e-3)
+            and bool(round(np.linalg.det(matrix))))
 
 
 def prime_factors(number):
