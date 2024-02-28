@@ -59,6 +59,18 @@ def test_square_to_prod_of_squares(number, expect):
 class TestWoodsRaises:
     """Collection of tests for exceptions raised by the Woods class."""
 
+    _fmt = {
+        'too_long': 'last_char_is_an_acceptable_u',
+        'invalid': 'd',
+        }
+
+    @parametrize(fmt_spec=_fmt.values(), ids=_fmt)
+    def test_format_invalid(self, fmt_spec):
+        """Check complaints with an invalid format specification."""
+        woods = Woods('p(1X1)')
+        with pytest.raises(TypeError):
+            format(woods, fmt_spec)
+
     _init = {
         'invalid style': ({'style': 'invalid'}, ValueError),
         'non-string string': ({'string': 1}, TypeError),
