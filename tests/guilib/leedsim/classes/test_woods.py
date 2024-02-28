@@ -102,3 +102,11 @@ class TestWoodsRaises:
         with pytest.raises(exc):
             Woods(**kwargs)
 
+    def test_invalid_parse(self):
+        """Check complaints with an invalid argument to Woods.parse."""
+        # Most of the invalid cases are already tested in
+        # test_invalid_init_args. We only miss a TypeError
+        woods = Woods()
+        with pytest.raises(TypeError):
+            woods.parse(1)
+
