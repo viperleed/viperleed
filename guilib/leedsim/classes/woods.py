@@ -701,7 +701,7 @@ class Woods:
         ----------
         woods : str, optional
             A string-representation of a Wood's notation. Will be set
-            to self.string is parsing is successful. If not given (or
+            to self.string if parsing is successful. If not given (or
             empty) self.string is used instead for the conversions.
             Default is an empty string.
         bulk_basis : Sequence or None, optional
@@ -743,6 +743,10 @@ class Woods:
             woods = self.string
         if bulk_basis is not None:
             self.bulk_basis = bulk_basis
+        if self.bulk_basis is None:
+            raise ValueError(f'{type(self).__name__}: Cannot convert {self} '
+                             'to_matrix() without a bulk_basis. Pass a valid '
+                             'bulk_basis, or set self.bulk_basis beforehand')
 
         # The next line may raise
         prefix, gamma1, gamma2, alpha = self.parse(woods)

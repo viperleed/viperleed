@@ -110,3 +110,15 @@ class TestWoodsRaises:
         with pytest.raises(TypeError):
             woods.parse(1)
 
+    def test_to_matrix_empty_string(self):
+        """Check complaints of to_matrix method with an empty woods."""
+        woods = Woods()
+        with pytest.raises(WoodsSyntaxError):
+            woods.to_matrix()
+
+    def test_to_matrix_invalid_basis(self):
+        """Check complaints of to_matrix method without a bulk_basis."""
+        woods = Woods(string='p(1x1)')
+        with pytest.raises(ValueError):
+            woods.to_matrix()
+
