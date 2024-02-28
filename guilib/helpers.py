@@ -248,7 +248,7 @@ def single_spaces_only(input_string):
     return input_string
 
 
-def array2string(matrix):
+def array_to_string(matrix):
     """Return a 1-line string representation of an array."""
     matrix = np.array2string(matrix, separator=',', suppress_small=True)
     matrix = single_spaces_only(matrix).replace('\n', '')

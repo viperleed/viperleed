@@ -18,7 +18,7 @@ from typing import Iterable
 
 import numpy as np
 
-from viperleed.guilib.helpers import array2string
+from viperleed.guilib.helpers import array_to_string
 from viperleed.guilib.helpers import remove_duplicates
 from viperleed.guilib.helpers import two_by_two_array_to_tuple
 
@@ -720,8 +720,8 @@ class PlaneGroup:
         if any(abs(frac_new - frac_new.round()) > 1e-5):                        # TODO: use ensure_integer_matrix
             raise ValueError(
                 f'Could not convert {self} direction {self.direction} '
-                f'using matrix transform {array2string(transform)}. Not '
-                f'an integer direction: {frac_new}'
+                f'using matrix transform {array_to_string(transform)}. '
+                f'Not an integer direction: {frac_new}'
                 )
         frac_new = frac_new.round().astype(int)
         transformed_group = PlaneGroup(self.hermann, direction=frac_new)

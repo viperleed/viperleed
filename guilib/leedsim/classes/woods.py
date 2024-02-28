@@ -16,7 +16,7 @@ import re
 
 import numpy as np
 
-from viperleed.guilib.helpers import array2string
+from viperleed.guilib.helpers import array_to_string
 from viperleed.guilib.helpers import is_integer_matrix
 from viperleed.guilib.helpers import prime_numbers
 from viperleed.guilib.helpers import remove_duplicates
@@ -131,7 +131,7 @@ class MatrixIncommensurateError(Exception):
 
     def __init__(self, matrix, message=''):
         if not message:
-            message = (f"Matrix {array2string(matrix)} "
+            message = (f"Matrix {array_to_string(matrix)} "
                        "gives an incommensurate lattice, i.e., "
                        "it is singular or has non-integer elements")
         super().__init__(message)
@@ -142,7 +142,7 @@ class WoodsNotRepresentableError(Exception):
 
     def __init__(self, matrix, message=''):
         if not message:
-            message = (f"Matrix {array2string(matrix)} "
+            message = (f"Matrix {array_to_string(matrix)} "
                        "is not Wood's-representable")
         super().__init__(message)
 
@@ -271,7 +271,7 @@ class Woods:
     def __repr__(self):
         """Return a representation string of self."""
         txt = self.string + ', '
-        txt += f"bulk_basis={array2string(self.bulk_basis)}"
+        txt += f"bulk_basis={array_to_string(self.bulk_basis)}"
         return f"Woods({txt}, style={self.style})"
 
     def __str__(self):
@@ -529,8 +529,6 @@ class Woods:
         """Return the style of this instance."""
         return self.__style
 
-    # Disabled because of bug in pylint:
-    # pylint: disable=missing-param-doc,missing-type-doc
     def add_example(self, woods, shape):
         """Add an example Wood's notation for a given cell shape.
 
@@ -551,7 +549,6 @@ class Woods:
         woods = format(woods)
         self.__examples[shape].add(woods)
 
-    # pylint: enable=missing-param-doc,missing-type-doc
     def from_matrix(self, matrix, bulk_basis=None):
         """Construct woods string from matrix.
 
