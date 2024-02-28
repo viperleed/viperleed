@@ -49,3 +49,50 @@ def test_square_to_prod_of_squares(number, expect):
     squares, remainder = woods.square_to_prod_of_squares(number)
     assert (squares, remainder) == expect
 
+
+class TestWoodsRaises:
+    """Collection of tests for exceptions raised by the Woods class."""
+
+    _init = {
+        'invalid style': ({'style': 'invalid'}, ValueError),
+        'non-string string': ({'string': 1}, TypeError),
+        'not a wood notation': ({'string': '23'}, woods.WoodsSyntaxError),
+        'gamma syntax invalid character': (
+            {'string': 'c(2, x 12)'},
+            woods.WoodsSyntaxError
+            ),
+        'gamma syntax unmatched': (
+            {'string': 'c((2 x 12)'},
+            woods.WoodsSyntaxError
+            ),
+        'unsupported math': ({'string': 'cos(2)x3'}, woods.WoodsSyntaxError),
+        'gamma not int': ({'string': '1.3x8'}, ValueError),
+        'missing bulk_basis': ({'matrix': np.eye(2)}, TypeError),
+        'matrix shape': (
+            {'matrix': np.eye(3), 'bulk_basis': np.eye(2)},
+            ValueError
+            ),
+        'bulk_basis shape': (
+            {'matrix': np.eye(2), 'bulk_basis': np.eye(3)},
+            ValueError
+            ),
+        'inconsistent matrix and string': (
+            {'matrix': np.eye(2), 'string': '2x2', 'bulk_basis': np.eye(2)},
+            ValueError
+            ),
+        'incommensurate matrix': (
+            {'matrix': np.eye(2)*1.2, 'bulk_basis': np.eye(2)},
+            woods.MatrixIncommensurateError
+            ),
+        'matrix not representable': (
+            {'matrix': np.arange(4).reshape(2, 2), 'bulk_basis': np.eye(2)},
+            woods.WoodsNotRepresentableError
+            )
+        }
+
+    @parametrize('kwargs,exc', _init.values(), ids=_init)
+    def test_invalid_init_args(self, kwargs, exc):
+        """Check that exc is raised with invalid kwargs at __init__."""
+        with pytest.raises(exc):
+            woods.Woods(**kwargs)
+

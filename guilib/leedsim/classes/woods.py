@@ -112,7 +112,6 @@ def square_to_prod_of_squares(number):
     # Take number, find all prime factors, return a tuple:
     # first element is the product of all primes showing
     # up an even number of times, the second one the rest.
-
     factors = list(prime_factors(number))
     if not factors:
         factors = [1]
@@ -123,7 +122,6 @@ def square_to_prod_of_squares(number):
     squares, remainders = zip(*[(fact**power, fact**rem)
                                 for (fact, power, rem)
                                 in zip(unique_factors, pow2, rest_pow)])
-
     return round(np.prod(squares)), round(np.prod(remainders))
 
 
@@ -227,14 +225,15 @@ class Woods:
             Wood's notations)
         ValueError
             If the parsed string contains scaling factors
-            for the two directions that are not the square
-            root of an integer
+            for the two directions whose square is not an
+            integer
         WoodsNotRepresentableError
             If matrix is valid but not Wood's-representable.
         WoodsSyntaxError
             If the string does not match the structure of a
             Wood's notation, or could not be evaluated due
-            to either unsupported math or unmatched brackets
+            to either unsupported, unmatched brackets or
+            other any unexpected characters.
         """
         if style[0].lower() not in 'ua':
             raise ValueError(f"Woods: invalid style {style}. "
@@ -805,8 +804,8 @@ class Woods:
             to either unsupported math or unmatched brackets
         """
         if not isinstance(woods, str):
-            raise TypeError("Woods: argument 'woods' should be "
-                            f"'str', not {type(woods).__name__!r}")
+            raise TypeError("Woods: argument should be 'str', "
+                            f"not {type(woods).__name__!r}")
         if not woods:
             return woods
 
