@@ -24,3 +24,28 @@ def test_is_commensurate(matrix, expect):
     commensurate = woods.is_commensurate(matrix)
     assert commensurate is expect
 
+
+_primes = {
+    'int': (12, (2, 2, 3)),
+    'int-like float': (42.0, (2, 3, 7)),
+    'one': (1, ()),
+    'prime': (97, (97,)),
+    }
+
+@parametrize('number,expect', _primes.values(), ids=_primes)
+def test_prime_factors(number, expect):
+    """Check correct splitting of a number into its prime factorization."""
+    assert tuple(woods.prime_factors(number)) == expect
+
+_squares = {
+    1: (1, 1),
+    12: (4, 3),
+    16: (16, 1),
+    }
+
+@parametrize('number,expect', _squares.items(), ids=_squares)
+def test_square_to_prod_of_squares(number, expect):
+    """Check correct decomposition in a product of squares."""
+    squares, remainder = woods.square_to_prod_of_squares(number)
+    assert (squares, remainder) == expect
+
