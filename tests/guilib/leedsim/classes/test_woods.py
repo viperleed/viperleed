@@ -122,6 +122,12 @@ class TestWoodsRaises:
         with pytest.raises(TypeError):
             woods.parse(1)
 
+    def test_from_matrix_no_basis(self):
+        """Check complaints when assigning a Wood from matrix."""
+        woods = Woods()
+        with pytest.raises(ValueError):
+            woods.from_matrix(np.eye(2))
+
     def test_to_matrix_empty_string(self):
         """Check complaints of to_matrix method with an empty woods."""
         woods = Woods()
