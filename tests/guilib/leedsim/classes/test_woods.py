@@ -17,6 +17,9 @@ from viperleed.guilib.leedsim.classes.woods import WoodsNotRepresentableError
 from viperleed.guilib.leedsim.classes.woods import WoodsSyntaxError
 
 
+SQUARE = (1, 0), (0, 1)
+HEX = (1, 0), (-0.5, 3**0.5/2)
+
 _commensurate = {
     'integer floats': ([[1.0, 2.0], [3.0, 4.0]], True),
     'integers': ([[1, 2], [3, 4]], True),
@@ -87,7 +90,7 @@ class TestWoodsRaises:
         'gamma not int': ({'string': '1.3x8'}, ValueError),
         'missing bulk_basis': ({'matrix': np.eye(2)}, TypeError),
         'matrix shape': (
-            {'matrix': np.eye(3), 'bulk_basis': np.eye(2)},
+            {'matrix': np.eye(3), 'bulk_basis': SQUARE},
             ValueError
             ),
         'bulk_basis shape': (
@@ -95,15 +98,15 @@ class TestWoodsRaises:
             ValueError
             ),
         'inconsistent matrix and string': (
-            {'matrix': np.eye(2), 'string': '2x2', 'bulk_basis': np.eye(2)},
+            {'matrix': np.eye(2), 'string': '2x2', 'bulk_basis': SQUARE},
             ValueError
             ),
         'incommensurate matrix': (
-            {'matrix': np.eye(2)*1.2, 'bulk_basis': np.eye(2)},
+            {'matrix': np.eye(2)*1.2, 'bulk_basis': SQUARE},
             MatrixIncommensurateError
             ),
         'matrix not representable': (
-            {'matrix': np.arange(4).reshape(2, 2), 'bulk_basis': np.eye(2)},
+            {'matrix': np.arange(4).reshape(2, 2), 'bulk_basis': SQUARE},
             WoodsNotRepresentableError
             )
         }
@@ -123,7 +126,7 @@ class TestWoodsRaises:
             woods.parse(1)
 
     def test_from_matrix_no_basis(self):
-        """Check complaints when assigning a Wood from matrix."""
+        """Check complaints when assigning a Woods from matrix."""
         woods = Woods()
         with pytest.raises(ValueError):
             woods.from_matrix(np.eye(2))
