@@ -231,7 +231,7 @@ class TestStrReprFormat:
     _str = {'unicode': 'p(1×1)', 'ascii': 'p(1x1)'}
     _repr = {
         'no basis, unicode': (_WoodsArgs('rt2xrt8R45', None, None), 'unicode',
-                              "Woods('p(√2×2√2)R45.0°', style='unicode')"),
+                              "Woods('p(√2×2√2)R45.0°')"),
         'no basis, ascii': (_WoodsArgs('rt2xrt8R45', None, None), 'ascii',
                             "Woods('p(sqrt2 x 2sqrt2)R45.0', style='ascii')"),
         'basis': (_WoodsArgs('3x9', SQUARE, None), 'a',

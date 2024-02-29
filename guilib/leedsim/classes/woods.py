@@ -300,7 +300,9 @@ class Woods:
         txt = f'{self.string!r}'
         if self.bulk_basis is not None:
             txt += f', bulk_basis={array_to_string(self.bulk_basis)}'
-        return f'Woods({txt}, style={self.style!r})'
+        if self.style != 'unicode':  # Hide the default
+            txt += f', style={self.style!r}'
+        return f'Woods({txt})'
 
     def __str__(self):
         """Return a string representation of self.
