@@ -208,3 +208,44 @@ class TestWoodsFromAndToMatrix:
         matrix = woods.matrix
         assert np.all(matrix == args.matrix)
 
+
+class TestStrReprFormat:
+    """Collection of tests for string-ifying a Woods."""
+
+    _str = {'unicode': 'p(1×1)', 'ascii': 'p(1x1)'}
+    _repr = {
+        'no basis, unicode': (_WoodsArgs('rt2xrt8R45', None, None), 'unicode',
+                              "Woods('p(√2×2√2)R45.0°', style='unicode')"),
+        'no basis, ascii': (_WoodsArgs('rt2xrt8R45', None, None), 'ascii',
+                            "Woods('p(sqrt2x2sqrt2)R45.0', style='ascii')"),
+        'basis': (_WoodsArgs('3x9', SQUARE, None), 'a',
+                  "Woods('p(3x9)', bulk_basis=[[1,0], [0,1]], style='ascii')"),
+        'matrix': (_WoodsArgs('2x7', SQUARE, np.diag((2, 7))), 'ascii',         # TODO: currently FAILS, as we dont' store, nor print, the matrix
+                   "Woods('p(2x7)', bulk_basis=[[1,0], [0,1]], "
+                   "matrix=[[2, 0], [0, 7], style='ascii')"),
+        }
+    _fmt = {
+        '5x4, ascii': ('5x4', 'a', 'p(5x4)'),
+        '5x4, unicode not specified': ('5x4', '', 'p(5×4)'),
+        'rt5, simple': ('(rt5 x rt5)R27', 's', '(√5×√5)R27.0°'),
+        'rt3, simple ascii': ('(rt3 x rt3)R30', 'sa', '(sqrt3xsqrt3)R30.0'),
+        }
+
+    @parametrize('style,expect', _str.items(), ids=_str)
+    def test_str(self, style, expect):
+        """Test __str__ method."""
+        woods = Woods('1x1', style=style)
+        assert str(woods) == expect
+
+    @parametrize('args,style,expect', _repr.values(), ids=_repr)
+    def test_repr(self, args, style, expect):
+        """Test __repr__ method."""
+        woods = Woods(*args, style=style)
+        assert repr(woods) == expect
+
+    @parametrize('string,spec,expect', _fmt.values(), ids=_fmt)
+    def test_format(self, string, spec, expect):
+        """Test __format__ method, via f-string."""
+        woods = Woods(string)
+        assert f'{woods:{spec}}' == expect
+
