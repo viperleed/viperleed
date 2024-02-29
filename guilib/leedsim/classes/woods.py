@@ -833,7 +833,7 @@ class Woods:
 
     def __format_rotation(self, alpha):
         """Return a formatted version of the rotation angle in degrees."""
-        if not alpha:
+        if abs(alpha) < 0.25:  # degrees
             return ''
         abs_cos_alpha = abs(np.cos(np.radians(alpha)))
         # Limits below are different because cos(90 + x) ~ x, but
