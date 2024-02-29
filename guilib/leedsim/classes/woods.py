@@ -618,12 +618,13 @@ class Woods:
 
         Returns
         -------
-        examples : set
-            Examples of Wood's notation for the given shape
+        examples : set of str
+            Examples of Wood's notation for the given shape.
         """
         if self.style == 'unicode':
             return self.__examples[shape]
-        return {self.__format__(ex) for ex in self.__examples[shape]}
+        cls = type(self)
+        return {format(cls(ex)) for ex in self.__examples[shape]}
 
     def guess_correct_rotation(self, woods_txt=None):
         """Guess the rotation angle that gives an acceptable Woods.
