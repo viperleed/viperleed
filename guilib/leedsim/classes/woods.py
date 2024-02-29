@@ -12,6 +12,7 @@ Author: Michele Riva
 Created: 2021-03-13 (was part of leedsim.classes.py before)
 """
 
+from collections import Counter
 import re
 
 import numpy as np
@@ -19,7 +20,6 @@ import numpy as np
 from viperleed.guilib.helpers import array_to_string
 from viperleed.guilib.helpers import is_integer_matrix
 from viperleed.guilib.helpers import prime_numbers
-from viperleed.guilib.helpers import remove_duplicates
 from viperleed.guilib.mathparse import MathParser, UnsupportedMathError
 
 # TODO: allow also "rect" special Woods notation for hex lattices (ONLY??)
@@ -104,7 +104,7 @@ def square_to_prod_of_squares(number):
 
     Returns
     -------
-    squares : int
+    square : int
         The largest perfect square divisor of number
     remainder : int
         The remainder, i.e., number / squares
@@ -112,17 +112,13 @@ def square_to_prod_of_squares(number):
     # Take number, find all prime factors, return a tuple:
     # first element is the product of all primes showing
     # up an even number of times, the second one the rest.
-    factors = list(prime_factors(number))
-    if not factors:
-        factors = [1]
-    unique_factors = remove_duplicates(factors)
-    count_factors = [((factors.count(fac) // 2)*2, factors.count(fac) % 2)
-                     for fac in unique_factors]
-    pow2, rest_pow = zip(*count_factors)
-    squares, remainders = zip(*[(fact**power, fact**rem)
-                                for (fact, power, rem)
-                                in zip(unique_factors, pow2, rest_pow)])
-    return round(np.prod(squares)), round(np.prod(remainders))
+    factors = Counter(prime_factors(number))
+    square, remainder = 1, 1
+    for prime_factor, count in factors.items():
+        pow2, rest_pow = (count // 2) * 2, count % 2
+        square *= prime_factor ** pow2
+        remainder *= prime_factor ** rest_pow
+    return square, remainder
 
 
 class MatrixIncommensurateError(Exception):
