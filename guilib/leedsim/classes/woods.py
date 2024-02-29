@@ -276,16 +276,14 @@ class Woods:
             raise TypeError('Woods: bulk_basis is mandatory when '
                             'a matrix is given')
 
-        # Store only the string representation and the bulk
-        # basis. If a matrix is given, it will be used to
-        # construct the string. For the stored properties
-        # defer checks and processing to the property setters
+        # Here the private attributes. Checking and processing
+        # is deferred to the property setters called below.
         self.__string = ''
         self.__bulk_basis = None
+        self.__matrix = None
         self.bulk_basis = bulk_basis
 
-        if matrix is None:
-            # Only string given
+        if matrix is None:  # Only string given
             self.string = string
             return
 
@@ -300,6 +298,9 @@ class Woods:
         txt = f'{self.string!r}'
         if self.bulk_basis is not None:
             txt += f', bulk_basis={array_to_string(self.bulk_basis)}'
+        # Use the private attribute not to trigger a conversion
+        if self.__matrix is not None:
+            txt += f', matrix={array_to_string(self.__matrix)}'
         if self.style != 'unicode':  # Hide the default
             txt += f', style={self.style!r}'
         return f'Woods({txt})'
@@ -480,17 +481,34 @@ class Woods:
         """
         if basis is None:
             self.__bulk_basis = basis
+            self.__matrix = None  # Cannot have a matrix without basis
             return
         basis = np.asarray(basis)
         if basis.shape != (2, 2):
             raise ValueError('Woods: invalid bulk_basis. Should have '
                              f'shape==(2, 2). Found {basis.shape}')
+        old_basis = self.bulk_basis
+        if old_basis is not None and np.allclose(basis, old_basis):
+            return
         self.__bulk_basis = basis
+        self.__matrix = None  # Outdated
 
     @property
     def matrix(self):
         """Return the matrix representation of self."""
-        return self.to_matrix()
+        if self.__matrix is not None:
+            return self.__matrix
+        # Both to_matrix() and guess_correct_rotation() below will
+        # store a valid, commensurate matrix into self.__matrix
+        try:
+            return self.to_matrix()
+        except MatrixIncommensurateError as exc:
+            # See if we can fix the rotation angle
+            try:
+                self.guess_correct_rotation()
+            except MatrixIncommensurateError:
+                raise exc from None
+        return self.__matrix
 
     @matrix.setter
     def matrix(self, matrix):
@@ -511,7 +529,7 @@ class Woods:
         WoodsNotRepresentableError
             If matrix is valid but not Wood's-representable.
         """
-        self.from_matrix(matrix)
+        self.from_matrix(matrix)  # Also stores matrix if representable
 
     @property
     def string(self):
@@ -543,7 +561,10 @@ class Woods:
             Wood's notation, or could not be evaluated due
             to either unsupported math or unmatched brackets
         """
+        old_string = self.__string
         self.__string = self.__fix_string(woods)
+        if self.__string != old_string:
+            self.__matrix = None  # Force recalculation
 
     @property
     def style(self):
@@ -623,6 +644,7 @@ class Woods:
         # Don't use the setter of self.string to skip
         # reformatting, which is anyway already correct
         self.__string = self.__format_parsed(prefix, gammas, alpha)
+        self.__matrix = matrix
         return self.string
 
     def get_examples(self, shape):
@@ -682,6 +704,7 @@ class Woods:
             # Skip using the setter of self.string to avoid
             # reformatting, as the format is already correct
             self.__string = tmp_woods.string
+            self.__matrix = orig_matrix.round().astype(int)
             return self.string
 
         # Matrix is incommensurate. Try to round
@@ -703,6 +726,7 @@ class Woods:
         # Correction was successful.  Skip using self.string
         # to avoid reformatting, as the format is already correct
         self.__string = rounded_txt
+        self.__matrix = rounded_matrix
         return self.string
 
     def to_matrix(self, woods='', bulk_basis=None, check_commensurate=True):
@@ -721,14 +745,16 @@ class Woods:
             is stored into self.bulk_basis. Default is None.
         check_commensurate : bool, optional
             If True, raise MatrixIncommensurateError in case the
-            resulting matrix is incommensurate. Default is True.
+            resulting matrix is incommensurate. Notice that only
+            a commensurate matrix is stored internally, whatever
+            the value of check_commensurate is. Default is True.
 
         Returns
         -------
         matrix : numpy.ndarray
-            Matrix representation. If check_commensurate is True and
-            matrix is commensurate, it returns a rounded matrix of
-            integers, otherwise the matrix is returned as-is.
+            Matrix representation. If matrix is commensurate,
+            a rounded version is returned. The matrix is instead
+            returned as-is if check_commensurate is False.
 
         Raises
         ------
@@ -745,13 +771,11 @@ class Woods:
             Wood's notation, or could not be evaluated due
             to either unsupported math or unmatched brackets
         """
+        woods = woods or self.string
         if not woods:
-            if not self.string:
-                raise WoodsSyntaxError('Woods: empty string is not a '
-                                       'valid Woods notation. Pass a '
-                                       'valid, non-empty string, or '
-                                       'set self.string beforehand')
-            woods = self.string
+            raise WoodsSyntaxError('Woods: empty string is not a valid Woods '
+                                   'notation. Pass a valid, non-empty string, '
+                                   'or set self.string beforehand')
         if bulk_basis is not None:
             self.bulk_basis = bulk_basis
         if self.bulk_basis is None:
@@ -774,16 +798,15 @@ class Woods:
                            (-gamma2 * basis_ratio * np.sin(alpha),
                             gamma2 * np.sin(omega + alpha))))
         matrix /= np.sin(omega)
-
         if prefix == 'c':
             matrix = np.dot([[1, 1], [-1, 1]], matrix)/2
 
+        if is_commensurate(matrix):
+            self.__matrix = matrix.round().astype(int)
+            return self.__matrix
         if not check_commensurate:
             return matrix
-
-        if not is_commensurate(matrix):
-            raise MatrixIncommensurateError(matrix)
-        return matrix.round().astype(int)
+        raise MatrixIncommensurateError(matrix)
 
     def __fix_string(self, woods):
         """Reformat a woods string to standard style.

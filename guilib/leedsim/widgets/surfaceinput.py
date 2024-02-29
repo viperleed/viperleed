@@ -26,6 +26,12 @@ from viperleed.guilib.widgetslib import change_control_text_color
 from viperleed.guilib import decorators as dev_
 
 
+# TODO: handle equivalent Woods
+# TODO: unformatted input string stays in Woods combo! They should be
+#       removed whenever a item is selected. Invalid ones should also
+#       be not re-selectable
+
+
 def _wrap_compatible_groups(lattice_input, surface_input):
     """Wrap reimplementation of compatible_groups.
 
@@ -642,20 +648,15 @@ class SurfaceStructureInput(qtw.QWidget):
             superlattice = self.__woods.matrix
         except MatrixIncommensurateError:
             # Woods gave an incommensurate lattice.
-            # See if the problem is the angle given.
-            try:
-                self.__woods.guess_correct_rotation()
-            except MatrixIncommensurateError:
-                # Can't be fixed
-                self.user_gave_invalid_input.emit(
-                    f"{woods_txt} invalid: Lattice is incommensurate.",
-                    7000
-                    )
-                change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
-                return
+            self.user_gave_invalid_input.emit(
+                f"{woods_txt} invalid: Lattice is incommensurate.",
+                7000
+                )
+            change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
+            return
 
         woods_combo.setCurrentText(self.__woods.string)
-        self._ctrls['superlattice'].matrix = self.__woods.matrix
+        self._ctrls['superlattice'].matrix = superlattice
         change_control_text_color(woods_combo.lineEdit(), qtc.Qt.black)
 
     @dev_.print_call

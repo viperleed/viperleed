@@ -149,6 +149,12 @@ class TestWoodsRaises:
         woods = Woods(string='p(1x1)')
         with pytest.raises(ValueError):
             woods.to_matrix()
+    
+    def test_matrix_attr_not_commensurate(self):
+        """Check complaints accessing .matrix when incommensurate."""
+        woods = Woods('rt3xrt3R30', bulk_basis=SQUARE)
+        with pytest.raises(MatrixIncommensurateError):
+            woods.matrix
 
 
 class TestWoodsFromAndToString:
@@ -197,8 +203,9 @@ class TestWoodsFromAndToMatrix:
         'rt5 R-27': _WoodsArgs('p(√5×√5)R-26.6°', SQUARE, ((2, -1), (1, 2))),
         'rt5 R-117': _WoodsArgs('p(√5×√5)R-116.6°',
                                 SQUARE, ((-1, -2), (2, -1))),
-        'rt31 R9': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((6, 1), (-1, 5))),        # TODO: to_matrix raises MatrixIncommensurateError
-        'rt31 R-51': _WoodsArgs('p(√31×√31)R-51.1°', HEX, ((1, -5), (5, 6))),    # TODO: to_matrix raises MatrixIncommensurateError
+        'rt31 R9': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((6, 1), (-1, 5))),
+        'rt31 R-51': _WoodsArgs('p(√31×√31)R-51.1°', HEX, ((1, -5), (5, 6))),
+        'rt67 R12': _WoodsArgs('p(√67×√67)R12.2°', HEX, ((9, 2), (-2, 7))),
         'c2x4': _WoodsArgs('c(2×4)', SQUARE, ((1, 2), (-1, 2))),
         }
 
@@ -214,16 +221,38 @@ class TestWoodsFromAndToMatrix:
             assert np.all(woods.bulk_basis == args.bulk_basis)
 
     @parametrize(args=_matrix.values(), ids=_matrix)
-    def test_to_matrix(self, args, subtests):
+    def test_to_matrix_attribute(self, args):
         """Check correct identification of matrix given a Woods string."""
-        with subtests.test('.matrix attribute'):
-            woods = Woods(string=args.string, bulk_basis=args.bulk_basis)
-            matrix = woods.matrix
-            assert np.all(matrix == args.matrix)
-        with subtests.test('to_matrix method'):
-            woods = Woods()
-            woods.to_matrix(args.string, bulk_basis=args.bulk_basis)
-            assert np.all(woods.bulk_basis == args.bulk_basis)
+        woods = Woods(string=args.string, bulk_basis=args.bulk_basis)
+        matrix = woods.matrix
+        assert np.all(matrix == args.matrix)
+        assert woods.matrix is matrix
+
+    # Skip those cases that we know require to explicitly fix the
+    # angle and would otherwise raise a MatrixIncommensurateError
+    _to_matrix = {k: v for k, v in _matrix.items() if 'rt31' not in k}
+
+    @parametrize(args=_to_matrix.values(), ids=_to_matrix)
+    def test_to_matrix_method(self, args):
+        """Check correct identification of matrix given a Woods string."""
+        # Notice that the to_matrix method, compared to the .matrix
+        # attribute, does not attempt to fix small angle mismatches
+        woods = Woods()
+        woods.to_matrix(args.string, bulk_basis=args.bulk_basis)
+        assert np.all(woods.bulk_basis == args.bulk_basis)
+
+    _cleared = {
+        'bulk_basis': HEX,
+        'string': 'c4x2',
+        }
+
+    @parametrize('attr,val', _cleared.items(), ids=_cleared)
+    def test_matrix_cleared(self, attr, val):
+        """Check that setting a new string value clears the stored matrix."""
+        woods = Woods('1x1', matrix=np.eye(2), bulk_basis=SQUARE)
+        assert woods._Woods__matrix is not None
+        setattr(woods, attr, val)
+        assert woods._Woods__matrix is None
 
 
 class TestStrReprFormat:
@@ -237,9 +266,9 @@ class TestStrReprFormat:
                             "Woods('p(sqrt2 x 2sqrt2)R45.0', style='ascii')"),
         'basis': (_WoodsArgs('3x9', SQUARE, None), 'a',
                   "Woods('p(3x9)', bulk_basis=[[1,0], [0,1]], style='ascii')"),
-        'matrix': (_WoodsArgs('2x7', SQUARE, np.diag((2, 7))), 'ascii',         # TODO: currently FAILS, as we dont' store, nor print, the matrix
+        'matrix': (_WoodsArgs('2x7', SQUARE, np.diag((2, 7))), 'ascii',
                    "Woods('p(2x7)', bulk_basis=[[1,0], [0,1]], "
-                   "matrix=[[2, 0], [0, 7], style='ascii')"),
+                   "matrix=[[2,0], [0,7]], style='ascii')"),
         }
     _fmt = {
         '5x4, ascii': ('5x4', 'a', 'p(5x4)'),
