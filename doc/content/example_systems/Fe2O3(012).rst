@@ -58,8 +58,8 @@ basis:
                         0 & -1 & 1
                      \end{pmatrix}
 
-In VESTA, you can do this by selecting "Edit" -> "Edit Data" -> "Unit cell" ->
-"Transform".
+In :term:`VESTA`, you can do this by selecting "Edit" -> "Edit Data" ->
+"Unit cell" -> "Transform".
 
 To create a suitable surface slab (as expected by ViPErLEED), we can then
 replicate the unit cell along :math:`\vec{c}` and (optionally) remove the
@@ -251,7 +251,7 @@ Optimizing the Incidence Angle
 In our case, the R-factor has improved significantly after the first structure
 optimization, but far from a good fit at :math:`R_P \approx 0.40`.
 This is because our measurement was performed on a UHV manipulator that does not
-have enough degrees of freedom in rotation, to perfectly align the sample with
+have enough degrees of freedom in rotation to perfectly align the sample with
 the LEED optics.
 We thus know, we need to optimize the incidence angle of the electron beam to
 get a closer correspondence between the experimental and calculated I(V) curves.
