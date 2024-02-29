@@ -160,19 +160,19 @@ class Woods:
                 f'c(6{TIMES}2)', f'c(8{TIMES}2)'}
 
     __examples = {
-        'Oblique': __common,
+        'Oblique': __common.copy(),
         'Square': __common | {f'c(4{TIMES}2)',
                               f'p({SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
                               f'p({SQRT}5{TIMES}{SQRT}5)R26.6{DEGREES}',
                               f'p(2{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
                               f'c(3{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
                               f'c(5{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}'},
-        'Rectangular': __common,
+        'Rectangular': __common.copy(),
         'Hexagonal': __common | {f'c(4{SQRT}2)',
                                  f'p({SQRT}3{TIMES}{SQRT}3)R30{DEGREES}',
                                  f'p({SQRT}7{TIMES}{SQRT}7)R19.1{DEGREES}',
                                  f'p(2{SQRT}3{TIMES}2{SQRT}3)R30{DEGREES}'},
-        'Rhombic': __common,
+        'Rhombic': __common.copy(),
         }
 
     # Disable for 'style' due to pylint bug: optional
