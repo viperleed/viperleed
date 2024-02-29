@@ -47,18 +47,18 @@ SQRT = '\u221a'
 # (6) optional closed parenthesis
 # (7) rotation block
 #     structure is 'R'<alpha> (possibly with spaces in
-#     between), optionally followed by a degrees
-#     designator ('\u00b0', or a contraction of 'deg'),
-#     with <alpha> an integer or floating-point number.
+#     between), optionally followed by a degrees designator
+#     ('\u00b0', or a contraction of 'deg'), with <alpha>
+#     a (possibly signed) integer or floating-point number.
 MATCH_WOODS = re.compile(
-    r'''
+    fr'''
     ^(?P<prefix>((?![sqrtSQRT])[\sa-zA-Z])*)
     \s*\(?
     (?P<gamma1>.*)
-    [xX\u00d7]
+    [xX{TIMES}]
     (?P<gamma2>[^R]*)
     \)?\s*
-    ([R]\s*(?P<alpha>\d+(\.\d+)?)\s*(\u00b0|d[eg]+)?)?
+    ([R]\s*(?P<alpha>-?\d+(\.\d+)?)\s*({DEGREES}|d[eg]+)?)?
     \s*$''',
     re.VERBOSE
     )
@@ -765,8 +765,7 @@ class Woods:
         alpha = np.radians(alpha)
         norm1, norm2 = np.linalg.norm(self.bulk_basis, axis=1)
         basis_ratio = norm2/norm1
-        omega = np.arccos(np.dot(self.bulk_basis[0],
-                                 self.bulk_basis[1])/(norm1*norm2))
+        omega = np.arccos(np.dot(*self.bulk_basis)/(norm1*norm2))
 
         matrix = np.array(((gamma1 * np.sin(omega - alpha),
                             gamma1 * np.sin(alpha)/basis_ratio),
@@ -961,10 +960,9 @@ class Woods:
         transformed_norm = np.linalg.norm(transformed_basis, axis=1)
         gamma1, gamma2 = transformed_norm/basis_norm
 
-        # Here is the calculation of cos_alpha from the first
-        # lattice vectors. In theory, the same calculation from
-        # the second lattice vectors should yield the same
-        cos_alpha = np.dot(transformed_basis[0], basis[0])
-        cos_alpha *= 1/(transformed_norm[0]*basis_norm[0])
-
-        return prefix, gamma1, gamma2, np.degrees(np.arccos(cos_alpha))
+        # Here is the calculation of the rotation angle  from the
+        # first lattice vectors. In theory, the same calculation
+        # from the second lattice vectors should yield the same
+        alpha = np.arctan2(np.cross(basis[0], transformed_basis[0]),
+                           np.dot(basis[0], transformed_basis[0]))
+        return prefix, gamma1, gamma2, np.degrees(alpha)

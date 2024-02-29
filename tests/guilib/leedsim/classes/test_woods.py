@@ -193,11 +193,12 @@ class TestWoodsFromAndToMatrix:
     _matrix = {
         '1x1': _WoodsArgs('p(1×1)', SQUARE, np.eye(2)),
         'rt5 R+27': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((2, 1), (-1, 2))),
-        'rt5 R+63': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((1, 2), (-2, 1))),     # TODO: gives 63.4°; to_matrix obviously fails;
-        'rt5 R-27': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((2, -1), (1, 2))),     # TODO: to_matrix fails;
-        'rt5 R-117': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((-1, -2), (-2, 1))),  # TODO: gives 116.6°; to_matrix obviously fails;
+        'rt5 R+63': _WoodsArgs('p(√5×√5)R63.4°', SQUARE, ((1, 2), (-2, 1))),
+        'rt5 R-27': _WoodsArgs('p(√5×√5)R-26.6°', SQUARE, ((2, -1), (1, 2))),
+        'rt5 R-117': _WoodsArgs('p(√5×√5)R-116.6°',
+                                SQUARE, ((-1, -2), (2, -1))),
         'rt31 R9': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((6, 1), (-1, 5))),        # TODO: to_matrix raises MatrixIncommensurateError
-        'rt31 R51': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((1, -5), (5, 6))),       # TODO: gives 51.1°; to_matrix raises MatrixIncommensurateError
+        'rt31 R-51': _WoodsArgs('p(√31×√31)R-51.1°', HEX, ((1, -5), (5, 6))),    # TODO: to_matrix raises MatrixIncommensurateError
         'c2x4': _WoodsArgs('c(2×4)', SQUARE, ((1, 2), (-1, 2))),
         }
 
