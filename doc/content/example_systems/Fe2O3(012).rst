@@ -278,7 +278,20 @@ sensitive to the incidence angle in the
 :ref:`FD_Optimization.pdf<fdoptimizationbeams>` and
 :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` files:
 
-*TODO figure FD optimization*
+.. _fig_Fe2O3_fd_opt_theta_values:
+.. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/FD_Optimization.pdf
+   :width: 70%
+   :align: center
+
+   Upper half of page 1 for ``Search-progress.pdf``.
+
+
+.. _fig_Fe2O3_fd_opt_theta_beams:
+.. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/FD_Optimization_beam_(1|1).pdf
+   :width: 70%
+   :align: center
+
+   Upper half of page 1 for ``Search-progress.pdf``.
 
 
 Refining the structure
