@@ -61,7 +61,105 @@ def test_square_to_prod_of_squares(number, expect):
     assert (squares, remainder) == expect
 
 
-class TestWoodsRaises:
+_WoodsArgs = namedtuple('_WoodsArgs', ('string', 'bulk_basis', 'matrix'))
+
+
+class TestFromAndToMatrix:
+    """Collection of tests for initializing a Woods from matrix."""
+
+    _matrix = {
+        '1x1': _WoodsArgs('p(1×1)', SQUARE, np.eye(2)),
+        'rt5 R+27': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((2, 1), (-1, 2))),
+        'rt5 R+63': _WoodsArgs('p(√5×√5)R63.4°', SQUARE, ((1, 2), (-2, 1))),
+        'rt5 R-27': _WoodsArgs('p(√5×√5)R-26.6°', SQUARE, ((2, -1), (1, 2))),
+        'rt5 R-117': _WoodsArgs('p(√5×√5)R-116.6°',
+                                SQUARE, ((-1, -2), (2, -1))),
+        'rt31 R9': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((6, 1), (-1, 5))),
+        'rt31 R-51': _WoodsArgs('p(√31×√31)R-51.1°', HEX, ((1, -5), (5, 6))),
+        'rt67 R12': _WoodsArgs('p(√67×√67)R12.2°', HEX, ((9, 2), (-2, 7))),
+        'c2x4': _WoodsArgs('c(2×4)', SQUARE, ((1, 2), (-1, 2))),
+        }
+
+    @parametrize(args=_matrix.values(), ids=_matrix)
+    def test_from_matrix(self, args, subtests):
+        """Check correct initialization from a matrix."""
+        with subtests.test('matrix at __init__'):
+            woods = Woods(matrix=args.matrix, bulk_basis=args.bulk_basis)
+            assert woods.string == args.string
+        with subtests.test('matrix at from_matrix call'):
+            woods = Woods()
+            woods.from_matrix(args.matrix, bulk_basis=args.bulk_basis)
+            assert np.all(woods.bulk_basis == args.bulk_basis)
+
+    @parametrize(args=_matrix.values(), ids=_matrix)
+    def test_to_matrix_attribute(self, args):
+        """Check correct identification of matrix given a Woods string."""
+        woods = Woods(string=args.string, bulk_basis=args.bulk_basis)
+        matrix = woods.matrix
+        assert np.all(matrix == args.matrix)
+        assert woods.matrix is matrix
+
+    # Skip those cases that we know require to explicitly fix the
+    # angle and would otherwise raise a MatrixIncommensurateError
+    _to_matrix = {k: v for k, v in _matrix.items() if 'rt31' not in k}
+
+    @parametrize(args=_to_matrix.values(), ids=_to_matrix)
+    def test_to_matrix_method(self, args):
+        """Check correct identification of matrix given a Woods string."""
+        # Notice that the to_matrix method, compared to the .matrix
+        # attribute, does not attempt to fix small angle mismatches
+        woods = Woods()
+        woods.to_matrix(args.string, bulk_basis=args.bulk_basis)
+        assert np.all(woods.bulk_basis == args.bulk_basis)
+
+    _cleared = {
+        'bulk_basis': HEX,
+        'string': 'c4x2',
+        }
+
+    @parametrize('attr,val', _cleared.items(), ids=_cleared)
+    def test_matrix_cleared(self, attr, val):
+        """Check that setting a new string value clears the stored matrix."""
+        woods = Woods('1x1', matrix=np.eye(2), bulk_basis=SQUARE)
+        assert woods._Woods__matrix is not None
+        setattr(woods, attr, val)
+        assert woods._Woods__matrix is None
+
+
+class TestFromAndToString:
+    """Collection of tests for initializing a Woods from string."""
+
+    _parse = {
+        '1x1': ('p', 1, 1, 0),
+        'r 3xrt3R30': ('p', 3**.5, 3**.5, 30),
+        'rt3xrt12R30': ('p', 3**.5, 12**.5, 30),
+        'c4×3*4': ('c', 4, 12, 0),
+        }
+    _string = {
+        '1x1': {'ascii': 'p(1x1)', 'unicode': 'p(1×1)'},
+        'rt3xrt3R30': {'ascii': 'p(sqrt3 x sqrt3)R30.0',                        # TODO: not nice to have decimals with so round angles
+                       'unicode': 'p(√3×√3)R30.0°'},
+        'rt3xrt12R30': {'ascii': 'p(sqrt3 x 2sqrt3)R30.0',
+                        'unicode': 'p(√3×2√3)R30.0°'},
+        'c4×3*4': {'ascii': 'c(4x12)', 'unicode': 'c(4×12)'},
+        }
+
+    @parametrize('woods,expect', _parse.items(), ids=_parse)
+    def test_parse(self, woods, expect):
+        """Check expected outcome of Woods.parse."""
+        parsed = Woods.parse(woods)
+        assert parsed == expect
+
+    @parametrize('string,style_and_result', _string.items(), ids=_string)
+    def test_string(self, string, style_and_result, subtests):
+        """Check expected result of Woods.string."""
+        for style, expect in style_and_result.items():
+            woods = Woods(string, style=style)
+            with subtests.test(style):
+                assert woods.string == expect
+
+
+class TestRaises:
     """Collection of tests for exceptions raised by the Woods class."""
 
     _fmt = {
@@ -155,104 +253,6 @@ class TestWoodsRaises:
         woods = Woods('rt3xrt3R30', bulk_basis=SQUARE)
         with pytest.raises(MatrixIncommensurateError):
             woods.matrix
-
-
-class TestWoodsFromAndToString:
-    """Collection of tests for initializing a Woods from string."""
-
-    _parse = {
-        '1x1': ('p', 1, 1, 0),
-        'r 3xrt3R30': ('p', 3**.5, 3**.5, 30),
-        'rt3xrt12R30': ('p', 3**.5, 12**.5, 30),
-        'c4×3*4': ('c', 4, 12, 0),
-        }
-    _string = {
-        '1x1': {'ascii': 'p(1x1)', 'unicode': 'p(1×1)'},
-        'rt3xrt3R30': {'ascii': 'p(sqrt3 x sqrt3)R30.0',                        # TODO: not nice to have decimals with so round angles
-                       'unicode': 'p(√3×√3)R30.0°'},
-        'rt3xrt12R30': {'ascii': 'p(sqrt3 x 2sqrt3)R30.0',
-                        'unicode': 'p(√3×2√3)R30.0°'},
-        'c4×3*4': {'ascii': 'c(4x12)', 'unicode': 'c(4×12)'},
-        }
-
-    @parametrize('woods,expect', _parse.items(), ids=_parse)
-    def test_parse(self, woods, expect):
-        """Check expected outcome of Woods.parse."""
-        parsed = Woods.parse(woods)
-        assert parsed == expect
-
-    @parametrize('string,style_and_result', _string.items(), ids=_string)
-    def test_string(self, string, style_and_result, subtests):
-        """Check expected result of Woods.string."""
-        for style, expect in style_and_result.items():
-            woods = Woods(string, style=style)
-            with subtests.test(style):
-                assert woods.string == expect
-
-
-_WoodsArgs = namedtuple('_WoodsArgs', ('string', 'bulk_basis', 'matrix'))
-
-
-class TestWoodsFromAndToMatrix:
-    """Collection of tests for initializing a Woods from matrix."""
-
-    _matrix = {
-        '1x1': _WoodsArgs('p(1×1)', SQUARE, np.eye(2)),
-        'rt5 R+27': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((2, 1), (-1, 2))),
-        'rt5 R+63': _WoodsArgs('p(√5×√5)R63.4°', SQUARE, ((1, 2), (-2, 1))),
-        'rt5 R-27': _WoodsArgs('p(√5×√5)R-26.6°', SQUARE, ((2, -1), (1, 2))),
-        'rt5 R-117': _WoodsArgs('p(√5×√5)R-116.6°',
-                                SQUARE, ((-1, -2), (2, -1))),
-        'rt31 R9': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((6, 1), (-1, 5))),
-        'rt31 R-51': _WoodsArgs('p(√31×√31)R-51.1°', HEX, ((1, -5), (5, 6))),
-        'rt67 R12': _WoodsArgs('p(√67×√67)R12.2°', HEX, ((9, 2), (-2, 7))),
-        'c2x4': _WoodsArgs('c(2×4)', SQUARE, ((1, 2), (-1, 2))),
-        }
-
-    @parametrize(args=_matrix.values(), ids=_matrix)
-    def test_from_matrix(self, args, subtests):
-        """Check correct initialization from a matrix."""
-        with subtests.test('matrix at __init__'):
-            woods = Woods(matrix=args.matrix, bulk_basis=args.bulk_basis)
-            assert woods.string == args.string
-        with subtests.test('matrix at from_matrix call'):
-            woods = Woods()
-            woods.from_matrix(args.matrix, bulk_basis=args.bulk_basis)
-            assert np.all(woods.bulk_basis == args.bulk_basis)
-
-    @parametrize(args=_matrix.values(), ids=_matrix)
-    def test_to_matrix_attribute(self, args):
-        """Check correct identification of matrix given a Woods string."""
-        woods = Woods(string=args.string, bulk_basis=args.bulk_basis)
-        matrix = woods.matrix
-        assert np.all(matrix == args.matrix)
-        assert woods.matrix is matrix
-
-    # Skip those cases that we know require to explicitly fix the
-    # angle and would otherwise raise a MatrixIncommensurateError
-    _to_matrix = {k: v for k, v in _matrix.items() if 'rt31' not in k}
-
-    @parametrize(args=_to_matrix.values(), ids=_to_matrix)
-    def test_to_matrix_method(self, args):
-        """Check correct identification of matrix given a Woods string."""
-        # Notice that the to_matrix method, compared to the .matrix
-        # attribute, does not attempt to fix small angle mismatches
-        woods = Woods()
-        woods.to_matrix(args.string, bulk_basis=args.bulk_basis)
-        assert np.all(woods.bulk_basis == args.bulk_basis)
-
-    _cleared = {
-        'bulk_basis': HEX,
-        'string': 'c4x2',
-        }
-
-    @parametrize('attr,val', _cleared.items(), ids=_cleared)
-    def test_matrix_cleared(self, attr, val):
-        """Check that setting a new string value clears the stored matrix."""
-        woods = Woods('1x1', matrix=np.eye(2), bulk_basis=SQUARE)
-        assert woods._Woods__matrix is not None
-        setattr(woods, attr, val)
-        assert woods._Woods__matrix is None
 
 
 class TestStrReprFormat:
