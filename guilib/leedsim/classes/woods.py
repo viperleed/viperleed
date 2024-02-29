@@ -428,8 +428,10 @@ class Woods:
 
         # Make sure that gamma**2 is close to int
         if abs(gamma**2 - round(gamma**2)) > 1e-3:
-            raise ValueError(f"Woods: {gamma_str} (evaluated to {gamma}) "
-                             "is not the square root of an integer")
+            raise ValueError(
+                f"Woods: {gamma_str} (evaluated to {gamma}) can't "
+                "be represented as the square root of an integer"
+                )
         return gamma
 
     @property
@@ -947,4 +949,4 @@ class Woods:
         cos_alpha = np.dot(transformed_basis[0], basis[0])
         cos_alpha *= 1/(transformed_norm[0]*basis_norm[0])
 
-        return (prefix, gamma1, gamma2, cos_alpha)
+        return prefix, gamma1, gamma2, cos_alpha
