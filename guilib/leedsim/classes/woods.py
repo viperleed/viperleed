@@ -346,6 +346,27 @@ class Woods:
             return fmt[1:]
         return fmt
 
+    @classmethod
+    def add_example(cls, woods, shape):
+        """Add an example Wood's notation for a given cell shape.
+
+        Parameters
+        ----------
+        woods : str or Woods
+            The example to add
+        shape : {'Oblique', 'Square', 'Rectangular',
+                 'Hexagonal', 'Rhombic'}
+            Shape of the surface unit cell
+
+        Returns
+        -------
+        None.
+        """
+        if isinstance(woods, Woods):
+            woods = woods.string
+        woods = format(woods)
+        cls.__examples[shape].add(woods)
+
     @staticmethod
     def parse(woods):
         """Parse a Wood's string into conventional blocks.
@@ -570,27 +591,6 @@ class Woods:
     def style(self):
         """Return the style of this instance."""
         return self.__style
-
-    @classmethod
-    def add_example(cls, woods, shape):
-        """Add an example Wood's notation for a given cell shape.
-
-        Parameters
-        ----------
-        woods : str or Woods
-            The example to add
-        shape : {'Oblique', 'Square', 'Rectangular',
-                 'Hexagonal', 'Rhombic'}
-            Shape of the surface unit cell
-
-        Returns
-        -------
-        None.
-        """
-        if isinstance(woods, Woods):
-            woods = woods.string
-        woods = format(woods)
-        cls.__examples[shape].add(woods)
 
     def from_matrix(self, matrix, bulk_basis=None):
         """Construct woods string from matrix.
