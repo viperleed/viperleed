@@ -432,7 +432,9 @@ class Woods:
             idx = gamma_str.rindex(')')
             gamma_str = gamma_str[:idx] + gamma_str[idx+1:]
 
-        parser.expression = gamma_str
+        # parser needs at least 'rt' for square root.
+        # Support also 'r' for Woods notations
+        parser.expression = re.sub(r'r([^t])', r'rt\1', gamma_str)
         try:
             gamma = parser.evaluate()
         except SyntaxError as exc:
