@@ -931,8 +931,8 @@ class Woods:
             Primitive or centered
         gamma1, gamma2 : float
             Scaling factors in the two directions of basis
-        cos_alpha : float
-            Cosine of the rotation angle
+        alpha : float
+            Rotation angle, in degrees.
 
         Raises
         ------
