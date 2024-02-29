@@ -616,22 +616,12 @@ class Woods:
             self.bulk_basis = bulk_basis
 
         # Next line may raise WoodsNotRepresentableError
-        prefix, *gammas, cos_alpha = self.__primitive_or_centered(matrix)
+        prefix, *gammas, alpha = self.__primitive_or_centered(matrix)
 
-        woods = f'{prefix}({self.__format_scaling_factors(gammas)})'
-
-        # Limits below are different because cos(90 + x) ~ x, but
-        # cos(x) ~ 1 - x**2/2. Limits below tolerate x ~ 0.25deg
-        if abs(cos_alpha) > 4e-3 and 1 - abs(cos_alpha) > 8e-6:
-            # Angle not 0, 90 nor 180
-            alpha = round(np.degrees(np.arccos(cos_alpha)), ndigits=1)
-            woods += f'R{alpha}{self.style.degrees}'
-
-        # Don't use self.string to skip the reformatting,
-        # which is anyway already correct
-        self.__string = woods
-
-        return woods
+        # Don't use the setter of self.string to skip
+        # reformatting, which is anyway already correct
+        self.__string = self.__format_parsed(prefix, gammas, alpha)
+        return self.string
 
     def get_examples(self, shape):
         """Return examples of Wood's for a given cell shape.
@@ -831,19 +821,27 @@ class Woods:
         if not woods:
             return woods
         prefix, *gammas, alpha = self.parse(woods)
+        return self.__format_parsed(prefix, gammas, alpha)
 
-        fixed_woods = f'{prefix}({self.__format_scaling_factors(gammas)})'
+    def __format_parsed(self, prefix, gammas, alpha):
+        """Return a standardized Woods notation from parsed values."""
+        woods = f'{prefix}({self.__format_scaling_factors(gammas)})'
+        fmt_alpha = self.__format_rotation(alpha)
+        if fmt_alpha:
+            woods += f'R{fmt_alpha}{self.style.degrees}'
+        return woods
 
-        # Finally handle the angle
-        if alpha:
-            abs_cos_alpha = abs(np.cos(np.radians(alpha)))
-            # Limits below are different because cos(90 + x) ~ x, but
-            # cos(x) ~ 1 - x**2/2. Both limits tolerate x ~ 0.25deg
-            if abs_cos_alpha > 4e-3 and 1 - abs_cos_alpha > 8e-6:
-                # Angle is neither 90, nor 0 or 180
-                fixed_woods += f'R{alpha:.1f}{self.style.degrees}'
-
-        return fixed_woods
+    def __format_rotation(self, alpha):
+        """Return a formatted version of the rotation angle in degrees."""
+        if not alpha:
+            return ''
+        abs_cos_alpha = abs(np.cos(np.radians(alpha)))
+        # Limits below are different because cos(90 + x) ~ x, but
+        # cos(x) ~ 1 - x**2/2. Both limits tolerate x ~ 0.25deg
+        if abs_cos_alpha > 4e-3 and 1 - abs_cos_alpha > 8e-6:
+            # Angle is neither 90, nor 0 or 180
+            return f'{alpha:.1f}'
+        return ''
 
     def __format_scaling_factors(self, gammas):
         """Format scaling factors in Woods notation.
@@ -969,4 +967,4 @@ class Woods:
         cos_alpha = np.dot(transformed_basis[0], basis[0])
         cos_alpha *= 1/(transformed_norm[0]*basis_norm[0])
 
-        return prefix, gamma1, gamma2, cos_alpha
+        return prefix, gamma1, gamma2, np.degrees(np.arccos(cos_alpha))
