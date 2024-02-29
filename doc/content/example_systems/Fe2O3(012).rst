@@ -276,14 +276,15 @@ After running the calculation, we find that we find a minimum at about
 We can also see that the I(V) curves and consequently the R-factor are very
 sensitive to the incidence angle in the
 :ref:`FD_Optimization.pdf<fdoptimizationbeams>` and
-:ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` files:
+:ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` files (see 
+:numref:`fig_Fe2O3_fd_opt_theta_values` and :numref:`fig_Fe2O3_fd_opt_theta_beams`).
 
 .. _fig_Fe2O3_fd_opt_theta_values:
 .. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/FD_Optimization.pdf
    :width: 70%
    :align: center
 
-   Upper half of page 1 for ``Search-progress.pdf``.
+   R-factor as a function of the incidence angle as shown in :ref:`FD_Optimization.pdf<fdoptimizationbeams>`.
 
 
 .. _fig_Fe2O3_fd_opt_theta_beams:
@@ -291,7 +292,7 @@ sensitive to the incidence angle in the
    :width: 70%
    :align: center
 
-   Upper half of page 1 for ``Search-progress.pdf``.
+   I(V) curves for beam (1|1) as shown in :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`.
 
 
 Refining the structure
