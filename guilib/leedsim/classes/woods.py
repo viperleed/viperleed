@@ -272,7 +272,6 @@ class Woods:
             other any unexpected characters.
         """
         self.__style = _WoodsStyle(style)
-
         if matrix is not None and bulk_basis is None:
             raise TypeError('Woods: bulk_basis is mandatory when '
                             'a matrix is given')
@@ -283,7 +282,6 @@ class Woods:
         # defer checks and processing to the property setters
         self.__string = ''
         self.__bulk_basis = None
-
         self.bulk_basis = bulk_basis
 
         if matrix is None:
@@ -384,7 +382,6 @@ class Woods:
         if not isinstance(woods, str):
             raise TypeError('Woods.parse: argument woods should '
                             f"be 'str', not {type(woods).__name__!r}")
-
         match = MATCH_WOODS.match(woods)
         if not match:
             raise WoodsSyntaxError(f'Woods: {woods} is not a '
@@ -436,14 +433,14 @@ class Woods:
         parser.expression = gamma_str
         try:
             gamma = parser.evaluate()
-        except SyntaxError as err:
+        except SyntaxError as exc:
             raise WoodsSyntaxError(f'Woods: {gamma_str} could '
                                    'not be parsed, likely because '
-                                   'of unmatched brackets') from err
-        except UnsupportedMathError as err:
+                                   'of unmatched brackets') from exc
+        except UnsupportedMathError as exc:
             raise WoodsSyntaxError(f'Woods: {gamma_str} could '
                                    'not be parsed as it contains '
-                                   'unsupported math operations') from err
+                                   'unsupported math operations') from exc
 
         # Make sure that gamma**2 is close to int
         if abs(gamma**2 - round(gamma**2)) > 1e-3:
@@ -480,7 +477,6 @@ class Woods:
         if basis is None:
             self.__bulk_basis = basis
             return
-
         basis = np.asarray(basis)
         if basis.shape != (2, 2):
             raise ValueError('Woods: invalid bulk_basis. Should have '
@@ -689,8 +685,8 @@ class Woods:
         orig_matrix = tmp_woods.to_matrix(check_commensurate=False)
 
         if is_commensurate(orig_matrix):
-            # Skip using self.string to avoid reformatting,
-            # as the format is already correct
+            # Skip using the setter of self.string to avoid
+            # reformatting, as the format is already correct
             self.__string = tmp_woods.string
             return self.string
 
@@ -704,7 +700,7 @@ class Woods:
         # Prefix should stay the same; same for gammas
         # (the user rarely inputs the wrong scaling);
         # New angle is acceptable if it is within +-1
-        # degree from the original input
+        # degrees from the original input
         if (round_prefix != orig_prefix
             or np.any(delta_gamma > 1e-3)
                 or abs(round_alpha - orig_alpha) > 1):
@@ -713,8 +709,7 @@ class Woods:
         # Correction was successful.  Skip using self.string
         # to avoid reformatting, as the format is already correct
         self.__string = rounded_txt
-
-        return rounded_txt
+        return self.string
 
     def to_matrix(self, woods='', bulk_basis=None, check_commensurate=True):
         """Convert woods notation into matrix representation.
@@ -776,8 +771,7 @@ class Woods:
             self.string = woods
 
         alpha = np.radians(alpha)
-        norm1, norm2 = np.sqrt(self.bulk_basis.T[0]**2
-                               + self.bulk_basis.T[1]**2)
+        norm1, norm2 = np.linalg.norm(self.bulk_basis, axis=1)
         basis_ratio = norm2/norm1
         omega = np.arccos(np.dot(self.bulk_basis[0],
                                  self.bulk_basis[1])/(norm1*norm2))
@@ -834,7 +828,6 @@ class Woods:
                             f'not {type(woods).__name__!r}')
         if not woods:
             return woods
-
         prefix, *gammas, alpha = self.parse(woods)
 
         fixed_woods = f'{prefix}({self.__format_scaling_factors(gammas)})'
@@ -894,7 +887,6 @@ class Woods:
             # Add some spaces around the 'x' if there
             # are 'sqrt's to make it look less messy
             times = f' {times} '
-
         return times.join(to_format)
 
     def __is_representable(self, matrix):
