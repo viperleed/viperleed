@@ -143,3 +143,36 @@ class TestWoodsRaises:
         with pytest.raises(ValueError):
             woods.to_matrix()
 
+
+class TestWoodsFromAndToString:
+    """Collection of tests for initializing a Woods from string."""
+
+    _parse = {
+        '1x1': ('p', 1, 1, 0),
+        'rt3xrt3R30': ('p', 3**.5, 3**.5, 30),
+        'rt3xrt12R30': ('p', 3**.5, 12**.5, 30),
+        'c4×3*4': ('c', 4, 12, 0),
+        }
+    _string = {
+        '1x1': {'ascii': 'p(1x1)', 'unicode': 'p(1×1)'},
+        'rt3xrt3R30': {'ascii': 'p(sqrt3xsqrt3)R30.0',                          # TODO: not nice to have decimals with so round angles
+                       'unicode': 'p(√3×√3)R30.0°'},
+        'rt3xrt12R30': {'ascii': 'p(sqrt3x2sqrt3)R30.0',
+                        'unicode': 'p(√3×2√3)R30.0°'},
+        'c4×3*4': {'ascii': 'c(4x12)', 'unicode': 'c(4×12)'},
+        }
+
+    @parametrize('woods,expect', _parse.items(), ids=_parse)
+    def test_parse(self, woods, expect):
+        """Check expected outcome of Woods.parse."""
+        parsed = Woods.parse(woods)
+        assert parsed == expect
+
+    @parametrize('string,style_and_result', _string.items(), ids=_string)
+    def test_string(self, string, style_and_result, subtests):
+        """Check expected result of Woods.string."""
+        for style, expect in style_and_result.items():
+            woods = Woods(string, style=style)
+            with subtests.test(style):
+                assert woods.string == expect
+
