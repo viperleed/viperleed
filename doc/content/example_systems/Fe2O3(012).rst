@@ -319,8 +319,8 @@ and fine-grained structure optimizations, and possibly also adjust the
 
 In this case, we found that by first performing another looped structure
 optimization for the first two layers (atoms ``* L1-2``), and then adding the
-third layer atoms to the optimization, we could reliably further reduce the
-R-factor to about :math:`R_P \approx 0.16`. [#]_
+third layer atoms (atoms ``* L1-3``) to the optimization, we could reliably
+further reduce the R-factor to about :math:`R_P \approx 0.16`. [#]_
 
 
 .. [#] The data was obtained by Alexander M. Imre and Michele Riva, with further
