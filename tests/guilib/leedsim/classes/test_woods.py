@@ -78,6 +78,7 @@ class TestWoodsRaises:
 
     _init = {
         'invalid style': ({'style': 'invalid'}, ValueError),
+        'invalid style type': ({'style': 3}, TypeError),
         'non-string string': ({'string': 1}, TypeError),
         'not a wood notation': ({'string': '23'}, WoodsSyntaxError),
         'gamma syntax invalid character': (

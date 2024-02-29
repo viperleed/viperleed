@@ -13,6 +13,7 @@ Created: 2021-03-13 (was part of leedsim.classes.py before)
 """
 
 from collections import Counter
+from dataclasses import dataclass, field
 import re
 
 import numpy as np
@@ -146,8 +147,48 @@ class WoodsSyntaxError(Exception):
     """Exception raised in case a Wood's string has invalid syntax."""
 
 
-# Disable due to pylint bug
-# pylint: disable=too-many-instance-attributes
+@dataclass(frozen=True)
+class _WoodsStyle:
+    """Simple collection of style-dependent symbols for Wood's notations."""
+    style: str
+    degrees: str = field(init=False)
+    times: str = field(init=False)
+    sqrt: str = field(init=False)
+
+    def __eq__(self, other):
+        """Return whether self == other."""
+        if isinstance(other, str):
+            return self.style == other
+        return super().__eq__(other)
+
+    def __repr__(self):
+        """Return a string version of this style."""
+        return repr(self.style)
+
+    def __post_init__(self):
+        """Fill in the symbols given a style."""
+        style = self.style
+        if not isinstance(style, (str, _WoodsStyle)):
+            raise TypeError(f'Woods: invalid style {type(style).__name__!r}. '
+                            "Expected 'str'")
+        if isinstance(style, _WoodsStyle):
+            style = style.style
+
+        if style[0].lower() not in 'ua':
+            raise ValueError(f'Woods: invalid style {style!r}. '
+                             "Expected 'unicode' or 'ascii'")
+        style = 'unicode' if style[0].lower() == 'u' else 'ascii'
+        setattr_ = object.__setattr__
+        setattr_(self, 'style', style)
+        setattr_(self, 'degrees', '' if style == 'ascii' else DEGREES)
+        setattr_(self, 'times', 'x' if style == 'ascii' else TIMES)
+        setattr_(self, 'sqrt', 'sqrt' if style == 'ascii' else SQRT)
+
+    def startswith(self, string):
+        """Return whether self.style starts with string."""
+        return self.style.startswith(string)
+
+
 class Woods:
     """Class to represent a reconstruction in Wood's notation.
 
@@ -230,14 +271,7 @@ class Woods:
             to either unsupported, unmatched brackets or
             other any unexpected characters.
         """
-        if style[0].lower() not in 'ua':
-            raise ValueError(f'Woods: invalid style {style!r}. '
-                             "Expected 'unicode' or 'ascii'")
-        style = 'unicode' if style[0].lower() == 'u' else 'ascii'
-        self.__style = style
-        self.degrees = '' if style == 'ascii' else DEGREES
-        self.times = 'x' if style == 'ascii' else TIMES
-        self.sqrt = 'sqrt' if style == 'ascii' else SQRT
+        self.__style = _WoodsStyle(style)
 
         if matrix is not None and bulk_basis is None:
             raise TypeError('Woods: bulk_basis is mandatory when '
@@ -304,7 +338,7 @@ class Woods:
         if (fmt_style and fmt_style not in 'ua') or (len(format_spec) > 2):
             raise TypeError('unsupported format string '
                             'passed to Woods.__format__')
-        is_default_style = not fmt_style or fmt_style == self.style[0]
+        is_default_style = not fmt_style or self.style.startswith(fmt_style)
         fmt = (self.string if is_default_style
                else Woods(self.string, style=fmt_style).string)
         if fmt[0] == 'p' and 's' in format_spec:
@@ -593,7 +627,7 @@ class Woods:
         if abs(cos_alpha) > 4e-3 and 1 - abs(cos_alpha) > 8e-6:
             # Angle not 0, 90 nor 180
             alpha = round(np.degrees(np.arccos(cos_alpha)), ndigits=1)
-            woods += f'R{alpha}{self.degrees}'
+            woods += f'R{alpha}{self.style.degrees}'
 
         # Don't use self.string to skip the reformatting,
         # which is anyway already correct
@@ -812,7 +846,7 @@ class Woods:
             # cos(x) ~ 1 - x**2/2. Both limits tolerate x ~ 0.25deg
             if abs_cos_alpha > 4e-3 and 1 - abs_cos_alpha > 8e-6:
                 # Angle is neither 90, nor 0 or 180
-                fixed_woods += f'R{alpha:.1f}{self.degrees}'
+                fixed_woods += f'R{alpha:.1f}{self.style.degrees}'
 
         return fixed_woods
 
@@ -844,7 +878,7 @@ class Woods:
 
             format_direction = ''  # Format the direction in here.
             if gamma_sqrt > 1:     # Root part
-                format_direction = f'{self.sqrt}{gamma_sqrt}'
+                format_direction = f'{self.style.sqrt}{gamma_sqrt}'
 
             if not format_direction:
                 # If there is no root part, always
@@ -855,7 +889,7 @@ class Woods:
                 format_direction = str(gamma_int) + format_direction
             to_format.append(format_direction)
 
-        times = self.times
+        times = self.style.times
         if self.style == 'ascii' and any('sqrt' in g for g in to_format):
             # Add some spaces around the 'x' if there
             # are 'sqrt's to make it look less messy
