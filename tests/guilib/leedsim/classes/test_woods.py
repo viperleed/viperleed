@@ -76,6 +76,12 @@ class TestWoodsRaises:
         with pytest.raises(TypeError):
             format(woods, fmt_spec)
 
+    def test_guess_rotation_invalid(self):
+        """Check complaints for an invalid rotation angle."""
+        woods = Woods('rt5xrt5R45', bulk_basis=SQUARE)
+        with pytest.raises(MatrixIncommensurateError):
+            woods.guess_correct_rotation()
+
     _init = {
         'invalid style': ({'style': 'invalid'}, ValueError),
         'invalid style type': ({'style': 3}, TypeError),
