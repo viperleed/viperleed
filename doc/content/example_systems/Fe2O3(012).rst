@@ -19,7 +19,7 @@ complexity" oxide surface and will compare experimental LEED :math:`I(V)` data
 [#]_ with a theory calculation in ViPErLEED.
 
 All input files needed to follow along on your own machine can be found
-:download:`here</_static/example_systems/Fe2O3-(1x1)/input_files.zip>`.
+:download:`here</_static/example_systems/Fe2O3(012)-(1x1)/input_files.zip>`.
 
 .. tip:: 
    If you are new to ViPErLEED, check out :ref:`this tutorial<example_ag_100>`
