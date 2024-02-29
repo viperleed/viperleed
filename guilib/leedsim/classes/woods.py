@@ -855,7 +855,13 @@ class Woods:
                 format_direction = str(gamma_int) + format_direction
             to_format.append(format_direction)
 
-        return self.times.join(to_format)
+        times = self.times
+        if self.style == 'ascii' and any('sqrt' in g for g in to_format):
+            # Add some spaces around the 'x' if there
+            # are 'sqrt's to make it look less messy
+            times = f' {times} '
+
+        return times.join(to_format)
 
     def __is_representable(self, matrix):
         """Return whether a matrix is Woods-representable.

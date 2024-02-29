@@ -155,9 +155,9 @@ class TestWoodsFromAndToString:
         }
     _string = {
         '1x1': {'ascii': 'p(1x1)', 'unicode': 'p(1×1)'},
-        'rt3xrt3R30': {'ascii': 'p(sqrt3xsqrt3)R30.0',                          # TODO: not nice to have decimals with so round angles
+        'rt3xrt3R30': {'ascii': 'p(sqrt3 x sqrt3)R30.0',                        # TODO: not nice to have decimals with so round angles
                        'unicode': 'p(√3×√3)R30.0°'},
-        'rt3xrt12R30': {'ascii': 'p(sqrt3x2sqrt3)R30.0',
+        'rt3xrt12R30': {'ascii': 'p(sqrt3 x 2sqrt3)R30.0',
                         'unicode': 'p(√3×2√3)R30.0°'},
         'c4×3*4': {'ascii': 'c(4x12)', 'unicode': 'c(4×12)'},
         }
@@ -226,7 +226,7 @@ class TestStrReprFormat:
         'no basis, unicode': (_WoodsArgs('rt2xrt8R45', None, None), 'unicode',
                               "Woods('p(√2×2√2)R45.0°', style='unicode')"),
         'no basis, ascii': (_WoodsArgs('rt2xrt8R45', None, None), 'ascii',
-                            "Woods('p(sqrt2x2sqrt2)R45.0', style='ascii')"),
+                            "Woods('p(sqrt2 x 2sqrt2)R45.0', style='ascii')"),
         'basis': (_WoodsArgs('3x9', SQUARE, None), 'a',
                   "Woods('p(3x9)', bulk_basis=[[1,0], [0,1]], style='ascii')"),
         'matrix': (_WoodsArgs('2x7', SQUARE, np.diag((2, 7))), 'ascii',         # TODO: currently FAILS, as we dont' store, nor print, the matrix
@@ -237,7 +237,7 @@ class TestStrReprFormat:
         '5x4, ascii': ('5x4', 'a', 'p(5x4)'),
         '5x4, unicode not specified': ('5x4', '', 'p(5×4)'),
         'rt5, simple': ('(rt5 x rt5)R27', 's', '(√5×√5)R27.0°'),
-        'rt3, simple ascii': ('(rt3 x rt3)R30', 'sa', '(sqrt3xsqrt3)R30.0'),
+        'rt3, simple ascii': ('(rt3 x rt3)R30', 'sa', '(sqrt3 x sqrt3)R30.0'),
         }
 
     @parametrize('style,expect', _str.items(), ids=_str)
