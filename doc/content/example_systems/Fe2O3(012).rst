@@ -21,7 +21,7 @@ complexity" oxide surface and will compare experimental LEED :math:`I(V)` data
 All input files needed to follow along on your own machine can be found
 :download:`here</_static/example_systems/Fe2O3(012)-(1x1)/input_files.zip>`.
 
-.. tip:: 
+.. tip::
    If you are new to ViPErLEED, check out :ref:`this tutorial<example_ag_100>`
    first, which explains how to set up a calculation in more detail.
 
@@ -286,7 +286,8 @@ sensitive to the incidence angle in the
    :width: 70%
    :align: center
 
-   R-factor as a function of the incidence angle as shown in :ref:`FD_Optimization.pdf<fdoptimizationbeams>`.
+   R-factor as a function of the incidence angle as shown in
+   :ref:`FD_Optimization.pdf<fdoptimizationbeams>`.
 
 
 .. _fig_Fe2O3_fd_opt_theta_beams:
@@ -294,7 +295,8 @@ sensitive to the incidence angle in the
    :width: 70%
    :align: center
 
-   I(V) curves for beam (1|1) as shown in :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`.
+   I(V) curves for beam (1|1) as shown in
+   :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`.
 
 
 Refining the structure
