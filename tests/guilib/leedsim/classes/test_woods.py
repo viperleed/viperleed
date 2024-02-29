@@ -4,6 +4,8 @@ Created: 2024-02-20
 Author: Michele Riva (@michele-riva)
 """
 
+from collections import namedtuple
+
 import numpy as np
 import pytest
 from pytest_cases import parametrize
@@ -175,4 +177,34 @@ class TestWoodsFromAndToString:
             woods = Woods(string, style=style)
             with subtests.test(style):
                 assert woods.string == expect
+
+
+_WoodsArgs = namedtuple('_WoodsArgs', ('string', 'bulk_basis', 'matrix'))
+
+
+class TestWoodsFromAndToMatrix:
+    """Collection of tests for initializing a Woods from matrix."""
+
+    _matrix = {
+        '1x1': _WoodsArgs('p(1×1)', SQUARE, np.eye(2)),
+        'rt5 R+27': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((2, 1), (-1, 2))),
+        'rt5 R+63': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((1, 2), (-2, 1))),     # TODO: gives 63.4°; to_matrix obviously fails;
+        'rt5 R-27': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((2, -1), (1, 2))),     # TODO: to_matrix fails;
+        'rt5 R-117': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((-1, -2), (-2, 1))),  # TODO: gives 116.6°; to_matrix obviously fails;
+        'rt31 R9': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((6, 1), (-1, 5))),        # TODO: to_matrix raises MatrixIncommensurateError
+        'rt31 R51': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((1, -5), (5, 6))),       # TODO: gives 51.1°; to_matrix raises MatrixIncommensurateError
+        }
+
+    @parametrize(args=_matrix.values(), ids=_matrix)
+    def test_from_matrix(self, args):
+        """Check correct initialization from a matrix."""
+        woods = Woods(matrix=args.matrix, bulk_basis=args.bulk_basis)
+        assert woods.string == args.string
+
+    @parametrize(args=_matrix.values(), ids=_matrix)
+    def test_to_matrix(self, args):
+        """Check correct identification of matrix given a Woods string."""
+        woods = Woods(string=args.string, bulk_basis=args.bulk_basis)
+        matrix = woods.matrix
+        assert np.all(matrix == args.matrix)
 
