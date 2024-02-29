@@ -270,9 +270,10 @@ class Woods:
 
     def __repr__(self):
         """Return a representation string of self."""
-        txt = self.string + ', '
-        txt += f"bulk_basis={array_to_string(self.bulk_basis)}"
-        return f"Woods({txt}, style={self.style})"
+        txt = f'{self.string!r}'
+        if self.bulk_basis is not None:
+            txt += f", bulk_basis={array_to_string(self.bulk_basis)}"
+        return f"Woods({txt}, style={self.style!r})"
 
     def __str__(self):
         """Return a string representation of self.
