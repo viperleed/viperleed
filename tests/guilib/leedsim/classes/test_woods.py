@@ -193,20 +193,31 @@ class TestWoodsFromAndToMatrix:
         'rt5 R-117': _WoodsArgs('p(√5×√5)R26.6°', SQUARE, ((-1, -2), (-2, 1))),  # TODO: gives 116.6°; to_matrix obviously fails;
         'rt31 R9': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((6, 1), (-1, 5))),        # TODO: to_matrix raises MatrixIncommensurateError
         'rt31 R51': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((1, -5), (5, 6))),       # TODO: gives 51.1°; to_matrix raises MatrixIncommensurateError
+        'c2x4': _WoodsArgs('c(2×4)', SQUARE, ((1, 2), (-1, 2))),
         }
 
     @parametrize(args=_matrix.values(), ids=_matrix)
-    def test_from_matrix(self, args):
+    def test_from_matrix(self, args, subtests):
         """Check correct initialization from a matrix."""
-        woods = Woods(matrix=args.matrix, bulk_basis=args.bulk_basis)
-        assert woods.string == args.string
+        with subtests.test('matrix at __init__'):
+            woods = Woods(matrix=args.matrix, bulk_basis=args.bulk_basis)
+            assert woods.string == args.string
+        with subtests.test('matrix at from_matrix call'):
+            woods = Woods()
+            woods.from_matrix(args.matrix, bulk_basis=args.bulk_basis)
+            assert np.all(woods.bulk_basis == args.bulk_basis)
 
     @parametrize(args=_matrix.values(), ids=_matrix)
-    def test_to_matrix(self, args):
+    def test_to_matrix(self, args, subtests):
         """Check correct identification of matrix given a Woods string."""
-        woods = Woods(string=args.string, bulk_basis=args.bulk_basis)
-        matrix = woods.matrix
-        assert np.all(matrix == args.matrix)
+        with subtests.test('.matrix attribute'):
+            woods = Woods(string=args.string, bulk_basis=args.bulk_basis)
+            matrix = woods.matrix
+            assert np.all(matrix == args.matrix)
+        with subtests.test('to_matrix method'):
+            woods = Woods()
+            woods.to_matrix(args.string, bulk_basis=args.bulk_basis)
+            assert np.all(woods.bulk_basis == args.bulk_basis)
 
 
 class TestStrReprFormat:
