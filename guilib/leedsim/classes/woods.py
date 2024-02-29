@@ -306,13 +306,11 @@ class Woods:
             # This means format_spec was 's'
             fmt_style = ''
         if (fmt_style and fmt_style not in 'ua') or (len(format_spec) > 2):
-            raise TypeError("unsupported format string "
-                            "passed to Woods.__format__")
-        if (not fmt_style) or (fmt_style == self.style[0]):
-            fmt = self.string
-        else:
-            fmt = Woods(self.string, style=fmt_style).string
-
+            raise TypeError('unsupported format string '
+                            'passed to Woods.__format__')
+        is_default_style = not fmt_style or fmt_style == self.style[0]
+        fmt = (self.string if is_default_style
+               else Woods(self.string, style=fmt_style).string)
         if fmt[0] == 'p' and 's' in format_spec:
             return fmt[1:]
         return fmt
@@ -359,23 +357,14 @@ class Woods:
 
         match = MATCH_WOODS.match(woods)
         if not match:
-            raise WoodsSyntaxError(f"Woods: {woods} is not a "
-                                   "valid Wood's notation.")
-
-        groups = match.groupdict()
-        if 'c' in groups['prefix'].lower():  # Force prefix to be p or c
-            groups['prefix'] = 'c'
-        else:
-            groups['prefix'] = 'p'
-
-        gammas = [Woods.__parse_and_check_gamma(groups[key])
-                  for key in ('gamma1', 'gamma2')]
-
-        if groups['alpha']:
-            alpha = float(groups['alpha'])
-        else:
-            alpha = 0
-        return groups['prefix'], gammas[0], gammas[1], alpha
+            raise WoodsSyntaxError(f'Woods: {woods} is not a '
+                                   'valid Woods notation.')
+        # Force prefix to be p or c
+        prefix = 'c' if 'c' in match['prefix'].lower() else 'p'
+        gammas = (Woods.__parse_and_check_gamma(match[key])
+                  for key in ('gamma1', 'gamma2'))
+        alpha = float(match['alpha']) if match['alpha'] else 0.
+        return prefix, *gammas, alpha
 
     @staticmethod
     def __parse_and_check_gamma(gamma_str):
