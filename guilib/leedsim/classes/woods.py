@@ -520,7 +520,8 @@ class Woods:
         """Return the style of this instance."""
         return self.__style
 
-    def add_example(self, woods, shape):
+    @classmethod
+    def add_example(cls, woods, shape):
         """Add an example Wood's notation for a given cell shape.
 
         Parameters
@@ -538,7 +539,7 @@ class Woods:
         if isinstance(woods, Woods):
             woods = woods.string
         woods = format(woods)
-        self.__examples[shape].add(woods)
+        cls.__examples[shape].add(woods)
 
     def from_matrix(self, matrix, bulk_basis=None):
         """Construct woods string from matrix.
