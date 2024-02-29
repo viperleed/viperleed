@@ -130,9 +130,9 @@ class MatrixIncommensurateError(Exception):
 
     def __init__(self, matrix, message=''):
         if not message:
-            message = (f"Matrix {array_to_string(matrix)} "
-                       "gives an incommensurate lattice, i.e., "
-                       "it is singular or has non-integer elements")
+            message = (f'Matrix {array_to_string(matrix)} '
+                       'gives an incommensurate lattice, i.e., '
+                       'it is singular or has non-integer elements')
         super().__init__(message)
 
 
@@ -141,8 +141,8 @@ class WoodsNotRepresentableError(Exception):
 
     def __init__(self, matrix, message=''):
         if not message:
-            message = (f"Matrix {array_to_string(matrix)} "
-                       "is not Wood's-representable")
+            message = (f'Matrix {array_to_string(matrix)} '
+                       'is not Woods-representable')
         super().__init__(message)
 
 
@@ -179,6 +179,9 @@ class Woods:
         'Rhombic': __common,
         }
 
+    # Disable for 'style' due to pylint bug: optional
+    # not allowed in 'list of allowed values'
+    # pylint: disable-next=missing-type-doc
     def __init__(self, string='', bulk_basis=None,
                  matrix=None, style='unicode'):
         """Initialize instances.
@@ -200,10 +203,6 @@ class Woods:
             The character set that will be used to represent
             the Wood's notation. Only the first letter passed
             is used (case insensitive). Default is 'unicode'.
-
-        Returns
-        -------
-        None.
 
         Raises
         ------
@@ -236,7 +235,7 @@ class Woods:
             other any unexpected characters.
         """
         if style[0].lower() not in 'ua':
-            raise ValueError(f"Woods: invalid style {style}. "
+            raise ValueError(f'Woods: invalid style {style!r}. '
                              "Expected 'unicode' or 'ascii'")
         style = 'unicode' if style[0].lower() == 'u' else 'ascii'
         self.__style = style
@@ -245,8 +244,8 @@ class Woods:
         self.sqrt = 'sqrt' if style == 'ascii' else SQRT
 
         if matrix is not None and bulk_basis is None:
-            raise TypeError("Woods: bulk_basis is mandatory when "
-                            "a matrix is given")
+            raise TypeError('Woods: bulk_basis is mandatory when '
+                            'a matrix is given')
 
         # Store only the string representation and the bulk
         # basis. If a matrix is given, it will be used to
@@ -266,14 +265,14 @@ class Woods:
         self.matrix = matrix   # Also sets self.string
         if string and string != self.string:
             # Both matrix and string given
-            raise ValueError("Woods: matrix and string are inconsistent.")
+            raise ValueError('Woods: matrix and string are inconsistent.')
 
     def __repr__(self):
         """Return a representation string of self."""
         txt = f'{self.string!r}'
         if self.bulk_basis is not None:
-            txt += f", bulk_basis={array_to_string(self.bulk_basis)}"
-        return f"Woods({txt}, style={self.style!r})"
+            txt += f', bulk_basis={array_to_string(self.bulk_basis)}'
+        return f'Woods({txt}, style={self.style!r})'
 
     def __str__(self):
         """Return a string representation of self.
@@ -355,7 +354,7 @@ class Woods:
             to either unsupported math or unmatched brackets
         """
         if not isinstance(woods, str):
-            raise TypeError("Woods.parse: argument 'woods' should "
+            raise TypeError('Woods.parse: argument woods should '
                             f"be 'str', not {type(woods).__name__!r}")
 
         match = MATCH_WOODS.match(woods)
@@ -419,19 +418,19 @@ class Woods:
         try:
             gamma = parser.evaluate()
         except SyntaxError as err:
-            raise WoodsSyntaxError(f"Woods: {gamma_str} could "
-                                   "not be parsed, likely because "
-                                   "of unmatched brackets") from err
+            raise WoodsSyntaxError(f'Woods: {gamma_str} could '
+                                   'not be parsed, likely because '
+                                   'of unmatched brackets') from err
         except UnsupportedMathError as err:
-            raise WoodsSyntaxError(f"Woods: {gamma_str} could "
-                                   "not be parsed as it contains "
-                                   "unsupported math operations") from err
+            raise WoodsSyntaxError(f'Woods: {gamma_str} could '
+                                   'not be parsed as it contains '
+                                   'unsupported math operations') from err
 
         # Make sure that gamma**2 is close to int
         if abs(gamma**2 - round(gamma**2)) > 1e-3:
             raise ValueError(
-                f"Woods: {gamma_str} (evaluated to {gamma}) can't "
-                "be represented as the square root of an integer"
+                f'Woods: {gamma_str} (evaluated to {gamma}) cannot '
+                'be represented as the square root of an integer'
                 )
         return gamma
 
@@ -465,8 +464,8 @@ class Woods:
 
         basis = np.asarray(basis)
         if basis.shape != (2, 2):
-            raise ValueError("Woods: invalid bulk_basis. Should have "
-                             f"shape==(2, 2). Found {basis.shape}")
+            raise ValueError('Woods: invalid bulk_basis. Should have '
+                             f'shape==(2, 2). Found {basis.shape}')
         self.__bulk_basis = basis
 
     @property
@@ -585,31 +584,30 @@ class Woods:
         """
         matrix = np.asarray(matrix)
         if matrix.shape != (2, 2):
-            raise ValueError("Woods: invalid matrix. Should have "
-                             f"shape==(2, 2). Found {matrix.shape}")
+            raise ValueError('Woods: invalid matrix. Should have '
+                             f'shape==(2, 2). Found {matrix.shape}')
         if not is_commensurate(matrix):
             raise MatrixIncommensurateError(matrix)
         matrix = matrix.round().astype(int)
 
         if bulk_basis is None and self.bulk_basis is None:
-            raise ValueError("Woods: cannot convert from matrix "
-                             "without a bulk basis. Pass a bulk_basis "
-                             "or set one via the bulk_basis property")
+            raise ValueError('Woods: cannot convert from matrix '
+                             'without a bulk basis. Pass a bulk_basis '
+                             'or set one via the bulk_basis property')
         if bulk_basis is not None:
             self.bulk_basis = bulk_basis
 
         # Next line may raise WoodsNotRepresentableError
         prefix, *gammas, cos_alpha = self.__primitive_or_centered(matrix)
 
-        woods = f"{prefix}({self.__format_scaling_factors(gammas)})"
+        woods = f'{prefix}({self.__format_scaling_factors(gammas)})'
 
         # Limits below are different because cos(90 + x) ~ x, but
         # cos(x) ~ 1 - x**2/2. Limits below tolerate x ~ 0.25deg
         if abs(cos_alpha) > 4e-3 and 1 - abs(cos_alpha) > 8e-6:
             # Angle not 0, 90 nor 180
-            alpha = round(np.degrees(np.arccos(cos_alpha)),
-                          ndigits=1)
-            woods += f"R{alpha}{self.degrees}"
+            alpha = round(np.degrees(np.arccos(cos_alpha)), ndigits=1)
+            woods += f'R{alpha}{self.degrees}'
 
         # Don't use self.string to skip the reformatting,
         # which is anyway already correct
@@ -739,10 +737,10 @@ class Woods:
         """
         if not woods:
             if not self.string:
-                raise WoodsSyntaxError("Woods: empty string is not a "
-                                       "valid Wood's notation. Pass a "
-                                       "valid, non-empty string, or "
-                                       "set self.string beforehand")
+                raise WoodsSyntaxError('Woods: empty string is not a '
+                                       'valid Woods notation. Pass a '
+                                       'valid, non-empty string, or '
+                                       'set self.string beforehand')
             woods = self.string
         if bulk_basis is not None:
             self.bulk_basis = bulk_basis
@@ -812,13 +810,13 @@ class Woods:
         """
         if not isinstance(woods, str):
             raise TypeError("Woods: argument should be 'str', "
-                            f"not {type(woods).__name__!r}")
+                            f'not {type(woods).__name__!r}')
         if not woods:
             return woods
 
         prefix, *gammas, alpha = self.parse(woods)
 
-        fixed_woods = f"{prefix}({self.__format_scaling_factors(gammas)})"
+        fixed_woods = f'{prefix}({self.__format_scaling_factors(gammas)})'
 
         # Finally handle the angle
         if alpha:
@@ -827,7 +825,7 @@ class Woods:
             # cos(x) ~ 1 - x**2/2. Both limits tolerate x ~ 0.25deg
             if abs_cos_alpha > 4e-3 and 1 - abs_cos_alpha > 8e-6:
                 # Angle is neither 90, nor 0 or 180
-                fixed_woods += f"R{alpha:.1f}{self.degrees}"
+                fixed_woods += f'R{alpha:.1f}{self.degrees}'
 
         return fixed_woods
 
@@ -859,7 +857,7 @@ class Woods:
 
             format_direction = ''  # Format the direction in here.
             if gamma_sqrt > 1:     # Root part
-                format_direction = f"{self.sqrt}{gamma_sqrt}"
+                format_direction = f'{self.sqrt}{gamma_sqrt}'
 
             if not format_direction:
                 # If there is no root part, always
