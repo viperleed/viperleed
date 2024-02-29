@@ -84,10 +84,8 @@ class TestWoodsRaises:
             {'string': 'c(2, x 12)'},
             WoodsSyntaxError
             ),
-        'gamma syntax unmatched': (
-            {'string': 'c((2 x 12)'},
-            WoodsSyntaxError
-            ),
+        'gamma syntax unmatched': ({'string': 'c((2 x 12)'}, WoodsSyntaxError),
+        'too many gammas': ({'string': '2x3x4'}, WoodsSyntaxError),
         'unsupported math': ({'string': 'cos(2)x3'}, WoodsSyntaxError),
         'gamma not int': ({'string': '1.3x8'}, ValueError),
         'missing bulk_basis': ({'matrix': np.eye(2)}, TypeError),
