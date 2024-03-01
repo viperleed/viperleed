@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module base_slab of viperleed.calc.lib.classes.slab.
+"""Module base_slab of viperleed.calc.classes.slab.
 
 Created on 2023-02-21, originally Jun 13 2019
 
