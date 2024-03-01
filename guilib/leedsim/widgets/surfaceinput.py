@@ -648,26 +648,14 @@ class SurfaceStructureInput(qtw.QWidget):
             return
         except WoodsInvalidForBasisError:
             self.user_gave_invalid_input.emit(
-                f"{woods_txt} invalid for this bulk basis.",
-                7000
-                )
-            change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
-            return
-
-        # Try converting to a matrix
-        try:
-            superlattice = self.__woods.matrix
-        except MatrixIncommensurateError:
-            # Woods gave an incommensurate lattice.
-            self.user_gave_invalid_input.emit(
-                f"{woods_txt} invalid: Lattice is incommensurate.",
+                f"{woods_txt} incommensurate for this bulk basis.",
                 7000
                 )
             change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
             return
 
         woods_combo.setCurrentText(self.__woods.string)
-        self._ctrls['superlattice'].matrix = superlattice
+        self._ctrls['superlattice'].matrix = self.__woods.matrix
         change_control_text_color(woods_combo.lineEdit(), qtc.Qt.black)
 
     @dev_.print_call
