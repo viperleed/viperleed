@@ -209,7 +209,7 @@ Instead we conclude this example by mentioning two other options on how to proce
 
 For a more complicated system it may not be clear, which structure parameters are most important.
 In this case we could run an :ref:`error calculation<error_calculation>` which can show how much the displacement of any individual atom impacts the R-factor.
-The error calculation also provides us with an estimate for the statistical accuracy of the determined parameter values, for details see :ref:`errors-pdf`.
+The error calculation also provides us with an estimate for the statistical accuracy of the determined parameter values, for details see :ref:`errorspdf`.
 
 Alternatively, we could turn to a :ref:`full-dynamic optimization<fdoptimization>` to also tackle parameters that are not accessible under the tensor LEED approximation such as :math:`V_{0i}`, the unit cell dimensions (not relevant here, since well-known for Ag), or the electron beam incidence angle.
 
