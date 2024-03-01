@@ -122,7 +122,11 @@ def square_to_prod_of_squares(number):
     return square, remainder
 
 
-class MatrixIncommensurateError(Exception):
+class WoodsError(Exception):
+    """Base exception for Wood's-related error."""
+
+
+class MatrixIncommensurateError(WoodsError):
     """Matrix is incommensurate."""
 
     def __init__(self, matrix, message=''):
@@ -133,7 +137,7 @@ class MatrixIncommensurateError(Exception):
         super().__init__(message)
 
 
-class WoodsNotRepresentableError(Exception):
+class WoodsNotRepresentableError(WoodsError):
     """Matrix is not Wood's-representable."""
 
     def __init__(self, matrix, message=''):
@@ -143,8 +147,8 @@ class WoodsNotRepresentableError(Exception):
         super().__init__(message)
 
 
-class WoodsSyntaxError(Exception):
-    """Exception raised in case a Wood's string has invalid syntax."""
+class WoodsSyntaxError(WoodsError):
+    """A Wood's string has invalid syntax."""
 
 
 @dataclass(frozen=True)
