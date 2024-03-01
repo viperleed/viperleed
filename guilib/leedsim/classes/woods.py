@@ -137,6 +137,10 @@ class MatrixIncommensurateError(WoodsError):
         super().__init__(message)
 
 
+class WoodsInvalidForBasisError(WoodsError):
+    """A string woods is not appropriate for the current bulk basis."""
+
+
 class WoodsNotRepresentableError(WoodsError):
     """Matrix is not Wood's-representable."""
 
@@ -577,17 +581,34 @@ class Woods:
         TypeError
             If `woods` is not a string
         ValueError
-            If the parsed string contains scaling factors for
-            the two directions whose square is not an integer
+            If `woods` is inappropriate for the current basis or
+            the parsed string contains scaling factors for the
+            two directions whose square is not an integer
         WoodsSyntaxError
-            If the string does not match the structure of a
+            If `woods` does not match the structure of a
             Wood's notation, or could not be evaluated due
             to either unsupported math or unmatched brackets
         """
         old_string = self.__string
-        self.__string = self.__fix_string(woods)
-        if self.__string != old_string:
-            self.__matrix = None  # Force recalculation
+        new_string = self.__fix_string(woods)
+        if new_string == old_string:
+            return
+        if not new_string or self.bulk_basis is None:
+            self.__matrix = None  # No matrix with no string or basis
+            self.__string = new_string
+            return
+        self.__string = new_string
+        self.__matrix, old_matrix = None, self.__matrix
+        try:  # Make sure new_string is OK for the current basis
+            _ = self.matrix
+        except MatrixIncommensurateError as exc:
+            self.__string = old_string
+            self.__matrix = old_matrix
+            raise WoodsInvalidForBasisError(
+                f'{woods!r} is incompatible with bulk basis '
+                f'{array_to_string(self.bulk_basis)}. Gives '
+                f'matrix={exc.matrix}.'
+                ) from None
 
     @property
     def style(self):
@@ -695,11 +716,14 @@ class Woods:
         if woods_txt is None:
             woods_txt = self.string
 
-        # Prepare a copy that will be used for messing around
-        tmp_woods = Woods(string=woods_txt, bulk_basis=self.bulk_basis,
-                          style=self.style)
+        # Prepare a copy that will be used for messing around.
+        # Notice that we DO NOT pass the bulk_basis at this stage
+        # not to trigger a consistency check for woods_txt. The
+        # check happens when we see if the matrix is commensurate
+        tmp_woods = Woods(string=woods_txt, style=self.style)
         orig_prefix, *orig_gamma, orig_alpha = self.parse(tmp_woods.string)
-        orig_matrix = tmp_woods.to_matrix(check_commensurate=False)
+        orig_matrix = tmp_woods.to_matrix(bulk_basis=self.bulk_basis,
+                                          check_commensurate=False)
         if is_commensurate(orig_matrix):
             # Don't use the setter of self.string to avoid reformatting
             self.__string = tmp_woods.string
@@ -780,8 +804,10 @@ class Woods:
                              'to_matrix() without a bulk_basis. Pass a valid '
                              'bulk_basis, or set self.bulk_basis beforehand')
         prefix, gamma1, gamma2, alpha = self.parse(woods)  # May raise!
+        woods = self.__format_parsed(prefix, (gamma1, gamma2), alpha)
         if woods != self.string:
-            self.string = woods
+            self.__string = woods
+            self.__matrix = None
 
         alpha = np.radians(alpha)
         norm1, norm2 = np.linalg.norm(self.bulk_basis, axis=1)

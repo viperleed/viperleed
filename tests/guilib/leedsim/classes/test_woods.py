@@ -15,6 +15,7 @@ from viperleed.guilib.leedsim.classes.woods import prime_factors
 from viperleed.guilib.leedsim.classes.woods import square_to_prod_of_squares
 from viperleed.guilib.leedsim.classes.woods import Woods
 from viperleed.guilib.leedsim.classes.woods import MatrixIncommensurateError
+from viperleed.guilib.leedsim.classes.woods import WoodsInvalidForBasisError
 from viperleed.guilib.leedsim.classes.woods import WoodsNotRepresentableError
 from viperleed.guilib.leedsim.classes.woods import WoodsSyntaxError
 
@@ -176,8 +177,8 @@ class TestFromAndToMatrix:
 
     _cleared = {
         'bulk_basis': HEX,
-        'string': 'c4x2',
         'matrix': None,
+        'string': '',
         }
 
     @parametrize('attr,val', _cleared.items(), ids=_cleared)
@@ -263,32 +264,26 @@ class TestRaises:
 
     def test_guess_rotation_invalid(self):
         """Check complaints for an invalid rotation angle."""
-        woods = Woods('rt5xrt5R45', bulk_basis=SQUARE)
+        woods = Woods(bulk_basis=SQUARE)
         with pytest.raises(MatrixIncommensurateError):
-            woods.guess_correct_rotation()
+            woods.guess_correct_rotation('rt5xrt5R45')
 
     _init = {
         'invalid style': ({'style': 'invalid'}, ValueError),
         'invalid style type': ({'style': 3}, TypeError),
         'non-string string': ({'string': 1}, TypeError),
         'not a wood notation': ({'string': '23'}, WoodsSyntaxError),
-        'gamma syntax invalid character': (
-            {'string': 'c(2, x 12)'},
-            WoodsSyntaxError
-            ),
+        'gamma syntax invalid character': ({'string': 'c(2, x 12)'},
+                                           WoodsSyntaxError),
         'gamma syntax unmatched': ({'string': 'c((2 x 12)'}, WoodsSyntaxError),
         'too many gammas': ({'string': '2x3x4'}, WoodsSyntaxError),
         'unsupported math': ({'string': 'cos(2)x3'}, WoodsSyntaxError),
         'gamma not int': ({'string': '1.3x8'}, ValueError),
         'missing bulk_basis': ({'matrix': np.eye(2)}, TypeError),
-        'matrix shape': (
-            {'matrix': np.eye(3), 'bulk_basis': SQUARE},
-            ValueError
-            ),
-        'bulk_basis shape': (
-            {'matrix': np.eye(2), 'bulk_basis': np.eye(3)},
-            ValueError
-            ),
+        'matrix shape': ({'matrix': np.eye(3), 'bulk_basis': SQUARE},
+                         ValueError),
+        'bulk_basis shape': ({'matrix': np.eye(2), 'bulk_basis': np.eye(3)},
+                             ValueError),
         'inconsistent matrix and string': (
             {'matrix': np.eye(2), 'string': '2x2', 'bulk_basis': SQUARE},
             ValueError
@@ -297,6 +292,8 @@ class TestRaises:
             {'matrix': np.eye(2)*1.2, 'bulk_basis': SQUARE},
             MatrixIncommensurateError
             ),
+        'invalid for basis':({'string': 'rt3xrt3R30', 'bulk_basis': SQUARE},
+                             WoodsInvalidForBasisError),
         'matrix not representable': (
             {'matrix': np.arange(4).reshape(2, 2), 'bulk_basis': SQUARE},
             WoodsNotRepresentableError
@@ -337,7 +334,8 @@ class TestRaises:
 
     def test_matrix_attr_not_commensurate(self):
         """Check complaints accessing .matrix when incommensurate."""
-        woods = Woods('rt3xrt3R30', bulk_basis=SQUARE)
+        woods = Woods('rt3xrt3R30')
+        woods.bulk_basis = SQUARE
         with pytest.raises(MatrixIncommensurateError):
             _ = woods.matrix
 
@@ -351,8 +349,11 @@ class TestStrReprFormat:
                               "Woods('p(√2×2√2)R45°')"),
         'no basis, ascii': (_WoodsArgs('rt2xrt8R45', None, None), 'ascii',
                             "Woods('p(sqrt2 x 2sqrt2)R45', style='ascii')"),
+        'basis only': (_WoodsArgs('', SQUARE, None), 'a',
+                       "Woods('', bulk_basis=[[1,0], [0,1]], style='ascii')"),
         'basis': (_WoodsArgs('3x9', SQUARE, None), 'a',
-                  "Woods('p(3x9)', bulk_basis=[[1,0], [0,1]], style='ascii')"),
+                  "Woods('p(3x9)', bulk_basis=[[1,0], [0,1]], "
+                  "matrix=[[3,0], [0,9]], style='ascii')"),
         'matrix': (_WoodsArgs('2x7', SQUARE, np.diag((2, 7))), 'ascii',
                    "Woods('p(2x7)', bulk_basis=[[1,0], [0,1]], "
                    "matrix=[[2,0], [0,7]], style='ascii')"),

@@ -17,9 +17,11 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
 from viperleed.guilib.classes.planegroup import PlaneGroup
-from viperleed.guilib.leedsim.classes.woods import (Woods, WoodsSyntaxError,
-                                                    MatrixIncommensurateError,
-                                                    WoodsNotRepresentableError)
+from viperleed.guilib.leedsim.classes.woods import Woods
+from viperleed.guilib.leedsim.classes.woods import WoodsSyntaxError
+from viperleed.guilib.leedsim.classes.woods import MatrixIncommensurateError
+from viperleed.guilib.leedsim.classes.woods import WoodsInvalidForBasisError
+from viperleed.guilib.leedsim.classes.woods import WoodsNotRepresentableError
 from viperleed.guilib.leedsim.widgets import EditableMatrix, LatticeInput
 from viperleed.guilib.widgetslib import change_control_text_color
 
@@ -642,6 +644,13 @@ class SurfaceStructureInput(qtw.QWidget):
         except (ValueError, WoodsSyntaxError):
             # Text is not an acceptable Wood's notation
             self.user_gave_invalid_input.emit("Invalid Wood's syntax.", 1000)
+            change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
+            return
+        except WoodsInvalidForBasisError:
+            self.user_gave_invalid_input.emit(
+                f"{woods_txt} invalid for this bulk basis.",
+                7000
+                )
             change_control_text_color(woods_combo.lineEdit(), qtc.Qt.red)
             return
 
