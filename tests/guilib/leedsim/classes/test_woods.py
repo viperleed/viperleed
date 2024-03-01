@@ -161,6 +161,15 @@ class TestFromAndToMatrix:
         setattr(woods, attr, val)
         assert woods._Woods__matrix is None
 
+    def test_matrix_not_cleared(self):
+        """Check matrix stays when assigning the same bulk_basis."""
+        woods = Woods('1x1', matrix=np.eye(2), bulk_basis=SQUARE)
+        old_basis = woods.bulk_basis
+        assert woods._Woods__matrix is not None
+        woods.bulk_basis = SQUARE
+        assert woods._Woods__matrix is not None
+        assert woods.bulk_basis is old_basis
+
 
 class TestFromAndToString:
     """Collection of tests for initializing a Woods from string."""
@@ -343,4 +352,3 @@ class TestStrReprFormat:
         """Test __format__ method, via f-string."""
         woods = Woods(string)
         assert f'{woods:{spec}}' == expect
-
