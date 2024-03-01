@@ -1,7 +1,7 @@
 .. _fdoptimizationdata:
 
-The FD_Optimization.pdf and FD_Optimization.csv files
-=====================================================
+FD_Optimization.pdf and FD_Optimization.csv
+===========================================
 
 The FD_Optimization files contain R-factors as a function of the 
 parameter under variation during a 

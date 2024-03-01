@@ -1,7 +1,7 @@
 .. _poscar:
 
-The POSCAR file
-===============
+POSCAR
+======
 
 A POSCAR file describes the structure: The unit cell, the atom types (and the number of atoms for each type), and their coordinates. Note that the atom names in a POSCAR file ("POSCAR elements") need not be actual chemical elements (as given in the periodic table). See :ref:`element name collision<ElementNameCollision>`  for the distinction between POSCAR elements and chemical elements, and the :ref:`ELEMENT_MIX<ELSPLIT>`  and :ref:`ELEMENT_RENAME<ELDEF>` parameters for mapping between POSCAR element names and chemical elements.
 

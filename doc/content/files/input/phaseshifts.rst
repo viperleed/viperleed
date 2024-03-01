@@ -1,7 +1,7 @@
 .. _phaseshifts:
 
-The PHASESHIFTS file
-====================
+PHASESHIFTS
+===========
 
 The ``PHASESHIFTS`` file is generated automatically with the eeasisss script during initialization if needed.
 If a ``PHASESHIFTS`` file is already present, a consistency check will be performed for the following features:

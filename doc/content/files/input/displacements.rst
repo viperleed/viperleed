@@ -1,8 +1,8 @@
 .. _displacements:
 
-======================
-The DISPLACEMENTS file
-======================
+=============
+DISPLACEMENTS
+=============
 
 
 

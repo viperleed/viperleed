@@ -1,7 +1,7 @@
 .. _parameters:
 
-The PARAMETERS file
-===================
+PARAMETERS
+==========
 
 The PARAMETERS file lists parameters defining what to run, how to 
 interpret the other input files, and what to pass on to the TensErLEED 

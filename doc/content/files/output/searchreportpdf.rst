@@ -1,7 +1,7 @@
 .. _searchreportpdf:
 
-The Search-report.pdf file
-==========================
+Search-report.pdf
+=================
 
 The Search-report.pdf file is meant to collate the overall progress of the current optimization, stretching over multiple searches. If only one search is performed, it is mostly redundant with the :ref:`Search-progress.pdf<searchprogresspdf>`  file.
 

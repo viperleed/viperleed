@@ -1,7 +1,7 @@
 .. _ivbeams:
 
-The IVBEAMS file
-================
+IVBEAMS
+=======
 
 The IVBEAMS file lists the beams for which output should be generated. 
 These are the beams for which the R-factors will be calculated, as well 

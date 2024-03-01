@@ -1,7 +1,7 @@
 .. _fd_out:
 
-Files refcalc-fd.out and refcalc-amp.out
-========================================
+refcalc-fd.out and refcalc-amp.out
+==================================
 
 TensErLEED writes the output of the :ref:`ref-calc` for each energy step, i.e. the diffraction
 intensity :math:`I` and complex amplitude :math:`A` of each requested 

@@ -1,7 +1,7 @@
 .. _expbeams:
 
-The EXPBEAMS file
-=================
+EXPBEAMS
+========
 
 The EXPBEAMS file contains the experimental data (beam intensities vs. 
 energy, without normalization) to be compared against. The TensErLEED 
