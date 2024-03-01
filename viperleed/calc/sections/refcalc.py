@@ -16,7 +16,7 @@ import numpy as np
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import splitMaxRight
 from viperleed.calc.lib.checksums import validate_multiple_files
-from viperleed.calc.files import beams
+from viperleed.calc.files import beams, parameters
 from viperleed.calc.files import iorefcalc as tl_io
 from viperleed.calc.files.ivplot import plot_iv
 
