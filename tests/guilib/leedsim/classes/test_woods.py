@@ -64,37 +64,62 @@ def test_square_to_prod_of_squares(number, expect):
 class TestExamples:
     """Collection of tests for retrieving Woods notation examples."""
 
+    @staticmethod
+    def _to_str(examples):
+        """Return strings out of Woods examples."""
+        return {w.string for w in examples}
+
     _add = {
         'formatted': 'p(√31×√31)R9°',
-        'unformatted': 'r31 x r31 R9',                                          # TODO: fails with style 'a', if run before style 'u'
+        'unformatted': 'r31 x r31 R9',
         }
 
+    @parametrize(as_string=(True, False))
     @parametrize(style='au')
     @parametrize(string=_add.values(), ids=_add)
-    def test_add_example(self, style, string):
+    def test_add_example(self, as_string, style, string, subtests):
         """Check correct addition of one example."""
         woods = Woods(string, style=style)
-        woods_unicode = Woods(string)
-        woods.add_example(woods, 'Hexagonal')
-        assert woods_unicode.string in woods.get_examples('Hexagonal')
-        assert woods_unicode.string not in woods.get_examples('Square')
-        assert woods_unicode.string in woods_unicode.get_examples('Hexagonal')
+        woods_u = Woods(string)
+        if as_string:
+            woods.add_example(string, 'Hexagonal')
+        else:
+            woods.add_example(woods, 'Hexagonal')
+        expect = woods.string
+        expect_u = woods_u.string
+        _hex_examples = self._to_str(woods.get_examples('Hexagonal'))
+        with subtests.test('self style in self'):
+            assert expect in _hex_examples
+        with subtests.test('self style not in another shape'):
+            assert expect not in self._to_str(woods.get_examples('Square'))
+        if style != 'u':
+            with subtests.test('Unicode style not in self'):
+                assert expect_u not in _hex_examples
+        with subtests.test('Unicode in Unicode'):
+            _hex_examples_u = self._to_str(woods_u.get_examples('Hexagonal'))
+            assert expect_u in _hex_examples_u
+        with subtests.test('always added as Unicode'):
+            _raw_class_attr = self._to_str(woods._Woods__examples['Hexagonal'])
+            assert expect_u in _raw_class_attr
+        # Clean up for next tests!
+        Woods._Woods__examples.clear()
+        Woods.make_examples()
 
     _get = {
-        'Oblique': 'p(2×1)',
-        'Rectangular': 'c(2×2)',
-        'Square': 'p(√5×√5)R26.6°',
-        'Hexagonal': 'p(√3×√3)R30°',
-        'Rhombic': 'p(3×3)',
+        'Oblique': {'u': 'p(2×1)', 'a': 'p(2x1)'},
+        'Rectangular': {'u': 'c(2×2)', 'a': 'c(2x2)'},
+        'Square': {'u': 'p(√5×√5)R26.6°', 'a': 'p(sqrt5 x sqrt5)R26.6'},
+        'Hexagonal': {'u': 'p(√3×√3)R30°', 'a': 'p(sqrt3 x sqrt3)R30'},
+        'Rhombic': {'u': 'p(3×3)', 'a': 'p(3x3)'},
         }
 
-    @parametrize(style='ua')
-    @parametrize('shape,example', _get.items(), ids=_get)
-    def test_get_examples(self, style, shape, example):
+    @parametrize(style='ua', shape=_get)
+    def test_get_examples(self, style, shape, subtests):
         """Check that example is one of those for shape."""
         woods = Woods(style=style)
         examples = woods.get_examples(shape)
-        assert example in examples
+        example = self._get[shape][style]
+        assert example in self._to_str(examples)
 
 
 _WoodsArgs = namedtuple('_WoodsArgs', ('string', 'bulk_basis', 'matrix'))

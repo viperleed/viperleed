@@ -191,33 +191,33 @@ class _WoodsStyle:
         """Return whether self.style starts with string."""
         return self.style.startswith(string)
 
+# Some examples of common Wood's notations. In Unicode style.
+_COMMON = {f'p(1{TIMES}1)', f'p(1{TIMES}2)', f'p(2{TIMES}1)', f'p(2{TIMES}2)',
+           f'p(3{TIMES}1)', f'p(3{TIMES}2)', f'p(3{TIMES}3)', f'c(2{TIMES}2)',
+           f'c(4{TIMES}4)', f'c(6{TIMES}2)', f'c(8{TIMES}2)'}
+_EXAMPLES = {
+        'Oblique': _COMMON,
+        'Square': _COMMON | {f'c(4{TIMES}2)',
+                             f'p({SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
+                             f'p({SQRT}5{TIMES}{SQRT}5)R26.6{DEGREES}',
+                             f'p(2{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
+                             f'c(3{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
+                             f'c(5{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}'},
+        'Rectangular': _COMMON,
+        'Hexagonal': _COMMON | {f'c(4{TIMES}2)',
+                                f'p({SQRT}3{TIMES}{SQRT}3)R30{DEGREES}',
+                                f'p({SQRT}7{TIMES}{SQRT}7)R19.1{DEGREES}',
+                                f'p(2{SQRT}3{TIMES}2{SQRT}3)R30{DEGREES}'},
+        'Rhombic': _COMMON,
+        }
+
 
 class Woods:
     """Class to represent a reconstruction in Wood's notation.
 
     Also allows conversion to/from a matrix representation.
     """
-
-    __common = {f'p(1{TIMES}1)', f'p(1{TIMES}2)', f'p(2{TIMES}1)',
-                f'p(2{TIMES}2)', f'p(3{TIMES}1)', f'p(3{TIMES}2)',
-                f'p(3{TIMES}3)', f'c(2{TIMES}2)', f'c(4{TIMES}4)',
-                f'c(6{TIMES}2)', f'c(8{TIMES}2)'}
-
-    __examples = {
-        'Oblique': __common.copy(),
-        'Square': __common | {f'c(4{TIMES}2)',
-                              f'p({SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
-                              f'p({SQRT}5{TIMES}{SQRT}5)R26.6{DEGREES}',
-                              f'p(2{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
-                              f'c(3{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
-                              f'c(5{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}'},
-        'Rectangular': __common.copy(),
-        'Hexagonal': __common | {f'c(4{TIMES}2)',
-                                 f'p({SQRT}3{TIMES}{SQRT}3)R30{DEGREES}',
-                                 f'p({SQRT}7{TIMES}{SQRT}7)R19.1{DEGREES}',
-                                 f'p(2{SQRT}3{TIMES}2{SQRT}3)R30{DEGREES}'},
-        'Rhombic': __common.copy(),
-        }
+    __examples = {}  # Filled once via make_examples
 
     # Disable for 'style' due to pylint bug: optional
     # not allowed in 'list of allowed values'
@@ -365,10 +365,20 @@ class Woods:
         -------
         None.
         """
-        if isinstance(woods, Woods):
-            woods = woods.string
-        woods = format(woods)
+        # Store examples always in Unicode style
+        if isinstance(woods, str):
+            woods = cls(woods)
+        if not woods.style.startswith('u'):
+            woods = cls(woods.string)
         cls.__examples[shape].add(woods)
+
+    @classmethod
+    def make_examples(cls):
+        """Populate the __examples class attribute."""
+        if cls.__examples:
+            return
+        for shape, examples in _EXAMPLES.items():
+            cls.__examples[shape] = {cls(example) for example in examples}
 
     @staticmethod
     def parse(woods):
@@ -663,13 +673,14 @@ class Woods:
 
         Returns
         -------
-        examples : set of str
+        examples : set of Woods
             Examples of Wood's notation for the given shape.
         """
         if self.style == 'unicode':
-            return self.__examples[shape]
+            return self.__examples[shape].copy()
         cls = type(self)
-        return {format(cls(ex)) for ex in self.__examples[shape]}
+        return {cls(woods.string, style=self.style)
+                for woods in self.__examples[shape]}
 
     def guess_correct_rotation(self, woods_txt=None):
         """Guess the rotation angle that gives an acceptable Woods.
@@ -993,3 +1004,7 @@ class Woods:
         alpha = np.arctan2(np.cross(basis[0], transformed_basis[0]),
                            np.dot(basis[0], transformed_basis[0]))
         return prefix, gamma1, gamma2, np.degrees(alpha)
+
+# A bit of a trick to assign examples as class attributes. This
+# class method will only do something the first time it is called
+Woods.make_examples()

@@ -431,7 +431,9 @@ class SurfaceStructureInput(qtw.QWidget):
 
         woods_combo = self._ctrls['woods']
         woods_combo.clear()
-        woods_combo.addItems(sorted(self.__woods.get_examples(bulk_shape)))
+        woods_combo.addItems(sorted(
+            ex.string for ex in self.__woods.get_examples(bulk_shape))
+            )
 
         self.pick_right_woods()
 
