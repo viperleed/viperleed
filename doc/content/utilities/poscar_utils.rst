@@ -30,7 +30,9 @@ All POSCAR utilities support the following options:
 attach_bulk
 ===========
 
-Interactive script that takes a slab POSCAR and adds a bulk POSCAR on the bottom, rescaling the unit cell.
+Interactive script that takes a slab POSCAR and adds a bulk POSCAR on the
+bottom, expanding the the unit cell in the :math:`\vec{c}` direction
+accordingly.
 
 **Usage**
 
@@ -61,7 +63,8 @@ This can also be useful to quickly check the number of atoms above a certain hei
 
 **Additional Options**
 
-- ``c`` (required): the fraction of the :math:`\vec{c}` above which to delete atoms
+- ``c`` (required): the fraction (floating point number) of :math:`\vec{c}`
+  above which to delete atoms.
 
 
 .. _poscar_utils_delete_below:
@@ -79,7 +82,8 @@ Same as :ref:`poscar_utils_delete_above`, but deletes all atoms below the specif
 
 **Options**
 
-- ``c`` (required): the fraction of the :math:`\vec{c}` below which to delete atoms
+- ``c`` (required): the fraction (floating point number) of :math:`\vec{c}`
+  below which to delete atoms.
 
 .. _poscar_utils_delete_between:
 
@@ -123,6 +127,14 @@ Symmetry detection works the same as the :ref:`find_symmetry<poscar_utils_find_s
 - ``--planegroup``: Planegroup to enforce.
   Default: detected automatically from the slab.
   Use this option to override the automatic detection and manually lower the symmetry.
+
+**Example**
+
+**Usage**
+
+.. code-block:: console
+
+    $ viperleed poscar enforce_symmetry <POSCAR_IN >POSCAR_OUT   --symmetry-eps 0.01
 
 .. _poscar_utils_find_symmetry:
 
@@ -172,7 +184,7 @@ Merges two or more POSCAR files into one.
 All files must have the same unit cell dimensions (within a tolerance defined by the ``--eps`` option).
 
 The resultant POSCAR file will contain all atoms from all input files.
-This can be used to stich together superstructures and a bulk cell, for example.
+This can be used to stitch together superstructures and a bulk cell, for example.
 
 The utility raises an error if any two atoms are closer than ``--eps-collision``.
 This can also be used to check if atoms from different slabs (with the same unit cell dimensions) are in the same positions.
@@ -215,7 +227,12 @@ This utility allows to modify the vacuum spacing of a POSCAR file by adding or r
 project_c_to_z
 ==============
 
-Projects the :math:`\vec{c}` vector of the POSCAR file onto the :math:`\vec{z}` axis.
+Projects the :math:`\vec{c}` vector of the POSCAR file onto the :math:`\vec{z}`
+axis.
+Note this does not alter atomic coordinates, only the orientation of the lattice
+vectors.
+The bulk-stacking direction is assumed to be along the :math:`\vec{z}` vector.
+See also the :ref:`page on used conventions<conventions>`.
 
 **Usage**
 
@@ -256,6 +273,8 @@ rescale_cell
 ============
 
 Rescales the unit cell dimensions of the POSCAR file by the specified factor.
+Irrespective of how many values are give, this utility will directly alter the
+unit cell basis vectors in the POSCAR file, not the scaling factor (line 2).
 
 **Usage**
 

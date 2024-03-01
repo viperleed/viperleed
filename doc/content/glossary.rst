@@ -23,7 +23,8 @@ Glossary
       Density functional theory
 
     TensErLEED
-      Erlangen package for tensor LEED
+      Erlangen package for tensor LEED.
+      See also the paper by :cite:t:`blumFastLEEDIntensity2001a`.
 
     ViPErLEED
       The Vienna Package for Erlangen LEED
