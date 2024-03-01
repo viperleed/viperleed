@@ -859,13 +859,12 @@ class Woods:
         """Return a formatted version of the rotation angle in degrees."""
         if abs(alpha) < 0.25:  # degrees
             return ''
-        abs_cos_alpha = abs(np.cos(np.radians(alpha)))
-        # Limits below are different because cos(90 + x) ~ x, but
-        # cos(x) ~ 1 - x**2/2. Both limits tolerate x ~ 0.25deg
-        if abs_cos_alpha > 4e-3 and 1 - abs_cos_alpha > 8e-6:
-            # Angle is neither 90, nor 0 or 180
-            return f'{alpha:.1f}'
-        return ''
+        if abs(alpha - round(alpha)) < 0.1:
+            alpha = round(alpha)
+            fmt = 'd'
+        else:
+            fmt = '.1f'
+        return f'{alpha:{fmt}}'
 
     def __format_scaling_factors(self, gammas):
         """Format scaling factors in Woods notation.

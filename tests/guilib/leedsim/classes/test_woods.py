@@ -74,8 +74,8 @@ class TestFromAndToMatrix:
         'rt5 R-27': _WoodsArgs('p(√5×√5)R-26.6°', SQUARE, ((2, -1), (1, 2))),
         'rt5 R-117': _WoodsArgs('p(√5×√5)R-116.6°',
                                 SQUARE, ((-1, -2), (2, -1))),
-        'rt31 R9': _WoodsArgs('p(√31×√31)R8.9°', HEX, ((6, 1), (-1, 5))),
-        'rt31 R-51': _WoodsArgs('p(√31×√31)R-51.1°', HEX, ((1, -5), (5, 6))),
+        'rt31 R9': _WoodsArgs('p(√31×√31)R9°', HEX, ((6, 1), (-1, 5))),
+        'rt31 R-51': _WoodsArgs('p(√31×√31)R-51°', HEX, ((1, -5), (5, 6))),
         'rt67 R12': _WoodsArgs('p(√67×√67)R12.2°', HEX, ((9, 2), (-2, 7))),
         'c2x4': _WoodsArgs('c(2×4)', SQUARE, ((1, 2), (-1, 2))),
         }
@@ -137,10 +137,10 @@ class TestFromAndToString:
         }
     _string = {
         '1x1': {'ascii': 'p(1x1)', 'unicode': 'p(1×1)'},
-        'rt3xrt3R30': {'ascii': 'p(sqrt3 x sqrt3)R30.0',                        # TODO: not nice to have decimals with so round angles
-                       'unicode': 'p(√3×√3)R30.0°'},
-        'rt3xrt12R30': {'ascii': 'p(sqrt3 x 2sqrt3)R30.0',
-                        'unicode': 'p(√3×2√3)R30.0°'},
+        'rt3xrt3R30': {'ascii': 'p(sqrt3 x sqrt3)R30',
+                       'unicode': 'p(√3×√3)R30°'},
+        'rt3xrt12R30': {'ascii': 'p(sqrt3 x 2sqrt3)R30',
+                        'unicode': 'p(√3×2√3)R30°'},
         'c4×3*4': {'ascii': 'c(4x12)', 'unicode': 'c(4×12)'},
         }
 
@@ -247,7 +247,7 @@ class TestRaises:
         woods = Woods(string='p(1x1)')
         with pytest.raises(ValueError):
             woods.to_matrix()
-    
+
     def test_matrix_attr_not_commensurate(self):
         """Check complaints accessing .matrix when incommensurate."""
         woods = Woods('rt3xrt3R30', bulk_basis=SQUARE)
@@ -261,9 +261,9 @@ class TestStrReprFormat:
     _str = {'unicode': 'p(1×1)', 'ascii': 'p(1x1)'}
     _repr = {
         'no basis, unicode': (_WoodsArgs('rt2xrt8R45', None, None), 'unicode',
-                              "Woods('p(√2×2√2)R45.0°')"),
+                              "Woods('p(√2×2√2)R45°')"),
         'no basis, ascii': (_WoodsArgs('rt2xrt8R45', None, None), 'ascii',
-                            "Woods('p(sqrt2 x 2sqrt2)R45.0', style='ascii')"),
+                            "Woods('p(sqrt2 x 2sqrt2)R45', style='ascii')"),
         'basis': (_WoodsArgs('3x9', SQUARE, None), 'a',
                   "Woods('p(3x9)', bulk_basis=[[1,0], [0,1]], style='ascii')"),
         'matrix': (_WoodsArgs('2x7', SQUARE, np.diag((2, 7))), 'ascii',
@@ -273,8 +273,8 @@ class TestStrReprFormat:
     _fmt = {
         '5x4, ascii': ('5x4', 'a', 'p(5x4)'),
         '5x4, unicode not specified': ('5x4', '', 'p(5×4)'),
-        'rt5, simple': ('(rt5 x rt5)R27', 's', '(√5×√5)R27.0°'),
-        'rt3, simple ascii': ('(rt3 x rt3)R30', 'sa', '(sqrt3 x sqrt3)R30.0'),
+        'rt5, simple': ('(rt5 x rt5)R27', 's', '(√5×√5)R27°'),
+        'rt3, simple ascii': ('(rt3 x rt3)R30', 'sa', '(sqrt3 x sqrt3)R30'),
         }
 
     @parametrize('style,expect', _str.items(), ids=_str)
