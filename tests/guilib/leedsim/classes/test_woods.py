@@ -194,6 +194,19 @@ class TestFromAndToString:
             with subtests.test(style):
                 assert woods.string == expect
 
+    _guess = {
+        'correct': ('rt5 x rt5 R26.6', ((2, 1), (-1, 2))),
+        'to fix': ('rt5 x rt5 R-26', ((2, -1), (1, 2))),
+        }
+
+    @parametrize('string,matrix', _guess.values(), ids=_guess)
+    def test_guess_rotation(self, string, matrix):
+        """Check identification of correct rotation angle."""
+        woods = Woods(bulk_basis=SQUARE)
+        woods.guess_correct_rotation(string)
+        assert np.all(woods.matrix == matrix)
+        assert woods.matrix.dtype == int
+
 
 class TestRaises:
     """Collection of tests for exceptions raised by the Woods class."""

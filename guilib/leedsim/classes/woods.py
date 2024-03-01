@@ -709,7 +709,7 @@ class Woods:
 
         # Matrix is incommensurate. Try to round
         # it to int, and redo the parsing
-        rounded_matrix = orig_matrix.round()
+        rounded_matrix = orig_matrix.round().astype(int)
         rounded_txt = tmp_woods.from_matrix(rounded_matrix)
         round_prefix, *round_gamma, round_alpha = self.parse(rounded_txt)
 
