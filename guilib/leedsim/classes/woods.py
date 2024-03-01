@@ -130,10 +130,10 @@ class MatrixIncommensurateError(WoodsError):
     """Matrix is incommensurate."""
 
     def __init__(self, matrix, message=''):
+        self.matrix = array_to_string(matrix)
         if not message:
-            message = (f'Matrix {array_to_string(matrix)} '
-                       'gives an incommensurate lattice, i.e., '
-                       'it is singular or has non-integer elements')
+            message = (f'Matrix {self.matrix} gives an incommensurate lattice,'
+                       ' i.e., it is singular or has non-integer elements')
         super().__init__(message)
 
 
@@ -141,9 +141,9 @@ class WoodsNotRepresentableError(WoodsError):
     """Matrix is not Wood's-representable."""
 
     def __init__(self, matrix, message=''):
+        self.matrix = array_to_string(matrix)
         if not message:
-            message = (f'Matrix {array_to_string(matrix)} '
-                       'is not Woods-representable')
+            message = f'Matrix {self.matrix} is not Woods-representable'
         super().__init__(message)
 
 
