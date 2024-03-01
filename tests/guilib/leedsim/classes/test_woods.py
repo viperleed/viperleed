@@ -177,6 +177,7 @@ class TestFromAndToMatrix:
     _cleared = {
         'bulk_basis': HEX,
         'string': 'c4x2',
+        'matrix': None,
         }
 
     @parametrize('attr,val', _cleared.items(), ids=_cleared)

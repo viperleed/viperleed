@@ -552,6 +552,9 @@ class Woods:
         WoodsNotRepresentableError
             If matrix is valid but not Wood's-representable.
         """
+        if matrix is None:
+            self.__matrix = matrix
+            return
         self.from_matrix(matrix)  # Also stores matrix if representable
 
     @property
