@@ -12,8 +12,8 @@ from viperleed.guilib.classes import planegroup
 from viperleed.guilib.classes.planegroup import PlaneGroup
 
 
-_equal = {
-    'valid string': (PlaneGroup('pmg[10]'), 'pmg[1 0 ] ', True),  # Fails!
+_equal = {  # pylint: disable=R6101
+    'valid string': (PlaneGroup('pmg[10]'), 'pmg[1 0 ] ', True),
     'invalid string': (PlaneGroup('pgg'), 'p-gg', False),
     'other': (PlaneGroup('cmm'), 1, False),
     'different group': (PlaneGroup('cmm'), PlaneGroup('p6'), False),
@@ -27,6 +27,7 @@ def test_equal(group1, group2, expect):
 
 
 def test_highest_symmetry(subtests):
+    """Check correct highest-symmetry group for each cell shape."""
     _high = PlaneGroup.highest_symmetry_for_shape
     with subtests.test('oblique'):
         assert _high('Oblique') == 'p2'
@@ -38,7 +39,7 @@ def test_highest_symmetry(subtests):
         assert _high('Hexagonal') == 'p6m'
 
 
-_init = {
+_init = {  # pylint: disable=R6101
     'p2': ('p2', 'p2', ('E', 'C2')),
     'cmm[10]': ('cMm[10]', 'cmm[1 2]', ('E', 'C2', 'M10', 'M12')),
     'from p4m': (PlaneGroup('p4m'), 'p4m',
@@ -127,6 +128,7 @@ class TestGroupsCompatibleWith:
         assert 'p4' in PlaneGroup.groups_compatible_with('Square')
 
     def test_include_operations(self):
+        """Check groups compatible with a cell shape and some operations."""
         operations = PlaneGroup('cmm').operations()
         groups = PlaneGroup.groups_compatible_with('Square', operations)
         assert 'cm[1 -1]' in groups
@@ -384,7 +386,7 @@ class TestWithTransformedDirection:
         assert transformed == 'pm[0 1]'
         assert transformed.screws_glides == (planegroup.Mx,)
 
-    def test_cmm_rotated_90(self):                                              # TODO: fails, but should not!
+    def test_cmm_rotated_90(self):
         """Check correct outcome of transforming a group's direction."""
         group = PlaneGroup('cmm', (1, 0))
         c4_hex = (1, 2), (-2, -1)

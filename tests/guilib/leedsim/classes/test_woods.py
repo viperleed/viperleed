@@ -22,7 +22,7 @@ from viperleed.guilib.leedsim.classes.woods import WoodsSyntaxError
 SQUARE = (1, 0), (0, 1)
 HEX = (1, 0), (-0.5, 3**0.5/2)
 
-_commensurate = {
+_commensurate = {  # pylint: disable=R6101
     'integer floats': ([[1.0, 2.0], [3.0, 4.0]], True),
     'integers': ([[1, 2], [3, 4]], True),
     'singular': ([[1, 2], [2, 4]], False),
@@ -36,7 +36,7 @@ def test_is_commensurate(matrix, expect):
     assert commensurate is expect
 
 
-_primes = {
+_primes = {  # pylint: disable=R6101
     'int': (12, (2, 2, 3)),
     'int-like float': (42.0, (2, 3, 7)),
     'one': (1, ()),
@@ -48,7 +48,7 @@ def test_prime_factors(number, expect):
     """Check correct splitting of a number into its prime factorization."""
     assert tuple(prime_factors(number)) == expect
 
-_squares = {
+_squares = {  # pylint: disable=R6101
     1: (1, 1),
     12: (4, 3),
     16: (16, 1),
@@ -98,6 +98,7 @@ class TestExamples:
         with subtests.test('Unicode in Unicode'):
             _hex_examples_u = self._to_str(woods_u.get_examples('Hexagonal'))
             assert expect_u in _hex_examples_u
+        # pylint: disable=protected-access
         with subtests.test('always added as Unicode'):
             _raw_class_attr = self._to_str(woods._Woods__examples['Hexagonal'])
             assert expect_u in _raw_class_attr
@@ -114,7 +115,7 @@ class TestExamples:
         }
 
     @parametrize(style='ua', shape=_get)
-    def test_get_examples(self, style, shape, subtests):
+    def test_get_examples(self, style, shape):
         """Check that example is one of those for shape."""
         woods = Woods(style=style)
         examples = woods.get_examples(shape)
@@ -180,7 +181,8 @@ class TestFromAndToMatrix:
 
     @parametrize('attr,val', _cleared.items(), ids=_cleared)
     def test_matrix_cleared(self, attr, val):
-        """Check that setting a new string value clears the stored matrix."""
+        """Check that setting a attribute clears the stored matrix."""
+        # pylint: disable=protected-access
         woods = Woods('1x1', matrix=np.eye(2), bulk_basis=SQUARE)
         assert woods._Woods__matrix is not None
         setattr(woods, attr, val)
@@ -188,6 +190,7 @@ class TestFromAndToMatrix:
 
     def test_matrix_not_cleared(self):
         """Check matrix stays when assigning the same bulk_basis."""
+        # pylint: disable=protected-access
         woods = Woods('1x1', matrix=np.eye(2), bulk_basis=SQUARE)
         old_basis = woods.bulk_basis
         assert woods._Woods__matrix is not None
@@ -335,7 +338,7 @@ class TestRaises:
         """Check complaints accessing .matrix when incommensurate."""
         woods = Woods('rt3xrt3R30', bulk_basis=SQUARE)
         with pytest.raises(MatrixIncommensurateError):
-            woods.matrix
+            _ = woods.matrix
 
 
 class TestStrReprFormat:
