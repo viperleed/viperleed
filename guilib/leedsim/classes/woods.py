@@ -31,7 +31,7 @@ TIMES = '\u00d7'
 SQRT = '\u221a'
 
 # In the following regular expression (spaces ignored everywhere):
-# (1) <prefix>
+# (1) <prefix>, optional
 #     Any letter sequence, provided it does not contain 's', 'q',
 #     'r', 't' (also capital). Will be turned into 'p' (most of
 #     the times) or 'c' (if there is a 'c'/'C')
@@ -45,7 +45,7 @@ SQRT = '\u221a'
 #     Also, it may 'eat up' the closing parenthesis. This is
 #     checked for before parsing.
 # (6) optional closed parenthesis
-# (7) rotation block
+# (7) rotation block, optional
 #     structure is 'R'<alpha> (possibly with spaces in
 #     between), optionally followed by a degrees designator
 #     ('\u00b0', or a contraction of 'deg'), with <alpha>
@@ -172,12 +172,11 @@ class _WoodsStyle:
     def __post_init__(self):
         """Fill in the symbols given a style."""
         style = self.style
-        if not isinstance(style, (str, _WoodsStyle)):
-            raise TypeError(f'Woods: invalid style {type(style).__name__!r}. '
-                            "Expected 'str'")
         if isinstance(style, _WoodsStyle):
             style = style.style
-
+        if not isinstance(style, str):
+            raise TypeError(f'Woods: invalid style {type(style).__name__!r}. '
+                            "Expected 'str'")
         if style[0].lower() not in 'ua':
             raise ValueError(f'Woods: invalid style {style!r}. '
                              "Expected 'unicode' or 'ascii'")
