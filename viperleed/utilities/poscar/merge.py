@@ -48,14 +48,14 @@ def add_cli_parser_arguments(parser):
         help=("maximum element-wise allowed difference in lattice parameters "
               "between the unit cells of the POSCAR files to be merged"),
         type=float,
-        default=1e-6,
+        default=1e-3,
     )
     parser.add_argument(
         "--eps-collision",
         help=("minimum distance between atoms in different before a collision "
               "is detected"),
         type=float,
-        default=1e-3
+        default=1e-1
     )
 
 

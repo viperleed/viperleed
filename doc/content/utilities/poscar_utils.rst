@@ -185,8 +185,8 @@ This can also be used to check if atoms from different slabs (with the same unit
 
 **Additional Options**
 
-- ``--eps-cell``: tolerance for checking that the unit cell dimensions of the input files are the same (default: 1e-6)
-- ``--eps-collision``: tolerance for checking that no two atoms are closer than this distance (default: 1e-3)
+- ``--eps-cell``: tolerance for checking that the unit cell dimensions of the input files are the same (default: 1e-1)
+- ``--eps-collision``: tolerance for checking that no two atoms are closer than this distance (default: 0.1)
 
 .. _poscar_utils_modify_vacuum:
 
