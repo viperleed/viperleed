@@ -341,6 +341,7 @@ eeasisss
 
 .. todo::
     Compile eeasisss at run time, instead of using a pre-compiled version?
+
 These scripts are used by ViPErLEED during the :ref:`initialization`, to generate :ref:`BEAMLIST<beamlist>` and :ref:`PHASESHIFTS<phaseshifts>`.
 If they are not present, ViPErLEED cannot create this file if required.
 
