@@ -258,7 +258,7 @@ class TestRaises:
     @parametrize(fmt_spec=_fmt.values(), ids=_fmt)
     def test_format_invalid(self, fmt_spec):
         """Check complaints with an invalid format specification."""
-        woods = Woods('p(1X1)')
+        woods = Woods('p1X1')
         with pytest.raises(TypeError):
             format(woods, fmt_spec)
 
@@ -320,16 +320,16 @@ class TestRaises:
         with pytest.raises(ValueError):
             woods.from_matrix(np.eye(2))
 
-    def test_to_matrix_empty_string(self):
-        """Check complaints of to_matrix method with an empty woods."""
-        woods = Woods()
-        with pytest.raises(WoodsSyntaxError):
-            woods.to_matrix()
+    _to_matrix = {
+        'empty string': ('', WoodsSyntaxError),
+        'no basis': ('p1x1', ValueError),
+        }
 
-    def test_to_matrix_invalid_basis(self):
-        """Check complaints of to_matrix method without a bulk_basis."""
-        woods = Woods(string='p(1x1)')
-        with pytest.raises(ValueError):
+    @parametrize('string,exc', _to_matrix.values(), ids=_to_matrix)
+    def test_to_matrix_empty_string(self, string, exc):
+        """Check complaints of to_matrix method with an empty woods."""
+        woods = Woods(string)
+        with pytest.raises(exc):
             woods.to_matrix()
 
     def test_matrix_attr_not_commensurate(self):
