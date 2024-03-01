@@ -21,20 +21,20 @@ from operator import itemgetter
 import numpy as np
 from scipy.spatial import KDTree, distance as sp_distance
 
-from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import NonIntegerMatrixError
-from viperleed.tleedmlib.base import SingularMatrixError
-from viperleed.tleedmlib.base import add_edges_and_corners
-from viperleed.tleedmlib.base import collapse
-from viperleed.tleedmlib.base import collapse_fractional
-from viperleed.tleedmlib.base import ensure_integer_matrix
-from viperleed.tleedmlib.base import pairwise
-from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.atom_containers import AtomList
-from viperleed.tleedmlib.files.parameters.errors import (
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import NonIntegerMatrixError
+from viperleed.calc.lib.base import SingularMatrixError
+from viperleed.calc.lib.base import add_edges_and_corners
+from viperleed.calc.lib.base import collapse
+from viperleed.calc.lib.base import collapse_fractional
+from viperleed.calc.lib.base import ensure_integer_matrix
+from viperleed.calc.lib.base import pairwise
+from viperleed.calc.classes.atom import Atom
+from viperleed.calc.classes.atom_containers import AtomList
+from viperleed.calc.files.parameters.errors import (
     InconsistentParameterError
     )
-from viperleed.tleedmlib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
+from viperleed.calc.lib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
 
 from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab

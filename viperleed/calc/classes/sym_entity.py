@@ -12,7 +12,7 @@ represent symmetry operations with a 2D location.
 
 import numpy as np
 
-from viperleed.tleedmlib.base import add_edges_and_corners, dist_from_line
+from viperleed.calc.lib.base import add_edges_and_corners, dist_from_line
 
 
 class SymPlane:

@@ -8,7 +8,7 @@ Created on 2023-02-21
 Contains exceptions specific to BaseSlab objects.
 """
 
-from viperleed.tleedmlib.classes.atom_containers import AtomContainerError
+from viperleed.calc.classes.atom_containers import AtomContainerError
 
 
 class SlabError(AtomContainerError):

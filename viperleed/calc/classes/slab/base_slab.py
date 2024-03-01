@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Module base_slab of viperleed.tleedmlib.classes.slab.
+"""Module base_slab of viperleed.calc.lib.classes.slab.
 
 Created on 2023-02-21, originally Jun 13 2019
 
@@ -25,17 +25,17 @@ from operator import attrgetter, itemgetter
 import numpy as np
 from scipy.spatial.distance import cdist as euclid_distance
 
-from viperleed.tleedmlib import leedbase
-from viperleed.tleedmlib.base import COLLAPSE_EPS
-from viperleed.tleedmlib.base import add_edges_and_corners
-from viperleed.tleedmlib.base import collapse
-from viperleed.tleedmlib.base import collapse_fractional
-from viperleed.tleedmlib.base import pairwise
-from viperleed.tleedmlib.base import rotation_matrix_order
-from viperleed.tleedmlib.classes.atom import Atom
-from viperleed.tleedmlib.classes.atom_containers import AtomContainer, AtomList
-from viperleed.tleedmlib.classes.layer import Layer, SubLayer
-from viperleed.tleedmlib.classes.sitetype import Sitetype
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import COLLAPSE_EPS
+from viperleed.calc.lib.base import add_edges_and_corners
+from viperleed.calc.lib.base import collapse
+from viperleed.calc.lib.base import collapse_fractional
+from viperleed.calc.lib.base import pairwise
+from viperleed.calc.lib.base import rotation_matrix_order
+from viperleed.calc.classes.atom import Atom
+from viperleed.calc.classes.atom_containers import AtomContainer, AtomList
+from viperleed.calc.classes.layer import Layer, SubLayer
+from viperleed.calc.classes.sitetype import Sitetype
 
 from .errors import AlreadyMinimalError
 from .errors import EmptySlabError

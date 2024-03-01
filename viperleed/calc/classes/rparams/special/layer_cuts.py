@@ -21,7 +21,7 @@ from typing import Any
 
 from ._base import SpecialParameter
 
-from viperleed.tleedmlib.base import pairwise
+from viperleed.calc.lib.base import pairwise
 
 
 def threewise(iterable):
