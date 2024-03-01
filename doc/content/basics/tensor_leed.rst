@@ -125,7 +125,6 @@ in the tensor LEED approximation and also LEED :math:`I(V)` in general:
     This would require manually going over every symmetry-linked atom and defining matching displacement vectors.
 
     *Fortunately for the user*, automatic symmetry-detection and enforcement is one of the **main features** of ViPErLEED.
-    See the ViPErLEED paper for details (**TODO**).
 
 
 -   When using Pendry's R factor, the R factor hyper-surfaces tend to be inherently non-smooth :cite:p:`rousTensorLEEDApproximation1992`.
