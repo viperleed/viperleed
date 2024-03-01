@@ -177,7 +177,7 @@ class TestFromAndToMatrix:
         assert np.all(woods.bulk_basis == args.bulk_basis)
 
     _cleared = {
-        'bulk_basis': HEX,
+        'bulk_basis': None,
         'matrix': None,
         'string': '',
         }
@@ -250,6 +250,15 @@ class TestFromAndToString:
 
 class TestRaises:
     """Collection of tests for exceptions raised by the Woods class."""
+
+    def test_bulk_basis_invalid(self):
+        """Check complaints with a basis giving an incommensurate matrix."""
+        woods = Woods('rt3xrt3R30')
+        with pytest.raises(ValueError):
+            woods.bulk_basis = SQUARE
+        assert woods.bulk_basis is None
+        # pylint: disable-next=protected-access
+        assert woods._Woods__matrix is None
 
     _fmt = {
         'too_long': 'last_char_is_an_acceptable_u',
@@ -336,13 +345,6 @@ class TestRaises:
         woods = Woods(string)
         with pytest.raises(exc):
             woods.to_matrix()
-
-    def test_matrix_attr_not_commensurate(self):
-        """Check complaints accessing .matrix when incommensurate."""
-        woods = Woods('rt3xrt3R30')
-        woods.bulk_basis = SQUARE
-        with pytest.raises(MatrixIncommensurateError):
-            _ = woods.matrix
 
 
 class TestStrReprFormat:

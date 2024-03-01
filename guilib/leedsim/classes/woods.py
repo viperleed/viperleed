@@ -506,19 +506,7 @@ class Woods:
         ValueError
             If shape of basis is not (2, 2)
         """
-        if basis is None:
-            self.__bulk_basis = basis
-            self.__matrix = None  # Cannot have a matrix without basis
-            return
-        basis = np.asarray(basis)
-        if basis.shape != (2, 2):
-            raise ValueError('Woods: invalid bulk_basis. Should have '
-                             f'shape==(2, 2). Found {basis.shape}')
-        old_basis = self.bulk_basis
-        if old_basis is not None and np.allclose(basis, old_basis):
-            return
-        self.__bulk_basis = basis
-        self.__matrix = None  # Outdated
+        self.__set_bulk_basis(basis)
 
     @property
     def matrix(self):
@@ -660,7 +648,7 @@ class Woods:
                              'without a bulk basis. Pass a bulk_basis '
                              'or set one via the bulk_basis property')
         if bulk_basis is not None:
-            self.bulk_basis = bulk_basis
+            self.__set_bulk_basis(bulk_basis, check_matrix=False)
 
         # Next line may raise WoodsNotRepresentableError
         prefix, *gammas, alpha = self.__primitive_or_centered(matrix)
@@ -800,7 +788,7 @@ class Woods:
                                    'notation. Pass a valid, non-empty string, '
                                    'or set self.string beforehand')
         if bulk_basis is not None:
-            self.bulk_basis = bulk_basis
+            self.__set_bulk_basis(bulk_basis, check_matrix=False)
         if self.bulk_basis is None:
             raise ValueError(f'{type(self).__name__}: Cannot convert {self} '
                              'to_matrix() without a bulk_basis. Pass a valid '
@@ -1003,6 +991,32 @@ class Woods:
         alpha = np.arctan2(np.cross(basis[0], transformed_basis[0]),
                            np.dot(basis[0], transformed_basis[0]))
         return prefix, gamma1, gamma2, np.degrees(alpha)
+
+    def __set_bulk_basis(self, basis, check_matrix=True):
+        """Assign a new bulk_basis attribute."""
+        if basis is None:
+            self.__bulk_basis = basis
+            self.__matrix = None  # Cannot have a matrix without basis
+            return
+        basis = np.asarray(basis)
+        if basis.shape != (2, 2):
+            raise ValueError('Woods: invalid bulk_basis. Should have '
+                             f'shape==(2, 2). Found {basis.shape}')
+        old_basis, old_matrix = self.bulk_basis, self.__matrix
+        if old_basis is not None and np.allclose(basis, old_basis):
+            return
+        self.__bulk_basis = basis
+        self.__matrix = None  # Outdated
+        if not self.string or not check_matrix:
+            return
+        try:
+            _ = self.matrix
+        except MatrixIncommensurateError as exc:
+            # Revert changes
+            self.__bulk_basis, self.__matrix = old_basis, old_matrix
+            raise ValueError(f'Invalid basis={array_to_string(basis)} for '
+                             f'{self.string}. Would give an incommensurate '
+                             f'matrix={exc.matrix}.') from None
 
 # A bit of a trick to assign examples as class attributes. This
 # class method will only do something the first time it is called
