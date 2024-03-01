@@ -62,7 +62,7 @@ The package consists of:
     #.  Software for calculation of :math:`I(V)` curves for a given structure and structure optimization, by minimizing the difference between the calculated and experimental :math:`I(V)` data.
 
 For details please see the ViPErLEED publication series (**TODO**).
-This manual primarily deals with part **iii**.
+This manual primarily deals with part **3.**.
 
 The goal of any :term:`LEED-I(V)` calculation is the calculation of energy-dependent electron-scattering amplitudes and intensities of diffracted beams.
 These intensity curves, taken as a function of the primary beam energy, [often referred to as :math:`I(V)` curves or spectra] are very sensitive to the precise position and vibrational amplitudes of each atom in the surface unit cell.
