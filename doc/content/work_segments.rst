@@ -33,6 +33,7 @@ The pages listed above cover normal operation, in which the theoretical beams co
 If multiple structures coexist on the sample, the same segments need to be executed, but their behavior is somewhat different, as described here:
 
 -  :ref:`Domain calculations<domain_calculation>`: Reference calculations are run separately for the different domains (if necessary) and Delta-amplitudes are generated independently.
+
 The search then combines the optimization of the different structures – weighted by their area fraction – for the best overall R-factor, compared to the experimental beam set.
 
 

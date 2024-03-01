@@ -99,7 +99,6 @@ A POSCAR file with a gap smaller than 5 Å will not cause ViPErLEED to stop, bu
 Overview of Planegroups
 -----------------------
 
-**TODO Alex, Florian** We may want to make this it's own page.
 
 .. figure:: /_static/planegroups.pdf
     :alt: Overview of planegroups and possible symmetry operations.

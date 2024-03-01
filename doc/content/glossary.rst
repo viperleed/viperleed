@@ -103,6 +103,9 @@ Glossary
     fcc
       Face centered cubic crystal structure.
 
+    XRD
+      X-ray diffraction.
+
     Jupyter
       The Jupyter project for interactive computing.
       Jupyter notebooks are commonly used as interactive Python environments.

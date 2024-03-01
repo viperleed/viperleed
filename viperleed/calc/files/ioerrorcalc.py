@@ -509,7 +509,7 @@ def _error_legends(mode, mode_errors):
 
 
 def draw_error(axis, bound, error, r_interval):
-    """Adds annotation for statistical error estimates to individual
+    r"""Adds annotation for statistical error estimates to individual
     error plots.
 
     Parameters

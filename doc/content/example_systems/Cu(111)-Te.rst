@@ -71,7 +71,7 @@ Below, you see a rendering of the initial structure (produced using :term:`VESTA
 PARAMETERS
 ==========
 
-Similar to the previous examples, we start by setting up a :ref:`PARAMETERS file<parameters>` file:
+Similar to the previous examples, we start by setting up a :ref:`PARAMETERS file<parameters>`:
 
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/PARAMETERS
    :language: console
