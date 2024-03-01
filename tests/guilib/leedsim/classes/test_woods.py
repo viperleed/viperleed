@@ -61,6 +61,42 @@ def test_square_to_prod_of_squares(number, expect):
     assert (squares, remainder) == expect
 
 
+class TestExamples:
+    """Collection of tests for retrieving Woods notation examples."""
+
+    _add = {
+        'formatted': 'p(√31×√31)R9°',
+        'unformatted': 'r31 x r31 R9',                                          # TODO: fails with style 'a', if run before style 'u'
+        }
+
+    @parametrize(style='au')
+    @parametrize(string=_add.values(), ids=_add)
+    def test_add_example(self, style, string):
+        """Check correct addition of one example."""
+        woods = Woods(string, style=style)
+        woods_unicode = Woods(string)
+        woods.add_example(woods, 'Hexagonal')
+        assert woods_unicode.string in woods.get_examples('Hexagonal')
+        assert woods_unicode.string not in woods.get_examples('Square')
+        assert woods_unicode.string in woods_unicode.get_examples('Hexagonal')
+
+    _get = {
+        'Oblique': 'p(2×1)',
+        'Rectangular': 'c(2×2)',
+        'Square': 'p(√5×√5)R26.6°',
+        'Hexagonal': 'p(√3×√3)R30°',
+        'Rhombic': 'p(3×3)',
+        }
+
+    @parametrize(style='ua')
+    @parametrize('shape,example', _get.items(), ids=_get)
+    def test_get_examples(self, style, shape, example):
+        """Check that example is one of those for shape."""
+        woods = Woods(style=style)
+        examples = woods.get_examples(shape)
+        assert example in examples
+
+
 _WoodsArgs = namedtuple('_WoodsArgs', ('string', 'bulk_basis', 'matrix'))
 
 

@@ -23,7 +23,7 @@ from viperleed.guilib.helpers import is_integer_matrix
 from viperleed.guilib.helpers import prime_numbers
 from viperleed.guilib.mathparse import MathParser, UnsupportedMathError
 
-# TODO: allow also "rect" special Woods notation for hex lattices (ONLY??)
+# TODO: allow also 'rect' special Woods notation for hex lattices (ONLY??)
 
 # Unicode symbols
 DEGREES = '\u00b0'
@@ -209,7 +209,7 @@ class Woods:
                               f'c(3{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
                               f'c(5{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}'},
         'Rectangular': __common.copy(),
-        'Hexagonal': __common | {f'c(4{SQRT}2)',
+        'Hexagonal': __common | {f'c(4{TIMES}2)',
                                  f'p({SQRT}3{TIMES}{SQRT}3)R30{DEGREES}',
                                  f'p({SQRT}7{TIMES}{SQRT}7)R19.1{DEGREES}',
                                  f'p(2{SQRT}3{TIMES}2{SQRT}3)R30{DEGREES}'},
