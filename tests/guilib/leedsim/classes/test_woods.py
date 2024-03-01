@@ -20,8 +20,9 @@ from viperleed.guilib.leedsim.classes.woods import WoodsNotRepresentableError
 from viperleed.guilib.leedsim.classes.woods import WoodsSyntaxError
 
 
-SQUARE = (1, 0), (0, 1)
 HEX = (1, 0), (-0.5, 3**0.5/2)
+OBLIQUE = (2, 0), (3*np.cos(np.radians(100)), 3*np.sin(np.radians(100)))
+SQUARE = (1, 0), (0, 1)
 
 _commensurate = {  # pylint: disable=R6101
     'integer floats': ([[1.0, 2.0], [3.0, 4.0]], True),
@@ -297,7 +298,11 @@ class TestRaises:
         'matrix not representable': (
             {'matrix': np.arange(4).reshape(2, 2), 'bulk_basis': SQUARE},
             WoodsNotRepresentableError
-            )
+            ),
+        'matrix not representable oblique': (  # Regression
+            {'matrix': ((0, -1), (1, 0)), 'bulk_basis': OBLIQUE},
+            WoodsNotRepresentableError
+            ),
         }
 
     @parametrize('kwargs,exc', _init.values(), ids=_init)

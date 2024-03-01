@@ -948,11 +948,12 @@ class Woods:
 
         basis_norm = np.linalg.norm(basis, axis=1)
         transf_norm = np.linalg.norm(transformed_basis, axis=1)
-        gamma1, gamma2 = transf_norm/basis_norm
-
-        det = np.abs(np.linalg.det(matrix))
-
-        return abs(det/(gamma1*gamma2) - 1) < 1e-8
+        gammas = transf_norm/basis_norm
+        for gamma in gammas:
+            if abs(gamma**2 - round(gamma**2)) > 1e-3:
+                return False
+        det = abs(np.linalg.det(matrix))
+        return abs(det/np.prod(gammas) - 1) < 1e-8
 
     def __primitive_or_centered(self, matrix):
         """Check if matrix is representable as primitive or centered.
