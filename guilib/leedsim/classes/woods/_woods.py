@@ -1,27 +1,32 @@
-"""Module woods of guilib.leedsim.classes.
+"""Module _woods of guilib.leedsim.classes.woods.
 
 ======================================
   ViPErLEED Graphical User Interface
 ======================================
- *** module guilib.leedsim.classes.woods ***
+ *** package guilib.leedsim.classes.woods ***
+
+Author: Michele Riva (@michele-riva)
+Created: 2021-03-13 (was part of leedsim.classes.py before)
+Refactored: 2024-03-01
 
 Defines the Woods class, used for conversion of a Wood's notation
-string into a matrix and vice versa, as well as for formatting
-
-Author: Michele Riva
-Created: 2021-03-13 (was part of leedsim.classes.py before)
+string into a matrix and vice versa, as well as for formatting.
 """
 
-from collections import Counter
 from dataclasses import dataclass, field
 import re
 
 import numpy as np
 
 from viperleed.guilib.helpers import array_to_string
-from viperleed.guilib.helpers import is_integer_matrix
-from viperleed.guilib.helpers import prime_numbers
 from viperleed.guilib.mathparse import MathParser, UnsupportedMathError
+
+from .errors import MatrixIncommensurateError
+from .errors import WoodsInvalidForBasisError
+from .errors import WoodsNotRepresentableError
+from .errors import WoodsSyntaxError
+from .utils import is_commensurate
+from .utils import square_to_prod_of_squares
 
 # TODO: allow also 'rect' special Woods notation for hex lattices (ONLY??)
 
@@ -63,96 +68,25 @@ MATCH_WOODS = re.compile(
     re.VERBOSE
     )
 
-
-def is_commensurate(matrix):
-    """Return whether a matrix represent a commensurate structure.
-
-    Parameters
-    ----------
-    matrix : Sequence
-        Matrix to be tested
-
-    Returns
-    -------
-    commensurate : bool
-        True if matrix is commensurate
-    """
-    return (is_integer_matrix(matrix, 5e-3)
-            and bool(round(np.linalg.det(matrix))))
-
-
-def prime_factors(number):
-    """Yield the prime factors of a number, with repetition."""
-    for prime_factor in prime_numbers():
-        if prime_factor*prime_factor > number:
-            break
-        while not number % prime_factor:
-            yield prime_factor
-            number //= prime_factor
-    if number > 1:
-        yield number
-
-
-def square_to_prod_of_squares(number):
-    """Decompose integer into two factors.
-
-    Useful to decompose, e.g., sqrt(12) into 2sqrt(3).
-
-    Parameters
-    ----------
-    number : int
-        Integer to be decomposed
-
-    Returns
-    -------
-    square : int
-        The largest perfect square divisor of number
-    remainder : int
-        The remainder, i.e., number / squares
-    """
-    # Take number, find all prime factors, return a tuple:
-    # first element is the product of all primes showing
-    # up an even number of times, the second one the rest.
-    factors = Counter(prime_factors(number))
-    square, remainder = 1, 1
-    for prime_factor, count in factors.items():
-        pow2, rest_pow = (count // 2) * 2, count % 2
-        square *= prime_factor ** pow2
-        remainder *= prime_factor ** rest_pow
-    return square, remainder
-
-
-class WoodsError(Exception):
-    """Base exception for Wood's-related error."""
-
-
-class MatrixIncommensurateError(WoodsError):
-    """Matrix is incommensurate."""
-
-    def __init__(self, matrix, message=''):
-        self.matrix = array_to_string(matrix)
-        if not message:
-            message = (f'Matrix {self.matrix} gives an incommensurate lattice,'
-                       ' i.e., it is singular or has non-integer elements')
-        super().__init__(message)
-
-
-class WoodsInvalidForBasisError(WoodsError):
-    """A string woods is not appropriate for the current bulk basis."""
-
-
-class WoodsNotRepresentableError(WoodsError):
-    """Matrix is not Wood's-representable."""
-
-    def __init__(self, matrix, message=''):
-        self.matrix = array_to_string(matrix)
-        if not message:
-            message = f'Matrix {self.matrix} is not Woods-representable'
-        super().__init__(message)
-
-
-class WoodsSyntaxError(WoodsError):
-    """A Wood's string has invalid syntax."""
+# Some examples of common Wood's notations. In Unicode style.
+_COMMON = {f'p(1{TIMES}1)', f'p(1{TIMES}2)', f'p(2{TIMES}1)', f'p(2{TIMES}2)',
+           f'p(3{TIMES}1)', f'p(3{TIMES}2)', f'p(3{TIMES}3)', f'c(2{TIMES}2)',
+           f'c(4{TIMES}4)', f'c(6{TIMES}2)', f'c(8{TIMES}2)'}
+_EXAMPLES = {
+        'Oblique': _COMMON,
+        'Square': _COMMON | {f'c(4{TIMES}2)',
+                             f'p({SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
+                             f'p({SQRT}5{TIMES}{SQRT}5)R26.6{DEGREES}',
+                             f'p(2{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
+                             f'c(3{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
+                             f'c(5{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}'},
+        'Rectangular': _COMMON,
+        'Hexagonal': _COMMON | {f'c(4{TIMES}2)',
+                                f'p({SQRT}3{TIMES}{SQRT}3)R30{DEGREES}',
+                                f'p({SQRT}7{TIMES}{SQRT}7)R19.1{DEGREES}',
+                                f'p(2{SQRT}3{TIMES}2{SQRT}3)R30{DEGREES}'},
+        'Rhombic': _COMMON,
+        }
 
 
 @dataclass(frozen=True)
@@ -194,27 +128,6 @@ class _WoodsStyle:
     def startswith(self, string):
         """Return whether self.style starts with string."""
         return self.style.startswith(string)
-
-# Some examples of common Wood's notations. In Unicode style.
-_COMMON = {f'p(1{TIMES}1)', f'p(1{TIMES}2)', f'p(2{TIMES}1)', f'p(2{TIMES}2)',
-           f'p(3{TIMES}1)', f'p(3{TIMES}2)', f'p(3{TIMES}3)', f'c(2{TIMES}2)',
-           f'c(4{TIMES}4)', f'c(6{TIMES}2)', f'c(8{TIMES}2)'}
-_EXAMPLES = {
-        'Oblique': _COMMON,
-        'Square': _COMMON | {f'c(4{TIMES}2)',
-                             f'p({SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
-                             f'p({SQRT}5{TIMES}{SQRT}5)R26.6{DEGREES}',
-                             f'p(2{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
-                             f'c(3{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}',
-                             f'c(5{SQRT}2{TIMES}{SQRT}2)R45{DEGREES}'},
-        'Rectangular': _COMMON,
-        'Hexagonal': _COMMON | {f'c(4{TIMES}2)',
-                                f'p({SQRT}3{TIMES}{SQRT}3)R30{DEGREES}',
-                                f'p({SQRT}7{TIMES}{SQRT}7)R19.1{DEGREES}',
-                                f'p(2{SQRT}3{TIMES}2{SQRT}3)R30{DEGREES}'},
-        'Rhombic': _COMMON,
-        }
-
 
 class Woods:
     """Class to represent a reconstruction in Wood's notation.
