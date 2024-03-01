@@ -584,6 +584,8 @@ class Woods:
             If `woods` is inappropriate for the current basis or
             the parsed string contains scaling factors for the
             two directions whose square is not an integer
+        WoodsInvalidForBasisError
+            If `woods` is incompatible with the current bulk basis.
         WoodsSyntaxError
             If `woods` does not match the structure of a
             Wood's notation, or could not be evaluated due
