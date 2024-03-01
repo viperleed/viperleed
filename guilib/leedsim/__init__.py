@@ -11,7 +11,7 @@ properly indexing an experimental LEED pattern
 
 from viperleed import GLOBALS
 
-__all__ = ['LEEDSymmetryDomains', 'Woods', 'LEEDPattern', 'RealSpace',
+__all__ = ['LEEDSymmetryDomains', 'LEEDPattern', 'RealSpace',
            'export_pattern_csv', 'LEEDParameters', 'LEEDParametersList',
            'LEEDEquivalentBeams', 'LEEDStructuralDomains', 'LEEDParser']
 
@@ -19,7 +19,6 @@ from viperleed.guilib.leedsim.classes import (LEEDEquivalentBeams,    # not sure
                                               LEEDSymmetryDomains,    # not sure I need this to be exposed
                                               LEEDStructuralDomains,  # not sure I need this to be exposed
                                               LEEDParser,             # not sure I need this to be exposed
-                                              Woods,
                                               LEEDPattern, RealSpace)
 from viperleed.guilib.leedsim.exportcsv import export_pattern_csv
 from viperleed.guilib.leedsim.classes.leedparameters import (
