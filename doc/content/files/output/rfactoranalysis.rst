@@ -15,11 +15,16 @@ by integrating the squared difference between the Y-functions, this plot gives a
 rough idea where the main contributions to the R-factor come from.
 
 Finally, the third plot on each page makes this more explicit by 
-plotting the integral over 
+plotting the cumulative sum of the squared difference between the Y-functions 
 :math:`\frac{(Y_1 - Y_2)^2}{(Y_1^2 + Y_2^2)}`, 
-which is the exact term used in the R-factor.
+which is the term used in the Pendry R-factor.
 This allows quick identification of the areas contributing most to the 
 R-factor.
 
 
-**TODO Alex: include an example here; possibly from Hematite once ready**
+.. figure:: /_static/output_examples/Search-progress.pdf
+   :width: 60%
+   :align: center
+
+   A R-factor analysis plots for a single beam calculated in the example on the 
+   Hematite :math:`(012)-(1 \times 1)` surface discussed :ref:`here<example_Fe2O3>`.
