@@ -42,20 +42,10 @@ Example
 Below are examples of a Search-progress.pdf file that was generated during the
 example calculation discussed :ref:`here<example_Fe2O3>`.
 
-.. figure:: /_static/output_examples/Search-report_page_1.pdf
+.. figure:: /_static/output_examples/Search-progress.pdf
    :width: 60%
    :align: center
 
    Example of the first page of a Search-progress.pdf file.
-   The top plot shows the R-factor over generations, lower plot shows the number
-   of generations since the last improvement.
-
-
-.. figure:: /_static/output_examples/Search-report_page_2.pdf
-   :width: 60%
-   :align: center
-
-   Example of the second page of a Search-progress.pdf file showing the
-   parameter scatter plots.
-   The upper three lines show z-displacements, the lowest line shows changes in
-   vibrational amplitude.
+   The top plot shows the R-factor during the search, the lower plot shows the
+   generations since the last change.
