@@ -35,14 +35,27 @@ Point size represents the number of population members which have the same value
    Error bars are only drawn if at least one edge falls within the displacement range.
    The left error bar corresponds to the uncorrelated parameter error, the right to the correlated parameter error.
 
-**TODO Florian, Alex: comment by Ulli: this may need more clarification in the paper/examples**
-
 
 Example
 ~~~~~~~
 
-**TODO Alex: comment here on example/ maybe replace with example figure from Hematite once ready...**
+Below are examples of a Search-progress.pdf file that was generated during the
+example calculation discussed :ref:`here<example_Fe2O3>`.
 
-.. figure:: /_static/example_systems/Cu(111)-Te/figures/Search-report_rough.pdf
+.. figure:: /_static/output_examples/Search-report_page_1.pdf
    :width: 60%
    :align: center
+
+   Example of the first page of a Search-progress.pdf file.
+   The top plot shows the R-factor over generations, lower plot shows the number
+   of generations since the last improvement.
+
+
+.. figure:: /_static/output_examples/Search-report_page_2.pdf
+   :width: 60%
+   :align: center
+
+   Example of the second page of a Search-progress.pdf file showing the
+   parameter scatter plots.
+   The upper three lines show z-displacements, the lowest line shows changes in
+   vibrational amplitude.
