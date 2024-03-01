@@ -1,7 +1,7 @@
 .. _searchprogresspdf:
 
-The Search-progress.pdf file
-============================
+Search-progress.pdf
+===================
 
 The Search-progress.pdf file is meant to give an overview of the current status of the search, and of the convergence, while the search is running. It contains several different plots, listed below:
 
@@ -28,10 +28,12 @@ Parameter scatters are drawn as half-transparent if a parameter is coupled to an
 
 Point size represents the number of population members which have the same value for the parameter. If more than one structure has the same parameter value, the color (i.e. R-factor) is indicated for the best one; for example, if the best and the worst structure both have a given parameter at the center of the displacement range, then the point at the center of the displacement range is nevertheless drawn as black.
 
-If :ref:`N-dimensional parabola fits<parabola_fit>` to the R-factor data were performed, then the parabola minimum and error bars are also indicated.
-The minimum is indicated by a red or green diamond (red if neither of the error bars is small enough to fit within the displacement range).
-Error bars are only drawn if at least one edge falls within the displacement range.
-The left error bar corresponds to the uncorrelated parameter error, the right to the correlated parameter error.
+.. 
+   Commented out for now, as N-dimensional parabola fits were deprecated in 0.11
+   If :ref:`N-dimensional parabola fits<parabola_fit>` to the R-factor data were performed, then the parabola minimum and error bars are also indicated.
+   The minimum is indicated by a red or green diamond (red if neither of the error bars is small enough to fit within the displacement range).
+   Error bars are only drawn if at least one edge falls within the displacement range.
+   The left error bar corresponds to the uncorrelated parameter error, the right to the correlated parameter error.
 
 **TODO Florian, Alex: comment by Ulli: this may need more clarification in the paper/examples**
 
