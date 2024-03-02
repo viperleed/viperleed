@@ -107,14 +107,14 @@ class BeamIndex(tuple):
             try:
                 n_indices = len(indices)
             except TypeError as err:
-                raise TypeError("BeamIndex: when one argument given, "
-                                "it should be a string or a 2-element "
-                                "array-like.") from err
+                raise TypeError('BeamIndex: when one argument given, '
+                                'it should be a string or a 2-element '
+                                'array-like.') from err
 
         if n_indices != 2:
-            raise ValueError("BeamIndex: too many/few indices. "
-                             "Exactly 2 indices should be given. "
-                             f"Found {n_indices} instead.")
+            raise ValueError('BeamIndex: too many/few indices. '
+                             'Exactly 2 indices should be given. '
+                             f'Found {n_indices} instead.')
         return tuple(indices)
 
     @staticmethod
@@ -126,8 +126,8 @@ class BeamIndex(tuple):
             if len(indices) == 2:
                 # found an acceptable separator
                 return (Fraction(indices[0]), Fraction(indices[1]))
-        raise ValueError("BeamIndex: too many/few indices in "
-                         f"{str_indices!r}, or incorrect "
+        raise ValueError('BeamIndex: too many/few indices in '
+                         f'{str_indices!r}, or incorrect '
                          "separator (acceptable: ',', '|').")
 
     @staticmethod
@@ -145,32 +145,33 @@ class BeamIndex(tuple):
             try:
                 int_numerator = int(index)
             except TypeError as err:
-                raise TypeError("BeamIndex: when using from_numerators, "
-                                "the indices should be integers.") from err
+                raise TypeError('BeamIndex: when using from_numerators, '
+                                'the indices should be integers.') from err
         else:
             # The index passed is fractional, get the numerator
             float_numerator = index*denominator
             int_numerator = round(float_numerator)
             if abs(int_numerator - float_numerator) > 1e-6:
-                raise ValueError(f"Fractional index {index} is not consistent "
-                                 f"with denominator {denominator}.")
+                raise ValueError(f'Fractional index {index} is not consistent '
+                                 f'with denominator {denominator}.')
         return Fraction(int_numerator, denominator)
 
     def __str__(self):
-        return f"{', '.join(str(index) for index in self)}"
+        return ', '.join(str(index) for index in self)
 
     def __repr__(self):
-        return f"BeamIndex({', '.join(str(index) for index in self)})"
+        return f'BeamIndex({self})'  # Delegate to __str__
 
     def __mul__(self, factor):
         """Override tuple.__mul__().
 
         Make it such that self*number = (self[0]*number, self[1]*number)
         """
+        cls = type(self)
         if isinstance(factor, (int, Fraction)):
-            return BeamIndex(self[0]*factor, self[1]*factor)
-        raise TypeError("unsupported operand type(s) for *: "
-                        f"'BeamIndex' and {type(factor).__name__!r}")
+            return cls(self[0]*factor, self[1]*factor)
+        raise TypeError('unsupported operand type(s) for *: '
+                        f'{cls.__name__!r} and {type(factor).__name__!r}')
 
     def __rmul__(self, factor):
         return self.__mul__(factor)
@@ -186,56 +187,55 @@ class BeamIndex(tuple):
         [[fill]align][sign][#][0][minimumwidth][.precision][type]
 
         The following formats apply:
-        - type == "s":
-            returns "(num/den|num/den)" where the width of each of the h,k
+        - type == 's':
+            returns '(num/den|num/den)' where the width of each of the h,k
             fields is dictated by the minimumwidth specifier in format_spec. In
-            this case, minimumwidth should be of the form "(w_num,w_den)", so
+            this case, minimumwidth should be of the form '(w_num,w_den)', so
             that the indices can be aligned at the slash. If this is omitted,
             the width of both fields is equal, and equal to the longest among
             the two.
-            If h or k are integers, their "/den" is omitted, and replaced with
+            If h or k are integers, their '/den' is omitted, and replaced with
             white spaces if the other is fractional.
             Negative signs are printed, positive ones are replaced with spaces
             if the other index is negative
-        - type == "f":
-            returns f"({float(h)},{float(k)})". If .precision is not given,
+        - type == 'f':
+            returns f'({float(h)},{float(k)})'. If .precision is not given,
             uses 5 digits. If minimumwidth is given, it is treated as the
             minimum width of the integer part only. The two indices are aligned
             on the decimal point.
-        - all others return f"({str(self)}:{format_spec}})"
+        - all others return f'({str(self)}:{format_spec}})'
         """
-        if format_spec == '':
+        if not format_spec:
             return str(self)
-        if format_spec[-1] not in ('s', 'f'):
+        if format_spec[-1] not in 'sf':
             # basic format
-            return f"({str(self):{format_spec}})"
-        if format_spec[-1] == 'f':
-            return f"({format_floats(format_spec, *self)})"
+            return f'({str(self):{format_spec}})'
+        if format_spec.endswith('f'):
+            return f'({format_floats(format_spec, *self)})'
 
         # Case 's':
         num_min_len, den_min_len = self.get_format_lengths('s')
 
-        # now search the specifier for something like "(\d+,\d+)" to be
+        # now search the specifier for something like '(\d+,\d+)' to be
         # interpreted as the minimum widths of the two fields, to update
         # the minimum lengths of the fields
-        m = re.search(r"((?P<num>\d+),(?P<den>\d+))", format_spec)
+        m = re.search(r'((?P<num>\d+),(?P<den>\d+))', format_spec)
         if m is not None:
-            num_min_len = max(num_min_len, int(m.group('num')))
-            den_min_len = max(den_min_len, int(m.group('den')))
-            format_spec = format_spec.replace(
-                f"({m.group('num')},{m.group('den')})", '')
+            num_min_len = max(num_min_len, int(m['num']))
+            den_min_len = max(den_min_len, int(m['den']))
+            format_spec = format_spec.replace(f'({m["num"]},{m["den"]})', '')
 
         raws = ['', '']
         for i, hk in enumerate(self):
             # numerator is right-justified in its field
-            raws[i] = f"{hk.numerator:>{num_min_len}}"
+            raws[i] = f'{hk.numerator:>{num_min_len}}'
 
             # denominator a bit more complicated, as it depends on whether
             # it is == 1 or not
             if hk.denominator == 1:
                 n_white = den_min_len
                 n_white += 1 if den_min_len else 0  # slash if needed
-                raws[i] += ' '*(n_white)
+                raws[i] += ' ' * n_white
             else:
                 raws[i] += f'/{hk.denominator:<{den_min_len}}'
         return f"{f'({raws[0]}|{raws[1]})':{format_spec}}"
