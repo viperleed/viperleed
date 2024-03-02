@@ -16,8 +16,8 @@ from warnings import warn as warning  # TODO: replace with logging
 import numpy as np
 
 from viperleed import guilib as gl
-from viperleed.guilib.base import BeamIndex
 from viperleed.guilib.classes import planegroup
+from viperleed.guilib.classes.beamindex import BeamIndex
 from viperleed.guilib.helpers import equal_dicts
 from viperleed.guilib.helpers import two_by_two_array_to_tuple
 

@@ -16,6 +16,7 @@ Created: 2021-03-13
 import numpy as np
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.beamindex import BeamIndex
 from viperleed.guilib.leedsim.classes.leedsubpattern import (
     LEEDSubpattern, CachedLEEDSubpatternConstructor
     )
@@ -325,7 +326,7 @@ class LEEDPattern:
             each one is a (beam, index, text) tuple, with
             beam : tuple
                 formatted as requested in out_format
-            index : gl.BeamIndex
+            index : BeamIndex
                 fractional indices
             text : str
                 form "i+(j)+..." where i,j,... are the indices of the
@@ -620,7 +621,7 @@ class LEEDPattern:
 
         # (3) Request 'n' and input is already 'n' --> return as is
         if in_format == out_format == 'numerator':
-            return tuple(gl.BeamIndex(b) for b in beams)
+            return tuple(BeamIndex(b) for b in beams)
 
         # (4) Input is 'g' or 'n', output is something different
         #     --> convert to fractional, so these cases can be handled
@@ -650,14 +651,13 @@ class LEEDPattern:
         den = self.domains[0].denominator_for_bulk_beams
         if in_format == 'fractional':
             if not self.domains.fractional:
-                beams = [gl.BeamIndex(b, denominator=den) for b in beams]
+                beams = [BeamIndex(b, denominator=den) for b in beams]
             else:
                 # Here numerical errors will likely occur!
-                beams = [b if isinstance(b, gl.BeamIndex)
-                         else gl.BeamIndex(b)
+                beams = [b if isinstance(b, BeamIndex) else BeamIndex(b)
                          for b in beams]
         else:  # 'numerator'
-            beams = [gl.BeamIndex(b, denominator=den, from_numerators=True)
+            beams = [BeamIndex(b, denominator=den, from_numerators=True)
                      for b in beams]
 
         if out_format == 'numerator':

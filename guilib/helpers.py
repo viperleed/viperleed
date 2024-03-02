@@ -107,7 +107,7 @@ def two_d_iterable_to_array(iterable, dtype=float, shape=None):
     np.asarray(iterable, dtype=dtype). Rough speed tests suggest
     that this is a factor of 1.5-5.5 faster than np.asarray when
     running on a list of tuples, and a factor of 3-35 faster when
-    running on a list of gl.BeamIndex (likely similar performance
+    running on a list of BeamIndex (likely similar performance
     on other subclasses of tuple).
 
     Parameters

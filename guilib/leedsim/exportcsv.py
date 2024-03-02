@@ -13,8 +13,9 @@ as input for the ViPErLEED ImageJ plug-ins
 
 import numpy as np
 
-from viperleed import guilib as gl
 from viperleed import GLOBALS
+from viperleed import guilib as gl
+from viperleed.guilib.classes.beamindex import BeamIndex
 
 
 def export_pattern_csv(fnames, leeds, **kwargs):
@@ -162,7 +163,7 @@ def _format_beams_(leed, **kwargs):
     for fract in fractions:
         # construct beam (= hk indices) and g (= reciprocal-space vector
         #                                      in Cartesian coordinates)
-        beam = gl.BeamIndex(fract)
+        beam = BeamIndex(fract)
         hk.append(beam)
         g = np.dot(beam, leed.bulk_basis)
         gg.append(g)

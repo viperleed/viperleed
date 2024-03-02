@@ -19,7 +19,8 @@ import logging
 import fortranformat as ff
 import numpy as np
 
-from viperleed.guilib.base import get_equivalent_beams, BeamIndex
+from viperleed.guilib.base import get_equivalent_beams
+from viperleed.guilib.classes.beamindex import BeamIndex
 from viperleed.tleedmlib import symmetry
 from viperleed.tleedmlib.leedbase import BOHR_TO_ANGSTROM, HARTREE_TO_EV
 from viperleed.tleedmlib.leedbase import getLEEDdict
