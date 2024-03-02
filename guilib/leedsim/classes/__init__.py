@@ -20,7 +20,9 @@ from viperleed.guilib.leedsim.classes.leedparameters import(
     LEEDParametersList
     )
 from viperleed.guilib.leedsim.classes.realspace import RealSpace
-from viperleed.guilib.leedsim.classes.beams import LEEDEquivalentBeams
+from viperleed.guilib.leedsim.classes.equivalent_beams import (
+    LEEDEquivalentBeams
+    )
 from viperleed.guilib.leedsim.classes.symdomains import LEEDSymmetryDomains
 from viperleed.guilib.leedsim.classes.structdomains import (
     LEEDStructuralDomains,

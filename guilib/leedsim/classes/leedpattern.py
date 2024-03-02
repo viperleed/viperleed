@@ -19,7 +19,7 @@ from viperleed import guilib as gl
 from viperleed.guilib.leedsim.classes.leedsubpattern import (
     LEEDSubpattern, CachedLEEDSubpatternConstructor
     )
-from viperleed.guilib.leedsim.classes.beams import sort_hk
+from viperleed.guilib.leedsim.classes.equivalent_beams import sort_hk
 
 from viperleed.guilib import decorators as dev_
 
