@@ -91,138 +91,15 @@ class BeamIndex(tuple):
             cls._cache[input_hash] = instance
         return instance
 
+    @property
+    def numerators(self):
+        """Return a tuple of the numerators in this BeamIndex."""
+        return tuple(index.numerator for index in self)
+
     @classmethod
     def clear_cache(cls):
         """Fully clear cache. Use only if memory usage becomes an issue."""
         cls._cache = {}
-
-    @classmethod
-    def _process_indices(cls, indices):
-        """Return a 2-items tuple from indices after checking them.
-
-        Parameters
-        ----------
-        indices : Sequence
-            One or two items. If a single item, it must be a string
-            or a 2-item sequence. When a single string, it is expected
-            to contain both Miller indices.
-
-        Returns
-        -------
-        processed_indices : tuple
-            Two items, corresponding to the two Miller indices in
-            `indices`. The only processing of `indices` concerns
-            the case of a single-string value.
-
-        Raises
-        ------
-        TypeError
-            If `indices` --- or its first and only element --- is not a
-            sequence (i.e., it has no __len__).
-        ValueError
-            If `indices` has a single string items, but it does not
-            consist of two indices separated by one of the acceptable
-            separators.
-        ValueError
-            If `indices` --- or its first and only element --- does not
-            evaluate to exactly two items.
-        """
-        n_indices = len(indices)
-        if n_indices == 1:
-            indices = indices[0]
-            if isinstance(indices, str):
-                indices = cls._indices_from_string(indices)
-            try:
-                n_indices = len(indices)
-            except TypeError as err:
-                raise TypeError(f'{cls.__name__}: when one argument given, '
-                                'it should be a string or a 2-element '
-                                'sequence.') from err
-        if n_indices != 2:
-            raise ValueError(f'{cls.__name__}: too many/few indices. '
-                             'Exactly 2 indices should be given. '
-                             f'Found {n_indices} instead.')
-        return tuple(indices)
-
-    @classmethod
-    def _indices_from_string(cls, str_indices):
-        """Return two Fractions from `str_indices`."""
-        for separator in _SEPARATORS:
-            indices = str_indices.split(separator)
-            if len(indices) == 2:
-                # found an acceptable separator
-                return (Fraction(indices[0]), Fraction(indices[1]))
-        raise ValueError(
-            f'{cls.__name__}: too many/few indices in '
-            f'{str_indices!r}, or incorrect separator (acceptable: '
-            + 'or '.join(repr(s) for s in _SEPARATORS) + ').'
-            )
-
-    @staticmethod
-    def _index_to_fraction(index, denominator=1, from_numerator=False):
-        """Return a Fraction version of index. See also __new__."""
-        try:
-            index.limit_denominator  # attribute of Fraction only
-        except AttributeError:
-            pass
-        else:
-            return index
-
-        if from_numerator:
-            try:
-                int_numerator = int(index)
-            except TypeError as err:
-                raise TypeError('BeamIndex: when using from_numerators, '
-                                'the indices should be integers.') from err
-        else:
-            # The index passed is fractional, get the numerator
-            float_numerator = index*denominator
-            int_numerator = round(float_numerator)
-            if abs(int_numerator - float_numerator) > 1e-6:
-                raise ValueError(f'Fractional index {index} is not consistent '
-                                 f'with denominator {denominator}.')
-        return Fraction(int_numerator, denominator)
-
-    def __str__(self):
-        """Return a string version of this BeamIndex."""
-        return ', '.join(str(index) for index in self)
-
-    def __repr__(self):
-        """Return a representation string for this BeamIndex."""
-        return f'BeamIndex({self})'  # Delegate to __str__
-
-    def __mul__(self, value):
-        """Return a scaled version of this BeamIndex.
-
-        Parameters
-        ----------
-        value : int or Fraction
-            The scaling factor to be applied identically to both of
-            the Miller indices in this BeamIndex.
-
-        Returns
-        -------
-        scaled : BeamIndex
-            A new BeamIndex with Miller indices multiplied by `value`.
-
-        Raises
-        ------
-        TypeError
-            If value is not int or Fraction.
-        """
-        cls = type(self)
-        if isinstance(value, (int, Fraction)):
-            return cls(self[0]*value, self[1]*value)
-        raise TypeError('unsupported operand type(s) for *: '
-                        f'{cls.__name__!r} and {type(value).__name__!r}')
-
-    def __rmul__(self, value):
-        """Return a scaled version of this BeamIndex."""
-        return self * value
-
-    def __imul__(self, value):
-        """Return a scaled version of this BeamIndex."""
-        return self * value
 
     def __format__(self, format_spec):
         """Return a formatted string version of this BeamIndex.
@@ -288,25 +165,46 @@ class BeamIndex(tuple):
                            for i in self)
         return f'{indices:{format_spec}}'
 
-    @staticmethod
-    def _fmt_one_index(index, num_min_len, den_min_len):
-        """Return a "num/den" string for index with defined field lengths."""
-        # Numerator is right-justified in its field
-        numerator = f'{index.numerator:>{num_min_len}}'
+    def __imul__(self, value):
+        """Return a scaled version of this BeamIndex."""
+        return self * value  # Delegate to __mul__
 
-        # Denominator is a bit more complicated, as
-        # it depends on whether it is == 1 or not
-        if index.denominator != 1:
-            return numerator + f'/{index.denominator:<{den_min_len}}'
+    def __mul__(self, value):
+        """Return a scaled version of this BeamIndex.
 
-        n_white = den_min_len
-        n_white += 1 if den_min_len else 0  # slash if needed
-        return numerator + ' ' * n_white
+        Parameters
+        ----------
+        value : int or Fraction
+            The scaling factor to be applied identically to both of
+            the Miller indices in this BeamIndex.
 
-    @property
-    def numerators(self):
-        """Return a tuple of the numerators in this BeamIndex."""
-        return tuple(index.numerator for index in self)
+        Returns
+        -------
+        scaled : BeamIndex
+            A new BeamIndex with Miller indices multiplied by `value`.
+
+        Raises
+        ------
+        TypeError
+            If value is not int or Fraction.
+        """
+        cls = type(self)
+        if isinstance(value, (int, Fraction)):
+            return cls(self[0]*value, self[1]*value)
+        raise TypeError('unsupported operand type(s) for *: '
+                        f'{cls.__name__!r} and {type(value).__name__!r}')
+
+    def __repr__(self):
+        """Return a representation string for this BeamIndex."""
+        return f'BeamIndex({self})'  # Delegate to __str__
+
+    def __rmul__(self, value):
+        """Return a scaled version of this BeamIndex."""
+        return self * value  # Delegate to __mul__
+
+    def __str__(self):
+        """Return a string version of this BeamIndex."""
+        return ', '.join(str(index) for index in self)
 
     def get_format_widths(self):
         """Return the minimum number of characters to format this BeamIndex.
@@ -324,3 +222,105 @@ class BeamIndex(tuple):
         den_min_len = (0 if all(den == 1 for den in dens)
                        else max(len(str(den)) for den in dens))
         return num_min_len, den_min_len
+
+    @staticmethod
+    def _fmt_one_index(index, num_min_len, den_min_len):
+        """Return a "num/den" string for index with defined field lengths."""
+        # Numerator is right-justified in its field
+        numerator = f'{index.numerator:>{num_min_len}}'
+
+        # Denominator is a bit more complicated, as
+        # it depends on whether it is == 1 or not
+        if index.denominator != 1:
+            return numerator + f'/{index.denominator:<{den_min_len}}'
+
+        n_white = den_min_len
+        n_white += 1 if den_min_len else 0  # slash if needed
+        return numerator + ' ' * n_white
+
+    @classmethod
+    def _index_to_fraction(cls, index, denominator=1, from_numerator=False):
+        """Return a Fraction version of index. See also __new__."""
+        try:
+            index.limit_denominator  # attribute of Fraction only
+        except AttributeError:
+            pass
+        else:
+            return index
+
+        if from_numerator:
+            try:
+                int_numerator = int(index)
+            except TypeError as err:
+                raise TypeError(f'{cls.__name__: when using from_numerators, '
+                                'the indices should be integers.') from err
+        else:
+            # The index passed is fractional, get the numerator
+            float_numerator = index*denominator
+            int_numerator = round(float_numerator)
+            if abs(int_numerator - float_numerator) > 1e-6:
+                raise ValueError(f'Fractional index {index} is not consistent '
+                                 f'with denominator {denominator}.')
+        return Fraction(int_numerator, denominator)
+
+    @classmethod
+    def _indices_from_string(cls, str_indices):
+        """Return two Fractions from `str_indices`."""
+        for separator in _SEPARATORS:
+            indices = str_indices.split(separator)
+            if len(indices) == 2:
+                # found an acceptable separator
+                return (Fraction(indices[0]), Fraction(indices[1]))
+        raise ValueError(
+            f'{cls.__name__}: too many/few indices in '
+            f'{str_indices!r}, or incorrect separator (acceptable: '
+            + 'or '.join(repr(s) for s in _SEPARATORS) + ').'
+            )
+
+    @classmethod
+    def _process_indices(cls, indices):
+        """Return a 2-items tuple from indices after checking them.
+
+        Parameters
+        ----------
+        indices : Sequence
+            One or two items. If a single item, it must be a string
+            or a 2-item sequence. When a single string, it is expected
+            to contain both Miller indices.
+
+        Returns
+        -------
+        processed_indices : tuple
+            Two items, corresponding to the two Miller indices in
+            `indices`. The only processing of `indices` concerns
+            the case of a single-string value.
+
+        Raises
+        ------
+        TypeError
+            If `indices` --- or its first and only element --- is not a
+            sequence (i.e., it has no __len__).
+        ValueError
+            If `indices` has a single string items, but it does not
+            consist of two indices separated by one of the acceptable
+            separators.
+        ValueError
+            If `indices` --- or its first and only element --- does not
+            evaluate to exactly two items.
+        """
+        n_indices = len(indices)
+        if n_indices == 1:
+            indices = indices[0]
+            if isinstance(indices, str):
+                indices = cls._indices_from_string(indices)
+            try:
+                n_indices = len(indices)
+            except TypeError as err:
+                raise TypeError(f'{cls.__name__}: when one argument given, '
+                                'it should be a string or a 2-element '
+                                'sequence.') from err
+        if n_indices != 2:
+            raise ValueError(f'{cls.__name__}: too many/few indices. '
+                             'Exactly 2 indices should be given. '
+                             f'Found {n_indices} instead.')
+        return tuple(indices)
