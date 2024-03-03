@@ -258,7 +258,7 @@ class BeamIndex(tuple):
             try:
                 int_numerator = int(index)
             except TypeError as err:
-                raise TypeError(f'{cls.__name__: when using from_numerators, '
+                raise TypeError(f'{cls.__name__}: when using from_numerators, '
                                 'the indices should be integers.') from err
         else:
             # The index passed is fractional, get the numerator
