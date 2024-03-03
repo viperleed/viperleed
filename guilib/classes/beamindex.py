@@ -28,7 +28,7 @@ class BeamIndex(tuple):
     """
 
     separators = ',|'
-    __cache = {}
+    _cache = {}
 
     def __new__(cls, *indices, denominator=1, from_numerators=False):
         """
@@ -52,7 +52,7 @@ class BeamIndex(tuple):
             passing numerators only, it is most efficient to give the indices
             as ints rather than floats
         """
-        indices = cls.__process_indices(indices)
+        indices = cls._process_indices(indices)
 
         # We will hash the object only if it does not contain
         # '-1' as this is a special value for hashing. In fact,
@@ -63,29 +63,29 @@ class BeamIndex(tuple):
         for_hash = (*indices, denominator)
         if -1 not in for_hash:
             input_hash = hash(for_hash)
-        if input_hash in cls.__cache:
-            return cls.__cache[input_hash]
+        if input_hash in cls._cache:
+            return cls._cache[input_hash]
 
-        instance = (cls.__index_to_fraction(
+        instance = (cls._index_to_fraction(
                         indices[0], denominator=denominator,
                         from_numerator=from_numerators
                         ),
-                    cls.__index_to_fraction(
+                    cls._index_to_fraction(
                         indices[1], denominator=denominator,
                         from_numerator=from_numerators
                         ))
         instance = super().__new__(cls, instance)
         if input_hash != -1:
-            cls.__cache[input_hash] = instance
+            cls._cache[input_hash] = instance
         return instance
 
-    @staticmethod
-    def clear_cache():
+    @classmethod
+    def clear_cache(cls):
         """Fully clear cache. Use only if memory usage becomes an issue."""
-        BeamIndex.__cache = {}
+        cls._cache = {}
 
-    @staticmethod
-    def __process_indices(indices):
+    @classmethod
+    def _process_indices(cls, indices):
         """
         Checks and processes the indices as needed
 
@@ -103,35 +103,35 @@ class BeamIndex(tuple):
         if n_indices == 1:
             indices = indices[0]
             if isinstance(indices, str):
-                indices = BeamIndex.__indices_from_string(indices)
+                indices = cls._indices_from_string(indices)
             try:
                 n_indices = len(indices)
             except TypeError as err:
-                raise TypeError('BeamIndex: when one argument given, '
+                raise TypeError(f'{cls.__name__}: when one argument given, '
                                 'it should be a string or a 2-element '
                                 'array-like.') from err
 
         if n_indices != 2:
-            raise ValueError('BeamIndex: too many/few indices. '
+            raise ValueError(f'{cls.__name__}: too many/few indices. '
                              'Exactly 2 indices should be given. '
                              f'Found {n_indices} instead.')
         return tuple(indices)
 
-    @staticmethod
-    def __indices_from_string(str_indices):
+    @classmethod
+    def _indices_from_string(cls, str_indices):
         """
         """
-        for separator in BeamIndex.separators:
+        for separator in cls.separators:
             indices = str_indices.split(separator)
             if len(indices) == 2:
                 # found an acceptable separator
                 return (Fraction(indices[0]), Fraction(indices[1]))
-        raise ValueError('BeamIndex: too many/few indices in '
+        raise ValueError(f'{cls.__name__}: too many/few indices in '
                          f'{str_indices!r}, or incorrect '
                          "separator (acceptable: ',', '|').")
 
     @staticmethod
-    def __index_to_fraction(index, denominator=1, from_numerator=False):
+    def _index_to_fraction(index, denominator=1, from_numerator=False):
         # if isinstance(index, Fraction):
             # return index
         try:
