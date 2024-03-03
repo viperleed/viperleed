@@ -730,19 +730,11 @@ def format_floats(format_specs, *numbers):
     if m is None:
         raise TypeError("Incorrect format specifier for type f.")
     # process the format specifications:
-    # number of digits:
-    prec = m.group('prec')
-    if prec:
-        prec = int(prec)
-    else:
-        prec = 5
-    # minimum width of integer part
-    # (will left-pad with spaces if needed):
-    min_w = m.group('minwidth')
-    if min_w:
-        min_w = int(min_w)
-    else:
-        min_w = int_len
+    # (1) Number of decimal digits
+    prec = int(m['prec'] or '5')
+    # (2) Minimum width of integer part
+    #    (will left-pad with spaces if needed)
+    min_w = int(m['minwidth'] or 0) or int_len
     tot_w = max(min_w + prec, int_len + prec) + 1  # +1 for decimal point
 
     format = f">{tot_w}.{prec}f"

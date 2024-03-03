@@ -170,12 +170,12 @@ def _format_beams_(leed, **kwargs):
 
         # get relevant lengths:
         # 1) fractional representation of beam indices
-        num, den = beam.get_format_lengths('s')
+        num, den = beam.get_format_widths()
         lengths['numerator'].append(num)
         lengths['denominator'].append(den)
 
         # 2) float representation of beam indices
-        lengths['hk_integer'].append(beam.get_format_lengths('f')[0])
+        lengths['hk_integer'].append(gl.integer_part_length(*beam))
 
         # 3) and reciprocal-space vector
         lengths['g_integer'].append(gl.integer_part_length(*g))
