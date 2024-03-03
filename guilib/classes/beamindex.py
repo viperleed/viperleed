@@ -263,8 +263,6 @@ class BeamIndex(tuple):
         # case 's'
         num_min_len = max(len(str(hk.numerator)) for hk in self)
         dens = [hk.denominator for hk in self]
-        if all(den == 1 for den in dens):
-            den_min_len = 0
-        else:
-            den_min_len = max(len(str(den)) for den in dens)
+        den_min_len = (0 if all(den == 1 for den in dens)
+                       else max(len(str(den)) for den in dens))
         return num_min_len, den_min_len
