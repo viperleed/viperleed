@@ -101,6 +101,12 @@ class BeamIndex(tuple):
         """Fully clear cache. Use only if memory usage becomes an issue."""
         cls._cache = {}
 
+    def __add__(self, value):
+        """Disallow making BeamIndex longer."""
+        cls = type(self)
+        raise TypeError(f'unsupported operand type(s) for +: {cls.__name__!r} '
+                        f'and {type(value).__name__!r}')
+
     def __format__(self, format_spec):
         """Return a formatted string version of this BeamIndex.
 
