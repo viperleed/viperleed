@@ -244,6 +244,7 @@ class TestRaises:
         'not a wood notation': ({'string': '23'}, WoodsSyntaxError),
         'gamma syntax invalid character': ({'string': 'c(2, x 12)'},
                                            WoodsSyntaxError),
+        'gamma too complex': ({'string': '1000'*2600 + 'x2'}, WoodsSyntaxError),
         'gamma syntax unmatched': ({'string': 'c((2 x 12)'}, WoodsSyntaxError),
         'too many gammas': ({'string': '2x3x4'}, WoodsSyntaxError),
         'unsupported math': ({'string': 'cos(2)x3'}, WoodsSyntaxError),

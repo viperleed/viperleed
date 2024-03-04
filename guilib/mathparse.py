@@ -17,7 +17,7 @@ Created: 2021-06-13
 # for a nice description of ast, as the official python docs are
 # a bit tight...
 
-__all__ = ['UnsupportedMathError', 'MathParser']
+__all__ = ('MathParser', 'TooComplexMathError', 'UnsupportedMathError')
 
 import ast
 import math
@@ -41,6 +41,8 @@ UNARY_OPERATIONS = {
 MATH_OPERATIONS = {
     'sqrt': math.sqrt,
     }
+
+MAX_LEN = 10000  # characters
 
 
 def _fix_expression(txt):
@@ -139,6 +141,10 @@ def _fix_multiplication(txt):
     return txt
 
 
+class TooComplexMathError(ValueError):
+    """Expression is too long or contains too large numbers."""
+
+
 class UnsupportedMathError(Exception):
     """Unsupported expression in math."""
 
@@ -178,9 +184,13 @@ class MathParser:
             expression is manipulated to bring it to a standard
             format that can then be evaluated.
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        TooComplexMathError
+            If `expression` contains too many characters
+            after preprocessing.
+        TypeError
+            If `expression` is not a string.
         """
         self._expression = ''
         self.expression = expression  # Use setter for processing
@@ -202,13 +212,21 @@ class MathParser:
 
         Raises
         ------
+        TooComplexMathError
+            If `new_expression` contains too many characters
+            after preprocessing.
         TypeError
             If `new_expression` is not a string.
         """
         if not isinstance(new_expression, str):
             raise TypeError('MathParser: expression should be a string, '
                             f'not {type(new_expression).__name__!r}')
-       self._expression = _fix_expression(new_expression)
+        fixed_expression = _fix_expression(new_expression)
+        if len(fixed_expression) > MAX_LEN:
+            raise TooComplexMathError('Too many characters '
+                                      f'({len(fixed_expression)}>{MAX_LEN}) '
+                                      'in expression after preprocessing')
+        self._expression = fixed_expression
 
     def evaluate(self):
         """Evaluate self.expression.

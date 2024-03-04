@@ -19,7 +19,9 @@ import re
 import numpy as np
 
 from viperleed.guilib.helpers import array_to_string
-from viperleed.guilib.mathparse import MathParser, UnsupportedMathError
+from viperleed.guilib.mathparse import MathParser
+from viperleed.guilib.mathparse import UnsupportedMathError
+from viperleed.guilib.mathparse import TooComplexMathError
 
 from .errors import MatrixIncommensurateError
 from .errors import WoodsInvalidForBasisError
@@ -376,7 +378,12 @@ class Woods:
 
         # parser needs at least 'rt' for square root.
         # Support also 'r' for Woods notations
-        parser.expression = re.sub(r'r([^t])', r'rt\1', gamma_str)
+        try:
+            parser.expression = re.sub(r'r([^t])', r'rt\1', gamma_str)
+        except TooComplexMathError as exc:
+            raise WoodsSyntaxError(f'Woods: {gamma_str} could '
+                                   'not be parsed as it is too '
+                                   'complex.') from exc
         try:
             gamma = parser.evaluate()
         except SyntaxError as exc:
