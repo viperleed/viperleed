@@ -43,6 +43,7 @@ MATH_OPERATIONS = {
     }
 
 MAX_LEN = 10000  # characters
+MAX_POW = 1000   # Limit range of operands in pow
 
 
 def _fix_expression(txt):
@@ -241,6 +242,8 @@ class MathParser:
         SyntaxError
             If the expression passed contains errors,
             typically unmatched brackets.
+        TooComplexMathError
+            If the expression would evaluate to a too-large number.
         UnsupportedMathError
             If the expression contains calls to mathematical
             functions that are not supported.
@@ -324,7 +327,12 @@ class MathParser:
             operation = BINARY_OPERATIONS[type(node.op)]
         except KeyError as exc:
             raise UnsupportedMathError(node.op) from exc
-        return operation(self._eval(node.left), self._eval(node.right))
+        operands = self._eval(node.left), self._eval(node.right)
+        if (operation is operator.pow  # Limit ranges for a**b
+                and any(op > MAX_POW for op in operands)):
+            raise TooComplexMathError('Result too large. Cannot compute '
+                                      f'{operands[0]}**{operands[1]}.')
+        return operation(*operands)
 
     def _eval_unary_operation(self, node):
         """Evaluate a node containing a unary operation.

@@ -390,7 +390,7 @@ class Woods:
             raise WoodsSyntaxError(f'Woods: {gamma_str} could '
                                    'not be parsed, likely because '
                                    'of unmatched brackets') from exc
-        except UnsupportedMathError as exc:
+        except (UnsupportedMathError, TooComplexMathError) as exc:
             raise WoodsSyntaxError(f'Woods: {gamma_str} could '
                                    'not be parsed as it contains '
                                    'unsupported math operations') from exc
