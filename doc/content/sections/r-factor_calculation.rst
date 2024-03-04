@@ -42,8 +42,10 @@ R factors for more open surfaces, such as missing-row-reconstructed Pt(110), can
 Note that some smoothing algorithms applied to both, the experimental and the calculated data, such as the smoothing suggested by Pendry in :cite:p:`pendryReliabilityFactorsLEED1980`, apparently lowers the R factor, because it effectively raises the minima of the :math:`I(V)` curves.
 At minima, where the intensities approach zero, :math:`R_P` is especially 
 sensitive to small differences; artificially increasing the intensity there leads to lower values of :math:`R_P`.
-Some LEED programs apply such a smoothing; in this case lower R factors than those obtained with ViPErLEED will be reported, but this does not indicate a better agreement between calculated and experimental data. 
-The ViPErLEED package uses only smoothing of the experimental :math:`I(V)` curves to suppress noise; the smoothing algorithm employed does not raise the minima. **TODO Michael, Michele, Alex: comment by Ulli: say which smoothing algorithm is used?**
+Some LEED programs apply such a smoothing; in this case lower R factors than those obtained with ViPErLEED will be reported, but this does not indicate a better agreement between calculated and experimental data.
+In ViPEerLEED, there is no automatic smoothing.
+Experimental data should be smoothed beforehand using the I(V) curve editor (**TODO**: Link)
+
 
 Smoothing of the experimental data should be done by the :math:`I(V)` curve editor in the Spot Tracker package;
 its output should be used as :ref:`EXPBEAMS.csv<EXPBEAMS>` file.

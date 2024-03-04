@@ -33,8 +33,8 @@ Syntax
 
 where
 
--  ``POSCAREL`` is the :ref:`POSCAR<POSCAR>` element (and **not** the :ref:`ELEMENT_MIX<ELSPLIT>` one).
-   Take a look at the :ref:`AUXLATGEO file<AUXLATGEO>` **correct?** to make sure you use the right labels. **TODO**
+-  ``POSCAREL`` is the :ref:`POSCAR<POSCAR>` element and **not** the chemical species defined via :ref:`ELEMENT_MIX<ELSPLIT>`.
+   See also :ref:`element name collision<elnamecollision>`.
 -  ``site`` is optional, and has the same functionality as the one in the :ref:`Geometrical displacements<GEODELTA>`.
 -  ``number(s)`` also behave as in the :ref:`Geometrical displacements<GEODELTA>`.
 
