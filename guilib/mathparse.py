@@ -274,8 +274,8 @@ class MathParser:
         """
         try:
             operation = MATH_OPERATIONS[node.func.id]
-        except KeyError as err:
-            raise UnsupportedMathError(node.func.id) from err
+        except KeyError as exc:
+            raise UnsupportedMathError(node.func.id) from exc
         operands = (self._eval(op) for op in node.args)
         return operation(*operands)
 
@@ -304,8 +304,8 @@ class MathParser:
         """
         try:
             operation = BINARY_OPERATIONS[type(node.op)]
-        except KeyError as err:
-            raise UnsupportedMathError(node.op) from err
+        except KeyError as exc:
+            raise UnsupportedMathError(node.op) from exc
         return operation(self._eval(node.left), self._eval(node.right))
 
     def _eval_unary_operation(self, node):
@@ -332,8 +332,8 @@ class MathParser:
         """
         try:
             operation = UNARY_OPERATIONS[type(node.op)]
-        except KeyError as err:
-            raise UnsupportedMathError(node.op) from err
+        except KeyError as exc:
+            raise UnsupportedMathError(node.op) from exc
         return operation(self._eval(node.operand))
 
 
