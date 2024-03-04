@@ -34,7 +34,7 @@ class BeamIndex(tuple):
 
         Parameters
         ----------
-        *indices : str, Sequence of str, or Sequence of numbers
+        *indices : str, or Sequence of numbers
             indices of the beam. Can be passed as a single argument
             or as two arguments. When a single argument, it should be
             either a string of the form 'idx1, idx' or 'idx1 | idx2'
