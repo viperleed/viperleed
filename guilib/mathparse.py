@@ -270,15 +270,14 @@ class MathParser:
         Raises
         ------
         UnsupportedMathError
-            If the mathematical function is not supported
+            If the mathematical function is not supported.
         """
         try:
             operation = MATH_OPERATIONS[node.func.id]
         except KeyError as err:
             raise UnsupportedMathError(node.func.id) from err
-
-        # Allow only single-argument math operations
-        return operation(self._eval(node.args[0]))
+        operands = (self._eval(op) for op in node.args)
+        return operation(*operands)
 
     def _eval_binary_operation(self, node):
         """Evaluate a node containing a binary operation.
