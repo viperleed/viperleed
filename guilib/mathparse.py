@@ -361,20 +361,3 @@ class MathParser:
         except KeyError as exc:
             raise UnsupportedMathError(node.op) from exc
         return operation(self._eval(node.operand))
-
-
-if __name__ == '__main__':
-    # Run some tests
-    parser = MathParser('2*sqrt[2]')
-    print(parser.evaluate())
-
-    parser.expression = '2*2**0.5'
-    print(parser.evaluate())
-
-    parser.expression = '2[3+2*rt 95] rt3 -9sqrt(7) / \u221a3'
-    print(parser.expression)
-    print(parser.evaluate())
-
-    parser.expression = '3.254*rt2'
-    print(parser.expression)
-    print(parser.evaluate())
