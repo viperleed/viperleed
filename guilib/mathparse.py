@@ -126,7 +126,7 @@ def _fix_multiplication(txt):
     """
     # Add a star whenever a digit is followed by any
     # character except a digit, an operator, or a parenthesis
-    insert_star = r'((\d)([^+\-()*/.\d]))'
+    insert_star = r'((\d)([^+\-()*/.\d,<>%=]))'
     txt = re.sub(insert_star, r'\2*\3', txt)
 
     # And again stars, this time any time there is
