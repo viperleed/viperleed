@@ -70,14 +70,14 @@ def _fix_expression(txt):
     remove_spaces = r'\s*'
     txt = re.sub(remove_spaces, '', txt)
 
-    txt = __brackets_to_parentheses(txt)
-    txt = __fix_sqrt(txt)
-    txt = __fix_multiplication(txt)
+    txt = _brackets_to_parentheses(txt)
+    txt = _fix_sqrt(txt)
+    txt = _fix_multiplication(txt)
 
     return txt
 
 
-def __brackets_to_parentheses(txt):
+def _brackets_to_parentheses(txt):
     """Replace '['/'{' [and closed counterparts] with '(' [and ')']."""
     replace_left_brackets = r'[\{\[]'
     txt = re.sub(replace_left_brackets, '(', txt)
@@ -87,7 +87,7 @@ def __brackets_to_parentheses(txt):
     return txt
 
 
-def __fix_sqrt(txt):
+def _fix_sqrt(txt):
     """Replace 'rt' and '\u221a' with 'sqrt' and fix parentheses."""
     # Replace 'rt' (not preceded by 'sq')
     # or '\u221a' with 'sqrt'
@@ -102,7 +102,7 @@ def __fix_sqrt(txt):
     return txt
 
 
-def __fix_multiplication(txt):
+def _fix_multiplication(txt):
     """Add a '*' wherever it's missing.
 
     This means:
@@ -182,12 +182,13 @@ class MathParser:
         -------
         None.
         """
-        self.__expression = _fix_expression(expression)
+        self._expression = ''
+        self.expression = expression  # Use setter for processing
 
     @property
     def expression(self):
         """Return the expression that will be evaluated as a string."""
-        return self.__expression
+        return self._expression
 
     @expression.setter
     def expression(self, new_expression):
@@ -202,15 +203,15 @@ class MathParser:
         Raises
         ------
         TypeError
-            If new_expression is not a string.
+            If `new_expression` is not a string.
         """
         if not isinstance(new_expression, str):
-            raise TypeError("MathParser: expression should be a string, "
-                            f"not {type(new_expression).__name__!r}")
-        self.__expression = _fix_expression(new_expression)
+            raise TypeError('MathParser: expression should be a string, '
+                            f'not {type(new_expression).__name__!r}')
+       self._expression = _fix_expression(new_expression)
 
     def evaluate(self):
-        """Evaluate the expression given at instantiation.
+        """Evaluate self.expression.
 
         Returns
         -------
@@ -221,43 +222,35 @@ class MathParser:
         ------
         SyntaxError
             If the expression passed contains errors,
-            typically unmatched brackets
+            typically unmatched brackets.
         UnsupportedMathError
             If the expression contains calls to mathematical
-            functions that are not supported
+            functions that are not supported.
         """
         node = ast.parse(self.expression, mode='eval')
-        return self.__eval(node)
+        return self._eval(node)
 
-    def __eval(self, node):
+    def _eval(self, node):
         """Recursively evaluate a node."""
         if isinstance(node, ast.Expression):
-            ret = self.__eval(node.body)
-
+            ret = self._eval(node.body)
         elif isinstance(node, ast.Constant):  # Available since 3.6
             ret = node.value
-
         elif isinstance(node, ast.Str):       # Deprecated since 3.8
             ret = node.s
-
         elif isinstance(node, ast.Num):       # Deprecated since 3.8
             ret = node.n
-
         elif isinstance(node, ast.BinOp):
-            ret = self.__eval_binary_operation(node)
-
+            ret = self._eval_binary_operation(node)
         elif isinstance(node, ast.UnaryOp):
-            ret = self.__eval_unary_operation(node)
-
+            ret = self._eval_unary_operation(node)
         elif isinstance(node, ast.Call):
-            ret = self.__eval_math_function(node)
-
+            ret = self._eval_math_function(node)
         else:
             raise UnsupportedMathError(node)
-
         return ret
 
-    def __eval_math_function(self, node):
+    def _eval_math_function(self, node):
         """Evaluate a node containing the call to a function.
 
         Supported mathematical functions are:
@@ -285,9 +278,9 @@ class MathParser:
             raise UnsupportedMathError(node.func.id) from err
 
         # Allow only single-argument math operations
-        return operation(self.__eval(node.args[0]))
+        return operation(self._eval(node.args[0]))
 
-    def __eval_binary_operation(self, node):
+    def _eval_binary_operation(self, node):
         """Evaluate a node containing a binary operation.
 
         Supported binary operations are addition, subtraction,
@@ -314,9 +307,9 @@ class MathParser:
             operation = BINARY_OPERATIONS[type(node.op)]
         except KeyError as err:
             raise UnsupportedMathError(node.op) from err
-        return operation(self.__eval(node.left), self.__eval(node.right))
+        return operation(self._eval(node.left), self._eval(node.right))
 
-    def __eval_unary_operation(self, node):
+    def _eval_unary_operation(self, node):
         """Evaluate a node containing a unary operation.
 
         Supported unary operations are sign change (-x) and
@@ -342,7 +335,7 @@ class MathParser:
             operation = UNARY_OPERATIONS[type(node.op)]
         except KeyError as err:
             raise UnsupportedMathError(node.op) from err
-        return operation(self.__eval(node.operand))
+        return operation(self._eval(node.operand))
 
 
 if __name__ == '__main__':
