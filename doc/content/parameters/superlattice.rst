@@ -18,7 +18,7 @@ SUPERLATTICE defines the relationship between the real-space vectors of the bulk
    SUPERLATTICE = (2*sqrt(2) x sqrt(2))R45
    SUPERLATTICE M = 1 1, -1 1              # same as (sqrt(2) x sqrt(2))R45
 
-If SUPERLATTICE is not defined, ViPErLEED will perform a search for possible unit cell vectors for the bulk (as defined by :ref:`LAYER_CUTS<CTRUNC>` and :ref:`N_BULK_LAYERS<BLAY>`), and choose two vectors that minimize the unit cell area and circumference. The resulting SUPERLATTICE matrix will then be further optimized to bring the bulk unit cell to its highest symmetry form (preserving the area). Note that for many systems, multiple choices of the bulk unit cell are possible, but result in different SUPERLATTICE definitions; this choice will be made arbitrarily if SUPERLATTICE is not actively defined.
+If SUPERLATTICE is not defined, ViPErLEED will perform a search for possible unit cell vectors for the bulk (as defined by :ref:`LAYER_CUTS<CTRUNC>` and :ref:`N_BULK_LAYERS<n_bulk_layers>`), and choose two vectors that minimize the unit cell area and circumference. The resulting SUPERLATTICE matrix will then be further optimized to bring the bulk unit cell to its highest symmetry form (preserving the area). Note that for many systems, multiple choices of the bulk unit cell are possible, but result in different SUPERLATTICE definitions; this choice will be made arbitrarily if SUPERLATTICE is not actively defined.
 
 Even when SUPERLATTICE is defined, an automatic search for the best bulk unit cell will run. If a unit cell with a smaller area is found, the program will warn and stop. If required, halting can be suppressed using the :ref:`HALTING<HALTING>` parameter.
 

@@ -55,7 +55,7 @@ This can be used for direct comparison (e.g., in VESTA :cite:p:`mommaVESTAThreed
 POSCAR_bulk
 -----------
 
-In addition, a **POSCAR_bulk** file is created (see SUPP folder) based on the :ref:`LAYER_CUTS<CTRUNC>`, :ref:`N_BULK_LAYERS<BLAY>`, :ref:`BULK_REPEAT<BULK_REPEAT>` and :ref:`SUPERLATTICE<SUPERLATTICE>` parameters.
+In addition, a **POSCAR_bulk** file is created (see SUPP folder) based on the :ref:`LAYER_CUTS<CTRUNC>`, :ref:`N_BULK_LAYERS<n_bulk_layers>`, :ref:`BULK_REPEAT<BULK_REPEAT>` and :ref:`SUPERLATTICE<SUPERLATTICE>` parameters.
 The structure in this file represents the bulk as it will be used during the TensErLEED calculations.
 You can check whether the bulk unit cell was recognized correctly by opening POSCAR_bulk in VESTA and editing the boundary such that multiple cells are shown in all three directions.
 For the same purpose, the **POSCAR_bulk_appended** is the original POSCAR file with 1-3 bulk units (depending on the bulk thickness) appended at the bottom, meant to check whether the bulk cell is aligned correctly with the slab.

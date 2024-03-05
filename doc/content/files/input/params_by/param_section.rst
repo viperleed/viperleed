@@ -31,7 +31,7 @@ Initialization
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`LAYER_CUTS<CTRUNC>`                  | How to separate the :ref:`POSCAR file<POSCAR>`  into layers                                                  |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **→** :ref:`N_BULK_LAYERS<BLAY>`           | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                 |
+  | **→** :ref:`N_BULK_LAYERS<n_bulk_layers>`  | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                 |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`SITE_DEF<SITEDEF>`             | Define which sites in the :ref:`POSCAR file<POSCAR>`  are special, i.e. have different vibrational amplitude |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -88,7 +88,7 @@ Reference calculation
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`LMAX<LMAX>`                           | Maximum angular momentum number; usually determined via :ref:`PHASESHIFT_EPS<PHASESHIFTMIN>`                 |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | **→** :ref:`N_BULK_LAYERS<BLAY>`            | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                 |
+  | **→** :ref:`N_BULK_LAYERS<n_bulk_layers>`   | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                 |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`N_CORES<NCORES>`                | The number of CPUs to use                                                                                    |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+

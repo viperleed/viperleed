@@ -60,7 +60,7 @@ Input Structure
   +------------------------------------------+----------------------------------------------------------------------------------+
   | :ref:`LAYER_CUTS<CTRUNC>`                | How to separate the :ref:`POSCAR file<POSCAR>` into layers                       |
   +------------------------------------------+----------------------------------------------------------------------------------+
-  | **→** :ref:`N_BULK_LAYERS<BLAY>`         | Define how many layers in the :ref:`POSCAR file<POSCAR>` represent the bulk      |
+  | **→** :ref:`N_BULK_LAYERS<n_bulk_layers>`| Define how many layers in the :ref:`POSCAR file<POSCAR>` represent the bulk      |
   +------------------------------------------+----------------------------------------------------------------------------------+
   | **→** :ref:`SUPERLATTICE<SUPERLATTICE>`  | The relationship between the surface and bulk unit cells                         |
   +------------------------------------------+----------------------------------------------------------------------------------+

@@ -1,4 +1,4 @@
-.. _blay:
+.. _n_bulk_layers:
 
 N_BULK_LAYERS
 =============
