@@ -90,4 +90,17 @@ class TestGenerateBeamlist:
     def test_generate_beamlist(self, make_beamlist):
         """Check successful generation of a 'BEAMLIST' file."""
         *_, beamlist = make_beamlist
-        assert beamlist.exists()                                                # TODO: may want to check it's not empty
+        assert beamlist.exists()
+        # check that file is not empty
+        with open(beamlist, 'r') as file:
+            assert file.read()
+
+    def test_beamlist_is_ordered_consistently(self, make_beamlist):
+        """Check that the beams are ordered consistently (See issue #184)"""
+        beamlist_contents = []
+        for _ in range(3):
+            *_, beamlist = make_beamlist
+            with open(beamlist, 'r') as file:
+                beamlist_contents.append(file.read())
+        assert all(contents == beamlist_contents[0]
+                   for contents in beamlist_contents)
