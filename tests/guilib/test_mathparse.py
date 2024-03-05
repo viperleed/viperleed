@@ -39,6 +39,8 @@ class TestMathParser:
         '2[3+2*rt 95] rt3 -9sqrt(7) / \u221a3': (
             2*(3+2*(95**0.5))*(3**0.5) - 9*(7**0.5)/(3**0.5)
             ),
+        '-1(1+2)(3-4)': 3,
+        '-1((1+2))(3-4)': 3,
         }
 
     @parametrize('expr,result', _processed_expr.items(), ids=_processed_expr)

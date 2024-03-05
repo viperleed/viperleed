@@ -124,17 +124,18 @@ def _fix_multiplication(txt):
     fixed_txt : str
         Text with multiplication signs added where needed.
     """
-    # Add a star whenever a digit is followed by any
-    # character except a digit, an operator, or a parenthesis
-    insert_star = r'((\d)([^+\-()*/.\d,<>%=]))'
+    # Add a star whenever a digit is followed by any character
+    # except a digit, an operator, or a parenthesis
+    exclude = r'[^+\-()*/.\d,<>%=]'
+    insert_star = fr'((\d)({exclude}))'
     txt = re.sub(insert_star, r'\2*\3', txt)
 
     # And again stars, this time any time there is
     # an '(' not preceded by an operator or a letter,
     # and any time there is an ')' followed by
     # a letter or a number
-    # add_star_open_parentheses = r'(.+)((?<!t|[+\-*/])[(])'
-    add_star_open_parentheses = r'(.+)((?<![a-zA-Z+\-*/])[(])'
+    no_open_par = r'[^(]'
+    add_star_open_parentheses = fr'({no_open_par}+)((?<![a-zA-Z+\-*/])[(])'
     txt = re.sub(add_star_open_parentheses, r'\1*\2', txt)
     add_star_close_parentheses = r'(\))([a-zA-Z\d])'
     txt = re.sub(add_star_close_parentheses, r'\1*\2', txt)
