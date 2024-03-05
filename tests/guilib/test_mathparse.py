@@ -53,6 +53,12 @@ class TestMathParser:
 class TestMathParserRaises:
     """Collection of tests for complaints from a MathParser."""
 
+    def test_no_expression(self):
+        """Check complaints when no expression is defined."""
+        parser = MathParser()
+        with pytest.raises(SyntaxError):
+            parser.evaluate()
+
     def test_not_a_string(self):
         """Check complaints for a non-string expression."""
         with pytest.raises(TypeError):

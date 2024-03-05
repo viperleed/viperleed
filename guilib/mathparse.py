@@ -269,6 +269,8 @@ class MathParser:
             If the expression contains calls to mathematical
             functions that are not supported.
         """
+        if not self.expression:
+            raise SyntaxError('No expression to evaluate. Set one beforehand.')
         node = ast.parse(self.expression, mode='eval')
         return self._eval(node, depth=0)
 
