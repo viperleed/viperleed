@@ -8,6 +8,7 @@ Created on 2024-03-04
 import pytest
 from pytest_cases import parametrize
 
+from viperleed.guilib import mathparse
 from viperleed.guilib.mathparse import MathParser
 from viperleed.guilib.mathparse import TooComplexMathError
 from viperleed.guilib.mathparse import UnsupportedMathError
@@ -70,8 +71,10 @@ class TestMathParserRaises:
 
     def test_too_long(self):
         """Check complaints for a too long expression."""
+        backup, mathparse.MAX_LEN = mathparse.MAX_LEN, 50
         with pytest.raises(TooComplexMathError):
-            MathParser('2*sqrt(2)' * 1001)  # Exceeds MAX_LEN
+            MathParser('2*sqrt(2)' * 10)  # Exceeds MAX_LEN
+        mathparse.MAX_LEN = backup
 
     _unsupported = (
         'sin(0)',    # No support for trigonometric
