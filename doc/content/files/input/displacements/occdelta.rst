@@ -34,7 +34,7 @@ Syntax
 where
 
 -  ``POSCAREL`` is the :ref:`POSCAR<POSCAR>` element and **not** the chemical species defined via :ref:`ELEMENT_MIX<ELSPLIT>`.
-   See also :ref:`element name collision<elnamecollision>`.
+   See also :ref:`element name collision<elementnamecollision>`.
 -  ``site`` is optional, and has the same functionality as the one in the :ref:`Geometrical displacements<GEODELTA>`.
 -  ``number(s)`` also behave as in the :ref:`Geometrical displacements<GEODELTA>`.
 
