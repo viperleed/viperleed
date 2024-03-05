@@ -36,7 +36,7 @@ class BulkInput(LatticeInput):
         ---------
         parent : PyQt5.QtWidgets.QWidget, default=None
             Parent widget that 'contains' this instance.
-        bulk_lattice : viperleed.Lattice
+        bulk_lattice : Lattice2D
             The lattice instance that will be modified
             when the controls in this instance are edited
         """

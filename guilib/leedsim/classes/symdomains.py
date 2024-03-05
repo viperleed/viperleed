@@ -17,6 +17,7 @@ import itertools
 import numpy as np
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.helpers import conventional_angles
 from viperleed.guilib.helpers import two_by_n_array_to_tuples
 from viperleed.guilib.helpers import two_by_two_array_to_tuple
@@ -107,8 +108,7 @@ class LEEDSymmetryDomains(Sequence):
     and the symmetry operations of a bulk group.
     LEEDSymmetryDomains is an immutable sequence (i.e., tuple-like).
 
-    Calling LEEDSymmetryDomains[i] returns a viperleed.Lattice of the
-    domain
+    Calling LEEDSymmetryDomains[i] returns a Lattice2D of the domain.
     """
 
     @dev_.exec_time
@@ -133,7 +133,7 @@ class LEEDSymmetryDomains(Sequence):
         # that are calculated only once (either during this
         # initialization or upon first call of one of the properties).
         # The keys are:
-        # - 'bulk': a minimal bulk Lattice used to get the basis,
+        # - 'bulk': a minimal bulk Lattice2D used to get the basis,
         #           the cell shape, and similar attributes.
         #           Read via self.bulk.
         # - 'operations': a list of the bulk symmetry operations
@@ -156,7 +156,7 @@ class LEEDSymmetryDomains(Sequence):
                          'denominator': None}
 
         # self.__domains is the underlying list that is accessed when
-        # issuing self[index]. It's a list of gl.Lattice instances
+        # issuing self[index]. It's a list of Lattice2D instances
         self.__domains = self.__build_domains()
 
         # self.__equiv_spots_no_superpos is a list of dictionaries of
@@ -201,7 +201,7 @@ class LEEDSymmetryDomains(Sequence):
 
         Notice that if a slice is given, the result is NOT
         type-preserving, i.e., it will not be a LEEDSymmetryDomains
-        but a list of Lattice(s)
+        but a list of Lattice2D objects.
         """
         return self.__domains[elem]
 
@@ -214,11 +214,11 @@ class LEEDSymmetryDomains(Sequence):
 
     @property
     def bulk(self):
-        """Minimal bulk Lattice. Do not use for plotting."""
+        """Minimal bulk Lattice2D. Do not use for plotting."""
         if not self.__consts['bulk']:
-            bulk_lattice = gl.Lattice(self.bulk_basis,
-                                      group=self.groups['bulk'],
-                                      space='reciprocal')
+            bulk_lattice = Lattice2D(self.bulk_basis,
+                                     group=self.groups['bulk'],
+                                     space='reciprocal')
             self.__consts['bulk'] = bulk_lattice
         return self.__consts['bulk']
 
@@ -657,18 +657,18 @@ class LEEDSymmetryDomains(Sequence):
         return 'other'
 
     def __build_domains(self):
-        """Return the viperleed.Lattice(s) with self.superlattices matrices."""
+        """Return Lattice2D objects with self.superlattices matrices."""
         # Create dummy surface lattice just to get the reciprocal basis
-        surf = gl.Lattice(self.__parameters['surfBasis'])
+        surf = Lattice2D(self.__parameters['surfBasis'])
 
         # and get the maximum screen radius
         max_radius = gl.screen_radius(self.__parameters['eMax'],
                                       self.__parameters['screenAperture'])
 
         # Then prepare the actual reciprocal lattice of the first domain
-        domains = [gl.Lattice(surf.reciprocal_basis, space='reciprocal',
-                              group=self.__parameters['surfGroup'],
-                              limit=max_radius)]
+        domains = [Lattice2D(surf.reciprocal_basis, space='reciprocal',
+                             group=self.__parameters['surfGroup'],
+                             limit=max_radius)]
 
         # and work out those of the others.
         # The reciprocal-space basis of domain i is:

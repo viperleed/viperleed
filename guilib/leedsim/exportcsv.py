@@ -307,8 +307,8 @@ def _format_header_(lengths, leed, **kwargs):                                   
     #       structure or multiple ones. Probably something like "Structural
     #       domain {name}: ..." in the latter case
     
-    #       LEEDSymmetryDomains has a .bulk property (a Lattice), and self[0]
-    #       is the first-domain Lattice
+    #       LEEDSymmetryDomains has a .bulk property (a Lattice2D), and self[0]
+    #       is the first-domain Lattice2D
 
     for txt in ('Bulk', 'Surface'):
         lattice = leed.reciprocal_lattices[txt[:4].lower()]

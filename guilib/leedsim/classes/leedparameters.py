@@ -21,6 +21,7 @@ import numpy as np
 
 from viperleed import guilib as gl
 from viperleed.guilib.classes import planegroup
+from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.helpers import conventional_angles
 from viperleed.guilib.helpers import remove_duplicates
 from viperleed.guilib.helpers import single_spaces_only
@@ -429,7 +430,7 @@ class LEEDParameters(MutableMapping):
         # basis, from which one can find the bulk reciprocal basis. Also,
         # round a bit the result (8 decimal digits).
         bulk_basis = np.dot(self['SUPERLATTICE'].T,
-                            gl.Lattice(self['surfBasis']).reciprocal_basis)
+                            Lattice2D(self['surfBasis']).reciprocal_basis)
         self['bulkReciprocalBasis'] = bulk_basis.round(decimals=8)
 
     def _3d_ops_to_bulk_group(self):
@@ -444,9 +445,9 @@ class LEEDParameters(MutableMapping):
             return
 
         # get dummy bulk to get the lattice shape
-        dummy_bulk = gl.Lattice(self['bulkReciprocalBasis'],
-                                space='reciprocal',
-                                group=self['bulkGroup'])
+        dummy_bulk = Lattice2D(self['bulkReciprocalBasis'],
+                               space='reciprocal',
+                               group=self['bulkGroup'])
         bulk_shape = dummy_bulk.cell_shape
 
         # And apply the bulk operations to the bulk group

@@ -16,6 +16,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.classes.planegroup import PlaneGroup
 from viperleed.guilib.leedsim.classes.woods import Woods
 from viperleed.guilib.leedsim.classes.woods import WoodsSyntaxError
@@ -151,7 +152,7 @@ class SurfaceStructureInput(qtw.QWidget):
         bulk_lattice : viperleed.Lattice
             The real-space lattice of the bulk. Can
             be read/written via the .bulk property
-        surface_lattice : viperleed.Lattice or None, default=None
+        surface_lattice : Lattice2D or None, default=None
             The real-space lattice of the surface structure.
             Can be read/written via the .lattice property.
             If not given or None, it should be set using
@@ -199,22 +200,22 @@ class SurfaceStructureInput(qtw.QWidget):
 
     @property
     def bulk(self):
-        """Return the viperleed.Lattice of the bulk."""
+        """Return the Lattice2D of the bulk."""
         return self.__bulk
 
     @bulk.setter
     def bulk(self, new_lattice):
-        """Set the viperleed.Lattice of the bulk to new_lattice."""
-        if isinstance(new_lattice, gl.Lattice):
+        """Set the Lattice2D of the bulk to new_lattice."""
+        if isinstance(new_lattice, Lattice2D):
             self.__bulk = new_lattice
             return
         raise TypeError("SurfaceStructureInput: invalid bulk lattice "
                         f"type {type(new_lattice).__name__}. Expected "
-                        "viperleed.Lattice or None")
+                        "Lattice2D or None")
 
     @property
     def lattice(self):
-        """Return the underlying viperleed.Lattice."""
+        """Return the underlying Lattice2D."""
         return self._ctrls['lattice'].lattice
 
     @lattice.setter
@@ -233,10 +234,10 @@ class SurfaceStructureInput(qtw.QWidget):
             If the basis of new_lattice is incommensurate
             with respect to the one of the bulk.
         """
-        if not isinstance(new_lattice, gl.Lattice):
+        if not isinstance(new_lattice, Lattice2D):
             raise TypeError("SurfaceStructureInput: invalid lattice "
                             f"argument type {type(new_lattice).__name__}. "
-                            "Expected viperleed.Lattice")
+                            "Expected Lattice2D")
         self._update_superlattice_from_surf_basis(new_lattice.basis)
         self._ctrls['lattice'].lattice = new_lattice
         self.update_woods_list_and_selection()

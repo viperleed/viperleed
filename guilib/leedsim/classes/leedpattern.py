@@ -17,6 +17,7 @@ import numpy as np
 
 from viperleed import guilib as gl
 from viperleed.guilib.classes.beamindex import BeamIndex
+from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.leedsim.classes.leedsubpattern import (
     LEEDSubpattern, CachedLEEDSubpatternConstructor
     )
@@ -144,14 +145,14 @@ class LEEDPattern:
 
     @property
     def bulk(self):
-        """Reciprocal-space bulk Lattice."""
-        if hasattr(self, '__bulk'):
+        """Reciprocal-space bulk Lattice2D."""
+        if hasattr(self, '__bulk'):                                             # TODO: ugly
             return self.__bulk
 
         max_radius = self.screen_radius(self.max_energy)
-        return gl.Lattice(self.domains.bulk_basis, space='reciprocal',
-                          group=self.parameters[0]['bulkGroup'],
-                          limit=max_radius)
+        return Lattice2D(self.domains.bulk_basis, space='reciprocal',
+                         group=self.parameters[0]['bulkGroup'],
+                         limit=max_radius)
 
     @property
     def max_energy(self):

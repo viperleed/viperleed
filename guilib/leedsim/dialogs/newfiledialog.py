@@ -19,6 +19,7 @@ import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
 from viperleed.gui import resources_path
+from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.leedsim import LEEDParametersList
 from viperleed.guilib.widgetslib import change_control_text_color
 # from viperleed.guilib.leedsim.widgets import BulkInput
@@ -71,7 +72,7 @@ class NewFileDialog(qtw.QDialog):
             self.__startup_parameters = old_params
         else:
             self.__startup_parameters = LEEDParametersList(DEFAULT_STARTUP)
-        self.__lattices = []  # List of gl.Lattice
+        self.__lattices = []  # List of Lattice2D
         self._ctrls = {       # Control widgets
             'bulk': gl.BulkInput(),
             'surfaces': qtw.QTabWidget(),
@@ -209,7 +210,7 @@ class NewFileDialog(qtw.QDialog):
 
         Parameters
         ----------
-        lattice : viperleed.Lattice or None, optional
+        lattice : Lattice2D or None, optional
             The lattice to use to initialize the controls.
             If not given or None, a new 1x1 lattice is
             created and added to the list of lattices
@@ -225,7 +226,7 @@ class NewFileDialog(qtw.QDialog):
         surf_tabs = self._ctrls['surfaces']
 
         if lattice is None:
-            lattice = gl.Lattice(basis=self.bulk_lattice.basis)
+            lattice = Lattice2D(basis=self.bulk_lattice.basis)
             self.__lattices.append(lattice)
         if not name:
             name = f"S{surf_tabs.count() + 1}"
@@ -525,12 +526,12 @@ class NewFileDialog(qtw.QDialog):
         superlattice = self.__startup_parameters[0]['SUPERLATTICE']
         bulk_basis = np.dot(np.linalg.inv(superlattice),
                             self.__startup_parameters[0]['surfBasis'])
-        self.__lattices = [gl.Lattice(
+        self.__lattices = [Lattice2D(
             bulk_basis,
             group=self.__startup_parameters[0]['bulkGroup']
             )]
         for param in self.__startup_parameters:
-            self.__lattices.append(gl.Lattice(
+            self.__lattices.append(Lattice2D(
                 param['surfBasis'],
                 group=param['surfGroup']
                 ))
@@ -582,7 +583,7 @@ class NewFileDialog(qtw.QDialog):
 
             for i in range(surf_tabs.count()):
                 surf_i = surf_tabs.widget(i)
-                superlattice = np.dot(surf_i.superlattice, bulk_transform_inv)
+                superlattice = np.dot(surf_i.superlattice, bulk_transform_inv)  # TODO: use ensure_integer_matrix
                 if np.any(np.abs(superlattice - superlattice.round()) > 1e-3):
                     # Lattice would be incommensurate. Signal the problem
                     error_msg.setText(error_txt.format(surf_tabs.tabText(i)))
@@ -771,7 +772,7 @@ class NewFileDialog(qtw.QDialog):
         # structure, i.e., a standard lattice.
         n_structures = tabs.count()
         if n_structures == 1:
-            lattice = gl.Lattice(self.bulk_lattice.basis)
+            lattice = Lattice2D(self.bulk_lattice.basis)
             self.__lattices[1] = lattice
             tabs.removeTab(index)
             self._add_surface_structure_tab(lattice, "S1")

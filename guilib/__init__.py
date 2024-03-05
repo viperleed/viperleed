@@ -22,8 +22,7 @@ from viperleed.guilib.base import (get_equivalent_beams,
                                    string_matrix_to_numpy,
                                    format_floats,  # probably not needed globally
                                    integer_part_length,
-                                   parallel, orientation, screen_radius,
-                                   Lattice)
+                                   parallel, orientation, screen_radius)
 
 from viperleed.guilib.mathparse import MathParser, UnsupportedMathError
 

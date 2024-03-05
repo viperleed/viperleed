@@ -18,6 +18,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.lattice2d import Lattice2D
 from viperleed.guilib.classes.planegroup import PlaneGroup
 from viperleed.guilib.widgetslib import change_control_text_color
 
@@ -33,9 +34,9 @@ MATCH_LATTICE_PARAM = re.compile(r'^\s*(\d+(\.\d+)?)\s*[\u212b\u00b0]?\s*$')
 class LatticeInput(qtw.QWidget):
     """Generic input for a lattice.
 
-    The underlying viperleed.Lattice instance, used upon
-    construction, is updated according to the interactive
-    user input.
+    The underlying Lattice2D instance, used upon
+    construction, is updated according to the
+    interactive user input.
 
     The controls are not initialized with up-to-date values.
     Call update_controls_from_lattice() to update from the data.
@@ -55,7 +56,7 @@ class LatticeInput(qtw.QWidget):
         parent : PyQt5.QtWidgets.QWidget or None, optional
             Parent widget that 'contains' this instance.
             Default is None.
-        lattice : viperleed.Lattice or None, optional
+        lattice : Lattice2D or None, optional
             The lattice instance that will be modified when the
             controls in this instance are edited. If None or not
             given, it should be set via the .lattice property
@@ -138,7 +139,7 @@ class LatticeInput(qtw.QWidget):
 
     @property
     def lattice(self):
-        """Return the underlying viperleed.Lattice."""
+        """Return the underlying Lattice2D."""
         if self._lattice is None:
             raise RuntimeError("LatticeInput: underlying lattice never set.")
         return self._lattice
@@ -156,10 +157,10 @@ class LatticeInput(qtw.QWidget):
         TypeError
             If new_lattice is not a viperleed.Lattice
         """
-        if not isinstance(new_lattice, gl.Lattice):
+        if not isinstance(new_lattice, Lattice2D):
             raise TypeError("LatticeInput: invalid lattice argument "
                             f"type {type(new_lattice).__name__}. "
-                            "Expected viperleed.Lattice")
+                            "Expected Lattice2D")
         self._lattice = new_lattice
         self.__last_acceptable_basis = new_lattice.basis
         self.update_controls_from_lattice()
@@ -449,8 +450,7 @@ class LatticeInput(qtw.QWidget):
             ctrl.addItem('_None')
             ctrl.setCurrentText('_None')
         ctrl.setCurrentText('')
-        ctrl.setSizePolicy(qtw.QSizePolicy.Fixed,
-                                            qtw.QSizePolicy.Preferred)
+        ctrl.setSizePolicy(qtw.QSizePolicy.Fixed, qtw.QSizePolicy.Preferred)
         ctrl.ensurePolished()
         ctrl.adjustSize()
         ctrl.setEnabled(self.edit_enabled)

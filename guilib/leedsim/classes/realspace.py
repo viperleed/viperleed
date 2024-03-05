@@ -14,6 +14,7 @@ Created: 2021-03-13
 import numpy as np
 
 from viperleed import guilib as gl
+from viperleed.guilib.classes.lattice2d import Lattice2D
 
 
 class RealSpace():
@@ -42,14 +43,14 @@ class RealSpace():
         # self.fov is the real space field of view.
         # contains at least 4 unit cells
         self.fov = 4.2*max(surf_basis.ravel())
-        self.surf = gl.Lattice(surf_basis,
-                               space='real',
-                               group=params['surfGroup'],
-                               limit=self.fov)
-        self.bulk = gl.Lattice(self.bulk_basis,
-                               space='real',
-                               group=params['bulkGroup'],
-                               limit=self.fov)
+        self.surf = Lattice2D(surf_basis,
+                              space='real',
+                              group=params['surfGroup'],
+                              limit=self.fov)
+        self.bulk = Lattice2D(self.bulk_basis,
+                              space='real',
+                              group=params['bulkGroup'],
+                              limit=self.fov)
         self.bulk.group.set_screws_glides(params['bulk3Dsym'],
                                           self.bulk.cell_shape)
 

@@ -66,7 +66,7 @@ class Bulk3DSymDialog(qtw.QDialog):
                                           'cancel': qtw.QPushButton()}}
 
         # The following are set update_operations():
-        self.__bulk = None      # gl.Lattice
+        self.__bulk = None      # Lattice2D
         self.__extra_ops = []   # extra operations that may be selected
 
         self.__compose()
@@ -258,7 +258,7 @@ class Bulk3DSymDialog(qtw.QDialog):
 
         Parameters
         ----------
-        bulk : gl.Lattice
+        bulk : Lattice2D
 
         Returns
         -------
