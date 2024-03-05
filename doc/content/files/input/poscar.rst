@@ -38,7 +38,7 @@ For each atom the following information is given:
 
 -  **N**: Consecutive numbering of the atoms. Same as atom number in VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011`. Atom numbering is conserved from the original POSCAR. This numbering convention is applied everywhere in TLEEDM.
 -  **SiteLabel**: ``element_sitetype``, as determined from :ref:`SITE_DEF<SITEDEF>`.
--  **Layer**: The layer that the atom is in, as determined from :ref:`LAYER_CUTS<CTRUNC>`.
+-  **Layer**: The layer that the atom is in, as determined from :ref:`LAYER_CUTS<layer_cuts>`.
 -  **Linking**: Progressive label that indicates which atoms are related to one another by the symmetry **Group**. When one of the atoms from an equivalence group is moved via the :ref:`DISPLACEMENTS<DISPLACEMENTS>`, its equivalent ones will be also moved such that the symmetry is conserved (see the :ref:`DISPLACEMENTS<DISPLACEMENTS>`  file for further details).
 -  **FreeDir**: Allowed in-plane movement direction for the atom during LEED optimization. Will be ``locked`` if the atom is on a rotation axis, and ``[i j]`` if the atom is on a mirror plane, where the allowed direction is ``ia + jb``. This column is not displayed in the POSCAR_oricell file, since the cell (and therefore the unit vectors) might be different. Bulk atoms will be labelled ``bulk`` in this column, since they cannot be moved during optimization.
 
@@ -55,7 +55,7 @@ This can be used for direct comparison (e.g., in VESTA :cite:p:`mommaVESTAThreed
 POSCAR_bulk
 -----------
 
-In addition, a **POSCAR_bulk** file is created (see SUPP folder) based on the :ref:`LAYER_CUTS<CTRUNC>`, :ref:`N_BULK_LAYERS<n_bulk_layers>`, :ref:`BULK_REPEAT<BULK_REPEAT>` and :ref:`SUPERLATTICE<SUPERLATTICE>` parameters.
+In addition, a **POSCAR_bulk** file is created (see SUPP folder) based on the :ref:`LAYER_CUTS<layer_cuts>`, :ref:`N_BULK_LAYERS<n_bulk_layers>`, :ref:`BULK_REPEAT<BULK_REPEAT>` and :ref:`SUPERLATTICE<SUPERLATTICE>` parameters.
 The structure in this file represents the bulk as it will be used during the TensErLEED calculations.
 You can check whether the bulk unit cell was recognized correctly by opening POSCAR_bulk in VESTA and editing the boundary such that multiple cells are shown in all three directions.
 For the same purpose, the **POSCAR_bulk_appended** is the original POSCAR file with 1-3 bulk units (depending on the bulk thickness) appended at the bottom, meant to check whether the bulk cell is aligned correctly with the slab.
@@ -89,7 +89,7 @@ A **POSCAR_vacuum_corrected** file is provided (in folder SUPP) if the original 
 In these cases, the POSCAR_vacuum_corrected file may be used as a starting point to produce an acceptable input POSCAR for a subsequent run.
 
 .. note::
-    When preparing a new set of input files from POSCAR_vacuum_corrected, be careful to adapt any :ref:`PARAMETERS<parameters>` that are defined as fractions of the unit-cell c vector (e.g., :ref:`LAYER_CUTS<CTRUNC>`, :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`, :ref:`BULK_REPEAT<BULK_REPEAT>`).
+    When preparing a new set of input files from POSCAR_vacuum_corrected, be careful to adapt any :ref:`PARAMETERS<parameters>` that are defined as fractions of the unit-cell c vector (e.g., :ref:`LAYER_CUTS<layer_cuts>`, :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`, :ref:`BULK_REPEAT<BULK_REPEAT>`).
 
 A POSCAR file with a gap smaller than 5 Å will not cause ViPErLEED to stop, but a POSCAR_vacuum_corrected file is nonetheless generated. It can be used, e.g., to judge the appropriate identification of which atoms are at the top and which ones belong to the bulk-like portion of the input POSCAR.
 

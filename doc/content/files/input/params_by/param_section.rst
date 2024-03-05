@@ -29,7 +29,7 @@ Initialization
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`ELEMENT_MIX<ELSPLIT>`                | Declare that sites in the :ref:`POSCAR file<POSCAR>`  can be occupied by different chemical elements         |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`LAYER_CUTS<CTRUNC>`                  | How to separate the :ref:`POSCAR file<POSCAR>`  into layers                                                  |
+  | :ref:`LAYER_CUTS<layer_cuts>`              | How to separate the :ref:`POSCAR file<POSCAR>`  into layers                                                  |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`N_BULK_LAYERS<n_bulk_layers>`  | Define how many layers in the :ref:`POSCAR file<POSCAR>`  represent the bulk                                 |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -84,7 +84,7 @@ Reference calculation
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`KEEP_REFCALC_DIRS<keep_refcalc_dirs>` | Toggle to keep the reference calculating execution directories                                               |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`LAYER_CUTS<CTRUNC>`                   | How to separate the :ref:`POSCAR file<POSCAR>`  into layers                                                  |
+  | :ref:`LAYER_CUTS<layer_cuts>`               | How to separate the :ref:`POSCAR file<POSCAR>`  into layers                                                  |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`LMAX<LMAX>`                           | Maximum angular momentum number; usually determined via :ref:`PHASESHIFT_EPS<PHASESHIFTMIN>`                 |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+

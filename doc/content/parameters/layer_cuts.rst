@@ -1,4 +1,4 @@
-.. _ctrunc:
+.. _layer_cuts:
 
 LAYER_CUTS
 ==========

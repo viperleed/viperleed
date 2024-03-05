@@ -53,7 +53,7 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`KEEP_REFCALC_DIRS<keep_refcalc_dirs>`             | Toggle to keep the reference calculating execution directories                                                                          |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`LAYER_CUTS<CTRUNC>`                               | How to separate the :ref:`POSCAR file<POSCAR>` into layers                                                                              |
+  | :ref:`LAYER_CUT<layer_cuts>`                            | How to separate the :ref:`POSCAR file<POSCAR>` into layers                                                                              |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`LAYER_STACK_VERTICAL<GEO_VERTSTACK>`              | How to choose layer stacking vectors in the TensErLEED input (debugging functionality only)                                             |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+

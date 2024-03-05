@@ -28,5 +28,5 @@ POSCAR_get_bulk_repeat reads a POSCAR file, asks at what c value (fractional coo
 To use the POSCAR_get_bulk_repeat utility, simply call the :term:`Python` script ``POSCAR_get_bulk_repeat.py`` from the command line (e.g. ``python POSCAR_get_bulk_repeat.py``).
 The script will instruct the user and promt for a POSCAR file name.
 It will then read the structure and then promt for a cutoff c value and a desired tolerance for symmetry search.
-If the bulk can be determined, the determined values for the parameters :ref:`BULK_REPEAT`, :ref:`N_BULK_LAYERS<n_bulk_layers>` and :ref:`LAYER_CUTS<ctrunc>` are output.
+If the bulk can be determined, the determined values for the parameters :ref:`BULK_REPEAT`, :ref:`N_BULK_LAYERS<n_bulk_layers>` and :ref:`LAYER_CUTS<layer_cuts>` are output.
 Additionally, the files ``POSCAR_bulk`` containing the bulk unit-cell and a file ``POSCAR_min`` containing the minimal surface slab will be written.
