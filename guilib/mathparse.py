@@ -4,12 +4,12 @@
   ViPErLEED Graphical User Interface
 ======================================
 
+Created: 2021-06-13
+@author: Michele Riva (@michele-riva)
+
 Defines a MathParser class that allows parsing simple mathematical
 expressions. The parser is safe with respect to code injection, as
 it only accepts numeric expressions and square root calculations.
-
-Author: Michele Riva
-Created: 2021-06-13
 """
 
 # The code is based on https://stackoverflow.com/questions/20748202/
