@@ -237,7 +237,7 @@ structure, as these may require multiple iterations of reference calculations,
 and structure optimizations to converge.
 
 .. _fig_Fe2O3_search_progress_1:
-.. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/Search-report-first_optimization.pdf
+.. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/Search-report-first_optimization.svg
    :width: 70%
    :align: center
 
@@ -290,7 +290,7 @@ sensitive to the incidence angle in the
 :numref:`fig_Fe2O3_fd_opt_theta_values` and :numref:`fig_Fe2O3_fd_opt_theta_beams`).
 
 .. _fig_Fe2O3_fd_opt_theta_values:
-.. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/FD_Optimization.pdf
+.. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/FD_Optimization.svg
    :width: 70%
    :align: center
 
@@ -299,7 +299,7 @@ sensitive to the incidence angle in the
 
 
 .. _fig_Fe2O3_fd_opt_theta_beams:
-.. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/FD_Optimization_beam_(1,1).pdf
+.. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/FD_Optimization_beam_(1,1).svg
    :width: 70%
    :align: center
 
