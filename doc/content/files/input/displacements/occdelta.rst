@@ -53,7 +53,7 @@ Notice that a **maximum of five distinct chemical elements**
 (including vacancies) can be used at each atomic position.
 
 ``start``, ``end``, ``step``, and ``fix*`` are floating point numbers 
-between 0 and 100 defining the fractional occupations in percent.
+between 0 and 1 defining the fractional occupations in percent.
 
 When using the first syntax, the program will search all independent 
 combinations of ``CHEM*`` in the range specified.
