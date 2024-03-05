@@ -10,6 +10,8 @@ amplitude for each element in the :ref:`POSCAR file<POSCAR>`. If the
 :ref:`ELEMENT_MIX<ELSPLIT>`  parameter is defined for an element in the 
 :ref:`PARAMETERS file<PARAMETERS>`, explicitly assigning vibrational 
 amplitudes and occupations to all sub-elements is recommended.
+See also :ref:`this page<occdelta>` for instructions on how to vary the
+occupation of a site during structure optimization.
 
 Additionally, the VIBROCC file can contain a block defining offsets in 
 vibrational amplitudes, occupation, or position per element for specific 

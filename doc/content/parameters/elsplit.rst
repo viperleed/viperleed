@@ -3,9 +3,10 @@
 ELEMENT_MIX
 ===========
 
-ELEMENT_MIX defines whether sites defined as one element in the :ref:`POSCAR file<POSCAR>`  are occupied by multiple chemical elements.
+ELEMENT_MIX defines whether sites defined as one element in the :ref:`POSCAR file<POSCAR>` are occupied by multiple chemical elements.
+See also :ref:`this page<occdelta>` for instructions on how to vary the occupation of a site during structure optimization.
 
-**Default:** None of the elements given in the :ref:`POSCAR file<POSCAR>`  are occupied by multiple elements.
+**Default:** None of the elements given in the :ref:`POSCAR file<POSCAR>` are occupied by multiple elements.
 
 **Syntax:**
 
