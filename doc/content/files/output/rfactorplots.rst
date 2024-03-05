@@ -12,7 +12,7 @@ Note that the curves are the ones output by the TensErLEED r-factor program (the
 The appearance of the R-factor plots can be modified with the :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>` parameter.
 
 
-.. figure:: /_static/output_examples/Rfactor_plots.pdf
+.. figure:: /_static/output_examples/Rfactor_plots.svg
    :width: 60%
    :align: center
 

@@ -42,7 +42,7 @@ Example
 Below are examples of a Search-progress.pdf file that was generated during the
 example calculation discussed :ref:`here<example_Fe2O3>`.
 
-.. figure:: /_static/output_examples/Search-progress.pdf
+.. figure:: /_static/output_examples/Search-progress.svg
    :width: 60%
    :align: center
 

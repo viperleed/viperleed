@@ -28,7 +28,7 @@ structural optimization discussed in the example calculation discussed
 :ref:`here<example_Fe2O3>`.
 
 
-.. figure:: /_static/output_examples/Search-report_page_1.pdf
+.. figure:: /_static/output_examples/Search-report_page_1.svg
    :width: 60%
    :align: center
 
@@ -37,7 +37,7 @@ structural optimization discussed in the example calculation discussed
    of generations since the last improvement.
 
 
-.. figure:: /_static/output_examples/Search-report_page_2.pdf
+.. figure:: /_static/output_examples/Search-report_page_2.svg
    :width: 60%
    :align: center
 
