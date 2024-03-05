@@ -62,7 +62,7 @@ _BEAMGEN_CASES = {
 
 
 class TestGenerateBeamlist:
-    """Collection of tests for the generation of beam lists."""
+    """Collection of tests for the generation of beam lists."""                 # TODO: check energy sorting
 
     @fixture(name='make_beamlist', scope='class')
     @parametrize_with_cases('args', **_BEAMGEN_CASES)

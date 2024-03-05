@@ -194,8 +194,7 @@ def _prepare_beam_groups(bulk, beam_subsets):
     all_energies = []
     all_indices = []
     for beam_indices in beam_subsets:
-        indices_arr = np.array(sorted(beam_indices),                            # TODO: temporary fix for Issue #184. Redo using sort_hk from guilib once merged from multi-structures-in-gui
-                               dtype='float64')  # from Fraction
+        indices_arr = np.array(beam_indices, dtype='float64')  # from Fraction
         # Calculate cut-off energy for each beam
         energies = (                                                            # TODO: we could probably remove the energies from BEAMLIST completely. It seems they are not used in TensErLEED (see subroutine READIN in lib.tleed.f). Would need to remove it from here, and readBEAMLIST in beams.py.
             H_BAR_SQ_OVER_2M
@@ -330,10 +329,10 @@ def get_beam_scattering_subsets(beam_indices_raw):
         Reduced version of the indices in beam_indices_raw.
     """
     reduced_indices = [(h%1, k%1) for (h, k) in beam_indices_raw]
-    subset_classes = set(reduced_indices)
+    subset_classes = dict.fromkeys(reduced_indices)
 
     # sort order of subsets by |(h_red, k_red)|^2
-    subset_classes = sorted(subset_classes, key=lambda hk: hk[0]**2 + hk[1]**2)
+    #subset_classes = sorted(subset_classes, key=lambda hk: hk[0]**2 + hk[1]**2)
 
     return subset_classes, reduced_indices
 
