@@ -232,6 +232,8 @@ class MathParser:
             after preprocessing.
         TypeError
             If `new_expression` is not a string.
+        UnsupportedMathError
+            If `new_expression` contains invalid characters.
         """
         if not isinstance(new_expression, str):
             raise TypeError('MathParser: expression should be a string, '
