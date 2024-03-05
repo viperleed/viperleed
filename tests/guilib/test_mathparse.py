@@ -75,6 +75,18 @@ class TestMathParserRaises:
         with pytest.raises(TooComplexMathError):
             MathParser('2*sqrt(2)' * 10)  # Exceeds MAX_LEN
         mathparse.MAX_LEN = backup
+    
+    def test_max_recursion(self):
+        """Check complaints for a too deep expression."""
+        backup, mathparse.MAX_DEPTH = mathparse.MAX_DEPTH, 3
+        expr = '_'
+        for _ in range(mathparse.MAX_DEPTH-1):
+            expr = expr.replace('_', 'sqrt(_)')
+        expr = expr.replace('_', '1')
+        parser = MathParser(expr)
+        with pytest.raises(TooComplexMathError):
+            parser.evaluate()
+        mathparse.MAX_DEPTH = backup
 
     _unsupported = (
         'sin(0)',    # No support for trigonometric

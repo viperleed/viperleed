@@ -20,6 +20,7 @@ Created: 2021-06-13
 __all__ = ('MathParser', 'TooComplexMathError', 'UnsupportedMathError')
 
 import ast
+from functools import wraps
 import math
 import operator
 import re
@@ -42,6 +43,7 @@ MATH_OPERATIONS = {
     'sqrt': math.sqrt,
     }
 
+MAX_DEPTH = 100  # Maximum recursion for expression evaluation
 MAX_LEN = 10000  # characters
 MAX_POW = 1000   # Limit range of operands in pow
 
@@ -141,6 +143,17 @@ def _fix_multiplication(txt):
     txt = re.sub(add_star_close_parentheses, r'\1*\2', txt)
 
     return txt
+
+
+def limit_recursion(func):
+    """Raise if func is called with a too deep recursion depth."""
+    @wraps(func)
+    def _wrapper(self, node, depth):
+        if depth > MAX_DEPTH:
+            raise TooComplexMathError('Cannot evaluate mathematical '
+                                      'expression: Too deep.')
+        return func(self, node, depth)
+    return _wrapper
 
 
 class TooComplexMathError(ValueError):
@@ -250,12 +263,13 @@ class MathParser:
             functions that are not supported.
         """
         node = ast.parse(self.expression, mode='eval')
-        return self._eval(node)
+        return self._eval(node, depth=0)
 
-    def _eval(self, node):
+    @limit_recursion
+    def _eval(self, node, depth):
         """Recursively evaluate a node."""
         if isinstance(node, ast.Expression):
-            ret = self._eval(node.body)
+            ret = self._eval(node.body, depth+1)
         elif isinstance(node, ast.Constant):  # Available since 3.6
             ret = node.value
         elif isinstance(node, ast.Str):       # Deprecated since 3.8
@@ -263,16 +277,17 @@ class MathParser:
         elif isinstance(node, ast.Num):       # Deprecated since 3.8
             ret = node.n
         elif isinstance(node, ast.BinOp):
-            ret = self._eval_binary_operation(node)
+            ret = self._eval_binary_operation(node, depth+1)
         elif isinstance(node, ast.UnaryOp):
-            ret = self._eval_unary_operation(node)
+            ret = self._eval_unary_operation(node, depth+1)
         elif isinstance(node, ast.Call):
-            ret = self._eval_math_function(node)
+            ret = self._eval_math_function(node, depth+1)
         else:
             raise UnsupportedMathError(node)
         return ret
 
-    def _eval_math_function(self, node):
+    @limit_recursion
+    def _eval_math_function(self, node, depth):
         """Evaluate a node containing the call to a function.
 
         Supported mathematical functions are:
@@ -298,10 +313,11 @@ class MathParser:
             operation = MATH_OPERATIONS[node.func.id]
         except KeyError as exc:
             raise UnsupportedMathError(node.func.id) from exc
-        operands = (self._eval(op) for op in node.args)
+        operands = (self._eval(op, depth+1) for op in node.args)
         return operation(*operands)
 
-    def _eval_binary_operation(self, node):
+    @limit_recursion
+    def _eval_binary_operation(self, node, depth):
         """Evaluate a node containing a binary operation.
 
         Supported binary operations are addition, subtraction,
@@ -328,14 +344,16 @@ class MathParser:
             operation = BINARY_OPERATIONS[type(node.op)]
         except KeyError as exc:
             raise UnsupportedMathError(node.op) from exc
-        operands = self._eval(node.left), self._eval(node.right)
+        operands = (self._eval(node.left, depth+1),
+                    self._eval(node.right, depth+1))
         if (operation is operator.pow  # Limit ranges for a**b
                 and any(op > MAX_POW for op in operands)):
             raise TooComplexMathError('Result too large. Cannot compute '
                                       f'{operands[0]}**{operands[1]}.')
         return operation(*operands)
 
-    def _eval_unary_operation(self, node):
+    @limit_recursion
+    def _eval_unary_operation(self, node, depth):
         """Evaluate a node containing a unary operation.
 
         Supported unary operations are sign change (-x) and
@@ -361,4 +379,4 @@ class MathParser:
             operation = UNARY_OPERATIONS[type(node.op)]
         except KeyError as exc:
             raise UnsupportedMathError(node.op) from exc
-        return operation(self._eval(node.operand))
+        return operation(self._eval(node.operand, depth+1))
