@@ -3,14 +3,14 @@
 BULK_REPEAT
 ===========
 
-BULK_REPEAT defines how the bulk layers (as defined by :ref:`LAYER_CUTS<CTRUNC>`  and :ref:`N_BULK_LAYERS<BLAY>`) are repeated after reaching the bottom of the :ref:`POSCAR file<POSCAR>`. If the **c** vector of the POSCAR is oriented parallel to a bulk repeat vector, BULK_REPEAT can be defined simply as a bulk "layer thickness" (which may be equivalent to step height). Note that the :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` parameter offers an easy way to detect the bulk repeat unit automatically.
+BULK_REPEAT defines how the bulk layers (as defined by :ref:`LAYER_CUTS<layer_cuts>`  and :ref:`N_BULK_LAYERS<n_bulk_layers>`) are repeated after reaching the bottom of the :ref:`POSCAR file<POSCAR>`. If the **c** vector of the POSCAR is oriented parallel to a bulk repeat vector, BULK_REPEAT can be defined simply as a bulk "layer thickness" (which may be equivalent to step height). Note that the :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` parameter offers an easy way to detect the bulk repeat unit automatically.
 
 .. note::
 
-   If :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` is defined, BULK_REPEAT and :ref:`N_BULK_LAYERS<BLAY>` can be automatically detected from the :ref:`POSCAR<POSCAR>` file.
+   If :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` is defined, BULK_REPEAT and :ref:`N_BULK_LAYERS<n_bulk_layers>` can be automatically detected from the :ref:`POSCAR<POSCAR>` file.
    The :ref:`PARAMETERS<parameters>` file will automatically be updated accordingly.
 
-**Default:** Detected automatically from :ref:`POSCAR<POSCAR>`  and :ref:`N_BULK_LAYERS<BLAY>`: If as many non-bulk layers as bulk layers are "bulk-like" (i.e. unrelaxed), automatically detects the minimal repeat vector. Otherwise, assumes that the bulk repeat vector is parallel to **c** and defines BULK_REPEAT as a bulk layer thickness. This is done by detecting the cartesian distance in z direction between bottom atom in bottom bulk layer and bottom atom in bottom non-bulk layer.
+**Default:** Detected automatically from :ref:`POSCAR<POSCAR>`  and :ref:`N_BULK_LAYERS<n_bulk_layers>`: If as many non-bulk layers as bulk layers are "bulk-like" (i.e. unrelaxed), automatically detects the minimal repeat vector. Otherwise, assumes that the bulk repeat vector is parallel to **c** and defines BULK_REPEAT as a bulk layer thickness. This is done by detecting the cartesian distance in z direction between bottom atom in bottom bulk layer and bottom atom in bottom non-bulk layer.
 
 **Allowed values:** positive float, or any three float values if vector
 

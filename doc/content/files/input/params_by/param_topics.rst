@@ -58,9 +58,9 @@ Input Structure
   +------------------------------------------+----------------------------------------------------------------------------------+
   | :ref:`BULK_REPEAT<BULK_REPEAT>`          | Thickness of the bulk repeat unit, or a bulk repeat vector                       |
   +------------------------------------------+----------------------------------------------------------------------------------+
-  | :ref:`LAYER_CUTS<CTRUNC>`                | How to separate the :ref:`POSCAR file<POSCAR>` into layers                       |
+  | :ref:`LAYER_CUTS<layer_cuts>`            | How to separate the :ref:`POSCAR file<POSCAR>` into layers                       |
   +------------------------------------------+----------------------------------------------------------------------------------+
-  | **→** :ref:`N_BULK_LAYERS<BLAY>`         | Define how many layers in the :ref:`POSCAR file<POSCAR>` represent the bulk      |
+  | **→** :ref:`N_BULK_LAYERS<n_bulk_layers>`| Define how many layers in the :ref:`POSCAR file<POSCAR>` represent the bulk      |
   +------------------------------------------+----------------------------------------------------------------------------------+
   | **→** :ref:`SUPERLATTICE<SUPERLATTICE>`  | The relationship between the surface and bulk unit cells                         |
   +------------------------------------------+----------------------------------------------------------------------------------+

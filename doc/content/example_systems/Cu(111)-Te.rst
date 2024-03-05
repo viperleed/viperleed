@@ -109,7 +109,7 @@ The lower figure shows the deviation of the structural parameters over time.
 Together, these two plots give an idea, of how converged the search is.
 
 .. _Cu(111)-Te_search_report:
-.. figure:: /_static/example_systems/Cu(111)-Te/figures/Search-report_rough.pdf
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/Search-report_rough.svg
    :width: 60%
    :align: center
    
@@ -178,7 +178,7 @@ To do this, we set :ref:`RUN = 6<run>` and add this line to :ref:`PARAMETERS<par
     Since higher :math:`V_{0\text{i}}` smoothens out the :math:`I(V)` curves, it is possible to deceptively decrease the R-factor by arbitrarily increasing :math:`V_{0\text{i}}`.
     This usually happens in cases of very high R-factor values, where :math:`V_{0\text{i}}` optimization is not the main concern anyhow.
 
-.. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_Optimization.pdf
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_Optimization.svg
    :width: 60%
    :align: center
 
@@ -188,7 +188,7 @@ The optimized value for :math:`V_{0\text{i}}` will be output in the log file and
 Furthermore, ViPErLEED produces the files :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` and :ref:`FD_Optimization.pdf<fdoptimizationdata>` in the ``OUT`` directory.
 :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` shows the calculated diffraction intensities for different values of the optimized parameter, while :ref:`FD_Optimization.pdf<fdoptimizationdata>` shows the R-factors corresponding to each trial value.
 
-.. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_beams.pdf
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_beams.svg
    :width: 90%
    :align: center
 
@@ -224,7 +224,7 @@ Here is an example for displacements in (:math:`x`) direction, but example for (
 The results are plotted in the file :ref:`Errors.pdf<errorspdf>`.
 We see that displacements for atoms in all layers have a drastic impact on the R-factor – so we can be fairly confident that all varied atoms are indeed present within the true surface structure.
 
-.. figure:: /_static/example_systems/Cu(111)-Te/figures/Errors_x_vib.pdf
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/Errors_x_vib.svg
    :width: 100%
    :align: center
 

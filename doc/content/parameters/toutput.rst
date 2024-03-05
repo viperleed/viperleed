@@ -3,7 +3,7 @@
 TENSOR_OUTPUT
 =============
 
-TENSOR_OUTPUT defines whether Tensor output is required for non-bulk layers (starting from the top) in the refcalc. Layers are defined by the :ref:`LAYER_CUTS<CTRUNC>`  parameter.
+TENSOR_OUTPUT defines whether Tensor output is required for non-bulk layers (starting from the top) in the refcalc. Layers are defined by the :ref:`LAYER_CUTS<layer_cuts>`  parameter.
 
 **Default:** 1 for all layers
 

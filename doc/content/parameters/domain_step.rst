@@ -20,5 +20,3 @@ See also the page about :ref:`Domain calculations<domain_calculation>`.
 When fitting multiple domains, one weight parameter per domain is added to the search. These parameters are varied freely, but renormalized to sum to 100%, resulting in an effective N-1 free parameters, with N the number of domains. DOMAIN_STEP defines the step width for these parameters, so increasing the value may speed up the search.
 
 DOMAIN_STEP should always be a divisor of 100 because the variation is performed with integer-valued parameters, with the lowest value (1) always corresponding to 0% and the highest value corresponding to 100%.
-
-**TODO - needs discussion, move comment**: perhaps it would be more intuitive to interpret the step as the 'resolution' in the area fractions?
