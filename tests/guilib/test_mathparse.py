@@ -89,20 +89,22 @@ class TestMathParserRaises:
         mathparse.MAX_DEPTH = backup
 
     _unsupported = (
-        'sin(0)',    # No support for trigonometric
-        'abc',       # No support for arbitrary strings
-        '1<2',       # No support for ordering
-        'ge(1,2)',   # No support for ordering
-        'truth(1)',  # No support for unary truth
-        'abs(1)',    # No support for absolute value
-        'not 1',     # No support for unary not
-        '1 << 8',    # No support for bit shift
-        '~1',        # No support for bit inversion
+        'sin(0)',      # No support for trigonometric
+        'abc',         # No support for arbitrary strings
+        '1<2',         # No support for ordering
+        'ge(1,2)',     # No support for ordering
+        'truth(1)',    # No support for unary truth
+        'abs(1)',      # No support for absolute value
+        'not 1',       # No support for unary not
+        '1 << 8',      # No support for bit shift
+        '~1',          # No support for bit inversion
+        '__module__',  # No support for underscore
         )
 
     @parametrize(expr=_unsupported)
     def test_unsupported_operation(self, expr):
         """Check complaints for unsupported mathematical functions."""
-        parser = MathParser(expr)
+        parser = MathParser()
         with pytest.raises(UnsupportedMathError):
+            parser.expression = expr
             parser.evaluate()

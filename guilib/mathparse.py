@@ -236,11 +236,18 @@ class MathParser:
         if not isinstance(new_expression, str):
             raise TypeError('MathParser: expression should be a string, '
                             f'not {type(new_expression).__name__!r}')
-        fixed_expression = _fix_expression(new_expression)
+        fixed_expression = _fix_expression(new_expression).lower()
         if len(fixed_expression) > MAX_LEN:
             raise TooComplexMathError('Too many characters '
                                       f'({len(fixed_expression)}>{MAX_LEN}) '
                                       'in expression after preprocessing')
+        # Now fixed_expression must only contain
+        # alphanumeric, operators and parentheses
+        if re.search(r'[^a-z\d+\-*/().,%<>~]', fixed_expression):
+            raise UnsupportedMathError(
+                f': Invalid expression {fixed_expression!r}. Must contain '
+                'only alphanumeric, parentheses, and operator characters'
+                )
         self._expression = fixed_expression
 
     def evaluate(self):
