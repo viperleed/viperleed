@@ -8,9 +8,13 @@ Created on 2023-07-28
 
 import numpy as np
 import pytest
+from pytest_cases import parametrize_with_cases
 
 from viperleed.tleedmlib.psgen import adjust_phaseshifts
+from viperleed.tleedmlib.psgen import runPhaseshiftGen_old
 
+from .helpers import execute_in_dir
+from .poscar_slabs import CasePOSCARSlabs as POSCARSlabs
 
 class TestPhaseshiftsGen:
     """Tests for the successful outcome of a PHASESHIFTS calculation."""
@@ -45,6 +49,19 @@ class TestPhaseshiftsGen:
         """Ensure a log file was written to disk."""
         param, *_ = run_phaseshift
         assert any(param.workdir.glob('phaseshift*.log'))
+
+    @parametrize_with_cases('args', cases=POSCARSlabs.case_poscar_lsmo_001_rt2)
+    def test_phaseshift_input_mixed_sites(self, args, tensorleed_path,
+                                          tmp_path_factory):
+        """Test that phaseshift generation works with mixed sites."""
+        tmp_path = tmp_path_factory.mktemp(basename='phaseshifts')
+        slab, rpars, _ = args
+        rpars.source_dir = tensorleed_path
+        rpars.workdir = tmp_path
+        rpars.THEO_ENERGIES = rpars.THEO_ENERGIES.from_value((50,100,5))
+        with execute_in_dir(tmp_path):
+            firstline, _ = runPhaseshiftGen_old(slab, rpars)
+        assert firstline
 
 
 class TestAdjustPhaseshifts:

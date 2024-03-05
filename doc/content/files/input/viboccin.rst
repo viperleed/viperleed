@@ -10,6 +10,8 @@ amplitude for each element in the :ref:`POSCAR file<POSCAR>`. If the
 :ref:`ELEMENT_MIX<ELSPLIT>`  parameter is defined for an element in the 
 :ref:`PARAMETERS file<PARAMETERS>`, explicitly assigning vibrational 
 amplitudes and occupations to all sub-elements is recommended.
+See also :ref:`this page<occdelta>` for instructions on how to vary the
+occupation of a site during structure optimization.
 
 Additionally, the VIBROCC file can contain a block defining offsets in 
 vibrational amplitudes, occupation, or position per element for specific 
@@ -18,7 +20,7 @@ sites.
 A VIBROCC file containing only some starting guesses for vibrational 
 amplitudes can be generated automatically using the :ref:`VIBR_AMP_SCALE`, 
 :ref:`T_EXPERIMENT` and :ref:`T_DEBYE` parameters in the 
-:ref:`PARAMETERS<PARAMETERS>` file.
+:ref:`PARAMETERS<PARAMETERS>` file. See :ref:`below<vibrocc_auto>` for details.
 
 Example
 -------
@@ -135,29 +137,44 @@ independently, the vibrations and occupations written for each site
 will be the average, and values for the single atoms will be written as 
 search offsets.
 
-Further notes
--------------
 
-A starting guess for vibrational amplitudes (in ångstroms) for bulk
-atoms at the measurement temperature :math:`T` and the Debye temperature
-:math:`\theta_D` can be made using:
+.. _vibrocc_auto:
 
-.. math::
-    u = \sqrt{(u^2)}
+Automatic generation of VIBROCC
+-------------------------------
 
-where (result in m^2):
+ViPErLEED can automatically generate a VIBROCC file containing starting guesses
+for vibrational amplitudes.
+To do this, the experiment temperature :math:`T` (:ref:`T_EXPERIMENT`) and the
+sample Debye temperature :math:`\Theta_D` (:ref:`T_DEBYE`) must be specified in
+:ref:`PARAMETERS<PARAMETERS>`.
+Additionally, :ref:`VIBR_AMP_SCALE` must be set if you are using non-default
+sites (which is generally recommended).
 
-.. math::
-    u^2 = \sqrt{\frac{(1 + 16(T/\theta_D)^2) (9 \hbar)}{(4 m k_B \theta_D)}}
-
-with :math:`\hbar` and :math:`k_B` the reduced Planck constant and 
-the Boltzman
-constant, and :math:`m` the atomic mass (in kg). With constants 
-already evaluated (ignoring units), this is equivalent to (results in Å 
-:math:`^2``):
+Given these parameters and the atomic masses :math:`m`, we can estimate the
+atomic vibrational amplitudes as follows
+:cite:p:`tongTheoryLowenergyElectron1975,vanhoveSurfaceCrystallographyLEED1979`:
 
 .. math::
-   u^2 = \sqrt{1+16\frac{T}{\theta_D}^2} * \frac{109.15}{A \theta_D}
+    \langle u^2 \rangle _{T} \approx \frac{9 \hbar^2}{4 m k_B \Theta_D} [1+ 4(\frac{T}{\Theta_D})^2 \int_{0}^{\frac{\Theta_D}{T}} \frac{x}{e^x - 1} dx].
 
-with the atomic mass :math:`A`` of the chemical element (in u). These
-formulas are derived from: :cite:t:`vanhoveSurfaceCrystallographyLEED1979`, chapter 3.5.
+Here :math:`\hbar` and :math:`k_B` are the reduced Planck constant and the
+Boltzmann constant respectively.
+
+The integral can not be evaluated analytically, but a good approximation is
+given by a combination of low and high temperature limits
+
+.. math::
+    \langle u^2 \rangle _{T} \approx \sqrt{ (\langle u^2 \rangle _{T=0})^2 + (\langle u^2 \rangle _{T \rightarrow \infty})^2 }.
+
+Evaluating these limits,
+
+.. math ::
+      \langle u^2 \rangle _{T=0} = \frac{9 \hbar^2}{4 m k_B \Theta_D},
+
+      \langle u^2 \rangle _{T \rightarrow \infty} = \frac{9 \hbar^2 T}{m k_B \Theta_D^2},
+
+gives 
+
+.. math ::
+      \langle u^2 \rangle _{T} \approx \frac{9 \hbar^2}{4 m k_B \Theta_D} \sqrt{1+16(\frac{T}{\Theta_D})^2}.

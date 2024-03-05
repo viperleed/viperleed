@@ -177,7 +177,7 @@ def runPhaseshiftGen_old(sl, rp,
         while supercell_size % a_size:
             a_size += 1
         b_size = supercell_size // a_size
-        nsl = nsl.make_supercell(np.diag(a_size, b_size))
+        nsl = nsl.make_supercell(np.diag((a_size, b_size)))
 
     subatlists = {}     # atlist per block tuple
     for site in nsl.sitelist:
@@ -711,7 +711,7 @@ def make_atom_types(rp, sl, additional_layers):
         while scsize % a_size:
             a_size += 1
         b_size = scsize // a_size
-        nsl = nsl.make_supercell(np.diag(a_size, b_size))
+        nsl = nsl.make_supercell(np.diag((a_size, b_size)))
 
     # Write new unit cell vectors; to be used for input
     uct = nsl.ucell.transpose()
