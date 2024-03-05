@@ -23,7 +23,7 @@ import pytest
 from pytest_cases import fixture
 from pytest_cases.filters import get_case_tags
 
-from viperleed.tleedmlib.classes.rparams import LayerCuts
+from viperleed.calc.classes.rparams import LayerCuts
 
 
 # Think about a decorator for injecting fixtures.
