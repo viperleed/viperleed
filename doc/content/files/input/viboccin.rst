@@ -176,5 +176,3 @@ gives
 
 .. math ::
       \langle u^2 \rangle _{T} \approx \frac{9 \hbar^2}{4 m k_B \Theta_D} \sqrt{1+16(\frac{T}{\Theta_D})^2}.
-
-which we found to be accurate within 2%.
