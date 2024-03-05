@@ -123,7 +123,7 @@ The first reference calculation gave a values of :math:`R_P \approx 0.55`, but :
 We can get a better idea of how the search has converged by taking a look at the file :ref:`Search-progress.pdf<searchprogresspdf>` in the ``SUPP`` directory.
 
 .. _fig_Ir_O_search_progress_1:
-.. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_1.pdf
+.. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_1.svg
    :width: 70%
    :align: center
 
@@ -134,7 +134,7 @@ We clearly see that both geometric optimizations made quick progress in terms of
 The other pages of the file give us some insight into how each atomic parameter developed during the structure optimization.
 
 .. _fig_Ir_O_search_progress_2:
-.. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_2.pdf
+.. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_2.svg
    :width: 70%
    :align: center
 
@@ -198,7 +198,7 @@ We then chose to run the :ref:`full-dynamic optimization<fdoptimization>` by set
 Once finished, the log file will let us know of the optimized value for the chosen parameter.
 ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the ``OUT`` directory which contains a visualization of the R-factors calculated for the various values of the parameter and a fit parabola.
 
-.. figure:: /_static/example_systems/Ir(100)-O/figures/FD_Optimization.pdf
+.. figure:: /_static/example_systems/Ir(100)-O/figures/FD_Optimization.svg
    :width: 60%
    :align: center
 
@@ -228,7 +228,7 @@ ViPErLEED generates a plot of the Error curves in ``Errors.pdf`` and stores the 
 :ref:`Errors.pdf<errorspdf>` shows that displacements of surface atoms even by a few pm drastically increase the R-factor.
 Here, atom 1 is the oxygen adsorbate and atoms 2 and 3 are the topmost iridium species.
 
-.. figure:: /_static/example_systems/Ir(100)-O/figures/errors_geo.pdf
+.. figure:: /_static/example_systems/Ir(100)-O/figures/errors_geo.svg
    :width: 50%
    :align: center
 
@@ -239,7 +239,7 @@ Here, atom 1 is the oxygen adsorbate and atoms 2 and 3 are the topmost iridium s
 
 Similarly, changes in the vibrational amplitude of the surface atoms also strongly affect the R-factor:
 
-.. figure:: /_static/example_systems/Ir(100)-O/figures/errors_vib.pdf
+.. figure:: /_static/example_systems/Ir(100)-O/figures/errors_vib.svg
    :width: 50%
    :align: center
 
