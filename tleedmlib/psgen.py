@@ -193,21 +193,21 @@ def runPhaseshiftGen_old(sl, rp,
             al = [at for at in nsl if at.site == site]
             totats = len(al)
             for el in occdict:
-                subatlists[(site, el)] = []
+                subatlists[(site.label, el)] = []
                 reqats = int(np.ceil(totats * site.occ[el]))
                 reqats = max(2, reqats)
                 while reqats > 0 and len(al) > 0:
                     at = random.choice(al)
-                    subatlists[(site, el)].append(at)
+                    subatlists[(site.label, el)].append(at)
                     al.remove(at)
                     reqats -= 1
             if len(al) > 0:  # should never happen
                 logger.warning("Error in PHASESHIFTS file "
                                "generation: Not all atoms were distributed!")
         else:
-            subatlists[(site, site.el)] = [at for at in nsl if at.site == site]
+            subatlists[(site.label, site.el)] = [at for at in nsl if at.site == site]
     blocks = [(site, el) for (site, el) in blocks
-              if len(subatlists[(site, el)]) > 0]
+              if len(subatlists[(site.label, el)]) > 0]
 #    if bulk:
 #        bulksites = [site for (site,el) in blocks]
 #    else:
@@ -268,7 +268,7 @@ def runPhaseshiftGen_old(sl, rp,
         # realcartpos = np.dot(nsl.ucell, at.pos)
         # use the "real" cartesian system, with Z going up
         for (site, el) in blocks:
-            if at in subatlists[(site, el)]:
+            if at in subatlists[(site.label, el)]:
                 chemel = chemels[el]
                 chgdenpath = chem_el_paths[el]
         output += ("1 "+str(PERIODIC_TABLE.index(chemel)+1)
@@ -400,15 +400,14 @@ def runPhaseshiftGen_old(sl, rp,
     # average over atoms of site
     outvals = defaultdict(list)  # This is outvals[energy][block][L]            # TODO: clean up this messy data structure
     atom_index_map = {at: i for i, at in enumerate(nsl)}
-    for block in blocks:
-        equivalent_atoms = [at for at in subatlists[block]
+    for site, block_element in blocks:
+        equivalent_atoms = [at for at in subatlists[(site.label, block_element)]
                             if at not in newbulkats]
         if not equivalent_atoms:
             continue
         equivalent_atoms_ind = [atom_index_map[at]
                                 for at in equivalent_atoms]
 
-        site, block_element = block
         # Check variance of phaseshifts for "equivalent" atoms. Warn
         # if it's very large. May help identify averaging of different
         # coordination environments
