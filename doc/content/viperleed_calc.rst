@@ -16,7 +16,7 @@ using pip:
     pip install viperleed
 
 The ``viperleed calc`` package is written in Python, but many core parts require
-the :ref:`TensErLEED<TensErLEED>` source code to be available which is available
+the :term:`TensErLEED` source code to be available which is available
 from the `ViPErLEED GitHub repository:
 Please see the :ref:`installation page<installation>` for further information.
 
