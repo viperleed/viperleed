@@ -5,4 +5,3 @@ ViPErLEED Spot-Tracker
 ======================
 
 **TODO Michael**
-
