@@ -7,7 +7,8 @@ License Information
 ViPErLEED
 #########
 
-:term:`ViPErLEED` is released as open-source under the GPL v3 license.
+:term:`ViPErLEED` is released as open-source under the :term:`GPLv3` (or later)
+license.
 Copyright (c) 2019-2024, ViPErLEED Developers.
 
 The ViPErLEED project aims to provide free and open software.
