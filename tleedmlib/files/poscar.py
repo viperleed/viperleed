@@ -266,8 +266,7 @@ class POSCARReader:
 
         # Element symbols may be terminated by a '/' + some hash; remove it
         # See https://www.vasp.at/forum/viewtopic.php?t=19113
-        elements = [el.split('/')[0] if '/' in el and len(el) > 1 else el
-                    for el in elements]
+        elements = [el[:el.find('/')] for el in elements]
 
         # Element labels line is optional, but we need it
         try:
@@ -280,6 +279,10 @@ class POSCARReader:
             raise POSCARSyntaxError(
                 'POSCAR: Element labels line not found. This is an optional '
                 'line in the POSCAR specification, but ViPErLEED needs it.'
+                )
+        if any(not el for el in elements):
+            raise POSCARSyntaxError(
+                'POSCAR: Empty element label found. This is not allowed.'
                 )
 
         element_counts = [int(c) for c in next(self.stream, '').split()]
