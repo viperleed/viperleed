@@ -45,7 +45,7 @@ if VPR_PATH not in sys.path:
 from viperleed.tleedmlib.files import displacements, vibrocc
 from viperleed.tleedmlib import psgen
 
-from .helpers import TEST_DATA, POSCAR_PATH, BEAMLIST_PATH
+from .helpers import TEST_DATA, POSCAR_PATH
 from .helpers import CaseTag, exclude_tags
 from . import poscar_slabs
 # pylint: enable=wrong-import-position
@@ -66,12 +66,6 @@ def re_match():  # This is actually a fixture factory
 def poscars_path():
     """Return the Path to the directory containing POSCAR files."""
     return POSCAR_PATH
-
-
-@pytest.fixture(scope='session')
-def beamlist_path():
-    """Return the Path to the directory containing POSCAR files."""
-    return BEAMLIST_PATH
 
 
 @pytest.fixture(scope='session', name='data_path')

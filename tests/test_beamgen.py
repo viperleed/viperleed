@@ -81,35 +81,32 @@ class TestGenerateBeamlist:
         return slab, param, info
 
     @fixture(name='make_beamlist', scope='class')
-    def factory_make_beamlist(self, prepare_for_beamlist, tmp_path_factory):
+    def fixture_make_beamlist(self, prepare_for_beamlist, tmp_path_factory):
         """Create a 'BEAMLIST' file and return slab, parameters, info and path."""
         slab, param, info = prepare_for_beamlist
-        def make_beamlist():
-            tmp_dir = tmp_path_factory.mktemp(
-                basename=f'{info.poscar.name}_beamlist',
-                numbered=True
-                )
-            beamlist = tmp_dir / 'BEAMLIST'
-            beamgen.calc_and_write_beamlist(slab, param, beamlist_name=beamlist)
-            return slab, param, info, beamlist
-        return make_beamlist
+        tmp_dir = tmp_path_factory.mktemp(
+            basename=f'{info.poscar.name}_beamlist',
+            numbered=True
+            )
+        beamlist = tmp_dir / 'BEAMLIST'
+        beamgen.calc_and_write_beamlist(slab, param, beamlist_name=beamlist)
+        return slab, param, info, beamlist
 
     def test_generate_beamlist(self, make_beamlist):
         """Check successful generation of a 'BEAMLIST' file."""
-        *_, beamlist = make_beamlist()
+        *_, beamlist = make_beamlist
         assert beamlist.exists()
         # check that file is not empty
         with open(beamlist, 'r') as file:
             assert file.read()
 
-    def test_beamlist_is_correct(self, make_beamlist, beamlist_path):
+    def test_beamlist_is_correct(self, make_beamlist, data_path):
         """Check that the BEAMLIST file matches the expected contents."""
-        *_, info, beamlist = make_beamlist()
+        *_, info, beamlist = make_beamlist
         with open(beamlist, 'r') as file:
             contents = file.read()
         # get the expected contents
         beamlist_name = info.poscar.name.replace('POSCAR', 'BEAMLIST')
-        with open(beamlist_path / beamlist_name, 'r') as file:
+        with open(data_path / 'BEAMLISTs' / beamlist_name, 'r') as file:
             expected_contents = file.read()
         assert contents == expected_contents
-
