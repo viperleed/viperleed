@@ -183,7 +183,7 @@ def run_tleedm(system_name="", console_output=True, slab=None,
         rp.source_dir = _source.parent
     elif (_source / "tensorleed").is_dir():
         logger.warning(f"tensorleed directory found in {_source}, using that "
-                       "instead of {_source}.")
+                       f"instead of {_source}.")
         rp.source_dir = _source / "tensorleed"
     else:
         logger.warning(f"Could not find a tensorleed directory at {_source}. "
