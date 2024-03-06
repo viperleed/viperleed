@@ -48,24 +48,37 @@
 ViPErLEED documentation
 =======================
 
-
-Welcome to the manual for :term:`ViPErLEED` and the :term:`Python` package :term:`tleedm`.
+Welcome to the manual for :term:`ViPErLEED` and the :term:`Python` package
+:term:`tleedm`.
 See the :ref:`Getting Started page<getting_started>`.
 
-The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims at drastically reducing the effort for a intensity [LEED-:math:`I(V)`] analysis, both on the computational and on the experimental side.
+The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims at
+drastically reducing the effort for a intensity [LEED-:math:`I(V)`] analysis,
+both on the computational and on the experimental side.
 
-The package consists of:
+The ViPErLEED package consists of:
 
+   - The viperleed calc package
+      A Python package for the calculation of :math:`I(V)` curves,
+      structure optimization and quantitative analysis of :term:`LEED` data.
+   - :ref:`The ViPErLEED Spot-Tracker<spot_tracker>`
+      Software for extracting :math:`I(V)` curves from the experimental data
+      ("movies").
+   -  The ViPErLEED hardware
+      A set of hardware, firmware and control software for the easy
+      acquisition of LEED-:math:`I(V)` data with pre-existing LEED systems.
 
-    i.  Hardware and software for data acquisition.
-    #.  Software for extracting :math:`I(V)` curves from the experimental data ("movies").
-    #.  Software for calculation of :math:`I(V)` curves for a given structure and structure optimization, by minimizing the difference between the calculated and experimental :math:`I(V)` data.
 
 For details please see the ViPErLEED publication series (**TODO**).
-This manual primarily deals with part **3.**.
 
-The goal of any :term:`LEED-I(V)` calculation is the calculation of energy-dependent electron-scattering amplitudes and intensities of diffracted beams.
-These intensity curves, taken as a function of the primary beam energy, [often referred to as :math:`I(V)` curves or spectra] are very sensitive to the precise position and vibrational amplitudes of each atom in the surface unit cell.
+
+
+The goal of any :term:`LEED-I(V)` calculation is the calculation of
+energy-dependent electron-scattering amplitudes and intensities of diffracted
+beams.
+These intensity curves, taken as a function of the primary beam energy,
+[often referred to as :math:`I(V)` curves or spectra] are very sensitive to the
+precise position and vibrational amplitudes of each atom in the surface unit cell.
 For more details consult works that cover the basics of :term:`LEED` and :term:`LEED-I(V)`, e.g.
 Chapter 4 in :cite:t:`fausterSurfacePhysicsFundamentals2020,fausterOberflachenphysikGrundlagenUnd2013` or the overview by :cite:t:`heinzElectronBasedMethods2013`.
 In ViPErLEED, these calculations are performed by the TensErLEED manager :term:`tleedm`.
@@ -121,7 +134,11 @@ For computational details please have a look at the ViPErLEED paper (**TODO**) a
 
    Utilities<content/utilities>
 
+.. toctree:: 
+   :maxdepth: 1
+   :caption: Spot-Tracker
 
+   Spot-Tracker<content/spot_tracker>
 
 .. toctree:: 
    :maxdepth: 1
