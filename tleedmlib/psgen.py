@@ -193,21 +193,22 @@ def runPhaseshiftGen_old(sl, rp,
             al = [at for at in nsl if at.site == site]
             totats = len(al)
             for el in occdict:
-                subatlists[(site.label, el)] = []
+                subatlists[(site.label, el)] = []                               # TODO: once site.__hash__ has been implemented, we switch back from site.label to just site. See commit 40c37096231811226e65efc37ed9781a54e27b87
                 reqats = int(np.ceil(totats * site.occ[el]))
                 reqats = max(2, reqats)
                 while reqats > 0 and len(al) > 0:
                     at = random.choice(al)
-                    subatlists[(site.label, el)].append(at)
+                    subatlists[(site.label, el)].append(at)                     # TODO: once site.__hash__ has been implemented, we switch back from site.label to just site. See commit 40c37096231811226e65efc37ed9781a54e27b87
                     al.remove(at)
                     reqats -= 1
             if len(al) > 0:  # should never happen
                 logger.warning("Error in PHASESHIFTS file "
                                "generation: Not all atoms were distributed!")
         else:
-            subatlists[(site.label, site.el)] = [at for at in nsl if at.site == site]
+            subatlists[(site.label, site.el)] = [at for at                      # TODO: once site.__hash__ has been implemented, we switch back from site.label to just site. See commit 40c37096231811226e65efc37ed9781a54e27b87
+                                                 in nsl if at.site == site]
     blocks = [(site, el) for (site, el) in blocks
-              if len(subatlists[(site.label, el)]) > 0]
+              if len(subatlists[(site.label, el)]) > 0]                         # TODO: once site.__hash__ has been implemented, we switch back from site.label to just site. See commit 40c37096231811226e65efc37ed9781a54e27b87
 #    if bulk:
 #        bulksites = [site for (site,el) in blocks]
 #    else:
@@ -268,7 +269,7 @@ def runPhaseshiftGen_old(sl, rp,
         # realcartpos = np.dot(nsl.ucell, at.pos)
         # use the "real" cartesian system, with Z going up
         for (site, el) in blocks:
-            if at in subatlists[(site.label, el)]:
+            if at in subatlists[(site.label, el)]:                              # TODO: once site.__hash__ has been implemented, we switch back from site.label to just site. See commit 40c37096231811226e65efc37ed9781a54e27b87
                 chemel = chemels[el]
                 chgdenpath = chem_el_paths[el]
         output += ("1 "+str(PERIODIC_TABLE.index(chemel)+1)
@@ -401,7 +402,7 @@ def runPhaseshiftGen_old(sl, rp,
     outvals = defaultdict(list)  # This is outvals[energy][block][L]            # TODO: clean up this messy data structure
     atom_index_map = {at: i for i, at in enumerate(nsl)}
     for site, block_element in blocks:
-        equivalent_atoms = [at for at in subatlists[(site.label, block_element)]
+        equivalent_atoms = [at for at in subatlists[(site.label, block_element)]# TODO: once site.__hash__ has been implemented, we switch back from site.label to just site. See commit 40c37096231811226e65efc37ed9781a54e27b87
                             if at not in newbulkats]
         if not equivalent_atoms:
             continue
