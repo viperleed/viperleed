@@ -266,7 +266,7 @@ class POSCARReader:
 
         # Element symbols may be terminated by a '/' + some hash; remove it
         # See https://www.vasp.at/forum/viewtopic.php?t=19113
-        elements = [el[:el.find('/')] for el in elements]
+        elements = [el.split('/')[0] for el in elements]
 
         # Element labels line is optional, but we need it
         try:
