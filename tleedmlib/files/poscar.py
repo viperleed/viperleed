@@ -264,6 +264,11 @@ class POSCARReader:
         # Line of element labels, then their counts
         elements = [el.capitalize() for el in next(self.stream, '').split()]
 
+        # Element symbols may be terminated by a '/'; remove it
+        # See https://www.vasp.at/forum/viewtopic.php?t=19113
+        elements = [el[:-1] if el.endswith('/') and len(el) > 1 else el
+                    for el in elements]
+
         # Element labels line is optional, but we need it
         try:
             _ = [int(e) for e in elements]
