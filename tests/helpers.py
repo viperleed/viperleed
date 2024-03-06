@@ -35,6 +35,7 @@ from viperleed.tleedmlib.classes.rparams import LayerCuts
 
 TEST_DATA = Path(__file__).parent / '_test_data'
 POSCAR_PATH = TEST_DATA / 'POSCARs'
+BEAMLIST_PATH = TEST_DATA / 'BEAMLISTs'
 
 
 # ##############################   DECORATORS   ###############################
