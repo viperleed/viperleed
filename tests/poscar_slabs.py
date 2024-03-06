@@ -315,6 +315,12 @@ class CasePOSCARSlabs:
         info.poscar.n_cells = 4
         return self.case_poscar(info)
 
+    def case_poscar_fe2o3_012_1x1(self):
+        """Return a non-optimized Fe2O3(012) slab."""
+        info = _get_poscar_info('POSCAR_Fe2O3_012_1x1_not_optimized', 40,
+                                'pg[0 1]')
+        return self.case_poscar(info)
+
     @case(tags=(Tag.NON_MINIMAL_CELL,
                 Tag.BULK_PROPERTIES,
                 Tag.VACUUM_GAP_SMALL))
