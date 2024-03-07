@@ -121,11 +121,13 @@ class TestPOSCARWrite:
         assert written_slab.foundplanegroup == slab.foundplanegroup
 
     def test_reorder(self, poscar_with_group, write_and_read):
-        """Ensure that writing a slab sorts atoms by z."""
+        """Ensure that a sorted slab is written in the same order."""
         slab, *_ = poscar_with_group
-        written_slab = write_and_read(slab, reorder=True, comments='all')
+        slab.sort_by_z()
+        written_slab = write_and_read(slab, comments='all')
         assert all(a1.pos[2] <= a2.pos[2] or a1.el != a2.el
                    for a1, a2 in pairwise(written_slab))
+        assert all(a1.el == a2.el for a1, a2 in zip(slab, written_slab))
 
 
 @fixture(name='poscar_stream')

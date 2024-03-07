@@ -74,8 +74,7 @@ def read(filename='POSCAR'):
         return poscar.read()
 
 
-def write(slab, filename='CONTCAR', reorder=False,
-          comments='none', silent=False, bottom_to_top=True):
+def write(slab, filename='CONTCAR', comments='none', silent=False):
     """Write a POSCAR-style file from a slab.
 
     If a file named 'POSCAR' exists in the current folder, its first,
@@ -87,10 +86,6 @@ def write(slab, filename='CONTCAR', reorder=False,
         The Slab object to write.
     filename : str or Path or TextIOBase, optional
         The file(name) to write to. The default is 'CONTCAR'.
-    reorder : bool, optional
-        If True, atoms will be sorted by z coordinate; in all
-        cases atoms are sorted by original-element order. The
-        default is False.
     comments : str, optional
         Defines whether additional information for each atom
         should be printed:
@@ -102,17 +97,12 @@ def write(slab, filename='CONTCAR', reorder=False,
           (meant to be used with POSCAR_bulk).
     silent : bool, optional
         If True, will print less to log.
-    bottom_to_top : bool, optional
-        If reordered, atoms will be sorted from bottom to top if True, else
-        from top to bottom. The default is True.
 
     Raises
     -------
     OSError
         If writing to filename fails.
     """
-    if reorder:
-        slab.sort_by_z(bottom_to_top)
     slab.sort_by_element()   # This is the minimum that has to happen
 
     if isinstance(filename, TextIOBase):
