@@ -17,7 +17,11 @@ logger = logging.getLogger("viperleed.utilities.poscar.sort_by_z")
 
 
 def add_cli_parser_arguments(parser):
-    pass
+    parser.add_argument(
+        "-r", "--reversed",
+        help="Reverse z ordering (bottom to top)",
+        action="store_true",
+    )
 
 
 def main(args=None):
@@ -40,6 +44,7 @@ def main(args=None):
                  filename=sys.stdout,
                  reorder=True,
                  comments='none',
+                 bottom_to_top=args.reversed,
                  silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
