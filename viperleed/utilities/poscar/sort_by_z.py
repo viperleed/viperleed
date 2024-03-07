@@ -38,13 +38,12 @@ def main(args=None):
 
     # read the POSCAR file from stdin
     slab = poscar.read(sys.stdin)
+    slab.sort_by_z(bottom_to_top=args.reversed)
 
     # write the output file
     poscar.write(slab=slab,
                  filename=sys.stdout,
-                 reorder=True,
                  comments='none',
-                 bottom_to_top=args.reversed,
                  silent=logger.level<=logging.DEBUG)
 
 if __name__ == "__main__":
