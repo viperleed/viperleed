@@ -367,7 +367,7 @@ def project_to_first_domain(beam_list, leed_parameters, *other_leed_parameters,
                 except KeyError:
                     err = (f"Beam {beam} is incompatible with all the current "
                            "SUPERLATTICE matrices:\n"
-                           "\n".join(str(m) for m in superlattices))
+                           + "\n".join(str(m) for m in superlattices))
 
                     # Check if the reason why the beam was not found is that
                     # it would lie outside the LEED screen
