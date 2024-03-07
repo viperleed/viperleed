@@ -121,7 +121,7 @@ def main(args=None):
     slab.sort_by_element()
 
     try:
-        poscar.write(slab, reorder=False)
+        poscar.write(slab)
     except Exception:
         logging.error("Exception while writing CONTCAR:", exc_info=True)
 #    print(cfact)
