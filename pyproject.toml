@@ -17,7 +17,7 @@ dependencies = [
     'psutil',
     'quicktions',
     'scipy',
-    'sklearn',
+    'scikit-learn',
     'wrapt',
     ]
 
