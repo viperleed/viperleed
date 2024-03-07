@@ -305,7 +305,7 @@ To reorder the element blocks themselves, use :ref:`poscar_utils_reorder_element
 
 **Additional Options**
 
-None
+- ``--reversed``: sort elements bottom to top (default: top to bottom)
 
 
 .. _poscar_utils_strip_comments:
