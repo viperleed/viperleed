@@ -72,7 +72,7 @@ def read(filename='POSCAR'):
 
 
 def write(slab, filename='CONTCAR', reorder=False,
-          comments='none', silent=False):
+          comments='none', silent=False, bottom_to_top=True):
     """Write a POSCAR-style file from a slab.
 
     If a file named 'POSCAR' exists in the current folder, its first,
@@ -99,6 +99,9 @@ def write(slab, filename='CONTCAR', reorder=False,
           (meant to be used with POSCAR_bulk).
     silent : bool, optional
         If True, will print less to log.
+    bottom_to_top : bool, optional
+        If reordered, atoms will be sorted from bottom to top if True, else
+        from top to bottom. The default is True.
 
     Raises
     -------
@@ -106,7 +109,7 @@ def write(slab, filename='CONTCAR', reorder=False,
         If writing to filename fails.
     """
     if reorder:
-        slab.sort_by_z()
+        slab.sort_by_z(bottom_to_top)
     slab.sort_by_element()   # This is the minimum that has to happen
 
     if isinstance(filename, TextIOBase):
@@ -261,6 +264,10 @@ class POSCARReader:
         # Line of element labels, then their counts
         elements = [el.capitalize() for el in next(self.stream, '').split()]
 
+        # Element symbols may be terminated by a '/' + some hash; remove it
+        # See https://www.vasp.at/forum/viewtopic.php?t=19113
+        elements = [el.split('/')[0] for el in elements]
+
         # Element labels line is optional, but we need it
         try:
             _ = [int(e) for e in elements]
@@ -272,6 +279,10 @@ class POSCARReader:
             raise POSCARSyntaxError(
                 'POSCAR: Element labels line not found. This is an optional '
                 'line in the POSCAR specification, but ViPErLEED needs it.'
+                )
+        if any(not el for el in elements):
+            raise POSCARSyntaxError(
+                'POSCAR: Empty element label found. This is not allowed.'
                 )
 
         element_counts = [int(c) for c in next(self.stream, '').split()]

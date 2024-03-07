@@ -5,7 +5,6 @@ Created on 2023-06-09
 @author: Alexander M. Imre (@amimre)
 @author: Michele Riva (@michele-riva)
 """
-
 from pathlib import Path
 import sys
 
@@ -13,6 +12,7 @@ from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc.files import beamgen
 from viperleed.calc.lib import symmetry
+from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 
 from .helpers import CaseTag, exclude_tags
 from .poscar_slabs import CasePOSCARSlabs
@@ -50,7 +50,7 @@ class TestBeamScatteringSubsets:
 
 _BEAMGEN_CASES = {
     'cases': CasePOSCARSlabs,
-    'filter': exclude_tags(CaseTag.NO_INFO),                                     # TODO: not great to exclude these, but there's a few that really need PARAMETERS
+    'filter': exclude_tags(CaseTag.NO_INFO),                                    # TODO: not great to exclude these, but there's a few that really need PARAMETERS
     'scope': 'class',
     }
 
@@ -58,9 +58,9 @@ _BEAMGEN_CASES = {
 class TestGenerateBeamlist:
     """Collection of tests for the generation of beam lists."""                 # TODO: check energy sorting
 
-    @fixture(name='make_beamlist', scope='class')
+    @fixture(name='prepare_for_beamlist', scope='class')
     @parametrize_with_cases('args', **_BEAMGEN_CASES)
-    def fixture_make_beamlist(self, args, tmp_path_factory, tensorleed_path):
+    def fixture_prepare_for_beamlist(self, args, tensorleed_path):
         """Return slab, parameters, info and the path to a 'BEAMLIST'."""
         slab, param, info = args
         slab.create_layers(param)
@@ -68,11 +68,16 @@ class TestGenerateBeamlist:
         symmetry.findSymmetry(slab, param)
         symmetry.findSymmetry(slab.bulkslab, param, bulk=True)
         symmetry.findBulkSymmetry(slab.bulkslab, param)
-
+        param.THEO_ENERGIES = EnergyRange(stop=300) # limit to 300 eV for performance
         param.initTheoEnergies()
         param.source_dir = tensorleed_path
         param.updateDerivedParams()  # for TL_VERSION
+        return slab, param, info
 
+    @fixture(name='make_beamlist', scope='class')
+    def fixture_make_beamlist(self, prepare_for_beamlist, tmp_path_factory):
+        """Create a 'BEAMLIST' file and return slab, parameters, info and path."""
+        slab, param, info = prepare_for_beamlist
         tmp_dir = tmp_path_factory.mktemp(
             basename=f'{info.poscar.name}_beamlist',
             numbered=True
@@ -89,12 +94,13 @@ class TestGenerateBeamlist:
         with open(beamlist, 'r') as file:
             assert file.read()
 
-    def test_beamlist_is_ordered_consistently(self, make_beamlist):
-        """Check that the beams are ordered consistently (See issue #184)"""
-        beamlist_contents = []
-        for _ in range(3):
-            *_, beamlist = make_beamlist
-            with open(beamlist, 'r') as file:
-                beamlist_contents.append(file.read())
-        assert all(contents == beamlist_contents[0]
-                   for contents in beamlist_contents)
+    def test_beamlist_is_correct(self, make_beamlist, data_path):
+        """Check that the BEAMLIST file matches the expected contents."""
+        *_, info, beamlist = make_beamlist
+        with open(beamlist, 'r') as file:
+            contents = file.read()
+        # get the expected contents
+        beamlist_name = info.poscar.name.replace('POSCAR', 'BEAMLIST')
+        with open(data_path / 'BEAMLISTs' / beamlist_name, 'r') as file:
+            expected_contents = file.read()
+        assert contents == expected_contents
