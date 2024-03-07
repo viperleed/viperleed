@@ -312,7 +312,8 @@ class CasePOSCARSlabs:
     def case_poscar_diamond(self):
         """Return a non-minimal diamond(111) slab."""
         info = _get_poscar_info('POSCAR_diamond', 96, 'rcm', (90, False))
-        info.poscar.n_cells = 4
+        info.poscar.n_cells = 8
+        info.param_presets = {'SUPERLATTICE': np.array([[2, -2], [2, 2]])}
         return self.case_poscar(info)
 
     def case_poscar_fe2o3_012_1x1(self):
