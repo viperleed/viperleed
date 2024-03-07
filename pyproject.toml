@@ -21,6 +21,11 @@ dependencies = [
     'wrapt',
     ]
 
+
+[tool.setuptools]
+py-modules = ["viperleed"]
+
+
 [project.scripts]
 "viperleed" = "viperleed.__main__:main"
 
