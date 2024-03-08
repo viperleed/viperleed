@@ -539,7 +539,7 @@ class Lattice2D:
 
     def is_high_symmetry(self):
         """Check whether the lattice has the highest symmetry possible."""
-        return np.array_equal(((1, 0), (0, 1)), self.high_symm_transform())
+        return np.array_equal(np.eye(2), self.high_symm_transform())
 
     def make_high_symmetry(self):
         """Make the basis of this lattice highest symmetry.
