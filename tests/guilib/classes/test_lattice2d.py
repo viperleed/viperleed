@@ -24,6 +24,18 @@ _SQUARE = (1, 0), (0, 1)
 class TestProperties:
     """Collection of tests for accessing properties."""
 
+    _group = {
+        None: 'p1',  # Default
+        'pgg': 'pgg'
+        }
+
+    @parametrize('group,expect', _group.items(), ids=_group)
+    def test_group_valid(self, group, expect):
+        """Check assignment of a valid plane group."""
+        lattice = Lattice2D(_RECT)
+        lattice.group = group
+        assert lattice.group == expect
+
     _params = {
         (_HEX_ACUTE, 'real'): (1, 1, 120),
         (_HEX_OBTUSE, 'real'): (1, 1, 120),
