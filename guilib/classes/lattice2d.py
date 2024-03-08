@@ -579,20 +579,34 @@ class Lattice2D:
 
         return transform
 
-    def transform(self, transform, as_copy=True):
-        """
-        Modifies the basis and lattice points according to transform, and
-        returns a copy (if copy=True) or directly modifies the values of self.
+    def transform(self, transform):
+        """Apply transform to this lattice's basis and lattice points.
+
+        Parameters
+        ----------
+        transform : Sequence
+            Shape (2, 2). The transformation matrix to be
+            left-multiplied to the basis.
 
         Returns
         -------
-        Lattice2D
-            Either a reference to self (copy=False) or a reference
-            to a new Lattice2D. In both cases the lattice returned
-            is updated with the transform
+        None.
         """
-        new_lattice = self
-        if as_copy:
-            new_lattice = copy.deepcopy(self)
-        new_lattice.basis = np.dot(transform, self.basis)
+        self.basis = np.dot(transform, self.basis)
+
+    def transformed(self, transform):
+        """Return a new Lattice2D with transformed basis.
+
+        Parameters
+        ----------
+        transform : Sequence
+            Shape (2, 2). The transformation matrix to be
+            left-multiplied to the basis.
+
+        Returns
+        -------
+        transformed_lattice : Lattice2D
+        """
+        new_lattice = copy.deepcopy(self)
+        new_lattice.transform(transform)
         return new_lattice
