@@ -157,14 +157,14 @@ def _log_beamgroups(equivalent_beams):
                     '(   h     |   k     ),group,']
     for beam_hk, beam_group, *_ in equivalent_beams:
         index = BeamIndex(beam_hk)
-        line = f'{format(index, "(4,4)s")}, {beam_group:4},\n'
+        line = f'{format(index, "(4,4)s")}, {beam_group:4},'
         full_log_msg.append(line)
 
     # Split log message into two parts
     # The first 15 lines are intended for log-level verbose...
     _LOGGER.log(level=5, msg='\n'.join(full_log_msg[:15]))
     # ...the rest only at very verbose
-    _LOGGER.log(level=1, msg='\n'.join(full_log_msg[15:]))
+    _LOGGER.log(level=1, msg='\n'+'\n'.join(full_log_msg[15:]))
 
 
 def _prepare_beam_groups(bulk, beam_subsets):
