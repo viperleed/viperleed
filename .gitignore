@@ -61,6 +61,7 @@ tensorleed/eeasisss
 *.mod
 **/_lint
 
-# Ignore test and coverage results
+# Ignore test, coverage, and profiling results
 **/.pytest_cache/
 .coverage
+**/prof/

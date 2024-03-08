@@ -68,7 +68,11 @@ class TestGenerateBeamlist:
         symmetry.findSymmetry(slab, param)
         symmetry.findSymmetry(slab.bulkslab, param, bulk=True)
         symmetry.findBulkSymmetry(slab.bulkslab, param)
-        param.THEO_ENERGIES = EnergyRange(stop=300) # limit to 300 eV for performance
+
+        # Limit energy range for performance reasons. 300 eV is more
+        # than enough to generate a sizeable number of beams for any
+        # reasonable system
+        param.THEO_ENERGIES = EnergyRange(stop=300)
         param.initTheoEnergies()
         param.source_dir = tensorleed_path
         param.updateDerivedParams()  # for TL_VERSION
