@@ -11,8 +11,45 @@ import numpy as np
 from viperleed.guilib.classes.lattice2d import Lattice2D
 
 
+_HEX_ACUTE = (1, 0), (0.5, 3**0.5/2)
 _HEX_OBTUSE = (1, 0), (-0.5, 3**0.5/2)
+_OBLIQUE_ACUTE = (1, 0), (1.2, 3.5)
+_OBLIQUE_OBTUSE = (1, 0), (-1.2, 3.5)
+_RECT = (1, 0), (0, 3.5)
+_RHOMBIC_ACUTE = (2, 1), (2, -1)
+_RHOMBIC_OBTUSE = (-2, 1), (2, 1)
 _SQUARE = (1, 0), (0, 1)
+
+
+class TestProperties:
+    """Collection of tests for accessing properties."""
+
+    _params = {
+        (_HEX_ACUTE, 'real'): (1, 1, 120),
+        (_HEX_OBTUSE, 'real'): (1, 1, 120),
+        (_HEX_ACUTE, 'reciprocal'): (1, 1, 60),
+        (_HEX_OBTUSE, 'reciprocal'): (1, 1, 60),
+        (_OBLIQUE_ACUTE, 'real'): (1, 3.7, 71.075),
+        (_OBLIQUE_ACUTE, 'reciprocal'): (1, 3.7, 71.075),
+        (_OBLIQUE_OBTUSE, 'real'): (1, 3.7, 108.925),
+        (_OBLIQUE_OBTUSE, 'reciprocal'): (1, 3.7, 108.925),
+        (_RECT, 'real'): (1, 3.5, 90),
+        (_RECT, 'reciprocal'): (1, 3.5, 90),
+        (_RHOMBIC_ACUTE, 'real'): (5**0.5, 5**0.5, 126.87),
+        (_RHOMBIC_OBTUSE, 'real'): (5**0.5, 5**0.5, 126.87),
+        (_RHOMBIC_ACUTE, 'reciprocal'): (5**0.5, 5**0.5, 53.13),
+        (_RHOMBIC_OBTUSE, 'reciprocal'): (5**0.5, 5**0.5, 53.13),
+        (_SQUARE, 'real'): (1, 1, 90),
+        (_SQUARE, 'reciprocal'): (1, 1, 90),
+        }
+
+    @parametrize('args,expect', _params.items(), ids=(str(p) for p in _params))
+    def test_lattice_parameters(self, args, expect):
+        """Check correct values of vector lengths and angle."""
+        basis, space = args
+        lat = Lattice2D(basis, space=space)
+        assert lat.lattice_parameters == pytest.approx(expect, abs=1e-3)
+        assert np.linalg.det(basis) == np.linalg.det(lat.basis)
 
 
 class TestRaises:

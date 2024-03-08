@@ -185,7 +185,7 @@ class Lattice2D:
             Angle between the two basis vectors in degrees.
         """
         norm_a, norm_b = np.linalg.norm(self.basis, axis=-1)
-        alpha = np.arccos(np.dot(self.basis[0], self.basis[1])/(norm_a*norm_b))
+        alpha = np.arccos(np.dot(*self.basis) / (norm_a * norm_b))
         return norm_a, norm_b, np.degrees(alpha)
 
     @property
@@ -312,16 +312,17 @@ class Lattice2D:
             return 'Square' if abs(delta) < eps else 'Rectangular'
         if abs(delta) >= eps:
             return 'Oblique'
-        # Rhombic or hexagonal
-        if self.space == 'real':
-            if cosine > eps:  # angle is acute -> make it obtuse
-                transform = (0, -1), (1, 0)  # this keeps the handedness
-            else:
-                transform = (1, 0), (0, 1)
-            self._basis = np.dot(transform, self._basis)
+
+        # Rhombic or hexagonal. Make real-space acute into obtuse.
+        _is_real_space_acute = (cosine > eps if self.space == 'real'
+                                else cosine < -eps)
+        if _is_real_space_acute:
+            # Transform in a handedness-conserving manner
+            self._basis = np.dot(((0, -1), (1, 0)), self._basis)
             *_, alpha = self.lattice_parameters
             cosine = np.cos(np.radians(alpha))
-        elif cosine > eps:  # Reciprocal acute, thus real is obtuse
+        if self.space == 'reciprocal' and cosine > eps:
+            # Reciprocal acute, thus real is obtuse
             cosine *= -1
         if abs(cosine + 0.5) < eps:  # angle is 120deg
             return 'Hexagonal'
