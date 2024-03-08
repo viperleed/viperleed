@@ -94,14 +94,9 @@ class Lattice2D:
         self._shape = None  # Set via .basis setter below
         self._space = space
 
-        # Delegate type/shape check to setter. Also updates cell shape
-        self.basis = basis
-
-        # check if the plane group given is consistent with the cell shape
-        if group and not PlaneGroup.is_valid_group(group, self.cell_shape):
-            raise ValueError(f'Lattice2D: invalid group {group} for lattice '
-                             f'shape {self.cell_shape}')
-        self.group = group or 'p1'
+        # Delegate checks to setters
+        self.basis = basis   # Also updates cell shape
+        self.group = group
 
     def __str__(self):
         """Return a string version of this Lattice2D."""
@@ -166,6 +161,12 @@ class Lattice2D:
     @group.setter
     def group(self, group):
         """Assign a new group (str or PlaneGroup) for this Lattice2D."""
+        if group is None:
+            self._group = PlaneGroup('p1')
+            return
+        if not PlaneGroup.is_valid_group(group, self.cell_shape):
+            raise ValueError(f'{type(self).__name__}: invalid group {group} '
+                             f'for lattice shape {self.cell_shape}')
         self._group = PlaneGroup(group)
 
     @property
