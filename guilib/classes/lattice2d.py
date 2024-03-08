@@ -430,106 +430,94 @@ class Lattice2D:
         # The following line should also redefine the basis so that
         # it is obtuse for real-space rhombic and hexagonal lattices
         _shape = self.cell_shape
+        if _shape != 'Oblique':
+            # Noting to do if it's already non-oblique
+            return np.eye(2, dtype=int)
 
         # Will always work on the real-space lattice for convenience,
         # then convert back to the reciprocal one in case the lattice
         # was reciprocal in the first place
         basis = self.real_basis
 
-        # In what follows, t_elem is used to define a specific elementary
-        # operation to be performed on the lattice basis. This is
-        # left-multiplied to t_overall at each elementary step, so that
-        # t_overall contains the overall transformation
-
-        if _shape != 'Oblique':
-            return (1, 0), (0, 1)
-
-        # Lattice is oblique.
-        # Transform lattice to have the shortest two vectors, with angle
-        # closest to 90°.
-        # This might bring it to rect, hex or rhombic.
-        #
-        # If neither, will anyway transform to have the closest to rect.
-
-        # ALGORITHM for reduction to closest to rect:
-        # This is a discrete version of Gram-Schmidt's algorithm to find
-        # orthogonal bases
+        # As a first step, transform the basis to have the shortest
+        # two vectors with angle closest to 90°. This might bring it
+        # to rectangular, hexagonal or rhombic. If neither, will
+        # anyway transform to have the closest to rectangular.
+        # ALGORITHM for reduction to closest to rectangular:
+        # This is a discrete version of Gram-Schmidt's algorithm
+        # to find orthogonal bases.
         # At each iteration:
         #   - order vectors by norm, the shortest first
-        #   - determine the projection of the second on the first,
-        #     and calculate the nearest integer kk
+        #   - determine the projection of the second on
+        #     the first, and calculate the nearest integer
         #   - subtract from the second the projection calculated above
         #   - check whether now the second is the smallest.
         #     If yes, repeat, otherwise finished.
-
-        # swap keeps track of whether the first and second vectors are
-        # swapped at the end of this passage
-        swap = (1, 0), (0, 1)
-        t_overall = (1, 0), (0, 1)
+        # In what follows, `t_elem` is used to define a specific
+        # elementary operation to be performed on the lattice basis.
+        # This is left-multiplied to `t_overall` at each elementary
+        # step, so that `t_overall` contains the overall transform.
+        # `swap` keeps track of whether the first and second vectors
+        # are swapped at the end of this passage
+        swap = np.eye(2, dtype=int)
+        t_overall = np.eye(2, dtype=int)
+        a_norm, b_norm = np.linalg.norm(basis, axis=1)
         while True:
             # Swap vectors if needed to get the shortest first
-            if np.linalg.norm(basis[0]) > np.linalg.norm(basis[1]):
-                t_elem = (0, 1), (1, 0)
-            else:
-                t_elem = (1, 0), (0, 1)
+            t_elem = ((0, 1), (1, 0)) if a_norm > b_norm else ((1, 0), (0, 1))
             swap = np.dot(t_elem, swap)
             t_overall = np.dot(t_elem, t_overall)
             basis = np.dot(t_elem, basis)
-            projection = np.dot(basis[0], basis[1])/np.dot(basis[0],
-                                                           basis[0])
-            projection = int(np.round(projection))
-            t_elem = (1, 0), (-projection, 1)
+
+            projection = np.dot(basis[0], basis[1])/np.dot(basis[0], basis[0])
+            t_elem = (1, 0), (-round(projection), 1)
             t_overall = np.dot(t_elem, t_overall)
             basis = np.dot(t_elem, basis)
-            if np.linalg.norm(basis[0]) <= np.linalg.norm(basis[1]):
+
+            a_norm, b_norm = np.linalg.norm(basis, axis=1)
+            if a_norm <= b_norm:
                 break
         # Swap vectors back if they were overall swapped
-        t_overall = np.dot(swap, t_overall)
-        basis = np.dot(swap, basis)
+        t_overall = swap.dot(t_overall)
+        basis = swap.dot(basis)
 
-        # END OF ALGORITHM. Now the lattice is closest to rectangular.
-        # It might be still any shape (square, rect, hex, rhombic, oblique)
+        # END OF ALGORITHM. Now basis is closest to rectangular. It
+        # might be still any shape (square, rectangular, hexagonal,
+        # rhombic, or oblique).
 
         # Create a dummy lattice with the new basis,
         # to check which shape it has
         _shape = Lattice2D(basis).cell_shape
 
-        # If it's still oblique, try to see if it can be transformed to hex
-        # or rhombic by choosing "a" not to be the shortest vector of all.
-        #
-        # If possible, keep the new transformation. Otherwise, stick to the
-        # one that makes it closest to rectangular
-        #
-        # All the operations that follow are stored in a matrix t_second,
-        # to be later left-multiplied to t_overall to get the full
-        # transformation
-        #
-        if _shape != 'ob':
-            t_second = (1, 0), (0, 1)
+        # If it's still oblique, try to see if it can be transformed
+        # to hex or rhombic by choosing "a" not to be the shortest
+        # vector of all. If possible, keep the new transformation.
+        # Otherwise, stick to the one that makes it closest to
+        # rectangular.
+        # All the operations that follow are stored in a matrix
+        # `t_second`, to be later left-multiplied to `t_overall`
+        # to get the full transformation
+        if _shape != 'Oblique':
+            t_second = np.eye(2, dtype=int)
         else:
-            # lattice is still oblique, even if closest to rectangular
-            #
-            # Re-swapping guarantees that that the matrix has on the first
-            # line the shortest possible vector,
-            # and on the second line the second shortest possible vector.
-            #
-            # The only possible combinations that can lead to a
-            # rhombic/hex are a'=b+a or a'=b-a, depending
-            # on whether the angle is acute or obtuse, respectively
-            #
+            # Lattice is still oblique, even if closest to rectangular.
+            # See if it can be made rhombic or hexagonal.
+            basis = swap.dot(basis)  # Ensure basis[0] is shortest
             t_second = swap
-            basis = np.dot(swap, basis)
 
-            t_elem = [[-int(np.sign(np.dot(basis[0], basis[1]))), 1],
-                      [0, 1]]
+            # The only possible combinations that can lead to a
+            # rhombic/hexagonal are a'=b+a or a'=b-a, depending
+            # on whether the angle is obtuse or acute, respectively
+            t_elem = (
+                (-int(np.sign(np.dot(*basis))), 1),
+                (0, 1)
+                )
             t_second = np.dot(t_elem, t_second)
             basis = np.dot(t_elem, basis)
             dummy2 = Lattice2D(basis)
 
             # The following line might change acute into obtuse
-            # --> check if it was the case
-            # PROBABLY IT CANNOT HAPPEN ANYWAY!! IT SHOULD RATHER BE
-            # CHECKED ON DUMMY ABOVE
+            # --> check if it was the case                                      # TODO: PROBABLY IT CANNOT HAPPEN ANYWAY!! IT SHOULD RATHER BE CHECKED ON DUMMY ABOVE
             _shape = dummy2.cell_shape
             sign_before = np.dot(basis[0], basis[1])
             sign_after = np.dot(dummy2.basis[0], dummy2.basis[1])
@@ -537,10 +525,10 @@ class Lattice2D:
                 # sign did change -> basis went from acute to obtuse
                 t_second = np.dot([[0, -1], [1, 0]], t_second)
 
-            if _shape == 'ob':
+            if _shape == 'Oblique':
                 # lattice is still oblique, no transformation is needed
                 # (will keep the one closest to rect)
-                t_second = (1, 0), (0, 1)
+                t_second = np.eye(2, dtype=int)
         t_overall = np.dot(t_second, t_overall)
 
         # Finally update the transformation matrix to
