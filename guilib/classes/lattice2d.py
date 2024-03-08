@@ -303,45 +303,28 @@ class Lattice2D:
         -------
         shape : {'Oblique', 'Rhombic', 'Hexagonal', 'Rectangular', 'Square'}
         """
-
-        basis = self._basis
-
-        # Relative tolerance factor within which things are assumed to be equal
-        eps = 1e-3
-
-        # cosine of angle between vectors
-        cosine = np.dot(basis[0], basis[1])/(np.linalg.norm(basis[0])
-                                             * np.linalg.norm(basis[1]))
-
-        # Mismatch between the length of the two vectors
-        delta = np.linalg.norm(basis[0])/np.linalg.norm(basis[1]) - 1
+        eps = 1e-3  # Relative tolerance for equality
+        norm_a, norm_b, alpha = self.lattice_parameters
+        cosine = np.cos(np.radians(alpha))
+        delta = norm_a/norm_b - 1  # Relative mismatch between a and b
         if abs(cosine) < eps:  # angle is 90°
-            if np.abs(delta) < eps:
-                return 'Square'
-            return 'Rectangular'
-        if np.abs(delta) < eps:  # rhombic or hex
-            if self.space == 'real':
-                if cosine > eps:  # angle is acute -> make it obtuse
-                    print('Warning: the input might be corrupted,'
-                          'since the real-space basis is not obtuse!')
-                    transform = (0, -1), (1, 0)  # this keeps the handedness
-                else:
-                    transform = (1, 0), (0, 1)
-                self._basis = np.dot(transform, self._basis)
-                basis = self._basis
-                cosine = np.dot(basis[0],
-                                basis[1])/(np.linalg.norm(basis[0])
-                                           * np.linalg.norm(basis[1]))
+            return 'Square' if abs(delta) < eps else 'Rectangular'
+        if abs(delta) >= eps:
+            return 'Oblique'
+        # Rhombic or hexagonal
+        if self.space == 'real':
+            if cosine > eps:  # angle is acute -> make it obtuse
+                transform = (0, -1), (1, 0)  # this keeps the handedness
             else:
-                if cosine > eps:
-                    # The reciprocal lattice will be acute, since
-                    # the real one is obtuse.
-                    cosine *= -1
-
-            if abs(cosine + 0.5) < eps:  # angle is 120deg
-                return 'Hexagonal'
-            return 'Rhombic'
-        return 'Oblique'
+                transform = (1, 0), (0, 1)
+            self._basis = np.dot(transform, self._basis)
+            *_, alpha = self.lattice_parameters
+            cosine = np.cos(np.radians(alpha))
+        elif cosine > eps:  # Reciprocal acute, thus real is obtuse
+            cosine *= -1
+        if abs(cosine + 0.5) < eps:  # angle is 120deg
+            return 'Hexagonal'
+        return 'Rhombic'
 
     def __generate_lattice(self):                                               # TODO: have to rethink the usage of limit, as we need more beams for large off-normal incidence.
         """Generate a list of lattice points from self.basis.
