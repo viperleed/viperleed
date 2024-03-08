@@ -152,7 +152,10 @@ def get_equivalent_beams(leed_parameters, *other_leed_parameters, domains=None):
               ids are generated based on the (h, k) values, so that beams
               closer to the (0, 0) spot have smaller abs(id)
 
-        The entries in the list are sorted in this order: abs(id), h, k << NOT ANYMORE!
+        The entries in the list are sorted in this order:
+            abs(id)  [i.e., energy], -h-k, -h
+        The sorting choice for the (h, k) indices makes 'nicer' beams
+        appear earlier (e.g., 1|0 before -1|0).
     """
     # process arguments to allow the function to accept the LEED parameters
     # being passed as a single "list" of dictionaries, or as an unpacked "list"
