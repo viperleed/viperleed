@@ -20,6 +20,7 @@ from typing import Sequence
 import numpy as np
 
 from viperleed.guilib.classes.planegroup import PlaneGroup
+from viperleed.guilib.helpers import array_to_string
 
 
 # Disable as pylint considers twice private attributes and
@@ -102,12 +103,16 @@ class Lattice2D:
                              f'shape {self.cell_shape}')
         self.group = group or 'p1'
 
+    def __str__(self):
+        """Return a string version of this Lattice2D."""
+        return f'{self.cell_shape} ' + repr(self)
+
     def __repr__(self):
-        txt = (f"{self.cell_shape} "
-               + f"viperleed.Lattice2D({self.basis}, ".replace('\n', '')
-               + f"space={self.space}, group={self.group}, "
-               + f"limit={self._limit})")
-        return txt
+        """Return a string representation of this Lattice2D."""
+        cls_name = type(self).__name__
+        return (f'{cls_name}({array_to_string(self.basis)}, '
+                f'space={self.space}, group={self.group}, '
+                f'limit={self._limit})')
 
     @property
     def basis(self):
