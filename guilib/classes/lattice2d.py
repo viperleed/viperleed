@@ -184,13 +184,18 @@ class Lattice2D:
 
     @property
     def n_beams(self):
-        """
-        Returns
-        -------
-        int
-        the number of lattice points (for real-space) or LEED beams (for
-        reciprocal-space)
-        """
+        """Return the number of LEED beams. Only for reciprocal-space."""
+        if self.space == 'real':
+            raise AttributeError('Real-space lattice has no LEED '
+                                 'beams. Use .points instead.')
+        return len(self.hk)
+
+    @property
+    def n_points(self):
+        """Return the number of lattice points. Only for real-space."""
+        if self.space == 'reciprocal':
+            raise AttributeError('Reciprocal-space lattice has no '
+                                 'points. Use .n_beams instead.')
         return len(self.hk)
 
     @property
