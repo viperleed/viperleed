@@ -432,7 +432,7 @@ class Lattice2D:
         # it is obtuse for real-space rhombic and hexagonal lattices
         _shape = self.cell_shape
         if _shape != 'Oblique':
-            # Noting to do if it's already non-oblique
+            # Nothing to do if it's already non-oblique
             return np.eye(2, dtype=int)
 
         # Will always work on the real-space lattice for convenience,
