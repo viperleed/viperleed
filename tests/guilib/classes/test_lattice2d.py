@@ -70,10 +70,12 @@ class TestRaises:
     _init = {
         'space': (_SQUARE, {'space': 'invalid_space'}, ValueError),
         'limit': (_SQUARE, {'limit': 'not_a_number'}, TypeError),
-        'basis': ('invalid_basis', {}, TypeError),
+        'basis': ('not_a_list', {}, TypeError),
         'basis shape': (np.eye(3), {}, ValueError),
         'basis singular': (np.zeros((2, 2)), {}, ValueError),
-        'group': (_HEX_OBTUSE, {'group': 'p4'}, ValueError),
+        'group for shape': (_HEX_OBTUSE, {'group': 'p4'}, ValueError),
+        'not a group': (_HEX_OBTUSE, {'group': 'invalid_group'}, ValueError),
+        'group type': (_HEX_OBTUSE, {'group': 123}, ValueError),
         }
 
     @parametrize('basis,kwargs,exc', _init.values(), ids=_init)
