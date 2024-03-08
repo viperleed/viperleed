@@ -137,8 +137,7 @@ class Lattice2D:
         if self.group is None:
             return
 
-        compatible_groups = self.group.groups_compatible_with(self.cell_shape)
-        if self.group.group not in compatible_groups:
+        if not PlaneGroup.is_valid_group(group, self.cell_shape):
             # Shape does not allow the old group.
             # Can't pick one, so use 'p1'                                       # TODO: is there a better way to do this? How to treat 3D operations (also when group is one of those of the shape)?
             self.group = 'p1'
