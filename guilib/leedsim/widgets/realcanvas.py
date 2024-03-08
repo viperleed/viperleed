@@ -62,7 +62,7 @@ class RealCanvas(gl.MPLFigureCanvas):
         windowScaleFactor = (self.rightSize().height()/434)**2
                             # this is used for scaling the size of the spots
         rotSurfB = rs.surf.get_rotated_basis(rotation)
-        rotSurfL = rs.surf.get_rotated_lattice(rotation)
+        rotSurfL = rs.surf.get_rotated_lattice_points(rotation)
 
         # Plot surface as scatter
         self.ax.scatter(rotSurfL[:,0], rotSurfL[:,1],
