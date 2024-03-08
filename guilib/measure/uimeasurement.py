@@ -558,7 +558,9 @@ class Measure(ViPErLEEDPluginBase):
         self._dialogs['error_box'].finished.connect(
             self.__report_errors
             )
-
+        self._dialogs['firmware_upgrade'].error_occurred.connect(
+            self.error_occurred
+            )
         # OTHERS
         self.error_occurred.connect(self.__on_error_occurred)
         self.__measurement_thread.finished.connect(self.__switch_enabled)
