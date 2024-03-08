@@ -568,15 +568,9 @@ class Lattice2D:
             the basis to make it highest symmetry. Shape (2, 2).
         """
         transform = self.high_symm_transform()
-
-        if not np.array_equal([[1, 0], [0, 1]], transform):
-            # lattice can be higher symmetry, i.e., it was oblique
-            self.basis = np.dot(transform, self.basis)
-            self._shape = self.__get_cell_shape()
-            self.lattice, self.hk = self.__generate_lattice()
-            # no need to change the group, since group was at most p2.
-            # Inferring whether the group has higher symmetry is not possible
-
+        if not np.array_equal(np.eye(2), transform):
+            # Was oblique, and can be made high symmetry
+            self.transform(transform)
         return transform
 
     def transform(self, transform):
