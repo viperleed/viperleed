@@ -271,24 +271,24 @@ class Lattice2D:
         # lattice, and the role of 3d operations is merely that of
         # determining how many domains may occur in LEED                        # TODO: IS THIS CORRECT??
         transform = np.linalg.inv(self.real_basis)
-        ops = self.group.transform(transform)
+        operations = self.group.transform(transform)
 
         # The special directions are those parallel to the eigenvectors
         # of the mirrors with eigenvalue == 1 (use 1e-4 tolerance). In
         # fact, this is the direction that is unchanged when applying
         # the mirror operation. No special direction for rotations.
         directions = []
-        for op in ops:
-            if np.linalg.det(op) > 0:  # Rotation
+        for operation in operations:
+            if np.linalg.det(operation) > 0:  # Rotation
                 directions.append(None)
                 continue
-            eigval, eigvecs = np.linalg.eig(op)
-            # eigvecs has the eigenvectors as columns, ordered in the same
-            # way as the eigenvalues in eigvals. Notice the use of .extend()
-            # rather than .append(). This is because eigvecs is a matrix,
-            # and its 1-element slice is a (1, 2) array. Using .extend() adds
-            # a (2,)-shaped array.
-            directions.extend(eigvecs.T[np.abs(eigval - 1) < 1e-4])
+            eigval, eigvecs = np.linalg.eig(operation)
+            # eigvecs has the eigenvectors as columns, ordered in the
+            # same way as the eigenvalues in eigvals. Notice the use
+            # of .extend() rather than .append(). This is because
+            # eigvecs is a matrix, and its 1-element slice is a
+            # (1, 2) array. Using .extend() adds a (2,)-shaped array.
+            directions.extend(eigvecs.T[abs(eigval - 1) < 1e-4])
         return directions
 
     def __get_cell_shape(self):
@@ -352,7 +352,7 @@ class Lattice2D:
         h_max = int(np.ceil(limit/shortest))
 
         # create grid of indices
-        hk = np.mgrid[-h_max:h_max+1, -h_max:h_max+1].reshape(2,-1).T
+        indices = np.mgrid[-h_max:h_max+1, -h_max:h_max+1].reshape(2, -1).T
 
         # Create lattice:
         # Notice that, given a row vector of indices (h, k) and
@@ -360,13 +360,12 @@ class Lattice2D:
         # corresponding lattice point can be obtained as the
         # row vector
         #    L = [L1, L2] = [h, k]*B
-        lattice = np.dot(hk, basis)
+        lattice = np.dot(indices, basis)
 
         # Now find all those lattice points that lie within
         # limit, and use this as a mask for the output
         mask = np.linalg.norm(lattice, axis=1) <= limit
-
-        return lattice[mask], hk[mask]
+        return lattice[mask], indices[mask]
 
     def get_rotated_lattice_points(self, angle):
         """Return a copy of self.lattice rotated by angle.
