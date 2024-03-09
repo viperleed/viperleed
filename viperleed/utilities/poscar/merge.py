@@ -22,7 +22,7 @@ logger = logging.getLogger("viperleed.utilities.poscar.merge")
 
 def merge_slabs(slabs, check_collisions=True, eps=1e-5):
     merged_slab = deepcopy(slabs[0])
-    merged_slab.strict = False  # won't allow duplicate atom numbers otherwise
+    merged_slab.atlist.strict = False  # won't allow duplicate atom numbers otherwise
     for slab in slabs[1:]:
         if check_collisions:
             # check for collisions
@@ -33,10 +33,10 @@ def merge_slabs(slabs, check_collisions=True, eps=1e-5):
                                    "is smaller than eps. ")
         merged_slab.atlist.extend(slab.atlist)
 
-    merged_slab.updateAtomNumbers()
-    merged_slab.updateElementCount()
-    merged_slab.getCartesianCoordinates()
-    merged_slab.strict = True
+    merged_slab.update_atom_numbers()
+    merged_slab.update_element_count()
+    merged_slab.update_cartesian_from_fractional()
+    merged_slab.atlist.strict = True
 
     return merged_slab
 
