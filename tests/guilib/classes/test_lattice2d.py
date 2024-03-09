@@ -103,6 +103,102 @@ class TestProperties:
         assert lat.lattice_parameters == pytest.approx(expect, abs=1e-3)
         assert np.linalg.det(basis) == np.linalg.det(lat.basis)
 
+    _real_rec = {  # (self.basis, real_basis, reciprocal_basis)
+        (_HEX_ACUTE, 'real'): (
+            ((-0.5, -3**0.5/2), (1, 0)),  # OBTUSE, swap a'=-b, b'=a
+            ((-0.5, -3**0.5/2), (1, 0)),  # OBTUSE, swap a'=-b, b'=a
+            2*np.pi * np.array(((0, -2/3**0.5), (1, -1/3**0.5))),
+            ),
+        (_HEX_OBTUSE, 'real'): (
+            _HEX_OBTUSE,
+            _HEX_OBTUSE,
+            2*np.pi * np.array(((1, 1/3**0.5), (0, 2/3**0.5))),
+            ),
+        (_HEX_ACUTE, 'reciprocal'): (
+            _HEX_ACUTE,
+            2*np.pi * np.array(((1, -1/3**0.5), (0, 2/3**0.5))),
+            2*np.pi * np.array(((1, -1/3**0.5), (0, 2/3**0.5))),
+            ),
+        (_HEX_OBTUSE, 'reciprocal'): (
+            ((0.5, -3**0.5/2), (1, 0)),  # OBTUSE, swap a'=-b, b'=a
+            2*np.pi * np.array(((0, -2/3**0.5), (1, 1/3**0.5))),
+            2*np.pi * np.array(((0, -2/3**0.5), (1, 1/3**0.5))),
+            ),
+        (_OBLIQUE_ACUTE, 'real'): (
+            _OBLIQUE_ACUTE,
+            _OBLIQUE_ACUTE,
+            2*np.pi/3.5 * np.array(((3.5, -1.2), (0, 1))),
+            ),
+        (_OBLIQUE_ACUTE, 'reciprocal'): (
+            _OBLIQUE_ACUTE,
+            2*np.pi/3.5 * np.array(((3.5, -1.2), (0, 1))),
+            2*np.pi/3.5 * np.array(((3.5, -1.2), (0, 1))),
+            ),
+        (_OBLIQUE_OBTUSE, 'real'): (
+            _OBLIQUE_OBTUSE,
+            _OBLIQUE_OBTUSE,
+            2*np.pi/3.5 * np.array(((3.5, 1.2), (0, 1))),
+            ),
+        (_OBLIQUE_OBTUSE, 'reciprocal'): (
+            _OBLIQUE_OBTUSE,
+            2*np.pi/3.5 * np.array(((3.5, 1.2), (0, 1))),
+            2*np.pi/3.5 * np.array(((3.5, 1.2), (0, 1))),
+            ),
+        (_RECT, 'real'): (
+            _RECT,
+            _RECT,
+            2*np.pi * np.array(((1, 0), (0, 1/3.5))),
+            ),
+        (_RECT, 'reciprocal'): (
+            _RECT,
+            2*np.pi * np.array(((1, 0), (0, 1/3.5))),
+            2*np.pi * np.array(((1, 0), (0, 1/3.5))),
+            ),
+        (_RHOMBIC_ACUTE, 'real'): (
+            _RHOMBIC_OBTUSE,
+            _RHOMBIC_OBTUSE,
+            2*np.pi/4 *np.array(((-1, 2), (1, 2))),
+            ),
+        (_RHOMBIC_OBTUSE, 'real'): (
+            _RHOMBIC_OBTUSE,
+            _RHOMBIC_OBTUSE,
+            2*np.pi/4 *np.array(((-1, 2), (1, 2))),
+            ),
+        (_RHOMBIC_ACUTE, 'reciprocal'): (
+            _RHOMBIC_ACUTE,
+            2*np.pi/4 *np.array(((1, 2), (1, -2))),
+            2*np.pi/4 *np.array(((1, 2), (1, -2))),
+            ),
+        (_RHOMBIC_OBTUSE, 'reciprocal'): (
+            ((-2, -1), (-2, 1)),
+            2*np.pi/4 *np.array(((-1, -2), (-1, 2))),
+            2*np.pi/4 *np.array(((-1, -2), (-1, 2))),
+            ),
+        (_SQUARE, 'real'): (
+            _SQUARE,
+            _SQUARE,
+            2*np.pi * np.array(_SQUARE),
+            ),
+        (_SQUARE, 'reciprocal'): (
+            _SQUARE,
+            2*np.pi * np.array(_SQUARE),
+            2*np.pi * np.array(_SQUARE),
+            ),
+        }
+
+    @parametrize('args,expect', _real_rec.items(),
+                 ids=(str(p) for p in _real_rec))
+    def test_real_reciprocal_bases(self, args, expect, subtests):
+        basis, space = args
+        expect_self, expect_real, expect_rec = expect
+        lattice = Lattice2D(basis, space=space)
+        with subtests.test('self basis'):
+            assert np.allclose(lattice.basis, expect_self)
+        with subtests.test('real basis'):
+            assert np.allclose(lattice.real_basis, expect_real)
+        with subtests.test('reciprocal basis'):
+            assert np.allclose(lattice.reciprocal_basis, expect_rec)
+
 
 class TestRaises:
     """Collection of tests for complaints by Lattice2D objects."""
