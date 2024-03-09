@@ -100,13 +100,14 @@ class Lattice2D:
 
     def __str__(self):
         """Return a string version of this Lattice2D."""
-        return f'{self.cell_shape} ' + repr(self)
+        return (f'{self.cell_shape}, {self.space}-space {type(self).__name__}'
+                f'({array_to_string(self.basis)}, group={self.group})')
 
     def __repr__(self):
         """Return a string representation of this Lattice2D."""
         cls_name = type(self).__name__
         return (f'{cls_name}({array_to_string(self.basis)}, '
-                f'space={self.space}, group={self.group}, '
+                f'space={self.space!r}, group={self.group.group!r}, '
                 f'limit={self._limit})')
 
     @property

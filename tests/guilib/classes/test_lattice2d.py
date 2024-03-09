@@ -21,6 +21,16 @@ _RHOMBIC_OBTUSE = (-2, 1), (2, 1)
 _SQUARE = (1, 0), (0, 1)
 
 
+def test_str_repr():
+    """Check expected outcome of __str__ and __repr__ methods."""
+    basis = _SQUARE
+    lattice = Lattice2D(basis)
+    _repr = "Lattice2D([[1,0], [0,1]], space='real', group='p1', limit=1)"
+    _str = "Square, real-space Lattice2D([[1,0], [0,1]], group=p1)"
+    assert repr(lattice) == _repr
+    assert str(lattice) == _str
+
+
 class TestProperties:
     """Collection of tests for accessing properties."""
 
