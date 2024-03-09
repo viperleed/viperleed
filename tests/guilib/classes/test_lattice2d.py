@@ -113,6 +113,16 @@ class TestProperties:
         assert lat.lattice_parameters == pytest.approx(expect, abs=1e-3)
         assert np.linalg.det(basis) == np.linalg.det(lat.basis)
 
+    _pts = {'real': ('n_points', 19),
+            'reciprocal': ('n_beams', 7)}
+
+    @parametrize('space,expect', _pts.items(), ids=_pts)
+    def test_lattice_pts(self, space, expect):
+        """Check correct number of lattice points/beams."""
+        lattice = Lattice2D(_RECT, space=space, limit=3)
+        attr, value = expect
+        assert getattr(lattice, attr) == value
+
     _real_rec = {  # (self.basis, real_basis, reciprocal_basis)
         (_HEX_ACUTE, 'real'): (
             ((-0.5, -3**0.5/2), (1, 0)),  # OBTUSE, swap a'=-b, b'=a
