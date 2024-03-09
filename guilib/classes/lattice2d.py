@@ -318,8 +318,7 @@ class Lattice2D:
         if _is_real_space_acute:
             # Transform in a handedness-conserving manner
             self._basis = np.dot(((0, -1), (1, 0)), self._basis)
-            *_, alpha = self.lattice_parameters
-            cosine = np.cos(np.radians(alpha))
+            cosine *= -1
         if self.space == 'reciprocal' and cosine > eps:
             # Reciprocal acute, thus real is obtuse
             cosine *= -1
