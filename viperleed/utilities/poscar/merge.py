@@ -22,10 +22,12 @@ logger = logging.getLogger("viperleed.utilities.poscar.merge")
 
 def merge_slabs(slabs, check_collisions=True, eps=1e-5):
     merged_slab = deepcopy(slabs[0])
+    merged_slab.strict = False  # won't allow duplicate atom numbers otherwise
     for slab in slabs[1:]:
         if check_collisions:
             # check for collisions
-            dists = cdist(merged_slab.cartpos, slab.cartpos)
+            dists = cdist([at.cartpos for at in merged_slab],
+                          [at.cartpos for at in slab])
             if np.any(dists < eps):
                 raise RuntimeError("Distance between atoms in different slabs "
                                    "is smaller than eps. ")
@@ -34,6 +36,7 @@ def merge_slabs(slabs, check_collisions=True, eps=1e-5):
     merged_slab.updateAtomNumbers()
     merged_slab.updateElementCount()
     merged_slab.getCartesianCoordinates()
+    merged_slab.strict = True
 
     return merged_slab
 
