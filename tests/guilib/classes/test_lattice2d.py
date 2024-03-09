@@ -37,6 +37,18 @@ class TestProperties:
         """Check correct identification of the cell shape."""
         assert Lattice2D(basis).cell_shape == shape
 
+    def test_group_upon_basis_change(self, subtests):
+        """Check that the group becomes p1 when a new basis shape is given."""
+        with subtests.test('upon construction'):
+            lattice = Lattice2D(_RECT, group='pmm')
+            assert lattice.group == 'pmm'
+        with subtests.test('rect->square'):
+            lattice.basis = _SQUARE
+            assert lattice.group == 'pmm'
+        with subtests.test('square->rhombic'):
+            lattice.basis = _RHOMBIC_OBTUSE
+            assert lattice.group == 'p1'
+
     _group = {
         None: 'p1',  # Default
         'pgg': 'pgg'

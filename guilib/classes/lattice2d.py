@@ -137,7 +137,7 @@ class Lattice2D:
         if self.group is None:
             return
 
-        if not PlaneGroup.is_valid_group(group, self.cell_shape):
+        if not PlaneGroup.is_valid_group(self.group, self.cell_shape):
             # Shape does not allow the old group.
             # Can't pick one, so use 'p1'                                       # TODO: is there a better way to do this? How to treat 3D operations (also when group is one of those of the shape)?
             self.group = 'p1'
