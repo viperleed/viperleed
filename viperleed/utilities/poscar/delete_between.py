@@ -55,6 +55,7 @@ def main(args=None):
     modified_slab.atlist = [atom for atom in slab.atlist
                             if atom.pos[2] < args.c[0]
                             or atom.pos[2] > args.c[1]]
+    modified_slab.update_element_count()
 
     logger.debug(f"Deleted {len(slab.atlist) - len(modified_slab.atlist)} atoms"
                  f" in the range c = [{args.c[0]:5.3},{args.c[1]:5.3}].")

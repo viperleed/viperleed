@@ -44,6 +44,7 @@ def main(args=None):
     modified_slab = deepcopy(slab)
     modified_slab.atlist = [atom for atom in slab.atlist
                             if args.c > atom.pos[2]]
+    modified_slab.update_element_count()
 
     logger.debug(f"Deleted {len(slab.atlist) - len(modified_slab.atlist)} atoms"
                  f" above c > {args.c}.")
