@@ -24,6 +24,21 @@ _SQUARE = (1, 0), (0, 1)
 class TestProperties:
     """Collection of tests for accessing properties."""
 
+    _basis = {
+        'hex': _HEX_OBTUSE,
+        'oblique': _OBLIQUE_OBTUSE,
+        'rect': _RECT,
+        'rhombic': _RHOMBIC_OBTUSE,
+        'square': _SQUARE,
+        }
+
+    @parametrize(basis=_basis.values(), ids=_basis)
+    def test_basis(self, basis):
+        """Check correct setting of lattice basis."""
+        lattice = Lattice2D(basis)
+        assert lattice.space == 'real'
+        assert np.all(lattice.basis == basis)
+
     _cell = {
         _HEX_ACUTE: 'Hexagonal', _HEX_OBTUSE: 'Hexagonal',
         _OBLIQUE_ACUTE: 'Oblique', _OBLIQUE_OBTUSE: 'Oblique',
