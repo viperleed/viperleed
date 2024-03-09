@@ -50,7 +50,7 @@ def main(args=None):
     slab = poscar.read(sys.stdin)
 
     param = rparams.Rparams()
-    slab.fullUpdate(param)
+    slab.full_update(param)
     param.SYMMETRY_EPS = args.symmetry_eps
     param.SYMMETRY_EPS_Z = (args.symmetry_eps_z
                             if args.symmetry_eps_z is not None
