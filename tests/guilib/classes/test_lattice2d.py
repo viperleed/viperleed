@@ -24,6 +24,19 @@ _SQUARE = (1, 0), (0, 1)
 class TestProperties:
     """Collection of tests for accessing properties."""
 
+    _cell = {
+        _HEX_ACUTE: 'Hexagonal', _HEX_OBTUSE: 'Hexagonal',
+        _OBLIQUE_ACUTE: 'Oblique', _OBLIQUE_OBTUSE: 'Oblique',
+        _RECT: 'Rectangular',
+        _RHOMBIC_ACUTE: 'Rhombic', _RHOMBIC_OBTUSE: 'Rhombic',
+        _SQUARE: 'Square',
+        }
+
+    @parametrize('basis,shape', _cell.items(), ids=(str(c) for c in _cell))
+    def test_cell_shape(self, basis, shape):
+        """Check correct identification of the cell shape."""
+        assert Lattice2D(basis).cell_shape == shape
+
     _group = {
         None: 'p1',  # Default
         'pgg': 'pgg'
