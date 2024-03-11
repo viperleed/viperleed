@@ -10,7 +10,6 @@ import numpy as np
 
 from viperleed.guilib.classes.lattice2d import Lattice2D
 
-
 _HEX_ACUTE = (1, 0), (0.5, 3**0.5/2)
 _HEX_OBTUSE = (1, 0), (-0.5, 3**0.5/2)
 _OBLIQUE_ACUTE = (1, 0), (1.2, 3.5)
@@ -250,4 +249,21 @@ class TestRaises:
         """Check complaints when accessing a property for the wrong space."""
         with pytest.raises(AttributeError):
             _ = getattr(lattice, attr)
+
+
+class TestTransforms:
+    """Collection of tests for transformations of a Lattice2D."""
+
+    _rot_basis = {
+        'square 90': (_SQUARE, 90, ((0, 1), (-1, 0))),
+        'rhomb -90': (_RHOMBIC_OBTUSE, -90, ((1, 2), (1, -2))),
+        'hex 60': (_HEX_OBTUSE, 60, ((0.5, 3**0.5/2), (-1, 0))),
+        }
+
+    @parametrize('basis,angle,expect', _rot_basis.values(), ids=_rot_basis)
+    def test_rotated_basis(self, basis, angle, expect):
+        """Check correct result of get_rotated_basis(angle)."""
+        lattice = Lattice2D(basis)
+        rotated_basis = lattice.get_rotated_basis(angle)
+        assert np.allclose(rotated_basis, expect)
 
