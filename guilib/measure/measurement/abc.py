@@ -658,6 +658,15 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         None.
         """
         primary = self.primary_controller
+
+        if trigger_meas and not primary.measures():
+            # If the primary controller cannot measure we anyway need a
+            # timestamp as a reference for all other measurements.
+            primary.time_stamp = time.perf_counter()
+            dummy_dict = {QuantityInfo.TIMESTAMPS: []}
+            dummy_dict[QuantityInfo.TIMESTAMPS].append(primary.time_stamp)
+            self.data_points.add_data(dummy_dict, primary)
+
         if self.current_energy != self.__previous_energy:
             primary.set_energy(energy, settle_time, *more_steps,
                                trigger_meas=trigger_meas)
@@ -672,13 +681,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             primary.measure_now()
         except AttributeError:
             pass  # Controller cannot measure
-        if not primary.measures():
-            # If the primary controller cannot measure we anyway need a
-            # timestamp as a reference for all other measurements.
-            primary.time_stamp = time.perf_counter()
-            dummy_dict = {QuantityInfo.TIMESTAMPS: []}
-            dummy_dict[QuantityInfo.TIMESTAMPS].append(primary.time_stamp)
-            self.data_points.add_data(dummy_dict, primary)
 
         primary.about_to_trigger.emit()
 
