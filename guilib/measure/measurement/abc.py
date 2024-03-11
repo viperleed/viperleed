@@ -517,7 +517,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         primary = self.primary_controller
         about_to_trigger = primary.about_to_trigger
-        base.safe_disconnect(about_to_trigger, self.store_primary_time_stamp)
         for ctrl in self.controllers:
             # Make sure no controller can be triggered for
             # measurement during the whole preparation
@@ -658,10 +657,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
+        primary = self.primary_controller
         if self.current_energy != self.__previous_energy:
-            self.primary_controller.set_energy(energy, settle_time,
-                                               *more_steps,
-                                               trigger_meas=trigger_meas)
+            primary.set_energy(energy, settle_time, *more_steps,
+                               trigger_meas=trigger_meas)
             return
 
         # When the energy did not change, we can avoid setting
@@ -670,11 +669,18 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             return
 
         try:
-            self.primary_controller.measure_now()
+            primary.measure_now()
         except AttributeError:
-            self.primary_controller.time_stamp = time.perf_counter()
+            pass  # Controller cannot measure
+        if not primary.measures():
+            # If the primary controller cannot measure we anyway need a
+            # timestamp as a reference for all other measurements.
+            primary.time_stamp = time.perf_counter()
+            dummy_dict = {QuantityInfo.TIMESTAMPS: []}
+            dummy_dict[QuantityInfo.TIMESTAMPS].append(primary.time_stamp)
+            self.data_points.add_data(dummy_dict, primary)
 
-        self.primary_controller.about_to_trigger.emit()
+        primary.about_to_trigger.emit()
 
     @abstractmethod
     def start_next_measurement(self):
@@ -837,8 +843,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         about_to_trigger = primary.about_to_trigger
         base.safe_connect(self._request_stop_primary, primary.stop,
                           type=_UNIQUE)
-        base.safe_connect(about_to_trigger, self.store_primary_time_stamp,
-                          type=_UNIQUE)
         self._connect_controller(primary)
 
     def __connect_secondary_controllers(self):
@@ -880,7 +884,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             return
         about_to_trigger = primary.about_to_trigger
         base.safe_disconnect(self._request_stop_primary, primary.stop)
-        base.safe_disconnect(about_to_trigger, self.store_primary_time_stamp)
         for ctrl in self.secondary_controllers:
             base.safe_disconnect(about_to_trigger, ctrl.measure_now)
         self._disconnect_controller(primary)
@@ -1255,11 +1258,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         None.
         """
         controller = self.sender()
-        # Remove the time stamp for measurements coming from
-        # the primary controller as it was already added in
-        # store_primary_time_stamp.
-        if controller is self.primary_controller:
-            data.pop(QuantityInfo.TIMESTAMPS)
         self.data_points.add_data(data, controller)
 
         # Don't even try to go to the next energy if we haven't
@@ -1427,22 +1425,3 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                                f"folder {self.settings.base_dir}") from None
         return device_cfg
 
-    def store_primary_time_stamp(self):
-        """Append primary controller time stamp to data points.
-
-        This method stores the time stamp of the primary
-        controller in the datapoints when it is about to
-        trigger. This is necessary to ensure that even
-        non-measuring primary controller correctly store
-        their time stamps.
-
-        Returns
-        -------
-        None.
-        """
-        primary = self.primary_controller
-        dummy_dict = {QuantityInfo.TIMESTAMPS: []}
-        dummy_dict[QuantityInfo.TIMESTAMPS].append(
-            primary.time_stamp + primary.time_to_trigger / 1000
-            )
-        self.data_points.add_data(dummy_dict, primary)
