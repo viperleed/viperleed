@@ -21,6 +21,7 @@ import numpy as np
 
 from viperleed.guilib.classes.planegroup import PlaneGroup
 from viperleed.guilib.helpers import array_to_string
+from viperleed.tleedmlib.base import rotation_matrix
 
 
 # Disable as pylint considers twice private attributes and
@@ -382,9 +383,7 @@ class Lattice2D:
         rotated_lattice : numpy.ndarray
             The rotated version of self.lattice. Shape == (N, 2).
         """
-        angle = np.radians(angle)
-        rot = np.array([[np.cos(angle), np.sin(angle)],                         # TODO: use tleedmlib matrix
-                        [-np.sin(angle), np.cos(angle)]])
+        rot = rotation_matrix(np.radians(angle)).T
         return np.dot(self.lattice, rot)
 
     def get_rotated_basis(self, angle):
@@ -401,9 +400,7 @@ class Lattice2D:
         rotated basis: numpy.ndarray
             Shape == (2, 2). Unit vectors are rows.
         """
-        angle = np.radians(angle)
-        rot = np.array([[np.cos(angle), np.sin(angle)],                         # TODO: use tleedmlib matrix
-                        [-np.sin(angle), np.cos(angle)]])
+        rot = rotation_matrix(np.radians(angle)).T
         return np.dot(self.basis, rot)
 
     def high_symm_transform(self):
