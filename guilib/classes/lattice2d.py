@@ -23,6 +23,8 @@ from viperleed.guilib.classes.planegroup import PlaneGroup
 from viperleed.guilib.helpers import array_to_string
 from viperleed.tleedmlib.base import rotation_matrix
 
+ACUTE_TO_OBTUSE = np.array(((0, -1), (1, 0)))  # Conserves handedness
+
 
 # Disable as pylint considers twice private attributes and
 # property when the property is set somewhere in the code
@@ -88,12 +90,13 @@ class Lattice2D:
                             f' not {type(limit).__name__}')
 
         self._basis = None  # Set via .basis setter below
-        self._group = None  # Set via setter further below
+        self._group = None  # Set via .group setter below
         # pylint: disable-next=invalid-name  # For hk
         self.lattice, self.hk = None, None   # Set via .basis setter
         self._limit = limit
-        self._shape = None  # Set via .basis setter below
+        self._shape = None       # Set via .basis setter below
         self._space = space
+        self._was_acute = False  # Set via .basis setter below
 
         # Delegate checks to setters
         self.basis = basis   # Also updates cell shape
@@ -133,7 +136,8 @@ class Lattice2D:
             raise ValueError(f'{type(self).__name__}: basis is singular.')
 
         self._basis = basis
-        self._shape = self.__get_cell_shape()
+        self._was_acute = False
+        self._shape = self.__get_cell_shape()  # Sets _was_acute
         self.lattice, self.hk = self.__generate_lattice()
 
         if self.group is None:
@@ -293,6 +297,11 @@ class Lattice2D:
             directions.extend(eigvecs.T[abs(eigval - 1) < 1e-4])
         return directions
 
+    @property
+    def was_acute(self):
+        """Return whether the real-space basis was made obtuse."""
+        return self._was_acute
+
     def __get_cell_shape(self):
         """Determine the shape of this lattice's basis.
 
@@ -315,11 +324,11 @@ class Lattice2D:
             return 'Oblique'
 
         # Rhombic or hexagonal. Make real-space acute into obtuse.
-        _is_real_space_acute = (cosine > eps if self.space == 'real'
-                                else cosine < -eps)
-        if _is_real_space_acute:
-            # Transform in a handedness-conserving manner
-            self._basis = np.dot(((0, -1), (1, 0)), self._basis)
+        real_space_is_acute = (cosine > eps if self.space == 'real'
+                               else cosine < -eps)
+        self._was_acute = real_space_is_acute
+        if real_space_is_acute:
+            self._basis = ACUTE_TO_OBTUSE.dot(self._basis)
             cosine *= -1
         if self.space == 'reciprocal' and cosine > eps:
             # Reciprocal acute, thus real is obtuse

@@ -219,6 +219,32 @@ class TestProperties:
         with subtests.test('reciprocal basis'):
             assert np.allclose(lattice.reciprocal_basis, expect_rec)
 
+    _acute = {
+        (_HEX_ACUTE, 'real') : True,
+        (_HEX_OBTUSE, 'real'): False,
+        (_HEX_ACUTE, 'reciprocal'): False,
+        (_HEX_OBTUSE, 'reciprocal'): True,
+        (_OBLIQUE_ACUTE, 'real'): False,  # Only hex & rhombic!
+        (_OBLIQUE_OBTUSE, 'real'): False,
+        (_OBLIQUE_ACUTE, 'reciprocal'): False,
+        (_OBLIQUE_OBTUSE, 'reciprocal'): False,
+        (_RECT, 'real'): False,
+        (_RECT, 'reciprocal'): False,
+        (_RHOMBIC_ACUTE, 'real'): True,
+        (_RHOMBIC_OBTUSE, 'real'): False,
+        (_RHOMBIC_ACUTE, 'reciprocal'): False,
+        (_RHOMBIC_OBTUSE, 'reciprocal'): True,
+        (_SQUARE, 'real'): False,
+        (_SQUARE, 'reciprocal'): False,
+        }
+
+    @parametrize('args,expect', _acute.items(), ids=(str(a) for a in _acute))
+    def test_was_acute(self, args, expect):
+        """Check correct value of property was_acute."""
+        basis, space = args
+        lat = Lattice2D(basis, space=space)
+        assert lat.was_acute == expect
+
 
 class TestRaises:
     """Collection of tests for complaints by Lattice2D objects."""
