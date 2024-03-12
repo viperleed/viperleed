@@ -267,3 +267,21 @@ class TestTransforms:
         rotated_basis = lattice.get_rotated_basis(angle)
         assert np.allclose(rotated_basis, expect)
 
+    def test_rotated_lattice(self):
+        """Check correct result of get_rotated_lattice_points(angle)."""
+        lattice = Lattice2D(_RECT, space='real', limit=3)
+        pts = lattice.lattice
+        expect_pts = [[-4,   0. ], [-3,   0. ], [-2,  -3.5], [-2,   0. ],
+                      [-2,   3.5], [-1,  -3.5], [-1,   0. ], [-1,   3.5],
+                      [ 0,  -3.5], [ 0,   0. ], [ 0,   3.5], [ 1,  -3.5],
+                      [ 1,   0. ], [ 1,   3.5], [ 2,  -3.5], [ 2,   0. ],
+                      [ 2,   3.5], [ 3,   0. ], [ 4,   0. ]]
+        expect_rot_pts = [[ 0.0, -4], [ 0.0, -3], [ 3.5, -2], [ 0.0, -2],
+                          [-3.5, -2], [ 3.5, -1], [ 0.0, -1], [-3.5, -1],
+                          [ 3.5,  0], [ 0.0,  0], [-3.5,  0], [ 3.5,  1],
+                          [ 0.0,  1], [-3.5,  1], [ 3.5,  2], [ 0.0,  2],
+                          [-3.5,  2], [ 0.0,  3], [ 0.0,  4]]
+        assert np.allclose(pts, expect_pts)
+        rot_pts = lattice.get_rotated_lattice_points(90)
+        assert np.allclose(rot_pts, expect_rot_pts)
+
