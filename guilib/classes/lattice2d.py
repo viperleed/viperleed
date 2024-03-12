@@ -566,7 +566,11 @@ class Lattice2D:
         ----------
         transform : Sequence
             Shape (2, 2). The transformation matrix to be
-            left-multiplied to the basis.
+            left-multiplied to the basis. This means that
+            `transform` should be expressed in 'fractional'
+            coordinates. This is normally one of the
+            planegroup operations that are suited for
+            self.cell_shape.
 
         Returns
         -------
@@ -581,7 +585,11 @@ class Lattice2D:
         ----------
         transform : Sequence
             Shape (2, 2). The transformation matrix to be
-            left-multiplied to the basis.
+            left-multiplied to the basis. This means that
+            `transform` should be expressed in 'fractional'
+            coordinates. This is normally one of the
+            planegroup operations that are suited for
+            self.cell_shape.
 
         Returns
         -------

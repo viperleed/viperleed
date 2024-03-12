@@ -8,6 +8,7 @@ import pytest
 from pytest_cases import parametrize
 import numpy as np
 
+from viperleed.guilib.classes import planegroup
 from viperleed.guilib.classes.lattice2d import Lattice2D
 
 _HEX_ACUTE = (1, 0), (0.5, 3**0.5/2)
@@ -284,4 +285,25 @@ class TestTransforms:
         assert np.allclose(pts, expect_pts)
         rot_pts = lattice.get_rotated_lattice_points(90)
         assert np.allclose(rot_pts, expect_rot_pts)
+
+    def test_transform(self):
+        """Check correct transformation of a lattice basis."""
+        lattice = Lattice2D(_RECT)
+        # Notice that here we should only use transformation
+        # matrices that make sense for the current shape!
+        lattice.transform(planegroup.Mx)
+        assert np.array_equal(lattice.basis, ((1, 0), (0, -3.5)))
+        assert lattice.cell_shape == 'Rectangular'
+
+    def test_transformed(self):
+        """Check generation of a transformed lattice."""
+        lattice = Lattice2D(_HEX_OBTUSE)
+        # Notice that here we should only use transformation
+        # matrices that make sense for the current shape!
+        new_lattice = lattice.transformed(planegroup.Cm6)
+        expect_basis = (0.5, -3**0.5/2), (0.5, 3**0.5/2)
+        assert new_lattice is not lattice
+        assert np.array_equal(lattice.basis, _HEX_OBTUSE)
+        assert new_lattice.cell_shape == 'Hexagonal'
+        assert np.array_equal(new_lattice.basis, expect_basis)
 
