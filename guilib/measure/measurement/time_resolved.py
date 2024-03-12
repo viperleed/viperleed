@@ -59,6 +59,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # controller to return measurements. The time interval
         # is read from the settings.
         trigger = self.__trigger_one_measurement = qtc.QTimer(parent=self)
+        trigger.timeout.connect(self.__on_one_measurement_triggered)
         for ctrl in self.controllers:
             self.__connect_trigger_timeout(ctrl)
 
@@ -312,6 +313,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         None.
         """
         super().start_next_measurement()
+        self._missing_data = dict.fromkeys(self._missing_data.keys(), 0)
         self.__energy_step_timer.setInterval(self.energy_step_duration)
         _continuous = self.is_continuous
         about_to_trigger = self.primary_controller.about_to_trigger
@@ -478,6 +480,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         self.data_points.add_image(camera)
         camera.process_info.count += 1
 
+        if not self.is_continuous:
+            # We must make sure that we have already stored in the
+            # datapoints all the images that we have ever triggered for.
+            self._missing_data[camera] -= 1
         if not self.__energy_step_timer.isActive():
             # We are at the end of an energy step, and just finished
             # waiting for the last image. See if we can go on
@@ -503,7 +509,15 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         None.
         """
         controller = self.sender()
+        self._missing_data[controller] -= 1
         self.data_points.add_data(data, controller)
+
+    def __on_one_measurement_triggered(self):
+       """Increment the number of missing data for all devices."""
+       if self.is_continuous:
+           return
+       for device in self._missing_data:
+           self._missing_data[device] += 1
 
     def __prepare_continuous_mode(self):
         """Adjust the preparations to fit continuous mode.

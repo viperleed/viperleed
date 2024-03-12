@@ -64,7 +64,10 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
         "No camera available for the measurement. Check both the "
         "measurement and the camera configuration files."
         )
-
+    TOO_MUCH_DATA = (
+        306,
+        "The devices {} returned more data than expected."
+        )
 
 # Progression:
 # Entry: .begin_preparation()
@@ -126,7 +129,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         # Keep track of which data of which controller was
         # stored in self.data_points at this energy step
-        self._data_stored = {}
+        self._missing_data = {}
 
         self.threads = []
         self.running = False     # Used for aborting from outside
@@ -334,9 +337,12 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self._make_cameras()
         self.__make_tmp_directory_tree()
 
-        self._data_stored = {c: False
+        self._missing_data = {c: 1
                              for c in self.controllers
                              if c.measures()}
+        for camera in self.cameras:
+            self._missing_data[camera] = 1
+
         self.data_points.primary_controller = self.primary_controller
         return True
 
@@ -701,7 +707,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
-        self._data_stored = dict.fromkeys(self._data_stored.keys(), False)
+        self._missing_data = dict.fromkeys(self._missing_data.keys(), 1)
         self.data_points.new_data_point(self.current_energy, self.controllers,
                                         self.cameras)
 
@@ -1238,6 +1244,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.data_points.add_image(camera)
         camera.process_info.count += 1
 
+        self._missing_data[camera] -= 1
         self._ready_for_next_measurement()
 
     @qtc.pyqtSlot(dict)
@@ -1261,17 +1268,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """
         controller = self.sender()
         self.data_points.add_data(data, controller)
-
-        # Don't even try to go to the next energy if we haven't
-        # processed the data from all controllers. Notice that
-        # this solution prevents a race condition in which one
-        # controller may have returned data while another one
-        # has turned not busy (i.e., all are not busy), but the
-        # data_ready signal of the second controller was not
-        # processed yet.
-        self._data_stored[controller] = True
-        if all(self._data_stored.values()):
-            self._ready_for_next_measurement()
+        self._missing_data[controller] -= 1
+        self._ready_for_next_measurement()
 
     @qtc.pyqtSlot(tuple)
     def __on_hardware_error(self, *_):
@@ -1351,7 +1349,18 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """
         if any(device.busy for device in self.devices):
             return
-        if not all(self._data_stored.values()):
+        if any(miss < 0 for miss in self._missing_data.values()):
+            # Check if any device returned more data than expected.
+            _too_many = {d.name: v for d, v in self._missing_data.items()
+                         if v < 0}
+            base.emit_error(self, MeasurementErrors.TOO_MUCH_DATA, _too_many)
+        if any(self._missing_data.values()):
+            # Don't go to the next energy if we haven't processed the
+            # data from all devices. Notice that this solution prevents
+            # a race condition in which one device may have returned
+            # data while another one has turned not busy (i.e., all are
+            # not busy), but the signal of the other devices was not
+            # processed yet.
             return
 
         self.data_points.calculate_times()
