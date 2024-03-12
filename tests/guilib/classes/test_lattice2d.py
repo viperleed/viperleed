@@ -278,6 +278,11 @@ class TestRaises:
             _ = getattr(lattice, attr)
 
 
+# Prepare some linear combinations for testing high_symm_transform.
+LINEAR_COMBINATIONS = np.random.randint(-20, 20, size=20)
+LINEAR_COMBINATIONS[LINEAR_COMBINATIONS==0] += 1
+
+
 class TestTransforms:
     """Collection of tests for transformations of a Lattice2D."""
 
@@ -332,4 +337,31 @@ class TestTransforms:
         assert np.array_equal(lattice.basis, _HEX_OBTUSE)
         assert new_lattice.cell_shape == 'Hexagonal'
         assert np.array_equal(new_lattice.basis, expect_basis)
+
+    _bases = (_HEX_OBTUSE, _RECT, _RHOMBIC_OBTUSE, _SQUARE)
+
+    @parametrize(basis=_bases, lin_comb=LINEAR_COMBINATIONS)
+    def test_high_sym(self, basis, lin_comb, subtests):
+        """Check correct value of Lattice2D.is_high_symmetry()."""
+        lattice = Lattice2D(basis)
+        # Use only transformations that preserve the area,
+        # as the algorithm does not try to reduce it
+        transform = np.eye(2)
+        transform[0, 1] = lin_comb
+        self._check_high_symmetry(lattice, transform, subtests, 'modify 1st')
+        transform = np.eye(2)
+        transform[1, 0] = lin_comb
+        self._check_high_symmetry(lattice, transform, subtests, 'modify 2nd')
+
+    @staticmethod
+    def _check_high_symmetry(lattice, transform, subtests, txt):
+        """Check high-symmetry for a lattice after transforming it."""
+        shape = lattice.cell_shape
+        new_lattice = lattice.transformed(transform)
+        with subtests.test(f'{txt} - is_high_symmetry'):
+            expect = new_lattice.cell_shape != 'Oblique'
+            assert new_lattice.is_high_symmetry() == expect
+        with subtests.test(f'{txt} - make_high_symmetry'):
+            new_lattice.make_high_symmetry()
+            assert new_lattice.cell_shape == shape
 

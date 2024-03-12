@@ -433,6 +433,7 @@ class Lattice2D:
         The `transform` can bring an oblique lattice into square,
             rectangular, hexagonal or rhombic, or make the basis
             vectors as close to orthogonal as possible.
+        The `transform` returned conserves the unit cell area.
         """
         # The following line should also redefine the basis so that
         # it is obtuse for real-space rhombic and hexagonal lattices
@@ -492,9 +493,11 @@ class Lattice2D:
         # might be still any shape (square, rectangular, hexagonal,
         # rhombic, or oblique).
 
-        # Create a dummy lattice with the new basis,
-        # to check which shape it has
-        _shape = Lattice2D(basis).cell_shape
+        # Use a dummy lattice to check the shape of the new basis
+        dummy = Lattice2D(basis)
+        if dummy.was_acute:
+            # Also update the transformation matrix
+            t_overall = ACUTE_TO_OBTUSE.dot(t_overall)
 
         # If it's still oblique, try to see if it can be transformed
         # to hex or rhombic by choosing "a" not to be the shortest
@@ -504,7 +507,7 @@ class Lattice2D:
         # All the operations that follow are stored in a matrix
         # `t_second`, to be later left-multiplied to `t_overall`
         # to get the full transformation
-        if _shape != 'Oblique':
+        if dummy.cell_shape != 'Oblique':
             t_second = np.eye(2, dtype=int)
         else:
             # Lattice is still oblique, even if closest to rectangular.
@@ -521,20 +524,14 @@ class Lattice2D:
                 )
             t_second = np.dot(t_elem, t_second)
             basis = np.dot(t_elem, basis)
-            dummy2 = Lattice2D(basis)
+            dummy2 = Lattice2D(basis)  # May turn acute to obtuse again
+            if dummy2.was_acute:
+                # Also update the transformation matrix
+                t_second = ACUTE_TO_OBTUSE.dot(t_second)
 
-            # The following line might change acute into obtuse
-            # --> check if it was the case                                      # TODO: PROBABLY IT CANNOT HAPPEN ANYWAY!! IT SHOULD RATHER BE CHECKED ON DUMMY ABOVE
-            _shape = dummy2.cell_shape
-            sign_before = np.dot(basis[0], basis[1])
-            sign_after = np.dot(dummy2.basis[0], dummy2.basis[1])
-            if sign_before*sign_after < 0:
-                # sign did change -> basis went from acute to obtuse
-                t_second = np.dot([[0, -1], [1, 0]], t_second)
-
-            if _shape == 'Oblique':
-                # lattice is still oblique, no transformation is needed
-                # (will keep the one closest to rect)
+            if dummy2.cell_shape == 'Oblique':
+                # Lattice is still oblique, no transformation is
+                # needed. Will keep the one closest to rectangular
                 t_second = np.eye(2, dtype=int)
         t_overall = np.dot(t_second, t_overall)
 
