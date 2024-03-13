@@ -101,7 +101,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 },
             'buttons' : {
                 'refresh': qtw.QPushButton('&Refresh'),
-                'upload': qtw.QPushButton('&Upload'),
+                'upload': qtw.QPushButton('&Upload firmware'),
                 'done': qtw.QPushButton('&Done'),
                 'upgrade': qtw.QPushButton('&Upgrade CLI')
                 },
