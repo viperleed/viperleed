@@ -45,13 +45,13 @@ Mm45 = (0, -1), (-1, 0)  # Across line at -45deg relative to 1st vector
 # ...these are good for rhombic and hex (both obtuse),...
 M11 = (0, 1), (1, 0)     # == M45
 M1m1 = (0, -1), (-1, 0)  # == -M11 == Mm45
-M01 = (-1, -1), (0, 1)
-M10 = (1, 0), (-1, -1)
 # ...and these are good for hex only (obtuse).
 C6 = (1, 1), (-1, 0)
 Cm6 = (0, -1), (1, 1)
 C3 = (0, 1), (-1, -1)
 Cm3 = (-1, -1), (1, 0)
+M01 = (-1, -1), (0, 1)
+M10 = (1, 0), (-1, -1)
 M21 = (1, 1), (0, -1)
 M12 = (-1, 0), (1, 1)
 
