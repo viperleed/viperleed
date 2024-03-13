@@ -701,10 +701,9 @@ class FirmwareUploader(qtc.QObject):
                 return
 
         # See if there is the correct executable in arduino-cli
-        arduino_cli = 'arduino-cli'
+        arduino_cli = self.base_path / 'arduino-cli'
         if 'win' in sys.platform and not 'darwin' in sys.platform:
-            arduino_cli += '.exe'
-        arduino_cli = self.base_path.joinpath(arduino_cli)
+            arduino_cli = arduino_cli.with_suffix('.exe')
         if not arduino_cli.is_file():
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
