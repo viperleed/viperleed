@@ -103,7 +103,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 'refresh': qtw.QPushButton('&Refresh'),
                 'upload': qtw.QPushButton('&Upload firmware'),
                 'done': qtw.QPushButton('&Done'),
-                'upgrade': qtw.QPushButton('&Upgrade CLI')
+                'upgrade': qtw.QPushButton('Upgrade &Arduino CLI')
                 },
             'controller_info': {
                 'ctrl_type': qtw.QLabel(f'Controller type: {NOT_SET}'),
