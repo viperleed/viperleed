@@ -107,10 +107,10 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 },
             'controller_info': {
                 'ctrl_type': qtw.QLabel(f'Controller type: {NOT_SET}'),
-                'firmware_version': qtw.QLabel(
-                    f'Installed firmware version: {NOT_SET}'),
-                'highest_version': qtw.QLabel(
-                    f'Most recent firmware version: {NOT_SET}'),
+                'firmware_version': qtw.QLabel('Installed firmware '
+                                               f'version: {NOT_SET}'),
+                'highest_version': qtw.QLabel('Most recent firmware '
+                                              f'version: {NOT_SET}'),
                 },
             'timers': {
                 #TODO: maybe add timers (trigger detect devices instead of button)
