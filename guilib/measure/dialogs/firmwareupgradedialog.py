@@ -202,8 +202,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
     def __compose_info_section(self):
         layout = qtw.QHBoxLayout()
-        for lbl in self.__children['controller_info'].values():
-            layout.addWidget(lbl)
+        for label in self.__children['controller_info'].values():
+            layout.addWidget(label)
         return layout
 
     def __compose_path_selection(self):
