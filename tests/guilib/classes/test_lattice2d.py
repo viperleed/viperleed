@@ -10,6 +10,7 @@ import numpy as np
 
 from viperleed.guilib.classes import planegroup
 from viperleed.guilib.classes.lattice2d import Lattice2D
+from viperleed.tleedmlib.base import angle as angle_between
 
 _HEX_ACUTE = (1, 0), (0.5, 3**0.5/2)
 _HEX_OBTUSE = (1, 0), (-0.5, 3**0.5/2)
@@ -276,6 +277,76 @@ class TestRaises:
         """Check complaints when accessing a property for the wrong space."""
         with pytest.raises(AttributeError):
             _ = getattr(lattice, attr)
+
+
+class TestSpecialDirections:
+    """Tests for determination of mirror directions."""
+
+    @staticmethod
+    def _any_mismatch(results, expected):
+        """Check that results == expected, but items may be None or arrays."""
+        if len(results) != len(expected):
+            return f'length mismatch: {len(results)} vs. {len(expected)}'
+        for i, (res_, exp_) in enumerate(zip(results, expected)):
+            if res_ is None and exp_ is None:
+                continue
+            if any(v is None for v in (res_, exp_)):
+                # Only one is None
+                return f'mismatch at ind={i}: {res_}, {exp_}'
+            if not np.allclose(res_, exp_):
+                return f'mismatch at ind={i}: {res_}, {exp_}'
+        return False
+
+    _angles = {
+        (_HEX_ACUTE, 'p6m'): [0, 120, 90, 30, 60, 150],
+        (_HEX_OBTUSE, 'p6m'): [0, 120, 90, 30, 60, 150],
+        (_OBLIQUE_ACUTE, 'p2'): [],
+        (_OBLIQUE_OBTUSE, 'p2'): [],
+        (_RECT, 'pmm'): [0, 90],
+        (_RHOMBIC_ACUTE, 'cmm'): [116.565, 26.565],
+        (_RHOMBIC_OBTUSE, 'cmm'): [116.565, 26.565],
+        (_SQUARE, 'p4m'): [0, 90, 45, 135],
+        }
+
+    @parametrize('args,expect', _angles.items(), ids=(str(k) for k in _angles))
+    def test_angles(self, args, expect):
+        """Check correct orientation of the special directions."""
+        basis, group = args
+        lattice = Lattice2D(basis, group=group)
+        angles = [np.degrees(angle_between(lattice.basis[0], d)) % 180
+                  for d in lattice.special_directions
+                  if d is not None]
+        assert angles == pytest.approx(expect, abs=1e-3)
+
+    _directions = {  # Enough to check the highest-symmetry group
+        (_HEX_ACUTE, 'p6m'): [
+            None, (-0.5, -3**0.5/2), (1, 0), (3**0.5/2, -0.5), (0, 1),
+            (0.5, -3**0.5/2), (3**0.5/2, 0.5), None, None, None,
+            None, None
+            ],
+        (_HEX_OBTUSE, 'p6m'): [
+            None, (1, 0), (0.5, -3**0.5/2), (0, 1), (3**0.5/2, 0.5),
+            (-0.5, -3**0.5/2), (3**0.5/2, -0.5), None, None, None,
+            None, None
+            ],
+        (_OBLIQUE_ACUTE, 'p2'): [None, None],
+        (_OBLIQUE_OBTUSE, 'p2'): [None, None],
+        (_RECT, 'pmm'): [None, (1, 0), (0, 1), None],
+        (_RHOMBIC_ACUTE, 'cmm'): [None, None, (0, 1), (1, 0)],
+        (_RHOMBIC_OBTUSE, 'cmm'): [None, None, (0, 1), (1, 0)],
+        (_SQUARE, 'p4m'): [None, (1, 0), (0, 1), (2**-0.5, 2**-0.5),
+                           (2**-0.5, -2**-0.5), None, None, None],
+        }
+
+    @parametrize('args,expect', _directions.items(),
+                 ids=(str(k) for k in _directions))
+    def test_directions(self, args, expect):
+        """Check exact match of all the directions."""
+        basis, group = args
+        lattice = Lattice2D(basis, group=group)
+        directions = lattice.special_directions
+        print(directions)
+        assert not self._any_mismatch(directions, expect)
 
 
 # Prepare some linear combinations for testing high_symm_transform.
