@@ -854,8 +854,9 @@ class FirmwareUploader(qtc.QObject):
         None.
         """
         self.process_progress.emit(0)
-        request = qtn.QNetworkRequest(qtc.QUrl('https://api.github.com/repos/'
-                                      'arduino/arduino-cli/releases/latest'))
+        request = qtn.QNetworkRequest(qtc.QUrl(
+            'https://api.github.com/repos/arduino/arduino-cli/releases/latest'
+            ))
         self.manager.finished.connect(self.__get_newest_arduino_cli,
                                       type=qtc.Qt.UniqueConnection)
         self.manager.get(request)
