@@ -254,7 +254,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._uploader.cli_installation_finished.connect(
             self._on_cli_install_done
             )
-        self._uploader.process_progress.connect(self._progress_bar.setValue)
+        self._uploader.progress_occurred.connect(self._progress_bar.setValue)
 
     @qtc.pyqtSlot(bool)
     def _continue_open(self, is_installed):
@@ -273,8 +273,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         -------
         None
         """
-        base.safe_disconnect(self._uploader.cli_is_installed,
-                             self._continue_open)
+        base.safe_disconnect(self._uploader.cli_found, self._continue_open)
         # The error_occurred signal is reconnected because it is
         # disconnected in the open() method of the dialog.
         self._uploader.error_occurred.connect(self.error_occurred)
@@ -328,15 +327,15 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         firmware_dict = {}
         f_path = self.controls['firmware_path'].path
 
-        if not f_path or f_path == Path():
+        if not f_path or f_path == Path():  # User did not select path.
             self._update_combo_box('firmware_version', firmware_dict)
             return
 
         for file in f_path.glob('*.zip'):
-            with ZipFile(file, mode='r') as zf:
+            with ZipFile(file, mode='r') as archive:
                 # !!! We are assuming here that the first folder in the
                 # .zip file matches the name of the firmware version.
-                folder_name, *_ = zf.namelist()[0].split('/')
+                folder_name, *_ = archive.namelist()[0].split('/')
                 *_, version_str = folder_name.split('_')
                 try:
                     version = base.Version(version_str)
@@ -346,26 +345,24 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 firmware_dict[folder_name] = FirmwareVersionInfo(folder_name,
                                                                  version, file)
         self._update_combo_box('firmware_version', firmware_dict)
-        self._get_most_recent_firmware_version()
+        self._find_most_recent_firmware_version()
 
-    def _get_most_recent_firmware_version(self, *args):
+    def _find_most_recent_firmware_version(self):
         """Detect most recent firmware suitable for controller."""
-        ctrl = self.controls['controllers'].currentData()
+        controller = self.controls['controllers'].currentData()
         nr_versions = self.controls['firmware_version'].count()
-        max_version = base.Version('0.0')
 
-        if not ctrl or not ctrl['name_raw']:
+        if not controller or not controller['name_raw']:
             return
 
-        i = 0
-        while i < nr_versions:
-            firm_ver = self.controls['firmware_version'].itemData(i)
-            if ctrl['name_raw'] in firm_ver.folder_name:
-                if firm_ver.version > max_version:
-                    max_version = firm_ver.version
-            i += 1
-
-        if max_version == base.Version('0.0'):
+        versions = []
+        for i in range(nr_versions):
+            firmware = self.controls['firmware_version'].itemData(i)
+            if controller['name_raw'] in firmware.folder_name:
+                versions.append(firmware.version)
+        try:
+            max_version = max(versions)
+        except ValueError:  # No firmware available
             max_version = NOT_SET
 
         self.labels['highest_version'].setText(
@@ -401,7 +398,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.labels['highest_version'].setText(
             f'Most recent firmware version: {NOT_SET}'
             )
-        self._get_most_recent_firmware_version()
+        self._find_most_recent_firmware_version()
 
     @qtc.pyqtSlot()
     def _upgrade_arduino_cli(self):
@@ -412,8 +409,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     def _update_combo_box(self, which_combo, data_dict):
         """Replace displayed firmware/controllers with the detected ones."""
         self.controls[which_combo].clear()
-        for key, value in data_dict.items():
-            self.controls[which_combo].addItem(key, userData=value)
+        for item_text, item_data in data_dict.items():
+            self.controls[which_combo].addItem(item_text, userData=item_data)
         self._enable_upload_button()
 
     @qtc.pyqtSlot()
@@ -439,6 +436,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._clean_up()
         super().accept()
 
+    @qtc.pyqtSlot()
     def open(self):
         """Check if the Arduino CLI is installed before opening dialog.
 
@@ -446,10 +444,11 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         will stall until the FirmwareUploader has finished the check if
         the Arduino CLI is installled.
         """
-        self._uploader.cli_is_installed.connect(self._continue_open)
+        self._uploader.cli_found.connect(self._continue_open)
         base.safe_disconnect(self._uploader.error_occurred,
                              self.error_occurred)
         _INVOKE(self._uploader, 'is_cli_installed')
+
 
 class FirmwareUploader(qtc.QObject):
     """Worker that handles firmware uploads in another thread."""
@@ -472,17 +471,17 @@ class FirmwareUploader(qtc.QObject):
     controllers_detected = qtc.pyqtSignal(dict)
 
     # Emitted after the check if the Arduino CLI is installed.
-    cli_is_installed = qtc.pyqtSignal(bool)
+    cli_found = qtc.pyqtSignal(bool)
 
     # Emitted with a value that is indicative of how much of
     # the currently running process has been completed.
-    process_progress = qtc.pyqtSignal(int)
+    progress_occurred = qtc.pyqtSignal(int)
 
     def __init__(self, parent=None):
         """Initialise the firmware uploader."""
         self.base_path = Path().resolve() / 'hardware/arduino/arduino-cli'
-        self.manager = qtn.QNetworkAccessManager()
-        self.manager.setTransferTimeout(timeout=2000)
+        self.network = qtn.QNetworkAccessManager()
+        self.network.setTransferTimeout(timeout=2000)
         # _cli_os_name is the name of the OS specific Arduino CLI
         # version that has to be downloaded from github for
         # installation. It is determined automatically before
@@ -517,7 +516,7 @@ class FirmwareUploader(qtc.QObject):
         """
         cli = self._get_arduino_cli()
         if not cli:
-            return
+            return {}
         cli = subprocess.run([cli, 'core', 'list', '--format', 'json'],
                               capture_output=True)
         try:
@@ -529,7 +528,7 @@ class FirmwareUploader(qtc.QObject):
                 cli.stderr
                 )
             self.cli_installation_finished.emit(False)
-            return
+            return {}
         return json.loads(cli.stdout)
 
     def _get_installed_cli_version(self):
@@ -583,7 +582,7 @@ class FirmwareUploader(qtc.QObject):
             urls for these CLIs for various platforms.
         """
 
-        base.safe_disconnect(self.manager.finished,
+        base.safe_disconnect(self.network.finished,
                              self._get_newest_arduino_cli)
 
         # Check if connection failed.
@@ -593,7 +592,7 @@ class FirmwareUploader(qtc.QObject):
                 )
             self.cli_installation_finished.emit(False)
             return
-        self.process_progress.emit(10)
+        self.progress_occurred.emit(10)
 
         latest = json.loads(reply.readAll().data())
 
@@ -626,11 +625,11 @@ class FirmwareUploader(qtc.QObject):
                 )
             self.cli_installation_finished.emit(False)
             return
-        self.process_progress.emit(15)
+        self.progress_occurred.emit(15)
 
         installed_ver = self._get_installed_cli_version()
         if newest_version == installed_ver:
-            self.process_progress.emit(35)
+            self.progress_occurred.emit(35)
             self._install_and_upgrade_cores()
             return
 
@@ -638,18 +637,18 @@ class FirmwareUploader(qtc.QObject):
         # Since Qt does not come with SSL support the RedirectAttribute
         # must be set in order to get the file via http.
         request.setAttribute(qtn.QNetworkRequest.FollowRedirectsAttribute, True)
-        self.manager.finished.connect(self._install_arduino_cli,
+        self.network.finished.connect(self._install_arduino_cli,
                                       type=qtc.Qt.UniqueConnection)
-        self.manager.get(request)
-        self.process_progress.emit(25)
+        self.network.get(request)
+        self.progress_occurred.emit(25)
 
     def _install_and_upgrade_cores(self):
         """Download AVR core and upgrade existing cores and libraries."""
-        self.process_progress.emit(60)
+        self.progress_occurred.emit(60)
         self._install_arduino_core('arduino:avr')
-        self.process_progress.emit(80)
+        self.progress_occurred.emit(80)
         self._upgrade_arduino_cores_and_libraries()
-        self.process_progress.emit(100)
+        self.progress_occurred.emit(100)
         self.cli_installation_finished.emit(True)
 
     @qtc.pyqtSlot(qtn.QNetworkReply)
@@ -661,13 +660,13 @@ class FirmwareUploader(qtc.QObject):
         reply : QNetworkReply
             Contains the Arduino CLI in a .zip archive
         """
-        base.safe_disconnect(self.manager.finished,
+        base.safe_disconnect(self.network.finished,
                              self._install_arduino_cli)
-        self.process_progress.emit(40)
+        self.progress_occurred.emit(40)
         with open(self.base_path / self._cli_os_name, 'wb') as archive:
             archive.write(reply.readAll())
         shutil.unpack_archive(self.base_path / self._cli_os_name, self.base_path)
-        self.process_progress.emit(50)
+        self.progress_occurred.emit(50)
         self._install_and_upgrade_cores()
 
     def _install_arduino_core(self, core_name):                                            # TODO: add progress bar
@@ -794,7 +793,7 @@ class FirmwareUploader(qtc.QObject):
             self.cli_installation_finished.emit(True)
             return
 
-        self.process_progress.emit(90)
+        self.progress_occurred.emit(90)
 
         cli2 = subprocess.run([cli, 'upgrade'], capture_output=True)
         try:
@@ -827,7 +826,7 @@ class FirmwareUploader(qtc.QObject):
             If true, the extracted firmware will be uploaded to the
             selected controller.
         """
-        self.process_progress.emit(0)
+        self.progress_occurred.emit(0)
         # Check if the selected controller is present at all.
         available_ctrls = self.get_viperleed_hardware(False)
 
@@ -856,9 +855,9 @@ class FirmwareUploader(qtc.QObject):
         argv = ['compile', '--clean', '-b', s_ctrl['fqbn'], firmware_extracted]
         if upload:
             argv.extend(['-u', '-p', s_ctrl['port']])
-        self.process_progress.emit(20)
+        self.progress_occurred.emit(20)
         cli = subprocess.run([cli, *argv], capture_output=True)
-        self.process_progress.emit(80)
+        self.progress_occurred.emit(80)
         # cli = subprocess.run([cli, *argv, '--verbose'], capture_output=True)
         try:
             cli.check_returncode()
@@ -870,13 +869,13 @@ class FirmwareUploader(qtc.QObject):
                 )
             self.cli_installation_finished.emit(False)
             return
-        self.process_progress.emit(85)
+        self.progress_occurred.emit(85)
         # Remove extracted archive
         shutil.rmtree(tmp_path)
         # Update controller list
-        self.process_progress.emit(90)
+        self.progress_occurred.emit(90)
         self.get_viperleed_hardware(True)
-        self.process_progress.emit(100)
+        self.progress_occurred.emit(100)
         self.upload_finished.emit(True)
 
     @qtc.pyqtSlot()
@@ -892,13 +891,13 @@ class FirmwareUploader(qtc.QObject):
         -------
         None.
         """
-        self.process_progress.emit(0)
+        self.progress_occurred.emit(0)
         request = qtn.QNetworkRequest(qtc.QUrl(
             'https://api.github.com/repos/arduino/arduino-cli/releases/latest'
             ))
-        self.manager.finished.connect(self._get_newest_arduino_cli,
+        self.network.finished.connect(self._get_newest_arduino_cli,
                                       type=qtc.Qt.UniqueConnection)
-        self.manager.get(request)
+        self.network.get(request)
 
     @qtc.pyqtSlot(bool)
     def get_viperleed_hardware(self, emit_controllers):
@@ -977,9 +976,9 @@ class FirmwareUploader(qtc.QObject):
         None
         """
         cli = self._get_arduino_cli()
-        self.cli_is_installed.emit(bool(cli))
+        self.cli_found.emit(bool(cli))
 
     def moveToThread(self, thread):
-        """Move self and self.manager to thread."""
+        """Move self and self.network to thread."""
         super().moveToThread(thread)
-        self.manager.moveToThread(thread)
+        self.network.moveToThread(thread)
