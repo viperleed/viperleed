@@ -892,15 +892,18 @@ class FirmwareUploader(qtc.QObject):
         # Extract data from controller list.
         ctrl_dict = {}
         for b in viper_boards:
-            ctrl = b['port']['address'] + ' ' + b['matching_boards'][0]['name']
-            ctrl_dict[ctrl] = {}
-            ctrl_dict[ctrl]['port'] = b['port']['address']
-            ctrl_dict[ctrl]['name'] = b['matching_boards'][0]['name']
-            ctrl_dict[ctrl]['fqbn'] = b['matching_boards'][0]['fqbn']
-            ctrl_dict[ctrl]['version'] = NOT_SET
-            ctrl_dict[ctrl]['box_id'] = NOT_SET
-            # name_raw is used for firmware detection.
-            ctrl_dict[ctrl]['name_raw'] = None
+            port = board['port']['address']
+            board = board['matching_boards'][0]
+            ctrl = f'{port} {board['name']}'
+            ctrl_dict[ctrl] = {
+                'port': port,
+                'name': board['name'],
+                'fqbn': board['fqbn'],
+                'version': NOT_SET,
+                'box_id': NOT_SET,
+                # name_raw is used for firmware detection.
+                'name_raw': None,
+                }
 
         if not emit_controllers:
             return ctrl_dict
