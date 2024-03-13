@@ -59,9 +59,7 @@ class ViPErLEEDFirmwareError(base.ViPErLEEDErrorEnum):
 
     ERROR_CONTROLLER_NOT_FOUND = (
         500,
-        'Controller on port {} was no longer present when trying to upload '
-        'the selected firmware. Ensure that the controller has not been '
-        'disconnected.'
+        'Controller at port {} is no longer connected. Try re-plugging it.'
         )
     ERROR_ARDUINO_CLI_NOT_FOUND = (
         501,
