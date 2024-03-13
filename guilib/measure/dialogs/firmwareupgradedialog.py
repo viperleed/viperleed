@@ -230,7 +230,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             self.__get_firmware_versions
             )
         self.__children['ctrls']['controllers'].currentTextChanged.connect(
-                    self.__update_ctrl_labels
+            self.__update_ctrl_labels
             )
         self.__uploader.error_occurred.connect(self.error_occurred)
         self.__uploader.controllers_detected.connect(self.__update_combo_box)
