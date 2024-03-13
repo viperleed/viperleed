@@ -432,13 +432,12 @@ class Lattice2D:
             any other basis.
         The `transform` can bring an oblique lattice into square,
             rectangular, hexagonal or rhombic, or make the basis
-            vectors as close to orthogonal as possible.
+            vectors as close to orthogonal as possible. Lattices
+            that are not oblique are considered to be already in
+            their highest-symmetry form.
         The `transform` returned conserves the unit cell area.
         """
-        # The following line should also redefine the basis so that
-        # it is obtuse for real-space rhombic and hexagonal lattices
-        _shape = self.cell_shape
-        if _shape != 'Oblique':
+        if self.cell_shape != 'Oblique':
             # Nothing to do if it's already non-oblique
             return np.eye(2, dtype=int)
 
@@ -518,8 +517,9 @@ class Lattice2D:
             # The only possible combinations that can lead to a
             # rhombic/hexagonal are a'=b+a or a'=b-a, depending
             # on whether the angle is obtuse or acute, respectively
+            _is_acute = np.dot(*basis) > 0
             t_elem = (
-                (-int(np.sign(np.dot(*basis))), 1),
+                (-1 if _is_acute else 1, 1),
                 (0, 1)
                 )
             t_second = np.dot(t_elem, t_second)
