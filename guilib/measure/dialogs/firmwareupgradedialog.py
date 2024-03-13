@@ -93,7 +93,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     def __init__(self, parent=None):
         """Initialize dialog."""
         super().__init__(parent=parent)
-        self.__children = {
+        self._children = {
             'ctrls': {
                 'controllers': qtw.QComboBox(),
                 'firmware_path': PathSelector(select_file=False),
@@ -117,33 +117,31 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 },
             }
 
-        self.__uploader = FirmwareUploader()
-        self.__upload_thread = qtc.QThread()
-        self.__uploader.moveToThread(self.__upload_thread)
-        self.__upload_thread.start()
+        self._uploader = FirmwareUploader()
+        self._upload_thread = qtc.QThread()
+        self._uploader.moveToThread(self._upload_thread)
+        self._upload_thread.start()
 
-        self.__progress_bar = qtw.QProgressBar()
-        self.__progress_bar.setValue(0)
+        self._progress_bar = qtw.QProgressBar()
+        self._progress_bar.setValue(0)
 
-        self.__cli_info = qtw.QMessageBox(parent=self)
-
-        self.__OS_name = ''
+        self._cli_info = qtw.QMessageBox(parent=self)
 
         self.setWindowTitle('Upgrade ViPErLEED box firmware')
-        self.__children['ctrls']['firmware_path'].path = Path().resolve()
-        self.__compose()
-        self.__connect()
+        self._children['ctrls']['firmware_path'].path = Path().resolve()
+        self._compose()
+        self._connect()
 
-    def __clean_up(self):
+    def _clean_up(self):
         """Clean up before closing dialog."""
-        self.__progress_bar.setValue(0)
+        self._progress_bar.setValue(0)
 
-    def __compose(self):
+    def _compose(self):
         """Place children widgets."""
         self.setWindowFlags(self.windowFlags()
                             & ~qtc.Qt.WindowContextHelpButtonHint)
 
-        for btn in self.__children['buttons'].values():
+        for btn in self._children['buttons'].values():
             try:
                 btn.setAutoDefault(False)
             except AttributeError:
@@ -151,18 +149,18 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
         layout = qtw.QVBoxLayout()
         layout.setSpacing(layout.spacing() + 10)
-        layout.addLayout(self.__compose_controller_selection())
-        layout.addLayout(self.__compose_info_section())
-        layout.addLayout(self.__compose_path_selection())
-        layout.addLayout(self.__compose_firmware_selection())
-        layout.addLayout(self.__compose_progress_bar())
-        layout.addLayout(self.__compose_done_button())
+        layout.addLayout(self._compose_controller_selection())
+        layout.addLayout(self._compose_info_section())
+        layout.addLayout(self._compose_path_selection())
+        layout.addLayout(self._compose_firmware_selection())
+        layout.addLayout(self._compose_progress_bar())
+        layout.addLayout(self._compose_done_button())
         self.setLayout(layout)
-        self.__compose_cli_info()
+        self._compose_cli_info()
 
-    def __compose_cli_info(self):
-        """Creates the dialog asking the user to install Arduino CLI."""
-        info = self.__cli_info
+    def _compose_cli_info(self):
+        """Create the dialog asking the user to install Arduino CLI."""
+        info = self._cli_info
         info.setText(
             'In order to use the firmware upgrade tool you need to install '
             'the Arduino command-line interface. This software can be found '
@@ -175,137 +173,137 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         info.addButton(qtw.QPushButton('Cancel'), info.RejectRole)
         accept = qtw.QPushButton('Accept')
         info.addButton(accept, info.AcceptRole)
-        accept.clicked.connect(self.__download_and_install_arduino_cli)
+        accept.clicked.connect(self._download_and_install_arduino_cli)
 
-    def __compose_controller_selection(self):
+    def _compose_controller_selection(self):
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Select controller:'))
-        layout.addWidget(self.__children['ctrls']['controllers'], stretch=1)
-        layout.addWidget(self.__children['buttons']['refresh'])
+        layout.addWidget(self._children['ctrls']['controllers'], stretch=1)
+        layout.addWidget(self._children['buttons']['refresh'])
         return layout
 
-    def __compose_done_button(self):
+    def _compose_done_button(self):
         layout = qtw.QHBoxLayout()
-        layout.addWidget(self.__children['buttons']['upgrade'])
+        layout.addWidget(self._children['buttons']['upgrade'])
         layout.addStretch(1)
-        layout.addWidget(self.__children['buttons']['done'])
+        layout.addWidget(self._children['buttons']['done'])
         return layout
 
-    def __compose_firmware_selection(self):
+    def _compose_firmware_selection(self):
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Select firmware version:'))
-        layout.addWidget(self.__children['ctrls']['firmware_version'],
+        layout.addWidget(self._children['ctrls']['firmware_version'],
                          stretch=1)
-        layout.addWidget(self.__children['buttons']['upload'])
-        self.__children['buttons']['upload'].setEnabled(False)
+        layout.addWidget(self._children['buttons']['upload'])
+        self._children['buttons']['upload'].setEnabled(False)
         return layout
 
-    def __compose_info_section(self):
+    def _compose_info_section(self):
         layout = qtw.QHBoxLayout()
-        for label in self.__children['controller_info'].values():
+        for label in self._children['controller_info'].values():
             layout.addWidget(label)
         return layout
 
-    def __compose_path_selection(self):
+    def _compose_path_selection(self):
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Select firmware folder:'))
-        layout.addWidget(self.__children['ctrls']['firmware_path'])
+        layout.addWidget(self._children['ctrls']['firmware_path'])
         return layout
 
-    def __compose_progress_bar(self):
+    def _compose_progress_bar(self):
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Progess:'))
-        layout.addWidget(self.__progress_bar)
+        layout.addWidget(self._progress_bar)
         return layout
 
-    def __connect(self):
+    def _connect(self):
         """Connect children signals."""
-        self.__children['buttons']['done'].clicked.connect(self.accept)
-        self.__children['buttons']['refresh'].clicked.connect(self.__detect)
-        self.__children['buttons']['upload'].clicked.connect(self.__upload)
-        self.__children['buttons']['upgrade'].clicked.connect(
-            self.__upgrade_arduino_cli
+        self._children['buttons']['done'].clicked.connect(self.accept)
+        self._children['buttons']['refresh'].clicked.connect(self._detect)
+        self._children['buttons']['upload'].clicked.connect(self._upload)
+        self._children['buttons']['upgrade'].clicked.connect(
+            self._upgrade_arduino_cli
             )
-        self.__children['ctrls']['firmware_path'].path_changed.connect(
-            self.__get_firmware_versions
+        self._children['ctrls']['firmware_path'].path_changed.connect(
+            self._get_firmware_versions
             )
-        self.__children['ctrls']['controllers'].currentTextChanged.connect(
-            self.__update_ctrl_labels
+        self._children['ctrls']['controllers'].currentTextChanged.connect(
+            self._update_ctrl_labels
             )
-        self.__uploader.error_occurred.connect(self.error_occurred)
-        self.__uploader.controllers_detected.connect(self.__update_combo_box)
-        self.__uploader.controllers_detected.connect(self.__enable_buttons)
-        self.__uploader.upload_finished.connect(self.__ctrl_enable)
-        self.__uploader.cli_installation_finished.connect(
-            self.__ctrl_enable_with_enabled_done
+        self._uploader.error_occurred.connect(self.error_occurred)
+        self._uploader.controllers_detected.connect(self._update_combo_box)
+        self._uploader.controllers_detected.connect(self._enable_buttons)
+        self._uploader.upload_finished.connect(self._ctrl_enable)
+        self._uploader.cli_installation_finished.connect(
+            self._ctrl_enable_with_enabled_done
             )
-        self.__uploader.process_progress.connect(self.__progress_bar.setValue)
+        self._uploader.process_progress.connect(self._progress_bar.setValue)
 
     @qtc.pyqtSlot(bool)
-    def __continue_open(self, is_installed):
+    def _continue_open(self, is_installed):
         """Continue open() after check is finished.
 
         If the Arduino CLI is installed this will open up the
         FirmwareUpgradeDialog. If the CLI is not installed, the dialog
         asking the user to install the CLI will be opened.
         """
-        base.safe_disconnect(self.__uploader.cli_is_installed,
-                             self.__continue_open)
-        self.__uploader.error_occurred.connect(self.error_occurred)
+        base.safe_disconnect(self._uploader.cli_is_installed,
+                             self._continue_open)
+        self._uploader.error_occurred.connect(self.error_occurred)
         if is_installed:
             super().open()
             return
-        self.__cli_info.open()
+        self._cli_info.open()
 
     @qtc.pyqtSlot(bool)
-    def __ctrl_enable_with_enabled_done(self, enable):
+    def _ctrl_enable_with_enabled_done(self, enable):
         """Enable/disable controls while keeping done enabled."""
-        self.__ctrl_enable(enable)
-        self.__children['buttons']['done'].setEnabled(True)
+        self._ctrl_enable(enable)
+        self._children['buttons']['done'].setEnabled(True)
 
     @qtc.pyqtSlot(bool)
-    def __ctrl_enable(self, enabled):
+    def _ctrl_enable(self, enabled):
         """Enable/disable all controls."""
-        widgets = (*self.__children['buttons'].values(),
-                   *self.__children['ctrls'].values())
+        widgets = (*self._children['buttons'].values(),
+                   *self._children['ctrls'].values())
         for widget in widgets:
             widget.setEnabled(enabled)
 
     @qtc.pyqtSlot()
-    def __detect(self):
+    def _detect(self):
         """Detect connected ViPErLEED controllers."""
-        for button in self.__children['buttons'].values():
+        for button in self._children['buttons'].values():
             button.setEnabled(False)
         emit_controllers = True                          # TODO: I'm not a fan of this name!
-        _INVOKE(self.__uploader, 'get_viperleed_hardware',
+        _INVOKE(self._uploader, 'get_viperleed_hardware',
                 qtc.Q_ARG(bool, emit_controllers))
 
     @qtc.pyqtSlot()
-    def __download_and_install_arduino_cli(self):
+    def _download_and_install_arduino_cli(self):
         """Install the Arduino CLI.
 
         This will trigger the download and installation of the Arduino
         CLI. The FirmwareUpgradeDialog will be opened while the CLI
         is being installed.
         """
-        self.__ctrl_enable_with_enabled_done(False)
-        _INVOKE(self.__uploader, 'get_arduino_cli_from_git')
+        self._ctrl_enable_with_enabled_done(False)
+        _INVOKE(self._uploader, 'get_arduino_cli_from_git')
         super().open()
 
     @qtc.pyqtSlot(str, dict)
-    def __enable_buttons(self, *args):
+    def _enable_buttons(self, *args):
         """Enable buttons again."""
-        for btn in self.__children['buttons']:
-            self.__children['buttons'][btn].setEnabled(True)
+        for btn in self._children['buttons']:
+            self._children['buttons'][btn].setEnabled(True)
 
     @qtc.pyqtSlot()
-    def __get_firmware_versions(self, *args):
+    def _get_firmware_versions(self, *args):
         """Search for available firmware versions."""
         firmware_dict = {}
-        f_path = self.__children['ctrls']['firmware_path'].path
+        f_path = self._children['ctrls']['firmware_path'].path
 
         if not f_path or f_path == Path():
-            self.__update_combo_box('firmware_version', firmware_dict)
+            self._update_combo_box('firmware_version', firmware_dict)
             return
 
         for file in f_path.glob('*.zip'):
@@ -321,13 +319,13 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                     continue
                 firmware_dict[folder_name] = FirmwareVersionInfo(folder_name,
                                                                  version, file)
-        self.__update_combo_box('firmware_version', firmware_dict)
-        self.__get_most_recent_firmware_version()
+        self._update_combo_box('firmware_version', firmware_dict)
+        self._get_most_recent_firmware_version()
 
-    def __get_most_recent_firmware_version(self, *args):
+    def _get_most_recent_firmware_version(self, *args):
         """Detect most recent firmware suitable for controller."""
-        ctrl = self.__children['ctrls']['controllers'].currentData()
-        nr_versions = self.__children['ctrls']['firmware_version'].count()
+        ctrl = self._children['ctrls']['controllers'].currentData()
+        nr_versions = self._children['ctrls']['firmware_version'].count()
         max_version = base.Version('0.0')
 
         if not ctrl or not ctrl['name_raw']:
@@ -335,7 +333,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
         i = 0
         while i < nr_versions:
-            firm_ver = self.__children['ctrls']['firmware_version'].itemData(i)
+            firm_ver = self._children['ctrls']['firmware_version'].itemData(i)
             if ctrl['name_raw'] in firm_ver.folder_name:
                 if firm_ver.version > max_version:
                     max_version = firm_ver.version
@@ -344,65 +342,65 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         if max_version == base.Version('0.0'):
             max_version = NOT_SET
 
-        self.__children['controller_info']['highest_version'].setText(
+        self._children['controller_info']['highest_version'].setText(
             f'Most recent firmware version: {max_version}'
             )
 
     @qtc.pyqtSlot()
-    def __update_ctrl_labels(self, *args):
+    def _update_ctrl_labels(self, *args):
         """Display controller firmware version."""
-        ctrl = self.__children['ctrls']['controllers'].currentData() or {}
+        ctrl = self._children['ctrls']['controllers'].currentData() or {}
         version = ctrl.get('version', NOT_SET)
         box_id = ctrl.get('box_id', NOT_SET)
-        self.__children['controller_info']['firmware_version'].setText(
+        self._children['controller_info']['firmware_version'].setText(
             f'Installed firmware version: {version}'
             )
-        self.__children['controller_info']['ctrl_type'].setText(
+        self._children['controller_info']['ctrl_type'].setText(
             f'Controller type: {box_id}'
             )
-        self.__children['controller_info']['highest_version'].setText(
+        self._children['controller_info']['highest_version'].setText(
             f'Most recent firmware version: {NOT_SET}'
             )
-        self.__get_most_recent_firmware_version()
+        self._get_most_recent_firmware_version()
 
     @qtc.pyqtSlot()
-    def __upgrade_arduino_cli(self):
+    def _upgrade_arduino_cli(self):
         """Upgrade the Arduino CLI."""
-        self.__ctrl_enable(False)
-        _INVOKE(self.__uploader, 'get_arduino_cli_from_git')
+        self._ctrl_enable(False)
+        _INVOKE(self._uploader, 'get_arduino_cli_from_git')
 
     @qtc.pyqtSlot(str, dict)
-    def __update_combo_box(self, which_combo, data_dict):
+    def _update_combo_box(self, which_combo, data_dict):
         """Replace displayed firmware/controllers with the detected ones."""
-        self.__children['ctrls'][which_combo].clear()
+        self._children['ctrls'][which_combo].clear()
         for key, value in data_dict.items():
-            self.__children['ctrls'][which_combo].addItem(key, userData=value)
-        ctrl = self.__children['ctrls']['controllers'].currentData()
-        version = self.__children['ctrls']['firmware_version'].currentData()
+            self._children['ctrls'][which_combo].addItem(key, userData=value)
+        ctrl = self._children['ctrls']['controllers'].currentData()
+        version = self._children['ctrls']['firmware_version'].currentData()
         can_upload = bool(ctrl and version)
-        self.__children['buttons']['upload'].setEnabled(can_upload)
+        self._children['buttons']['upload'].setEnabled(can_upload)
 
     @qtc.pyqtSlot()
-    def __upload(self):
+    def _upload(self):
         """Upload selected firmware to selected controller."""
-        if not self.__children['ctrls']['controllers'].currentData():
+        if not self._children['ctrls']['controllers'].currentData():
             return
-        if not self.__children['ctrls']['firmware_version'].currentData():
+        if not self._children['ctrls']['firmware_version'].currentData():
             return
 
-        selected_ctrl = self.__children['ctrls']['controllers'].currentData()
-        firmware = self.__children['ctrls']['firmware_version'].currentData()
-        tmp_path = self.__children['ctrls']['firmware_path'].path / 'tmp_'
+        selected_ctrl = self._children['ctrls']['controllers'].currentData()
+        firmware = self._children['ctrls']['firmware_version'].currentData()
+        tmp_path = self._children['ctrls']['firmware_path'].path / 'tmp_'
         upload = True
-        _INVOKE(self.__uploader, 'compile', qtc.Q_ARG(dict, selected_ctrl),
+        _INVOKE(self._uploader, 'compile', qtc.Q_ARG(dict, selected_ctrl),
                 qtc.Q_ARG(FirmwareVersionInfo, firmware),
                 qtc.Q_ARG(Path, tmp_path), qtc.Q_ARG(bool, upload))
-        self.__ctrl_enable(False)
+        self._ctrl_enable(False)
 
     @qtc.pyqtSlot()
     def accept(self):
         """Clean up, then accept."""
-        self.__clean_up()
+        self._clean_up()
         super().accept()
 
     def open(self):
@@ -412,10 +410,10 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         will stall until the FirmwareUploader has finished the check if
         the Arduino CLI is installled.
         """
-        self.__uploader.cli_is_installed.connect(self.__continue_open)
-        base.safe_disconnect(self.__uploader.error_occurred,
+        self._uploader.cli_is_installed.connect(self._continue_open)
+        base.safe_disconnect(self._uploader.error_occurred,
                              self.error_occurred)
-        _INVOKE(self.__uploader, 'is_cli_installed')
+        _INVOKE(self._uploader, 'is_cli_installed')
 
 class FirmwareUploader(qtc.QObject):
     """Worker that handles firmware uploads in another thread."""
@@ -449,9 +447,14 @@ class FirmwareUploader(qtc.QObject):
         self.base_path = Path().resolve() / 'hardware/arduino/arduino-cli'
         self.manager = qtn.QNetworkAccessManager()
         self.manager.setTransferTimeout(timeout=2000)
+        # _cli_os_name is the name of the OS specific Arduino CLI
+        # version that has to be downloaded from github for
+        # installation. It is determined automatically before
+        # downloading the CLI.
+        self._cli_os_name = ''
         super().__init__(parent=parent)
 
-    def __get_arduino_cores(self):
+    def _get_arduino_cores(self):
         """Return a dictionary of the cores currently installed.
 
         Returns
@@ -476,7 +479,7 @@ class FirmwareUploader(qtc.QObject):
             'boards': dict
                 Dictionary of Arduino boards that use this core
         """
-        cli = self.__get_arduino_cli()
+        cli = self._get_arduino_cli()
         if not cli:
             return
         cli = subprocess.run([cli, 'core', 'list', '--format', 'json'],
@@ -493,7 +496,7 @@ class FirmwareUploader(qtc.QObject):
             return
         return json.loads(cli.stdout)
 
-    def __get_installed_cli_version(self):
+    def _get_installed_cli_version(self):
         """Detect version of installed Arduino CLI.
 
         Returns
@@ -530,7 +533,7 @@ class FirmwareUploader(qtc.QObject):
         return '0.0.0'
 
     @qtc.pyqtSlot(qtn.QNetworkReply)
-    def __get_newest_arduino_cli(self, reply):
+    def _get_newest_arduino_cli(self, reply):
         """Download newest version of Arduino CLI from github.
 
         Download newest version of the CLI for the OS if it doesn't
@@ -545,7 +548,7 @@ class FirmwareUploader(qtc.QObject):
         """
 
         base.safe_disconnect(self.manager.finished,
-                             self.__get_newest_arduino_cli)
+                             self._get_newest_arduino_cli)
 
         # Check if connection failed.
         if reply.error():
@@ -560,11 +563,11 @@ class FirmwareUploader(qtc.QObject):
 
         platform = sys.platform
         if 'darwin' in platform:
-            self.__OS_name = 'macOS'
+            self._cli_os_name = 'macOS'
         elif 'win' in platform and 'cyg' not in platform:
-            self.__OS_name = 'Windows'
+            self._cli_os_name = 'Windows'
         elif 'linux' in platform:
-            self.__OS_name = 'Linux'
+            self._cli_os_name = 'Linux'
         else:
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI
@@ -576,10 +579,10 @@ class FirmwareUploader(qtc.QObject):
         for asset in latest['assets']:
             # This should always pick the 32 bit version if
             # present, as it comes alphabetically earlier
-            if self.__OS_name in asset['name']:
+            if self._cli_os_name in asset['name']:
                 newest_version = asset['name'].split('_')[1]
                 url_latest = asset['browser_download_url']
-                self.__OS_name = asset['name']
+                self._cli_os_name = asset['name']
                 break
         else:
             base.emit_error(self,
@@ -589,32 +592,32 @@ class FirmwareUploader(qtc.QObject):
             return
         self.process_progress.emit(15)
 
-        installed_ver = self.__get_installed_cli_version()
+        installed_ver = self._get_installed_cli_version()
         if newest_version == installed_ver:
             self.process_progress.emit(35)
-            self.__install_and_upgrade_cores()
+            self._install_and_upgrade_cores()
             return
 
         request = qtn.QNetworkRequest(qtc.QUrl(url_latest))
         # Since Qt does not come with SSL support the RedirectAttribute
         # must be set in order to get the file via http.
         request.setAttribute(qtn.QNetworkRequest.FollowRedirectsAttribute, True)
-        self.manager.finished.connect(self.__install_arduino_cli,
+        self.manager.finished.connect(self._install_arduino_cli,
                                       type=qtc.Qt.UniqueConnection)
         self.manager.get(request)
         self.process_progress.emit(25)
 
-    def __install_and_upgrade_cores(self):
+    def _install_and_upgrade_cores(self):
         """Download AVR core and upgrade existing cores and libraries."""
         self.process_progress.emit(60)
-        self.__install_arduino_core('arduino:avr')
+        self._install_arduino_core('arduino:avr')
         self.process_progress.emit(80)
-        self.__upgrade_arduino_cores_and_libraries()
+        self._upgrade_arduino_cores_and_libraries()
         self.process_progress.emit(100)
         self.cli_installation_finished.emit(True)
 
     @qtc.pyqtSlot(qtn.QNetworkReply)
-    def __install_arduino_cli(self, reply):
+    def _install_arduino_cli(self, reply):
         """Extract downloaded Arduino CLI from .zip archive.
 
         Parameters
@@ -623,15 +626,15 @@ class FirmwareUploader(qtc.QObject):
             Contains the Arduino CLI in a .zip archive
         """
         base.safe_disconnect(self.manager.finished,
-                             self.__install_arduino_cli)
+                             self._install_arduino_cli)
         self.process_progress.emit(40)
-        with open(self.base_path / self.__OS_name, 'wb') as archive:
+        with open(self.base_path / self._cli_os_name, 'wb') as archive:
             archive.write(reply.readAll())
-        shutil.unpack_archive(self.base_path / self.__OS_name, self.base_path)
+        shutil.unpack_archive(self.base_path / self._cli_os_name, self.base_path)
         self.process_progress.emit(50)
-        self.__install_and_upgrade_cores()
+        self._install_and_upgrade_cores()
 
-    def __install_arduino_core(self, core_name):                                            # TODO: add progress bar
+    def _install_arduino_core(self, core_name):                                            # TODO: add progress bar
         """Install a given core to the Arduino CLI.
 
         Parameters
@@ -641,7 +644,7 @@ class FirmwareUploader(qtc.QObject):
             It's easier to get this information from a call to
             get_viperleed_hardware()
         """
-        cli = self.__get_arduino_cli()
+        cli = self._get_arduino_cli()
         if not cli:
             return
         cli = subprocess.run([cli, 'core', 'install', core_name],
@@ -656,7 +659,7 @@ class FirmwareUploader(qtc.QObject):
                 )
             self.cli_installation_finished.emit(False)
 
-    def __get_arduino_cli(self, get_from_git=False):                                        # TODO: add progress bar
+    def _get_arduino_cli(self, get_from_git=False):                                        # TODO: add progress bar
         """Pick the correct Arduino CLI tool.
 
         The choice is based on the current operating system.
@@ -713,14 +716,14 @@ class FirmwareUploader(qtc.QObject):
             return
         return arduino_cli
 
-    def __get_boards(self):
+    def _get_boards(self):
         """Get a dict of the available Arduino boards.
 
         Returns
         -------
         dict
         """
-        cli = self.__get_arduino_cli()
+        cli = self._get_arduino_cli()
         if not cli:
             return False
         cli = subprocess.run([cli, 'board', 'list', '--format', 'json'],
@@ -739,9 +742,9 @@ class FirmwareUploader(qtc.QObject):
         return [b for b in boards if 'matching_boards' in b]
 
     @qtc.pyqtSlot()
-    def __upgrade_arduino_cores_and_libraries(self):                                                      # TODO: add progress bar
+    def _upgrade_arduino_cores_and_libraries(self):                                                      # TODO: add progress bar
         """Upgrade the outdated cores and libraries."""
-        cli = self.__get_arduino_cli()
+        cli = self._get_arduino_cli()
         if not cli:
             return
 
@@ -806,7 +809,7 @@ class FirmwareUploader(qtc.QObject):
             self.upload_finished.emit(True)
             return
 
-        cli = self.__get_arduino_cli()
+        cli = self._get_arduino_cli()
         if not cli:
             return
 
@@ -857,7 +860,7 @@ class FirmwareUploader(qtc.QObject):
         request = qtn.QNetworkRequest(qtc.QUrl(
             'https://api.github.com/repos/arduino/arduino-cli/releases/latest'
             ))
-        self.manager.finished.connect(self.__get_newest_arduino_cli,
+        self.manager.finished.connect(self._get_newest_arduino_cli,
                                       type=qtc.Qt.UniqueConnection)
         self.manager.get(request)
 
@@ -875,7 +878,7 @@ class FirmwareUploader(qtc.QObject):
             The detected Arduino Micro boards.
         """
         viperleed_names = ('ViPErLEED', 'Arduino Micro')
-        boards = self.__get_boards()
+        boards = self._get_boards()
 
         # Return if Arduino CLI was not found to keep buttons disabled.
         if boards == False:
@@ -937,7 +940,7 @@ class FirmwareUploader(qtc.QObject):
         -------
         None
         """
-        cli = self.__get_arduino_cli()
+        cli = self._get_arduino_cli()
         self.cli_is_installed.emit(bool(cli))
 
     def moveToThread(self, thread):
