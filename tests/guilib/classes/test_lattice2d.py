@@ -326,13 +326,18 @@ class TestTransforms:
         assert np.array_equal(lattice.basis, ((1, 0), (0, -3.5)))
         assert lattice.cell_shape == 'Rectangular'
 
-    def test_transformed(self):
+    _transformed = {
+        planegroup.Cm6: ((0.5, -3**0.5/2), (0.5, 3**0.5/2)),
+        planegroup.M10: ((1, 0), (-0.5, -3**0.5/2)),
+        }
+
+    @parametrize('transform,expect_basis', _transformed.items())
+    def test_transformed(self, transform, expect_basis):
         """Check generation of a transformed lattice."""
         lattice = Lattice2D(_HEX_OBTUSE)
         # Notice that here we should only use transformation
         # matrices that make sense for the current shape!
-        new_lattice = lattice.transformed(planegroup.Cm6)
-        expect_basis = (0.5, -3**0.5/2), (0.5, 3**0.5/2)
+        new_lattice = lattice.transformed(transform)
         assert new_lattice is not lattice
         assert np.array_equal(lattice.basis, _HEX_OBTUSE)
         assert new_lattice.cell_shape == 'Hexagonal'
@@ -364,4 +369,3 @@ class TestTransforms:
         with subtests.test(f'{txt} - make_high_symmetry'):
             new_lattice.make_high_symmetry()
             assert new_lattice.cell_shape == shape
-
