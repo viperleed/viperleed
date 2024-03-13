@@ -935,10 +935,7 @@ class FirmwareUploader(qtc.QObject):
         None
         """
         cli = self.__get_arduino_cli()
-        if cli:
-            self.cli_is_installed.emit(True)
-        else:
-            self.cli_is_installed.emit(False)
+        self.cli_is_installed.emit(bool(cli))
 
     def moveToThread(self, thread):
         """Move self and self.manager to thread."""
