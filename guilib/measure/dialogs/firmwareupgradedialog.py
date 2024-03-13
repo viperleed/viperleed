@@ -22,12 +22,6 @@ https://github.com/arduino/arduino-cli/releases
 # replace 'Arduino Micro' with 'ViPErLEED' (unless the file was already there)
 # (3) rename boards.txt to boards.txt.bak, and boards.txt.ViPErLEED to
 # boards.txt; (4) compile and upload; (5) undo no.3.
-# latest = requests.get('https://api.github.com/repos/arduino'
-                      # '/arduino-cli/releases/latest').json()
-# Use print(latest['tag_name']) to get the latestest version string of the
-# arduino-cli. Get arduino-cli version --format json -> convert to dict and
-# and compare versions -> update if they don't match. arduino-cli update
-# and upgrade only update the cores
 
 from collections import namedtuple
 import json
@@ -41,8 +35,8 @@ from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc,
                    QtNetwork as qtn)
 
-from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.widgets.pathselector import PathSelector
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
@@ -250,7 +244,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._uploader.controllers_detected.connect(
             self._on_controllers_detected
             )
-        self._uploader.upload_finished.connect(self._ctrl_enable)
+        self._uploader.upload_finished.connect(self._on_upload_finished)
         self._uploader.cli_installation_finished.connect(
             self._on_cli_install_done
             )
@@ -271,7 +265,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
         Returns
         -------
-        None
+        None.
         """
         base.safe_disconnect(self._uploader.cli_found, self._continue_open)
         # The error_occurred signal is reconnected because it is
@@ -282,7 +276,6 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             return
         self._make_cli_install_disclaimer()
 
-    @qtc.pyqtSlot(bool)
     def _ctrl_enable(self, enabled):
         """Enable/disable all controls."""
         widgets = (*self.buttons.values(), *self.controls.values())
@@ -384,6 +377,11 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._update_combo_box('controllers', data_dict)
 
     @qtc.pyqtSlot()
+    def _on_upload_finished(self):
+        """Enable buttons after upload or failed upload."""
+        self._ctrl_enable(True)
+
+    @qtc.pyqtSlot()
     def _update_ctrl_labels(self, *args):
         """Display controller firmware version."""
         ctrl = self.controls['controllers'].currentData() or {}
@@ -455,9 +453,8 @@ class FirmwareUploader(qtc.QObject):
     error_occurred = qtc.pyqtSignal(tuple)
 
     # Emitted when the upload of firmware to the controller is finished
-    # or when it has failed. In both cases the signal is emitted with a
-    # True boolean.
-    upload_finished = qtc.pyqtSignal(bool)
+    # or when it has failed.
+    upload_finished = qtc.pyqtSignal()
 
     # Emitted when downloading and installing the Arduino CLI, cores and
     # libraries. Sent boolean is true when the full installation
@@ -495,7 +492,9 @@ class FirmwareUploader(qtc.QObject):
         Returns
         -------
         dict
-            The following {key: value} pairs are present
+            The following {key: value} pairs are only present if the
+            core detection does not fail. The returned dict will be
+            empty if the detection fails.
 
             'id': str
                 qualified name of the core
@@ -521,7 +520,7 @@ class FirmwareUploader(qtc.QObject):
                               capture_output=True)
         try:
             cli.check_returncode()
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError:
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
                 cli.returncode,
@@ -568,7 +567,7 @@ class FirmwareUploader(qtc.QObject):
         return '0.0.0'
 
     @qtc.pyqtSlot(qtn.QNetworkReply)
-    def _get_newest_arduino_cli(self, reply):
+    def _download_newest_cli(self, reply):
         """Download newest version of Arduino CLI from github.
 
         Download newest version of the CLI for the OS if it doesn't
@@ -580,10 +579,12 @@ class FirmwareUploader(qtc.QObject):
         reply : QNetworkReply
             Contains the newest CLI version names and download
             urls for these CLIs for various platforms.
-        """
 
-        base.safe_disconnect(self.network.finished,
-                             self._get_newest_arduino_cli)
+        Returns
+        -------
+        None.
+        """
+        base.safe_disconnect(self.network.finished, self._download_newest_cli)
 
         # Check if connection failed.
         if reply.error():
@@ -659,6 +660,10 @@ class FirmwareUploader(qtc.QObject):
         ----------
         reply : QNetworkReply
             Contains the Arduino CLI in a .zip archive
+        
+        Returns
+        -------
+        None.
         """
         base.safe_disconnect(self.network.finished,
                              self._install_arduino_cli)
@@ -678,6 +683,10 @@ class FirmwareUploader(qtc.QObject):
             Should be one of the Arduino core names (e.g., arduino:avr).
             It's easier to get this information from a call to
             get_viperleed_hardware()
+        
+        Returns
+        -------
+        None.
         """
         cli = self._get_arduino_cli()
         if not cli:
@@ -686,7 +695,7 @@ class FirmwareUploader(qtc.QObject):
                               capture_output=True)
         try:
             cli.check_returncode()
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError:
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
                 cli.returncode,
@@ -765,7 +774,7 @@ class FirmwareUploader(qtc.QObject):
                               capture_output=True)
         try:
             cli.check_returncode()
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError:
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
                 cli.returncode,
@@ -783,10 +792,10 @@ class FirmwareUploader(qtc.QObject):
         if not cli:
             return
 
-        cli2 = subprocess.run([cli, 'update'], capture_output=True)
+        cli_update = subprocess.run([cli, 'update'], capture_output=True)
         try:
-            cli2.check_returncode()
-        except subprocess.CalledProcessError as err:
+            cli_update.check_returncode()
+        except subprocess.CalledProcessError:
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED
                 )
@@ -795,14 +804,14 @@ class FirmwareUploader(qtc.QObject):
 
         self.progress_occurred.emit(90)
 
-        cli2 = subprocess.run([cli, 'upgrade'], capture_output=True)
+        cli_upgrade = subprocess.run([cli, 'upgrade'], capture_output=True)
         try:
-            cli2.check_returncode()
-        except subprocess.CalledProcessError as err:
+            cli_upgrade.check_returncode()
+        except subprocess.CalledProcessError:
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
-                cli2.returncode,
-                cli2.stderr
+                cli_upgrade.returncode,
+                cli_upgrade.stderr
                 )
             self.cli_installation_finished.emit(True)
 
@@ -841,7 +850,7 @@ class FirmwareUploader(qtc.QObject):
                             ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
                             s_ctrl['port'])
             self.controllers_detected.emit(available_ctrls)
-            self.upload_finished.emit(True)
+            self.upload_finished.emit()
             return
 
         cli = self._get_arduino_cli()
@@ -861,7 +870,7 @@ class FirmwareUploader(qtc.QObject):
         # cli = subprocess.run([cli, *argv, '--verbose'], capture_output=True)
         try:
             cli.check_returncode()
-        except subprocess.CalledProcessError as err:
+        except subprocess.CalledProcessError:
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
                 cli.returncode,
@@ -876,7 +885,7 @@ class FirmwareUploader(qtc.QObject):
         self.progress_occurred.emit(90)
         self.get_viperleed_hardware(True)
         self.progress_occurred.emit(100)
-        self.upload_finished.emit(True)
+        self.upload_finished.emit()
 
     @qtc.pyqtSlot()
     def get_arduino_cli_from_git(self):
@@ -895,7 +904,7 @@ class FirmwareUploader(qtc.QObject):
         request = qtn.QNetworkRequest(qtc.QUrl(
             'https://api.github.com/repos/arduino/arduino-cli/releases/latest'
             ))
-        self.network.finished.connect(self._get_newest_arduino_cli,
+        self.network.finished.connect(self._download_newest_cli,
                                       type=qtc.Qt.UniqueConnection)
         self.network.get(request)
 
@@ -973,7 +982,7 @@ class FirmwareUploader(qtc.QObject):
 
         Returns
         -------
-        None
+        None.
         """
         cli = self._get_arduino_cli()
         self.cli_found.emit(bool(cli))
