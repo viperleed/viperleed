@@ -11,12 +11,17 @@ The ``viperleed calc`` package uses a number of classes to represent the input d
     :toctree: classes
     :recursive:
 
+    atom.Atom
+    atom_containers.AtomContainer
+    atom_containers.AtomList
     beam.Beam
     layer.Layer
     r_error.R_Error
     rparams.DomainParameters
     rparams.Rparams
-    rparams.SearchPar
+    searchpar.SearchPar
     sitetype.Sitetype
-    slab.Slab
-    slab.SymPlane
+    slab.base_slab.BaseSlab
+    slab.bulk_slab.BulkSlab
+    slab.surface_slab.SurfaceSlab
+    sym_entity.SymPlane
