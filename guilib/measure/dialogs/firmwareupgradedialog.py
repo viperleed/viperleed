@@ -105,7 +105,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 'done': qtw.QPushButton('&Done'),
                 'upgrade': qtw.QPushButton('Upgrade &Arduino CLI')
                 },
-            'controller_info': {
+            'labels': {
                 'ctrl_type': qtw.QLabel(f'Controller type: {NOT_SET}'),
                 'firmware_version': qtw.QLabel('Installed firmware '
                                                f'version: {NOT_SET}'),
@@ -125,12 +125,25 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._progress_bar = qtw.QProgressBar()
         self._progress_bar.setValue(0)
 
-        self._cli_info = qtw.QMessageBox(parent=self)
-
         self.setWindowTitle('Upgrade ViPErLEED box firmware')
-        self._children['ctrls']['firmware_path'].path = Path().resolve()
+        self.controls['firmware_path'].path = Path().resolve()
         self._compose()
         self._connect()
+
+    @property
+    def buttons(self):
+         """Return the buttons of this dialog."""
+         return self._children['buttons']
+
+    @property
+    def controls(self):
+         """Return the controls of this dialog."""
+         return self._children['ctrls']
+
+    @property
+    def labels(self):
+         """Return the labels of this dialog."""
+         return self._children['labels']
 
     def _clean_up(self):
         """Clean up before closing dialog."""
@@ -141,7 +154,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.setWindowFlags(self.windowFlags()
                             & ~qtc.Qt.WindowContextHelpButtonHint)
 
-        for btn in self._children['buttons'].values():
+        for btn in self.buttons.values():
             try:
                 btn.setAutoDefault(False)
             except AttributeError:
@@ -154,14 +167,13 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         layout.addLayout(self._compose_path_selection())
         layout.addLayout(self._compose_firmware_selection())
         layout.addLayout(self._compose_progress_bar())
-        layout.addLayout(self._compose_done_button())
+        layout.addLayout(self._compose_upgrade_and_done_button())
         self.setLayout(layout)
-        self._compose_cli_info()
 
-    def _compose_cli_info(self):
+    def _make_cli_install_disclaimer(self):
         """Create the dialog asking the user to install Arduino CLI."""
-        info = self._cli_info
-        info.setText(
+        disclaimer = qtw.QMessageBox(parent=self)
+        disclaimer.setText(
             'In order to use the firmware upgrade tool you need to install '
             'the Arduino command-line interface. This software can be found '
             'under https://github.com/arduino/arduino-cli and is published '
@@ -170,47 +182,54 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             'specified in the settings menu. Make sure you are connected '
             'to the internet before clicking accept.'
             )
-        info.addButton(qtw.QPushButton('Cancel'), info.RejectRole)
+        disclaimer.addButton(qtw.QPushButton('Cancel'),
+                             disclaimer.RejectRole)
         accept = qtw.QPushButton('Accept')
-        info.addButton(accept, info.AcceptRole)
+        disclaimer.addButton(accept, disclaimer.AcceptRole)
         accept.clicked.connect(self._download_and_install_arduino_cli)
+        disclaimer.open()
 
     def _compose_controller_selection(self):
+        """Compose controller QComboBox and refresh button."""
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Select controller:'))
-        layout.addWidget(self._children['ctrls']['controllers'], stretch=1)
-        layout.addWidget(self._children['buttons']['refresh'])
+        layout.addWidget(self.controls['controllers'], stretch=1)
+        layout.addWidget(self.buttons['refresh'])
         return layout
 
-    def _compose_done_button(self):
+    def _compose_upgrade_and_done_button(self):
+        """Compose the upgrade and the done buttons."""
         layout = qtw.QHBoxLayout()
-        layout.addWidget(self._children['buttons']['upgrade'])
+        layout.addWidget(self.buttons['upgrade'])
         layout.addStretch(1)
-        layout.addWidget(self._children['buttons']['done'])
+        layout.addWidget(self.buttons['done'])
         return layout
 
     def _compose_firmware_selection(self):
+        """Compose firmware QComboBox and upload button."""
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Select firmware version:'))
-        layout.addWidget(self._children['ctrls']['firmware_version'],
-                         stretch=1)
-        layout.addWidget(self._children['buttons']['upload'])
-        self._children['buttons']['upload'].setEnabled(False)
+        layout.addWidget(self.controls['firmware_version'], stretch=1)
+        layout.addWidget(self.buttons['upload'])
+        self.buttons['upload'].setEnabled(False)
         return layout
 
     def _compose_info_section(self):
+        """Compose controller info."""
         layout = qtw.QHBoxLayout()
-        for label in self._children['controller_info'].values():
+        for label in self.labels.values():
             layout.addWidget(label)
         return layout
 
     def _compose_path_selection(self):
+        """Compose PathSelector."""
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Select firmware folder:'))
-        layout.addWidget(self._children['ctrls']['firmware_path'])
+        layout.addWidget(self.controls['firmware_path'])
         return layout
 
     def _compose_progress_bar(self):
+        """Compose QProgressBar."""
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Progess:'))
         layout.addWidget(self._progress_bar)
@@ -218,16 +237,14 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
     def _connect(self):
         """Connect children signals."""
-        self._children['buttons']['done'].clicked.connect(self.accept)
-        self._children['buttons']['refresh'].clicked.connect(self._detect)
-        self._children['buttons']['upload'].clicked.connect(self._upload)
-        self._children['buttons']['upgrade'].clicked.connect(
-            self._upgrade_arduino_cli
-            )
-        self._children['ctrls']['firmware_path'].path_changed.connect(
+        self.buttons['done'].clicked.connect(self.accept)
+        self.buttons['refresh'].clicked.connect(self._detect)
+        self.buttons['upload'].clicked.connect(self._upload)
+        self.buttons['upgrade'].clicked.connect(self._upgrade_arduino_cli)
+        self.controls['firmware_path'].path_changed.connect(
             self._get_firmware_versions
             )
-        self._children['ctrls']['controllers'].currentTextChanged.connect(
+        self.controls['controllers'].currentTextChanged.connect(
             self._update_ctrl_labels
             )
         self._uploader.error_occurred.connect(self.error_occurred)
@@ -253,26 +270,25 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         if is_installed:
             super().open()
             return
-        self._cli_info.open()
+        self._make_cli_install_disclaimer()
 
     @qtc.pyqtSlot(bool)
     def _ctrl_enable_with_enabled_done(self, enable):
         """Enable/disable controls while keeping done enabled."""
         self._ctrl_enable(enable)
-        self._children['buttons']['done'].setEnabled(True)
+        self.buttons['done'].setEnabled(True)
 
     @qtc.pyqtSlot(bool)
     def _ctrl_enable(self, enabled):
         """Enable/disable all controls."""
-        widgets = (*self._children['buttons'].values(),
-                   *self._children['ctrls'].values())
+        widgets = (*self.buttons.values(), *self.controls.values())
         for widget in widgets:
             widget.setEnabled(enabled)
 
     @qtc.pyqtSlot()
     def _detect(self):
         """Detect connected ViPErLEED controllers."""
-        for button in self._children['buttons'].values():
+        for button in self.buttons.values():
             button.setEnabled(False)
         emit_controllers = True                          # TODO: I'm not a fan of this name!
         _INVOKE(self._uploader, 'get_viperleed_hardware',
@@ -293,14 +309,14 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     @qtc.pyqtSlot(str, dict)
     def _enable_buttons(self, *args):
         """Enable buttons again."""
-        for btn in self._children['buttons']:
-            self._children['buttons'][btn].setEnabled(True)
+        for btn in self.buttons:
+            self.buttons[btn].setEnabled(True)
 
     @qtc.pyqtSlot()
     def _get_firmware_versions(self, *args):
         """Search for available firmware versions."""
         firmware_dict = {}
-        f_path = self._children['ctrls']['firmware_path'].path
+        f_path = self.controls['firmware_path'].path
 
         if not f_path or f_path == Path():
             self._update_combo_box('firmware_version', firmware_dict)
@@ -324,8 +340,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
     def _get_most_recent_firmware_version(self, *args):
         """Detect most recent firmware suitable for controller."""
-        ctrl = self._children['ctrls']['controllers'].currentData()
-        nr_versions = self._children['ctrls']['firmware_version'].count()
+        ctrl = self.controls['controllers'].currentData()
+        nr_versions = self.controls['firmware_version'].count()
         max_version = base.Version('0.0')
 
         if not ctrl or not ctrl['name_raw']:
@@ -333,7 +349,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
         i = 0
         while i < nr_versions:
-            firm_ver = self._children['ctrls']['firmware_version'].itemData(i)
+            firm_ver = self.controls['firmware_version'].itemData(i)
             if ctrl['name_raw'] in firm_ver.folder_name:
                 if firm_ver.version > max_version:
                     max_version = firm_ver.version
@@ -342,23 +358,23 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         if max_version == base.Version('0.0'):
             max_version = NOT_SET
 
-        self._children['controller_info']['highest_version'].setText(
+        self.labels['highest_version'].setText(
             f'Most recent firmware version: {max_version}'
             )
 
     @qtc.pyqtSlot()
     def _update_ctrl_labels(self, *args):
         """Display controller firmware version."""
-        ctrl = self._children['ctrls']['controllers'].currentData() or {}
+        ctrl = self.controls['controllers'].currentData() or {}
         version = ctrl.get('version', NOT_SET)
         box_id = ctrl.get('box_id', NOT_SET)
-        self._children['controller_info']['firmware_version'].setText(
+        self.labels['firmware_version'].setText(
             f'Installed firmware version: {version}'
             )
-        self._children['controller_info']['ctrl_type'].setText(
+        self.labels['ctrl_type'].setText(
             f'Controller type: {box_id}'
             )
-        self._children['controller_info']['highest_version'].setText(
+        self.labels['highest_version'].setText(
             f'Most recent firmware version: {NOT_SET}'
             )
         self._get_most_recent_firmware_version()
@@ -372,25 +388,25 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     @qtc.pyqtSlot(str, dict)
     def _update_combo_box(self, which_combo, data_dict):
         """Replace displayed firmware/controllers with the detected ones."""
-        self._children['ctrls'][which_combo].clear()
+        self.controls[which_combo].clear()
         for key, value in data_dict.items():
-            self._children['ctrls'][which_combo].addItem(key, userData=value)
-        ctrl = self._children['ctrls']['controllers'].currentData()
-        version = self._children['ctrls']['firmware_version'].currentData()
+            self.controls[which_combo].addItem(key, userData=value)
+        ctrl = self.controls['controllers'].currentData()
+        version = self.controls['firmware_version'].currentData()
         can_upload = bool(ctrl and version)
-        self._children['buttons']['upload'].setEnabled(can_upload)
+        self.buttons['upload'].setEnabled(can_upload)
 
     @qtc.pyqtSlot()
     def _upload(self):
         """Upload selected firmware to selected controller."""
-        if not self._children['ctrls']['controllers'].currentData():
+        if not self.controls['controllers'].currentData():
             return
-        if not self._children['ctrls']['firmware_version'].currentData():
+        if not self.controls['firmware_version'].currentData():
             return
 
-        selected_ctrl = self._children['ctrls']['controllers'].currentData()
-        firmware = self._children['ctrls']['firmware_version'].currentData()
-        tmp_path = self._children['ctrls']['firmware_path'].path / 'tmp_'
+        selected_ctrl = self.controls['controllers'].currentData()
+        firmware = self.controls['firmware_version'].currentData()
+        tmp_path = self.controls['firmware_path'].path / 'tmp_'
         upload = True
         _INVOKE(self._uploader, 'compile', qtc.Q_ARG(dict, selected_ctrl),
                 qtc.Q_ARG(FirmwareVersionInfo, firmware),
@@ -897,7 +913,7 @@ class FirmwareUploader(qtc.QObject):
         for b in viper_boards:
             port = board['port']['address']
             board = board['matching_boards'][0]
-            ctrl = f'{port} {board['name']}'
+            ctrl = f'{port} {board["name"]}'
             ctrl_dict[ctrl] = {
                 'port': port,
                 'name': board['name'],
