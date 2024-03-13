@@ -274,9 +274,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     @qtc.pyqtSlot()
     def __detect(self):
         """Detect connected ViPErLEED controllers."""
-        emit_controllers = True
-        for btn in self.__children['buttons']:
-            self.__children['buttons'][btn].setEnabled(False)
+        for button in self.__children['buttons'].values():
+            button.setEnabled(False)
+        emit_controllers = True                          # TODO: I'm not a fan of this name!
         _INVOKE(self.__uploader, 'get_viperleed_hardware',
                 qtc.Q_ARG(bool, emit_controllers))
 
