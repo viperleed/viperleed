@@ -941,14 +941,6 @@ class FirmwareUploader(qtc.QObject):
             self.cli_is_installed.emit(False)
 
     def moveToThread(self, thread):
-        """Overloaded moveToThread.
-        
-        Moves the QNetworkAccessManager to the same thread
-        as the FirmwareUploader.
-        
-        Returns
-        -------
-        None
-        """
+        """Move self and self.manager to thread."""
         super().moveToThread(thread)
         self.manager.moveToThread(thread)
