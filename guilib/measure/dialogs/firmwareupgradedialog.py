@@ -598,7 +598,7 @@ class FirmwareUploader(qtc.QObject):
         request = qtn.QNetworkRequest(qtc.QUrl(url_latest))
         # Since Qt does not come with SSL support the RedirectAttribute
         # must be set in order to get the file via http.
-        request.setAttribute(qtn.QNetworkRequest.FollowRedirectsAttribute, 21)
+        request.setAttribute(qtn.QNetworkRequest.FollowRedirectsAttribute, True)
         self.manager.finished.connect(self.__install_arduino_cli,
                                       type=qtc.Qt.UniqueConnection)
         self.manager.get(request)
