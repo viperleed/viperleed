@@ -63,7 +63,7 @@ class Lattice2D:
         (g_x, g_y) for reciprocal space
     hk : numpy.ndarray, shape == (..., 2)
         Array of (h, k) indices that generate the points
-        in lattice, i.e., lattice[i] = hk[i] @ basis
+        in `lattice`, i.e., lattice[i] = hk[i] @ basis
     """
 
     # Disable due to pylint bug. Does not accept
@@ -77,8 +77,8 @@ class Lattice2D:
         basis : Sequence or numpy.ndarray
             Shape (2, 2). Basis vectors a and b of the lattice, with
             a == basis[0], b == basis[1]. The units are assumed to be
-            Angstrom for real space lattices, and 2*pi/Angstrom for
-            reciprocal-space lattices.
+            Angstrom for real-space lattices, and 2*pi/Angstrom for
+            reciprocal-space ones.
         space : {'real', 'reciprocal'}, optional
             Whether the lattice is a real- or reciprocal-space one.
             Default is 'real'.
@@ -102,7 +102,7 @@ class Lattice2D:
         ValueError
             If `basis` is singular, or does not have shape (2, 2).
         ValueError
-            If `space` is not one of 'real' or 'reciprocal'
+            If `space` is not one of 'real' or 'reciprocal'.
         """
         if space not in {'real', 'reciprocal'}:
             raise ValueError(f'{type(self).__name__}: unknown space {space!r}')
@@ -137,12 +137,12 @@ class Lattice2D:
 
     @property
     def basis(self):
-        """Return a 2x2 numpy.ndarray of lattice vectors as rows."""
+        """Return a 2x2 numpy.ndarray of basis vectors as rows."""
         return self._basis
 
     @basis.setter
     def basis(self, basis):
-        """Set new lattice vectors (rows) for this Lattice2D."""
+        """Set new basis vectors (rows) for this Lattice2D."""
         if (isinstance(basis, str)
                 or not isinstance(basis, (Sequence, np.ndarray))):
             raise TypeError(
@@ -158,8 +158,8 @@ class Lattice2D:
 
         self._basis = basis
         self._was_acute = False
-        self._shape = self.__get_cell_shape()  # Sets _was_acute
-        self.lattice, self.hk = self.__generate_lattice()
+        self._shape = self._get_cell_shape()  # Sets _was_acute
+        self.lattice, self.hk = self._generate_lattice()
 
         if self.group is None:
             return
@@ -197,15 +197,15 @@ class Lattice2D:
 
     @property
     def lattice_parameters(self):
-        """Returns the lattice parameters of this Lattice2D.
+        """Return the lattice parameters of this Lattice2D.
 
         Returns
         -------
         length_a: float
-            The length of the first basis vectors in units of Angstrom
+            The length of the first basis vector in units of Angstrom
             or 2pi/Angstrom depending on self.space.
         length_b : float
-            The length of the second basis vectors in units of Angstrom
+            The length of the second basis vector in units of Angstrom
             or 2pi/Angstrom depending on self.space.
         alpha : float
             Angle between the two basis vectors in degrees.
@@ -326,7 +326,7 @@ class Lattice2D:
         """Return whether the real-space basis was made obtuse."""
         return self._was_acute
 
-    def __get_cell_shape(self):
+    def _get_cell_shape(self):
         """Determine the shape of this lattice's basis.
 
         For hexagonal and rhombic lattices, this method also changes
@@ -361,7 +361,7 @@ class Lattice2D:
             return 'Hexagonal'
         return 'Rhombic'
 
-    def __generate_lattice(self):                                               # TODO: have to rethink the usage of limit, as we need more beams for large off-normal incidence.
+    def _generate_lattice(self):                                                # TODO: have to rethink the usage of limit, as we need more beams for large off-normal incidence.
         """Generate a list of lattice points from self.basis.
 
         Returns
@@ -391,10 +391,10 @@ class Lattice2D:
 
         # Create lattice:
         # Notice that, given a row vector of indices (h, k) and
-        # a basis in matrix form B = [[a1, a2],[b1, b2]], the
+        # a basis in matrix form B = [[a1, a2], [b1, b2]], the
         # corresponding lattice point can be obtained as the
         # row vector
-        #    L = [L1, L2] = [h, k]*B
+        #    L = [L1, L2] = [h, k] @ B
         lattice = np.dot(indices, basis)
 
         # Now find all those lattice points that lie within
@@ -452,7 +452,7 @@ class Lattice2D:
 
         Notes
         -----
-        The highest-symmetry basis generates the same lattice as the
+        The highest-symmetry basis generates the same lattice as
             any other basis.
         The `transform` can bring an oblique lattice into square,
             rectangular, hexagonal or rhombic, or make the basis
@@ -599,8 +599,8 @@ class Lattice2D:
             left-multiplied to the basis. This means that
             `transform` should be expressed in 'fractional'
             coordinates. This is normally one of the
-            planegroup operations that are suited for
-            self.cell_shape.
+            `planegroup` operations that are suited
+            for self.cell_shape.
 
         Returns
         -------
@@ -618,8 +618,8 @@ class Lattice2D:
             left-multiplied to the basis. This means that
             `transform` should be expressed in 'fractional'
             coordinates. This is normally one of the
-            planegroup operations that are suited for
-            self.cell_shape.
+            `planegroup` operations that are suited
+            for self.cell_shape.
 
         Returns
         -------
