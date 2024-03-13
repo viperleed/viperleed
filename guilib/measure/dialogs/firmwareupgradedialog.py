@@ -548,7 +548,7 @@ class FirmwareUploader(qtc.QObject):
                              self.__get_newest_arduino_cli)
 
         # Check if connection failed.
-        if reply.error() != 0:
+        if reply.error():
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED
                 )
