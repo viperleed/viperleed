@@ -320,13 +320,13 @@ class TestSpecialDirections:
 
     _directions = {  # Enough to check the highest-symmetry group
         (_HEX_ACUTE, 'p6m'): [
-            None, (-0.5, -3**0.5/2), (1, 0), (3**0.5/2, -0.5), (0, 1),
+            None, (-0.5, -3**0.5/2), (1, 0), (3**0.5/2, -0.5), (0, -1),
             (0.5, -3**0.5/2), (3**0.5/2, 0.5), None, None, None,
             None, None
             ],
         (_HEX_OBTUSE, 'p6m'): [
-            None, (1, 0), (0.5, -3**0.5/2), (0, 1), (3**0.5/2, 0.5),
-            (-0.5, -3**0.5/2), (3**0.5/2, -0.5), None, None, None,
+            None, (1, 0), (-0.5, 3**0.5/2), (0, 1), (3**0.5/2, 0.5),
+            (0.5, 3**0.5/2), (-3**0.5/2, 0.5), None, None, None,
             None, None
             ],
         (_OBLIQUE_ACUTE, 'p2'): [None, None],
@@ -335,7 +335,7 @@ class TestSpecialDirections:
         (_RHOMBIC_ACUTE, 'cmm'): [None, None, (0, 1), (1, 0)],
         (_RHOMBIC_OBTUSE, 'cmm'): [None, None, (0, 1), (1, 0)],
         (_SQUARE, 'p4m'): [None, (1, 0), (0, 1), (2**-0.5, 2**-0.5),
-                           (2**-0.5, -2**-0.5), None, None, None],
+                           (-2**-0.5, 2**-0.5), None, None, None],
         }
 
     @parametrize('args,expect', _directions.items(),

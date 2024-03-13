@@ -19,11 +19,32 @@ from typing import Sequence
 
 import numpy as np
 
+from viperleed.guilib.classes import planegroup
 from viperleed.guilib.classes.planegroup import PlaneGroup
 from viperleed.guilib.helpers import array_to_string
 from viperleed.tleedmlib.base import rotation_matrix
 
 ACUTE_TO_OBTUSE = np.array(((0, -1), (1, 0)))  # Conserves handedness
+_SPECIAL_DIRECTIONS = {
+    # These are the eigenvectors of mirror operations with unity
+    # eigenvalue. In other words, they are the directions that
+    # are left invariant by the mirror operations. Since the
+    # group operations are expressed in fractional coordinates,
+    # the special directions are the directions of the mirror
+    # planes in fractional coordinates.
+    planegroup.Mx: np.array([1, 0]),
+    planegroup.My: np.array([0, 1]),
+    planegroup.M11: np.array([1, 1])/2**0.5,    # Also M45
+    planegroup.M1m1: np.array([-1, 1])/2**0.5,  # Also Mm45
+    # Notice that the following directions appear to be swapped,
+    # but are indeed right once considering that they are to be
+    # pre-multiplied with the inverse of an hexagonal basis. See
+    # comments in the special_directions @property for derivation.
+    planegroup.M01: np.array([-1, 2])/5**0.5,
+    planegroup.M10: np.array([2, -1])/5**0.5,
+    planegroup.M21: np.array([1, 0]),
+    planegroup.M12: np.array([0, 1]),
+    }
 
 
 # Disable as pylint considers twice private attributes and
@@ -269,33 +290,36 @@ class Lattice2D:
             mirror plane, in the same coordinate system as
             self.real_basis.
         """
-        # Work on the real-basis coordinates, as directions are the
-        # same in real and reciprocal space. Using the reciprocal-space
-        # basis would require to transpose-invert the symmetry
-        # operations. Also notice that we're not including the
-        # 3d operations, as this makes sense only for a 'surface'
-        # lattice, and the role of 3d operations is merely that of
-        # determining how many domains may occur in LEED                        # TODO: IS THIS CORRECT??
-        transform = np.linalg.inv(self.real_basis)
-        operations = self.group.transform(transform)
-
         # The special directions are those parallel to the eigenvectors
-        # of the mirrors with eigenvalue == 1 (use 1e-4 tolerance). In
-        # fact, this is the direction that is unchanged when applying
-        # the mirror operation. No special direction for rotations.
-        directions = []
-        for operation in operations:
-            if np.linalg.det(operation) > 0:  # Rotation
-                directions.append(None)
-                continue
-            eigval, eigvecs = np.linalg.eig(operation)
-            # eigvecs has the eigenvectors as columns, ordered in the
-            # same way as the eigenvalues in eigvals. Notice the use
-            # of .extend() rather than .append(). This is because
-            # eigvecs is a matrix, and its 1-element slice is a
-            # (1, 2) array. Using .extend() adds a (2,)-shaped array.
-            directions.extend(eigvecs.T[abs(eigval - 1) < 1e-4])
-        return directions
+        # of the mirrors with eigenvalue == 1. We don't need to compute
+        # the eigenvectors every time, though. It is sufficient to use
+        # those of the group operations. A group operation expressed in
+        # the coordinates of the real basis B is (see also
+        # PlaneGroup.transform):
+        #     R_b = inv(B) @ R @ B = Q_b @ L @ inv(Q_b),
+        # where R is the fractional group operation, Q_b is the matrix
+        # of eigenvectors in the coordinates of the basis, and L the
+        # eigenvalue matrix. This means that
+        #     R = (B @ Q_b) @ L @ inv(B @ Q_b) = Q_R @ L @ inv(Q_R),
+        # that is, the eigenvector matrix in the frame of the basis
+        # Q_b can be computed from the one of the operation, Q_R, as
+        #     Q_b = inv(B) @ Q_R.
+        # Then eigenvectors (i.e., the columns of Q_) are
+        #     v_b = inv(B) @ v_R.
+        # We work on the real-basis coordinates, as directions are the
+        # same in real and reciprocal space. Using the reciprocal-
+        # space basis would require to transpose-invert the symmetry
+        # operations. Also notice that we're not including the 3d
+        # operations, as special_directions make sense only for a
+        # 'surface' lattice, and the role of 3d operations is merely
+        # that of determining how many domains may occur in LEED                # TODO: IS THIS CORRECT??
+        transform = np.linalg.inv(self.real_basis)
+        fractional_directions = (_SPECIAL_DIRECTIONS.get(op, None)
+                                 for op in self.group.operations())
+        directions = (transform.dot(frac) if frac is not None else frac
+                      for frac in fractional_directions)
+        return [d/np.linalg.norm(d) if d is not None else d
+                for d in directions]
 
     @property
     def was_acute(self):
