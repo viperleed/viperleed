@@ -55,7 +55,7 @@ FirmwareVersionInfo = namedtuple('FirmwareVersionInfo',
 
 
 class ViPErLEEDFirmwareError(base.ViPErLEEDErrorEnum):
-    """This class contains all errors related to the FirmwareUpgradeDialog."""
+    """Errors related to the FirmwareUpgradeDialog."""
 
     ERROR_CONTROLLER_NOT_FOUND = (
         500,
