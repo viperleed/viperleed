@@ -36,20 +36,20 @@ class TestBeamScatteringSubsets:
         (classes,
          indices) = beamgen.get_beam_scattering_subsets(beam_indices_raw)
         with subtests.test('Integer beams - classes'):
-            assert classes == expected_subset_classes
+            assert list(classes) == expected_subset_classes
         with subtests.test('Integer beams - indices'):
             assert indices == expected_reduced_indices
 
     def test_get_beam_scattering_subsets_fractional(self, subtests):
         """Test correct identification for integer and fractional beams."""
         beam_indices_raw = [(0, 0), (1, 0), (1/2, 1/2), (1, 1/5)]
-        expected_classes = [(0, 0), (0, 1/5), (1/2, 1/2)]  # By |k|
+        expected_classes = [(0, 0), (1/2, 1/2), (0, 1/5)]  # Same order
         expected_indices = [(0, 0), (0, 0), (1/2, 1/2), (0, 1/5)]
 
         (classes,
          indices) = beamgen.get_beam_scattering_subsets(beam_indices_raw)
         with subtests.test('Integer and fractional beams - classes'):
-            assert classes == expected_classes
+            assert list(classes) == expected_classes
         with subtests.test('Integer and fractional beams - indices'):
             assert indices == expected_indices
 
