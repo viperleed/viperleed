@@ -910,7 +910,7 @@ class FirmwareUploader(qtc.QObject):
 
         # Extract data from controller list.
         ctrl_dict = {}
-        for b in viper_boards:
+        for board in viper_boards:
             port = board['port']['address']
             board = board['matching_boards'][0]
             ctrl = f'{port} {board["name"]}'
