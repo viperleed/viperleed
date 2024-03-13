@@ -53,7 +53,6 @@ FirmwareVersionInfo = namedtuple('FirmwareVersionInfo',
                                  ('folder_name', 'version', 'path'))
 
 
-
 class ViPErLEEDFirmwareError(base.ViPErLEEDErrorEnum):
     """Errors related to the FirmwareUpgradeDialog."""
 
@@ -80,8 +79,8 @@ class ViPErLEEDFirmwareError(base.ViPErLEEDErrorEnum):
         )
     ERROR_ARDUINO_CLI_FAILED = (
         504,
-        'The Arduino CLI failed. Something might be wrong with the '
-        'installation. Return code={}. The error was: {}'
+        'The Arduino CLI failed. Try to reinstall it. '
+        'Return code={}. The error was: {}'
         )
 
 
@@ -238,45 +237,51 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     def _connect(self):
         """Connect children signals."""
         self.buttons['done'].clicked.connect(self.accept)
-        self.buttons['refresh'].clicked.connect(self._detect)
+        self.buttons['refresh'].clicked.connect(self._detect_controllers)
         self.buttons['upload'].clicked.connect(self._upload)
         self.buttons['upgrade'].clicked.connect(self._upgrade_arduino_cli)
         self.controls['firmware_path'].path_changed.connect(
-            self._get_firmware_versions
+            self._find_firmware_versions
             )
         self.controls['controllers'].currentTextChanged.connect(
             self._update_ctrl_labels
             )
         self._uploader.error_occurred.connect(self.error_occurred)
-        self._uploader.controllers_detected.connect(self._update_combo_box)
-        self._uploader.controllers_detected.connect(self._enable_buttons)
+        self._uploader.controllers_detected.connect(
+            self._on_controllers_detected
+            )
         self._uploader.upload_finished.connect(self._ctrl_enable)
         self._uploader.cli_installation_finished.connect(
-            self._ctrl_enable_with_enabled_done
+            self._on_cli_install_done
             )
         self._uploader.process_progress.connect(self._progress_bar.setValue)
 
     @qtc.pyqtSlot(bool)
     def _continue_open(self, is_installed):
-        """Continue open() after check is finished.
+        """Open FirmwareUpgradeDialog if the Arduino CLI is_installed.
 
         If the Arduino CLI is installed this will open up the
         FirmwareUpgradeDialog. If the CLI is not installed, the dialog
         asking the user to install the CLI will be opened.
+
+        Parameters
+        ----------
+        is_installed : bool
+            True if the Arduino CLI is installed on the PC.
+
+        Returns
+        -------
+        None
         """
         base.safe_disconnect(self._uploader.cli_is_installed,
                              self._continue_open)
+        # The error_occurred signal is reconnected because it is
+        # disconnected in the open() method of the dialog.
         self._uploader.error_occurred.connect(self.error_occurred)
         if is_installed:
             super().open()
             return
         self._make_cli_install_disclaimer()
-
-    @qtc.pyqtSlot(bool)
-    def _ctrl_enable_with_enabled_done(self, enable):
-        """Enable/disable controls while keeping done enabled."""
-        self._ctrl_enable(enable)
-        self.buttons['done'].setEnabled(True)
 
     @qtc.pyqtSlot(bool)
     def _ctrl_enable(self, enabled):
@@ -286,10 +291,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             widget.setEnabled(enabled)
 
     @qtc.pyqtSlot()
-    def _detect(self):
+    def _detect_controllers(self):
         """Detect connected ViPErLEED controllers."""
-        for button in self.buttons.values():
-            button.setEnabled(False)
+        self._enable_buttons(False)
         emit_controllers = True                          # TODO: I'm not a fan of this name!
         _INVOKE(self._uploader, 'get_viperleed_hardware',
                 qtc.Q_ARG(bool, emit_controllers))
@@ -302,18 +306,24 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         CLI. The FirmwareUpgradeDialog will be opened while the CLI
         is being installed.
         """
-        self._ctrl_enable_with_enabled_done(False)
+        self._on_cli_install_done(False)
         _INVOKE(self._uploader, 'get_arduino_cli_from_git')
         super().open()
 
-    @qtc.pyqtSlot(str, dict)
-    def _enable_buttons(self, *args):
-        """Enable buttons again."""
-        for btn in self.buttons:
-            self.buttons[btn].setEnabled(True)
+    def _enable_buttons(self, enable):
+        """Enable/disable buttons."""
+        for button in self.buttons.values():
+            button.setEnabled(enable)
+
+    def _enable_upload_button(self):
+        """Enable upload if controller and firmware are selected."""
+        ctrl = self.controls['controllers'].currentData()
+        version = self.controls['firmware_version'].currentData()
+        can_upload = bool(ctrl and version)
+        self.buttons['upload'].setEnabled(can_upload)
 
     @qtc.pyqtSlot()
-    def _get_firmware_versions(self, *args):
+    def _find_firmware_versions(self, *args):
         """Search for available firmware versions."""
         firmware_dict = {}
         f_path = self.controls['firmware_path'].path
@@ -362,6 +372,20 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             f'Most recent firmware version: {max_version}'
             )
 
+    @qtc.pyqtSlot(bool)
+    def _on_cli_install_done(self, enable):
+        """Enable/disable controls while keeping done enabled."""
+        self._ctrl_enable(enable)
+        if enable:
+            self._enable_upload_button()
+        self.buttons['done'].setEnabled(True)
+
+    @qtc.pyqtSlot(dict)
+    def _on_controllers_detected(self, data_dict):
+        """Display detected controllers and enable buttons."""
+        self._enable_buttons(True)
+        self._update_combo_box('controllers', data_dict)
+
     @qtc.pyqtSlot()
     def _update_ctrl_labels(self, *args):
         """Display controller firmware version."""
@@ -385,16 +409,12 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._ctrl_enable(False)
         _INVOKE(self._uploader, 'get_arduino_cli_from_git')
 
-    @qtc.pyqtSlot(str, dict)
     def _update_combo_box(self, which_combo, data_dict):
         """Replace displayed firmware/controllers with the detected ones."""
         self.controls[which_combo].clear()
         for key, value in data_dict.items():
             self.controls[which_combo].addItem(key, userData=value)
-        ctrl = self.controls['controllers'].currentData()
-        version = self.controls['firmware_version'].currentData()
-        can_upload = bool(ctrl and version)
-        self.buttons['upload'].setEnabled(can_upload)
+        self._enable_upload_button()
 
     @qtc.pyqtSlot()
     def _upload(self):
@@ -449,7 +469,7 @@ class FirmwareUploader(qtc.QObject):
 
     # Emitted after connected controllers have been detected. Carries
     # with it the connected ViPErLEED controllers.
-    controllers_detected = qtc.pyqtSignal(str, dict)
+    controllers_detected = qtc.pyqtSignal(dict)
 
     # Emitted after the check if the Arduino CLI is installed.
     cli_is_installed = qtc.pyqtSignal(bool)
@@ -821,7 +841,7 @@ class FirmwareUploader(qtc.QObject):
             base.emit_error(self,
                             ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
                             s_ctrl['port'])
-            self.controllers_detected.emit('controllers', available_ctrls)
+            self.controllers_detected.emit(available_ctrls)
             self.upload_finished.emit(True)
             return
 
@@ -904,9 +924,9 @@ class FirmwareUploader(qtc.QObject):
         board_names = [b['matching_boards'][0]['name'] for b in boards]
         viper_boards = []
         for name in viperleed_names:
-            for i, board_name in enumerate(board_names):
+            for board, board_name in zip(boards, board_names):
                 if name in board_name:
-                    viper_boards.append(boards[i])
+                    viper_boards.append(board)
 
         # Extract data from controller list.
         ctrl_dict = {}
@@ -946,12 +966,12 @@ class FirmwareUploader(qtc.QObject):
                 ctrl_dict[ctrl]['name_raw'] = 'ViPErLEED_Data_Acquisition'
             ctrl_dict[new_ctrl_name] = ctrl_dict.pop(ctrl)
 
-        self.controllers_detected.emit('controllers', ctrl_dict)
+        self.controllers_detected.emit(ctrl_dict)
 
     @qtc.pyqtSlot()
     def is_cli_installed(self):
         """Check if Arduino CLI is installed.
-        
+
         Returns
         -------
         None
