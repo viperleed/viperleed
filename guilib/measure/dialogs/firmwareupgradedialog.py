@@ -264,12 +264,12 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.__children['buttons']['done'].setEnabled(True)
 
     @qtc.pyqtSlot(bool)
-    def __ctrl_enable(self, enable):
+    def __ctrl_enable(self, enabled):
         """Enable/disable all controls."""
-        for btn in self.__children['buttons']:
-            self.__children['buttons'][btn].setEnabled(enable)
-        for slct in self.__children['ctrls']:
-            self.__children['ctrls'][slct].setEnabled(enable)
+        widgets = (*self.__children['buttons'].values(),
+                   *self.__children['ctrls'].values())
+        for widget in widgets:
+            widget.setEnabled(enabled)
 
     @qtc.pyqtSlot()
     def __detect(self):
