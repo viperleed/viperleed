@@ -379,10 +379,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             self.__children['ctrls'][which_combo].addItem(key, userData=value)
         ctrl = self.__children['ctrls']['controllers'].currentData()
         version = self.__children['ctrls']['firmware_version'].currentData()
-        if not ctrl or not version:
-            self.__children['buttons']['upload'].setEnabled(False)
-        else:
-            self.__children['buttons']['upload'].setEnabled(True)
+        can_upload = bool(ctrl and version)
+        self.__children['buttons']['upload'].setEnabled(can_upload)
 
     @qtc.pyqtSlot()
     def __upload(self):
