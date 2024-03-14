@@ -162,5 +162,5 @@ def errorcalc(sl, rp):
                                    summary_fname="Errors_summary.csv")
 
     # Errors.pdf
-    errors_figs = tl_io.make_errors_figs(errors)
+    errors_figs = tl_io.make_errors_figs(errors, formatting=rp.PLOT_IV)
     tl_io.write_errors_pdf(errors_figs, filename = "Errors.pdf")
