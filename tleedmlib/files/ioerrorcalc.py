@@ -328,8 +328,8 @@ def make_errors_figs(errors):
         x_values = [err.lin_disp for err in mode_errors]
         if mode == "occ":
             x_values *= 100  # convert to %
-        x_min = np.min(x_values)
-        x_max = np.max(x_values)
+        x_min = np.min([np.min(x) for x in x_values])
+        x_max = np.max([np.max(x) for x in x_values])
         xrange = [x_min - abs(x_max - x_min) * 0.05,
                   x_max + abs(x_max - x_min) * 0.05]
         for err in mode_errors:
