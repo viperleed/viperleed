@@ -112,7 +112,7 @@ def initialization(sl, rp, subdomain=False):
         try:
             poscar.write(sl.symbaseslab, filename='POSCAR_mincell',
                          comments='all')
-        except Exception:
+        except OSError:
             logger.warning("Exception occurred while writing POSCAR_mincell")
 
     # generate new POSCAR
@@ -128,7 +128,7 @@ def initialization(sl, rp, subdomain=False):
     tmpslab.revert_unit_cell()
     try:
         poscar.write(tmpslab, filename='POSCAR_oricell', comments='nodir')
-    except Exception:
+    except OSError:
         logger.error("Exception occurred while writing POSCAR_oricell, "
                      "execution will continue...")
 
@@ -249,7 +249,7 @@ def initialization(sl, rp, subdomain=False):
     try:
         poscar.write(sl.with_extra_bulk_units(rp, n_cells)[0],
                      filename='POSCAR_bulk_appended')
-    except Exception:
+    except OSError:
         logger.warning('Exception occurred while writing POSCAR_bulk_appended')
 
     # Check for an ambiguous angle phi

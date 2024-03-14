@@ -184,6 +184,25 @@ def not_raises(exception):
     except exception:
         pytest.fail(f'DID RAISE {exception.__name__}')
 
+
+@contextmanager
+def raises_test_exception(obj, attr):
+    """Temporarily make obj.attr raise CustomTestException."""
+    # Exclude this function when reporting the exception trace
+    __tracebackhide__ = True  # pylint: disable=unused-variable
+    obj_name = (obj.__name__ if inspect.ismodule(obj)
+                else type(obj).__name__)
+
+    def _replaced(*args, **kwargs):
+        raise CustomTestException(f'Replaced {obj_name}.{attr} was called '
+                                  f'with args={args}, kwargs={kwargs}')
+
+    monkey_patch = pytest.MonkeyPatch
+    with monkey_patch.context() as patch, pytest.raises(CustomTestException):
+        patch.setattr(obj, attr, _replaced)
+        yield
+
+
 # ###############################   CLASSES   #################################
 
 class CaseTag(IntEnum):
@@ -201,6 +220,10 @@ class CaseTag(IntEnum):
     VACUUM_GAP_MIDDLE = auto()  # Not at top
     VACUUM_GAP_SMALL = auto()   # < 5A
     VACUUM_GAP_ZERO = auto()
+
+
+class CustomTestException(Exception):
+    """A custom exception for checking try...except blocks."""
 
 
 @dataclass
