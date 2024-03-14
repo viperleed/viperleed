@@ -123,6 +123,8 @@ def plot_iv(data, filename, labels=[], annotations=[],
     figs_per_page = formatting.get('perpage', 2)
     font_size = formatting.get('font_size', 10)
     line_width = formatting.get('line_width', 1.5)
+    curve_line_widths = formatting.get('curve_line_widths',
+                                       [line_width]*n_beams)
 
     # read data
     readlabels = False
@@ -270,6 +272,10 @@ def plot_iv(data, filename, labels=[], annotations=[],
                     logger.warning("plot_iv: Specified colors not "
                                    "recognized, reverting to default colors")
             for i in range(len(data)):
+                if i < len(curve_line_widths):
+                    lw = curve_line_widths[i] * gen_scaling
+                else:
+                    lw = curve_line_widths[-1]
                 if legends:
                     label = legends[i]
                 else:
