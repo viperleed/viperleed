@@ -28,7 +28,7 @@ logger = logging.getLogger("tleedm.files.ivplot")
 
 
 def plot_iv(data, filename, labels=[], annotations=[],
-            legends=[], formatting=None):
+            legends=[], formatting={}):
     '''
     Creates a single PDF file containing plots of I(V) curves
 
@@ -115,22 +115,14 @@ def plot_iv(data, filename, labels=[], annotations=[],
                          "beams.")
 
     # set formatting parameters
-    figs_per_page = 2
-    plotcolors = []
-    linewidths = [1.5] * n_beams
-    print_legend = 'all'
-    print_axes = 'all'
-    if formatting is not None:
-        if 'axes' in formatting:
-            print_axes = formatting['axes']
-        if 'colors' in formatting:
-            plotcolors = formatting['colors']
-        if 'legend' in formatting:
-            print_legend = formatting['legend']
-        if 'perpage' in formatting:
-            figs_per_page = formatting['perpage']
-        if 'linewidths' in formatting:
-            linewidths = formatting['linewidths']
+    if formatting is None:
+        formatting = {}
+    print_axes = formatting.get('axes', 'all')
+    plot_colors = formatting.get('colors', [])
+    print_legend = formatting.get('legend', 'all')
+    figs_per_page = formatting.get('perpage', 2)
+    font_size = formatting.get('font_size', 10)
+    line_width = formatting.get('line_width', 1.5)
 
     # read data
     readlabels = False
@@ -193,17 +185,16 @@ def plot_iv(data, filename, labels=[], annotations=[],
 
     # positions and scales, depending on number of figures per page
     figs = []
-    fontscale = 1 / np.sqrt(xfigs)
-    linewidth = 1.5 * fontscale
-    ylims = (ymin - 0.02*dy, ymax + 0.22*dy/fontscale)
-    namePos = (xlims[0] + 0.02*dx, ylims[1] - 0.1*dy/fontscale)  # eg labels
-    annotationPos = (namePos[0], namePos[1]-0.085*dy/fontscale)  # eg R-factor
+    gen_scaling = 1 / np.sqrt(xfigs)
+    ylims = (ymin - 0.02*dy, ymax + 0.22*dy*font_size/10/gen_scaling)
+    namePos = (xlims[0] + 0.02*dx, ylims[1] - 0.1*dy*font_size/10/gen_scaling)  # eg labels
+    annotationPos = (namePos[0], namePos[1]-0.085*dy*font_size/10/gen_scaling)  # eg R-factor
 
-    if dx / (tick * fontscale) > 16:  # too many labelled ticks
+    if dx / (tick * gen_scaling) > 16:  # too many labelled ticks
         minortick = majortick
-        newbase = int(np.ceil(dx / (tick * fontscale * 16))) * tick
+        newbase = int(np.ceil(dx / (tick * gen_scaling * 16))) * tick
         majortick = plticker.MultipleLocator(base=newbase)
-    ticklen = 3*fontscale
+    ticklen = 0.3 * font_size * gen_scaling
 
     # axes helper variables
     axes_visible = {'left': True, 'right': True, 'bottom': True, 'top': True}
@@ -229,20 +220,21 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 # need a new figure
                 fig_exists = True # at least one fig exists
                 fig_index_on_page = 0
+                plt.tight_layout()
                 fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
                                         squeeze=False)
                 axs = axs.flatten(order='C')  # flatten row-style
-                fig.subplots_adjust(left=(0.03 / (xfigs * fontscale)),
-                                    right=(1 - 0.03 / (xfigs * fontscale)),
-                                    bottom=(0.14 / (yfigs * fontscale)),
-                                    top=(1 - 0.02 / (yfigs * fontscale)),
-                                    wspace=0.04 / fontscale,
-                                    hspace=0.02 / fontscale)
+                fig.subplots_adjust(left=(0.03 / (xfigs * gen_scaling*font_size/10)),
+                                    right=(1 - 0.03 / (xfigs * gen_scaling*font_size/10)),
+                                    bottom=(0.14 / (yfigs * gen_scaling*font_size/10)),
+                                    top=(1 - 0.02 / (yfigs * gen_scaling*font_size/10)),
+                                    wspace=0.04 / gen_scaling*font_size/10,
+                                    hspace=0.02 / gen_scaling*font_size/10)
                 figs.append(fig)
                 [ax.set_xlim(*xlims) for ax in axs]
                 [ax.set_ylim(*ylims) for ax in axs]
                 [ax.get_yaxis().set_visible(False) for ax in axs]
-                [sp.set_linewidth(0.7*linewidth) for ax in axs
+                [sp.set_linewidth(0.7 * line_width * gen_scaling) for ax in axs
                  for sp in ax.spines.values()]
                 [ax.xaxis.set_major_locator(majortick) for ax in axs]
                 if minortick is not None:
@@ -252,27 +244,29 @@ def plot_iv(data, filename, labels=[], annotations=[],
                         ax.spines[k].set_visible(axes_visible[k])
                     if (((i//xfigs) + 1 == figs_per_page//xfigs)
                             or n_beams - (ct + i) <= xfigs):
-                        ax.set_xlabel("Energy (eV)", fontsize=10*fontscale,
-                                      labelpad=4*fontscale)
+                        ax.set_xlabel("Energy (eV)", fontsize=font_size*gen_scaling,
+                                      labelpad=4*gen_scaling)
                         ax.tick_params(
                             which='both', bottom=True,
                             top=axes_visible['top'], axis='x',
-                            direction='in', labelsize=9*fontscale,
-                            pad=5*fontscale, width=0.7*linewidth,
+                            direction='in', labelsize=0.9*font_size*gen_scaling,
+                            pad=0.5*font_size*gen_scaling,
+                            width=0.7 * line_width * gen_scaling,
                             length=ticklen)
                         ax.spines['bottom'].set_visible(True)
                     else:
                         ax.tick_params(
                             which='both', bottom=axes_visible['bottom'],
                             top=axes_visible['top'], axis='x', direction='in',
-                            labelbottom=False, width=0.7*linewidth,
+                            labelbottom=False,
+                            width=0.7 * line_width * gen_scaling,
                             length=ticklen)
                     if minortick is not None:
                         ax.tick_params(which='minor', length=ticklen*0.5)
-            if plotcolors:
+            if plot_colors:
                 if not all([matplotlib.colors.is_color_like(s)
-                            for s in plotcolors]):
-                    plotcolors = []
+                            for s in plot_colors]):
+                    plot_colors = []
                     logger.warning("plot_iv: Specified colors not "
                                    "recognized, reverting to default colors")
             for i in range(len(data)):
@@ -281,22 +275,18 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 else:
                     label = 'Beamset {}'.format(i+1)
                 xy = xy_per_beam_per_dataset[i][ct]
-                if i < len(linewidths):
-                    lw = linewidths[i] * fontscale
-                else:
-                    lw = linewidth
-                if i < len(plotcolors):
+                if i < len(plot_colors):
                     axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
-                                  linewidth=lw,
-                                  color=plotcolors[i])
+                                  linewidth=line_width,
+                                  color=plot_colors[i])
                 else:
                     axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
-                                  linewidth=lw)
+                                  linewidth=line_width)
             if labels:
-                axs[fig_index_on_page].annotate(labels[ct], namePos, fontsize=10*fontscale)
+                axs[fig_index_on_page].annotate(labels[ct], namePos, fontsize=font_size*gen_scaling)
             if annotations:
                 axs[fig_index_on_page].annotate(annotations[ct], annotationPos,
-                                  fontsize=10*fontscale)
+                                  fontsize=font_size*gen_scaling)
             if ((print_legend == 'all'
                     or (print_legend == 'first' and fig_index_on_page == 0)
                     or (print_legend == 'tr'
@@ -306,10 +296,10 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 legendscale = 1.
                 if len(data) > 2:
                     legendscale = 1/np.sqrt(len(data)-1)
-                legend = axs[fig_index_on_page].legend(fontsize=9*fontscale*legendscale,
+                legend = axs[fig_index_on_page].legend(fontsize=0.9*font_size*gen_scaling*legendscale,
                                          loc="upper right", frameon=False,
                                          ncol=(len(data) // 3 + 1))
-                legend.get_frame().set_linewidth(linewidth)
+                legend.get_frame().set_linewidth(line_width)
             fig_index_on_page += 1
 
         # finally, in case the last figure is empty (i.e. the number of beams
