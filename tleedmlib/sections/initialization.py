@@ -661,7 +661,7 @@ def init_domains(rp):
                     f"calculations: {', '.join(d.name for d in rr)}")
         for dp in rp.domainParams:
             for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams",
-                        "sourcedir"]:
+                        "source_dir"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
             if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
                 dp.rp.LMAX.max = rp.LMAX.max
