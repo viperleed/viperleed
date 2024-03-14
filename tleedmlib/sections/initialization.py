@@ -307,8 +307,7 @@ def initialization(sl, rp, subdomain=False):
             # let psgen catch the error if neither executable is found
             rundgrenpath = 'eeasisss'
         serneliuspath = 'seSernelius'
-        atom_density_path = (Path.cwd().relative_to(rp.workdir) /
-                             'atom_density_files')
+        atom_density_path = 'atom_density_files'
         logger.info("Generating phaseshifts data... ")
         ps_gen, kwargs = runPhaseshiftGen, {}
         if rp.PHASESHIFTS_CALC_OLD:
