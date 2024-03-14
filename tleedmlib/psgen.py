@@ -254,12 +254,10 @@ def runPhaseshiftGen_old(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        current_dir = Path.cwd()  # may be different from rp.workdir for domains
-        el_charge_density_path = (rp.source_dir / atdenssource / chemel /
-                                  (f"chgden{chemel}")).resolve()
-        charge_density_short_path = (rp.workdir / atdenssource / chemel /
-                                    (f"chgden{chemel}")
-                                    ).relative_to(current_dir, walk_up=True)
+        el_charge_density_path = (rp.source_dir / "atom_density_files" / 
+                                  chemel / (f"chgden{chemel}")).resolve()
+        charge_density_short_path = (atdenssource / chemel /
+                                    f"chgden{chemel}")
         os.makedirs(charge_density_short_path.parent, exist_ok=True)
         shutil.copy2(el_charge_density_path, charge_density_short_path)
         chem_el_paths[el] = charge_density_short_path
