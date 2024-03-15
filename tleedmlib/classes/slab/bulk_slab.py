@@ -111,7 +111,7 @@ class BulkSlab(BaseSlab):
         Raises
         ------
         MissingLayersError
-            If no layers are available
+            If no layers are available.
         """
         if self.n_layers == 1:
             return self.c_vector[2] - self.layers[0].thickness

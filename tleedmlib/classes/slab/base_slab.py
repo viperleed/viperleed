@@ -248,6 +248,36 @@ class BaseSlab(AtomContainer):
         return False
 
     @property
+    def interlayer_distances(self):
+        """Return the z gaps between adjacent layers.
+
+        Returns
+        -------
+        distances : generator of floats
+            When iterated over, it returns the z distances between
+            the bottommost atom of the higher layer and the topmost
+            atom of the lower one. Distances are in the same order
+            as self.layers. This means that the first element is the
+            gap between the topmost layer and the second layer from
+            the top. Notice that there are self.n_layers - 1 items
+            in `distances`.
+
+        Raises
+        ------
+        MissingLayersError
+            If no layers are available.
+        TooFewLayersError
+            If only one layer is present.
+        """
+        if not self.layers:
+            raise MissingLayersError
+        if self.n_layers == 1:
+            raise TooFewLayersError(f'{type(self).__name__} '
+                                    'has only one layer')
+        return (lay_below.cartori[2] - lay_above.cartbotz                       # TODO: change when flipping .cartpos[2] -- Issue #174
+                for lay_above, lay_below in pairwise(self.layers))
+
+    @property
     def n_atoms(self):
         """Return the number of atoms in this slab."""
         return self.atlist.n_atoms
@@ -283,20 +313,11 @@ class BaseSlab(AtomContainer):
         Raises
         ------
         MissingLayersError
-            If no layers are available
+            If no layers are available.
         TooFewLayersError
             If only one layer is present.
         """
-        if not self.layers:
-            raise MissingLayersError
-
-        if self.n_layers == 1:
-            raise TooFewLayersError(f'{type(self).__name__} '
-                                    'has only one layer')
-
-        # Recall that z increases moving deeper into the solid
-        return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2] -- Issue #174
-                   for lay_above, lay_below in pairwise(self.layers))
+        return min(self.interlayer_distances)
 
     @classmethod
     def from_slab(cls, other):

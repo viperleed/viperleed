@@ -1501,13 +1501,10 @@ class TestSlabLayers:
         assert not new_slab.layers
         assert not new_slab.sublayers
 
-    @with_layers
-    def test_interlayer_spacing(self, args):
-        """Test that interlayer spacing is correctly calculated."""
-        slab, _, info = args
-        expected = info.layer_properties.smallest_interlayer_spacing
-        spacing = slab.smallest_interlayer_spacing
-        assert spacing == pytest.approx(expected, abs=1e-5)
+    def test_interlayer_gap_positive(self, ag100):
+        """Ensure that gaps between layers are always positive."""
+        slab, *_ = ag100
+        assert all(d >0 for d in slab.interlayer_distances)
 
     @with_layers
     def test_interlayer_spacing_raises_without_layers(self, args):
@@ -1524,6 +1521,20 @@ class TestSlabLayers:
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         n_atoms_sublayers = [sublay.n_atoms for sublay in slab.sublayers]
         assert n_atoms_sublayers == info.layer_properties.n_atoms_per_sublayer
+
+    @with_layers
+    def test_smallest_interlayer_spacing(self, args):
+        """Test that interlayer spacing is correctly calculated."""
+        slab, _, info = args
+        expected = info.layer_properties.smallest_interlayer_spacing
+        spacing = slab.smallest_interlayer_spacing
+        assert spacing == pytest.approx(expected, abs=1e-5)
+
+    def test_smallest_interlayer_spacing_few_layers(self, manual_slab_3_atoms):
+        """Check complaints when there's not enough layers."""
+        slab = manual_slab_3_atoms
+        with pytest.raises(err.TooFewLayersError):
+            _ = slab.smallest_interlayer_spacing
 
     @infoless_poscar
     def test_sublayer_sorting(self, args, subtests):
@@ -1600,16 +1611,11 @@ class TestSlabRaises:
         with pytest.raises(TypeError):
             Slab.from_slab('invalid')
 
-    def test_interlayer_spacing_few_layers(self, manual_slab_3_atoms):
-        """Check complaints when there's not enough layers."""
-        slab = manual_slab_3_atoms
-        with pytest.raises(err.TooFewLayersError):
-            _ = slab.smallest_interlayer_spacing
-
     _props = {
         'ab_cell': err.InvalidUnitCellError,
         'c_vector': err.InvalidUnitCellError,
         'fewest_atoms_sublayer': err.MissingSublayersError,
+        'interlayer_distances': err.MissingLayersError,
         'smallest_interlayer_spacing': err.MissingLayersError,
         }
 
