@@ -1071,8 +1071,8 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             font_size = float(assignment.value)
         except ValueError:
             self.rpars.setHaltingLevel(1)
-            raise ParameterIntConversionError(assignment.parameter,
-                                              assignment.value) from None
+            raise ParameterFloatConversionError(assignment.parameter,
+                                                assignment.value) from None
         if font_size <= 0:
             self.rpars.setHaltingLevel(1)
             raise ParameterRangeError(assignment.parameter,
@@ -1103,7 +1103,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         if line_width <= 0:
             self.rpars.setHaltingLevel(1)
             raise ParameterRangeError(assignment.parameter,
-                                      message='Line width must be >= 0.')
+                                      message='Line width must be > 0.')
         self.rpars.PLOT_IV['line_width'] = line_width
 
     def _interpret_plot_iv__overbar(self, assignment):
