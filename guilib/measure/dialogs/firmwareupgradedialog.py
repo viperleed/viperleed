@@ -246,7 +246,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             )
         self._uploader.upload_finished.connect(self._on_upload_finished)
         self._uploader.cli_installation_finished.connect(
-            self._on_cli_install_done
+            self._on_cli_installation
             )
         self._uploader.progress_occurred.connect(self._progress_bar.setValue)
 
@@ -312,7 +312,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         -------
         None.
         """
-        self._on_cli_install_done(False)
+        self._on_cli_installation(False)
         _INVOKE(self._uploader, 'get_arduino_cli_from_git')
         super().open()
 
@@ -387,7 +387,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             )
 
     @qtc.pyqtSlot(bool)
-    def _on_cli_install_done(self, enable):
+    def _on_cli_installation(self, enable):
         """Enable/disable widgets while keeping done button enabled.
 
         Parameters
@@ -402,6 +402,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._ctrl_enable(enable)
         if enable:
             self._enable_upload_button()
+        else:
+            self.buttons['upgrade'].setEnabled(True)
         self.buttons['done'].setEnabled(True)
 
     @qtc.pyqtSlot(dict)
@@ -445,7 +447,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     @qtc.pyqtSlot()
     def _upgrade_arduino_cli(self):
         """Upgrade the Arduino CLI."""
-        self._ctrl_enable(False)
+        self._on_cli_installation(False)
         _INVOKE(self._uploader, 'get_arduino_cli_from_git')
 
     def _update_combo_box(self, which_combo, data_dict):
@@ -514,9 +516,7 @@ class FirmwareUploader(qtc.QObject):
 
     # Emitted when downloading and installing the Arduino CLI, cores and
     # libraries. Sent boolean is true when the full installation
-    # succeeded or when only the upgrading of existing cores has failed.
-    # The upgrading of existing cores is allowed to fail because the
-    # old cores can still be used to operate the FirmwareUploader.
+    # succeeded.
     cli_installation_finished = qtc.pyqtSignal(bool)
 
     # Emitted after connected controllers have been detected. Carries
@@ -855,7 +855,7 @@ class FirmwareUploader(qtc.QObject):
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED
                 )
-            self.cli_installation_finished.emit(True)
+            self.cli_installation_finished.emit(False)
             return
 
         self.progress_occurred.emit(90)
@@ -869,7 +869,7 @@ class FirmwareUploader(qtc.QObject):
                 cli_upgrade.returncode,
                 cli_upgrade.stderr
                 )
-            self.cli_installation_finished.emit(True)
+            self.cli_installation_finished.emit(False)
 
     @qtc.pyqtSlot(dict, FirmwareVersionInfo, Path, bool)
     def compile(self, selected_ctrl, firmware, tmp_path, upload):
