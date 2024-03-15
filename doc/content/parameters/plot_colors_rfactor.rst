@@ -74,7 +74,7 @@ the I(V) plots.
 
 ::
 
-   PLOT_IV line_width = 15
+   PLOT_IV font_size = 15
 
 **Acceptable values:** float values > 0
 
