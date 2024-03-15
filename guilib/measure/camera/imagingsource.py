@@ -591,12 +591,9 @@ class ImagingSourceCamera(abc.CameraABC):
             Each element is a tuple containing the name of a
             camera device and additional information as a dict.
         """
-        device_list = []
-        for name in self.driver.devices:
-            # We append empty dicts as there is no additional
-            # information to pass along.
-            device_list.append((name, {}))
-        return device_list
+        # Use empty dictionaries as there is no
+        # additional information to pass along.
+        return [(name, {}) for name in self.driver.devices]
 
     def open(self):
         """Open the camera device.
