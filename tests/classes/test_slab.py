@@ -1181,13 +1181,11 @@ class TestExtraBulk:
 class TestFromAse:
     """Collection of tests for the from_ase class method."""
 
-    def test_no_ase(self):
+    def test_no_ase(self, monkeypatch):
         """Check complaints when no ase module is present."""
-        # pylint: disable=protected-access
-        surface_slab._HAS_ASE = False
+        monkeypatch.setattr(surface_slab, '_HAS_ASE', False)
         with pytest.raises(ModuleNotFoundError):
             Slab.from_ase(None)
-        surface_slab._HAS_ASE = True
 
     def test_not_an_ase_atoms(self):
         """Check complaints for the wrong type."""
