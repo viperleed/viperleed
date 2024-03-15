@@ -683,6 +683,12 @@ class SurfaceSlab(BaseSlab):
             `rpars.BULK_REPEAT` (if it is not-None) or the z distance
             between the bottommost points of the lowest bulk and lowest
             non-bulk layers.
+
+        Raises
+        ------
+        TooFewLayersError
+            If rpars.BULK_REPEAT is None, and this slab has either
+            no bulk layers or no non-bulk layers.
         """
         if isinstance(rpars.BULK_REPEAT, np.ndarray):
             bulkc = rpars.BULK_REPEAT.copy()
@@ -690,19 +696,28 @@ class SurfaceSlab(BaseSlab):
                 bulkc *= -1
             return bulkc
 
-        if rpars.BULK_REPEAT is None:
-            # Use the distance between the bottommost bulk layer
-            # and the bottommost non-bulk layer, i.e., the current
-            # 'thickness of bulk', plus the gap between 'bulk' and
-            # 'non-bulk' parts.
-            blayers = self.bulk_layers
-            zdiff = (blayers[-1].cartbotz                                       # TODO: Issue #174?
-                     - self.layers[blayers[0].num - 1].cartbotz)
-        else:  # rpars.BULK_REPEAT is float
-            zdiff = rpars.BULK_REPEAT
+        zdiff = (rpars.BULK_REPEAT if rpars.BULK_REPEAT is not None
+                  else self._get_bulk_to_non_bulk_distance())
         if only_z_distance:
             return zdiff
         return self.c_vector * zdiff / self.c_vector[2]
+
+    def _get_bulk_to_non_bulk_distance(self):
+        """Return the z distance from bottommost bulk and non-bulk layers."""
+        bulk_layers = self.bulk_layers
+        non_bulk_layers = self.non_bulk_layers
+        if not bulk_layers:
+            raise TooFewLayersError(
+                f'{type(self).__name__} has no bulk layers. '
+                'Did you forget to .create_layers(rpars)?'
+                )
+        if not non_bulk_layers:
+            raise TooFewLayersError(f'{type(self).__name__} has only bulk '
+                                    'layers. Check LAYER_CUTS.')
+        # Use the distance between the bottommost bulk layer and the
+        # bottommost non-bulk layer, i.e., the current 'thickness of
+        # bulk', plus the gap between 'bulk' and 'non-bulk' parts.
+        return bulk_layers[-1].cartbotz - non_bulk_layers[-1].cartbotz          # TODO: Issue #174?
 
     def get_nearest_neighbours(self):
         """Return the nearest-neighbour distance for all atoms.

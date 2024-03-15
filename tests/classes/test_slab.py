@@ -567,6 +567,28 @@ class TestBulkRepeat:
         assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=atol)
         assert repeat_vector_bulk == pytest.approx(repeat_vector)
 
+    def test_get_raises_no_bulk_layers(self, ag100):
+        """Check complaints when get_bulk_repeat is called without bulk."""
+        slab, rpars, *_ = ag100
+        rpars.BULK_REPEAT = None
+        slab.layers = ()
+        with pytest.raises(err.TooFewLayersError) as exc:
+            slab.get_bulk_repeat(rpars)
+        assert exc.match('no bulk')
+
+    def test_get_raises_only_bulk_layers(self, ag100):
+        """Check complaints when get_bulk_repeat is called without non-bulk."""
+        slab, rpars, *_ = ag100
+        slab.make_bulk_slab(rpars)
+        bulk_twice = slab.bulkslab.with_double_thickness()
+        slab_with_ony_bulk = slab.from_slab(bulk_twice)
+        rpars.BULK_REPEAT = None
+        rpars.N_BULK_LAYERS = 2
+        slab_with_ony_bulk.create_layers(rpars)
+        with pytest.raises(err.TooFewLayersError) as exc:
+            slab_with_ony_bulk.get_bulk_repeat(rpars)
+        assert exc.match('only bulk')
+
     def test_get_returns_stored_bulk_repeat(self, ag100):
         """Test get_bulk_repeat returns stored bulk repeat if available."""
         slab, rpars, *_ = ag100
