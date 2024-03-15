@@ -1166,6 +1166,19 @@ class TestExtraBulk:
                                          rpars.SYMMETRY_EPS.z)
             assert twice.n_atoms == n_before_removal
 
+    @parametrize(delta_c=(-0.09, 0.2))
+    def test_issue_187(self, ag100, delta_c):
+        """Ensure no complaints when adding bulk to a relaxed slab (#187)."""
+        slab, rpars, *_ = ag100
+        # Move all the non.bulk atoms down, as it would be
+        # the case when non.bulk layers are allowed to relax
+        non_bulk_atoms = (at for lay in slab.non_bulk_layers
+                          for at in lay.atlist)
+        for atom in non_bulk_atoms:
+            atom.pos[2] += delta_c
+        slab.update_cartesian_from_fractional(update_origin=True)
+        with not_raises(err.SlabError):
+            slab.with_extra_bulk_units(rpars, 1)
 
 
 @if_ase
