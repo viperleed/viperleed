@@ -569,6 +569,7 @@ class BaseSlab(AtomContainer):
         i = 0
         while i < len(sublists):
             atoms = sublists[i]
+            # pylint: disable-next=magic-value-comparison  # The '2'
             if len(atoms) < 2 or _z_distance(atoms[0], atoms[-1]) <= eps:
                 i += 1
                 continue
@@ -816,7 +817,7 @@ class BaseSlab(AtomContainer):
         # with fewest atoms of the same chemical element)
         lowocclayer = self_copy.fewest_atoms_sublayer
         n_atoms = lowocclayer.n_atoms
-        if n_atoms < 2:
+        if n_atoms < 2:  # pylint: disable=magic-value-comparison
             # Cannot be smaller if there's only 1 atom
             raise AlreadyMinimalError(
                 f'{type(self).__name__}.get_minimal_ab_cell: fewest-atom '
