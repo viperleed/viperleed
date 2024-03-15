@@ -1024,6 +1024,27 @@ class TestEquivalence:
 class TestExtraBulk:
     """Collection of tests for adding additional bulk units to slabs."""
 
+    @fixture(name='check_doubled')
+    def fixture_check_doubled(self, subtests):
+        """Check correct outcome of doubling a bulk slab."""
+        def _check(double, bulk, extra=''):
+            with subtests.test(f'no. atoms{extra}'):
+                assert double.n_atoms == 2*bulk.n_atoms
+            with subtests.test(f'ab_cell unchanged{extra}'):
+                assert double.ab_cell == pytest.approx(bulk.ab_cell)
+            with subtests.test(f'c vector{extra}'):
+                assert double.c_vector == pytest.approx(2*bulk.c_vector)
+            with subtests.test(f'no. layers{extra}'):
+                assert double.n_layers == 2*bulk.n_layers
+            with subtests.test(f'no atom.num duplicates{extra}'):
+                at_num_counts = Counter(at.num for at in double)
+                assert all(c == 1 for c in at_num_counts.values())
+            if not bulk.layers:
+                return
+            with subtests.test(f'all{extra} layers are bulk'):
+                assert all(lay.is_bulk for lay in double)
+        return _check
+
     @fixture(name='check_extra_bulk')
     def fixture_check_extra_bulk(self, subtests):
         """Check correct addition of bulk units."""
@@ -1046,6 +1067,31 @@ class TestExtraBulk:
                 at_num_counts = Counter(at.num for at in bulk_appended)
                 assert all(c == 1 for c in at_num_counts.values())
         return _check
+
+    @with_bulk_repeat
+    def test_double_thickness_no_layers(self, args, check_doubled):
+        """Check correct doubling of a bulk slab that has no layers."""
+        slab, rpars, info = args
+        TestBulkDetect.prepare_to_detect(slab, rpars,
+                                         info.bulk_properties.bulk_like_below)
+        slab.detect_bulk(rpars)
+        bulk = slab.bulkslab
+        bulk.layers = ()
+        double = bulk.with_double_thickness()
+        check_doubled(double, bulk)
+
+    @with_bulk_repeat
+    def test_double_thickness_twice(self, args, check_doubled):
+        """Check repeated calls to with_extra_bulk_units work correctly."""
+        slab, rpars, info = args
+        TestBulkDetect.prepare_to_detect(slab, rpars,
+                                         info.bulk_properties.bulk_like_below)
+        slab.detect_bulk(rpars)
+        bulk = slab.bulkslab
+        double = bulk.with_double_thickness()
+        quadruple = double.with_double_thickness()
+        check_doubled(double, bulk, extra=' double')
+        check_doubled(quadruple, double, extra=' quadruple')
 
     @parametrize(n_cells=(1, 2, 3, 5))
     @with_bulk_repeat
@@ -1120,51 +1166,6 @@ class TestExtraBulk:
                                          rpars.SYMMETRY_EPS.z)
             assert twice.n_atoms == n_before_removal
 
-    @fixture(name='check_doubled')
-    def fixture_check_doubled(self, subtests):
-        """Check correct outcome of doubling a bulk slab."""
-        def _check(double, bulk, extra=''):
-            with subtests.test(f'no. atoms{extra}'):
-                assert double.n_atoms == 2*bulk.n_atoms
-            with subtests.test(f'ab_cell unchanged{extra}'):
-                assert double.ab_cell == pytest.approx(bulk.ab_cell)
-            with subtests.test(f'c vector{extra}'):
-                assert double.c_vector == pytest.approx(2*bulk.c_vector)
-            with subtests.test(f'no. layers{extra}'):
-                assert double.n_layers == 2*bulk.n_layers
-            with subtests.test(f'no atom.num duplicates{extra}'):
-                at_num_counts = Counter(at.num for at in double)
-                assert all(c == 1 for c in at_num_counts.values())
-            if not bulk.layers:
-                return
-            with subtests.test(f'all{extra} layers are bulk'):
-                assert all(lay.is_bulk for lay in double)
-        return _check
-
-    @with_bulk_repeat
-    def test_double_thickness_no_layers(self, args, check_doubled):
-        """Check correct doubling of a bulk slab that has no layers."""
-        slab, rpars, info = args
-        TestBulkDetect.prepare_to_detect(slab, rpars,
-                                         info.bulk_properties.bulk_like_below)
-        slab.detect_bulk(rpars)
-        bulk = slab.bulkslab
-        bulk.layers = ()
-        double = bulk.with_double_thickness()
-        check_doubled(double, bulk)
-
-    @with_bulk_repeat
-    def test_double_thickness_twice(self, args, check_doubled):
-        """Check repeated calls to with_extra_bulk_units work correctly."""
-        slab, rpars, info = args
-        TestBulkDetect.prepare_to_detect(slab, rpars,
-                                         info.bulk_properties.bulk_like_below)
-        slab.detect_bulk(rpars)
-        bulk = slab.bulkslab
-        double = bulk.with_double_thickness()
-        quadruple = double.with_double_thickness()
-        check_doubled(double, bulk, extra=' double')
-        check_doubled(quadruple, double, extra=' quadruple')
 
 
 @if_ase
