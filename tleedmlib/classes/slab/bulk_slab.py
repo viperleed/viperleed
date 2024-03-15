@@ -117,6 +117,27 @@ class BulkSlab(BaseSlab):
             return self.c_vector[2] - self.layers[0].thickness
         return super().smallest_interlayer_spacing
 
+    @classmethod
+    def from_slab(cls, other):
+        """Return a `cls` instance with attributes deep-copied from `other`.
+
+        Parameters
+        ----------
+        other : BaseSlab
+            The slab whose attributes are to be copied.
+
+        Returns
+        -------
+        new_slab : SurfaceSlab
+            A new slab instance with attributes copied from
+            `other`. Notice that no modification will occur
+            for new_slab.layers. This means that some of the
+            .layers of `new_slab` may be non-bulk. The same
+            holds true for atoms. The caller is responsible
+            for modifying layer.is_bulk after this call.
+        """
+        return super().from_slab(other)
+
     # Disabled too-many-arguments below because 7/5 seem better than
     # packing these arguments into some data structure which would
     # make the call to this method harder to follow.

@@ -206,6 +206,30 @@ class SurfaceSlab(BaseSlab):
         self.update_cartesian_from_fractional()
         return self
 
+    @classmethod
+    def from_slab(cls, other):
+        """Return a `cls` instance with attributes deep-copied from `other`.
+
+        Parameters
+        ----------
+        other : BaseSlab
+            The slab whose attributes are to be copied.
+
+        Returns
+        -------
+        new_slab : SurfaceSlab
+            A new slab instance with attributes copied from `other`.
+            `new_slab` will not have .layers and .sublayers defined
+            if other.is_bulk. This is to prevent `new_slab` from
+            having too many (i.e., more than RParams.N_BULK_LAYERS)
+            bulk layers.
+        """
+        new_slab = super().from_slab(other)
+        if other.is_bulk:
+            new_slab.layers = ()
+            new_slab.sublayers = ()
+        return new_slab
+
     # Used only in ensure_minimal_bulk_ab_cell
     def _change_bulk_cell(self, rpars, new_ab_cell):
         """Assign a new 2D unit cell to the bulk, if possible.

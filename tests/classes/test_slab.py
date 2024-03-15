@@ -1470,6 +1470,15 @@ class TestSlabLayers:
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         assert slab.n_sublayers == info.layer_properties.n_sublayers
 
+    def test_from_bulk_slab_clears_layers(self, ag100):
+        """Check that SurfaceSlab.from_slab(bulk) has no (sub)layers."""
+        slab, rpars, *_ = ag100
+        bulk = slab.make_bulk_slab(rpars)
+        assert bulk.n_layers == 1
+        new_slab = Slab.from_slab(bulk)
+        assert not new_slab.layers
+        assert not new_slab.sublayers
+
     @with_layers
     def test_interlayer_spacing(self, args):
         """Test that interlayer spacing is correctly calculated."""
