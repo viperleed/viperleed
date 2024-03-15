@@ -276,19 +276,29 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             return
         self._make_cli_install_disclaimer()
 
-    def _ctrl_enable(self, enabled):
-        """Enable/disable all controls."""
+    def _ctrl_enable(self, enable):
+        """Enable/disable all widgets.
+
+        Parameters
+        ----------
+        enable : bool
+            Whether widgets should be enabled.
+
+        Returns
+        -------
+        None.
+        """
         widgets = (*self.buttons.values(), *self.controls.values())
         for widget in widgets:
-            widget.setEnabled(enabled)
+            widget.setEnabled(enable)
 
     @qtc.pyqtSlot()
     def _detect_controllers(self):
         """Detect connected ViPErLEED controllers."""
         self._enable_buttons(False)
-        emit_controllers = True                          # TODO: I'm not a fan of this name!
+        detect_viperino = True
         _INVOKE(self._uploader, 'get_viperleed_hardware',
-                qtc.Q_ARG(bool, emit_controllers))
+                qtc.Q_ARG(bool, detect_viperino))
 
     @qtc.pyqtSlot()
     def _download_and_install_arduino_cli(self):
@@ -297,13 +307,27 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         This will trigger the download and installation of the Arduino
         CLI. The FirmwareUpgradeDialog will be opened while the CLI
         is being installed.
+
+        Returns
+        -------
+        None.
         """
         self._on_cli_install_done(False)
         _INVOKE(self._uploader, 'get_arduino_cli_from_git')
         super().open()
 
     def _enable_buttons(self, enable):
-        """Enable/disable buttons."""
+        """Enable/disable buttons.
+
+        Parameters
+        ----------
+        enable : bool
+            Whether buttons should be enabled.
+
+        Returns
+        -------
+        None.
+        """
         for button in self.buttons.values():
             button.setEnabled(enable)
 
@@ -364,7 +388,17 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
     @qtc.pyqtSlot(bool)
     def _on_cli_install_done(self, enable):
-        """Enable/disable controls while keeping done enabled."""
+        """Enable/disable widgets while keeping done button enabled.
+
+        Parameters
+        ----------
+        enable : bool
+            Whether widgets should be enabled.
+
+        Returns
+        -------
+        None.
+        """
         self._ctrl_enable(enable)
         if enable:
             self._enable_upload_button()
@@ -372,7 +406,17 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
     @qtc.pyqtSlot(dict)
     def _on_controllers_detected(self, data_dict):
-        """Display detected controllers and enable buttons."""
+        """Display detected controllers and enable buttons.
+
+        Parameters
+        ----------
+        data_dict : dict
+            A dict of available controllers.
+
+        Returns
+        -------
+        None.
+        """
         self._enable_buttons(True)
         self._update_combo_box('controllers', data_dict)
 
@@ -405,7 +449,19 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         _INVOKE(self._uploader, 'get_arduino_cli_from_git')
 
     def _update_combo_box(self, which_combo, data_dict):
-        """Replace displayed firmware/controllers with the detected ones."""
+        """Replace displayed firmware/controllers with the detected ones.
+        
+        Parameters
+        ----------
+        which_combo : str
+            A str determining which QComboBox should be updated.
+        data_dict : dict
+            A dict of available controllers or firmware.
+
+        Returns
+        -------
+        None.
+        """
         self.controls[which_combo].clear()
         for item_text, item_data in data_dict.items():
             self.controls[which_combo].addItem(item_text, userData=item_data)
@@ -476,6 +532,7 @@ class FirmwareUploader(qtc.QObject):
 
     def __init__(self, parent=None):
         """Initialise the firmware uploader."""
+        super().__init__(parent=parent)
         self.base_path = Path().resolve() / 'hardware/arduino/arduino-cli'
         self.network = qtn.QNetworkAccessManager()
         self.network.setTransferTimeout(timeout=2000)
@@ -484,7 +541,6 @@ class FirmwareUploader(qtc.QObject):
         # installation. It is determined automatically before
         # downloading the CLI.
         self._cli_os_name = ''
-        super().__init__(parent=parent)
 
     def _get_arduino_cores(self):
         """Return a dictionary of the cores currently installed.
@@ -660,7 +716,7 @@ class FirmwareUploader(qtc.QObject):
         ----------
         reply : QNetworkReply
             Contains the Arduino CLI in a .zip archive
-        
+
         Returns
         -------
         None.
@@ -683,7 +739,7 @@ class FirmwareUploader(qtc.QObject):
             Should be one of the Arduino core names (e.g., arduino:avr).
             It's easier to get this information from a call to
             get_viperleed_hardware()
-        
+
         Returns
         -------
         None.
@@ -761,15 +817,15 @@ class FirmwareUploader(qtc.QObject):
         return arduino_cli
 
     def _get_boards(self):
-        """Get a dict of the available Arduino boards.
+        """Get a list of the available Arduino boards.
 
         Returns
         -------
-        dict
+        list
         """
         cli = self._get_arduino_cli()
         if not cli:
-            return False
+            return []
         cli = subprocess.run([cli, 'board', 'list', '--format', 'json'],
                               capture_output=True)
         try:
@@ -781,7 +837,7 @@ class FirmwareUploader(qtc.QObject):
                 cli.stderr
                 )
             self.cli_installation_finished.emit(False)
-            return False
+            return []
         boards = json.loads(cli.stdout)
         return [b for b in boards if 'matching_boards' in b]
 
@@ -816,13 +872,14 @@ class FirmwareUploader(qtc.QObject):
             self.cli_installation_finished.emit(True)
 
     @qtc.pyqtSlot(dict, FirmwareVersionInfo, Path, bool)
-    def compile(self, s_ctrl, firmware, tmp_path, upload):
+    def compile(self, selected_ctrl, firmware, tmp_path, upload):
         """Compile viper-ino for the specified board.
 
         Parameters
         ----------
-        s_ctrl : dict
-            A dict representing the selected controller.
+        selected_ctrl : dict
+            A dict representing the selected controller. It contains the
+            controller name, COM port, and fully qualified board name.
         firmware : FirmwareVersionInfo
             A namedtuple representing the selected firmware that is
             to be uploaded to the selected controller. Contains the
@@ -834,21 +891,25 @@ class FirmwareUploader(qtc.QObject):
         upload : bool
             If true, the extracted firmware will be uploaded to the
             selected controller.
+
+        Returns
+        -------
+        None.
         """
         self.progress_occurred.emit(0)
         # Check if the selected controller is present at all.
         available_ctrls = self.get_viperleed_hardware(False)
 
         # Return if Arduino CLI was not found to keep buttons disabled.
-        if available_ctrls == False:
-            return False
+        if not available_ctrls:
+            return
 
-        if not any(available_ctrls[c]['name'] == s_ctrl['name'] and
-                   available_ctrls[c]['port'] == s_ctrl['port']
+        if not any(available_ctrls[c]['name'] == selected_ctrl['name'] and
+                   available_ctrls[c]['port'] == selected_ctrl['port']
                    for c in available_ctrls):
             base.emit_error(self,
                             ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
-                            s_ctrl['port'])
+                            selected_ctrl['port'])
             self.controllers_detected.emit(available_ctrls)
             self.upload_finished.emit()
             return
@@ -861,13 +922,13 @@ class FirmwareUploader(qtc.QObject):
             firmware_zip.extractall(tmp_path)
         firmware_extracted = tmp_path / firmware.folder_name / 'viper-ino'
         # Add generic inner folder structure to find .ino file
-        argv = ['compile', '--clean', '-b', s_ctrl['fqbn'], firmware_extracted]
+        argv = ['compile', '--clean', '-b', selected_ctrl['fqbn'], firmware_extracted]
         if upload:
-            argv.extend(['-u', '-p', s_ctrl['port']])
+            argv.extend(['-u', '-p', selected_ctrl['port']])
         self.progress_occurred.emit(20)
         cli = subprocess.run([cli, *argv], capture_output=True)
         self.progress_occurred.emit(80)
-        # cli = subprocess.run([cli, *argv, '--verbose'], capture_output=True)
+        # cli = subprocess.run([cli, *argv, '--verbose'], capture_output=True) TODO: track upload progress and adjust progress bar accordingly
         try:
             cli.check_returncode()
         except subprocess.CalledProcessError:
@@ -892,9 +953,12 @@ class FirmwareUploader(qtc.QObject):
         """Obtain the latest version of Arduino CLI from GitHub.
 
         Download and extract the latest version of the Arduino
-        command-line interface executables for the current platform.
-        For simplicity, the 32bit version is downloaded for both Linux
-        and Windows.
+        command-line interface executables for the current platform
+        asynchronously and upgrade libraries/cores. For simplicity, the
+        32bit version is downloaded for both Linux and Windows. First
+        the required CLI version is detected, then it is downloaded from
+        github. When the installation is finished, or has failed, the
+        cli_installation_finished signal is emitted.
 
         Returns
         -------
@@ -909,24 +973,45 @@ class FirmwareUploader(qtc.QObject):
         self.network.get(request)
 
     @qtc.pyqtSlot(bool)
-    def get_viperleed_hardware(self, emit_controllers):
-        """Return a list of the ViPErLEED Arduino boards.
+    def get_viperleed_hardware(self, detect_viperino):
+        """Return a dict of the ViPErLEED Arduino boards.
 
         In fact, it returns all the ViPErLEED as well as Arduino Micro
         boards. After calling this function, one should decide whether
         to keep only those boards whose 'name' contains 'ViPErLEED'.
+        
+        Parameters
+        ----------
+        detect_viperino : bool
+            ViPErLEED controller types will be detected if true.
 
         Returns
         -------
         viper_boards : dict
-            The detected Arduino Micro boards.
+            A dict of the detected Arduino Micro boards containing dicts
+            with information about the controllers. The following
+            {key: value} pairs are present in controller dicts.
+
+            'port': str
+                COM port address
+            'name': str
+                Board name
+            'fqbn': str
+                Fully qualified board name
+            'version': hardwarebase.Version or str
+                Firmware version of the device, if the information is
+                available, otherwise str
+            'box_id': int or str
+                int if box_id is set, str otherwise
+            'name_raw': str
+                Controller type name
         """
         viperleed_names = ('ViPErLEED', 'Arduino Micro')
         boards = self._get_boards()
 
         # Return if Arduino CLI was not found to keep buttons disabled.
-        if boards == False:
-            return False
+        if not boards:
+            return {}
 
         # Get all available Arduino Micro controllers.
         board_names = [b['matching_boards'][0]['name'] for b in boards]
@@ -949,22 +1034,27 @@ class FirmwareUploader(qtc.QObject):
                 'version': NOT_SET,
                 'box_id': NOT_SET,
                 # name_raw is used for firmware detection.
-                'name_raw': None,
+                'name_raw': '',
                 }
 
-        if not emit_controllers:
+        if not detect_viperino:
             return ctrl_dict
 
         # Detect ViPErLEED controllers.
         ctrl_with_id = []
-        for name, (cls, info) in base.get_devices('controller').items():
-            for ctrl in ctrl_dict:
-                if ctrl_dict[ctrl]['port'] == name.split(' (')[1][:-1]:
-                    if info.get('firmware'):
-                        ctrl_dict[ctrl]['version'] = info['firmware']
-                    if info.get('box_id') != None:
-                        ctrl_dict[ctrl]['box_id'] = info['box_id']
-                        ctrl_with_id.append(ctrl)
+        for name, (_, info) in base.get_devices('controller').items():
+            port = name.split(' (')[1][:-1]
+            ctrl = next((c for c in ctrl_dict
+                        if ctrl_dict[c]['port'] == port), None)
+            if not ctrl:
+                continue
+            ctrl_dict[ctrl]['version'] = info.get('firmware', NOT_SET)
+            box_id = info.get('box_id')
+            # box_id of the measuring ViPErinoController is 0! Check
+            # must be != None because of that.
+            if box_id != None:
+                ctrl_dict[ctrl]['box_id'] = box_id
+                ctrl_with_id.append(ctrl)
 
         # Adjust name for ViPErLEED controllers.
         for ctrl in ctrl_with_id:
@@ -975,15 +1065,11 @@ class FirmwareUploader(qtc.QObject):
             ctrl_dict[new_ctrl_name] = ctrl_dict.pop(ctrl)
 
         self.controllers_detected.emit(ctrl_dict)
+        return ctrl_dict
 
     @qtc.pyqtSlot()
     def is_cli_installed(self):
-        """Check if Arduino CLI is installed.
-
-        Returns
-        -------
-        None.
-        """
+        """Check if Arduino CLI is installed."""
         cli = self._get_arduino_cli()
         self.cli_found.emit(bool(cli))
 
