@@ -713,7 +713,8 @@ class SurfaceSlab(BaseSlab):
                 )
         if not non_bulk_layers:
             raise TooFewLayersError(f'{type(self).__name__} has only bulk '
-                                    'layers. Check LAYER_CUTS.')
+                                    'layers. Check LAYER_CUTS or explicitly '
+                                    'define as BULK_REPEAT.')
         # Use the distance between the bottommost bulk layer and the
         # bottommost non-bulk layer, i.e., the current 'thickness of
         # bulk', plus the gap between 'bulk' and 'non-bulk' parts.
