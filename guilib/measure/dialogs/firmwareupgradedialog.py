@@ -452,7 +452,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
     def _update_combo_box(self, which_combo, data_dict):
         """Replace displayed firmware/controllers with the detected ones.
-        
+
         Parameters
         ----------
         which_combo : str
@@ -569,9 +569,16 @@ class FirmwareUploader(qtc.QObject):
             'boards': dict
                 Dictionary of Arduino boards that use this core
         """
-        cli = self._get_arduino_cli()
-        if not cli:
+        try:
+            cli = self._get_arduino_cli()
+        except FileNotFoundError:
+            base.emit_error(self,
+                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
+                self.base_path
+                )
+            self.cli_installation_finished.emit(False)
             return {}
+
         cli = subprocess.run([cli, 'core', 'list', '--format', 'json'],
                               capture_output=True)
         try:
@@ -744,9 +751,16 @@ class FirmwareUploader(qtc.QObject):
         -------
         None.
         """
-        cli = self._get_arduino_cli()
-        if not cli:
+        try:
+            cli = self._get_arduino_cli()
+        except FileNotFoundError:
+            base.emit_error(self,
+                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
+                self.base_path
+                )
+            self.cli_installation_finished.emit(False)
             return
+
         cli = subprocess.run([cli, 'core', 'install', core_name],
                               capture_output=True)
         try:
@@ -776,6 +790,11 @@ class FirmwareUploader(qtc.QObject):
         -------
         arduino_cli : Path
             Path to correct executable
+
+        Raises
+        ------
+        FileNotFoundError
+            If the Arduino CLI was not found.
         """
         # See if, by chance, it is available system-wide
         try:
@@ -796,24 +815,14 @@ class FirmwareUploader(qtc.QObject):
                 # Get the executables from github
                 self.get_arduino_cli_from_git()
             else:
-                base.emit_error(self,
-                    ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
-                    self.base_path
-                    )
-                self.cli_installation_finished.emit(False)
-                return
+                raise FileNotFoundError('Arduino CLI not found')
 
         # See if there is the correct executable in arduino-cli
         arduino_cli = self.base_path / 'arduino-cli'
         if 'win' in sys.platform and not 'darwin' in sys.platform:
             arduino_cli = arduino_cli.with_suffix('.exe')
         if not arduino_cli.is_file():
-            base.emit_error(self,
-                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
-                self.base_path
-                )
-            self.cli_installation_finished.emit(False)
-            return
+            raise FileNotFoundError('Arduino CLI not found')
         return arduino_cli
 
     def _get_boards(self):
@@ -823,9 +832,16 @@ class FirmwareUploader(qtc.QObject):
         -------
         list
         """
-        cli = self._get_arduino_cli()
-        if not cli:
+        try:
+            cli = self._get_arduino_cli()
+        except FileNotFoundError:
+            base.emit_error(self,
+                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
+                self.base_path
+                )
+            self.cli_installation_finished.emit(False)
             return []
+
         cli = subprocess.run([cli, 'board', 'list', '--format', 'json'],
                               capture_output=True)
         try:
@@ -844,8 +860,14 @@ class FirmwareUploader(qtc.QObject):
     @qtc.pyqtSlot()
     def _upgrade_arduino_cores_and_libraries(self):                                                      # TODO: add progress bar
         """Upgrade the outdated cores and libraries."""
-        cli = self._get_arduino_cli()
-        if not cli:
+        try:
+            cli = self._get_arduino_cli()
+        except FileNotFoundError:
+            base.emit_error(self,
+                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
+                self.base_path
+                )
+            self.cli_installation_finished.emit(False)
             return
 
         cli_update = subprocess.run([cli, 'update'], capture_output=True)
@@ -914,8 +936,14 @@ class FirmwareUploader(qtc.QObject):
             self.upload_finished.emit()
             return
 
-        cli = self._get_arduino_cli()
-        if not cli:
+        try:
+            cli = self._get_arduino_cli()
+        except FileNotFoundError:
+            base.emit_error(self,
+                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
+                self.base_path
+                )
+            self.cli_installation_finished.emit(False)
             return
 
         with ZipFile(firmware.path) as firmware_zip:
@@ -979,7 +1007,7 @@ class FirmwareUploader(qtc.QObject):
         In fact, it returns all the ViPErLEED as well as Arduino Micro
         boards. After calling this function, one should decide whether
         to keep only those boards whose 'name' contains 'ViPErLEED'.
-        
+
         Parameters
         ----------
         detect_viperino : bool
@@ -1070,8 +1098,11 @@ class FirmwareUploader(qtc.QObject):
     @qtc.pyqtSlot()
     def is_cli_installed(self):
         """Check if Arduino CLI is installed."""
-        cli = self._get_arduino_cli()
-        self.cli_found.emit(bool(cli))
+        try:
+            cli = self._get_arduino_cli()
+            self.cli_found.emit(True)
+        except FileNotFoundError:
+            self.cli_found.emit(False)
 
     def moveToThread(self, thread):
         """Move self and self.network to thread."""
