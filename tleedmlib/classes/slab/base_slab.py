@@ -374,7 +374,14 @@ class BaseSlab(AtomContainer):
             The atoms added to this slab.
         new_layers : tuple
             The Layer objects added to this slab.
+
+        Raises
+        ------
+        ValueError
+            If `bulk_layers` is empty.
         """
+        if not bulk_layers:
+            raise ValueError('_add_one_bulk_cell: no bulk_layers to add.')
         if new_atoms_start_index is None:
             new_atoms_start_index = self.n_atoms + 1
         # The mess with needing three different components of the
