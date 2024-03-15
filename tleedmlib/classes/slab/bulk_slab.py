@@ -96,7 +96,7 @@ class BulkSlab(BaseSlab):
         return True
 
     @property
-    def smallest_interlayer_spacing(self):
+    def smallest_interlayer_gap(self):
         """Return the smallest z gap between two adjacent layers.
 
         Make sure to update_layer_coordinates() before.
@@ -105,8 +105,8 @@ class BulkSlab(BaseSlab):
         -------
         min_dist : float
             The smallest of the z distances between adjacent layers.
-            Distances are calculated between the topmost atom of the
-            lower layer and the bottommost one of the higher.
+            Distances are calculated between the bottommost atom of
+            the higher layer and the topmost atom of the lower one.
 
         Raises
         ------
@@ -115,7 +115,7 @@ class BulkSlab(BaseSlab):
         """
         if self.n_layers == 1:
             return self.c_vector[2] - self.layers[0].thickness
-        return super().smallest_interlayer_spacing
+        return super().smallest_interlayer_gap
 
     @classmethod
     def from_slab(cls, other):

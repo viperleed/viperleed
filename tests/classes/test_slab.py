@@ -547,7 +547,7 @@ class TestBulkDetect:
         slab, rpars, *_ = make_poscar(poscar_slabs.SLAB_Cu2O_111)
         rpars.BULK_LIKE_BELOW = 0.35
         slab.detect_bulk(rpars)
-        assert slab.smallest_interlayer_spacing >= 1.0
+        assert slab.smallest_interlayer_gap >= 1.0
 
 
 class TestBulkRepeat:
@@ -1506,7 +1506,7 @@ class TestSlabLayers:
     def test_interlayer_gap_positive(self, ag100):
         """Ensure that gaps between layers are always positive."""
         slab, *_ = ag100
-        assert all(d >0 for d in slab.interlayer_distances)
+        assert all(d >0 for d in slab.interlayer_gaps)
 
     @with_layers
     def test_interlayer_spacing_raises_without_layers(self, args):
@@ -1514,7 +1514,7 @@ class TestSlabLayers:
         slab, *_ = args
         slab.layers = ()
         with pytest.raises(err.MissingLayersError):
-            _ = slab.smallest_interlayer_spacing
+            _ = slab.smallest_interlayer_gap
 
     @with_layers
     def test_n_atoms_per_sublayer(self, args):
@@ -1525,18 +1525,18 @@ class TestSlabLayers:
         assert n_atoms_sublayers == info.layer_properties.n_atoms_per_sublayer
 
     @with_layers
-    def test_smallest_interlayer_spacing(self, args):
+    def test_smallest_interlayer_gap(self, args):
         """Test that interlayer spacing is correctly calculated."""
         slab, _, info = args
-        expected = info.layer_properties.smallest_interlayer_spacing
-        spacing = slab.smallest_interlayer_spacing
+        expected = info.layer_properties.smallest_interlayer_gap
+        spacing = slab.smallest_interlayer_gap
         assert spacing == pytest.approx(expected, abs=1e-5)
 
-    def test_smallest_interlayer_spacing_few_layers(self, manual_slab_3_atoms):
+    def test_smallest_interlayer_gap_few_layers(self, manual_slab_3_atoms):
         """Check complaints when there's not enough layers."""
         slab = manual_slab_3_atoms
         with pytest.raises(err.TooFewLayersError):
-            _ = slab.smallest_interlayer_spacing
+            _ = slab.smallest_interlayer_gap
 
     @infoless_poscar
     def test_sublayer_sorting(self, args, subtests):
@@ -1617,8 +1617,8 @@ class TestSlabRaises:
         'ab_cell': err.InvalidUnitCellError,
         'c_vector': err.InvalidUnitCellError,
         'fewest_atoms_sublayer': err.MissingSublayersError,
-        'interlayer_distances': err.MissingLayersError,
-        'smallest_interlayer_spacing': err.MissingLayersError,
+        'interlayer_gaps': err.MissingLayersError,
+        'smallest_interlayer_gap': err.MissingLayersError,
         }
 
     @parametrize('attr_name,exc', _props.items(), ids=_props)

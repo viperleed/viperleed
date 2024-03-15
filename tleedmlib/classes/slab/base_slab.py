@@ -248,8 +248,8 @@ class BaseSlab(AtomContainer):
         return False
 
     @property
-    def interlayer_distances(self):
-        """Return the z gaps between adjacent layers.
+    def interlayer_gaps(self):
+        """Return the z distances between pairs of adjacent layers.
 
         Returns
         -------
@@ -298,7 +298,7 @@ class BaseSlab(AtomContainer):
         return tuple(lay for lay in self.layers if not lay.is_bulk)
 
     @property
-    def smallest_interlayer_spacing(self):
+    def smallest_interlayer_gap(self):
         """Return the smallest z gap between two adjacent layers.
 
         Make sure to update_layer_coordinates() before.
@@ -307,8 +307,8 @@ class BaseSlab(AtomContainer):
         -------
         min_dist : float
             The smallest of the z distances between adjacent layers.
-            Distances are calculated between the topmost atom of the
-            lower layer and the bottommost one of the higher.
+            Distances are calculated between the bottommost atom of
+            the higher layer and the topmost atom of the lower one.
 
         Raises
         ------
@@ -317,7 +317,7 @@ class BaseSlab(AtomContainer):
         TooFewLayersError
             If only one layer is present.
         """
-        return min(self.interlayer_distances)
+        return min(self.interlayer_gaps)
 
     @classmethod
     def from_slab(cls, other):

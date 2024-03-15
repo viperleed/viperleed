@@ -1315,7 +1315,7 @@ class SurfaceSlab(BaseSlab):
         # We can only cover the case in which the BULK_REPEAT
         # gives negative interlayer distances. See discussion
         # at https://github.com/viperleed/viperleed/issues/187
-        if any(d < eps for d in bulk_appended.interlayer_distances):
+        if any(d < eps for d in bulk_appended.interlayer_gaps):
             raise SlabError('BULK_REPEAT is too small. Gives layers '
                             'with negative interlayer distances')
 

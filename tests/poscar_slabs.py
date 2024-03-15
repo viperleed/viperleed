@@ -287,7 +287,7 @@ class CasePOSCARSlabs:
             n_atoms_per_layer=[1, 1, 1, 1, 1, 1],
             n_atoms_per_sublayer=[1, 1, 1, 1, 1, 1],
             n_sublayers=6,
-            smallest_interlayer_spacing=2.03646,
+            smallest_interlayer_gap=2.03646,
             )
         info.nearest_neighbors = NearestNeighborInfo(
             nearest_neighbor_distances={1: 2.88, 2: 2.88, 3: 2.88,
