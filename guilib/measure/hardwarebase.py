@@ -13,11 +13,12 @@ by multiple ViPErLEED hardware objects.
 """
 
 from abc import ABCMeta
+from dataclasses import dataclass, field
+import enum
 import inspect
 from pathlib import Path
-import enum
-import sys
 import re
+import sys
 
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
 
@@ -418,8 +419,8 @@ def get_devices(package):
         if hasattr(cls, 'list_devices'):
             dummy_instance = cls()
             dev_list = dummy_instance.list_devices()
-            for dev_name, dev_info in dev_list:
-                devices[dev_name] = (cls, dev_info)
+            for device in dev_list:
+                devices[device.name] = (cls, device.more)
     return devices
 
 
@@ -456,6 +457,26 @@ def safe_disconnect(signal, *slot):
 
 
 ################################### CLASSES ###################################
+
+
+@dataclass
+class DeviceInfo:
+    """A container for information about discovered devices.
+
+    Attributes
+    ----------
+    name : str
+        Unique name identifying the discovered device
+    more : dict
+        Extra, optional, information about the discovered device.
+    """
+    name: str
+    more: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        """Check that we have a string name."""
+        if not isinstance(self.name, str):
+            raise TypeError(f'{type(self).__name__}: name must be a string')
 
 
 class QMetaABC(ABCMeta, type(qtc.QObject)):

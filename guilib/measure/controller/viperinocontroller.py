@@ -492,7 +492,14 @@ class ViPErinoController(abc.MeasureControllerABC):
         return handler
 
     def list_devices(self):  # too-complex, too-many-branches
-        """List Arduino Micro VipErLEED hardware -- can be slow."""
+        """List Arduino Micro VipErLEED hardware -- can be slow.
+
+        Returns
+        -------
+        device_list : list
+            Each element is a DeviceInfo instance containing the name
+            of a controller and additional information as a dict.
+        """
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]
 
@@ -529,7 +536,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
                 txt = f"{ctrl.name} ({ctrl.port_name})"
-                device_list.append((txt, hardware))
+                device_list.append(base.DeviceInfo(txt, hardware))
             else:
                 print("Not a ViPErLEED controller at", ctrl.port_name,
                       hardware, flush=True)
@@ -889,8 +896,8 @@ class ViPErinoController(abc.MeasureControllerABC):
         settings_name = self.settings.get("controller", "device_name",
                                           fallback='')
         if settings_name != self.name:
-            ports = {name.split(' (')[0]: name.split(' (')[1][:-1]
-                     for name, _ in self.list_devices()}
+            ports = {ctrl.name.split(' (')[0]: ctrl.name.split(' (')[1][:-1]
+                     for ctrl in self.list_devices()}
             correct_port = ports.get(self.name, '')
             if correct_port:
                 self.port_name = correct_port  # Also connects

@@ -587,13 +587,13 @@ class ImagingSourceCamera(abc.CameraABC):
 
         Returns
         -------
-        devices : list
-            Each element is a tuple containing the name of a
-            camera device and additional information as a dict.
+        list
+            Each element is a DeviceInfo instance containing the
+            name of a camera and additional information as a dict.
         """
         # Use empty dictionaries as there is no
         # additional information to pass along.
-        return [(name, {}) for name in self.driver.devices]
+        return [base.DeviceInfo(name) for name in self.driver.devices]
 
     def open(self):
         """Open the camera device.
