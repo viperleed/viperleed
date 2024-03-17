@@ -1526,7 +1526,7 @@ class TestSlabLayers:
     def test_interlayer_gap_positive(self, ag100):
         """Ensure that gaps between layers are always positive."""
         slab, *_ = ag100
-        assert all(d >0 for d in slab.interlayer_gaps)
+        assert all(d > 0 for d in slab.interlayer_gaps)
 
     @with_layers
     def test_interlayer_spacing_raises_without_layers(self, args):
