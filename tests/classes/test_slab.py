@@ -90,17 +90,18 @@ def factory_check_identical(subtests):
             assert all(at.el == at2.el for at, at2 in zip(slab, other))
 
         # Compare coordinates including replicas for edge/corner atoms
+        eps = 1e-4
         frac_slab, cart_slab = _get_frac_and_cart(slab)
         frac_other, cart_other = _get_frac_and_cart(other)
         cart_other, _ = add_edges_and_corners(cart_other, frac_other,
-                                              (1e-4,)*3, other.ucell.T)
+                                              (eps,)*3, other.ucell.T)
         frac_other = cart_other.dot(np.linalg.inv(other.ucell.T))
         with subtests.test('atom pos'):
             frac_dist = euclid_distance(frac_slab, frac_other).min(axis=1)
-            assert all(frac_dist <= 1e-4)
+            assert all(frac_dist <= eps)
         with subtests.test('atom cartpos'):
             cart_dist = euclid_distance(cart_slab, cart_other).min(axis=1)
-            assert all(cart_dist <= 1e-4)
+            assert all(cart_dist <= eps)
     return check_identical
 
 
@@ -726,7 +727,7 @@ class TestBulkUcell:
         """Ensure that atoms in slab are centred around cell midpoint in z."""
         atom_c_frac = [at.pos[2] for at in slab]
         midpos = (max(atom_c_frac) + min(atom_c_frac)) / 2
-        assert 0.48 < midpos < 0.52
+        assert midpos == pytest.approx(0.5, abs=0.02)
 
     @fixture(name='check_reduced_correctly')
     def factory_check_reduced_correctly(self, subtests):
@@ -1135,9 +1136,7 @@ class TestExtraBulk:
 
     @parametrize(n_cells=(1, 2, 3, 5))
     @with_bulk_repeat
-    # pylint: disable-next=too-many-arguments  # Mostly fixtures
-    def test_extra_bulk_thick_bulk(self, args, n_cells, check_extra_bulk,
-                                   subtests, with_one_thick_bulk):
+    def test_extra_bulk_thick_bulk(self, args, n_cells, with_one_thick_bulk):
         """Check correct addition of a thicker-than-repeat bulk."""
         with_one_thick_bulk(*args)
         slab, rpars, info = args
