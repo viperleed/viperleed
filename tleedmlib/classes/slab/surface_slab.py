@@ -696,7 +696,7 @@ class SurfaceSlab(BaseSlab):
             return bulkc
 
         zdiff = (rpars.BULK_REPEAT if rpars.BULK_REPEAT is not None
-                  else self._get_bulk_to_non_bulk_distance())
+                 else self._get_bulk_to_non_bulk_distance())
         if only_z_distance:
             return zdiff
         return self.c_vector * zdiff / self.c_vector[2]
