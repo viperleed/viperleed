@@ -754,7 +754,7 @@ class SurfaceSlab(BaseSlab):
         # a bunch of zeros since all atom_coords_center are a
         # subset of atom_coords_supercell: their first nearest
         # neighbour is themselves
-        distances, _ =  tree.query(atom_coords_center, k=2)
+        distances, _ = tree.query(atom_coords_center, k=2)
         distances = distances[:, 1]  # First column is zeros
         return dict(zip(self, distances))
 
@@ -895,7 +895,7 @@ class SurfaceSlab(BaseSlab):
             self.bulkslab.create_sublayers(epsz)
 
         n_bulk_lay = self.bulkslab.n_sublayers
-        if self.n_sublayers < 2*n_bulk_lay:
+        if self.n_sublayers < 2 * n_bulk_lay:
             raise NoBulkRepeatError(
                 f'{type(self).__name__}.identify_bulk_repeat: failed. '
                 f'Too few sublayers in slab ({self.n_sublayers}) with '

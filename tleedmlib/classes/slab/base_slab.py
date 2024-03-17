@@ -910,7 +910,7 @@ class BaseSlab(AtomContainer):
         # Finally, consider that the new unit cell area
         # must be an integer divisor of the current one
         candidate_ab_cells_and_area_ratios = (
-            (ab, ab_cell_area/area)
+            (ab, ab_cell_area / area)
             for ab, area in candidate_ab_cells_and_areas
             )
         acceptable_ab_cells_and_ratios = (
