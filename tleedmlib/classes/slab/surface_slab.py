@@ -1001,6 +1001,7 @@ class SurfaceSlab(BaseSlab):
         bulk_slab.clear_symmetry_and_ucell_history()
         bulk_slab.atlist = AtomList(bulk_slab.bulk_atoms)
         bulk_slab.layers = bulk_slab.bulk_layers
+        bulk_slab.sublayers = ()
 
         kwargs = {
             'eps': rpars.SYMMETRY_EPS,
