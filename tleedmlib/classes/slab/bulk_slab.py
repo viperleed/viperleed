@@ -203,7 +203,7 @@ class BulkSlab(BaseSlab):
         # positions are screwed. We rely on the Cartesian ones, and,
         # if requested, will 'shift' the fractional ones such that
         # the topmost atom now is still the topmost atom later
-        top_atom_cfrac = self._get_top_atom_c_pos() if recenter else 0
+        top_atom = self.top_atom if recenter else None
 
         # Make sure Cartesians are up to date,
         # then reduce c direction if needed
@@ -239,6 +239,7 @@ class BulkSlab(BaseSlab):
 
         # As mentioned above, fractional positions in c
         # are now screwed. Make top atom the topmost again...
+        top_atom_cfrac = top_atom.pos[2]
         for atom in self:
             atom.pos[2] = (atom.pos[2] - top_atom_cfrac + 0.9999) % 1.0
         # ...then center fractional c coordinates around cell midpoint
@@ -533,17 +534,6 @@ class BulkSlab(BaseSlab):
         # it shortest and as close to z as possible
         leedbase.reduce_c_vector(repeat_c, self.ab_cell.T)
         return repeat_c
-
-    def _get_top_atom_c_pos(self):
-        """Return the c fractional coordinate of the topmost atom."""
-        # Use the least expensive method by taking into consideration
-        # the normal sorting of sublayers and layers: scan through the
-        # smallest iterable available
-        if self.sublayers:
-            return max(at.pos[2] for at in self.sublayers[0])
-        if self.layers:
-            return max(at.pos[2] for at in self.layers[0])
-        return max(at.pos[2] for at in self)
 
     def is_bulk_glide_symmetric(self, symplane, sublayer_period, eps):
         """Return if the slab has a 3D glide plane.
