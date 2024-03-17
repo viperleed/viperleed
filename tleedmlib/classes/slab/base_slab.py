@@ -201,7 +201,7 @@ class BaseSlab(AtomContainer):
         # atom container that should have the fewest atoms. We
         # rely on the z-sorting of layers and sublayers.
         if self.sublayers:
-            container = self.sublayers[-1]
+            container = self.sublayers[-1]                                      # TODO: this may not be right, as sublayers are also sorted by element for same-z!
         elif self.layers:
             container = self.layers[-1]
         else:
@@ -318,6 +318,20 @@ class BaseSlab(AtomContainer):
             If only one layer is present.
         """
         return min(self.interlayer_gaps)
+
+    @property
+    def top_atom(self):
+        """Return the atom currently at the bottom of this slab."""
+        # Do it the most efficient way possible, i.e., with the
+        # atom container that should have the fewest atoms. We
+        # rely on the z-sorting of layers and sublayers.
+        if self.sublayers:
+            container = self.sublayers[0]                                       # TODO: this may not be right, as sublayers are also sorted by element for same-z!
+        elif self.layers:
+            container = self.layers[0]
+        else:
+            container = self
+        return max(container, key=lambda at: at.pos[2])
 
     @classmethod
     def from_slab(cls, other):
