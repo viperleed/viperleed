@@ -1206,15 +1206,21 @@ class TestMakeBulkSlab:
                       err.TooFewLayersError),
         }
 
+    @parametrize('slab,exc', _invalid.values(), ids=_invalid)
+    def test_invalid(self, slab, exc):
+        """Check complaints for invalid conditions when making bulk."""
+        with pytest.raises(exc):
+            slab.make_bulk_slab(Rparams())
+
     @with_bulk_repeat
-    def test_valid_nr_of_atoms(self, args):
+    def test_nr_of_atoms(self, args):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, info = args
         bulk_slab = slab.make_bulk_slab(rpars)
         assert bulk_slab.n_atoms == info.bulk_properties.n_bulk_atoms
 
     @with_bulk_repeat
-    def test_valid_ucell(self, args):
+    def test_ucell(self, args):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, info = args
         bulk_slab = slab.make_bulk_slab(rpars)
@@ -1222,7 +1228,7 @@ class TestMakeBulkSlab:
         assert np.allclose(bulk_slab.ucell, info.bulk_properties.bulk_ucell,
                            atol=atol)
 
-    def test_valid_warning_a_larger_b(self, ag100, caplog):
+    def test_warning_a_larger_b(self, ag100, caplog):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, *_ = ag100
         rpars.superlattice_defined = True  # Needed for check to happen
@@ -1230,12 +1236,6 @@ class TestMakeBulkSlab:
         slab.update_cartesian_from_fractional()
         slab.make_bulk_slab(rpars)
         assert 'does not follow standard convention' in caplog.text
-
-    @parametrize('slab,exc', _invalid.values(), ids=_invalid)
-    def test_invalid(self, slab, exc):
-        """Check complaints for invalid conditions when making bulk."""
-        with pytest.raises(exc):
-            slab.make_bulk_slab(Rparams())
 
 
 class TestProperties:
