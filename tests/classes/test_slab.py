@@ -1220,6 +1220,26 @@ class TestMakeBulkSlab:
         assert bulk_slab.n_atoms == info.bulk_properties.n_bulk_atoms
 
     @with_bulk_repeat
+    def test_top_and_bottom_atoms(self, args, subtests):
+        """Check that the top and bottom bulk atoms remain unchanged."""
+        slab, rpars, *_ = args
+        top_bulk_atom = max(slab.bulk_atoms, key=lambda at: at.pos[2])
+        bot_bulk_atom = min(slab.bulk_atoms, key=lambda at: at.pos[2])
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        top_bulk_sublayer = next(lay for lay in slab.sublayers
+                                 if top_bulk_atom in lay)
+        bot_bulk_sublayer = next(lay for lay in slab.sublayers
+                                 if bot_bulk_atom in lay)
+        bulk = slab.make_bulk_slab(rpars)
+        top, bot = bulk.top_atom, bulk.bottom_atom
+        with subtests.test('c centering'):
+            assert top.pos[2] + bot.pos[2] == pytest.approx(1)
+        with subtests.test('top atom unchanged'):
+            assert top.num in {at.num for at in top_bulk_sublayer}
+        with subtests.test('bottom atom unchanged'):
+            assert bot.num in {at.num for at in bot_bulk_sublayer}
+
+    @with_bulk_repeat
     def test_ucell(self, args):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, info = args
