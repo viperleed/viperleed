@@ -218,8 +218,8 @@ def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,
     formatting['colors'] = (
         list(cm.get_cmap('viridis', len(points)).colors)
         + [np.array([0, 0, 0, 1])])
-    formatting['linewidths'] = [0.5] * len(points) + [1.]
-    formatting['linewidths'][best_point_ind] = 1.
+    formatting['curve_line_widths'] = [0.5] * len(points) + [1.]
+    formatting['curve_line_widths'][best_point_ind] = 1.
     try:
         plot_iv(theodata + [exp_to_use], filename,
                 labels=labels, annotations=annotations, legends=legends,

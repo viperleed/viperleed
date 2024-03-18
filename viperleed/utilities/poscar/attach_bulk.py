@@ -122,7 +122,7 @@ def main(args=None):
 
     try:
         poscar.write(slab)
-    except Exception:
+    except OSError:
         logging.error("Exception while writing CONTCAR:", exc_info=True)
 #    print(cfact)
 

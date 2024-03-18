@@ -58,11 +58,11 @@ class TLEEDMSection(Enum):
         # Try with the aliases instead. First look for an exact match
         for name, aliases in _ALIASES.items():
             if any(alias == value for alias in aliases):
-                return cls(name)
+                return cls[name]
         # Alternatively, see if the value begins with an alias
         for name, aliases in _ALIASES.items():
             if any(value.startswith(alias) for alias in aliases):
-                return cls(name)
+                return cls[name]
         return None
 
     @classmethod

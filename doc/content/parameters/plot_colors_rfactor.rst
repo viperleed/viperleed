@@ -62,6 +62,38 @@ PLOT_IV legend
 
 **Acceptable values:** ``all`` / ``first`` / ``topright`` (or ``tr``) / ``none``
 
+PLOT_IV font_size
+-----------------
+
+``PLOT_IV font_size`` defines the font size used for the labels and legends in
+the I(V) plots.
+
+**Default**: 10
+
+**Syntax:**
+
+::
+
+   PLOT_IV font_size = 15
+
+**Acceptable values:** float values > 0
+
+PLOT_IV line_width
+------------------
+
+``PLOT_IV line_width`` defines the width of the lines used to plot the I(V)
+curves.
+
+**Default**: ``all``
+
+**Syntax:**
+
+::
+
+   PLOT_IV line_width = 2.0   ! use line_width 2.0
+
+**Acceptable values:** float values > 0
+
 PLOT_IV overbar / overline
 --------------------------
 

@@ -91,7 +91,7 @@ def runPhaseshiftGen_old(sl, rp,
     # the latter does not produce './' and '../' shorthands
     shortpath = str(rp.source_dir)
     if len(os.path.relpath(rp.source_dir)) < len(shortpath):
-        shortpath = os.path.relpath(rp.source_dir)
+        shortpath = os.path.relpath(rp.source_dir, start=rp.workdir)
 
     manual_copy = len(shortpath) > 62
     if manual_copy:
@@ -253,15 +253,14 @@ def runPhaseshiftGen_old(sl, rp,
                          "identify "+el+" as a chemical element. Define "
                          "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             raise
-        el_charge_density_path = (rp.source_dir / atdenssource / chemel /
-                                  (f"chgden{chemel}")).resolve()
-        charge_density_short_path = (rp.workdir / atdenssource / chemel /
-                                    (f"chgden{chemel}")).relative_to(rp.workdir)
-        os.makedirs(charge_density_short_path.parent, exist_ok=True)
-        shutil.copy2(el_charge_density_path, charge_density_short_path)
-        chem_el_paths[el] = charge_density_short_path
+        el_charge_density_path = (rp.source_dir / "atom_density_files" / 
+                                  chemel / (f"chgden{chemel}")).resolve()
+        charge_density_short_path = (Path(atdenssource) / chemel /
+                                    f"chgden{chemel}")
+        os.makedirs(charge_density_short_path.resolve().parent, exist_ok=True)
+        shutil.copy2(el_charge_density_path, charge_density_short_path.resolve())
+        chem_el_paths[el] = charge_density_short_path.resolve().relative_to(rp.workdir)
         chemels[el] = chemel
-        chgdenrelpath = charge_density_short_path
 
     nsl.sort_by_z(bottom_to_top=False)
     for at in nsl:
@@ -378,7 +377,7 @@ def runPhaseshiftGen_old(sl, rp,
     filelist.sort(key=lambda filename: int(filename.split('.')[-1]))
     firstline = "" # first line contains parameters for the potential
     # data from all the PS files
-    processed_files = [PSFile(at, filename, ps_energy_step)
+    processed_files = [PSFile(at, rp.workdir/filename, ps_energy_step)
                        for (at, filename) in zip(nsl, filelist)]
     firstline = processed_files[0].firstline
 

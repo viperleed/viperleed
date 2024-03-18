@@ -1194,8 +1194,8 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
     tmpslab.sort_original()
     try:
         poscar.write(tmpslab, filename=fn, comments="all", silent=silent)
-    except Exception:
-        logger.error("Exception occured while writing POSCAR_OUT" + suffix,
+    except OSError:
+        logger.error("Exception occurred while writing POSCAR_OUT" + suffix,
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
@@ -1203,9 +1203,9 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
         try:
             poscar.write(tmpslab, filename=fn, silent=silent)
-        except Exception:
+        except OSError:
             logger.warning(
-                "Exception occured while writing POSCAR_OUT_mincell" + suffix,
+                "Exception occurred while writing POSCAR_OUT_mincell" + suffix,
                 exc_info=rp.is_debug_mode)
     fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
     try:

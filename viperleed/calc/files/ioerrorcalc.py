@@ -286,21 +286,27 @@ def format_col_content(content):
                          f" file: {content}")
 
 
-def make_errors_figs(errors):
+def make_errors_figs(errors, formatting=None):
     """Creates figures for Errors.pdf.
 
     Parameters
     ----------
     errors : list of R_Error
         contains the R-factors to be plotted
-    filename : str, optional
-        Path of file to be written, by default "Errors.pdf"
+    formatting : dict, optional
+        Dictionary containing formatting options for the plots.
+        To be taken from rparams.PLOT_IV. The default is None.
     """
     global _CAN_PLOT
     if not _CAN_PLOT:
         logger.debug("Necessary modules for plotting not found. Skipping "
                      "error plotting.")
         return
+
+    # check formatting
+    if formatting is None:
+        formatting = {}
+    font_size_scale = formatting.get("font_size", 10) / 10
 
     fig_order = (3, 2)
     figs_per_page = fig_order[0] * fig_order[1]
@@ -326,8 +332,8 @@ def make_errors_figs(errors):
         x_values = [err.lin_disp for err in mode_errors]
         if mode == "occ":
             x_values *= 100  # convert to %
-        x_min = np.min(x_values)
-        x_max = np.max(x_values)
+        x_min = np.min([np.min(x) for x in x_values])
+        x_max = np.max([np.max(x) for x in x_values])
         xrange = [x_min - abs(x_max - x_min) * 0.05,
                   x_max + abs(x_max - x_min) * 0.05]
         for err in mode_errors:
@@ -357,10 +363,11 @@ def make_errors_figs(errors):
         fig = plt.figure(figsize=(5.8, 5.8))
         ax = fig.add_subplot(1, 1, 1)
         if mode != "occ":
-            ax.set_xlabel('Deviation from bestfit value (Å)')
+            ax.set_xlabel('Deviation from bestfit value (Å)',
+                          fontsize=8*font_size_scale)
         else:
-            ax.set_xlabel('Site occupation (%)')
-        ax.set_ylabel('Pendry R-factor')
+            ax.set_xlabel('Site occupation (%)', fontsize=8*font_size_scale)
+        ax.set_ylabel('Pendry R-factor', fontsize=8*font_size_scale)
         ax.set_title(titles[mode])
         if var and rmin + var < rmax + (rmax-rmin)*0.1:
             ax.plot(xrange, [rmin + var]*2, color="slategray")
@@ -380,17 +387,19 @@ def make_errors_figs(errors):
                 va = "top"
             ax.text(text_x, text_y, "$R_P + var(R_P)$", ha="center", va=va,
                     bbox=dict(facecolor='white', edgecolor='none',
-                              alpha=0.6, pad=0.5))
+                              alpha=0.6, pad=0.5),
+                    fontsize=6*font_size_scale)
         for err in mode_errors:
             ax.plot(err_x[err], err_y[err], '-o', label=err_legend[err],
                     markevery=err_x_to_mark[err])
         ax.set_xlim(*xrange)
         ax.set_ylim(rmin - ((rmax-rmin)*0.1), rmax + ((rmax-rmin)*0.1))
-        ax.legend(fontsize="small")
+        ax.legend(fontsize=font_size_scale*10)
         fig.tight_layout()
         figs.append(fig)
         # now plot individual figures
         figcount = 0
+        plt.tight_layout()
         fig, axs = plt.subplots(fig_order[0], fig_order[1],
                                 figsize=figsize, squeeze=True)
         axs = axs.flatten()
@@ -400,6 +409,7 @@ def make_errors_figs(errors):
                 fig.suptitle(titles[mode])
                 figs.append(fig)
                 figcount = 0
+                plt.tight_layout()
                 fig, axs = plt.subplots(fig_order[0], fig_order[1],
                                         figsize=figsize, squeeze=True)
                 axs = axs.flatten()
@@ -424,7 +434,8 @@ def make_errors_figs(errors):
                     text_y = rmin + var - (rmax-rmin)*0.015
                     va = "top"
                 axs[figcount].text(text_x, text_y, "$R_P + var(R_P)$",
-                                   fontsize=6, ha="center", va=va,
+                                   fontsize=6*font_size_scale,
+                                   ha="center", va=va,
                                    bbox=dict(facecolor='white',
                                              edgecolor='none',
                                              alpha=0.6, pad=0.5))
@@ -456,12 +467,14 @@ def make_errors_figs(errors):
             axs[figcount].set_yticks(yticks)
             axs[figcount].set_yticklabels([f"{v:.{dec}f}" for v in yticks])
             axs[figcount].xaxis.set_major_locator(plt.MaxNLocator(5))
-            axs[figcount].tick_params(labelsize=6)
+            # tick font size
+            axs[figcount].tick_params(labelsize=6*font_size_scale)
             if mode != "occ":
                 axs[figcount].set_xlabel('Deviation from bestfit value (Å)',
-                                         fontsize=8)
+                                         fontsize=6*font_size_scale)
             else:
-                axs[figcount].set_xlabel('Site occupation (%)', fontsize=8)
+                axs[figcount].set_xlabel('Site occupation (%)',
+                                         fontsize=6*font_size_scale)
 
             # add uncertainties in plot
             r_min = min(err.rfacs)
@@ -469,13 +482,15 @@ def make_errors_figs(errors):
             error_estimates = err.get_error_estimates
             if error_estimates[0]:
                 l_bound = p_best-error_estimates[0]
-                draw_error(axs[figcount], l_bound, err, r_interval=(rmax-rmin))
+                draw_error(axs[figcount], l_bound, err, r_interval=(rmax-rmin),
+                           font_size_scale=font_size_scale)
             if error_estimates[1]:
                 u_bound = p_best+error_estimates[1]
-                draw_error(axs[figcount], u_bound, err, r_interval=(rmax-rmin))
-            axs[figcount].set_ylabel('Pendry R-factor', fontsize=8)
-            axs[figcount].legend(fontsize="x-small", frameon=False)
-            # axs[figcount].set_title(err_legend[err], fontsize=8)
+                draw_error(axs[figcount], u_bound, err, r_interval=(rmax-rmin),
+                           font_size_scale=font_size_scale)
+            axs[figcount].set_ylabel('Pendry R-factor',
+                                     fontsize=6*font_size_scale)
+            axs[figcount].legend(fontsize=3*font_size_scale, frameon=False)
             figcount += 1
         for ax in axs[figcount:]:
             ax.axis('off')
@@ -508,7 +523,7 @@ def _error_legends(mode, mode_errors):
     return err_legend
 
 
-def draw_error(axis, bound, error, r_interval):
+def draw_error(axis, bound, error, r_interval, font_size_scale=1.0):
     r"""Adds annotation for statistical error estimates to individual
     error plots.
 
@@ -548,7 +563,8 @@ def draw_error(axis, bound, error, r_interval):
     axis.annotate(
         text=f"{format_col_content(bound-p_best)}",
         xy=((p_best+bound)/2,r_min - r_interval*0.022),
-        ha='center', va='top', fontsize=4.5)
+        ha='center', va='top', fontsize=4*font_size_scale,)
+
 
 def write_errors_pdf(figs, filename="Errors.pdf"):
     """Writes a list of figures to a pdf file."""

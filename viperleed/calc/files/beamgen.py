@@ -325,20 +325,17 @@ def get_beam_scattering_subsets(beam_indices_raw):
 
     Returns
     -------
-    subset_classes : list
-        The unique first-Brillouin-zone beam indices for the beam
-        subsets, sorted by their length. The length gives the number
-        of subsets.
+    subset_classes : dict_keys
+        The unique first-Brillouin-zone beam indices for the
+        beam subsets, sorted in their order of appearance in
+        `beam_indices_raw`. The length gives the number of
+        subsets.
     reduced_indices : list
         Reduced version of the indices in beam_indices_raw.
     """
-    reduced_indices = [(h%1, k%1) for (h, k) in beam_indices_raw]
+    reduced_indices = [(h % 1, k % 1) for (h, k) in beam_indices_raw]
     subset_classes = dict.fromkeys(reduced_indices)
-
-    # sort order of subsets by |(h_red, k_red)|^2
-    #subset_classes = sorted(subset_classes, key=lambda hk: hk[0]**2 + hk[1]**2)
-
-    return subset_classes, reduced_indices
+    return subset_classes.keys(), reduced_indices
 
 
 def _split_into_subsets(beam_indices_raw):

@@ -1022,7 +1022,11 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             'axes': 'axes', 'border': 'axes', 'borders': 'axes',
             'colors': 'colors', 'colours': 'colors',
             'color': 'colors', 'colour': 'colors',
+            'font': 'font_size', 'fontsize': 'font_size',
+            'font_size': 'font_size',
             'legend': 'legend', 'legends': 'legend',
+            'lw': 'line_width', 'linewidth': 'line_width',
+            'line_width': 'line_width', 'line': 'line_width',
             'overbar': 'overbar', 'overline': 'overbar',
             'perpage': 'perpage', 'layout': 'perpage',
             }
@@ -1060,6 +1064,21 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterValueError(assignment.parameter, message=err_)
         self.rpars.PLOT_IV['colors'] = colors
 
+    def _interpret_plot_iv__font_size(self, assignment):
+        """Assign PLOT_IV['font_size']."""
+        self._ensure_single_value_assignment(assignment)
+        try:
+            font_size = float(assignment.value)
+        except ValueError:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterFloatConversionError(assignment.parameter,
+                                                assignment.value) from None
+        if font_size <= 0:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterRangeError(assignment.parameter,
+                                      message='Font size must be positive.')
+        self.rpars.PLOT_IV['font_size'] = font_size
+
     def _interpret_plot_iv__legend(self, assignment):
         """Assign PLOT_IV['legend']."""
         self._ensure_single_value_assignment(assignment)
@@ -1071,6 +1090,21 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         else:
             self.rpars.setHaltingLevel(1)
             raise ParameterParseError(assignment.parameter)
+
+    def _interpret_plot_iv__line_width(self, assignment):
+        """Assign PLOT_IV['line_width']."""
+        self._ensure_single_value_assignment(assignment)
+        try:
+            line_width = float(assignment.value)
+        except ValueError:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterFloatConversionError(assignment.parameter,
+                                               assignment.value) from None
+        if line_width <= 0:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterRangeError(assignment.parameter,
+                                      message='Line width must be > 0.')
+        self.rpars.PLOT_IV['line_width'] = line_width
 
     def _interpret_plot_iv__overbar(self, assignment):
         """Assign PLOT_IV['overbar']."""

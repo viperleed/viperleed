@@ -116,7 +116,7 @@ def initialization(sl, rp, subdomain=False):
         try:
             poscar.write(sl.symbaseslab, filename='POSCAR_mincell',
                          comments='all')
-        except Exception:
+        except OSError:
             logger.warning("Exception occurred while writing POSCAR_mincell")
 
     # generate new POSCAR
@@ -132,7 +132,7 @@ def initialization(sl, rp, subdomain=False):
     tmpslab.revert_unit_cell()
     try:
         poscar.write(tmpslab, filename='POSCAR_oricell', comments='nodir')
-    except Exception:
+    except OSError:
         logger.error("Exception occurred while writing POSCAR_oricell, "
                      "execution will continue...")
 
@@ -253,7 +253,7 @@ def initialization(sl, rp, subdomain=False):
     try:
         poscar.write(sl.with_extra_bulk_units(rp, n_cells)[0],
                      filename='POSCAR_bulk_appended')
-    except Exception:
+    except OSError:
         logger.warning('Exception occurred while writing POSCAR_bulk_appended')
 
     # Check for an ambiguous angle phi
@@ -311,11 +311,13 @@ def initialization(sl, rp, subdomain=False):
             # let psgen catch the error if neither executable is found
             rundgrenpath = 'eeasisss'
         serneliuspath = 'seSernelius'
+        atom_density_path = 'atom_density_files'
         logger.info("Generating phaseshifts data... ")
         ps_gen, kwargs = runPhaseshiftGen, {}
         if rp.PHASESHIFTS_CALC_OLD:
             ps_gen = runPhaseshiftGen_old
-            kwargs = {"excosource": serneliuspath}
+            kwargs = {"excosource": serneliuspath,
+                      "atdenssource": atom_density_path}
         try:
             (rp.phaseshifts_firstline,
              rp.phaseshifts) = ps_gen(sl, rp, psgensource=rundgrenpath,
@@ -663,7 +665,7 @@ def init_domains(rp):
                     f"calculations: {', '.join(d.name for d in rr)}")
         for dp in rp.domainParams:
             for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams",
-                        "sourcedir"]:
+                        "source_dir"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
             if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
                 dp.rp.LMAX.max = rp.LMAX.max
