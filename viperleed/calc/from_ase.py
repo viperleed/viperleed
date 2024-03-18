@@ -704,9 +704,13 @@ def rfactor_from_csv(                                                           
 
     # Ready to calculate R-factor
     *bounds, _ = rpars.IV_SHIFT_RANGE
-    v0r_shift_range_int = np.int32([round(b / intpol_step) for b in bounds])
+    v0r_shift_range_int = np.array([round(b / intpol_step) for b in bounds],
+                                   dtype=np.int32)
     v0r_center = sum(v0r_shift_range_int) // 2
-    start_guess = np.int32([v0r_shift_range_int[0], v0r_center, v0r_shift_range_int[1]])
+    start_guess = np.array(
+        [v0r_shift_range_int[0], v0r_center, v0r_shift_range_int[1]],
+        dtype=np.int32
+        )
 
     # Same settings as used in R-factor for ViPErLEED
     fast_search = False  # TODO change to True as default if we are sure it is better
