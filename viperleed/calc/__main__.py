@@ -92,16 +92,36 @@ def add_calc_parser_arguments(parser):
         default="workhistory")
 
 
-def _interpret_tensorleed_path_flag(args):
+def get_tensorleed_path(tensorleed_path=None):
+    """Return the path to the TensErLEED source code.
+
+    Parameters
+    ----------
+    tensorleed_path : Pathlike, optional
+        Path to the viperleed-tensorleed source code, by default None.
+        If not given, tries to resolve the $VIPERLEED_TENSORLEED environment
+        variable.
+
+    Returns
+    -------
+    Path
+        Path to the TensErLEED source code.
+
+    Raises
+    ------
+    ValueError
+        If neither the tensorleed_path argument nor the $VIPERLEED_TENSORLEED
+        environment variable are set.
+    """
     # if tensorleed arg is given, use that
-    if args.tensorleed:
-        return Path(args.tensorleed)
+    if tensorleed_path:
+        return Path(tensorleed_path)
     # else check environment variable $VIPERLEED_TENSORLEED
     try:
         return Path(os.environ["VIPERLEED_TENSORLEED"])
     except KeyError as err:
         # environment variable not set
-        raise RuntimeError(
+        raise ValueError(
             "TensErLEED path not specified.\n"
             "Please either pass a path to the TensErLEED source code with "
             "the --tensorleed argument, or set the environment variable "
@@ -124,7 +144,7 @@ def main(args=None):
     work_path = work_path.resolve()
 
     # tensorleed source directory
-    _tensorleed_path = _interpret_tensorleed_path_flag(args)
+    tensorleed_path = get_tensorleed_path(args.tensorleed)
 
     # verbosity flags
     if sum([args.verbose, args.very_verbose]) > 1:
@@ -198,7 +218,7 @@ def main(args=None):
     os.chdir(work_path)
     run_tleedm(
         system_name=_system_name,
-        source=_tensorleed_path,
+        source=tensorleed_path,
         override_log_level=override_log_level
     )
 
