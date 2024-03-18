@@ -194,7 +194,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     """
 
     if deltaBasic == "":
-        deltaBasic = generateDeltaBasic()
+        deltaBasic = generateDeltaBasic(sl, rp)
     if auxbeams == "":
         # if AUXBEAMS is not in work folder, check SUPP folder
         if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
