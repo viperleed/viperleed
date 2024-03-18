@@ -9,7 +9,6 @@ import pkgutil
 import sys
 
 from viperleed.utilities import poscar
-from viperleed.utilities.poscar import *
 
 POSCAR_UTILITIES = [module.name for module in
                     pkgutil.iter_modules(poscar.__path__)

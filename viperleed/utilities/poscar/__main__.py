@@ -8,6 +8,7 @@ from importlib import import_module
 from viperleed.utilities import poscar
 from viperleed.utilities.poscar import POSCAR_UTILITIES, add_verbose_option
 
+
 def add_poscar_parser_arguments(parser):
     subparsers = parser.add_subparsers()
 
@@ -25,12 +26,14 @@ def add_poscar_parser_arguments(parser):
 
 def main(args=None):
     if args is None:
-        parser = argparse.ArgumentParser()
-        subparsers = parser.add_subparsers()
+        parser = argparse.ArgumentParser(prog='viperleed.utilities.poscar')
         add_poscar_parser_arguments(parser)
         args = parser.parse_args()
+    try:
+        args.func(args)
+    except AttributeError:
+        parser.print_help()
 
-    args.func(args)
 
 if __name__ == "__main__":
     main()
