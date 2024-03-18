@@ -948,8 +948,8 @@ def beamlist_to_array(beams):
     # fill with NaNs as default value
     beam_arr = np.full([n_E, n_beams], fill_value=np.NaN)
 
-    id_start = np.int32(np.zeros([n_beams]))
-    n_E_beams = np.int32(np.zeros([n_beams]))
+    id_start = np.zeros(n_beams, dtype=np.int32)
+    n_E_beams = np.zeros(n_beams, dtype=np.int32)
 
     for i, b in enumerate(beams):
         # write beams into colums of beam_arr
