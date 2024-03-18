@@ -409,8 +409,8 @@ def init_domains(rp):
             tensorIndex = leedbase.getMaxTensorIndex(path)
             if tensorIndex != 0:
                 try:
-                    leedbase.getTensors(tensorIndex, basedir=path,
-                                        targetdir=target)
+                    leedbase.getTensors(tensorIndex, base_dir=path,
+                                        target_dir=target)
                 except Exception as exc:
                     tensorIndex = 0
                     logger.warning(f"Error fetching Tensors: {exc}")
