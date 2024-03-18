@@ -249,10 +249,11 @@ def runPhaseshiftGen_old(sl, rp,
         elif el.lower() in ptl:
             chemel = el.capitalize()
         else:
-            logger.error("Error generating PHASESHIFTS file: Could not "
-                         "identify "+el+" as a chemical element. Define "
-                         "ELEMENT_RENAME or ELEMENT_MIX parameter.")
-            raise
+            _err = ("Error generating PHASESHIFTS file: Could not "
+                    "identify "+el+" as a chemical element. Define "
+                    "ELEMENT_RENAME or ELEMENT_MIX parameter.")
+            logger.error(_err)
+            raise RuntimeError(_err)
         el_charge_density_path = (rp.source_dir / "atom_density_files" / 
                                   chemel / (f"chgden{chemel}")).resolve()
         charge_density_short_path = (Path(atdenssource) / chemel /
