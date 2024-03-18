@@ -78,9 +78,9 @@ def main(args=None):
     slab.updateElementCount()
 
     # write the output file
+    slab.sort_by_z()
     poscar.write(slab=slab,
                  filename=sys.stdout,
-                 reorder=True,
                  comments='none',
                  silent=logger.level<=logging.DEBUG)
 
