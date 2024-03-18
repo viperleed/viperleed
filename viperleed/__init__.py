@@ -3,7 +3,7 @@
 =================
 """
 
-__version__ = '0.10.0'
+__version__ = '0.11.0'
 __authors__ = ["Alexander M. Imre (@amimre)",
                "Florian Kraushofer (@fkraushofer)",
                "Michele Riva (@michele-riva)"]
