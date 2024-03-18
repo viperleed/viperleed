@@ -77,7 +77,7 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
 class ViPErinoController(abc.MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
-    cls_lock = threading.Lock()  # Thread safe access to class properties
+    cls_lock = threading.RLock()  # Thread safe access to class properties
     _mandatory_settings = [
         # pylint: disable=protected-access
         *abc.MeasureControllerABC._mandatory_settings,
@@ -138,7 +138,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         # .acquire() instance.lock (or use a context manager). The
         # class-level lock instance.cls_lock should be used if any
         # attribute common to all instances is to be modified instead.
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
         # __adc_measurement_types[i] contains the QuantityInfo
         # that should be measured by ADC[i] (ADC0, ADC1, ..., LM35)
