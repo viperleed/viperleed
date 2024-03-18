@@ -38,8 +38,7 @@ logger = logging.getLogger("tleedm.search")
 
 class SearchError(Exception):
     """Base class for exceptions in this module."""
-    def __init__(self, message, *args, **kwargs):
-        super().__init__(message, *args, **kwargs)
+
 
 class SearchMaxIntensitiesError(SearchError):
     message = ("TensErLEED stopped due to unreasonably high beam amplitudes.\n"
@@ -54,6 +53,7 @@ class SearchMaxIntensitiesError(SearchError):
     def __init__(self, *args, **kwargs):
         super().__init__(self.message, *args, **kwargs)
 
+
 class SearchSigbusError(SearchError):
     message = ("TensErLEED stopped due to a SIGBUS signal.\n"
                "This may be caused by a compiler error. "
@@ -63,6 +63,7 @@ class SearchSigbusError(SearchError):
     def __init__(self, *args, **kwargs):
         super().__init__(self.message, *args, **kwargs)
 
+
 class SearchInconsistentV0ImagError(SearchError):
     message = ("TensErLEED search stopped because stored Delta files were "
                "calculated with a different imaginary inner potential "
@@ -71,7 +72,8 @@ class SearchInconsistentV0ImagError(SearchError):
                "Delta-Amplitudes and structure search.")
 
     def __init__(self, *args, **kwargs):
-        super().__init__(message, *args, **kwargs)
+        super().__init__(self.message, *args, **kwargs)
+
 
 def processSearchResults(sl, rp, search_log_path, final=True):
     """Read the best structure from the last block of 'SD.TL' into a slab.
