@@ -139,7 +139,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
                          intpol_step)
 
     # find correspondence experimental to theoretical beams:
-    beamcorr = tl_io.getBeamCorrespondence(sl, rp)
+    beamcorr = leedbase.getBeamCorrespondence(sl, rp)
     # integer & fractional beams
     iorf = []
     for (i, beam) in enumerate(rp.expbeams):
