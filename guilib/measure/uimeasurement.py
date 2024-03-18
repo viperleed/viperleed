@@ -402,15 +402,15 @@ class Measure(ViPErLEEDPluginBase):
         controllers.clear()
 
         # The get_devices method does return the device name, class and,
-        # additional information, but we discard the information as we
-        # are only interested in populating the menu.
+        # additional information. The class and additional information
+        # are returned as a tuple.
         for cam_name, (cam_cls, _) in base.get_devices("camera").items():
             act = cameras.addAction(cam_name)
             act.setData(cam_cls)
             act.triggered.connect(self.__on_camera_clicked)
-        for ctrl_name, (ctrl_cls, _) in base.get_devices("controller").items():
+        for ctrl_name, cls_and_info in base.get_devices("controller").items():
             act = controllers.addAction(ctrl_name)
-            act.setData(ctrl_cls)
+            act.setData(cls_and_info)
             act.triggered.connect(self.__on_controller_clicked)
 
         # Leave enabled only those containing entries
@@ -747,9 +747,11 @@ class Measure(ViPErLEEDPluginBase):
         """Show settings of the controller selected."""
         action = self.sender()
         full_name = action.text()
-        ctrl_cls = action.data()
-        ctrl_name, ctrl_port = (s.strip() for s in full_name.split("("))
-        ctrl_port = ctrl_port.replace(")", "")
+        ctrl_cls, ctrl_info = action.data()
+        # Note that ctrl_name may be different from
+        # the displayed controller name full_name.
+        ctrl_name = ctrl_info['name']
+        ctrl_address = ctrl_info['address']
 
         if full_name not in self._dialogs['device_settings']:
             self.__delete_outdated_ctrl_dialog(ctrl_name)

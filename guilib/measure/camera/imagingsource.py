@@ -588,7 +588,7 @@ class ImagingSourceCamera(abc.CameraABC):
         Returns
         -------
         list
-            Each element is a DeviceInfo instance containing the
+            Each element is a DeviceInfo instance containing the unique
             name of a camera and additional information as a dict.
         """
         # Use empty dictionaries as there is no

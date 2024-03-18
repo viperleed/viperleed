@@ -165,22 +165,38 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
     def _make_cli_install_disclaimer(self):
         """Create the dialog asking the user to install Arduino CLI."""
+        accept_btn_text = 'Agree and install Arduino CLI'                       # TODO: Use also for button
         disclaimer = qtw.QMessageBox(parent=self)
+        disclaimer.setWindowTitle('Arduino CLI not found')
+        disclaimer.setTextFormat(qtc.Qt.RichText)
         disclaimer.setText(
-            'In order to use the firmware upgrade tool you need to install '
-            'the Arduino command-line interface. This software can be found '
-            'under https://github.com/arduino/arduino-cli and is published '
-            'under the GPL-3.0 license. By clicking accept, you consent to '
-            'downloading and installing the Arduino CLI in the folder you '
-            'specified in the settings menu. Make sure you are connected '
-            'to the internet before clicking accept.'
+            'The firmware-upgrade tool requires the Arduino command-line '
+            'interface (CLI).<p>This is a third-party software that is <b>'
+            'not part of ViPErLEED</b>.</p><p>The Arduino CLI is released '
+            'under the <a href=https://www.gnu.org/licenses/gpl-3.0.html>'
+            'GNU GPL-v3</a> license. You can find the source code and more '
+            'information at <a href=https://github.com/arduino/arduino-cli>'
+            'github.com/arduino/arduino-cli</a>.</p><p>We could not find the '
+            'Arduino CLI on your system. '
+                                   # 'If it is installed, you can set its location in System Settings.</p>' TODO: True?
+            '<p>You can download and install it automatically.'
+            f'<p>By clicking on {accept_btn_text!r} you consent to:'
+            f'<ul><li>Downloading and installing the Arduino CLI</li>'# in {}</li>'    # TODO: add system settings path here!
+            '<li>The <a href=https://github.com/arduino/arduino-cli/blob/'
+            'master/LICENSE.txt>terms and conditions</a> for usage of the '
+            'Arduino CLI</li></ul></p>'
+            '<p>Make sure you are connected to the internet before proceeding.</p>'
             )
         disclaimer.addButton(qtw.QPushButton('Cancel'),
                              disclaimer.RejectRole)
-        accept = qtw.QPushButton('Accept')
+        accept = qtw.QPushButton(accept_btn_text)
         disclaimer.addButton(accept, disclaimer.AcceptRole)
-        accept.clicked.connect(self._download_and_install_arduino_cli)
-        disclaimer.open()
+        disclaimer.exec_()
+        button = disclaimer.clickedButton()
+        if button is accept:
+            self._on_cli_installation(False)
+            _INVOKE(self._uploader, 'get_arduino_cli_from_git')
+            super().open()
 
     def _compose_controller_selection(self):
         """Compose controller QComboBox and refresh button."""
@@ -233,7 +249,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.buttons['done'].clicked.connect(self.accept)
         self.buttons['refresh'].clicked.connect(self._detect_controllers)
         self.buttons['upload'].clicked.connect(self._upload)
-        self.buttons['upgrade'].clicked.connect(self._upgrade_arduino_cli)
+        self.buttons['upgrade'].clicked.connect(
+            self._upgrade_arduino_cli_and_cores
+            )
         self.controls['firmware_path'].path_changed.connect(
             self._find_firmware_versions
             )
@@ -299,22 +317,6 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         detect_viperino = True
         _INVOKE(self._uploader, 'get_viperleed_hardware',
                 qtc.Q_ARG(bool, detect_viperino))
-
-    @qtc.pyqtSlot()
-    def _download_and_install_arduino_cli(self):
-        """Install the Arduino CLI.
-
-        This will trigger the download and installation of the Arduino
-        CLI. The FirmwareUpgradeDialog will be opened while the CLI
-        is being installed.
-
-        Returns
-        -------
-        None.
-        """
-        self._on_cli_installation(False)
-        _INVOKE(self._uploader, 'get_arduino_cli_from_git')
-        super().open()
 
     def _enable_buttons(self, enable):
         """Enable/disable buttons.
@@ -445,7 +447,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._find_most_recent_firmware_version()
 
     @qtc.pyqtSlot()
-    def _upgrade_arduino_cli(self):
+    def _upgrade_arduino_cli_and_cores(self):
         """Upgrade the Arduino CLI."""
         self._on_cli_installation(False)
         _INVOKE(self._uploader, 'get_arduino_cli_from_git')
@@ -601,33 +603,15 @@ class FirmwareUploader(qtc.QObject):
         Version string : str
             The version of the Arduino CLI.
         """
-        ver = None
-
         try:
-            ver = subprocess.run(
-                ['arduino-cli', 'version', '--format', 'json'],
-                capture_output=True
-                )
+            cli = self._get_arduino_cli()
         except FileNotFoundError:
-            pass
+            return '0.0.0'
 
-        if not ver:
-            arduino_cli = 'arduino-cli'
-            if 'win' in sys.platform and not 'darwin' in sys.platform:
-                arduino_cli += '.exe'
-            arduino_cli = self.base_path.joinpath(arduino_cli)
-            try:
-                ver = subprocess.run(
-                    [arduino_cli, 'version', '--format', 'json'],
-                    capture_output=True
-                    )
-            except FileNotFoundError:
-                pass
-
-        if ver:
-            ver = json.loads(ver.stdout)
-            return ver['VersionString']
-        return '0.0.0'
+        ver = subprocess.run([cli, 'version', '--format', 'json'],
+                             capture_output=True)
+        ver = json.loads(ver.stdout)
+        return ver['VersionString']
 
     @qtc.pyqtSlot(qtn.QNetworkReply)
     def _download_newest_cli(self, reply):
@@ -1071,7 +1055,7 @@ class FirmwareUploader(qtc.QObject):
         # Detect ViPErLEED controllers.
         ctrl_with_id = []
         for name, (_, info) in base.get_devices('controller').items():
-            port = name.split(' (')[1][:-1]
+            port = info.get('address')
             ctrl = next((c for c in ctrl_dict
                         if ctrl_dict[c]['port'] == port), None)
             if not ctrl:

@@ -532,6 +532,8 @@ class ViPErinoController(abc.MeasureControllerABC):
         for ctrl in controllers:
             with ctrl.lock:
                 hardware = ctrl.hardware.copy()
+                hardware['address'] = ctrl.port_name
+                hardware['name'] = ctrl.name
             serial_nr = hardware.get('serial_nr', None)
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
@@ -892,7 +894,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.disconnect_()
 
         # Check that the serial no. in self.settings and the one in
-        # self.hardware match. Update the serial port if they don't
+        # self.hardware match. Update the serial port if they don't.
         settings_name = self.settings.get("controller", "device_name",
                                           fallback='')
         if settings_name != self.name:

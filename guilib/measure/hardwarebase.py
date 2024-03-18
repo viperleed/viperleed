@@ -420,7 +420,7 @@ def get_devices(package):
             dummy_instance = cls()
             dev_list = dummy_instance.list_devices()
             for device in dev_list:
-                devices[device.name] = (cls, device.more)
+                devices[device.unique_name] = (cls, device.more)
     return devices
 
 
@@ -465,18 +465,19 @@ class DeviceInfo:
 
     Attributes
     ----------
-    name : str
+    unique_name : str
         Unique name identifying the discovered device
     more : dict
         Extra, optional, information about the discovered device.
     """
-    name: str
+    unique_name: str
     more: dict = field(default_factory=dict)
 
     def __post_init__(self):
-        """Check that we have a string name."""
-        if not isinstance(self.name, str):
-            raise TypeError(f'{type(self).__name__}: name must be a string')
+        """Check that we have a string unique_name."""
+        if not isinstance(self.unique_name, str):
+            raise TypeError(f'{type(self).__name__}: '
+                            'unique_name must be a string')
 
 
 class QMetaABC(ABCMeta, type(qtc.QObject)):
