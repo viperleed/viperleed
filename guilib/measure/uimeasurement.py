@@ -611,9 +611,9 @@ class Measure(ViPErLEEDPluginBase):
             dialog.deleteLater()
             del self._dialogs['device_settings'][full_name]
 
-    def __make_ctrl_settings_dialog(self, ctrl_cls, name, port, full_name):
+    def __make_ctrl_settings_dialog(self, ctrl_cls, name, address, full_name):
         """Make a new settings dialog for a controller."""
-        ctrl = self.__make_device(ctrl_cls, name, port_name=port)
+        ctrl = self.__make_device(ctrl_cls, name, address=address)
         if not ctrl:
             return
 
@@ -756,7 +756,7 @@ class Measure(ViPErLEEDPluginBase):
         if full_name not in self._dialogs['device_settings']:
             self.__delete_outdated_ctrl_dialog(ctrl_name)
             self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_name,
-                                             ctrl_port, full_name)
+                                             ctrl_address, full_name)
 
         _dialog = self._dialogs['device_settings'].get(full_name, None)
         if not _dialog:
@@ -1026,7 +1026,7 @@ class Measure(ViPErLEEDPluginBase):
             if isinstance(sender, CameraABC):
                 source = f"camera {sender.name}"
             elif isinstance(sender, ControllerABC):
-                source = f"controller {sender.name} at {sender.port_name}"
+                source = f"controller {sender.name} at {sender.address}"
             elif isinstance(sender, MeasurementABC):
                 source = f"measurement {sender.__class__.__name__}"
             else:

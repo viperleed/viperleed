@@ -90,7 +90,7 @@ class ViPErinoController(abc.MeasureControllerABC):
     hardware_info_arrived = qtc.pyqtSignal()
 
     def __init__(self, parent=None, settings=None,
-                 port_name='', sets_energy=False):
+                 address='', sets_energy=False):
         """Initialise ViPErino controller object.
 
         Initialise prepare_todos dictionaries. The key is a
@@ -102,10 +102,10 @@ class ViPErinoController(abc.MeasureControllerABC):
         ----------
         settings : ConfigParser
             The controller settings
-        port_name : str, optional
-            Name of the serial port to be used to communicate with
+        address : str, optional
+            Address (the serial port) to be used to communicate with
             the controller. This parameter is optional only in case
-            settings contains a 'controller'/'port_name' option. If
+            settings contains a 'controller'/'address' option. If
             this is given, it will also be stored in the settings
             file, overriding the value that may be there. Default is
             an empty string.
@@ -118,11 +118,11 @@ class ViPErinoController(abc.MeasureControllerABC):
         Raises
         ------
         TypeError
-            If no port_name is given, and none was present in the
+            If no address is given, and none was present in the
             settings file.
         """
         super().__init__(parent=parent, settings=settings,
-                         port_name=port_name, sets_energy=sets_energy)
+                         address=address, sets_energy=sets_energy)
         # Initialise dictionaries for the measurement preparation.
         self.begin_prepare_todos['get_hardware'] = True
         self.begin_prepare_todos['calibrate_adcs'] = True
@@ -497,8 +497,10 @@ class ViPErinoController(abc.MeasureControllerABC):
         Returns
         -------
         device_list : list
-            Each element is a DeviceInfo instance containing the name
-            of a controller and additional information as a dict.
+            Each element is a DeviceInfo instance containing the unique
+            name of a controller and additional information as a dict.
+            Among the additional information is the address (COM port)
+            and the device name.
         """
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]
@@ -507,7 +509,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         threads = []
         controllers = []
         for port in port_names:
-            ctrl = ViPErinoController(port_name=port)
+            ctrl = ViPErinoController(address=port)
             if not ctrl.has_valid_settings:
                 print("Something is wrong with the ViPErino default settings")
                 return []
@@ -532,15 +534,15 @@ class ViPErinoController(abc.MeasureControllerABC):
         for ctrl in controllers:
             with ctrl.lock:
                 hardware = ctrl.hardware.copy()
-                hardware['address'] = ctrl.port_name
+                hardware['address'] = ctrl.address
                 hardware['name'] = ctrl.name
             serial_nr = hardware.get('serial_nr', None)
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
-                txt = f"{ctrl.name} ({ctrl.port_name})"
+                txt = f"{ctrl.name} ({ctrl.address})"
                 device_list.append(base.DeviceInfo(txt, hardware))
             else:
-                print("Not a ViPErLEED controller at", ctrl.port_name,
+                print("Not a ViPErLEED controller at", ctrl.address,
                       hardware, flush=True)
         for thread in threads:
             thread.quit()
@@ -898,11 +900,11 @@ class ViPErinoController(abc.MeasureControllerABC):
         settings_name = self.settings.get("controller", "device_name",
                                           fallback='')
         if settings_name != self.name:
-            ports = {ctrl.name.split(' (')[0]: ctrl.name.split(' (')[1][:-1]
+            ports = {ctrl.more['name']: ctrl.more['address']
                      for ctrl in self.list_devices()}
             correct_port = ports.get(self.name, '')
             if correct_port:
-                self.port_name = correct_port  # Also connects
+                self.address = correct_port  # Also connects
                 self.disconnect_()
         self.ready_to_show_settings.emit()
 
