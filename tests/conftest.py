@@ -37,6 +37,7 @@ import pytest
 import pytest_cases
 
 from viperleed.calc import run_tleedm
+from viperleed.calc.__main__ import get_tensorleed_path
 from viperleed.calc.lib import symmetry
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.rparams import Rparams
@@ -49,8 +50,6 @@ from .helpers import TEST_DATA, POSCAR_PATH
 from .helpers import CaseTag, exclude_tags, execute_in_dir
 from . import poscar_slabs
 
-VPR_PATH = str(Path(__file__).resolve().parents[2])
-TENSORLEED_PATH = Path(VPR_PATH) / 'viperleed' / 'tensorleed'                   # TODO: this will need to be dynamic!
 
 @pytest.fixture(scope='session')
 def re_match():  # This is actually a fixture factory
@@ -75,7 +74,7 @@ def fixture_data_path():
 @pytest.fixture(scope='session', name='tensorleed_path')
 def fixture_tensorleed_path():
     """Return the Path to the top-level tree with tensor-LEED source code."""
-    return TENSORLEED_PATH
+    return get_tensorleed_path()
 
 
 @pytest.fixture(name='make_poscar', scope='session')

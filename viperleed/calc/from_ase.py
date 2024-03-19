@@ -15,9 +15,9 @@ import warnings
 import numpy as np
 
 # for run_from_ase
-import viperleed
 
 from viperleed.calc import run_tleedm
+from viperleed.calc.__main__ import get_tensorleed_path
 from viperleed.calc.lib.base import rotation_matrix
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.slab import Slab
@@ -291,7 +291,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
     try:
         run_tleedm(slab=slab,
                    preset_params=_make_preset_params(rparams, slab),
-                   source=Path(viperleed.__file__).parent,)
+                   source=get_tensorleed_path(),)
     except Exception as err:
         # If ViPErLEED fails, move back to home directory
         os.chdir(home)
