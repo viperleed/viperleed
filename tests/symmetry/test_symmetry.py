@@ -406,6 +406,7 @@ class TestSlabSymmetrization:
         'poscar_mgo': 'Sometimes reduced to cmm from p4m',
         'poscar_sb_si_111': 'Sometimes symmetry increased to rcm from pm',
         'poscar-TiO2': 'Sometimes identified as pmg instead of pmm',
+        'poscar_tio2_small': 'Sometimes reduced to pm from pmm',
         'poscar-Al2O3_NiAl(111)_cHole_20061025' : (
             'Sometimes reduced to p1 from p3'
             ),
