@@ -201,7 +201,7 @@ class BaseSlab(AtomContainer):
         # atom container that should have the fewest atoms. We
         # rely on the z-sorting of layers and sublayers.
         if self.sublayers:
-            container = self.sublayers[-1]
+            container = self.sublayers[-1]                                      # TODO: this may not be right, as sublayers are also sorted by element for same-z!
         elif self.layers:
             container = self.layers[-1]
         else:
@@ -248,6 +248,36 @@ class BaseSlab(AtomContainer):
         return False
 
     @property
+    def interlayer_gaps(self):
+        """Return the z distances between pairs of adjacent layers.
+
+        Returns
+        -------
+        distances : generator of floats
+            When iterated over, it returns the z distances between
+            the bottommost atom of the higher layer and the topmost
+            atom of the lower one. Distances are in the same order
+            as self.layers. This means that the first element is the
+            gap between the topmost layer and the second layer from
+            the top. Notice that there are self.n_layers - 1 items
+            in `distances`.
+
+        Raises
+        ------
+        MissingLayersError
+            If no layers are available.
+        TooFewLayersError
+            If only one layer is present.
+        """
+        if not self.layers:
+            raise MissingLayersError
+        if self.n_layers == 1:
+            raise TooFewLayersError(f'{type(self).__name__} '
+                                    'has only one layer')
+        return (lay_below.cartori[2] - lay_above.cartbotz                       # TODO: change when flipping .cartpos[2] -- Issue #174
+                for lay_above, lay_below in pairwise(self.layers))
+
+    @property
     def n_atoms(self):
         """Return the number of atoms in this slab."""
         return self.atlist.n_atoms
@@ -268,7 +298,7 @@ class BaseSlab(AtomContainer):
         return tuple(lay for lay in self.layers if not lay.is_bulk)
 
     @property
-    def smallest_interlayer_spacing(self):
+    def smallest_interlayer_gap(self):
         """Return the smallest z gap between two adjacent layers.
 
         Make sure to update_layer_coordinates() before.
@@ -277,26 +307,31 @@ class BaseSlab(AtomContainer):
         -------
         min_dist : float
             The smallest of the z distances between adjacent layers.
-            Distances are calculated between the topmost atom of the
-            lower layer and the bottommost one of the higher.
+            Distances are calculated between the bottommost atom of
+            the higher layer and the topmost atom of the lower one.
 
         Raises
         ------
         MissingLayersError
-            If no layers are available
+            If no layers are available.
         TooFewLayersError
             If only one layer is present.
         """
-        if not self.layers:
-            raise MissingLayersError
+        return min(self.interlayer_gaps)
 
-        if self.n_layers == 1:
-            raise TooFewLayersError(f'{type(self).__name__} '
-                                    'has only one layer')
-
-        # Recall that z increases moving deeper into the solid
-        return min(lay_below.cartori[2] - lay_above.cartbotz                    # TODO: change when flipping .cartpos[2] -- Issue #174
-                   for lay_above, lay_below in pairwise(self.layers))
+    @property
+    def top_atom(self):
+        """Return the atom currently at the bottom of this slab."""
+        # Do it the most efficient way possible, i.e., with the
+        # atom container that should have the fewest atoms. We
+        # rely on the z-sorting of layers and sublayers.
+        if self.sublayers:
+            container = self.sublayers[0]                                       # TODO: this may not be right, as sublayers are also sorted by element for same-z!
+        elif self.layers:
+            container = self.layers[0]
+        else:
+            container = self
+        return max(container, key=lambda at: at.pos[2])
 
     @classmethod
     def from_slab(cls, other):
@@ -353,7 +388,14 @@ class BaseSlab(AtomContainer):
             The atoms added to this slab.
         new_layers : tuple
             The Layer objects added to this slab.
+
+        Raises
+        ------
+        ValueError
+            If `bulk_layers` is empty.
         """
+        if not bulk_layers:
+            raise ValueError('_add_one_bulk_cell: no bulk_layers to add.')
         if new_atoms_start_index is None:
             new_atoms_start_index = self.n_atoms + 1
         # The mess with needing three different components of the
@@ -548,6 +590,7 @@ class BaseSlab(AtomContainer):
         i = 0
         while i < len(sublists):
             atoms = sublists[i]
+            # pylint: disable-next=magic-value-comparison  # The '2'
             if len(atoms) < 2 or _z_distance(atoms[0], atoms[-1]) <= eps:
                 i += 1
                 continue
@@ -795,7 +838,7 @@ class BaseSlab(AtomContainer):
         # with fewest atoms of the same chemical element)
         lowocclayer = self_copy.fewest_atoms_sublayer
         n_atoms = lowocclayer.n_atoms
-        if n_atoms < 2:
+        if n_atoms < 2:  # pylint: disable=magic-value-comparison
             # Cannot be smaller if there's only 1 atom
             raise AlreadyMinimalError(
                 f'{type(self).__name__}.get_minimal_ab_cell: fewest-atom '
@@ -867,7 +910,7 @@ class BaseSlab(AtomContainer):
         # Finally, consider that the new unit cell area
         # must be an integer divisor of the current one
         candidate_ab_cells_and_area_ratios = (
-            (ab, ab_cell_area/area)
+            (ab, ab_cell_area / area)
             for ab, area in candidate_ab_cells_and_areas
             )
         acceptable_ab_cells_and_ratios = (
