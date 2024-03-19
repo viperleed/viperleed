@@ -5,26 +5,16 @@ Created on 2023-09-08
 @author: Michele Riva (@michele-riva)
 """
 
-from pathlib import Path
-import sys
-
 import numpy as np
 import pytest
 
 from pytest_cases import fixture, parametrize_with_cases
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Cannot do anything about it until we make viperleed installable
 from viperleed.calc.lib import symmetry
 
 from ..helpers import flat_fixture
 from . import simple_slabs
 from .. import poscar_slabs
-# pylint: enable=wrong-import-position
 
 
 RANDOM = np.random.default_rng().uniform

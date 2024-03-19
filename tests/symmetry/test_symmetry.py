@@ -10,8 +10,6 @@ Contains tests for symmetry-detection routines.
 import copy
 from contextlib import contextmanager
 import logging
-from pathlib import Path
-import sys
 
 import numpy as np
 import pytest
@@ -20,12 +18,6 @@ from pytest import approx
 from pytest_cases import fixture, parametrize, parametrize_with_cases
 from pytest_cases.filters import id_has_suffix
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Cannot do anything about it until we make viperleed installable
 from viperleed.calc.lib import symmetry
 from viperleed.calc.lib.base import angle as angle_radians
 
@@ -33,7 +25,6 @@ from ..helpers import duplicate_all, CaseTag
 from ..poscar_slabs import make_poscar_ids
 from . import simple_slabs
 from .conftest import get_cases
-# pylint: enable=wrong-import-position
 
 
 def angle(vec1, vec2):

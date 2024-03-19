@@ -6,12 +6,9 @@ Created on 2023
 @author: Michele Riva (@michele-riva)
 """
 
-from pathlib import Path
-import sys
-
 import numpy as np
 import pytest
-from copy import deepcopy
+
 from viperleed.calc.classes import r_error
 
 

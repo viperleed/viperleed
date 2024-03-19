@@ -6,15 +6,39 @@ Created on 2023-07-28
 @author: Michele Riva (@michele-riva)
 """
 
-from pathlib import Path
-import sys
-
 from viperleed.calc.files import phaseshifts
+
+from ..test_psgen import MIN_ENTRIES_IN_FIRST_LINE
+
+
+def test_phaseshifts_firstline_not_empty(run_phaseshift):
+    """Ensure a first line of the PHASESHIFTS file has been created."""
+    *_, firstline, _ = run_phaseshift
+    assert firstline
+
+
+def test_phaseshifts_firstline_len(run_phaseshift):
+    """Ensure the first line of a PHASESHIFTS file has enough items."""
+    *_, firstline, _ = run_phaseshift
+    potential_param = firstline.split()
+    assert len(potential_param) >= MIN_ENTRIES_IN_FIRST_LINE
+
+
+def test_phaseshift_log_exists(run_phaseshift):
+    """Ensure a log file is successfully written to disk."""
+    rpars, *_ = run_phaseshift
+    assert any(rpars.workdir.glob('phaseshift*.log'))
 
 
 def test_write_phaseshifts(run_phaseshift):
     """Ensure a PHASESHIFTS file is successfully written to disk."""
-    param, _, firstline, phaseshift = run_phaseshift
+    rpars, _, firstline, phaseshift = run_phaseshift
     phaseshifts.writePHASESHIFTS(firstline, phaseshift,
-                                 file_path=param.workdir/'PHASESHIFTS')
-    assert any(param.workdir.glob('PHASESHIFTS'))
+                                 file_path=rpars.workdir/'PHASESHIFTS')
+    assert any(rpars.workdir.glob('PHASESHIFTS'))
+
+
+def test_phaseshifts_not_empty(run_phaseshift):
+    """Ensure run_phaseshift has generated some PHASESHIFTS."""
+    *_, phaseshift = run_phaseshift
+    assert len(phaseshift)

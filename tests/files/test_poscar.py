@@ -7,22 +7,17 @@ Created on 2023-07-12
 """
 
 import io
-from pathlib import Path
-import sys
 
 import pytest
 from pytest_cases import parametrize_with_cases, fixture
 
-# pylint: disable=wrong-import-position
-# Will be fixed in installable version
+from viperleed.calc.files import poscar
 from viperleed.calc.lib import symmetry
 from viperleed.calc.lib.base import pairwise
-from viperleed.calc.files import poscar
 
 from . import case_poscar_files
 from ..poscar_slabs import CasePOSCARSlabs
 from ..helpers import exclude_tags, CaseTag
-# pylint: enable=wrong-import-position
 
 
 _WITH_INFO = {'cases': CasePOSCARSlabs,

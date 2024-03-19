@@ -11,8 +11,6 @@ from copy import deepcopy
 import logging
 import operator
 from random import shuffle
-from pathlib import Path
-import sys
 
 import numpy as np
 import pytest
@@ -20,8 +18,6 @@ from pytest_cases import fixture, fixture_ref
 from pytest_cases import parametrize, parametrize_with_cases
 from scipy.spatial.distance import cdist as euclid_distance
 
-# pylint: disable=wrong-import-position
-# Cannot do anything about it until we make viperleed installable
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import add_edges_and_corners, collapse, pairwise
 from viperleed.calc.lib.base import NonIntegerMatrixError, SingularMatrixError
@@ -38,7 +34,6 @@ from viperleed.calc.files.parameters.errors import (
 
 from ..helpers import exclude_tags, not_raises, CaseTag as Tag
 from .. import cases_ase, poscar_slabs
-# pylint: enable=wrong-import-position
 
 CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs
 todo = pytest.mark.skip('To be implemented')

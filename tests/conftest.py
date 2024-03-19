@@ -29,22 +29,15 @@ tensorleed_path
 """
 
 import os
-from pathlib import Path
 import re
-import sys
 
 import pytest
 import pytest_cases
 
-from viperleed.calc import run_tleedm
 from viperleed.calc.__main__ import get_tensorleed_path
-from viperleed.calc.lib import symmetry
-from viperleed.calc.classes.atom import Atom
-from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.classes.slab import Slab
-from viperleed.calc.files import displacements, vibrocc
-from viperleed.calc.files import parameters, poscar
+from viperleed.calc.files import displacements
 from viperleed.calc.files import psgen
+from viperleed.calc.files import vibrocc
 
 from .helpers import TEST_DATA, POSCAR_PATH
 from .helpers import CaseTag, exclude_tags, execute_in_dir

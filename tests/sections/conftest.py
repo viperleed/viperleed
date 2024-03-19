@@ -22,30 +22,18 @@ search_files_ag100
     INITIALIZATION + SEARCH run, for Ag(100) only
 """
 
-import os
-from pathlib import Path
 import shutil
-import sys
 from zipfile import ZipFile
 
 import pytest
 import pytest_cases
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Will be fixed in installable version
-from viperleed.calc import run_tleedm
 from viperleed.calc import run_tleedm
 from viperleed.calc.lib.base import copytree_exists_ok
 
 from ..helpers import TEST_DATA
-# pylint: enable=wrong-import-position
 
 
-SOURCE_STR = str(Path(VPR_PATH) / 'viperleed')
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
 
 TENSERLEED_TEST_VERSIONS = (1.61, 0.0)  # (0 == Newest)

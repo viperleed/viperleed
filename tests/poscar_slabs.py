@@ -7,28 +7,18 @@ Created on 2023-09-05
 Contains definition of pytest cases generated from POSCAR files.
 """
 
-from pathlib import Path
 import copy
 import inspect
-import sys
 
 import numpy as np
-import pytest
 from pytest_cases import parametrize, lazy_value, case
 
-VPR_PATH = str(Path(__file__).resolve().parents[2])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Cannot do anything about it until we make viperleed installable
 from viperleed.calc.classes.rparams import Rparams, LayerCuts, SymmetryEps
 from viperleed.calc.files import poscar
 
 from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo
 from .helpers import BulkSlabAndRepeatInfo, LayerInfo, CaseTag as Tag
 from .helpers import NearestNeighborInfo, SurfaceAtomInfo, duplicate_all
-# pylint: enable=wrong-import-position
 
 
 def _get_poscar_info(*args):
@@ -118,7 +108,7 @@ def make_poscar_ids(suffix=None):
 
 
 # PARAMETERS presets for slabs
-_PRESETS = {  # pylint: disable=consider-using-namedtuple-or-dataclass
+_PRESETS = {
     'Fe3O4': {'LAYER_CUTS': LayerCuts.from_string('0.1 0.2 <dz(1.0)'),
               'N_BULK_LAYERS': 2,
               'SYMMETRY_EPS': SymmetryEps(0.3),

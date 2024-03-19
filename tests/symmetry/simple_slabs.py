@@ -10,26 +10,15 @@ plane groups, including atoms at all Wychoff positions.
 """
 
 from enum import Enum
-from pathlib import Path
-import sys
 
 import numpy as np
 from pytest_cases import parametrize, case
 
-
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-
-# pylint: disable=wrong-import-position
-# Cannot do anything about it until we make viperleed installable
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.rparams import Rparams
 
 from ..helpers import TestInfo, DisplacementInfo, CaseTag as Tag
-# pylint: enable=wrong-import-position
 
 
 def remove_atoms(slab, param, *atom_nrs):

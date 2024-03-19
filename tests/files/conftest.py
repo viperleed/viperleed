@@ -15,21 +15,11 @@ tmp_poscar
     Fresh path to a 'POSCAR' file.
 """
 
-from pathlib import Path
-import sys
-
 from pytest_cases import fixture, parametrize_with_cases
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Will be fixed in installable version
 from viperleed.calc.lib import symmetry
 
 from ..poscar_slabs import CasePOSCARSlabs
-# pylint: enable=wrong-import-position
 
 
 @fixture

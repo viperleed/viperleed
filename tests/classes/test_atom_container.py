@@ -6,23 +6,14 @@ Created on 2023-10-06
 """
 
 from operator import attrgetter
-from pathlib import Path
-import sys
 
 import pytest
 from pytest_cases import fixture, parametrize, parametrize_with_cases
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Cannot do anything about it until we make viperleed installable
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.atom_containers import AtomListOutOfDateError
 from viperleed.calc.classes.atom_containers import DuplicateAtomsError
-# pylint: enable=wrong-import-position
 
 
 class CasesAtomList:

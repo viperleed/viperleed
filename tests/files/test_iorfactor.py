@@ -5,23 +5,13 @@ Created on 2023-12-11
 @author: Alexander M. Imre (@amimre)
 """
 
-from pathlib import Path
-import sys
-
 import pytest
 from pytest_cases import fixture
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Will be fixed in installable version
 from viperleed.calc.classes.rparams import Rparams, TheoEnergies
 from viperleed.calc.files.beams import readOUTBEAMS
 
 from viperleed.calc.files import iorfactor
-# pylint: enable=wrong-import-position
 
 
 @fixture(name='ag100_expbeams')

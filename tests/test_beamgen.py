@@ -5,14 +5,12 @@ Created on 2023-06-09
 @author: Alexander M. Imre (@amimre)
 @author: Michele Riva (@michele-riva)
 """
-from pathlib import Path
-import sys
 
 from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc.files import beamgen
-from viperleed.calc.lib import symmetry
 from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
+from viperleed.calc.lib import symmetry
 
 from .helpers import CaseTag, exclude_tags
 from .poscar_slabs import CasePOSCARSlabs

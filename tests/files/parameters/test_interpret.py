@@ -6,19 +6,11 @@ Created on 2023-06-09
 @author: Michele Riva (@michele-riva)
 """
 
-from pathlib import Path
-import sys
 
 import numpy as np
 import pytest
 from pytest_cases import parametrize, parametrize_with_cases
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Will be fixed in installable version
 from viperleed import __version__
 from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.classes.rparams.special.layer_cuts import (
@@ -39,7 +31,6 @@ from viperleed.calc.files.parameters._utils import NumericBounds as Bounds
 
 from .case_parameters import case_parameters_slab
 from ...poscar_slabs import CasePOSCARSlabs
-# pylint: enable=wrong-import-position
 
 
 class TestSlabParameters:

@@ -5,25 +5,15 @@ Created on 2023-09-07
 @author: Michele Riva (@michele-riva)
 """
 
-from pathlib import Path
-import sys
-
 import numpy as np
 from pytest_cases import case, parametrize
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Will be fixed in installable version
 from viperleed.calc.classes.rparams import LMax
 from viperleed.calc.files import parameters
 
 from ...helpers import TestInfo, CaseTag
 from ...poscar_slabs import POSCARS_WITHOUT_INFO
 from ...poscar_slabs import CasePOSCARSlabs, get_info_by_name
-# pylint: enable=wrong-import-position
 
 
 def _get_poscar_info(name):

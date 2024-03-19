@@ -1,4 +1,4 @@
-"""Run tests for functionality in from_ase.
+"""Tests for functionality in viperleed.calc.from_ase.
 
 Created on 2023-02-23
 
@@ -6,21 +6,14 @@ Created on 2023-02-23
 @author: Michele Riva (@michele-riva)
 
 Define fixtures and test cases appropriate for the functionality
-available in the from_ase module of viperleed.
+available in the from_ase module of viperleed.calc.
 """
 
 from io import StringIO
-from pathlib import Path
-import sys
 
 import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
-
-# pylint: disable=wrong-import-position
-# Unfortunately no way to do this the correct way till we have
-# an installable version of viperleed. The reason is the VPR_PATH
-# bit above.
 
 from viperleed.calc import from_ase as vpr_ase
 from viperleed.calc.lib.base import angle
@@ -30,8 +23,6 @@ from viperleed.calc.files.beams import readOUTBEAMS
 
 from .helpers import TEST_DATA
 from . import cases_ase
-
-# pylint: enable=wrong-import-position
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

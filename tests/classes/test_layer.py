@@ -7,26 +7,17 @@ Created on 2023-10-04
 
 from contextlib import contextmanager
 from dataclasses import dataclass
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 import pytest_cases
 
-VPR_PATH = str(Path(__file__).resolve().parents[3])
-if VPR_PATH not in sys.path:
-    sys.path.append(VPR_PATH)
-
-# pylint: disable=wrong-import-position
-# Will be fixed in installable
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.layer import Layer, SubLayer
 from viperleed.calc.classes.layer import LayerHasNoAtomsError
 from viperleed.calc.classes.slab import Slab
 
 from ..helpers import InfoBase, duplicate_all
-# pylint: enable=wrong-import-position
 
 
 _NO_VALUE = object()
