@@ -21,8 +21,8 @@ import sys
 from pytest_cases import fixture
 import numpy as np
 
-from viperleed.calc.classes import rparams
-from viperleed.calc.files import poscar
+from viperleed.calc.classes.atom import Atom
+from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.classes.slab import Slab
 
 
