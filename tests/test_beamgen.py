@@ -78,7 +78,7 @@ class TestGenerateBeamlist:
 
     @fixture(name='make_beamlist', scope='class')
     def fixture_make_beamlist(self, prepare_for_beamlist, tmp_path_factory):
-        """Create a 'BEAMLIST' file and return slab, parameters, info and path."""
+        """Create a 'BEAMLIST', and return slab, parameters, info, and path."""
         slab, param, info = prepare_for_beamlist
         tmp_dir = tmp_path_factory.mktemp(
             basename=f'{info.poscar.name}_beamlist',
@@ -93,16 +93,17 @@ class TestGenerateBeamlist:
         *_, beamlist = make_beamlist
         assert beamlist.exists()
         # check that file is not empty
-        with open(beamlist, 'r') as file:
+        with open(beamlist, 'r', encoding='utf-8') as file:
             assert file.read()
 
     def test_beamlist_is_correct(self, make_beamlist, data_path):
         """Check that the BEAMLIST file matches the expected contents."""
         *_, info, beamlist = make_beamlist
-        with open(beamlist, 'r') as file:
+        with open(beamlist, 'r', encoding='utf-8') as file:
             contents = file.read()
         # get the expected contents
         beamlist_name = info.poscar.name.replace('POSCAR', 'BEAMLIST')
-        with open(data_path / 'BEAMLISTs' / beamlist_name, 'r') as file:
+        beamlist_path = data_path / 'BEAMLISTs' / beamlist_name
+        with beamlist_path.open('r', encoding='utf-8') as file:
             expected_contents = file.read()
         assert contents == expected_contents
