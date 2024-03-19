@@ -309,6 +309,7 @@ def make_errors_figs(errors, formatting=None):
     if formatting is None:
         formatting = {}
     font_size_scale = formatting.get("font_size", 10) / 10
+    line_width = formatting.get("line_width", 2)
 
     fig_order = (3, 2)
     figs_per_page = fig_order[0] * fig_order[1]
@@ -364,6 +365,7 @@ def make_errors_figs(errors, formatting=None):
         rmax = max(r for err in mode_errors for r in err.rfacs)
         fig = plt.figure(figsize=(5.8, 5.8))
         ax = fig.add_subplot(1, 1, 1)
+        [sp.set_linewidth(0.7 * line_width) for sp in ax.spines.values()]
         if mode != "occ":
             ax.set_xlabel('Deviation from bestfit value (Å)',
                           fontsize=10*font_size_scale)
@@ -394,6 +396,8 @@ def make_errors_figs(errors, formatting=None):
         for err in mode_errors:
             ax.plot(err_x[err], err_y[err], '-o', label=err_legend[err],
                     markevery=err_x_to_mark[err])
+        # set tick font size
+        ax.tick_params(labelsize=6*font_size_scale, width=0.7 * line_width)
         ax.set_xlim(*xrange)
         ax.set_ylim(rmin - ((rmax-rmin)*0.1), rmax + ((rmax-rmin)*0.1))
         ax.legend(fontsize=font_size_scale*8)
@@ -404,6 +408,8 @@ def make_errors_figs(errors, formatting=None):
         plt.tight_layout()
         fig, axs = plt.subplots(fig_order[0], fig_order[1],
                                 figsize=figsize, squeeze=True)
+        [sp.set_linewidth(0.7 * line_width) for ax in axs.flatten()
+        for sp in ax.spines.values()]
         axs = axs.flatten()
         while len(mode_errors) > 0:
             if figcount >= figs_per_page:
@@ -414,6 +420,8 @@ def make_errors_figs(errors, formatting=None):
                 plt.tight_layout()
                 fig, axs = plt.subplots(fig_order[0], fig_order[1],
                                         figsize=figsize, squeeze=True)
+                [sp.set_linewidth(0.7 * line_width) for ax in axs
+                for sp in ax.spines.values()]
                 axs = axs.flatten()
             err = mode_errors.pop(0)
             rmax = max(r for r in err.rfacs)
@@ -424,7 +432,7 @@ def make_errors_figs(errors, formatting=None):
                       x_max + abs(x_max - x_min) * 0.05]
             if var and rmin + var < rmax + (rmax-rmin)*0.1:
                 axs[figcount].plot(xrange, [rmin + var]*2, color="slategray",
-                                   linewidth=1)
+                                   linewidth=line_width/2)
                 inters = sorted(err_x_inters[err] + [xrange[0], xrange[1]])
                 (ind, diff) = max_diff(inters)
                 text_x = inters[ind] - diff/2
@@ -443,7 +451,7 @@ def make_errors_figs(errors, formatting=None):
                                              alpha=0.6, pad=0.5))
             axs[figcount].plot(err_x[err], err_y[err], '-o',
                                markevery=err_x_to_mark[err],
-                               linewidth=1, ms=2,
+                               linewidth=line_width/2, ms=2,
                                label=re.sub("along", "\nalong",
                                             err_legend[err]))
             axs[figcount].set_xlim(*xrange)
@@ -470,7 +478,8 @@ def make_errors_figs(errors, formatting=None):
             axs[figcount].set_yticklabels([f"{v:.{dec}f}" for v in yticks])
             axs[figcount].xaxis.set_major_locator(plt.MaxNLocator(5))
             # tick font size
-            axs[figcount].tick_params(labelsize=6*font_size_scale)
+            axs[figcount].tick_params(labelsize=6*font_size_scale,
+                                      width=0.7 * line_width)
             if mode != "occ":
                 axs[figcount].set_xlabel('Deviation from bestfit value (Å)',
                                          fontsize=6*font_size_scale)
