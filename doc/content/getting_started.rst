@@ -12,3 +12,4 @@ Getting started
     Installation<basics/installation>
     Command Line Tools<basics/command_line_tools>
     How to Run<basics/how_to_run>
+    Notes for developers<basics/notes_for_developers>

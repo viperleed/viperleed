@@ -12,6 +12,13 @@ Glossary
     ASE
       Atomic Simulation Environment. See the `ASE homepage <https://wiki.fysik.dtu.dk/ase/>`__.
 
+    Environment variable
+      A variable that is set in the environment of a process.
+      It is used to pass information to a process.
+      ViPErLEED uses the environment variable `VIPERLEED_TENSORLEED` to locate
+      the TensErLEED source code if the path is not given explicitly.
+      See also :ref:`here<how_to_run>`.
+
     LEED
       Low energy electron diffraction
 
