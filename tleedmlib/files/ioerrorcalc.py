@@ -366,11 +366,11 @@ def make_errors_figs(errors, formatting=None):
         ax = fig.add_subplot(1, 1, 1)
         if mode != "occ":
             ax.set_xlabel('Deviation from bestfit value (Å)',
-                          fontsize=8*font_size_scale)
+                          fontsize=10*font_size_scale)
         else:
-            ax.set_xlabel('Site occupation (%)', fontsize=8*font_size_scale)
-        ax.set_ylabel('Pendry R-factor', fontsize=8*font_size_scale)
-        ax.set_title(titles[mode])
+            ax.set_xlabel('Site occupation (%)', fontsize=10*font_size_scale)
+        ax.set_ylabel('Pendry R-factor', fontsize=10*font_size_scale)
+        ax.set_title(titles[mode], fontsize=12*font_size_scale)
         if var and rmin + var < rmax + (rmax-rmin)*0.1:
             ax.plot(xrange, [rmin + var]*2, color="slategray")
             inters = sorted([x for err in mode_errors
@@ -396,7 +396,7 @@ def make_errors_figs(errors, formatting=None):
                     markevery=err_x_to_mark[err])
         ax.set_xlim(*xrange)
         ax.set_ylim(rmin - ((rmax-rmin)*0.1), rmax + ((rmax-rmin)*0.1))
-        ax.legend(fontsize=font_size_scale*10)
+        ax.legend(fontsize=font_size_scale*8)
         fig.tight_layout()
         figs.append(fig)
         # now plot individual figures
