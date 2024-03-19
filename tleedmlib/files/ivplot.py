@@ -283,11 +283,11 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 xy = xy_per_beam_per_dataset[i][ct]
                 if i < len(plot_colors):
                     axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
-                                  linewidth=line_width,
+                                  linewidth=lw,
                                   color=plot_colors[i])
                 else:
                     axs[fig_index_on_page].plot(xy[:, 0], xy[:, 1], label=label,
-                                  linewidth=line_width)
+                                  linewidth=lw)
             if labels:
                 axs[fig_index_on_page].annotate(labels[ct], namePos, fontsize=font_size*gen_scaling)
             if annotations:
