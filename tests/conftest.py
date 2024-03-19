@@ -53,30 +53,6 @@ from . import poscar_slabs
 VPR_PATH = str(Path(__file__).resolve().parents[2])
 TENSORLEED_PATH = Path(VPR_PATH) / 'viperleed' / 'tensorleed'                   # TODO: this will need to be dynamic!
 
-_FIXTURES_PATH = Path('tests/fixtures/')
-_POSCARs_PATH = _FIXTURES_PATH / 'POSCARs'
-
-_EXAMPLE_POSCAR_EXPECTATIONS = [("POSCAR_Ag(100)", 6, 'p4m', 0),
-                                ("POSCAR_STO(110)-4x1", 136, 'pm', 0),
-                                ("POSCAR_TiO2", 540, 'pmm', -1),
-                                ("POSCAR_diamond", 96, 'pm', 89),
-                                ("POSCAR_36C_p6m", 36, 'p6m', 0),
-                                ("POSCAR_36C_cm", 36,'cm', 0),]
-                               #("POSCAR_Fe3O4_SCV", 83, 'cmm', 50)]            #TODO: Phaseshift generation fails. Why? @Fkraushofer (worked in fkpCurie:Florian_OldLocalTests/Fe3O4-001-SCV/history/t000.r013_211220-133452)
-
-_EXAMPLE_POSCARs = [file.name for file in _POSCARs_PATH.glob('POSCAR*')]
-
-SOURCE_STR = str(Path(__file__)/ ".." / ".." / "viperleed-tensorleed" / "tensorleed")
-ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
-INPUTS_ORIGIN = Path(__file__).parent / "fixtures"
-POSCAR_PATHS = INPUTS_ORIGIN / "POSCARs"
-
-TENSERLEED_TEST_VERSIONS = ('1.72', '1.73', '1.74')
-
-AG_100_DISPLACEMENTS_NAMES = ['DISPLACEMENTS_z', 'DISPLACEMENTS_vib', 'DISPLACEMENTS_z+vib']
-AG_100_DELTAS_NAMES = ['Deltas_z.zip', 'Deltas_vib.zip', 'Deltas_z+vib.zip']
-
-
 @pytest.fixture(scope='session')
 def re_match():  # This is actually a fixture factory
     """Return a re.match object from a pattern and a string."""
