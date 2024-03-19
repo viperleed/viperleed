@@ -15,11 +15,8 @@ manual_slab_3_atoms
     An orthorhombic slab with three atoms.
 """
 
-from pathlib import Path
-import sys
-
-from pytest_cases import fixture
 import numpy as np
+from pytest_cases import fixture
 
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.rparams import Rparams
