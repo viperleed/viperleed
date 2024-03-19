@@ -79,7 +79,7 @@ class TestAtomList:
 
     @parametrize(other=(10, [1, 2, 5]))
     def test_not_equal(self, other, make_atomlist):
-        """Check that a non-Atom is never in an AtomList."""
+        """Check that a non-Atom never compares equal to an AtomList."""
         atom_list = make_atomlist(THREE_ATOMS())
         assert atom_list != other
 
