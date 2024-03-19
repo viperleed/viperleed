@@ -6,6 +6,7 @@ Created on 2023-06-09
 @author: Michele Riva (@michele-riva)
 """
 
+import logging
 
 import numpy as np
 import pytest
@@ -710,12 +711,12 @@ class TestLogLevel(_TestInterpretBase):
     def test_interpret_true(self, interpreter):
         """Check correct setting of LOG_LEVEL to True."""
         self.interpret(interpreter, 'true')
-        assert interpreter.rpars.LOG_LEVEL <= 10
+        assert interpreter.rpars.LOG_LEVEL <= logging.DEBUG
 
     def test_interpret_false(self, interpreter):
         """Check correct setting of LOG_LEVEL to False."""
         self.interpret(interpreter, 'F')
-        assert interpreter.rpars.LOG_LEVEL >= 20
+        assert interpreter.rpars.LOG_LEVEL >= logging.INFO
 
     def test_interpret_int(self, interpreter):
         """Check correct interpretation of integer LOG_LEVEL."""
@@ -724,7 +725,7 @@ class TestLogLevel(_TestInterpretBase):
     def test_interpret_default(self, interpreter):
         """Check correct interpretation of a default string LOG_LEVEL."""
         self.interpret(interpreter, 'vv')
-        assert interpreter.rpars.LOG_LEVEL < 5
+        assert interpreter.rpars.LOG_LEVEL < logging.DEBUG / 2
 
     invalid = {
         'too many': ('not a level', '', err.ParameterNumberOfInputsError),
