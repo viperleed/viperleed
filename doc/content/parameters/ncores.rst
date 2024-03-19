@@ -32,7 +32,8 @@ N_CORES defines the number of cores available for TensErLEED execution.
          export MKL_NUM_THREADS=2
 
       Ideally, :math:`{\mathrm{N_CORES} \times \mathrm{THREADS}}` should be set
-      to the number of available hyperthreading cores on the system.
+      to the number of available hyperthreading cores on the system with the 
+      N_CORES as high as possible without running into memory limitations.
 
 
 The TensErLEED search program is executed using ``mpirun``, with the number of
