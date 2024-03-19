@@ -45,9 +45,8 @@ from viperleed.calc.files import displacements, vibrocc
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.files import psgen
 
-
 from .helpers import TEST_DATA, POSCAR_PATH
-from .helpers import CaseTag, exclude_tags
+from .helpers import CaseTag, exclude_tags, execute_in_dir
 from . import poscar_slabs
 
 VPR_PATH = str(Path(__file__).resolve().parents[2])
@@ -131,7 +130,7 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
 
     Yields
     ------
-    param : Rparams
+    rpars : Rparams
         The PARAMETERS used during the PHASESHIFTS calculation.
     slab : Slab
         The Slab for which PHASESHIFTS were calculated.
@@ -141,16 +140,15 @@ def run_phaseshift(args, tensorleed_path, tmp_path_factory):
     phaseshift : list
         The PHASESHIFTS that were generated.
     """
-    slab, param, *_ = args
-    param.source_dir = tensorleed_path
-    param.workdir = tmp_path_factory.mktemp(basename='phaseshifts',
+    slab, rpars, *_ = args
+    rpars.source_dir = tensorleed_path
+    rpars.workdir = tmp_path_factory.mktemp(basename='phaseshifts',
                                             numbered=True)
-    param.initTheoEnergies()
+    rpars.initTheoEnergies()
     executable = 'EEASiSSS' + ('.exe' if 'nt' in os.name else '')               # TODO: does this cover it or should we use 'win' in sys.platform()?
 
     # run EEASISSS in the temporary directory
-    home = Path()
-    os.chdir(param.workdir)
-    results = psgen.runPhaseshiftGen_old(slab, param, psgensource=executable)
-    yield (param, slab, *results)
-    os.chdir(home)
+    with execute_in_dir(rpars.workdir):
+        results = psgen.runPhaseshiftGen_old(slab, rpars,
+                                             psgensource=executable)
+        yield (rpars, slab, *results)
