@@ -9,8 +9,7 @@ import pytest
 from pytest_cases import fixture
 
 from viperleed.calc.classes.rparams import Rparams, TheoEnergies
-from viperleed.calc.files.beams import readOUTBEAMS
-
+from viperleed.calc.files import beams
 from viperleed.calc.files import iorfactor
 
 
@@ -18,7 +17,7 @@ from viperleed.calc.files import iorfactor
 def fixture_ag100_expbeams(data_path):
     """Return a list of experimental beam energies for Ag(100)."""
     _expbeams_path = data_path / 'Ag(100)' / 'initialization' / 'EXPBEAMS.csv'
-    return readOUTBEAMS(str(_expbeams_path))
+    return beams.readOUTBEAMS(str(_expbeams_path))
 
 
 class TestCheckTheoBeamsEnergies:
