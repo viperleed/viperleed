@@ -3,7 +3,10 @@
 BULK_LIKE_BELOW
 ===============
 
-BULK_LIKE_BELOW is a helper parameter that can be used to automatically determine :ref:`BULK_REPEAT<BULK_REPEAT>`, :ref:`N_BULK_LAYERS<n_bulk_layers>`  and :ref:`LAYER_CUTS<layer_cuts>`. It specifies a fraction of **c** in the :ref:`POSCAR<POSCAR>`  unit cell below which the structure is bulk-like, i.e. unrelaxed (if coming from DFT), or sufficiently close to unrelaxed to fall within :ref:`SYMMETRY_EPS<SYMPREC>`. Generally, this is the most easy way to detect and define the bulk if at least two unrelaxed bulk repeat units are present in the :ref:`POSCAR<POSCAR>`  file. BULK_LIKE_BELOW does not need to be specified if the bulk is manually defined through :ref:`N_BULK_LAYERS<n_bulk_layers>`, :ref:`LAYER_CUTS<layer_cuts>`, and :ref:`BULK_REPEAT<BULK_REPEAT>`.
+BULK_LIKE_BELOW is a helper parameter that can be used to automatically determine :ref:`BULK_REPEAT<BULK_REPEAT>`, :ref:`N_BULK_LAYERS<n_bulk_layers>`  and :ref:`LAYER_CUTS<layer_cuts>`.
+It specifies a fraction of **c** in the :ref:`POSCAR<POSCAR>`  unit cell below which the structure is bulk-like, i.e. unrelaxed (if coming from DFT), or sufficiently close to unrelaxed to fall within :ref:`SYMMETRY_EPS<sym_eps>`.
+Generally, this is the most easy way to detect and define the bulk if at least two unrelaxed bulk repeat units are present in the :ref:`POSCAR<POSCAR>` file.
+BULK_LIKE_BELOW does not need to be specified if the bulk is manually defined through :ref:`N_BULK_LAYERS<n_bulk_layers>`, :ref:`LAYER_CUTS<layer_cuts>`, and :ref:`BULK_REPEAT<BULK_REPEAT>`.
 
 **Default:** No default, no auto-detection of bulk if undefined
 

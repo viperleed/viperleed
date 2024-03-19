@@ -162,7 +162,7 @@ This utility uses the same algorithm for symmetry detection as is used in ViPErL
 get_bulk_repeat
 ===============
 
-Interactive script that reads a POSCAR file, asks at what c value the bulk starts, then automatically reduces the size of the POSCAR to non-redundant bulk layers only, and outputs the appropriate :ref:`N_BULK_LAYERS<blay>` and :ref:`BULK_REPEAT` values.
+Interactive script that reads a POSCAR file, asks at what c value the bulk starts, then automatically reduces the size of the POSCAR to non-redundant bulk layers only, and outputs the appropriate :ref:`N_BULK_LAYERS<n_bulk_layers>` and :ref:`BULK_REPEAT` values.
 Additionally, the files ``POSCAR_bulk`` containing the bulk unit-cell and a file ``POSCAR_min`` containing the minimal surface slab will be written.
 
 **Usage**
