@@ -21,6 +21,7 @@ The ``viperleed calc`` package uses a number of classes to represent the input d
     rparams.Rparams
     searchpar.SearchPar
     sitetype.Sitetype
+    sitetype.Atom_type
     slab.base_slab.BaseSlab
     slab.bulk_slab.BulkSlab
     slab.surface_slab.SurfaceSlab
