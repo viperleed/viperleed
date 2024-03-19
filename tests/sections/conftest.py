@@ -31,7 +31,7 @@ import pytest_cases
 from viperleed.calc import run_tleedm
 from viperleed.calc.lib.base import copytree_exists_ok
 
-from ..helpers import TEST_DATA
+from ..helpers import TEST_DATA, execute_in_dir
 
 
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')
@@ -94,7 +94,6 @@ class BaseTleedmFilesSetup:
             copytree_exists_ok(input_dir, self.test_path)
             copytree_exists_ok(input_dir, self.work_path)
 
-        self.home = Path().resolve()
         self.failed = -1
         self.work_files_after_run = []
 
@@ -110,12 +109,9 @@ class BaseTleedmFilesSetup:
 
     def run_tleedm_from_setup(self, source, preset_params):
         """Move to work folder, execute, collect outcome, go back home."""
-        os.chdir(self.work_path)
-        try:
+        with execute_in_dir(self.work_path):
             self.failed = run_tleedm(source=source,
                                      preset_params=preset_params)
-        finally:
-            os.chdir(self.home)
         self.work_files_after_run = [f.name for f in self.work_path.glob('*')]
 
     def expected_file_exists(self, expected_file):
@@ -139,7 +135,7 @@ class BaseTleedmFilesSetup:
 @pytest.mark.parametrize('surface', INIT_SURFACES, ids=INIT_SURFACES)
 @pytest.mark.parametrize('tl_version', TENSERLEED_TEST_VERSIONS,
                          ids=(str(v) for v in TENSERLEED_TEST_VERSIONS))
-def init_files(surface, tl_version, make_section_tempdir):
+def init_files(surface, tl_version, make_section_tempdir, tensorleed_path):
     """Collect files and run an initialization."""
     files = BaseTleedmFilesSetup(
         surface_dir=surface,
@@ -148,7 +144,7 @@ def init_files(surface, tl_version, make_section_tempdir):
         copy_dirs=['initialization']
         )
     files.run_tleedm_from_setup(
-        source=SOURCE_STR,
+        source=tensorleed_path,
         preset_params={'RUN': [0,],  # only initialization
                        'TL_VERSION': tl_version,}
         )
@@ -160,7 +156,7 @@ _NON_INIT_TL_VERSION = 0.0  # i.e., most recent                                 
 
 @pytest_cases.fixture(scope='session')
 @pytest.mark.parametrize('surface', REFCALC_SURFACES, ids=REFCALC_SURFACES)
-def refcalc_files(surface, make_section_tempdir):
+def refcalc_files(surface, make_section_tempdir, tensorleed_path):
     """Collect files and execute a reference calculation."""
     files = BaseTleedmFilesSetup(
         surface_dir=surface,
@@ -169,7 +165,7 @@ def refcalc_files(surface, make_section_tempdir):
         copy_dirs=['initialization']
         )
     files.run_tleedm_from_setup(
-        source=SOURCE_STR,
+        source=tensorleed_path,
         preset_params={'RUN': [0, 1],                                           # TODO: tleedm should probably automatically inject INIT!
                        'TL_VERSION': _NON_INIT_TL_VERSION,}
         )
@@ -179,7 +175,7 @@ def refcalc_files(surface, make_section_tempdir):
 @pytest_cases.fixture(scope='session')
 @pytest.mark.parametrize('displacements', AG_100_DISPLACEMENTS,
                          ids=AG_100_DISPLACEMENTS)
-def delta_files_ag100(displacements, make_section_tempdir):
+def delta_files_ag100(displacements, make_section_tempdir, tensorleed_path):
     """Collect files, and run a delta-amplitude calculation for Ag(100)."""
     surface = 'Ag(100)'
 
@@ -193,7 +189,7 @@ def delta_files_ag100(displacements, make_section_tempdir):
     disp_source = files.inputs_path / 'displacements' / displacements
     files.copy_displacements(displacements_path=disp_source)
     files.run_tleedm_from_setup(
-        source=SOURCE_STR,
+        source=tensorleed_path,
         preset_params={'RUN': [0, 2],  # init and deltas
                        'TL_VERSION': _NON_INIT_TL_VERSION,}
         )
@@ -203,7 +199,9 @@ def delta_files_ag100(displacements, make_section_tempdir):
 @pytest_cases.fixture(scope='session')
 @pytest.mark.parametrize('displacements, deltas', AG_100_DISPLACEMENTS.items(),
                          ids=AG_100_DISPLACEMENTS)
-def search_files_ag100(displacements, deltas, make_section_tempdir):
+def search_files_ag100(displacements, deltas,
+                       make_section_tempdir,
+                       tensorleed_path):
     """Collect input files and run a structure optimization."""
     surface = 'Ag(100)'
     files = BaseTleedmFilesSetup(
@@ -217,7 +215,7 @@ def search_files_ag100(displacements, deltas, make_section_tempdir):
     files.copy_displacements(disp_source)
     files.copy_deltas(deltas_source)
     files.run_tleedm_from_setup(
-        source=SOURCE_STR,
+        source=tensorleed_path,
         preset_params={'RUN': [0, 3],  # init and search
                        'TL_VERSION': _NON_INIT_TL_VERSION,}
         )
