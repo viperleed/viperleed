@@ -15,7 +15,7 @@ from viperleed.calc.files.parameters._write import ModifiedParameterValue
 from viperleed.calc.files.parameters._write import ParametersFileEditor
 from viperleed.calc.files.parameters._write import comment_out, modify
 
-from ...helpers import execute_in_dir
+from ....helpers import execute_in_dir
 
 
 class TestModifiedParameterValue:

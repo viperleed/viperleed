@@ -32,7 +32,8 @@ from viperleed.calc.files.parameters.errors import (
     InconsistentParameterError
     )
 
-from ..helpers import exclude_tags, not_raises, CaseTag as Tag
+from ...helpers import exclude_tags, not_raises
+from ..tags import CaseTag as Tag
 from .. import cases_ase, poscar_slabs
 
 CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs

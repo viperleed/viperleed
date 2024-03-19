@@ -11,7 +11,7 @@ from pytest_cases import fixture, parametrize
 from viperleed.calc.classes.rparams import LMax
 from viperleed.calc.classes.rparams._defaults import NO_VALUE
 
-from ....helpers import not_raises
+from .....helpers import not_raises
 
 
 class TestLMaxValid:

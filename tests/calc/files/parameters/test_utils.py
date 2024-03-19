@@ -11,7 +11,7 @@ import pytest
 from viperleed.calc.files.parameters._utils import Assignment
 from viperleed.calc.files.parameters._utils import NumericBounds as Bounds
 
-from ...helpers import not_raises
+from ....helpers import not_raises
 
 
 _FLOAT_ZERO_FIVE = Bounds(range_=(0, 5))

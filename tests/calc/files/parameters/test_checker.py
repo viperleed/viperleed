@@ -12,7 +12,7 @@ from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.files.parameters._checker import ParametersChecker
 from viperleed.calc.files.parameters.errors import ParameterConflictError
 
-from ...helpers import not_raises
+from ....helpers import not_raises
 
 
 @fixture(name='rpars_with_attrs', scope='session')

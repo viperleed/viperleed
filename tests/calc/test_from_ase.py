@@ -21,7 +21,7 @@ from viperleed.calc.classes.slab import Slab
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import readOUTBEAMS
 
-from .helpers import TEST_DATA
+from ..helpers import TEST_DATA
 from . import cases_ase
 
 

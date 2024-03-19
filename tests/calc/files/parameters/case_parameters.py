@@ -11,9 +11,10 @@ from pytest_cases import case, parametrize
 from viperleed.calc.classes.rparams import LMax
 from viperleed.calc.files import parameters
 
-from ...helpers import TestInfo, CaseTag
 from ...poscar_slabs import POSCARS_WITHOUT_INFO
 from ...poscar_slabs import CasePOSCARSlabs, get_info_by_name
+from ...testinfo import TestInfo
+from ...tags import CaseTag
 
 
 def _get_poscar_info(name):

@@ -12,9 +12,9 @@ from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc.lib import symmetry
 
-from ..helpers import flat_fixture
-from . import simple_slabs
+from ...helpers import flat_fixture
 from .. import poscar_slabs
+from . import simple_slabs
 
 
 RANDOM = np.random.default_rng().uniform

@@ -13,7 +13,7 @@ from viperleed.calc.bookkeeper import BookkeeperMode
 from viperleed.calc.bookkeeper import bookkeeper
 from viperleed.calc.bookkeeper import store_input_files_to_history
 
-from .helpers import execute_in_dir
+from ..helpers import execute_in_dir
 
 
 HISTORY = 'history'

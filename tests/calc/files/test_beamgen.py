@@ -12,8 +12,9 @@ from viperleed.calc.files import beamgen
 from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
 from viperleed.calc.lib import symmetry
 
-from .helpers import CaseTag, exclude_tags
-from .poscar_slabs import CasePOSCARSlabs
+from ...helpers import exclude_tags
+from ..poscar_slabs import CasePOSCARSlabs
+from ..tags import CaseTag
 
 
 class TestBeamScatteringSubsets:

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 import ase.build
 
-from .helpers import InfoBase
+from ..helpers import InfoBase
 
 
 @dataclass(repr=False)

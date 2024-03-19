@@ -15,9 +15,10 @@ from viperleed.calc.files import poscar
 from viperleed.calc.lib import symmetry
 from viperleed.calc.lib.base import pairwise
 
-from . import case_poscar_files
+from ...helpers import exclude_tags
 from ..poscar_slabs import CasePOSCARSlabs
-from ..helpers import exclude_tags, CaseTag
+from ..tags import CaseTag
+from . import case_poscar_files
 
 
 _WITH_INFO = {'cases': CasePOSCARSlabs,

@@ -20,7 +20,8 @@ from viperleed.calc.files.parameters._reader import (
     )
 from viperleed.calc.files.parameters._utils import Assignment
 
-from ...helpers import exclude_tags, duplicate_all, CaseTag
+from ....helpers import exclude_tags, duplicate_all
+from ...tags import CaseTag
 from .case_parameters import CasesParametersFile
 
 

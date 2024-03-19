@@ -13,7 +13,7 @@ from pytest_cases import parametrize_with_cases
 from viperleed.calc.files.psgen import adjust_phaseshifts
 from viperleed.calc.files.psgen import runPhaseshiftGen_old
 
-from .helpers import execute_in_dir
+from ..helpers import execute_in_dir
 from .poscar_slabs import CasePOSCARSlabs as POSCARSlabs
 
 MIN_ENTRIES_IN_FIRST_LINE = 4

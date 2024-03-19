@@ -18,7 +18,8 @@ from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.rparams import Rparams
 
-from ..helpers import TestInfo, DisplacementInfo, CaseTag as Tag
+from ..testinfo import TestInfo, DisplacementInfo
+from ..tags import CaseTag as Tag
 
 
 def remove_atoms(slab, param, *atom_nrs):

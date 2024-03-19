@@ -16,9 +16,11 @@ from pytest_cases import parametrize, lazy_value, case
 from viperleed.calc.classes.rparams import Rparams, LayerCuts, SymmetryEps
 from viperleed.calc.files import poscar
 
-from .helpers import POSCAR_PATH, TestInfo, DisplacementInfo
-from .helpers import BulkSlabAndRepeatInfo, LayerInfo, CaseTag as Tag
-from .helpers import NearestNeighborInfo, SurfaceAtomInfo, duplicate_all
+from ..helpers import POSCAR_PATH, duplicate_all
+from .tags import CaseTag as Tag
+from .testinfo import TestInfo, DisplacementInfo
+from .testinfo import BulkSlabAndRepeatInfo, LayersInfo
+from .testinfo import NearestNeighborInfo, SurfaceAtomInfo
 
 
 def _get_poscar_info(*args):
@@ -269,7 +271,7 @@ class CasePOSCARSlabs:
                                  [ 0.     ,  2.88   , -1.44   ],
                                  [ 0.     ,  0.     ,  2.03647]]),
             )
-        info.layer_properties = LayerInfo(
+        info.layer_properties = LayersInfo(
             layer_cuts=LayerCuts.from_string('dz(1.2)'),
             n_bulk_layers=info.param_presets['N_BULK_LAYERS'],
             cuts=[0.35, 0.45, 0.55, 0.65, 0.75],

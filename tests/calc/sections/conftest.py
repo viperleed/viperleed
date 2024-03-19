@@ -31,7 +31,7 @@ import pytest_cases
 from viperleed.calc import run_tleedm
 from viperleed.calc.lib.base import copytree_exists_ok
 
-from ..helpers import TEST_DATA, execute_in_dir
+from ...helpers import TEST_DATA, execute_in_dir
 
 
 ALWAYS_REQUIRED_FILES = ('PARAMETERS', 'EXPBEAMS.csv', 'POSCAR')

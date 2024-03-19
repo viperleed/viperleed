@@ -16,7 +16,7 @@ from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCuts
     )
 
-from ....helpers import InfoBase
+from .....helpers import InfoBase
 
 
 class TestLayerCutToken:

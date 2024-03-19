@@ -21,10 +21,11 @@ from pytest_cases.filters import id_has_suffix
 from viperleed.calc.lib import symmetry
 from viperleed.calc.lib.base import angle as angle_radians
 
-from ..helpers import duplicate_all, CaseTag
+from ...helpers import duplicate_all
 from ..poscar_slabs import make_poscar_ids
-from . import simple_slabs
+from ..tags import CaseTag
 from .conftest import get_cases
+from . import simple_slabs
 
 
 def angle(vec1, vec2):
