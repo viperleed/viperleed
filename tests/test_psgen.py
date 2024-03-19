@@ -16,6 +16,9 @@ from viperleed.calc.files.psgen import runPhaseshiftGen_old
 from .helpers import execute_in_dir
 from .poscar_slabs import CasePOSCARSlabs as POSCARSlabs
 
+MIN_ENTRIES_IN_FIRST_LINE = 4
+
+
 class TestPhaseshiftsGen:
     """Tests for the successful outcome of a PHASESHIFTS calculation."""
 
@@ -41,9 +44,9 @@ class TestPhaseshiftsGen:
                 continue
             n_floats += 1
         with subtests.test('First line: enough items'):
-            assert len(potential_param) >= 4
+            assert len(potential_param) >= MIN_ENTRIES_IN_FIRST_LINE
         with subtests.test('First line: enough floating-point items'):
-            assert n_floats >= 4
+            assert n_floats >= MIN_ENTRIES_IN_FIRST_LINE
 
     def test_phaseshift_log_exists(self, run_phaseshift):
         """Ensure a log file was written to disk."""
