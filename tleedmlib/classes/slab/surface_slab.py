@@ -15,7 +15,6 @@ from collections import Counter
 import copy
 import itertools
 import logging
-from math import remainder as round_remainder
 from operator import itemgetter
 
 import numpy as np
@@ -205,6 +204,30 @@ class SurfaceSlab(BaseSlab):
             self.atlist.append(Atom(elem, pos, self.n_atoms + 1, self))
         self.update_cartesian_from_fractional()
         return self
+
+    @classmethod
+    def from_slab(cls, other):
+        """Return a `cls` instance with attributes deep-copied from `other`.
+
+        Parameters
+        ----------
+        other : BaseSlab
+            The slab whose attributes are to be copied.
+
+        Returns
+        -------
+        new_slab : SurfaceSlab
+            A new slab instance with attributes copied from `other`.
+            `new_slab` will not have .layers and .sublayers defined
+            if other.is_bulk. This is to prevent `new_slab` from
+            having too many (i.e., more than RParams.N_BULK_LAYERS)
+            bulk layers.
+        """
+        new_slab = super().from_slab(other)
+        if other.is_bulk:
+            new_slab.layers = ()
+            new_slab.sublayers = ()
+        return new_slab
 
     # Used only in ensure_minimal_bulk_ab_cell
     def _change_bulk_cell(self, rpars, new_ab_cell):
@@ -659,6 +682,12 @@ class SurfaceSlab(BaseSlab):
             `rpars.BULK_REPEAT` (if it is not-None) or the z distance
             between the bottommost points of the lowest bulk and lowest
             non-bulk layers.
+
+        Raises
+        ------
+        TooFewLayersError
+            If rpars.BULK_REPEAT is None, and this slab has either
+            no bulk layers or no non-bulk layers.
         """
         if isinstance(rpars.BULK_REPEAT, np.ndarray):
             bulkc = rpars.BULK_REPEAT.copy()
@@ -666,19 +695,29 @@ class SurfaceSlab(BaseSlab):
                 bulkc *= -1
             return bulkc
 
-        if rpars.BULK_REPEAT is None:
-            # Use the distance between the bottommost bulk layer
-            # and the bottommost non-bulk layer, i.e., the current
-            # 'thickness of bulk', plus the gap between 'bulk' and
-            # 'non-bulk' parts.
-            blayers = self.bulk_layers
-            zdiff = (blayers[-1].cartbotz                                       # TODO: Issue #174?
-                     - self.layers[blayers[0].num - 1].cartbotz)
-        else:  # rpars.BULK_REPEAT is float
-            zdiff = rpars.BULK_REPEAT
+        zdiff = (rpars.BULK_REPEAT if rpars.BULK_REPEAT is not None
+                 else self._get_bulk_to_non_bulk_distance())
         if only_z_distance:
             return zdiff
         return self.c_vector * zdiff / self.c_vector[2]
+
+    def _get_bulk_to_non_bulk_distance(self):
+        """Return the z distance from bottommost bulk and non-bulk layers."""
+        bulk_layers = self.bulk_layers
+        non_bulk_layers = self.non_bulk_layers
+        if not bulk_layers:
+            raise TooFewLayersError(
+                f'{type(self).__name__} has no bulk layers. '
+                'Did you forget to .create_layers(rpars)?'
+                )
+        if not non_bulk_layers:
+            raise TooFewLayersError(f'{type(self).__name__} has only bulk '
+                                    'layers. Check LAYER_CUTS or explicitly '
+                                    'define a BULK_REPEAT.')
+        # Use the distance between the bottommost bulk layer and the
+        # bottommost non-bulk layer, i.e., the current 'thickness of
+        # bulk', plus the gap between 'bulk' and 'non-bulk' parts.
+        return bulk_layers[-1].cartbotz - non_bulk_layers[-1].cartbotz          # TODO: Issue #174?
 
     def get_nearest_neighbours(self):
         """Return the nearest-neighbour distance for all atoms.
@@ -715,7 +754,7 @@ class SurfaceSlab(BaseSlab):
         # a bunch of zeros since all atom_coords_center are a
         # subset of atom_coords_supercell: their first nearest
         # neighbour is themselves
-        distances, _ =  tree.query(atom_coords_center, k=2)
+        distances, _ = tree.query(atom_coords_center, k=2)
         distances = distances[:, 1]  # First column is zeros
         return dict(zip(self, distances))
 
@@ -856,7 +895,7 @@ class SurfaceSlab(BaseSlab):
             self.bulkslab.create_sublayers(epsz)
 
         n_bulk_lay = self.bulkslab.n_sublayers
-        if self.n_sublayers < 2*n_bulk_lay:
+        if self.n_sublayers < 2 * n_bulk_lay:
             raise NoBulkRepeatError(
                 f'{type(self).__name__}.identify_bulk_repeat: failed. '
                 f'Too few sublayers in slab ({self.n_sublayers}) with '
@@ -962,6 +1001,7 @@ class SurfaceSlab(BaseSlab):
         bulk_slab.clear_symmetry_and_ucell_history()
         bulk_slab.atlist = AtomList(bulk_slab.bulk_atoms)
         bulk_slab.layers = bulk_slab.bulk_layers
+        bulk_slab.sublayers = ()
 
         kwargs = {
             'eps': rpars.SYMMETRY_EPS,
@@ -1217,6 +1257,8 @@ class SurfaceSlab(BaseSlab):
             interlayer distance. This may mean that (1) there are too
             few layers (e.g., only one thick layer), or (2) the bulk
             was not identified correctly (e.g., wrong BULK_REPEAT).
+        ValueError
+            If `n_cells` is not a positive number.
 
         Note
         ----
@@ -1224,35 +1266,21 @@ class SurfaceSlab(BaseSlab):
         so that there are exactly `rpars.N_BULK_LAYERS` bulk layers
         at the bottom. This means that layers of this slab that are
         labelled as bulk are turned into non-bulk layers in the
-        `bulk_appended` slab returned (as are atoms in those layers)
+        `bulk_appended` slab returned (as are atoms in those layers).
         """
+        if n_cells <= 0:
+            raise ValueError('with_extra_bulk_units: n_cells must be positive')
+        eps = 0.1
         bulk_appended = copy.deepcopy(self)
         bulk_layers = bulk_appended.bulk_layers
         if not bulk_layers:
             raise MissingLayersError('No bulk layers to duplicate')
-        try:
-            first_non_bulk = bulk_appended.non_bulk_layers[-1]
-        except IndexError:
-            raise MissingLayersError('Need at least one '
-                                     'non-bulk layer') from None
 
-        # First get the bulk repeat vector (with positive z). Take into
-        # account that there already may be multiple bulk layers at the
-        # bottom. In that case the thickness of the bulk is larger than
-        # the bulk repeat, and it must be a multiple of its z component
+        # First get the bulk repeat vector (with positive z).
         bulk_c = self.get_bulk_repeat(rpars)
-        if abs(bulk_c[2]) < 0.1:
+        if abs(bulk_c[2]) < eps:
             raise SlabError('Bulk interlayer distance is too small: '
                             f'{bulk_c[2]}. Check LAYER_CUTS.')
-        bulk_thickness = abs(first_non_bulk.cartbotz
-                             - bulk_layers[-1].cartbotz)
-        if (bulk_thickness > bulk_c[2]
-                and abs(round_remainder(bulk_thickness, bulk_c[2])) > 1e-3):
-            raise SlabError(f'Thickness of bulk ({bulk_thickness:.4f}) is not '
-                            'an integer multiple of the z component of bulk '
-                            f'repeat ({bulk_c[2]:.4f})')
-        if bulk_thickness > bulk_c[2]:
-            bulk_c *= round(bulk_thickness/bulk_c[2])
 
         # Now take the component of bulk_c parallel to unit-cell c.
         # This will be used for expanding the unit cell.
@@ -1283,6 +1311,14 @@ class SurfaceSlab(BaseSlab):
                                                              bulk_c_perp_atoms)
             new_bulk_atoms.extend(added_atoms)
         bulk_appended.collapse_cartesian_coordinates(update_origin=True)
+
+        # Make sure that the BULK_REPEAT is not too short.
+        # We can only cover the case in which the BULK_REPEAT
+        # gives negative interlayer distances. See discussion
+        # at https://github.com/viperleed/viperleed/issues/187
+        if any(d < eps for d in bulk_appended.interlayer_gaps):
+            raise SlabError('BULK_REPEAT is too small. Gives layers '
+                            'with negative interlayer distances')
 
         # Make sure the number of bulk layers in the new slab is
         # still consistent with rpars.N_BULK_LAYERS. This means

@@ -52,6 +52,10 @@ if_ase = pytest.mark.skipif(
     )
 with_bulk_repeat = parametrize_with_cases('args', cases=CasePOSCARSlabs,
                                           has_tag=Tag.BULK_PROPERTIES)
+with_layers = parametrize_with_cases(
+    'args',
+    cases=CasePOSCARSlabs.case_layer_info_poscar
+    )
 infoless_poscar = parametrize_with_cases(
     'args',
     cases=CasePOSCARSlabs.case_infoless_poscar
@@ -86,17 +90,18 @@ def factory_check_identical(subtests):
             assert all(at.el == at2.el for at, at2 in zip(slab, other))
 
         # Compare coordinates including replicas for edge/corner atoms
+        eps = 1e-4
         frac_slab, cart_slab = _get_frac_and_cart(slab)
         frac_other, cart_other = _get_frac_and_cart(other)
         cart_other, _ = add_edges_and_corners(cart_other, frac_other,
-                                              (1e-4,)*3, other.ucell.T)
+                                              (eps,)*3, other.ucell.T)
         frac_other = cart_other.dot(np.linalg.inv(other.ucell.T))
         with subtests.test('atom pos'):
             frac_dist = euclid_distance(frac_slab, frac_other).min(axis=1)
-            assert all(frac_dist <= 1e-4)
+            assert all(frac_dist <= eps)
         with subtests.test('atom cartpos'):
             cart_dist = euclid_distance(cart_slab, cart_other).min(axis=1)
-            assert all(cart_dist <= 1e-4)
+            assert all(cart_dist <= eps)
     return check_identical
 
 
@@ -543,11 +548,63 @@ class TestBulkDetect:
         slab, rpars, *_ = make_poscar(poscar_slabs.SLAB_Cu2O_111)
         rpars.BULK_LIKE_BELOW = 0.35
         slab.detect_bulk(rpars)
-        assert slab.smallest_interlayer_spacing >= 1.0
+        assert slab.smallest_interlayer_gap >= 1.0
 
 
 class TestBulkRepeat:
     """Collection of test for bulk-repeat finding and returning."""
+
+    @with_bulk_repeat
+    def test_get(self, args):
+        """Test get_bulk_repeat method."""
+        slab, rpars, info = args
+        bulk_info = info.bulk_properties
+        TestBulkDetect.prepare_to_detect(slab, rpars,
+                                         bulk_info.bulk_like_below)
+        slab.detect_bulk(rpars)
+        repeat_vector = slab.get_bulk_repeat(rpars)
+        repeat_vector_bulk = slab.bulkslab.get_bulk_repeat(rpars)
+        atol = float(0.2*rpars.SYMMETRY_EPS)
+        assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=atol)
+        assert repeat_vector_bulk == pytest.approx(repeat_vector)
+
+    def test_get_raises_no_bulk_layers(self, ag100):
+        """Check complaints when get_bulk_repeat is called without bulk."""
+        slab, rpars, *_ = ag100
+        rpars.BULK_REPEAT = None
+        slab.layers = ()
+        with pytest.raises(err.TooFewLayersError) as exc:
+            slab.get_bulk_repeat(rpars)
+        assert exc.match('no bulk')
+
+    def test_get_raises_only_bulk_layers(self, ag100):
+        """Check complaints when get_bulk_repeat is called without non-bulk."""
+        slab, rpars, *_ = ag100
+        slab.make_bulk_slab(rpars)
+        bulk_twice = slab.bulkslab.with_double_thickness()
+        slab_with_ony_bulk = slab.from_slab(bulk_twice)
+        rpars.BULK_REPEAT = None
+        rpars.N_BULK_LAYERS = 2
+        slab_with_ony_bulk.create_layers(rpars)
+        with pytest.raises(err.TooFewLayersError) as exc:
+            slab_with_ony_bulk.get_bulk_repeat(rpars)
+        assert exc.match('only bulk')
+
+    def test_get_returns_stored_bulk_repeat(self, ag100):
+        """Test get_bulk_repeat returns stored bulk repeat if available."""
+        slab, rpars, *_ = ag100
+        rpars.BULK_REPEAT = np.array([1, 2, 3])
+        assert np.allclose(slab.get_bulk_repeat(rpars), np.array([1, 2, 3]))
+
+    @with_bulk_repeat
+    def test_get_returns_z_vector(self, args):
+        """Test get_bulk_repeat gives a z-only vector without BULK_REPEAT."""
+        slab, rpars, info = args
+        rpars.BULK_REPEAT = None
+        atol = float(0.2*rpars.SYMMETRY_EPS)
+        assert np.allclose(slab.get_bulk_repeat(rpars),
+                           [0, 0, info.bulk_properties.bulk_repeat[2]],
+                           atol=atol)
 
     @with_bulk_repeat
     def test_identify(self, args, subtests):
@@ -596,36 +653,6 @@ class TestBulkRepeat:
         slab.bulkslab = None
         with pytest.raises(err.MissingBulkSlabError):
             slab.identify_bulk_repeat(.1)
-
-    @with_bulk_repeat
-    def test_get(self, args):
-        """Test get_bulk_repeat method."""
-        slab, rpars, info = args
-        bulk_info = info.bulk_properties
-        TestBulkDetect.prepare_to_detect(slab, rpars,
-                                         bulk_info.bulk_like_below)
-        slab.detect_bulk(rpars)
-        repeat_vector = slab.get_bulk_repeat(rpars)
-        repeat_vector_bulk = slab.bulkslab.get_bulk_repeat(rpars)
-        atol = float(0.2*rpars.SYMMETRY_EPS)
-        assert repeat_vector == pytest.approx(bulk_info.bulk_repeat, abs=atol)
-        assert repeat_vector_bulk == pytest.approx(repeat_vector)
-
-    def test_get_returns_stored_bulk_repeat(self, ag100):
-        """Test get_bulk_repeat returns stored bulk repeat if available."""
-        slab, rpars, *_ = ag100
-        rpars.BULK_REPEAT = np.array([1, 2, 3])
-        assert np.allclose(slab.get_bulk_repeat(rpars), np.array([1, 2, 3]))
-
-    @with_bulk_repeat
-    def test_get_returns_z_vector(self, args):
-        """Test get_bulk_repeat gives a z-only vector without BULK_REPEAT."""
-        slab, rpars, info = args
-        rpars.BULK_REPEAT = None
-        atol = float(0.2*rpars.SYMMETRY_EPS)
-        assert np.allclose(slab.get_bulk_repeat(rpars),
-                           [0, 0, info.bulk_properties.bulk_repeat[2]],
-                           atol=atol)
 
 
 class TestBulkUcell:
@@ -700,7 +727,7 @@ class TestBulkUcell:
         """Ensure that atoms in slab are centred around cell midpoint in z."""
         atom_c_frac = [at.pos[2] for at in slab]
         midpos = (max(atom_c_frac) + min(atom_c_frac)) / 2
-        assert 0.48 < midpos < 0.52
+        assert midpos == pytest.approx(0.5, abs=0.02)
 
     @fixture(name='check_reduced_correctly')
     def factory_check_reduced_correctly(self, subtests):
@@ -998,6 +1025,27 @@ class TestEquivalence:
 class TestExtraBulk:
     """Collection of tests for adding additional bulk units to slabs."""
 
+    @fixture(name='check_doubled')
+    def fixture_check_doubled(self, subtests):
+        """Check correct outcome of doubling a bulk slab."""
+        def _check(double, bulk, extra=''):
+            with subtests.test(f'no. atoms{extra}'):
+                assert double.n_atoms == 2*bulk.n_atoms
+            with subtests.test(f'ab_cell unchanged{extra}'):
+                assert double.ab_cell == pytest.approx(bulk.ab_cell)
+            with subtests.test(f'c vector{extra}'):
+                assert double.c_vector == pytest.approx(2*bulk.c_vector)
+            with subtests.test(f'no. layers{extra}'):
+                assert double.n_layers == 2*bulk.n_layers
+            with subtests.test(f'no atom.num duplicates{extra}'):
+                at_num_counts = Counter(at.num for at in double)
+                assert all(c == 1 for c in at_num_counts.values())
+            if not bulk.layers:
+                return
+            with subtests.test(f'all{extra} layers are bulk'):
+                assert all(lay.is_bulk for lay in double)
+        return _check
+
     @fixture(name='check_extra_bulk')
     def fixture_check_extra_bulk(self, subtests):
         """Check correct addition of bulk units."""
@@ -1019,110 +1067,6 @@ class TestExtraBulk:
                 # This would fail before PR #114
                 at_num_counts = Counter(at.num for at in bulk_appended)
                 assert all(c == 1 for c in at_num_counts.values())
-        return _check
-
-    @parametrize(n_cells=(1, 2, 3, 5))
-    @with_bulk_repeat
-    def test_extra_bulk(self, n_cells, args, check_extra_bulk):
-        """Test function for appending bulk units to a slab."""
-        slab, rpars, info = args
-        TestBulkDetect.prepare_to_detect(slab, rpars,
-                                         info.bulk_properties.bulk_like_below)
-        slab.detect_bulk(rpars)
-        bulk_appended, new_atoms = slab.with_extra_bulk_units(rpars, n_cells)
-        check_extra_bulk(bulk_appended, new_atoms, n_cells, slab, rpars,
-                         info.bulk_properties.n_bulk_atoms)
-
-    def test_extra_bulk_raises_no_layers(self, ag100, subtests):
-        """Check correct repeated addition of bulk units."""
-        slab, rpars, *_ = ag100
-        with subtests.test('no bulk layers'):
-            for layer in slab.layers:
-                layer.is_bulk = False
-            with pytest.raises(err.MissingLayersError):
-                slab.with_extra_bulk_units(rpars, 1)
-        with subtests.test('no layers'):
-            slab.layers = ()
-            with pytest.raises(err.MissingLayersError):
-                slab.with_extra_bulk_units(rpars, 1)
-
-    def test_extra_bulk_raises_no_repeat(self, ag100):
-        """Check complaints if the bulk repeat has no z."""
-        slab, rpars, *_ = ag100
-        rpars.BULK_REPEAT = rpars.BULK_REPEAT.copy()
-        rpars.BULK_REPEAT[2] = 0
-        with pytest.raises(err.SlabError):
-            slab.with_extra_bulk_units(rpars, 1)
-
-    @parametrize(n_cells=(1, 2, 3, 5))
-    @with_bulk_repeat
-    # pylint: disable-next=too-many-arguments  # Mostly fixtures
-    def test_extra_bulk_thick_bulk(self, args, n_cells, check_extra_bulk,
-                                   subtests, with_one_thick_bulk):
-        """Check correct addition of a thicker-than-repeat bulk."""
-        def _get_interlayers(_slab):
-            return [lay_below.cartori[2] - lay_above.cartbotz                   # TODO: flip with .cartpos[2] -- Issue #174
-                    for lay_above, lay_below in pairwise(_slab.layers)]
-
-        with_one_thick_bulk(*args)
-        slab, rpars, info = args
-        rpars.BULK_REPEAT = info.bulk_properties.bulk_repeat
-        try:
-            extra, added = slab.with_extra_bulk_units(rpars, n_cells)
-        except err.SlabError as exc:
-            if 'integer multiple' in exc.args[0]:
-                pytest.skip(reason=str(exc))
-            raise
-        check_extra_bulk(extra, added, n_cells, slab,
-                         rpars, slab.bulkslab.n_atoms)
-
-        # Ensure we haven't added any gaps or partly overlapping layers
-        dists = _get_interlayers(slab)
-        dists_extra = _get_interlayers(extra)
-        with subtests.test('same min interlayer'):
-            assert min(dists_extra) == pytest.approx(min(dists), abs=1e-3)
-        with subtests.test('same max interlayer'):
-            assert max(dists_extra) == pytest.approx(max(dists), abs=1e-3)
-
-    def test_extra_bulk_twice(self, ag100, subtests):
-        """Check correct repeated addition of bulk units."""
-        slab, rpars, *_ = ag100
-        once, added_once = slab.with_extra_bulk_units(rpars, 1)
-        twice, added_twice = once.with_extra_bulk_units(rpars, 1)
-        _, added_two = slab.with_extra_bulk_units(rpars, 2)
-        n_once = len(added_once)
-        n_twice = len(added_twice)
-        n_two_at_once = len(added_two)
-        # All of these subtests failed before PR #114
-        with subtests.test('same no. atoms each time'):
-            assert n_once == n_twice
-        with subtests.test('same no. atoms twice and two at once'):
-            assert n_two_at_once == n_once + n_twice
-        with subtests.test('no duplicates'):
-            n_before_removal = twice.n_atoms
-            twice.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
-                                         rpars.SYMMETRY_EPS.z)
-            assert twice.n_atoms == n_before_removal
-
-    @fixture(name='check_doubled')
-    def fixture_check_doubled(self, subtests):
-        """Check correct outcome of doubling a bulk slab."""
-        def _check(double, bulk, extra=''):
-            with subtests.test(f'no. atoms{extra}'):
-                assert double.n_atoms == 2*bulk.n_atoms
-            with subtests.test(f'ab_cell unchanged{extra}'):
-                assert double.ab_cell == pytest.approx(bulk.ab_cell)
-            with subtests.test(f'c vector{extra}'):
-                assert double.c_vector == pytest.approx(2*bulk.c_vector)
-            with subtests.test(f'no. layers{extra}'):
-                assert double.n_layers == 2*bulk.n_layers
-            with subtests.test(f'no atom.num duplicates{extra}'):
-                at_num_counts = Counter(at.num for at in double)
-                assert all(c == 1 for c in at_num_counts.values())
-            if not bulk.layers:
-                return
-            with subtests.test(f'all{extra} layers are bulk'):
-                assert all(lay.is_bulk for lay in double)
         return _check
 
     @with_bulk_repeat
@@ -1150,18 +1094,101 @@ class TestExtraBulk:
         check_doubled(double, bulk, extra=' double')
         check_doubled(quadruple, double, extra=' quadruple')
 
+    @parametrize(n_cells=(1, 2, 3, 5))
+    @with_bulk_repeat
+    def test_extra_bulk(self, n_cells, args, check_extra_bulk):
+        """Test function for appending bulk units to a slab."""
+        slab, rpars, info = args
+        TestBulkDetect.prepare_to_detect(slab, rpars,
+                                         info.bulk_properties.bulk_like_below)
+        slab.detect_bulk(rpars)
+        bulk_appended, new_atoms = slab.with_extra_bulk_units(rpars, n_cells)
+        check_extra_bulk(bulk_appended, new_atoms, n_cells, slab, rpars,
+                         info.bulk_properties.n_bulk_atoms)
+
+    @parametrize(n_cells=(-2, -1.5, 0))
+    def test_extra_bulk_raises_n_cells(self, ag100, n_cells):
+        """Ensure complaints for invalid n_cells."""
+        slab, rpars, *_ = ag100
+        with pytest.raises(ValueError):
+            slab.with_extra_bulk_units(rpars, n_cells)
+
+    def test_extra_bulk_raises_no_layers(self, ag100, subtests):
+        """Check correct repeated addition of bulk units."""
+        slab, rpars, *_ = ag100
+        with subtests.test('no bulk layers'):
+            for layer in slab.layers:
+                layer.is_bulk = False
+            with pytest.raises(err.MissingLayersError):
+                slab.with_extra_bulk_units(rpars, 1)
+        with subtests.test('no layers'):
+            slab.layers = ()
+            with pytest.raises(err.MissingLayersError):
+                slab.with_extra_bulk_units(rpars, 1)
+
+    def test_extra_bulk_raises_no_repeat(self, ag100):
+        """Check complaints if the bulk repeat has no z."""
+        slab, rpars, *_ = ag100
+        rpars.BULK_REPEAT = rpars.BULK_REPEAT.copy()
+        rpars.BULK_REPEAT[2] = 0
+        with pytest.raises(err.SlabError):
+            slab.with_extra_bulk_units(rpars, 1)
+
+    @parametrize(n_cells=(1, 2, 3, 5))
+    @with_bulk_repeat
+    def test_extra_bulk_thick_bulk(self, args, n_cells, with_one_thick_bulk):
+        """Check correct addition of a thicker-than-repeat bulk."""
+        with_one_thick_bulk(*args)
+        slab, rpars, info = args
+        rpars.BULK_REPEAT = info.bulk_properties.bulk_repeat
+        with pytest.raises(err.SlabError) as exc:
+            slab.with_extra_bulk_units(rpars, n_cells)
+        assert exc.match('negative')
+
+    def test_extra_bulk_twice(self, ag100, subtests):
+        """Check correct repeated addition of bulk units."""
+        slab, rpars, *_ = ag100
+        once, added_once = slab.with_extra_bulk_units(rpars, 1)
+        twice, added_twice = once.with_extra_bulk_units(rpars, 1)
+        _, added_two = slab.with_extra_bulk_units(rpars, 2)
+        n_once = len(added_once)
+        n_twice = len(added_twice)
+        n_two_at_once = len(added_two)
+        # All of these subtests failed before PR #114
+        with subtests.test('same no. atoms each time'):
+            assert n_once == n_twice
+        with subtests.test('same no. atoms twice and two at once'):
+            assert n_two_at_once == n_once + n_twice
+        with subtests.test('no duplicates'):
+            n_before_removal = twice.n_atoms
+            twice.remove_duplicate_atoms(rpars.SYMMETRY_EPS,
+                                         rpars.SYMMETRY_EPS.z)
+            assert twice.n_atoms == n_before_removal
+
+    @parametrize(delta_c=(-0.09, 0.2))
+    def test_issue_187(self, ag100, delta_c):
+        """Ensure no complaints when adding bulk to a relaxed slab (#187)."""
+        slab, rpars, *_ = ag100
+        # Move all the non.bulk atoms down, as it would be
+        # the case when non.bulk layers are allowed to relax
+        non_bulk_atoms = (at for lay in slab.non_bulk_layers
+                          for at in lay.atlist)
+        for atom in non_bulk_atoms:
+            atom.pos[2] += delta_c
+        slab.update_cartesian_from_fractional(update_origin=True)
+        with not_raises(err.SlabError):
+            slab.with_extra_bulk_units(rpars, 1)
+
 
 @if_ase
 class TestFromAse:
     """Collection of tests for the from_ase class method."""
 
-    def test_no_ase(self):
+    def test_no_ase(self, monkeypatch):
         """Check complaints when no ase module is present."""
-        # pylint: disable=protected-access
-        surface_slab._HAS_ASE = False
+        monkeypatch.setattr(surface_slab, '_HAS_ASE', False)
         with pytest.raises(ModuleNotFoundError):
             Slab.from_ase(None)
-        surface_slab._HAS_ASE = True
 
     def test_not_an_ase_atoms(self):
         """Check complaints for the wrong type."""
@@ -1178,15 +1205,41 @@ class TestMakeBulkSlab:
                       err.TooFewLayersError),
         }
 
+    @parametrize('slab,exc', _invalid.values(), ids=_invalid)
+    def test_invalid(self, slab, exc):
+        """Check complaints for invalid conditions when making bulk."""
+        with pytest.raises(exc):
+            slab.make_bulk_slab(Rparams())
+
     @with_bulk_repeat
-    def test_valid_nr_of_atoms(self, args):
+    def test_nr_of_atoms(self, args):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, info = args
         bulk_slab = slab.make_bulk_slab(rpars)
         assert bulk_slab.n_atoms == info.bulk_properties.n_bulk_atoms
 
     @with_bulk_repeat
-    def test_valid_ucell(self, args):
+    def test_top_and_bottom_atoms(self, args, subtests):
+        """Check that the top and bottom bulk atoms remain unchanged."""
+        slab, rpars, *_ = args
+        top_bulk_atom = max(slab.bulk_atoms, key=lambda at: at.pos[2])
+        bot_bulk_atom = min(slab.bulk_atoms, key=lambda at: at.pos[2])
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        top_bulk_sublayer = next(lay for lay in slab.sublayers
+                                 if top_bulk_atom in lay)
+        bot_bulk_sublayer = next(lay for lay in slab.sublayers
+                                 if bot_bulk_atom in lay)
+        bulk = slab.make_bulk_slab(rpars)
+        top, bot = bulk.top_atom, bulk.bottom_atom
+        with subtests.test('c centering'):
+            assert top.pos[2] + bot.pos[2] == pytest.approx(1)
+        with subtests.test('top atom unchanged'):
+            assert top.num in {at.num for at in top_bulk_sublayer}
+        with subtests.test('bottom atom unchanged'):
+            assert bot.num in {at.num for at in bot_bulk_sublayer}
+
+    @with_bulk_repeat
+    def test_ucell(self, args):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, info = args
         bulk_slab = slab.make_bulk_slab(rpars)
@@ -1194,7 +1247,7 @@ class TestMakeBulkSlab:
         assert np.allclose(bulk_slab.ucell, info.bulk_properties.bulk_ucell,
                            atol=atol)
 
-    def test_valid_warning_a_larger_b(self, ag100, caplog):
+    def test_warning_a_larger_b(self, ag100, caplog):
         """Test expected number of atoms in bulk slab for valid POSCARs."""
         slab, rpars, *_ = ag100
         rpars.superlattice_defined = True  # Needed for check to happen
@@ -1202,12 +1255,6 @@ class TestMakeBulkSlab:
         slab.update_cartesian_from_fractional()
         slab.make_bulk_slab(rpars)
         assert 'does not follow standard convention' in caplog.text
-
-    @parametrize('slab,exc', _invalid.values(), ids=_invalid)
-    def test_invalid(self, slab, exc):
-        """Check complaints for invalid conditions when making bulk."""
-        with pytest.raises(exc):
-            slab.make_bulk_slab(Rparams())
 
 
 class TestProperties:
@@ -1369,19 +1416,6 @@ class TestRevertUnitCell:
 class TestSlabLayers:
     """Collection of tests concerning slab (sub)layers."""
 
-    with_layers = {'cases': CasePOSCARSlabs.case_layer_info_poscar}
-
-    @parametrize_with_cases('args', **with_layers)
-    def test_bulk_layers(self, args, subtests):
-        """Test Slab.bulk_layers property."""
-        slab, rpars, info = args
-        slab.create_layers(rpars)
-        with subtests.test('no. bulk layers'):
-            assert len(slab.bulk_layers) == info.layer_properties.n_bulk_layers
-        with subtests.test('no. atoms in bulk layers'):
-            n_bulk_atoms = sum(lay.n_atoms for lay in slab.bulk_layers)
-            assert n_bulk_atoms == info.bulk_properties.n_bulk_atoms
-
     @fixture(name='check_layers_correct')
     def fixture_check_layers_correct(self, subtests):
         """Check correct identification of layers from known info."""
@@ -1396,12 +1430,26 @@ class TestSlabLayers:
                 assert n_atoms == pytest.approx(lay_info.n_atoms_per_layer)
         return _check
 
-    @parametrize_with_cases('args', **with_layers)
-    def test_create_layers(self, args, check_layers_correct):
-        """Check that layers are created correctly."""
-        slab, rpars, info = args
-        cuts = slab.create_layers(rpars)
+    def test_auto_cut_below_bulk_cut(self, ag100, check_layers_correct):
+        """Check correct layer identification with a useless auto-cut."""
+        slab, rpars, info = ag100
+        bulk_cuts = info.bulk_properties.bulk_cuts
+        rpars.LAYER_CUTS = LayerCuts.from_string(
+            f'dz(0.2) < {max(bulk_cuts) - .02} < dz(1.2)'
+            )
+        cuts = slab.create_layers(rpars, bulk_cuts=bulk_cuts)
         check_layers_correct(slab, cuts, info)
+
+    @with_layers
+    def test_bulk_layers(self, args, subtests):
+        """Test Slab.bulk_layers property."""
+        slab, rpars, info = args
+        slab.create_layers(rpars)
+        with subtests.test('no. bulk layers'):
+            assert len(slab.bulk_layers) == info.layer_properties.n_bulk_layers
+        with subtests.test('no. atoms in bulk layers'):
+            n_bulk_atoms = sum(lay.n_atoms for lay in slab.bulk_layers)
+            assert n_bulk_atoms == info.bulk_properties.n_bulk_atoms
 
     def test_bulkslab_layers_always_bulk(self, with_one_thick_bulk):
         """Check that all layers of a BulkSlab are bulk."""
@@ -1414,15 +1462,19 @@ class TestSlabLayers:
         assert bulk.n_layers == 12
         assert all(lay.is_bulk for lay in bulk.layers)
 
-    def test_auto_cut_below_bulk_cut(self, ag100, check_layers_correct):
-        """Check correct layer identification with a useless auto-cut."""
-        slab, rpars, info = ag100
-        bulk_cuts = info.bulk_properties.bulk_cuts
-        rpars.LAYER_CUTS = LayerCuts.from_string(
-            f'dz(0.2) < {max(bulk_cuts) - .02} < dz(1.2)'
-            )
-        cuts = slab.create_layers(rpars, bulk_cuts=bulk_cuts)
+    @with_layers
+    def test_create_layers(self, args, check_layers_correct):
+        """Check that layers are created correctly."""
+        slab, rpars, info = args
+        cuts = slab.create_layers(rpars)
         check_layers_correct(slab, cuts, info)
+
+    @with_layers
+    def test_create_sublayers(self, args):
+        """Check that sublayers are created correctly."""
+        slab, rpars, info = args
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        assert slab.n_sublayers == info.layer_properties.n_sublayers
 
     def test_empty_layer_warning(self, ag100, caplog):
         """Check that layers are created correctly."""
@@ -1433,12 +1485,77 @@ class TestSlabLayers:
         # check that we log a warning about the empty layer
         assert 'will be deleted' in caplog.text
 
-    @parametrize_with_cases('args', **with_layers)
-    def test_create_sublayers(self, args):
-        """Check that sublayers are created correctly."""
+    @with_layers
+    def test_full_update_with_layers_defined(self, args):
+        """Test full_update method with layers already defined."""
+        slab, rpars, *_ = args
+        n_layers_orignal = slab.n_layers
+        n_atoms_per_layer_original = [lay.n_atoms for lay in slab.layers]
+        # Shift some atoms out of the unit cell
+        for atom in slab:
+            atom.pos += 0.5
+        slab.full_update(rpars)
+        n_atoms_per_layer_after = [lay.n_atoms for lay in slab.layers]
+        assert slab.n_layers == n_layers_orignal
+        assert n_atoms_per_layer_after == n_atoms_per_layer_original
+        # Check that all atoms are in the unit cell
+        eps = 1e-8
+        assert np.all(-eps <= at.pos <= 1 + eps for at in slab)
+
+    @with_layers
+    def test_full_update_without_topat_ori_z(self, args):
+        """Test full_update when topat_ori_z is not available."""
         slab, rpars, info = args
+        slab.topat_ori_z = None
+        slab.full_update(rpars)
+        assert slab.topat_ori_z is not None
+        assert slab.n_layers == info.layer_properties.n_layers
         slab.create_sublayers(rpars.SYMMETRY_EPS.z)
         assert slab.n_sublayers == info.layer_properties.n_sublayers
+
+    def test_from_bulk_slab_clears_layers(self, ag100):
+        """Check that SurfaceSlab.from_slab(bulk) has no (sub)layers."""
+        slab, rpars, *_ = ag100
+        bulk = slab.make_bulk_slab(rpars)
+        assert bulk.n_layers == 1
+        new_slab = Slab.from_slab(bulk)
+        assert not new_slab.layers
+        assert not new_slab.sublayers
+
+    def test_interlayer_gap_positive(self, ag100):
+        """Ensure that gaps between layers are always positive."""
+        slab, *_ = ag100
+        assert all(d > 0 for d in slab.interlayer_gaps)
+
+    @with_layers
+    def test_interlayer_spacing_raises_without_layers(self, args):
+        """Test that interlayer spacing raises without layers defined."""
+        slab, *_ = args
+        slab.layers = ()
+        with pytest.raises(err.MissingLayersError):
+            _ = slab.smallest_interlayer_gap
+
+    @with_layers
+    def test_n_atoms_per_sublayer(self, args):
+        """Test the expected number of atoms per sublayer."""
+        slab, rpars, info = args
+        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
+        n_atoms_sublayers = [sublay.n_atoms for sublay in slab.sublayers]
+        assert n_atoms_sublayers == info.layer_properties.n_atoms_per_sublayer
+
+    @with_layers
+    def test_smallest_interlayer_gap(self, args):
+        """Test that interlayer spacing is correctly calculated."""
+        slab, _, info = args
+        expected = info.layer_properties.smallest_interlayer_gap
+        spacing = slab.smallest_interlayer_gap
+        assert spacing == pytest.approx(expected, abs=1e-5)
+
+    def test_smallest_interlayer_gap_few_layers(self, manual_slab_3_atoms):
+        """Check complaints when there's not enough layers."""
+        slab = manual_slab_3_atoms
+        with pytest.raises(err.TooFewLayersError):
+            _ = slab.smallest_interlayer_gap
 
     @infoless_poscar
     def test_sublayer_sorting(self, args, subtests):
@@ -1493,58 +1610,6 @@ class TestSlabLayers:
         sorting_after = [lay.element for lay in slab.sublayers]
         assert sorting_after == sorting_before
 
-    @parametrize_with_cases('args', **with_layers)
-    def test_full_update_with_layers_defined(self, args):
-        """Test full_update method with layers already defined."""
-        slab, rpars, *_ = args
-        n_layers_orignal = slab.n_layers
-        n_atoms_per_layer_original = [lay.n_atoms for lay in slab.layers]
-        # Shift some atoms out of the unit cell
-        for atom in slab:
-            atom.pos += 0.5
-        slab.full_update(rpars)
-        n_atoms_per_layer_after = [lay.n_atoms for lay in slab.layers]
-        assert slab.n_layers == n_layers_orignal
-        assert n_atoms_per_layer_after == n_atoms_per_layer_original
-        # Check that all atoms are in the unit cell
-        eps = 1e-8
-        assert np.all(-eps <= at.pos <= 1 + eps for at in slab)
-
-    @parametrize_with_cases('args', **with_layers)
-    def test_full_update_without_topat_ori_z(self, args):
-        """Test full_update when topat_ori_z is not available."""
-        slab, rpars, info = args
-        slab.topat_ori_z = None
-        slab.full_update(rpars)
-        assert slab.topat_ori_z is not None
-        assert slab.n_layers == info.layer_properties.n_layers
-        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
-        assert slab.n_sublayers == info.layer_properties.n_sublayers
-
-    @parametrize_with_cases('args', **with_layers)
-    def test_interlayer_spacing(self, args):
-        """Test that interlayer spacing is correctly calculated."""
-        slab, _, info = args
-        expected = info.layer_properties.smallest_interlayer_spacing
-        spacing = slab.smallest_interlayer_spacing
-        assert spacing == pytest.approx(expected, abs=1e-5)
-
-    @parametrize_with_cases('args', **with_layers)
-    def test_interlayer_spacing_raises_without_layers(self, args):
-        """Test that interlayer spacing raises without layers defined."""
-        slab, *_ = args
-        slab.layers = ()
-        with pytest.raises(err.MissingLayersError):
-            _ = slab.smallest_interlayer_spacing
-
-    @parametrize_with_cases('args', **with_layers)
-    def test_slab_lowocc_sublayer_assignment(self, args):
-        """Test the expected number of atoms per sublayer."""
-        slab, rpars, info = args
-        slab.create_sublayers(rpars.SYMMETRY_EPS.z)
-        n_atoms_sublayers = [sublay.n_atoms for sublay in slab.sublayers]
-        assert n_atoms_sublayers == info.layer_properties.n_atoms_per_sublayer
-
 
 class TestSlabRaises:
     """Collection of tests for diverse exception-raising conditions."""
@@ -1567,17 +1632,12 @@ class TestSlabRaises:
         with pytest.raises(TypeError):
             Slab.from_slab('invalid')
 
-    def test_interlayer_spacing_few_layers(self, manual_slab_3_atoms):
-        """Check complaints when there's not enough layers."""
-        slab = manual_slab_3_atoms
-        with pytest.raises(err.TooFewLayersError):
-            _ = slab.smallest_interlayer_spacing
-
     _props = {
         'ab_cell': err.InvalidUnitCellError,
         'c_vector': err.InvalidUnitCellError,
         'fewest_atoms_sublayer': err.MissingSublayersError,
-        'smallest_interlayer_spacing': err.MissingLayersError,
+        'interlayer_gaps': err.MissingLayersError,
+        'smallest_interlayer_gap': err.MissingLayersError,
         }
 
     @parametrize('attr_name,exc', _props.items(), ids=_props)
