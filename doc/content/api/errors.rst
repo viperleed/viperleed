@@ -13,10 +13,6 @@ Errors
     :members:
     :show-inheritance:
 
-.. automodule:: viperleed.calc.files.parameter_errors
-    :members:
-    :show-inheritance:
-
 .. autoexception:: viperleed.calc.files.poscar.POSCARError
     :members:
     :show-inheritance:
