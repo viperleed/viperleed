@@ -21,7 +21,7 @@ __created__ = "2019-12-16"
 #                  MAIN                       #
 ###############################################
 
-def main():
+def main(args=None):
     # print some info
     print("This utility reads a phaseshifts file (eg PHASESHIFTS) and allows "
           "the user to copy and rearrange the blocks, such that they fit the "
