@@ -16,7 +16,7 @@ import numpy as np
 import fortranformat as ff
 
 from viperleed.calc.classes.beam import Beam
-from viperleed.calc.files.beams import writeOUTBEAMS
+from viperleed.calc.files.beams import writeOUTBEAMS, averageBeams
 from viperleed.guilib.base import BeamIndex
 
 __authors__ = ["Alexander M. Imre (@amimre)",]
@@ -27,14 +27,19 @@ logger = logging.getLogger("viperleed.utilities.SATLEED_to_EXPBEAMS")
 def add_cli_parser_arguments(parser):
     parser.add_argument(
         "input",
-        help="Input file containing the I(V) curves as used by SATLEED.",
+        help="Input file containing the I(V) curves as used by SATLEED",
         type=str,
     )
     parser.add_argument(
         "-o", "--output",
-        help="Output file to write the beams to.",
+        help="Output file to write the beams to",
         type=str,
         default="EXPBEAMS.csv",
+    )
+    parser.add_argument(
+        "--average",
+        help="Average beams according to the averaging scheme in the input file",
+        action="store_true", default=False,
     )
 
 
@@ -92,7 +97,7 @@ def read_file(file, average=False):
         # this also checks that the energies are sorted
         if not np.allclose(np.diff(energies), energy_increment):
             raise ValueError(f"Energies for beam {beam_id} are not spaced "
-                            "accordingt o the energy increment specified on "
+                            "according to the energy increment specified on "
                             " line 5. Interpolation is not supported.")
 
         # store into the dict and process the next beam
@@ -113,6 +118,23 @@ def read_file(file, average=False):
         hk_beam.intens = {en: intens for en, intens
                           in zip(energies, intensities)}
         processed_beams.append(hk_beam)
+
+    # average if requested
+    if average and np.unique(averaging_scheme).size != n_beams:
+        averaged_beams = []
+        for group_id in np.unique(averaging_scheme):
+            group_beams = [[processed_beams[i]] for i in
+                           np.argwhere(averaging_scheme == group_id).flatten()]
+            try:
+                averaged_beams.append(averageBeams(group_beams, weights=None))
+            except ValueError as e:
+                logger.warning(f"Failed to average group {group_id}: {e}")
+        processed_beams = averaged_beams
+    elif np.unique(averaging_scheme).size != n_beams:
+        raise ValueError("Averaging scheme contains duplicate values. "
+                         "Use the --average option to average the beams if "
+                         "this is intended.")
+
     return processed_beams
 
 
@@ -123,7 +145,8 @@ def main(args=None):
         args = parser.parse_args()
 
     # Read the file
-    iv_beams_data = read_file(Path(args.input))
+    iv_beams_data = read_file(Path(args.input),
+                              average=args.average)
 
     out_file = args.output if args.output else "EXPBEAMS.csv"
 
