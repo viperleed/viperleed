@@ -1,12 +1,13 @@
 """Module search_cull of viperleed.calc.classes.rparams.special.
 
-Created on 2023-12-14
-
-@author: Michele Riva (@michele-riva)
-
 Defines the SearchCullType and SearchCull classes. They are convenience
 classes for handling user input of the SEARCH_CULL parameter.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-12-14'
 
 from dataclasses import dataclass, field, InitVar
 from enum import Enum  # Unfortunately StrEnum was introduced in py3.11

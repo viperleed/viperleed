@@ -1,9 +1,9 @@
-"""Tests for module viperleed.calc.files.iorfactor.
+"""Tests for module viperleed.calc.files.iorfactor."""
 
-Created on 2023-12-11
-
-@author: Alexander M. Imre (@amimre)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2023-12-11'
 
 import pytest
 from pytest_cases import fixture

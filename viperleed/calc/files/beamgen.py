@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 """Module beamgen of viperleed.calc.files
 
-@author: Alexander Imre (@amimre)
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
-
 Creates the BEAMLIST file for TensErLEED calculations.
 
 Original version by Florian Kraushofer (2020) was a wrapper for
@@ -13,6 +9,13 @@ by Alexander Imre (2023) that removes the dependency on the Fortran
 script and instead accomplishes the same in python. This is more
 flexible and allows for more accurate calculations.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2020-08-17'
 
 import logging
 
@@ -24,9 +27,6 @@ from viperleed.calc.lib import symmetry
 from viperleed.calc.lib.leedbase import HARTREE_TO_EV, BOHR_TO_ANGSTROM
 from viperleed.calc.lib.leedbase import getLEEDdict
 
-
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Florian Kraushofer (@fkraushofer)"]
 
 H_BAR_SQ_OVER_2M = 0.5 * HARTREE_TO_EV * BOHR_TO_ANGSTROM**2  # h**2/2m
 _LOGGER = logging.getLogger('tleedm.beamgen')

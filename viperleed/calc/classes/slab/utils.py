@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Module utils of viperleed.tleedmlib.classes.slab.
-
-Created on 2023-02-22
-
-@author: Michele Riva (@michele-riva)
+"""Module utils of viperleed.calc.classes.slab.
 
 Contains functions and classes useful for dealing with BaseSlab objects.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-02-22'
 
 import itertools
 import numpy as np

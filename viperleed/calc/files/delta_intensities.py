@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
+"""Module delta_intensities of viperleed.calc.files.
+
+Reads in delta-amplitude files.
 """
 
-@author: Tobias Hable, Alexander M. Imre
+__authors__ = (
+    'Tobias Hable (@ElHablos)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2022-05-02'
 
-Reads in delta files.
-"""
 from re import I
 import sys
 import numpy as np

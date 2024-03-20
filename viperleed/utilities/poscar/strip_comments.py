@@ -2,6 +2,12 @@
 # -*- coding: utf-8 -*-
 """ViPErLEED utility: Strip comments from POSCAR file
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2023-08-03'
+
 import argparse
 from copy import deepcopy
 import logging
@@ -9,9 +15,6 @@ import sys
 
 from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
-
-__authors__ = ["Alexander M. Imre (@amimre)",]
-__created__ = "2023-08-03"
 
 logger = logging.getLogger("viperleed.utilities.poscar.strip_comments")
 

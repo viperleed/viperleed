@@ -2,6 +2,13 @@
 """Functions for reading and writing files relevant to the rfactor calculation.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2020-08-19'
+
 import logging
 import os
 import re
@@ -26,10 +33,6 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.iorfactor")
 

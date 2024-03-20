@@ -1,10 +1,5 @@
 """Test configuration for viperleed.tests.
 
-Created on 2023-02-28
-
-@author: Michele Riva (@michele-riva)
-@author: Alexander M. Imre (@amimre)
-
 Defines fixtures and fixture factories used in multiple tests.
 
 Fixtures
@@ -14,6 +9,12 @@ data_path
 re_match (factory)
     Return a match object from a pattern and a string.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2023-02-28'
 
 import re
 

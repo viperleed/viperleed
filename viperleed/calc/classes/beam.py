@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2019-12-03'
+
 import math
 
 import numpy as np
 from quicktions import Fraction
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2019-12-03"
 
 
 class Beam:

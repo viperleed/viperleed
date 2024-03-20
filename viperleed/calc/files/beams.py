@@ -4,6 +4,12 @@
 This includes: BEAMLIST, IVBEAMS, EXPBEAMS and AUXEXPBEAMS.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2020-08-19'
+
 import copy
 from io import StringIO
 import logging
@@ -18,9 +24,6 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import parseMathSqrt
 from viperleed.calc.classes.beam import Beam
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.beams")
 

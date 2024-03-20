@@ -1,9 +1,9 @@
-"""Tests for module symmetry_eps of viperleed.calc.classes.rparams.special.
+"""Tests for module symmetry_eps of viperleed.calc.classes.rparams.special."""
 
-Created on 2023-12-11
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-12-11'
 
 import operator
 

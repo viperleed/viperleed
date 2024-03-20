@@ -5,6 +5,14 @@
 
 See viperleed.calc.__init__.py for more information.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-08-03'
+
 from pathlib import Path
 import argparse
 import logging
@@ -17,10 +25,6 @@ from viperleed.calc.bookkeeper import bookkeeper, BookkeeperMode
 from viperleed.calc import run_tleedm
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
 
 logger = logging.getLogger("tleedm")
 

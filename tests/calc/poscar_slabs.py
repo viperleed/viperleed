@@ -1,11 +1,12 @@
-"""Module poscar_slabs of viperleed.tests.
-
-Created on 2023-09-05
-
-@author: Michele Riva (@michele-riva)
+"""Module poscar_slabs of viperleed.tests.calc.
 
 Contains definition of pytest cases generated from POSCAR files.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-09-05'
 
 import copy
 import inspect

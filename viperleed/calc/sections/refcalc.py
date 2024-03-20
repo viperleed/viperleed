@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
+"""Section Reference Calculation."""
 
-"""Section Reference Calculation.
-"""
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2020-08-11'
 
 import copy
 import os
@@ -19,10 +23,6 @@ from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.files import beams, parameters
 from viperleed.calc.files import iorefcalc as tl_io
 from viperleed.calc.files.ivplot import plot_iv
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.refcalc")
 

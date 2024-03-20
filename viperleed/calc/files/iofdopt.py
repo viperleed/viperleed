@@ -1,9 +1,14 @@
-# -*- coding: utf-8 -*-
-"""Functions for writing output from full-dynamic optimization.
-"""
-import numpy as np
-import logging
+"""Functions for writing output from full-dynamic optimization."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2021-10-25'
+
 import copy
+import logging
+
+import numpy as np
 from numpy.polynomial import Polynomial
 
 try:
@@ -22,8 +27,6 @@ else:
 from viperleed.calc.files.iorfactor import read_rfactor_columns
 from viperleed.calc.files.ivplot import plot_iv
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)"]
-__created__ = "2021-10-25"
 
 logger = logging.getLogger("tleedm.files.iofdout")
 logger.setLevel(logging.INFO)

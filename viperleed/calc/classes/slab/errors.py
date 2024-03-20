@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Module errors of viperleed.tleedmlib.classes.slab.
 
-Created on 2023-02-21
-
-@author: Michele Riva (@michele-riva)
-
 Contains exceptions specific to BaseSlab objects.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-02-21'
 
 from viperleed.calc.classes.atom_containers import AtomContainerError
 

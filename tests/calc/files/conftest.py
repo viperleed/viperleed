@@ -1,8 +1,4 @@
-"""Test configuration for viperleed.tests.files.
-
-Created on 2023-09-06
-
-@author: Michele Riva (@michele-riva)
+"""Test configuration for viperleed.tests.calc.files.
 
 Fixtures
 --------
@@ -14,6 +10,11 @@ poscar_with_group
 tmp_poscar
     Fresh path to a 'POSCAR' file.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-09-06'
 
 from pytest_cases import fixture, parametrize_with_cases
 

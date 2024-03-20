@@ -39,6 +39,9 @@ superpos:
     refcalc
 """
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2020-08-11'

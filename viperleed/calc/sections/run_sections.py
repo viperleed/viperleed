@@ -2,6 +2,13 @@
 """Wrapper functions for running a section, and section loop for viperleed.calc.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2020-08-19'
+
 import logging
 import os
 import time
@@ -24,11 +31,6 @@ from viperleed.calc.files.displacements import readDISPLACEMENTS
 from viperleed.calc.files.phaseshifts import readPHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC, writeVIBROCC
 
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.sections.run_sections")
 

@@ -1,9 +1,4 @@
-"""Test configuration for tests/sections.
-
-Created on 2023-07-26
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
+"""Test configuration for tests.calc.sections.
 
 Defines fixtures useful for testing the successful execution of
 different segments of tleedm.
@@ -21,6 +16,12 @@ refcalc_files
 search_files_ag100
     INITIALIZATION + SEARCH run, for Ag(100) only
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-26'
 
 import shutil
 from zipfile import ZipFile

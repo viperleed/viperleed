@@ -4,6 +4,13 @@
 Also defines the POSCARError specific exception, as well as some subclasses.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2020-08-19'
+
 from collections import defaultdict
 from contextlib import AbstractContextManager
 from io import TextIOBase
@@ -13,11 +20,6 @@ from pathlib import Path
 import numpy as np
 
 from viperleed.calc.classes import atom as tl_atom, slab as tl_slab
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Michele Riva (@michele-riva)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2023-06"
 
 _LOGGER = logging.getLogger('tleedm.files.poscar')
 

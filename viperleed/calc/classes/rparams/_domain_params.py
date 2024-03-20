@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """Moule _domain_params of viperleed.calc.classes.rparams.
 
-Created on 2023-10-23, originally Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-
 Defines the DomainParameters class. Contains of information useful
 when a calculation with multiple structural domains is carried out.
-This module was originally part of the rparams.py module, refactored
-by Michele Riva in Oct 2023.
+This module was originally (2019-06-13) part of the rparams.py module,
+refactored by Michele Riva in Oct 2023.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2023-10-23'
 
 import logging
 from pathlib import Path

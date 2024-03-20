@@ -1,11 +1,12 @@
 """Tests for module viperleed.calc.lib.symmetry.
 
-Created on 2023-03-26
-
-@author: Michele Riva (@michele-riva)
-
 Contains tests for symmetry-detection routines.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-03-26'
 
 import copy
 from contextlib import contextmanager

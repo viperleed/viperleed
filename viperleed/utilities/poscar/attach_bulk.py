@@ -6,18 +6,21 @@ Takes a slab POSCAR and adds a bulk POSCAR on the bottom, rescaling the unit
 cell. Very primitive script, should be updated to include more recent
 functionality.
 """
-import time
-import logging
-import copy
 
-import numpy as np
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2019-06-14'
+
+import copy
+import logging
+import time
 from timeit import default_timer as timer
 
-from viperleed.calc.files import poscar
+import numpy as np
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2019-06-14"
+from viperleed.calc.files import poscar
 
 
 ###############################################

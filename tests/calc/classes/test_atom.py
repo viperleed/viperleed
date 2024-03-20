@@ -1,10 +1,10 @@
-"""Tests for module viperleed.calc.classes.atom.
+"""Tests for module viperleed.calc.classes.atom."""
 
-Created on 2023-07-28
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-28'
 
 import numpy as np
 import pytest

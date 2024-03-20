@@ -8,11 +8,13 @@ import os
 import sys
 
 cd = os.path.realpath(os.path.dirname(__file__))
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2019-12-16'
 
 from viperleed.calc.files.beams import readAUXEXPBEAMS, writeOUTBEAMS
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "2019-12-16"
 
 def main():
     # print some info

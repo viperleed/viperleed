@@ -1,9 +1,4 @@
-"""Test configuration for viperleed.tests.
-
-Created on 2023-02-28
-
-@author: Michele Riva (@michele-riva)
-@author: Alexander M. Imre (@amimre)
+"""Test configuration for viperleed.tests.calc.
 
 Defines fixtures and fixture factories used in multiple tests.
 
@@ -27,6 +22,12 @@ run_phaseshift
 tensorleed_path
     Path to the top-level tree with tensor-LEED source code.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2023-02-28'
 
 import os
 

@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 """Section Search.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2020-08-11'
+
 from collections import Counter
 from pathlib import Path
 from timeit import default_timer as timer
@@ -27,11 +35,6 @@ from viperleed.calc.files import iosearch as tl_io
 from viperleed.calc.files import parameters
 from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.search")
 

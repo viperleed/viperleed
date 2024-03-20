@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 """Module base_slab of viperleed.calc.classes.slab.
 
-Created on 2023-02-21, originally Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
-
 Defines the BaseSlab class, useful to describe collections of atoms in
 crystalline form. This is the abstract base class at the basis of both
 BulkSlab and SurfaceSlab classes (for 3D- and 2D-periodic systems,
 respectively), and contains generic functionality that is common to
-both. This module contains refactored and modified functionality that
-used to be contained in the original slab module by F. Kraushofer.
+both.
+This module contains refactored and modified functionality that
+used to be contained in the original slab module (2019-06-13) by
+F. Kraushofer.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-02-21'
 
 from abc import abstractmethod
 from collections import Counter

@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2019-06-13'
+
 import logging
 import re
 
@@ -7,9 +13,6 @@ import numpy as np
 from viperleed.calc.lib.periodic_table import (PERIODIC_TABLE,
                                                 COVALENT_RADIUS,
                                                 ATOMIC_MASS)
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "2019-06-13"
 
 logger = logging.getLogger("tleedm.sitetype")
 

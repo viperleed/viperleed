@@ -1,12 +1,14 @@
 """Module testinfo of viperleed.tests.calc.
 
-Created on 2024-03-19
-
-@author: Michele Riva (@michele-riva)
-
 Defines various InfoBase subclasses useful to define expected
-information in tests for the calc package of viperleed.
+information in tests for the calc package of viperleed. This
+module used to be part of viperleed.tests.helpers.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2024-03-19'
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple, Mapping

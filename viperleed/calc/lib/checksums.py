@@ -13,15 +13,18 @@ We use the common SHA-256 hashing algorithm as available from Pythons
 hashlib. The check is toggled by parameter TL_IGNORE_CHECKSUM.
 """
 
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2022-10-12'
+
 import hashlib
 import base64
 import ast
 from pathlib import Path
 import argparse
 from warnings import warn
-
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
 
 # TensErLEED Versions
 KNOWN_TL_VERSIONS = (

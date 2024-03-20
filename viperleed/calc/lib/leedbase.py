@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
-"""LEED-specific functions used throughout the viperleed calc package.
-"""
+"""LEED-specific functions used throughout the viperleed calc package."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2019-06-13'
+
 import copy
 import logging
 import multiprocessing
@@ -24,10 +31,6 @@ from viperleed.calc.lib.base import SingularMatrixError
 # imports. They are used exclusively as part of getTensorOriStates
 # which could potentially be split off somewhere else
 from viperleed.calc.files import parameters, poscar, vibrocc
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2019-06-13"
 
 # constants for conversion Angstrom and eV <-> atomic units
 HARTREE_TO_EV = 27.211396

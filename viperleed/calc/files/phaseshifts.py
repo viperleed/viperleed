@@ -2,6 +2,12 @@
 """Functions for reading and writing the PHASESHIFTS file
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2020-08-18'
+
 from itertools import combinations
 import logging
 import os
@@ -26,10 +32,6 @@ else:
     import matplotlib.pyplot as plt
     plt.style.use('viperleed.tleedm')
     _CAN_PLOT = True
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-18"
 
 
 logger = logging.getLogger("tleedm.files.phaseshifts")

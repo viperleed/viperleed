@@ -1,9 +1,9 @@
-"""Test configuration for viperleed.tests.symmetry.
+"""Test configuration for viperleed.tests.calc.symmetry."""
 
-Created on 2023-09-08
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-09-08'
 
 import numpy as np
 import pytest

@@ -1,9 +1,9 @@
-"""Cases for test_parameters.
+"""Cases for test_parameters."""
 
-Created on 2023-09-07
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-09-07'
 
 import numpy as np
 from pytest_cases import case, parametrize

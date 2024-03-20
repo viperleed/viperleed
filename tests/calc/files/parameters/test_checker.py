@@ -1,9 +1,9 @@
-"""Tests for module _checker of viperleed.calc.files.parameters.
+"""Tests for module _checker of viperleed.calc.files.parameters."""
 
-Created on 2023-10-25
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-25'
 
 import pytest
 from pytest_cases import fixture, parametrize

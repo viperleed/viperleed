@@ -1,5 +1,10 @@
 """Tests for the viperleed command-line interface."""
 
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2023-08-02'
+
 import argparse
 
 import pytest
@@ -9,8 +14,6 @@ from viperleed.calc.__main__ import add_calc_parser_arguments
 from viperleed.calc.bookkeeper import bookkeeper_cli_options
 from viperleed.calc.bookkeeper import main as bookkeeper_main
 
-authors = ['Alexander M. Imre']
-__created__ = '2023-08-02'
 
 
 @pytest.fixture(name='calc_parser')

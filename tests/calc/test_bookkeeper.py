@@ -1,9 +1,10 @@
-"""Tests for functionality of bookkeeper.py module.
+"""Tests for module viperleed.calc.bookkeeper."""
 
-Created on 2023-08-02
-
-@author: Alex M. Imre
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-08-02'
 
 import shutil
 

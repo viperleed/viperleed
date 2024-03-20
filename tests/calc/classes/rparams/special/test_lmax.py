@@ -1,9 +1,9 @@
-"""Tests for module l_max of viperleed.calc.classes.rparams.special.
+"""Tests for module l_max of viperleed.calc.classes.rparams.special."""
 
-Created on 2023-12-16
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-12-16'
 
 import pytest
 from pytest_cases import fixture, parametrize

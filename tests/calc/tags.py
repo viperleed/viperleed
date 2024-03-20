@@ -1,12 +1,13 @@
 """Helper module tags of viperleed.tests.calc.
 
-Created on 2024-03-19
-
-@author: Michele Riva (@michele-riva)
-
 Defines the CaseTag class, an IntEnum useful as tags for @case
 functions. This used to be part of viperleed.tests.helpers.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2024-03-19'
 
 from enum import IntEnum, auto
 

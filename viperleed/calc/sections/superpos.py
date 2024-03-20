@@ -2,6 +2,13 @@
 """Section Superpos.
 """
 from pathlib import Path
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michael Riva (@michele-riva)'
+    )
+__created__ = '2020-08-11'
+
 import copy
 import logging
 import os
@@ -16,10 +23,6 @@ from viperleed.calc.files import iosuperpos as tl_io
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.files.iorefcalc import readFdOut
 from viperleed.calc.files.iosearch import readSDTL_end, readSDTL_blocks
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Michael Riva (@michele-riva)"]
-__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.superpos")
 

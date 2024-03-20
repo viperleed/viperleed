@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 """Data structures and functions for storing and manipulating errors curves.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2023-01-12'
+
 import numpy as np
 import copy
 import logging
 
 from viperleed.calc.lib.base import range_to_str
 
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Florian Kraushofer (@fkraushofer)"]
-__created__ = "2023-01-12"
 
 logger = logging.getLogger("tleedm.classes.r_error")
 

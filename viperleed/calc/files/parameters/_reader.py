@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 """Module _reader of viperleed.calc.files.parameters.
 
-Created on 2023-10-16
-
-@author: Michele Riva (@michele-riva)
-
 This module is based on the original version of readPARAMETERS from
 @fkraushofer (2020). This module exists only to avoid cyclic imports
 between ._read and ._write, as both need access to one of the classes
@@ -14,6 +10,11 @@ some functionality from the other module.
 Defines context-manager, iterator classes for reading parameters from
 a PARAMETERS file.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-16'
 
 from collections.abc import Iterator
 from contextlib import AbstractContextManager

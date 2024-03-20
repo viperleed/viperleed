@@ -2,14 +2,16 @@
 """Functions for writing files relevant to the superpos calculation.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2020-08-19'
+
 import logging
 import numpy as np
 
 import fortranformat as ff
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-                "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.iosuperpos")
 

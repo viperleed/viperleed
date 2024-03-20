@@ -5,6 +5,12 @@
 Reads a file containing experimental I(V) curves as used by SATLEED and converts
 it into the standard CSV format used by ViPErLEED.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2024-03-20'
+
 import argparse
 import logging
 from pathlib import Path
@@ -15,11 +21,6 @@ import fortranformat as ff
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeOUTBEAMS, averageBeams
 from viperleed.guilib.base import BeamIndex
-
-__authors__ = [
-    "Alexander M. Imre (@amimre)",
-]
-__created__ = "2024-03-20"
 
 logger = logging.getLogger("viperleed.utilities.SATLEED_to_EXPBEAMS")
 

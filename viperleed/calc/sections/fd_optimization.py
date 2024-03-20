@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 """Section Full-dynamic Optimization.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2021-10-22'
+
 import copy
 import logging
 import os
@@ -16,9 +22,6 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import psgen
 from viperleed.calc.sections.refcalc import refcalc as section_refcalc
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)"]
-__created__ = "2021-10-22"
 logger = logging.getLogger("tleedm.fdopt")
 
 

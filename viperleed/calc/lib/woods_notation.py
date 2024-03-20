@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 """Module for reading and writing Woods notation.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2023-06-07'
+
 import re
 import logging
 
 import numpy as np
 
 from viperleed.calc.lib.base import parseMathSqrt, angle, cosvec
-
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Florian Kraushofer (@fkraushofer)"]
-__created__ = "2023-06"
 
 logger = logging.getLogger("tleedm.woods_notation")
 

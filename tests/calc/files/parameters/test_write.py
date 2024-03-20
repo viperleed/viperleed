@@ -1,9 +1,9 @@
-"""Tests for module _write of viperleed.calc.files.parameters.
+"""Tests for module _write of viperleed.calc.files.parameters."""
 
-Created on 2023-10-18
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-18'
 
 import numpy as np
 import pytest

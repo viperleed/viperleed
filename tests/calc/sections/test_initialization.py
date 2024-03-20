@@ -1,10 +1,10 @@
-"""Tests for section initialization.
+"""Tests for section initialization."""
 
-Created on 2023-07-19
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-19'
 
 import pytest
 

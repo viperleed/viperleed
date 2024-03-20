@@ -2,6 +2,11 @@
 """Functions for determining and setting slab symmetry.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2020-08-19'
+
 import copy
 import itertools
 import logging
@@ -17,9 +22,6 @@ from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.sym_entity import SymPlane
 from viperleed.calc.files import parameters
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.symmetry")
 

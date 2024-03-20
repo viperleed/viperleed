@@ -1,11 +1,5 @@
 """Package rparams of viperleed.calc.classes.
 
-Created on 2023-10-23
-
-@author: Michele Riva (@michele-riva)
-@author: Florian Kraushofer (@fkraushofer)
-@author: Alexander M. Imre (@amimre)
-
 This package is a result of the refactor of the rparams.py
 module, originally by @fkraushofer. Contains definition of
 Rparams, the class containing most of the information during
@@ -15,6 +9,13 @@ attributes of Rparams. Defaults for the simple parameters are
 defined in module _defaults. Their variability limits in module
 _limits. Special parameters define their own defaults and limits.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2023-10-23'
 
 # Important note: import first stuff from .special, as it is used
 # in _rparams and would otherwise lead to cyclic import issues

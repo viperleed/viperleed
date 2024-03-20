@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Contains generic functions used in the TensErLEED scripts.
-"""
+"""Contains generic functions used in the TensErLEED scripts."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2019-06-13'
+
 import itertools
 import logging
 import multiprocessing
@@ -12,11 +19,6 @@ import subprocess
 
 import numpy as np
 import scipy.spatial as sps
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2019-06-13"
 
 logger = logging.getLogger("tleedm.base")
 COLLAPSE_EPS = 1e-8  # Default for collapsing fractional coordinates

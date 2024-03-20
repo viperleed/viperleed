@@ -5,17 +5,15 @@
 Reads a PHASESHIFTS file and allows the user to copy and rearrange the blocks.
 """
 
-import time
-import os
-import sys
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2019-12-16'
 
-cd = os.path.realpath(os.path.dirname(__file__))
+import time
 
 from viperleed.calc.files.phaseshifts import (readPHASESHIFTS,
                                               writePHASESHIFTS)
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "2019-12-16"
 
 ###############################################
 #                  MAIN                       #

@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
-"""Functions for writing the SearchProgress.pdf and SearchReport.pdf files.
-"""
-import numpy as np
+"""Functions for writing the SearchProgress.pdf and SearchReport.pdf files."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2020-08-19'
+
 import logging
+
 from matplotlib.markers import MarkerStyle
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-19"
-
-logger = logging.getLogger("tleedm.files.searchpdf")
-logger.setLevel(logging.INFO)
+import numpy as np
 
 try:
     import matplotlib
@@ -23,6 +23,10 @@ except Exception:
     _CAN_PLOT = False
 else:
     _CAN_PLOT = True
+
+
+logger = logging.getLogger("tleedm.files.searchpdf")
+logger.setLevel(logging.INFO)
 
 
 def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,

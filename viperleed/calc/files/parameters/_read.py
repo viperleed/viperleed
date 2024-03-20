@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
 """Module _read of viperleed.calc.files.parameters.
 
-Created on Tue Aug 18 16:56:39 2020
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-
 Initial version by @fkraushofer in 2020, major rewrite by @amimre
 and @michele-riva in June 2023. This module used to be part of
 parameters.py. Refactored in October 2023.
@@ -14,6 +8,13 @@ parameters.py. Refactored in October 2023.
 Functions for reading from a PARAMETERS file and for updating
 an Rparams object at runtime from a user-modified PARAMETERS file.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2020-08-18'
 
 import logging
 from pathlib import Path

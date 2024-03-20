@@ -1,12 +1,14 @@
 """Collection of POSCAR files as cases for tests.
 
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-
-
 These used to be part of poscar_slabs. However, since they are not
 slabs, they would mess up other tests (e.g., tests/symmetry).
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2024-01-08'
 
 from pytest_cases import parametrize
 

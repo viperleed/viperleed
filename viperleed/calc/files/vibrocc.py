@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 19 10:36:53 2020
+"""Functions for reading and writing the VIBROCC file."""
 
-@author: Florian Kraushofer
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2020-08-19'
 
-Functions for reading and writing the VIBROCC file
-"""
 import logging
 import numpy as np
 import re
 
 from viperleed.calc.lib.base import splitSublists, readToExc
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2023-06"
 
 logger = logging.getLogger("tleedm.files.vibrocc")
 

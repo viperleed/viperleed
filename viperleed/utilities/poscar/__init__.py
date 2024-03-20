@@ -1,8 +1,11 @@
-"""ViPErLEED POSCAR utilities.
+"""ViPErLEED POSCAR utilities."""
 
-@author: Alexander M. Imre
-created: 2023-08-03
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-08-03'
+
 import argparse
 import logging
 import pkgutil

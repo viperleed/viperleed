@@ -2,6 +2,12 @@
 """Functions for reading, processing and writing files relevant to the search.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2020-08-19'
+
 import copy
 import logging
 import os
@@ -20,10 +26,6 @@ from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.iorfactor import largest_nr_grid_points
 from viperleed.calc.files.iorfactor import prepare_rfactor_energy_ranges
 from viperleed.calc.files.vibrocc import writeVIBROCC
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "19.08.2020"
 
 logger = logging.getLogger("tleedm.files.iosearch")
 

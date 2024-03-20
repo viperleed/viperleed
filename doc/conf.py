@@ -6,6 +6,11 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+__authors__ = (
+    'Alexander M. Imre (@ammimre)',
+    )
+__created__ = '2022-10-17'
+
 import datetime
 import sphinx_rtd_theme
 

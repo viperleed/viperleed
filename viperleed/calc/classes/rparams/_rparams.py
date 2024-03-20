@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """Module _rparams of viperleed.calc.classes.rparams.
 
-Created on 2023-10-23, originally Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
-
 This is the module defining the core class of this package, i.e.,
 Rparams. The class contains parameters read from the PARAMETERS
 file, and some parameters defined at runtime. The attributes that
 represent not-so-obvious user parameters are instances of classes
-defined as part of the special sub-package of rparams.
+defined as part of the special sub-package of rparams. Refactored
+on 2023-10-23 by @michele-riva.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2019-06-13'
 
 from collections import defaultdict
 import copy

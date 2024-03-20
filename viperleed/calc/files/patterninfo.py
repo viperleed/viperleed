@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """Functions for reading and writing PatternInfo.tlm
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2020-08-19'
+
 import logging
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)"]
-__created__ = "2020-08-19"
 
 logger = logging.getLogger("tleedm.files.patterninfo")
 

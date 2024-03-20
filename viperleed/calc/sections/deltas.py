@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 """Section Delta Amplitudes.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2020-08-11'
+
 import hashlib
 import logging
 import os
@@ -15,10 +22,6 @@ from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 import viperleed.calc.files.iodeltas as tl_io
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.deltas")
 

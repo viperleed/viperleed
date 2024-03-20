@@ -1,13 +1,14 @@
 """Tests for functionality in viperleed.calc.from_ase.
 
-Created on 2023-02-23
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-
 Define fixtures and test cases appropriate for the functionality
 available in the from_ase module of viperleed.calc.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-02-23'
 
 from io import StringIO
 

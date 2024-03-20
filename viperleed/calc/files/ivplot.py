@@ -2,6 +2,12 @@
 """Functions for producing plots of I(V) curves.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2021-10-25'
+
 import logging
 
 import numpy as np
@@ -20,10 +26,6 @@ else:
     plt.style.use('viperleed.tleedm')
 
 from viperleed.calc.classes.beam import Beam
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2021-10-25"
 
 logger = logging.getLogger("tleedm.files.ivplot")
 

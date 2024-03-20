@@ -1,10 +1,10 @@
-"""Tests for module viperleed.calc.files.vibrocc.
+"""Tests for module viperleed.calc.files.vibrocc."""
 
-Created on 2023-07-28
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-28'
 
 from pytest import approx
 

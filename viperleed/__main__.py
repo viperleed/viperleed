@@ -4,6 +4,12 @@
     ViPErLEED
 =================
 '''
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2023-08-01'
+
 from argparse import ArgumentParser
 
 from viperleed import GLOBALS

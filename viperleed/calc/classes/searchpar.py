@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """Module searchpar of viperleed.calc.classes.
 
-Created on 2023-10-23, originally Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-
 Defines SearchPar, a class containing information about ONE parameter
 of the tensor-LEED structural search. This module used to be part of
-rparams.py. Refactored by Michele Riva in Oct 2023.
+rparams.py (created on 2019-06-13). Refactored by Michele Riva in Oct
+ 2023.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2023-10-23'
 
 import logging
 

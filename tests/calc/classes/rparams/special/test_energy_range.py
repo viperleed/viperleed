@@ -1,12 +1,13 @@
-"""Tests for EnergyRange(+subclasses) of viperleed.calc.rparams.special.
-
-Created on 2023-10-27
-
-@author: Michele Riva (@michele-riva)
+"""Tests for EnergyRange of viperleed.calc.classes.rparams.special.
 
 Contains also tests for the TheoEnergies and IVShiftRange
 subclasses of EnergyRange.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-27'
 
 import itertools
 

@@ -1,10 +1,10 @@
-"""Tests for viperleed.calc.files.displacements.
+"""Tests for viperleed.calc.files.displacements."""
 
-Created on 2023-07-28
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-28'
 
 import numpy as np
 from pytest import approx

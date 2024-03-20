@@ -1,5 +1,11 @@
-"""Section Rfactor.
-"""
+"""Section Rfactor."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2020-08-11'
 
 import logging
 import os
@@ -21,11 +27,6 @@ except ImportError:
 else:
     from viperleed.calc.wrapped.error_codes import check_ierr
     _HAS_NEW_R_FACTOR = True
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.rfactor")
 

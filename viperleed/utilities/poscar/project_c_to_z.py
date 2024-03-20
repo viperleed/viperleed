@@ -4,6 +4,13 @@
 
 This utility takes a POSCAR slab and projects the c vector to the z axis.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__created__ = '2023-08-03'
+
 import argparse
 import logging
 import os
@@ -11,10 +18,6 @@ import sys
 
 from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
-
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Florian Kraushofer (@fkraushofer)"]
-__created__ = "2023-08-03"
 
 logger = logging.getLogger("viperleed.utilities.poscar.project_c_to_z")
 

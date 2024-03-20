@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Module surface_slab of viperleed.tleedmlib.classes.slab.
+"""Module surface_slab of viperleed.calc.classes.slab.
 
-Created on 2023-02-21, originally Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
-
-Defines the SurfaceSlab class, a BaseSlab describing a 2D-periodic crystal.
-This is available in tleedmlib as the Slab alias for backwards compatibility
-with the former module-based structure of slab.py.
+Defines the SurfaceSlab class, a BaseSlab describing a 2D-periodic
+crystal. This is available in viperleed.calc as the Slab alias for
+backwards compatibility with the former module-based structure of
+slab.py by @fkraushofer (originally created on 2019-06-13).
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)'
+    )
+__created__ = '2023-02-21'
 
 from collections import Counter
 import copy

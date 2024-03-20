@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Functions for reading and writing files relevant to the error calculation.
+"""Module ioerrorcalc of viperleed.calc.files.
+
+Functions for reading and writing files relevant to the error
+calculation.
 """
 import numpy as np
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2021-03-18'
+
 import logging
 import re
 from scipy import interpolate
@@ -9,9 +19,6 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from viperleed.calc.lib.base import range_to_str, max_diff
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2021-03-18"
 
 try:
     import matplotlib

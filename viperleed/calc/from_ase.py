@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
-"""A collection of functions that run ViPErLEED from a provided ASE object.
-"""
+"""A collection of functions that run ViPErLEED from a provided ASE object."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2021-06-04'
+
 from collections import defaultdict
 from dataclasses import dataclass, FrozenInstanceError
 from io import StringIO
@@ -37,9 +44,6 @@ except ImportError:
 else:
     _HAS_NEW_RFACTOR = True
 
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)",
-               "Florian Kraushofer (@fkraushofer)"]
 
 _LOGGER = logging.getLogger()
 _INPUT_FILES = (

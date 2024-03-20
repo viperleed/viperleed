@@ -2,6 +2,12 @@
 """Cleanup functions, to be used between sections or before/after execution.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2021-06-04'
+
 import time
 from timeit import default_timer as timer
 import logging
@@ -13,10 +19,6 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 from viperleed.calc.lib.base import copytree_exists_ok,get_elapsed_time_str
 from viperleed.calc.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2021-06-04"
 
 # files to go in SUPP
 _SUPP_FILES = (

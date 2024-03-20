@@ -1,10 +1,10 @@
-"""Tests for module viperleed.calc.files.beamgen.
+"""Tests for module viperleed.calc.files.beamgen."""
 
-Created on 2023-06-09
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-06-09'
 
 from pytest_cases import fixture, parametrize_with_cases
 

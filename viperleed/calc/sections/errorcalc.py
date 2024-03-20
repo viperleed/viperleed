@@ -2,6 +2,12 @@
 """Section Error calculation.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2021-03-18'
+
 import copy
 import logging
 import os
@@ -15,10 +21,6 @@ from viperleed.calc.sections.deltas import deltas as section_deltas
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 from viperleed.calc.sections.superpos import superpos as section_superpos
 
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2021-03-18"
 
 logger = logging.getLogger("tleedm.error")
 

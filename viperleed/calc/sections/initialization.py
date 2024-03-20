@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """Module initialization of viperleed.tleedmlib.sections.
 
-Created on Aug 11 2020
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-
-Tensor LEED Manager section Initialization
+ViPErLEED calculation section INITIALIZATION.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2020-08-11'
 
 import copy
 import logging
@@ -37,11 +38,6 @@ from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.files.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections._sections import (ALL_INPUT_FILES,
                                                     EXPBEAMS_NAMES)
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2020-08-11"
 
 logger = logging.getLogger("tleedm.initialization")
 

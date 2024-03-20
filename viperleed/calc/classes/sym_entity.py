@@ -1,14 +1,15 @@
 """Module sym_entity of viperleed.tleedmlib.classes.
 
-Created on 2023-02-16
-
-@author: Michele Riva (@michele-riva)
-@author: Florian Kraushofer (@fkraushofer)
-
 Part of the functionality defined here used to be in the slab module.
 Defines SymEntity and its subclasses SymPlane and RotationAxis, which
 represent symmetry operations with a 2D location.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-02-16'
 
 import numpy as np
 

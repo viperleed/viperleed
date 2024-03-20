@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 """Generate input files for EEASiSSS.x and run it.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__created__ = '2020-08-17'
+
 import copy
 import logging
 import os
@@ -17,10 +24,6 @@ import numpy as np
 from viperleed.calc.classes.sitetype import Atom_type
 from viperleed.calc.lib.leedbase import EV_TO_HARTREE
 from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-17"
 
 logger = logging.getLogger("tleedm.psgen")
 

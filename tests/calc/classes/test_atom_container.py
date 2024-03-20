@@ -1,9 +1,9 @@
-"""Tests for module viperleed.calc.classes.atom_containers.
+"""Tests for module viperleed.calc.classes.atom_containers."""
 
-Created on 2023-10-06
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-06'
 
 from operator import attrgetter
 

@@ -1,10 +1,10 @@
-"""Tests for module viperleed.calc.files.poscar.
+"""Tests for module viperleed.calc.files.poscar."""
 
-Created on 2023-07-12
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-12'
 
 import io
 

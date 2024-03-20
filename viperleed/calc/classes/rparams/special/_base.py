@@ -1,12 +1,14 @@
 """Module _base of viperleed.calc.classes.rparams.special.
 
-Created on 2023-10-27
-
-@author: Michele Riva (@michele-riva)
-
 Defines SpecialParameter, the base class for all other parameter
 classes defined in this package, and a few exceptions.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-27'
+
 
 class SpecialParameterError(Exception):
     """Base exception for all special parameter classes."""

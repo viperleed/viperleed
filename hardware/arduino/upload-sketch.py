@@ -1,14 +1,16 @@
 """Upload ViPErLEED sketch via Arduino CLI.
 
-Author: Michele Riva
-Created: 2021-05-09
-
 Provides some functionality to interface with the Arduino command-line
 interface tool that allows compiling and uploading the viper-ino.ino
 sketch to the hardware.
 
 The Arduino CLI is available from https://github.com/arduino/arduino-cli/releases
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2021-05-09'
 
 from pathlib import Path
 import requests
