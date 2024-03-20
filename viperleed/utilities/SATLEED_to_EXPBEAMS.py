@@ -5,9 +5,6 @@
 Reads a file containing experimental I(V) curves as used by SATLEED and converts
 it into the standard CSV format used by ViPErLEED.
 """
-import sys
-import io
-import tempfile
 import argparse
 import logging
 from pathlib import Path
