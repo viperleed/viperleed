@@ -35,11 +35,15 @@ def averageBeams(beams, weights=None):
     avbeams = copy.deepcopy(beams[0])
     for (i, b) in enumerate(avbeams):
         if not all([beams[j][i].isEqual(b) for j in range(1, len(beams))]):
-            logger.error("averageBeams: Beam lists are mismatched.")
+            _err = "averageBeams: Beam lists are mismatched."
+            logger.error(_err)
+            raise ValueError(_err)
             return []
         if not all([set(beams[j][i].intens.keys()) == set(b.intens.keys())
                     for j in range(1, len(beams))]):
-            logger.error("averageBeams: Beams have different energy ranges.")
+            _err = "averageBeams: Beams have different energy ranges."
+            logger.error(_err)
+            raise ValueError(_err)
             return []
         for en in b.intens:
             b.intens[en] *= weights[0]
