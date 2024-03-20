@@ -1,5 +1,0 @@
-# ViPErLEED development environment
-coverage==7.2.7
-line_profiler==4.0.2
-pytest==7.4.0
-pytest-cases==3.6.14
