@@ -68,7 +68,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         values of L in the phaseshift file.
     newpsGen: bool
         Whether the inconsitency found requires a full recalculation
-        of the phaseshifts. This happens if: 
+        of the phaseshifts. This happens if:
             1) an error occurs while parsing,
             2) if check, rp.V0_real was not given and could not
                interpret firstline,
@@ -123,7 +123,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
         )
         rp.setHaltingLevel(1)
         return "", [], True, True
-    
+
     # check block length is consitent with number of species
     if (lines_per_block - 1) % nel:
         logger.warning(
@@ -209,10 +209,10 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
     Returns
     -------
     phaseshifts: list of tuple
-        Each element is (energy, phaseshifts_at_energy) with 
+        Each element is (energy, phaseshifts_at_energy) with
         phaseshifts_at_energy = [[el0_L0, el0_L1, ...], [el1_L0, ...], ...]
         where eli_Lj is the phaseshift for element i and angular momentum j.
-        Therefore, len(phaseshifts) is the number of energies found, 
+        Therefore, len(phaseshifts) is the number of energies found,
         len(phaseshifts[0][1]) should match the number of sites, and
         len(phaseshifts[0][1][0]) is the number of different
         values of L in the phaseshift file.
@@ -221,7 +221,7 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
         modified if newpsWrite is True.
     newpsGen: bool
         Wether the inconsitency found requires a full recalculation
-        of the phaseshifts. This happens if: 
+        of the phaseshifts. This happens if:
             1) rp.V0_real was not given and could not interpret firstline,
             2) LMAX in phaseshifts is smaller than required in rp,
             3) if number of blocks inconsitent with elements in sl.
@@ -370,7 +370,7 @@ def __check_consistency_energy_range(rp, phaseshifts, muftin, newpsGen):
     return newpsGen
 
 
-def __check_consitency_element_order(rp, sl, phaseshifts, 
+def __check_consitency_element_order(rp, sl, phaseshifts,
                                      eps=None, l_max_cutoff=4):
     """Determine if elements may have been assigned wrong phaseshifts.
 

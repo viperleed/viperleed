@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """__main__.py of ViPErLEED (viperleed) calc

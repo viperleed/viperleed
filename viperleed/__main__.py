@@ -25,8 +25,7 @@ from viperleed.utilities.poscar.__main__ import main as poscar_main
 
 
 def main():
-    """ViPErLEED main function; defines command line interface.
-    """
+    """ViPErLEED main function; defines command line interface."""
     viperleed_parser = ArgumentParser(prog='viperleed')
     viperleed_parser.add_argument(
         '--version',

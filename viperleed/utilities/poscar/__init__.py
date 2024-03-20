@@ -13,17 +13,17 @@ import sys
 
 from viperleed.utilities import poscar
 
-POSCAR_UTILITIES = [module.name for module in
-                    pkgutil.iter_modules(poscar.__path__)
-                    if (not module.ispkg and
-                        module.name != '__main__' and
-                        module.name != 'poscar')]
+POSCAR_UTILITIES = [
+    module.name
+    for module in pkgutil.iter_modules(poscar.__path__)
+    if not module.ispkg and module.name not in {'__main__', 'poscar'}
+    ]
 
 poscar_utility_logger = logging.getLogger("viperleed.utilities.poscar")
 
 def add_verbose_option(parser):
-        parser.add_argument(
-        "-v", "--verbose",
-        help=("increase output verbosity"),
-        action="store_true",
-    )
+    parser.add_argument(
+        '-v', '--verbose',
+        help='increase output verbosity',
+        action='store_true',
+        )

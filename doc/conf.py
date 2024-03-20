@@ -22,6 +22,7 @@ copyright = f'{datetime.date.today().year}, ViPErLEED-developers'
 author = 'ViPErLEED-developers'
 release = viperleed.__version__
 
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
@@ -102,7 +103,7 @@ latex_elements = {
     \usepackage{newunicodechar}
     \newunicodechar{α}{$\alpha$}
     \newunicodechar{Δ}{$\Delta$}
-    
+
     \textblockorigin{28mm}{16.5mm} % position x,y wrt top-left corner of page
     %\setlength{\TPHorizModule}{\pdfpagewidth} % text block width = page width
     \setlength{\TPHorizModule}{\textwidth} % text block width = text width

@@ -16,6 +16,7 @@ from viperleed.calc.lib.periodic_table import (PERIODIC_TABLE,
 
 logger = logging.getLogger("tleedm.sitetype")
 
+
 class Sitetype:
     """Class storing properties of a site.
 
@@ -92,6 +93,7 @@ class Sitetype:
                                * 109.15 / (ATOMIC_MASS[el]
                                            * rp.T_DEBYE))), 3)
         return
+
 
 class Atom_type(Sitetype):
     """

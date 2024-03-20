@@ -29,6 +29,7 @@ from viperleed.calc.lib.woods_notation import writeWoodsNotation
 def add_cli_parser_arguments(parser):
     pass
 
+
 def ask_user_bulk_cut():
     """Return a valid fractional cut position after asking the user."""
     cut = -1.0
