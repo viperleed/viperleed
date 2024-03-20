@@ -39,11 +39,19 @@ hardware = [
     ]
 dev = [
     'line_profiler',
-    'sphinx',
-    'pytest',
     'pytest-cases',
     'pytest-subtests',
+    'pytest',
     ]
+doc = [
+    'myst-nb',
+    'sphinx-rtd-theme',
+    'sphinx',
+    'sphinxcontrib-bibtex',
+    'sphinxcontrib-qthelp',
+    'sphinxcontrib-spelling',
+    'sphinxcontrib-svg2pdfconverter',
+]
 
 [tool.pytest.ini_options]
 addopts = [
