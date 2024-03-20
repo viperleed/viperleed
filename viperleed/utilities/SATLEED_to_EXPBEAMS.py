@@ -31,23 +31,14 @@ def add_cli_parser_arguments(parser):
         type=str,
     )
     parser.add_argument(
-        "--average",
-        help="average beams according to the given scheme",
-        type=float,
-    )
-    parser.add_argument(
         "-o", "--output",
         help="Output file to write the beams to.",
         type=str,
         default="EXPBEAMS.csv",
     )
-    parser.add_argument(
-        "--rounding",
-        help="Decimal digit to round for energy grid. Default: 3",
-        type=int, default=3,
-    )
 
-def read_file(file, average=False, rounding=3):
+
+def read_file(file, average=False):
     """Read the file and return the contents as an array."""
 
     with open(file, 'r') as f:
@@ -132,9 +123,7 @@ def main(args=None):
         args = parser.parse_args()
 
     # Read the file
-    iv_beams_data = read_file(Path(args.input),
-                              average=args.average,
-                              rounding=args.rounding)
+    iv_beams_data = read_file(Path(args.input))
 
     out_file = args.output if args.output else "EXPBEAMS.csv"
 
