@@ -15,8 +15,8 @@ import argparse
 import logging
 from pathlib import Path
 
-import numpy as np
 import fortranformat as ff
+import numpy as np
 
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeOUTBEAMS, averageBeams

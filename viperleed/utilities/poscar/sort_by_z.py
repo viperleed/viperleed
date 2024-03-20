@@ -11,7 +11,6 @@ __created__ = '2023-08-03'
 import argparse
 import logging
 import sys
-import os
 
 from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option

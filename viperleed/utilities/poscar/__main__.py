@@ -9,6 +9,7 @@ __created__ = '2023-08-04'
 
 import argparse
 from importlib import import_module
+
 from viperleed.utilities import poscar
 from viperleed.utilities.poscar import POSCAR_UTILITIES, add_verbose_option
 

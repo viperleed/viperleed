@@ -12,6 +12,7 @@ __authors__ = (
 __created__ = '2022-10-17'
 
 import datetime
+
 import sphinx_rtd_theme
 
 import viperleed

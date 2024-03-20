@@ -19,9 +19,12 @@ from viperleed.calc.files import poscar
 
 from ..helpers import POSCAR_PATH, duplicate_all
 from .tags import CaseTag as Tag
-from .testinfo import TestInfo, DisplacementInfo
-from .testinfo import BulkSlabAndRepeatInfo, LayersInfo
-from .testinfo import NearestNeighborInfo, SurfaceAtomInfo
+from .testinfo import BulkSlabAndRepeatInfo
+from .testinfo import DisplacementInfo
+from .testinfo import LayersInfo
+from .testinfo import NearestNeighborInfo
+from .testinfo import SurfaceAtomInfo
+from .testinfo import TestInfo
 
 
 def _get_poscar_info(*args):

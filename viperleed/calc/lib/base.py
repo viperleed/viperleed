@@ -14,8 +14,8 @@ import multiprocessing
 import os
 import re
 import shutil
-import sys
 import subprocess
+import sys
 
 import numpy as np
 import scipy.spatial as sps

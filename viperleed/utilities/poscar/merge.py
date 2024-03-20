@@ -14,8 +14,8 @@ from copy import deepcopy
 import logging
 import sys
 
-from scipy.spatial.distance import cdist
 import numpy as np
+from scipy.spatial.distance import cdist
 
 from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option

@@ -15,13 +15,13 @@ import re
 import numpy as np
 import scipy.spatial as sps
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import (addUnequalPoints, angle, dist_from_line,
-                                      rotation_matrix_order, rotation_matrix)
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.sym_entity import SymPlane
 from viperleed.calc.files import parameters
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import (addUnequalPoints, angle, dist_from_line,
+                                     rotation_matrix_order, rotation_matrix)
 
 logger = logging.getLogger("tleedm.symmetry")
 

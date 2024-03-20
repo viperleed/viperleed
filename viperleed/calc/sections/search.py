@@ -10,17 +10,17 @@ __authors__ = (
 __created__ = '2020-08-11'
 
 from collections import Counter
-from pathlib import Path
-from timeit import default_timer as timer
 import copy
 import logging
 import os
+from pathlib import Path
 import re
 import shutil
 import signal
 import subprocess
 import sys
 import time
+from timeit import default_timer as timer
 
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.pipeline import make_pipeline

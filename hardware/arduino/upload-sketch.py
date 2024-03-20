@@ -12,14 +12,15 @@ __authors__ = (
     )
 __created__ = '2021-05-09'
 
-from pathlib import Path
-import requests
-import subprocess
-import shutil
-import sys
-import os
 import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
 import warnings
+
+import requests
 
 
 def get_arduino_cli_from_git():

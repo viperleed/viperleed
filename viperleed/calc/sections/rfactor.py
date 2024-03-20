@@ -15,10 +15,10 @@ import subprocess
 
 import numpy as np
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.files import iorfactor as tl_io
 from viperleed.calc.files.iorefcalc import readFdOut
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.checksums import validate_multiple_files
 
 try:
     from viperleed.calc.wrapped.rfactor import r_factor_new as rf

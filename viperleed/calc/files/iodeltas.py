@@ -13,11 +13,11 @@ __authors__ = (
 __created__ = '2020-08-19'
 
 import logging
-import numpy as np
 import os
 import shutil
 
 import fortranformat as ff
+import numpy as np
 
 from viperleed.calc.files.beams import writeAUXBEAMS
 

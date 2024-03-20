@@ -15,8 +15,8 @@ import os
 
 import numpy as np
 
-import viperleed.calc.lib.periodic_table as periodic_table
 from viperleed.calc.files import poscar
+from viperleed.calc.lib import periodic_table
 from viperleed.utilities.poscar import add_verbose_option
 
 logger = logging.getLogger("viperleed.utilities.poscar.reorder_elements")

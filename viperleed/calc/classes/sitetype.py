@@ -11,8 +11,8 @@ import re
 import numpy as np
 
 from viperleed.calc.lib.periodic_table import (PERIODIC_TABLE,
-                                                COVALENT_RADIUS,
-                                                ATOMIC_MASS)
+                                               COVALENT_RADIUS,
+                                               ATOMIC_MASS)
 
 logger = logging.getLogger("tleedm.sitetype")
 

@@ -28,9 +28,7 @@ from viperleed.calc.classes.slab import Slab, BulkSlab
 from viperleed.calc.classes.slab import errors as err
 from viperleed.calc.classes.slab import surface_slab
 from viperleed.calc.classes.sym_entity import SymPlane
-from viperleed.calc.files.parameters.errors import (
-    InconsistentParameterError
-    )
+from viperleed.calc.files.parameters.errors import InconsistentParameterError
 
 from ...helpers import exclude_tags, not_raises
 from ..tags import CaseTag as Tag

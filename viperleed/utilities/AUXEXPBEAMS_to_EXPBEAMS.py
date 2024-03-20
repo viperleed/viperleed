@@ -4,10 +4,7 @@
 
 Reads an AUXEXPBEAMS file and writes the contents in EXPBEAMS.csv format.
 """
-import os
-import sys
 
-cd = os.path.realpath(os.path.dirname(__file__))
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )

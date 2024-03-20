@@ -8,13 +8,13 @@ __authors__ = (
     )
 __created__ = '2021-06-04'
 
-import time
-from timeit import default_timer as timer
 import logging
 import os
-from pathlib import Path                                                     # TODO: use everywhere
-import shutil
+from pathlib import Path                                                        # TODO: use everywhere
 import re
+import shutil
+import time
+from timeit import default_timer as timer
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from viperleed.calc.lib.base import copytree_exists_ok,get_elapsed_time_str

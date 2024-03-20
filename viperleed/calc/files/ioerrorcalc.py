@@ -4,7 +4,6 @@
 Functions for reading and writing files relevant to the error
 calculation.
 """
-import numpy as np
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
@@ -14,8 +13,10 @@ __created__ = '2021-03-18'
 
 import logging
 import re
-from scipy import interpolate
 from zipfile import ZipFile, ZIP_DEFLATED
+
+import numpy as np
+from scipy import interpolate
 
 from viperleed.calc.lib.base import range_to_str, max_diff
 

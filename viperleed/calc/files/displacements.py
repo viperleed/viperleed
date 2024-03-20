@@ -9,6 +9,7 @@ __created__ = '2020-08-19'
 
 import logging
 import re
+
 import numpy as np
 
 from viperleed.calc.lib.base import readIntRange, splitSublists

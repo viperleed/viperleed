@@ -17,10 +17,10 @@ import os
 import fortranformat as ff
 import numpy as np
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import fortranContLine, splitMaxRight
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import fortranContLine, splitMaxRight
 
 logger = logging.getLogger("tleedm.files.iorefcalc")
 

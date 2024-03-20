@@ -8,15 +8,15 @@ __authors__ = (
     )
 __created__ = '2020-08-17'
 
+from collections import defaultdict
 import copy
 import logging
 import os
+from pathlib import Path
 import random
 import re
 import shutil
 import subprocess
-from pathlib import Path
-from collections import defaultdict
 
 import fortranformat as ff
 import numpy as np

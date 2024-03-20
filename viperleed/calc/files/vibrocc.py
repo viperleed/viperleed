@@ -8,8 +8,9 @@ __authors__ = (
 __created__ = '2020-08-19'
 
 import logging
-import numpy as np
 import re
+
+import numpy as np
 
 from viperleed.calc.lib.base import splitSublists, readToExc
 
