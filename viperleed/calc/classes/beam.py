@@ -1,3 +1,8 @@
+"""Module beam of viperleed.calc.classes.
+
+Defines the Beam class, a container of information concerning a
+diffraction beam.
+"""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

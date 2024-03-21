@@ -1,5 +1,4 @@
-"""Section Delta Amplitudes.
-"""
+"""Section Delta Amplitudes."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
@@ -422,7 +421,7 @@ def deltas(sl, rp, subdomain=False):
                 break
         if not found:
             index = len(deltaCompTasks)
-            ct = DeltaCompileTask(param, h,tl_path, index)
+            ct = DeltaCompileTask(param, h, tl_path, index)
             deltaCompTasks.append(ct)
             rt = DeltaRunTask(ct)
         deltaRunTasks.append(rt)

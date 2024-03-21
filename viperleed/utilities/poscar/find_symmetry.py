@@ -1,5 +1,4 @@
-"""ViPErLEED utility: Find Symmetry
-"""
+"""ViPErLEED utility: Find Symmetry."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',

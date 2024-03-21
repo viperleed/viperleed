@@ -1,5 +1,4 @@
-"""Functions for reading and writing the PHASESHIFTS file
-"""
+"""Functions for reading and writing the PHASESHIFTS file."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

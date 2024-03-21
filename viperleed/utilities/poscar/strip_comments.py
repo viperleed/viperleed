@@ -1,5 +1,4 @@
-"""ViPErLEED utility: Strip comments from POSCAR file
-"""
+"""ViPErLEED utility: Strip comments from POSCAR file."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',

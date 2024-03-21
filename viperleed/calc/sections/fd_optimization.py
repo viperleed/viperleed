@@ -1,5 +1,4 @@
-"""Section Full-dynamic Optimization.
-"""
+"""Section Full-dynamic Optimization."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

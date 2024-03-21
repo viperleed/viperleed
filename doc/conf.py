@@ -1,10 +1,8 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""Configuration file for the Sphinx documentation builder.
 
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+For the full list of built-in configuration values, see the documentation:
+https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""
 
 __authors__ = (
     'Alexander M. Imre (@ammimre)',
@@ -16,6 +14,10 @@ import datetime
 import sphinx_rtd_theme
 
 import viperleed
+
+
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'ViPErLEED'
 copyright = f'{datetime.date.today().year}, ViPErLEED-developers'

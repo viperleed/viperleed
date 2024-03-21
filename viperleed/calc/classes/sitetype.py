@@ -1,3 +1,4 @@
+"""Module sitetype of viperleed.calc.classes."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

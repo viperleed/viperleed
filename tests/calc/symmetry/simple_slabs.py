@@ -2,7 +2,7 @@
 
 This module defines two classes as containers of pytest cases. The
 cases consist of hand-made slabs with all relevant combinations of
-plane groups, including atoms at all Wychoff positions.
+plane groups, including atoms at all Wyckoff positions.
 """
 
 __authors__ = (

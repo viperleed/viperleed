@@ -1,4 +1,4 @@
-"""ViPErLEED utility: Modify vacuum gap
+"""ViPErLEED utility: Modify vacuum gap.
 
 This utility takes a slab in POSCAR format and modifies the vacuum gap.
 """

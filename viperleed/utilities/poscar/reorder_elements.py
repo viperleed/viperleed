@@ -1,5 +1,4 @@
-"""ViPErLEED utility: Reorder elements
-"""
+"""ViPErLEED utility: Reorder elements."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',

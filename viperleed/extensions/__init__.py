@@ -1,3 +1,5 @@
+"""Python extensions written in FORTRAN."""
+
 import warnings
 
 try:

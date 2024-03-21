@@ -1,5 +1,4 @@
-"""Functions for producing plots of I(V) curves.
-"""
+"""Functions for producing plots of I(V) curves."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

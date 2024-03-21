@@ -1,4 +1,6 @@
 """Data and functions related to the periodic table and element properties.
+
+The functionality in this module used to be part of calc.lib.leedbase.
 """
 
 __authors__ = (

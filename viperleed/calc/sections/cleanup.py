@@ -1,5 +1,4 @@
-"""Cleanup functions, to be used between sections or before/after execution.
-"""
+"""Cleanup functions, to be used between sections or before/after execution."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

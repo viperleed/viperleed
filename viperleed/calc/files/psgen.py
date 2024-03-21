@@ -1,5 +1,4 @@
-"""Generate input files for EEASiSSS.x and run it.
-"""
+"""Generate input files for EEASiSSS.x and run it."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

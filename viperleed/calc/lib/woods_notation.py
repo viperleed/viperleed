@@ -1,4 +1,6 @@
 """Module for reading and writing Woods notation.
+
+The functionality in this module used to be part of calc.lib.leedbase.
 """
 
 __authors__ = (

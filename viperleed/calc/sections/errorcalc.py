@@ -1,5 +1,4 @@
-"""Section Error calculation.
-"""
+"""Section Error calculation."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

@@ -1,4 +1,4 @@
-"""__main__.py of ViPErLEED (viperleed) calc
+"""Module __main__ of ViPErLEED (viperleed) calc
 
 See viperleed.calc.__init__.py for more information.
 """
@@ -72,7 +72,7 @@ def add_calc_parser_arguments(parser):
         help="specify path to TensErLEED source code",
         type=str
         )
-    parser.add_argument(                                                        #TODO: implement (for cont at end; warn if called with --no_cont)
+    parser.add_argument(                                                        # TODO: implement (for cont at end; warn if called with --no_cont)
         "-j", "--job-name",
         help=("defines a name for the current run. Will be appended to the name "
             "of the history folder that is created, and is logged in "

@@ -1,5 +1,4 @@
-"""ViPErLEED utility: Merge POSCAR files
-"""
+"""ViPErLEED utility: Merge POSCAR files."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',

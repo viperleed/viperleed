@@ -1,5 +1,4 @@
-"""Section Superpos.
-"""
+"""Section Superpos."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

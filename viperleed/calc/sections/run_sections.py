@@ -1,4 +1,7 @@
-"""Wrapper functions for running a section, and section loop for viperleed.calc.
+"""Module run_sections of viperleed.calc.sections.
+
+Wrapper functions for running a single section as well as
+a section loop.
 """
 
 __authors__ = (

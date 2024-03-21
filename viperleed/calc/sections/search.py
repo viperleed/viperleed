@@ -1,5 +1,4 @@
-"""Section Search.
-"""
+"""Section Search."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

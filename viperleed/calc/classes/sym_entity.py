@@ -1,8 +1,8 @@
 """Module sym_entity of viperleed.calc.classes.
 
 Part of the functionality defined here used to be in the slab module.
-Defines SymEntity and its subclasses SymPlane and RotationAxis, which
-represent symmetry operations with a 2D location.
+Defines the SymPlane class, which represent a mirror/glide operations
+with a 2D location.
 """
 
 __authors__ = (

@@ -8,14 +8,10 @@ ag100
     A Ag(100) slab, an Rparams, and a TestInfo.
 ag100_with_displacements_and_offsets
     A Ag(100) Slab and an Rparams, after reading a DISPLACEMENTS block.
-data_path
-    Path to the top-level folder containing test data.
 make_poscar (factory)
     Return a Slab from POSCAR, an Rparams and a TestInfo from a TestInfo.
 poscars_path
     Path to the data directory containing POSCAR files.
-re_match (factory)
-    Return a match object from a pattern and a string.
 run_phaseshift
     An Rparams, a Slab, and the results of generating phaseshifts
     with them.

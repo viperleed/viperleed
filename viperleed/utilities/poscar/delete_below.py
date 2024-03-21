@@ -1,5 +1,4 @@
-"""ViPErLEED utility: Delete atoms below a certain height
-"""
+"""ViPErLEED utility: Delete atoms below a certain height."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',

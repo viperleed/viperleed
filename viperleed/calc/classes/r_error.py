@@ -1,4 +1,7 @@
-"""Data structures and functions for storing and manipulating errors curves.
+"""Module r_error of viperleed.calc.classes.
+
+Defines data structures and functions for storing and manipulating
+errors curves.
 """
 
 __authors__ = (

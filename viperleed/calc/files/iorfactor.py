@@ -1,4 +1,7 @@
-"""Functions for reading and writing files relevant to the rfactor calculation.
+"""Module iorfactor of viperleed.calc.files.
+
+Functions for reading and writing files relevant to the
+R-factor calculation.
 """
 
 __authors__ = (

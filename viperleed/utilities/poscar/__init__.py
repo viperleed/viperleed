@@ -22,6 +22,7 @@ POSCAR_UTILITIES = [
 poscar_utility_logger = logging.getLogger(__name__)
 
 def add_verbose_option(parser):
+    """Add --verbose flag to `parser`."""
     parser.add_argument(
         '-v', '--verbose',
         help='increase output verbosity',

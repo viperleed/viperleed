@@ -1,5 +1,4 @@
-"""ViPErLEED utility: Sort slab by z
-"""
+"""ViPErLEED utility: Sort slab by z."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',

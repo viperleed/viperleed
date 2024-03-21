@@ -1,5 +1,4 @@
-"""ViPErLEED utility: Delete atoms between a certain c fraction
-"""
+"""ViPErLEED utility: Delete atoms between a certain c fraction."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',

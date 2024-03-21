@@ -1,5 +1,4 @@
-"""ViPErLEED utility: Enforce Symmetry
-"""
+"""ViPErLEED utility: Enforce Symmetry."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',

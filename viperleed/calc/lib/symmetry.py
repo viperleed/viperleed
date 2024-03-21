@@ -1,5 +1,4 @@
-"""Functions for determining and setting slab symmetry.
-"""
+"""Functions for determining and setting slab symmetry."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

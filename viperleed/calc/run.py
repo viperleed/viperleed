@@ -44,21 +44,26 @@ def run_calc(system_name=None,
     Parameters
     ----------
     system_name : str, optional
-        Used as a comment in some output file headers
+        Used as a comment in some output-file headers. If not
+        specified, 'unknown' is used instead. Default is None.
     console_output : bool, optional
-        If False, will not add a logging.StreamHandler. Output will only be
-        printed to the log file.
+        If False, will not add a logging.StreamHandler. Output will
+        only be printed to the log file. Default is True.
     slab : Slab, optional
         Start from a pre-existing slab, instead of reading from POSCAR.
+        Default is None.
     preset_params : dict, optional
-        Parameters to add to the Rparams object after PARAMETERS has been read.
-        Keys should be attributes of Rparam. Values in preset_params will
-        overwrite values read from the PARAMETERS file, if present in both. If
-        no PARAMETERS file is read, parameters will be read exclusively from
-        present_params.
-    source : str, optional
-        Path where the 'tensorleed' directory can be found, which contains all
-        the TensErLEED source code.
+        Parameters to add to the Rparams object after a PARAMETERS file
+        has been read. Keys should be attributes of Rparams. Values in
+        `preset_params` will overwrite values read from the PARAMETERS
+        file, if present in both. If no PARAMETERS file is read,
+        parameters will be read exclusively from `preset_params`.
+        Default is None.
+    source : pathlike, optional
+        Path where the 'tensorleed' directory can be found, which
+        contains all the TensErLEED source code. Default is an empty
+        string, i.e., the current directory.
+
     Returns
     -------
     int
@@ -70,6 +75,7 @@ def run_calc(system_name=None,
     os.umask(0)
     # start logger, write to file:
     timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
+                                        
     log_name = f'{LOG_PREFIX}-{timestamp}.log'
     logger.setLevel(logging.INFO)
     logFormatter = CustomLogFormatter()
@@ -80,11 +86,13 @@ def run_calc(system_name=None,
         consoleHandler = logging.StreamHandler()
         consoleHandler.setFormatter(logFormatter)
         logger.addHandler(consoleHandler)
+
     logger.info("Starting new log: " + log_name + "\nTime of execution (UTC): "
                 + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     logger.info("This is ViPErLEED version " + GLOBALS["version"] + "\n")
-    logger.info("! THIS VERSION IS A PRE-RELEASE NOT MEANT FOR PUBLIC "
+    logger.info("! THIS VERSION IS A PRE-RELEASE NOT MEANT FOR PUBLIC "         # TODO: remove for v1.0
                 "DISTRIBUTION !\n")
+
     tmp_manifest = ["SUPP", "OUT", log_name]
     try:
         rp = parameters.read()
@@ -99,10 +107,12 @@ def run_calc(system_name=None,
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmp_manifest)
         return 2
+
     # check if this is going to be a domain search
     domains = False
     if "DOMAIN" in rp.readParams:
         domains = True
+
     if domains:  # no POSCAR in main folder for domain searches
         slab = None
     elif slab is None:
@@ -119,6 +129,7 @@ def run_calc(system_name=None,
             logger.error("POSCAR not found. Stopping execution...")
             cleanup(tmp_manifest)
             return 2
+
         if not slab.preprocessed:
             logger.info("The POSCAR file will be processed and overwritten. "
                         "Copying the original POSCAR to POSCAR_user...")
@@ -144,12 +155,14 @@ def run_calc(system_name=None,
         logger.error("Exception while reading PARAMETERS file", exc_info=True)
         cleanup(tmp_manifest)
         return 2
+
     # set logging level
     if override_log_level is not None:
         rp.LOG_LEVEL = override_log_level
         logger.info("Overriding log level to {str(override_log_level)}.")
     logger.setLevel(rp.LOG_LEVEL)
     logger.debug("PARAMETERS file was read successfully")
+
     rp.timestamp = timestamp
     rp.manifest = tmp_manifest
     try:
@@ -179,21 +192,27 @@ def run_calc(system_name=None,
         logger.warning(f"Could not find a tensorleed directory at {_source}. "
                        "This may cause errors.")
         rp.source_dir = _source
+
     if system_name is not None:
         rp.systemName = system_name
     else:
         logger.info('No system name specified. Using name "unknown".')
         rp.systemName = "unknown"
+
     # check if halting condition is already in effect:
     if rp.halt >= rp.HALTING:
         logger.info("Halting execution...")
         cleanup(rp.manifest, rp)
         return 0
+
     rp.updateDerivedParams()
     logger.info(f"ViPErLEED is using TensErLEED version {rp.TL_VERSION_STR}.")
+
     prerun_clean(rp, log_name)
     exit_code = section_loop(rp, slab)
+
     # Finalize logging - if not done, will break unit testing
     logger.handlers.clear()
     logging.shutdown()
+
     return exit_code

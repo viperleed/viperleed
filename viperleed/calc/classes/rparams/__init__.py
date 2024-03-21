@@ -3,11 +3,12 @@
 This package is a result of the refactor of the rparams.py
 module, originally by @fkraushofer. Contains definition of
 Rparams, the class containing most of the information during
-a viperleed.tleedm run. It also defines specific classes for
-not-so-simple user parameters (in package special), used as
-attributes of Rparams. Defaults for the simple parameters are
-defined in module _defaults. Their variability limits in module
-_limits. Special parameters define their own defaults and limits.
+a viperleed.calc run. It also defines specific classes for
+not-so-simple user parameters (in package special), used
+as attributes of Rparams. Defaults for the parameters are
+defined in module _defaults. Their variability limits in
+module _limits. Some of the special parameters define their
+own defaults and limits.
 """
 
 __authors__ = (

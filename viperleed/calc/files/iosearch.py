@@ -1,4 +1,7 @@
-"""Functions for reading, processing and writing files relevant to the search.
+"""Module iosearch of viperleed.calc.files.
+
+Functions for reading, processing and writing files relevant
+to the search.
 """
 
 __authors__ = (

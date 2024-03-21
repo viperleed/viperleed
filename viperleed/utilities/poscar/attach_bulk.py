@@ -1,8 +1,8 @@
 """ViPErLEED utility: Attach Bulk
 
-Takes a slab POSCAR and adds a bulk POSCAR on the bottom, rescaling the unit
-cell. Very primitive script, should be updated to include more recent
-functionality.
+Takes a slab POSCAR and adds a bulk POSCAR on the bottom, rescaling the
+unit cell. Very primitive script, should be updated to include more
+recent functionality.
 """
 
 __authors__ = (

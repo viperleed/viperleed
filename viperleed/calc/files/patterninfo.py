@@ -1,5 +1,4 @@
-"""Functions for reading and writing PatternInfo.tlm
-"""
+"""Functions for reading and writing PatternInfo.tlm."""
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

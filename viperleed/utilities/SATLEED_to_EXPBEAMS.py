@@ -1,7 +1,7 @@
-"""ViPErLEED utility to convert experimental input for SATLEED to EXPBEAMS.CSV.
+"""ViPErLEED utility to convert experimental input for SATLEED to EXPBEAMS.csv.
 
-Reads a file containing experimental I(V) curves as used by SATLEED and converts
-it into the standard CSV format used by ViPErLEED.
+Reads a file containing experimental I(V) curves as used by SATLEED
+and converts it into the standard CSV format used by ViPErLEED.
 """
 
 __authors__ = (
