@@ -46,7 +46,26 @@ def add_cli_parser_arguments(parser):
 
 
 def read_file(file, average=False):
-    """Read the file and return the contents as an array."""
+    """Read the file and return the contents as a list of Beam objects.
+
+    Parameters
+    ----------
+    file : Pathlike
+        Path to the input file.
+    average : bool
+        If True, average beams according to the averaging scheme in the input
+        file.
+
+    Raises
+    ------
+    ValueError
+        If the file is not formatted correctly.
+
+    Returns
+    -------
+    list of Beam
+        List of Beam objects containing the data from the input file.
+    """
 
     with open(file, "r") as f:
         lines = iter(f.readlines())
