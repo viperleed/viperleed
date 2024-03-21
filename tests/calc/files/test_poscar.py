@@ -11,8 +11,8 @@ import io
 import pytest
 from pytest_cases import parametrize_with_cases, fixture
 
+from viperleed.calc import symmetry
 from viperleed.calc.files import poscar
-from viperleed.calc.lib import symmetry
 from viperleed.calc.lib.base import pairwise
 
 from ...helpers import exclude_tags

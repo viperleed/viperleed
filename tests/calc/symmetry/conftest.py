@@ -10,7 +10,7 @@ import pytest
 
 from pytest_cases import fixture, parametrize_with_cases
 
-from viperleed.calc.lib import symmetry
+from viperleed.calc import symmetry
 
 from ...helpers import flat_fixture
 from .. import poscar_slabs

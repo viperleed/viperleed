@@ -18,7 +18,7 @@ __created__ = '2023-09-06'
 
 from pytest_cases import fixture, parametrize_with_cases
 
-from viperleed.calc.lib import symmetry
+from viperleed.calc import symmetry
 
 from ..poscar_slabs import CasePOSCARSlabs
 

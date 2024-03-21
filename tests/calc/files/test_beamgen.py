@@ -8,9 +8,9 @@ __created__ = '2023-06-09'
 
 from pytest_cases import fixture, parametrize_with_cases
 
+from viperleed.calc import symmetry
 from viperleed.calc.files import beamgen
 from viperleed.calc.classes.rparams import EnergyRange
-from viperleed.calc.lib import symmetry
 
 from ...helpers import exclude_tags
 from ..poscar_slabs import CasePOSCARSlabs
