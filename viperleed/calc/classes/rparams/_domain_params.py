@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Moule _domain_params of viperleed.calc.classes.rparams.
 
 Defines the DomainParameters class. Contains of information useful

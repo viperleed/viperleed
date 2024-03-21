@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module _utils of viperleed.calc.files.parameters.
 
 Initial version by @fkraushofer on 2020-08-18, major rewrite by

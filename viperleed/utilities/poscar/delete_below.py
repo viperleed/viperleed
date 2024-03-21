@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility: Delete atoms below a certain height
 """
 

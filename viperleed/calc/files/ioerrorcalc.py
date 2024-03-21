@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module ioerrorcalc of viperleed.calc.files.
 
 Functions for reading and writing files relevant to the error

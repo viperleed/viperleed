@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions for reading and writing the VIBROCC file."""
 
 __authors__ = (

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module initialization of viperleed.tleedmlib.sections.
 
 ViPErLEED calculation section INITIALIZATION.

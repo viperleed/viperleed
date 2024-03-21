@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A collection of functions that run ViPErLEED from a provided ASE object."""
 
 __authors__ = (

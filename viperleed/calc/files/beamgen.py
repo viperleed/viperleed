@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module beamgen of viperleed.calc.files
 
 Creates the BEAMLIST file for TensErLEED calculations.

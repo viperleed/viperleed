@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility to convert AUXEXPBEAMS to EXPBEAMS.
 
 Reads an AUXEXPBEAMS file and writes the contents in EXPBEAMS.csv format.

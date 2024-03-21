@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """__main__.py of ViPErLEED (viperleed) calc
 
 See viperleed.calc.__init__.py for more information.

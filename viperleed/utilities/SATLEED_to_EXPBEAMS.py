@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility to convert experimental input for SATLEED to EXPBEAMS.CSV.
 
 Reads a file containing experimental I(V) curves as used by SATLEED and converts

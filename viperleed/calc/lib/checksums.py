@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Checksums for TensErLEED Fortran source code files.
 
 Contains basic information about TensErLEED files and code to check

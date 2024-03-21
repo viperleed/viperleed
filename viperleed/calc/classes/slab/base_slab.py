@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module base_slab of viperleed.calc.classes.slab.
 
 Defines the BaseSlab class, useful to describe collections of atoms in

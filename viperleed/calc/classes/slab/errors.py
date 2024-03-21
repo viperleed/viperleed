@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module errors of viperleed.tleedmlib.classes.slab.
 
 Contains exceptions specific to BaseSlab objects.

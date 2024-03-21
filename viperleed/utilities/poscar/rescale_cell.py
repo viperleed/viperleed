@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility: Rescale cell
 
 This utility takes a slab in POSCAR format and rescales the unit cell.

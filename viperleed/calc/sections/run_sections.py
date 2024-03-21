@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Wrapper functions for running a section, and section loop for viperleed.calc.
 """
 

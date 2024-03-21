@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module errors of viperleed.calc.files.parameters.
 
 This module used to be called files/parameter_errors.py. Refactored

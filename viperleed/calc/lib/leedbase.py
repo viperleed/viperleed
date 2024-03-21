@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LEED-specific functions used throughout the viperleed calc package."""
 
 __authors__ = (

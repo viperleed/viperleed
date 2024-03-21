@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module delta_intensities of viperleed.calc.files.
 
 Reads in delta-amplitude files.

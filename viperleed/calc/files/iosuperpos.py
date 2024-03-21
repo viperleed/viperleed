@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions for writing files relevant to the superpos calculation.
 """
 

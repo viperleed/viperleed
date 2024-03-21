@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions for reading and interpreting the DISPLACEMENTS file."""
 
 __authors__ = (

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions for reading, processing and writing files relevant to the search.
 """
 

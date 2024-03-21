@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module _checker of viperleed.calc.files.parameters.
 
 Defines the ParametersChecker class, useful for checking that parameters

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions for reading and writing beams files.
 
 This includes: BEAMLIST, IVBEAMS, EXPBEAMS and AUXEXPBEAMS.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module utils of viperleed.calc.classes.slab.
 
 Contains functions and classes useful for dealing with BaseSlab objects.

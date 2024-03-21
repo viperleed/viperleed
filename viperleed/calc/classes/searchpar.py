@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module searchpar of viperleed.calc.classes.
 
 Defines SearchPar, a class containing information about ONE parameter

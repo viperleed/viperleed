@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility: Modify vacuum gap
 
 This utility takes a slab in POSCAR format and modifies the vacuum gap.

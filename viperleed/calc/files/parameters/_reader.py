@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module _reader of viperleed.calc.files.parameters.
 
 This module is based on the original version of readPARAMETERS from

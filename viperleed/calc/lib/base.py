@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Contains generic functions used in the TensErLEED scripts."""
 
 __authors__ = (

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Generate input files for EEASiSSS.x and run it.
 """
 

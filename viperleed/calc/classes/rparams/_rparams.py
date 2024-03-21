@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module _rparams of viperleed.calc.classes.rparams.
 
 This is the module defining the core class of this package, i.e.,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module bulk_slab of viperleed.tleedmlib.classes.slab.
 
 Defines the BulkSlab class, a BaseSlab describing a 3D-periodic

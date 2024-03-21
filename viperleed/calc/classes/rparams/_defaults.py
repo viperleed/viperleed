@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Moule _defaults of viperleed.calc.classes.rparams.
 
 Defines the default values of 'simple' user PARAMETERS. Not-so-simple

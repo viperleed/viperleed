@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions for reading and writing POSCAR files.
 
 Also defines the POSCARError specific exception, as well as some subclasses.

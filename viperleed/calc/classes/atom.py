@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module atom of viperleed.calc.classes.
 
 Class storing position and other properties of individual atoms (to be

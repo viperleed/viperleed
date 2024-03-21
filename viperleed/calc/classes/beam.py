@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions for writing the SearchProgress.pdf and SearchReport.pdf files."""
 
 __authors__ = (

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Cleanup functions, to be used between sections or before/after execution.
 """
 

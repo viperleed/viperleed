@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module layer of viperleed.calc.classes.
 
 Classes storing position and atom list of a Layer, and its SubLayer

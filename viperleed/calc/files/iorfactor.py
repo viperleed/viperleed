@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions for reading and writing files relevant to the rfactor calculation.
 """
 

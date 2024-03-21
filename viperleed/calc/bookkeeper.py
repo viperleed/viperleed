@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED bookkeeper module of package calc."""
 
 __authors__ = (

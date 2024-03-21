@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions for determining and setting slab symmetry.
 """
 

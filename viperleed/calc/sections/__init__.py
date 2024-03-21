@@ -1,4 +1,3 @@
-"""Package section of viperleed.calc.
 
 This package contains the main functionality that runs the various
 logically different parts of TensErLEED, and takes care of using the

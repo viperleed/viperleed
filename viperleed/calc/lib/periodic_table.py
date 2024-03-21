@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Data and functions related to the periodic table and element properties.
 """
 

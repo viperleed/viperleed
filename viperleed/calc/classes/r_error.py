@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Data structures and functions for storing and manipulating errors curves.
 """
 

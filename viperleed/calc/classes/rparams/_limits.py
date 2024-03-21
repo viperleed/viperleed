@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Moule _limits of viperleed.calc.classes.rparams.
 
 Defines the limiting values of 'simple' user PARAMETERS. Not-so-simple

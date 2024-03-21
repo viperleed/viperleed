@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility: Attach Bulk
 
 Takes a slab POSCAR and adds a bulk POSCAR on the bottom, rescaling the unit

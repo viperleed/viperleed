@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module _interpret of viperleed.calc.files.parameters.
 
 Initial version by @fkraushofer in 2020, major rewrite by @amimre

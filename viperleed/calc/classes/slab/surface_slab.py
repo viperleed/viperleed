@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module surface_slab of viperleed.calc.classes.slab.
 
 Defines the SurfaceSlab class, a BaseSlab describing a 2D-periodic

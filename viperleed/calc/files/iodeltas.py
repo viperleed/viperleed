@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module iodeltas of viperleed.calc.files.
 
 Defines functions for reading and writing files relevant to the
