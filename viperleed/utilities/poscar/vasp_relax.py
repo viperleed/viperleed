@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ViPErLEED utility: Preparing POSCAR for VASP relaxation
 
 This utility takes a slab in POSCAR format as used by ViPErLEED and prepares it

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ViPErLEED utility: Project c vector to z axis
 
 This utility takes a POSCAR slab and projects the c vector to the z axis.

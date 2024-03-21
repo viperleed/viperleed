@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ViPErLEED utility: Strip comments from POSCAR file
 """
 

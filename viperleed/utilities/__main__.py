@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ViPErLEED utilities."""
 
 __authors__ = (

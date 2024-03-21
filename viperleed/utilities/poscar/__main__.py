@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ViPErLEED poscar utilities."""
 
 __authors__ = (

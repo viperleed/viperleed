@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """POSCAR utility get_bulk_repeat.
 
 Reads a POSCAR file, asks at what c value the bulk starts, then

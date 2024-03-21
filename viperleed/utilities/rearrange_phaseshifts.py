@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ViPErLEED utility: rearrange phaseshifts.
 
 Reads a PHASESHIFTS file and allows the user to copy and rearrange the blocks.

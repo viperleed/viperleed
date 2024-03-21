@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ViPErLEED utility: Delete atoms between a certain c fraction
 """
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ViPErLEED utility: Delete atoms above a certain height."""
 
 __authors__ = (

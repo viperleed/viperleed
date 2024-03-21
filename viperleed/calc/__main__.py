@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """__main__.py of ViPErLEED (viperleed) calc
 
 See viperleed.calc.__init__.py for more information.
