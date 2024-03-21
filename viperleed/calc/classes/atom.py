@@ -12,6 +12,7 @@ __created__ = '2019-06-13'
 
 import copy
 import logging
+
 import numpy as np
 
 from viperleed.calc.lib.base import add_edges_and_corners

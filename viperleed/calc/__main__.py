@@ -10,11 +10,10 @@ __authors__ = (
     )
 __created__ = '2023-08-03'
 
-from pathlib import Path
 import argparse
-import logging
 import multiprocessing
 import os
+from pathlib import Path
 import shutil
 
 from viperleed import GLOBALS

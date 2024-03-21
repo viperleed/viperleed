@@ -15,11 +15,11 @@ import subprocess
 
 import numpy as np
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.files import iodeltas
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.checksums import validate_multiple_files
 
 logger = logging.getLogger(__name__)
 

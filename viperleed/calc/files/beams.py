@@ -18,10 +18,10 @@ import re
 import fortranformat as ff
 import numpy as np
 
-from viperleed.guilib import project_to_first_domain
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import parseMathSqrt
 from viperleed.calc.classes.beam import Beam
+from viperleed.guilib import project_to_first_domain
 
 
 logger = logging.getLogger(__name__)

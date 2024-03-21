@@ -20,19 +20,19 @@ import sys
 import time
 from timeit import default_timer as timer
 
+import numpy as np
+import scipy
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
-import numpy as np
-import scipy
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import iosearch
 from viperleed.calc.files import parameters
 from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.checksums import validate_multiple_files
 
 logger = logging.getLogger(__name__)
 

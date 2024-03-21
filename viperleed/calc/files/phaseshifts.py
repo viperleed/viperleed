@@ -14,10 +14,9 @@ from pathlib import Path
 import fortranformat as ff
 import numpy as np
 
-import viperleed
 from viperleed.calc.lib.leedbase import HARTREE_TO_EV
 from viperleed.calc.lib.periodic_table import (get_atomic_number,
-                                                get_element_symbol)
+                                               get_element_symbol)
 
 try:
     import matplotlib

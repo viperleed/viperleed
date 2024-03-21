@@ -22,14 +22,15 @@ import numpy as np
 import psutil
 from quicktions import Fraction
 
-from viperleed.guilib import get_equivalent_beams
-from viperleed.calc.lib.base import cosvec, ensure_integer_matrix, lcm
-from viperleed.calc.lib.base import SingularMatrixError
-
-# The following imports are potentially the cause of cyclic
+# The following import line is potentially the cause of cyclic
 # imports. They are used exclusively as part of getTensorOriStates
 # which could potentially be split off somewhere else
 from viperleed.calc.files import parameters, poscar, vibrocc
+
+from viperleed.calc.lib.base import cosvec, ensure_integer_matrix, lcm
+from viperleed.calc.lib.base import SingularMatrixError
+from viperleed.guilib import get_equivalent_beams
+
 
 # constants for conversion Angstrom and eV <-> atomic units
 HARTREE_TO_EV = 27.211396

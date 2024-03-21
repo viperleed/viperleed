@@ -19,10 +19,6 @@ from zipfile import ZipFile
 
 import numpy as np
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import NonIntegerMatrixError
-from viperleed.calc.lib.base import angle, rotation_matrix
-from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.classes.rparams import DomainParameters
 from viperleed.calc.classes.slab import BulkSlab, Slab
 from viperleed.calc.classes.slab import AlreadyMinimalError
@@ -32,11 +28,14 @@ from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
 from viperleed.calc.files import beams as iobeams, parameters
 from viperleed.calc.files import patterninfo, phaseshifts, poscar, vibrocc
-from viperleed.calc.lib.woods_notation import writeWoodsNotation
+from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.files.psgen import runPhaseshiftGen, runPhaseshiftGen_old
-from viperleed.calc.sections._sections import (ALL_INPUT_FILES,
-                                                    EXPBEAMS_NAMES)
+from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import symmetry
+from viperleed.calc.lib.base import NonIntegerMatrixError
+from viperleed.calc.lib.base import angle, rotation_matrix
+from viperleed.calc.lib.woods_notation import writeWoodsNotation
+from viperleed.calc.sections._sections import ALL_INPUT_FILES, EXPBEAMS_NAMES
 
 logger = logging.getLogger(__name__)
 

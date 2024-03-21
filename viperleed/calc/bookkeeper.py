@@ -6,10 +6,10 @@ __authors__ = (
     )
 __created__ = '2020-01-30'
 
-from enum import Enum
-from pathlib import Path
 import argparse
+from enum import Enum
 import os
+from pathlib import Path
 import re
 import shutil
 import time

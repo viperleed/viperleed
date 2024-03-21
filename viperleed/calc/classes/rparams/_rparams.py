@@ -25,15 +25,13 @@ from timeit import default_timer as timer
 
 import numpy as np
 
-
-import viperleed
+from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import beams as iobeams
+from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import (KNOWN_TL_VERSIONS,
-                                           UnknownTensErLEEDVersionError)
-from viperleed.calc.classes.searchpar import SearchPar
-from viperleed.calc.files.iodeltas import checkDelta
+                                          UnknownTensErLEEDVersionError)
 from viperleed.calc.sections._sections import EXPBEAMS_NAMES
 
 
