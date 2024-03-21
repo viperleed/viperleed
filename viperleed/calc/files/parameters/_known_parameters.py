@@ -23,7 +23,8 @@ import logging
 from .errors import ParameterNotRecognizedError
 
 
-_LOGGER = logging.getLogger('tleedm.files.parameters')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 # Allowed parameters with their 'standard' names in alphabetic order

@@ -18,7 +18,7 @@ from scipy.spatial.distance import cdist
 from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
-logger = logging.getLogger("viperleed.utilities.poscar.merge")
+logger = logging.getLogger(__name__)
 
 
 def merge_slabs(slabs, check_collisions=True, eps=1e-5):

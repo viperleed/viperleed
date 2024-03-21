@@ -14,7 +14,7 @@ import logging
 from viperleed.calc.lib.base import range_to_str
 
 
-logger = logging.getLogger("tleedm.classes.r_error")
+logger = logging.getLogger(__name__)
 
 
 class R_Error():

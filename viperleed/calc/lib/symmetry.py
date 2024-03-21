@@ -22,7 +22,7 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import (addUnequalPoints, angle, dist_from_line,
                                      rotation_matrix_order, rotation_matrix)
 
-logger = logging.getLogger("tleedm.symmetry")
+logger = logging.getLogger(__name__)
 
 
 def getSymPosLists(sl, rp, pointlist, output=False):

@@ -21,7 +21,7 @@ from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import fortranContLine, splitMaxRight
 
-logger = logging.getLogger("tleedm.files.iorefcalc")
+logger = logging.getLogger(__name__)
 
 
 def combine_tensors(oripath=".", targetpath=".", buffer=0):

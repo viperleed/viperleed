@@ -17,14 +17,14 @@ try:
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-    plt.style.use('viperleed.tleedm')
+    plt.style.use('viperleed.calc')
 except Exception:
     _CAN_PLOT = False
 else:
     _CAN_PLOT = True
 
 
-logger = logging.getLogger("tleedm.files.searchpdf")
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 

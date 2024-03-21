@@ -15,7 +15,7 @@ from viperleed.calc.lib.base import readIntRange, splitSublists
 from viperleed.calc.lib.symmetry import setSymmetry, enforceSymmetry
 
 
-logger = logging.getLogger("tleedm.files.displacements")
+logger = logging.getLogger(__name__)
 
 
 def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):

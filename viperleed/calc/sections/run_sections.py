@@ -31,12 +31,11 @@ from viperleed.calc.files.phaseshifts import readPHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC, writeVIBROCC
 
 
-logger = logging.getLogger("tleedm.sections.run_sections")
+logger = logging.getLogger(__name__)
 
 
 def run_section(index, sl, rp):
-    """
-    Runs a specific tleedm section.
+    """Run a specific viperleed.calc section.
 
     Parameters
     ----------
@@ -323,7 +322,8 @@ def section_loop(rp, sl):
             cleanup(rp.manifest, rp)
             return 1
         except Exception:
-            logger.error("Exception during tleedm execution: ", exc_info=True)
+            logger.error("Exception during viperleed.calc execution: ",
+                         exc_info=True)
             cleanup(rp.manifest, rp)
             return 3
         if rp.halt >= rp.HALTING:

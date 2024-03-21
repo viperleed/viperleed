@@ -371,7 +371,7 @@ def read_encoded_checksums(encoded_file_path=None):
     ----------
     encoded_file_path : str, or pathlike, optional
         Optional location of encoded checksum file. If None, the
-        default location (tleedmlib/_checksums.dat) is assumed.
+        default location (viperleed/calc/_checksums.dat) is assumed.
         Default is None.
 
     Returns
@@ -381,7 +381,7 @@ def read_encoded_checksums(encoded_file_path=None):
         checksums. Paths are relative to the tensorleed folder.
     """
     if encoded_file_path is None:
-        # file should be in tleedmlib/
+        # file should be in calc/
         encoded_file_path = Path(__file__).resolve().parent
         encoded_file_path /= "_checksums.dat"
 
@@ -399,7 +399,7 @@ def _write_encoded_checksums(source_file_checksums, encoded_file_path=None):
         checksums. Paths are relative to the tensorleed folder.
     encoded_file_path : str, or pathlike, optional
         Optional location of encoded checksum file. If None, the
-        default location (tleedmlib/_checksums.dat) is assumed.
+        default location (viperleed/calc/_checksums.dat) is assumed.
         Default is None.
 
     Returns
@@ -407,7 +407,7 @@ def _write_encoded_checksums(source_file_checksums, encoded_file_path=None):
     None.
     """
     if encoded_file_path is None:
-        # file should be in tleedmlib/
+        # file should be in calc/
         encoded_file_path = Path(__file__).resolve().parent
         encoded_file_path /= "_checksums.dat"
 
@@ -420,7 +420,7 @@ def _add_checksums_for_dir(path,
                            patterns=("*/GLOBAL", "*/*.f*")):
     """Add checksums for files in path into checksum_dict_.
 
-    This function is intended for tleedm developers.
+    This function is intended for viperleed developers.
 
     Parameters
     ----------

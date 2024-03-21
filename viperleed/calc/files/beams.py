@@ -24,7 +24,7 @@ from viperleed.calc.lib.base import parseMathSqrt
 from viperleed.calc.classes.beam import Beam
 
 
-logger = logging.getLogger("tleedm.files.beams")
+logger = logging.getLogger(__name__)
 
 
 def averageBeams(beams, weights=None):

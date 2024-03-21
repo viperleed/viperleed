@@ -13,10 +13,10 @@ from viperleed.calc.files.beams import readAUXEXPBEAMS, writeOUTBEAMS
 
 def main():
     # print some info
-    print("This utility reads an AUXEXPBEAMS file (ie, beams formatted as "
-          "TensErLEED experimental input) and writes the contents in the csv "
-          "formatting applied in tleedmap for THEOBEAMS.csv and EXPBEAMS.csv "
-          "files.\n")
+    print("This utility reads an AUXEXPBEAMS file (i.e., beams formatted as "
+          "TensErLEED experimental input) and writes the contents in the "
+          "csv formatting applied in viperleed.calc for THEOBEAMS.csv and "
+          "EXPBEAMS.csv files.\n")
 
     # read the AUXEXPBEAMS file
     filename = ""

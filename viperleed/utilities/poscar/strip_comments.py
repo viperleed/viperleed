@@ -14,7 +14,7 @@ import sys
 from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
-logger = logging.getLogger("viperleed.utilities.poscar.strip_comments")
+logger = logging.getLogger(__name__)
 
 
 def add_cli_parser_arguments(parser):

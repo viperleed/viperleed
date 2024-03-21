@@ -27,12 +27,12 @@ import numpy as np
 
 
 import viperleed
+from viperleed.calc.files import beams as iobeams
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import (KNOWN_TL_VERSIONS,
                                            UnknownTensErLEEDVersionError)
 from viperleed.calc.classes.searchpar import SearchPar
-from viperleed.calc.files import beams as tl_beams
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.sections._sections import EXPBEAMS_NAMES
 
@@ -49,14 +49,10 @@ from ._defaults import NO_VALUE, DEFAULTS
 from ._limits import PARAM_LIMITS
 from .special._base import SpecialParameter, NotASpecialParameterError
 
-_LOGGER = logging.getLogger('tleedm.rparams')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 if _CAN_PLOT:
-    plt.style.use('viperleed.tleedm')
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2019-06-13"
+    plt.style.use('viperleed.calc')
 
 
 class Rparams:
@@ -258,8 +254,8 @@ class Rparams:
         err_msg = f'Error while reading file {self.expbeams_file_name}'
         enrange = self.THEO_ENERGIES.as_floats()[:2]
         try:
-            self.expbeams = tl_beams.readOUTBEAMS(self.expbeams_file_name,
-                                                  enrange=enrange)
+            self.expbeams = iobeams.readOUTBEAMS(self.expbeams_file_name,
+                                                 enrange=enrange)
         except OSError:
             _LOGGER.error(f'{err_msg}.', exc_info=True)
             return

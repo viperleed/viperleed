@@ -17,7 +17,7 @@ try:
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-    plt.style.use('viperleed.tleedm')
+    plt.style.use('viperleed.calc')
     from matplotlib import cm
 except Exception:
     _CAN_PLOT = False
@@ -28,7 +28,7 @@ from viperleed.calc.files.iorfactor import read_rfactor_columns
 from viperleed.calc.files.ivplot import plot_iv
 
 
-logger = logging.getLogger("tleedm.files.iofdout")
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 

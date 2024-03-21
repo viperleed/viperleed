@@ -9,7 +9,7 @@ __created__ = '2020-08-19'
 import logging
 
 
-logger = logging.getLogger("tleedm.files.patterninfo")
+logger = logging.getLogger(__name__)
 
 
 def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):

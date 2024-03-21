@@ -293,8 +293,8 @@ class TestRaises:
         assert exc.match('z component')
 
     # In principle we are also raising a RuntimeError in case
-    # run_tleedm raises any exception. In practice, this should
-    # not happen as the code currently is, since run_tleedm
+    # run_calc raises any exception. In practice, this should
+    # not happen as the code currently is, since run_calc
     # swallows all exceptions....
 
 

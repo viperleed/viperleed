@@ -1,4 +1,4 @@
-"""Module sym_entity of viperleed.tleedmlib.classes.
+"""Module sym_entity of viperleed.calc.classes.
 
 Part of the functionality defined here used to be in the slab module.
 Defines SymEntity and its subclasses SymPlane and RotationAxis, which

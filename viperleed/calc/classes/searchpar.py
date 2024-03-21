@@ -15,7 +15,7 @@ import logging
 
 import numpy as np
 
-_LOGGER = logging.getLogger('tleedm.searchpar')
+_LOGGER = logging.getLogger(__name__)
 
 
 class SearchPar:

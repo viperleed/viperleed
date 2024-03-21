@@ -19,7 +19,7 @@ import sys
 import numpy as np
 import scipy.spatial as sps
 
-logger = logging.getLogger("tleedm.base")
+logger = logging.getLogger(__name__)
 COLLAPSE_EPS = 1e-8  # Default for collapsing fractional coordinates
 
 ###############################################

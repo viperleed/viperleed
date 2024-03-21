@@ -37,7 +37,7 @@ EV_TO_HARTREE = 1/HARTREE_TO_EV
 BOHR_TO_ANGSTROM = 0.529177210903
 ANGSTROM_TO_BOHR = 1/BOHR_TO_ANGSTROM
 
-logger = logging.getLogger("tleedm.leedbase")
+logger = logging.getLogger(__name__)
 
 
 ###############################################

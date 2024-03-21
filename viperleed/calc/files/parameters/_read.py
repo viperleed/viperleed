@@ -26,7 +26,8 @@ from ._reader import ParametersReader
 from ._write import comment_out
 
 
-_LOGGER = logging.getLogger('tleedm.files.parameters')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 def read(filename='PARAMETERS'):

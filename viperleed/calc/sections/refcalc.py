@@ -17,13 +17,13 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.files import beams, parameters
-from viperleed.calc.files import iorefcalc as tl_io
+from viperleed.calc.files import iorefcalc
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import splitMaxRight
 from viperleed.calc.lib.checksums import validate_multiple_files
 
-logger = logging.getLogger("tleedm.refcalc")
+logger = logging.getLogger(__name__)
 
 # TODO: we should have a parent class for compile tasks (issue #43)
 # CompileTask subclasses would need a class-level list of
@@ -98,8 +98,6 @@ class RefcalcRunTask():
 def compile_refcalc(comptask):
     """Function meant to be executed by parallelized workers. Executes a
     RefcalcCompileTask."""
-    logger = logging.getLogger("tleedm.refcalc")
-
     workfolder = os.path.join(comptask.basedir, comptask.foldername)
     # make folder and go there:
     if os.path.isdir(workfolder):
@@ -156,7 +154,6 @@ def compile_refcalc(comptask):
 def run_refcalc(runtask):
     """Runs a part of a reference calculation in a subfolder, or the whole
     refcalc here if in single-threaded mode."""
-    logger = logging.getLogger("tleedm.refcalc")
     base = runtask.comptask.basedir
     workfolder = base
     task_name = "(single-threaded)"
@@ -304,12 +301,12 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     except FileNotFoundError:
         pass
     try:
-        tl_io.writeAUXLATGEO(sl, rp)
+        iorefcalc.writeAUXLATGEO(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXLATGEO: ")
         raise
     try:
-        tl_io.writeAUXNONSTRUCT(sl, rp)
+        iorefcalc.writeAUXNONSTRUCT(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXNONSTRUCT: ")
         raise
@@ -320,12 +317,12 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             logger.error("Exception during writeAUXBEAMS: ")
             raise
     try:
-        tl_io.writeAUXGEO(sl, rp)
+        iorefcalc.writeAUXGEO(sl, rp)
     except Exception:
         logger.error("Exception during writeAUXGEO: ")
         raise
     try:
-        fin = tl_io.collectFIN(version=rp.TL_VERSION)
+        fin = iorefcalc.collectFIN(version=rp.TL_VERSION)
     except Exception:
         logger.error("Exception while trying to collect input for "
                      "refcalc FIN: ")
@@ -342,7 +339,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             )
     if rp.TL_VERSION < 1.7:   # muftin.f deprecated in version 1.7
         try:
-            tl_io.writeMuftin(sl, rp)
+            iorefcalc.writeMuftin(sl, rp)
         except Exception:
             logger.error("Exception during writeMuftin: ")
             raise
@@ -411,7 +408,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     collect_param = ""
     for lm in which_lmax:
         try:
-            param = tl_io.writePARAM(sl, rp, lmax=lm)
+            param = iorefcalc.writePARAM(sl, rp, lmax=lm)
         except Exception:
             logger.error("Exception during writePARAM: ",
                          exc_info=rp.is_debug_mode)
@@ -534,9 +531,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                            + ct.foldername)
 
     if not single_threaded:
-        tl_io.combine_fdout(oripath=collection_dir)
+        iorefcalc.combine_fdout(oripath=collection_dir)
         if 1 in rp.TENSOR_OUTPUT:
-            tl_io.combine_tensors(oripath=collection_dir)
+            iorefcalc.combine_tensors(oripath=collection_dir)
         try:
             shutil.rmtree(collection_dir)
         except Exception:
@@ -544,7 +541,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                            + os.path.basename(collection_dir))
 
     try:
-        rp.theobeams["refcalc"], rp.refcalc_fdout = tl_io.readFdOut()
+        rp.theobeams["refcalc"], rp.refcalc_fdout = iorefcalc.readFdOut()
     except FileNotFoundError:
         logger.error("fd.out not found after reference calculation. "
                      "Check settings and refcalc log.")
@@ -703,7 +700,6 @@ def _reinitialize_deltas(param, slab):
 def runDomainRefcalc(dp):
     """Runs the reference calculation for one domain, based on the
     DomainParameters object."""
-    logger = logging.getLogger("tleedm.refcalc")
     home = os.getcwd()
     try:
         os.chdir(dp.workdir)

@@ -16,7 +16,7 @@ import numpy as np
 
 from viperleed.calc.lib.base import add_edges_and_corners
 
-_LOGGER = logging.getLogger('tleedm.atom')
+_LOGGER = logging.getLogger(__name__)
 
 
 class AtomError(Exception):

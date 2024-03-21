@@ -17,9 +17,7 @@ from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
 
-logger = logging.getLogger(
-    "viperleed.utilities.poscar.prepare_for_vasp_relaxation"
-    )
+logger = logging.getLogger(__name__)
 
 
 def modify_vacuum(slab, vacuum_gap_size, absolute=False):

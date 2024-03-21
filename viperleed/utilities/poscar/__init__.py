@@ -19,7 +19,7 @@ POSCAR_UTILITIES = [
     if not module.ispkg and module.name not in {'__main__', 'poscar'}
     ]
 
-poscar_utility_logger = logging.getLogger("viperleed.utilities.poscar")
+poscar_utility_logger = logging.getLogger(__name__)
 
 def add_verbose_option(parser):
     parser.add_argument(

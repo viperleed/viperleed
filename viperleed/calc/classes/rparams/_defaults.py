@@ -15,8 +15,8 @@ __created__ = '2023-10-23'
 
 import logging
 
-
-_LOGGER = logging.getLogger('tleedm.rparams')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)  # Remove _defaults
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 # Notice that we cannot use a module-level global object(), as this
 # module may be imported a number of times when using multiprocessing

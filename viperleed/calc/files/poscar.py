@@ -18,9 +18,10 @@ from pathlib import Path
 
 import numpy as np
 
-from viperleed.calc.classes import atom as tl_atom, slab as tl_slab
+from viperleed.calc.classes import atom as calc_atom
+from viperleed.calc.classes import slab as calc_slab
 
-_LOGGER = logging.getLogger('tleedm.files.poscar')
+_LOGGER = logging.getLogger(__name__)
 
 
 class POSCARError(Exception):
@@ -144,7 +145,7 @@ class POSCARReader:
 
     def read(self):
         """Return a slab with info read from source."""
-        slab = tl_slab.Slab()
+        slab = calc_slab.Slab()
 
         next(self.stream, None)  # Skip first line: comment
         slab.poscar_scaling = float(next(self.stream, '1').split()[0])          # TODO: POSCAR wiki says it's more complex!
@@ -202,7 +203,7 @@ class POSCARReader:
         for element, n_atoms in zip(elements, element_counts):
             for n_added, fractional_pos in enumerate(positions, start=1):
                 atoms[element].append(
-                    tl_atom.Atom(element, fractional_pos, 0, slab)
+                    calc_atom.Atom(element, fractional_pos, 0, slab)
                     )
                 if n_added >= n_atoms:
                     break

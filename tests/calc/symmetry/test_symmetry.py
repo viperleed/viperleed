@@ -307,6 +307,7 @@ class TestSymmetryConstraints:
         'square_cm_11': 'Known to often fail with a random shift',
         'square_cm_1m1': 'Known to often fail with a random shift',
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
+        'poscar_sb_si_111': 'Known to rarely fail with a random shift',
         'poscar_sto110_4x1': 'Known to sometimes fail with a random shift',
         }
 

@@ -14,7 +14,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
-from viperleed.calc.files import iosuperpos as tl_io
+from viperleed.calc.files import iosuperpos
 from viperleed.calc.files.beams import writeOUTBEAMS, averageBeams, writeFdOut
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.files.iorefcalc import readFdOut
@@ -22,7 +22,7 @@ from viperleed.calc.files.iosearch import readSDTL_end, readSDTL_blocks
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
 
-logger = logging.getLogger("tleedm.superpos")
+logger = logging.getLogger(__name__)
 
 
 def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
@@ -65,9 +65,9 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
     # now we have configuration and parameters, create input:
     contrin = ""
     try:
-        contrin = tl_io.writeSuperposInput(sl, rp, config[0][1],
-                                           for_error=for_error,
-                                           only_vary=only_vary)
+        contrin = iosuperpos.writeSuperposInput(sl, rp, config[0][1],
+                                                for_error=for_error,
+                                                only_vary=only_vary)
     except Exception:
         logger.error("Error getting input data for Superpos: ", exc_info=True)
         rp.setHaltingLevel(2)

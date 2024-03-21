@@ -14,7 +14,7 @@ import numpy as np
 from viperleed.calc.lib.base import splitSublists, readToExc
 
 
-logger = logging.getLogger("tleedm.files.vibrocc")
+logger = logging.getLogger(__name__)
 
 
 def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):

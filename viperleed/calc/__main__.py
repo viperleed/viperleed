@@ -18,12 +18,11 @@ import os
 import shutil
 
 from viperleed import GLOBALS
+from viperleed.calc import LOGGER as logger
 from viperleed.calc.bookkeeper import bookkeeper, BookkeeperMode
-from viperleed.calc import run_tleedm
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
-
-logger = logging.getLogger("tleedm")
+from viperleed.calc.run import run_calc
 
 
 def add_calc_parser_arguments(parser):
@@ -217,11 +216,9 @@ def main(args=None):
     # go to work directory, execute there
     cwd = Path.cwd().resolve()
     os.chdir(work_path)
-    run_tleedm(
-        system_name=_system_name,
-        source=tensorleed_path,
-        override_log_level=override_log_level
-    )
+    run_calc(system_name=_system_name,
+             source=tensorleed_path,
+             override_log_level=override_log_level)
 
     # copy back everything listed in manifest
     manifest = []

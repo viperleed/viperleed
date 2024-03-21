@@ -1,4 +1,4 @@
-"""Module bulk_slab of viperleed.tleedmlib.classes.slab.
+"""Module bulk_slab of viperleed.calc.classes.slab.
 
 Defines the BulkSlab class, a BaseSlab describing a 3D-periodic
 crystal. This module was created as part of the refactoring of

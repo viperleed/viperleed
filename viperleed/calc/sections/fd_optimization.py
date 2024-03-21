@@ -15,13 +15,14 @@ import shutil
 import numpy as np
 from numpy.polynomial import Polynomial
 
-from viperleed.calc.files import iofdopt as tl_io
+from viperleed.calc.files import iofdopt
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
 from viperleed.calc.files import psgen
 from viperleed.calc.sections.refcalc import refcalc as section_refcalc
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
-logger = logging.getLogger("tleedm.fdopt")
+
+logger = logging.getLogger(__name__)
 
 
 class FullDynamicCalculationError(Exception):
@@ -266,9 +267,9 @@ def fd_optimization(sl, rp):
 
         # write out results
         if len(known_points) != 0:
-            tl_io.write_fd_opt_csv(known_points, which)
+            iofdopt.write_fd_opt_csv(known_points, which)
         if len(known_points) > 2:
-            tl_io.write_fd_opt_pdf(known_points, which, parabola=parabola)
+            iofdopt.write_fd_opt_pdf(known_points, which, parabola=parabola)
 
         # create test objects tsl, trp and set parameters
         tsl = copy.deepcopy(sl)
@@ -322,9 +323,9 @@ def fd_optimization(sl, rp):
         new_min = current_best[0]
 
     # output analysis
-    tl_io.write_fd_opt_csv(known_points, which)
+    iofdopt.write_fd_opt_csv(known_points, which)
     if len(known_points) > 2:
-        tl_io.write_fd_opt_pdf(known_points, which, parabola=parabola)
+        iofdopt.write_fd_opt_pdf(known_points, which, parabola=parabola)
 
     # output modified files
     comment = "Found by full-dynamic optimization"
@@ -347,8 +348,8 @@ def fd_optimization(sl, rp):
     # fetch I(V) data from all, plot together
     best_rfactors = rfactor_lists[np.argmin(known_points[:, 1])]
     try:
-        tl_io.write_fd_opt_beams_pdf(rp, known_points, which, tmpdirs,
-                                     best_rfactors)
+        iofdopt.write_fd_opt_beams_pdf(rp, known_points, which, tmpdirs,
+                                       best_rfactors)
     except Exception as exc:
         logger.warning(f"Failed to plot I(V) curves from optimization: {exc}")
 

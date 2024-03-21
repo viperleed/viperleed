@@ -20,7 +20,7 @@ from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeOUTBEAMS, averageBeams
 from viperleed.guilib.base import BeamIndex
 
-logger = logging.getLogger("viperleed.utilities.SATLEED_to_EXPBEAMS")
+logger = logging.getLogger(__name__)
 
 
 def add_cli_parser_arguments(parser):

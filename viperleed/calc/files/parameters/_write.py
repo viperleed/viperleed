@@ -28,7 +28,8 @@ from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from ._reader import RawLineParametersReader
 
 
-_LOGGER = logging.getLogger('tleedm.files.parameters')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 def comment_out(rpars, modpar, comment='', path='', suppress_ori=False):

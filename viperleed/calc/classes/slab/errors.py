@@ -1,4 +1,4 @@
-"""Module errors of viperleed.tleedmlib.classes.slab.
+"""Module errors of viperleed.calc.classes.slab.
 
 Contains exceptions specific to BaseSlab objects.
 """

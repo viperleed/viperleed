@@ -26,14 +26,14 @@ else:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
-    plt.style.use('viperleed.tleedm')
+    plt.style.use('viperleed.calc')
 
 from viperleed.calc.lib import leedbase
 from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 
-logger = logging.getLogger("tleedm.files.iorfactor")
+logger = logging.getLogger(__name__)
 
 
 # How many extra points to take at the boundaries to prevent wasting

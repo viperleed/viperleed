@@ -26,7 +26,7 @@ from viperleed.calc.files.iorfactor import largest_nr_grid_points
 from viperleed.calc.files.iorfactor import prepare_rfactor_energy_ranges
 from viperleed.calc.files.vibrocc import writeVIBROCC
 
-logger = logging.getLogger("tleedm.files.iosearch")
+logger = logging.getLogger(__name__)
 
 
 class SearchIORaceConditionError(Exception):

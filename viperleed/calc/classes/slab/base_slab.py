@@ -50,7 +50,8 @@ from .errors import TooFewLayersError
 from .utils import _left_handed, _z_distance
 
 
-_LOGGER = logging.getLogger('tleedm.slab')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 # TODO: .cartpos[2] Issue #174

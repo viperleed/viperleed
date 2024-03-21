@@ -15,7 +15,7 @@ import subprocess
 
 import numpy as np
 
-from viperleed.calc.files import iorfactor as tl_io
+from viperleed.calc.files import iorfactor
 from viperleed.calc.files.iorefcalc import readFdOut
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
@@ -28,7 +28,7 @@ else:
     from viperleed.calc.wrapped.error_codes import check_ierr
     _HAS_NEW_R_FACTOR = True
 
-logger = logging.getLogger("tleedm.rfactor")
+logger = logging.getLogger(__name__)
 
 
 def rfactor(sl, rp, index, for_error=False, only_vary=None):                    # TODO: Parameters __doc__
@@ -131,7 +131,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
 
     (_, theo_range,
      iv_shift,
-     intpol_step) = tl_io.prepare_rfactor_energy_ranges(
+     intpol_step) = iorfactor.prepare_rfactor_energy_ranges(
         rp, theobeams, for_error,
         n_expand=(rp.INTPOL_DEG - 1) // 2
         )
@@ -153,17 +153,15 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
     n_beams = len(beamcorr) - beamcorr.count(-1)  # -1 indicates no correspondence
     (exp_grid, exp_id_start,
      exp_n_E_beams,
-     exp_intensities_in) = tl_io.beamlist_to_array(rp.expbeams)
+     exp_intensities_in) = iorfactor.beamlist_to_array(rp.expbeams)
     corr_theobeams = []
     for i in beamcorr:
         if i != -1:
             corr_theobeams.append(theobeams[i])
-    (
-        theo_grid,
-        theo_id_start,
-        theo_n_E_beams,
-        theo_intensities_in,
-    ) = tl_io.beamlist_to_array(corr_theobeams)
+    (theo_grid,
+     theo_id_start,
+     theo_n_E_beams,
+     theo_intensities_in) = iorfactor.beamlist_to_array(corr_theobeams)
 
     deg = rp.INTPOL_DEG
     v0i = rp.V0_IMAG
@@ -396,7 +394,7 @@ def run_new_rfactor(sl, rp, for_error, name, theobeams, expbeams):
 
         # shifted_E_start_exp must be now same as shifted_E_start_theo -> no need to pass both
         # same for n_e_beams
-        tl_io.writeRfactorPdf_new(
+        iorfactor.writeRfactorPdf_new(
             n_beams,
             labels,
             R_beams,
@@ -424,14 +422,14 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         theospec = rp.superpos_specout
     # WEXPEL before PARAM, to make sure number of exp. beams is correct
     try:
-        tl_io.writeWEXPEL(sl, rp, theobeams, for_error=for_error)
+        iorfactor.writeWEXPEL(sl, rp, theobeams, for_error=for_error)
     except Exception:
         logger.error("Exception during writeWEXPEL: ")
         raise
     try:
-        tl_io.writeRfactPARAM(rp, theobeams,
-                              for_error=for_error,
-                              only_vary=only_vary)
+        iorfactor.writeRfactPARAM(rp, theobeams,
+                                  for_error=for_error,
+                                  only_vary=only_vary)
     except Exception:
         logger.error("Exception during writeRfactPARAM: ")
         raise
@@ -528,7 +526,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     # read output
     if for_error:
         try:
-            rfaclist = tl_io.readROUTSHORT()
+            rfaclist = iorfactor.readROUTSHORT()
         except Exception:
             logger.error("Error reading ROUTSHORT file",
                          exc_info=rp.is_debug_mode)
@@ -536,7 +534,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         return rfaclist
 
     try:
-        (rfac, r_int, r_frac), v0rshift, rfaclist = tl_io.readROUT()
+        (rfac, r_int, r_frac), v0rshift, rfaclist = iorfactor.readROUT()
     except Exception:  # TODO catch correct exception
         logger.error("Error reading ROUT file", exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
@@ -583,7 +581,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         labelwidth = max(beam.getLabel(style=labelstyle)[1]
                          for beam in rp.expbeams)
         try:
-            tl_io.writeRfactorPdf(
+            iorfactor.writeRfactorPdf(
                 [(b.getLabel(lwidth=labelwidth, style=labelstyle)[0], r)
                  for b, r in zip(rp.expbeams, rfaclist)],
                 outName=outname,

@@ -29,7 +29,8 @@ from ._known_parameters import from_alias, did_you_mean
 from ._utils import Assignment
 
 
-_LOGGER = logging.getLogger('tleedm.files.parameters')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 class ParametersReader(AbstractContextManager, Iterator):

@@ -61,7 +61,8 @@ from ._known_parameters import KNOWN_PARAMS, is_deprecated, warn_if_deprecated
 from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
 
-_LOGGER = logging.getLogger('tleedm.files.parameters')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 # Bool parameters for which to create interpret...() methods automatically.

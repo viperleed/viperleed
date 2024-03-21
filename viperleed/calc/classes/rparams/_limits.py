@@ -14,7 +14,8 @@ __created__ = '2023-10-23'
 
 import logging
 
-_LOGGER = logging.getLogger('tleedm.rparams')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
                                                                                 # TODO: fill dict of parameter limits here (e.g. LMAX etc.)
 # parameter limits

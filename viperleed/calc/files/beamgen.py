@@ -28,7 +28,7 @@ from viperleed.calc.lib.leedbase import getLEEDdict
 
 
 H_BAR_SQ_OVER_2M = 0.5 * HARTREE_TO_EV * BOHR_TO_ANGSTROM**2  # h**2/2m
-_LOGGER = logging.getLogger('tleedm.beamgen')
+_LOGGER = logging.getLogger(__name__)
 
 
 def calc_and_write_beamlist(slab, rpars, domains=False,

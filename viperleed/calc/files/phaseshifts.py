@@ -29,11 +29,11 @@ else:
     matplotlib.use('Agg')
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-    plt.style.use('viperleed.tleedm')
+    plt.style.use('viperleed.calc')
     _CAN_PLOT = True
 
 
-logger = logging.getLogger("tleedm.files.phaseshifts")
+logger = logging.getLogger(__name__)
 
 
 def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,

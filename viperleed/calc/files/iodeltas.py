@@ -20,7 +20,7 @@ import numpy as np
 
 from viperleed.calc.files.beams import writeAUXBEAMS
 
-logger = logging.getLogger("tleedm.files.iodeltas")
+logger = logging.getLogger(__name__)
 
 
 def checkDelta(filename, at, el, rp):

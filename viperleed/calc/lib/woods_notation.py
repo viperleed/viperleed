@@ -14,7 +14,7 @@ import numpy as np
 
 from viperleed.calc.lib.base import parseMathSqrt, angle, cosvec
 
-logger = logging.getLogger("tleedm.woods_notation")
+logger = logging.getLogger(__name__)
 
 def readWoodsNotation(s, ucell):
     """Takes a string that should contain the transformation from the bulk to

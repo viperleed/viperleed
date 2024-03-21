@@ -24,7 +24,7 @@ from viperleed.calc.classes.sitetype import Atom_type
 from viperleed.calc.lib.leedbase import EV_TO_HARTREE
 from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
 
-logger = logging.getLogger("tleedm.psgen")
+logger = logging.getLogger(__name__)
 
 
 ###############################################

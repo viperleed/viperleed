@@ -12,7 +12,7 @@ import numpy as np
 
 import fortranformat as ff
 
-logger = logging.getLogger("tleedm.files.iosuperpos")
+logger = logging.getLogger(__name__)
 
 
 def writeSuperposInput(sl, rp, config, param_name="PARAM",
