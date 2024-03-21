@@ -54,5 +54,7 @@ tensorleed/eeasisss
 *.plist
 *.mod
 
-# Ignore test results
+# Ignore test, coverage, and profiling results
 **/.pytest_cache/
+.coverage
+**/prof/

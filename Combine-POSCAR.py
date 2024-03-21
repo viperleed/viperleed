@@ -79,8 +79,8 @@ def main():
         return 1  # Error reading
 
     # if a and b vectors differ, cancel operation
-    if (np.linalg.norm(slab.ucell[:, 0] - bulk.ucell[:, 0]) > 1e-4
-            or np.linalg.norm(slab.ucell[:, 1] - bulk.ucell[:, 1]) > 1e-4):
+    if (np.linalg.norm(slab.ab_cell.T[0] - bulk.ab_cell.T[0]) > 1e-4
+            or np.linalg.norm(slab.ab_cell.T[1] - bulk.ab_cell.T[1]) > 1e-4):
         logging.error("Slab and bulk unit cell vectors are not equal in a and "
                       "b (error > 1e-4). Stopping operation...")
         cleanup(consoleHandler)
@@ -94,35 +94,30 @@ def main():
         logging.debug("Slab and bulk elements are not equal. Adding missing "
                       "elements.")
         for el in bulk.elements:
-            if el not in slab.elements:
-                slab.elements.append(el)
-                slab.n_per_elem[el] = 0
+            slab.n_per_elem[el] = 0
     else:
         logging.debug("Slab and bulk elements are identical.")
 
-    batoms = len(bulk.atlist)
-    cfact = slab.ucell[2][2]/bulk.ucell[2][2]
-    slab.ucell[:, 2] *= (cfact + 1) / cfact        # resize the slab unit cell
+    cfact = slab.c_vector[2]/bulk.c_vector[2]
+    slab.c_vector[:] *= (cfact + 1) / cfact        # resize the slab unit cell
     # recalculate c for the slab atoms (undistort & shift)
-    for atom in slab.atlist:
+    for atom in slab:
         atom.pos[2] = (atom.pos[2]*(cfact/(cfact+1)))+(1/(cfact+1))
-        atom.num += batoms
+        atom.num += bulk.n_atoms
     # copy atoms from bulk and add them to the slab
-    for atom in bulk.atlist:
+    for atom in bulk:
         newat = copy.copy(atom)
         # recalculate bulk atom c in the new slab unit cell
         newat.pos[2] /= cfact+1
         slab.atlist.append(newat)
         newat.slab = slab
-    for el in slab.elements:
-        if el in bulk.elements:
-            slab.n_per_elem[el] += bulk.n_per_elem[el]
-
+    slab.atlist.update_atoms_map()
+    slab.update_element_count()
     slab.sort_by_element()
 
     try:
-        poscar.write(slab, reorder=False)
-    except Exception:
+        poscar.write(slab)
+    except OSError:
         logging.error("Exception while writing CONTCAR:", exc_info=True)
 #    print(cfact)
 

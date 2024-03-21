@@ -18,9 +18,9 @@ class TestReadDISPLACEMENTS:
         displ_read = np.array(displaced_atom.disp_geo['all'])
         assert displ_read[:, 2] == approx([0.2, 0.1, 0.0, -0.1, -0.2])
 
-    def test_read_geo_with_inverted_ranges(self, ag100_with_displacements_and_offsets):
-        """Test successful reading of a geometric DISPLACEMENTS block with inverted ranges.
-        Tries reading this displacement: Ag 2 z = 0.2 -0.2 0.1"""
+    def test_read_geo_inverted_ranges(self,
+                                      ag100_with_displacements_and_offsets):
+        """Test reading a geometric DISPLACEMENT with start > stop."""
         slab, *_ = ag100_with_displacements_and_offsets
         atom = slab.atlist[1]
         displ_read = np.array(atom.disp_geo['all'])

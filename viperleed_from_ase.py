@@ -24,6 +24,7 @@ import numpy as np
 import viperleed
 from viperleed.tleedm import run_tleedm
 from viperleed.tleedmlib.base import rotation_matrix
+from viperleed.tleedmlib.classes.atom_containers import AtomList
 from viperleed.tleedmlib.classes.slab import Slab
 from viperleed.tleedmlib.classes.rparams import Rparams, TheoEnergies
 from viperleed.tleedmlib.classes.rparams import IVShiftRange
@@ -121,7 +122,7 @@ class _ImmutableSlabTransform(SlabTransform):
         object.__setattr__(self, 'uc_scaling', None)
         object.__setattr__(self, 'cut_cell_c_fraction', 0.)
 
-    def __setattr__(self, name, value, /):
+    def __setattr__(self, name, value):
         """Raise FrozenInstanceError."""
         if name == '__doc__':
             # One exception to allow nicer 'help' for instances
@@ -129,7 +130,7 @@ class _ImmutableSlabTransform(SlabTransform):
             return
         raise FrozenInstanceError(f"cannot assign to field {name!r}")
 
-    def __delattr__(self, name, /):
+    def __delattr__(self, name):
         """Raise FrozenInstanceError."""
         raise FrozenInstanceError(f"cannot assign to field {name!r}")
 
@@ -255,7 +256,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
     exec_path = Path(exec_path).resolve()
     if not exec_path.is_dir():
         raise FileNotFoundError(
-            f"Invalid {exec_path=}: not "
+            f"Invalid exec_path={exec_path}: not "
             + "existent" if not exec_path.exists() else "a directory"
             )
 
@@ -316,7 +317,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
             _LOGGER.warning(
                 f"Failed to remove work directory {work_path}. Info: {err}"
                 )
-    return *content_list, rparams.V0_IMAG
+    return (*content_list, rparams.V0_IMAG)
 
 
 def _copy_inputs_to_exec_path(inputs_path, exec_path):
@@ -343,7 +344,8 @@ def _apply_transform(slab, transform, apply_cut=False):
 
     if indices:
         # Swapping axes will require to make a new bulk slab for sure
-        slab.bulkslab = None
+        if not slab.is_bulk:
+            slab.bulkslab = None
         new_axes, old_axes = ((ind,) for ind in indices)
         slab.ucell.T[new_axes] = slab.ucell.T[old_axes]
         for atom in slab:
@@ -362,15 +364,15 @@ def _apply_transform(slab, transform, apply_cut=False):
 
     # Cut the slab as given in cut_cell_c_fraction - very important
     if transform.cut_cell_c_fraction:
-        slab.atlist = [at for at in slab.atlist
-                       if at.pos[2] >= transform.cut_cell_c_fraction]
-    slab.updateAtomNumbers()
-    slab.updateElementCount()
+        slab.atlist = AtomList(at for at in slab
+                               if at.pos[2] >= transform.cut_cell_c_fraction)
+    slab.update_atom_numbers()
+    slab.update_element_count()
 
 
 def _make_and_check_slab(ase_object, transforms):
     """Return a Slab from ase.Atoms with transformations applied."""
-    slab = Slab(ase_atoms=ase_object)
+    slab = Slab.from_ase(ase_object)
 
     # Transformations of slab:
     # Mirror/rotation/swapping and/or stretching/shrinking

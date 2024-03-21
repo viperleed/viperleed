@@ -598,7 +598,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         except ValueError:
             raise ParameterFloatConversionError(parameter=param) from None
 
-        val = self.slab.ucell[2, 2] * val if 'c' in bulk_repeat_str else val
+        val = self.slab.c_vector[2] * val if 'c' in bulk_repeat_str else val
         self.rpars.BULK_REPEAT = val
 
     def interpret_domain(self, assignment):
@@ -1028,7 +1028,11 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             'axes': 'axes', 'border': 'axes', 'borders': 'axes',
             'colors': 'colors', 'colours': 'colors',
             'color': 'colors', 'colour': 'colors',
+            'font': 'font_size', 'fontsize': 'font_size',
+            'font_size': 'font_size',
             'legend': 'legend', 'legends': 'legend',
+            'lw': 'line_width', 'linewidth': 'line_width',
+            'line_width': 'line_width', 'line': 'line_width',
             'overbar': 'overbar', 'overline': 'overbar',
             'perpage': 'perpage', 'layout': 'perpage',
             }
@@ -1066,6 +1070,21 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ParameterValueError(assignment.parameter, message=err_)
         self.rpars.PLOT_IV['colors'] = colors
 
+    def _interpret_plot_iv__font_size(self, assignment):
+        """Assign PLOT_IV['font_size']."""
+        self._ensure_single_value_assignment(assignment)
+        try:
+            font_size = float(assignment.value)
+        except ValueError:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterFloatConversionError(assignment.parameter,
+                                                assignment.value) from None
+        if font_size <= 0:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterRangeError(assignment.parameter,
+                                      message='Font size must be positive.')
+        self.rpars.PLOT_IV['font_size'] = font_size
+
     def _interpret_plot_iv__legend(self, assignment):
         """Assign PLOT_IV['legend']."""
         self._ensure_single_value_assignment(assignment)
@@ -1077,6 +1096,21 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         else:
             self.rpars.setHaltingLevel(1)
             raise ParameterParseError(assignment.parameter)
+
+    def _interpret_plot_iv__line_width(self, assignment):
+        """Assign PLOT_IV['line_width']."""
+        self._ensure_single_value_assignment(assignment)
+        try:
+            line_width = float(assignment.value)
+        except ValueError:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterFloatConversionError(assignment.parameter,
+                                               assignment.value) from None
+        if line_width <= 0:
+            self.rpars.setHaltingLevel(1)
+            raise ParameterRangeError(assignment.parameter,
+                                      message='Line width must be > 0.')
+        self.rpars.PLOT_IV['line_width'] = line_width
 
     def _interpret_plot_iv__overbar(self, assignment):
         """Assign PLOT_IV['overbar']."""
@@ -1356,12 +1390,11 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         sorted_atoms = []
         if 'top(' in assignment.values_str:
             sorted_atoms = sorted(
-                (at for at in self.slab.atlist if at.el == site_element),
+                (at for at in self.slab if at.el == site_element),
                 key=lambda atom: atom.pos[2],
                 reverse=True
                 )
 
-        atom_map = {at.num: at for at in self.slab.atlist}
         site_def_dict = {}
         for flag_and_values in assignment.values_str.strip().split(','):
             site_label, site_specs = self._get_valid_sitedef_spec(
@@ -1375,8 +1408,9 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 err_ = f'Invalid syntax in {assignment.values_str!r}: {exc!r}'
                 raise ParameterParseError(param, message=err_) from None
             try:
-                self._ensure_sitedef_makes_sense(site_element, site_label,
-                                                 atnums, atom_map)
+                self._ensure_sitedef_makes_sense(site_element,
+                                                 site_label,
+                                                 atnums)
             except ValueError as exc:
                 self.rpars.setHaltingLevel(3)
                 raise ParameterValueError(assignment.parameter,
@@ -1441,14 +1475,13 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             raise ValueError(site_spec)
         return atnums
 
-    @staticmethod
-    def _ensure_sitedef_makes_sense(poscar_el, site_label, atom_nrs, atom_map):
+    def _ensure_sitedef_makes_sense(self, poscar_el, site_label, atom_nrs):
         """Raise ValueError if the atom_nrs selected for a site are wrong."""
         invalid_atom_nums = []
         invalid_elements = []
         for num in atom_nrs:
             try:
-                atom = atom_map[num]
+                atom = self.slab.atlist.get(num)
             except KeyError:
                 invalid_atom_nums.append(num)
                 continue

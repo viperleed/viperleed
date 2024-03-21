@@ -327,8 +327,10 @@ class LEEDPattern:
     
     def sortEnergy(self, beamlist):                                               ## this may go into BeamIndexList
         beam = eval(beamlist[0])  # returns a tuple
-        # sort by Energy, i.e., by g^2:
-        return np.linalg.norm(np.dot(beam, self.bulk_basis))
+        # sort by Energy, i.e., by g^2. Notice the
+        # rounding to reduce floating-point errors
+        g_norm = np.linalg.norm(np.dot(beam, self.bulk_basis)).round(7)
+        return (g_norm, *self.beamsSortCriterion(beamlist[0]))
 
     # @gl.profile_lines
     def __build_subpatterns(self):

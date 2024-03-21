@@ -15,7 +15,7 @@ BULKDOUBLING_EPS defines the convergence criterion used to determine when doubli
 
 **Accepted values**: A single floating-point number, 0.0001 :math:`\leq` ``<eps>`` < 1. Typical <0.005, although the default value of 0.001 should be appropriate. Change only in case there are some convergence issues with the layer doubling, and only after checking whether the issues arise from an input error in the geometry. Cannot be smaller than 0.0001 due to Fortran reading it as an F7.4
 
-**What is layer doubling?** During layer doubling, the layers defined as bulk with :ref:`N_BULK_LAYERS<BLAY>`  will be used to determine the scattered intensity due to the bulk. This follows a layer doubling scheme, in which
+**What is layer doubling?** During layer doubling, the layers defined as bulk with :ref:`N_BULK_LAYERS<n_bulk_layers>`  will be used to determine the scattered intensity due to the bulk. This follows a layer doubling scheme, in which
 
 #. the reflection/transmission matrices of one bulk layer are combined to create reflection/transmission matrices for two identical bulk layers.
 #. the new reflection/transmission matrices of the 2-layers stack are combined to create reflection/transmission matrices for a 4-layers stack... and so on.

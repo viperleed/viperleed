@@ -72,7 +72,7 @@ class R_Error():
 
 
     def calc_var_r(self, v0i, energy_range):
-        """Calculates the variance of the Pendry R-factor.
+        r"""Calculates the variance of the Pendry R-factor.
         
         The variance of the Pendry R-factor can be estimated from the 
         imaginary part of the inner potential and the measurement energy

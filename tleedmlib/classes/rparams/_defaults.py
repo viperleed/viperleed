@@ -47,7 +47,6 @@ DEFAULTS = {
     'RUN': (0, 1, 2, 3),
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
     'SEARCH_MAX_DGEN': {'all': 0, 'best': 0, 'dec': 100},
-    'SYMMETRY_EPS': 0.1,  # z always equal to in-plane
     'SYMMETRY_FIX': '',
     'THETA': 0,   # perpendicular incidence
     'PHI': 0,     # not needed in case of perpendicular incidence
@@ -59,6 +58,7 @@ DEFAULTS = {
     'LAYER_CUTS': 'dz(1.2)',
     'LMAX': (NO_VALUE, NO_VALUE),
     'SEARCH_CULL': (0.1, 'genetic'),
+    'SYMMETRY_EPS': 0.1,  # z always equal to in-plane
     'THEO_ENERGIES': (NO_VALUE, NO_VALUE, NO_VALUE),
     'THEO_ENERGIES - no experiments': (20, 800, 3),
     }

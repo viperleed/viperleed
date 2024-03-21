@@ -44,6 +44,8 @@ addopts = [
 pythonpath = [
     '.', '..'
     ]
+# Turn all warnings into errors. See also "How to capture warnings"
+filterwarnings = ["error",]
 required_plugins = [
     'pytest-cases>=3.8.1',  # 3.8.1 fixes some ScopeMismatch
     'pytest-subtests'
@@ -57,24 +59,29 @@ extension-pkg-allow-list = ['PyQt5', 'quicktions']
 load-plugins = [
     'pylint.extensions.bad_builtin',
     'pylint.extensions.broad_try_clause',
+    'pylint.extensions.check_elif',
     'pylint.extensions.code_style',
     'pylint.extensions.comparison_placement',
     'pylint.extensions.confusing_elif',
-    'pylint.extensions.for_any_all',
     'pylint.extensions.consider_refactoring_into_while_condition',
     'pylint.extensions.consider_ternary_expression',
-    'pylint.extensions.mccabe',
     'pylint.extensions.dict_init_mutate',
+    'pylint.extensions.docparams',
     'pylint.extensions.docstyle',
     'pylint.extensions.dunder',
-    'pylint.extensions.check_elif',
     'pylint.extensions.empty_comment',
+    'pylint.extensions.for_any_all',
+    'pylint.extensions.magic_value',
+    'pylint.extensions.mccabe',
+    'pylint.extensions.overlapping_exceptions',
     'pylint.extensions.private_import',
     'pylint.extensions.redefined_variable_type',
-    'pylint.extensions.overlapping_exceptions',
-    'pylint.extensions.docparams',
     'pylint.extensions.set_membership',
     ]
+# It would be nice to have this set, but there are many language
+# features (e.g., equals in f-strings) that are simply not checked
+# even if this is set.
+# py-version = '3.7'
 
 [tool.pylint.basic]
 no-docstring-rgx = '^(?!__init__$)_'

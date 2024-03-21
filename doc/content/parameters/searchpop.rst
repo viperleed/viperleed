@@ -21,7 +21,7 @@ For best performance, SEARCH_POPULATION should be an integer multiple of the num
 
 Since each trial structure evolves by randomly modifying its parameters, 
 there is always a risk of some structures getting stuck in a local minimum, 
-especially when GAUSSIAN_WIDTH (see :ref:`SEARCH_CONVERGENCE`) is small.
+especially when :ref:`SEARCH_CONVERGENCE gaussian<rmut>` is small.
 Large populations reduce this risk, and it can therefore be useful to scale up the population to deal with large parameter spaces.
 Note however that every independent parameter adds an extra dimension to the parameter space, and computational cost scales (roughly) linearly with the population size. 
 For a large number of independent parameters, scaling the population up 

@@ -54,6 +54,8 @@ html_theme = "sphinx_rtd_theme"
 #html_theme = 'sphinx_book_theme'
 #html_theme = 'piccolo_theme'
 
+html_favicon = '../guilib/icons/favicon.ico'
+
 html_static_path = ['_static']
 
 # RTD theme specific

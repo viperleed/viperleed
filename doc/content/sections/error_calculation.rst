@@ -41,10 +41,11 @@ The results of the error calculation will be output into the files :ref:`Errors.
        of a given atom (much less sensitivity than for other atoms with a 
        similar depth and similar scattering properties), 
        this is an indication that the respective atom is either absent or 
-       its position is **far** from reality.
-       (In the *z* direction, the R factor can be already insensitive to 
-       the position for deviations >0.1 Å from the true position! 
-       **TODO - Michael, Lutz** is this value ok?
+       its position is **far** from the true position.
+       In this case, you may want to consider increasing the displacement range
+       for this atom. Note also the what is "far away" depends on how strongly the
+       atom scatters (i.e. chemical species and depth), and in some cases may be
+       as small as 0.1Å, e.g. for a z variation of a surface atom.
 
     -  Hydrogen is a very weak scatterer; the R factor depends only weakly on its position.
     -  If a site can be occupied by different chemical elements, the site 

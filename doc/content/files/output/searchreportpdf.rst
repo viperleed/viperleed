@@ -1,7 +1,7 @@
 .. _searchreportpdf:
 
-The Search-report.pdf file
-==========================
+Search-report.pdf
+=================
 
 The Search-report.pdf file is meant to collate the overall progress of the current optimization, stretching over multiple searches. If only one search is performed, it is mostly redundant with the :ref:`Search-progress.pdf<searchprogresspdf>`  file.
 
@@ -19,3 +19,29 @@ Parameter scatter plots
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The parameter scatter plots in the Search-report.pdf file are direct copies of the latest such plots in the :ref:`Search-progress.pdf<searchprogresspdf>`  files. If a search is performed in a loop, only the latest iteration of the loop is found in the Search-report.pdf file.
+
+Example
+~~~~~~~
+
+Below are is an example of a Search-report.pdf file that was generated a
+structural optimization discussed in the example calculation discussed
+:ref:`here<example_Fe2O3>`.
+
+
+.. figure:: /_static/output_examples/Search-report_page_1.svg
+   :width: 60%
+   :align: center
+
+   Example of the first page of a Search-report.pdf file.
+   The top plot shows the R-factor over generations, lower plot shows the number
+   of generations since the last improvement.
+
+
+.. figure:: /_static/output_examples/Search-report_page_2.svg
+   :width: 60%
+   :align: center
+
+   Example of the second page of a Search-report.pdf file showing the
+   parameter scatter plots.
+   The upper three lines show z-displacements, the lowest line shows changes in
+   vibrational amplitude.

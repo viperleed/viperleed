@@ -18,9 +18,12 @@ import os
 from pathlib import Path
 from typing import Dict, List, Set, Tuple, Mapping
 
+import numpy as np
 import pytest
 from pytest_cases import fixture
 from pytest_cases.filters import get_case_tags
+
+from viperleed.tleedmlib.classes.rparams import LayerCuts
 
 
 # Think about a decorator for injecting fixtures.
@@ -175,21 +178,52 @@ def execute_in_dir(path):
 def not_raises(exception):
     """Fail a test if a specific exception is raised."""
     # Exclude this function when reporting the exception trace
-    __tracebackhide__ = True
+    __tracebackhide__ = True  # pylint: disable=unused-variable
     try:
         yield
     except exception:
         pytest.fail(f'DID RAISE {exception.__name__}')
+
+
+@contextmanager
+def raises_test_exception(obj, attr):
+    """Temporarily make obj.attr raise CustomTestException."""
+    # Exclude this function when reporting the exception trace
+    __tracebackhide__ = True  # pylint: disable=unused-variable
+    obj_name = (obj.__name__ if inspect.ismodule(obj)
+                else type(obj).__name__)
+
+    def _replaced(*args, **kwargs):
+        raise CustomTestException(f'Replaced {obj_name}.{attr} was called '
+                                  f'with args={args}, kwargs={kwargs}')
+
+    monkey_patch = pytest.MonkeyPatch
+    with monkey_patch.context() as patch, pytest.raises(CustomTestException):
+        patch.setattr(obj, attr, _replaced)
+        yield
+
 
 # ###############################   CLASSES   #################################
 
 class CaseTag(IntEnum):
     """Enumeration of tags to use for cases."""
     BULK = auto()
+    BULK_PROPERTIES = auto()
+    LAYER_INFO = auto()
+    NEAREST_NEIGHBOURS = auto()
     NEED_ROTATION = auto()
-    THICK_BULK = auto()
     NO_INFO = auto()
+    NON_MINIMAL_CELL = auto()
     RAISES = auto()
+    SURFACE_ATOMS = auto()
+    THICK_BULK = auto()
+    VACUUM_GAP_MIDDLE = auto()  # Not at top
+    VACUUM_GAP_SMALL = auto()   # < 5A
+    VACUUM_GAP_ZERO = auto()
+
+
+class CustomTestException(Exception):
+    """A custom exception for checking try...except blocks."""
 
 
 @dataclass
@@ -237,17 +271,25 @@ class InfoBase:
 
 
 @dataclass(repr=False)
-class POSCARInfo(InfoBase):
-    """Container for information about POSCAR files."""
-    name: str = ''
-    n_atoms: int = None
-    n_atoms_by_elem: dict = field(init=False, default_factory=dict)
+class BulkInfo(InfoBase):
+    """Information exclusively valid for bulk slabs."""
 
-    def __post_init__(self):
-        """Post-process initialization values."""
-        if isinstance(self.n_atoms, Mapping):
-            self.n_atoms_by_elem = self.n_atoms
-            self.n_atoms = sum(self.n_atoms_by_elem.values())
+    screw_orders: Set[int] = None    # Rotation orders of screw axes
+    n_glide_planes: int = None       # Number of 3D glide planes
+    repeat: (float,)*3 = None        # Repeat vector
+    periods: list = None             # Candidate periods
+
+
+@dataclass(repr=False)
+class BulkSlabAndRepeatInfo(InfoBase):
+    """Container for information about bulk atoms and repeat vector."""
+    bulk_like_below: float
+    # Here the expected values:
+    bulk_repeat: np.ndarray   # From bulk to surface
+    n_bulk_atoms: int
+    bulk_cuts: List[float]
+    bulk_dist: float
+    bulk_ucell: np.ndarray
 
 
 # Avoid using atoms that are on planes: Easier to test.
@@ -256,6 +298,56 @@ class DisplacementInfo(InfoBase):
     """Information about an atom to be displaced."""
     atom_nr: int
     atom_on_axis: bool
+
+
+@dataclass(repr=False)
+class LayerInfo(InfoBase):
+    """Container for information about expected layer properties."""
+    layer_cuts: LayerCuts
+    n_bulk_layers: int
+    # Here the expected values:
+    cuts: List[float]
+    n_layers: int
+    n_sublayers: int
+    n_atoms_per_layer: List[int]
+    n_atoms_per_sublayer: List[int]
+    smallest_interlayer_gap: float
+
+
+@dataclass(repr=False)
+class NearestNeighborInfo(InfoBase):
+    """Container for information about nearest neighbors."""
+    # Keys are atom number
+    nearest_neighbor_distances: Dict[int, float]
+
+
+@dataclass(repr=False)
+class ParametersInfo(InfoBase):
+    """A container of information for PARAMETERS tests."""
+    param_path : str = '' # Relative to data_path
+    expected: dict = field(default_factory=dict)
+
+
+@dataclass(repr=False)
+class POSCARInfo(InfoBase):
+    """Container for information about POSCAR files."""
+    name: str = ''
+    n_atoms: int = None
+    n_atoms_by_elem: dict = field(init=False, default_factory=dict)
+    n_cells: int = 1  # How many 2D cells are in the POSCAR?
+
+    def __post_init__(self):
+        """Post-process initialization values."""
+        if isinstance(self.n_atoms, Mapping):
+            self.n_atoms_by_elem = self.n_atoms
+            self.n_atoms = sum(self.n_atoms_by_elem.values())
+
+
+@dataclass(repr=False)
+class SurfaceAtomInfo(InfoBase):
+    """Container for information about which atoms are at the surface."""
+    # Keys are atom number
+    surface_atom_nums: Tuple[int]
 
 
 LinkGroup = Dict[int, Set[int]]
@@ -272,22 +364,6 @@ class SymmetryInfo(InfoBase):
         )
     hermann: str = ''          # expected plane group (Hermann-Maugin)
     invalid_direction: str = ''       # For subgroup reduction
-
-
-@dataclass(repr=False)
-class BulkInfo(InfoBase):
-    """Information exclusively valid for bulk slabs."""
-
-    screw_orders: Set[int] = None    # Rotation orders of screw axes
-    n_glide_planes: int = None       # Number of 3D glide planes
-    repeat: (float,)*3 = None         # Repeat vector
-
-
-@dataclass(repr=False)
-class ParametersInfo(InfoBase):
-    """A container of information for PARAMETERS tests."""
-    param_path : str = '' # Relative to data_path
-    expected: dict = field(default_factory=dict)
 
 
 @dataclass(repr=False)

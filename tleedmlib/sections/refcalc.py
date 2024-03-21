@@ -299,8 +299,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     if rp.domainParams:
         refcalc_domains(rp)
         return
-    sl.getCartesianCoordinates(updateOrigin=True)
-    sl.updateLayerCoordinates()
+    sl.update_cartesian_from_fractional(update_origin=True)
+    sl.update_layer_coordinates()
     # delete old refcalc-fd.out if present - not earlier because can be input
     #   for r-factor calculation if no refcalc is executed
     try:
@@ -561,7 +561,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.error("No data found in fd.out. Check if file is empty.")
         raise RuntimeError                                                      # TODO: better exception
     # clear oriState for atoms and sites, current state will be new origin
-    for at in sl.atlist:
+    for at in sl:
         at.oriState = None
     for site in sl.sitelist:
         site.oriState = None
@@ -700,7 +700,7 @@ def _reinitialize_deltas(param, slab):
                 "with the new set of tensors.")
 
     # empty atom.known_deltas
-    for at in slab.atlist:
+    for at in slab:
         at.known_deltas = []
 
 

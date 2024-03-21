@@ -1,7 +1,7 @@
 .. _beamlist:
 
-The BEAMLIST file
-=================
+BEAMLIST
+========
 
 The BEAMLIST file is always created during initialization using the beamgen3 script.
 

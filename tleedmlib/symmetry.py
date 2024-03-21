@@ -18,7 +18,9 @@ import scipy.spatial as sps
 from viperleed.tleedmlib import leedbase
 from viperleed.tleedmlib.base import (addUnequalPoints, angle, dist_from_line,
                                       rotation_matrix_order, rotation_matrix)
-from viperleed.tleedmlib.classes.slab import SymPlane
+from viperleed.tleedmlib.classes.atom_containers import AtomList
+from viperleed.tleedmlib.classes.slab import AlreadyMinimalError
+from viperleed.tleedmlib.classes.sym_entity import SymPlane
 from viperleed.tleedmlib.files import parameters
 
 logger = logging.getLogger("tleedm.symmetry")
@@ -31,7 +33,7 @@ def getSymPosLists(sl, rp, pointlist, output=False):
 
     def uniqueSymPosList(sl, rp, spl, verbose, description=""):
         eps = rp.SYMMETRY_EPS
-        abst = np.transpose(sl.ucell[:2, :2])
+        abst = np.transpose(sl.ab_cell)
         tree = sps.KDTree(spl)
         if len(spl) > 1e6:
             logger.warning(
@@ -71,13 +73,13 @@ def getSymPosLists(sl, rp, pointlist, output=False):
         hexsymposlist = [(p1+p2+p3)/3 for (p1, p2, p3) in
                          itertools.combinations(pointlist, 3)]
     # collapse to base unit cell:
-    symposlist = list(np.dot(sl.ucell[:2, :2],
-                             (np.dot(np.linalg.inv(sl.ucell[:2, :2]),
+    symposlist = list(np.dot(sl.ab_cell,
+                             (np.dot(np.linalg.inv(sl.ab_cell),
                                      np.array(symposlist).transpose())
                               % 1.0)).T)
     if len(hexsymposlist) > 0:
-        hexsymposlist = list(np.dot(sl.ucell[:2, :2],
-                                    (np.dot(np.linalg.inv(sl.ucell[:2, :2]),
+        hexsymposlist = list(np.dot(sl.ab_cell,
+                                    (np.dot(np.linalg.inv(sl.ab_cell),
                                             np.array(hexsymposlist).T)
                                      % 1.0)).T)
     # remove duplicates:
@@ -99,34 +101,28 @@ def getSymPosLists(sl, rp, pointlist, output=False):
 def findBulkSymmetry(sl, rp):
     """Checks the bulk slab for screw axes and glide planes."""
     eps = rp.SYMMETRY_EPS
-    uct = np.transpose(copy.copy(sl.ucell))
-    abt = uct[:2, :2]
+    abt = sl.ab_cell.T.copy()
     rotsfound = []
     glidesfound = []
     ts = copy.deepcopy(sl)
-    ts.sort_by_z()
-    ts.collapseCartesianCoordinates()
-    ts.createSublayers(eps.z)
-    # optimize C vector
-    newC = ts.getMinC(rp)
-    if newC is not None:
-        logger.debug("Bulk unit cell could be reduced with repeat vector "
-                     "[{:.5f} {:.5f} {:.5f}]".format(*(-newC)))
-        # apply new unit cell
-        ts.atlist = [at for at in ts.atlist
-                     if at.cartpos[2] > ts.topat_ori_z - abs(newC[2])]
-        ts.layers[0].atlist = ts.atlist
-        ts.layers = [ts.layers[0]]
-        ts.layers[0].is_bulk = True
-        rp2 = copy.deepcopy(rp)
-        rp2.SUPERLATTICE = np.array([[1, 0], [0, 1]], dtype=float)
-        rp2.BULK_REPEAT = -newC
-        ts = ts.makeBulkSlab(rp2)
+    rp2 = copy.deepcopy(rp)
+    # optimize C vector, removing vacuum below first. Notice that
+    # this is the safer way, as it allows us to relax assumptions
+    # on the z periodicity of sl
+    ts.remove_vacuum_at_bottom(rp2)
+    try:
+        ts.ensure_minimal_c_vector(rp2)
+    except AlreadyMinimalError:
+        pass
+    else:
+        logger.debug('Bulk unit cell could be reduced with repeat vector '
+                     '[{:.5f} {:.5f} {:.5f}]'.format(*(rp2.BULK_REPEAT)))
+
     # figure out what to check
-    pcands = ts.getCandidateLayerPeriod(eps)
+    pcands = ts.get_candidate_layer_periods(eps)
     if len(pcands) == 0:
         return
-    nl = len(ts.sublayers)
+    nl = ts.n_sublayers
     # check for screw axes
     checkrots = []
     if nl % 2 == 0:
@@ -135,7 +131,7 @@ def findBulkSymmetry(sl, rp):
         checkrots.extend([3, 6])
     for per in pcands:
         for ro in [ro for ro in checkrots if ro not in rotsfound]:
-            if ts.isBulkScrewSymmetric(ro, per, eps):
+            if ts.is_bulk_screw_symmetric(ro, per, eps):
                 rotsfound.append(ro)
     sl.bulk_screws = rotsfound
     if len(rotsfound) > 0:
@@ -151,7 +147,7 @@ def findBulkSymmetry(sl, rp):
                             SymPlane(ori, abt[0] + 2*abt[1], abt)])
     for per in pcands:
         for gl in [gl for gl in checkglides if gl not in glidesfound]:
-            if ts.isBulkGlideSymmetric(gl, per, eps):
+            if ts.is_bulk_glide_symmetric(gl, per, eps):
                 glidesfound.append(gl)
     sl.bulk_glides = glidesfound
     if len(rotsfound) > 0:
@@ -168,7 +164,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     planegroup = ""  # plane group will be stored in Hermann-Mauguin notation
     eps = rp.SYMMETRY_EPS
     # reduce surface unit cell
-    abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
+    abst = sl.ab_cell.T  # surface unit cell, transposed
 #        usurf = np.array([[1,0],[0,1]])
     if rp.SYMMETRY_FIX != "p1":
         abst, usurf, celltype = leedbase.reduceUnitCell(abst)
@@ -213,56 +209,58 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             targetsym = m.group("group")
             tspar = [int(m.group("i1")), int(m.group("i2"))]
             cartdir = np.dot(tspar, abst)
-            newab = np.dot(sl.ucell[:2, :2], np.transpose(usurf))
+            newab = np.dot(sl.ab_cell, np.transpose(usurf))
             newdir = np.dot(np.linalg.inv(newab), cartdir)
             newdir = newdir / min(newdir)
             s = (targetsym+"[{:.0f} {:.0f}]".format(newdir[0], newdir[1]))
             parameters.modify(rp, "SYMMETRY_FIX", s)
         # MODIFY UNIT CELL
-        sl.getCartesianCoordinates()
+        sl.update_cartesian_from_fractional()
         sl.ucell_mod.append(('rmul', utr.T))
         sl.ucell = np.dot(sl.ucell, utr.T)
         # same as np.transpose(np.dot(utr,np.transpose(sl.ucell)))
-        sl.collapseCartesianCoordinates(updateOrigin=True)
+        sl.collapse_cartesian_coordinates(update_origin=True)
         # gets fractional coordinates in the new unit cell and
         #   collapses appropriately
 
     # check cell type again
-    abst = sl.ucell[:2, :2].T
+    abst = sl.ab_cell.T
     celltype, _ = leedbase.checkLattice(abst)
     sl.celltype = celltype
     if output:
         logger.info("Found unit cell type: "+celltype)
         logger.info("Starting symmetry search...")
     # FIND HIGHEST SYMMETRY ORIGIN
-    sl.collapseCartesianCoordinates()
+    sl.collapse_cartesian_coordinates()
     # create a testslab: C projected to Z
     ts = copy.deepcopy(sl)
     if bulk:        # check whether there are at least 2 atomic layers
-        ts.createSublayers(eps.z)
-        if len(ts.sublayers) < 2:
-            ts = ts.doubleBulkSlab()
-    ts.projectCToZ()
+        ts.create_sublayers(eps.z)
+        if ts.n_sublayers < 2:
+            ts = ts.with_double_thickness()
+    ts.project_c_to_z()
     ts.sort_by_z()
 
     bigslab = copy.deepcopy(ts)
     # will have atoms duplicated and shifted to 4 unit cells
     #  ([0,0], [0,1], [1,0], [1,1])
-    tmplist = bigslab.atlist[:]
-    for at in tmplist:
+    bigslab.atlist.strict = False
+    for at in bigslab.atlist[:]:
         for i in range(0, 2):
             for j in range(0, 2):
                 if not (i == 0 and j == 0):
                     tmpat = at.duplicate()
                     tmpat.pos[0] += i
                     tmpat.pos[1] += j
-    bigslab.getCartesianCoordinates(updateOrigin=True)
-    # bigslab.fullUpdate(rp)   can't do this - would collapse coordinates!
-    bigslab.createSublayers(eps.z)
+    bigslab.update_atom_numbers()
+    bigslab.atlist.strict = True
+    bigslab.update_cartesian_from_fractional(update_origin=True)
+    # bigslab.full_update(rp)   can't do this - would collapse coordinates!
+    bigslab.create_sublayers(eps.z)
 
     # find the lowest occupancy sublayer; comparing candidate
     #   axes / planes to this one will be fastest
-    lowocclayer = bigslab.getLowOccLayer()
+    lowocclayer = bigslab.fewest_atoms_sublayer
     minlen = lowocclayer.n_atoms
 
     # find candidate positions for symmetry points / planes:
@@ -289,7 +287,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
 
     # we're done with the bigger slab, actually testing symmetry operations
     #   can be done just on the basic one.
-    ts.createSublayers(eps.z)
+    ts.create_sublayers(eps.z)
     lowocclayer = ts.sublayers[bigslab.sublayers.index(lowocclayer)]
     del bigslab
 
@@ -303,15 +301,15 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
     toprotlist = []  # positions of highest rot-symmetry points
     for p in comsymposlist:
         rotsymorder = 0
-        if ts.isRotationSymmetric(p, 2, eps):
+        if ts.is_rotation_symmetric(p, 2, eps):
             rotsymorder = 2
             if celltype == "square":
-                if ts.isRotationSymmetric(p, 4, eps):
+                if ts.is_rotation_symmetric(p, 4, eps):
                     rotsymorder = 4
         if celltype == "hexagonal":
-            if ts.isRotationSymmetric(p, 3, eps):
+            if ts.is_rotation_symmetric(p, 3, eps):
                 rotsymorder = 3
-                if ts.isRotationSymmetric(p, 6, eps):
+                if ts.is_rotation_symmetric(p, 6, eps):
                     rotsymorder = 6
         if rotsymorder > toprotsym:     # new best point found
             toprotsym = rotsymorder
@@ -352,10 +350,10 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             logger.debug(str(len(symplanelist))
                          + " candidates for mirror/glide planes found...")
         for spl in symplanelist:    # test the candidates
-            if ts.isMirrorSymmetric(spl, eps):
+            if ts.is_mirror_symmetric(spl, eps):
                 spl.type = "mirror"
                 mirror = True
-            elif ts.isMirrorSymmetric(spl, eps, glide=True):
+            elif ts.is_mirror_symmetric(spl, eps, glide=True):
                 spl.type = "glide"
                 glide = True
         droptypes = ["none"]
@@ -384,13 +382,8 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 mindist = min(np.linalg.norm(p-c) for c in corners)
                 topsympoint = p
         # shift origin
-        for at in sl.atlist:
-            at.cartpos[0:2] -= topsympoint
-        for at in ts.atlist:
-            at.cartpos[0:2] -= topsympoint
-        sl.ucell_mod.append(('add', -topsympoint))
-        sl.getFractionalCoordinates()
-        ts.getFractionalCoordinates()
+        sl.translate_atoms_2d(-topsympoint)
+        ts.translate_atoms_2d(-topsympoint)
 
     if toprotsym == 0: # should be an else
         # identify group:
@@ -431,7 +424,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 elif (celltype == "hexagonal"
                       and tuple(oriplane.par) not in [(1, 1), (1, -1)]):
                     # Special case - requires rotation of unit cell to bring
-                    # mirror/glide along either (11) or (1-1) direction. 
+                    # mirror/glide along either (11) or (1-1) direction.
                     abst, oriplane = mirror_to_diagonal(sl, rp, abst, oriplane)
         if oriplane is not None and oriplane.distanceFromOrigin(abst) > eps:
             # shift to closest point on oriplane
@@ -440,12 +433,9 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             if dist_from_line(
                     oriplane.pos, oriplane.pos+oriplane.dir, shiftv) > eps:
                 shiftv = -1*shiftv
-            for at in sl.atlist:
-                at.cartpos[0:2] -= shiftv
             # ts is not used any more in this case, otherwise those atoms
             #  would have to be shifted as well.
-            sl.ucell_mod.append(('add', -shiftv))
-            sl.getFractionalCoordinates()
+            sl.translate_atoms_2d(-shiftv)
         if oriplane:
             oriplane.pos = np.array([0, 0])
             sl.orisymplane = oriplane
@@ -456,19 +446,13 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
         #  there (potentially), test
         if toprotsym == 2 and celltype in ["hexagonal", "rhombic"]:
             shiftslab = copy.deepcopy(ts)
-            for at in shiftslab.atlist:
-                at.cartpos[:2] -= abst[0]/2
-            shiftslab.getFractionalCoordinates()
+            shiftslab.translate_atoms_2d(-abst[0]/2)
             # test diagonal mirror at shifted origin
             spl = SymPlane(np.array([0, 0]), (abst[0]+abst[1]), abst)
-            if shiftslab.isMirrorSymmetric(spl, eps):
+            if shiftslab.is_mirror_symmetric(spl, eps):
                 planegroup = "cmm"
                 ts = shiftslab
-                # correct origin
-                for at in sl.atlist:
-                    at.cartpos[0:2] -= abst[0]/2
-                sl.ucell_mod.append(('add', -abst[0]/2))
-                sl.getFractionalCoordinates()
+                sl.translate_atoms_2d(-abst[0]/2)  # correct origin
 
     if not planegroup:
         efftype = ""    # effective cell type
@@ -478,7 +462,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             else:
                 # test mirror plane along unit vector at origin
                 spl = SymPlane(np.array([0, 0]), abst[0], abst)
-                if ts.isMirrorSymmetric(spl, eps):
+                if ts.is_mirror_symmetric(spl, eps):
                     if toprotsym == 6:
                         planegroup = "p6m"
                     else:
@@ -492,7 +476,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                         for i in [+1, -1]:
                             spl = SymPlane(np.array([0, 0]),
                                            (abst[0]+(i*abst[1])), abst)
-                            if ts.isMirrorSymmetric(spl, eps):
+                            if ts.is_mirror_symmetric(spl, eps):
                                 found = True
                                 break
                         if found:
@@ -503,13 +487,13 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             if toprotsym == 4:
                 # test mirror plane along unit vector at origin
                 spl = SymPlane(np.array([0, 0]), abst[0], abst)
-                if ts.isMirrorSymmetric(spl, eps):
+                if ts.is_mirror_symmetric(spl, eps):
                     planegroup = "p4m"
                 else:
                     # test glide plane along diagonal at origin
                     spl = SymPlane(np.array([0, 0]), (abst[0]+abst[1]),
                                    abst)
-                    if ts.isMirrorSymmetric(spl, eps, glide=True):
+                    if ts.is_mirror_symmetric(spl, eps, glide=True):
                         planegroup = "p4g"
                     else:
                         planegroup = "p4"
@@ -519,7 +503,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                 for i in [+1, -1]:
                     spl = SymPlane(np.array([0, 0]), (abst[0]+i*abst[1]),
                                    abst)
-                    if ts.isMirrorSymmetric(spl, eps):
+                    if ts.is_mirror_symmetric(spl, eps):
                         found = True
                         break
                 if found:
@@ -534,7 +518,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             found = False
             for i in [+1, -1]:
                 spl = SymPlane(np.array([0, 0]), (abst[0]+i*abst[1]), abst)
-                if ts.isMirrorSymmetric(spl, eps):
+                if ts.is_mirror_symmetric(spl, eps):
                     found = True
                     break
             if not found:
@@ -554,7 +538,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
             mirs = [False, False]
             for i in range(0, 2):
                 spl = SymPlane(np.array([0, 0]), abst[i], abst)
-                if ts.isMirrorSymmetric(spl, eps):
+                if ts.is_mirror_symmetric(spl, eps):
                     mirs[i] = True
             if toprotsym == 2:
                 if mirs[0] and mirs[1]:
@@ -564,7 +548,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     gldplane = None
                     for i in range(0, 2):
                         spl = SymPlane(np.array([0, 0]), abst[i], abst)
-                        if ts.isMirrorSymmetric(spl, eps, glide=True):
+                        if ts.is_mirror_symmetric(spl, eps, glide=True):
                             spl.type = "glide"
                             gldplane = spl
                     if gldplane is not None:
@@ -573,13 +557,13 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
                     else:
                         # test glide plane at a/4:
                         spl = SymPlane(abst[0]/4, abst[1], abst)
-                        if ts.isMirrorSymmetric(spl, eps, glide=True):
+                        if ts.is_mirror_symmetric(spl, eps, glide=True):
                             planegroup = "pgg"
                         else:
                             planegroup = "p2"
                 if planegroup in ["pmm", "pmg", "pgg"]:
                     # each of these might be a mis-identified rcmm
-                    if ts.isRotationSymmetric((abst[0]+abst[1])/4, 2, eps):
+                    if ts.is_rotation_symmetric((abst[0]+abst[1])/4, 2, eps):
                         planegroup = "rcmm"
             else:
                 logger.warning("Unexpected point encountered in "
@@ -625,7 +609,7 @@ def findSymmetry(sl, rp, bulk=False, output=True, forceFindOri=False):
 
 def mirror_to_diagonal(sl, rp, abst, oriplane):
     """Rotate cell to bring oriplane along a diagonal.
-    
+
     The correct direction among (11) and (1-1) is the one
     forming a 60deg angle with the symmetry plane.
     """
@@ -640,12 +624,12 @@ def mirror_to_diagonal(sl, rp, abst, oriplane):
         raise RuntimeError(err)
     idx = 0 if dev_from_60[0] else 1
     m = rotation_matrix(angles[idx], dim=3)
-    sl.getCartesianCoordinates()
+    sl.update_cartesian_from_fractional()
     sl.ucell_mod.append(('lmul', m))
     sl.ucell = np.dot(m, sl.ucell)
-    abst = sl.ucell[:2, :2].T
+    abst = sl.ab_cell.T
     direction = (abst[0]+abst[1], abst[0]-abst[1])[idx]
-    sl.collapseCartesianCoordinates(updateOrigin=True)
+    sl.collapse_cartesian_coordinates(update_origin=True)
     oriplane = SymPlane(np.array([0, 0]), direction, abst)
     logger.warning("The POSCAR unit cell was changed to a higher "
                    "symmetry form. Make sure to check beam labels for "
@@ -667,7 +651,7 @@ def setSymmetry(sl, rp, targetsym):
             "symmetry reduction.".format(planegroup, targetsym))
         rp.setHaltingLevel(setHaltingTo)
 
-    abst = np.transpose(sl.ucell[:2, :2])  # surface unit cell, transposed
+    abst = sl.ab_cell.T  # surface unit cell, transposed
     # set high symmetry
     if "[" not in sl.foundplanegroup:
         sl.planegroup = sl.foundplanegroup
@@ -723,7 +707,7 @@ def setSymmetry(sl, rp, targetsym):
                 "vector, but the unit cell has been modified. Attempting to "
                 "interpret direction in the old coordinate system...")
             rp.setHaltingLevel(1)
-            tspar = np.dot(np.linalg.inv(sl.ucell[:2, :2]),
+            tspar = np.dot(np.linalg.inv(sl.ab_cell),
                            np.dot(sl.ucell_ori[:2, :2], tspar))
             for i in range(0, 2):
                 tspar[i] = round(tspar[i])
@@ -747,10 +731,7 @@ def setSymmetry(sl, rp, targetsym):
                               * np.dot(np.array(sl.orisymplane.par[1],
                                                 -sl.orisymplane.par[0]),
                                        abst))
-                    for at in sl.atlist:
-                        at.cartpos[:2] -= shiftv
-                    sl.ucell_mod.append(('add', -shiftv))
-                    sl.getFractionalCoordinates()
+                    sl.translate_atoms_2d(-shiftv)
                     sl.orisymplane.type = "glide"
                     # since the origin shifts and the direction stays the
                     #  same, nothing needs to be changed about the symplane
@@ -773,10 +754,7 @@ def setSymmetry(sl, rp, targetsym):
             elif planegroup == 'pmg':   # reducing to: pm, pg
                 if targetsym == 'pm':  # needs origin shift
                     shiftv = 0.25*np.dot(sl.orisymplane.par, abst)
-                    for at in sl.atlist:
-                        at.cartpos[:2] -= shiftv
-                    sl.ucell_mod.append(('add', -shiftv))
-                    sl.getFractionalCoordinates()
+                    sl.translate_atoms_2d(-shiftv)
                     sl.orisymplane = SymPlane(
                         np.array([0, 0]), np.array(sl.orisymplane.dir[1],
                                                    -sl.orisymplane.dir[0]),
@@ -785,10 +763,7 @@ def setSymmetry(sl, rp, targetsym):
             elif planegroup == 'pgg':   # reducing to: pg
                 if (tspar[0], tspar[1]) in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
                     shiftv = 0.25*np.dot(np.array(tspar[1], -tspar[0]), abst)
-                    for at in sl.atlist:
-                        at.cartpos[:2] -= shiftv
-                    sl.ucell_mod.append(('add', -shiftv))
-                    sl.getFractionalCoordinates()
+                    sl.translate_atoms_2d(-shiftv)
                     sl.orisymplane = SymPlane(np.array([0, 0]),
                                               np.dot(tspar, abst), abst)
                     sl.orisymplane.type = "glide"
@@ -813,18 +788,12 @@ def setSymmetry(sl, rp, targetsym):
                             # shift origin to glide plane
                             shiftv = 0.25*np.dot(np.array(tspar[1],
                                                           -tspar[0]), abst)
-                            for at in sl.atlist:
-                                at.cartpos[0:2] -= shiftv
-                            sl.ucell_mod.append(('add', -shiftv))
-                            sl.getFractionalCoordinates()
+                            sl.translate_atoms_2d(-shiftv)
                             sl.orisymplane.type = "glide"
                         sl.planegroup = targetsym
                     elif targetsym == "pmg":
                         shiftv = 0.25*(abst[0]+abst[1])
-                        for at in sl.atlist:
-                            at.cartpos[0:2] -= shiftv
-                        sl.ucell_mod.append(('add', -shiftv))
-                        sl.getFractionalCoordinates()
+                        sl.translate_atoms_2d(-shiftv)
                         sl.orisymplane = SymPlane(np.array([0, 0]),
                                                   np.dot(tspar, abst), abst)
                         sl.orisymplane.type = "glide"
@@ -873,10 +842,7 @@ def setSymmetry(sl, rp, targetsym):
                     else:
                         allowed = False
                 if allowed:
-                    for at in sl.atlist:
-                        at.cartpos[:2] -= shiftv
-                    sl.ucell_mod.append(('add', -shiftv))
-                    sl.getFractionalCoordinates()
+                    sl.translate_atoms_2d(-shiftv)
                     sl.planegroup = targetsym
                 else:
                     invalidDirectionMessage(rp, planegroup, targetsym)
@@ -890,10 +856,10 @@ def setSymmetry(sl, rp, targetsym):
                                           abst[0]))) > 0.01):
                         chir = -1   # left-handed unit cell -> invert rotations
                     if (tspar[0], tspar[1]) in [(1, 2), (-1, -2)]:
-                        sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
+                        sl.rotate_unit_cell(6*chir)  # rotate 60° clockwise
                     elif (tspar[0], tspar[1]) in [(2, 1), (-2, -1)]:
-                        sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
-                    abst = sl.ucell[:2, :2].T
+                        sl.rotate_unit_cell(-6*chir)  # rotate 60° countercl.
+                    abst = sl.ab_cell.T
                     sl.orisymplane = SymPlane(np.array([0, 0]),
                                               abst[0]-abst[1], abst)
                     sl.planegroup = targetsym
@@ -908,10 +874,10 @@ def setSymmetry(sl, rp, targetsym):
                             abst[0]))) > 0.01:
                         chir = -1   # left-handed unit cell
                     if (tspar[0], tspar[1]) in [(1, 0), (-1, 0)]:
-                        sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
+                        sl.rotate_unit_cell(6*chir)  # rotate 60° clockwise
                     elif (tspar[0], tspar[1]) in [(0, 1), (0, -1)]:
-                        sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
-                    abst = sl.ucell[:2, :2].T
+                        sl.rotate_unit_cell(-6*chir)  # rotate 60° countercl.
+                    abst = sl.ab_cell.T
                     sl.orisymplane = SymPlane(np.array([0, 0]),
                                               abst[0]+abst[1], abst)
                     sl.planegroup = targetsym
@@ -936,20 +902,20 @@ def setSymmetry(sl, rp, targetsym):
                     elif (tspar[0], tspar[1]) in [(1, 2), (-1, -2),
                                                   (2, 1), (-2, -1)]:
                         if (tspar[0], tspar[1]) in [(1, 2), (-1, -2)]:
-                            sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
+                            sl.rotate_unit_cell(6*chir)  # rotate 60° clockwise
                         elif (tspar[0], tspar[1]) in [(2, 1), (-2, -1)]:
-                            sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
-                        abst = sl.ucell[:2, :2].T
+                            sl.rotate_unit_cell(-6*chir)  # rotate 60° countercl.
+                        abst = sl.ab_cell.T
                         if targetsym == 'cm':
                             sl.orisymplane = SymPlane(
                                 np.array([0, 0]), abst[0]-abst[1], abst)
                     elif (tspar[0], tspar[1]) in [(1, 0), (-1, 0),
                                                   (0, 1), (0, -1)]:
                         if (tspar[0], tspar[1]) in [(1, 0), (-1, 0)]:
-                            sl.rotateUnitCell(6*chir)  # rotate 60° clockwise
+                            sl.rotate_unit_cell(6*chir)  # rotate 60° clockwise
                         elif (tspar[0], tspar[1]) in [(0, 1), (0, -1)]:
-                            sl.rotateUnitCell(-6*chir)  # rotate 60° countercl.
-                        abst = sl.ucell[:2, :2].T
+                            sl.rotate_unit_cell(-6*chir)  # rotate 60° countercl.
+                        abst = sl.ab_cell.T
                         if targetsym == 'cm':
                             sl.orisymplane = SymPlane(
                                 np.array([0, 0]), abst[0]+abst[1], abst)
@@ -992,17 +958,17 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
             logger.warning("enforceSymmetry: Invalid 'movement' variable "
                            "passed. Using SYMMETRIZE_INPUT parameter instead.")
     eps = rp.SYMMETRY_EPS
-    abst = sl.ucell[:2, :2].T  # surface unit cell, transposed
+    abst = sl.ab_cell.T  # surface unit cell, transposed
 
     # FIND ATOM LINKING - HERE WORK WITH sl INSTEAD OF ts, SINCE WE WANT
     #   TO ASSIGN PROPERTIES TO INDIVIDUAL ATOMS
-    for at in sl.atlist:  # first put all atoms in a list of their own
+    for at in sl:  # first put all atoms in a list of their own
         at.linklist = [at]
         at.symrefm = np.identity(2)
     if not planegroup == "p1":  # p1 has no symmetry to check for
-        sl.createSublayers(eps.z)
-        sl.sortOriginal()
-        sl.collapseCartesianCoordinates()
+        sl.create_sublayers(eps.z)
+        sl.sort_original()
+        sl.collapse_cartesian_coordinates()
         # TEST ROTATION AT ORIGIN - TESTING ONLY HIGHEST ROTATIONAL ORDER
         #    IS ENOUGH
         if planegroup not in ["p1", "pm", "pg", "cm", "rcm"]:
@@ -1019,8 +985,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                                "enforceSymmetry routine: ES001")
                 rp.setHaltingLevel(1)
             tmpslab = copy.deepcopy(sl)
-            tmpslab.rotateAtoms(np.array([0, 0]), toprotsym)
-            tmpslab.collapseCartesianCoordinates()
+            tmpslab.rotate_atoms(toprotsym)
             m = np.linalg.inv(rotation_matrix_order(toprotsym))
             for (sli, sl1) in enumerate(sl.sublayers):
                 for (ati, at1) in enumerate(sl1):
@@ -1061,10 +1026,8 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 logger.warning("Unexpected point encountered in "
                                "enforceSymmetry routine: ES002")
                 rp.setHaltingLevel(1)
-            g = True if testplane.type == "glide" else False
             tmpslab = copy.deepcopy(sl)
-            tmpslab.mirror(testplane, glide=g)
-            tmpslab.collapseCartesianCoordinates()
+            tmpslab.mirror_atoms(testplane)
             ang = angle(np.array([1, 0]), testplane.dir)
             rotm = rotation_matrix(ang)
             m = np.dot(rotm, np.dot(np.array([[1, 0], [0, -1]]),
@@ -1088,7 +1051,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         sl1.atlist[atj].linklist = at1.linklist
                         break
     sl.linklists = []     # re-create linklists
-    for at in sl.atlist:
+    for at in sl:
         if len(at.linklist) > 1 and at.linklist not in sl.linklists:
             # don't keep the linklists of length 1
             sl.linklists.append(at.linklist)
@@ -1192,9 +1155,9 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                            SymPlane(abst[1], abst[0], abst, collapse=False),
                            SymPlane(ori, abst[0]+abst[1], abst)])
     ts = copy.deepcopy(sl)
-    ts.projectCToZ()
-    ts.collapseCartesianCoordinates()
-    for at in ts.atlist:
+    ts.project_c_to_z()
+    ts.collapse_cartesian_coordinates()
+    for at in ts:
         # first check points
         for p in lockpoints:
             if at.is_same_xy(p, eps):
@@ -1216,13 +1179,13 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                             shiftv = -1 * shiftv
                         at.cartpos[:2] += shiftv
                     break
-    for at in sl.atlist:
-        at2 = [a for a in ts.atlist if a.num == at.num][0]
+    for at in sl:
+        at2 = [a for a in ts if a.num == at.num][0]
         at.freedir = at2.freedir
         at.cartpos = at2.cartpos
     # average positions for linked atoms
     if not nomove and not planegroup == "p1":
-        sl.collapseCartesianCoordinates()
+        sl.collapse_cartesian_coordinates()
         releps = [eps / np.linalg.norm(abst[j]) for j in range(0, 2)]
         mvslabs = []
         if planegroup not in ["pm", "pg", "cm", "rcm"]:
@@ -1231,19 +1194,16 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                     tmpslab = copy.deepcopy(sl)
                 else:
                     tmpslab = copy.deepcopy(mvslabs[-1])
-                tmpslab.rotateAtoms(ori, toprotsym)
-                tmpslab.collapseCartesianCoordinates()
+                tmpslab.rotate_atoms(toprotsym, ori)
                 mvslabs.append(tmpslab)
         if planegroup not in ["p2", "p3", "p4", "p6"]:
             tmpslab = copy.deepcopy(sl)
-            tmpslab.mirror(testplane, glide=g)
-            tmpslab.collapseCartesianCoordinates()
+            tmpslab.mirror_atoms(testplane)
             mvslabs.append(tmpslab)
             if planegroup not in ["pm", "pg", "cm", "rcm"]:
                 for i in range(0, toprotsym-1):
                     tmpslab = copy.deepcopy(mvslabs[-1])
-                    tmpslab.rotateAtoms(ori, toprotsym)
-                    tmpslab.collapseCartesianCoordinates()
+                    tmpslab.rotate_atoms(toprotsym, ori)
                     mvslabs.append(tmpslab)
         for (llind, ll) in enumerate(sl.linklists):
             for at in ll:
@@ -1278,7 +1238,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                         "will not be symmetrized.")
                 else:
                     at.cartpos = psum / pn
-    sl.collapseCartesianCoordinates(updateOrigin=True)
+    sl.collapse_cartesian_coordinates(update_origin=True)
     if not rotcell:
         # !!! THIS IS NOW THE DEFAULT, rotcell is NEVER true.
         #  if it stays like this, consider deleting the following lines..
@@ -1317,7 +1277,7 @@ def enforceSymmetry(sl, rp, planegroup="fromslab",
                 for j in range(0, 3):
                     if abs(sl.ucell[i, j]) < 1e-6:
                         sl.ucell[i, j] = 0
-            sl.getCartesianCoordinates()
+            sl.update_cartesian_from_fractional()
             # modify BEAM_INCIDENCE
             if rp.THETA != 0:
                 logger.debug("Modifying BEAM_INCIDENCE parameter")
@@ -1336,26 +1296,26 @@ def getSymBaseSymmetry(sl, rp):
     if sl.symbaseslab.planegroup == "unknown":
         findSymmetry(sl.symbaseslab, rp, forceFindOri=True)
         enforceSymmetry(sl.symbaseslab, rp, rotcell=False)
-    sl.getCartesianCoordinates()
+    sl.update_cartesian_from_fractional()
     for ll in sl.symbaseslab.linklists:
         newll = []
         for ssl_at in ll:
-            at = [a for a in sl.atlist if a.num == ssl_at.num][0]
+            at = [a for a in sl if a.num == ssl_at.num][0]
             newll.append(at)
             at.linklist = newll
             at.symrefm = np.copy(ssl_at.symrefm)
-    for at in [at for at in sl.atlist if at.duplicate_of]:
+    for at in [at for at in sl if at.duplicate_of]:
         at.duplicate_of.linklist.append(at)
         at.linklist = at.duplicate_of.linklist
         at.symrefm = np.copy(at.duplicate_of.symrefm)
         if rp.SYMMETRIZE_INPUT:
             cv = at.cartpos[:2] - at.duplicate_of.cartpos[:2]
             v = np.append(np.round(np.dot(np.linalg.inv(
-                                     sl.symbaseslab.ucell[:2, :2]), cv)), 0.)
+                                     sl.symbaseslab.ab_cell), cv)), 0.)
             at.cartpos = (at.duplicate_of.cartpos
                           + np.dot(sl.symbaseslab.ucell, v))
-    sl.getFractionalCoordinates()
+    sl.update_fractional_from_cartesian()
     sl.linklists = []
-    for at in sl.atlist:
+    for at in sl:
         if len(at.linklist) > 1 and at.linklist not in sl.linklists:
             sl.linklists.append(at.linklist)

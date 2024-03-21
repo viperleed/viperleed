@@ -3,10 +3,11 @@
 VIBR_AMP_SCALE
 ==============
 
-VIBR_AMP_SCALE is used when vibrational amplitudes are automatically generated 
+VIBR_AMP_SCALE is used when
+:ref:`vibrational amplitudes are automatically generated<vibrocc_auto>`
 from the :ref:`T_EXPERIMENT` and :ref:`T_DEBYE` parameters.
-E.g., vibrational amplitudes of the surface atoms are normally larger than in the bulk, 
-so one wants to scale the bulk vibration amplitudes.
+E.g., vibrational amplitudes of the surface atoms are normally larger than in
+the bulk, so one wants to scale the bulk vibration amplitudes.
 VIBR_AMP_SCALE will **never** be used if the VIBROCC file exists and defines 
 a vibrational amplitude for the site in question.
 
@@ -27,7 +28,7 @@ or on multiple lines.
 
 The site types are labelled as ``El_sitename``, where ``El`` is an element 
 as found in the :ref:`POSCAR file<POSCAR>`, and ``sitename`` is a site name 
-defined in the :ref:`PARAMETERS file<PARAMETERS>`  under :ref:`SITE_DEF<SITEDEF>`.
+defined in the :ref:`PARAMETERS file<PARAMETERS>` under :ref:`SITE_DEF<SITEDEF>`.
 Asterisks ``*`` are treated as wildcard characters, so ``*surf`` in the example 
 above will match both ``Fe_surf`` and ``O_surf``. 
 (The same convention as in the VIBROCC file.)
@@ -35,10 +36,14 @@ above will match both ``Fe_surf`` and ``O_surf``.
 In the example above, if the vibrational amplitude for Fe has been calculated 
 to be 0.1 Å, the vibrational amplitude for the Fe_surf atoms will be set to 0.13 Å.
 
-Note that the parameters VIBR_AMP_SCALE, :ref:`T_EXPERIMENT` and :ref:`T_DEBYE` 
-will normally be used only once, to calculate an initial guess for vibrational 
-amplitudes and generate a :ref:`VIBROCC file<VIBOCCIN>`.
-Afterwards, all three parameters will automatically be commented out in the PARAMETERS file; 
-the vibration amplitudes will be defined in the VIBROCC file instead.
-Even if the parameters were un-commented again, they would never be used as long 
-as a VIBROCC file is present and defines the amplitude of the respective site.
+.. note::
+
+    The parameters :ref:`T_DEBYE<t_debye>`,
+    :ref:`T_EXPERIMENT<t_experiment>` and VIBR_AMP_SCALE
+    will normally be used only once, to calculate an initial guess for
+    vibrational amplitudes and generate a :ref:`VIBROCC file <viboccin>`. 
+    Afterwards, all three parameters will automatically be commented out in the
+    :ref:`PARAMETERS` file; the vibration amplitudes will be defined in the
+    VIBROCC file instead.
+    Even if the parameters were un-commented again, they would never be used
+    as long as a :ref:`VIBROCC file <viboccin>` is present.

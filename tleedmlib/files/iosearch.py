@@ -1045,7 +1045,7 @@ def _read_control_chem(control_chem_path,
             return control_lines
         elif n_control_lines > expected_lines:
             raise RuntimeError(f"Expected at maximum {expected_lines} lines "
-                               "in control.chem, but found {n_control_lines}.")
+                               f"in control.chem, but found {n_control_lines}.")
         time.sleep(sleep_time/1000)  # in milliseconds
     raise SearchIORaceConditionError("Could not read complete "
                                      "control.chem file")
@@ -1091,16 +1091,16 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
         else:
             parinds = rp.searchResultConfig[0]
     # If atom and site original states are not yet saved, do it now:
-    for at in sl.atlist:
+    for at in sl:
         at.storeOriState()
     for site in sl.sitelist:
         if site.oriState is None:
             tmp = copy.deepcopy(site)
             site.oriState = tmp
 
-    sl.getCartesianCoordinates()
+    sl.update_cartesian_from_fractional()
     uci = np.linalg.inv(sl.ucell)
-    for at in sl.atlist:
+    for at in sl:
         # make list of searchpars addressing this atom:
         sps = [sp for sp in rp.searchpars if sp.atom == at and sp.el != "vac"]
         if len(sps) > 0:
@@ -1156,13 +1156,12 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                 off = np.dot(sl.ucell, rel_off)
                 off[2] *= -1
                 at.offset_geo[el] = off
-    sl.collapseFractionalCoordinates()
-    sl.getCartesianCoordinates()
-    sl.updateLayerCoordinates()
+    sl.collapse_fractional_coordinates()
+    sl.update_cartesian_from_fractional()
+    sl.update_layer_coordinates()
     # now update site occupations and vibrations:
     for site in sl.sitelist:
-        siteats = [at for at in sl.atlist if at.site == site
-                   and not at.is_bulk]
+        siteats = [at for at in sl if at.site == site and not at.is_bulk]
         if not siteats: # site is only found in bulk
             continue
         for el in site.occ:
@@ -1194,21 +1193,21 @@ def writeSearchOutput(sl, rp, parinds=None, silent=False, suffix=""):
                     at.offset_vib[el] -= offset_vib
     fn = "POSCAR_OUT" + suffix + "_" + rp.timestamp
     tmpslab = copy.deepcopy(sl)
-    tmpslab.sortOriginal()
+    tmpslab.sort_original()
     try:
         poscar.write(tmpslab, filename=fn, comments="all", silent=silent)
-    except Exception:
-        logger.error("Exception occured while writing POSCAR_OUT" + suffix,
+    except OSError:
+        logger.error("Exception occurred while writing POSCAR_OUT" + suffix,
                      exc_info=rp.is_debug_mode)
         rp.setHaltingLevel(2)
     if not np.isclose(rp.SYMMETRY_CELL_TRANSFORM, np.identity(2)).all():
-        tmpslab = sl.makeSymBaseSlab(rp)
+        tmpslab = sl.make_subcell(rp, rp.SYMMETRY_CELL_TRANSFORM)
         fn = "POSCAR_OUT_mincell" + suffix + "_" + rp.timestamp
         try:
             poscar.write(tmpslab, filename=fn, silent=silent)
-        except Exception:
+        except OSError:
             logger.warning(
-                "Exception occured while writing POSCAR_OUT_mincell" + suffix,
+                "Exception occurred while writing POSCAR_OUT_mincell" + suffix,
                 exc_info=rp.is_debug_mode)
     fn = "VIBROCC_OUT" + suffix + "_" + rp.timestamp
     try:

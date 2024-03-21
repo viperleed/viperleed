@@ -207,7 +207,7 @@ def __check_consistency_rp_elements(sl, rp, phaseshifts, firstline, muftin):
     Returns
     -------
     phaseshifts: list of tuple
-        Each element is (energy, pahseshifts_at_energy) with 
+        Each element is (energy, phaseshifts_at_energy) with 
         phaseshifts_at_energy = [[el0_L0, el0_L1, ...], [el1_L0, ...], ...]
         where eli_Lj is the phaseshift for element i and angular momentum j.
         Therefore, len(phaseshifts) is the number of energies found, 
@@ -573,7 +573,7 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
         ax.set_xlim((np.min(energies), np.max(energies)))
         for j in range(0, nlplot):
             ax.plot(energies, ps_vals[:, i, j],
-                    linewidth=linewidth, label=f"$\ell$ = {j}",
+                    linewidth=linewidth, label=fr"$\ell$ = {j}",
                     c=colors[j % len(colors)],
                     ls=styles[(j // len(colors)) % len(styles)])
         legend = ax.legend(ncol=(nlplot // 8 + 1))

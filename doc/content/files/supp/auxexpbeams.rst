@@ -1,7 +1,7 @@
 .. _auxexpbeams:
 
-The AUXEXPBEAMS file
-====================
+AUXEXPBEAMS
+===========
 
 The AUXEXPBEAMS file contains the experimental data (beam intensities
 vs. energy) to be compared against, formatted as input for TensErLEED. 

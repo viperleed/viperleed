@@ -74,8 +74,7 @@ def read(filename='POSCAR'):
         return poscar.read()
 
 
-def write(slab, filename='CONTCAR', reorder=False,
-          comments='none', silent=False):
+def write(slab, filename='CONTCAR', comments='none', silent=False):
     """Write a POSCAR-style file from a slab.
 
     If a file named 'POSCAR' exists in the current folder, its first,
@@ -87,10 +86,6 @@ def write(slab, filename='CONTCAR', reorder=False,
         The Slab object to write.
     filename : str or Path or TextIOBase, optional
         The file(name) to write to. The default is 'CONTCAR'.
-    reorder : bool, optional
-        If True, atoms will be sorted by z coordinate; in all
-        cases atoms are sorted by original-element order. The
-        default is False.
     comments : str, optional
         Defines whether additional information for each atom
         should be printed:
@@ -108,8 +103,6 @@ def write(slab, filename='CONTCAR', reorder=False,
     OSError
         If writing to filename fails.
     """
-    if reorder:
-        slab.sort_by_z()
     slab.sort_by_element()   # This is the minimum that has to happen
 
     if isinstance(filename, TextIOBase):
@@ -127,54 +120,10 @@ def write(slab, filename='CONTCAR', reorder=False,
         _LOGGER.debug(f'Wrote to {filename} successfully')
 
 
-def ensure_away_from_c_edges(positions, eps):
-    """Ensure positions are not closer than eps to unit-cell edges along c.
-
-    Parameters
-    ----------
-    positions : Sequence
-        Shape (n, 3), n > 0. Fractional coordinates to be checked.
-    eps : float
-        Fractional distance from 0 and 1 edges. Should be in range
-        (0, 1).
-
-    Returns
-    -------
-    positions : numpy.ndarray
-        Shape (n, 3). Modified in place if an array was passed.
-        The new fractional coordinates. All elements are such
-        that their z fractional coordinate is between eps and
-        1 - eps.
-
-    Raises
-    ------
-    ValueError
-        If eps is out of range, or if positions cannot be shifted
-        rigidly to fit the (eps, 1 - eps) range.
-    """
-    if not 0 < eps < 1:
-        raise ValueError(f'ensure_away_from_c_edges: Invalid eps={eps}. '
-                         'Should be between zero and one.')
-    positions = np.asarray(positions)
-    min_c, max_c = positions[:, 2].min(), positions[:, 2].max()
-    if max_c - min_c > 1 - 2*eps:                                               # TODO: couldn't we expand the unit cell?
-        raise ValueError(
-            'ensure_away_from_c_edges: Cannot shift positions '
-            f'to fit between {eps} and {1-eps} along the c axis.'
-            )
-    offset = np.zeros(3)
-    if max_c < eps or max_c > 1 - eps:
-        offset[2] = 1 - eps - max_c
-    elif min_c < eps:
-        offset[2] = eps - min_c
-    positions += offset
-    return positions
-
-
 class POSCARReader:
     """Base class for reading POSCAR structures into a Slab."""
 
-    def __init__(self, source, *, ucell_eps=1e-4, min_frac_dist=1e-4):
+    def __init__(self, source, *, ucell_eps=1e-4):
         """Initialize instance.
 
         Parameters
@@ -186,14 +135,9 @@ class POSCARReader:
             Cartesian tolerance (Angstrom). All the unit cell
             Cartesian components smaller than ucell_eps will
             be zeroed exactly. Default is 1e-4.
-        min_frac_dist : float, optional
-            Smallest fractional distance from the c=0 and c=1
-            edges of the unit cell. If atoms are closer, they
-            are shifted, if possible.
         """
         self._source = source
         self.ucell_eps = ucell_eps
-        self.min_frac_dist = min_frac_dist
 
     @property
     def stream(self):
@@ -211,18 +155,6 @@ class POSCARReader:
         element_info = self._read_elements(slab)
         cartesian, _ = self._read_cartesian_and_group(slab)
         positions = self._read_atom_coordinates(slab, cartesian)
-
-        try:
-            # Move atoms away from edges in z to avoid conflicts
-            positions = ensure_away_from_c_edges(positions, self.min_frac_dist)
-        except ValueError:
-            _LOGGER.warning(
-                'POSCAR contains atoms close to c=0 and atoms close '
-                'to c=1. This cannot be corrected automatically and '
-                'will likely cause problems with layer assignment!'
-                )
-
-        # And add them to the slab
         self._make_atoms(slab, positions, *element_info)
         return slab
 
@@ -276,10 +208,13 @@ class POSCARReader:
                     )
                 if n_added >= n_atoms:
                     break
-        slab.atlist = [at for el_ats in atoms.values() for at in el_ats]
-        slab.updateAtomNumbers()
-        slab.updateElementCount()
-        slab.getCartesianCoordinates()
+        slab.atlist.clear()
+        slab.atlist.strict = False  # All atoms have the same .num
+        slab.atlist.extend(at for el_ats in atoms.values() for at in el_ats)
+        slab.update_atom_numbers()  # Also updates atlist map
+        slab.atlist.strict = True
+        slab.update_element_count()
+        slab.update_cartesian_from_fractional()
 
     def _read_atom_coordinates(self, slab, cartesian):
         """Return an array of fractional atomic coordinates read from file_."""
@@ -322,6 +257,10 @@ class POSCARReader:
         # Line of element labels, then their counts
         elements = [el.capitalize() for el in next(self.stream, '').split()]
 
+        # Element symbols may be terminated by a '/' + some hash; remove it
+        # See https://www.vasp.at/forum/viewtopic.php?t=19113
+        elements = [el.split('/')[0] for el in elements]
+
         # Element labels line is optional, but we need it
         try:
             _ = [int(e) for e in elements]
@@ -333,6 +272,10 @@ class POSCARReader:
             raise POSCARSyntaxError(
                 'POSCAR: Element labels line not found. This is an optional '
                 'line in the POSCAR specification, but ViPErLEED needs it.'
+                )
+        if any(not el for el in elements):
+            raise POSCARSyntaxError(
+                'POSCAR: Empty element label found. This is not allowed.'
                 )
 
         element_counts = [int(c) for c in next(self.stream, '').split()]
@@ -417,7 +360,7 @@ class POSCARReader:
 class POSCARFileReader(AbstractContextManager, POSCARReader):
     """A context manager for reading POSCAR files into a slab."""
 
-    def __init__(self, filename, *, ucell_eps=1e-4, min_frac_dist=1e-4):
+    def __init__(self, filename, *, ucell_eps=1e-4):
         """Initialize instance.
 
         Parameters
@@ -428,14 +371,8 @@ class POSCARFileReader(AbstractContextManager, POSCARReader):
             Cartesian tolerance (Angstrom). All the unit cell
             Cartesian components smaller than ucell_eps will
             be zeroed exactly. Default is 1e-4.
-        min_frac_dist : float, optional
-            Smallest fractional distance from the c=0 and c=1
-            edges of the unit cell. If atoms are closer, they
-            are shifted, if possible.
         """
-        super().__init__(Path(filename),
-                         ucell_eps=ucell_eps,
-                         min_frac_dist=min_frac_dist)
+        super().__init__(Path(filename), ucell_eps=ucell_eps)
         self._file_object = None
 
     @property
@@ -464,7 +401,7 @@ class POSCARFileReader(AbstractContextManager, POSCARReader):
             self._file_object.close()
         except AttributeError:
             pass
-        super().__exit__(exc_type, exc_val, exc_tb)
+        return super().__exit__(exc_type, exc_val, exc_tb)
 
     def read(self):
         """Return a slab with info read from file."""
@@ -562,7 +499,7 @@ class POSCARWriter:
         """Yield a line of coordinates and other info for each atom in slab."""
         more_than_one = (link for link in slab.linklists if len(link) > 1)
         linklists = {id(link): i+1 for i, link in enumerate(more_than_one)}
-        for i, atom in enumerate(slab.atlist):
+        for i, atom in enumerate(slab):
             line = ''.join(f'{coord:20.16f}' for coord in atom.pos)
             line += self._get_comments_for_atom(atom, i, linklists)
             yield line + '\n'

@@ -94,7 +94,14 @@ Glossary
     fcc
       Face centered cubic crystal structure.
 
+    XRD
+      X-ray diffraction.
+
     Jupyter
       The Jupyter project for interactive computing.
       Jupyter notebooks are commonly used as interactive Python environments.
       See also the `project Jupyter homepage <https://jupyter.org>`__.
+
+    GPLv3
+      The GNU General Public License version 3.
+      `License text <https://www.gnu.org/licenses/gpl-3.0.en.html#license-text>`__.

@@ -1,7 +1,7 @@
 .. _job_script:
 
-The job script
-==============
+job
+===
 
 The job script, typically either ``job.py`` or ``job.sh`` is the entry point for a ViPErLEED run.
 Examplary job scripts are provided with ViPErLEED that need minimal adjustments.

@@ -614,13 +614,14 @@ def read_rfactor_columns(cols_dir=''):
         except FileNotFoundError:
             logger.error("read_rfactor_columns: File {} not found. Aborting."
                          .format(fname))
-            return []
+            return [], []
         except PermissionError:
             logger.error("read_rfactor_columns: Cannot open file {}. Aborting."
                          .format(fname))
-            return []
+            return [], []
 
         cols = np.array([[float(col) for col in line.split()] for line in f])
+        f.close()
         xy = np.split(cols, np.shape(cols)[1]/2, axis=1)
         # xy is now a list of 2D arrays.
         # Each array has the form [[en1, intens1], ...]

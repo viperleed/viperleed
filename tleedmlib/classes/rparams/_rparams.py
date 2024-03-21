@@ -104,8 +104,10 @@ class Rparams:
         self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
         self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
         self.PHI = DEFAULTS['PHI']           # from BEAM_INCIDENCE
-        self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [],
-                        'legend': 'all', 'overbar': False, 'perpage': 2}
+        self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [], 
+                        'font_size': 10, 'legend': 'all', 'line_width': 1,
+                        'overbar': False, 'perpage': 2,
+                        }
         self.RUN = self.get_default('RUN')        # what segments should be run
         self.R_FACTOR_LEGACY = True # use old runtime-compiled R-factor calculation
         self.R_FACTOR_TYPE = 1  # 1: Pendry, 2: R2, 3: Zanazzi-Jona
@@ -928,8 +930,7 @@ class Rparams:
         if (2 in self.runHistory or 42 in self.runHistory
                 or sl.deltas_initialized):
             # if delta has been run, information what deltas exist is stored
-            atlist = [at for at in sl.atlist
-                      if not at.is_bulk and at.known_deltas]
+            atlist = [at for at in sl if not at.is_bulk and at.known_deltas]
         else:
             _LOGGER.debug('Delta-amplitudes were not calculated in current '
                           'run; looking for delta files by name.')
@@ -942,8 +943,7 @@ class Rparams:
                     delN.append(int(filename.split('_')[1]))
                 except ValueError:
                     filelist.remove(filename)
-            atlist = [at for at in sl.atlist
-                      if not at.is_bulk and at.num in delN]
+            atlist = [at for at in sl if not at.is_bulk and at.num in delN]
             for at in atlist:
                 deltaCandidates = [fn for fn in filelist
                                    if int(fn.split('_')[1]) == at.num]
@@ -979,7 +979,7 @@ class Rparams:
                                       f'for {at}, element {el}')
                         raise RuntimeError('Missing Delta file')
             # sanity check: are displacements defined but deltas missing?
-            for at in sl.atlist:
+            for at in sl:
                 # check whether at has non-trivial displacements:
                 found = False
                 for d in [at.disp_occ, at.disp_geo, at.disp_vib]:

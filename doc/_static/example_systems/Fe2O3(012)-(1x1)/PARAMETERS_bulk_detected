@@ -1,0 +1,10 @@
+...
+! BULK_LIKE_BELOW = 0.35            ! line commented out automatically
+
+! ######################################################
+! #  THE FOLLOWING LINES WERE GENERATED AUTOMATICALLY  #
+! ######################################################
+
+BULK_REPEAT = [-2.51774 2.33620 3.68229] ! Automatically detected repeat vector
+LAYER_CUTS = 0.1250 0.2500 0.3750
+N_BULK_LAYERS = 1

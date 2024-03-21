@@ -28,13 +28,13 @@ Syntax
 
 ::
 
-   POSCAREL(_site) number(s) = CHEM1 start end step, CHEM2 start end step, CHEM3 start end step, CHEM4 start end step, CHEM5 start end step
-   POSCAREL(_site) number(s) = fix1 CHEM1 + fix2 CHEM2 start end step, CHEM3 start end step, CHEM4 start end step, CHEM5 start end step
+   POSCAREL(_site) number(s) = chem1 start end step, chem2 start end step, chem3 start end step, chem4 start end step, chem5 start end step
+   POSCAREL(_site) number(s) = fix1 chem1 + fix2 chem2 start end step, chem3 start end step, chem4 start end step, chem5 start end step
 
 where
 
--  ``POSCAREL`` is the :ref:`POSCAR<POSCAR>` element (and **not** the :ref:`ELEMENT_MIX<ELSPLIT>` one).
-   Take a look at the :ref:`AUXLATGEO file<AUXLATGEO>` **correct?** to make sure you use the right labels. **TODO**
+-  ``POSCAREL`` is the :ref:`POSCAR<POSCAR>` element and **not** the chemical species defined via :ref:`ELEMENT_MIX<ELSPLIT>`.
+   See also :ref:`element name collision<elementnamecollision>`.
 -  ``site`` is optional, and has the same functionality as the one in the :ref:`Geometrical displacements<GEODELTA>`.
 -  ``number(s)`` also behave as in the :ref:`Geometrical displacements<GEODELTA>`.
 
@@ -43,20 +43,20 @@ Each list element can have the two possible forms:
 
 ::
 
-   CHEM start end step
-   fix1 CHEM1 + fix2 CHEM2 (+ ...) start end step
+   chem start end step
+   fix1 chem1 + fix2 chem2 (+ ...) start end step
 
-where ``CHEM*`` is one of the **chemical** elements that you have 
+where ``chem*`` is one of the **chemical** elements that you have 
 defined via :ref:`ELSPLIT<ELSPLIT>` or the special flag ``Vac`` (not 
 case sensitive) for vacancies.
 Notice that a **maximum of five distinct chemical elements** 
 (including vacancies) can be used at each atomic position.
 
 ``start``, ``end``, ``step``, and ``fix*`` are floating point numbers 
-between 0 and 100 defining the fractional occupations in percent.
+between 0 and 1 defining the fractional occupations in percent.
 
 When using the first syntax, the program will search all independent 
-combinations of ``CHEM*`` in the range specified.
+combinations of ``chem*`` in the range specified.
 The second syntax allows you to fix the relative concentration of (at 
 least two, at maximum five) elements via the numbers ``fix*``, creating 
 a "combined atom", whose concentration with respect to the other 
