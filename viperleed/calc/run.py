@@ -152,12 +152,11 @@ def run_calc(system_name=None,
     logger.debug("PARAMETERS file was read successfully")
     rp.timestamp = timestamp
     rp.manifest = tmp_manifest
-    for p in preset_params:
-        try:
-            setattr(rp, p, preset_params[p])
-        except Exception:
-            logger.warning(f"Error applying preset parameter {p}: ",
-                           exc_info=True)
+    try:
+        rp.update(preset_params)
+    except (ValueError, TypeError):
+        logger.warning(f"Error applying preset parameters: ",
+                       exc_info=True)
     if not domains:
         warn_if_slab_has_atoms_in_multiple_c_cells(slab, rp)
         slab.full_update(rp)   # gets PARAMETERS data into slab
