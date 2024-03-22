@@ -36,8 +36,7 @@ def run_calc(system_name=None,
              console_output=True,
              slab=None,
              preset_params={},
-             source=Path(),
-             override_log_level=None):
+             source=Path()):
     """Run a ViPErLEED calculation.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
@@ -158,20 +157,21 @@ def run_calc(system_name=None,
         cleanup(tmp_manifest)
         return 2
 
-    # set logging level
-    if override_log_level is not None:
-        rp.LOG_LEVEL = override_log_level
-        logger.info("Overriding log level to {str(override_log_level)}.")
-    logger.setLevel(rp.LOG_LEVEL)
-    logger.debug("PARAMETERS file was read successfully")
-
     rp.timestamp = timestamp
     rp.manifest = tmp_manifest
+
+    # Load parameter presets, overriding those in PARAMETERS
     try:
         rp.update(preset_params)
     except (ValueError, TypeError):
-        logger.warning(f"Error applying preset parameters: ",
-                       exc_info=True)
+        logger.warning(f"Error applying preset parameters: ", exc_info=True)
+
+    # set logging level
+    if preset_params.get('LOG_LEVEL', None) is not None:
+        logger.info(f'Overriding log level to {preset_params['LOG_LEVEL']}.')
+    logger.setLevel(rp.LOG_LEVEL)
+    logger.debug("PARAMETERS file was read successfully")
+
     if not domains:
         warn_if_slab_has_atoms_in_multiple_c_cells(slab, rp)
         slab.full_update(rp)   # gets PARAMETERS data into slab

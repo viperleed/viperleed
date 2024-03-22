@@ -146,18 +146,19 @@ def main(args=None):
 
     # tensorleed source directory
     tensorleed_path = get_tensorleed_path(args.tensorleed)
+    
+    # Preset parameters. Will override those read from PARAMETERS
+    presets = {}
 
     # verbosity flags
     if sum([args.verbose, args.very_verbose]) > 1:
         # only one verbosity level can be chosen
         logger.error("Only one verbosity level can be chosen. Stopping ")
         return 2
-    elif args.very_verbose:
-        override_log_level = 1
+    if args.very_verbose:
+        presets['LOG_LEVEL'] = 1
     elif args.verbose:
-        override_log_level = 5
-    else:
-        override_log_level = None
+        presets['LOG_LEVEL'] = 5
 
     # system name flag
     if args.name:
@@ -219,7 +220,7 @@ def main(args=None):
     os.chdir(work_path)
     run_calc(system_name=_system_name,
              source=tensorleed_path,
-             override_log_level=override_log_level)
+             preset_params=presets)
 
     # copy back everything listed in manifest
     manifest = []
