@@ -21,7 +21,7 @@ GFLAPACK := -llapack
 
 # Target are the .so python module executables
 all: rfactor.so interpolation.so MS_smoothing.so
-	echo "Success: Modules saved to tleedmlib/wrapped"
+	echo "Success: Modules saved to viperleed/extensions"
 
 rfactor.so: $(BUILD_DIR)/interpolation.o $(BUILD_DIR)/interpolation.mod $(BUILD_DIR)/rfactor.o $(BUILD_DIR)/rfactor.mod $(BUILD_DIR)/rfactor.pyf $(SRC_DIR)/rfactor/rfactor.f90 $(SRC_DIR)/interpolation/interpolation.f90 correct_sha256
 	f2py -c --opt="$(GFOPTFLAGS)" --f90flags="$(GFDEBUGFLAGS) -I$(BUILD_DIR)" $(BUILD_DIR)/rfactor.pyf $(SRC_DIR)/rfactor/rfactor.f90 -I $(SRC_DIR)/interpolation/interpolation.f90 $(GFLAPACK)
