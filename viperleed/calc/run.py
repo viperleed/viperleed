@@ -38,7 +38,7 @@ _DEFAULT_SYSTEM_NAME = 'unknown'
 def run_calc(system_name=None,
              console_output=True,
              slab=None,
-             preset_params={},
+             preset_params=None,
              source=''):
     """Run a ViPErLEED calculation.
 
@@ -79,7 +79,7 @@ def run_calc(system_name=None,
     os.umask(0)
     # start logger, write to file:
     timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
-                                        
+
     log_name = f'{LOG_PREFIX}-{timestamp}.log'
     logger.setLevel(logging.INFO)
     logFormatter = CustomLogFormatter()
@@ -164,6 +164,7 @@ def run_calc(system_name=None,
     rp.manifest = tmp_manifest
 
     # Load parameter presets, overriding those in PARAMETERS
+    preset_params = preset_params or {}
     try:
         rp.update(preset_params)
     except (ValueError, TypeError):
