@@ -16,10 +16,10 @@ import shutil
 import numpy as np
 from numpy.polynomial import Polynomial
 
+from viperleed.calc import psgen
 from viperleed.calc.files import iofdopt
 from viperleed.calc.files import parameters
 from viperleed.calc.files import poscar
-from viperleed.calc.files import psgen
 from viperleed.calc.sections.refcalc import refcalc as section_refcalc
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 
