@@ -21,6 +21,7 @@ from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.files import iodeltas
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib import parallelization
 from viperleed.calc.lib.checksums import validate_multiple_files
 
 logger = logging.getLogger(__name__)
@@ -514,7 +515,9 @@ def deltas(sl, rp, subdomain=False):
     logger.info("Compiling fortran files...")
     poolsize = min(len(deltaCompTasks), rp.N_CORES)
     try:
-        leedbase.monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+        parallelization.monitoredPool(rp, poolsize,
+                                      compileDelta,
+                                      deltaCompTasks)
     except Exception:
         # save log files in case of error:
         for ct in deltaCompTasks:
@@ -526,7 +529,7 @@ def deltas(sl, rp, subdomain=False):
     # run executions
     logger.info("Running delta calculations...")
     poolsize = min(len(deltaRunTasks), rp.N_CORES)
-    leedbase.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+    parallelization.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
     if rp.STOP:
         return
     logger.info("Delta calculations finished.")
@@ -588,7 +591,9 @@ def deltas_domains(rp):
     if len(deltaCompTasks) > 0:
         logger.info("Compiling fortran files...")
         poolsize = min(len(deltaCompTasks), rp.N_CORES)
-        leedbase.monitoredPool(rp, poolsize, compileDelta, deltaCompTasks)
+        parallelization.monitoredPool(rp, poolsize,
+                                      compileDelta,
+                                      deltaCompTasks)
         if rp.STOP:
             return
 
@@ -596,7 +601,7 @@ def deltas_domains(rp):
     if len(deltaRunTasks) > 0:
         logger.info("Running delta calculations...")
         poolsize = min(len(deltaRunTasks), rp.N_CORES)
-        leedbase.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
+        parallelization.monitoredPool(rp, poolsize, runDelta, deltaRunTasks)
         if rp.STOP:
             return
         logger.info("Delta calculations finished.")

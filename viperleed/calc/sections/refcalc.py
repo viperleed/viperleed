@@ -22,6 +22,7 @@ from viperleed.calc.files import beams, parameters
 from viperleed.calc.files import iorefcalc
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib import parallelization
 from viperleed.calc.lib.base import splitMaxRight
 from viperleed.calc.lib.checksums import validate_multiple_files
 
@@ -505,8 +506,10 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         logger.info("Compiling fortran files...")
         poolsize = min(len(comp_tasks), rp.N_CORES)
         try:
-            leedbase.monitoredPool(rp, poolsize, compile_refcalc, comp_tasks,
-                                   update_from=parent_dir)
+            parallelization.monitoredPool(rp, poolsize,
+                                          compile_refcalc,
+                                          comp_tasks,
+                                          update_from=parent_dir)
         except Exception:
             # save log files in case of error:
             for ct in comp_tasks:
@@ -517,8 +520,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
         # run executions
         logger.info("Running reference calculations...")
         poolsize = min(len(ref_tasks), rp.N_CORES)
-        leedbase.monitoredPool(rp, poolsize, run_refcalc, ref_tasks,
-                               update_from=parent_dir)
+        parallelization.monitoredPool(rp, poolsize, run_refcalc, ref_tasks,
+                                      update_from=parent_dir)
         if rp.STOP:
             return
         logger.info("Reference calculations finished. Processing files...")

@@ -11,17 +11,14 @@ __license__ = 'GPLv3+'
 
 import copy
 import logging
-import multiprocessing
 import os
 from pathlib import Path
 import re
 import shutil
 import subprocess
-import time
 from zipfile import ZipFile
 
 import numpy as np
-import psutil
 from quicktions import Fraction
 
 # The following import line is potentially the cause of cyclic
@@ -103,89 +100,6 @@ def get_superlattice_repetitions(matrix):
         first_row -= second_row/second_row[1]
         first_row *= multiple  # Ensure integer
     return abs(round(matrix[0, 0])), abs(round(n_repeats / matrix[0, 0]))
-
-
-def monitoredPool(rp, poolsize, function, tasks, update_from=Path()):
-    """
-    The 'function' and 'tasks' arguments are passed on to a multiprocessing
-    pool of size 'poolsize' with apply_async. While waiting for the pool to
-    finish, the PARAMETERS file is read every second to check whether there is
-    a STOP command. If so, the pool is terminated.
-
-    Parameters
-    ----------
-    rp : Rparams object
-        Needed for the parameter update
-    poolsize : int
-        passed on to multiprocessing.Pool
-    function : function
-        passed on to multiprocessing.Pool.apply_async
-    tasks : list of arguments
-        treated like the arguments of pool.map, i.e. each element is passed on
-        in a seperate call of 'function' via multiprocessing.Pool.apply_async
-    update_from : pathlike
-        directory from which PARAMETERS should be read for updates
-
-    Returns
-    -------
-    None
-
-    """
-
-    def kill_pool(p):
-        """Kill the subprocesses, then terminate the pool."""
-        for proc in p._pool:
-            parent = psutil.Process(proc.pid)
-            for child in parent.children(recursive=True):
-                child.kill()
-        p.terminate()
-
-    def checkPoolResult(r):
-        nonlocal pool
-        nonlocal killed
-        if r != "":
-            kill_pool(pool)
-            killed = True
-        return r
-
-    pool = multiprocessing.Pool(poolsize)
-    results = []
-    killed = False
-    for task in tasks:
-        r = pool.apply_async(function, (task,), callback=checkPoolResult)
-        results.append(r)
-    pool.close()
-    try:
-        while not all(r.ready() for r in results):
-            if killed:
-                break
-            # See if user wants to STOP
-            parameters.update(rp, update_from=update_from)
-            if rp.STOP:
-                kill_pool(pool)
-                logger.info("Stopped by STOP parameter.")
-                return
-            time.sleep(1)
-    except KeyboardInterrupt:
-        logger.warning("Stopped by keyboard interrupt.")
-        kill_pool(pool)
-        raise
-    pool.join()
-    error = False
-    for r in results:
-        try:
-            v = r.get(timeout=1)
-            if v:
-                logger.error(v)
-                error = True
-        except (TimeoutError, multiprocessing.context.TimeoutError):
-            logger.error("Failed to get result from execution of {}"
-                         .format(function.__name__))
-            error = True
-    if error:
-        raise RuntimeError("Error in parallel execution of {}"
-                           .format(function.__name__))
-    return
 
 
 def getYfunc(ivfunc, v0i):
