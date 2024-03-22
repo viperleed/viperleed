@@ -1,4 +1,4 @@
-"""Tests for module viperleed.calc.lib.symmetry.
+"""Tests for module viperleed.calc.symmetry.
 
 Contains tests for symmetry-detection routines.
 """
