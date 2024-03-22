@@ -168,7 +168,7 @@ def run_calc(system_name=None,
 
     # set logging level
     if preset_params.get('LOG_LEVEL', None) is not None:
-        logger.info(f'Overriding log level to {preset_params['LOG_LEVEL']}.')
+        logger.info(f'Overriding log level to {preset_params["LOG_LEVEL"]}.')
     logger.setLevel(rp.LOG_LEVEL)
     logger.debug("PARAMETERS file was read successfully")
 
