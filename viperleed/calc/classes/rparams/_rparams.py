@@ -29,7 +29,6 @@ import numpy as np
 
 from viperleed.calc.classes.searchpar import SearchPar
 from viperleed.calc.files import beams as iobeams
-from viperleed.calc.files import iotensors
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
@@ -415,7 +414,7 @@ class Rparams:
         """
         # TENSOR_INDEX:
         if self.TENSOR_INDEX is None:
-            self.TENSOR_INDEX = iotensors.getMaxTensorIndex()
+            self.TENSOR_INDEX = leedbase.getMaxTensorIndex()
         # TL_VERSION:
         if self.source_dir is None:
             raise RuntimeError('Cannot determine highest TensErLEED version '

@@ -37,6 +37,7 @@ from viperleed.calc.files import phaseshifts
 from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
+from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import angle, rotation_matrix
 from viperleed.calc.lib.base import NonIntegerMatrixError
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
@@ -406,7 +407,7 @@ def init_domains(rp):
         logger.info(f"Fetching input files for domain {name}")
         if os.path.isdir(path):
             # check the path for Tensors
-            tensorIndex = iotensors.getMaxTensorIndex(path)
+            tensorIndex = leedbase.getMaxTensorIndex(path)
             if tensorIndex != 0:
                 try:
                     iotensors.getTensors(tensorIndex, base_dir=path,
@@ -450,7 +451,7 @@ def init_domains(rp):
                         raise RuntimeError("Error getting domain input files")
         elif os.path.isfile(path):
             try:
-                tensorIndex = iotensors.getMaxTensorIndex(target)
+                tensorIndex = leedbase.getMaxTensorIndex(target)
             except Exception:
                 tensorIndex = 0
             tensorDir = target / "Tensors" / f"Tensors_{tensorIndex + 1:03d}"

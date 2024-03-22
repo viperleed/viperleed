@@ -21,7 +21,7 @@ import shutil
 from viperleed import GLOBALS
 from viperleed.calc import LOGGER as logger
 from viperleed.calc.bookkeeper import bookkeeper, BookkeeperMode
-from viperleed.calc.files.iotensors import getMaxTensorIndex
+from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
 from viperleed.calc.run import run_calc
 
