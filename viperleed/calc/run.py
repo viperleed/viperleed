@@ -32,6 +32,9 @@ from viperleed.calc.sections.initialization import (
 from viperleed.calc.sections.run_sections import section_loop
 
 
+_DEFAULT_SYSTEM_NAME = 'unknown'
+
+
 def run_calc(system_name=None,
              console_output=True,
              slab=None,
@@ -195,11 +198,9 @@ def run_calc(system_name=None,
                        "This may cause errors.")
         rp.source_dir = _source
 
-    if system_name is not None:
-        rp.systemName = system_name
-    else:
-        logger.info('No system name specified. Using name "unknown".')
-        rp.systemName = "unknown"
+    rp.systemName = system_name or _DEFAULT_SYSTEM_NAME
+    if not system_name:
+        logger.info(f'No system name specified. Using name {rp.systemName!r}.')
 
     # check if halting condition is already in effect:
     if rp.halt >= rp.HALTING:
