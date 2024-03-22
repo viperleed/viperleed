@@ -1,14 +1,16 @@
-# -*- coding: utf-8 -*-
-"""Module initialization of viperleed.tleedmlib.sections.
+"""Module initialization of viperleed.calc.sections.
 
-Created on Aug 11 2020
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-
-Tensor LEED Manager section Initialization
+ViPErLEED calculation section INITIALIZATION.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-11'
+__license__ = 'GPLv3+'
 
 import copy
 import logging
@@ -19,11 +21,7 @@ from zipfile import ZipFile
 
 import numpy as np
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib import symmetry as tl_symmetry
-from viperleed.calc.lib.base import NonIntegerMatrixError
-from viperleed.calc.lib.base import angle, rotation_matrix
-from viperleed.calc.files.beamgen import calc_and_write_beamlist
+from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams import DomainParameters
 from viperleed.calc.classes.slab import BulkSlab, Slab
 from viperleed.calc.classes.slab import AlreadyMinimalError
@@ -31,19 +29,17 @@ from viperleed.calc.classes.slab import NoBulkRepeatError
 from viperleed.calc.classes.slab import NoVacuumError
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
-from viperleed.calc.files import beams as tl_beams, parameters
+from viperleed.calc.files import beams as iobeams, parameters
 from viperleed.calc.files import patterninfo, phaseshifts, poscar, vibrocc
-from viperleed.calc.lib.woods_notation import writeWoodsNotation
+from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.files.psgen import runPhaseshiftGen, runPhaseshiftGen_old
-from viperleed.calc.sections._sections import (ALL_INPUT_FILES,
-                                                    EXPBEAMS_NAMES)
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import NonIntegerMatrixError
+from viperleed.calc.lib.base import angle, rotation_matrix
+from viperleed.calc.lib.woods_notation import writeWoodsNotation
+from viperleed.calc.sections._sections import ALL_INPUT_FILES, EXPBEAMS_NAMES
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2020-08-11"
-
-logger = logging.getLogger("tleedm.initialization")
+logger = logging.getLogger(__name__)
 
 ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 
@@ -62,8 +58,8 @@ def initialization(sl, rp, subdomain=False):
 
     # if necessary, run findSymmetry:
     if sl.planegroup == "unknown":
-        tl_symmetry.findSymmetry(sl, rp)
-        tl_symmetry.enforceSymmetry(sl, rp)
+        symmetry.findSymmetry(sl, rp)
+        symmetry.enforceSymmetry(sl, rp)
 
     # check whether the slab unit cell is minimal:
     try:
@@ -112,7 +108,7 @@ def initialization(sl, rp, subdomain=False):
     if sl.symbaseslab is not None:
         logger.info("A symmetry cell transformation was found. Re-running "
                     "slab symmetry search using base unit cell...")
-        tl_symmetry.getSymBaseSymmetry(sl, rp)
+        symmetry.getSymBaseSymmetry(sl, rp)
         try:
             poscar.write(sl.symbaseslab, filename='POSCAR_mincell',
                          comments='all')
@@ -228,10 +224,10 @@ def initialization(sl, rp, subdomain=False):
 
         # bulk plane group detection:
         logger.info("Starting bulk symmetry search...")
-        tl_symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
+        symmetry.findSymmetry(bsl, rp, bulk=True, output=False)
         bsl.revert_unit_cell()  # keep origin matched with main slab
         logger.info(f"Found bulk plane group: {bsl.foundplanegroup}")
-        tl_symmetry.findBulkSymmetry(bsl, rp)
+        symmetry.findBulkSymmetry(bsl, rp)
 
         # write POSCAR_bulk
         bsl = copy.deepcopy(sl.bulkslab)
@@ -347,7 +343,7 @@ def initialization(sl, rp, subdomain=False):
     calc_and_write_beamlist(sl, rp, beamlist_name="BEAMLIST")
 
     try:
-        rp.beamlist = tl_beams.readBEAMLIST()
+        rp.beamlist = iobeams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
     except Exception:
         logger.error("Error while reading required file BEAMLIST")
@@ -358,11 +354,11 @@ def initialization(sl, rp, subdomain=False):
 
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
         if rp.fileLoaded["EXPBEAMS"]:
-            tl_beams.checkEXPBEAMS(sl, rp)
+            iobeams.checkEXPBEAMS(sl, rp)
         # write and sort IVBEAMS
         if not rp.fileLoaded["IVBEAMS"]:
             try:
-                rp.ivbeams = tl_beams.writeIVBEAMS(sl, rp)
+                rp.ivbeams = iobeams.writeIVBEAMS(sl, rp)
                 rp.ivbeams_sorted = False
                 rp.fileLoaded["IVBEAMS"] = True
                 rp.manifest.append("IVBEAMS")
@@ -371,7 +367,7 @@ def initialization(sl, rp, subdomain=False):
                              "EXPBEAMS data.")
                 raise
     if rp.fileLoaded["IVBEAMS"] and not rp.ivbeams_sorted:
-        rp.ivbeams = tl_beams.sortIVBEAMS(sl, rp)
+        rp.ivbeams = iobeams.sortIVBEAMS(sl, rp)
         rp.ivbeams_sorted = True
 
     # Create directory compile_logs in which logs from compilation will be saved
@@ -497,7 +493,7 @@ def init_domains(rp):
                     raise
                 dp.sl.full_update(dp.rp)
                 try:
-                    dp.rp.ivbeams = tl_beams.readIVBEAMS()
+                    dp.rp.ivbeams = iobeams.readIVBEAMS()
                 except FileNotFoundError:
                     pass
                 except Exception:
@@ -604,18 +600,18 @@ def init_domains(rp):
                       domains=True,
                       beamlist_name='BEAMLIST')
     try:
-        rp.beamlist = tl_beams.readBEAMLIST()
+        rp.beamlist = iobeams.readBEAMLIST()
         rp.fileLoaded["BEAMLIST"] = True
     except Exception:
         logger.error("Error while reading required file BEAMLIST")
         raise
     # if EXPBEAMS was loaded, it hasn't been checked yet - check now
     if rp.fileLoaded["EXPBEAMS"]:
-        tl_beams.checkEXPBEAMS(None, rp, domains=True)
+        iobeams.checkEXPBEAMS(None, rp, domains=True)
     # write and sort IVBEAMS
     if not rp.fileLoaded["IVBEAMS"]:
         try:
-            rp.ivbeams = tl_beams.writeIVBEAMS(None, rp, domains=True)
+            rp.ivbeams = iobeams.writeIVBEAMS(None, rp, domains=True)
             rp.ivbeams_sorted = False
             rp.fileLoaded["IVBEAMS"] = True
             rp.manifest.append("IVBEAMS")
@@ -624,7 +620,7 @@ def init_domains(rp):
                          "EXPBEAMS data.")
             raise
     if not rp.ivbeams_sorted:
-        rp.ivbeams = tl_beams.sortIVBEAMS(None, rp)
+        rp.ivbeams = iobeams.sortIVBEAMS(None, rp)
         rp.ivbeams_sorted = True
 
     rp.updateDerivedParams()  # Also sets LMAX

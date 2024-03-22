@@ -1,11 +1,4 @@
-# -*- coding: utf-8 -*-
 """Module _known_parameters of viperleed.calc.files.parameters.
-
-Created on Tue Aug 18 16:56:39 2020
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
 
 Initial version by @fkraushofer in 2020, major rewrite by @amimre
 and @michele-riva in June 2023. This module used to be part of
@@ -17,13 +10,23 @@ names used internally when reading/writing/interpreting a PARAMETERS
 file.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-18'
+__license__ = 'GPLv3+'
+
 from difflib import get_close_matches
 import logging
 
 from .errors import ParameterNotRecognizedError
 
 
-_LOGGER = logging.getLogger('tleedm.files.parameters')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 # Allowed parameters with their 'standard' names in alphabetic order

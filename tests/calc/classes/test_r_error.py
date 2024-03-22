@@ -1,10 +1,10 @@
-"""Tests for viperleed.calc.classes.RError.
+"""Tests for viperleed.calc.classes.RError."""
 
-Created on 2023
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-03-09'
 
 import numpy as np
 import pytest

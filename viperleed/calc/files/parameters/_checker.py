@@ -1,13 +1,15 @@
-# -*- coding: utf-8 -*-
 """Module _checker of viperleed.calc.files.parameters.
-
-Created on 2023-10-25
-
-@author: Michele Riva (@michele-riva)
 
 Defines the ParametersChecker class, useful for checking that parameters
 read from a PARAMETERS file do not clash with one another.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-10-25'
+__license__ = 'GPLv3+'
 
 import operator
 

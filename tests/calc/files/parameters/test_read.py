@@ -1,9 +1,9 @@
-"""Tests for modules _read/_reader of viperleed.calc.files.parameters.
+"""Tests for modules _read/_reader of viperleed.calc.files.parameters."""
 
-Created on 2023-10-17
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-17'
 
 import logging
 

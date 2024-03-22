@@ -1,12 +1,15 @@
 """Module symmetry_eps of viperleed.calc.classes.rparams.special.
 
-Created on 2023-12-11
-
-@author: Alexander Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-
-Defines the class SymmetryEps, which is a float with optional z value.
+Defines the SymmetryEps class, a float with optional z value.
 """
+
+__authors__ = (
+    'Alexander Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-12-11'
+__license__ = 'GPLv3+'
 
 from functools import total_ordering
 from numbers import Real

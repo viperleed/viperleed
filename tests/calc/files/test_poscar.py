@@ -1,18 +1,18 @@
-"""Tests for module viperleed.calc.files.poscar.
+"""Tests for module viperleed.calc.files.poscar."""
 
-Created on 2023-07-12
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-12'
 
 import io
 
 import pytest
 from pytest_cases import parametrize_with_cases, fixture
 
+from viperleed.calc import symmetry
 from viperleed.calc.files import poscar
-from viperleed.calc.lib import symmetry
 from viperleed.calc.lib.base import pairwise
 
 from ...helpers import exclude_tags

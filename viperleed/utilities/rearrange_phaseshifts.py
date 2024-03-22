@@ -1,21 +1,19 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility: rearrange phaseshifts.
 
 Reads a PHASESHIFTS file and allows the user to copy and rearrange the blocks.
 """
 
-import time
-import os
-import sys
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-12-16'
+__license__ = 'GPLv3+'
 
-cd = os.path.realpath(os.path.dirname(__file__))
+import time
 
 from viperleed.calc.files.phaseshifts import (readPHASESHIFTS,
                                               writePHASESHIFTS)
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "2019-12-16"
 
 ###############################################
 #                  MAIN                       #

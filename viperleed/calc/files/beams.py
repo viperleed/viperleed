@@ -1,8 +1,15 @@
-# -*- coding: utf-8 -*-
 """Functions for reading and writing beams files.
 
 This includes: BEAMLIST, IVBEAMS, EXPBEAMS and AUXEXPBEAMS.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
 
 import copy
 from io import StringIO
@@ -13,16 +20,13 @@ import re
 import fortranformat as ff
 import numpy as np
 
-from viperleed.guilib import project_to_first_domain
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import parseMathSqrt
 from viperleed.calc.classes.beam import Beam
+from viperleed.guilib import project_to_first_domain
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-19"
 
-logger = logging.getLogger("tleedm.files.beams")
+logger = logging.getLogger(__name__)
 
 
 def averageBeams(beams, weights=None):

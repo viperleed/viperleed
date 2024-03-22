@@ -1,14 +1,17 @@
-"""Package slab of viperleed.tleedmlib.classes.
-
-Created on 2023-02-21
-
-@author: Michele Riva
-@author: Florian Kraushofer
+"""Package slab of viperleed.calc.classes.
 
 This package is a result of the refactor of what used to be the slab
 module. It is now split into multiple submodule to ease maintenance.
 The API of the package remains unchanged.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-02-21'
+__license__ = 'GPLv3+'
 
 from .bulk_slab import BulkSlab
 from .errors import AlreadyMinimalError

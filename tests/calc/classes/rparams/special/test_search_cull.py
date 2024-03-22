@@ -1,17 +1,15 @@
-"""Tests for module search_cull of viperleed.calc.classes.rparams.special.
+"""Tests for module search_cull of viperleed.calc.classes.rparams.special."""
 
-Created on 2023-12-14
-
-@author: Michele Riva (@michele-riva)
-"""
-
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-12-14'
 
 import pytest
 from pytest_cases import fixture, parametrize
 
-from viperleed.calc.classes.rparams.special.search_cull import (
-    SearchCull, SearchCullType
-    )
+from viperleed.calc.classes.rparams.special.search_cull import SearchCull
+from viperleed.calc.classes.rparams.special.search_cull import SearchCullType
 
 
 @fixture(name='value_and_type')

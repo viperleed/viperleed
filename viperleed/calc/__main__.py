@@ -1,28 +1,29 @@
-
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""__main__.py of ViPErLEED (viperleed) calc
+"""Module __main__ of ViPErLEED (viperleed) calc
 
 See viperleed.calc.__init__.py for more information.
 """
-from pathlib import Path
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-08-03'
+__license__ = 'GPLv3+'
+
 import argparse
-import logging
 import multiprocessing
 import os
+from pathlib import Path
 import shutil
 
 from viperleed import GLOBALS
+from viperleed.calc import LOGGER as logger
 from viperleed.calc.bookkeeper import bookkeeper, BookkeeperMode
-from viperleed.calc import run_tleedm
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-
-logger = logging.getLogger("tleedm")
+from viperleed.calc.run import run_calc
 
 
 def add_calc_parser_arguments(parser):
@@ -72,7 +73,7 @@ def add_calc_parser_arguments(parser):
         help="specify path to TensErLEED source code",
         type=str
         )
-    parser.add_argument(                                                        #TODO: implement (for cont at end; warn if called with --no_cont)
+    parser.add_argument(                                                        # TODO: implement (for cont at end; warn if called with --no_cont)
         "-j", "--job-name",
         help=("defines a name for the current run. Will be appended to the name "
             "of the history folder that is created, and is logged in "
@@ -216,11 +217,9 @@ def main(args=None):
     # go to work directory, execute there
     cwd = Path.cwd().resolve()
     os.chdir(work_path)
-    run_tleedm(
-        system_name=_system_name,
-        source=tensorleed_path,
-        override_log_level=override_log_level
-    )
+    run_calc(system_name=_system_name,
+             source=tensorleed_path,
+             override_log_level=override_log_level)
 
     # copy back everything listed in manifest
     manifest = []

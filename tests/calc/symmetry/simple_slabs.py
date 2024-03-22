@@ -1,13 +1,14 @@
-"""Module simple_slabs of viperleed.tests.test_symmetry.
-
-Created on 2023-04-13
-
-@author: Michele Riva
+"""Module simple_slabs of viperleed.tests.calc.symmetry.
 
 This module defines two classes as containers of pytest cases. The
 cases consist of hand-made slabs with all relevant combinations of
-plane groups, including atoms at all Wychoff positions.
+plane groups, including atoms at all Wyckoff positions.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-04-13'
 
 from enum import Enum
 

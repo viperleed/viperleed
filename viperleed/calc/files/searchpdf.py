@@ -1,16 +1,17 @@
-# -*- coding: utf-8 -*-
-"""Functions for writing the SearchProgress.pdf and SearchReport.pdf files.
-"""
-import numpy as np
+"""Functions for writing the SearchProgress.pdf and SearchReport.pdf files."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
+
 import logging
+
 from matplotlib.markers import MarkerStyle
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-19"
-
-logger = logging.getLogger("tleedm.files.searchpdf")
-logger.setLevel(logging.INFO)
+import numpy as np
 
 try:
     import matplotlib
@@ -18,11 +19,15 @@ try:
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-    plt.style.use('viperleed.tleedm')
+    plt.style.use('viperleed.calc')
 except Exception:
     _CAN_PLOT = False
 else:
     _CAN_PLOT = True
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,

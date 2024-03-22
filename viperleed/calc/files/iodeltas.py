@@ -1,21 +1,28 @@
-# -*- coding: utf-8 -*-
-"""Functions for reading and writing files relevant to the delta calculation.
+"""Module iodeltas of viperleed.calc.files.
+
+Defines functions for reading and writing files relevant to the
+delta-amplitudes calculation.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
+
 import logging
-import numpy as np
 import os
 import shutil
 
 import fortranformat as ff
+import numpy as np
 
 from viperleed.calc.files.beams import writeAUXBEAMS
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2020-08-19"
-
-logger = logging.getLogger("tleedm.files.iodeltas")
+logger = logging.getLogger(__name__)
 
 
 def checkDelta(filename, at, el, rp):

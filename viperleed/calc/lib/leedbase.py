@@ -1,14 +1,22 @@
-# -*- coding: utf-8 -*-
-"""LEED-specific functions used throughout the viperleed calc package.
-"""
+"""LEED-specific functions used throughout the viperleed calc package."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-06-13'
+__license__ = 'GPLv3+'
+
 import copy
 import logging
 import multiprocessing
 import os
 from pathlib import Path
 import re
-import subprocess
 import shutil
+import subprocess
 import time
 from zipfile import ZipFile
 
@@ -16,18 +24,15 @@ import numpy as np
 import psutil
 from quicktions import Fraction
 
-from viperleed.guilib import get_equivalent_beams
-from viperleed.calc.lib.base import cosvec, ensure_integer_matrix, lcm
-from viperleed.calc.lib.base import SingularMatrixError
-
-# The following imports are potentially the cause of cyclic
+# The following import line is potentially the cause of cyclic
 # imports. They are used exclusively as part of getTensorOriStates
 # which could potentially be split off somewhere else
 from viperleed.calc.files import parameters, poscar, vibrocc
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2019-06-13"
+from viperleed.calc.lib.base import cosvec, ensure_integer_matrix, lcm
+from viperleed.calc.lib.base import SingularMatrixError
+from viperleed.guilib import get_equivalent_beams
+
 
 # constants for conversion Angstrom and eV <-> atomic units
 HARTREE_TO_EV = 27.211396
@@ -35,7 +40,7 @@ EV_TO_HARTREE = 1/HARTREE_TO_EV
 BOHR_TO_ANGSTROM = 0.529177210903
 ANGSTROM_TO_BOHR = 1/BOHR_TO_ANGSTROM
 
-logger = logging.getLogger("tleedm.leedbase")
+logger = logging.getLogger(__name__)
 
 
 ###############################################

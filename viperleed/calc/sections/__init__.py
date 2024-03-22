@@ -1,4 +1,4 @@
-"""Package section of viperleed.calc.
+"""Package sections of viperleed.calc.
 
 This package contains the main functionality that runs the various
 logically different parts of TensErLEED, and takes care of using the
@@ -39,6 +39,11 @@ superpos:
     refcalc
 """
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-11'
+__license__ = 'GPLv3+'

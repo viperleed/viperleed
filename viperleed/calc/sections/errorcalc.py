@@ -1,6 +1,12 @@
-# -*- coding: utf-8 -*-
-"""Section Error calculation.
-"""
+"""Section Error calculation."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2021-03-18'
+__license__ = 'GPLv3+'
 
 import copy
 import logging
@@ -9,18 +15,14 @@ from pathlib import Path
 
 from viperleed.calc.classes.r_error import R_Error
 from viperleed.calc.classes.searchpar import SearchPar
-from viperleed.calc.files import ioerrorcalc as tl_io
+from viperleed.calc.files import ioerrorcalc
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.sections.deltas import deltas as section_deltas
 from viperleed.calc.sections.rfactor import rfactor as section_rfactor
 from viperleed.calc.sections.superpos import superpos as section_superpos
 
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2021-03-18"
-
-logger = logging.getLogger("tleedm.error")
+logger = logging.getLogger(__name__)
 
 
 def errorcalc(sl, rp):
@@ -135,13 +137,15 @@ def errorcalc(sl, rp):
                     "R-factor.")
     else:
         # Write var(R) to log as info.
-        var_r_info = tl_io.extract_var_r(errors)
+        var_r_info = ioerrorcalc.extract_var_r(errors)
         if any(var_r_info.values()):
             var_str = []
             for mode, var_r in var_r_info.items():
                 if not var_r:
                     continue
-                var_str.append(f"{mode}: {tl_io.format_col_content(var_r)}")
+                var_str.append(
+                    f"{mode}: {ioerrorcalc.format_col_content(var_r)}"
+                    )
             var_str = ", ".join(var_str)
             logger.info(f"Found values for var(R): {var_str}")
         else:
@@ -150,15 +154,18 @@ def errorcalc(sl, rp):
     save_path = rp.workdir
 
     # Errors_summary.csv and Errors.zip
-    summary_csv_content, individual_files = tl_io.generate_errors_csv(errors)
-    tl_io.write_errors_archive(individual_files,
-                               archive_path=save_path,
-                               compression_level=rp.ZIP_COMPRESSION_LEVEL,
-                               archive_fname="Errors.zip")
-    tl_io.write_errors_summary_csv(summary_csv_content,
-                                   summary_path=save_path,
-                                   summary_fname="Errors_summary.csv")
+    (summary_csv_content,
+     individual_files) = ioerrorcalc.generate_errors_csv(errors)
+    ioerrorcalc.write_errors_archive(
+        individual_files,
+        archive_path=save_path,
+        compression_level=rp.ZIP_COMPRESSION_LEVEL,
+        archive_fname="Errors.zip"
+        )
+    ioerrorcalc.write_errors_summary_csv(summary_csv_content,
+                                         summary_path=save_path,
+                                         summary_fname="Errors_summary.csv")
 
     # Errors.pdf
-    errors_figs = tl_io.make_errors_figs(errors, formatting=rp.PLOT_IV)
-    tl_io.write_errors_pdf(errors_figs, filename = "Errors.pdf")
+    errors_figs = ioerrorcalc.make_errors_figs(errors, formatting=rp.PLOT_IV)
+    ioerrorcalc.write_errors_pdf(errors_figs, filename = "Errors.pdf")

@@ -1,17 +1,25 @@
-# -*- coding: utf-8 -*-
-"""Data structures and functions for storing and manipulating errors curves.
+"""Module r_error of viperleed.calc.classes.
+
+Defines data structures and functions for storing and manipulating
+errors curves.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-01-12'
+__license__ = 'GPLv3+'
+
 import numpy as np
 import copy
 import logging
 
 from viperleed.calc.lib.base import range_to_str
 
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Florian Kraushofer (@fkraushofer)"]
-__created__ = "2023-01-12"
 
-logger = logging.getLogger("tleedm.classes.r_error")
+logger = logging.getLogger(__name__)
 
 
 class R_Error():
@@ -22,7 +30,7 @@ class R_Error():
     linked.
     """
 
-    def __init__(self, r_type, atoms, mode, rfacs, disp_label, lin_disp, 
+    def __init__(self, r_type, atoms, mode, rfacs, disp_label, lin_disp,
                  v0i=None, energy_range=None):
         self.r_type = r_type # Type of R-factor (int). Only Pendry R-factor (r_type=1) can give statistical error estimates.
         self.atoms = atoms  # atoms that have been varied together
@@ -63,15 +71,15 @@ class R_Error():
             else:
                 k = "all"
             self.displacements = copy.deepcopy(d[k])
-            
+
         if v0i and energy_range and r_type==1:
             self.calc_var_r(v0i, energy_range)
 
 
     def calc_var_r(self, v0i, energy_range):
         r"""Calculates the variance of the Pendry R-factor.
-        
-        The variance of the Pendry R-factor can be estimated from the 
+
+        The variance of the Pendry R-factor can be estimated from the
         imaginary part of the inner potential and the measurement energy
         range as:
 
@@ -125,7 +133,7 @@ class R_Error():
         ValueError
             If self.lin_disp is not initialized.
         """
-    
+
         # error estimates are only available for Pendry R-factor
         if self.r_type != 1:  #TODO: when we introduce a new R-factor, make sure to update this.
             return (None, None)

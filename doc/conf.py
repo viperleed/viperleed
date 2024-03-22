@@ -1,20 +1,29 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""Configuration file for the Sphinx documentation builder.
 
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+For the full list of built-in configuration values, see the documentation:
+https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""
+
+__authors__ = (
+    'Alexander M. Imre (@ammimre)',
+    )
+__created__ = '2022-10-17'
 
 import datetime
+
 import sphinx_rtd_theme
 
 import viperleed
+
+
+# -- Project information -----------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'ViPErLEED'
 copyright = f'{datetime.date.today().year}, ViPErLEED-developers'
 author = 'ViPErLEED-developers'
 release = viperleed.__version__
+
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -96,7 +105,7 @@ latex_elements = {
     \usepackage{newunicodechar}
     \newunicodechar{α}{$\alpha$}
     \newunicodechar{Δ}{$\Delta$}
-    
+
     \textblockorigin{28mm}{16.5mm} % position x,y wrt top-left corner of page
     %\setlength{\TPHorizModule}{\pdfpagewidth} % text block width = page width
     \setlength{\TPHorizModule}{\textwidth} % text block width = text width

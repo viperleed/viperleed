@@ -1,9 +1,4 @@
-"""Test configuration for viperleed.tests.classes.
-
-Created on 2023-07-26
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
+"""Test configuration for viperleed.tests.calc.classes.
 
 Fixtures
 --------
@@ -14,6 +9,12 @@ manual_slab_1_atom_trigonal
 manual_slab_3_atoms
     An orthorhombic slab with three atoms.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-26'
 
 import numpy as np
 from pytest_cases import fixture

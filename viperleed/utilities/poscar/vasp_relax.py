@@ -1,16 +1,18 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility: Preparing POSCAR for VASP relaxation
-
-Created on 2023-08-02
-
-@author: Alexander M. Imre
-@author: Michele Riva
 
 This utility takes a slab in POSCAR format as used by ViPErLEED and prepares it
 for relaxation in VASP. This includes adding a vacuum gap on top of the slab,
 writing the "Selective dynamics" flags, and giving logical flags for each atom.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-08-02'
+__license__ = 'GPLv3+'
+
 import argparse
 import logging
 import sys
@@ -22,10 +24,6 @@ from viperleed.utilities.poscar import add_verbose_option
 # TODO: add an option to add a mirror image to the slab, so that the slab is
 #       symmetric with respect to the center of the slab. This could be useful
 #       when dealing with a polar surface.
-
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2023-08-02"
 
 
 logger = logging.getLogger(

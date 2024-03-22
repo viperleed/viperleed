@@ -1,11 +1,4 @@
-# -*- coding: utf-8 -*-
 """Module _interpret of viperleed.calc.files.parameters.
-
-Created on Tue Aug 18 16:56:39 2020
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
 
 Initial version by @fkraushofer in 2020, major rewrite by @amimre
 and @michele-riva in June 2023. This module used to be part of
@@ -14,6 +7,15 @@ parameters.py. Refactored in October 2023.
 Functions and classes for interpreting the contents previously
 read from a PARAMETERS file.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-18'
+__license__ = 'GPLv3+'
 
 from collections.abc import Sequence
 import copy
@@ -61,7 +63,8 @@ from ._known_parameters import KNOWN_PARAMS, is_deprecated, warn_if_deprecated
 from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
 
-_LOGGER = logging.getLogger('tleedm.files.parameters')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 # Bool parameters for which to create interpret...() methods automatically.

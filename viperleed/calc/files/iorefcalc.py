@@ -1,6 +1,15 @@
-# -*- coding: utf-8 -*-
-"""Functions for reading and writing files relevant to the reference calculation
+"""Module iorefcalc of viperleed.calc.files.
+
+Defines functions for reading and writing files relevant to the
+reference calculation.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
 
 import copy
 import logging
@@ -9,15 +18,12 @@ import os
 import fortranformat as ff
 import numpy as np
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import fortranContLine, splitMaxRight
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import fortranContLine, splitMaxRight
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "19.08.2020"
-
-logger = logging.getLogger("tleedm.files.iorefcalc")
+logger = logging.getLogger(__name__)
 
 
 def combine_tensors(oripath=".", targetpath=".", buffer=0):

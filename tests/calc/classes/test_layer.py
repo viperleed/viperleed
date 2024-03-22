@@ -1,9 +1,9 @@
-"""Tests for module viperleed.calc.classes.layer.
+"""Tests for module viperleed.calc.classes.layer."""
 
-Created on 2023-10-04
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-04'
 
 from contextlib import contextmanager
 from dataclasses import dataclass

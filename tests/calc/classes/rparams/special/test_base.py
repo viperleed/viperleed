@@ -1,9 +1,9 @@
-"""Tests for module _base of viperleed.calc.classes.rparams.special.
+"""Tests for module _base of viperleed.calc.classes.rparams.special."""
 
-Created on 2023-10-27
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-27'
 
 from dataclasses import dataclass
 

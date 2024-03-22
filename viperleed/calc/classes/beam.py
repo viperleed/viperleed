@@ -1,12 +1,21 @@
-# -*- coding: utf-8 -*-
+"""Module beam of viperleed.calc.classes.
+
+Defines the Beam class, a container of information concerning a
+diffraction beam.
+"""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-12-03'
+__license__ = 'GPLv3+'
+
 import math
 
 import numpy as np
 from quicktions import Fraction
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2019-12-03"
 
 
 class Beam:

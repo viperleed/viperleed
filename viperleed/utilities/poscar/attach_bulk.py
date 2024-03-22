@@ -1,23 +1,26 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility: Attach Bulk
 
-Takes a slab POSCAR and adds a bulk POSCAR on the bottom, rescaling the unit
-cell. Very primitive script, should be updated to include more recent
-functionality.
+Takes a slab POSCAR and adds a bulk POSCAR on the bottom, rescaling the
+unit cell. Very primitive script, should be updated to include more
+recent functionality.
 """
-import time
-import logging
-import copy
 
-import numpy as np
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-06-14'
+__license__ = 'GPLv3+'
+
+import copy
+import logging
+import time
 from timeit import default_timer as timer
 
-from viperleed.calc.files import poscar
+import numpy as np
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2019-06-14"
+from viperleed.calc.files import poscar
 
 
 ###############################################

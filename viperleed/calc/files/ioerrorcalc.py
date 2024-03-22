@@ -1,17 +1,26 @@
-# -*- coding: utf-8 -*-
-"""Functions for reading and writing files relevant to the error calculation.
+"""Module ioerrorcalc of viperleed.calc.files.
+
+Functions for reading and writing files relevant to the error
+calculation.
 """
-import numpy as np
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2021-03-18'
+__license__ = 'GPLv3+'
+
 import logging
 import re
-from scipy import interpolate
 from zipfile import ZipFile, ZIP_DEFLATED
+
+import numpy as np
+from scipy import interpolate
 
 from viperleed.calc.lib.base import range_to_str, max_diff
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2021-03-18"
 
 try:
     import matplotlib
@@ -19,15 +28,15 @@ try:
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-    # import matplotlib.ticker as plticker
-    plt.style.use('viperleed.tleedm')
+    plt.style.use('viperleed.calc')
 except Exception:
     _CAN_PLOT = False
 else:
     _CAN_PLOT = True
 
-logger = logging.getLogger("tleedm.files.ioerrorcalc")
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 def extract_var_r(errors):
     var_r_info = {
@@ -134,13 +143,13 @@ def geo_errors_csv_content(error):
     -------
     dict
         columns dict containing displacements and R-factors.
-        
+
     Raises
     ------
     ValueError
         If error.mode is not "geo".
     """
-    
+
     if error.mode != "geo":
         raise ValueError(f'Cannot format errors of type "{error.mode}"')
     columns = {
@@ -167,7 +176,7 @@ def vib_errors_csv_content(error):
     -------
     dict
         columns dict containing displacements and R-factors.
-        
+
     Raises
     ------
     ValueError
@@ -199,7 +208,7 @@ def occ_errors_csv_content(error):
     -------
     dict
         columns dict containing displacements and R-factors.
-        
+
     Raises
     ------
     ValueError
@@ -228,7 +237,7 @@ def get_string_from_columns(columns, sep=","):
     ----------
     columns : dict
         dict holding the contents to be written in the CSV. Keys are not
-        used, values must be a list of entries for each column. Entries 
+        used, values must be a list of entries for each column. Entries
         can be str, int, float or None.
     sep : str
         CSV separator character to be used. Default is ",".
@@ -514,7 +523,7 @@ def _error_legends(mode, mode_errors):
     for err in mode_errors:
         # group sort atoms by site
         sites = [at.site for at in err.atoms]
-        atom_groups = {site:[at for at in err.atoms if at.site == site] 
+        atom_groups = {site:[at for at in err.atoms if at.site == site]
                        for site in sites}
         label = "Atoms " if len(err.atoms) > 1 else "Atom "
         label_parts = []

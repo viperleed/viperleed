@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
 """Module _reader of viperleed.calc.files.parameters.
-
-Created on 2023-10-16
-
-@author: Michele Riva (@michele-riva)
 
 This module is based on the original version of readPARAMETERS from
 @fkraushofer (2020). This module exists only to avoid cyclic imports
@@ -14,6 +9,13 @@ some functionality from the other module.
 Defines context-manager, iterator classes for reading parameters from
 a PARAMETERS file.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-10-16'
+__license__ = 'GPLv3+'
 
 from collections.abc import Iterator
 from contextlib import AbstractContextManager
@@ -29,7 +31,8 @@ from ._known_parameters import from_alias, did_you_mean
 from ._utils import Assignment
 
 
-_LOGGER = logging.getLogger('tleedm.files.parameters')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 class ParametersReader(AbstractContextManager, Iterator):

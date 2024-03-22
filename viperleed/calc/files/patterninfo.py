@@ -1,12 +1,16 @@
-# -*- coding: utf-8 -*-
-"""Functions for reading and writing PatternInfo.tlm
-"""
+"""Functions for reading and writing PatternInfo.tlm."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
+
 import logging
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)"]
-__created__ = "2020-08-19"
 
-logger = logging.getLogger("tleedm.files.patterninfo")
+logger = logging.getLogger(__name__)
 
 
 def writePatternInfo(sl, rp, filename="PatternInfo.tlm"):

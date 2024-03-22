@@ -1,9 +1,9 @@
-"""Tests for module layer_cuts of viperleed.calc.classes.rparams.special.
+"""Tests for module layer_cuts of viperleed.calc.classes.rparams.special."""
 
-Created on 2023-10-22
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-22'
 
 from dataclasses import dataclass
 

@@ -1,14 +1,17 @@
-"""Module sym_entity of viperleed.tleedmlib.classes.
-
-Created on 2023-02-16
-
-@author: Michele Riva (@michele-riva)
-@author: Florian Kraushofer (@fkraushofer)
+"""Module sym_entity of viperleed.calc.classes.
 
 Part of the functionality defined here used to be in the slab module.
-Defines SymEntity and its subclasses SymPlane and RotationAxis, which
-represent symmetry operations with a 2D location.
+Defines the SymPlane class, which represent a mirror/glide operations
+with a 2D location.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-02-16'
+__license__ = 'GPLv3+'
 
 import numpy as np
 

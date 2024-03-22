@@ -1,12 +1,7 @@
-"""Test configuration for tests/sections.
-
-Created on 2023-07-26
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
+"""Test configuration for tests.calc.sections.
 
 Defines fixtures useful for testing the successful execution of
-different segments of tleedm.
+different segments of viperleed.calc.
 
 Fixtures
 --------
@@ -22,14 +17,20 @@ search_files_ag100
     INITIALIZATION + SEARCH run, for Ag(100) only
 """
 
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-26'
+
 import shutil
 from zipfile import ZipFile
 
 import pytest
 import pytest_cases
 
-from viperleed.calc import run_tleedm
 from viperleed.calc.lib.base import copytree_exists_ok
+from viperleed.calc.run import run_calc
 
 from ...helpers import TEST_DATA, execute_in_dir
 
@@ -107,11 +108,11 @@ class BaseTleedmFilesSetup:
         """Return the path to the work directory."""
         return self.test_path / 'work'
 
-    def run_tleedm_from_setup(self, source, preset_params):
+    def run_calc_from_setup(self, source, preset_params):
         """Move to work folder, execute, collect outcome, go back home."""
         with execute_in_dir(self.work_path):
-            self.failed = run_tleedm(source=source,
-                                     preset_params=preset_params)
+            self.failed = run_calc(source=source,
+                                   preset_params=preset_params)
         self.work_files_after_run = [f.name for f in self.work_path.glob('*')]
 
     def expected_file_exists(self, expected_file):
@@ -143,7 +144,7 @@ def init_files(surface, tl_version, make_section_tempdir, tensorleed_path):
         required_files=['PHASESHIFTS',],
         copy_dirs=['initialization']
         )
-    files.run_tleedm_from_setup(
+    files.run_calc_from_setup(
         source=tensorleed_path,
         preset_params={'RUN': [0,],  # only initialization
                        'TL_VERSION': tl_version,}
@@ -164,9 +165,9 @@ def refcalc_files(surface, make_section_tempdir, tensorleed_path):
         required_files=['PHASESHIFTS',],
         copy_dirs=['initialization']
         )
-    files.run_tleedm_from_setup(
+    files.run_calc_from_setup(
         source=tensorleed_path,
-        preset_params={'RUN': [0, 1],                                           # TODO: tleedm should probably automatically inject INIT!
+        preset_params={'RUN': [0, 1],                                           # TODO: calc should probably automatically inject INIT!
                        'TL_VERSION': _NON_INIT_TL_VERSION,}
         )
     return files
@@ -188,7 +189,7 @@ def delta_files_ag100(displacements, make_section_tempdir, tensorleed_path):
         )
     disp_source = files.inputs_path / 'displacements' / displacements
     files.copy_displacements(displacements_path=disp_source)
-    files.run_tleedm_from_setup(
+    files.run_calc_from_setup(
         source=tensorleed_path,
         preset_params={'RUN': [0, 2],  # init and deltas
                        'TL_VERSION': _NON_INIT_TL_VERSION,}
@@ -214,7 +215,7 @@ def search_files_ag100(displacements, deltas,
     deltas_source = files.inputs_path / 'search' / 'Deltas' / deltas
     files.copy_displacements(disp_source)
     files.copy_deltas(deltas_source)
-    files.run_tleedm_from_setup(
+    files.run_calc_from_setup(
         source=tensorleed_path,
         preset_params={'RUN': [0, 3],  # init and search
                        'TL_VERSION': _NON_INIT_TL_VERSION,}

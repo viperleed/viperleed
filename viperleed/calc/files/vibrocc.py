@@ -1,22 +1,22 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 19 10:36:53 2020
+"""Functions for reading and writing the VIBROCC file."""
 
-@author: Florian Kraushofer
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
 
-Functions for reading and writing the VIBROCC file
-"""
 import logging
-import numpy as np
 import re
+
+import numpy as np
 
 from viperleed.calc.lib.base import splitSublists, readToExc
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2023-06"
 
-logger = logging.getLogger("tleedm.files.vibrocc")
+logger = logging.getLogger(__name__)
 
 
 def readVIBROCC(rp, slab, filename='VIBROCC', silent=False):

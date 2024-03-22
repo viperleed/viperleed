@@ -1,6 +1,17 @@
-# -*- coding: utf-8 -*-
-"""Wrapper functions for running a section, and section loop for viperleed.calc.
+"""Module run_sections of viperleed.calc.sections.
+
+Wrapper functions for running a single section as well as
+a section loop.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
 
 import logging
 import os
@@ -25,17 +36,11 @@ from viperleed.calc.files.phaseshifts import readPHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC, writeVIBROCC
 
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2020-08-19"
-
-logger = logging.getLogger("tleedm.sections.run_sections")
+logger = logging.getLogger(__name__)
 
 
 def run_section(index, sl, rp):
-    """
-    Runs a specific tleedm section.
+    """Run a specific viperleed.calc section.
 
     Parameters
     ----------
@@ -322,7 +327,8 @@ def section_loop(rp, sl):
             cleanup(rp.manifest, rp)
             return 1
         except Exception:
-            logger.error("Exception during tleedm execution: ", exc_info=True)
+            logger.error("Exception during viperleed.calc execution: ",
+                         exc_info=True)
             cleanup(rp.manifest, rp)
             return 3
         if rp.halt >= rp.HALTING:

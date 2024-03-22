@@ -1,26 +1,25 @@
-# -*- coding: utf-8 -*-
 """Module atom of viperleed.calc.classes.
-
-Created on Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
 
 Class storing position and other properties of individual atoms (to be
 used with Slab, Layer, etc).
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-06-13'
+__license__ = 'GPLv3+'
+
 import copy
 import logging
+
 import numpy as np
 
 from viperleed.calc.lib.base import add_edges_and_corners
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2019-06-13"
-
-_LOGGER = logging.getLogger('tleedm.atom')
+_LOGGER = logging.getLogger(__name__)
 
 
 class AtomError(Exception):

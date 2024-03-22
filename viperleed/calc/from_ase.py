@@ -1,6 +1,14 @@
-# -*- coding: utf-8 -*-
-"""A collection of functions that run ViPErLEED from a provided ASE object.
-"""
+"""A collection of functions that run ViPErLEED from a provided ASE object."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2021-06-04'
+__license__ = 'GPLv3+'
+
 from collections import defaultdict
 from dataclasses import dataclass, FrozenInstanceError
 from io import StringIO
@@ -16,14 +24,14 @@ import numpy as np
 
 # for run_from_ase
 
-from viperleed.calc import run_tleedm
 from viperleed.calc.__main__ import get_tensorleed_path
-from viperleed.calc.lib.base import rotation_matrix
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.rparams import Rparams, TheoEnergies
 from viperleed.calc.classes.rparams import IVShiftRange
 from viperleed.calc.files import parameters, poscar
+from viperleed.calc.lib.base import rotation_matrix
+from viperleed.calc.run import run_calc
 # for rfactor_from_csv
 from viperleed.calc.files import iorfactor as rf_io
 from viperleed.calc.files.beams import readOUTBEAMS
@@ -37,11 +45,8 @@ except ImportError:
 else:
     _HAS_NEW_RFACTOR = True
 
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)",
-               "Florian Kraushofer (@fkraushofer)"]
 
-_LOGGER = logging.getLogger()
+_LOGGER = logging.getLogger(__name__)
 _INPUT_FILES = (
     "PARAMETERS",
     "VIBROCC",
@@ -289,9 +294,9 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
 
     # We are ready to run ViPErLEED! Have fun!
     try:
-        run_tleedm(slab=slab,
-                   preset_params=_make_preset_params(rparams, slab),
-                   source=get_tensorleed_path(),)
+        run_calc(slab=slab,
+                 preset_params=_make_preset_params(rparams, slab),
+                 source=get_tensorleed_path())
     except Exception as err:
         # If ViPErLEED fails, move back to home directory
         os.chdir(home)
@@ -320,7 +325,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
 
 
 def _copy_inputs_to_exec_path(inputs_path, exec_path):
-    """Copy all tleedm input files from inputs_path to exec_path."""
+    """Copy all calc input files from inputs_path to exec_path."""
     if inputs_path is None:
         return
     inputs_path = Path(inputs_path)
@@ -397,7 +402,7 @@ def _make_and_check_slab(ase_object, transforms):
 
 
 def _make_preset_params(rparams, slab):
-    """Return preset parameters to use when running tleedm."""
+    """Return preset parameters to use when running viperleed.calc."""
     if rparams.SITE_DEF:
         return {}
 
@@ -519,7 +524,7 @@ def rfactor_from_csv(                                                           
     if not _HAS_NEW_RFACTOR:
         raise ModuleNotFoundError(
             "Missing R-factor compiled Fortran extension module. "
-            "Run make in viperleed/tleedmlib/wrapped, then try again",
+            "Run make in viperleed/calc/extensions, then try again",
             name='viperleed.calc.extensions.rfactor'
             )
 

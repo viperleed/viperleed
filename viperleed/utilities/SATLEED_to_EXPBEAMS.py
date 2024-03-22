@@ -1,27 +1,28 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""ViPErLEED utility to convert experimental input for SATLEED to EXPBEAMS.CSV.
+"""ViPErLEED utility to convert experimental input for SATLEED to EXPBEAMS.csv.
 
-Reads a file containing experimental I(V) curves as used by SATLEED and converts
-it into the standard CSV format used by ViPErLEED.
+Reads a file containing experimental I(V) curves as used by SATLEED
+and converts it into the standard CSV format used by ViPErLEED.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2024-03-20'
+__license__ = 'GPLv3+'
+
 import argparse
 import logging
 from pathlib import Path
 
-import numpy as np
 import fortranformat as ff
+import numpy as np
 
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeOUTBEAMS, averageBeams
 from viperleed.guilib.base import BeamIndex
 
-__authors__ = [
-    "Alexander M. Imre (@amimre)",
-]
-__created__ = "2024-03-20"
-
-logger = logging.getLogger("viperleed.utilities.SATLEED_to_EXPBEAMS")
+logger = logging.getLogger(__name__)
 
 
 def add_cli_parser_arguments(parser):

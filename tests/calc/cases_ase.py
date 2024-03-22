@@ -1,9 +1,9 @@
-"""Test cases for test_viperleed_from_ase.
+"""Test cases for test_viperleed_from_ase."""
 
-Created on 2023-09-15
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-09-15'
 
 from dataclasses import dataclass
 

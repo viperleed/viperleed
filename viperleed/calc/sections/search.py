@@ -1,39 +1,42 @@
-# -*- coding: utf-8 -*-
-"""Section Search.
-"""
+"""Section Search."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-11'
+__license__ = 'GPLv3+'
+
 from collections import Counter
-from pathlib import Path
-from timeit import default_timer as timer
 import copy
 import logging
 import os
+from pathlib import Path
 import re
 import shutil
 import signal
 import subprocess
 import sys
 import time
+from timeit import default_timer as timer
 
+import numpy as np
+import scipy
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
-import numpy as np
-import scipy
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.classes.searchpar import SearchPar
-from viperleed.calc.files import iosearch as tl_io
+from viperleed.calc.files import iosearch
 from viperleed.calc.files import parameters
 from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.checksums import validate_multiple_files
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2020-08-11"
-
-logger = logging.getLogger("tleedm.search")
+logger = logging.getLogger(__name__)
 
 
 class SearchError(Exception):
@@ -103,15 +106,17 @@ def processSearchResults(sl, rp, search_log_path, final=True):
     # get the last block from SD.TL:
     wait_time = 5 if not final else 20
     try:
-        sdtl_content = tl_io.repeat_fetch_SDTL_last_block(which_beams=rp.SEARCH_BEAMS,
-                                           expected_params=rp.SEARCH_POPULATION,
-                                           final=final, wait_time=wait_time)
-    except tl_io.SearchIOEmptyFileError as err:
+        sdtl_content = iosearch.repeat_fetch_SDTL_last_block(
+            which_beams=rp.SEARCH_BEAMS,
+            expected_params=rp.SEARCH_POPULATION,
+            final=final, wait_time=wait_time
+            )
+    except iosearch.SearchIOEmptyFileError as err:
         if final:
             logger.error("No data found in SD.TL file!")
             rp.setHaltingLevel(2)
         raise RuntimeError("No data in SD.TL") from err
-    except tl_io.SearchIORaceConditionError:
+    except iosearch.SearchIORaceConditionError:
         return  # if we can't find a block, we also can't store it.
 
     (generation, rfactors, configs), *_ = sdtl_content
@@ -271,9 +276,9 @@ def _store_and_write_best_structure(rp, dom_slab, dom_rp, best_config, final):
         for j, sp in enumerate(dom_rp.searchpars):
             if sp.parabolaFit["min"] is not None:
                 parab_inds[j] = sp.parabolaFit["min"]
-        tl_io.writeSearchOutput(dom_slab, dom_rp, parab_inds,
-                                silent=True, suffix="_parabola")
-    tl_io.writeSearchOutput(dom_slab, dom_rp, best_config, silent=not final)
+        iosearch.writeSearchOutput(dom_slab, dom_rp, parab_inds,
+                                   silent=True, suffix="_parabola")
+    iosearch.writeSearchOutput(dom_slab, dom_rp, best_config, silent=not final)
 
 
 def _check_search_log(search_log_path):
@@ -406,7 +411,7 @@ def parabolaFit(rp, datafiles, r_best, x0=None, max_configs=0, **kwargs):
     r_cutoff = 1.0
     if datafiles:
         varR = np.sqrt(8*abs(rp.V0_IMAG) / rp.total_energy_range())*r_best
-        rc = np.array((tl_io.readDataChem(
+        rc = np.array((iosearch.readDataChem(
             rp, datafiles,
             cutoff=r_best + r_cutoff * varR,
             max_configs=max_configs
@@ -664,14 +669,14 @@ def search(sl, rp):
     # generate rf.info
     try:
         rf_info_path = rp.workdir / "rf.info"
-        rf_info_content = tl_io.writeRfInfo(sl, rp, file_path=rf_info_path)
+        rf_info_content = iosearch.writeRfInfo(sl, rp, file_path=rf_info_path)
     except Exception:
         logger.error("Error generating search input file rf.info")
         raise
     # generate PARAM and search.steu
     #   needs to go AFTER rf.info, as writeRfInfo may remove expbeams!
     try:
-        tl_io.generateSearchInput(sl, rp)
+        iosearch.generateSearchInput(sl, rp)
     except Exception:
         logger.error("Error generating search input")
         raise
@@ -692,7 +697,7 @@ def search(sl, rp):
             elif isinstance(sp.linkedTo, SearchPar):
                 this_domain_pars[i] = rp.searchpars.index(sp.linkedTo) + 1
         rp.searchResultConfig = ((100, this_domain_pars),)                      # TODO: Used to assign straight to rp.searchResultConfig[i] -> IndexError as there was only a single element.
-        tl_io.writeSearchOutput(sl, rp)
+        iosearch.writeSearchOutput(sl, rp)
         return None
 
     if rp.SUPPRESS_EXECUTION:
@@ -976,12 +981,14 @@ def search(sl, rp):
                     lastEval = t
                     newData = []
                     if os.path.isfile("SD.TL"):
-                        filepos, content = tl_io.readSDTL_next(offset=filepos)
+                        filepos, content = iosearch.readSDTL_next(
+                            offset=filepos
+                            )
                         if content:
-                            newData = tl_io.readSDTL_blocks(
+                            newData = iosearch.readSDTL_blocks(
                                 content, whichR=rp.SEARCH_BEAMS,
                                 n_expect=rp.SEARCH_POPULATION
-                            )
+                                )
                     elif t >= 900 and rp.HALTING < 3:                           # TODO: nicer with a QTimer timeout
                         stop = True
                         if tried_repeat:
@@ -1175,8 +1182,8 @@ def search(sl, rp):
                 rp.SEARCH_MAX_GEN -= sdtlGenNum
                 markers.append((genOffset, comment))
             try:
-                tl_io.generateSearchInput(sl, rp, steuOnly=True,
-                                          cull=True, info=False)
+                iosearch.generateSearchInput(sl, rp, steuOnly=True,
+                                             cull=True, info=False)
             except Exception:
                 logger.error("Error re-generating search input")
                 raise

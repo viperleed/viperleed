@@ -43,7 +43,7 @@ def export_pattern_csv(fnames, leeds, **kwargs):
         * source: str
             Path to file (or any other useful reference to it) that was used
             as an input to generate the pattern file. In GUI, this is the .tlm
-            file. When called from tleedm it may be related to the names given
+            file. When called from calc it may be related to the names given
             automatically by the bookkeeper.
         * name: str
             Descriptive text giving a name to the structure, independent of
@@ -240,7 +240,7 @@ def _format_header_(lengths, leed, **kwargs):                                   
         * source: str
             Path to file (or any other useful reference to it) that was used
             as an input to generate the pattern file. In GUI, this is the .tlm
-            file. When called from tleedm it may be related to the names given
+            file. When called from calc it may be related to the names given
             automatically by the bookkeeper.
         * name: str
             Descriptive text giving a name to the structure, independent of

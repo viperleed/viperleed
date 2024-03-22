@@ -1,21 +1,21 @@
-# -*- coding: utf-8 -*-
 """Module layer of viperleed.calc.classes.
-
-Created on Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
 
 Classes storing position and atom list of a Layer, and its SubLayer
 subclass. The latter is for atoms of the same chemical species at
 the same z position.
 """
 
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-06-13'
+__license__ = 'GPLv3+'
+
 from viperleed.calc.classes.atom_containers import AtomContainer
 from viperleed.calc.classes.atom_containers import AtomContainerError
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "2019-06-13"
 
 class LayerError(AtomContainerError):
     """Base exception for Layer objects."""

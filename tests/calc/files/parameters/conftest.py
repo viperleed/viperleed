@@ -1,9 +1,9 @@
-"""Test configuration for viperleed.calc.files.parameters.
+"""Test configuration for viperleed.calc.files.parameters."""
 
-Created on 2023-10-18
-
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-10-18'
 
 import shutil
 

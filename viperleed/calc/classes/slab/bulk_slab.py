@@ -1,14 +1,17 @@
-# -*- coding: utf-8 -*-
-"""Module bulk_slab of viperleed.tleedmlib.classes.slab.
+"""Module bulk_slab of viperleed.calc.classes.slab.
 
-Created on 2023-02-21, originally Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
-
-Defines the BulkSlab class, a BaseSlab describing a 3D-periodic crystal.
-This module was created as part of the refactoring of slab.py.
+Defines the BulkSlab class, a BaseSlab describing a 3D-periodic
+crystal. This module was created as part of the refactoring of
+slab.py (originally created on 2019-06-13).
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-02-21'
+__license__ = 'GPLv3+'
 
 import copy
 import functools

@@ -1,15 +1,18 @@
 """Module layer_cuts of viperleed.calc.classes.rparams.special.
 
-Created on 2023-10-21
-
-@author: Michele Riva (@michele-riva)
-
 Defines the LayerCutTokenType, LayerCutToken, and LayerCuts classes.
 They are convenience classes for handling user input of slab cut
 positions used to generate layers of a Slab. The code is a rewrite
 of the functionality, originally by @fkraushofer, previously split
 partly in ParameterInterpreter, partly in Slab.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-10-21'
+__license__ = 'GPLv3+'
 
 from collections.abc import Sequence
 from dataclasses import dataclass

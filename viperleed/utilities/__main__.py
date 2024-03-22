@@ -1,16 +1,19 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""ViPErLEED utilities.
-"""
-import argparse
+"""ViPErLEED utilities."""
 
-from viperleed.utilities.poscar.__main__ import main as poscar_main
-from viperleed.utilities.poscar.__main__ import add_poscar_parser_arguments
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-08-02'
+__license__ = 'GPLv3+'
+
+import argparse
 
 from viperleed.utilities import SATLEED_to_EXPBEAMS
 from viperleed.utilities import rearrange_phaseshifts
+from viperleed.utilities.poscar.__main__ import main as poscar_main
+from viperleed.utilities.poscar.__main__ import add_poscar_parser_arguments
 
-__authors__ = ["Alexander M. Imre (@amimre)",]
 
 def add_util_parser_arguments(parser):
     subparsers = parser.add_subparsers()

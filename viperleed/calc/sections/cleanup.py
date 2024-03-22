@@ -1,22 +1,25 @@
-# -*- coding: utf-8 -*-
-"""Cleanup functions, to be used between sections or before/after execution.
-"""
+"""Cleanup functions, to be used between sections or before/after execution."""
 
-import time
-from timeit import default_timer as timer
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2021-06-04'
+__license__ = 'GPLv3+'
+
 import logging
 import os
-from pathlib import Path                                                     # TODO: use everywhere
-import shutil
+from pathlib import Path                                                        # TODO: use everywhere
 import re
+import shutil
+import time
+from timeit import default_timer as timer
 from zipfile import ZipFile, ZIP_DEFLATED
 
+from viperleed.calc import LOG_PREFIX
 from viperleed.calc.lib.base import copytree_exists_ok,get_elapsed_time_str
 from viperleed.calc.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
-
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2021-06-04"
 
 # files to go in SUPP
 _SUPP_FILES = (
@@ -69,11 +72,11 @@ _OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
 # output files that can be used as input in future runs - keep during prerun
 iofiles = ["control.chem", "refcalc-fd.out", "superpos-spec.out"]
 
-logger = logging.getLogger("tleedm.sections.cleanup")
+logger = logging.getLogger(__name__)
 
 
 def prerun_clean(rp, logname=""):
-    """Clean up the work directory before tleedm starts.
+    """Clean up the work directory before viperleed.calc starts.
 
     Delete workhistory, old executables, and old logfiles.
     Call move_oldruns if required.
@@ -187,10 +190,10 @@ def _organize_supp_out(path, outfiles):
             filelist = set(path / f for f in _SUPP_FILES)
             # move directories original_inputs and compile_logs to SUPP
             directory_list = (path / d for d in _SUPP_DIRS)
-            # Also add log files into SUPP: skip tleedm logs (they go to
+            # Also add log files into SUPP: skip calc logs (they go to
             # main dir), and compile logs (they go to compile_logs dir)
             logs_to_supp = (f for f in path.glob("*.log")
-                            if (not f.name.startswith("tleedm")
+                            if (not f.name.startswith(LOG_PREFIX)
                                 and "compile" not in f.name))
             filelist.update(logs_to_supp)
         else:
@@ -332,7 +335,7 @@ def move_oldruns(rp, prerun=False):
         num = maxnum + 1
     if prerun:
         oldlogfiles = sorted([f for f in os.listdir() if os.path.isfile(f) and
-                              f.endswith(".log") and f.startswith("tleedm-")
+                              f.endswith(".log") and f.startswith(LOG_PREFIX)
                               and f not in rp.manifest])
         if len(oldlogfiles) > 0:
             oldTimeStamp = oldlogfiles[-1][7:20]
@@ -370,7 +373,7 @@ def move_oldruns(rp, prerun=False):
         dirlist = ["SUPP", "OUT"]
     else:
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
-                    (f.startswith("tleedm-") and f.endswith(".log"))]
+                    (f.startswith(LOG_PREFIX) and f.endswith(".log"))]
         dirlist = [d for d in rp.manifest if os.path.isdir(d) and
                    d not in ["Tensors", "Deltas", "workhistory"]]
     for f in filelist:

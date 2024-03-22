@@ -1,24 +1,27 @@
-# -*- coding: utf-8 -*-
-"""Contains generic functions used in the TensErLEED scripts.
-"""
+"""Contains generic functions used in the TensErLEED scripts."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-06-13'
+__license__ = 'GPLv3+'
+
 import itertools
 import logging
 import multiprocessing
 import os
 import re
 import shutil
-import sys
 import subprocess
+import sys
 
 import numpy as np
 import scipy.spatial as sps
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)",
-               "Michele Riva (@michele-riva)"]
-__created__ = "2019-06-13"
-
-logger = logging.getLogger("tleedm.base")
+logger = logging.getLogger(__name__)
 COLLAPSE_EPS = 1e-8  # Default for collapsing fractional coordinates
 
 ###############################################

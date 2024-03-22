@@ -1,16 +1,16 @@
-"""Tests for module viperleed.calc.files.beamgen.
+"""Tests for module viperleed.calc.files.beamgen."""
 
-Created on 2023-06-09
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-06-09'
 
 from pytest_cases import fixture, parametrize_with_cases
 
+from viperleed.calc import symmetry
 from viperleed.calc.files import beamgen
-from viperleed.calc.classes.rparams.special.energy_range import EnergyRange
-from viperleed.calc.lib import symmetry
+from viperleed.calc.classes.rparams import EnergyRange
 
 from ...helpers import exclude_tags
 from ..poscar_slabs import CasePOSCARSlabs

@@ -2,14 +2,19 @@
 
 Defines an enumeration of calculation sections.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-01-23'
+__license__ = 'GPLv3+'
+
 from enum import Enum
 from itertools import chain
 
 from viperleed.calc.lib.base import split_string_range, readIntRange
-
-__authors__ = ["Michele Riva (@michele-riva)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2023-01-23"
 
 _ALIASES = {  # Exact match first, then check .startswith
     'INITIALIZATION': ('ini', 'init', 'initialisation'),

@@ -1,10 +1,10 @@
-"""Tests for viperleed.calc.classes.slab.
+"""Tests for viperleed.calc.classes.slab."""
 
-Created on 2023-07-28
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-07-28'
 
 from collections import Counter
 from copy import deepcopy
@@ -28,9 +28,7 @@ from viperleed.calc.classes.slab import Slab, BulkSlab
 from viperleed.calc.classes.slab import errors as err
 from viperleed.calc.classes.slab import surface_slab
 from viperleed.calc.classes.sym_entity import SymPlane
-from viperleed.calc.files.parameters.errors import (
-    InconsistentParameterError
-    )
+from viperleed.calc.files.parameters.errors import InconsistentParameterError
 
 from ...helpers import exclude_tags, not_raises
 from ..tags import CaseTag as Tag
@@ -910,7 +908,7 @@ class TestCoordinates:
         slab.collapse_cartesian_coordinates()
         assert atom.cartpos == pytest.approx(expect, abs=1e-8)
 
-    def test_collapse_fractional(self, manual_slab_3_atoms):                    # TODO: will have to add a test for tleedmlib.base in which we use both 'floor' and 'round' methods. Find especially cases that are 'problematic' with %1.0: e.g., 1-1e-8, 1-1e-9, 1-1e-15
+    def test_collapse_fractional(self, manual_slab_3_atoms):                    # TODO: will have to add a test for calc.lib.base in which we use both 'floor' and 'round' methods. Find especially cases that are 'problematic' with %1.0: e.g., 1-1e-8, 1-1e-9, 1-1e-15
         """Check that fractional coordinates are correctly collapsed."""
         slab = manual_slab_3_atoms
         atom = slab.atlist[0]

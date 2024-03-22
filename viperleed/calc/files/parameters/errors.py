@@ -1,10 +1,4 @@
-# -*- coding: utf-8 -*-
 """Module errors of viperleed.calc.files.parameters.
-
-Created in June 2023
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
 
 This module used to be called files/parameter_errors.py. Refactored
 in October 2023.
@@ -12,6 +6,14 @@ in October 2023.
 Defines exceptions that may be raised when reading/writing/interpreting
 a PARAMETERS file.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-06-07'
+__license__ = 'GPLv3+'
 
 
 class ParameterError(Exception):

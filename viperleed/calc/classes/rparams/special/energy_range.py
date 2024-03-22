@@ -1,9 +1,5 @@
 """Module energy_range of viperleed.calc.classes.rparams.special.
 
-Created on 2023-10-23
-
-@author: Michele Riva (@michele-riva)
-
 Classes
 -------
 EnergyRange
@@ -16,6 +12,13 @@ IVShiftRange
     Used as the Rparams attribute IV_SHIFT_RANGE. Bounds are integer
     multiples of step. The step attribute is strictly positive.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-10-23'
+__license__ = 'GPLv3+'
 
 import ast
 from collections.abc import Sequence

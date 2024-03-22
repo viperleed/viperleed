@@ -1,7 +1,13 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""ViPErLEED utility: Delete atoms below a certain height
-"""
+"""ViPErLEED utility: Delete atoms below a certain height."""
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-08-03'
+__license__ = 'GPLv3+'
+
 import argparse
 from copy import deepcopy
 import logging
@@ -10,11 +16,8 @@ import sys
 from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Florian Kraushofer (@fkraushofer)"]
-__created__ = "2023-08-03"
 
-logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
+logger = logging.getLogger(__name__)
 
 
 def add_cli_parser_arguments(parser):

@@ -1,26 +1,29 @@
-# -*- coding: utf-8 -*-
 """Module _utils of viperleed.calc.files.parameters.
 
-Created on Tue Aug 18 16:56:39 2020
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-
-Initial version by @fkraushofer in 2020, major rewrite by @amimre
-and @michele-riva in June 2023. This module used to be part of
-parameters.py. Refactored in October 2023.
+Initial version by @fkraushofer on 2020-08-18, major rewrite by
+@amimre and @michele-riva in June 2023. This module used to be
+part of parameters.py. Refactored in October 2023.
 
 Contains functions and classes used in multiple submodules of
 the viperleed.calc.files.parameters package.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-10-16'
+__license__ = 'GPLv3+'
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 import logging
 
 
-_LOGGER = logging.getLogger('tleedm.files.parameters')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 # TODO: some of these classes are probably also useful for other
 # files, possibly with little modification. If they are, they

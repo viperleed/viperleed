@@ -1,18 +1,23 @@
-# -*- coding: utf-8 -*-
-"""Functions for reading and interpreting the DISPLACEMENTS file.
-"""
+"""Functions for reading and interpreting the DISPLACEMENTS file."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
+
 import logging
 import re
+
 import numpy as np
 
 from viperleed.calc.lib.base import readIntRange, splitSublists
 from viperleed.calc.lib.symmetry import setSymmetry, enforceSymmetry
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-19"
 
-logger = logging.getLogger("tleedm.files.displacements")
+logger = logging.getLogger(__name__)
 
 
 def readDISPLACEMENTS(rp, filename="DISPLACEMENTS"):

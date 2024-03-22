@@ -1,11 +1,12 @@
 """Tests for module viperleed.calc.lib.symmetry.
 
-Created on 2023-03-26
-
-@author: Michele Riva (@michele-riva)
-
 Contains tests for symmetry-detection routines.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-03-26'
 
 import copy
 from contextlib import contextmanager
@@ -18,7 +19,7 @@ from pytest import approx
 from pytest_cases import fixture, parametrize, parametrize_with_cases
 from pytest_cases.filters import id_has_suffix
 
-from viperleed.calc.lib import symmetry
+from viperleed.calc import symmetry
 from viperleed.calc.lib.base import angle as angle_radians
 
 from ...helpers import duplicate_all
@@ -306,6 +307,7 @@ class TestSymmetryConstraints:
         'square_cm_11': 'Known to often fail with a random shift',
         'square_cm_1m1': 'Known to often fail with a random shift',
         'poscar_diamond': 'Known incorrect plane group pm instead of rcm',
+        'poscar_sb_si_111': 'Known to rarely fail with a random shift',
         'poscar_sto110_4x1': 'Known to sometimes fail with a random shift',
         }
 

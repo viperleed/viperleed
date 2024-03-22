@@ -1,12 +1,13 @@
 """Module helpers of viperleed.tests.
 
-Created on 2023-02-28
-
-@author: Michele Riva (@michele-riva)
-
 Contains some useful general definitions that can be used when creating
 or running tests.
 """
+
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-02-28'
 
 from contextlib import contextmanager
 import copy

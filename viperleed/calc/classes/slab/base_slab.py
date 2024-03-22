@@ -1,18 +1,22 @@
-# -*- coding: utf-8 -*-
 """Module base_slab of viperleed.calc.classes.slab.
-
-Created on 2023-02-21, originally Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
 
 Defines the BaseSlab class, useful to describe collections of atoms in
 crystalline form. This is the abstract base class at the basis of both
 BulkSlab and SurfaceSlab classes (for 3D- and 2D-periodic systems,
 respectively), and contains generic functionality that is common to
-both. This module contains refactored and modified functionality that
-used to be contained in the original slab module by F. Kraushofer.
+both.
+This module contains refactored and modified functionality that
+used to be contained in the original slab module (2019-06-13) by
+F. Kraushofer.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-02-21'
+__license__ = 'GPLv3+'
 
 from abc import abstractmethod
 from collections import Counter
@@ -48,7 +52,8 @@ from .errors import TooFewLayersError
 from .utils import _left_handed, _z_distance
 
 
-_LOGGER = logging.getLogger('tleedm.slab')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 # TODO: .cartpos[2] Issue #174

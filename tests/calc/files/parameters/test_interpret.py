@@ -1,10 +1,10 @@
-"""Tests for module _interpret of viperleed.calc.files.parameters.
+"""Tests for module _interpret of viperleed.calc.files.parameters."""
 
-Created on 2023-06-09
-
-@author: Alexander M. Imre (@amimre)
-@author: Michele Riva (@michele-riva)
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-06-09'
 
 import logging
 

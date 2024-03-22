@@ -1,6 +1,16 @@
-# -*- coding: utf-8 -*-
 """Module for reading and writing Woods notation.
+
+The functionality in this module used to be part of calc.lib.leedbase.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-06-07'
+__license__ = 'GPLv3+'
+
 import re
 import logging
 
@@ -8,11 +18,7 @@ import numpy as np
 
 from viperleed.calc.lib.base import parseMathSqrt, angle, cosvec
 
-__authors__ = ["Alexander M. Imre (@amimre)",
-               "Florian Kraushofer (@fkraushofer)"]
-__created__ = "2023-06"
-
-logger = logging.getLogger("tleedm.woods_notation")
+logger = logging.getLogger(__name__)
 
 def readWoodsNotation(s, ucell):
     """Takes a string that should contain the transformation from the bulk to

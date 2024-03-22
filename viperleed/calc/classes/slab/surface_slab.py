@@ -1,15 +1,18 @@
-# -*- coding: utf-8 -*-
-"""Module surface_slab of viperleed.tleedmlib.classes.slab.
+"""Module surface_slab of viperleed.calc.classes.slab.
 
-Created on 2023-02-21, originally Jun 13 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
-
-Defines the SurfaceSlab class, a BaseSlab describing a 2D-periodic crystal.
-This is available in tleedmlib as the Slab alias for backwards compatibility
-with the former module-based structure of slab.py.
+Defines the SurfaceSlab class, a BaseSlab describing a 2D-periodic
+crystal. This is available in viperleed.calc as the Slab alias for
+backwards compatibility with the former module-based structure of
+slab.py by @fkraushofer (originally created on 2019-06-13).
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)'
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-02-21'
+__license__ = 'GPLv3+'
 
 from collections import Counter
 import copy
@@ -57,7 +60,8 @@ else:
     _HAS_ASE = True
 
 
-_LOGGER = logging.getLogger('tleedm.slab')
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
+_LOGGER = logging.getLogger(_LOGGER_NAME)
 _MIN_VACUUM = 5.0   # Angstrom
 _VACUUM_EPS = 1e-4  # In fractional c coordinates
 
@@ -69,7 +73,7 @@ class SurfaceSlab(BaseSlab):
     Also has a variety of convenience functions for manipulating
     and updating the atoms. Slabs can be created from an ase.Atoms
     object using the `from_ase` class method. Another common way
-    is using `viperleed.tleedmlib.files.poscar.read`.
+    is using `viperleed.calc.files.poscar.read`.
 
     Attributes
     ----------
@@ -124,7 +128,7 @@ class SurfaceSlab(BaseSlab):
     preprocessed : bool
         True if the POSCAR that this slab was read from had the
         'Plane group = XY' comment in the header, indicating that
-        it was processed by tleedm before.
+        it was processed by viperleed.calc before.
     symbaseslab : Slab or None
         Slab with the smallest in-plane unit-cell area that shows
         the full symmetry of the slab.
@@ -252,7 +256,7 @@ class SurfaceSlab(BaseSlab):
         NonIntegerMatrixError
             If `new_ab_cell` gives a superlattice matrix that is not
             integer-valued.
-        tleedmlib.files.parameters.errors.InconsistentParameterError
+        calc.files.parameters.errors.InconsistentParameterError
             If `new_ab_cell` gives a different superlattice matrix
             than the one in `rpars`.
         """
@@ -641,7 +645,7 @@ class SurfaceSlab(BaseSlab):
         NonIntegerMatrixError
             If reduction to a minimal cell would give a SUPERLATTICE
             matrix with non-integer values.
-        tleedmlib.files.parameters.errors.InconsistentParameterError
+        calc.files.parameters.errors.InconsistentParameterError
             If reduction to a minimal cell would give a SUPERLATTICE
             different from the one in `rpars`.
         """

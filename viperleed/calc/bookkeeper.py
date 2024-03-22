@@ -1,21 +1,29 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""ViPErLEED bookkeeper module.
-"""
+"""ViPErLEED bookkeeper module of package calc."""
 
-from enum import Enum
-from pathlib import Path
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-01-30'
+__license__ = 'GPLv3+'
+
 import argparse
+from enum import Enum
 import os
+from pathlib import Path
 import re
 import shutil
 import time
 
+from viperleed.calc import LOG_PREFIX
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-01-30"
+_CALC_LOG_PREFIXES = (
+    LOG_PREFIX,
+    'tleedm',   # For backwards compatibility
+    )
+
 
 class BookkeeperMode(Enum):
     DEFAULT = 'default'  # store last run, but do not overwrite POSCAR, VIBROCC
@@ -84,11 +92,11 @@ def bookkeeper(mode,
     # make list of stuff to move
     files_to_move = [d for d in os.listdir() if os.path.isdir(d)
               and (d == "OUT" or d == "SUPP")]
-    # logs will be saved to history; tleedm in root, others in SUPP
+    # logs will be saved to history; calc in root, others in SUPP
     logs_to_move = []
     for file in os.listdir():
         if os.path.isfile(file) and file.endswith(".log"):
-            if file.startswith("tleedm"):
+            if file.startswith(_CALC_LOG_PREFIXES):
                 files_to_move.append(file)
             else:
                 logs_to_move.append(file)
@@ -157,11 +165,13 @@ def bookkeeper(mode,
     else:
         num = max_nums[tensor_number] + 1
     # find old timestamp, if possible
-    old_log_files = sorted([f for f in os.listdir() if os.path.isfile(f) and
-                            f.endswith(".log") and f.startswith("tleedm-")])
+    old_log_files = sorted(
+        f for f in os.listdir() if os.path.isfile(f) and
+        f.endswith(".log") and f.startswith(_CALC_LOG_PREFIXES)
+        )
     last_log_lines = []
     if len(old_log_files) > 0:
-        old_timestamp = old_log_files[-1][7:20]
+        old_timestamp = old_log_files[-1][-17:-4]
         try:
             with open(old_log_files[-1], "r") as read_file:
                 last_log_lines = read_file.readlines()
@@ -229,7 +239,7 @@ def bookkeeper(mode,
                     print(f"Failed to discard file {file}.")
             except Exception:
                 print(f"Failed to discard directory {file}.")
-    # move log files to SUPP (except for general log tleedm....log)
+    # move log files to SUPP (except for general viperleed-calc log)
     for log_file in logs_to_move:
         if _mode is not BookkeeperMode.DISCARD:
             try:

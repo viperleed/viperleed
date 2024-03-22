@@ -1,15 +1,22 @@
-# -*- coding: utf-8 -*-
-"""Generate input files for EEASiSSS.x and run it.
-"""
+"""Generate input files for EEASiSSS.x and run it."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-17'
+__license__ = 'GPLv3+'
+
+from collections import defaultdict
 import copy
 import logging
 import os
+from pathlib import Path
 import random
 import re
 import shutil
 import subprocess
-from pathlib import Path
-from collections import defaultdict
 
 import fortranformat as ff
 import numpy as np
@@ -18,11 +25,7 @@ from viperleed.calc.classes.sitetype import Atom_type
 from viperleed.calc.lib.leedbase import EV_TO_HARTREE
 from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-17"
-
-logger = logging.getLogger("tleedm.psgen")
+logger = logging.getLogger(__name__)
 
 
 ###############################################

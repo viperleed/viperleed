@@ -1,10 +1,16 @@
-# -*- coding: utf-8 -*-
+"""Module delta_intensities of viperleed.calc.files.
+
+Reads in delta-amplitude files.
 """
 
-@author: Tobias Hable, Alexander M. Imre
+__authors__ = (
+    'Tobias Hable (@ElHablos)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2022-05-02'
+__license__ = 'GPLv3+'
 
-Reads in delta files.
-"""
 from re import I
 import sys
 import numpy as np
@@ -19,55 +25,55 @@ from numba import njit, prange
 
 def read_delta_file(filename, n_E):
     """This function reads in one file of data and stores the data in arrays, which can be used in later functions (ex.: GetInt)
-    
+
     Parameters
     ----------
     filename : string
     The filename describes which file you want to read in (path from the function location to the file)
-    
+
     n_E : int
     Number of different energy levels. This should be a known factor for your files
-    
-    
+
+
     Returns
     -------
     (phi, theta): tuple of float
     Angles of how the beam hits the sample
-    
+
     (trar1, trar2) : tuple of ndarray
     Vectors of the normal and the reciprocal unit cell of the sample
-    
+
     int0 : int
-    Number of beams that are reflected by the sample 
-    
+    Number of beams that are reflected by the sample
+
     n_atoms: int
     TBD
-    
+
     nc_steps: ndarray
     Number of permutations between direction deltas and vibration deltas
-    
+
     E_kin_array : ndarray
     Array that contains the kinetic energies of the elastically scatted
     electrons inside the crystal. (Not the incidence energy!)
-    
+
     VPI_array : ndarray
     Imaginary part of the inner potential of the surface
-    
+
     VV_array : ndarray
     Real part of the inner potential of the surface
-    
+
     beam_indices : ndarray
     Array with the order of beams
-    
+
     Cundisp : ndarray
     TBD always 0
-    
+
     CDisp : ndarry
     Geometric displacement of given delta
-    
+
     amplitudes_ref : ndarray
     Array that contains all values of the reference amplitudes
-    
+
     amplitudes_del : ndarray
     Array that contains all values of the delta amplitudes
     """
@@ -253,52 +259,52 @@ def calc_delta_intensities(
     number_z_steps,
 ):
     """This function reads in the values of the function Transform and uses them to get the ATSAS_matrix
-    
+
     Parameters
     ----------
     n_files: int
     Number of files
-    
+
     phi, theta:
     Angles of how the beam hits the sample
-    
+
     trar1, trar2:
     Vectors of the normal and the reciprocal unit cell of the sample
-    
+
     Beam_variables:
     The variables int0, n_atoms, nc_steps for each file stored in an array
-    
+
     beam_indices:
     Array with the order of beams
-    
+
     ph_CDisp:
     Geometric displacements of the atom
-    
+
     E_array:
     Array that contains all the energies of the file
-    
+
     VPI_array:
     Imaginary part of the inner potential of the surface
-    
+
     VV_array:
     Real part of the inner potential of the surface
-    
+
     amplitudes_ref:
     Array that contains all values of the reference amplitudes
-    
+
     amplitudes_del:
     Array that contains all values of the delta amplitudes
-    
+
     nc_surf: np.array of bool
     Bool array with flags that decide if atom is considered to be at the surface.
-    
+
     delta_steps:
     List of numbers that decide which geometric displacement this atom has
-    
+
     number_z_steps:
     Total number of different delta_z values
-    
-    
+
+
     Returns
     ----------
     ATSAS_matrix:
@@ -416,54 +422,54 @@ def calc_delta_intensities_2D(
 ):
 
     """This function reads in the values of the function Transform and uses them to get the ATSAS_matrix
-    
+
     Parameters
     ----------
     phi, theta:
     Angles of how the beam hits the sample
-    
+
     trar1, trar2:
     Vectors of the normal and the reciprocal unit cell of the sample
-    
+
     Beam_variables:
     The variables int0, n_atoms, nc_steps for each file stored in an array
-    
+
     beam_indices:
     Array with the order of beams
-    
+
     ph_CDisp:
     Geometric displacements of the atom
-    
+
     E_array:
     Array that contains all the energies of the file
-    
+
     VPI_array:
     Imaginary part of the inner potential of the surface
-    
+
     VV_array:
     Real part of the inner potential of the surface
-    
+
     amplitudes_ref:
     Array that contains all values of the reference amplitudes
-    
+
     amplitudes_del:
     Array that contains all values of the delta amplitudes
-    
+
     n_files: int
     Number of files
-    
+
     nc_surf: np.array of bool
     Bool array with flags that decide if atom is considered to be at the surface.
-    
+
     delta_step:
     List of numbers that decide which geometric displacement this atom has
-    
+
     number_z_steps:
     Total number of different delta_z values
-    
+
     number_vib_steps:
     Total number of different delta_vib values
-    
+
     Returns
     ----------
     ATSAS_matrix:
@@ -526,7 +532,7 @@ def calc_delta_intensities_2D(
                 v = delta_steps[i, 1]
                 z1 = int(z)
                 z2 = min(z1+1, number_z_steps)
-                v1 = int(v) 
+                v1 = int(v)
                 v2 = min(v1+1, number_vib_steps)
 
                 da_z1_v1 = amplitudes_del[i, e_index, v1 * number_vib_steps + z1, b_index]
@@ -536,7 +542,7 @@ def calc_delta_intensities_2D(
 
                 intpol_value = bilinear_interpolation_unit_square(
                     (z1, z2, z),
-                    (v1, v2, v), 
+                    (v1, v2, v),
                     (da_z1_v1, da_z1_v2, da_z2_v1, da_z2_v2)
                 )
                 DelAct += intpol_value
@@ -570,43 +576,43 @@ def Transform(n_E, directory):
     ----------
     n_E:
     Number of different energies of one file
-    
+
     directory:
     Relative path to the file that gets read in
-    
-    
-    Returns 
+
+
+    Returns
     ----------
     phi, theta:
     Angles of how the beam hits the sample
-    
+
     trar1, trar2:
     Vectors of the normal and the reciprocal unit cell of the sample
-    
+
     Beam_variables:
     The variables int0, n_atoms, nc_steps for each file stored in an array
-    
+
     beam_indices:
     Array with the order of beams
-    
+
     CDisp:
     Geometric displacements of the atom
-    
+
     E_array:
     Array that contains all the energies of the file
-    
+
     VPI_array:
     Imaginary part of the inner potential of the surface
-    
+
     VV_array:
     Real part of the inner potential of the surface
-    
+
     amplitudes_ref:
     Array that contains all values of the reference amplitudes
-    
+
     amplitudes_del:
     Array that contains all values of the delta amplitudes
-    
+
     filename_list:
     List of the filenames that contain the data
     """

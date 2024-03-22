@@ -1,14 +1,17 @@
-"""Tests for functionality of bookkeeper.py module.
+"""Tests for module viperleed.calc.bookkeeper."""
 
-Created on 2023-08-02
-
-@author: Alex M. Imre
-"""
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__created__ = '2023-08-02'
 
 import shutil
 
 import pytest
+from pytest_cases import fixture, parametrize
 
+from viperleed.calc.bookkeeper import _CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper import BookkeeperMode
 from viperleed.calc.bookkeeper import bookkeeper
 from viperleed.calc.bookkeeper import store_input_files_to_history
@@ -18,7 +21,7 @@ from ..helpers import execute_in_dir
 
 HISTORY = 'history'
 MOCK_TIMESTAMP = '010203-040506'
-MOCK_LOG_FILE = f'tleedm-{MOCK_TIMESTAMP}.log'
+MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in _CALC_LOG_PREFIXES]
 NOTES_TEST_CONTENT = 'This is a test note.'
 MOCK_FILES = ('POSCAR', 'VIBROCC')
 MOCK_INPUT_CONTENT = 'This is a test input file.'
@@ -26,8 +29,9 @@ MOCK_ORIG_CONTENT = 'This is a test original input file.'
 MOCK_OUT_CONTENT = 'This is a test output file.'
 
 
-@pytest.fixture(name='bookkeeper_mock_dir')
-def fixture_bookkeeper_mock_dir(tmp_path):
+@fixture(name='bookkeeper_mock_dir')
+@parametrize(log_file_name=MOCK_LOG_FILES)
+def fixture_bookkeeper_mock_dir(tmp_path, log_file_name):
     """Yield a temporary directory for testing the bookkeeper."""
     work_path = tmp_path / 'work'
     out_path = tmp_path / 'OUT'
@@ -38,8 +42,8 @@ def fixture_bookkeeper_mock_dir(tmp_path):
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
     # create mock log files
-    (tmp_path / MOCK_LOG_FILE).touch()
-    (work_path / MOCK_LOG_FILE).touch()
+    (tmp_path / log_file_name).touch()
+    (work_path / log_file_name).touch()
     # create mock notes file
     notes_file = tmp_path / 'notes.txt'
     notes_file.write_text(NOTES_TEST_CONTENT)
@@ -63,13 +67,13 @@ def fixture_bookkeeper_mock_dir(tmp_path):
     shutil.rmtree(tmp_path)
 
 
-@pytest.fixture(name='history_path')
+@fixture(name='history_path')
 def fixture_history_path(bookkeeper_mock_dir):
     """Return the path to a history subfolder of bookkeeper_mock_dir."""
     return bookkeeper_mock_dir / HISTORY
 
 
-@pytest.fixture(name='history_path_run')
+@fixture(name='history_path_run')
 def fixture_history_path_run(history_path):
     """Return the path to a history run subfolder of history_path."""
     return history_path / f't000.r001_{MOCK_TIMESTAMP}'

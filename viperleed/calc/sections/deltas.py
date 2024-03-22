@@ -1,6 +1,13 @@
-# -*- coding: utf-8 -*-
-"""Section Delta Amplitudes.
-"""
+"""Section Delta Amplitudes."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-11'
+__license__ = 'GPLv3+'
+
 import hashlib
 import logging
 import os
@@ -10,17 +17,13 @@ import subprocess
 
 import numpy as np
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.checksums import validate_multiple_files
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
-import viperleed.calc.files.iodeltas as tl_io
+from viperleed.calc.files import iodeltas
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.checksums import validate_multiple_files
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-11"
-
-logger = logging.getLogger("tleedm.deltas")
+logger = logging.getLogger(__name__)
 
 # TODO: would be nice to replace all os.path with pathlib
 
@@ -85,7 +88,6 @@ class DeltaRunTask():
 def runDelta(runtask):
     """Function meant to be executed by parallelized workers. Executes a
     DeltaRunTask."""
-    logger = logging.getLogger("tleedm.deltas")
     home = os.getcwd()
     base = runtask.comptask.basedir
     workname = "calculating_"+runtask.deltaname
@@ -246,7 +248,7 @@ def deltas(sl, rp, subdomain=False):
         sl.restoreOriState(keepDisp=True)
     # if there are old deltas, fetch them
     leedbase.getDeltas(rp.TENSOR_INDEX, required=False)
-    dbasic = tl_io.generateDeltaBasic(sl, rp)
+    dbasic = iodeltas.generateDeltaBasic(sl, rp)
     # get AUXBEAMS; if AUXBEAMS is not in work folder, check SUPP folder
     if not os.path.isfile(os.path.join(".", "AUXBEAMS")):
         if os.path.isfile(os.path.join(".", "SUPP", "AUXBEAMS")):
@@ -358,7 +360,7 @@ def deltas(sl, rp, subdomain=False):
                       if f.startswith(f'DEL_{at.num}_{el}')]
             found = False
             for df in dfiles:
-                if tl_io.checkDelta(df, at, el, rp):
+                if iodeltas.checkDelta(df, at, el, rp):
                     found = True
                     at.known_deltas.append(df)
                     countExisting += 1
@@ -410,7 +412,7 @@ def deltas(sl, rp, subdomain=False):
     tensordir = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
     tl_path = rp.get_tenserleed_directory()
     for (at, el) in atElTodo:
-        din, din_short, param = tl_io.generateDeltaInput(
+        din, din_short, param = iodeltas.generateDeltaInput(
             at, el, sl, rp, dbasic, auxbeams, phaseshifts)
         h = hashlib.md5(param.encode()).digest()
         found = False
@@ -421,7 +423,7 @@ def deltas(sl, rp, subdomain=False):
                 break
         if not found:
             index = len(deltaCompTasks)
-            ct = DeltaCompileTask(param, h,tl_path, index)
+            ct = DeltaCompileTask(param, h, tl_path, index)
             deltaCompTasks.append(ct)
             rt = DeltaRunTask(ct)
         deltaRunTasks.append(rt)

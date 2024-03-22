@@ -1,6 +1,17 @@
-# -*- coding: utf-8 -*-
-"""Functions for reading and writing files relevant to the rfactor calculation.
+"""Module iorfactor of viperleed.calc.files.
+
+Functions for reading and writing files relevant to the
+R-factor calculation.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
 
 import logging
 import os
@@ -20,18 +31,14 @@ else:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
-    plt.style.use('viperleed.tleedm')
+    plt.style.use('viperleed.calc')
 
 from viperleed.calc.lib import leedbase
 from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2020-08-19"
-
-logger = logging.getLogger("tleedm.files.iorfactor")
+logger = logging.getLogger(__name__)
 
 
 # How many extra points to take at the boundaries to prevent wasting

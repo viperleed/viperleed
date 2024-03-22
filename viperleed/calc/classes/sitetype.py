@@ -1,17 +1,23 @@
-# -*- coding: utf-8 -*-
+"""Module sitetype of viperleed.calc.classes."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-06-13'
+__license__ = 'GPLv3+'
+
 import logging
 import re
 
 import numpy as np
 
 from viperleed.calc.lib.periodic_table import (PERIODIC_TABLE,
-                                                COVALENT_RADIUS,
-                                                ATOMIC_MASS)
+                                               COVALENT_RADIUS,
+                                               ATOMIC_MASS)
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "2019-06-13"
+logger = logging.getLogger(__name__)
 
-logger = logging.getLogger("tleedm.sitetype")
 
 class Sitetype:
     """Class storing properties of a site.
@@ -89,6 +95,7 @@ class Sitetype:
                                * 109.15 / (ATOMIC_MASS[el]
                                            * rp.T_DEBYE))), 3)
         return
+
 
 class Atom_type(Sitetype):
     """

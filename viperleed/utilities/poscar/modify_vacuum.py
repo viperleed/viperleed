@@ -1,9 +1,15 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""ViPErLEED utility: Modify vacuum gap
+"""ViPErLEED utility: Modify vacuum gap.
 
 This utility takes a slab in POSCAR format and modifies the vacuum gap.
 """
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-08-03'
+__license__ = 'GPLv3+'
+
 import argparse
 from copy import deepcopy
 import logging
@@ -13,12 +19,7 @@ from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
 
-__authors__ = ["Alexander M. Imre (@amimre)",]
-__created__ = "2023-08-03"
-
-logger = logging.getLogger(
-    "viperleed.utilities.poscar.prepare_for_vasp_relaxation"
-    )
+logger = logging.getLogger(__name__)
 
 
 def modify_vacuum(slab, vacuum_gap_size, absolute=False):

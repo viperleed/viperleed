@@ -1,17 +1,19 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """POSCAR utility get_bulk_repeat.
-
-Created on Wed Dec 16 17:45 2019
-
-@author: Florian Kraushofer (@fkraushofer)
-@author: Michele Riva (@michele-riva)
 
 Reads a POSCAR file, asks at what c value the bulk starts, then
 automatically reduces the size of the POSCAR to non-redundant bulk
 layers only, and outputs the appropriate N_BULK_LAYERS and BULK_REPEAT
 values.
 """
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-12-16'
+__license__ = 'GPLv3+'
 
 import copy
 
@@ -23,12 +25,10 @@ from viperleed.calc.classes.slab import NoBulkRepeatError
 from viperleed.calc.files import poscar
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2019-12-16"
 
 def add_cli_parser_arguments(parser):
     pass
+
 
 def ask_user_bulk_cut():
     """Return a valid fractional cut position after asking the user."""

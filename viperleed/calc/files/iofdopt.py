@@ -1,9 +1,16 @@
-# -*- coding: utf-8 -*-
-"""Functions for writing output from full-dynamic optimization.
-"""
-import numpy as np
-import logging
+"""Functions for writing output from full-dynamic optimization."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2021-10-25'
+__license__ = 'GPLv3+'
+
 import copy
+import logging
+
+import numpy as np
 from numpy.polynomial import Polynomial
 
 try:
@@ -12,7 +19,7 @@ try:
     matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-    plt.style.use('viperleed.tleedm')
+    plt.style.use('viperleed.calc')
     from matplotlib import cm
 except Exception:
     _CAN_PLOT = False
@@ -22,10 +29,8 @@ else:
 from viperleed.calc.files.iorfactor import read_rfactor_columns
 from viperleed.calc.files.ivplot import plot_iv
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)"]
-__created__ = "2021-10-25"
 
-logger = logging.getLogger("tleedm.files.iofdout")
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 

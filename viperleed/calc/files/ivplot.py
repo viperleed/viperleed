@@ -1,6 +1,12 @@
-# -*- coding: utf-8 -*-
-"""Functions for producing plots of I(V) curves.
-"""
+"""Functions for producing plots of I(V) curves."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2021-10-25'
+__license__ = 'GPLv3+'
 
 import logging
 
@@ -17,15 +23,11 @@ else:
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
-    plt.style.use('viperleed.tleedm')
+    plt.style.use('viperleed.calc')
 
 from viperleed.calc.classes.beam import Beam
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",
-               "Alexander M. Imre (@amimre)"]
-__created__ = "2021-10-25"
-
-logger = logging.getLogger("tleedm.files.ivplot")
+logger = logging.getLogger(__name__)
 
 
 def plot_iv(data, filename, labels=[], annotations=[],
@@ -103,8 +105,8 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 + str(type(dataset[0])))
         if type(dataset[0]) not in (Beam, np.ndarray):
             raise TypeError(
-                "Expected data as a list of tleedmlib Beams or numpy arrays, "
-                "found " + str(type(dataset[0])))
+                "Expected data as a list of viperleed.calc.classes.beam.Beam "
+                "or numpy arrays, found " + str(type(dataset[0])))
         elif len(dataset) != n_beams:
             raise ValueError("Different beam sets or not of equivalent "
                              "length.")

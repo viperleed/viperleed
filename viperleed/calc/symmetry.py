@@ -1,6 +1,11 @@
-# -*- coding: utf-8 -*-
-"""Functions for determining and setting slab symmetry.
-"""
+"""Functions for determining and setting slab symmetry."""
+
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2020-08-19'
+__license__ = 'GPLv3+'
 
 import copy
 import itertools
@@ -10,18 +15,15 @@ import re
 import numpy as np
 import scipy.spatial as sps
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import (addUnequalPoints, angle, dist_from_line,
-                                      rotation_matrix_order, rotation_matrix)
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.slab import AlreadyMinimalError
 from viperleed.calc.classes.sym_entity import SymPlane
 from viperleed.calc.files import parameters
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import (addUnequalPoints, angle, dist_from_line,
+                                     rotation_matrix_order, rotation_matrix)
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "2020-08-19"
-
-logger = logging.getLogger("tleedm.symmetry")
+logger = logging.getLogger(__name__)
 
 
 def getSymPosLists(sl, rp, pointlist, output=False):

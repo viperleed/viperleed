@@ -1,25 +1,24 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ViPErLEED utility to convert AUXEXPBEAMS to EXPBEAMS.
 
 Reads an AUXEXPBEAMS file and writes the contents in EXPBEAMS.csv format.
 """
-import os
-import sys
 
-cd = os.path.realpath(os.path.dirname(__file__))
+__authors__ = (
+    'Florian Kraushofer (@fkraushofer)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2019-12-16'
+__license__ = 'GPLv3+'
 
 from viperleed.calc.files.beams import readAUXEXPBEAMS, writeOUTBEAMS
 
-__authors__ = ["Florian Kraushofer (@fkraushofer)",]
-__created__ = "2019-12-16"
 
 def main():
     # print some info
-    print("This utility reads an AUXEXPBEAMS file (ie, beams formatted as "
-          "TensErLEED experimental input) and writes the contents in the csv "
-          "formatting applied in tleedmap for THEOBEAMS.csv and EXPBEAMS.csv "
-          "files.\n")
+    print("This utility reads an AUXEXPBEAMS file (i.e., beams formatted as "
+          "TensErLEED experimental input) and writes the contents in the "
+          "csv formatting applied in viperleed.calc for THEOBEAMS.csv and "
+          "EXPBEAMS.csv files.\n")
 
     # read the AUXEXPBEAMS file
     filename = ""

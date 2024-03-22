@@ -1,21 +1,23 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""ViPErLEED utility: Find Symmetry
-"""
+"""ViPErLEED utility: Find Symmetry."""
+
+__authors__ = (
+    'Alexander M. Imre (@amimre)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2023-08-03'
+__license__ = 'GPLv3+'
+
 import argparse
 from copy import deepcopy
 import logging
 import sys
 
-from viperleed.calc.lib import symmetry
+from viperleed.calc import symmetry
 from viperleed.calc.classes import rparams
 from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option
 
-__authors__ = ["Alexander M. Imre (@amimre)",]
-__created__ = "2023-08-03"
-
-logger = logging.getLogger("viperleed.utilities.poscar.prepare_for_vasp_relaxation")
+logger = logging.getLogger(__name__)
 
 
 def add_cli_parser_arguments(parser):
