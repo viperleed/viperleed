@@ -36,7 +36,7 @@ def run_calc(system_name=None,
              console_output=True,
              slab=None,
              preset_params={},
-             source=Path()):
+             source=''):
     """Run a ViPErLEED calculation.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
