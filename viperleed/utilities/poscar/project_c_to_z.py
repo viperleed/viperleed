@@ -7,7 +7,9 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Florian Kraushofer (@fkraushofer)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
+__license__ = 'GPLv3+'
 
 import argparse
 import logging

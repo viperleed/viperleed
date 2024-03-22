@@ -7,7 +7,9 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Florian Kraushofer (@fkraushofer)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-06-07'
+__license__ = 'GPLv3+'
 
 PERIODIC_TABLE = (
     'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na',

@@ -11,7 +11,9 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-23'
+__license__ = 'GPLv3+'
 
 import logging
 

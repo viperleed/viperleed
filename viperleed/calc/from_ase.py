@@ -5,7 +5,9 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2021-06-04'
+__license__ = 'GPLv3+'
 
 from collections import defaultdict
 from dataclasses import dataclass, FrozenInstanceError

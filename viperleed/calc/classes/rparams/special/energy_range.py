@@ -16,7 +16,9 @@ IVShiftRange
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-23'
+__license__ = 'GPLv3+'
 
 import ast
 from collections.abc import Sequence

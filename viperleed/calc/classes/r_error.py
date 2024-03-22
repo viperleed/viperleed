@@ -8,7 +8,9 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Florian Kraushofer (@fkraushofer)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-01-12'
+__license__ = 'GPLv3+'
 
 import numpy as np
 import copy

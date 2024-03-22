@@ -9,7 +9,9 @@ __authors__ = (
     'Michele Riva (@michele-riva)',
     'Florian Kraushofer (@fkraushofer)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-02-21'
+__license__ = 'GPLv3+'
 
 from .bulk_slab import BulkSlab
 from .errors import AlreadyMinimalError

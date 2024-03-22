@@ -7,7 +7,9 @@ classes for handling user input of the SEARCH_CULL parameter.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-12-14'
+__license__ = 'GPLv3+'
 
 from dataclasses import dataclass, field, InitVar
 from enum import Enum  # Unfortunately StrEnum was introduced in py3.11

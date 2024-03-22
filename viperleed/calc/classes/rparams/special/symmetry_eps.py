@@ -7,7 +7,9 @@ __authors__ = (
     'Alexander Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-12-11'
+__license__ = 'GPLv3+'
 
 from functools import total_ordering
 from numbers import Real

@@ -7,7 +7,9 @@ and converts it into the standard CSV format used by ViPErLEED.
 __authors__ = (
     'Alexander M. Imre (@amimre)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-03-20'
+__license__ = 'GPLv3+'
 
 import argparse
 import logging

@@ -6,7 +6,9 @@ Defines the LMax class, a convenience container for parameter LMAX.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-12-16'
+__license__ = 'GPLv3+'
 
 from dataclasses import dataclass
 

@@ -6,7 +6,9 @@ This utility takes a slab in POSCAR format and modifies the vacuum gap.
 __authors__ = (
     'Alexander M. Imre (@amimre)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
+__license__ = 'GPLv3+'
 
 import argparse
 from copy import deepcopy

@@ -9,7 +9,9 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2019-06-13'
+__license__ = 'GPLv3+'
 
 from viperleed.calc.classes.atom_containers import AtomContainer
 from viperleed.calc.classes.atom_containers import AtomContainerError

@@ -6,7 +6,9 @@ Contains definitions of collections (i.e., containers) of Atoms.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-06'
+__license__ = 'GPLv3+'
 
 from abc import abstractmethod
 from collections.abc import Container, Iterable, MutableSequence, Sequence

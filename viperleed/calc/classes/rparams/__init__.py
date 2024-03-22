@@ -16,7 +16,9 @@ __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-23'
+__license__ = 'GPLv3+'
 
 # Important note: import first stuff from .special, as it is used
 # in _rparams and would otherwise lead to cyclic import issues

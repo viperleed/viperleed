@@ -8,7 +8,9 @@ of the former parameters.py module.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-13'
+__license__ = 'GPLv3+'
 
 from . import errors
 from ._interpret import interpret, ParameterInterpreter

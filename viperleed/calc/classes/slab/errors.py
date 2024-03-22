@@ -6,7 +6,9 @@ Contains exceptions specific to BaseSlab objects.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-02-21'
+__license__ = 'GPLv3+'
 
 from viperleed.calc.classes.atom_containers import AtomContainerError
 

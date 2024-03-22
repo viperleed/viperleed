@@ -6,7 +6,9 @@ Contains functions and classes useful for dealing with BaseSlab objects.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-02-22'
+__license__ = 'GPLv3+'
 
 import itertools
 import numpy as np

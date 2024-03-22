@@ -6,7 +6,9 @@ Reads a PHASESHIFTS file and allows the user to copy and rearrange the blocks.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2019-12-16'
+__license__ = 'GPLv3+'
 
 import time
 

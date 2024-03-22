@@ -6,7 +6,9 @@ Reads an AUXEXPBEAMS file and writes the contents in EXPBEAMS.csv format.
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2019-12-16'
+__license__ = 'GPLv3+'
 
 from viperleed.calc.files.beams import readAUXEXPBEAMS, writeOUTBEAMS
 
