@@ -1,4 +1,4 @@
-"""Tests for module viperleed.calc.files.psgen."""
+"""Tests for module viperleed.calc.psgen."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
@@ -10,8 +10,8 @@ import numpy as np
 import pytest
 from pytest_cases import parametrize_with_cases
 
-from viperleed.calc.files.psgen import adjust_phaseshifts
-from viperleed.calc.files.psgen import runPhaseshiftGen_old
+from viperleed.calc.psgen import adjust_phaseshifts
+from viperleed.calc.psgen import runPhaseshiftGen_old
 
 from ..helpers import execute_in_dir
 from .poscar_slabs import CasePOSCARSlabs as POSCARSlabs
