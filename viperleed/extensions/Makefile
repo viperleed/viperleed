@@ -2,7 +2,7 @@ comp := gfortran
 
 
 BUILD_DIR := ./build
-SRC_DIR := ./source
+SRC_DIR := .
 
 # Set the sha256 command to be used for checksum verification
 SHA256_CMD = sha256sum
