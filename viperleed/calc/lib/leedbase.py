@@ -9,7 +9,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2019-06-13'
 __license__ = 'GPLv3+'
 
-import copy
 import logging
 import os
 from pathlib import Path
@@ -20,11 +19,6 @@ from zipfile import ZipFile
 
 import numpy as np
 from quicktions import Fraction
-
-# The following import line is potentially the cause of cyclic
-# imports. They are used exclusively as part of getTensorOriStates
-# which could potentially be split off somewhere else
-from viperleed.calc.files import parameters, poscar, vibrocc
 
 from viperleed.calc.lib.base import cosvec, ensure_integer_matrix, lcm
 from viperleed.calc.lib.base import SingularMatrixError
@@ -146,73 +140,6 @@ def getYfunc(ivfunc, v0i):
     return yfunc
 
 
-def getMaxTensorIndex(home=".", zip_only=False):
-    """
-    Checks the Tensors folder for the highest Tensor index there,
-    returns that value, or zero if there is no Tensors folder or no valid
-    Tensors zip file. zip_only looks only for zip files, ignoring directories.
-    """
-    tensor_dir = (Path(home) / "Tensors").resolve()
-    if not tensor_dir.is_dir():
-        return 0
-    indlist = []
-    rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-    for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
-              if (os.path.isfile(os.path.join(home, "Tensors", f))
-                  and rgx.match(f))]:
-        m = rgx.match(f)
-        if m.span()[1] == 15:  # exact match
-            indlist.append(int(m.group(0)[-7:-4]))
-    if not zip_only:
-        rgx = re.compile(r'Tensors_[0-9]{3}')
-        for f in [f for f in os.listdir(os.path.join(home, "Tensors"))
-                  if ((tensor_dir / f).is_dir() and rgx.match(f))]:
-            m = rgx.match(f)
-            if m.span()[1] == 11:  # exact match
-                indlist.append(int(m.group(0)[-3:]))
-    if indlist:
-        return max(indlist)
-    return 0
-
-
-def getTensors(index, base_dir=".", target_dir=".", required=True):
-    """Fetches Tensor files from Tensors or archive with specified tensor
-    index. If required is set True, an error will be printed if no Tensor
-    files are found.
-    base_dir is the directory in which the Tensor directory is based.
-    target_dir is the directory to which the Tensor files should be moved."""
-    dn = "Tensors_"+str(index).zfill(3)
-    tensor_dir = (Path(base_dir) / "Tensors").resolve()
-    unpack_path = (Path(target_dir) / "Tensors" / dn).resolve()
-    zip_path = (tensor_dir / dn).with_suffix(".zip")
-
-    if (os.path.basename(base_dir) == "Tensors"
-            and not tensor_dir.is_dir()):
-        base_dir = os.path.dirname(base_dir)
-    if not (tensor_dir / dn).is_dir():
-        if (tensor_dir / dn).with_suffix(".zip").is_file():
-            logger.info(f"Unpacking {dn}.zip...")
-            os.makedirs(unpack_path, exist_ok=True)
-            try:
-                with ZipFile(zip_path, 'r') as zip_ref:
-                    zip_ref.extractall(unpack_path)                             # TODO: maybe it would be nicer to read directly from the zip file
-            except Exception:
-                logger.error(f"Failed to unpack {dn}.zip")
-                raise
-        else:
-            logger.error("Tensors not found")
-            raise RuntimeError("Tensors not found")
-    elif base_dir != target_dir:
-        try:
-            os.makedirs(unpack_path, exist_ok=True)
-            for file in os.path.listdir(os.path.join(base_dir, "Tensors", dn)):
-                shutil.copy2(file, unpack_path)
-        except Exception:
-            logger.error("Failed to move Tensors from {dn}")
-            raise
-    return None
-
-
 def getDeltas(index, basedir=".", targetdir=".", required=True):
     """Fetches Delta files from Deltas or archive with specified tensor index.
     If required is set True, an error will be printed if no Delta files are
@@ -244,51 +171,6 @@ def getDeltas(index, basedir=".", targetdir=".", required=True):
         logger.error("Deltas not found")
         raise RuntimeError("Deltas not found")
     return None
-
-
-def getTensorOriStates(sl, path):
-    """Reads POSCAR, PARAMETERS and VIBROCC from the target path, gets the
-    original state of the atoms and sites, and stores them in the given
-    slab's atom/site oriState variables."""
-    path = Path(path).resolve()
-    for fn in ["POSCAR", "PARAMETERS", "VIBROCC"]:
-        if not (path / fn).is_file():
-            logger.error(f"No {fn} file in {path}")
-            raise RuntimeError("Could not check Tensors: File missing")         # TODO: FileNotFoundError?
-    dn = path.parent
-    try:
-        tsl = poscar.read(path / "POSCAR")
-        trp = parameters.read(filename=path/"PARAMETERS")
-        parameters.interpret(trp, slab=tsl, silent=True)
-        tsl.full_update(trp)
-        vibrocc.readVIBROCC(trp, tsl, filename=path/"VIBROCC", silent=True)
-        tsl.full_update(trp)
-    except Exception as exc:
-        logger.error("Error checking Tensors: Error while reading "
-                     f"input files in {dn}")
-        logger.debug("Exception:", exc_info=True)
-        raise RuntimeError("Could not check Tensors: Error loading old input "
-                           "files") from exc
-    if tsl.n_atoms != sl.n_atoms:
-        logger.error(f"POSCAR from {dn} is incompatible with "
-                     "current POSCAR.")
-        raise RuntimeError("Tensors file incompatible")
-    for at in sl:
-        tat = tsl.atlist.get(at.num, None)
-        if tat is None:
-            logger.error(f"POSCAR from {dn} is incompatible with "
-                         "current POSCAR.")
-            raise RuntimeError("Tensors file incompatible")
-        at.copyOriState(tat)
-    if len(tsl.sitelist) != len(sl.sitelist):
-        logger.error(f"Sites from {dn} input differ from current input.")
-        raise RuntimeError("Tensors file incompatible")
-    for site in sl.sitelist:
-        tsitel = [s for s in tsl.sitelist if site.label == s.label]
-        if len(tsitel) != 1:
-            logger.error(f"Sites from {dn} input differ from current input.")
-            raise RuntimeError("Tensors file incompatible")
-        site.oriState = copy.deepcopy(tsitel[0])
 
 
 def fortran_compile_batch(tasks, retry=True, logname="fortran-compile.log"):

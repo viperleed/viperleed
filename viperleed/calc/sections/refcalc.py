@@ -18,8 +18,10 @@ import subprocess
 import fortranformat as ff
 import numpy as np
 
-from viperleed.calc.files import beams, parameters
+from viperleed.calc.files import beams
 from viperleed.calc.files import iorefcalc
+from viperleed.calc.files import iotensors
+from viperleed.calc.files import parameters
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
@@ -632,7 +634,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     if 1 not in rp.TENSOR_OUTPUT:
         return
     # move and zip tensor files
-    rp.TENSOR_INDEX = leedbase.getMaxTensorIndex() + 1
+    rp.TENSOR_INDEX = iotensors.getMaxTensorIndex() + 1
     if "Tensors" not in rp.manifest:
         rp.manifest.append("Tensors")
     dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)

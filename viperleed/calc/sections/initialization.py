@@ -29,10 +29,14 @@ from viperleed.calc.classes.slab import NoBulkRepeatError
 from viperleed.calc.classes.slab import NoVacuumError
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
-from viperleed.calc.files import beams as iobeams, parameters
-from viperleed.calc.files import patterninfo, phaseshifts, poscar, vibrocc
+from viperleed.calc.files import beams as iobeams
+from viperleed.calc.files import iotensors
+from viperleed.calc.files import parameters
+from viperleed.calc.files import patterninfo
+from viperleed.calc.files import phaseshifts
+from viperleed.calc.files import poscar
+from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
-from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import angle, rotation_matrix
 from viperleed.calc.lib.base import NonIntegerMatrixError
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
@@ -402,11 +406,11 @@ def init_domains(rp):
         logger.info(f"Fetching input files for domain {name}")
         if os.path.isdir(path):
             # check the path for Tensors
-            tensorIndex = leedbase.getMaxTensorIndex(path)
+            tensorIndex = iotensors.getMaxTensorIndex(path)
             if tensorIndex != 0:
                 try:
-                    leedbase.getTensors(tensorIndex, base_dir=path,
-                                        target_dir=target)
+                    iotensors.getTensors(tensorIndex, base_dir=path,
+                                         target_dir=target)
                 except Exception as exc:
                     tensorIndex = 0
                     logger.warning(f"Error fetching Tensors: {exc}")
@@ -446,7 +450,7 @@ def init_domains(rp):
                         raise RuntimeError("Error getting domain input files")
         elif os.path.isfile(path):
             try:
-                tensorIndex = leedbase.getMaxTensorIndex(target)
+                tensorIndex = iotensors.getMaxTensorIndex(target)
             except Exception:
                 tensorIndex = 0
             tensorDir = target / "Tensors" / f"Tensors_{tensorIndex + 1:03d}"

@@ -20,6 +20,7 @@ import numpy as np
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.files import iodeltas
+from viperleed.calc.files import iotensors
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
 from viperleed.calc.lib.checksums import validate_multiple_files
@@ -239,13 +240,13 @@ def deltas(sl, rp, subdomain=False):
     if not os.path.isdir(os.path.join(".", "Tensors")):
         logger.error("No Tensors directory found.")
         raise RuntimeError("Tensors not found")
-    leedbase.getTensors(rp.TENSOR_INDEX)
+    iotensors.getTensors(rp.TENSOR_INDEX)
     if 1 not in rp.runHistory:
         dn = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
         logger.debug(
             "Running without reference calculation, checking "
             "input files in "+dn+" to determine original configuration.")
-        leedbase.getTensorOriStates(sl, os.path.join(".", "Tensors", dn))
+        iotensors.getTensorOriStates(sl, os.path.join(".", "Tensors", dn))
         sl.restoreOriState(keepDisp=True)
     # if there are old deltas, fetch them
     leedbase.getDeltas(rp.TENSOR_INDEX, required=False)

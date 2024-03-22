@@ -18,6 +18,7 @@ import subprocess
 import numpy as np
 
 from viperleed.calc.files import iorfactor
+from viperleed.calc.files import iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
@@ -82,7 +83,7 @@ def _fetch_and_check_spectra(rp, index, name):
         path = "OUT" / fn
     elif index == 11:
         # try getting from Tensors
-        leedbase.getTensors(rp.TENSOR_INDEX, required=False)
+        iotensors.getTensors(rp.TENSOR_INDEX, required=False)
         directory = Path(f"Tensors_{rp.TENSOR_INDEX:03d}")
         if ("Tensors" / directory / fn).is_file():
             path = "Tensors" / directory / fn
