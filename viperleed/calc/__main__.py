@@ -1,4 +1,4 @@
-"""Module __main__ of ViPErLEED (viperleed) calc
+"""Module __main__ of ViPErLEED (viperleed) calc.
 
 See viperleed.calc.__init__.py for more information.
 """
@@ -16,5 +16,5 @@ import sys
 
 from viperleed.calc.cli import main
 
-exit_code = main()
-sys.exit(exit_code)
+EXIT_CODE = main()
+sys.exit(EXIT_CODE)
