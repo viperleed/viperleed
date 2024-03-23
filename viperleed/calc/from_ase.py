@@ -28,7 +28,6 @@ from viperleed.calc.classes.rparams import Rparams, TheoEnergies
 from viperleed.calc.classes.rparams import IVShiftRange
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.lib.base import rotation_matrix
-from viperleed.calc.run import get_tensorleed_path
 from viperleed.calc.run import run_calc
 # for rfactor_from_csv
 from viperleed.calc.files import iorfactor as rf_io
@@ -293,8 +292,7 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
     # We are ready to run ViPErLEED! Have fun!
     try:
         run_calc(slab=slab,
-                 preset_params=_make_preset_params(rparams, slab),
-                 source=get_tensorleed_path())
+                 preset_params=_make_preset_params(rparams, slab))
     except Exception as err:
         # If ViPErLEED fails, move back to home directory
         os.chdir(home)

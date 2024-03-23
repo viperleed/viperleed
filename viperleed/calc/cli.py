@@ -25,7 +25,6 @@ from viperleed.calc.bookkeeper import bookkeeper, BookkeeperMode
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections._sections import ALL_INPUT_FILES
-from viperleed.calc.run import get_tensorleed_path                              # TODO: let run_calc do this!
 from viperleed.calc.run import run_calc
 
 
@@ -151,8 +150,8 @@ def main(args=None):
     os.chdir(work_path)
     try:
         exit_code = run_calc(
-            source=get_tensorleed_path(args.tensorleed),
             system_name=args.name,
+            source=args.tensorleed,
             preset_params=presets
             )
     finally:

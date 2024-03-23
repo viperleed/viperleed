@@ -32,13 +32,17 @@ from viperleed.calc.sections.initialization import (
 from viperleed.calc.sections.run_sections import section_loop
 
 
+_KNOWN_TENSORLEED_TOP_FOLDERS = (
+    'viperleed-tensorleed',
+    'tensorleed',  # For backwards compatibility
+    )
 
 
 def run_calc(system_name=None,
              console_output=True,
              slab=None,
              preset_params=None,
-             source=''):
+             source=None):
     """Run a ViPErLEED calculation.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
@@ -51,11 +55,11 @@ def run_calc(system_name=None,
         specified, the name of the parent directory is used
         instead. Default is None.
     console_output : bool, optional
-        If False, will not add a logging.StreamHandler. Output will
-        only be printed to the log file. Default is True.
+        If False, will not add a logging.StreamHandler. Output
+        will only be printed to the log file. Default is True.
     slab : Slab, optional
-        Start from a pre-existing slab, instead of reading from POSCAR.
-        Default is None.
+        Start from a pre-existing slab, instead of reading from
+        POSCAR. Default is None.
     preset_params : dict, optional
         Parameters to add to the Rparams object after a PARAMETERS file
         has been read. Keys should be attributes of Rparams. Values in
@@ -64,9 +68,11 @@ def run_calc(system_name=None,
         parameters will be read exclusively from `preset_params`.
         Default is None.
     source : pathlike, optional
-        Path where the 'tensorleed' directory can be found, which
-        contains all the TensErLEED source code. Default is an empty
-        string, i.e., the current directory.
+        Path where the tensor-LEED directory can be found, which
+        contains all the TensErLEED source code. If not given
+        or None, try taking it from the environment variable
+        VIPERLEED_TENSORLEED. As a last resort, use the current
+        directory. Default is None.
 
     Returns
     -------
@@ -182,23 +188,11 @@ def run_calc(system_name=None,
         rp.fileLoaded["POSCAR"] = True
 
     # set source directory
-    _source = Path(source).resolve()
-    if not _source.is_dir():
-        logger.warning(f"tensorleed directory {source} not found.")
-    if _source.name == "tensorleed":
-        rp.source_dir = _source
-    elif _source.parent.name == "tensorleed":
-        logger.warning(f"tensorleed directory found in {_source.parent}, "
-                       f"using that instead of {_source}.")
-        rp.source_dir = _source.parent
-    elif (_source / "tensorleed").is_dir():
-        logger.warning(f"tensorleed directory found in {_source}, using that "
-                       f"instead of {_source}.")
-        rp.source_dir = _source / "tensorleed"
-    else:
-        logger.warning(f"Could not find a tensorleed directory at {_source}. "
-                       "This may cause errors.")
-        rp.source_dir = _source
+    try:
+        rp.source_dir = get_tensorleed_path(source)
+    except ValueError as exc:
+        logger.warning(f'{exc} This may cause errors.')
+        rp.source_dir = Path(source or '').resolve()
 
     if system_name is None:
         system_name = _get_parent_directory_name()
@@ -230,34 +224,51 @@ def get_tensorleed_path(tensorleed_path=None):
     ----------
     tensorleed_path : pathlike, optional
         Path to the viperleed-tensorleed source code, by default None.
-        If not given, tries to resolve the $VIPERLEED_TENSORLEED environment
-        variable.
+        If not given, the $VIPERLEED_TENSORLEED environment variable
+        is used, if defined. As a last resort, the current directory
+        is used. In all cases, the path given may be the top-level tree
+        containing the tensor-LEED code, its parent, or a first-level
+        subfolder.
 
     Returns
     -------
     Path
-        Path to the TensErLEED source code.
+        Path to the TensErLEED source code, that is, the directory
+        that contains, e.g., potentially multiple TensErLEED sources
+        as well as the EEASiSSS source code and compiled binaries.
 
     Raises
     ------
     ValueError
-        If neither the tensorleed_path argument nor the $VIPERLEED_TENSORLEED
-        environment variable are set.
+        If neither the tensorleed_path argument nor the
+        VIPERLEED_TENSORLEED environment variable are set.
+    ValueError
+        If neither tensorleed_path (or VIPERLEED_TENSORLEED), its
+        parent, or any of its children, point to one of the known
+        tensor-LEED directory structures.
     """
-    # if tensorleed arg is given, use that
-    if tensorleed_path:
-        return Path(tensorleed_path)
-    # else check environment variable $VIPERLEED_TENSORLEED
+    if tensorleed_path is not None:
+        path_ = Path(tensorleed_path)
+        return _verify_tensorleed_path(path_)
+
+    # Check environment variable $VIPERLEED_TENSORLEED
     try:
-        return Path(os.environ["VIPERLEED_TENSORLEED"])
-    except KeyError as exc:
-        # environment variable not set
+        path_ = Path(os.environ["VIPERLEED_TENSORLEED"])
+    except KeyError:  # Environment variable not set. Try CWD below.
+        pass
+    else:
+        return _verify_tensorleed_path(path_)
+
+    # Last resort: try with the current directory
+    try:
+        return _verify_tensorleed_path(Path.cwd())
+    except ValueError:
         raise ValueError(
-            "TensErLEED path not specified.\n"
-            "Please either pass a path to the TensErLEED source code with "
-            "the --tensorleed argument, or set the environment variable "
-            "$VIPERLEED_TENSORLEED."
-            ) from exc
+            'TensErLEED path not specified.\n'
+            'Either pass a path to the TensErLEED source code with the '
+            '--tensorleed command-line argument, or set the environment '
+            'variable VIPERLEED_TENSORLEED.'
+            ) from None
 
 
 def _get_parent_directory_name():
@@ -266,3 +277,30 @@ def _get_parent_directory_name():
     logger.info('No system name specified. Using name of parent '
                 f'directory: {_system_name}')
     return _system_name
+
+
+def _verify_tensorleed_path(path_):
+    """Return path_, its parent, or a child, if any is a tensor-LEED folder."""
+    source = path_.resolve()
+    if not source.is_dir():
+        raise ValueError(f'Tensor-LEED directory {path_} not found.')
+
+    if source.name in _KNOWN_TENSORLEED_TOP_FOLDERS:                            # TODO: I (@michele-riva) am not so sure going by name is the best way at this point, especially now that we moved the tensorleed code out of viperleed. People may store it anywhere under whatever folder name. Perhaps we should check the contents? I guess there should be at least one TensErLEED* folder.
+        return source
+
+    if source.parent.name in _KNOWN_TENSORLEED_TOP_FOLDERS:
+        logger.warning(
+            f'{source.parent.name!r} directory found in {source.parent}, '
+            f'using the latter instead of {source}.'
+            )
+        return source.parent
+
+    children = (source / d for d in _KNOWN_TENSORLEED_TOP_FOLDERS)
+    children = (d for d in children if d.is_dir())
+    child = next(children, None)
+    if child is not None:
+        logger.warning(f'{child.name!r} directory found in {source}, '
+                       f'using the former instead of {source}.')
+        return child
+    raise ValueError('Could not find a known tensor-LEED '
+                     f'source directory at {source}.')
