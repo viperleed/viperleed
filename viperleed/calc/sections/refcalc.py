@@ -343,7 +343,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             )
     if rp.TL_VERSION < 1.7:   # muftin.f deprecated in version 1.7
         try:
-            iorefcalc.writeMuftin(sl, rp)
+            iorefcalc.writeMuftin(rp)
         except Exception:
             logger.error("Exception during writeMuftin: ")
             raise

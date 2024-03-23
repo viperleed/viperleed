@@ -678,7 +678,7 @@ def writeAUXGEO(sl, rp):
     return
 
 
-def writeMuftin(sl, rp):
+def writeMuftin(rp):
     """Writes a muftin.f file, which will be compiled for the refcalc."""
     output = """
 C  Subroutine muftin contains explicit energy dependence of inner
