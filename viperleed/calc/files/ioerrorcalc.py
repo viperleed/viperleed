@@ -375,10 +375,10 @@ def make_errors_figs(errors, formatting=None):
         [sp.set_linewidth(0.7 * line_width) for sp in ax.spines.values()]
         if mode != "occ":
             ax.set_xlabel('Deviation from bestfit value (Å)',
-                          fontsize=10*font_size_scale)
+                          fontsize=9*font_size_scale)
         else:
             ax.set_xlabel('Site occupation (%)', fontsize=10*font_size_scale)
-        ax.set_ylabel('Pendry R-factor', fontsize=10*font_size_scale)
+        ax.set_ylabel('Pendry R-factor', fontsize=9*font_size_scale)
         ax.set_title(titles[mode], fontsize=12*font_size_scale)
         if var and rmin + var < rmax + (rmax-rmin)*0.1:
             ax.plot(xrange, [rmin + var]*2, color="slategray")
@@ -404,10 +404,10 @@ def make_errors_figs(errors, formatting=None):
             ax.plot(err_x[err], err_y[err], '-o', label=err_legend[err],
                     markevery=err_x_to_mark[err])
         # set tick font size
-        ax.tick_params(labelsize=6*font_size_scale, width=0.7 * line_width)
+        ax.tick_params(labelsize=7*font_size_scale, width=0.7 * line_width)
         ax.set_xlim(*xrange)
         ax.set_ylim(rmin - ((rmax-rmin)*0.1), rmax + ((rmax-rmin)*0.1))
-        ax.legend(fontsize=font_size_scale*8)
+        ax.legend(fontsize=6*font_size_scale)
         fig.tight_layout()
         figs.append(fig)
         # now plot individual figures
