@@ -19,7 +19,7 @@ from pathlib import Path
 import shutil
 import time
 
-from viperleed import GLOBALS
+from viperleed import __version__
 from viperleed.calc import LOGGER as logger
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc.classes import rparams
@@ -91,9 +91,9 @@ def run_calc(system_name=None,
         consoleHandler.setFormatter(logFormatter)
         logger.addHandler(consoleHandler)
 
-    logger.info("Starting new log: " + log_name + "\nTime of execution (UTC): "
+    logger.info(f"Starting new log: {log_name}\nTime of execution (UTC): "
                 + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-    logger.info("This is ViPErLEED version " + GLOBALS["version"] + "\n")
+    logger.info(f"This is ViPErLEED version {__version__}\n")
     logger.info("! THIS VERSION IS A PRE-RELEASE NOT MEANT FOR PUBLIC "         # TODO: remove for v1.0
                 "DISTRIBUTION !\n")
 
@@ -121,16 +121,16 @@ def run_calc(system_name=None,
         slab = None
     elif slab is None:
         poscar_file = Path("POSCAR")
-        if poscar_file.is_file():
-            logger.info("Reading structure from file POSCAR")
-            try:
-                slab = poscar.read(filename=poscar_file)
-            except Exception:
-                logger.error("Exception while reading POSCAR", exc_info=True)
-                cleanup(tmp_manifest)
-                return 2
-        else:
+        if not poscar_file.is_file():
             logger.error("POSCAR not found. Stopping execution...")
+            cleanup(tmp_manifest)
+            return 2
+
+        logger.info("Reading structure from file POSCAR")
+        try:
+            slab = poscar.read(filename=poscar_file)
+        except Exception:
+            logger.error("Exception while reading POSCAR", exc_info=True)
             cleanup(tmp_manifest)
             return 2
 
@@ -139,12 +139,12 @@ def run_calc(system_name=None,
                         "Copying the original POSCAR to POSCAR_user...")
             try:
                 shutil.copy2(poscar_file, "POSCAR_user")
-                tmp_manifest.append("POSCAR_user")
-            except Exception:
+            except OSError:
                 logger.error("Failed to copy POSCAR to POSCAR_user. Stopping "
                              "execution...")
                 cleanup(tmp_manifest)
                 return 2
+            tmp_manifest.append("POSCAR_user")
     try:
         # interpret the PARAMETERS file
         parameters.interpret(rp, slab=slab, silent=False)
@@ -171,8 +171,8 @@ def run_calc(system_name=None,
         logger.warning(f"Error applying preset parameters: ", exc_info=True)
 
     # set logging level
-    if preset_params.get('LOG_LEVEL', None) is not None:
-        logger.info(f'Overriding log level to {preset_params["LOG_LEVEL"]}.')
+    if 'LOG_LEVEL' in preset_params:
+        logger.info(f'Overriding log level to {rp.LOG_LEVEL}.')
     logger.setLevel(rp.LOG_LEVEL)
     logger.debug("PARAMETERS file was read successfully")
 
@@ -180,6 +180,7 @@ def run_calc(system_name=None,
         warn_if_slab_has_atoms_in_multiple_c_cells(slab, rp)
         slab.full_update(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
+
     # set source directory
     _source = Path(source).resolve()
     if not _source.is_dir():
@@ -227,7 +228,7 @@ def get_tensorleed_path(tensorleed_path=None):
 
     Parameters
     ----------
-    tensorleed_path : Pathlike, optional
+    tensorleed_path : pathlike, optional
         Path to the viperleed-tensorleed source code, by default None.
         If not given, tries to resolve the $VIPERLEED_TENSORLEED environment
         variable.
