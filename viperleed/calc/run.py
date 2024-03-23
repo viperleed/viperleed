@@ -32,7 +32,6 @@ from viperleed.calc.sections.initialization import (
 from viperleed.calc.sections.run_sections import section_loop
 
 
-_DEFAULT_SYSTEM_NAME = 'unknown'
 
 
 def run_calc(system_name=None,
@@ -49,7 +48,8 @@ def run_calc(system_name=None,
     ----------
     system_name : str, optional
         Used as a comment in some output-file headers. If not
-        specified, 'unknown' is used instead. Default is None.
+        specified, the name of the parent directory is used
+        instead. Default is None.
     console_output : bool, optional
         If False, will not add a logging.StreamHandler. Output will
         only be printed to the log file. Default is True.
@@ -200,9 +200,9 @@ def run_calc(system_name=None,
                        "This may cause errors.")
         rp.source_dir = _source
 
-    rp.systemName = system_name or _DEFAULT_SYSTEM_NAME
-    if not system_name:
-        logger.info(f'No system name specified. Using name {rp.systemName!r}.')
+    if system_name is None:
+        system_name = _get_parent_directory_name()
+    rp.systemName = system_name
 
     # check if halting condition is already in effect:
     if rp.halt >= rp.HALTING:
@@ -258,3 +258,11 @@ def get_tensorleed_path(tensorleed_path=None):
             "the --tensorleed argument, or set the environment variable "
             "$VIPERLEED_TENSORLEED."
             ) from exc
+
+
+def _get_parent_directory_name():
+    """Return the name of the directory above the current one."""
+    _system_name = Path.cwd().resolve().parent.name
+    logger.info('No system name specified. Using name of parent '
+                f'directory: {_system_name}')
+    return _system_name

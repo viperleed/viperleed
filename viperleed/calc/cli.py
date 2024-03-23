@@ -151,8 +151,8 @@ def main(args=None):
     os.chdir(work_path)
     try:
         exit_code = run_calc(
-            system_name=args.name or _get_parent_directory_name(),
             source=get_tensorleed_path(args.tensorleed),
+            system_name=args.name,
             preset_params=presets
             )
     finally:
@@ -228,14 +228,6 @@ def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
         work_directory = work_path / local_dir
         work_directory.mkdir(parents=True, exist_ok=True)
         shutil.copy2(local_file, work_path / local_file)
-
-
-def _get_parent_directory_name():
-    """Return the name of the directory above the current one."""
-    _system_name = Path.cwd().resolve().parent.name
-    logger.info('No system name specified. Using name of parent '
-                f'directory: {_system_name}')
-    return _system_name
 
 
 def _make_work_directory(cli_args):
