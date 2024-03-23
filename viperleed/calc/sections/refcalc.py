@@ -471,7 +471,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
         # @issue #43: this could be a class method
-        validate_multiple_files(comp_tasks[0].get_source_files(),
+        files_to_check = (file for file in comp_tasks[0].get_source_files()
+                          if file and 'muftin' not in file.name.lower())
+        validate_multiple_files(files_to_check,
                                 logger, "reference calculation",
                                 rp.TL_VERSION_STR)
 
