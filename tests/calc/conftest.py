@@ -31,9 +31,9 @@ import pytest
 import pytest_cases
 
 from viperleed.calc import psgen
-from viperleed.calc.__main__ import get_tensorleed_path
 from viperleed.calc.files import displacements
 from viperleed.calc.files import vibrocc
+from viperleed.calc.run import get_tensorleed_path
 
 from ..helpers import POSCAR_PATH
 from ..helpers import exclude_tags, execute_in_dir

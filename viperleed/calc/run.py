@@ -220,3 +220,40 @@ def run_calc(system_name=None,
     logging.shutdown()
 
     return exit_code
+
+
+def get_tensorleed_path(tensorleed_path=None):
+    """Return the path to the TensErLEED source code.
+
+    Parameters
+    ----------
+    tensorleed_path : Pathlike, optional
+        Path to the viperleed-tensorleed source code, by default None.
+        If not given, tries to resolve the $VIPERLEED_TENSORLEED environment
+        variable.
+
+    Returns
+    -------
+    Path
+        Path to the TensErLEED source code.
+
+    Raises
+    ------
+    ValueError
+        If neither the tensorleed_path argument nor the $VIPERLEED_TENSORLEED
+        environment variable are set.
+    """
+    # if tensorleed arg is given, use that
+    if tensorleed_path:
+        return Path(tensorleed_path)
+    # else check environment variable $VIPERLEED_TENSORLEED
+    try:
+        return Path(os.environ["VIPERLEED_TENSORLEED"])
+    except KeyError as exc:
+        # environment variable not set
+        raise ValueError(
+            "TensErLEED path not specified.\n"
+            "Please either pass a path to the TensErLEED source code with "
+            "the --tensorleed argument, or set the environment variable "
+            "$VIPERLEED_TENSORLEED."
+            ) from exc

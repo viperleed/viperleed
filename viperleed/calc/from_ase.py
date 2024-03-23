@@ -22,15 +22,13 @@ import warnings
 
 import numpy as np
 
-# for run_from_ase
-
-from viperleed.calc.__main__ import get_tensorleed_path
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.rparams import Rparams, TheoEnergies
 from viperleed.calc.classes.rparams import IVShiftRange
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.lib.base import rotation_matrix
+from viperleed.calc.run import get_tensorleed_path
 from viperleed.calc.run import run_calc
 # for rfactor_from_csv
 from viperleed.calc.files import iorfactor as rf_io
