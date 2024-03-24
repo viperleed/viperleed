@@ -478,15 +478,8 @@ def _parse_args(args):
         If the path given in args does not exist or does not contain
         source files.
     """
-    if args.tlpath:
-        tl_base_path = Path(args.tlpath).resolve()
-    else:
-        raise RuntimeError("No path specified. Use --tlpath or -p")
-
-    if not tl_base_path.exists():
-        raise FileNotFoundError(f"Could not find {tl_base_path}")
-
-    tl_folders = tuple(tl_base_path.glob("TensErLEED*"))                       # TODO: would need to be changed to include beamgen, etc.
+    tl_base_path = _resolve_tensorleed_path_argument(args)
+    tl_folders = tuple(tl_base_path.glob('TensErLEED*'))                        # TODO: would need to be changed to include beamgen, etc.
     if not tl_folders:
         raise FileNotFoundError(
             f'No TensErLEED folders found in {tl_base_path}'
@@ -503,6 +496,17 @@ def _parse_args(args):
 
     return tl_base_path, tl_folders, checksum_dict
 
+
+def _resolve_tensorleed_path_argument(args):
+    """Return a path to the tensor-LEED folder from CLI args."""
+    if args.tlpath:
+        tl_base_path = Path(args.tlpath).resolve()
+    else:
+        raise RuntimeError("No path specified. Use --tlpath or -p")
+
+    if not tl_base_path.exists():
+        raise FileNotFoundError(f"Could not find {tl_base_path}")
+    return tl_base_path
 if __name__ != "__main__":
     # Permissible checksums for various source files
     # in the form {file_path: set(known_checksums)}
