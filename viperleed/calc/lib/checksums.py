@@ -507,6 +507,23 @@ def _resolve_tensorleed_path_argument(args):
     if not tl_base_path.exists():
         raise FileNotFoundError(f"Could not find {tl_base_path}")
     return tl_base_path
+
+
+def _add_parser_args(parser):
+    """Add CLI arguments to parser."""
+    parser.add_argument('-p', '--tlpath',
+                        help='Specify TensErLEED source directory',
+                        type=str)
+    parser.add_argument(
+        '-n', '--no-append',
+        help=(f'Do not read in existing {CHECKSUMS_FILE_NAME} file and '
+              'create a new one instead containing ONLY the current files. '
+              'If not specified, the default is to append new checksums '
+              'to existing ones'),
+        action='store_true'
+        )
+
+
 if __name__ != "__main__":
     # Permissible checksums for various source files
     # in the form {file_path: set(known_checksums)}
@@ -526,17 +543,7 @@ if __name__ != "__main__":
 
 else:  # Write new checksum file when executed as a module
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-p", "--tlpath",
-        help=("specify TensErLEED source directory"), type=str
-    )
-    parser.add_argument(
-        "-n", "--no-append",
-        help=("Do not read in existing _checksums.dat file and create "
-              "a new one instead containing ONLY the current files. If "
-              "not specified, the default is to append new checksums "
-              "to existing ones."), type=str
-    )
+    _add_parser_args(parser)
     _args = parser.parse_known_args()
 
     _tl_base_path, _tl_folders, _checksum_dict = _parse_args(_args[0])
