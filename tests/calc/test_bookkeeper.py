@@ -10,7 +10,6 @@ __license__ = 'GPLv3+'
 
 import shutil
 
-import pytest
 from pytest_cases import fixture, parametrize
 
 from viperleed.calc.bookkeeper import _CALC_LOG_PREFIXES
