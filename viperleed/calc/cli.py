@@ -209,8 +209,7 @@ def _copy_tensors_and_deltas_to_work(work_path, all_tensors):
     if all_tensors:  # Copy all of them
         for directory in ('Tensors', 'Deltas'):
             try:
-                shutil.copytree(directory, work_path / directory,
-                                dirs_exist_ok=True)
+                copytree_exists_ok(directory, work_path / directory)
             except FileNotFoundError:
                 pass
         return
