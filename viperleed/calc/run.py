@@ -190,7 +190,7 @@ def run_calc(system_name=None,
     # set source directory
     try:
         rp.source_dir = get_tensorleed_path(source)
-    except ValueError as exc:
+    except (ValueError, FileNotFoundError) as exc:
         logger.warning(f'{exc} This may cause errors.')
         rp.source_dir = Path(source or '').resolve()
 
@@ -242,7 +242,7 @@ def get_tensorleed_path(tensorleed_path=None):
     ValueError
         If neither the tensorleed_path argument nor the
         VIPERLEED_TENSORLEED environment variable are set.
-    ValueError
+    FileNotFoundError
         If neither tensorleed_path (or VIPERLEED_TENSORLEED), its
         parent, or any of its children, point to one of the known
         tensor-LEED directory structures.
@@ -283,7 +283,7 @@ def _verify_tensorleed_path(path_):
     """Return path_, its parent, or a child, if any is a tensor-LEED folder."""
     source = path_.resolve()
     if not source.is_dir():
-        raise ValueError(f'Tensor-LEED directory {path_} not found.')
+        raise FileNotFoundError(f'Tensor-LEED directory {path_} not found.')
 
     if source.name in _KNOWN_TENSORLEED_TOP_FOLDERS:                            # TODO: I (@michele-riva) am not so sure going by name is the best way at this point, especially now that we moved the tensorleed code out of viperleed. People may store it anywhere under whatever folder name. Perhaps we should check the contents? I guess there should be at least one TensErLEED* folder.
         return source
@@ -302,5 +302,5 @@ def _verify_tensorleed_path(path_):
         logger.warning(f'{child.name!r} directory found in {source}, '
                        f'using the former instead of {source}.')
         return child
-    raise ValueError('Could not find a known tensor-LEED '
-                     f'source directory at {source}.')
+    raise FileNotFoundError('Could not find a known tensor-LEED '
+                            f'source directory at {source}.')
