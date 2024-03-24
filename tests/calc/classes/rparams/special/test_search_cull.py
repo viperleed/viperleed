@@ -3,7 +3,9 @@
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-12-14'
+__license__ = 'GPLv3+'
 
 import pytest
 from pytest_cases import fixture, parametrize

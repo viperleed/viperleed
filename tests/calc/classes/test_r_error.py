@@ -4,7 +4,9 @@ __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-03-09'
+__license__ = 'GPLv3+'
 
 import numpy as np
 import pytest

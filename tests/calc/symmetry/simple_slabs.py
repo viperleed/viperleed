@@ -8,7 +8,9 @@ plane groups, including atoms at all Wyckoff positions.
 __authors__ = (
     'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-04-13'
+__license__ = 'GPLv3+'
 
 from enum import Enum
 
