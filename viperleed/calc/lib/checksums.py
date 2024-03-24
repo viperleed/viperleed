@@ -20,30 +20,34 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2022-10-12'
 __license__ = 'GPLv3+'
 
-import hashlib
-import base64
-import ast
-from pathlib import Path
 import argparse
+import ast
+import base64
+import hashlib
+from pathlib import Path
 from warnings import warn
+
+# Where encoded checksums are stored
+CHECKSUMS_FILE_NAME = '_checksums.dat'
+
 
 # TensErLEED Versions
 KNOWN_TL_VERSIONS = (
-    "1.6",
-    "1.61",
-    "1.71",
-    "1.72",
-    "1.73",  # TODO: use Version when available
-    "1.74",
-    "1.75",
-    "1.76",
-    "1.8",
-)
+    '1.6',
+    '1.61',
+    '1.71',
+    '1.72',
+    '1.73',  # TODO: use Version when available
+    '1.74',
+    '1.75',
+    '1.76',
+    '1.8',
+    )
 
 
 # sections of TensErLEED - currently unused
-KNOWN_TL_SECTIONS = ("ref-calc", "r-factor", "deltas", "search",
-                     "superpos", "errors")
+KNOWN_TL_SECTIONS = ('ref-calc', 'r-factor', 'deltas', 'search',
+                     'superpos', 'errors')
 
 
 class UnknownTensErLEEDVersionError(ValueError):
@@ -66,7 +70,7 @@ class TLSourceFile:
 
         Parameters
         ----------
-        name : str, or path-like
+        name : str or pathlike
             Path to the source file
         version : str
             String with TensErLEED version. Must be part of KNOWN_TL_VERSIONS.
@@ -98,8 +102,8 @@ class TLSourceFile:
 
     def __repr__(self):
         """Return a string representation of self."""
-        txt = f"TLSourceFile({self.name}, {self.tl_version}, "
-        return txt + f"{self.valid_checksums})"
+        txt = f'TLSourceFile({self.name}, {self.tl_version}, '
+        return txt + f'{self.valid_checksums})'
 
     @property
     def valid_checksums(self):
@@ -154,10 +158,8 @@ def _get_checksums(tl_version, filename):
     tl_version_files = get_tl_version_files(tl_version)
     applicable_files = tuple(f for f in tl_version_files if f.name == filename)
     if not applicable_files:
-        raise ValueError(
-            f"Unrecognized filename '{filename}' "
-            f"for TensErLEED version {tl_version}."
-        )
+        raise ValueError(f'Unrecognized filename {filename!r} '
+                         f'for TensErLEED version {tl_version}.')
 
     nested_valid_checksums = (f.valid_checksums for f in applicable_files)
     valid_checksums = (cs for nest in nested_valid_checksums for cs in nest)
@@ -169,7 +171,7 @@ def get_file_checksum(file_path):
 
     Parameters
     ----------
-    file_path : str, or path-like
+    file_path : str or pathlike
         Path to the file whose checksum should be calculated.
 
     Returns
@@ -184,14 +186,12 @@ def get_file_checksum(file_path):
     """
     file_path = Path(file_path).resolve()
     if not file_path.exists():
-        raise FileNotFoundError(
-            f"Could not calculate checksum of file {file_path}. File not found."
-        )
+        raise FileNotFoundError('Could not calculate checksum of '
+                                f'file {file_path}. File not found.')
     if not file_path.is_file():
-        raise FileNotFoundError(
-            f"Could not calculate checksum of file {file_path}. Not a file."
-        )
-    with file_path.open(mode="rb") as open_file:
+        raise FileNotFoundError('Could not calculate checksum of '
+                                f'file {file_path}. Not a file.')
+    with file_path.open(mode='rb') as open_file:
         content = open_file.read()
     # Make sure we always have '\n' for line endings, and not '\r\n'.
     # The latter seems to appear in files synced with git on Windows:
@@ -208,9 +208,9 @@ def validate_checksum(tl_version, filename):
 
     Parameters
     ----------
-    tl_version : str, or float
+    tl_version : str or float
         TensErLEED version
-    filename : str, or path-like
+    filename : str or pathlike
         Path to the file to be checked
 
     Raises
@@ -229,7 +229,7 @@ def validate_checksum(tl_version, filename):
     """
     # Ensure TL version is valid
     if not isinstance(tl_version, (str, float)):
-        raise TypeError("Invalid type for tl_version")
+        raise TypeError('Invalid type for tl_version')
     clean_tl_version = str(tl_version)
 
     if clean_tl_version not in KNOWN_TL_VERSIONS:
@@ -239,11 +239,9 @@ def validate_checksum(tl_version, filename):
 
     # Ensure filename is valid and cleaned up
     if not isinstance(filename, (str, Path)):
-        raise TypeError(
-            "Invalid type of filename: "
-            f"{type(filename).__name__}. "
-            "Allowed are str and Path."
-        )
+        raise TypeError('Invalid type of filename: '
+                        f'{type(filename).__name__}. '
+                        'Allowed are str and Path.')
 
     file_path = Path(filename).resolve()
     base_path = file_path.parents[2]  # 3 folders up
@@ -255,15 +253,13 @@ def validate_checksum(tl_version, filename):
     # Get known checksums
     try:
         reference_checksums = _get_checksums(clean_tl_version, filename_clean)
-    except ValueError as err:
-        raise InvalidChecksumFileError(
-            f"Could not find checksum for file {filename_clean}."
-        ) from err
+    except ValueError as exc:
+        raise InvalidChecksumFileError('Could not find checksum '
+                                       f'for file {filename_clean}.') from exc
 
     if file_checksum not in reference_checksums:
-        raise InvalidChecksumError(
-            f"SHA-256 checksum comparison failed for file {filename}."
-        )
+        raise InvalidChecksumError('SHA-256 checksum comparison '
+                                   f'failed for file {filename}.')
 
 
 def validate_multiple_files(files_to_check, logger, calc_part_name, version):
@@ -290,28 +286,25 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     """
     problematic = []
     for file_path in files_to_check:
-        if file_path is None: # may be passed a None for e.g. muftin -> skip
+        if file_path is None: # May be None, e.g. for muftin.f -> skip
             continue
         try:
             validate_checksum(version, file_path)
-        except (InvalidChecksumError, InvalidChecksumFileError) as err:
+        except (InvalidChecksumError, InvalidChecksumFileError) as exc:
             logger.error(
-                "Error in checksum comparison of TensErLEED files for "
-                f"{calc_part_name}. Could not verify file {file_path}."
-                f" Info: {err}"
-            )
+                'Error in checksum comparison of TensErLEED files for '
+                f'{calc_part_name}. Could not verify file {file_path}.'
+                f' Info: {exc}'
+                )
             problematic.append(str(file_path))
-
     if problematic:
         txt = ', '.join(problematic)
         raise InvalidChecksumError(
-            f"SHA-256 checksum comparison failed for files {txt}."
-        )
-
+            f'SHA-256 checksum comparison failed for files {txt}.'
+            )
     # If you arrive here, checksums were successful
-    logger.debug(
-        f"Checksums of TensErLEED source files for {calc_part_name} validated."
-    )
+    logger.debug('Checksums of TensErLEED source '
+                 f'files for {calc_part_name} validated.')
 
 
 def encode_checksums(source_file_checksums):
@@ -328,7 +321,7 @@ def encode_checksums(source_file_checksums):
     encoded : bytes
         base-64 encoded version of source_file_checksums.
     """
-    bytes_source = repr(source_file_checksums).encode("utf-8")
+    bytes_source = repr(source_file_checksums).encode('utf-8')
     return base64.b64encode(bytes_source)
 
 
@@ -353,17 +346,16 @@ def decode_checksums(encoded_checksums):
     InvalidChecksumFileError
         When decoding of encoded_checksums fails.
     """
-    encoded_checksums += b"==="  # Prevents padding errors
+    encoded_checksums += b'==='  # Prevents padding errors
     bytes_source = base64.b64decode(encoded_checksums)
     try:
-        return ast.literal_eval(bytes_source.decode("utf-8"))
-    except (TypeError, ValueError,
-            MemoryError, RecursionError,
-            SyntaxError, UnicodeDecodeError) as err:
+        return ast.literal_eval(bytes_source.decode('utf-8'))
+    except (TypeError, ValueError, MemoryError,
+            RecursionError, SyntaxError) as exc:
         raise InvalidChecksumFileError(
-            "Looks like the TensErLEED source "
-            "checksum file has been tampered with!"
-            ) from err
+            'Looks like the TensErLEED source '
+            'checksum file has been tampered with!'
+            ) from exc
 
 
 def read_encoded_checksums(encoded_file_path=None):
@@ -371,7 +363,7 @@ def read_encoded_checksums(encoded_file_path=None):
 
     Parameters
     ----------
-    encoded_file_path : str, or pathlike, optional
+    encoded_file_path : str or pathlike, optional
         Optional location of encoded checksum file. If None, the
         default location (viperleed/calc/_checksums.dat) is assumed.
         Default is None.
@@ -385,9 +377,9 @@ def read_encoded_checksums(encoded_file_path=None):
     if encoded_file_path is None:
         # file should be in calc/
         encoded_file_path = Path(__file__).resolve().parent
-        encoded_file_path /= "_checksums.dat"
+        encoded_file_path /= CHECKSUMS_FILE_NAME
 
-    with open(encoded_file_path, "rb") as file:
+    with open(encoded_file_path, 'rb') as file:
         return decode_checksums(file.read())
 
 
@@ -411,15 +403,15 @@ def _write_encoded_checksums(source_file_checksums, encoded_file_path=None):
     if encoded_file_path is None:
         # file should be in calc/
         encoded_file_path = Path(__file__).resolve().parent
-        encoded_file_path /= "_checksums.dat"
+        encoded_file_path /= CHECKSUMS_FILE_NAME
 
-    with open(encoded_file_path, "wb") as file:
+    with open(encoded_file_path, 'wb') as file:
         file.write(encode_checksums(source_file_checksums))
 
 
 def _add_checksums_for_dir(path,
                            checksum_dict_,
-                           patterns=("*/GLOBAL", "*/*.f*")):
+                           patterns=('*/GLOBAL', '*/*.f*')):
     """Add checksums for files in path into checksum_dict_.
 
     This function is intended for viperleed developers.
@@ -473,7 +465,8 @@ def _parse_args(args):
     Raises
     ------
     RuntimeError
-        _description_
+        If no valid tensor-LEED path was specified as a command-line
+        argument.
     FileNotFoundError
         If the path given in args does not exist or does not contain
         source files.
@@ -489,8 +482,8 @@ def _parse_args(args):
     tl_folders = tuple(tl_base_path.glob("TensErLEED*"))                       # TODO: would need to be changed to include beamgen, etc.
     if not tl_folders:
         raise FileNotFoundError(
-            f"No TensErLEED folders found in {tl_base_path}"
-        )
+            f'No TensErLEED folders found in {tl_base_path}'
+            )
 
     # Check for --no-append flag
     checksum_dict = {}
@@ -498,8 +491,8 @@ def _parse_args(args):
         try:
             checksum_dict = read_encoded_checksums()
         except (FileNotFoundError, InvalidChecksumFileError) as exc:
-            warn("Could not read _checksums.dat file. "
-                 f"Creating a new one. Info: {exc}")
+            warn(f'Could not read {CHECKSUMS_FILE_NAME} file. '
+                 f'Creating a new one. Info: {exc}')
 
     return tl_base_path, tl_folders, checksum_dict
 
