@@ -25,6 +25,7 @@ import ast
 import base64
 import hashlib
 from pathlib import Path
+import sys
 from warnings import warn
 
 # Where encoded checksums are stored
@@ -452,13 +453,13 @@ def _add_checksums_for_dir(path,
             checksum_dict_[key].add(checksum)
 
 
-def _parse_args(args):
+def _parse_args(parser):
     """Parse command line arguments.
 
     Parameters
     ----------
-    args : argparse.Namespace
-        First element returned by ArgumentParser.parse_known_args()
+    parser : argparse.ArgumentParser
+        Command-line interface argument parser.
 
     Returns
     -------
@@ -475,9 +476,10 @@ def _parse_args(args):
         If no valid tensor-LEED path was specified as a command-line
         argument.
     FileNotFoundError
-        If the path given in args does not exist or does not contain
-        source files.
+        If the path specified at the command line does not exist or
+        does not contain source files.
     """
+    args = parser.parse_args()
     tl_base_path = _resolve_tensorleed_path_argument(args)
     tl_folders = tuple(tl_base_path.glob('TensErLEED*'))                        # TODO: would need to be changed to include beamgen, etc.
     if not tl_folders:
@@ -524,6 +526,33 @@ def _add_parser_args(parser):
         )
 
 
+def _write_new_checksum_dat_file():
+    """Update (or create) the _checksums.dat file. For developers only."""
+    parser = argparse.ArgumentParser()
+    _add_parser_args(parser)
+
+    tl_base_path, tl_folders, checksum_dict = _parse_args(parser)
+
+    for folder in tl_folders:
+        _, version_ = folder.name.split('v')
+        if version_ not in KNOWN_TL_VERSIONS:
+            raise UnknownTensErLEEDVersionError(
+                message=('Unknown TensErLEED version '
+                         f'{version_} in {tl_base_path}')
+                )
+        _add_checksums_for_dir(folder, checksum_dict)
+
+    # Write to file
+    _write_encoded_checksums(checksum_dict)
+
+    # Try to read to make sure it's OK
+    read_checksums = read_encoded_checksums()
+    assert read_checksums == checksum_dict
+    print(f'Wrote {CHECKSUMS_FILE_NAME} successfully!')
+
+    return 0
+
+
 if __name__ != "__main__":
     # Permissible checksums for various source files
     # in the form {file_path: set(known_checksums)}
@@ -542,25 +571,4 @@ if __name__ != "__main__":
         TL_INPUT_FILES.add(TLSourceFile(file_, f_version, f_checksums))
 
 else:  # Write new checksum file when executed as a module
-    parser = argparse.ArgumentParser()
-    _add_parser_args(parser)
-    _args = parser.parse_known_args()
-
-    _tl_base_path, _tl_folders, _checksum_dict = _parse_args(_args[0])
-
-    for folder in _tl_folders:
-        version_ = folder.name.split("v")[1]
-        if version_ not in KNOWN_TL_VERSIONS:
-            raise UnknownTensErLEEDVersionError(
-                    f"Unknown TensErLEED version {version_} in {_tl_base_path}"
-                    )
-        _add_checksums_for_dir(folder, _checksum_dict)
-
-    # write to file
-    _write_encoded_checksums(_checksum_dict)
-
-    # try to read to make sure it's ok
-    read_checksums = read_encoded_checksums()
-
-    assert read_checksums == _checksum_dict
-    print("Wrote _checksums.dat successfully!")
+    sys.exit(_write_new_checksum_dat_file())
