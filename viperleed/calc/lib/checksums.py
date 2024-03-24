@@ -507,7 +507,7 @@ def _resolve_tensorleed_path_argument(args):
         raise RuntimeError("No path specified. Use --tlpath or -p")
 
     if not tl_base_path.exists():
-        raise FileNotFoundError(f"Could not find {tl_base_path}")
+        raise FileNotFoundError(f'Could not find {tl_base_path}')
     return tl_base_path
 
 
@@ -553,7 +553,7 @@ def _write_new_checksum_dat_file():
     return 0
 
 
-if __name__ != "__main__":
+if __name__ != '__main__':
     # Permissible checksums for various source files
     # in the form {file_path: set(known_checksums)}
     VALID_CHECKSUMS = read_encoded_checksums()
@@ -561,13 +561,11 @@ if __name__ != "__main__":
     # Generate set of all files
     TL_INPUT_FILES = set()
     for file_, f_checksums in VALID_CHECKSUMS.items():
-        folder = tuple(Path(file_).parents)[-2]
-        if not folder.name.startswith("TensErLEED"):
-            raise NotImplementedError(
-                "Checksums are only implemented "
-                "for TensErLEED files at the moment."
-                )
-        f_version = folder.name.split("v")[1]
+        folder_ = tuple(Path(file_).parents)[-2]
+        if not folder_.name.startswith('TensErLEED'):
+            raise NotImplementedError('Checksums are only implemented '
+                                      'for TensErLEED files at the moment.')
+        _, f_version = folder_.name.split('v')
         TL_INPUT_FILES.add(TLSourceFile(file_, f_version, f_checksums))
 
 else:  # Write new checksum file when executed as a module
