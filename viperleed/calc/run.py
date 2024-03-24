@@ -20,6 +20,7 @@ import shutil
 import time
 
 from viperleed import __version__
+from viperleed import VIPERLEED_TENSORLEED_ENV
 from viperleed.calc import LOGGER as logger
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc.classes import rparams
@@ -253,7 +254,7 @@ def get_tensorleed_path(tensorleed_path=None):
 
     # Check environment variable $VIPERLEED_TENSORLEED
     try:
-        path_ = Path(os.environ["VIPERLEED_TENSORLEED"])
+        path_ = Path(os.environ[VIPERLEED_TENSORLEED_ENV])
     except KeyError:  # Environment variable not set. Try CWD below.
         pass
     else:
@@ -267,7 +268,7 @@ def get_tensorleed_path(tensorleed_path=None):
             'TensErLEED path not specified.\n'
             'Either pass a path to the TensErLEED source code with the '
             '--tensorleed command-line argument, or set the environment '
-            'variable VIPERLEED_TENSORLEED.'
+            f'variable {VIPERLEED_TENSORLEED_ENV}.'
             ) from None
 
 

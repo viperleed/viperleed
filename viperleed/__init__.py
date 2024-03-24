@@ -20,3 +20,6 @@ GLOBALS = {
     'version_message': ('ViPErLEED (Vienna Package for Erlangen LEED) '
                         f'v{__version__}')
     }
+# Name of environment variable specifying the path to the tensor-LEED
+# source code. Typically the viperleed-tensorleed repository.
+VIPERLEED_TENSORLEED_ENV = 'VIPERLEED_TENSORLEED'
