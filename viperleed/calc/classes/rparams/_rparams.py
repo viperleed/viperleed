@@ -436,9 +436,9 @@ class Rparams:
         if (self.TL_VERSION_STR not in KNOWN_TL_VERSIONS
                 and not self.TL_IGNORE_CHECKSUM):
             raise UnknownTensErLEEDVersionError(
-                f'Unrecognized TensErLEED version: {self.TL_VERSION_STR}. '
-                'Consider editing KNOWN_TL_VERSIONS global in checksums.py '
-                'or setting TL_IGNORE_CHECKSUM = True'
+                self.TL_VERSION_STR,
+                message=('Consider editing KNOWN_TL_VERSIONS global in '
+                         'checksums.py or setting TL_IGNORE_CHECKSUM = True')
                 )
 
         # SEARCH_CONVERGENCE:

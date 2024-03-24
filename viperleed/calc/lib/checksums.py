@@ -53,6 +53,17 @@ KNOWN_TL_SECTIONS = ('ref-calc', 'r-factor', 'deltas', 'search',
 class UnknownTensErLEEDVersionError(ValueError):
     """Exception for invalid TensErLEED version."""
 
+    def __init__(self, version=None, message=''):
+        """Initialize exception."""
+        self.version = version
+        full_message = ('' if version is None
+                        else f'Unrecognized TensErLEED version {version}.')
+        if message and full_message:
+            full_message += ' '
+        if message:
+            full_message += message
+        super().__init__(full_message)
+
 
 class InvalidChecksumError(Exception):
     """Exception for invalid checksums."""
@@ -91,7 +102,7 @@ class TLSourceFile:
         self._name = self.path.relative_to(base_path)
 
         if version not in KNOWN_TL_VERSIONS:
-            raise UnknownTensErLEEDVersionError(f"Unknown TensErLEED version {version}")
+            raise UnknownTensErLEEDVersionError(version)
         self._version = version
 
         self._valid_checksums = set(checksums)
@@ -151,9 +162,7 @@ def get_tl_version_files(version):
 def _get_checksums(tl_version, filename):
     """Return a tuple of valid checksums for given version and filename."""
     if tl_version not in KNOWN_TL_VERSIONS:
-        raise UnknownTensErLEEDVersionError(
-            f"Unrecognized TensErLEED Version: {tl_version}"
-        )
+        raise UnknownTensErLEEDVersionError(tl_version)
 
     tl_version_files = get_tl_version_files(tl_version)
     applicable_files = tuple(f for f in tl_version_files if f.name == filename)
@@ -233,9 +242,7 @@ def validate_checksum(tl_version, filename):
     clean_tl_version = str(tl_version)
 
     if clean_tl_version not in KNOWN_TL_VERSIONS:
-        raise UnknownTensErLEEDVersionError(
-            f"Unrecognized TensErLEED version: {clean_tl_version}"
-        )
+        raise UnknownTensErLEEDVersionError(clean_tl_version)
 
     # Ensure filename is valid and cleaned up
     if not isinstance(filename, (str, Path)):
