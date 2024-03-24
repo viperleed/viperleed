@@ -24,9 +24,12 @@ import argparse
 import ast
 import base64
 import hashlib
+import os
 from pathlib import Path
 import sys
 from warnings import warn
+
+from viperleed import VIPERLEED_TENSORLEED_ENV
 
 # Where encoded checksums are stored
 CHECKSUMS_FILE_NAME = '_checksums.dat'
@@ -501,11 +504,25 @@ def _parse_args(parser):
 
 def _resolve_tensorleed_path_argument(args):
     """Return a path to the tensor-LEED folder from CLI args."""
+    if args.tlpath is None and not args.use_env_variable:
+        raise RuntimeError(
+            'No path specified. Use --tlpath/-p, or --use-env-variable/-e '
+            f'to take it from the {VIPERLEED_TENSORLEED_ENV} environment '
+            'variable'
+            )
     if args.tlpath:
         tl_base_path = Path(args.tlpath).resolve()
     else:
-        raise RuntimeError("No path specified. Use --tlpath or -p")
-
+        # Notice that here we don't use the get_tensorleed_path
+        # function from run on purpose, as that one also does
+        # some more verification of the folder name that we
+        # do not really need here. What we care is only that
+        # there are TensErLEED* folders in it.
+        try:
+            tl_base_path = Path(os.environ[VIPERLEED_TENSORLEED_ENV]).resolve()
+        except (TypeError, KeyError) as exc:
+            raise RuntimeError(f'No {VIPERLEED_TENSORLEED_ENV} '
+                               f'environment variable.') from exc
     if not tl_base_path.exists():
         raise FileNotFoundError(f'Could not find {tl_base_path}')
     return tl_base_path
@@ -516,6 +533,12 @@ def _add_parser_args(parser):
     parser.add_argument('-p', '--tlpath',
                         help='Specify TensErLEED source directory',
                         type=str)
+    parser.add_argument(
+        '-e', '--use-env-variable',
+        help=('Use the path specified in the VIPERLEED_TENSORLEED environment '
+              'variable as a fallback in case --tlpath is not given'),
+        action='store_true'
+        )
     parser.add_argument(
         '-n', '--no-append',
         help=(f'Do not read in existing {CHECKSUMS_FILE_NAME} file and '
