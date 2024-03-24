@@ -7,7 +7,6 @@ import ast
 from collections import Counter
 from pathlib import Path
 import re
-import sys
 
 
 DUNDER_RE = re.compile(r'^__[a-z]+__$')
@@ -268,18 +267,21 @@ def add_copyright_dunder(filename):
     add_one_dunder(filename, '__copyright__', _copyright)
 
 
-def check_and_fix_viperleed_repo():
+def check_and_fix_viperleed_repo(package):
     """Check viperleed repository, and fix files that should be fixed."""
-    viperleed = Path.cwd().parents[1] / 'viperleed'
-    print(f"Checking {viperleed}")
-    for file in viperleed.glob('**/*.py'):
+    base = Path.cwd().parents[1]
+    repo = base / package
+    print(f'Checking {repo}')
+    for file in repo.glob('**/*.py'):
         try:
             check_one_file(file)
         except DunderError as exc:
-            print(f'Problem in {file.relative_to(viperleed)}: {exc}')
+            print(f'Problem in {file.relative_to(base)}: {exc}')
             continue
-        print(f'Fixing {file.relative_to(viperleed)}')
+        print(f'Fixing {file.relative_to(base)}')
         fix_one_file(file)
 
+
 if __name__ == '__main__':
-    check_and_fix_viperleed_repo()
+    check_and_fix_viperleed_repo('viperleed')
+    check_and_fix_viperleed_repo('tests')
