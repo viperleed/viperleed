@@ -70,7 +70,7 @@ class RefcalcCompileTask():
         lib_tleed = next(libpath.glob('lib.tleed*'), None)
         srcname = next(srcpath.glob('ref-calc*'), None)
         globalname = srcpath / "GLOBAL"
-        _muftin = Path("muftin.f")
+        _muftin = self.basedir / "muftin.f"
         muftinname =_muftin if _muftin.is_file() else None
         if any(f is None for f in (srcname, lib_tleed)):
             raise RuntimeError(f"Source files missing in {sourcedir}")          # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
