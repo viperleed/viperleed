@@ -3,6 +3,13 @@
 Adds the __copyright__ and __license__ module dunders for given files.
 """
 
+__authors__ = (
+    'Michele Riva (@michele-riva)',
+    )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
+__created__ = '2024-03-22'
+__license__ = 'GPLv3+'
+
 import ast
 from collections import Counter
 from pathlib import Path
@@ -15,6 +22,7 @@ ACCEPTABLE_DUNDER_TYPES = (
     ast.Tuple,
     ast.Constant,
     )
+IMPORT_RE = re.compile(r'^\s*(from\s+\w+\s+)?import\s+\w+')
 
 
 class DunderError(Exception):
@@ -111,7 +119,7 @@ def find_dunder_line_ranges(contents):
 def find_imports(contents):
     """Return line indices that contain imports (except __future__)."""
     return [i for i, line in enumerate(contents)
-            if 'import ' in line and 'from __future__' not in line]
+            if IMPORT_RE.match(line) and 'from __future__' not in line]
 
 
 def find_first_import_line(contents):
@@ -216,8 +224,9 @@ def check_one_file(filename):
 
 def fix_one_file(filename):
     """Fix dynamic dunders in filename."""
-    add_copyright_dunder(filename)
-    add_license_dunder(filename)
+    added_copyright = add_copyright_dunder(filename)
+    added_license = add_license_dunder(filename)
+    return added_copyright or added_license
 
 
 def add_one_dunder(filename, new_dunder, value):
@@ -232,11 +241,12 @@ def add_one_dunder(filename, new_dunder, value):
     except KeyError:  # Not there
         pass
     else:  # Found                                                              # TODO: edit if necessary
-        return
+        return False
     lineno = find_new_dunder_position(current_dunders, new_dunder)
     contents.insert(lineno, f'{new_dunder} = {value!r}\n')
     with filename.open('w', encoding='utf-8') as file:
         file.writelines(contents)
+    return True
 
 
 def find_new_dunder_position(current_dunders, new_dunder):
@@ -258,30 +268,32 @@ def find_new_dunder_position(current_dunders, new_dunder):
 
 def add_license_dunder(filename):
     """Add a __license__ = 'GPLv3+' dunder."""
-    add_one_dunder(filename, '__license__', 'GPLv3+')
+    return add_one_dunder(filename, '__license__', 'GPLv3+')
 
 
 def add_copyright_dunder(filename):
     """Add a __copyright__ dunder."""
     _copyright = 'Copyright (c) 2019-2024 ViPErLEED developers'
-    add_one_dunder(filename, '__copyright__', _copyright)
+    return add_one_dunder(filename, '__copyright__', _copyright)
 
 
 def check_and_fix_viperleed_repo(package):
     """Check viperleed repository, and fix files that should be fixed."""
     base = Path.cwd().parents[1]
     repo = base / package
-    print(f'Checking {repo}')
+    print(f'\nChecking {repo}')
     for file in repo.glob('**/*.py'):
         try:
             check_one_file(file)
         except DunderError as exc:
             print(f'Problem in {file.relative_to(base)}: {exc}')
             continue
-        print(f'Fixing {file.relative_to(base)}')
-        fix_one_file(file)
+        fixed = fix_one_file(file)
+        if fixed:
+            print(f'Fixed {file.relative_to(base)}')
 
 
 if __name__ == '__main__':
     check_and_fix_viperleed_repo('viperleed')
     check_and_fix_viperleed_repo('tests')
+    check_and_fix_viperleed_repo('build/scripts')
