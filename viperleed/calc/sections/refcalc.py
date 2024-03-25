@@ -70,7 +70,7 @@ class RefcalcCompileTask():
         lib_tleed = next(libpath.glob('lib.tleed*'), None)
         srcname = next(srcpath.glob('ref-calc*'), None)
         globalname = srcpath / "GLOBAL"
-        _muftin = Path("muftin.f")
+        _muftin = self.basedir / "muftin.f"
         muftinname =_muftin if _muftin.is_file() else None
         if any(f is None for f in (srcname, lib_tleed)):
             raise RuntimeError(f"Source files missing in {sourcedir}")          # TODO: use a more appropriate custom exception in CompileTask (e.g., MissingSourceFileError)
@@ -343,7 +343,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             )
     if rp.TL_VERSION < 1.7:   # muftin.f deprecated in version 1.7
         try:
-            iorefcalc.writeMuftin(sl, rp)
+            iorefcalc.writeMuftin(rp)
         except Exception:
             logger.error("Exception during writeMuftin: ")
             raise
@@ -471,7 +471,9 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     # Validate TensErLEED checksums
     if not rp.TL_IGNORE_CHECKSUM:
         # @issue #43: this could be a class method
-        validate_multiple_files(comp_tasks[0].get_source_files(),
+        files_to_check = (file for file in comp_tasks[0].get_source_files()
+                          if file and 'muftin' not in file.name.lower())
+        validate_multiple_files(files_to_check,
                                 logger, "reference calculation",
                                 rp.TL_VERSION_STR)
 
