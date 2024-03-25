@@ -10,29 +10,29 @@ __created__ = '2021-06-04'
 __license__ = 'GPLv3+'
 
 from collections import defaultdict
-from dataclasses import dataclass, FrozenInstanceError
+from dataclasses import FrozenInstanceError, dataclass
 from io import StringIO
 import logging
 from numbers import Real
 import os
 from pathlib import Path
 import shutil
-from typing import Sequence, Any
+from typing import Any, Sequence
 import warnings
 
 import numpy as np
 
 from viperleed.calc.classes.atom_containers import AtomList
-from viperleed.calc.classes.slab import Slab
-from viperleed.calc.classes.rparams import Rparams, TheoEnergies
 from viperleed.calc.classes.rparams import IVShiftRange
+from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.classes.slab import Slab
+from viperleed.calc.files import iorfactor as rf_io
 from viperleed.calc.files import parameters, poscar
+from viperleed.calc.files.beams import readOUTBEAMS
+from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib.base import rotation_matrix
 from viperleed.calc.run import run_calc
-# for rfactor_from_csv
-from viperleed.calc.files import iorfactor as rf_io
-from viperleed.calc.files.beams import readOUTBEAMS
-from viperleed.calc.files.ivplot import plot_iv  # for plot_iv_from_csv
 from viperleed.extensions.error_codes import check_ierr
 
 try:

@@ -11,16 +11,17 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2022-05-02'
 __license__ = 'GPLv3+'
 
+import os
 from re import I
 import sys
-import numpy as np
-from numpy import sin, cos, sqrt
+
 import fortranformat as ff
 import matplotlib.pyplot as plt
-import scipy
-import os
-from tqdm import tqdm
 from numba import njit, prange
+import numpy as np
+from numpy import cos, sin, sqrt
+import scipy
+from tqdm import tqdm
 
 
 def read_delta_file(filename, n_E):

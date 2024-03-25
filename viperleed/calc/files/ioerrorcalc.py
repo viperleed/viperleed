@@ -14,12 +14,13 @@ __license__ = 'GPLv3+'
 
 import logging
 import re
-from zipfile import ZipFile, ZIP_DEFLATED
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import numpy as np
 from scipy import interpolate
 
-from viperleed.calc.lib.base import range_to_str, max_diff
+from viperleed.calc.lib.base import max_diff
+from viperleed.calc.lib.base import range_to_str
 
 
 try:

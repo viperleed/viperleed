@@ -16,13 +16,12 @@ from pytest_cases import parametrize, parametrize_with_cases
 
 from viperleed import __version__
 from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.classes.rparams.special.layer_cuts import (
-    LayerCutToken as Cut, LayerCutTokenType as CutType
-    )
 from viperleed.calc.classes.rparams.special.l_max import LMax
-from viperleed.calc.classes.rparams.special.search_cull import (
-    SearchCull
+from viperleed.calc.classes.rparams.special.layer_cuts import (
+    LayerCutToken as Cut,
+    LayerCutTokenType as CutType
     )
+from viperleed.calc.classes.rparams.special.search_cull import SearchCull
 from viperleed.calc.files import parameters
 from viperleed.calc.files.parameters import errors as err
 from viperleed.calc.files.parameters.checker import ParametersChecker
@@ -30,8 +29,8 @@ from viperleed.calc.files.parameters.known_parameters import is_deprecated
 from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.utils import NumericBounds as Bounds
 
-from .case_parameters import case_parameters_slab
 from ...poscar_slabs import CasePOSCARSlabs
+from .case_parameters import case_parameters_slab
 
 
 class TestSlabParameters:

@@ -19,7 +19,8 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.classes.beam import Beam
-from viperleed.calc.files.beams import writeOUTBEAMS, averageBeams
+from viperleed.calc.files.beams import averageBeams
+from viperleed.calc.files.beams import writeOUTBEAMS
 from viperleed.guilib.base import BeamIndex
 
 logger = logging.getLogger(__name__)

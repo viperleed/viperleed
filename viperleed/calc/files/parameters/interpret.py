@@ -44,8 +44,9 @@ from viperleed.calc.lib.base import recombineListElements, splitSublists
 from viperleed.calc.lib.woods_notation import readWoodsNotation
 from viperleed.calc.sections.calc_section import CalcSection as Section
 
-from .errors import ParameterError
+from .checker import ParametersChecker
 from .errors import ParameterBooleanConversionError
+from .errors import ParameterError
 from .errors import ParameterFloatConversionError
 from .errors import ParameterHasNoValueError
 from .errors import ParameterIntConversionError
@@ -58,7 +59,6 @@ from .errors import ParameterRangeError
 from .errors import ParameterUnknownFlagError
 from .errors import ParameterValueError
 from .errors import SuperfluousParameterError
-from .checker import ParametersChecker
 from .known_parameters import KNOWN_PARAMS, is_deprecated, warn_if_deprecated
 from .utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 

@@ -1,7 +1,9 @@
-import numpy as np
-from rfactor import r_factor_new as rf
 import time
 import timeit # dependency for testing! Don't use in Viperleed build
+
+import numpy as np
+
+from rfactor import r_factor_new as rf
 
 """
 For compiling:

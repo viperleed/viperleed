@@ -13,8 +13,10 @@ import re
 
 import numpy as np
 
-from viperleed.calc.lib.base import readIntRange, splitSublists
-from viperleed.calc.symmetry import setSymmetry, enforceSymmetry
+from viperleed.calc.lib.base import readIntRange
+from viperleed.calc.lib.base import splitSublists
+from viperleed.calc.symmetry import enforceSymmetry
+from viperleed.calc.symmetry import setSymmetry
 
 
 logger = logging.getLogger(__name__)

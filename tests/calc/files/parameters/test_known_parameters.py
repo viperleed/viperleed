@@ -13,11 +13,11 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.files.parameters import errors
-from viperleed.calc.files.parameters.known_parameters import from_alias
-from viperleed.calc.files.parameters.known_parameters import did_you_mean
-from viperleed.calc.files.parameters.known_parameters import warn_if_deprecated
-from viperleed.calc.files.parameters.known_parameters import _PARAM_ALIAS
 from viperleed.calc.files.parameters.known_parameters import KNOWN_PARAMS
+from viperleed.calc.files.parameters.known_parameters import _PARAM_ALIAS
+from viperleed.calc.files.parameters.known_parameters import did_you_mean
+from viperleed.calc.files.parameters.known_parameters import from_alias
+from viperleed.calc.files.parameters.known_parameters import warn_if_deprecated
 
 
 class TestFromAlias:

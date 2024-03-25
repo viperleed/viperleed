@@ -25,9 +25,11 @@ import re
 
 from viperleed.calc.lib.base import strip_comments
 
-from .errors import ParameterNotRecognizedError, MissingEqualsError
+from .errors import MissingEqualsError
 from .errors import ParameterHasNoValueError
-from .known_parameters import from_alias, did_you_mean
+from .errors import ParameterNotRecognizedError
+from .known_parameters import did_you_mean
+from .known_parameters import from_alias
 from .utils import Assignment
 
 

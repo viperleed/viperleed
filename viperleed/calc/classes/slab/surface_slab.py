@@ -23,6 +23,11 @@ from operator import itemgetter
 import numpy as np
 from scipy.spatial import KDTree, distance as sp_distance
 
+from viperleed.calc.classes.atom import Atom
+from viperleed.calc.classes.atom_containers import AtomList
+from viperleed.calc.files.parameters.errors import (
+    InconsistentParameterError
+    )
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import NonIntegerMatrixError
 from viperleed.calc.lib.base import SingularMatrixError
@@ -31,12 +36,8 @@ from viperleed.calc.lib.base import collapse
 from viperleed.calc.lib.base import collapse_fractional
 from viperleed.calc.lib.base import ensure_integer_matrix
 from viperleed.calc.lib.base import pairwise
-from viperleed.calc.classes.atom import Atom
-from viperleed.calc.classes.atom_containers import AtomList
-from viperleed.calc.files.parameters.errors import (
-    InconsistentParameterError
-    )
-from viperleed.calc.lib.periodic_table import PERIODIC_TABLE, COVALENT_RADIUS
+from viperleed.calc.lib.periodic_table import COVALENT_RADIUS
+from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
 
 from .base_slab import BaseSlab
 from .bulk_slab import BulkSlab
@@ -46,10 +47,10 @@ from .errors import EmptySlabError
 from .errors import MissingBulkSlabError
 from .errors import MissingLayersError
 from .errors import NoBulkRepeatError
-from .errors import NotEnoughVacuumError
 from .errors import NoVacuumError
-from .errors import TooFewLayersError
+from .errors import NotEnoughVacuumError
 from .errors import SlabError
+from .errors import TooFewLayersError
 from .errors import WrongVacuumPositionError
 
 try:

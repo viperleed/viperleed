@@ -14,9 +14,13 @@ import copy
 import inspect
 
 import numpy as np
-from pytest_cases import parametrize, lazy_value, case
+from pytest_cases import case
+from pytest_cases import lazy_value
+from pytest_cases import parametrize
 
-from viperleed.calc.classes.rparams import Rparams, LayerCuts, SymmetryEps
+from viperleed.calc.classes.rparams import LayerCuts
+from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.rparams import SymmetryEps
 from viperleed.calc.files import poscar
 
 from ..helpers import POSCAR_PATH, duplicate_all

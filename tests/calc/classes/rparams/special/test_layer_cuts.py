@@ -10,7 +10,7 @@ __license__ = 'GPLv3+'
 from dataclasses import dataclass
 
 import pytest
-from pytest_cases import parametrize, fixture
+from pytest_cases import fixture, parametrize
 
 from viperleed.calc.classes.rparams.special.layer_cuts import (
     LayerCutToken as Cut,

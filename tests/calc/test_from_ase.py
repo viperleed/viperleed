@@ -19,10 +19,10 @@ import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc import from_ase as vpr_ase
-from viperleed.calc.lib.base import angle
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import readOUTBEAMS
+from viperleed.calc.lib.base import angle
 
 from ..helpers import TEST_DATA
 from . import cases_ase

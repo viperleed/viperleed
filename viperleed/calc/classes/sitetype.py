@@ -12,9 +12,9 @@ import re
 
 import numpy as np
 
-from viperleed.calc.lib.periodic_table import (PERIODIC_TABLE,
-                                               COVALENT_RADIUS,
-                                               ATOMIC_MASS)
+from viperleed.calc.lib.periodic_table import ATOMIC_MASS
+from viperleed.calc.lib.periodic_table import COVALENT_RADIUS
+from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
 
 logger = logging.getLogger(__name__)
 

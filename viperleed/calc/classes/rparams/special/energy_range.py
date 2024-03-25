@@ -27,8 +27,8 @@ from decimal import Decimal
 from math import ceil, floor, isfinite, remainder
 from numbers import Real
 
-from .base import SpecialParameter
 from ..defaults import NO_VALUE
+from .base import SpecialParameter
 
 
 EPS = 1e-8  # Tolerance for comparisons of floats

@@ -33,10 +33,10 @@ else:
     import matplotlib.ticker as plticker
     plt.style.use('viperleed.calc')
 
-from viperleed.calc.lib import leedbase
 from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
+from viperleed.calc.lib import leedbase
 
 logger = logging.getLogger(__name__)
 

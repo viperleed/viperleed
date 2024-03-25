@@ -13,7 +13,7 @@ __created__ = '2024-03-19'
 __license__ = 'GPLv3+'
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple, Mapping
+from typing import Dict, List, Mapping, Set, Tuple
 
 import numpy as np
 

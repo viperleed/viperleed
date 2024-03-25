@@ -45,9 +45,10 @@ else:
     _CAN_PLOT = True
 
 
-from .defaults import NO_VALUE, DEFAULTS
+from .defaults import DEFAULTS, NO_VALUE
 from .limits import PARAM_LIMITS
-from .special.base import SpecialParameter, NotASpecialParameterError
+from .special.base import NotASpecialParameterError
+from .special.base import SpecialParameter
 
 _LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
 _LOGGER = logging.getLogger(_LOGGER_NAME)

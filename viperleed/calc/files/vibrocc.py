@@ -13,7 +13,8 @@ import re
 
 import numpy as np
 
-from viperleed.calc.lib.base import splitSublists, readToExc
+from viperleed.calc.lib.base import readToExc
+from viperleed.calc.lib.base import splitSublists
 
 
 logger = logging.getLogger(__name__)

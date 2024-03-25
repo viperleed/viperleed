@@ -15,7 +15,7 @@ import re
 import shutil
 import time
 from timeit import default_timer as timer
-from zipfile import ZipFile, ZIP_DEFLATED
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc.lib.base import copytree_exists_ok,get_elapsed_time_str

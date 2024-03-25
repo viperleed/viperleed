@@ -12,9 +12,10 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-01-12'
 __license__ = 'GPLv3+'
 
-import numpy as np
 import copy
 import logging
+
+import numpy as np
 
 from viperleed.calc.lib.base import range_to_str
 

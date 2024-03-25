@@ -8,7 +8,6 @@ __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
 import argparse
-from copy import deepcopy
 import logging
 import sys
 

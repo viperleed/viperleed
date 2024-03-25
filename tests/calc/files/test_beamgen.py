@@ -11,8 +11,8 @@ __license__ = 'GPLv3+'
 from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc import symmetry
-from viperleed.calc.files import beamgen
 from viperleed.calc.classes.rparams import EnergyRange
+from viperleed.calc.files import beamgen
 
 from ...helpers import exclude_tags
 from ..poscar_slabs import CasePOSCARSlabs

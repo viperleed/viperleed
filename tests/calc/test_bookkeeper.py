@@ -12,8 +12,8 @@ import shutil
 
 from pytest_cases import fixture, parametrize
 
-from viperleed.calc.bookkeeper import _CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper import BookkeeperMode
+from viperleed.calc.bookkeeper import _CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper import bookkeeper
 from viperleed.calc.bookkeeper import store_input_files_to_history
 

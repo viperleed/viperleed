@@ -15,14 +15,15 @@ __license__ = 'GPLv3+'
 from enum import Enum
 
 import numpy as np
-from pytest_cases import parametrize, case
+from pytest_cases import case, parametrize
 
 from viperleed.calc.classes.atom import Atom
-from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.slab import Slab
 
-from ..testinfo import TestInfo, DisplacementInfo
 from ..tags import CaseTag as Tag
+from ..testinfo import DisplacementInfo
+from ..testinfo import TestInfo
 
 
 def remove_atoms(slab, param, *atom_nrs):

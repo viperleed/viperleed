@@ -13,7 +13,6 @@ __license__ = 'GPLv3+'
 
 import argparse
 import logging
-import os
 import sys
 
 from viperleed.calc.files import poscar

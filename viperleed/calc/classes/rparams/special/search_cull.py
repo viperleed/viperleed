@@ -11,12 +11,12 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-12-14'
 __license__ = 'GPLv3+'
 
-from dataclasses import dataclass, field, InitVar
+from dataclasses import InitVar, dataclass, field
 from enum import Enum  # Unfortunately StrEnum was introduced in py3.11
 from numbers import Real
 
-from .base import SpecialParameter
 from ..defaults import NO_VALUE
+from .base import SpecialParameter
 
 
 class SearchCullType(Enum):

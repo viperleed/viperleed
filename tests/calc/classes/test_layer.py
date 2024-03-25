@@ -15,8 +15,9 @@ import pytest
 import pytest_cases
 
 from viperleed.calc.classes.atom import Atom
-from viperleed.calc.classes.layer import Layer, SubLayer
+from viperleed.calc.classes.layer import Layer
 from viperleed.calc.classes.layer import LayerHasNoAtomsError
+from viperleed.calc.classes.layer import SubLayer
 from viperleed.calc.classes.slab import Slab
 
 from ...helpers import InfoBase, duplicate_all

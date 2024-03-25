@@ -16,7 +16,6 @@ __license__ = 'GPLv3+'
 import argparse
 import logging
 import sys
-import os
 
 from viperleed.calc.files import poscar
 from viperleed.utilities.poscar import add_verbose_option

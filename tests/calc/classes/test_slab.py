@@ -20,21 +20,23 @@ from pytest_cases import fixture, fixture_ref
 from pytest_cases import parametrize, parametrize_with_cases
 from scipy.spatial.distance import cdist as euclid_distance
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import add_edges_and_corners, collapse, pairwise
-from viperleed.calc.lib.base import NonIntegerMatrixError, SingularMatrixError
 from viperleed.calc.classes.atom import Atom
 from viperleed.calc.classes.atom_containers import AtomList
-from viperleed.calc.classes.rparams import Rparams, LayerCuts
-from viperleed.calc.classes.slab import Slab, BulkSlab
+from viperleed.calc.classes.rparams import LayerCuts
+from viperleed.calc.classes.rparams import Rparams
+from viperleed.calc.classes.slab import BulkSlab
+from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import errors as err
 from viperleed.calc.classes.slab import surface_slab
 from viperleed.calc.classes.sym_entity import SymPlane
 from viperleed.calc.files.parameters.errors import InconsistentParameterError
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import NonIntegerMatrixError, SingularMatrixError
+from viperleed.calc.lib.base import add_edges_and_corners, collapse, pairwise
 
 from ...helpers import exclude_tags, not_raises
-from ..tags import CaseTag as Tag
 from .. import cases_ase, poscar_slabs
+from ..tags import CaseTag as Tag
 
 CasePOSCARSlabs = poscar_slabs.CasePOSCARSlabs
 todo = pytest.mark.skip('To be implemented')

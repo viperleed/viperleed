@@ -11,12 +11,12 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-06-07'
 __license__ = 'GPLv3+'
 
-import re
 import logging
+import re
 
 import numpy as np
 
-from viperleed.calc.lib.base import parseMathSqrt, angle, cosvec
+from viperleed.calc.lib.base import angle, cosvec, parseMathSqrt
 
 logger = logging.getLogger(__name__)
 

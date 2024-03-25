@@ -10,9 +10,6 @@ __license__ = 'GPLv3+'
 import argparse
 import logging
 import sys
-import os
-
-import numpy as np
 
 from viperleed.calc.files import poscar
 from viperleed.calc.lib import periodic_table

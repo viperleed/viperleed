@@ -11,7 +11,7 @@ __license__ = 'GPLv3+'
 import io
 
 import pytest
-from pytest_cases import parametrize_with_cases, fixture
+from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc import symmetry
 from viperleed.calc.files import poscar

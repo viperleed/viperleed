@@ -23,7 +23,7 @@ __license__ = 'GPLv3+'
 from .domain_params import DomainParameters
 from .rparams import Rparams
 from .special.energy_range import EnergyRange, IVShiftRange, TheoEnergies
-from .special.layer_cuts import LayerCuts
 from .special.l_max import LMax
+from .special.layer_cuts import LayerCuts
 from .special.search_cull import SearchCull
 from .special.symmetry_eps import SymmetryEps

@@ -23,8 +23,8 @@ from .errors import MissingElementsError
 from .errors import MissingLayersError
 from .errors import MissingSublayersError
 from .errors import NoBulkRepeatError
-from .errors import NotEnoughVacuumError
 from .errors import NoVacuumError
+from .errors import NotEnoughVacuumError
 from .errors import SlabError
 from .errors import TooFewLayersError
 from .errors import VacuumError

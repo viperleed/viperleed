@@ -14,7 +14,9 @@ __license__ = 'GPLv3+'
 from enum import Enum
 from itertools import chain
 
-from viperleed.calc.lib.base import split_string_range, readIntRange
+from viperleed.calc.lib.base import readIntRange
+from viperleed.calc.lib.base import split_string_range
+
 
 _ALIASES = {  # Exact match first, then check .startswith
     'INITIALIZATION': ('ini', 'init', 'initialisation'),

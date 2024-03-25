@@ -12,9 +12,9 @@ import argparse
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.cli import add_calc_parser_arguments
 from viperleed.calc.bookkeeper import bookkeeper_cli_options
 from viperleed.calc.bookkeeper import main as bookkeeper_main
+from viperleed.calc.cli import add_calc_parser_arguments
 
 
 @pytest.fixture(name='calc_parser')

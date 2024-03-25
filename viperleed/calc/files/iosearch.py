@@ -23,13 +23,13 @@ import time
 import fortranformat as ff
 import numpy as np
 
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import BackwardsReader, readIntLine
 from viperleed.calc.files import poscar
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.iorfactor import largest_nr_grid_points
 from viperleed.calc.files.iorfactor import prepare_rfactor_energy_ranges
 from viperleed.calc.files.vibrocc import writeVIBROCC
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import BackwardsReader, readIntLine
 
 logger = logging.getLogger(__name__)
 

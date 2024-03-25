@@ -7,8 +7,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-15'
 __license__ = 'GPLv3+'
 
-from pytest_cases import parametrize
 import pytest
+from pytest_cases import parametrize
 
 from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.utils import NumericBounds as Bounds

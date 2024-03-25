@@ -18,22 +18,21 @@ import os
 import time
 from timeit import default_timer as timer
 
-from viperleed.calc.lib.base import get_elapsed_time_str
-from viperleed.calc.sections import initialization                              # TODO: perhaps use CalcSection
-from viperleed.calc.sections import refcalc
-from viperleed.calc.sections import rfactor
-from viperleed.calc.sections import deltas
-from viperleed.calc.sections import search
-from viperleed.calc.sections import superpos
-from viperleed.calc.sections import errorcalc
-from viperleed.calc.sections import fd_optimization
-from viperleed.calc.sections.cleanup import cleanup, move_oldruns
+from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import parameters
-from viperleed.calc.files.beams import (readBEAMLIST, readIVBEAMS,
-                                        readOUTBEAMS, checkEXPBEAMS)
 from viperleed.calc.files.displacements import readDISPLACEMENTS
 from viperleed.calc.files.phaseshifts import readPHASESHIFTS
 from viperleed.calc.files.vibrocc import readVIBROCC, writeVIBROCC
+from viperleed.calc.lib.base import get_elapsed_time_str
+from viperleed.calc.sections import deltas
+from viperleed.calc.sections import errorcalc
+from viperleed.calc.sections import fd_optimization
+from viperleed.calc.sections import initialization                              # TODO: perhaps use CalcSection
+from viperleed.calc.sections import refcalc
+from viperleed.calc.sections import rfactor
+from viperleed.calc.sections import search
+from viperleed.calc.sections import superpos
+from viperleed.calc.sections.cleanup import cleanup, move_oldruns
 
 
 logger = logging.getLogger(__name__)
@@ -108,10 +107,10 @@ def run_section(index, sl, rp):
         if filename == "EXPBEAMS":
             rp.try_loading_expbeams_file()
             if index != 0:
-                checkEXPBEAMS(sl, rp)
+                iobeams.checkEXPBEAMS(sl, rp)
         elif filename == "IVBEAMS":
             try:
-                rp.ivbeams = readIVBEAMS()
+                rp.ivbeams = iobeams.readIVBEAMS()
                 rp.ivbeams_sorted = False
                 rp.fileLoaded["IVBEAMS"] = True
             except FileNotFoundError:
@@ -129,7 +128,7 @@ def run_section(index, sl, rp):
                              exc_info=(type(e) != FileNotFoundError))
         elif filename == "BEAMLIST":
             try:
-                rp.beamlist = readBEAMLIST()
+                rp.beamlist = iobeams.readBEAMLIST()
                 rp.fileLoaded["BEAMLIST"] = True
             except Exception as e:
                 logger.error("Error while reading required file "

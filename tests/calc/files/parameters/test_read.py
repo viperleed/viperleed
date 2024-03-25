@@ -13,14 +13,15 @@ import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.files.parameters.errors import ParameterNotRecognizedError
 from viperleed.calc.files.parameters.errors import ParameterHasNoValueError
+from viperleed.calc.files.parameters.errors import ParameterNotRecognizedError
 from viperleed.calc.files.parameters.read import read, update
 from viperleed.calc.files.parameters.reader import ParametersReader
 from viperleed.calc.files.parameters.reader import RawLineParametersReader
 from viperleed.calc.files.parameters.utils import Assignment
 
-from ....helpers import exclude_tags, duplicate_all
+from ....helpers import duplicate_all
+from ....helpers import exclude_tags
 from ...tags import CaseTag
 from .case_parameters import CasesParametersFile
 

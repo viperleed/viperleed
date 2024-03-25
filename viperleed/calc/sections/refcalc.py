@@ -9,9 +9,9 @@ __created__ = '2020-08-11'
 __license__ = 'GPLv3+'
 
 import copy
+import logging
 import os
 from pathlib import Path
-import logging
 import shutil
 import subprocess
 

@@ -10,8 +10,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-03-26'
 __license__ = 'GPLv3+'
 
-import copy
 from contextlib import contextmanager
+import copy
 import logging
 
 import numpy as np
@@ -27,8 +27,8 @@ from viperleed.calc.lib.base import angle as angle_radians
 from ...helpers import duplicate_all
 from ..poscar_slabs import make_poscar_ids
 from ..tags import CaseTag
-from .conftest import get_cases
 from . import simple_slabs
+from .conftest import get_cases
 
 
 def angle(vec1, vec2):

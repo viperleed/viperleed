@@ -13,7 +13,8 @@ import pytest
 from pytest_cases import fixture
 
 from viperleed.calc.classes.rparams.special.base import (
-    SpecialParameter, NotASpecialParameterError
+    NotASpecialParameterError,
+    SpecialParameter, 
     )
 
 

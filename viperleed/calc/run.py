@@ -19,14 +19,15 @@ from pathlib import Path
 import shutil
 import time
 
-from viperleed import __version__
 from viperleed import VIPERLEED_TENSORLEED_ENV
+from viperleed import __version__
 from viperleed.calc import LOGGER as logger
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc.classes import rparams
 from viperleed.calc.files import parameters, poscar
 from viperleed.calc.lib.base import CustomLogFormatter
-from viperleed.calc.sections.cleanup import prerun_clean, cleanup
+from viperleed.calc.sections.cleanup import cleanup
+from viperleed.calc.sections.cleanup import prerun_clean
 from viperleed.calc.sections.initialization import (
     warn_if_slab_has_atoms_in_multiple_c_cells
     )

@@ -11,8 +11,8 @@ import argparse
 
 from viperleed.utilities import SATLEED_to_EXPBEAMS
 from viperleed.utilities import rearrange_phaseshifts
-from viperleed.utilities.poscar.__main__ import main as poscar_main
 from viperleed.utilities.poscar.__main__ import add_poscar_parser_arguments
+from viperleed.utilities.poscar.__main__ import main as poscar_main
 
 
 def add_util_parser_arguments(parser):

@@ -24,9 +24,10 @@ import numpy as np
 from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams import DomainParameters
 from viperleed.calc.classes.slab import AlreadyMinimalError
-from viperleed.calc.classes.slab import BulkSlab, Slab
+from viperleed.calc.classes.slab import BulkSlab
 from viperleed.calc.classes.slab import NoBulkRepeatError
 from viperleed.calc.classes.slab import NoVacuumError
+from viperleed.calc.classes.slab import Slab
 from viperleed.calc.classes.slab import VacuumError
 from viperleed.calc.classes.slab import WrongVacuumPositionError
 from viperleed.calc.files import beams as iobeams
@@ -38,8 +39,8 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import angle, rotation_matrix
 from viperleed.calc.lib.base import NonIntegerMatrixError
+from viperleed.calc.lib.base import angle, rotation_matrix
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES

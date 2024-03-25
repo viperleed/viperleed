@@ -39,8 +39,8 @@ from viperleed.calc.run import get_tensorleed_path
 
 from ..helpers import POSCAR_PATH
 from ..helpers import exclude_tags, execute_in_dir
-from .tags import CaseTag
 from . import poscar_slabs
+from .tags import CaseTag
 
 
 @pytest.fixture(scope='session')

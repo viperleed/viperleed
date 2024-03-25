@@ -24,9 +24,11 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc import symmetry
-from viperleed.calc.lib.leedbase import HARTREE_TO_EV, BOHR_TO_ANGSTROM
+from viperleed.calc.lib.leedbase import BOHR_TO_ANGSTROM
+from viperleed.calc.lib.leedbase import HARTREE_TO_EV
 from viperleed.calc.lib.leedbase import getLEEDdict
-from viperleed.guilib.base import get_equivalent_beams, BeamIndex
+from viperleed.guilib.base import BeamIndex
+from viperleed.guilib.base import get_equivalent_beams
 
 
 H_BAR_SQ_OVER_2M = 0.5 * HARTREE_TO_EV * BOHR_TO_ANGSTROM**2  # h**2/2m
