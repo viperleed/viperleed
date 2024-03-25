@@ -73,7 +73,7 @@ def read_file(file, average=False):
         lines = iter(f.readlines())
 
     # first line is name of the system
-    name = next(lines).strip()
+    _ = next(lines).strip()
     # number of beams
     n_beams = int(next(lines))
 
