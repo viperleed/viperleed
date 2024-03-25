@@ -8,7 +8,7 @@ Fixtures
 delta_files_ag100
     INITIALIZATION + DELTAS run, for Ag(100) only
 make_section_tempdir (factory)
-    Temporary directory for a system name and a TLEEDM section.
+    Temporary directory for a system name and a viperleed.calc section.
 init_files
     INITIALIZATION run
 refcalc_files
@@ -52,15 +52,15 @@ AG_100_DISPLACEMENTS = {  # For DELTAS and SEARCH
 
 @pytest_cases.fixture(scope='session', name='make_section_tempdir')
 def fixture_factory_make_section_tempdir(tmp_path_factory):
-    """Return a temporary directory for a surface and a TLEEDM section."""
+    """Return a temporary directory for a surface and a calc section."""
     def _make(surface, section, *other_specifiers):
         tmp_dir_name = f'{surface}_{section}' + '_'.join(other_specifiers)
         return tmp_path_factory.mktemp(basename=tmp_dir_name, numbered=True)
     return _make
 
 
-class BaseTleedmFilesSetup:
-    """Utility class for collecting files an running TLEEDM tests."""
+class BaseCalcFilesSetup:
+    """Utility class for collecting files and running viperleed.calc tests."""
 
     def __init__(self, surface_dir, tmp_test_path,
                  required_files=(), copy_dirs=()):
@@ -72,8 +72,8 @@ class BaseTleedmFilesSetup:
             Name of the directory in the tests/fixtures tree
             from which input files should be collected.
         tmp_test_path : Path
-            Path to the (temporary) directory in which TLEEDM
-            should be executed.
+            Path to the (temporary) directory in which
+            viperleed.calc should be executed.
         required_files : Iterable of str, optional
             Name of files that should be present. Files that
             are common to all sections do not need to be listed.
@@ -140,7 +140,7 @@ class BaseTleedmFilesSetup:
                          ids=(str(v) for v in TENSERLEED_TEST_VERSIONS))
 def init_files(surface, tl_version, make_section_tempdir, tensorleed_path):
     """Collect files and run an initialization."""
-    files = BaseTleedmFilesSetup(
+    files = BaseCalcFilesSetup(
         surface_dir=surface,
         tmp_test_path=make_section_tempdir(surface, 'init'),
         required_files=['PHASESHIFTS',],
@@ -161,7 +161,7 @@ _NON_INIT_TL_VERSION = 0.0  # i.e., most recent                                 
 @pytest.mark.parametrize('surface', REFCALC_SURFACES, ids=REFCALC_SURFACES)
 def refcalc_files(surface, make_section_tempdir, tensorleed_path):
     """Collect files and execute a reference calculation."""
-    files = BaseTleedmFilesSetup(
+    files = BaseCalcFilesSetup(
         surface_dir=surface,
         tmp_test_path=make_section_tempdir(surface, 'refcalc'),
         required_files=['PHASESHIFTS',],
@@ -183,7 +183,7 @@ def delta_files_ag100(displacements, make_section_tempdir, tensorleed_path):
     surface = 'Ag(100)'
 
     # correct DISPLACEMENTS
-    files = BaseTleedmFilesSetup(
+    files = BaseCalcFilesSetup(
         surface_dir=surface,
         tmp_test_path=make_section_tempdir(surface, 'deltas', displacements),
         required_files=['PHASESHIFTS',],
@@ -207,7 +207,7 @@ def search_files_ag100(displacements, deltas,
                        tensorleed_path):
     """Collect input files and run a structure optimization."""
     surface = 'Ag(100)'
-    files = BaseTleedmFilesSetup(
+    files = BaseCalcFilesSetup(
         surface_dir=surface,
         tmp_test_path=make_section_tempdir(surface, 'search', displacements),
         required_files=[],

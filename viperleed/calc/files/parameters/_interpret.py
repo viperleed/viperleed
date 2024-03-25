@@ -42,7 +42,7 @@ from viperleed.calc.classes.rparams import LayerCuts
 from viperleed.calc.classes.rparams import SymmetryEps
 from viperleed.calc.classes.rparams import TheoEnergies
 from viperleed.calc.lib.woods_notation import readWoodsNotation
-from viperleed.calc.sections._sections import TLEEDMSection as Section
+from viperleed.calc.sections.calc_section import CalcSection as Section
 
 from .errors import ParameterError
 from .errors import ParameterBooleanConversionError

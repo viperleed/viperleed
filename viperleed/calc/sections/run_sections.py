@@ -19,7 +19,7 @@ import time
 from timeit import default_timer as timer
 
 from viperleed.calc.lib.base import get_elapsed_time_str
-from viperleed.calc.sections import initialization                              # TODO: perhaps use TLEEDMSection
+from viperleed.calc.sections import initialization                              # TODO: perhaps use CalcSection
 from viperleed.calc.sections import refcalc
 from viperleed.calc.sections import rfactor
 from viperleed.calc.sections import deltas

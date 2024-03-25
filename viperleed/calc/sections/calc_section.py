@@ -1,4 +1,4 @@
-"""Module _sections of viperleed.calc.sections.
+"""Module calc_section of viperleed.calc.sections.
 
 Defines an enumeration of calculation sections.
 """
@@ -30,7 +30,7 @@ _ALIASES = {  # Exact match first, then check .startswith
     }
 
 
-class TLEEDMSection(Enum):
+class CalcSection(Enum):
     """An enumeration of calculation sections."""
     INITIALIZATION = 0
     REFCALC = 1
@@ -84,24 +84,24 @@ class TLEEDMSection(Enum):
             start, stop = split_string_range(string_)
         except ValueError:
             raise ValueError(
-                f"{cls.__name__}: {string_!r} is neither a valid "
-                "section nor a valid range of sections."
+                f'{cls.__name__}: {string_!r} is neither a valid '
+                'section nor a valid range of sections.'
                 ) from None
         try:
-            _as_int_range = f"{cls(start).value}-{cls(stop).value}"
+            _as_int_range = f'{cls(start).value}-{cls(stop).value}'
         except ValueError:
             raise ValueError(
-                f"{cls.__name__}: Could not interpret one of "
-                f"{start!r} and/or {stop!r} as a valid section"
+                f'{cls.__name__}: Could not interpret one of '
+                f'{start!r} and/or {stop!r} as a valid section'
                 ) from None
         return tuple(cls(v) for v in readIntRange(_as_int_range))
 
     @property
     def history_tag(self):
         """Return an identifier suitable for history records."""
-        _history_sections = (TLEEDMSection.REFCALC,
-                             TLEEDMSection.DELTAS,
-                             TLEEDMSection.SEARCH)
+        _history_sections = (CalcSection.REFCALC,
+                             CalcSection.DELTAS,
+                             CalcSection.SEARCH)
         return self.name[0] if self in _history_sections else ''
 
     @property
@@ -119,56 +119,114 @@ class TLEEDMSection(Enum):
 
 
 _LONG_NAMES = {
-    TLEEDMSection.INITIALIZATION: "INITIALIZATION",
-    TLEEDMSection.REFCALC: "REFERENCE CALCULATION",
-    TLEEDMSection.DELTAS: "DELTA-AMPLITUDES",
-    TLEEDMSection.SEARCH: "SEARCH",
-    TLEEDMSection.RFACTOR_REFCALC: "R-FACTOR CALCULATION",
-    TLEEDMSection.RFACTOR_SUPERPOS: "R-FACTOR CALCULATION",
-    TLEEDMSection.SUPERPOS: "SUPERPOS",
-    TLEEDMSection.ERRORCALC: "ERROR CALCULATION",
-    TLEEDMSection.FD_OPTIMIZATION: "FULL-DYNAMIC OPTIMIZATION",
+    CalcSection.INITIALIZATION: 'INITIALIZATION',
+    CalcSection.REFCALC: 'REFERENCE CALCULATION',
+    CalcSection.DELTAS: 'DELTA-AMPLITUDES',
+    CalcSection.SEARCH: 'SEARCH',
+    CalcSection.RFACTOR_REFCALC: 'R-FACTOR CALCULATION',
+    CalcSection.RFACTOR_SUPERPOS: 'R-FACTOR CALCULATION',
+    CalcSection.SUPERPOS: 'SUPERPOS',
+    CalcSection.ERRORCALC: 'ERROR CALCULATION',
+    CalcSection.FD_OPTIMIZATION: 'FULL-DYNAMIC OPTIMIZATION',
     }
 
 
 _SECTION_ORDERING = {  # Default order of execution
     v: i
     for i, v in enumerate((
-        TLEEDMSection.INITIALIZATION,
-        TLEEDMSection.REFCALC,
-        TLEEDMSection.FD_OPTIMIZATION,
-        TLEEDMSection.RFACTOR_REFCALC,
-        TLEEDMSection.DELTAS,
-        TLEEDMSection.SEARCH,
-        TLEEDMSection.SUPERPOS,
-        TLEEDMSection.RFACTOR_SUPERPOS,
-        TLEEDMSection.DOMAINS,
-        TLEEDMSection.ERRORCALC
+        CalcSection.INITIALIZATION,
+        CalcSection.REFCALC,
+        CalcSection.FD_OPTIMIZATION,
+        CalcSection.RFACTOR_REFCALC,
+        CalcSection.DELTAS,
+        CalcSection.SEARCH,
+        CalcSection.SUPERPOS,
+        CalcSection.RFACTOR_SUPERPOS,
+        CalcSection.DOMAINS,
+        CalcSection.ERRORCALC
         ))
     }
 
+
 _REQUIRED_FILES = {  # Required input files per section
-    TLEEDMSection.INITIALIZATION: ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS"],
-    TLEEDMSection.REFCALC: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "VIBROCC"],
-    TLEEDMSection.DELTAS: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS"],
-    TLEEDMSection.SEARCH: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS", "EXPBEAMS"],
-    TLEEDMSection.RFACTOR_REFCALC: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
-    TLEEDMSection.RFACTOR_SUPERPOS: ["BEAMLIST", "PARAMETERS", "IVBEAMS", "EXPBEAMS"],
-    TLEEDMSection.SUPERPOS: ["BEAMLIST", "POSCAR", "PARAMETERS", "IVBEAMS",
-                          "VIBROCC", "DISPLACEMENTS"],
-    TLEEDMSection.ERRORCALC: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "VIBROCC", "DISPLACEMENTS", "EXPBEAMS"],
-    TLEEDMSection.FD_OPTIMIZATION: ["BEAMLIST", "PHASESHIFTS", "POSCAR", "PARAMETERS",
-                         "IVBEAMS", "VIBROCC", "EXPBEAMS"],
-}
+    CalcSection.INITIALIZATION: (
+        'IVBEAMS',
+        'PARAMETERS',
+        'POSCAR',
+        'VIBROCC',
+        ),
+    CalcSection.REFCALC: (
+        'BEAMLIST',
+        'IVBEAMS',
+        'PARAMETERS',
+        'PHASESHIFTS',
+        'POSCAR',
+        'VIBROCC',
+        ),
+    CalcSection.DELTAS: (
+        'BEAMLIST',
+        'DISPLACEMENTS',
+        'IVBEAMS',
+        'PARAMETERS',
+        'PHASESHIFTS',
+        'POSCAR',
+        'VIBROCC',
+        ),
+    CalcSection.SEARCH: (
+        'BEAMLIST',
+        'DISPLACEMENTS',
+        'EXPBEAMS',
+        'IVBEAMS',
+        'PARAMETERS',
+        'PHASESHIFTS',
+        'POSCAR',
+        'VIBROCC',
+        ),
+    CalcSection.RFACTOR_REFCALC: (
+        'BEAMLIST',
+        'EXPBEAMS',
+        'IVBEAMS',
+        'PARAMETERS',
+        ),
+    CalcSection.RFACTOR_SUPERPOS: (
+        'BEAMLIST',
+        'PARAMETERS',
+        'IVBEAMS',
+        'EXPBEAMS',
+        ),
+    CalcSection.SUPERPOS: (
+        'BEAMLIST',
+        'DISPLACEMENTS',
+        'IVBEAMS',
+        'PARAMETERS',
+        'POSCAR',
+        'VIBROCC',
+        ),
+    CalcSection.ERRORCALC: (
+        'BEAMLIST',
+        'DISPLACEMENTS',
+        'EXPBEAMS',
+        'IVBEAMS',
+        'PARAMETERS',
+        'PHASESHIFTS',
+        'POSCAR',
+        'VIBROCC',
+        ),
+    CalcSection.FD_OPTIMIZATION: (
+        'BEAMLIST',
+        'EXPBEAMS',
+        'IVBEAMS',
+        'PARAMETERS',
+        'PHASESHIFTS',
+        'POSCAR',
+        'VIBROCC',
+        ),
+    }
 
 # set of all input files
 ALL_INPUT_FILES = set(chain.from_iterable(_REQUIRED_FILES.values()))
 
 # allowed names for the file containing the experimental beams
 # files will be used in precedence from left to right
-EXPBEAMS_NAMES = ("EXPBEAMS.csv", "EXPBEAMS")
+EXPBEAMS_NAMES = ('EXPBEAMS.csv', 'EXPBEAMS')
 ALL_INPUT_FILES.update(set(EXPBEAMS_NAMES))

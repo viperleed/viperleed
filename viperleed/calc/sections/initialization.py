@@ -42,7 +42,8 @@ from viperleed.calc.lib.base import angle, rotation_matrix
 from viperleed.calc.lib.base import NonIntegerMatrixError
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
-from viperleed.calc.sections._sections import ALL_INPUT_FILES, EXPBEAMS_NAMES
+from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 logger = logging.getLogger(__name__)
 

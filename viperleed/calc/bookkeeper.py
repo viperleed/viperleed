@@ -17,7 +17,7 @@ import shutil
 import time
 
 from viperleed.calc import LOG_PREFIX
-from viperleed.calc.sections._sections import ALL_INPUT_FILES
+from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 
 _CALC_LOG_PREFIXES = (
     LOG_PREFIX,

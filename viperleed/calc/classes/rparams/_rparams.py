@@ -34,7 +34,7 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
 from viperleed.calc.lib.checksums import (KNOWN_TL_VERSIONS,
                                           UnknownTensErLEEDVersionError)
-from viperleed.calc.sections._sections import EXPBEAMS_NAMES
+from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 
 try:
