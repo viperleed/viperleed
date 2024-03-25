@@ -1,4 +1,4 @@
-"""Moule _limits of viperleed.calc.classes.rparams.
+"""Moule limits of viperleed.calc.classes.rparams.
 
 Defines the limiting values of 'simple' user PARAMETERS. Not-so-simple
 parameters, which are defined as their own classes in package special,

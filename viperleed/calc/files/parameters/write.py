@@ -1,4 +1,4 @@
-"""Module _modify of viperleed.calc.files.parameters.
+"""Module write of viperleed.calc.files.parameters.
 
 Initial version by @fkraushofer in 2020, major rewrite by @amimre
 and @michele-riva in June 2023. This module used to be part of
@@ -27,7 +27,7 @@ import numpy as np
 from viperleed.calc.lib.base import strip_comments
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 
-from ._reader import RawLineParametersReader
+from .reader import RawLineParametersReader
 
 
 _LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)

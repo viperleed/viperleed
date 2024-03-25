@@ -15,8 +15,8 @@ from dataclasses import dataclass, field, InitVar
 from enum import Enum  # Unfortunately StrEnum was introduced in py3.11
 from numbers import Real
 
-from ._base import SpecialParameter
-from .._defaults import NO_VALUE
+from .base import SpecialParameter
+from ..defaults import NO_VALUE
 
 
 class SearchCullType(Enum):

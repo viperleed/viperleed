@@ -1,4 +1,4 @@
-"""Tests for module _interpret of viperleed.calc.files.parameters."""
+"""Tests for module interpret of viperleed.calc.files.parameters."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
@@ -25,12 +25,10 @@ from viperleed.calc.classes.rparams.special.search_cull import (
     )
 from viperleed.calc.files import parameters
 from viperleed.calc.files.parameters import errors as err
-from viperleed.calc.files.parameters._checker import ParametersChecker
-from viperleed.calc.files.parameters._known_parameters import (
-    is_deprecated
-    )
-from viperleed.calc.files.parameters._utils import Assignment
-from viperleed.calc.files.parameters._utils import NumericBounds as Bounds
+from viperleed.calc.files.parameters.checker import ParametersChecker
+from viperleed.calc.files.parameters.known_parameters import is_deprecated
+from viperleed.calc.files.parameters.utils import Assignment
+from viperleed.calc.files.parameters.utils import NumericBounds as Bounds
 
 from .case_parameters import case_parameters_slab
 from ...poscar_slabs import CasePOSCARSlabs

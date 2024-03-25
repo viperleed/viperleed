@@ -1,4 +1,4 @@
-"""Moule _domain_params of viperleed.calc.classes.rparams.
+"""Moule domain_params of viperleed.calc.classes.rparams.
 
 Defines the DomainParameters class. Contains of information useful
 when a calculation with multiple structural domains is carried out.

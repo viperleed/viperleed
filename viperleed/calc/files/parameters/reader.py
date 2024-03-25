@@ -1,8 +1,8 @@
-"""Module _reader of viperleed.calc.files.parameters.
+"""Module reader of viperleed.calc.files.parameters.
 
 This module is based on the original version of readPARAMETERS from
 @fkraushofer (2020). This module exists only to avoid cyclic imports
-between ._read and ._write, as both need access to one of the classes
+between .read and .write, as both need access to one of the classes
 defined here (ParametersReader, RawLineParametersReader), as well as
 some functionality from the other module.
 
@@ -27,8 +27,8 @@ from viperleed.calc.lib.base import strip_comments
 
 from .errors import ParameterNotRecognizedError, MissingEqualsError
 from .errors import ParameterHasNoValueError
-from ._known_parameters import from_alias, did_you_mean
-from ._utils import Assignment
+from .known_parameters import from_alias, did_you_mean
+from .utils import Assignment
 
 
 _LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)

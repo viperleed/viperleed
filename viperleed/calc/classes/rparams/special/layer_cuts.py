@@ -22,9 +22,9 @@ from numbers import Real
 import re
 from typing import Any
 
-from ._base import SpecialParameter
-
 from viperleed.calc.lib.base import pairwise
+
+from .base import SpecialParameter
 
 
 def threewise(iterable):

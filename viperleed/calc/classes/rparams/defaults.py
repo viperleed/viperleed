@@ -1,4 +1,4 @@
-"""Moule _defaults of viperleed.calc.classes.rparams.
+"""Moule defaults of viperleed.calc.classes.rparams.
 
 Defines the default values of 'simple' user PARAMETERS. Not-so-simple
 parameters, which are defined as their own classes in package special,
@@ -17,7 +17,7 @@ __license__ = 'GPLv3+'
 
 import logging
 
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)  # Remove _defaults
+_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)  # Remove "defaults"
 _LOGGER = logging.getLogger(_LOGGER_NAME)
 
 # Notice that we cannot use a module-level global object(), as this

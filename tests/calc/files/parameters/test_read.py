@@ -1,4 +1,4 @@
-"""Tests for modules _read/_reader of viperleed.calc.files.parameters."""
+"""Tests for modules read/reader of viperleed.calc.files.parameters."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -13,14 +13,12 @@ import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
 from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.files.parameters.errors import (
-    ParameterNotRecognizedError, ParameterHasNoValueError
-    )
-from viperleed.calc.files.parameters._read import read, update
-from viperleed.calc.files.parameters._reader import (
-    ParametersReader, RawLineParametersReader
-    )
-from viperleed.calc.files.parameters._utils import Assignment
+from viperleed.calc.files.parameters.errors import ParameterNotRecognizedError
+from viperleed.calc.files.parameters.errors import ParameterHasNoValueError
+from viperleed.calc.files.parameters.read import read, update
+from viperleed.calc.files.parameters.reader import ParametersReader
+from viperleed.calc.files.parameters.reader import RawLineParametersReader
+from viperleed.calc.files.parameters.utils import Assignment
 
 from ....helpers import exclude_tags, duplicate_all
 from ...tags import CaseTag

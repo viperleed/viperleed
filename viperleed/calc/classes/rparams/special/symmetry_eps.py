@@ -14,7 +14,7 @@ __license__ = 'GPLv3+'
 from functools import total_ordering
 from numbers import Real
 
-from ._base import SpecialParameter
+from .base import SpecialParameter
 
 
 def _make_arithmetic(operation, allow_eps):

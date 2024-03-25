@@ -1,4 +1,4 @@
-"""Tests for module _known_parameters of viperleed.calc.files.parameters."""
+"""Tests for module known_parameters of viperleed.calc.files.parameters."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -12,11 +12,12 @@ import logging
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.files.parameters._known_parameters import (
-    from_alias, did_you_mean, warn_if_deprecated,
-    _PARAM_ALIAS, KNOWN_PARAMS
-    )
 from viperleed.calc.files.parameters import errors
+from viperleed.calc.files.parameters.known_parameters import from_alias
+from viperleed.calc.files.parameters.known_parameters import did_you_mean
+from viperleed.calc.files.parameters.known_parameters import warn_if_deprecated
+from viperleed.calc.files.parameters.known_parameters import _PARAM_ALIAS
+from viperleed.calc.files.parameters.known_parameters import KNOWN_PARAMS
 
 
 class TestFromAlias:

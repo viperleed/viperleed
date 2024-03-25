@@ -1,4 +1,4 @@
-"""Module _checker of viperleed.calc.files.parameters.
+"""Module checker of viperleed.calc.files.parameters.
 
 Defines the ParametersChecker class, useful for checking that parameters
 read from a PARAMETERS file do not clash with one another.

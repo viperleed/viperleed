@@ -12,9 +12,9 @@ __license__ = 'GPLv3+'
 
 from dataclasses import dataclass
 
-from ._base import SpecialParameter
-from .._defaults import NO_VALUE
-from .._limits import PARAM_LIMITS
+from .base import SpecialParameter
+from ..defaults import NO_VALUE
+from ..limits import PARAM_LIMITS
 
 
 _MIN, _MAX = PARAM_LIMITS['LMAX']

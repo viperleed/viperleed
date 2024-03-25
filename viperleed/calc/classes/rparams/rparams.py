@@ -1,4 +1,4 @@
-"""Module _rparams of viperleed.calc.classes.rparams.
+"""Module rparams of viperleed.calc.classes.rparams.
 
 This is the module defining the core class of this package, i.e.,
 Rparams. The class contains parameters read from the PARAMETERS
@@ -32,8 +32,8 @@ from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files.iodeltas import checkDelta
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import available_cpu_count
-from viperleed.calc.lib.checksums import (KNOWN_TL_VERSIONS,
-                                          UnknownTensErLEEDVersionError)
+from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
+from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 
@@ -45,9 +45,9 @@ else:
     _CAN_PLOT = True
 
 
-from ._defaults import NO_VALUE, DEFAULTS
-from ._limits import PARAM_LIMITS
-from .special._base import SpecialParameter, NotASpecialParameterError
+from .defaults import NO_VALUE, DEFAULTS
+from .limits import PARAM_LIMITS
+from .special.base import SpecialParameter, NotASpecialParameterError
 
 _LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
 _LOGGER = logging.getLogger(_LOGGER_NAME)
@@ -98,7 +98,7 @@ class Rparams:
         self.PHASESHIFTS_CALC_OLD = True # use old EEASiSSS version # TODO: once established, set to False or remove
         self.PHASESHIFTS_OUT_OLD = True  # output old PHASESHIFTS file # TODO: once established, set to False or remove
         self.PHI = DEFAULTS['PHI']           # from BEAM_INCIDENCE
-        self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [], 
+        self.PLOT_IV = {'plot': True, 'axes': 'all', 'colors': [],
                         'font_size': 10, 'legend': 'all', 'line_width': 1,
                         'overbar': False, 'perpage': 2,
                         }

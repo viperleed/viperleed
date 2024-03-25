@@ -1,4 +1,4 @@
-"""Tests for module _checker of viperleed.calc.files.parameters."""
+"""Tests for module checker of viperleed.calc.files.parameters."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -11,7 +11,7 @@ import pytest
 from pytest_cases import fixture, parametrize
 
 from viperleed.calc.classes.rparams import Rparams
-from viperleed.calc.files.parameters._checker import ParametersChecker
+from viperleed.calc.files.parameters.checker import ParametersChecker
 from viperleed.calc.files.parameters.errors import ParameterConflictError
 
 from ....helpers import not_raises

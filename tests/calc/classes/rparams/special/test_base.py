@@ -1,4 +1,4 @@
-"""Tests for module _base of viperleed.calc.classes.rparams.special."""
+"""Tests for module base of viperleed.calc.classes.rparams.special."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -12,9 +12,9 @@ from dataclasses import dataclass
 import pytest
 from pytest_cases import fixture
 
-from viperleed.calc.classes.rparams.special._base import (
+from viperleed.calc.classes.rparams.special.base import (
     SpecialParameter, NotASpecialParameterError
-)
+    )
 
 
 class TestSpecialParameter:

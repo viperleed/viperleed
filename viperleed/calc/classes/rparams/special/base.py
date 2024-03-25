@@ -1,4 +1,4 @@
-"""Module _base of viperleed.calc.classes.rparams.special.
+"""Module base of viperleed.calc.classes.rparams.special.
 
 Defines SpecialParameter, the base class for all other parameter
 classes defined in this package, and a few exceptions.

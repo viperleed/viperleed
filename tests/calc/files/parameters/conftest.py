@@ -11,7 +11,7 @@ import shutil
 
 from pytest_cases import fixture
 
-from viperleed.calc.files.parameters._read import read
+from viperleed.calc.files.parameters.read import read
 
 from .case_parameters import CasesParametersFile
 

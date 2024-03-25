@@ -1,4 +1,4 @@
-"""Tests for module _write of viperleed.calc.files.parameters."""
+"""Tests for module write of viperleed.calc.files.parameters."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -11,11 +11,11 @@ import numpy as np
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.lib.base import strip_comments
 from viperleed.calc.classes.rparams import Rparams, LayerCuts, LMax
-from viperleed.calc.files.parameters._write import ModifiedParameterValue
-from viperleed.calc.files.parameters._write import ParametersFileEditor
-from viperleed.calc.files.parameters._write import comment_out, modify
+from viperleed.calc.files.parameters.write import ModifiedParameterValue
+from viperleed.calc.files.parameters.write import ParametersFileEditor
+from viperleed.calc.files.parameters.write import comment_out, modify
+from viperleed.calc.lib.base import strip_comments
 
 from ....helpers import execute_in_dir
 
@@ -228,7 +228,7 @@ def check_file_modified(fpath, assign_str, comment=''):
 
 
 class TestCommentOutAndModifyFunctions:
-    """Collection of tests for the public functions of ._write."""
+    """Collection of tests for the public functions of .write."""
 
     def test_comment_out_param(self, read_one_param_file):
         """Check effective commenting-out of one parameter."""

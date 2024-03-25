@@ -1,4 +1,4 @@
-"""Module _utils of viperleed.calc.files.parameters.
+"""Module utils of viperleed.calc.files.parameters.
 
 Initial version by @fkraushofer on 2020-08-18, major rewrite by
 @amimre and @michele-riva in June 2023. This module used to be
@@ -27,7 +27,7 @@ _LOGGER = logging.getLogger(_LOGGER_NAME)
 
 # TODO: some of these classes are probably also useful for other
 # files, possibly with little modification. If they are, they
-# could go higher up the hierarchy into a file._utils.py or similar
+# could go higher up the hierarchy into a file.utils.py or similar
 
 
 @dataclass(frozen=True)

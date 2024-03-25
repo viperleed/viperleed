@@ -1,4 +1,4 @@
-"""Tests for module _utils of viperleed.calc.files.parameters."""
+"""Tests for module utils of viperleed.calc.files.parameters."""
 
 __authors__ = (
     'Michele Riva (@michele-riva)',
@@ -10,8 +10,8 @@ __license__ = 'GPLv3+'
 from pytest_cases import parametrize
 import pytest
 
-from viperleed.calc.files.parameters._utils import Assignment
-from viperleed.calc.files.parameters._utils import NumericBounds as Bounds
+from viperleed.calc.files.parameters.utils import Assignment
+from viperleed.calc.files.parameters.utils import NumericBounds as Bounds
 
 from ....helpers import not_raises
 

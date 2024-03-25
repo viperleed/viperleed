@@ -1,4 +1,4 @@
-"""Module _interpret of viperleed.calc.files.parameters.
+"""Module interpret of viperleed.calc.files.parameters.
 
 Initial version by @fkraushofer in 2020, major rewrite by @amimre
 and @michele-riva in June 2023. This module used to be part of
@@ -33,14 +33,14 @@ else:
     _CAN_PLOT = True
 
 from viperleed import __version__
-from viperleed.calc.lib import periodic_table
-from viperleed.calc.lib.base import readIntRange, readVector
-from viperleed.calc.lib.base import recombineListElements, splitSublists
 from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.classes.rparams import IVShiftRange
 from viperleed.calc.classes.rparams import LayerCuts
 from viperleed.calc.classes.rparams import SymmetryEps
 from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.lib import periodic_table
+from viperleed.calc.lib.base import readIntRange, readVector
+from viperleed.calc.lib.base import recombineListElements, splitSublists
 from viperleed.calc.lib.woods_notation import readWoodsNotation
 from viperleed.calc.sections.calc_section import CalcSection as Section
 
@@ -58,9 +58,9 @@ from .errors import ParameterRangeError
 from .errors import ParameterUnknownFlagError
 from .errors import ParameterValueError
 from .errors import SuperfluousParameterError
-from ._checker import ParametersChecker
-from ._known_parameters import KNOWN_PARAMS, is_deprecated, warn_if_deprecated
-from ._utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
+from .checker import ParametersChecker
+from .known_parameters import KNOWN_PARAMS, is_deprecated, warn_if_deprecated
+from .utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
 
 _LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
@@ -919,7 +919,7 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
         if which not in _OPTIMIZE_OPTIONS:
             self.rpars.setHaltingLevel(3)
             raise ParameterUnknownFlagError(param, f'{which!r}')
-        if Section.FD_OPTIMIZATION.value not in self.rpars.RUN:                 # TODO: remove .value when using TLEEDMSection in RUN
+        if Section.FD_OPTIMIZATION.value not in self.rpars.RUN:                 # TODO: remove .value when using CalcSection in RUN
             err_ = ('RUN does not include a full-dynamic-optimization section '
                     f'(RUN = {Section.FD_OPTIMIZATION.value}). It makes no '
                     'sense to provide an OPTIMIZE parameter')

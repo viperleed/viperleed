@@ -20,8 +20,8 @@ from pytest_cases import fixture, parametrize
 from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.classes.rparams import IVShiftRange
 from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.classes.rparams.defaults import NO_VALUE
 from viperleed.calc.classes.rparams.special.energy_range import EPS
-from viperleed.calc.classes.rparams._defaults import NO_VALUE
 
 
 # Makes no sense to complain about too many methods in a test class

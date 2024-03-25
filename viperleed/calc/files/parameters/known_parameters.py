@@ -1,4 +1,4 @@
-"""Module _known_parameters of viperleed.calc.files.parameters.
+"""Module known_parameters of viperleed.calc.files.parameters.
 
 Initial version by @fkraushofer in 2020, major rewrite by @amimre
 and @michele-riva in June 2023. This module used to be part of

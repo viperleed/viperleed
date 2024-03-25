@@ -13,6 +13,6 @@ __created__ = '2023-10-13'
 __license__ = 'GPLv3+'
 
 from . import errors
-from ._interpret import interpret, ParameterInterpreter
-from ._read import read, update
-from ._write import comment_out, modify
+from .interpret import interpret, ParameterInterpreter
+from .read import read, update
+from .write import comment_out, modify

@@ -1,4 +1,4 @@
-"""Module _read of viperleed.calc.files.parameters.
+"""Module read of viperleed.calc.files.parameters.
 
 Initial version by @fkraushofer in 2020, major rewrite by @amimre
 and @michele-riva in June 2023. This module used to be part of
@@ -23,9 +23,9 @@ from pathlib import Path
 from viperleed.calc.classes import rparams
 
 from .errors import MissingEqualsError
-from ._interpret import ParameterInterpreter
-from ._reader import ParametersReader
-from ._write import comment_out
+from .interpret import ParameterInterpreter
+from .reader import ParametersReader
+from .write import comment_out
 
 
 _LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
