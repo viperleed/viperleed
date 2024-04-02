@@ -1,72 +1,55 @@
-"""ViPErLEED utility: Delete atoms between a certain c fraction."""
+"""ViPErLEED utility: Delete atoms between certain c fractions."""
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import argparse
-from copy import deepcopy
-import logging
-import sys
-
-from viperleed.calc.files import poscar
-from viperleed.utilities.poscar import add_verbose_option
-
-logger = logging.getLogger(__name__)
+from viperleed.cli_base import float_in_zero_one
+from viperleed.utilities.poscar.base import _RemoveAtomsCLI
 
 
-def add_cli_parser_arguments(parser):
+class DeleteBeteenCLI(_RemoveAtomsCLI, cli_name='delete_between'):
+    """Remove atoms between a pair of c fractions."""
 
-    parser.add_argument(
-        "c",
-        help="delete all atoms between these c fractions",
-        type=float,
-        nargs=2,
-    )
+    long_name = 'delete atoms between'
+
+    def add_remove_condition_arguments(self, parser):
+        """Add c fraction limits to parser."""
+        parser.add_argument(
+            'c',
+            help='delete all atoms at or between these c fractions',
+            type=float_in_zero_one,
+            nargs=2,
+            )
+
+    def process_slab(self, slab, args):
+        """Remove atoms above the c fraction specified in the CLI."""
+        modified_slab = super().process_slab(slab, args)
+        logger = self.get_logger()
+        min_c, max_c = args.c
+        logger.debug(f'Deleted {slab.n_atoms - modified_slab.n_atoms} atoms '
+                     f'in the range c = [{min_c:5.3}, {max_c:5.3}].')
+        return modified_slab
+
+    def select_surviving_atoms(self, slab, args):
+        """Return atoms of slab with c position outside the args.c interval."""
+        min_c, max_c = args.c
+        return [atom for atom in slab if not min_c <= atom.pos[2] <= max_c]
+
+    def parse_cli_args(self, args):
+        """Validate c fractions passed after parsing."""
+        parsed_args = self.parse_cli_args(args)
+        min_c, max_c = parsed_args.c
+        if min_c > max_c:
+            self.parser.error('c fractions must be sorted '
+                              'from smaller to larger')
+        return parsed_args
 
 
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_verbose_option(parser)
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-    logger.info("ViPErLEED utility: delete atoms between\n")
-
-    for c in args.c:
-        if c <= 0 or c >= 1:
-            raise RuntimeError("c must be in range [0, 1]")
-    if args.c[0] > args.c[1]:
-        raise RuntimeError("First c fraction must be smaller than second c "
-                           "fraction.")
-
-    # read the POSCAR file
-    slab = poscar.read(sys.stdin)
-
-
-    # process the slab
-    modified_slab = deepcopy(slab)
-    modified_slab.atlist = [atom for atom in slab.atlist
-                            if atom.pos[2] < args.c[0]
-                            or atom.pos[2] > args.c[1]]
-    modified_slab.update_element_count()
-
-    logger.debug(f"Deleted {len(slab.atlist) - len(modified_slab.atlist)} atoms"
-                 f" in the range c = [{args.c[0]:5.3},{args.c[1]:5.3}].")
-
-    # write the output file
-    poscar.write(slab=modified_slab,
-                 filename=sys.stdout,
-                 comments='none',
-                 silent=logger.level<=logging.DEBUG)
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    DeleteBeteenCLI.run_as_script()

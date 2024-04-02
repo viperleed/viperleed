@@ -3,65 +3,41 @@
 __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import argparse
-from copy import deepcopy
-import logging
-import sys
-
-from viperleed.calc.files import poscar
-from viperleed.utilities.poscar import add_verbose_option
+from viperleed.cli_base import float_in_zero_one
+from viperleed.utilities.poscar.base import _RemoveAtomsCLI
 
 
-logger = logging.getLogger(__name__)
+class DeleteBelowCLI(_RemoveAtomsCLI, cli_name='delete_below'):
+    """Remove atoms below a certain c fraction."""
+
+    long_name = 'delete atoms below'
+
+    def add_remove_condition_arguments(self, parser):
+        """Add maximum c fraction to parser."""
+        parser.add_argument(
+            'c',
+            help='delete all atoms strictly below this c fraction',
+            type=float_in_zero_one,
+            )
+
+    def process_slab(self, slab, args):
+        """Remove atoms below the c fraction specified in the CLI."""
+        modified_slab = super().process_slab(slab, args)
+        logger = self.get_logger()
+        logger.debug(f'Deleted {slab.n_atoms - modified_slab.n_atoms} '
+                     f'atoms at c < {args.c}.')
+        return modified_slab
+
+    def select_surviving_atoms(self, slab, args):
+        """Return atoms of slab with c position of at least args.c."""
+        return [atom for atom in slab if atom.pos[2] >= args.c]
 
 
-def add_cli_parser_arguments(parser):
-    parser.add_argument(
-        "c",
-        help="delete all atoms below this c fraction",
-        type=float,
-    )
-
-
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_verbose_option(parser)
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
-
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-    logger.info("ViPErLEED utility: delete atoms above\n")
-
-    if args.c <= 0 or args.c >= 1:
-        raise RuntimeError("c must be in range [0, 1]")
-
-    # read the POSCAR file
-    slab = poscar.read(sys.stdin)
-
-
-    # process the slab
-    modified_slab = deepcopy(slab)
-    modified_slab.atlist = [atom for atom in slab.atlist
-                            if args.c < atom.pos[2]]
-    modified_slab.update_element_count()
-
-    logger.debug(f"Deleted {len(slab.atlist) - len(modified_slab.atlist)} atoms"
-                 f" below c < {args.c}.")
-
-    # write the output file
-    poscar.write(slab=modified_slab,
-                 filename=sys.stdout,
-                 comments='none',
-                 silent=logger.level<=logging.DEBUG)
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    DeleteBelowCLI.run_as_script()
