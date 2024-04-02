@@ -546,7 +546,7 @@ def writeOUTBEAMS(beams, filename="THEOBEAMS.csv", sep=", ",
     try:
         with open(filename, 'w') as wf:
             wf.write(output)
-    except Exception:
+    except OSError:
         logger.error("Failed to write "+filename)
         raise
     logger.debug("Wrote to "+filename+" successfully")
