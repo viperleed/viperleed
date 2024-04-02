@@ -13,13 +13,11 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import argparse
 import multiprocessing
 import os
 from pathlib import Path
 import shutil
 
-from viperleed import GLOBALS
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import DEFAULT_WORK_HISTORY
@@ -30,151 +28,146 @@ from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.cli_base import ViPErLEEDCLI
 
 
 LOG_VERBOSE = 5
 LOG_VERY_VERBOSE = 1
 
 
-def add_calc_parser_arguments(parser):
-    """Add CLI arguments for viiperleed.calc to parser."""
-    parser.add_argument(
-        '--version',
-        action='version',
-        version=GLOBALS['version_message'],
-        )
+class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
+    """Main command-line interface for viperleed.calc."""
 
-    parser.add_argument(
-        '--name', '-n',
-        help=('Specify name of the system/sample for which '
-              'calculations are run (e.g., Ag(100)-p1x1)'),
-        type=str
-        )
+    def __call__(self, args=None):
+        """Call viperleed.calc."""
+        # Make sure that pre-packed 'executables'
+        # work with multiprocessing on Windows
+        multiprocessing.freeze_support()
 
-    # VERBOSITY
-    parser.add_argument(
-        '-v', '--verbose',
-        help='Increase output verbosity and print debug messages',
-        action='store_true'
-        )
-    parser.add_argument(
-        '-vv', '--very-verbose',
-        help='Increase output verbosity and print more debug messages',
-        action='store_true'
-        )
+        args = self.parse_cli_args(args)
+        work_path = _make_work_directory(args)
 
-    # PATHS
-    parser.add_argument(
-        '-w', '--work',
-        help='Specify execution work directory',
-        type=str
-        )
-    parser.add_argument(
-        '--tensorleed', '-t',
-        help=('Specify the path to the folder containing '
-              'the TensErLEED and EEASISSS source codes'),
-        type=str
-        )
-
-    # BOOKKEPER
-    parser.add_argument(
-        '--no-cont',
-        help='Do not overwrite POSCAR/VIBROCC with those after a search',
-        action='store_true'
-        )
-    parser.add_argument(                                                        # TODO: implement (for cont at end; warn if called with --no_cont)
-        '-j', '--job-name',
-        help=('Define a name for the current run. Will be appended to the '
-              'name of the history folder that is created, and is logged '
-              'in history.info. Passed along to the bookkeeper'),
-        type=str
-        )
-    parser.add_argument(
-        '--history-name',
-        help=('Define the name of the history folder that is '
-              'created/used. Passed along to the bookkeeper. '
-              f'Default is {DEFAULT_HISTORY!r}'),
-        type=str,
-        default=DEFAULT_HISTORY
-        )
-    parser.add_argument(
-        '--work-history-name',
-       help=('Define the name of the workhistory folder that '
-             'is created/used. Passed along to the bookkeeper. '
-             f'Default is {DEFAULT_WORK_HISTORY!r}'),
-        type=str,
-        default=DEFAULT_WORK_HISTORY
-        )
-
-    # CREATING/DELETING DIRECTORIES
-    parser.add_argument(
-        '--all-tensors',
-        help=('Copy all Tensors to the work directory. Required if using '
-              'the TENSORS parameter to calculate from old tensors'),
-        action='store_true'
-        )
-    parser.add_argument(
-        '--delete-workdir',
-        help='Delete work directory after execution',
-        action='store_true'
-        )
-
-
-def main(args=None):
-    """Read command-line arguments and execute viperleed.calc."""
-    # Make sure that pre-packed 'executables'
-    # work with multiprocessing on Windows
-    multiprocessing.freeze_support()
-
-    args = args or _parse_cli_args()
-    work_path = _make_work_directory(args)
-
-    presets = {}  # Replace selected PARAMETERS
-    try:
+        presets = {}  # Replace selected PARAMETERS
         _verbosity_to_log_level(args, presets)
-    except ValueError as exc:
-        logger.error(f'{exc} Stopping.')
-        return 2
 
-    print('Running bookkeeper...')                                              # TODO: This is lost to stdout if we don't log it
-    # NB: job_name is None, because we're cleaning up the previous run
-    bookkeeper(mode=BookkeeperMode.DEFAULT,
-               job_name=None,
-               history_name=args.history_name,
-               work_history_name=args.work_history_name)
-
-    _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)               # TODO: it would be nice if all_tensors automatically checked PARAMETERS
-    _copy_input_files_to_work(work_path)
-
-    # Go to work directory, execute there
-    cwd = Path.cwd().resolve()
-    os.chdir(work_path)
-    try:
-        exit_code = run_calc(
-            system_name=args.name,
-            source=args.tensorleed,
-            preset_params=presets
-            )
-    finally:
-        # Copy back everything listed in manifest, then go back
-        _copy_files_from_manifest(cwd)
-        os.chdir(cwd)
-
-    # Call bookkeeper again to clean up unless --no_cont is set
-    if not args.no_cont:
-        bookkeeper(mode=BookkeeperMode.CONT,
-                   job_name=args.job_name,
+        print('Running bookkeeper...')                                          # TODO: This is lost to stdout if we don't log it
+        # NB: job_name is None, as we're cleaning up the previous run
+        bookkeeper(mode=BookkeeperMode.DEFAULT,
+                   job_name=None,
                    history_name=args.history_name,
                    work_history_name=args.work_history_name)
 
-    # Finally clean up work if requested
-    if args.delete_workdir:
-        try:
-            shutil.rmtree(work_path)
-        except OSError as exc:
-            print(f'Error deleting work directory: {exc}')                      # TODO: This is lost to stdout if we don't log it
+        _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
+        _copy_input_files_to_work(work_path)
 
-    return exit_code
+        # Go to work directory, execute there
+        cwd = Path.cwd().resolve()
+        os.chdir(work_path)
+        exit_code = 2
+        try:
+            exit_code = run_calc(
+                system_name=args.name,
+                source=args.tensorleed,
+                preset_params=presets
+                )
+        finally:
+            # Copy back everything listed in manifest, then go back
+            _copy_files_from_manifest(cwd)
+            os.chdir(cwd)
+
+        # Call bookkeeper again to clean up unless --no-cont is set
+        if not args.no_cont:
+            bookkeeper(mode=BookkeeperMode.CONT,
+                       job_name=args.job_name,
+                       history_name=args.history_name,
+                       work_history_name=args.work_history_name)
+
+        # Finally clean up work if requested
+        if args.delete_workdir:
+            try:
+                shutil.rmtree(work_path)
+            except OSError as exc:
+                print(f'Error deleting work directory: {exc}')                  # TODO: This is lost to stdout if we don't log it
+        return exit_code
+
+    def add_parser_arguments(self, parser):
+        """Add CLI arguments for viperleed.calc to parser."""
+        super().add_parser_arguments(parser)
+        parser.add_argument(
+            '--name', '-n',
+            help=('specify name of the system/sample for which '
+                  'calculations are run (e.g., Ag(100)-p1x1)'),
+            type=str
+            )
+
+        # VERBOSITY
+        verbosity = parser.add_mutually_exclusive_group()
+        verbosity.add_argument(
+            '-v', '--verbose',
+            help='increase output verbosity and print debug messages',
+            action='store_true'
+            )
+        verbosity.add_argument(
+            '-vv', '--very-verbose',
+            help='increase output verbosity and print more debug messages',
+            action='store_true'
+            )
+
+        # PATHS
+        parser.add_argument(                                                    # TODO: bookkeeper always assumes DEFAULT_WORK!
+            '-w', '--work',
+            help='specify execution work directory',
+            type=str
+            )
+        parser.add_argument(
+            '--tensorleed', '-t',
+            help=('specify the path to the folder containing '
+                  'the TensErLEED and EEASISSS source codes'),
+            type=str
+            )
+
+        # BOOKKEPER
+        parser.add_argument(
+            '--no-cont',
+            help='do not overwrite POSCAR/VIBROCC with those after a search',
+            action='store_true'
+            )
+        parser.add_argument(                                                    # TODO: implement (for cont at end; warn if called with --no_cont)
+            '-j', '--job-name',
+            help=('define a name for the current run. Will be appended to the '
+                  'name of the history folder that is created, and is logged '
+                  'in history.info. Passed along to the bookkeeper'),
+            type=str
+            )
+        parser.add_argument(
+            '--history-name',
+            help=('define the name of the history folder that is '
+                  'created/used. Passed along to the bookkeeper. '
+                  f'Default is {DEFAULT_HISTORY!r}'),
+            type=str,
+            default=DEFAULT_HISTORY
+            )
+        parser.add_argument(
+            '--work-history-name',
+           help=('define the name of the workhistory folder that '
+                 'is created/used. Passed along to the bookkeeper. '
+                 f'Default is {DEFAULT_WORK_HISTORY!r}'),
+            type=str,
+            default=DEFAULT_WORK_HISTORY
+            )
+
+        # CREATING/DELETING DIRECTORIES
+        parser.add_argument(
+            '--all-tensors',
+            help=('copy all Tensors to the work directory. Required if using '
+                  'the TENSORS parameter to calculate from old tensors'),
+            action='store_true'
+            )
+        parser.add_argument(
+            '--delete-workdir',
+            help='delete work directory after execution',
+            action='store_true'
+            )
 
 
 def _copy_input_files_to_work(work_path):
@@ -236,18 +229,8 @@ def _make_work_directory(cli_args):
     return work_path
 
 
-def _parse_cli_args():
-    """Return parsed arguments from args."""
-    parser = argparse.ArgumentParser()
-    add_calc_parser_arguments(parser)
-    return parser.parse_args()
-
-
 def _verbosity_to_log_level(cli_args, presets):
     """Add a LOG_LEVEL to presets if cli_args have verbosity specified."""
-    if sum([cli_args.verbose, cli_args.very_verbose]) > 1:
-        # only one verbosity level can be chosen
-        raise ValueError('Only one verbosity level can be chosen.')
     if cli_args.very_verbose:
         presets['LOG_LEVEL'] = LOG_VERY_VERBOSE
     elif cli_args.verbose:

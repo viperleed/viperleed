@@ -14,15 +14,13 @@ from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper import bookkeeper_cli_options
 from viperleed.calc.bookkeeper import main as bookkeeper_main
-from viperleed.calc.cli import add_calc_parser_arguments
+from viperleed.calc.cli import ViPErLEEDCalcCLI
 
 
 @pytest.fixture(name='calc_parser')
 def fixture_calc_parser():
     """Return a CLI argument parser for viperleed.calc."""
-    parser = argparse.ArgumentParser()
-    add_calc_parser_arguments(parser)
-    return parser
+    return ViPErLEEDCalcCLI().parser
 
 
 @pytest.fixture(name='bookkeeper_parser')

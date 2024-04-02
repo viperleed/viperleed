@@ -14,7 +14,6 @@ __license__ = 'GPLv3+'
 
 import sys
 
-from viperleed.calc.cli import main
+from viperleed.calc.cli import ViPErLEEDCalcCLI
 
-EXIT_CODE = main()
-sys.exit(EXIT_CODE)
+ViPErLEEDCalcCLI.run_as_script()
