@@ -2,46 +2,24 @@
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import argparse
-import logging
-import sys
-
-from viperleed.calc.files import poscar
-from viperleed.utilities.poscar import add_verbose_option
-
-logger = logging.getLogger(__name__)
+from viperleed.utilities.poscar.base import _PoscarStreamCLI
 
 
-def add_cli_parser_arguments(parser):
-    pass
+class StripCommentsCLI(_PoscarStreamCLI, cli_name='strip_comments'):
+    """Remove ViPErLEED (or VASP) comments from a POSCAR file."""
+
+    long_name = 'strip comments'
+
+    def process_slab(self, slab, args):
+        """Return an unchanged slab, as we only remove comments."""
+        return slab
 
 
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_verbose_option(parser)
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-    logger.debug("ViPErLEED utility: strip comments\n")
-
-    # read the POSCAR files
-    slab = poscar.read(sys.stdin)
-
-    # write the output file without comments
-    poscar.write(slab=slab,
-                 filename=sys.stdout,
-                 comments='none',
-                 silent=logger.level<=logging.DEBUG)
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    StripCommentsCLI.run_as_script()
