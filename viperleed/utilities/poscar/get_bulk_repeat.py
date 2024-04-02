@@ -24,10 +24,11 @@ from viperleed.calc.classes.rparams import Rparams
 from viperleed.calc.classes.slab import NoBulkRepeatError
 from viperleed.calc.files import poscar
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
+from viperleed.cli_base import ViPErLEEDCLI
 
 
-def add_cli_parser_arguments(parser):
-    pass
+_BULK_DIST_ENOUGH = 1.2
+_BULK_DIST_SMALL = 0.7
 
 
 def ask_user_bulk_cut():
@@ -51,7 +52,7 @@ def ask_user_bulk_cut():
 
 def ask_user_confirmation_to_cut(bulk_interlayer, bulk_cuts):
     """Ask confirmation if cutting at a somewhat narrow layer spacing."""
-    if not 0.7 < bulk_interlayer < 1.2:
+    if not _BULK_DIST_SMALL < bulk_interlayer < _BULK_DIST_ENOUGH:
         return
 
     dec = None
@@ -83,7 +84,7 @@ def ask_user_symmetry_eps():
             print('Could not convert value to float.')
             continue
         if eps < 0:
-            print('Value has to be greater than zero.')
+            print('Value must be non-negative.')
     return eps
 
 
@@ -93,7 +94,7 @@ def print_utility_description():
           'orientation of the bulk, requiring only an input where the bulk '
           'starts. The bulk repeat unit is then automatically determined. '
           'Output is a new POSCAR with a minimum amount of bulk, and values '
-          'for the BULK_REPEAT and N_BULK_LAYERS parameters.\n')
+          'for the BULK_REPEAT, N_BULK_LAYERS and LAYER_CUTS parameters.\n')
 
 
 def read_user_poscar():
@@ -154,62 +155,70 @@ def write_poscar_min(slab, rpars, cut, bulk_cuts):
     input('Program finished, exit with return')
 
 
-def main(args=None):
-    """Execute the core functionality of the utility.
+class DetectBulkCLI(ViPErLEEDCLI,
+                    cli_name='get_bulk_repeat',
+                    help_='automatically detect the bulk portion of a POSCAR'):
+    """Detect bulk of a user-given POSCAR from a BULK_LIKE_BELOW."""
 
-    Returns
-    -------
-    success : int
-        0: successful completion, 1: errors
-    """
-    print_utility_description()
-    try:
-        slab = read_user_poscar()
-    except OSError:
-        print('Exception while reading POSCAR file')
-        return 1
+    def __call__(self, _=None):
+        """Execute the core functionality of the utility.
 
-    rpars = Rparams()
-    rpars.BULK_LIKE_BELOW = cut = ask_user_bulk_cut()
-    rpars.SYMMETRY_EPS = rpars.SYMMETRY_EPS.from_value(ask_user_symmetry_eps())
+        Returns
+        -------
+        exit_code : int
+            0: successful completion, 1: errors
+        """
+        print_utility_description()
+        try:
+            slab = read_user_poscar()
+        except OSError:
+            print('Exception while reading POSCAR file')
+            return 1
 
-    print('Checking bulk unit cell...')
-    try:
-        bulk_cuts, bulk_interlayer = slab.detect_bulk(rpars, 0.7)
-    except NoBulkRepeatError:
-        _no_repeat = True
-    else:
-        _no_repeat = False
+        rpars = Rparams()
+        rpars.BULK_LIKE_BELOW = cut = ask_user_bulk_cut()
+        rpars.SYMMETRY_EPS = rpars.SYMMETRY_EPS.from_value(
+            ask_user_symmetry_eps()
+            )
 
-    superlattice = rpars.SUPERLATTICE
-    ws = writeWoodsNotation(superlattice)                                       # TODO: replace writeWoodsNotation with guilib functions
-    if ws:
-        info = f'= {ws}'
-    else:
-        info = 'M = {} {}, {} {}'.format(*superlattice.astype(int).ravel())
-    print(f'Found SUPERLATTICE {info}')
+        print('Checking bulk unit cell...')
+        try:
+            bulk_cuts, bulk_interlayer = slab.detect_bulk(rpars,
+                                                          _BULK_DIST_SMALL)
+        except NoBulkRepeatError:
+            _no_repeat = True
+        else:
+            _no_repeat = False
 
-    if _no_repeat:
-        print('No repeat vector was found inside the bulk. The bulk may '
-              'already be minimal.')
+        superlattice = rpars.SUPERLATTICE
+        ws = writeWoodsNotation(superlattice)                                   # TODO: replace writeWoodsNotation with guilib functions
+        info = (
+            f'= {ws}' if ws
+            else 'M = {} {}, {} {}'.format(*superlattice.astype(int).ravel())
+            )
+        print(f'Found SUPERLATTICE {info}')
+
+        if _no_repeat:
+            print('No repeat vector was found inside the bulk. The bulk may '
+                  'already be minimal.')
+            return 0
+
+        ask_user_confirmation_to_cut(bulk_interlayer, bulk_cuts)
+
+        # write POSCAR_bulk
+        try:
+            poscar.write(slab.bulkslab,
+                         filename='POSCAR_bulk',
+                         comments='none')
+        except OSError:
+            print('Exception occurred while writing POSCAR_bulk')
+        else:
+            print('Wrote POSCAR_bulk. Check file to see if periodicity is '
+                  'correct.')
+
+        write_poscar_min(slab, rpars, cut, bulk_cuts)
         return 0
-
-    ask_user_confirmation_to_cut(bulk_interlayer, bulk_cuts)
-
-    # write POSCAR_bulk
-    try:
-        poscar.write(slab.bulkslab, filename='POSCAR_bulk', comments='none')
-    except OSError:
-        print('Exception occurred while writing POSCAR_bulk')
-    else:
-        print('Wrote POSCAR_bulk. Check file to see if periodicity is '
-              'correct.')
-
-    write_poscar_min(slab, rpars, cut, bulk_cuts)
-    return 0
 
 
 if __name__ == '__main__':
-    SUCCESS = main()
-    if not SUCCESS:
-        print('Exit with error')
+    DetectBulkCLI.run_as_script()
