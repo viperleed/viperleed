@@ -12,6 +12,9 @@ import shutil
 
 from pytest_cases import fixture, parametrize
 
+from viperleed.calc import DEFAULT_HISTORY
+from viperleed.calc import DEFAULT_WORK
+from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper import BookkeeperMode
 from viperleed.calc.bookkeeper import _CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper import bookkeeper
@@ -20,7 +23,6 @@ from viperleed.calc.bookkeeper import store_input_files_to_history
 from ..helpers import execute_in_dir
 
 
-HISTORY = 'history'
 MOCK_TIMESTAMP = '010203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in _CALC_LOG_PREFIXES]
 NOTES_TEST_CONTENT = 'This is a test note.'
@@ -34,7 +36,7 @@ MOCK_OUT_CONTENT = 'This is a test output file.'
 @parametrize(log_file_name=MOCK_LOG_FILES)
 def fixture_bookkeeper_mock_dir(tmp_path, log_file_name):
     """Yield a temporary directory for testing the bookkeeper."""
-    work_path = tmp_path / 'work'
+    work_path = tmp_path / DEFAULT_WORK
     out_path = tmp_path / 'OUT'
     supp_path = tmp_path / 'SUPP'
     tensors_path = tmp_path / 'Tensors'
@@ -54,7 +56,7 @@ def fixture_bookkeeper_mock_dir(tmp_path, log_file_name):
         (tmp_path / file).write_text(MOCK_INPUT_CONTENT)
 
     # create mock original_inputs folder
-    original_inputs_path = work_path / 'original_inputs'
+    original_inputs_path = work_path / ORIGINAL_INPUTS_DIR_NAME
     original_inputs_path.mkdir(parents=True, exist_ok=True)
     for file in MOCK_FILES:
         (original_inputs_path / file).write_text(MOCK_ORIG_CONTENT)
@@ -70,8 +72,8 @@ def fixture_bookkeeper_mock_dir(tmp_path, log_file_name):
 
 @fixture(name='history_path')
 def fixture_history_path(bookkeeper_mock_dir):
-    """Return the path to a history subfolder of bookkeeper_mock_dir."""
-    return bookkeeper_mock_dir / HISTORY
+    """Return the path to a history subfolder of `bookkeeper_mock_dir`."""
+    return bookkeeper_mock_dir / DEFAULT_HISTORY
 
 
 @fixture(name='history_path_run')
@@ -89,8 +91,8 @@ def test_bookkeeper_mode_enum():
 
 def test_store_input_files_to_history(tmp_path, bookkeeper_mock_dir):
     """Check correct storage of original input files to history."""
-    inputs_path = bookkeeper_mock_dir / 'work' / 'original_inputs'
-    history = tmp_path / HISTORY
+    inputs_path = bookkeeper_mock_dir / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME
+    history = tmp_path / DEFAULT_HISTORY
     history.mkdir(parents=True, exist_ok=True)
     store_input_files_to_history(inputs_path, history)
     for file in MOCK_FILES:

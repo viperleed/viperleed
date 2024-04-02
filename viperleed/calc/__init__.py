@@ -49,5 +49,9 @@ __license__ = 'GPLv3+'
 
 import logging
 
+DEFAULT_HISTORY = 'history'
+DEFAULT_WORK = 'work'
+DEFAULT_WORK_HISTORY = 'workhistory'
 LOGGER = logging.getLogger(__name__)
 LOG_PREFIX = 'viperleed-calc'
+ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'

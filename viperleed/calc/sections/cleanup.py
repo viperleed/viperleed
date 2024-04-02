@@ -17,9 +17,10 @@ import time
 from timeit import default_timer as timer
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
+from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok,get_elapsed_time_str
-from viperleed.calc.sections.initialization import ORIGINAL_INPUTS_DIR_NAME
 
 # files to go in SUPP
 _SUPP_FILES = (
@@ -93,11 +94,11 @@ def prerun_clean(rp, logname=""):
     None.
     """
     # clean out the workhistory folder, if there is one
-    if os.path.isdir(os.path.join(".", "workhistory")):
+    if os.path.isdir(os.path.join(".", DEFAULT_WORK_HISTORY)):
         try:
-            shutil.rmtree(os.path.join(".", "workhistory"))
+            shutil.rmtree(os.path.join(".", DEFAULT_WORK_HISTORY))
         except Exception:
-            logger.warning("Failed to clear workhistory folder.")
+            logger.warning(f"Failed to clear {DEFAULT_WORK_HISTORY} folder.")
     # get rid of old POSCAR_OUT, VIBROCC_OUT and R_OUT files:
     for d in [".", os.path.join(".", "OUT")]:
         if os.path.isdir(d):
@@ -307,14 +308,15 @@ def move_oldruns(rp, prerun=False):
     """
     sectionabbrv = {1: "R", 2: "D", 3: "S"}
     try:
-        os.makedirs(os.path.join(".", "workhistory"), exist_ok=True)
+        os.makedirs(os.path.join(".", DEFAULT_WORK_HISTORY), exist_ok=True)
     except Exception:
-        logger.error("Error creating workhistory folder: ", exc_info=True)
+        logger.error(f"Error creating {DEFAULT_WORK_HISTORY} folder: ",
+                     exc_info=True)
         raise
     if not prerun:
-        rp.manifest.append("workhistory")
-    dl = [n for n in os.listdir("workhistory")
-          if os.path.isdir(os.path.join("workhistory", n))]
+        rp.manifest.append(DEFAULT_WORK_HISTORY)
+    dl = [n for n in os.listdir(DEFAULT_WORK_HISTORY)
+          if os.path.isdir(os.path.join(DEFAULT_WORK_HISTORY, n))]
     maxnum = -1
     rgx = re.compile(r't'+'{:03d}'.format(rp.TENSOR_INDEX)+r'.r[0-9]{3}_')             # TODO: would be nicer to use a capture group for the last three digits, used to decide how to number the new folder
     for d in dl:
@@ -352,11 +354,12 @@ def move_oldruns(rp, prerun=False):
         dirname += "_" + rp.timestamp
 
     # make workhistory directory
-    work_hist_path = Path(".") / "workhistory" / dirname
+    work_hist_path = Path(".") / DEFAULT_WORK_HISTORY / dirname
     try:
         os.mkdir(work_hist_path)
     except Exception:
-        logger.error("Error creating workhistory subfolder: ", exc_info=True)
+        logger.error(f"Error creating {DEFAULT_WORK_HISTORY} subfolder: ",
+                     exc_info=True)
         raise
     if not prerun:
         organize_workdir(rp.TENSOR_INDEX, delete_unzipped=False,
@@ -375,7 +378,7 @@ def move_oldruns(rp, prerun=False):
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
                     (f.startswith(LOG_PREFIX) and f.endswith(".log"))]
         dirlist = [d for d in rp.manifest if os.path.isdir(d) and
-                   d not in ["Tensors", "Deltas", "workhistory"]]
+                   d not in ["Tensors", "Deltas", DEFAULT_WORK_HISTORY]]
     for f in filelist:
         try:
             if not prerun or f in iofiles:

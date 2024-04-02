@@ -20,6 +20,9 @@ from pathlib import Path
 import shutil
 
 from viperleed import GLOBALS
+from viperleed.calc import DEFAULT_HISTORY
+from viperleed.calc import DEFAULT_WORK
+from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOGGER as logger
 from viperleed.calc.bookkeeper import BookkeeperMode
 from viperleed.calc.bookkeeper import bookkeeper
@@ -29,9 +32,6 @@ from viperleed.calc.run import run_calc
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 
 
-DEFAULT_HISTORY = 'history'
-DEFAULT_WORK = 'work'
-DEFAULT_WORK_HISTORY = 'workhistory'
 LOG_VERBOSE = 5
 LOG_VERY_VERBOSE = 1
 

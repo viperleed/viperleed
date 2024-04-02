@@ -21,6 +21,7 @@ from zipfile import ZipFile
 
 import numpy as np
 
+from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc import symmetry
 from viperleed.calc.classes.rparams import DomainParameters
 from viperleed.calc.classes.slab import AlreadyMinimalError
@@ -47,8 +48,6 @@ from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 logger = logging.getLogger(__name__)
-
-ORIGINAL_INPUTS_DIR_NAME = 'original_inputs'
 
 
 def initialization(sl, rp, subdomain=False):

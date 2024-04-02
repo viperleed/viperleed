@@ -22,6 +22,7 @@ import warnings
 
 import numpy as np
 
+from viperleed.calc import DEFAULT_WORK
 from viperleed.calc.classes.atom_containers import AtomList
 from viperleed.calc.classes.rparams import IVShiftRange
 from viperleed.calc.classes.rparams import Rparams
@@ -422,7 +423,7 @@ def _make_preset_params(rparams, slab):
 
 def _make_work_dir(exec_path):
     """Return exec_path/'work' after copying there all input files."""
-    work_path = exec_path / "work"
+    work_path = exec_path / DEFAULT_WORK
     work_path.mkdir(exist_ok=True)
     # copy input files to work directory
     for file in _INPUT_FILES:

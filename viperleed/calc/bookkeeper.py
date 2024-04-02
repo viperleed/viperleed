@@ -16,7 +16,11 @@ import re
 import shutil
 import time
 
+from viperleed.calc import DEFAULT_HISTORY
+from viperleed.calc import DEFAULT_WORK
+from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
+from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 
 _CALC_LOG_PREFIXES = (
@@ -52,7 +56,7 @@ def store_input_files_to_history(root_path, history_path):
         Path to the history directory in which the files should be stored.
     """
     _root_path, _history_path = Path(root_path), Path(history_path)
-    original_inputs_path = _root_path / "work" / "original_inputs"
+    original_inputs_path = _root_path / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME
     if original_inputs_path.is_dir():
         input_origin_path = original_inputs_path
     else:
@@ -76,8 +80,8 @@ def store_input_files_to_history(root_path, history_path):
 
 def bookkeeper(mode,
                job_name=None,
-               history_name="history",
-               work_history_name="workhistory",):
+               history_name=DEFAULT_HISTORY,
+               work_history_name=DEFAULT_WORK_HISTORY,):
 
     # convert mode to enum if necessary
     _mode = BookkeeperMode(mode)
@@ -403,9 +407,9 @@ def bookkeeper_cli_options(parser):
     parser.add_argument(
         "--work-history-name",
         help=("defines the name of the workhistory folder that is created/used. "
-              "Default is 'workhistory'"),
+              f"Default is {DEFAULT_WORK_HISTORY!r}"),
         type=str,
-        default="workhistory")
+        default=DEFAULT_WORK_HISTORY)
 
 
 def main(args=None):
