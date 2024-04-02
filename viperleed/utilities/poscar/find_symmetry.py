@@ -7,62 +7,26 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import argparse
-import logging
 import sys
 
 from viperleed.calc import symmetry
-from viperleed.calc.classes import rparams
-from viperleed.calc.files import poscar
-from viperleed.utilities.poscar import add_verbose_option
-
-logger = logging.getLogger(__name__)
+from viperleed.utilities.poscar.base import _PoscarSymmetryCLI
 
 
-def add_cli_parser_arguments(parser):
+class FindSymmetryCLI(_PoscarSymmetryCLI, cli_name='find_symmetry'):
+    """Detect the plane group of a the structure in a POSCAR."""
 
-    parser.add_argument(
-        "-e", "--symmetry-eps",
-        help=("Epsilon for symmetry detection in Å. Default: 0.1Å"),
-        type=float,
-        default=0.1,
-    )
-    parser.add_argument(
-        "--symmetry-eps-z",
-        help=("Epsilon for symmetry detection in z in Å. If not provided, "
-              "the value of --symmetry-eps is used."),
-        type=float,
-    )
+    long_name = 'find symmetry'
+
+    def process_slab(self, slab, args):
+        """Find the plane group of slab."""
+        rpars = self.prepare_rpars(slab, args)
+        symmetry.findSymmetry(slab, rpars)
+
+    def write_to_stdout(self, processed_slab, _):
+        """Write the detected plane group to the terminal."""
+        sys.stdout.write(f'{processed_slab.foundplanegroup}\n')
 
 
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_verbose_option(parser)
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-    logger.info("ViPErLEED utility: find symmetry\n")
-
-    # read the POSCAR file
-    slab = poscar.read(sys.stdin)
-
-    param = rparams.Rparams()
-    slab.full_update(param)
-    param.SYMMETRY_EPS = args.symmetry_eps
-    param.SYMMETRY_EPS_Z = (args.symmetry_eps_z
-                            if args.symmetry_eps_z is not None
-                            else args.symmetry_eps)
-    param.SYMMETRY_FIND_ORI = True
-
-    # find the symmetry
-    found_symmetry = symmetry.findSymmetry(slab, param)
-
-    # write the found symmetry group
-    sys.stdout.write(found_symmetry + "\n")
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    FindSymmetryCLI.run_as_script()
