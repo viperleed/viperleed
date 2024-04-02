@@ -5,18 +5,16 @@ This utility takes a slab in POSCAR format and modifies the vacuum gap.
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import argparse
 from copy import deepcopy
 import logging
-import sys
 
-from viperleed.calc.files import poscar
-from viperleed.utilities.poscar import add_verbose_option
+from viperleed.utilities.poscar.base import _PoscarStreamCLI
 
 
 logger = logging.getLogger(__name__)
@@ -53,74 +51,63 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
     slab_thickness = processed_slab.thickness
     current_gap_size = processed_slab.vacuum_gap
 
-    if absolute:
-        new_vacuum_gap_size = vacuum_gap_size
-    else:
-        new_vacuum_gap_size = current_gap_size + vacuum_gap_size
+    vacuum_gap_size += current_gap_size if absolute else 0
 
-    logger.debug(f"Current vacuum gap size:\t{current_gap_size:9.3f}")
-    logger.debug(f"New vacuum gap size:\t\t{new_vacuum_gap_size:9.3f}")
+    logger.debug(f'Current vacuum gap size:\t{current_gap_size:9.3f}')
+    logger.debug(f'New vacuum gap size:\t\t{vacuum_gap_size:9.3f}')
 
-    if new_vacuum_gap_size < 0:
-        raise RuntimeError("The resulting vacuum gap size would be "
-                            "negative.")
+    if vacuum_gap_size < 0:
+        raise RuntimeError('The resulting vacuum gap size would be negative.')
 
-    new_c_z = new_vacuum_gap_size + slab_thickness
+    new_c_z = vacuum_gap_size + slab_thickness
 
-    processed_slab.ucell[:, 2] = new_c_z / processed_slab.c_vector[2]           # TODO: @amimre is this (and the next line) correct??
+    processed_slab.ucell[:, 2] = new_c_z / processed_slab.c_vector[2]           # TODO: @amimre is this (and the next line) correct?? I'd say .c_vector[:] *= new_c_z/.c_vector[2]
     processed_slab.ucell[2, 2] = new_c_z
     processed_slab.collapse_cartesian_coordinates()
     return processed_slab
 
 
-def add_cli_parser_arguments(parser):
+class ModifyVacuumCLI(_PoscarStreamCLI, cli_name='modify_vacuum'):
+    """Change the vacuum gap of a POSCAR."""
 
-    parser.add_argument(
-        "vacuum",
-        help=("Add vacuum on top of the slab. Value in Å. Default is 0 Å."),
-        type=float,
-        default=0.0,
-    )
-    parser.add_argument(
-        "-a", "--absolute",
-        help=("If set, the value given to vacuum is the absolute size"
-              "of the vacuum gap, else it is the amount of vacuum to add or"
-              "remove from the slab."),
-        action = "store_true"
-    )
+    long_name = 'modify vacuum gap'
+
+    def add_parser_arguments(self, parser):
+        """Add mandatory vacuum and optional --absolute arguments."""
+        super().add_parser_arguments(parser)
+        parser.add_argument(
+            'vacuum',
+            help=('Add (or remove, if negative) vacuum on top of '
+                  'the slab. Value in angstrom. Default is zero.'),
+            type=float,
+            default=0.0,
+            )
+        parser.add_argument(
+            '-a', '--absolute',
+            help=('If set, the value given to vacuum is the absolute size '
+                  'of the vacuum gap, else it is the amount of vacuum to add '
+                  'or remove from the slab.'),
+            action='store_true'
+            )
+
+    def parse_cli_args(self, args):
+        """Check consistency of vacuum and absolute."""
+        parsed_args = super().parse_cli_args(args)
+        if parsed_args.absolute and parsed_args.vacuum < 0:
+            self.parser.error('Absolute vacuum gap must be non-negative, '
+                              f'but was {parsed_args.vacuum}.')
+        return parsed_args
+
+    def process_slab(self, slab, args):
+        """Return a new slab with modified vacuum."""
+        if args.absolute:
+            logger.debug('Using absolute vacuum gap size.')
+        try:
+            return modify_vacuum(slab, args.vacuum, absolute=args.absolute)
+        except RuntimeError as exc:
+            self.parser.error(str(exc))
+        return slab  # This is unreachable as parser.error sys-exits
 
 
-
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_verbose_option(parser)
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-    logger.info("ViPErLEED utility: modify vacuum gap\n")
-
-    if args.absolute and args.vacuum < 0:
-        raise ValueError("Absolute vacuum gap has to be positive, but was "
-                         f"{args.vacuum}.")
-
-    if args.absolute:
-        logger.debug("Using absolute vacuum gap size.")
-
-    # read the POSCAR file
-    slab = poscar.read(sys.stdin)
-
-    # process the slab
-    processed_slab = modify_vacuum(slab, args.vacuum, absolute=args.absolute)
-
-    # write the output file
-    poscar.write(slab=processed_slab,
-                 filename=sys.stdout,
-                 comments='none',
-                 silent=logger.level<=logging.DEBUG)
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    ModifyVacuumCLI.run_as_script()
