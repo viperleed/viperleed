@@ -25,18 +25,6 @@ import random
 import shutil
 from timeit import default_timer as timer
 
-import numpy as np
-
-from viperleed.calc.classes.searchpar import SearchPar
-from viperleed.calc.files import beams as iobeams
-from viperleed.calc.files.iodeltas import checkDelta
-from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import available_cpu_count
-from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
-from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
-from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
-
-
 try:
     import matplotlib.pyplot as plt
 except ImportError:
@@ -44,14 +32,25 @@ except ImportError:
 else:
     _CAN_PLOT = True
 
+import numpy as np
+
+from viperleed.calc.classes.searchpar import SearchPar
+from viperleed.calc.files import beams as iobeams
+from viperleed.calc.files.iodeltas import checkDelta
+from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.base import available_cpu_count
+from viperleed.calc.lib.base import parent_name
+from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
+from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
+from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
 from .defaults import DEFAULTS, NO_VALUE
 from .limits import PARAM_LIMITS
 from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter
 
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
+
+_LOGGER = logging.getLogger(parent_name(__name__))
 if _CAN_PLOT:
     plt.style.use('viperleed.calc')
 

@@ -19,11 +19,7 @@ __license__ = 'GPLv3+'
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-import logging
 
-
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 # TODO: some of these classes are probably also useful for other
 # files, possibly with little modification. If they are, they

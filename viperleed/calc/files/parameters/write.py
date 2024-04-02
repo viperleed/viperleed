@@ -24,14 +24,14 @@ import shutil
 
 import numpy as np
 
+from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.base import strip_comments
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 
 from .reader import RawLineParametersReader
 
 
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
+_LOGGER = logging.getLogger(parent_name(__name__))
 
 
 def comment_out(rpars, modpar, comment='', path='', suppress_ori=False):

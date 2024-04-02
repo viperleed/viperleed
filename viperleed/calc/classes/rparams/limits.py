@@ -14,11 +14,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-10-23'
 __license__ = 'GPLv3+'
 
-import logging
-
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
-
                                                                                 # TODO: fill dict of parameter limits here (e.g. LMAX etc.)
 # parameter limits
 # either tuple of (min, max) or list of allowed values                          # TODO: allowed would be cleaner as set. It's not great that things are mixed though. Would be better to have a separate global

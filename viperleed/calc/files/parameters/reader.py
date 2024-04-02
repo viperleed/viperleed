@@ -19,7 +19,6 @@ __license__ = 'GPLv3+'
 
 from collections.abc import Iterator
 from contextlib import AbstractContextManager
-import logging
 from pathlib import Path
 import re
 
@@ -31,10 +30,6 @@ from .errors import ParameterNotRecognizedError
 from .known_parameters import did_you_mean
 from .known_parameters import from_alias
 from .utils import Assignment
-
-
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 class ParametersReader(AbstractContextManager, Iterator):
