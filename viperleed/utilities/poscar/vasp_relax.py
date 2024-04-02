@@ -13,35 +13,54 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
-import argparse
-import logging
 import sys
 
 from viperleed.calc.files import poscar
-from viperleed.utilities.poscar import add_verbose_option
+from viperleed.cli_base import float_in_zero_one
+from viperleed.utilities.poscar.base import _PoscarStreamCLI
 
 # TODO: add an option to add a mirror image to the slab, so that the slab is
 #       symmetric with respect to the center of the slab. This could be useful
 #       when dealing with a polar surface.
 
-
-logger = logging.getLogger(
-    "viperleed.utilities.poscar.prepare_for_vasp_relaxation"
-    )
+MIN_VACUUM_GAP = 10  # angstrom. Emit warnings if too small.
 
 
-def add_cli_parser_arguments(parser):
+class PrepareForVASPRelaxCLI(_PoscarStreamCLI, cli_name='vasp_relax'):
+    """Add VASP relaxation tags to the atoms of a POSCAR."""
 
-    parser.add_argument(
-        "above_c",
-        help=("Specify above which c fraction to relax the slab."),
-        type=float,
-    )
-    parser.add_argument(
-        "--all_directions",
-        help=("Relax all directions, not just the c direction."),
-        action="store_true"
-    )
+    long_name = 'preparing slab for VASP relaxation'
+
+    def add_parser_arguments(self, parser):
+        """Add arguments specifying which atoms/directions to mark."""
+        super().add_parser_arguments(parser)
+        parser.add_argument(
+            'above_c',
+            help='specify above which c fraction to relax the slab.',
+            type=float_in_zero_one,
+            )
+        parser.add_argument(
+            '--all_directions',
+            help='relax all directions, not just the c direction.',
+            action='store_true'
+            )
+
+    def process_slab(self, slab, args):
+        """Return an unchanged slab, as we only edit comments."""
+        logger = self.get_logger()
+        logger.debug(f'Relaxing above c fraction {args.above_c}.')
+        vacuum = slab.vacuum_gap
+        if vacuum < MIN_VACUUM_GAP:
+            logger.warning(
+                f'Vacuum gap between top and bottom of slab is {vacuum:.2f}A, '
+                f'i.e., less than {MIN_VACUUM_GAP}A. This may result in '
+                'interaction between the periodic replicas of slabs.'
+                )
+        return slab
+
+    def write_to_stdout(self, processed_slab, args):
+        """Write VASP POSCAR to the terminal."""
+        write_vasp_poscar(processed_slab, args)
 
 
 def write_vasp_poscar(slab, args):
@@ -58,32 +77,5 @@ def write_vasp_poscar(slab, args):
     writer.write(slab)
 
 
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_verbose_option(parser)
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-
-    logger.debug("ViPErLEED utility: Preparing slab for VASP relaxation\n")
-
-    above_c = args.above_c
-    if above_c <= 0 or above_c >= 1:
-        raise ValueError("c fraction has to be in range [0,1], but was "
-                         f"{above_c}.")
-    logger.debug(f"Relaxing above c fraction {above_c}.")
-
-    # read the POSCAR file from stdin
-    slab = poscar.read(sys.stdin)
-
-    if slab.vacuum_gap < 10:
-        logger.warning("Gap between top and bottom of slab is less than 10 Å. "
-                       "This may result in interaction between the slabs.")
-    write_vasp_poscar(slab, args)
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    PrepareForVASPRelaxCLI.run_as_script()
