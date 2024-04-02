@@ -63,7 +63,8 @@ def fixture_bookkeeper_mock_dir(tmp_path, log_file_name):
 
     # create mock OUT folder
     for file in MOCK_FILES:
-        (out_path / f'{file}_OUT_{MOCK_TIMESTAMP}').write_text(MOCK_OUT_CONTENT)
+        out_file = out_path / f'{file}_OUT_{MOCK_TIMESTAMP}'
+        out_file.write_text(MOCK_OUT_CONTENT)
 
     with execute_in_dir(tmp_path):
         yield tmp_path
@@ -78,7 +79,7 @@ def fixture_history_path(bookkeeper_mock_dir):
 
 @fixture(name='history_path_run')
 def fixture_history_path_run(history_path):
-    """Return the path to a history run subfolder of history_path."""
+    """Return the path to a history run subfolder of `history_path`."""
     return history_path / f't000.r001_{MOCK_TIMESTAMP}'
 
 
@@ -105,17 +106,16 @@ def test_bookkeeper_default_mode(bookkeeper_mock_dir,
                                  history_path,
                                  history_path_run):
     """Check correct storage of history files in DEFAULT mode."""
-    # os.chdir(bookkeeper_mock_dir)
     bookkeeper(mode=BookkeeperMode.DEFAULT)
     assert history_path.exists()
     assert history_path_run.is_dir()
     assert (bookkeeper_mock_dir / 'history.info').exists()
-    # out stored in history
+    # Out stored in history
     for file in MOCK_FILES:
         hist_file = history_path_run / 'OUT' / f'{file}_OUT_{MOCK_TIMESTAMP}'
         hist_content = hist_file.read_text()
         assert MOCK_OUT_CONTENT in hist_content
-    # original not overwritten
+    # Original not overwritten
     for file in MOCK_FILES:
         input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_INPUT_CONTENT in input_content
@@ -123,10 +123,9 @@ def test_bookkeeper_default_mode(bookkeeper_mock_dir,
 
 def test_bookkeeper_cont_mode(bookkeeper_mock_dir, history_path):
     """Check correct overwriting of input files in continuation mode."""
-    # os.chdir(bookkeeper_mock_dir)
     bookkeeper(mode=BookkeeperMode.CONT)
     assert history_path.exists()
-    # make sure input was overwritten
+    # Make sure input was overwritten
     for file in MOCK_FILES:
         input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_OUT_CONTENT in input_content
@@ -134,10 +133,9 @@ def test_bookkeeper_cont_mode(bookkeeper_mock_dir, history_path):
 
 def test_bookkeeper_discard_mode(bookkeeper_mock_dir, history_path_run):
     """Check correct skipping of history storage in DISCARD mode."""
-    # os.chdir(bookkeeper_mock_dir)
     bookkeeper(mode=BookkeeperMode.DISCARD)
     assert not history_path_run.is_dir()
-    # original not overwritten
+    # Original not overwritten
     for file in MOCK_FILES:
         input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_INPUT_CONTENT in input_content
@@ -145,14 +143,12 @@ def test_bookkeeper_discard_mode(bookkeeper_mock_dir, history_path_run):
 
 def test_bookkeeper_with_job_name(history_path):
     """Check correct history storage when a specific job name is set."""
-    # os.chdir(bookkeeper_mock_dir)
     bookkeeper(mode='default', job_name='test_job')
     assert (history_path / f't000.r001_{MOCK_TIMESTAMP}_test_job').exists()
 
 
 def test_bookkeeper_with_existing_history_and_alt_name(bookkeeper_mock_dir):
     """Check correct storage with a non-empty, differently named history."""
-    # os.chdir(bookkeeper_mock_dir)
     # Create some existing history folders
     hist_name = 'history_alt_name'
     alt_history = bookkeeper_mock_dir / hist_name
