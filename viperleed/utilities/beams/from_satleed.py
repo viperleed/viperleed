@@ -6,12 +6,12 @@ and converts it into the standard CSV format used by ViPErLEED.
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-03-20'
 __license__ = 'GPLv3+'
 
-import argparse
 import logging
 from pathlib import Path
 
@@ -21,30 +21,54 @@ import numpy as np
 from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import averageBeams
 from viperleed.calc.files.beams import writeOUTBEAMS
+from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.guilib.base import BeamIndex
+from viperleed.utilities.beams import EXPBEAMS_DEFAULT
 
 logger = logging.getLogger(__name__)
 
 
-def add_cli_parser_arguments(parser):
-    parser.add_argument(
-        "input",
-        help="Input file containing the I(V) curves as used by SATLEED",
-        type=str,
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        help="Output file to write the beams to",
-        type=str,
-        default="EXPBEAMS.csv",
-    )
-    parser.add_argument(
-        "--average",
-        help="Average beams according to the averaging scheme in the input file",
-        action="store_true",
-        default=False,
-    )
+_HELP = ('convert a SATLEED-style experimental-'
+         'beams input file to ViPErLEED format')
+
+
+class FromSATLEEDCLI(ViPErLEEDCLI, cli_name='from-SATLEED', help_=_HELP):
+    """Utility to convert SATLEED beams file to EXPBEAMS format."""
+
+    def add_parser_arguments(self, parser):
+        """Add command-line arguments to parser."""
+        super().add_parser_arguments(parser)
+        parser.add_argument(
+            'input',
+            help='input file containing the I(V) curves as used by SATLEED',
+            type=str,
+            )
+        parser.add_argument(
+            '-o', '--output',
+            help=('output file to write the beams to. '
+                  f'Default is {EXPBEAMS_DEFAULT}'),
+            type=str,
+            default=EXPBEAMS_DEFAULT,
+            )
+        parser.add_argument(
+            '--average',
+            help=('Average beams according to the averaging '
+                  'scheme in the input file. Default is False.'),
+            action='store_true',
+            default=False,
+            )
+
+    def __call__(self, args=None):
+        """Parse CLI arguments, then convert file."""
+        args = self.parse_cli_args(args)
+        # Read input file
+        iv_beams_data = read_file(Path(args.input), average=args.average)
+        # Check if out_file exists...
+        out_file = args.output
+        if Path(out_file).exists():
+            raise FileExistsError(f'Output file {out_file} already exists.')
+        # ...and write to it
+        writeOUTBEAMS(filename=out_file, beams=iv_beams_data)
 
 
 def read_file(file, average=False):
@@ -169,24 +193,5 @@ def read_file(file, average=False):
     return processed_beams
 
 
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
-
-    # Read the file
-    iv_beams_data = read_file(Path(args.input), average=args.average)
-
-    out_file = args.output if args.output else "EXPBEAMS.csv"
-
-    # check if out_file exists
-    if Path(out_file).exists():
-        raise FileExistsError(f"Output file {out_file} already exists.")
-
-    # write the output file
-    writeOUTBEAMS(filename=out_file, beams=iv_beams_data)
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    FromSATLEEDCLI.run_as_script()
