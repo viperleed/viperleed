@@ -148,8 +148,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             '<p>Make sure you are connected to the internet before '
             'proceeding.</p>'
             )
-        disclaimer.addButton(qtw.QPushButton('Cancel'),
-                             disclaimer.RejectRole)
+        disclaimer.addButton(qtw.QPushButton('Cancel'), disclaimer.RejectRole)
         accept = qtw.QPushButton(accept_btn_text)
         disclaimer.addButton(accept, disclaimer.AcceptRole)
         disclaimer.exec_()
@@ -446,10 +445,24 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         firmware = self.controls['firmware_version'].currentData()
         tmp_path = self.controls['firmware_path'].path / 'tmp_'
         upload = True
-        _INVOKE(self._uploader, 'compile', qtc.Q_ARG(dict, selected_ctrl),
-                qtc.Q_ARG(FirmwareVersionInfo, firmware),
-                qtc.Q_ARG(Path, tmp_path), qtc.Q_ARG(bool, upload))
-        self._ctrl_enable(False)
+        warning = qtw.QMessageBox(parent=self)
+        warning.setWindowTitle('About to upload new firmware')
+        warning.setText(
+            'Uploading firmware to '
+            f'{self.controls["controllers"].currentText()}. '
+            'This will delete all firmware that is currently installed '
+            'on the device. To proceed press "Upload".'
+            )
+        warning.addButton(qtw.QPushButton('Abort'), warning.RejectRole)
+        accept = qtw.QPushButton('Upload')
+        warning.addButton(accept, warning.AcceptRole)
+        warning.exec_()
+        button = warning.clickedButton()
+        if button is accept:
+            _INVOKE(self._uploader, 'compile', qtc.Q_ARG(dict, selected_ctrl),
+                    qtc.Q_ARG(FirmwareVersionInfo, firmware),
+                    qtc.Q_ARG(Path, tmp_path), qtc.Q_ARG(bool, upload))
+            self._ctrl_enable(False)
 
     @qtc.pyqtSlot()
     def accept(self):
