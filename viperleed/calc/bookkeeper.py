@@ -22,6 +22,7 @@ from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.cli_base import ViPErLEEDCLI
 
 _CALC_LOG_PREFIXES = (
     LOG_PREFIX,
