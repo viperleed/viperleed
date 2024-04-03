@@ -42,6 +42,7 @@ dev = [
     'pytest-cases',
     'pytest-subtests',
     'pytest',
+    'twine',
     ]
 doc = [
     'myst-nb',
