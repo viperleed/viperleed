@@ -27,7 +27,7 @@ py-modules = ["viperleed"]
 
 
 [project.scripts]
-viperleed = "viperleed.cli:main"
+viperleed = "viperleed.__main__"
 
 [project.optional-dependencies]
 GUI = [
@@ -41,7 +41,7 @@ dev = [
     'line_profiler',
     'pytest-cases',
     'pytest-subtests',
-    'pytest',
+    'pytest<8',  # Till Issue #337 of pytest-cases is fixed
     ]
 doc = [
     'myst-nb',
@@ -51,7 +51,7 @@ doc = [
     'sphinxcontrib-qthelp',
     'sphinxcontrib-spelling',
     'sphinxcontrib-svg2pdfconverter',
-]
+    ]
 
 [tool.pytest.ini_options]
 addopts = [
