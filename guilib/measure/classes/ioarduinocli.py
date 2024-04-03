@@ -666,8 +666,8 @@ class FirmwareUploader(ArduinoCLI):
                 err.returncode,
                 err.stderr.decode()
                 )
-            self.cli_failed.emit()
-            return
+            # No return here to ensure that tmp folder is
+            # removed and buttons are enabled.
         self.progress_occurred.emit(85)
         # Remove extracted archive
         shutil.rmtree(tmp_path)
