@@ -51,7 +51,7 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
     slab_thickness = processed_slab.thickness
     current_gap_size = processed_slab.vacuum_gap
 
-    vacuum_gap_size += current_gap_size if absolute else 0
+    vacuum_gap_size += current_gap_size if not absolute else 0
 
     logger.debug(f'Current vacuum gap size:\t{current_gap_size:9.3f}')
     logger.debug(f'New vacuum gap size:\t\t{vacuum_gap_size:9.3f}')
