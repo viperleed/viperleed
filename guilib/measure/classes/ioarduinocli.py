@@ -757,7 +757,10 @@ class FirmwareUploader(ArduinoCLI):
             # must be is not None because of that.
             if box_id is not None:
                 ctrl_dict[ctrl]['box_id'] = box_id
-                ctrl_dict[ctrl]['name'] = '_'.join(name.split(' ')[:-2])
+                # Notice the -2: the last two entries in name are the
+                # serial number and the '(COM<port>)' bits, which we
+                # don't need.
+                ctrl_dict[ctrl]['name'] = '_'.join(name.split()[:-2])
                 ctrl_dict[name] = ctrl_dict.pop(ctrl)
 
         self.controllers_detected.emit(ctrl_dict)

@@ -203,7 +203,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         """
         with self.lock:
             serial_nr = self.hardware.get('serial_nr', 'UNKNOWN_SERIAL_NR')
-        return f"ViPErLEED Data Acquisition {serial_nr}"
+        return f"ViPErLEED {serial_nr}"
 
     @property
     def name_clean(self):
@@ -211,7 +211,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         # Fall back on the settings if we have no serial number info
         with self.lock:
             try:
-                name = f"ViPErLEED Data Acquisition {self.hardware['serial_nr']}"
+                name = f"ViPErLEED {self.hardware['serial_nr']}"
             except KeyError:
                 name = self.settings.get("controller", "device_name")
         return base.as_valid_filename(name)

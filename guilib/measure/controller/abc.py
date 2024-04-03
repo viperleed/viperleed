@@ -571,7 +571,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # Also, save changes to file, unless we have been reading
         # from the default configuration.
         _settings_serial = new_settings.get('controller', 'address',
-                                          fallback=self.__address)
+                                            fallback=self.__address)
         if not self.__address:
             self.__address = _settings_serial
         else:
@@ -582,7 +582,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         serial_cls_name = new_settings.get('controller', 'serial_class',
                                            fallback='')                         # TODO: remove fallback in 1.0
         if not serial_cls_name:                                                 # TODO: only here for backwards compatibility, remove in 1.0
-            serial_cls_name = new_settings.get('controller', 'serial_port_class')
+            serial_cls_name = new_settings.get('controller',
+                                               'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
             try:
                 serial_class = base.class_from_name('serial', serial_cls_name)
