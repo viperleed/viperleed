@@ -13,7 +13,6 @@ import pytest
 from pytest_cases import parametrize
 
 from viperleed.calc.bookkeeper import BookkeeperCLI
-from viperleed.calc.bookkeeper import main as bookkeeper_main
 from viperleed.calc.cli import ViPErLEEDCalcCLI
 
 
