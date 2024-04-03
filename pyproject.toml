@@ -38,6 +38,7 @@ hardware = [
     'requests',
     ]
 dev = [
+    'build',
     'line_profiler',
     'pytest-cases',
     'pytest-subtests',
