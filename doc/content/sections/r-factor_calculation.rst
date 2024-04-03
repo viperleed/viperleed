@@ -46,11 +46,15 @@ Note that some smoothing algorithms applied to both, the experimental and the ca
 At minima, where the intensities approach zero, :math:`R_P` is especially 
 sensitive to small differences; artificially increasing the intensity there leads to lower values of :math:`R_P`.
 Some LEED programs apply such a smoothing; in this case lower R factors than those obtained with ViPErLEED will be reported, but this does not indicate a better agreement between calculated and experimental data.
-In ViPEerLEED, there is no automatic smoothing.
-Experimental data should be smoothed beforehand using the I(V) curve editor (**TODO**: Link)
+
+By default, ViPErLEED applies no additional smoothing upon structure
+optimization and calculating the R factor.
+We highly recommend that experimental data should be smoothed beforehand using
+the I(V) curve editor in the :ref:`ViPErLEED Spot Tracker<spot_tracker>`.
+The :ref:`EXPBEAMS.csv<EXPBEAMS>` file should thus already contain the
+smoothed data.
 
 
-Smoothing of the experimental data should be done by the :math:`I(V)` curve editor in the Spot Tracker package;
-its output should be used as :ref:`EXPBEAMS.csv<EXPBEAMS>` file.
-By default, ViPErLEED applies no additional smoothing upon structure optimization and calculating the R factor.
-(Using the :ref:`R_FACTOR_SMOOTH<RFACTORSMOOTH>` parameter for smoothing the experimental :math:`I(V)` curves is discouraged; the smoothing algorithm applied there is inferior to that used by the :math:`I(V)` curve editor.)
+(Using the :ref:`R_FACTOR_SMOOTH<RFACTORSMOOTH>` parameter for smoothing the experimental :math:`I(V)` curves is discouraged;
+the smoothing algorithm applied there is inferior to that used by the
+:math:`I(V)` curve editor .)
