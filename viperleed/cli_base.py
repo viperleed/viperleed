@@ -415,7 +415,7 @@ class ViPErLEEDCLI:
         Raises
         ------
         SystemExit
-            With a suitable ext code. If unhandled, this will
+            With a suitable exit code. If unhandled, this will
             TERMINATE THE INTERPRETER.
         """
         cli = cls()
