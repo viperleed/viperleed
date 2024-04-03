@@ -70,7 +70,7 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
     print(f"New c vector: {new_c_vector}")
     print(f"Old c vector: {processed_slab.c_vector}")
 
-    processed_slab.ucell[:, 2] = new_c_vector
+    processed_slab.c_vector[:] = new_c_vector
     processed_slab.collapse_cartesian_coordinates()
     processed_slab.update_fractional_from_cartesian()
     return processed_slab
