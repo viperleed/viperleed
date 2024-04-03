@@ -14,6 +14,8 @@ __license__ = 'GPLv3+'
 from copy import deepcopy
 import logging
 
+import numpy as np
+
 from viperleed.utilities.poscar.base import _PoscarStreamCLI
 
 
@@ -46,12 +48,13 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
     """
     processed_slab = deepcopy(slab)
     processed_slab.check_a_b_in_plane()
+    processed_slab.project_c_to_z()
     processed_slab.update_cartesian_from_fractional()
 
     slab_thickness = processed_slab.thickness
     current_gap_size = processed_slab.vacuum_gap
 
-    vacuum_gap_size += current_gap_size if absolute else 0
+    vacuum_gap_size += current_gap_size if not absolute else 0
 
     logger.debug(f'Current vacuum gap size:\t{current_gap_size:9.3f}')
     logger.debug(f'New vacuum gap size:\t\t{vacuum_gap_size:9.3f}')
@@ -59,11 +62,17 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
     if vacuum_gap_size < 0:
         raise RuntimeError('The resulting vacuum gap size would be negative.')
 
-    new_c_z = vacuum_gap_size + slab_thickness
+    new_c_vector = (
+        processed_slab.c_vector
+        / np.linalg.norm(processed_slab.c_vector)
+        * (vacuum_gap_size + slab_thickness)
+    )
+    print(f"New c vector: {new_c_vector}")
+    print(f"Old c vector: {processed_slab.c_vector}")
 
-    processed_slab.ucell[:, 2] = new_c_z / processed_slab.c_vector[2]           # TODO: @amimre is this (and the next line) correct?? I'd say .c_vector[:] *= new_c_z/.c_vector[2]
-    processed_slab.ucell[2, 2] = new_c_z
+    processed_slab.ucell[:, 2] = new_c_vector
     processed_slab.collapse_cartesian_coordinates()
+    processed_slab.update_fractional_from_cartesian()
     return processed_slab
 
 
