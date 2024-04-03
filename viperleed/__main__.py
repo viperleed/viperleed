@@ -13,8 +13,4 @@ __license__ = 'GPLv3+'
 
 from viperleed.cli import ViPErLEEDMain
 
-def main():
-    ViPErLEEDMain.run_as_script()
-
-if __name__ == '__main__':
-    main()
+ViPErLEEDMain.run_as_script()

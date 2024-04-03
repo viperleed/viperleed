@@ -27,7 +27,7 @@ py-modules = ["viperleed"]
 
 
 [project.scripts]
-viperleed = "viperleed.__main__:main"
+viperleed = "viperleed.cli:ViPErLEEDMain.run_as_script"
 
 [project.optional-dependencies]
 GUI = [
