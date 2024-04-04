@@ -443,4 +443,3 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
 
 if __name__ == '__main__':
     BookkeeperCLI.run_as_script()
-
