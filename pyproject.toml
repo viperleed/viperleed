@@ -25,6 +25,8 @@ dependencies = [
 [tool.setuptools]
 py-modules = ["viperleed"]
 
+[tool.setuptools.dynamic]
+version = {attr = "viperleed.__version__"}
 
 [project.scripts]
 viperleed = "viperleed.cli:main"
