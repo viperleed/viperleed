@@ -198,7 +198,10 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
                                  'add_parser_arguments') from None
         if args.infile.isatty():
             print('Please input the contents of a POSCAR file:')
-        return poscar.read(args.infile)
+        try:
+            return poscar.read(args.infile)
+        except (ValueError, poscar.POSCARError) as exc:
+            self.parser.error(f'Failed to read POSCAR. Stopping. Info: {exc}')
 
     def write_output(self, processed_slab, args):
         """Write output to an output file or the terminal.
