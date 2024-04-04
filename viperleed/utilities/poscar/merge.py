@@ -83,6 +83,14 @@ class MergePoscarsCLI(_PoscarStreamCLI, cli_name='merge'):
 
     def add_parser_arguments(self, parser):
         """Add positional list of files and optional arguments."""
+        # This version of the overridden add_parser_arguments is
+        # a bit tedious: we do not want to have a single stdin as
+        # an input stream, but still want to support:
+        # (1) the base arguments of ViPErLEEDCLI: we do this via
+        #     super, skipping _PoscarStreamCLI in the inheritance
+        super(_PoscarStreamCLI, self).add_parser_arguments(parser)
+        # (2) the verbose option for the logger.
+        self.add_verbose_option(parser)
         parser.add_argument('files', nargs='+', action=minimum_length(2))
         parser.add_argument(
             '--eps-cell',
