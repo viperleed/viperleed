@@ -9,11 +9,11 @@ Author: Michele Riva
 Author: Florian Doerr
 
 This module contains QObjectWithErrorABC, QObjectWithSettingsABC, and
-DeviceABC. QObjectWithErrorABC is the base class of
+HardwareABC. QObjectWithErrorABC is the base class of
 QObjectWithSettingsABC, Masure, CalibrationTask, and DataPoints.
-QObjectWithSettingsABC is the base class of DeviceABC and
-MeasurementABC. DeviceABC is the base class of ControllerABC, SerialABC,
-and CameraABC.
+QObjectWithSettingsABC is the base class of HardwareABC and
+MeasurementABC. HardwareABC is the base class of DeviceABC and
+SerialABC. DeviceABC is the base class of ControllerABC and CameraABC.
 """
 
 from PyQt5 import QtCore as qtc
@@ -23,7 +23,7 @@ from viperleed.guilib.measure.classes import settings
 
 
 class QObjectWithErrorABC(qtc.QObject, metaclass=base.QMetaABC):
-    """Metaclass of measurement objects with error detection."""
+    """Abstract base class of measurement objects with error detection."""
 
     # Emitted whenver an error has been detected. Contains
     # information about the error which occurred.
@@ -31,16 +31,17 @@ class QObjectWithErrorABC(qtc.QObject, metaclass=base.QMetaABC):
 
 
 class QObjectWithSettingsABC(QObjectWithErrorABC):
-    """Metaclass of measurement objects with settings."""
+    """Abstract base class of measurement objects with settings."""
 
     def __init__(self, **kwargs):
         """Initialise instance."""
         self._settings = settings.ViPErLEEDSettings()
         super().__init__(**kwargs)
+    # TODO: add set_settings and find_settings
 
 
-class DeviceABC(QObjectWithSettingsABC):
-    """Metaclass of hardware device objects."""
+class HardwareABC(QObjectWithSettingsABC):
+    """Abstract base class of hardware related objects."""
 
     # Emitted whenever the busy state of the device changes.
     # Contains the busy state the device changed to.
@@ -51,3 +52,8 @@ class DeviceABC(QObjectWithSettingsABC):
         # Busy state of the device.
         self._busy = False
         super().__init__(**kwargs)
+
+
+class DeviceABC(HardwareABC):
+    """Abstract base class of hardware device objects."""
+    # TODO: add list_devices
