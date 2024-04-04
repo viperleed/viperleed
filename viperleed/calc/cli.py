@@ -21,7 +21,6 @@ import shutil
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc import LOGGER as logger
 from viperleed.calc.bookkeeper import BookkeeperMode
 from viperleed.calc.bookkeeper import bookkeeper
 from viperleed.calc.lib.base import copytree_exists_ok

@@ -69,7 +69,7 @@ class FromSATLEEDCLI(ViPErLEEDCLI, cli_name='from-SATLEED', help_=_HELP):
         except ValueError as exc:
             self.parser.error(str(exc))
             raise  # Unreachable as .error does sys.exit
-        except StopIteration as exc:
+        except StopIteration:
             self.parser.error(f'Not enough lines in {args.input}.')
             raise  # Unreachable as .error does sys.exit
         # Check if out_file exists...
@@ -121,7 +121,7 @@ def _average_beams_if_requested(beams, averaging_scheme, average):
     for group_id in averaging_groups:
         group_beams = [
             [beams[i]]
-            for i in np.argwhere(averaging_scheme == group_id).flatten()        # TODO: probably nicer to do this with a boolean mask after converting beams into an array. Something along the lines of group_beams = beams[averaging_scheme == group_id] 
+            for i in np.argwhere(averaging_scheme == group_id).flatten()        # TODO: probably nicer to do this with a boolean mask after converting beams into an array. Something along the lines of group_beams = beams[averaging_scheme == group_id]
             ]
         try:
             averaged_beams.append(averageBeams(group_beams, weights=None))

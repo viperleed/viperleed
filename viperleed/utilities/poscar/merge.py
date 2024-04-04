@@ -88,7 +88,7 @@ class MergePoscarsCLI(_PoscarStreamCLI, cli_name='merge'):
             '--eps-cell',
             help=('maximum element-wise allowed difference in lattice '
                   'parameters (in angstrom) between the unit cells of '
-                  'the POSCAR files to be merged. Default is'
+                  'the POSCAR files to be merged. Default is '
                   f'{_EPS_CELL_DEFAULT:g}'),
             type=positive_float,
             default=_EPS_CELL_DEFAULT,

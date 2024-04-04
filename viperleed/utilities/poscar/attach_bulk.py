@@ -41,7 +41,7 @@ _CONSOLE_HANDLER.setFormatter(logging.Formatter(_LOG_FORMAT))
 class AttachBulkCLI(ViPErLEEDCLI, cli_name='attach_bulk'):
     """Main command-line interface of this utility."""
 
-    def __call__(self, *_args, **_kwargs):
+    def __call__(self, _=None):
         """Call this utility."""
         try:
             return self._call_impl()
