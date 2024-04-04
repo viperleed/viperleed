@@ -31,6 +31,8 @@ keywords = [
     'physics',
     ]
 
+[project.urls]
+Homepage = 'https://viperleed.org'
 
 [tool.setuptools]
 py-modules = ["viperleed"]
