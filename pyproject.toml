@@ -20,6 +20,16 @@ dependencies = [
     'scikit-learn',
     'wrapt',
     ]
+keywords = [
+    'LEED',
+    'electron',
+    'diffraction',
+    'IV',
+    'I(V)',
+    'surface',
+    'science',
+    'physics',
+    ]
 
 
 [tool.setuptools]
