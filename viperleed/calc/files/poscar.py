@@ -347,10 +347,15 @@ class POSCARReader:
                 break
         slab.ucell = np.array(ucell).T * slab.poscar_scaling
         if slab.ucell.shape != (3, 3):
-            n_vec, n_comp = slab.ucell.shape
-            _err = ('Invalid unit-cell vectors: not enough vectors '
-                    f'({n_vec}/3) or not enough Cartesian components '
-                    f'({n_comp}/3).')
+            try:
+                n_vec, n_comp = slab.ucell.shape
+            except ValueError:
+                _err = ('Invalid unit-cell vectors. Expected shape (3, 3), '
+                        f'found {slab.ucell.shape} instead')
+            else:
+                _err = ('Invalid unit-cell vectors: not enough vectors '
+                        f'({n_vec}/3) or not enough Cartesian components '
+                        f'({n_comp}/3).')
             _LOGGER.error(_err)
             raise POSCARSyntaxError(_err)
 
