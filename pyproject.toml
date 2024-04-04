@@ -20,11 +20,25 @@ dependencies = [
     'scikit-learn',
     'wrapt',
     ]
+keywords = [
+    'LEED',
+    'electron',
+    'diffraction',
+    'IV',
+    'I(V)',
+    'surface',
+    'science',
+    'physics',
+    ]
 
+[project.urls]
+Homepage = 'https://viperleed.org'
 
 [tool.setuptools]
 py-modules = ["viperleed"]
 
+[tool.setuptools.dynamic]
+version = {attr = "viperleed.__version__"}
 
 [project.scripts]
 viperleed = "viperleed.cli:ViPErLEEDMain.run_as_script"
@@ -38,10 +52,13 @@ hardware = [
     'requests',
     ]
 dev = [
+    'build',
     'line_profiler',
     'pytest-cases',
     'pytest-subtests',
     'pytest<8',  # Till Issue #337 of pytest-cases is fixed
+    'pytest',
+    'twine',
     ]
 doc = [
     'myst-nb',
