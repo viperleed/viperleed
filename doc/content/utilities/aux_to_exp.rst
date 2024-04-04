@@ -25,5 +25,9 @@ It is invoked with the following commands:
     $ viperleed util beams from-TensErLEED
     $ viperleed util beams from-SATLEED
 
-The utility will prompt the user for the input file name and the output file
-name.
+For more information on usage, see
+
+.. code-block:: bash
+
+    $ viperleed util beams from-TensErLEED --help
+    $ viperleed util beams from-SATLEED --help
