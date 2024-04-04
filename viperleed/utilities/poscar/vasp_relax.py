@@ -13,8 +13,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
-import sys
-
 from viperleed.calc.files import poscar
 from viperleed.cli_base import float_in_zero_one
 from viperleed.utilities.poscar.base import _PoscarStreamCLI
@@ -58,8 +56,8 @@ class PrepareForVASPRelaxCLI(_PoscarStreamCLI, cli_name='vasp_relax'):
                 )
         return slab
 
-    def write_to_stdout(self, processed_slab, args):
-        """Write VASP POSCAR to the terminal."""
+    def write_output(self, processed_slab, args):
+        """Write VASP POSCAR to args.outfile (typically the terminal)."""
         write_vasp_poscar(processed_slab, args)
 
 
@@ -73,7 +71,7 @@ def write_vasp_poscar(slab, args):
     slab.sort_by_element()
     relax_info = {'above_c': args.above_c,
                   'c_only': not args.all_directions}
-    writer = poscar.VASPPOSCARWriter(sys.stdout, relax_info=relax_info)
+    writer = poscar.VASPPOSCARWriter(args.outfile, relax_info=relax_info)
     writer.write(slab)
 
 

@@ -12,6 +12,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-03-27'
 __license__ = 'GPLv3+'
 
+from argparse import FileType
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import logging
@@ -30,7 +31,7 @@ from viperleed.cli_base import ViPErLEEDCLI, positive_float
 
 
 class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
-    """A POSCAR utilities that reads/writes from/to the terminal."""
+    """A POSCAR utility that reads/writes from/to files or the terminal."""
 
     long_name = ''
 
@@ -43,12 +44,101 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         logger.info(f'ViPErLEED POSCAR utility: {self.long_name}\n')
         slab = self.read_poscar(parsed_args)
         processed_slab = self.process_slab(slab, parsed_args)
-        self.write_to_stdout(processed_slab, parsed_args)
+        self.write_output(processed_slab, parsed_args)
         return 0
 
+    def add_infile_argument(self, parser):
+        """Add an optional --infile/-i argument to parser.
+
+        This method is automatically called by the base implementation
+        of add_parser_arguments. It can be used by subclasses that
+        intend to override (and not extend) add_parser_arguments but
+        still desire to provide an --infile/-i argument.
+
+        **IMPORTANT**: Subclasses that override add_parser_arguments
+        but do not override read_poscar **must** call this method
+        in add_parser_arguments.
+
+        Parameters
+        ----------
+        parser : argparse.ArgumentParser
+            The parser to which the optional argument should be
+            added. The added argument defaults to the standard-in
+            stream, i.e., the terminal.
+
+        Returns
+        -------
+        None.
+        """
+        help_ = ('Name of the POSCAR input file. Default: read text '
+                 'from the standard-input stream (i.e., the terminal)')
+        parser.add_argument('--infile', '-i',
+                            type=FileType('r'),
+                            help=help_,
+                            default=sys.stdin)
+
+    def add_outfile_argument(self, parser, help_=None):
+        """Add an optional --outfile/-o argument to parser.
+
+        This method is automatically called by the base implementation
+        of add_parser_arguments. It can be used by subclasses that
+        intend to override (and not extend) add_parser_arguments but
+        still desire to provide an --outfile/-o argument.
+
+        ''IMPORTANT**: Subclasses that override add_parser_arguments
+        but do not override write_output **must** call this method
+        in add_parser_arguments.
+
+        Parameters
+        ----------
+        parser : argparse.ArgumentParser
+            The parser to which the optional argument should be
+            added. The added argument defaults to the standard-out
+            stream, i.e., the terminal.
+
+        Returns
+        -------
+        None.
+        """
+        help_ = ('Name of the POSCAR output file. Default: write text '
+                 'to the standard-output stream (i.e., the terminal)')
+        parser.add_argument('--outfile', '-o',
+                            type=FileType('w'),
+                            help=help_,
+                            default=sys.stdout)
+
     def add_parser_arguments(self, parser):
-        """Add generic arguments to this CLI."""
+        """Add generic arguments to this CLI.
+
+        The base implementation adds:
+        - all the arguments of ancestor classes.
+        - two optional arguments for the input and output files
+          (--infile/-i and --outfile/-o, respectively) which
+          default to standard-in and standard-out.
+        - an optional argument to turn logging verbose.
+
+        **IMPORTANT**: Subclasses may extend this method via super()
+        if they want to inherit the arguments of this base class. If
+        not, they **must** provide outfile (positional) or --outfile
+        (optional) CLI arguments (typically with sys.stdout default),
+        unless they also override write_output. If, additionally, they
+        do not override read_poscar, they must provide infile/--infile
+        CLI arguments (typically with sys.stdin default). Subclasses
+        may use the add_infile_argument/add_outfile_argument methods
+        to add optional --infile/--outfile arguments.
+
+        Parameters
+        ----------
+        parser : argparse.ArgumentParser
+            The parser to which arguments are added.
+
+        Returns
+        -------
+        None.
+        """
         super().add_parser_arguments(parser)
+        self.add_infile_argument(parser)
+        self.add_outfile_argument(parser)
         self.add_verbose_option(parser)
 
     @abstractmethod
@@ -73,16 +163,12 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
             written to stout exactly as it is returned.
         """
 
-    # DISABLE: args is unused in this implementation, but it is
-    # needed for the interface, as subclasses may need it to
-    # decide what/how to read.
-    # pylint: disable-next=unused-argument
     def read_poscar(self, args):
         """Return a slab from args.
 
-        The return value of this method is passed on, together
-        with args, to self.process_slab. The default implementation
-        reads a slab from stdin.
+        The return value of this method is passed on, together with
+        args, to self.process_slab. The default implementation reads
+        a slab from args.infile, which defaults to the terminal.
 
         Parameters
         ----------
@@ -92,20 +178,35 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
         Returns
         -------
         slab : Slab
-            A slab read from the terminal.
-        """
-        return poscar.read(sys.stdin)
+            A slab read using information in args.
 
-    # DISABLE: args is unused in this implementation, but it is
-    # needed for the interface, as subclasses may need it to
-    # decide what/how to read.
-    # pylint: disable-next=unused-argument
-    def write_to_stdout(self, processed_slab, args):
-        """Write output to the terminal.
+        Raises
+        ------
+        AttributeError
+            If subclasses have overridden (and not extended) the
+            add_parser_arguments method, have not overridden this
+            method and forgot to call add_infile_argument in their
+            modified add_parser_arguments.
+        """
+        try:
+            _ = args.infile
+        except AttributeError:
+            raise AttributeError('--infile argument is missing. If you have '
+                                 'overridden add_parser_arguments without '
+                                 'also overriding read_poscar, make sure to '
+                                 'call add_infile_argument in your overridden '
+                                 'add_parser_arguments') from None
+        if args.infile.isatty():
+            print('Please input the contents of a POSCAR file:')
+        return poscar.read(args.infile)
+
+    def write_output(self, processed_slab, args):
+        """Write output to an output file or the terminal.
 
         This is the last method that is called by this utility
         before terminating. The default implementation writes
-        processed_slab to the terminal.
+        processed_slab to args.outfile, which defaults to the
+        terminal.
 
         Parameters
         ----------
@@ -113,14 +214,26 @@ class _PoscarStreamCLI(ViPErLEEDCLI, ABC, cli_name=None):
             The slab processed by this utility.
         args : argparse.Namespace
             The processed command-line arguments.
+        
+        Raises
+        ------
+        AttributeError
+            If subclasses have overridden (and not extended) the
+            add_parser_arguments method, have not overridden this
+            method and forgot to call add_outfile_argument in their
+            modified add_parser_arguments.
         """
-        self.write_processed_slab(processed_slab)
-
-    def write_processed_slab(self, slab):
-        """Write slab to the terminal."""
+        try:
+            _ = args.outfile
+        except AttributeError:
+            raise AttributeError('--outfile argument is missing. If you have '
+                                 'overridden add_parser_arguments without '
+                                 'also overriding write_output, make sure to '
+                                 'call add_outfile_argument in your overridden'
+                                 ' add_parser_arguments') from None
         log_level = self.get_logger().getEffectiveLevel()
-        poscar.write(slab,
-                     filename=sys.stdout,
+        poscar.write(processed_slab,
+                     filename=args.outfile,
                      comments='none',
                      silent=log_level<=logging.DEBUG)
 

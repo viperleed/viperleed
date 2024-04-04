@@ -7,8 +7,6 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import sys
-
 from viperleed.calc import symmetry
 from viperleed.utilities.poscar.base import _PoscarSymmetryCLI
 
@@ -23,9 +21,9 @@ class FindSymmetryCLI(_PoscarSymmetryCLI, cli_name='find_symmetry'):
         rpars = self.prepare_rpars(slab, args)
         symmetry.findSymmetry(slab, rpars)
 
-    def write_to_stdout(self, processed_slab, _):
-        """Write the detected plane group to the terminal."""
-        sys.stdout.write(f'{processed_slab.foundplanegroup}\n')
+    def write_output(self, processed_slab, args):
+        """Write the detected plane group to the args.outfile."""
+        args.outfile.write(f'{processed_slab.foundplanegroup}\n')
 
 
 if __name__ == '__main__':

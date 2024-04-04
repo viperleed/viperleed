@@ -109,6 +109,8 @@ class MergePoscarsCLI(_PoscarStreamCLI, cli_name='merge'):
             type=positive_float,
             default=_EPS_COLLISION_DEFAULT
             )
+        # (3) an output stream, defaulting to stdout.
+        self.add_outfile_argument(parser)
 
     # DISABLE: the positional argument is renamed to slabs on purpose
     # as this makes it clearer that this method expects multiple slabs,
