@@ -232,7 +232,7 @@ class ViPErLEEDCLI:
 
         Parameters
         ----------
-        args : Sequence or None, optional
+        args : Sequence or argparse.Namespace or None, optional
             Command-line arguments for this ViPErLEEDCLI. When
             overriding __call__, use self.parse_cli_args to properly
             resolve both global and specific arguments. If not given
@@ -247,14 +247,13 @@ class ViPErLEEDCLI:
             1   -> clean exit (e.g., via KeyboardInterrupt)
             > 1 -> error
         """
-        parser = self.parser
-        known, others = parser.parse_known_args(args)
+        args = self.parse_cli_args(args)
         try:
-            command = known.func
+            command = args.func
         except AttributeError:  # Called without arguments
-            parser.parse_args(['--help'])
+            self.parser.parse_args(['--help'])
             return 0  # Unreachable, as help does sys.exit
-        return command(others)
+        return command(args)
 
     @property
     def children(self):
@@ -517,7 +516,7 @@ class ViPErLEEDCLI:
 
         Parameters
         ----------
-        args : Sequence or None
+        args : Sequence or argparse.Namespace or None
             The command-line arguments to be parsed using self.parser.
             If None, sys.argv is used, as per argparse.ArgumentParser
             implementation.
@@ -526,6 +525,8 @@ class ViPErLEEDCLI:
         -------
         parsed_args : argparse.Namespace
         """
+        if isinstance(args, argparse.Namespace):
+            return args  # Parsed already by someone else
         return self.parser.parse_args(args)
 
 
