@@ -7,16 +7,10 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-04-03'
 __license__ = 'GPLv3+'
 
-import argparse
-
 import numpy as np
 
 import pytest
 import pytest_cases
-
-from viperleed.calc.bookkeeper import BookkeeperCLI
-from viperleed.calc.cli import ViPErLEEDCalcCLI
-
 
 from viperleed.utilities.poscar.delete_above import DeleteAboveCLI
 from viperleed.utilities.poscar.delete_below import DeleteBelowCLI
@@ -24,12 +18,13 @@ from viperleed.utilities.poscar.delete_below import DeleteBelowCLI
 
 from ... import poscar_slabs
 
-TEST_CUT_FRACTIONS = [0.1234, 0.5, 0.75]
+VALID_CUT_FRACTIONS = [0.1234, 0.5, 0.75]
+INVALID_CUT_FRACTIONS = [-0.1, 1.1, 0.0]
 
 class TestDeleteAbove:
     """Tests for the delete_above utility."""
 
-    @pytest.mark.parametrize('c', TEST_CUT_FRACTIONS)
+    @pytest.mark.parametrize('c', VALID_CUT_FRACTIONS)
     @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs)
     def test_delete_above_cli(self, test_slab, c):
         """Test the DeleteAboveCLI class."""
@@ -46,7 +41,7 @@ class TestDeleteAbove:
 class TestDeleteBelow:
     """Tests for the delete_below utility."""
 
-    @pytest.mark.parametrize('c', TEST_CUT_FRACTIONS)
+    @pytest.mark.parametrize('c', VALID_CUT_FRACTIONS)
     @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs)
     def test_delete_below_cli(self, test_slab, c):
         """Test the DeleteBelowCLI class."""
