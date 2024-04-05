@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 from pytest_cases import fixture, parametrize_with_cases
 
+from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import from_ase as vpr_ase
 from viperleed.calc.classes.slab import Slab
 from viperleed.calc.files import poscar
@@ -376,7 +377,7 @@ class TestFailingInitialization:
         *_, v0i = self.init_results
         assert isinstance(v0i, float)
 
-    @pytest.mark.parametrize('file', ('POSCAR', 'work/VIBROCC'))
+    @pytest.mark.parametrize('file', ('POSCAR', f'{DEFAULT_WORK}/VIBROCC'))
     def test_writes_file(self, file):
         """Ensure that run_from_ase writes `file` during initialization."""
         assert (self.exec_path / file).is_file()
@@ -482,7 +483,7 @@ class TestSuccessfulRefcalc:
     @pytest.mark.parametrize('file', ('BEAMLIST', 'VIBROCC', 'IVBEAMS'))
     def test_writes_file(self, file):
         """Ensure that run_from_ase writes work `file` during refcalc."""
-        assert (self.exec_path / 'work' / file).is_file()
+        assert (self.exec_path / DEFAULT_WORK / file).is_file()
 
     def test_output_not_empty(self):
         """Ensure that run_from_ase ref-calc returns a non-empty output."""
@@ -534,7 +535,7 @@ class TestFailingRefcalc:
     @pytest.mark.parametrize('file', ('BEAMLIST', ))
     def test_does_not_write_file(self, file):
         """Ensure that run_from_ase does not write work `file`."""
-        assert not (self.exec_path / 'work' / file).is_file()
+        assert not (self.exec_path / DEFAULT_WORK / file).is_file()
 
     def test_output_empty(self):
         """Ensure that run_from_ase ref-calc returns an empty output."""

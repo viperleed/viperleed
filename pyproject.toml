@@ -41,7 +41,7 @@ py-modules = ["viperleed"]
 version = {attr = "viperleed.__version__"}
 
 [project.scripts]
-viperleed = "viperleed.cli:main"
+viperleed = "viperleed.cli:ViPErLEEDMain.run_as_script"
 
 [project.optional-dependencies]
 GUI = [
@@ -56,6 +56,7 @@ dev = [
     'line_profiler',
     'pytest-cases',
     'pytest-subtests',
+    'pytest<8',  # Till Issue #337 of pytest-cases is fixed
     'pytest',
     'twine',
     ]
@@ -67,7 +68,7 @@ doc = [
     'sphinxcontrib-qthelp',
     'sphinxcontrib-spelling',
     'sphinxcontrib-svg2pdfconverter',
-]
+    ]
 
 [tool.pytest.ini_options]
 addopts = [

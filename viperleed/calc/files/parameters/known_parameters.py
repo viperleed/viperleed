@@ -22,11 +22,12 @@ __license__ = 'GPLv3+'
 from difflib import get_close_matches
 import logging
 
+from viperleed.calc.lib.base import parent_name
+
 from .errors import ParameterNotRecognizedError
 
 
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
+_LOGGER = logging.getLogger(parent_name(__name__))
 
 
 # Allowed parameters with their 'standard' names in alphabetic order

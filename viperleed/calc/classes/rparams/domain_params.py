@@ -13,11 +13,7 @@ __copyright__ = '2019-2024 ViPErLEED team'
 __created__ = '2023-10-23'
 __license__ = 'GPLv3+'
 
-import logging
 from pathlib import Path
-
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
 
 
 class DomainParameters:

@@ -26,6 +26,18 @@ else:
     GLOBALS['USE_GUI'] = True
 
 from viperleed import guilib as gl
+from viperleed.cli_base import ViPErLEEDCLI
+
+
+class ViPErLEEDGUICLI(ViPErLEEDCLI, cli_name='gui'):
+    """Main entry point for GUI. Both command-line and graphical."""
+
+    def __call__(self, args=None):
+        """Call either the CLI or graphical versions of the GUI."""
+        if is_commandline_mode():
+            return commandline_main()
+            _ = super().__call__(args)                                          # TODO: This line is unreachable because we don't handle the gui arguments correctly yet
+        return gui_main()
 
 
 def is_commandline_mode():
@@ -90,12 +102,12 @@ def gui_main():
     app = qtw.QApplication(sys.argv)
 
     # Import some fonts from ./fonts folder
-    font_path = resources_path("guilib/fonts")
+    font_path = resources_path('guilib/fonts')
     # * Text: family =  'DejaVu Sans'
     qtg.QFontDatabase.addApplicationFont(os.path.join(font_path,
-                                                      "DejaVuSans.ttf"))
+                                                      'DejaVuSans.ttf'))
     # * Math: family =  'CMU Serif'
-    qtg.QFontDatabase.addApplicationFont(os.path.join(font_path, "cmunrm.otf"))
+    qtg.QFontDatabase.addApplicationFont(os.path.join(font_path, 'cmunrm.otf'))
 
     leed_gui = gl.LEED_GUI()
     leed_gui.show()
@@ -104,11 +116,6 @@ def gui_main():
 
     sys.exit(app.exec_())
 
-def main(args=None):
-    if is_commandline_mode():
-        commandline_main()
-    else:
-        gui_main()
 
 if __name__ == '__main__':
-    main()
+    ViPErLEEDGUICLI.run_as_script()

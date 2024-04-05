@@ -39,6 +39,7 @@ from viperleed.calc.classes.rparams import LayerCuts
 from viperleed.calc.classes.rparams import SymmetryEps
 from viperleed.calc.classes.rparams import TheoEnergies
 from viperleed.calc.lib import periodic_table
+from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.base import readIntRange, readVector
 from viperleed.calc.lib.base import recombineListElements, splitSublists
 from viperleed.calc.lib.woods_notation import readWoodsNotation
@@ -63,8 +64,7 @@ from .known_parameters import KNOWN_PARAMS, is_deprecated, warn_if_deprecated
 from .utils import Assignment, NumericBounds, POSITIVE_FLOAT, POSITIVE_INT
 
 
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
+_LOGGER = logging.getLogger(parent_name(__name__))
 
 
 # Bool parameters for which to create interpret...() methods automatically.

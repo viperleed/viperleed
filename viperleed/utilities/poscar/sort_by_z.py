@@ -2,50 +2,34 @@
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import argparse
-import logging
-import sys
-
-from viperleed.calc.files import poscar
-from viperleed.utilities.poscar import add_verbose_option
-
-logger = logging.getLogger(__name__)
+from viperleed.utilities.poscar.base import _PoscarStreamCLI
 
 
-def add_cli_parser_arguments(parser):
-    parser.add_argument(
-        "-r", "--reversed",
-        help="Reverse z ordering (bottom to top)",
-        action="store_true",
-    )
+class SortByZCLI(_PoscarStreamCLI, cli_name='sort_by_z'):
+    """Sort atoms by ascending or descending z coordinate."""
+
+    long_name = 'sort slab by z'
+
+    def add_parser_arguments(self, parser):
+        """Add optional --reversed argument."""
+        super().add_parser_arguments(parser)
+        parser.add_argument(
+            '-r', '--reversed',
+            help='sort from bottom to top. Default is from top to bottom.',
+            action='store_true',
+            )
+
+    def process_slab(self, slab, args):
+        """Return a slab z-sorted according to args."""
+        slab.sort_by_z(bottom_to_top=args.reversed)
+        return slab
 
 
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_verbose_option(parser)
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-    logger.debug("ViPErLEED utility: sort slab by z\n")
-
-    # read the POSCAR file from stdin
-    slab = poscar.read(sys.stdin)
-    slab.sort_by_z(bottom_to_top=args.reversed)
-
-    # write the output file
-    poscar.write(slab=slab,
-                 filename=sys.stdout,
-                 comments='none',
-                 silent=logger.level<=logging.DEBUG)
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    SortByZCLI.run_as_script()

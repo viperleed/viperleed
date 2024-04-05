@@ -21,6 +21,7 @@ import logging
 from pathlib import Path
 
 from viperleed.calc.classes import rparams
+from viperleed.calc.lib.base import parent_name
 
 from .errors import MissingEqualsError
 from .interpret import ParameterInterpreter
@@ -28,8 +29,7 @@ from .reader import ParametersReader
 from .write import comment_out
 
 
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
+_LOGGER = logging.getLogger(parent_name(__name__))
 
 
 def read(filename='PARAMETERS'):

@@ -3,12 +3,12 @@
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
-import argparse
 from enum import Enum
 import os
 from pathlib import Path
@@ -16,8 +16,13 @@ import re
 import shutil
 import time
 
+from viperleed.calc import DEFAULT_HISTORY
+from viperleed.calc import DEFAULT_WORK
+from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
+from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.cli_base import ViPErLEEDCLI
 
 _CALC_LOG_PREFIXES = (
     LOG_PREFIX,
@@ -52,7 +57,7 @@ def store_input_files_to_history(root_path, history_path):
         Path to the history directory in which the files should be stored.
     """
     _root_path, _history_path = Path(root_path), Path(history_path)
-    original_inputs_path = _root_path / "work" / "original_inputs"
+    original_inputs_path = _root_path / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME
     if original_inputs_path.is_dir():
         input_origin_path = original_inputs_path
     else:
@@ -76,8 +81,8 @@ def store_input_files_to_history(root_path, history_path):
 
 def bookkeeper(mode,
                job_name=None,
-               history_name="history",
-               work_history_name="workhistory",):
+               history_name=DEFAULT_HISTORY,
+               work_history_name=DEFAULT_WORK_HISTORY,):
 
     # convert mode to enum if necessary
     _mode = BookkeeperMode(mode)
@@ -376,59 +381,65 @@ def bookkeeper(mode,
         print("Error: Failed to append to history.info file.")
     return 0
 
-def bookkeeper_cli_options(parser):
-    parser.add_argument(
-        "-c", "--cont",
-        help=("overwrite POSCAR and VIBROCC with POSCAR_OUT and VIBROCC_OUT "
-              "from the OUT folder, if present."),
-        action="store_true")
-    parser.add_argument(
-        "-d", "--discard",
-        help=("discard all results from the last run, as if it had not "
-              "happened, and do not add anything to history or history.info. "
-              "Note that this will not necessarily restore modified input "
-              "files in the main folder."),
-        action="store_true")
-    parser.add_argument(
-        "-j", "--job-name",
-        help=("defines a string to be appended to the name of the history "
-              "folder that is created, and is logged in history.info"),
-        type=str)
-    parser.add_argument(
-        "--history-name",
-        help=("defines the name of the history folder that is created/used. "
-              "Default is 'history'"),
-        type=str,
-        default="history")
-    parser.add_argument(
-        "--work-history-name",
-        help=("defines the name of the workhistory folder that is created/used. "
-              "Default is 'workhistory'"),
-        type=str,
-        default="workhistory")
 
+class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
+    """The main command-line interface for the bookkeeper utility."""
 
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        bookkeeper_cli_options(parser)
-        args = parser.parse_args()
+    def add_parser_arguments(self, parser):
+        """Add bookkeeper arguments to parser."""
+        super().add_parser_arguments(parser)
+        what_next = parser.add_mutually_exclusive_group()
+        what_next.add_argument(
+            '-c', '--cont',
+            help=('overwrite POSCAR and VIBROCC with POSCAR_OUT and '
+                  'VIBROCC_OUT from the OUT folder, if present.'),
+            action='store_true'
+            )
+        what_next.add_argument(
+            '-d', '--discard',
+            help=('discard all results from the last run, as if it had '
+                  'not happened, and do not add anything to history or '
+                  'history.info. Note that this will not necessarily '
+                  'restore modified input files in the main folder.'),
+            action='store_true',
+            )
+        parser.add_argument(
+            '-j', '--job-name',
+            help=('define a string to be appended to the name of the history '
+                  'folder that is created, and is logged in history.info'),
+            type=str
+            )
+        parser.add_argument(
+            '--history-name',
+            help=('define the name of the history folder that is '
+                  f'created/used. Default is {DEFAULT_HISTORY!r}'),
+            type=str,
+            default=DEFAULT_HISTORY
+            )
+        parser.add_argument(
+            '--work-history-name',
+            help=('define the name of the workhistory folder that is '
+                  f'created/used. Default is {DEFAULT_WORK_HISTORY!r}'),
+            type=str,
+            default=DEFAULT_WORK_HISTORY
+            )
 
-    # select mode
-    if args.cont and args.discard:
-        raise RuntimeError("Flags --cont and --discard are incompatible.")
-    elif args.cont:
-        mode = BookkeeperMode.CONT
-    elif args.discard:
-        mode = BookkeeperMode.DISCARD
-    else:   # default
-        mode = BookkeeperMode.DEFAULT
+    def __call__(self, args=None):
+        """Call the bookkeeper with command-line args."""
+        parsed_args = self.parse_cli_args(args)
 
-    bookkeeper(mode,
-               job_name=args.job_name,
-               history_name=args.history_name,
-               work_history_name=args.work_history_name,)
+        # Select mode
+        if parsed_args.cont:
+            mode = BookkeeperMode.CONT
+        elif parsed_args.discard:
+            mode = BookkeeperMode.DISCARD
+        else:   # default
+            mode = BookkeeperMode.DEFAULT
+        return bookkeeper(mode,
+                          job_name=parsed_args.job_name,
+                          history_name=parsed_args.history_name,
+                          work_history_name=parsed_args.work_history_name,)
 
 
 if __name__ == '__main__':
-    main()
+    BookkeeperCLI.run_as_script()

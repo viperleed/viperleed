@@ -105,7 +105,7 @@ def readPHASESHIFTS(sl, rp, readfile='PHASESHIFTS', check=True,
 
     try:
         nel = ri3.read(filelines[0])[0]
-    except Exception:
+    except (ValueError, IndexError):
         logger.error("Exception while trying to read PHASESHIFTS: could not "
                      "find number of blocks in first line.")
         raise

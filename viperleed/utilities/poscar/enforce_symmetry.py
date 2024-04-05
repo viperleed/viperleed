@@ -2,85 +2,51 @@
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import argparse
-import logging
-import sys
+from argparse import ArgumentTypeError
 
 from viperleed.calc import symmetry
-from viperleed.calc.classes import rparams
-from viperleed.calc.files import poscar
 from viperleed.guilib.base import PlaneGroup
-from viperleed.utilities.poscar import add_verbose_option
-from viperleed.utilities.poscar import poscar_utility_logger as logger
+from viperleed.utilities.poscar.base import _PoscarSymmetryCLI
 
 
-def add_cli_parser_arguments(parser):
-    parser.add_argument(
-        "-e", "--symmetry-eps",
-        help=("Epsilon for symmetry detection in Å. Default: 0.1Å"),
-        type=float,
-        default=0.1,
-    )
-    parser.add_argument(
-        "--symmetry-eps-z",
-        help=("Epsilon for symmetry detection in z in Å. If not provided, "
-              "the value of --symmetry-eps is used."),
-        type=float,
-    )
-    parser.add_argument(
-        "-p", "--planegroup",
-        help=("Planegroup to enforce. Default: detected automatically from "
-              "the slab. Use this option to override the automatic detection "
-              "and manually lower the symmetry."),
-        type=str,
-    )
+def validate_planegroup(plane_group):
+    """Raise ArgumentTypeError if plane_group is not acceptable."""
+    all_groups = PlaneGroup.allGroups.keys()
+    if plane_group not in all_groups:
+        raise ArgumentTypeError(f'Invalid planegroup: {plane_group}')
+    return plane_group
 
 
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_verbose_option(parser)
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
+class SymmetrizeSlabCLI(_PoscarSymmetryCLI, cli_name='enforce_symmetry'):
+    """Symmetrize a slab according to an optionally specified plane group."""
 
-    logger.info("ViPErLEED utility: find symmetry\n")
+    long_name = 'symmetrize slab'
 
-    # read the POSCAR file
-    slab = poscar.read(sys.stdin)
+    def add_parser_arguments(self, parser):
+        """Add an optional --plane-group argument."""
+        super().add_parser_arguments(parser)
+        parser.add_argument(
+            '-g', '--plane-group',
+            help=('Plane group to enforce. Default: detected automatically '
+                  'from the slab. Use this option to override the automatic '
+                  'detection and manually lower the symmetry.'),
+            type=validate_planegroup,
+            )
 
-    param = rparams.Rparams()
-    slab.fullUpdate(param)
-    param.SYMMETRY_EPS = args.symmetry_eps
-    param.SYMMETRY_EPS_Z = (args.symmetry_eps_z
-                            if args.symmetry_eps_z is not None
-                            else args.symmetry_eps)
-    param.SYMMETRY_FIND_ORI = True
+    def process_slab(self, slab, args):
+        """Find slab symmetry and symmetrize it according to `args`."""
+        rpars = self.prepare_rpars(slab, args)
+        found_symmetry = symmetry.findSymmetry(slab, rpars)
+        plane_group = args.plane_group or found_symmetry
+        symmetry.enforceSymmetry(slab, rpars, plane_group)
+        return slab
 
-    # find the symmetry
-    found_symmetry = symmetry.findSymmetry(slab, param)
 
-    sys.tracebacklimit = 0
-    possible_planegroups = PlaneGroup.allGroups.keys()
-    if args.planegroup is not None:
-        if args.planegroup not in possible_planegroups:
-            raise ValueError(f"Invalid planegroup: {args.planegroup}")
-        planegroup = args.planegroup
-    else:
-        planegroup = found_symmetry
-
-    # enforce the symmetry
-    symmetry.enforceSymmetry(slab, param, planegroup)
-
-    # write the output file
-    poscar.write(slab=slab,
-                 filename=sys.stdout,
-                 comments='none',
-                 silent=logger.level<=logging.DEBUG)
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    SymmetrizeSlabCLI.run_as_script()

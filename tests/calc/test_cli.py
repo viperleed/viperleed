@@ -12,25 +12,20 @@ import argparse
 import pytest
 from pytest_cases import parametrize
 
-from viperleed.calc.bookkeeper import bookkeeper_cli_options
-from viperleed.calc.bookkeeper import main as bookkeeper_main
-from viperleed.calc.cli import add_calc_parser_arguments
+from viperleed.calc.bookkeeper import BookkeeperCLI
+from viperleed.calc.cli import ViPErLEEDCalcCLI
 
 
 @pytest.fixture(name='calc_parser')
 def fixture_calc_parser():
     """Return a CLI argument parser for viperleed.calc."""
-    parser = argparse.ArgumentParser()
-    add_calc_parser_arguments(parser)
-    return parser
+    return ViPErLEEDCalcCLI().parser
 
 
 @pytest.fixture(name='bookkeeper_parser')
 def fixture_bookkeeper_parser():
     """Return a CLI argument parser for viperleed.calc.bookkeeper."""
-    parser = argparse.ArgumentParser()
-    bookkeeper_cli_options(parser)
-    return parser
+    return BookkeeperCLI().parser
 
 
 class TestCalcParser:
@@ -78,6 +73,6 @@ class TestBookkeeperParser:
 
     def test_bookkeeper_parser_exclusive_options(self, bookkeeper_parser):
         """Check complaints when conflicting modes are given."""
-        args = bookkeeper_parser.parse_args(['-c', '-d'])
-        with pytest.raises(RuntimeError):
-            bookkeeper_main(args)
+        with pytest.raises(SystemExit) as exc:
+            bookkeeper_parser.parse_args(['-c', '-d'])
+        assert exc.value.code == 2  # argparse error code

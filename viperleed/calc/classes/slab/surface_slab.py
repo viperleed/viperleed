@@ -36,6 +36,7 @@ from viperleed.calc.lib.base import collapse
 from viperleed.calc.lib.base import collapse_fractional
 from viperleed.calc.lib.base import ensure_integer_matrix
 from viperleed.calc.lib.base import pairwise
+from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.periodic_table import COVALENT_RADIUS
 from viperleed.calc.lib.periodic_table import PERIODIC_TABLE
 
@@ -61,8 +62,7 @@ else:
     _HAS_ASE = True
 
 
-_LOGGER_NAME, _ = __name__.rsplit('.', maxsplit=1)
-_LOGGER = logging.getLogger(_LOGGER_NAME)
+_LOGGER = logging.getLogger(parent_name(__name__))
 _MIN_VACUUM = 5.0   # Angstrom
 _VACUUM_EPS = 1e-4  # In fractional c coordinates
 

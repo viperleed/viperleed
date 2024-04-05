@@ -5,59 +5,40 @@ This utility takes a slab in POSCAR format and rescales the unit cell.
 
 __authors__ = (
     'Alexander M. Imre (@amimre)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2023-08-03'
 __license__ = 'GPLv3+'
 
-import argparse
-import logging
-import sys
-
-from viperleed.calc.files import poscar
-from viperleed.utilities.poscar import add_verbose_option
-
-logger = logging.getLogger(__name__)
+from viperleed.cli_base import length_choices
+from viperleed.utilities.poscar.base import _PoscarStreamCLI
 
 
-def add_cli_parser_arguments(parser):
+class RescaleCellCLI(_PoscarStreamCLI, cli_name='rescale_cell'):
+    """Apply scaling factors to the unit cell of a POSCAR."""
 
-    parser.add_argument(
-        "scaling",
-        help=("One or three scaling factors for the unit cell. If three values "
-              "are given, the scaling factors are applied to the a, b, and c "
-              "vector, respectively. If only one value is given, an isotropic "
-              "scaling is applied."),
-        type=float,
-        nargs="+",
-    )
+    long_name = 'rescale unit cell'
 
+    def add_parser_arguments(self, parser):
+        """Add mandatory scaling factor(s) argument."""
+        super().add_parser_arguments(parser)
+        parser.add_argument(
+            'scaling',
+            help=('One or three scaling factors for the unit cell. If three '
+                  'values are given, the scaling factors are applied to the '
+                  'a, b, and c vectors, respectively. If only one value is '
+                  'given, an isotropic scaling is applied.'),
+            type=float,
+            nargs='+',
+            action=length_choices(1, 3),
+            )
 
-def main(args=None):
-    if args is None:
-        parser = argparse.ArgumentParser()
-        add_verbose_option(parser)
-        add_cli_parser_arguments(parser)
-        args = parser.parse_args()
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-
-    logger.info("ViPErLEED utility: rescale unit cell\n")
-
-    # read the POSCAR file
-    slab = poscar.read(sys.stdin)
-
-    if len(args.scaling) == 1 or len(args.scaling) == 3:
+    def process_slab(self, slab, args):
+        """Return a slab with a unit cell scaled according to args."""
         slab.apply_scaling(*args.scaling)
-    else:
-        raise ValueError("The number of scaling factors must be either 1 or 3.")
+        return slab
 
-    # write the output file
-    poscar.write(slab=slab,
-                 filename=sys.stdout,
-                 comments='none',
-                 silent=logger.level<=logging.DEBUG)
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    RescaleCellCLI.run_as_script()

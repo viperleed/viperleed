@@ -31,6 +31,7 @@ from zipfile import ZipFile
 import pytest
 import pytest_cases
 
+from viperleed.calc import DEFAULT_WORK
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.run import run_calc
 
@@ -108,7 +109,7 @@ class BaseCalcFilesSetup:
     @property
     def work_path(self):
         """Return the path to the work directory."""
-        return self.test_path / 'work'
+        return self.test_path / DEFAULT_WORK
 
     def run_calc_from_setup(self, source, preset_params):
         """Move to work folder, execute, collect outcome, go back home."""
