@@ -43,7 +43,7 @@ class DeleteBeteenCLI(_RemoveAtomsCLI, cli_name='delete_between'):
 
     def parse_cli_args(self, args):
         """Validate c fractions passed after parsing."""
-        parsed_args = self.parse_cli_args(args)
+        parsed_args = super().parse_cli_args(args)
         min_c, max_c = parsed_args.c
         if min_c > max_c:
             self.parser.error('c fractions must be sorted '
