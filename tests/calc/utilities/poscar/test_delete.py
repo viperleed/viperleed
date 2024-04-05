@@ -42,6 +42,7 @@ class TestDeleteAbove:
         assert processed.n_atoms == n_atoms_below_c
         # unit cell is unchanged
         assert np.allclose(slab.ucell, original_ucell)
+        assert np.allclose(processed.ucell, original_ucell)
 
     @pytest.mark.parametrize('c', INVALID_CUT_FRACTIONS)
     def test_invalid_c(self, ag100, c):
@@ -69,6 +70,7 @@ class TestDeleteBelow:
         assert processed.n_atoms == n_atoms_above_c
         # unit cell is unchanged
         assert np.allclose(slab.ucell, original_ucell)
+        assert np.allclose(processed.ucell, original_ucell)
 
     @pytest.mark.parametrize('c', INVALID_CUT_FRACTIONS)
     def test_invalid_c(self, ag100, c):
@@ -98,3 +100,4 @@ class TestDeleteBetween:
         assert processed.n_atoms == n_atoms_in_c_range
         # unit cell is unchanged
         assert np.allclose(slab.ucell, original_ucell)
+        assert np.allclose(processed.ucell, original_ucell)
