@@ -8,22 +8,24 @@ __created__ = '2023-04-05'
 __license__ = 'GPLv3+'
 
 import numpy as np
-
+import pytest
 import pytest_cases
 
 from viperleed.utilities.poscar.modify_vacuum import ModifyVacuumCLI
 
 from ... import poscar_slabs
-import pytest
-import numpy as np
-from viperleed.utilities.poscar.modify_vacuum import ModifyVacuumCLI
+from ...tags import CaseTag as Tag
+
+infoless = pytest_cases.parametrize_with_cases('test_slab',
+                                               cases=poscar_slabs,
+                                               has_tag=Tag.NO_INFO)
+
 
 class TestModifyVacuum:
     """Tests for the modify_vacuum utility."""
 
     @pytest.mark.parametrize('vacuum_gap_size', [1.0, 3.14, 10.0, -1.0])
-    @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs,
-                                         has_tag=poscar_slabs.Tag.NO_INFO)
+    @infoless
     def test_modify_vacuum_relative(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class."""
         parser = ModifyVacuumCLI().parser
@@ -36,8 +38,7 @@ class TestModifyVacuum:
                 == pytest.approx(vacuum_gap_size + original_gap))
 
     @pytest.mark.parametrize('vacuum_gap_size', [1.0, 3.14, 10.0,])
-    @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs,
-                                         has_tag=poscar_slabs.Tag.NO_INFO)
+    @infoless
     def test_modify_vacuum_gap_absolute(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with invalid vacuum gap size."""
         parser = ModifyVacuumCLI().parser

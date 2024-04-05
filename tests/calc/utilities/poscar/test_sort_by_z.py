@@ -10,15 +10,18 @@ __license__ = 'GPLv3+'
 import random
 
 import numpy as np
-
 import pytest_cases
 
 from viperleed.utilities.poscar.sort_by_z import SortByZCLI
 
 from ... import poscar_slabs
+from ...tags import CaseTag as Tag
 
-@pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs,
-                                        has_tag=poscar_slabs.Tag.NO_INFO)
+infoless = pytest_cases.parametrize_with_cases('test_slab',
+                                               cases=poscar_slabs,
+                                               has_tag=Tag.NO_INFO)
+
+@infoless
 def test_sort_by_z(test_slab):
     slab, *_ = test_slab
     parser = SortByZCLI().parser
@@ -32,8 +35,7 @@ def test_sort_by_z(test_slab):
     # Check if the slab is sorted by z-coordinate
     assert np.all(np.diff([at.pos[2] for at in sorted_slab]) <= 0)
 
-@pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs,
-                                        has_tag=poscar_slabs.Tag.NO_INFO)
+@infoless
 def test_sort_by_z_reversed(test_slab):
     slab, *_ = test_slab
     parser = SortByZCLI().parser

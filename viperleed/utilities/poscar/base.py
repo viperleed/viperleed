@@ -12,8 +12,8 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-03-27'
 __license__ = 'GPLv3+'
 
-from argparse import FileType
 from abc import ABC, abstractmethod
+from argparse import FileType
 from copy import deepcopy
 import logging
 import sys
