@@ -38,6 +38,14 @@ class TestDeleteAbove:
         # unit cell is unchanged
         assert np.allclose(slab.ucell, original_ucell)
 
+    @pytest.mark.parametrize('c', INVALID_CUT_FRACTIONS)
+    def test_invalid_c(self, ag100, c):
+        """Test the DeleteAboveCLI class."""
+        parser = DeleteAboveCLI().parser
+        slab, *_ = ag100
+        with pytest.raises(SystemExit):
+            args = parser.parse_args([str(c)])
+
 class TestDeleteBelow:
     """Tests for the delete_below utility."""
 
@@ -54,3 +62,11 @@ class TestDeleteBelow:
         assert DeleteBelowCLI().process_slab(slab, args).n_atoms == n_atoms_above_c
         # unit cell is unchanged
         assert np.allclose(slab.ucell, original_ucell)
+
+    @pytest.mark.parametrize('c', INVALID_CUT_FRACTIONS)
+    def test_invalid_c(self, ag100, c):
+        """Test the DeleteAboveCLI class."""
+        parser = DeleteBelowCLI().parser
+        slab, *_ = ag100
+        with pytest.raises(SystemExit):
+            args = parser.parse_args([str(c)])
