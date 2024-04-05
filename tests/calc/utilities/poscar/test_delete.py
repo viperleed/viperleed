@@ -25,7 +25,8 @@ class TestDeleteAbove:
     """Tests for the delete_above utility."""
 
     @pytest.mark.parametrize('c', VALID_CUT_FRACTIONS)
-    @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs)
+    @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs,
+                                         has_tag=poscar_slabs.Tag.NO_INFO)
     def test_delete_above_cli(self, test_slab, c):
         """Test the DeleteAboveCLI class."""
         parser = DeleteAboveCLI().parser
@@ -51,7 +52,8 @@ class TestDeleteBelow:
     """Tests for the delete_below utility."""
 
     @pytest.mark.parametrize('c', VALID_CUT_FRACTIONS)
-    @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs)
+    @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs,
+                                         has_tag=poscar_slabs.Tag.NO_INFO)
     def test_delete_below_cli(self, test_slab, c):
         """Test the DeleteBelowCLI class."""
         parser = DeleteBelowCLI().parser
@@ -77,7 +79,8 @@ class TestDeleteBetween:
     """Tests for the delete_between utility."""
 
     @pytest.mark.parametrize('c1, c2', [(0.2, 0.8), (0.4, 0.6)])
-    @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs)
+    @pytest_cases.parametrize_with_cases('test_slab', cases=poscar_slabs,
+                                         has_tag=poscar_slabs.Tag.NO_INFO)
     def test_delete_between_cli(self, test_slab, c1, c2):
         """Test the DeleteBetweenCLI class."""
         parser = DeleteBetweenCLI().parser
