@@ -13,7 +13,7 @@ from viperleed.cli_base import float_in_zero_one
 from viperleed.utilities.poscar.base import _RemoveAtomsCLI
 
 
-class DeleteBeteenCLI(_RemoveAtomsCLI, cli_name='delete_between'):
+class DeleteBetweenCLI(_RemoveAtomsCLI, cli_name='delete_between'):
     """Remove atoms between a pair of c fractions."""
 
     long_name = 'delete atoms between'
@@ -52,4 +52,4 @@ class DeleteBeteenCLI(_RemoveAtomsCLI, cli_name='delete_between'):
 
 
 if __name__ == '__main__':
-    DeleteBeteenCLI.run_as_script()
+    DeleteBetweenCLI.run_as_script()
