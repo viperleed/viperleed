@@ -289,7 +289,7 @@ class _RemoveAtomsCLI(_PoscarStreamCLI, ABC, cli_name=None):
         modified_slab = deepcopy(slab)
         atoms = self.select_surviving_atoms(modified_slab, args)
         modified_slab.atlist.clear()
-        modified_slab.extend(atoms)
+        modified_slab.atlist.extend(atoms)
         modified_slab.update_element_count()
         return modified_slab
 
