@@ -17,7 +17,6 @@ SerialABC. DeviceABC is the base class of ControllerABC and CameraABC.
 """
 
 from abc import abstractmethod
-from collections.abc import Sequence
 
 from PyQt5 import QtCore as qtc
 
@@ -67,22 +66,37 @@ class QObjectWithSettingsABC(QObjectWithErrorABC):
         self.set_settings(new_settings)
 
     @abstractmethod
-    def find_settings(self):
+    def find_settings(self):                                                    # TODO: abstract or base implementation?
         """Find appropriate settings for this instance."""
-                                                                                # TODO: abstract or base implementation?
+
+    def are_settings_invalid(self, new_settings):
+        """Check if there are any invalid settings.
+
+        Reimplementations can add additional mandatory settings in
+        run time.
+
+        Parameters
+        ----------
+        new_settings : ViPErLEEDSettings
+            The new settings.
+
+        Returns
+        -------
+        invalid_settings : list
+            Invalid required_settings of self as a list of strings.
+            Each entry can be either '<section>', '<section>/<option>',
+            or '<section>/<option> not one of <value1>, <value2>, ...'
+        """
+        return new_settings.has_settings(*self._mandatory_settings)
 
     @qtc.pyqtSlot(object)
-    @qtc.pyqtSlot(object, Sequence)
-    def set_settings(self, new_settings, extra_mandatory=()):                   # TODO: make sure reimplementations and extensions also return bool
+    def set_settings(self, new_settings):                                       # TODO: make sure reimplementations and extensions also return bool
         """Set new settings for this instance.
 
         Parameters
         ----------
         new_settings : dict or ConfigParser or str or Path
             The new settings.
-        extra_mandatory : Sequence of tuples
-            Mandatory sections/values in the settings file.
-            Empty tuple if there are not extra mandatory settings.
 
         Returns
         -------
@@ -116,8 +130,7 @@ class QObjectWithSettingsABC(QObjectWithErrorABC):
                             type(self).__name__)
             return False
 
-        invalid = new_settings.has_settings(*self._mandatory_settings,
-                                            *extra_mandatory)
+        invalid = self.are_settings_invalid(new_settings)
         if invalid:
             base.emit_error(QObjectABCErrors.INVALID_SETTINGS,
                             type(self).__name__, ', '.join(invalid), '')
@@ -131,7 +144,6 @@ class QObjectWithSettingsABC(QObjectWithErrorABC):
 # pylint: disable-next=abstract-method
 class HardwareABC(QObjectWithSettingsABC):
     """Abstract base class of hardware related objects."""
-
     # Emitted whenever the busy state of the device changes.
     # Contains the busy state the device changed to.
     busy_changed = qtc.pyqtSignal(bool)
