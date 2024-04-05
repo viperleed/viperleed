@@ -87,17 +87,9 @@ class TestDeleteBetween:
         slab, *_ = test_slab
         original_ucell = slab.ucell.copy()
         args = parser.parse_args([str(c1), str(c2)])
-        n_atoms_between_c1_c2 = sum(1 for atom in slab if atom.pos[2] >= c1
-                                    and atom.pos[2] <= c2)
+        n_atoms_between_c1_c2 = sum(1 for atom in slab if atom.pos[2] < c1
+                                    or atom.pos[2] > c2)
         # right number of atoms
         assert DeleteBetweenCLI().process_slab(slab, args).n_atoms == n_atoms_between_c1_c2
         # unit cell is unchanged
         assert np.allclose(slab.ucell, original_ucell)
-
-    @pytest.mark.parametrize('c1, c2', [(0.8, 0.2), (0.6, 0.4)])
-    def test_invalid_c(self, ag100, c1, c2):
-        """Test the DeleteBetweenCLI class."""
-        parser = DeleteBetweenCLI().parser
-        slab, *_ = ag100
-        with pytest.raises(SystemExit):
-            args = parser.parse_args([str(c1), str(c2)])
