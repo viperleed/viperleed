@@ -37,9 +37,9 @@ class DeleteBetweenCLI(_RemoveAtomsCLI, cli_name='delete_between'):
         return modified_slab
 
     def select_surviving_atoms(self, slab, args):
-        """Return atoms of slab with c position inside the args.c interval."""
+        """Return atoms of slab with c position outside the args.c interval."""
         min_c, max_c = args.c
-        return [atom for atom in slab if min_c <= atom.pos[2] <= max_c]
+        return [atom for atom in slab if not min_c <= atom.pos[2] <= max_c]
 
     def parse_cli_args(self, args):
         """Validate c fractions passed after parsing."""
