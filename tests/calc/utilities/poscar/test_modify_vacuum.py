@@ -27,7 +27,7 @@ class TestModifyVacuum:
     @pytest.mark.parametrize('vacuum_gap_size', [1.0, 3.14, 10.0, -1.0])
     @infoless
     def test_modify_vacuum_relative(self, test_slab, vacuum_gap_size):
-        """Test the ModifyVacuumCLI class."""
+        """Test the ModifyVacuumCLI class with relative vacuum gap."""
         parser = ModifyVacuumCLI().parser
         slab, *_ = test_slab
         args = parser.parse_args([str(vacuum_gap_size)])
@@ -40,7 +40,7 @@ class TestModifyVacuum:
     @pytest.mark.parametrize('vacuum_gap_size', [1.0, 3.14, 10.0,])
     @infoless
     def test_modify_vacuum_gap_absolute(self, test_slab, vacuum_gap_size):
-        """Test the ModifyVacuumCLI class with invalid vacuum gap size."""
+        """Test the ModifyVacuumCLI class with absolute vacuum gap size."""
         parser = ModifyVacuumCLI().parser
         slab, *_ = test_slab
         args = parser.parse_args([str(vacuum_gap_size), '-a'])
