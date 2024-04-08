@@ -77,8 +77,8 @@ class Rparams:
         self.FILAMENT_WF = DEFAULTS['FILAMENT_WF']['lab6']   # work function of emitting cathode
         self.FORTRAN_COMP = ['', '']      # before files, after files
         self.FORTRAN_COMP_MPI = ['', '']  # before files, after files
-        self.GAUSSIAN_WIDTH = 0.5
-        self.GAUSSIAN_WIDTH_SCALING = 0.5
+        self.GAUSSIAN_WIDTH = DEFAULTS['GAUSSIAN_WIDTH']
+        self.GAUSSIAN_WIDTH_SCALING = DEFAULTS['GAUSSIAN_WIDTH_SCALING']
         self.HALTING = 2    # 2: major concerns, 1: minor warnings, 0: always
         self.INTPOL_DEG = 3 # Degree of interpolation spline used in R-factor calculation
         self.IV_SHIFT_RANGE = self.get_default('IV_SHIFT_RANGE')

@@ -33,6 +33,10 @@ DEFAULTS = {
         'lab6': 2.65,  # This is the default if nothing is given
         'w': 4.5,
         },
+    # GAUSSIAN_WIDTH and GAUSSIAN_WIDTH_SCALING are set by parameter
+    # SEARCH_CONVERGENCE
+    'GAUSSIAN_WIDTH' : 0.1,
+    'GAUSSIAN_WIDTH_SCALING' : 0.5,
     'LOG_LEVEL' : {
         NO_VALUE: logging.INFO,
         'debug': logging.DEBUG,

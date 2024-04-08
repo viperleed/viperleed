@@ -46,7 +46,7 @@ parameters and a dynamic parameter that is varied during the search.
 Two real values are accepted: The value to be used at the beginning of the search, 
 and a scaling factor applied whenever partial convergence is reached.
 
-**Default:** 0.5 0.5
+**Default:** 0.1 0.5
 
 **Allowed values:** ]0,∞[, ]0,1[
 
@@ -82,7 +82,8 @@ independent of convergence, is given by :ref:`SEARCH_MAX_GEN<SEARCHGENMAX>`.
    ``dgen`` also affects the output interval for the raw TenErLEED file :ref:`SD.TL<sdtl>`.
    Very values for ``dgen`` (:math:`\lesssim` 10) may slow down the search due to I/O overhead.
 
-**Default:** partial convergence when best 10% of structures do not change in 100 generations, scaling factor = 1/(scaling factor of ``gaussian``)
+**Default:** partial convergence when best 10% of structures do not change in
+200 generations, scaling factor = 0.75/(scaling factor of ``gaussian``).
 
 **Allowed values:** one or two values > 1
 
@@ -111,3 +112,13 @@ The scaling factor will default to the inverse of the scaling factor used by ``g
 
 Defining values for more than one convergence criterion is allowed; in that case, partial convergence will be considered to have been reached once *either* condition is met, but full convergence is reached only once *all* conditions are met.
 
+
+Changelog
+---------
+
+.. versionchanged:: 0.12.0
+    Changed default values for ``SEARCH_CONVERGENCE gaussian`` from 0.5 0.5 to
+    0.1 0.5.
+    Change default values for ``SEARCH_CONVERGENCE dgen`` from 100
+    1/(scaling factor of ``gaussian``) to 200 0.75/(scaling factor of
+    ``gaussian``).
