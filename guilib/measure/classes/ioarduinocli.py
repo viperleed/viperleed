@@ -159,6 +159,9 @@ class ArduinoCLIInstaller(ArduinoCLI):
         # installation. It is determined automatically before
         # downloading the CLI. It is file name of the zipped CLI.
         self._archive_name = ''
+        
+        # Whenever an error occurs perform _on_install_failed.
+        self.error_occurred.connect(self._on_install_failed)
 
     @qtc.pyqtSlot(qtn.QNetworkReply)
     def _download_newest_cli(self, reply):
@@ -198,7 +201,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED
                 )
-            self._install_failed()
             return
         self.progress_occurred.emit(10)
 
@@ -215,7 +217,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI
                 )
-            self._install_failed()
             return
 
         url_latest = ''
@@ -231,7 +232,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI
                 )
-            self._install_failed()
             return
         self.progress_occurred.emit(15)
 
@@ -293,7 +293,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
-            self._install_failed()
             return {}
 
         try:
@@ -305,7 +304,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
                 err.returncode,
                 err.stderr
                 )
-            self._install_failed()
             return {}
         return json.loads(cores.stdout)
 
@@ -408,7 +406,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
-            self._install_failed()
             return
 
         try:
@@ -420,9 +417,9 @@ class ArduinoCLIInstaller(ArduinoCLI):
                 err.returncode,
                 err.stderr
                 )
-            self._install_failed()
 
-    def _install_failed(self):
+    @qtc.pyqtSlot(tuple)
+    def _on_install_failed(self, _):
         """Installation of Arduino CLI failed."""
         self.cli_installation_finished.emit(False)
 
@@ -457,7 +454,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
-            self._install_failed()
             return
 
         try:
@@ -466,7 +462,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED
                 )
-            self._install_failed()
             return
 
         self.progress_occurred.emit(90)
@@ -479,7 +474,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
                 err.returncode,
                 err.stderr
                 )
-            self._install_failed()
 
     @qtc.pyqtSlot()
     def get_arduino_cli_from_git(self):
