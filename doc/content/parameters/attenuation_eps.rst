@@ -1,4 +1,4 @@
-.. _intmaxatt:
+.. _attenuation_eps:
 
 ATTENUATION_EPS
 ===============
