@@ -256,6 +256,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
         self.network.get(request)
         self.progress_occurred.emit(25)
 
+    # This method is currently unused.                                          TODO: check if it can be used to accelerate the CLI upgrade by checking if the required core is already installed.
     def _get_arduino_cores(self):
         """Return a dictionary of the cores currently installed.
 
@@ -327,11 +328,11 @@ class ArduinoCLIInstaller(ArduinoCLI):
             return '0.0.0'
 
         try:
-            ver = subprocess.run([cli, 'version', '--format', 'json'],
+            ver_json = subprocess.run([cli, 'version', '--format', 'json'],
                                  capture_output=True, check=True)
         except subprocess.CalledProcessError:
             return '0.0.0'
-        ver = json.loads(ver.stdout)
+        ver = json.loads(ver_json.stdout)
         return ver['VersionString']
 
     def _install_and_upgrade_cores(self):
