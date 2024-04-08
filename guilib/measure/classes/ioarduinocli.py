@@ -102,7 +102,7 @@ class ArduinoCLI(qtc.QObject):
         # See if, by chance, it is available system-wide
         try:
             subprocess.run(['arduino-cli', '-h'], check=True)
-        except FileNotFoundError:
+        except (FileNotFoundError, subprocess.CalledProcessError):
             pass
         else:
             return Path('arduino-cli')
