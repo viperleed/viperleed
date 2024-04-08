@@ -309,7 +309,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
                 err.returncode,
-                err.stderr
+                err.stderr.decode()
                 )
             return {}
         return json.loads(cores.stdout)
@@ -413,7 +413,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
                 err.returncode,
-                err.stderr
+                err.stderr.decode()
                 )
 
     @qtc.pyqtSlot(tuple)
@@ -466,7 +466,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
                 err.returncode,
-                err.stderr
+                err.stderr.decode()
                 )
 
     @qtc.pyqtSlot()
@@ -571,7 +571,7 @@ class FirmwareUploader(ArduinoCLI):
             base.emit_error(self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
                 err.returncode,
-                err.stderr
+                err.stderr.decode()
                 )
             self.cli_failed.emit()
             return []
