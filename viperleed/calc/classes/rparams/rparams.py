@@ -53,6 +53,7 @@ from .special.base import SpecialParameter
 _LOGGER = logging.getLogger(parent_name(__name__))
 if _CAN_PLOT:
     plt.style.use('viperleed.calc')
+TENSERLEED_FOLDER_NAME = 'TensErLEED'
 
 
 class Rparams:
@@ -382,7 +383,7 @@ class Rparams:
 
         highest = foundversion = 0.0
         founddir = None
-        for directory in source_tree.glob('TensErLEED*'):
+        for directory in source_tree.glob(f'{TENSERLEED_FOLDER_NAME}*'):
             if not directory.is_dir():
                 continue
             try:

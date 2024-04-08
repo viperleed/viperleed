@@ -12,6 +12,7 @@ import pytest
 import pytest_cases
 
 from viperleed.utilities.poscar.modify_vacuum import ModifyVacuumCLI
+from viperleed.calc.classes.slab.surface_slab import _MIN_VACUUM
 
 from ... import poscar_slabs
 from ...tags import CaseTag as Tag
@@ -32,7 +33,7 @@ class TestModifyVacuum:
         slab, *_ = test_slab
         args = parser.parse_args([str(vacuum_gap_size)])
         original_gap = slab.vacuum_gap
-        if vacuum_gap_size + original_gap < 5.0:
+        if vacuum_gap_size + original_gap < _MIN_VACUUM:
             with pytest.raises(SystemExit):
                 modified_slab = ModifyVacuumCLI().process_slab(slab, args)
         else:
