@@ -108,18 +108,6 @@ independent of convergence, is given by :ref:`SEARCH_MAX_GEN<SEARCHGENMAX>`.
 The additional flags "all","dec", and "best" can be used to specify whether all configurations in the population, the best 10%, or only the best configuration should be considered.
 If no additional flag is given, ``SEARCH_CONVERGENCE dgen`` will default to checking the best 10% of the population.
 The scaling factor will default to the inverse of the scaling factor used by ``gaussian`` for any of the three.
-**TODO Florian, Alex, Michele– comment by Michael; needs discussion:** Das ist verwirrend. Warum wird hier der inverse Faktor angegeben?
-Wenn auf Breite * 0.5 skaliert wird, sollte es überall '0.5' oder überall '2' heißen.
-(wobei ich ohnehin nicht glaube, dass es etwas bringt, je nach Kriterium unterschiedliche Faktoren zu verwenden).
-Eine Änderung sollte natürlich in den 'Change notes' oder dgl. stehen.
 
 Defining values for more than one convergence criterion is allowed; in that case, partial convergence will be considered to have been reached once *either* condition is met, but full convergence is reached only once *all* conditions are met.
-
-**TODO Florian, Alex, Michele– comment by Michael; needs discussion:** Verstehe ich nicht: ich hätte gedacht, full convergence ist durch search_max_dgen_best gegeben (oder es bricht wegen zu vieler Generationen ab).
-Wenn es mehrere dgen all, dgen best etc Kriterien gibt, wird ja beim Erreichen eines der Kriterien die Gauss-Breite verringert, und die anderen Kriterien können nicht mehr eintreten. Oder habe ich da etwas falsch verstanden?
-
-Gibt's eine Grenze, wenn der Gaussian zu schmal wird? (dann landet man ja immer am Ausgangspunkt, und die Suche bringt nichts. Man sollte jedenfalls vermeiden, die-Kurven für den aktuellen Punkt wiederholt zu berechnen, wenn der neue Parametersatz gleich dem aktuellen ist).
-Wenn wir den zweiten Parameter (scaling factor) von SEARCH_CONVERGENCE dgen dec = 1000 1.5
-auf den Kehrwert ändern, sollte es mit alten Files kompatibel bleiben.
-Da dieser Parameter ja immer den Bereich verkleinern muss, könnte man Werte > 1 als 1/Wert interpretieren. Dann ist es egal, ob man 0.5 oder 2.0 tippt, es wird der Suchbereich immer auf die Hälfte verringert.
 
