@@ -16,6 +16,7 @@ import logging
 
 import numpy as np
 
+from viperleed.calc.classes.slab.errors import NotEnoughVacuumError
 from viperleed.utilities.poscar.base import _PoscarStreamCLI
 
 
@@ -56,6 +57,15 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
 
     vacuum_gap_size += current_gap_size if not absolute else 0
 
+    # check there is enough space on top of the slab to reduce the vacuum gap
+    if vacuum_gap_size < current_gap_size:
+        top_atom_positions = max(at.cartpos[2] for at in slab)
+        gap_on_top = slab.c_vector[2] - top_atom_positions
+        if gap_on_top < (current_gap_size - vacuum_gap_size):
+            raise RuntimeError('The resulting vacuum gap size would be larger '
+                               'than the distance between the topmost atom and '
+                               'the top of the cell.')
+
     logger.debug(f'Current vacuum gap size:\t{current_gap_size:9.3f}')
     logger.debug(f'New vacuum gap size:\t\t{vacuum_gap_size:9.3f}')
 
@@ -73,6 +83,10 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
     processed_slab.c_vector[:] = new_c_vector
     processed_slab.collapse_cartesian_coordinates()
     processed_slab.update_fractional_from_cartesian()
+    try:
+        processed_slab.check_vacuum_gap()
+    except NotEnoughVacuumError:
+        raise RuntimeError('The resulting vacuum gap would be too small.')
     return processed_slab
 
 

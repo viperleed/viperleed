@@ -32,12 +32,16 @@ class TestModifyVacuum:
         slab, *_ = test_slab
         args = parser.parse_args([str(vacuum_gap_size)])
         original_gap = slab.vacuum_gap
-        modified_slab = ModifyVacuumCLI().process_slab(slab, args)
-        # check if vacuum gap size is modified correctly
-        assert (modified_slab.vacuum_gap
-                == pytest.approx(vacuum_gap_size + original_gap))
+        if vacuum_gap_size + original_gap < 5.0:
+            with pytest.raises(SystemExit):
+                modified_slab = ModifyVacuumCLI().process_slab(slab, args)
+        else:
+            modified_slab = ModifyVacuumCLI().process_slab(slab, args)
+            # check if vacuum gap size is modified correctly
+            assert (modified_slab.vacuum_gap
+                    == pytest.approx(vacuum_gap_size + original_gap))
 
-    @pytest.mark.parametrize('vacuum_gap_size', [1.0, 3.14, 10.0,])
+    @pytest.mark.parametrize('vacuum_gap_size', [10.0, 100.0])
     @infoless
     def test_modify_vacuum_gap_absolute(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with absolute vacuum gap size."""
@@ -47,3 +51,14 @@ class TestModifyVacuum:
         modified_slab = ModifyVacuumCLI().process_slab(slab, args)
         # check if vacuum gap size is modified correctly
         assert modified_slab.vacuum_gap == pytest.approx(vacuum_gap_size)
+        assert modified_slab.thickness == pytest.approx(slab.thickness)
+
+    @pytest.mark.parametrize('vacuum_gap_size', [1.0])
+    @infoless
+    def test_modify_vacuum_gap_too_small(self, test_slab, vacuum_gap_size):
+        """Test the ModifyVacuumCLI class with absolute vacuum gap size."""
+        parser = ModifyVacuumCLI().parser
+        slab, *_ = test_slab
+        args = parser.parse_args([str(vacuum_gap_size), '-a'])
+        with pytest.raises(SystemExit):
+            modified_slab = ModifyVacuumCLI().process_slab(slab, args)
