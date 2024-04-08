@@ -89,6 +89,8 @@ class ViPErinoController(abc.MeasureControllerABC):
 
     hardware_info_arrived = qtc.pyqtSignal()
 
+    _box_id = 0
+
     def __init__(self, parent=None, settings=None,
                  address='', sets_energy=False):
         """Initialise ViPErino controller object.
@@ -156,6 +158,11 @@ class ViPErinoController(abc.MeasureControllerABC):
         # The thermocouple.Thermocouple instance for this unit.
         # None if not present (or if TEMPERATURE was not measured)
         self.__thermocouple = None
+
+    @property
+    def box_id(self):
+        """Return the box id of the associated controller."""
+        return self._box_id
 
     @property
     def initial_delay(self):
