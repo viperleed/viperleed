@@ -611,6 +611,7 @@ class SystemSettings(ViPErLEEDSettings):
     # for it's core functionality.
     __non_mandatory = (
         ('PATHS', 'arduino_cli'),
+        ('PATHS', 'firmware'),
         )
 
     def __new__(cls, *args, **kwargs):
@@ -672,8 +673,11 @@ class SystemSettings(ViPErLEEDSettings):
          "you will be able to decide if you want to be asked each "
          "time a measurement starts."),
         ('PATHS', 'arduino_cli',
-         "<nobr>This is the folder in which the Arduino</nobr> "
-         "command-line interface is installed."),
+         '<nobr>This is the folder in which the Arduino</nobr> '
+         'command-line interface is installed.'),
+        ('PATHS', 'firmware',
+         '<nobr>This is the folder in which ViPErLEED</nobr> '
+         'controller firmware is saved.'),
         )
         for section, option, info in _infos:
             handler[section][option].set_info_text(info)

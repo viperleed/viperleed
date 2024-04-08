@@ -22,6 +22,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.classes import settings
 from viperleed.guilib.measure.classes.ioarduinocli import ArduinoCLIInstaller
 from viperleed.guilib.measure.classes.ioarduinocli import FirmwareUploader
 from viperleed.guilib.measure.classes.ioarduinocli import FirmwareVersionInfo
@@ -402,6 +403,13 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         """Enable buttons after upload or failed upload."""
         self._ctrl_enable(True)
 
+    def _set_firmware_path(self):
+        """Set firmware_path to the path given in system settings."""
+        path_getter = settings.SystemSettings()
+        firmware_path = path_getter.get('PATHS', 'firmware', fallback=None)
+        if firmware_path:
+            self.controls['firmware_path'].path = Path(firmware_path)
+
     @qtc.pyqtSlot()
     def _update_ctrl_labels(self, *_):
         """Display controller firmware version."""
@@ -484,12 +492,14 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
         This method interrupts the regular opening of the dialog and
         will stall until the FirmwareUploader has finished the check if
-        the Arduino CLI is installled.
-        
+        the Arduino CLI is installled. The firmware_path is also set
+        to the path specified in the system settings before opening.
+
         Returns
         -------
         None.
         """
+        self._set_firmware_path()
         self._downloader.cli_found.connect(self._continue_open)
         base.safe_disconnect(self._downloader.error_occurred,
                              self.error_occurred)
