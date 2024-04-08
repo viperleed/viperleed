@@ -16,7 +16,8 @@ import logging
 
 import numpy as np
 
-from viperleed.calc.classes.slab.errors import NotEnoughVacuumError
+from viperleed.calc.classes.slab.errors import (NotEnoughVacuumError,
+                                                WrongVacuumPositionError)
 from viperleed.utilities.poscar.base import _PoscarStreamCLI
 
 
@@ -87,6 +88,9 @@ def modify_vacuum(slab, vacuum_gap_size, absolute=False):
         processed_slab.check_vacuum_gap()
     except NotEnoughVacuumError:
         raise RuntimeError('The resulting vacuum gap would be too small.')
+    except WrongVacuumPositionError:
+        raise RuntimeError('Cannot modify the vaccum gap as requested. Check '
+                           'that there already is a vacuum gap in the POSCAR.')
     return processed_slab
 
 

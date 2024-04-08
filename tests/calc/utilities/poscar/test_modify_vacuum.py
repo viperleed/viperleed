@@ -24,7 +24,7 @@ infoless = pytest_cases.parametrize_with_cases('test_slab',
 class TestModifyVacuum:
     """Tests for the modify_vacuum utility."""
 
-    @pytest.mark.parametrize('vacuum_gap_size', [1.0, 3.14, 10.0, -1.0])
+    @pytest.mark.parametrize('vacuum_gap_size', [1.0, 3.14, 15.0, -1.0])
     @infoless
     def test_modify_vacuum_relative(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with relative vacuum gap."""
@@ -41,7 +41,7 @@ class TestModifyVacuum:
             assert (modified_slab.vacuum_gap
                     == pytest.approx(vacuum_gap_size + original_gap))
 
-    @pytest.mark.parametrize('vacuum_gap_size', [10.0, 100.0])
+    @pytest.mark.parametrize('vacuum_gap_size', [15.0, 100.0])
     @infoless
     def test_modify_vacuum_gap_absolute(self, test_slab, vacuum_gap_size):
         """Test the ModifyVacuumCLI class with absolute vacuum gap size."""
