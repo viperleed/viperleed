@@ -320,8 +320,11 @@ class ArduinoCLIInstaller(ArduinoCLI):
         except FileNotFoundError:
             return '0.0.0'
 
-        ver = subprocess.run([cli, 'version', '--format', 'json'],
-                             capture_output=True, check=True)
+        try:
+            ver = subprocess.run([cli, 'version', '--format', 'json'],
+                                 capture_output=True, check=True)
+        except subprocess.CalledProcessError:
+            return '0.0.0'
         ver = json.loads(ver.stdout)
         return ver['VersionString']
 
