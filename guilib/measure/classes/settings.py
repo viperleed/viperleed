@@ -605,6 +605,10 @@ class SystemSettings(ViPErLEEDSettings):
     # Can also decide to add depending on the Version of viperleed
     __mandatory = __non_null
 
+    # __non_mandatory entries are settings that can be added, but
+    # that are not enforced. They should be used if the setting is
+    # only required by a part of the package that is not essential
+    # for it's core functionality.
     __non_mandatory = (
         ('PATHS', 'arduino_cli'),
         )

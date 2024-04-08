@@ -498,9 +498,31 @@ class ViPErinoController(abc.MeasureControllerABC):
         -------
         device_list : list
             Each element is a DeviceInfo instance containing the unique
-            name of a controller and additional information as a dict.
-            Among the additional information is the address (COM port)
-            and the device name.
+            name of a controller and .more information as a dict.
+            The .more dict contains the following keys:
+                'name':
+                    The controller name. This name may not be unique!
+                'address':
+                    The COM port on which the controller is connected.
+                'box_id':
+                    The type of ViPErLEED controller.
+                'firmware':
+                    The firmware version that is installed
+                    on the controller.
+                'serial_nr':
+                    The serial number of the controller.
+                'adc_0':
+                    Whether the ADC 0 is present or not.
+                'adc_1':
+                    Whether the ADC 1 is present or not.
+                'lm35':
+                    Whether the LM35 is present or not.
+                'relay':
+                    Whether the relay is present or not.
+                'aux_range':
+                    The volt range of the auxiliary channel.
+                'i0_range':
+                    The volt range of the i0 channel.
         """
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]

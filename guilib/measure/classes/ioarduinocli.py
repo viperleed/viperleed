@@ -40,6 +40,10 @@ from viperleed.guilib.measure.classes import settings
 NOT_SET = '\u2014'
 
 
+# FirmwareVersionInfo represents the selected firmware that
+# is to be uploaded to the selected controller. It is used
+# when detecting firmware in the FirmwareUpgradeDialog and
+# when uploading firmware with the FirmwareUploader
 FirmwareVersionInfo = namedtuple('FirmwareVersionInfo',
                                  ('folder_name', 'version', 'path'))
 
@@ -135,6 +139,7 @@ class ArduinoCLI(qtc.QObject):
 
 class ArduinoCLIInstaller(ArduinoCLI):
     """Worker that handles downloads in another thread."""
+
     error_occurred = qtc.pyqtSignal(tuple)
 
     # Emitted when downloading and installing the Arduino CLI, cores and
@@ -157,9 +162,10 @@ class ArduinoCLIInstaller(ArduinoCLI):
         # _archive_name is the name of the OS specific Arduino
         # CLI version that has to be downloaded from github for
         # installation. It is determined automatically before
-        # downloading the CLI. It is file name of the zipped CLI.
+        # downloading the CLI. It is also the file name of the
+        # zipped CLI.
         self._archive_name = ''
-        
+
         # Whenever an error occurs perform _on_install_failed.
         self.error_occurred.connect(self._on_install_failed)
 
@@ -177,14 +183,14 @@ class ArduinoCLIInstaller(ArduinoCLI):
             Contains the newest CLI version names and download
             urls for these CLIs for various platforms.
 
-        Returns
-        -------
-        None.
-
         Emits
         -----
         progress_occurred
-            If progress occurred.
+            Emitted after downloading version data, extracting version
+            data, and getting installed version. Last emit is either
+            done immediately if installed version matches the newest
+            available version, or after initiating download of newest
+            version if installed version is outdated.
         error_occurred(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
             If the QNetworkReply from the QNetworkAccessManager
             contains an error.
@@ -192,7 +198,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             If the OS is not supported by any precompiled
             Arduino CLI version.
         cli_installation_finished(False)
-            If the installation failed.
+            If any error_occurred.
         """
         base.safe_disconnect(self.network.finished, self._download_newest_cli)
 
@@ -237,7 +243,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
 
         installed_ver = self._get_installed_cli_version()
         if newest_version == installed_ver:
-            self.progress_occurred.emit(35)
+            self.progress_occurred.emit(60)
             self._install_and_upgrade_cores()
             return
 
@@ -282,9 +288,9 @@ class ArduinoCLIInstaller(ArduinoCLI):
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
             If the Arduino CLI was not found.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
-            If the Arduino CLI failed.
+            If detecting the Arduino cores failed.
         cli_installation_finished(False)
-            If the installation failed.
+            If any error_occurred.
         """
         try:
             cli = self.get_arduino_cli()
@@ -331,18 +337,14 @@ class ArduinoCLIInstaller(ArduinoCLI):
     def _install_and_upgrade_cores(self):
         """Download AVR core and upgrade existing cores and libraries.
 
-        Returns
-        -------
-        None.
-
         Emits
         -----
         progress_occurred
-            If progress occurred.
+            Emitted after the Arduino cores have been installed and
+            after the cores and libraries have been upgraded.
         cli_installation_finished(True)
             If the installation succeeded.
         """
-        self.progress_occurred.emit(60)
         self._install_arduino_core('arduino:avr')
         self.progress_occurred.emit(80)
         self._upgrade_arduino_cores_and_libraries()
@@ -356,16 +358,13 @@ class ArduinoCLIInstaller(ArduinoCLI):
         Parameters
         ----------
         reply : QNetworkReply
-            Contains the Arduino CLI in a .zip archive
-
-        Returns
-        -------
-        None.
+            Contains the Arduino CLI in a .zip archive.
 
         Emits
         -----
         progress_occurred
-            If progress occurred.
+            Emitted after newest CLI version has been downloaded
+            and after it has been installed.
         """
         base.safe_disconnect(self.network.finished,
                              self._install_arduino_cli)
@@ -376,7 +375,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
                               self.base_path)
         # self._archive_name is no longer needed.
         self._archive_name = ''
-        self.progress_occurred.emit(50)
+        self.progress_occurred.emit(60)
         self._install_and_upgrade_cores()
 
     def _install_arduino_core(self, core_name):                                # TODO: add progress bar
@@ -386,21 +385,16 @@ class ArduinoCLIInstaller(ArduinoCLI):
         ----------
         core_name : str
             Should be one of the Arduino core names (e.g., arduino:avr).
-            It's easier to get this information from a call to
-            get_viperleed_hardware()
-
-        Returns
-        -------
-        None.
 
         Emits
         -----
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
             If the Arduino CLI was not found.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
-            If the Arduino CLI failed.
+            If installing the Arduino cores failed. This might
+            happen due to core_name being an invalid name.
         cli_installation_finished(False)
-            If the installation failed.
+            If any error_occurred.
         """
         try:
             cli = self.get_arduino_cli()
@@ -430,14 +424,10 @@ class ArduinoCLIInstaller(ArduinoCLI):
     def _upgrade_arduino_cores_and_libraries(self):
         """Upgrade the outdated cores and libraries.
 
-        Returns
-        -------
-        None.
-
         Emits
         -----
         progress_occurred
-            If progress occurred.
+            Emitted after cores and libraries have been updated.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
             If the Arduino CLI was not found.
         error_occurred(ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED)
@@ -446,9 +436,9 @@ class ArduinoCLIInstaller(ArduinoCLI):
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
             If the Arduino CLI failed at upgrading the Arduino CLI.
             In this case the issue should not be the internet as the
-            update must have went through.
+            update succeeded. The Arduino CLI might be broken.
         cli_installation_finished(False)
-            If the installation failed.
+            If any error_occurred.
         """
         try:
             cli = self.get_arduino_cli()
@@ -493,7 +483,8 @@ class ArduinoCLIInstaller(ArduinoCLI):
         Emits
         -----
         progress_occurred
-            If progress occurred.
+            Emitted at the beginning to signal the start of the
+            Arduino CLI installation/upgrade process.
         """
         self.progress_occurred.emit(0)
         request = qtn.QNetworkRequest(qtc.QUrl(
@@ -527,6 +518,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
 
 class FirmwareUploader(ArduinoCLI):
     """Worker that handles firmware uploads in another thread."""
+
     error_occurred = qtc.pyqtSignal(tuple)
 
     # Emitted when the upload of firmware to the controller is finished
@@ -549,14 +541,15 @@ class FirmwareUploader(ArduinoCLI):
 
         Returns
         -------
-        list
+        boards : list of dicts
+            A list that contains each matching board as a dict.
 
         Emits
         -----
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
             If the Arduino CLI was not found.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
-            If the Arduino CLI failed.
+            If the Arduino CLI failed to detect the connected boards.
         cli_failed()
             If the Arduino CLI process failed.
         """
@@ -608,27 +601,32 @@ class FirmwareUploader(ArduinoCLI):
         Emits
         -----
         progress_occurred
-            If progress occurred.
+            Emitted at the start, after the firmware was extracted,
+            after the firmware was uploaded, after the extracted
+            firmware folder was removed, and at the end.
         error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
-            If there was no available controller the given port.
+            If there was no available controller on the given port.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
             If the Arduino CLI was not found.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
-            If the Arduino CLI failed.
+            If the Arduino CLI failed to upload the selected
+            firmware to the controller.
         controllers_detected(available_ctrls)
             If the requested controller was no longer present.
             Contains the detected controllers.
         cli_failed()
             If the Arduino CLI process failed.
         upload_finished()
-            If the upload either finished or because the selected
-            controller was no longer present.
+            Emitted if the selected controller was no longer connected
+            when trying upload the firmware, or if the upload was
+            successful.
         """
         self.progress_occurred.emit(0)
         # Check if the selected controller is present at all.
         available_ctrls = self.get_viperleed_hardware(False)
         selected_ctrl_exists = any(
-            self.ctrls_with_port(available_ctrls, selected_ctrl['port']))
+            self.ctrls_with_port(available_ctrls, selected_ctrl['port'])
+            )
         if not selected_ctrl_exists:
             base.emit_error(self,
                             ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
@@ -684,7 +682,13 @@ class FirmwareUploader(ArduinoCLI):
         Parameters
         ----------
         detect_viperino : bool
-            ViPErLEED controller types will be detected if true.
+            If True, a check whether the detected boards already have
+            ViPErLEED firmware installed will be performed. viperino
+            controllers are renamed to their respective uniqued name
+            in the returned dict and their box ID and firmware version
+            are set. If detect_viperino is False, then the
+            controllers_detected signal will not be emitted after a
+            successful controller detection.
 
         Returns
         -------
@@ -692,7 +696,6 @@ class FirmwareUploader(ArduinoCLI):
             A dict of the detected Arduino Micro boards containing dicts
             with information about the controllers. The following
             {key: value} pairs are present in controller dicts.
-
             'port': str
                 COM port address
             'name': str
@@ -708,14 +711,16 @@ class FirmwareUploader(ArduinoCLI):
         Emits
         -----
         controllers_detected(ctrl_dict)
-            Contains the detected ViPErLEED controllers.
+            Contains the detected ViPErLEED controllers. Emitted if
+            detect_viperino is True or if no boards have been detected.
         """
         viperleed_names = ('ViPErLEED', 'Arduino Micro')
         boards = self._get_boards()
+        ctrl_dict = {}
 
         if not boards:
             self.controllers_detected.emit({})
-            return {}
+            return ctrl_dict
 
         # Get all available Arduino Micro controllers.
         board_names = [b['matching_boards'][0]['name'] for b in boards]
@@ -726,7 +731,6 @@ class FirmwareUploader(ArduinoCLI):
                     viper_boards.append(board)
 
         # Extract data from controller list.
-        ctrl_dict = {}
         for board in viper_boards:
             port = board['port']['address']
             board = board['matching_boards'][0]

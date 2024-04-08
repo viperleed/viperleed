@@ -25,11 +25,11 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.ioarduinocli import ArduinoCLIInstaller
 from viperleed.guilib.measure.classes.ioarduinocli import FirmwareUploader
 from viperleed.guilib.measure.classes.ioarduinocli import FirmwareVersionInfo
+from viperleed.guilib.measure.classes.ioarduinocli import NOT_SET
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
-NOT_SET = '\u2014'
 
 
 class FirmwareUpgradeDialog(qtw.QDialog):
@@ -44,13 +44,13 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             'ctrls': {
                 'controllers': qtw.QComboBox(),
                 'firmware_path': PathSelector(select_file=False),
-                'firmware_version': qtw.QComboBox(),
+                'firmware_versions': qtw.QComboBox(),
                 },
             'buttons' : {
                 'refresh': qtw.QPushButton('&Refresh'),
                 'upload': qtw.QPushButton('&Upload firmware'),
                 'done': qtw.QPushButton('&Done'),
-                'upgrade': qtw.QPushButton('Upgrade &Arduino CLI'),
+                'upgrade_cli': qtw.QPushButton('Upgrade &Arduino CLI'),
                 },
             'labels': {
                 'ctrl_type': qtw.QLabel(f'Controller type: {NOT_SET}'),
@@ -119,47 +119,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         layout.addLayout(self._compose_upgrade_and_done_button())
         self.setLayout(layout)
 
-    def _make_cli_install_disclaimer(self):
-        """Create the dialog asking the user to install Arduino CLI."""
-        accept_btn_text = 'Agree and install Arduino CLI'
-        disclaimer = qtw.QMessageBox(parent=self)
-        disclaimer.setWindowTitle('Arduino CLI not found')
-        disclaimer.setTextFormat(qtc.Qt.RichText)
-        disclaimer.setText(
-            'The firmware-upgrade tool requires the Arduino command-line '
-            'interface (CLI).<p>This is a third-party software that is <b>'
-            'not part of ViPErLEED</b>.</p><p>The Arduino CLI is released '
-            'under the <a href=https://www.gnu.org/licenses/gpl-3.0.html>'
-            'GNU GPL-v3</a> license. You can find the source code and more '
-            'information at <a href=https://github.com/arduino/arduino-cli>'
-            'github.com/arduino/arduino-cli</a>.</p><p>We could not find the '
-            'Arduino CLI on your system. If it is installed, you can set its '
-            'location in the Settings menu.</p>'
-            '<p>You can also download and install it automatically. Please '
-            'make sure to select the desired install location first in the '
-            'Settings menu, otherwise the Arduino CLI will be installed '
-            'in the default location.</p>'
-            f'<p>By clicking on {accept_btn_text!r} you consent to:'
-            f'<ul><li>Downloading and installing the Arduino CLI in '
-            f'{self._downloader.base_path}</li>'
-            '<li>The <a href=https://github.com/arduino/arduino-cli/blob/'
-            'master/LICENSE.txt>terms and conditions</a> for usage of the '
-            'Arduino CLI</li></ul></p>'
-            '<p>Make sure you are connected to the internet before '
-            'proceeding.</p>'
-            )
-        disclaimer.addButton(qtw.QPushButton('Cancel'), disclaimer.RejectRole)
-        accept = qtw.QPushButton(accept_btn_text)
-        disclaimer.addButton(accept, disclaimer.AcceptRole)
-        disclaimer.exec_()
-        button = disclaimer.clickedButton()
-        if button is accept:
-            self._on_cli_done(False)
-            _INVOKE(self._downloader, 'get_arduino_cli_from_git')
-            super().open()
-
     def _compose_controller_selection(self):
-        """Compose controller QComboBox and refresh button."""
+        """Return a layout of the controller dropdown and refresh button."""
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Select controller:'))
         layout.addWidget(self.controls['controllers'], stretch=1)
@@ -167,38 +128,38 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         return layout
 
     def _compose_upgrade_and_done_button(self):
-        """Compose the upgrade and the done buttons."""
+        """Return a layout of the upgrade and the done buttons."""
         layout = qtw.QHBoxLayout()
-        layout.addWidget(self.buttons['upgrade'])
+        layout.addWidget(self.buttons['upgrade_cli'])
         layout.addStretch(1)
         layout.addWidget(self.buttons['done'])
         return layout
 
     def _compose_firmware_selection(self):
-        """Compose firmware QComboBox and upload button."""
+        """Return a layout of the firmware dropdown and upload button."""
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Select firmware version:'))
-        layout.addWidget(self.controls['firmware_version'], stretch=1)
+        layout.addWidget(self.controls['firmware_versions'], stretch=1)
         layout.addWidget(self.buttons['upload'])
         self.buttons['upload'].setEnabled(False)
         return layout
 
     def _compose_info_section(self):
-        """Compose controller info."""
+        """Return a layout of the controller info."""
         layout = qtw.QHBoxLayout()
         for label in self.labels.values():
             layout.addWidget(label)
         return layout
 
     def _compose_path_selection(self):
-        """Compose PathSelector."""
+        """Return a layout of the PathSelector."""
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Select firmware folder:'))
         layout.addWidget(self.controls['firmware_path'])
         return layout
 
     def _compose_progress_bar(self):
-        """Compose QProgressBar."""
+        """Return a layout of the QProgressBar."""
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Progess:'))
         layout.addWidget(self._progress_bar)
@@ -209,7 +170,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.buttons['done'].clicked.connect(self.accept)
         self.buttons['refresh'].clicked.connect(self._detect_controllers)
         self.buttons['upload'].clicked.connect(self._upload)
-        self.buttons['upgrade'].clicked.connect(
+        self.buttons['upgrade_cli'].clicked.connect(
             self._upgrade_arduino_cli_and_cores
             )
         self.controls['firmware_path'].path_changed.connect(
@@ -267,8 +228,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         -------
         None.
         """
-        widgets = (*self.buttons.values(), *self.controls.values())
-        for widget in widgets:
+        self._enable_buttons(enable)
+        for widget in self.controls.values():
             widget.setEnabled(enable)
 
     @qtc.pyqtSlot()
@@ -297,7 +258,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     def _enable_upload_button(self):
         """Enable upload if controller and firmware are selected."""
         ctrl = self.controls['controllers'].currentData()
-        version = self.controls['firmware_version'].currentData()
+        version = self.controls['firmware_versions'].currentData()
         can_upload = bool(ctrl and version)
         self.buttons['upload'].setEnabled(can_upload)
 
@@ -308,7 +269,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         f_path = self.controls['firmware_path'].path
 
         if not f_path or f_path == Path():  # User did not select path.
-            self._update_combo_box('firmware_version', firmware_dict)
+            self._update_combo_box('firmware_versions', firmware_dict)
             return
 
         for file in f_path.glob('*.zip'):
@@ -324,20 +285,22 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                     continue
                 firmware_dict[folder_name] = FirmwareVersionInfo(folder_name,
                                                                  version, file)
-        self._update_combo_box('firmware_version', firmware_dict)
+        self._update_combo_box('firmware_versions', firmware_dict)
         self._find_most_recent_firmware_version()
 
     def _find_most_recent_firmware_version(self):
         """Detect most recent firmware suitable for controller."""
         controller = self.controls['controllers'].currentData()
-        nr_versions = self.controls['firmware_version'].count()
+        nr_versions = self.controls['firmware_versions'].count()
         try:
             controller['box_id']
         except (TypeError, KeyError):
+            # Note that we return here before resetting the controller
+            # labels as this is already done in _update_ctrl_labels.
             return
         versions = []
         for i in range(nr_versions):
-            firmware = self.controls['firmware_version'].itemData(i)
+            firmware = self.controls['firmware_versions'].itemData(i)
             if controller['name'] in firmware.folder_name:
                 versions.append(firmware.version)
         try:
@@ -348,6 +311,45 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.labels['highest_version'].setText(
             f'Most recent firmware version: {max_version}'
             )
+
+    def _make_cli_install_disclaimer(self):
+        """Create the dialog asking the user to install Arduino CLI."""
+        accept_btn_text = 'Agree and install Arduino CLI'
+        disclaimer = qtw.QMessageBox(parent=self)
+        disclaimer.setWindowTitle('Arduino CLI not found')
+        disclaimer.setTextFormat(qtc.Qt.RichText)
+        disclaimer.setText(
+            'The firmware-upgrade tool requires the Arduino command-line '
+            'interface (CLI).<p>This is a third-party software that is <b>'
+            'not part of ViPErLEED</b>.</p><p>The Arduino CLI is released '
+            'under the <a href=https://www.gnu.org/licenses/gpl-3.0.html>'
+            'GNU GPL-v3</a> license. You can find the source code and more '
+            'information at <a href=https://github.com/arduino/arduino-cli>'
+            'github.com/arduino/arduino-cli</a>.</p><p>We could not find the '
+            'Arduino CLI on your system. If it is installed, you can set its '
+            'location in the System Settings menu.</p>'
+            '<p>You can also download and install it automatically. Please '
+            'make sure to select the desired install location first in the '
+            'Settings menu, otherwise the Arduino CLI will be installed '
+            'in the default location.</p>'
+            f'<p>By clicking on {accept_btn_text!r} you consent to:'
+            f'<ul><li>Downloading and installing the Arduino CLI in '
+            f'{self._downloader.base_path}</li>'
+            '<li>The <a href=https://github.com/arduino/arduino-cli/blob/'
+            'master/LICENSE.txt>terms and conditions</a> for usage of the '
+            'Arduino CLI</li></ul></p>'
+            '<p>Make sure you are connected to the internet before '
+            'proceeding.</p>'
+            )
+        disclaimer.addButton(qtw.QPushButton('Cancel'), disclaimer.RejectRole)
+        accept = qtw.QPushButton(accept_btn_text)
+        disclaimer.addButton(accept, disclaimer.AcceptRole)
+        disclaimer.exec_()
+        button = disclaimer.clickedButton()
+        if button is accept:
+            self._on_cli_done(False)
+            _INVOKE(self._downloader, 'get_arduino_cli_from_git')
+            super().open()
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(bool)
@@ -367,7 +369,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         if successful:
             self._enable_upload_button()
         else:
-            self.buttons['upgrade'].setEnabled(True)
+            self.buttons['upgrade_cli'].setEnabled(True)
         self.buttons['done'].setEnabled(True)
 
     @qtc.pyqtSlot(dict)
@@ -376,8 +378,22 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
         Parameters
         ----------
-        data_dict : dict
-            A dict of available controllers.
+        data_dict : dict of dicts
+            A dict of available controllers. Each key represents a
+            controller and the associated value is a dict with more
+            information about the controller. The expected {key: value}
+            pairs in each controller dict are:
+            'port': str
+                COM port address
+            'name': str
+                Board name
+            'fqbn': str
+                Fully qualified board name
+            'version': hardwarebase.Version or str
+                Firmware version of the device, if the information is
+                available, otherwise str
+            'box_id': int or str
+                int if box_id is set, str otherwise
 
         Returns
         -------
@@ -408,12 +424,6 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             )
         self._find_most_recent_firmware_version()
 
-    @qtc.pyqtSlot()
-    def _upgrade_arduino_cli_and_cores(self):
-        """Upgrade the Arduino CLI."""
-        self._on_cli_done(False)
-        _INVOKE(self._downloader, 'get_arduino_cli_from_git')
-
     def _update_combo_box(self, which_combo, data_dict):
         """Replace displayed firmware/controllers with the detected ones.
 
@@ -434,15 +444,21 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._enable_upload_button()
 
     @qtc.pyqtSlot()
+    def _upgrade_arduino_cli_and_cores(self):
+        """Upgrade the Arduino CLI."""
+        self._on_cli_done(False)
+        _INVOKE(self._downloader, 'get_arduino_cli_from_git')
+
+    @qtc.pyqtSlot()
     def _upload(self):
         """Upload selected firmware to selected controller."""
         if not self.controls['controllers'].currentData():
             return
-        if not self.controls['firmware_version'].currentData():
+        if not self.controls['firmware_versions'].currentData():
             return
 
         selected_ctrl = self.controls['controllers'].currentData()
-        firmware = self.controls['firmware_version'].currentData()
+        firmware = self.controls['firmware_versions'].currentData()
         tmp_path = self.controls['firmware_path'].path / 'tmp_'
         upload = True
         warning = qtw.QMessageBox(parent=self)
@@ -451,7 +467,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             'Uploading firmware to '
             f'{self.controls["controllers"].currentText()}. '
             'This will delete all firmware that is currently installed '
-            'on the device. To proceed press "Upload".'
+            'on the device. Do not disconnect the controller during the '
+            'upload. To proceed press "Upload".'
             )
         warning.addButton(qtw.QPushButton('Abort'), warning.RejectRole)
         accept = qtw.QPushButton('Upload')
@@ -477,6 +494,10 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         This method interrupts the regular opening of the dialog and
         will stall until the FirmwareUploader has finished the check if
         the Arduino CLI is installled.
+        
+        Returns
+        -------
+        None.
         """
         self._downloader.cli_found.connect(self._continue_open)
         base.safe_disconnect(self._downloader.error_occurred,

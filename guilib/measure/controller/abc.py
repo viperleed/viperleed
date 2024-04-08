@@ -58,7 +58,7 @@ def ensure_connected(method):
         self.connect_()
         if not self.serial or not self.serial.is_open:
             base.emit_error(self, ControllerErrors.NOT_CONNECTED,
-            method.__name__, self.name, self.address)
+                            method.__name__, self.name, self.address)
             return None
         try:
             return method(*args, **kwargs)
@@ -149,8 +149,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             in the settings file, overriding the value that may be
             there. If not given and no value is present in the
             "controller/address" field, an address should be set
-            explicitly via the .serial.port_name property. Default             TODO: change port_name to address
-            is an empty string.
+            explicitly via the .address property. Default is an                 TODO: change port_name to address in SerialABC
+            empty string.
         sets_energy : bool, optional
             Used to determine whether this controller is responsible
             for setting the electron energy by communicating with the
@@ -651,10 +651,14 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                                         *extra_mandatory)
 
         # Backwards compatibility fix
-        new = (('measurement_settings', 'nr_samples'),
-               ('controller', 'serial_class'))
-        old = (('measurement_settings', 'num_meas_to_average'),
-               ('controller', 'serial_port_class'))
+        new = (
+            ('measurement_settings', 'nr_samples'),
+            ('controller', 'serial_class'),
+            )
+        old = (
+            ('measurement_settings', 'num_meas_to_average'),
+            ('controller', 'serial_port_class'),
+            )
         for new_setting, old_setting in zip(new, old):
             if '/'.join(new_setting) in invalid:
                 old_missing = settings.has_settings(old_setting)
@@ -821,11 +825,15 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         This method must return a list of DeviceInfo instances. The
         DeviceInfo class is located in the hardwarebase module. Each
         controller is represented by a single DeviceInfo instance. The
-        DeviceInfo object must contain a unique device name, and a dict
-        holding additional information about the device. Among the
-        additional information must be the controller address (e.g.
-        COM port) stored under the 'adreess' key. It must also contain
-        a key 'name' with value of self.name.
+        DeviceInfo object must contain a .unique_name, and a dict
+        holding .more information about the device. .unique_name can
+        be the controller name and it's address to make it unique.
+        The .more dict must contain the following keys:
+            'name':
+                The controller name (value of self.name).
+                This name may not be unique!
+            'address':
+                The address of the controller. (e.g. COM port)
 
         Returns
         -------
