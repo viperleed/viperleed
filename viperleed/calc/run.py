@@ -34,10 +34,10 @@ from viperleed.calc.sections.initialization import (
 from viperleed.calc.sections.run_sections import section_loop
 
 
-_KNOWN_TENSORLEED_TOP_FOLDERS = (
+_KNOWN_TENSORLEED_TOP_FOLDERS = {
     'viperleed-tensorleed',
     'tensorleed',  # For backwards compatibility
-    )
+    }
 
 
 def run_calc(system_name=None,
@@ -282,27 +282,73 @@ def _get_parent_directory_name():
 
 
 def _verify_tensorleed_path(path_):
-    """Return path_, its parent, or a child, if any is a tensor-LEED folder."""
+    """Return the path to the tensor-LEED folder, starting from `path_`.
+
+    Parameters
+    ----------
+    path_ : Path
+        Path where the tensor-LEED code is looked up.
+
+    Returns
+    -------
+    verified_path : Path
+        Path to the folder that contains tensor-LEED code. The
+        following places are checked: `path_`, its containing
+        folder, and all of its direct subfolders. `verified_path`
+        is identified as a tensor-LEED containing folder if its
+        name is one of the known tensor-LEED repository names
+        or if it contains any subfolder whose name starts with
+        'TensErLEED'.
+
+    Raises
+    ------
+    FileNotFoundError
+        If `path_` is not the path to an existing directory,
+        or if finding a verified tensor-LEED path failed.
+    """
     source = path_.resolve()
     if not source.is_dir():
         raise FileNotFoundError(f'Tensor-LEED directory {path_} not found.')
 
-    if source.name in _KNOWN_TENSORLEED_TOP_FOLDERS:                            # TODO: I (@michele-riva) am not so sure going by name is the best way at this point, especially now that we moved the tensorleed code out of viperleed. People may store it anywhere under whatever folder name. Perhaps we should check the contents? I guess there should be at least one TensErLEED* folder.
-        return source
+    # Collect various potential source-code places: the given path_,
+    # its containing folder, and all of the path_'s direct subfolders
+    potential_sources = (
+        source,
+        source.parent,
+        *(d for d in source.iterdir() if d.is_dir())
+        )
 
-    if source.parent.name in _KNOWN_TENSORLEED_TOP_FOLDERS:
-        logger.warning(
-            f'{source.parent.name!r} directory found in {source.parent}, '
-            f'using the latter instead of {source}.'
+    # First look for an exact name match with
+    # the known top-level tensor-LEED folders
+    try:
+        source_by_name = next(d for d in potential_sources
+                              if d.name in _KNOWN_TENSORLEED_TOP_FOLDERS)
+    except StopIteration:  # Not a known folder name
+        pass
+    else:
+        if source_by_name != source:
+            logger.warning(
+                f'{source_by_name.name!r} directory found in '
+                f'{source_by_name.parent}. Using {source_by_name} '
+                f'instead of {source}.'
+                )
+        return source_by_name
+
+    # Not found by name. Try to find if one contains a
+    # TensErLEED directory instead. In principle here we
+    # could use Rparams.get_tenserleed_directory() but we
+    # do not care about versions and globbing is enough.
+    try:
+        with_tenserleed = (
+            d for d in potential_sources
+            if any(d.glob(f'{rparams.TENSERLEED_FOLDER_NAME}*'))
             )
-        return source.parent
-
-    children = (source / d for d in _KNOWN_TENSORLEED_TOP_FOLDERS)
-    children = (d for d in children if d.is_dir())
-    child = next(children, None)
-    if child is not None:
-        logger.warning(f'{child.name!r} directory found in {source}, '
-                       f'using the former instead of {source}.')
-        return child
-    raise FileNotFoundError('Could not find a known tensor-LEED '
-                            f'source directory at {source}.')
+    except StopIteration:
+        raise FileNotFoundError('Could not find a known tensor-LEED '
+                                f'source directory at {source}.') from None
+    if with_tenserleed != source:
+        logger.warning(
+            f'TensErLEED code found in {with_tenserleed}. '
+            f'Using the latter instead of {source}.'
+            )
+    return with_tenserleed
