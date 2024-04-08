@@ -35,7 +35,8 @@ gaussian
 --------
 
 The flag ``gaussian`` is a scaling factor applied to the standard deviation of the
-probability distribution (a normal distribution) of the step width during the search (see the TensErLEED paper by :cite:t:`blumFastLEEDIntensity2001a`).
+probability distribution (a normal distribution) of the step width during the
+search (see the TensErLEED paper by :cite:t:`blumFastLEEDIntensity2001a`).
 It corresponds to the ``RMUT`` parameter in the TensErLEED code.
 
 A larger value corresponds to a higher probability of taking a 
@@ -57,11 +58,17 @@ and a scaling factor applied whenever partial convergence is reached.
    ! initialize with=0.1, scale factor=0.3 whenever partial convergence is reached
    SEARCH_CONVERGENCE gaussian = 0.1 0.3
 
-**SEARCH_CONVERGENCE** ``gaussian`` **is one of the main parameters controlling convergence**, and appropriate values are highly dependent on the system in use. 
-By default, ``gaussian`` is initialized with a very high value of 0.5, and downscaled by 50% every time partial convergence is reached (see ``dgen`` flag below).
-For rough (wide scan) searches, a value of 0.1 is appropriate. The finer the fit, the smaller the steps should be, so ``gaussian`` may be set at 0.01 or even lower.
+**SEARCH_CONVERGENCE** ``gaussian`` **is one of the main parameters controlling
+convergence**, and appropriate values are highly dependent on the system in use. 
+By default, ``gaussian`` is initialized with a very high value of 0.1, and
+downscaled by 50% every time partial convergence is reached (see ``dgen`` flag
+below).
+For rough (wide scan) searches, a value of 0.1 is appropriate. The finer the
+fit, the smaller the steps should be, so ``gaussian`` may be set at 0.01 or even
+lower.
 
-**TODO Lutz: Could use some more advice-style info**
+.. todo:: Could use some more advice-style info by Lutz.
+
 
 dgen
 ----
@@ -106,11 +113,18 @@ independent of convergence, is given by :ref:`SEARCH_MAX_GEN<SEARCHGENMAX>`.
    ! the entire population doesn't change in 200 generations, then for lowered gausssian flag in 400 generations, etc.
    SEARCH_CONVERGENCE dgen all = 200 2
 
-The additional flags "all","dec", and "best" can be used to specify whether all configurations in the population, the best 10%, or only the best configuration should be considered.
-If no additional flag is given, ``SEARCH_CONVERGENCE dgen`` will default to checking the best 10% of the population.
-The scaling factor will default to the inverse of the scaling factor used by ``gaussian`` for any of the three.
+The additional flags "all","dec", and "best" can be used to specify whether all
+configurations in the population, the best 10%, or only the best configuration
+should be considered.
+If no additional flag is given, ``SEARCH_CONVERGENCE dgen`` will default to
+checking the best 10% of the population.
+The scaling factor will default to the inverse of the scaling factor used by
+``gaussian`` for any of the three.
 
-Defining values for more than one convergence criterion is allowed; in that case, partial convergence will be considered to have been reached once *either* condition is met, but full convergence is reached only once *all* conditions are met.
+Defining values for more than one convergence criterion is allowed; in that
+case, partial convergence will be considered to have been reached once *either*
+condition is met, but full convergence is reached only once *all* conditions are
+met.
 
 
 Changelog
