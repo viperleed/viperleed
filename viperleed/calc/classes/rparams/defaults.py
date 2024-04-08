@@ -42,8 +42,8 @@ DEFAULTS = {
     'PHASESHIFT_EPS': {
         'r': 0.1,
         'n': 0.05,
-        'f': 0.01,  # This is the default if nothing is given
-        'e': 0.001,
+        'd': 0.02, # default value
+        'f': 0.01,
         },
     'RUN': (0, 1, 2, 3),
     'SEARCH_EVAL_TIME': 60,  # time interval between reads of SD.TL,            # TODO: should be dynamic?
