@@ -53,7 +53,6 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 'upgrade_cli': qtw.QPushButton('Upgrade &Arduino CLI'),
                 },
             'labels': {
-                'ctrl_type': qtw.QLabel(f'Controller type: {NOT_SET}'),
                 'firmware_version': qtw.QLabel('Installed firmware '
                                                f'version: {NOT_SET}'),
                 'highest_version': qtw.QLabel('Most recent firmware '
@@ -292,9 +291,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         """Detect most recent firmware suitable for controller."""
         controller = self.controls['controllers'].currentData()
         nr_versions = self.controls['firmware_versions'].count()
-        try:
-            controller['box_id']
-        except (TypeError, KeyError):
+        if not controller:
             # Note that we return here before resetting the controller
             # labels as this is already done in _update_ctrl_labels.
             return
@@ -392,8 +389,6 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             'version': hardwarebase.Version or str
                 Firmware version of the device, if the information is
                 available, otherwise str
-            'box_id': int or str
-                int if box_id is set, str otherwise
 
         Returns
         -------
@@ -412,12 +407,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         """Display controller firmware version."""
         ctrl = self.controls['controllers'].currentData() or {}
         version = ctrl.get('version', NOT_SET)
-        box_id = ctrl.get('box_id', NOT_SET)
         self.labels['firmware_version'].setText(
             f'Installed firmware version: {version}'
-            )
-        self.labels['ctrl_type'].setText(
-            f'Controller type: {box_id}'
             )
         self.labels['highest_version'].setText(
             f'Most recent firmware version: {NOT_SET}'

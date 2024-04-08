@@ -683,13 +683,13 @@ class FirmwareUploader(ArduinoCLI):
         Parameters
         ----------
         detect_viperino : bool
-            If True, a check whether the detected boards already have
-            ViPErLEED firmware installed will be performed. viperino
+            If True, a check, whether the detected boards already have
+            ViPErLEED firmware installed, will be performed. viperino
             controllers are renamed to their respective uniqued name
-            in the returned dict and their box ID and firmware version
-            are set. If detect_viperino is False, then the
-            controllers_detected signal will not be emitted after a
-            successful controller detection.
+            in the returned dict and their firmware version is set. If
+            detect_viperino is False, then the controllers_detecte
+            signal will not be emitted after a successful controller
+            detection.
 
         Returns
         -------
@@ -706,8 +706,6 @@ class FirmwareUploader(ArduinoCLI):
             'version': hardwarebase.Version or str
                 Firmware version of the device, if the information is
                 available, otherwise str
-            'box_id': int or str
-                int if box_id is set, str otherwise
 
         Emits
         -----
@@ -741,7 +739,6 @@ class FirmwareUploader(ArduinoCLI):
                 'name': board['name'],
                 'fqbn': board['fqbn'],
                 'version': NOT_SET,
-                'box_id': NOT_SET,
                 }
 
         if not detect_viperino:
@@ -758,7 +755,6 @@ class FirmwareUploader(ArduinoCLI):
             # box_id of the measuring ViPErinoController is 0! Check
             # must be is not None because of that.
             if box_id is not None:
-                ctrl_dict[ctrl]['box_id'] = box_id
                 # Notice the -2: the last two entries in name are the
                 # serial number and the '(COM<port>)' bits, which we
                 # don't need.
