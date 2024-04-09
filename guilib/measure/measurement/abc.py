@@ -96,7 +96,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
     # Abort current tasks on all devices/the primary controller
     _request_stop_devices = qtc.pyqtSignal()                                    # TODO: Could use QMetaObject.invokeMethod
-    _request_stop_primary = qtc.pyqtSignal()                                    # TODO: May not be needed. See TimeResolved
 
     # __preparation_started: emitted in .begin_preparation right
     # before the first energy is set. Carries pairs of energies and
@@ -849,8 +848,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """Connect signals of the primary controller."""
         primary = self.primary_controller
         about_to_trigger = primary.about_to_trigger
-        base.safe_connect(self._request_stop_primary, primary.stop,
-                          type=_UNIQUE)
         self._connect_controller(primary)
 
     def __connect_secondary_controllers(self):
@@ -891,7 +888,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if primary is None:
             return
         about_to_trigger = primary.about_to_trigger
-        base.safe_disconnect(self._request_stop_primary, primary.stop)
         for ctrl in self.secondary_controllers:
             base.safe_disconnect(about_to_trigger, ctrl.measure_now)
         self._disconnect_controller(primary)
@@ -1345,10 +1341,14 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         Returns
         -------
-        None.
+        has_continued : bool
+            Whether the next step has been initiated (either the next
+            energy step or the conclusion of the whole measurement
+            process). False if any device is still busy, or some of
+            the data from the devices has not been processed yet.
         """
         if any(device.busy for device in self.devices):
-            return
+            return False
         if any(miss < 0 for miss in self._missing_data.values()):
             # Check if any device returned more data than expected.
             _too_many = {d.name: v for d, v in self._missing_data.items()
@@ -1361,7 +1361,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             # data while another one has turned not busy (i.e., all are
             # not busy), but the signal of the other devices was not
             # processed yet.
-            return
+            return False
 
         self.data_points.calculate_times()
         self.data_points.nr_steps_done += 1
@@ -1371,6 +1371,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             self._prepare_finalization()
         else:
             self.start_next_measurement()
+        return True
 
     @qtc.pyqtSlot()
     def __report_init_errors(self):
