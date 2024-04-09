@@ -9,6 +9,7 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
+from collections import defaultdict
 from enum import Enum
 import os
 from pathlib import Path
@@ -28,6 +29,9 @@ from viperleed.cli_base import ViPErLEEDCLI
 _CALC_LOG_PREFIXES = (
     LOG_PREFIX,
     'tleedm',   # For backwards compatibility
+    )
+HIST_FOLDER_RE = re.compile(
+    r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
     )
 
 
@@ -108,6 +112,32 @@ def _collect_supp_and_out(cwd):
             if d.is_dir() and d.name in {'OUT', 'SUPP'}]
 
 
+def _find_max_run_per_tensor(history_path):
+    """Return maximum run numbers for all directories in `history_path`.
+
+    Parameters
+    ----------
+    history_path : Path
+        The path to the history folder in which
+        tensor-run directories are looked up.
+
+    Returns
+    -------
+    max_nums : defaultdict(int)
+        The maximum run number currently stored in `history_path`
+        for each of the tensors in `history_path`.
+    """
+    max_nums = defaultdict(int)  # max. job number per tensor number
+    for directory in history_path.iterdir():
+        match = HIST_FOLDER_RE.match(directory.name)
+        if not directory.is_dir() or not match:
+            continue
+        tensor_num = int(match['tensor_num'])
+        job_num = int(match['job_num'])
+        max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
+    return max_nums
+
+
 def _workhistory_has_dirs_to_move(work_history_path):
     """Return whether work_history_path contains any directory worth moving."""
     work_history_dirs = (d for d in work_history_path.glob('r*')                # TODO: is this correct? In _move_workhistory_folders we also use HIST_FOLDER_RE, and folders contain 'r' but do not begin with it
@@ -179,26 +209,12 @@ def bookkeeper(mode,
         print('Error creating history folder.')
         raise
 
-    # figure out the number of the tensor
+    # Figure out the number of the tensor (it's the most recent one)
+    # and the highest run number currently stored for each tensor in
+    # history_path
     tensor_number = leedbase.getMaxTensorIndex(home=cwd, zip_only=True)
+    max_job_for_tensor = _find_max_run_per_tensor(history_path)
 
-    # figure out the number of the run
-    dir_list = [d for d in history_path.iterdir()
-                if (history_path / d).is_dir()]
-    max_nums = {}  # max. job number per tensor number
-    rgx = re.compile(r't[0-9]{3}.r[0-9]{3}_')
-    for dir in dir_list:
-        match = rgx.match(dir.name)
-        if match:
-            try:
-                r_fac_line = int(dir.name[1:4])
-                i = int(dir.name[6:9])
-                if r_fac_line not in max_nums:
-                    max_nums[r_fac_line] = i
-                else:
-                    max_nums[r_fac_line] = max(max_nums[r_fac_line], i)
-            except (ValueError, IndexError):
-                pass
     if tensor_number not in max_nums:
         num = 1  # Tensor is new - if discard: delete
         if _mode is BookkeeperMode.DISCARD:
@@ -307,7 +323,7 @@ def bookkeeper(mode,
     if work_history_path.is_dir() and _mode is not BookkeeperMode.DISCARD:
         work_hist_prev = [d for d in os.listdir(work_history_name) if
                         os.path.isdir(os.path.join(work_history_name, d))
-                        and rgx.match(d) and ("previous" in d)]
+                        and HIST_FOLDER_RE.match(d) and ("previous" in d)]
         for dir in work_hist_prev:
             try:
                 shutil.rmtree(work_history_path / dir)
@@ -316,7 +332,7 @@ def bookkeeper(mode,
                       f"{work_history_path}")
         work_history_dirs = [dir for dir in work_history_path.iterdir() if
                         (work_history_path / dir).is_dir()
-                        and rgx.match(dir.name)
+                        and HIST_FOLDER_RE.match(dir.name)
                         and not ("previous" in dir.name)
                         and old_timestamp in dir.name]
         for dir in work_history_dirs:
