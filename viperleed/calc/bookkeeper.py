@@ -69,27 +69,24 @@ def store_input_files_to_history(root_path, history_path):
         Path to the history directory in which the files should
         be stored.
     """
-    _root_path, _history_path = Path(root_path), Path(history_path)
-    original_inputs_path = _root_path / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME  # TODO: we should use root_path / 'SUPP' / ORIGINAL_INPUTS_DIR_NAME instead! bookkeeper should not access the work directory (which may have a different name, or not be in root at all!)
+    root_path, history_path = Path(root_path), Path(history_path)
+    original_inputs_path = root_path / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME  # TODO: we should use root_path / 'SUPP' / ORIGINAL_INPUTS_DIR_NAME instead! bookkeeper should not access the work directory (which may have a different name, or not be in root at all!)
     if original_inputs_path.is_dir():
         input_origin_path = original_inputs_path
     else:
-        input_origin_path = _root_path
-        print("Could not find directory 'original_inputs' with unaltered "
-              "input files. Files will instead be copied from the root "
-              "directory.")
+        input_origin_path = root_path
+        print(f'Could not find directory {ORIGINAL_INPUTS_DIR_NAME!r} with '
+              'unaltered input files. Files will instead be copied from the '
+              'root directory.')
 
-    # only files, no dirs
-    files_in_dir =  (f for f in Path(input_origin_path).iterdir()
-                     if f.is_file())
-    files_to_copy = (file for file in files_in_dir
-                     if file.name in ALL_INPUT_FILES)
-    # copy files to history
+    # Only files, no directories
+    files_to_copy = (file for file in input_origin_path.iterdir()
+                     if file.is_file() and file.name in ALL_INPUT_FILES)
     for file in files_to_copy:
         try:
-            shutil.copy2(file, _history_path/file.name)
-        except OSError as error_msg:
-            print(f"Failed to copy file {file} to history: {error_msg}")
+            shutil.copy2(file, history_path/file.name)
+        except OSError as exc:
+            print(f'Failed to copy file {file} to history: {exc}')
 
 
 def _collect_log_files(cwd):
