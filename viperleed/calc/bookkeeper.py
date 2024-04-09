@@ -34,6 +34,7 @@ _CALC_LOG_PREFIXES = (
 HIST_FOLDER_RE = re.compile(
     r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
     )
+_PREVIOUS_LABEL = 'previous'
 
 
 class BookkeeperMode(Enum):
