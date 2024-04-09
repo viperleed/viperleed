@@ -284,7 +284,8 @@ def bookkeeper(mode,
             dirname += "_" + job_name
         tensor_dir = Path(history_name).resolve() / dirname
         if os.path.isdir(tensor_dir):
-            tensor_dir_2 = f"{tensor_dir}_moved-{timestamp}"
+            suffix = old_timestamp.replace('moved-', '')
+            tensor_dir_2 = f"{tensor_dir}_moved-{suffix}"
             print(f"Error: Target directory {tensor_dir} already exists. Will "
                   "use {tensor_dir_2} instead.")
             tensor_dir = Path(tensor_dir_2).resolve()
