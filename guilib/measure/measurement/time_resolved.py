@@ -315,8 +315,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         None.
         """
         super().start_next_measurement()
-        self.__energy_step_timer.setInterval(self.energy_step_duration)
         _continuous = self.is_continuous
+        if _continuous:
+            self._missing_data = dict.fromkeys(self._missing_data.keys(), 0)
+        self.__energy_step_timer.setInterval(self.energy_step_duration)
         about_to_trigger = self.primary_controller.about_to_trigger
 
         # Each energy step will begin when the energy has settled,
@@ -496,7 +498,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         None.
         """
         controller = self.sender()
-        self._missing_data[controller] -= 1
+        if not self.is_continuous:
+            self._missing_data[controller] -= 1
         self.data_points.add_data(data, controller)
 
     @qtc.pyqtSlot()
