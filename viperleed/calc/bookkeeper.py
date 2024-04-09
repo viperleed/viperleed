@@ -254,8 +254,6 @@ def bookkeeper(mode,
     cwd = Path.cwd()
     history_path = cwd / history_name
     work_history_path = cwd / work_history_name
-    tensors_path = Path("Tensors").resolve()
-    deltas_path = Path("Deltas").resolve()
     out_path = Path("OUT").resolve()
 
     # Make list of stuff to move:
