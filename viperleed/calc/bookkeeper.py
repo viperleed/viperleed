@@ -171,13 +171,13 @@ def bookkeeper(mode,
         print('Bookkeeper: Found nothing to do. Exiting...')
         return 1
 
-    # check whether history folder is there. If not, make one
-    if not history_path.is_dir():
-        try:
-            os.mkdir(history_name)
-        except Exception:
-            print("Error creating history folder.")
-            raise
+    # Make history folder if not there yet
+    try:
+        history_path.mkdir(exist_ok=True)
+    except OSError:
+        print('Error creating history folder.')
+        raise
+
     # figure out the number of the tensor
     tensor_number = 0
     if tensors_path.is_dir():
