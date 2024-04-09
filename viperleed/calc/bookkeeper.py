@@ -51,6 +51,11 @@ class BookkeeperMode(Enum):
     DEFAULT = 'default'
     DISCARD = 'discard'
 
+    @property
+    def discard(self):
+        """Return whether this is mode DISCARD."""
+        return self is BookkeeperMode.DISCARD
+
 
 def store_input_files_to_history(root_path, history_path):
     """Find input files in `root_path` and copy them to `history_path`.
@@ -244,7 +249,7 @@ def bookkeeper(mode,
     else:
         timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
         old_timestamp = f"moved-{timestamp}"
-    if _mode is not BookkeeperMode.DISCARD:
+    if not _mode.discard:
         # get dirname
         dirname = f"t{tensor_number:03d}.r{num:03d}_{old_timestamp}"
         if job_name is not None:
@@ -288,7 +293,7 @@ def bookkeeper(mode,
 
     # move old stuff
     for file in files_to_move:
-        if _mode is not BookkeeperMode.DISCARD:
+        if not _mode.discard:
             try:
                 shutil.move(file, tensor_dir / file)
             except Exception:
@@ -305,7 +310,7 @@ def bookkeeper(mode,
                 print(f"Failed to discard directory {file}.")
     # move log files to SUPP (except for general viperleed-calc log)
     for log_file in logs_to_move:
-        if _mode is not BookkeeperMode.DISCARD:
+        if not _mode.discard:
             try:
                 hist_supp_path = tensor_dir / 'SUPP'
                 shutil.move(log_file, hist_supp_path / log_file)
@@ -320,7 +325,7 @@ def bookkeeper(mode,
     # if there is a workhist folder, go through it and move contents as well
     tensor_nums = {tensor_number}
 
-    if work_history_path.is_dir() and _mode is not BookkeeperMode.DISCARD:
+    if work_history_path.is_dir() and not _mode.discard:
         work_hist_prev = [d for d in os.listdir(work_history_name) if
                         os.path.isdir(os.path.join(work_history_name, d))
                         and HIST_FOLDER_RE.match(d) and ("previous" in d)]
@@ -356,16 +361,16 @@ def bookkeeper(mode,
                 tensor_nums.add(tensor_num_2)
     if work_history_path.is_dir():
         if (len(list(work_history_path.iterdir())) == 0
-            or _mode is BookkeeperMode.DISCARD):
+            or _mode.discard):
             try:
                 shutil.rmtree(work_history_name)
             except OSError as error:
-                if _mode is BookkeeperMode.DISCARD:
+                if _mode.discard:
                     print(f"Failed to discard workhistory folder: {error}")
                 else:
                     print(f"Failed to delete empty {work_history_name} "
                           f"directory: {str(error)}")
-    if _mode is BookkeeperMode.DISCARD:  # all done
+    if _mode.discard:  # all done
         return 0
     job_nums = []
     for tensor_number in tensor_nums:
