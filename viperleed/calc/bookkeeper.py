@@ -213,7 +213,7 @@ def bookkeeper(mode,
     # and the highest run number currently stored for each tensor in
     # history_path
     tensor_number = leedbase.getMaxTensorIndex(home=cwd, zip_only=True)
-    max_num = _find_max_run_per_tensor(history_path)
+    max_nums = _find_max_run_per_tensor(history_path)
 
     if tensor_number not in max_nums:
         num = 1  # Tensor is new - if discard: delete
