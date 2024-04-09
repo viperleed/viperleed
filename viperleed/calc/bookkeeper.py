@@ -11,6 +11,7 @@ __license__ = 'GPLv3+'
 
 from collections import defaultdict
 from enum import Enum
+from operator import attrgetter
 import os
 from pathlib import Path
 import re
@@ -169,6 +170,31 @@ def _move_or_discard_one_file(file, target_folder, discard):
         print(f'Error: Failed to move {file.name}.')
 
 
+def _read_most_recent_log(cwd):
+    """Return timestamp and lines from the most-recent log file in cwd."""
+    last_log_lines = []
+    try:
+        most_recent_log = max(
+            (log_file
+             for prefix in _CALC_LOG_PREFIXES
+             for log_file in cwd.glob(f'{prefix}*.log')
+             if log_file.is_file()),
+            key=attrgetter('name')
+            )
+    except ValueError:  # No log files
+        timestamp = time.strftime('%y%m%d-%H%M%S', time.localtime())
+        old_timestamp = f'moved-{timestamp}'
+        return old_timestamp, last_log_lines
+
+    old_timestamp = most_recent_log.name[-17:-4]
+    try:  # pylint: disable=too-many-try-statements
+        with most_recent_log.open('r', encoding='utf-8') as log_file:
+            last_log_lines = log_file.readlines()
+    except OSError:
+        pass
+    return old_timestamp, last_log_lines
+
+
 def _translate_timestamp(time_stamp):
     """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
     if len(time_stamp) != 13:
@@ -260,23 +286,10 @@ def bookkeeper(mode,
         # New Tensor to be discarded.
         _discard_tensors_and_deltas(cwd, tensor_number)
 
+    # Infer timestamp from log file, if possible
+    old_timestamp, last_log_lines = _read_most_recent_log(cwd)
+
     num = max_nums[tensor_number] + 1
-    # find old timestamp, if possible
-    old_log_files = sorted(
-        f for f in os.listdir() if os.path.isfile(f) and
-        f.endswith(".log") and f.startswith(_CALC_LOG_PREFIXES)
-        )
-    last_log_lines = []
-    if len(old_log_files) > 0:
-        old_timestamp = old_log_files[-1][-17:-4]
-        try:
-            with open(old_log_files[-1], "r") as read_file:
-                last_log_lines = read_file.readlines()
-        except Exception:
-            pass
-    else:
-        timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
-        old_timestamp = f"moved-{timestamp}"
     if not _mode.discard:
         # get dirname
         dirname = f"t{tensor_number:03d}.r{num:03d}_{old_timestamp}"
