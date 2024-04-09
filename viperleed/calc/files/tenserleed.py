@@ -1,3 +1,10 @@
+"""Handling of TensErLEED Fortran source code files.
+
+Checks for the presence of the TensErLEED source code in a given path,
+deals with versioning, and provides the path to the TensErLEED source
+code.
+"""
+
 __authors__ = (
     'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
