@@ -38,6 +38,10 @@ from viperleed.guilib.measure.classes import settings
 
 
 NOT_SET = '\u2014'
+# For development use only. If GET_ARCHIVED_FIRMWARE is true, firmware
+# will be taken from .zip archives. If false, regular folders will be
+# searched. Useful for uploading firmware in development.
+GET_ARCHIVED_FIRMWARE = True
 
 
 # FirmwareVersionInfo represents the selected firmware that
@@ -646,10 +650,15 @@ class FirmwareUploader(ArduinoCLI):
             self.cli_failed.emit()
             return
 
-        with ZipFile(firmware.path) as firmware_zip:
-            firmware_zip.extractall(tmp_path)
-        firmware_extracted = tmp_path / firmware.folder_name / 'viper-ino'     # TODO: Add generic inner folder structure to find .ino file
-        argv = ['compile', '--clean', '-b', selected_ctrl['fqbn'], firmware_extracted]
+        if GET_ARCHIVED_FIRMWARE:
+            with ZipFile(firmware.path) as firmware_zip:
+                firmware_zip.extractall(tmp_path)
+            firmware_file = tmp_path / firmware.folder_name / 'viper-ino'       # TODO: Add generic inner folder structure to find .ino file
+        else:
+            firmware_file = firmware.path / firmware.folder_name / 'viper-ino'
+        
+        argv = ['compile', '--clean', '-b', selected_ctrl['fqbn'],
+                firmware_file]
         if upload:
             argv.extend(['-u', '-p', selected_ctrl['port']])
         self.progress_occurred.emit(20)
@@ -665,8 +674,9 @@ class FirmwareUploader(ArduinoCLI):
             # No return here to ensure that tmp folder is
             # removed and buttons are enabled.
         self.progress_occurred.emit(85)
-        # Remove extracted archive
-        shutil.rmtree(tmp_path)
+        if GET_ARCHIVED_FIRMWARE:
+            # Remove extracted archive
+            shutil.rmtree(tmp_path)
         # Update controller list
         self.progress_occurred.emit(90)
         self.get_viperleed_hardware(True)

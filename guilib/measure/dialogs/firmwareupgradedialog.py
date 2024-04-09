@@ -16,6 +16,7 @@ https://github.com/arduino/arduino-cli/releases
 """
 
 from pathlib import Path
+from re import sub
 from zipfile import ZipFile
 
 from PyQt5 import QtCore as qtc
@@ -27,6 +28,7 @@ from viperleed.guilib.measure.classes.ioarduinocli import ArduinoCLIInstaller
 from viperleed.guilib.measure.classes.ioarduinocli import FirmwareUploader
 from viperleed.guilib.measure.classes.ioarduinocli import FirmwareVersionInfo
 from viperleed.guilib.measure.classes.ioarduinocli import NOT_SET
+from viperleed.guilib.measure.classes.ioarduinocli import GET_ARCHIVED_FIRMWARE
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 
 
@@ -272,19 +274,11 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             self._update_combo_box('firmware_versions', firmware_dict)
             return
 
-        for file in f_path.glob('*.zip'):
-            with ZipFile(file, mode='r') as archive:
-                # !!! We are assuming here that the first folder in the
-                # .zip file matches the name of the firmware version.
-                folder_name, *_ = archive.namelist()[0].split('/')
-                *_, version_str = folder_name.split('_')
-                try:
-                    version = base.Version(version_str)
-                except ValueError:
-                    # Some non-firmware zip file
-                    continue
-                firmware_dict[folder_name] = FirmwareVersionInfo(folder_name,
-                                                                 version, file)
+        if GET_ARCHIVED_FIRMWARE:
+            firmware_dict = self._get_archived_firmware(f_path)
+        else:
+            firmware_dict = self._get_firmware(f_path)
+
         self._update_combo_box('firmware_versions', firmware_dict)
         self._find_most_recent_firmware_version()
 
@@ -309,6 +303,69 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self.labels['highest_version'].setText(
             f'Most recent firmware version: {max_version}'
             )
+
+    def _get_archived_firmware(self, f_path):
+        """Get firmware versions that are in a .zip archive.
+        
+        Parameters
+        ----------
+        f_path : Path
+            The location where to look for firmware.
+        
+        Returns
+        -------
+        firmware_dict : dict
+            A dict containing a FirmwareVersionInfo
+            for each firmware folder.
+        """
+        firmware_dict = {}
+        for file in f_path.glob('*.zip'):
+            with ZipFile(file, mode='r') as archive:
+                # !!! We are assuming here that the first folder in the
+                # .zip file matches the name of the firmware version.
+                folder_name, *_ = archive.namelist()[0].split('/')
+                *_, version_str = folder_name.split('_')
+                try:
+                    version = base.Version(version_str)
+                except ValueError:
+                    # Some non-firmware zip file
+                    continue
+                firmware_dict[folder_name] = FirmwareVersionInfo(folder_name,
+                                                                 version, file)
+        return firmware_dict
+
+    def _get_firmware(self, f_path):
+        """Get firmware versions that are in a regular folder.
+        
+        Parameters
+        ----------
+        f_path : Path
+            The location where to look for firmware.
+        
+        Returns
+        -------
+        firmware_dict : dict
+            A dict containing a FirmwareVersionInfo
+            for each firmware folder.
+        """
+        firmware_dict = {}
+        # This search can potentially take very long if performed
+        # on a large directory.
+        for file_name in f_path.rglob('viper-ino.ino'):
+            with file_name.open(encoding='utf-8') as file:
+                for line in file:
+                    if 'FIRMWARE_VERSION_MAJOR' in line:
+                        major = int(sub(r'\D', '', line.split('//')[0]))
+                    if 'FIRMWARE_VERSION_MINOR' in line:
+                        minor = int(sub(r'\D', '', line.split('//')[0]))
+                        break
+            version = base.Version(major, minor)
+            folder_name = file_name.parents[1].name
+            folder = str(file_name.parents[1].relative_to(f_path))
+            firmware_dict[folder] = FirmwareVersionInfo(
+                folder_name, version, file_name.parents[2]
+                )
+        return firmware_dict
 
     def _make_cli_install_disclaimer(self):
         """Create the dialog asking the user to install Arduino CLI."""
