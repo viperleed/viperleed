@@ -47,13 +47,14 @@ class BookkeeperMode(Enum):
     DISCARD = 'discard'
 
 
-def _translate_timestamp(s):
+def _translate_timestamp(time_stamp):
     """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
-    if len(s) != 13:
-        print("Error translating timestamp: Invalid length")
-        return s
-    return "{}.{}.{} {}:{}:{}".format(s[4:6], s[2:4], s[0:2],
-                                      s[7:9], s[9:11], s[11:13])
+    if len(time_stamp) != 13:
+        raise ValueError('Error translating timestamp: Invalid length '
+                         f'{len(time_stamp)}. Expected 13 characters.')
+    year, month, day = time_stamp[:2], time_stamp[2:4], time_stamp[4:6]
+    hour, minutes, secs = time_stamp[7:9], time_stamp[9:11], time_stamp[11:13]
+    return f'{day}.{month}.{year} {hour}:{minutes}:{secs}'
 
 
 def store_input_files_to_history(root_path, history_path):
