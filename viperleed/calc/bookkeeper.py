@@ -107,6 +107,14 @@ def _collect_supp_and_out(cwd):
             if d.is_dir() and d.name in {'OUT', 'SUPP'}]
 
 
+def _workhistory_has_dirs_to_move(work_history_path):
+    """Return whether work_history_path contains any directory worth moving."""
+    work_history_dirs = (d for d in work_history_path.glob('r*')                # TODO: is this correct? In _move_workhistory_folders we also use HIST_FOLDER_RE, and folders contain 'r' but do not begin with it
+                         if d.is_dir()
+                         and _PREVIOUS_LABEL not in d.name)
+    return any(work_history_dirs)
+
+
 def bookkeeper(mode,
                job_name=None,
                history_name=DEFAULT_HISTORY,
@@ -157,20 +165,12 @@ def bookkeeper(mode,
     files_to_move, logs_to_move = _collect_log_files(cwd)
     files_to_move.extend(_collect_supp_and_out(cwd))
 
-    # if there's nothing to move, return.
-    if len(files_to_move) == 0:
-        found = False
-        # check workhist folder:
-        if work_history_path.is_dir():
-            work_history_dirs = [d for d in work_history_path.iterdir() if
-                                (work_history_path / d).is_dir()
-                                and d.name.startswith("r")
-                                and not ("previous" in d.name)]
-            if len(work_history_dirs) > 0:
-                found = True
-        if not found:
-            print("Bookkeeper: Found nothing to do. Exiting...")
-            return 1
+    # Exit early if there's nothing to move:
+    if (not files_to_move
+            and not _workhistory_has_dirs_to_move(work_history_path)):
+        print('Bookkeeper: Found nothing to do. Exiting...')
+        return 1
+
     # check whether history folder is there. If not, make one
     if not history_path.is_dir():
         try:
