@@ -374,36 +374,10 @@ def bookkeeper(mode,
     if _mode is BookkeeperMode.CONT:
         _replace_input_files_from_out(cwd)
 
-    # move old stuff
-    for file in files_to_move:
-        if not _mode.discard:
-            try:
-                shutil.move(file, tensor_dir / file)
-            except Exception:
-                print(f"Error: Failed to move {file}.")
-        else:  # delete instead
-            try:
-                shutil.rmtree(file)
-            except NotADirectoryError:
-                try:
-                    os.remove(file)
-                except Exception:
-                    print(f"Failed to discard file {file}.")
-            except Exception:
-                print(f"Failed to discard directory {file}.")
-    # move log files to SUPP (except for general viperleed-calc log)
-    for log_file in logs_to_move:
-        if not _mode.discard:
-            try:
-                hist_supp_path = tensor_dir / 'SUPP'
-                shutil.move(log_file, hist_supp_path / log_file)
-            except Exception:
-                print(f"Error: Failed to move {log_file}.")
-        else:   # delete instead
-            try:
-                os.remove(log_file)
-            except Exception:
-                print("Failed to discard file {log_file}.")
+    # Move (or discard) old stuff: files go to main history, logs go
+    # to SUPP (except main viperleed-calc log)
+    _move_or_discard_files(files_to_move, tensor_dir, _mode.discard)
+    _move_or_discard_files(logs_to_move, tensor_dir/'SUPP', _mode.discard)
 
     # if there is a workhist folder, go through it and move contents as well
     tensor_nums = {tensor_number}
