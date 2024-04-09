@@ -31,14 +31,24 @@ _CALC_LOG_PREFIXES = (
 
 
 class BookkeeperMode(Enum):
-    DEFAULT = 'default'  # store last run, but do not overwrite POSCAR, VIBROCC
-    CONT = 'cont'        # store last run and overwrite POSCAR, VIBROCC from OUT
-    DISCARD = 'discard'  # discard previous run as if it never happened
+    """Enumeration of bookkeeper modes.
+
+    Attributes
+    ----------
+    CONT
+        Store last run in history. Overwrite POSCAR & VIBROCC from OUT.
+    DEFAULT
+        Store last run in history. Do not overwrite POSCAR & VIBROCC.
+    DISCARD
+        Discard previous run as if it never happened.
+    """
+    DEFAULT = 'default'
+    CONT = 'cont'
+    DISCARD = 'discard'
 
 
 def _translate_timestamp(s):
-    """Takes a timestamp YYMMDD-hhmmss and translates it to format DD.MM.YY
-    hh:mm:ss"""
+    """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
     if len(s) != 13:
         print("Error translating timestamp: Invalid length")
         return s
@@ -47,17 +57,19 @@ def _translate_timestamp(s):
 
 
 def store_input_files_to_history(root_path, history_path):
-    """Finds and copies input files to history.
+    """Find input files in `root_path` and copy them to `history_path`.
 
     Parameters
     ----------
     root_path : pathlike
-        Root directory from which to take files. Should be cwd, not ./work.
+        Root directory from which to take files. Should be cwd,
+        not ./work.
     history_path : pathlike
-        Path to the history directory in which the files should be stored.
+        Path to the history directory in which the files should
+        be stored.
     """
     _root_path, _history_path = Path(root_path), Path(history_path)
-    original_inputs_path = _root_path / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME
+    original_inputs_path = _root_path / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME  # TODO: we should use root_path / 'SUPP' / ORIGINAL_INPUTS_DIR_NAME instead! bookkeeper should not access the work directory (which may have a different name, or not be in root at all!)
     if original_inputs_path.is_dir():
         input_origin_path = original_inputs_path
     else:
@@ -82,7 +94,36 @@ def store_input_files_to_history(root_path, history_path):
 def bookkeeper(mode,
                job_name=None,
                history_name=DEFAULT_HISTORY,
-               work_history_name=DEFAULT_WORK_HISTORY,):
+               work_history_name=DEFAULT_WORK_HISTORY):
+    """Archive or discard the most recent run found in the current directory.
+
+    Parameters
+    ----------
+    mode : str or BookkeeperMode
+        Which bookkeeper mode to use. See help(BookkeeperMode).
+    job_name : str or None, optional
+        Custom name to append to the stored folder and to history.info.
+        If not given or None, no extra name is added. Default is None.
+    history_name : str, optional
+        The name of the folder in the current directory where the
+        most recent run should be archived. Default is 'history'.
+    work_history_name : str, optional
+        The name of the workhistory subfolder of ./work where
+        intermediate runs may have been stored. Results are also
+        copied from here to ./history_name. Default is workhistory.
+
+    Returns
+    -------
+    exit_code : int
+        0 -> success
+        1 -> No files to be copied
+
+    Raises
+    ------
+    OSError
+        If creation of the history folder or any of the subfolders
+        where results are to be stored fails.
+    """
 
     # convert mode to enum if necessary
     _mode = BookkeeperMode(mode)
