@@ -70,6 +70,10 @@ _OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
              "FD_Optimization_beams.pdf", "Complex_amplitudes_imag.csv",
              "Complex_amplitudes_real.csv")
 
+# Label given to workhistory folders when cleaning up stray remains
+# from previous viperleed.calc executions from the work directory
+PREVIOUS_LABEL = 'previous'
+
 # output files that can be used as input in future runs - keep during prerun
 iofiles = ["control.chem", "refcalc-fd.out", "superpos-spec.out"]
 
@@ -343,7 +347,7 @@ def move_oldruns(rp, prerun=False):
             oldTimeStamp = oldlogfiles[-1][7:20]
         else:
             oldTimeStamp = "moved-" + rp.timestamp
-        dirname = ("t{:03d}.r{:03d}_previous_".format(rp.TENSOR_INDEX, num)
+        dirname = (f"t{rp.TENSOR_INDEX:03d}.r{num:03d}_{PREVIOUS_LABEL}_"
                    + oldTimeStamp)
     else:
         dirname = "t{:03d}.r{:03d}_".format(rp.TENSOR_INDEX, num)

@@ -24,6 +24,7 @@ from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.calc.lib import leedbase
 from viperleed.cli_base import ViPErLEEDCLI
 
@@ -34,7 +35,6 @@ _CALC_LOG_PREFIXES = (
 HIST_FOLDER_RE = re.compile(
     r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
     )
-_PREVIOUS_LABEL = 'previous'
 
 
 class BookkeeperMode(Enum):
@@ -284,7 +284,7 @@ def _workhistory_has_dirs_to_move(work_history_path):
     """Return whether work_history_path contains any directory worth moving."""
     work_history_dirs = (d for d in work_history_path.glob('r*')                # TODO: is this correct? In _move_workhistory_folders we also use HIST_FOLDER_RE, and folders contain 'r' but do not begin with it
                          if d.is_dir()
-                         and _PREVIOUS_LABEL not in d.name)
+                         and PREVIOUS_LABEL not in d.name)
     return any(work_history_dirs)
 
 
