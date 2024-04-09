@@ -17,8 +17,13 @@ __license__ = 'GPLv3+'
 import logging
 import os
 from pathlib import Path
+import zipfile
 
 from viperleed import VIPERLEED_TENSORLEED_ENV
+
+logger = logging.getLogger(__name__)
+
+TENSERLEED_FOLDER_NAME = 'TensErLEED'
 
 # TensErLEED Versions
 KNOWN_TL_VERSIONS = (
@@ -32,6 +37,8 @@ KNOWN_TL_VERSIONS = (
     '1.76',
     '2.0',
     )
+
+VERSION_FILE_NAME = 'version'
 
 _KNOWN_TENSORLEED_TOP_FOLDERS = {
     'viperleed-tensorleed',
@@ -152,7 +159,7 @@ def _verify_tensorleed_path(path_):
     try:
         with_tenserleed = (
             d for d in potential_sources
-            if any(d.glob(f'{rparams.TENSERLEED_FOLDER_NAME}*'))
+            if any(d.glob(f'{TENSERLEED_FOLDER_NAME}*'))
             )
     except StopIteration:
         raise FileNotFoundError('Could not find a known tensor-LEED '
@@ -163,3 +170,44 @@ def _verify_tensorleed_path(path_):
             f'Using the latter instead of {source}.'
             )
     return with_tenserleed
+class TensErLEEDSource:
+
+    def __init__(self, path):
+        _path = Path(path).resolve()
+        # Check that the path is a directory or a zip file
+        if _path.is_dir():
+            self.path = _path
+        elif _path.is_file() and _path.suffix == '.zip':
+            self.path = zipfile.Path(zipfile.ZipFile(_path))
+        else:
+            raise FileNotFoundError(
+                f'TensErLEED path {_path} is not a directory or a zip file')
+
+        # go one level deeper in case there is a nested directory like
+        # TensErLEED-v1.x.y/TensErLEED-v1.x.y/
+        if self.path.name.startswith('TensErLEED'):
+            self.path = self.path / self.path.name.replace('.zip', '')
+
+    @property
+    def version(self):
+        return self.determine_version()
+
+    def determine_version(self):
+        """Return the version of the TensErLEED source code.
+
+        Returns
+        -------
+        Version
+            Version of the TensErLEED source code.
+        """
+        # check if "-v" is in the name
+        if '-v' in self.path.name:
+            return Version(self.path.name.split('-v')[-1])
+        elif (self.path / VERSION_FILE_NAME).is_file():
+            version_str = (self.path / VERSION_FILE_NAME).read_text().strip()
+            return Version(version_str)
+        else:
+            logger.warning("Could not determine the version of the TensErLEED "
+                           f"source code at {self.path}.")
+            return Version('unknown')
+
