@@ -1365,7 +1365,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         self.data_points.calculate_times()
         self.data_points.nr_steps_done += 1
-        self.new_data_available.emit(self.data_points[-1])
+        self.new_data_available.emit(self.data_points[-1].copy())
 
         if self._is_finished():
             self._prepare_finalization()
