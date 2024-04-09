@@ -107,6 +107,13 @@ def _collect_supp_and_out(cwd):
             if d.is_dir() and d.name in {'OUT', 'SUPP'}]
 
 
+def _discard_tensors_and_deltas(cwd, tensor_number):
+    """Delete tensor and delta files with tensor_num in cwd."""
+    tensor_file = cwd / 'Tensors' / f'Tensors_{tensor_number:03d}.zip'
+    delta_file = cwd / 'Deltas' / f'Deltas_{tensor_number:03d}.zip'
+    _move_or_discard_files((tensor_file, delta_file), cwd, True)
+
+
 def _find_max_run_per_tensor(history_path):
     """Return maximum run numbers for all directories in `history_path`.
 
@@ -131,6 +138,35 @@ def _find_max_run_per_tensor(history_path):
         job_num = int(match['job_num'])
         max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
     return max_nums
+
+
+def _move_or_discard_files(file_paths, target_folder, discard):
+    """Move file_paths to target_folder or delete them."""
+    for file in file_paths:
+        _move_or_discard_one_file(file, target_folder, discard)
+
+
+def _move_or_discard_one_file(file, target_folder, discard):
+    """Move file to target_folder or delete it."""
+    if not file.exists():
+        return
+    if discard and file.is_file():
+        try:
+            file.unlink()
+        except OSError:
+            print(f'Failed to discard file {file.name}.')
+        return
+    if discard:  # Should be a directory
+        try:
+            shutil.rmtree(file)
+        except OSError:
+            print(f'Failed to discard directory {file.name}.')
+        return
+    # Move it
+    try:
+        shutil.move(file, target_folder / file.name)
+    except OSError:
+        print(f'Error: Failed to move {file.name}.')
 
 
 def _translate_timestamp(time_stamp):
@@ -220,19 +256,11 @@ def bookkeeper(mode,
     tensor_number = leedbase.getMaxTensorIndex(home=cwd, zip_only=True)
     max_nums = _find_max_run_per_tensor(history_path)
 
-    if tensor_number not in max_nums:
-        num = 1  # Tensor is new - if discard: delete
-        if _mode is BookkeeperMode.DISCARD:
-            tensor_file = tensors_path / "Tensors_{tensor_number:03d}.zip"
-            delta_file = deltas_path / "Deltas_{tensor_number:03d}.zip"
-            for file in (tensor_file, delta_file):
-                if os.path.isfile(file):
-                    try:
-                        os.remove(file)
-                    except Exception:
-                        print(f"Failed to discard file {file}")
-    else:
-        num = max_nums[tensor_number] + 1
+    if tensor_number not in max_nums and _mode.discard:
+        # New Tensor to be discarded.
+        _discard_tensors_and_deltas(cwd, tensor_number)
+
+    num = max_nums[tensor_number] + 1
     # find old timestamp, if possible
     old_log_files = sorted(
         f for f in os.listdir() if os.path.isfile(f) and
