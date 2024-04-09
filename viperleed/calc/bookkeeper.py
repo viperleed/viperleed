@@ -52,16 +52,6 @@ class BookkeeperMode(Enum):
     DISCARD = 'discard'
 
 
-def _translate_timestamp(time_stamp):
-    """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
-    if len(time_stamp) != 13:
-        raise ValueError('Error translating timestamp: Invalid length '
-                         f'{len(time_stamp)}. Expected 13 characters.')
-    year, month, day = time_stamp[:2], time_stamp[2:4], time_stamp[4:6]
-    hour, minutes, secs = time_stamp[7:9], time_stamp[9:11], time_stamp[11:13]
-    return f'{day}.{month}.{year} {hour}:{minutes}:{secs}'
-
-
 def store_input_files_to_history(root_path, history_path):
     """Find input files in `root_path` and copy them to `history_path`.
 
@@ -136,6 +126,16 @@ def _find_max_run_per_tensor(history_path):
         job_num = int(match['job_num'])
         max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
     return max_nums
+
+
+def _translate_timestamp(time_stamp):
+    """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
+    if len(time_stamp) != 13:
+        raise ValueError('Error translating timestamp: Invalid length '
+                         f'{len(time_stamp)}. Expected 13 characters.')
+    year, month, day = time_stamp[:2], time_stamp[2:4], time_stamp[4:6]
+    hour, minutes, secs = time_stamp[7:9], time_stamp[9:11], time_stamp[11:13]
+    return f'{day}.{month}.{year} {hour}:{minutes}:{secs}'
 
 
 def _workhistory_has_dirs_to_move(work_history_path):
