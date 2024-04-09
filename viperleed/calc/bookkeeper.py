@@ -42,8 +42,8 @@ class BookkeeperMode(Enum):
     DISCARD
         Discard previous run as if it never happened.
     """
-    DEFAULT = 'default'
     CONT = 'cont'
+    DEFAULT = 'default'
     DISCARD = 'discard'
 
 
