@@ -169,6 +169,21 @@ def _discard_tensors_and_deltas(cwd, tensor_number):
     _move_or_discard_files((tensor_file, delta_file), cwd, True)
 
 
+def _discard_workhistory_previous(work_history_path):
+    """Remove 'previous'-labelled directories in `work_history_path`."""
+    work_hist_prev = (
+        d for d in work_history_path.glob(f'*{PREVIOUS_LABEL}*')
+        if d.is_dir()
+        and HIST_FOLDER_RE.match(d.name)
+        )
+    for directory in work_hist_prev:
+        try:
+            shutil.rmtree(directory)
+        except OSError:
+            print(f'Failed to delete {directory} directory '
+                  f'from {work_history_path}')
+
+
 def _find_max_run_per_tensor(history_path):
     """Return maximum run numbers for all directories in `history_path`.
 
@@ -193,6 +208,61 @@ def _find_max_run_per_tensor(history_path):
         job_num = int(match['job_num'])
         max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
     return max_nums
+
+
+def _move_and_cleanup_workhistory(work_history_path,
+                                  history_path,
+                                  timestamp,
+                                  max_job_for_tensor,
+                                  discard):
+    """Move files from `work_history_path` to `history_path`, then clean up.
+
+    If `work_history_path` is empty, it is always deleted. Otherwise
+    only if `discard` is True.
+
+    Parameters
+    ----------
+    work_history_path : Path
+        Path to the workhistory directory, moved in root by
+        sections.cleanup, as it is included in manifest in
+        move_oldruns.
+    history_path : Path
+        The target history folder where files should be copied.
+    timestamp : str
+        The time-stamp selecting the subfolders to be moved. Only
+        those folders whose name contains timestamp are copied over.
+    max_job_for_tensor : defaultdict(int)
+        The maximum job number known for each tensor number. Used
+        to generate new folder names (incrementing by one unit)
+        in `history_path`.
+    discard : bool
+        Whether files should only be discarded without copying them.
+
+    Returns
+    -------
+    tensor_nums : set of int
+        Indices of tensors found in `work_history_path` that have
+        been moved to `history_path` as new history entries.
+    """
+    tensor_nums = set()
+    if not work_history_path.is_dir():
+        return tensor_nums
+
+    # Always remove any 'previous'-labelled folders
+    _discard_workhistory_previous(work_history_path)
+    if not discard:
+        tensor_nums = _move_workhistory_folders(work_history_path,
+                                                history_path,
+                                                timestamp,
+                                                max_job_for_tensor)
+    is_empty = not any(work_history_path.iterdir())
+    if is_empty or discard:
+        try:
+            shutil.rmtree(work_history_path)
+        except OSError as exc:
+            err_ = f'Failed to {{}} {work_history_path.name} folder: {exc}'
+            print(err_.format('discard' if discard else 'delete empty'))
+    return tensor_nums
 
 
 def _move_or_discard_files(file_paths, target_folder, discard):
@@ -222,6 +292,61 @@ def _move_or_discard_one_file(file, target_folder, discard):
         shutil.move(file, target_folder / file.name)
     except OSError:
         print(f'Error: Failed to move {file.name}.')
+
+
+def _move_workhistory_folders(work_history_path, history_path,
+                              timestamp, max_job_for_tensor):
+    """Move timestamp-labelled folders in work_history_path to history_path.
+
+    Parameters
+    ----------
+    work_history_path : Path
+        Base path to the workhistory folder from
+        which stuff should be moved.
+    history_path : Path
+        Destination path for the subfolders of
+        `work_history_path` that will be moved.
+    timestamp : str
+        Selects which sub-folders of `work_history_path` should be
+        moved. Only those whose name contains `timestamp` are moved.
+    max_job_for_tensor : defaultdict(int)
+        The maximum job number known for each tensor number. Used
+        to generate new folder names (incrementing by one unit)
+        in `history_path` for each of the directories moved from
+        `work_history_path`.
+
+    Returns
+    -------
+    tensor_nums : set
+        The tensor numbers of the folders that have been moved.
+    """
+    tensor_nums = set()
+    work_history_dirs = (
+        d for d in work_history_path.glob(f'*{timestamp}*')
+        if d.is_dir()
+        and PREVIOUS_LABEL not in d.name
+        )
+    for directory in work_history_dirs:
+        match = HIST_FOLDER_RE.match(directory.name)
+        if not match:
+            continue
+        tensor_num = int(match['tensor_num'])
+        try:
+            search_num = int(directory.name[6:9])                               # TODO: is this right? 6:9 should be job_num
+        except (ValueError, IndexError):
+            continue
+
+        tensor_nums.add(tensor_num)
+        job_num = max_job_for_tensor[tensor_num] + 1
+        newname = (
+            f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
+            + directory.name[9:]
+            )
+        try:
+            shutil.move(directory, history_path / newname)
+        except OSError:
+            print(f'Error: Failed to move {directory}.')
+    return tensor_nums
 
 
 def _read_most_recent_log(cwd):
@@ -376,58 +501,17 @@ def bookkeeper(mode,
         _replace_input_files_from_out(cwd)
 
     # Move (or discard) old stuff: files go to main history, logs go
-    # to SUPP (except main viperleed-calc log)
+    # to SUPP (except main viperleed-calc log); collect also folders
+    # from workhistory
     _move_or_discard_files(files_to_move, tensor_dir, _mode.discard)
     _move_or_discard_files(logs_to_move, tensor_dir/'SUPP', _mode.discard)
+    tensor_nums = _move_and_cleanup_workhistory(work_history_path,
+                                                history_path,
+                                                old_timestamp,
+                                                max_nums,
+                                                _mode.discard)
+    tensor_nums.add(tensor_number)
 
-    # if there is a workhist folder, go through it and move contents as well
-    tensor_nums = {tensor_number}
-
-    if work_history_path.is_dir() and not _mode.discard:
-        work_hist_prev = [d for d in os.listdir(work_history_name) if
-                        os.path.isdir(os.path.join(work_history_name, d))
-                        and HIST_FOLDER_RE.match(d) and ("previous" in d)]
-        for dir in work_hist_prev:
-            try:
-                shutil.rmtree(work_history_path / dir)
-            except Exception:
-                print(f"Failed to delete {dir} directory from "
-                      f"{work_history_path}")
-        work_history_dirs = [dir for dir in work_history_path.iterdir() if
-                        (work_history_path / dir).is_dir()
-                        and HIST_FOLDER_RE.match(dir.name)
-                        and not ("previous" in dir.name)
-                        and old_timestamp in dir.name]
-        for dir in work_history_dirs:
-            try:
-                tensor_num_2 = int(dir.name[1:4])
-                search_num = int(dir.name[6:9])
-            except (ValueError, IndexError):
-                pass
-            else:
-                if tensor_num_2 not in max_nums:
-                    num = 1
-                else:
-                    num = max_nums[tensor_num_2] + 1
-                newname = (f"t{tensor_num_2:03d}.r{num:03d}.{search_num:03d}"
-                           + dir.name[9:])
-                try:
-                    shutil.move(os.path.join(work_history_name, dir),
-                                os.path.join(history_name, newname))
-                except OSError:
-                    print(f"Error: Failed to move {work_history_path / dir}.")
-                tensor_nums.add(tensor_num_2)
-    if work_history_path.is_dir():
-        if (len(list(work_history_path.iterdir())) == 0
-            or _mode.discard):
-            try:
-                shutil.rmtree(work_history_name)
-            except OSError as error:
-                if _mode.discard:
-                    print(f"Failed to discard workhistory folder: {error}")
-                else:
-                    print(f"Failed to delete empty {work_history_name} "
-                          f"directory: {str(error)}")
     if _mode.discard:  # all done
         return 0
     job_nums = []
