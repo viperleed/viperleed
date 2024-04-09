@@ -248,6 +248,27 @@ def _read_most_recent_log(cwd):
     return old_timestamp, last_log_lines
 
 
+def _replace_input_files_from_out(cwd):
+    """Replace POSCAR and VIBROCC in cwd with those from OUT."""
+    out_path = cwd / 'OUT'
+    if not out_path.is_dir():
+        return
+    for file in ('POSCAR', 'VIBROCC'):
+        out_files = (f for f in out_path.glob(f'{file}_OUT_*')
+                     if f.is_file()
+                     and 'parabola' not in f.name)
+        try:
+            most_recent = max(out_files, key=attrgetter('name'))                # TODO: is this right? are the OUT files sorted by timestamp or by R?
+        except ValueError:  # No files
+            # Do not complain if not found, since we move
+            # previous runs to the history by default
+            continue
+        try:
+            shutil.copy2(most_recent, cwd / file)
+        except OSError:
+            print(f'Error: failed to copy {most_recent} as new {file}.')
+
+
 def _translate_timestamp(time_stamp):
     """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
     if len(time_stamp) != 13:
@@ -307,7 +328,6 @@ def bookkeeper(mode,
     cwd = Path.cwd()
     history_path = cwd / history_name
     work_history_path = cwd / work_history_name
-    out_path = Path("OUT").resolve()
 
     # Make list of stuff to move:
     # Log files (calc in root, others in SUPP), and SUPP/OUT folders
@@ -351,25 +371,8 @@ def bookkeeper(mode,
     if not mode.discard:
         store_input_files_to_history(cwd, tensor_dir)
 
-    # if CONT, check for POSCAR_OUT / VIBROCC_OUT
-    # do not complain if not found, since we move previous runs to the history
-    # by default
     if _mode is BookkeeperMode.CONT:
-        if os.path.isdir("OUT"):
-            for file in ("POSCAR", "VIBROCC"):
-
-                files_in_out = sorted(
-                    [f for f in out_path.iterdir()
-                    if (out_path / f).is_file()
-                    and f.name.startswith(f"{file}_OUT_")
-                    and "parabola" not in f.name]
-                )
-                if len(files_in_out) > 0:
-                    path = out_path / files_in_out[-1]
-                    try:
-                        shutil.copy2(path, file)
-                    except Exception:
-                        print(f"Error: failed to copy {path} as new {file}.")
+        _replace_input_files_from_out(cwd)
 
     # move old stuff
     for file in files_to_move:
