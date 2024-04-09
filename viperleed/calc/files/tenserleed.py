@@ -35,8 +35,19 @@ KNOWN_TL_VERSIONS = (
     '1.74',
     '1.75',
     '1.76',
-    '2.0',
+    '2.0.0',
     )
+
+_OLD_TL_VERSION_NAMES = {
+    '1.6': '1.6.0',
+    '1.61': '1.6.1',
+    '1.71': '1.7.1',
+    '1.72': '1.7.2',
+    '1.73': '1.7.3',
+    '1.74': '1.7.4',
+    '1.75': '1.7.5',
+    '1.76': '1.7.6',
+    }
 
 VERSION_FILE_NAME = 'version'
 
@@ -190,9 +201,6 @@ class TensErLEEDSource:
 
     @property
     def version(self):
-        return self.determine_version()
-
-    def determine_version(self):
         """Return the version of the TensErLEED source code.
 
         Returns
@@ -202,7 +210,9 @@ class TensErLEEDSource:
         """
         # check if "-v" is in the name
         if '-v' in self.path.name:
-            return Version(self.path.name.split('-v')[-1])
+            version_str = self.path.name.split('-v')[-1]
+            version_str = _OLD_TL_VERSION_NAMES.get(version_str, version_str)
+            return Version(version_str)
         elif (self.path / VERSION_FILE_NAME).is_file():
             version_str = (self.path / VERSION_FILE_NAME).read_text().strip()
             return Version(version_str)
