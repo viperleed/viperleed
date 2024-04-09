@@ -22,6 +22,7 @@ from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.lib import leedbase
 from viperleed.cli_base import ViPErLEEDCLI
 
 _CALC_LOG_PREFIXES = (
@@ -179,18 +180,8 @@ def bookkeeper(mode,
         raise
 
     # figure out the number of the tensor
-    tensor_number = 0
-    if tensors_path.is_dir():
-        indlist = []
-        rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-        for file in [f for f in os.listdir("Tensors")
-                  if ((tensors_path / f).is_file()
-                      and rgx.match(f))]:
-            match = rgx.match(file)
-            if match.span()[1] == 15:  # exact match
-                indlist.append(int(match.group(0)[-7:-4]))
-        if indlist:
-            tensor_number = max(indlist)
+    tensor_number = leedbase.getMaxTensorIndex(home=cwd, zip_only=True)
+
     # figure out the number of the run
     dir_list = [d for d in history_path.iterdir()
                 if (history_path / d).is_dir()]
