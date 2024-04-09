@@ -91,6 +91,24 @@ def store_input_files_to_history(root_path, history_path):
             print(f"Failed to copy file {file} to history: {error_msg}")
 
 
+def _collect_log_files(cwd):
+    """Return two lists of log files in `cwd`: 'calc' and others."""
+    calc_logs, other_logs = [], []
+    for file in cwd.glob('*.log'):
+        if not file.is_file():
+            continue
+        container = (calc_logs if file.name.startswith(_CALC_LOG_PREFIXES)
+                     else other_logs)
+        container.append(file)
+    return calc_logs, other_logs
+
+
+def _collect_supp_and_out(cwd):
+    """Return paths to 'SUPP' and 'OUT' if they are present in `cwd`."""
+    return [d for d in cwd.iterdir()
+            if d.is_dir() and d.name in {'OUT', 'SUPP'}]
+
+
 def bookkeeper(mode,
                job_name=None,
                history_name=DEFAULT_HISTORY,
@@ -128,24 +146,19 @@ def bookkeeper(mode,
     # convert mode to enum if necessary
     _mode = BookkeeperMode(mode)
 
-    # get paths for history and workhistory
-    history_path = Path(history_name).resolve()
-    work_history_path = Path(work_history_name).resolve()
+    # Get paths for history and workhistory
+    cwd = Path.cwd()
+    history_path = cwd / history_name
+    work_history_path = cwd / work_history_name
     tensors_path = Path("Tensors").resolve()
     deltas_path = Path("Deltas").resolve()
     out_path = Path("OUT").resolve()
 
-    # make list of stuff to move
-    files_to_move = [d for d in os.listdir() if os.path.isdir(d)
-              and (d == "OUT" or d == "SUPP")]
-    # logs will be saved to history; calc in root, others in SUPP
-    logs_to_move = []
-    for file in os.listdir():
-        if os.path.isfile(file) and file.endswith(".log"):
-            if file.startswith(_CALC_LOG_PREFIXES):
-                files_to_move.append(file)
-            else:
-                logs_to_move.append(file)
+    # Make list of stuff to move:
+    # Log files (calc in root, others in SUPP), and SUPP/OUT folders
+    files_to_move, logs_to_move = _collect_log_files(cwd)
+    files_to_move.extend(_collect_supp_and_out(cwd))
+
     # if there's nothing to move, return.
     if len(files_to_move) == 0:
         found = False
