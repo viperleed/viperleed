@@ -361,7 +361,7 @@ class Rparams:
         Returns
         -------
         tenserleed_path : Path
-            Path to the desired 'TensErLEED' directory.
+            Path to the desired 'TensErLEED' directory or zip archive.
 
         Raises
         ------

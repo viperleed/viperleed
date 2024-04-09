@@ -30,23 +30,10 @@ import sys
 from warnings import warn
 
 from viperleed import VIPERLEED_TENSORLEED_ENV
+from viperleed.calc.files.tenserleed import KNOWN_TL_VERSIONS
 
 # Where encoded checksums are stored
 CHECKSUMS_FILE_NAME = '_checksums.dat'
-
-
-# TensErLEED Versions
-KNOWN_TL_VERSIONS = (
-    '1.6',
-    '1.61',
-    '1.71',
-    '1.72',
-    '1.73',  # TODO: use Version when available
-    '1.74',
-    '1.75',
-    '1.76',
-    '1.8',
-    )
 
 
 # sections of TensErLEED - currently unused
