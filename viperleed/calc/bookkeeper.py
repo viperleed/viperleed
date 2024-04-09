@@ -108,6 +108,59 @@ def _collect_supp_and_out(cwd):
             if d.is_dir() and d.name in {'OUT', 'SUPP'}]
 
 
+def _create_new_history_directory(history_path, tensor_number,
+                                  job_num, suffix, should_mkdir):
+    """Return the path to a new subfolder of `history_path`.
+
+    Parameters
+    ----------
+    history_path : Path
+        Path to the history folder. The new
+        subdirectory is created here.
+    tensor_number : int
+        Progressive index of the tensor for the new subdirectory.
+    job_num : int
+        Progressive number identifying the run for `tensor_number`
+        for which the new directory is created.
+    suffix : str
+        Suffix to append to the directory name. Typically includes
+        the time-stamp and, optionally, a user-defined job name.
+    should_mkdir : bool
+        Whether the new history folder should also be created on the
+        filesystem as a new directory. If not given, only the path is
+        returned, without any check for existence.
+
+    Returns
+    -------
+    new_history_dir : Path
+        Path to the new subdirectory of `history_path`.
+
+    Raises
+    ------
+    OSError
+        If `should_mkdir` and creation of `new_history_dir` fails.
+    """
+    dirname = f't{tensor_number:03d}.r{job_num:03d}_{suffix}'
+    new_history_dir = history_path / dirname
+
+    if not should_mkdir:
+        return new_history_dir
+
+    if new_history_dir.is_dir():
+        suffix = suffix.replace('moved-', '')
+        dirname_moved = f'{dirname}_moved-{suffix}'
+        print(f'Error: Target directory {dirname} already '
+              f'exists. Will use {dirname_moved} instead.')
+        new_history_dir = history_path / dirname_moved
+    try:
+        new_history_dir.mkdir()
+    except OSError:
+        print('Error: Could not create target directory '
+              f'{new_history_dir}\n Stopping...')
+        raise
+    return new_history_dir
+
+
 def _discard_tensors_and_deltas(cwd, tensor_number):
     """Delete tensor and delta files with tensor_num in cwd."""
     tensor_file = cwd / 'Tensors' / f'Tensors_{tensor_number:03d}.zip'
@@ -287,29 +340,16 @@ def bookkeeper(mode,
     # Infer timestamp from log file, if possible
     old_timestamp, last_log_lines = _read_most_recent_log(cwd)
 
-    num = max_nums[tensor_number] + 1
-    if not _mode.discard:
-        # get dirname
-        dirname = f"t{tensor_number:03d}.r{num:03d}_{old_timestamp}"
-        if job_name is not None:
-            dirname += "_" + job_name
-        tensor_dir = Path(history_name).resolve() / dirname
-        if os.path.isdir(tensor_dir):
-            suffix = old_timestamp.replace('moved-', '')
-            tensor_dir_2 = f"{tensor_dir}_moved-{suffix}"
-            print(f"Error: Target directory {tensor_dir} already exists. Will "
-                  "use {tensor_dir_2} instead.")
-            tensor_dir = Path(tensor_dir_2).resolve()
-            dirname = os.path.basename(tensor_dir)
-        try:
-            os.mkdir(tensor_dir)
-        except Exception:
-            print(f"Error: Could not create target directory {tensor_dir}"
-                  "\n Stopping...")
-            raise
-        # copy (or discard) files
-        cwd_path = Path(".")
-        store_input_files_to_history(cwd_path, tensor_dir)
+    # Get new history subfolder tensor_dir
+    tensor_dir = _create_new_history_directory(
+        history_path,
+        tensor_number,
+        job_num=max_nums[tensor_number] + 1,
+        suffix=old_timestamp + ('' if job_name is None else f'_{job_name}'),
+        should_mkdir=not _mode.discard
+        )
+    if not mode.discard:
+        store_input_files_to_history(cwd, tensor_dir)
 
     # if CONT, check for POSCAR_OUT / VIBROCC_OUT
     # do not complain if not found, since we move previous runs to the history
@@ -475,7 +515,7 @@ def bookkeeper(mode,
                     hist += r_fac_line + line.split(":", maxsplit=1)[1].strip() + "\n"
 
     hist += "# TIME ".ljust(spacing) + f"{_translate_timestamp(old_timestamp)} \n"
-    hist += "# FOLDER ".ljust(spacing) + f"{dirname} \n"
+    hist += "# FOLDER ".ljust(spacing) + f"{tensor_dir.name} \n"
     hist += f"Notes: {notes}\n"
     hist += "\n###########\n"
     try:
