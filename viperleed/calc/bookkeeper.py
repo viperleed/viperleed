@@ -229,11 +229,8 @@ def _discard_tensors_and_deltas(cwd, tensor_number):
 
 def _discard_workhistory_previous(work_history_path):
     """Remove 'previous'-labelled directories in `work_history_path`."""
-    work_hist_prev = (
-        d for d in work_history_path.glob(f'*{PREVIOUS_LABEL}*')
-        if d.is_dir()
-        and HIST_FOLDER_RE.match(d.name)
-        )
+    work_hist_prev = _get_workhistory_directories(work_history_path,
+                                                  contains=PREVIOUS_LABEL)
     for directory in work_hist_prev:
         try:
             shutil.rmtree(directory)
@@ -266,6 +263,61 @@ def _find_max_run_per_tensor(history_path):
         job_num = int(match['job_num'])
         max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
     return max_nums
+
+
+def _get_current_workhistory_directories(work_history_path, contains=''):
+    """Return a generator of subfolders in work_history_path.
+
+    As compared with _get_workhistory_directories, only those
+    directories not marked as 'previous' are returned.
+
+    Parameters
+    ----------
+    work_history_path : Path
+        Path to the workhistory folder where
+        subdirectories are looked up.
+    contains : str, optional
+        Select only those subdirectories whose name contains this
+        string. Default is an empty string, corresponding to no
+        filtering other than the one described in Returns.
+
+    Returns
+    -------
+    subfolders : generator
+        When iterated over, it yields paths to the immediate
+        subdirectories of `work_history_path` whose name matches
+        the HIST_FOLDER_RE regular expression, whose name
+        include `contains`, but does not contain 'previous'.
+    """
+    directories = _get_workhistory_directories(work_history_path,
+                                               contains=contains)
+    return (d for d in directories if PREVIOUS_LABEL not in d.name)
+
+
+def _get_workhistory_directories(work_history_path, contains=''):
+    """Return a generator of subfolders in `work_history_path`.
+
+    Parameters
+    ----------
+    work_history_path : Path
+        Path to the workhistory folder where
+        subdirectories are looked up.
+    contains : str, optional
+        Select only those subdirectories whose name contains this
+        string. Default is an empty string, corresponding to no
+        filtering other than the one described in Returns.
+
+    Returns
+    -------
+    subfolders : generator
+        When iterated over, it yields paths to the immediate
+        subdirectories of work_history_path whose name matches
+        the HIST_FOLDER_RE regular expression, and whose name
+        include `contains`.
+    """
+    globbed = (work_history_path.glob(f'*{contains}*') if contains
+               else work_history_path.iterdir())
+    return (d for d in globbed if d.is_dir() and HIST_FOLDER_RE.match(d.name))
 
 
 def _infer_run_info_from_log(last_log_lines):
@@ -414,14 +466,11 @@ def _move_workhistory_folders(work_history_path, history_path,
         The tensor numbers of the folders that have been moved.
     """
     tensor_nums = set()
-    work_history_dirs = (
-        d for d in work_history_path.glob(f'*{timestamp}*')
-        if d.is_dir()
-        and PREVIOUS_LABEL not in d.name
-        )
-    for directory in work_history_dirs:
+    directories = _get_current_workhistory_directories(work_history_path,
+                                                       contains=timestamp)
+    for directory in directories:
         match = HIST_FOLDER_RE.match(directory.name)
-        if not match:
+        if not match:  # Should always match
             continue
         tensor_num = int(match['tensor_num'])
         try:
@@ -519,9 +568,7 @@ def _translate_timestamp(time_stamp):
 
 def _workhistory_has_dirs_to_move(work_history_path):
     """Return whether work_history_path contains any directory worth moving."""
-    work_history_dirs = (d for d in work_history_path.glob('r*')                # TODO: is this correct? In _move_workhistory_folders we also use HIST_FOLDER_RE, and folders contain 'r' but do not begin with it
-                         if d.is_dir()
-                         and PREVIOUS_LABEL not in d.name)
+    work_history_dirs = _get_current_workhistory_directories(work_history_path)
     return any(work_history_dirs)
 
 
