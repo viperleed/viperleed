@@ -12,7 +12,6 @@ __license__ = 'GPLv3+'
 from collections import defaultdict
 from enum import Enum
 from operator import attrgetter
-import os
 from pathlib import Path
 import re
 import shutil
