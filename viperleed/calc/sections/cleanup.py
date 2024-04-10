@@ -106,10 +106,10 @@ def prerun_clean(rp, logname=""):
             shutil.rmtree(os.path.join(".", DEFAULT_WORK_HISTORY))
         except Exception:
             logger.warning(f"Failed to clear {DEFAULT_WORK_HISTORY} folder.")
-    # get rid of old POSCAR_OUT, VIBROCC_OUT and R_OUT files:
+    # get rid of old POSCAR_OUT, VIBROCC_OUT, PARAMETERS and R_OUT files:
     for d in [".", os.path.join(".", "OUT")]:
         if os.path.isdir(d):
-            for s in ["POSCAR_OUT", "VIBROCC_OUT", "R_OUT"]:
+            for s in ["POSCAR_OUT", "VIBROCC_OUT", "PARAMETERS", "R_OUT"]:
                 for file in [fn for fn in os.listdir(d) if fn.startswith(s)]:
                     try:
                         os.remove(os.path.join(d, file))
