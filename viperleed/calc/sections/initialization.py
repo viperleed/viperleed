@@ -483,10 +483,6 @@ def init_domains(rp):
             os.chdir(target)
             logger.info(f"Reading input files for domain {name}")
             try:
-                dp.sl = poscar.read()
-                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
-                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
-                dp.rp.inputs_dir = Path.cwd().resolve()
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
@@ -494,6 +490,11 @@ def init_domains(rp):
                 # run _preserve_original_input separately for each domain
                 dp.rp.inputs_dir = dp.rp.workdir / ORIGINAL_INPUTS_DIR_NAME / name
                 _preserve_original_input(dp.rp, origin_dir=Path.cwd().resolve())
+
+                dp.sl = poscar.read(dp.rp.inputs_dir / "POSCAR")
+                dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
+                warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
+                dp.rp.inputs_dir = Path.cwd().resolve()
 
                 parameters.interpret(dp.rp, slab=dp.sl,
                                      silent=rp.LOG_LEVEL > logging.DEBUG)

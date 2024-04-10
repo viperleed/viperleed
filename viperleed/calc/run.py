@@ -128,7 +128,7 @@ def run_calc(system_name=None,
     if domains:  # no POSCAR in main folder for domain searches
         slab = None
     elif slab is None:
-        poscar_file = Path("POSCAR")
+        poscar_file = rp.inputs_dir / "POSCAR"
         if not poscar_file.is_file():
             logger.error("POSCAR not found. Stopping execution...")
             cleanup(tmp_manifest)
