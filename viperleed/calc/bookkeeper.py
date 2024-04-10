@@ -610,7 +610,7 @@ def bookkeeper(mode,
     if not mode.discard:
         store_input_files_to_history(cwd, tensor_dir)
 
-    if _mode is BookkeeperMode.CONT:
+    if mode is BookkeeperMode.CONT:
         _replace_input_files_from_out(cwd)
 
     # Move (or discard) old stuff: files go to main history, logs go
