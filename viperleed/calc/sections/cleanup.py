@@ -72,6 +72,7 @@ _OUT_FILES = (
     "FD_Optimization.pdf",
     "FITBEAMS_norm.csv",
     "FITBEAMS.csv",
+    "PARAMETERS",
     "PatternInfo.tlm",
     "refcalc-amp.out",
     "Rfactor_analysis_refcalc.pdf",
