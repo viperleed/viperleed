@@ -41,16 +41,23 @@ class BookkeeperMode(Enum):
 
     Attributes
     ----------
-    CONT
-        Store last run in history. Overwrite POSCAR & VIBROCC from OUT.
-    DEFAULT
-        Store last run in history. Do not overwrite POSCAR & VIBROCC.
+    ARCHIVE
+        Store last run in history. Overwrite PARAMETERS, POSCAR & VIBROCC from
+        OUT. Runs after run_calc by default.
+    CLEAR
+        Clear the input directory of last run.
+        Runs before run_calc by default.
     DISCARD
-        Discard previous run as if it never happened.
+        Re-start from the same input as the previous run. The discarded run is
+        kept in history. Has to be run manually after run_calc.
+    DISCARD_FULL
+        Discard previous run as if it never happened and removes it from 
+        history. Has to be run manually after run_calc.
     """
-    CONT = 'cont'
-    DEFAULT = 'default'
+    ARCHIVE = 'archive'
+    CLEAR = 'clear'
     DISCARD = 'discard'
+    DISCARD_FULL = 'discard_full'
 
     @property
     def discard(self):
@@ -690,18 +697,32 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
         super().add_parser_arguments(parser)
         what_next = parser.add_mutually_exclusive_group()
         what_next.add_argument(
-            '-c', '--cont',
-            help=('overwrite POSCAR and VIBROCC with POSCAR_OUT and '
-                  'VIBROCC_OUT from the OUT folder, if present.'),
-            action='store_true'
+            '-a', '--archive',
+            help=('Store last run in history. Overwrite PARAMETERS, POSCAR &'
+                  'VIBROCC from OUT. Runs after viperleed.calc by default.'),
+            action='store_const',
+            const=BookkeeperMode.ARCHIVE,
+            )
+        what_next.add_argument(
+            '-c', '--clear',
+            help=('Clear the input directory and add last run to history if not'
+                  ' already there. Runs before viperleed.calc by default.'),
+            action='store_const',
+            const=BookkeeperMode.CLEAR,
             )
         what_next.add_argument(
             '-d', '--discard',
-            help=('discard all results from the last run, as if it had '
-                  'not happened, and do not add anything to history or '
-                  'history.info. Note that this will not necessarily '
-                  'restore modified input files in the main folder.'),
-            action='store_true',
+            help=('Discard all results from the last run, and restore the '
+                  'previous inputs. The discarded run is kept in history.'),
+            action='store_const',
+            const=BookkeeperMode.DISCARD,
+            )
+        what_next.add_argument(
+            '-df', '--discard-full',
+            help=('Discard all results from the last run as if it never '
+                  'happened. The discarded run is removed from history.'),
+            action='store_const',
+            const=BookkeeperMode.DISCARD_FULL,
             )
         parser.add_argument(
             '-j', '--job-name',
