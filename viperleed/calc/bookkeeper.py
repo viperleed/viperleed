@@ -13,6 +13,7 @@ from collections import defaultdict
 from enum import Enum
 from operator import attrgetter
 from pathlib import Path
+import logging
 import re
 import shutil
 import time
@@ -25,6 +26,8 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.cli_base import ViPErLEEDCLI
+
+logger = logging.getLogger(__name__)
 
 _CALC_LOG_PREFIXES = (
     LOG_PREFIX,
