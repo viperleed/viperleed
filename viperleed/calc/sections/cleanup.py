@@ -220,6 +220,15 @@ def _organize_supp_out(path, outfiles):
     out_path = path / _DEFAULT_OUT
     _copy_files_and_directories(outfiles, (), path, out_path)
 
+    # Rename OUT/PARAMETERS to OUT/PARAMETERS_OUT for naming consistency
+    parameters_path = out_path / "PARAMETERS"
+    parameters_out_path = out_path / "PARAMETERS_OUT"
+    try:
+        parameters_path.rename(parameters_out_path)
+    except OSError:
+        logger.error(f"Error renaming {_DEFAULT_OUT}/PARAMETERS to "
+                     f"{_DEFAULT_OUT}/PARAMETERS_OUT.", exc_info=True)
+
 
 def _copy_files_and_directories(filelist, directory_list, origin, target):
     """Helper function for copying files and directories to SUPP and OUT."""
