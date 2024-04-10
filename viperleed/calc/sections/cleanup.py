@@ -72,7 +72,6 @@ _OUT_FILES = (
     "FD_Optimization.pdf",
     "FITBEAMS_norm.csv",
     "FITBEAMS.csv",
-    "PARAMETERS",
     "PatternInfo.tlm",
     "refcalc-amp.out",
     "Rfactor_analysis_refcalc.pdf",
@@ -122,16 +121,22 @@ def prerun_clean(rp, logname=""):
             shutil.rmtree(os.path.join(".", DEFAULT_WORK_HISTORY))
         except Exception:
             logger.warning(f"Failed to clear {DEFAULT_WORK_HISTORY} folder.")
-    # get rid of old POSCAR_OUT, VIBROCC_OUT, PARAMETERS and R_OUT files:
-    for d in [".", os.path.join(".", "OUT")]:
-        if os.path.isdir(d):
-            for s in ["POSCAR_OUT", "VIBROCC_OUT", "PARAMETERS", "R_OUT"]:
-                for file in [fn for fn in os.listdir(d) if fn.startswith(s)]:
-                    try:
-                        os.remove(os.path.join(d, file))
-                    except Exception:
-                        logger.debug("Failed to delete file {}"
-                                     .format(os.path.join(d, file)))
+
+    # remove old SUPP and OUT directories in work
+    for dir in [_DEFAULT_SUPP, _DEFAULT_OUT]:
+        try:
+            shutil.rmtree(rp.workdir / dir)
+        except Exception:
+            logger.warning(f"Failed to clear work/{dir} folder.")
+
+    # get rid of old POSCAR_OUT, VIBROCC_OUT, PARAMETERS_OUT and any R_OUT files:
+    old_out_files = rp.workdir.glob('*_OUT*')
+    for file in old_out_files:
+        try:
+            os.remove(file)
+        except Exception:
+            logger.warning(f"Failed to delete previous {file} file.")
+
     # clean up old executable files:
     for fn in ["refcalc", "rfactor", "search", "superpos"]:
         p = re.compile(fn+r'-\d{6}-\d{6}')
@@ -141,6 +146,7 @@ def prerun_clean(rp, logname=""):
                 os.remove(file)
             except Exception:
                 logger.debug(f"Failed to delete file {file}")
+
     # see if there are old logfiles
     old_logs = [f for f in os.listdir() if os.path.isfile(f) and
                f.endswith(".log") and f != logname]
@@ -188,40 +194,40 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     None.
     """
     # outfiles with variable names:
-    path = Path(workdir)
-    outfiles = set(path / f for f in _OUT_FILES)
-    for pattern in ("POSCAR_OUT*", "VIBROCC_OUT*", "R_OUT*"):
-        outfiles.update(path.glob(pattern))
+    work_path = Path(workdir)
 
-    _collect_deltas(tensor_index, path)
-    _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
+    _collect_deltas(tensor_index, work_path)
+    _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, work_path,
                             compression_level)
-    _organize_supp_out(path, outfiles)
+    _organize_supp_out(work_path)
 
-def _organize_supp_out(path, outfiles):
+def _organize_supp_out(work_path):
     """Helper function for organizing SUPP and OUT directories."""
     # SUPP
-    supp_path = path / _DEFAULT_SUPP
+    supp_path = work_path / _DEFAULT_SUPP
 
-    files_to_copy = set(path / f for f in _SUPP_FILES)
+    files_to_copy = set(work_path / f for f in _SUPP_FILES)
     # move directories original_inputs and compile_logs to SUPP
-    directories_to_copy = (path / d for d in _SUPP_DIRS)
+    directories_to_copy = (work_path / d for d in _SUPP_DIRS)
     # Also add log files into SUPP: skip calc logs (they go to
     # main dir), and compile logs (they go to compile_logs dir)
-    logs_to_supp = (f for f in path.glob("*.log")
+    logs_to_supp = (f for f in work_path.glob("*.log")
                     if (not f.name.startswith(LOG_PREFIX)
                         and "compile" not in f.name))
     files_to_copy.update(logs_to_supp)
 
-    _copy_files_and_directories(files_to_copy, directories_to_copy, path,
+    _copy_files_and_directories(files_to_copy, directories_to_copy, work_path,
                                 supp_path)
 
     # OUT
-    out_path = path / _DEFAULT_OUT
-    _copy_files_and_directories(outfiles, (), path, out_path)
+    out_path = work_path / _DEFAULT_OUT
+    out_files = set(work_path / f for f in _OUT_FILES)
+    # add POSCAR_OUT, VIBROCC_OUT, PARAMETERS_OUT & any R_OUT files
+    out_files.update(work_path.glob("_OUT*"))
+    _copy_files_and_directories(out_files, (), work_path, out_path)
 
     # Rename OUT/PARAMETERS to OUT/PARAMETERS_OUT for naming consistency
-    parameters_path = out_path / "PARAMETERS"
+    parameters_path = Path("PARAMETERS")
     parameters_out_path = out_path / "PARAMETERS_OUT"
     try:
         parameters_path.rename(parameters_out_path)
