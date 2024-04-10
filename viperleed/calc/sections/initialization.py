@@ -56,6 +56,9 @@ def initialization(sl, rp, subdomain=False):
         rp.try_loading_expbeams_file()
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
+    # preserve unmodified input files to original_inputs directory
+    _preserve_original_input(rp)
+
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
         init_domains(rp)
         return
@@ -379,8 +382,6 @@ def initialization(sl, rp, subdomain=False):
     # Create directory compile_logs in which logs from compilation will be saved
     make_compile_logs_dir(rp)
 
-    # At the end of initialization preserve the original input files
-    _preserve_original_input(rp, logger)
     return
 
 
@@ -704,10 +705,9 @@ def init_domains(rp):
         rp.RUN.remove(4)
 
 
-def _preserve_original_input(rp, init_logger, path=""):
+def _preserve_original_input(rp):
     """Create original_inputs directory and copies the input files there."""
-    path = Path(path)
-    orig_inputs_path = path / ORIGINAL_INPUTS_DIR_NAME
+    orig_inputs_path = rp.workdir / ORIGINAL_INPUTS_DIR_NAME
     try:
         orig_inputs_path.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
@@ -725,18 +725,18 @@ def _preserve_original_input(rp, init_logger, path=""):
     # copy all files to orig_inputs that were used as original input
     for file in files_to_preserve:
         # save under name EXPBEAMS.csv
-        file_path = path / file
+        file_path = rp.inputs_dir / file
         if not file_path.is_file():
-            init_logger.warning(f"Could not find file {file}. "
-                                    "It will not be stored in "
-                                    f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            logger.warning(f"Could not find file {file}. "
+                            "It will not be stored in "
+                            f"{ORIGINAL_INPUTS_DIR_NAME}.")
             rp.setHaltingLevel(1)
             return
         try:
             shutil.copy2(file_path, orig_inputs_path)
         except OSError:
-            init_logger.warning(f"Could not copy file {file} to "
-                                f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            logger.warning(f"Could not copy file {file} to "
+                           f"{ORIGINAL_INPUTS_DIR_NAME}.")
             rp.setHaltingLevel(1)
 
 
