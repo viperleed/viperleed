@@ -39,16 +39,16 @@ _SUPP_FILES = (
     "EEASISSS-log.txt",
     "muftin.f",
     "Phaseshifts_plots.pdf",
-    "POSCAR_bulk",
     "POSCAR_bulk_appended",
+    "POSCAR_bulk",
     "POSCAR_mincell",
     "POSCAR_oricell",
     "POSCAR_vacuum_corrected",
     "refcalc-FIN",
     "refcalc-PARAM",
     "restrict.f",
-    "rfactor-WEXPEL",
     "rfactor-PARAM",
+    "rfactor-WEXPEL",
     "search-PARAM",
     "search-rf.info",
     "search.steu",
@@ -60,18 +60,33 @@ _SUPP_FILES = (
 _SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
 
 # files to go in OUT
-_OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
-             "PatternInfo.tlm", "SD.TL", "refcalc-fd.out", "refcalc-amp.out",
-             "Rfactor_plots_refcalc.pdf", "control.chem",
-             "Search-progress.pdf", "Search-progress.csv",
-             "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",
-             "superpos-spec.out", "Rfactor_plots_superpos.pdf",
-             "Rfactor_analysis_refcalc.pdf",
-             "Rfactor_analysis_superpos.pdf",
-             "Errors_summary.csv", "Errors.zip", "Errors.pdf",
-             "FD_Optimization.csv", "FD_Optimization.pdf",
-             "FD_Optimization_beams.pdf", "Complex_amplitudes_imag.csv",
-             "Complex_amplitudes_real.csv")
+_OUT_FILES = (
+    "Complex_amplitudes_imag.csv",
+    "Complex_amplitudes_real.csv"
+    "control.chem",
+    "Errors_summary.csv",
+    "Errors.pdf",
+    "Errors.zip",
+    "FD_Optimization_beams.pdf",
+    "FD_Optimization.csv",
+    "FD_Optimization.pdf",
+    "FITBEAMS_norm.csv",
+    "FITBEAMS.csv",
+    "PatternInfo.tlm",
+    "refcalc-amp.out",
+    "Rfactor_analysis_refcalc.pdf",
+    "Rfactor_analysis_superpos.pdf",
+    "Rfactor_plots_refcalc.pdf",
+    "Rfactor_plots_superpos.pdf",
+    "SD.TL", "refcalc-fd.out",
+    "Search-progress.csv",
+    "Search-progress.pdf",
+    "Search-report.pdf",
+    "superpos-spec.out",
+    "THEOBEAMS_norm.csv",
+    "THEOBEAMS.csv",
+    "THEOBEAMS.pdf",
+    )
 
 # Label given to workhistory folders when cleaning up stray remains
 # from previous viperleed.calc executions from the work directory
@@ -173,7 +188,7 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     """
     # outfiles with variable names:
     path = Path(workdir)
-    outfiles = set(path / f for f in _OUTFILES)
+    outfiles = set(path / f for f in _OUT_FILES)
     for pattern in ("POSCAR_OUT*", "VIBROCC_OUT*", "R_OUT*"):
         outfiles.update(path.glob(pattern))
 
@@ -388,7 +403,7 @@ def move_oldruns(rp, prerun=False):
                              compression_level=rp.ZIP_COMPRESSION_LEVEL)
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
-                    (f.endswith(".log") or f in _OUTFILES or f in _SUPP_FILES)
+                    (f.endswith(".log") or f in _OUT_FILES or f in _SUPP_FILES)
                     and f not in rp.manifest and f not in iofiles]
         dirlist = ["SUPP", "OUT"]
     else:
