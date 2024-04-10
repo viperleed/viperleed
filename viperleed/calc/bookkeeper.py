@@ -569,7 +569,7 @@ def _translate_timestamp(time_stamp):
 def _workhistory_has_dirs_to_move(work_history_path):
     """Return whether work_history_path contains any directory worth moving."""
     work_history_dirs = _get_current_workhistory_directories(work_history_path)
-    return any(work_history_dirs)
+    return work_history_path.is_dir() and any(work_history_dirs)
 
 
 def bookkeeper(mode,
