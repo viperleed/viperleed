@@ -17,7 +17,6 @@ import subprocess
 
 import numpy as np
 
-from viperleed.calc import DEFAULT_WORK
 from viperleed.calc.files import iorfactor
 from viperleed.calc.files import iotensors
 from viperleed.calc.files.iorefcalc import readFdOut
@@ -77,7 +76,7 @@ def _fetch_and_check_spectra(rp, index, name):
     directory = None
     path = None
     if fn.is_file():
-        directory = DEFAULT_WORK
+        directory = rp.workdir.name
         path = fn
     elif ("OUT" / fn).is_file():
         directory = "OUT"
