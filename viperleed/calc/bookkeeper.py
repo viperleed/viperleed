@@ -590,9 +590,9 @@ def bookkeeper(mode,
     # and the highest run number currently stored for each tensor in
     # history_path
     tensor_number = leedbase.getMaxTensorIndex(home=cwd, zip_only=True)
-    max_nums = _find_max_run_per_tensor(history_path)
+    max_job_for_tensor = _find_max_run_per_tensor(history_path)
 
-    if tensor_number not in max_nums and mode.discard:
+    if tensor_number not in max_job_for_tensor and mode.discard:
         # New Tensor to be discarded.
         _discard_tensors_and_deltas(cwd, tensor_number)
 
@@ -603,7 +603,7 @@ def bookkeeper(mode,
     tensor_dir = _create_new_history_directory(
         history_path,
         tensor_number,
-        job_num=max_nums[tensor_number] + 1,
+        job_num=max_job_for_tensor[tensor_number] + 1,
         suffix=old_timestamp + ('' if job_name is None else f'_{job_name}'),
         should_mkdir=not mode.discard
         )
@@ -621,7 +621,7 @@ def bookkeeper(mode,
     tensor_nums = _move_and_cleanup_workhistory(work_history_path,
                                                 history_path,
                                                 old_timestamp,
-                                                max_nums,
+                                                max_job_for_tensor,
                                                 mode.discard)
     tensor_nums.add(tensor_number)
 
@@ -629,7 +629,7 @@ def bookkeeper(mode,
         _add_entry_to_history_info_file(
             cwd,
             tensor_nums,
-            [max_nums[tensor] + 1 for tensor in tensor_nums],
+            [max_job_for_tensor[tensor] + 1 for tensor in tensor_nums],
             job_name,
             last_log_lines,
             old_timestamp,
