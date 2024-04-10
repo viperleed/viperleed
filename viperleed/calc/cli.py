@@ -67,7 +67,8 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             exit_code = run_calc(
                 system_name=args.name,
                 source=args.tensorleed,
-                preset_params=presets
+                preset_params=presets,
+                inputs_dir=cwd,
                 )
         finally:
             # Copy back everything listed in manifest, then go back
