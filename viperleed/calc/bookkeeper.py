@@ -38,6 +38,7 @@ HIST_FOLDER_RE = re.compile(
     )
 _HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
 
+STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 
 class BookkeeperMode(Enum):
     """Enumeration of bookkeeper modes.
@@ -66,6 +67,14 @@ class BookkeeperMode(Enum):
     def discard(self):
         """Return whether this is mode DISCARD."""
         return self is BookkeeperMode.DISCARD
+
+
+def _rename_state_files_to_ori(path):
+    """Renames the state files in `path` to include '_ori' in their name."""
+    for file in STATE_FILES:
+        if not (path / file).is_file():
+            logger.error(f'No {file} file in {path}.')
+        os.rename(path / file, path / f'{file}_ori')
 
 
 def store_input_files_to_history(root_path, history_path):
