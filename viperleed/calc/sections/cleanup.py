@@ -183,49 +183,59 @@ def organize_workdir(tensor_index, delete_unzipped=False,
     _organize_supp_out(path, outfiles)
 
 def _organize_supp_out(path, outfiles):
-    # sort SUPP and OUT files:
-    for folder in [_DEFAULT_SUPP, _DEFAULT_OUT]:
-        out_path = path / folder
-        try:
-            out_path.mkdir(parents=True)
-        except FileExistsError:
-            pass
-        except OSError:
-            logger.error(f"Error creating {folder} folder: ", exc_info=True)
+    """Helper function for organizing SUPP and OUT directories."""
+    # SUPP
+    supp_path = path / _DEFAULT_SUPP
+
+    files_to_copy = set(path / f for f in _SUPP_FILES)
+    # move directories original_inputs and compile_logs to SUPP
+    directories_to_copy = (path / d for d in _SUPP_DIRS)
+    # Also add log files into SUPP: skip calc logs (they go to
+    # main dir), and compile logs (they go to compile_logs dir)
+    logs_to_supp = (f for f in path.glob("*.log")
+                    if (not f.name.startswith(LOG_PREFIX)
+                        and "compile" not in f.name))
+    files_to_copy.update(logs_to_supp)
+
+    _copy_files_and_directories(files_to_copy, directories_to_copy, path,
+                                supp_path)
+
+    # OUT
+    out_path = path / _DEFAULT_OUT
+    _copy_files_and_directories(outfiles, (), path, out_path)
+
+
+def _copy_files_and_directories(filelist, directory_list, origin, target):
+    """Helper function for copying files and directories to SUPP and OUT."""
+    folder = target.name  # SUPP or OUT
+    # Create the directory
+    try:
+        target.mkdir(parents=True)
+    except FileExistsError:
+        pass
+    except OSError:
+        logger.error(f"Error creating {folder} folder: ", exc_info=True)
+        return
+
+    # Copy files and directories
+    for file in filelist:
+        if not file.is_file():
             continue
+        # copies files into SUPP and OUT directories
+        try:
+            shutil.copy2(file, target / file.name)
+        except OSError:
+            logger.error(f"Error moving {folder} file {file.name}: ",
+                            exc_info=True)
 
-        if folder == _DEFAULT_SUPP:
-            filelist = set(path / f for f in _SUPP_FILES)
-            # move directories original_inputs and compile_logs to SUPP
-            directory_list = (path / d for d in _SUPP_DIRS)
-            # Also add log files into SUPP: skip calc logs (they go to
-            # main dir), and compile logs (they go to compile_logs dir)
-            logs_to_supp = (f for f in path.glob("*.log")
-                            if (not f.name.startswith(LOG_PREFIX)
-                                and "compile" not in f.name))
-            filelist.update(logs_to_supp)
-        else:
-            filelist = outfiles
-            directory_list = ()
-
-        for file in filelist:
-            if not file.is_file():
-                continue
-            # copies files into SUPP and OUT directories
-            try:
-                shutil.copy2(file, out_path / file.name)
-            except OSError:
-                logger.error(f"Error moving {folder} file {file.name}: ",
-                             exc_info=True)
-
-        for _dir in directory_list:
-            if not _dir.is_dir():
-                continue
-            try:
-                copytree_exists_ok(_dir, out_path / _dir.name)
-            except OSError:
-                logger.error(f"Error moving {folder} directory {_dir.name}: ",
-                             exc_info=True)
+    for _dir in directory_list:
+        if not _dir.is_dir():
+            continue
+        try:
+            copytree_exists_ok(_dir, target / _dir.name)
+        except OSError:
+            logger.error(f"Error moving {folder} directory {_dir.name}: ",
+                            exc_info=True)
 
 
 def _zip_deltas_and_tensors(delete_unzipped, tensors, deltas, path,
