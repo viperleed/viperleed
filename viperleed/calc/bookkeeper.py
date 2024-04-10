@@ -35,6 +35,7 @@ _CALC_LOG_PREFIXES = (
 HIST_FOLDER_RE = re.compile(
     r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
     )
+_HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
 
 
 class BookkeeperMode(Enum):
@@ -89,6 +90,66 @@ def store_input_files_to_history(root_path, history_path):
             shutil.copy2(file, history_path/file.name)
         except OSError as exc:
             print(f'Failed to copy file {file} to history: {exc}')
+
+
+# While there are indeed many arguments to this function, packing them
+# up into a dedicated dataclass seems a bit overkill. Appropriately
+# documenting them should be enough.
+# pylint: disable-next=too-many-arguments
+def _add_entry_to_history_info_file(cwd, tensor_nums, job_nums, job_name,
+                                    last_log_lines, timestamp, dirname):
+    """Add information about the current run to history.info.
+
+    Parameters
+    ----------
+    cwd : Path
+        The current directory, containing history.info
+        and the optional notes files.
+    tensor_nums : Sequence of int
+        The progressive numbers of the tensors that were used
+        or created during this run (and were moved to history).
+    job_nums : Sequence of int
+        The new job numbers for the current run (one per tensor).
+    job_name : str
+        Alternative name, typically given by the user as
+        a command-line argument.
+    last_log_lines : Sequence of str
+        The lines read from the most recent viperleed.calc
+        log file.
+    timestamp : str
+        The time-stamp for this run. Typically derived
+        from the name of the viperleed.calc log file.
+    dirname : str
+        The name of the new history directory that was
+        created during this bookkeeper run.
+
+    Returns
+    -------
+    None.
+    """
+    history_info = cwd / 'history.info'
+    contents = [] if not history_info.is_file() else ['', '']
+    contents.append(
+        '# TENSORS '.ljust(_HISTORY_INFO_SPACING)
+        + ('None' if tensor_nums == {0} else str(tensor_nums)[1:-1])            # TODO: perhaps we should sort the tensor numbers?
+        )
+    contents.append('# JOB ID '.ljust(_HISTORY_INFO_SPACING)
+                    + str(job_nums)[1:-1])                                      # TODO: perhaps we should sort the job numbers?
+    if job_name is not None:
+        contents.append(f'# JOB NAME {job_name}')
+    contents.extend(_infer_run_info_from_log(last_log_lines))
+    contents.append(
+        '# TIME '.ljust(_HISTORY_INFO_SPACING)
+        + f'{_translate_timestamp(timestamp)}'
+        )
+    contents.append('# FOLDER '.ljust(_HISTORY_INFO_SPACING) + f'{dirname}')
+    contents.append(f'Notes: {_read_and_clear_notes_file(cwd)}')
+    contents.append('\n###########')
+    try:  # pylint: disable=too-many-try-statements
+        with history_info.open('a', encoding='utf-8') as hist_info_file:
+            hist_info_file.write('\n'.join(contents))
+    except OSError:
+        print('Error: Failed to append to history.info file.')
 
 
 def _collect_log_files(cwd):
@@ -208,6 +269,41 @@ def _find_max_run_per_tensor(history_path):
         job_num = int(match['job_num'])
         max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
     return max_nums
+
+
+def _infer_run_info_from_log(last_log_lines):
+    """Yield history.info lines about executed segments and R-factors."""
+    if not last_log_lines:
+        return
+    for i, line in enumerate(reversed(last_log_lines)):
+        # try to read what was executed
+        if line.startswith('Executed segments: '):
+            run_info = line.split('Executed segments: ')[1].strip()
+            yield '# RUN '.ljust(_HISTORY_INFO_SPACING) + run_info
+            break
+    else:
+        return
+
+    # Now try to read final R-factors
+    _section_to_shorhand = {
+        'refcalc': 'REF',
+        'superpos': 'SUPER',
+        }
+    for j, line in enumerate(reversed(last_log_lines)):
+        if not line.startswith('Final R'):
+            continue
+        if j >= i:  # R factors are after the segments
+            return
+        try:
+            shorthand = next(
+                short
+                for section, short in _section_to_shorhand.items()
+                if section in line
+                )
+        except StopIteration:
+            continue
+        yield (f'# R {shorthand} '.ljust(_HISTORY_INFO_SPACING)
+               + line.split(':', maxsplit=1)[1].strip())
 
 
 def _move_and_cleanup_workhistory(work_history_path,
@@ -347,6 +443,25 @@ def _move_workhistory_folders(work_history_path, history_path,
         except OSError:
             print(f'Error: Failed to move {directory}.')
     return tensor_nums
+
+
+def _read_and_clear_notes_file(cwd):
+    """Return notes read from file. Clear the file contents."""
+    notes_path = next(cwd.glob('notes*'), None)
+    if notes_path is None:
+        return ''
+    try:
+        notes = notes_path.read_text(encoding='utf-8')
+    except OSError:
+        print(f'Error: Failed to read {notes_path.name} file.')
+        return ''
+    try:  # pylint: disable=too-many-try-statements
+        with notes_path.open('w', encoding='utf-8'):
+            pass
+    except OSError:
+        print(f'Error: Failed to clear the {notes_path.name} '
+              'file after reading.')
+    return notes
 
 
 def _read_most_recent_log(cwd):
@@ -512,79 +627,16 @@ def bookkeeper(mode,
                                                 _mode.discard)
     tensor_nums.add(tensor_number)
 
-    if _mode.discard:  # all done
-        return 0
-    job_nums = []
-    for tensor_number in tensor_nums:
-        if tensor_number not in max_nums:
-            job_nums.append(1)
-        else:
-            job_nums.append(max_nums[tensor_number] + 1)
-    # look for notes file
-    notes_name = ""
-    notes = ""
-    for fn in ("notes", "notes.txt"):
-        if os.path.isfile(fn):
-            notes_name = fn
-            break
-    if notes_name:
-        try:
-            with open(notes_name, 'r') as read_file:
-                notes = read_file.read()
-        except Exception:
-            print(f"Error: Failed to read {notes_name} file.")
-    if notes:
-        try:
-            with open(notes_name, 'w'):
-                pass
-        except Exception:
-            print(f"Error: Failed to clear the {notes_name} file after "
-                  "reading.")
-    # write history.info
-    spacing = 12
-    hist = ""
-    if os.path.isfile("history.info"):
-        hist += "\n\n"
-    if tensor_nums == {0}:
-        hist += "# TENSORS ".ljust(spacing) + "None\n"
-    else:
-        hist += "# TENSORS ".ljust(spacing) + str(tensor_nums)[1:-1] + "\n"
-    hist += "# JOB ID ".ljust(spacing) + str(job_nums)[1:-1] + "\n"
-    if job_name is not None:
-        hist += f"# JOB NAME {job_name} \n"
-    if len(last_log_lines) > 0:
-        # try to read what was executed
-        run_info = ""
-        i = len(last_log_lines) - 1
-        while i > 0:
-            if last_log_lines[i].startswith("Executed segments: "):
-                run_info = (last_log_lines[i].split("Executed segments: ")[1]
-                           .strip())
-                break
-            i -= 1
-        if run_info:
-            hist += "# RUN ".ljust(spacing) + run_info + "\n"
-        # now try to read final R-factors
-        for j in range(i+1, len(last_log_lines)):
-            line = last_log_lines[j]
-            if line.startswith("Final R"):
-                r_fac_line = ""
-                if "refcalc" in line:
-                    r_fac_line = "# R REF ".ljust(spacing)
-                elif "superpos" in line:
-                    r_fac_line = "# R SUPER ".ljust(spacing)
-                if r_fac_line:
-                    hist += r_fac_line + line.split(":", maxsplit=1)[1].strip() + "\n"
-
-    hist += "# TIME ".ljust(spacing) + f"{_translate_timestamp(old_timestamp)} \n"
-    hist += "# FOLDER ".ljust(spacing) + f"{tensor_dir.name} \n"
-    hist += f"Notes: {notes}\n"
-    hist += "\n###########\n"
-    try:
-        with open("history.info", "a") as hist_info_file:
-            hist_info_file.write(hist)
-    except Exception:
-        print("Error: Failed to append to history.info file.")
+    if not _mode.discard:  # write history.info, including notes
+        _add_entry_to_history_info_file(
+            cwd,
+            tensor_nums,
+            [max_nums[tensor] + 1 for tensor in tensor_nums],
+            job_name,
+            last_log_lines,
+            old_timestamp,
+            tensor_dir.name
+            )
     return 0
 
 
