@@ -643,17 +643,17 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     try:
         for tf in [f for f in os.listdir('.') if f.startswith("T_")]:
             shutil.move(tf, os.path.join(".", "Tensors", dn, tf))
-    except Exception:
+    except OSError:
         logger.error("Error moving Tensor files: ")
         raise
-    tInputFiles = ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS",
+    tensor_input_files = ["POSCAR", "PARAMETERS", "VIBROCC", "IVBEAMS",
                    "PHASESHIFTS"]
-    for f in [f for f in tInputFiles if f in os.listdir('.')]:
+    for f in [f for f in tensor_input_files if f in os.listdir('.')]:
         of = f
-        for fn in ["POSCAR", "VIBROCC"]:
+        for fn in ["POSCAR", "VIBROCC", "PARAMETERS"]:
             if (f == fn and 3 in rp.runHistory
-                    and os.path.isfile(fn + "_OUT_" + rp.timestamp)):
-                of = fn + "_OUT_" + rp.timestamp
+                    and os.path.isfile(fn + "_OUT")):
+                of = fn + "_OUT"
         try:
             shutil.copy2(of, os.path.join("Tensors", dn, f))
         except Exception:
@@ -664,12 +664,6 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                      os.path.join("Tensors", dn, "refcalc-fd.out"))
     except Exception:
         logger.warning("Failed to copy refcalc-fd.out to Tensors folder.")
-    # modify PARAMETERS to contain the energies and LMAX that were really used
-    if os.path.isfile(os.path.join("Tensors", dn, "PARAMETERS")):
-        parameters.modify(rp, "THEO_ENERGIES",
-                          path=os.path.join("Tensors", dn))
-        parameters.modify(rp, "LMAX",
-                          path=os.path.join("Tensors", dn))
 
     # remove references to Deltas from old tensors
     _reinitialize_deltas(rp, sl)
