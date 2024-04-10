@@ -18,7 +18,6 @@ import shutil
 import time
 
 from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
@@ -65,14 +64,13 @@ def store_input_files_to_history(root_path, history_path):
     Parameters
     ----------
     root_path : pathlike
-        Root directory from which to take files. Should be cwd,
-        not ./work.
+        Root directory from which to take files. Should be cwd.
     history_path : pathlike
         Path to the history directory in which the files should
         be stored.
     """
     root_path, history_path = Path(root_path), Path(history_path)
-    original_inputs_path = root_path / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME  # TODO: we should use root_path / 'SUPP' / ORIGINAL_INPUTS_DIR_NAME instead! bookkeeper should not access the work directory (which may have a different name, or not be in root at all!)
+    original_inputs_path = root_path / 'SUPP' / ORIGINAL_INPUTS_DIR_NAME
     if original_inputs_path.is_dir():
         input_origin_path = original_inputs_path
     else:
