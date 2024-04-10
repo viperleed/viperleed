@@ -561,9 +561,7 @@ def bookkeeper(mode,
         If creation of the history folder or any of the subfolders
         where results are to be stored fails.
     """
-
-    # convert mode to enum if necessary
-    _mode = BookkeeperMode(mode)
+    mode = BookkeeperMode(mode)
 
     # Get paths for history and workhistory
     cwd = Path.cwd()
@@ -594,7 +592,7 @@ def bookkeeper(mode,
     tensor_number = leedbase.getMaxTensorIndex(home=cwd, zip_only=True)
     max_nums = _find_max_run_per_tensor(history_path)
 
-    if tensor_number not in max_nums and _mode.discard:
+    if tensor_number not in max_nums and mode.discard:
         # New Tensor to be discarded.
         _discard_tensors_and_deltas(cwd, tensor_number)
 
@@ -607,7 +605,7 @@ def bookkeeper(mode,
         tensor_number,
         job_num=max_nums[tensor_number] + 1,
         suffix=old_timestamp + ('' if job_name is None else f'_{job_name}'),
-        should_mkdir=not _mode.discard
+        should_mkdir=not mode.discard
         )
     if not mode.discard:
         store_input_files_to_history(cwd, tensor_dir)
@@ -618,16 +616,16 @@ def bookkeeper(mode,
     # Move (or discard) old stuff: files go to main history, logs go
     # to SUPP (except main viperleed-calc log); collect also folders
     # from workhistory
-    _move_or_discard_files(files_to_move, tensor_dir, _mode.discard)
-    _move_or_discard_files(logs_to_move, tensor_dir/'SUPP', _mode.discard)
+    _move_or_discard_files(files_to_move, tensor_dir, mode.discard)
+    _move_or_discard_files(logs_to_move, tensor_dir/'SUPP', mode.discard)
     tensor_nums = _move_and_cleanup_workhistory(work_history_path,
                                                 history_path,
                                                 old_timestamp,
                                                 max_nums,
-                                                _mode.discard)
+                                                mode.discard)
     tensor_nums.add(tensor_number)
 
-    if not _mode.discard:  # write history.info, including notes
+    if not mode.discard:  # write history.info, including notes
         _add_entry_to_history_info_file(
             cwd,
             tensor_nums,
