@@ -57,7 +57,9 @@ def initialization(sl, rp, subdomain=False):
     rp.initTheoEnergies()  # may be initialized based on exp. beams
 
     # preserve unmodified input files to original_inputs directory
-    _preserve_original_input(rp)
+    if not subdomain:
+        rp.inputs_dir = rp.workdir / ORIGINAL_INPUTS_DIR_NAME
+        _preserve_original_input(rp, origin_dir=Path.cwd().resolve())
 
     if (rp.DOMAINS or rp.domainParams) and not subdomain:
         init_domains(rp)
@@ -484,9 +486,15 @@ def init_domains(rp):
                 dp.sl = poscar.read()
                 dp.rp = parameters.read()                                       # NB: if we are running from stored Tensors, then these parameters will be stored versions, not current PARAMETERS from Domain directory
                 warn_if_slab_has_atoms_in_multiple_c_cells(dp.sl, dp.rp, name)
+                dp.rp.inputs_dir = Path.cwd().resolve()
                 dp.rp.workdir = home
                 dp.rp.source_dir = rp.source_dir
                 dp.rp.timestamp = rp.timestamp
+
+                # run _preserve_original_input separately for each domain
+                dp.rp.inputs_dir = dp.rp.workdir / ORIGINAL_INPUTS_DIR_NAME / name
+                _preserve_original_input(dp.rp, origin_dir=Path.cwd().resolve())
+
                 parameters.interpret(dp.rp, slab=dp.sl,
                                      silent=rp.LOG_LEVEL > logging.DEBUG)
                 dp.sl.full_update(dp.rp)
@@ -515,6 +523,7 @@ def init_domains(rp):
                              f"PARAMETERS for domain {name}")
                 raise
             logger.info(f"Running initialization for domain {name}")
+
             try:
                 initialization(dp.sl, dp.rp, subdomain=True)
             except Exception:
@@ -705,11 +714,11 @@ def init_domains(rp):
         rp.RUN.remove(4)
 
 
-def _preserve_original_input(rp):
+def _preserve_original_input(rp, origin_dir):
     """Create original_inputs directory and copies the input files there."""
-    orig_inputs_path = rp.workdir / ORIGINAL_INPUTS_DIR_NAME
+
     try:
-        orig_inputs_path.mkdir(parents=True, exist_ok=True)
+        rp.inputs_dir.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
         raise RuntimeError(f"Could not create directory "
                            f"{ORIGINAL_INPUTS_DIR_NAME}. "
@@ -725,7 +734,7 @@ def _preserve_original_input(rp):
     # copy all files to orig_inputs that were used as original input
     for file in files_to_preserve:
         # save under name EXPBEAMS.csv
-        file_path = rp.inputs_dir / file
+        file_path = origin_dir / file
         if not file_path.is_file():
             logger.warning(f"Could not find file {file}. "
                             "It will not be stored in "
@@ -733,7 +742,7 @@ def _preserve_original_input(rp):
             rp.setHaltingLevel(1)
             return
         try:
-            shutil.copy2(file_path, orig_inputs_path)
+            shutil.copy2(file_path, rp.inputs_dir)
         except OSError:
             logger.warning(f"Could not copy file {file} to "
                            f"{ORIGINAL_INPUTS_DIR_NAME}.")

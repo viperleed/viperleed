@@ -44,8 +44,7 @@ def run_calc(system_name=None,
              console_output=True,
              slab=None,
              preset_params=None,
-             source=None,
-             inputs_dir=None,):
+             source=None):
     """Run a ViPErLEED calculation.
 
     By default, a PARAMETERS and a POSCAR file are expected, but can be
@@ -189,9 +188,6 @@ def run_calc(system_name=None,
         warn_if_slab_has_atoms_in_multiple_c_cells(slab, rp)
         slab.full_update(rp)   # gets PARAMETERS data into slab
         rp.fileLoaded["POSCAR"] = True
-
-    # set input directory
-    rp.inputs_dir = inputs_dir or Path.cwd().resolve()
 
     # set source directory
     try:
