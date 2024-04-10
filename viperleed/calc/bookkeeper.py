@@ -597,14 +597,14 @@ def bookkeeper(mode,
         _discard_tensors_and_deltas(cwd, tensor_number)
 
     # Infer timestamp from log file, if possible
-    old_timestamp, last_log_lines = _read_most_recent_log(cwd)
+    timestamp, last_log_lines = _read_most_recent_log(cwd)
 
     # Get new history subfolder tensor_dir
     tensor_dir = _create_new_history_directory(
         history_path,
         tensor_number,
         job_num=max_job_for_tensor[tensor_number] + 1,
-        suffix=old_timestamp + ('' if job_name is None else f'_{job_name}'),
+        suffix=timestamp + ('' if job_name is None else f'_{job_name}'),
         should_mkdir=not mode.discard
         )
     if not mode.discard:
@@ -620,7 +620,7 @@ def bookkeeper(mode,
     _move_or_discard_files(logs_to_move, tensor_dir/'SUPP', mode.discard)
     tensor_nums = _move_and_cleanup_workhistory(work_history_path,
                                                 history_path,
-                                                old_timestamp,
+                                                timestamp,
                                                 max_job_for_tensor,
                                                 mode.discard)
     tensor_nums.add(tensor_number)
@@ -632,7 +632,7 @@ def bookkeeper(mode,
             [max_job_for_tensor[tensor] + 1 for tensor in tensor_nums],
             job_name,
             last_log_lines,
-            old_timestamp,
+            timestamp,
             tensor_dir.name
             )
     return 0
