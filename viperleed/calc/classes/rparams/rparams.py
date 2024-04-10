@@ -44,7 +44,7 @@ from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 
-from .defaults import DEFAULTS, NO_VALUE
+from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
 from .limits import PARAM_LIMITS
 from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter
@@ -53,7 +53,6 @@ from .special.base import SpecialParameter
 _LOGGER = logging.getLogger(parent_name(__name__))
 if _CAN_PLOT:
     plt.style.use('viperleed.calc')
-TENSERLEED_FOLDER_NAME = 'TensErLEED'
 
 
 class Rparams:

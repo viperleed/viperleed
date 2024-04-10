@@ -341,7 +341,7 @@ def _verify_tensorleed_path(path_):
     try:
         with_tenserleed = (
             d for d in potential_sources
-            if any(d.glob(f'{rparams.TENSERLEED_FOLDER_NAME}*'))
+            if any(d.glob(f'{rparams.defaults.TENSERLEED_FOLDER_NAME}*'))
             )
     except StopIteration:
         raise FileNotFoundError('Could not find a known tensor-LEED '
