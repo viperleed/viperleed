@@ -22,6 +22,9 @@ from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok,get_elapsed_time_str
 
+_DEFAULT_SUPP = "SUPP"
+_DEFAULT_OUT = "OUT"
+
 # files to go in SUPP
 _SUPP_FILES = (
     "AUXBEAMS",
@@ -181,7 +184,7 @@ def organize_workdir(tensor_index, delete_unzipped=False,
 
 def _organize_supp_out(path, outfiles):
     # sort SUPP and OUT files:
-    for folder in ["SUPP", "OUT"]:
+    for folder in [_DEFAULT_SUPP, _DEFAULT_OUT]:
         out_path = path / folder
         try:
             out_path.mkdir(parents=True)
@@ -191,7 +194,7 @@ def _organize_supp_out(path, outfiles):
             logger.error(f"Error creating {folder} folder: ", exc_info=True)
             continue
 
-        if folder == "SUPP":
+        if folder == _DEFAULT_SUPP:
             filelist = set(path / f for f in _SUPP_FILES)
             # move directories original_inputs and compile_logs to SUPP
             directory_list = (path / d for d in _SUPP_DIRS)
