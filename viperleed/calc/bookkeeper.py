@@ -555,24 +555,17 @@ def _read_most_recent_log(cwd):
 
 
 def _replace_input_files_from_out(cwd):
-    """Replace POSCAR and VIBROCC in cwd with those from OUT."""
+    """Move files from OUT to root, replacing the original ones."""
     out_path = cwd / 'OUT'
     if not out_path.is_dir():
         return
-    for file in ('POSCAR', 'VIBROCC'):
-        out_files = (f for f in out_path.glob(f'{file}_OUT_*')
-                     if f.is_file()
-                     and 'parabola' not in f.name)
-        try:
-            most_recent = max(out_files, key=attrgetter('name'))                # TODO: is this right? are the OUT files sorted by timestamp or by R?
-        except ValueError:  # No files
-            # Do not complain if not found, since we move
-            # previous runs to the history by default
-            continue
-        try:
-            shutil.copy2(most_recent, cwd / file)
-        except OSError:
-            print(f'Error: failed to copy {most_recent} as new {file}.')
+    for file in STATE_FILES:
+        out_file = out_path / f'{file}_OUT'
+        if out_file.is_file():
+            try:
+                shutil.copy2(out_file, cwd / file)
+            except OSError:
+                print(f'Error: failed to copy {out_file} as new {file}.')
 
 
 def _translate_timestamp(time_stamp):
