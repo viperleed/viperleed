@@ -639,14 +639,14 @@ def bookkeeper(mode,
     # Exit early if there's nothing to move:
     if (not files_to_move
             and not _workhistory_has_dirs_to_move(work_history_path)):
-        print('Bookkeeper: Found nothing to do. Exiting...')
+        logger.info('Bookkeeper: Found nothing to do. Exiting...')
         return 1
 
     # Make history folder if not there yet
     try:
         history_path.mkdir(exist_ok=True)
     except OSError:
-        print('Error creating history folder.')
+        logger.error('Error creating history folder.')
         raise
 
     # Figure out the number of the tensor (it's the most recent one)
