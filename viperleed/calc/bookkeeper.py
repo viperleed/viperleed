@@ -762,12 +762,8 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
         parsed_args = self.parse_cli_args(args)
 
         # Select mode
-        if parsed_args.cont:
-            mode = BookkeeperMode.CONT
-        elif parsed_args.discard:
-            mode = BookkeeperMode.DISCARD
-        else:   # default
-            mode = BookkeeperMode.DEFAULT
+        mode = parsed_args.what_next or BookkeeperMode.ARCHIVE
+
         return bookkeeper(mode,
                           job_name=parsed_args.job_name,
                           history_name=parsed_args.history_name,
