@@ -599,8 +599,8 @@ def bookkeeper(mode,
     # Infer timestamp from log file, if possible
     timestamp, last_log_lines = _read_most_recent_log(cwd)
 
-    # Get new history subfolder tensor_dir
-    tensor_dir = _create_new_history_directory(
+    # Get new history subfolder new_history_dir
+    new_history_dir = _create_new_history_directory(
         history_path,
         tensor_number,
         job_num=max_job_for_tensor[tensor_number] + 1,
@@ -608,7 +608,7 @@ def bookkeeper(mode,
         should_mkdir=not mode.discard
         )
     if not mode.discard:
-        store_input_files_to_history(cwd, tensor_dir)
+        store_input_files_to_history(cwd, new_history_dir)
 
     if mode is BookkeeperMode.CONT:
         _replace_input_files_from_out(cwd)
@@ -616,8 +616,8 @@ def bookkeeper(mode,
     # Move (or discard) old stuff: files go to main history, logs go
     # to SUPP (except main viperleed-calc log); collect also folders
     # from workhistory
-    _move_or_discard_files(files_to_move, tensor_dir, mode.discard)
-    _move_or_discard_files(logs_to_move, tensor_dir/'SUPP', mode.discard)
+    _move_or_discard_files(files_to_move, new_history_dir, mode.discard)
+    _move_or_discard_files(logs_to_move, new_history_dir/'SUPP', mode.discard)
     tensor_nums = _move_and_cleanup_workhistory(work_history_path,
                                                 history_path,
                                                 timestamp,
@@ -633,7 +633,7 @@ def bookkeeper(mode,
             job_name,
             last_log_lines,
             timestamp,
-            tensor_dir.name
+            new_history_dir.name
             )
     return 0
 
