@@ -233,8 +233,8 @@ class Bookkeeper():
 
     def _run_archive_mode(self):
         if self.history_dir.is_dir():
-            logger.warning(f'History folder {self.history_dir} already exists. '
-                            'Exiting without doing anything.')
+            logger.warning(f'History directory {self.history_dir.name} already '
+                           'exists. Exiting without doing anything.')
             return 1
         self._make_and_copy_to_history(use_ori=False)
 
