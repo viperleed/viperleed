@@ -877,29 +877,25 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
             '-a', '--archive',
             help=('Store last run in history. Overwrite PARAMETERS, POSCAR &'
                   'VIBROCC from OUT. Runs after viperleed.calc by default.'),
-            action='store_const',
-            const=BookkeeperMode.ARCHIVE,
+            action='store_true',
             )
         what_next.add_argument(
             '-c', '--clear',
             help=('Clear the input directory and add last run to history if not'
                   ' already there. Runs before viperleed.calc by default.'),
-            action='store_const',
-            const=BookkeeperMode.CLEAR,
+            action='store_true',
             )
         what_next.add_argument(
             '-d', '--discard',
             help=('Discard all results from the last run, and restore the '
                   'previous inputs. The discarded run is kept in history.'),
-            action='store_const',
-            const=BookkeeperMode.DISCARD,
+            action='store_true',
             )
         what_next.add_argument(
             '-df', '--discard-full',
             help=('Discard all results from the last run as if it never '
                   'happened. The discarded run is removed from history.'),
-            action='store_const',
-            const=BookkeeperMode.DISCARD_FULL,
+            action='store_true',
             )
         parser.add_argument(
             '-j', '--job-name',
@@ -931,7 +927,14 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
                                 work_history_name=parsed_args.work_history_name,
                                 cwd=Path.cwd().resolve())
         # Select mode
-        mode = parsed_args.what_next or BookkeeperMode.ARCHIVE
+        if parsed_args.clear:
+            mode = BookkeeperMode.CLEAR
+        elif parsed_args.discard:
+            mode = BookkeeperMode.DISCARD
+        elif parsed_args.discard_full:
+            mode = BookkeeperMode.DISCARD_FULL
+        else:
+            mode = BookkeeperMode.ARCHIVE
         return bookkeeper.run(mode)
 
 
