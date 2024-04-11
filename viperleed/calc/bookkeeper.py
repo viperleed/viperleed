@@ -225,8 +225,8 @@ def _create_new_history_directory(history_path, tensor_number,
         return new_history_dir
 
     if new_history_dir.is_dir():
-        suffix = suffix.replace('moved-', '')
-        dirname_moved = f'{dirname}_moved-{suffix}'
+        bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S', time.localtime())
+        dirname_moved = f'{dirname}_moved-{bookkeeper_timestamp}'
         print(f'Error: Target directory {dirname} already '
               f'exists. Will use {dirname_moved} instead.')
         new_history_dir = history_path / dirname_moved
@@ -655,7 +655,25 @@ def bookkeeper(mode,
     # Infer timestamp from log file, if possible
     timestamp, last_log_lines = _read_most_recent_log(cwd)
 
-    # Get new history subfolder new_history_dir
+    # Get new history subfolder new_history_dir. The name of the new
+    # folder has form 'tXXX.rYYY_<suffix>'. <suffix> can vary. It may
+    # be:
+    # - if there was a log file, and the folder is not
+    #   present in history:
+    #       <log_timestamp>[_<job_name>]
+    # - if there was a log file, but there is already a folder
+    #   in history with the same timestamp and job_name (typically
+    #   that means that bookkeeper was called multiple times with
+    #   the same job_name on the same run):
+    #       <log_timestamp>[_<job_name>]_moved-<bookie_timestamp>
+    # - if there was no log file:
+    #       moved-<bookie_timestamp>[_<job_name>]
+    # - in the unlikely event that the folder in the previous point
+    #   already exists (this would mean that the bookkeeper is called
+    #   twice with the same job_name within one second):
+    #       moved-<bookie_timestamp>[_<job_name>]_moved-<bookie_timestamp2>
+    #   where <bookie_timestamp2> may be slightly later than
+    #   <bookie_timestamp>, but is most likely the same.
     new_history_dir = _create_new_history_directory(
         history_path,
         tensor_number,
