@@ -723,7 +723,8 @@ def _move_or_discard_one_file(file, target_folder, discard):
 
 def _copy_log_files_to_history(cwd, history_path):
     """Copy log files to history."""
-    log_files = _collect_log_files(cwd)
+    calc_logs, other_logs = _collect_log_files(cwd)
+    log_files = calc_logs + other_logs
     for file in log_files:
         _copy_one_file_to_history(file, history_path)
 
