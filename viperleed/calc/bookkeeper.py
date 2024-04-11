@@ -398,7 +398,7 @@ class Bookkeeper():
             except OSError:
                 logger.error(f'Error: Failed to copy {name} directory to history.')
 
-    def _copy_log_files_to_history(self):
+    def copy_log_files_to_history(self):
         """Copy log files to history."""
         calc_logs, other_logs = self.cwd_logs
         log_files = calc_logs + other_logs
