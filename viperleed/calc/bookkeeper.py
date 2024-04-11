@@ -410,6 +410,7 @@ def _rename_state_files_to_ori(path):
     for file in STATE_FILES:
         if not (path / file).is_file():
             logger.error(f'No {file} file in {path}.')
+            continue
         os.rename(path / file, path / f'{file}_ori')
 
 
