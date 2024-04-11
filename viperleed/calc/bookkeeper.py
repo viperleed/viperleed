@@ -132,6 +132,40 @@ class Bookkeeper():
             suffix=self.timestamp + ('' if job_name is None else f'_{job_name}'),
         )
 
+    def _get_history_directory_name(self):
+        """Return the name of a history directory for a given run.
+
+        Folder has form 'tXXX.rYYY_<suffix>'. <suffix> can vary. It may
+        be:
+        - if there was a log file, and the folder is not
+          present in history:
+              <log_timestamp>[_<job_name>]
+        - if there was a log file, but there is already a folder
+          in history with the same timestamp and job_name (typically
+          that means that bookkeeper was called multiple times with
+          the same job_name on the same run):
+              <log_timestamp>[_<job_name>]_moved-<bookie_timestamp>
+        - if there was no log file:
+              moved-<bookie_timestamp>[_<job_name>]
+        - in the unlikely event that the folder in the previous point
+          already exists (this would mean that the bookkeeper is called
+          twice with the same job_name within one second):
+              moved-<bookie_timestamp>[_<job_name>]_moved-<bookie_timestamp2>
+          where <bookie_timestamp2> may be slightly later than
+          <bookie_timestamp>, but is most likely the same.
+        """
+        suffix = (self.timestamp +
+                  ('' if self.job_name is None else f'_{self.job_name}'))
+        dir_name = (
+            f't{self.tensor_number:03d}.r'
+            f'{self.max_job_for_tensor[self.tensor_number] + 1:03d}_{suffix}')
+        if (self.top_level_history_path / dir_name).is_dir():
+            bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S',
+                                                 time.localtime())
+            dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
+        return dir_name
+
+
     @property
     def cwd_ori_files(self):
         [self.cwd / f'{file}_ori' for file in STATE_FILES]
@@ -439,59 +473,6 @@ def _collect_supp_and_out(cwd):
     return [d for d in cwd.iterdir()
             if d.is_dir() and d.name in (DEFAULT_OUT, DEFAULT_SUPP)]
 
-
-def _create_new_history_directory(history_path, tensor_number,
-                                  job_num, suffix, should_mkdir):
-    """Return the path to a new subfolder of `history_path`.
-
-    Parameters
-    ----------
-    history_path : Path
-        Path to the history folder. The new
-        subdirectory is created here.
-    tensor_number : int
-        Progressive index of the tensor for the new subdirectory.
-    job_num : int
-        Progressive number identifying the run for `tensor_number`
-        for which the new directory is created.
-    suffix : str
-        Suffix to append to the directory name. Typically includes
-        the time-stamp and, optionally, a user-defined job name.
-    should_mkdir : bool
-        Whether the new history folder should also be created on the
-        filesystem as a new directory. If not given, only the path is
-        returned, without any check for existence.
-
-    Returns
-    -------
-    new_history_dir : Path
-        Path to the new subdirectory of `history_path`.
-
-    Raises
-    ------
-    OSError
-        If `should_mkdir` and creation of `new_history_dir` fails.
-    """
-    dirname = f't{tensor_number:03d}.r{job_num:03d}_{suffix}'
-    new_history_dir = history_path / dirname
-
-    if not should_mkdir:
-        return new_history_dir
-
-    if new_history_dir.is_dir():
-        suffix = suffix.replace('moved-', '')
-        dirname_moved = f'{dirname}_moved-{suffix}'
-        print(f'Error: Target directory {dirname} already '
-              f'exists. Will use {dirname_moved} instead.')
-        new_history_dir = history_path / dirname_moved
-    try:
-        new_history_dir.mkdir()
-    except OSError:
-        print('Error: Could not create target directory '
-              f'{new_history_dir}\n Stopping...')
-        raise
-    return new_history_dir
-
 def _create_new_history_dir(new_history_path):
     try:
         new_history_path.mkdir()
@@ -500,26 +481,6 @@ def _create_new_history_dir(new_history_path):
                      f'{new_history_path}\n Stopping...')
         raise
 
-def _get_history_directory_name(tensor_number, job_num, suffix):
-    """Return the name of a history directory for a given run.
-
-    Parameters
-    ----------
-    tensor_number : int
-        Progressive index of the tensor for the new subdirectory.
-    job_num : int
-        Progressive number identifying the run for `tensor_number`
-        for which the new directory is created.
-    suffix : str
-        Suffix to append to the directory name. Typically includes
-        the time-stamp and, optionally, a user-defined job name.
-
-    Returns
-    -------
-    dirname : str
-        The name of the new subdirectory of `history_path`.
-    """
-    return f't{tensor_number:03d}.r{job_num:03d}_{suffix}'
 
 def _discard_tensors_and_deltas(cwd, tensor_number):
     """Delete tensor and delta files with tensor_num in cwd."""
