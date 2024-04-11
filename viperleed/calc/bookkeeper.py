@@ -179,7 +179,7 @@ class Bookkeeper():
         self._deal_with_workhistory_and_history_info(discard=True)
 
         # replace input files from _ori
-        _replace_state_files_from_ori(self.cwd)
+        self.replace_state_files_from_ori()
 
         # remove OUT, SUPP and logs
         self.remove_log_files()
@@ -197,7 +197,7 @@ class Bookkeeper():
             return 1
 
         # replace input files from _ori
-        _replace_state_files_from_ori(self.cwd)
+        self.replace_state_files_from_ori()
 
         # remove OUT, SUPP and logs
         self.remove_log_files()
@@ -209,10 +209,7 @@ class Bookkeeper():
                 # Copy everything to history
         _create_new_history_dir(self.history_dir)
         _copy_out_and_supp(self.cwd, self.history_dir)
-        _copy_input_files_from_original_inputs_and_cwd(
-            self.cwd, self.work_dir, self.history_dir,
-            use_ori=use_ori
-        )
+        self.copy_input_files_from_original_inputs_and_cwd(use_ori)
         _copy_log_files_to_history(self.cwd, self.history_dir)
 
     def _deal_with_workhistory_and_history_info(self, discard=False):
@@ -244,6 +241,41 @@ class Bookkeeper():
     def remove_log_files(self):
         _move_or_discard_files(self.logs_to_history, self.cwd, True)
 
+    def replace_state_files_from_ori(self):
+        for file in STATE_FILES:
+            ori_file = self.cwd / f'{file}_ori'
+            if ori_file.is_file():
+                try:
+                    shutil.move(ori_file, self.cwd / file)
+                except OSError:
+                    logger.error(f'Error: failed to move {ori_file} to {file}.')
+                    raise
+
+    def copy_input_files_from_original_inputs_and_cwd(self, use_ori=False):
+        """Copy files from original_inputs_path to target_path."""
+        for file in ALL_INPUT_FILES:
+            original_file = self.work_dir / file
+            cwd_file = self.cwd / file
+            if file in STATE_FILES and use_ori:
+                cwd_file = self.cwd / f'{file}_ori'
+            if original_file.is_file() and cwd_file.is_file():
+                # copy original, but warn if cwd is newer
+                _copy_one_file_to_history(original_file, self.history_dir)
+                original_timestamp = original_file.stat().st_mtime
+                cwd_timestamp = cwd_file.stat().st_mtime
+                if original_timestamp < cwd_timestamp:
+                    logger.warning(f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} '
+                                'was copied to history, but the file in the '
+                                'input directory is newer.')
+            elif original_file.is_file():
+                # just copy original
+                _copy_one_file_to_history(original_file, self.history_dir)
+            elif cwd_file.is_file():
+                # copy cwd and warn
+                _copy_one_file_to_history(self.cwd, self.history_dir)
+                logger.warning(f'File {file} not found in '
+                            f'{ORIGINAL_INPUTS_DIR_NAME}. Using file from input '
+                            f'directory instead.')
 
 def _rename_state_files_to_ori(path):
     """Renames the state files in `path` to include '_ori' in their name."""
@@ -679,36 +711,6 @@ def _copy_out_and_supp(cwd, target_path):
             logger.error(f'Error: Failed to copy {name} directory to history.')
 
 
-def _copy_input_files_from_original_inputs_and_cwd(cwd,
-                                                   original_inputs_path,
-                                                   target_path,
-                                                   use_ori=False):
-    """Copy files from original_inputs_path to target_path."""
-    for file in ALL_INPUT_FILES:
-        original_file = original_inputs_path / file
-        cwd_file = cwd / file
-        if file in STATE_FILES and use_ori:
-            cwd_file = cwd / f'{file}_ori'
-        if original_file.is_file() and cwd_file.is_file():
-            # copy original, but warn if cwd is newer
-            _copy_one_file_to_history(original_file, target_path)
-            original_timestamp = original_file.stat().st_mtime
-            cwd_timestamp = cwd_file.stat().st_mtime
-            if original_timestamp < cwd_timestamp:
-                logger.warning(f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} '
-                               'was copied to history, but the file in the '
-                               'input directory is newer.')
-        elif original_file.is_file():
-            # just copy original
-            _copy_one_file_to_history(original_file, target_path)
-        elif cwd_file.is_file():
-            # copy cwd and warn
-            _copy_one_file_to_history(cwd, target_path)
-            logger.warning(f'File {file} not found in '
-                           f'{ORIGINAL_INPUTS_DIR_NAME}. Using file from input '
-                           f'directory instead.')
-
-
 def _copy_log_files_to_history(cwd, history_path):
     """Copy log files to history."""
     log_files = _collect_log_files(cwd)
@@ -724,15 +726,6 @@ def _copy_one_file_to_history(file_path, history_path):
         logger.error(f'Error: Failed to copy {file_path} to history.')
 
 
-def _replace_state_files_from_ori(cwd):
-    for file in STATE_FILES:
-        ori_file = cwd / f'{file}_ori'
-        if ori_file.is_file():
-            try:
-                shutil.move(ori_file, cwd / file)
-            except OSError:
-                logger.error(f'Error: failed to move {ori_file} to {file}.')
-                raise
 
 def _move_workhistory_folders(work_history_path, history_path,
                               timestamp, max_job_for_tensor):
@@ -844,14 +837,7 @@ def _replace_input_files_from_out(cwd):
                 print(f'Error: failed to copy {out_file} as new {file}.')
 
 
-def _make_and_copy_to_history(cwd, history_dir, work_dir, mode):
-    _create_new_history_dir(history_dir)
-    _copy_out_and_supp(cwd, history_dir)
-    _copy_input_files_from_original_inputs_and_cwd(
-        cwd, work_dir, history_dir,
-        use_ori=mode is BookkeeperMode.CLEAR
-    )
-    _copy_log_files_to_history(cwd, history_dir)
+
 
 
 def _translate_timestamp(time_stamp):
@@ -1028,10 +1014,6 @@ def bookkeeper(mode,
         pass
 
     if 
-
-
-
-
 
 
 
