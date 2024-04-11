@@ -105,9 +105,9 @@ class Bookkeeper():
         self.top_level_history_path = self.cwd / history_name
         self.work_history_path = self.cwd / work_history_name
         if work_dir is None:
-            work_dir = self.cwd / 'work'
+            self.work_dir = self.cwd / 'work'
         else:
-            work_dir = Path(work_dir)
+            self.work_dir = Path(work_dir)
         self.job_name = job_name
 
         # Make top level history folder if not there yet
