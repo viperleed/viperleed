@@ -239,6 +239,34 @@ def _create_new_history_directory(history_path, tensor_number,
         raise
     return new_history_dir
 
+def _create_new_history_dir(new_history_path):
+    try:
+        new_history_path.mkdir()
+    except OSError:
+        logger.error('Error: Could not create target directory '
+                     f'{new_history_path}\n Stopping...')
+        raise
+
+def _get_history_directory_name(tensor_number, job_num, suffix):
+    """Return the name of a history directory for a given run.
+
+    Parameters
+    ----------
+    tensor_number : int
+        Progressive index of the tensor for the new subdirectory.
+    job_num : int
+        Progressive number identifying the run for `tensor_number`
+        for which the new directory is created.
+    suffix : str
+        Suffix to append to the directory name. Typically includes
+        the time-stamp and, optionally, a user-defined job name.
+
+    Returns
+    -------
+    dirname : str
+        The name of the new subdirectory of `history_path`.
+    """
+    return f't{tensor_number:03d}.r{job_num:03d}_{suffix}'
 
 def _discard_tensors_and_deltas(cwd, tensor_number):
     """Delete tensor and delta files with tensor_num in cwd."""
