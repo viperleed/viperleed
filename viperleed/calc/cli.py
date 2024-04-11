@@ -75,9 +75,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             _copy_files_from_manifest(cwd)
             os.chdir(cwd)
 
-        # Call bookkeeper again to clean up unless --no-cont is set
-        if not args.no_cont:
-            bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
+        bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
 
         # Finally clean up work if requested
         if args.delete_workdir:
@@ -124,11 +122,6 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             )
 
         # BOOKKEPER
-        parser.add_argument(
-            '--no-cont',
-            help='do not overwrite POSCAR/VIBROCC with those after a search',
-            action='store_true'
-            )
         parser.add_argument(                                                    # TODO: implement (for cont at end; warn if called with --no_cont)
             '-j', '--job-name',
             help=('define a name for the current run. Will be appended to the '
