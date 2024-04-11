@@ -313,7 +313,7 @@ class Bookkeeper():
         _create_new_history_dir(self.history_dir)
         self.copy_out_and_supp()
         self.copy_input_files_from_original_inputs_and_cwd(use_ori)
-        _copy_log_files_to_history(self.cwd, self.history_dir)
+        self.copy_log_files_to_history()
 
     def _deal_with_workhistory_and_history_info(self, discard=False):
         tensor_nums = _move_and_cleanup_workhistory(self.work_history_path,
@@ -397,7 +397,14 @@ class Bookkeeper():
                 shutil.copytree(dir, self.history_dir / name)
             except OSError:
                 logger.error(f'Error: Failed to copy {name} directory to history.')
-            
+
+    def _copy_log_files_to_history(self):
+        """Copy log files to history."""
+        calc_logs, other_logs = self.cwd_logs
+        log_files = calc_logs + other_logs
+        for file in log_files:
+            _copy_one_file_to_history(file, self.history_dir)
+
 def _rename_state_files_to_ori(path):
     """Renames the state files in `path` to include '_ori' in their name."""
     for file in STATE_FILES:
@@ -501,19 +508,6 @@ def _add_entry_to_history_info_file(cwd, tensor_nums, job_nums, job_name,
         logger.error('Error: Failed to append to history.info file.')
 
 
-def _collect_log_files(cwd):
-    """Return two lists of log files in `cwd`: 'calc' and others."""
-    calc_logs, other_logs = [], []
-    for file in cwd.glob('*.log'):
-        if not file.is_file():
-            continue
-        container = (calc_logs if file.name.startswith(_CALC_LOG_PREFIXES)
-                     else other_logs)
-        container.append(file)
-    return calc_logs, other_logs
-
-
-
 def _create_new_history_dir(new_history_path):
     try:
         new_history_path.mkdir()
@@ -521,7 +515,6 @@ def _create_new_history_dir(new_history_path):
         logger.error('Error: Could not create target directory '
                      f'{new_history_path}\n Stopping...')
         raise
-
 
 
 def _discard_workhistory_previous(work_history_path):
@@ -735,13 +728,6 @@ def _move_or_discard_one_file(file, target_folder, discard):
     except OSError:
         logger.error(f'Error: Failed to move {file.name}.')
 
-
-def _copy_log_files_to_history(cwd, history_path):
-    """Copy log files to history."""
-    calc_logs, other_logs = _collect_log_files(cwd)
-    log_files = calc_logs + other_logs
-    for file in log_files:
-        _copy_one_file_to_history(file, history_path)
 
 
 def _copy_one_file_to_history(file_path, history_path):
