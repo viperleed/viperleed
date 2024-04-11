@@ -851,7 +851,9 @@ def _replace_input_files_from_out(cwd):
 # This could probably be done by datetime.strptime
 def _translate_timestamp(time_stamp):
     """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
+    time_stamp = time_stamp.replace('moved-', '')
     if len(time_stamp) != 13:
+        print(time_stamp)
         raise ValueError('Error translating timestamp: Invalid length '
                          f'{len(time_stamp)}. Expected 13 characters.')
     year, month, day = time_stamp[:2], time_stamp[2:4], time_stamp[4:6]
