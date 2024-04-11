@@ -165,7 +165,8 @@ class Bookkeeper():
 
     @property
     def cwd_ori_files(self):
-        [self.cwd / f'{file}_ori' for file in STATE_FILES]
+        return [self.cwd / f'{file}_ori' for file in STATE_FILES]
+
 
     @property
     def last_history_info_entry_has_notes(self):
