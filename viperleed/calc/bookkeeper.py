@@ -127,11 +127,7 @@ class Bookkeeper():
         self.timestamp, self.last_log_lines = _read_most_recent_log(cwd)
 
         # get history dir to deal with
-        self.history_dir = self.top_level_history_path / _get_history_directory_name(
-            self.tensor_number,
-            job_num=self.max_job_for_tensor[self.tensor_number] + 1,
-            suffix=self.timestamp + ('' if job_name is None else f'_{job_name}'),
-        )
+        self.history_dir = self.top_level_history_path / self._get_history_directory_name()
 
     def _get_history_directory_name(self):
         """Return the name of a history directory for a given run.
