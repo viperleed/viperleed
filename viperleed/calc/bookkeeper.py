@@ -296,7 +296,7 @@ class Bookkeeper():
     def _make_and_copy_to_history(self, use_ori=False):
                 # Copy everything to history
         _create_new_history_dir(self.history_dir)
-        _copy_out_and_supp(self.cwd, self.history_dir)
+        self.copy_out_and_supp()
         self.copy_input_files_from_original_inputs_and_cwd(use_ori)
         _copy_log_files_to_history(self.cwd, self.history_dir)
 
@@ -370,6 +370,19 @@ class Bookkeeper():
                             f'{ORIGINAL_INPUTS_DIR_NAME}. Using file from input '
                             f'directory instead.')
 
+    def copy_out_and_supp(self):
+        """Copy OUT and SUPP directories to history."""
+        for name in (DEFAULT_SUPP, DEFAULT_OUT):
+            dir = self.cwd / name
+            if not dir.is_dir():
+                logger.warning(f'Could not find {name} directory in {self.cwd}. '
+                            'It will not be copied to history.')
+                continue
+            try:
+                shutil.copytree(dir, self.history_dir / name)
+            except OSError:
+                logger.error(f'Error: Failed to copy {name} directory to history.')
+            
 def _rename_state_files_to_ori(path):
     """Renames the state files in `path` to include '_ori' in their name."""
     for file in STATE_FILES:
@@ -485,10 +498,6 @@ def _collect_log_files(cwd):
     return calc_logs, other_logs
 
 
-def _collect_supp_and_out(cwd):
-    """Return paths to 'SUPP' and 'OUT' if they are present in `cwd`."""
-    return [d for d in cwd.iterdir()
-            if d.is_dir() and d.name in (DEFAULT_OUT, DEFAULT_SUPP)]
 
 def _create_new_history_dir(new_history_path):
     try:
@@ -710,20 +719,6 @@ def _move_or_discard_one_file(file, target_folder, discard):
         shutil.move(file, target_folder / file.name)
     except OSError:
         logger.error(f'Error: Failed to move {file.name}.')
-
-
-def _copy_out_and_supp(cwd, target_path):
-    """Copy OUT and SUPP directories to target_path."""
-    out, supp = _collect_supp_and_out(cwd)
-    for dir, name in zip((supp, out), (DEFAULT_SUPP, DEFAULT_OUT)):
-        if not dir.is_dir():
-            logger.warning(f'Could not find {name} directory in {cwd}. '
-                           'It will not be copied to history.')
-            continue
-        try:
-            shutil.copytree(dir, target_path / name)
-        except OSError:
-            logger.error(f'Error: Failed to copy {name} directory to history.')
 
 
 def _copy_log_files_to_history(cwd, history_path):
