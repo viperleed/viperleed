@@ -116,7 +116,6 @@ class Bookkeeper():
     @property
     def cwd_ori_files(self):
         [self.cwd / f'{file}_ori' for file in STATE_FILES]
-    
 
     def run(self, mode):
         # FULL_DISCARD does no archiving
@@ -178,12 +177,7 @@ class Bookkeeper():
         # workhistory and history.info
         self._deal_with_workhistory_and_history_info(discard=True)
 
-        # replace input files from _ori
-        self.replace_state_files_from_ori()
-
-        # remove OUT, SUPP and logs
-        self.remove_log_files()
-        self.remove_out_and_supp()
+        self._discard_common()
 
     def _run_discard_full_mode(self):
         
@@ -196,6 +190,10 @@ class Bookkeeper():
             logger.error(f'Error: Failed to delete {self.history_dir}.')
             return 1
 
+        self._discard_common()
+
+    def _discard_common(self):
+        """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
         # replace input files from _ori
         self.replace_state_files_from_ori()
 
