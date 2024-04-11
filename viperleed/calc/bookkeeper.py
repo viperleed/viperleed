@@ -167,6 +167,20 @@ class Bookkeeper():
     def cwd_ori_files(self):
         return [self.cwd / f'{file}_ori' for file in STATE_FILES]
 
+    @property
+    def cwd_logs(self):
+        calc_logs, other_logs = [], []
+        for file in self.cwd.glob('*.log'):
+            if not file.is_file():
+                continue
+            container = (calc_logs if file.name.startswith(_CALC_LOG_PREFIXES)
+                        else other_logs)
+            container.append(file)
+        return calc_logs, other_logs
+
+    @property
+    def all_cwd_logs(self):
+        return self.cwd_logs[0] + self.cwd_logs[1]
 
     @property
     def last_history_info_entry_has_notes(self):
@@ -328,7 +342,7 @@ class Bookkeeper():
                                self.cwd, True)
 
     def remove_log_files(self):
-        _move_or_discard_files(self.logs_to_history, self.cwd, True)
+        _move_or_discard_files(self.all_cwd_logs, self.cwd, True)
 
     def remove_tensors_and_deltas(self):
         tensor_file = self.cwd / 'Tensors' / f'Tensors_{self.tensor_number:03d}.zip'
