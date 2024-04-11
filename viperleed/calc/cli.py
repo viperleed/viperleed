@@ -21,8 +21,7 @@ import shutil
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc.bookkeeper import BookkeeperMode
-from viperleed.calc.bookkeeper import bookkeeper
+from viperleed.calc.bookkeeper import Bookkeeper, BookkeeperMode
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
@@ -49,12 +48,14 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         presets = {}  # Replace selected PARAMETERS
         _verbosity_to_log_level(args, presets)
 
-        print('Running bookkeeper...')                                          # TODO: This is lost to stdout if we don't log it
         # NB: job_name is None, as we're cleaning up the previous run
-        bookkeeper(mode=BookkeeperMode.DEFAULT,
-                   job_name=None,
-                   history_name=args.history_name,
-                   work_history_name=args.work_history_name)
+        bookkeeper = Bookkeeper(
+            job_name=None,
+            history_name=args.history_name,
+            work_history_name=args.work_history_name,
+            work_dir=work_path,
+        )
+        bookkeeper.run(mode=BookkeeperMode.CLEAR)
 
         _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
         _copy_input_files_to_work(work_path)
@@ -76,10 +77,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
 
         # Call bookkeeper again to clean up unless --no-cont is set
         if not args.no_cont:
-            bookkeeper(mode=BookkeeperMode.CONT,
-                       job_name=args.job_name,
-                       history_name=args.history_name,
-                       work_history_name=args.work_history_name)
+            bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
 
         # Finally clean up work if requested
         if args.delete_workdir:
