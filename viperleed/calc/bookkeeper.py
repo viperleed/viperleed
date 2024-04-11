@@ -382,8 +382,8 @@ class Bookkeeper():
                 # copy cwd and warn
                 _copy_one_file_to_history(self.cwd, self.history_dir)
                 logger.warning(f'File {file} not found in '
-                            f'{ORIGINAL_INPUTS_DIR_NAME}. Using file from input '
-                            f'directory instead.')
+                            f'{ORIGINAL_INPUTS_DIR_NAME}. Using file from root '
+                            f'directory instead and renaming to {cwd_file.name}_from_root.')
 
     def copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
