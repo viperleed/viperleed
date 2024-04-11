@@ -87,7 +87,7 @@ class Bookkeeper():
 
         # Make top level history folder if not there yet
         try:
-            self.history_path.mkdir(exist_ok=True)
+            self.top_level_history_path.mkdir(exist_ok=True)
         except OSError:
             logger.error('Error creating history folder.')
             raise
