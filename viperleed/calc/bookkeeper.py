@@ -23,7 +23,7 @@ from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
-from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.cli_base import ViPErLEEDCLI
@@ -72,17 +72,41 @@ class BookkeeperMode(Enum):
 
 
 class Bookkeeper():
-
+    """Bookkeeper to archive or discard the most recent viperleed calc run.
+    """
     def __init__(self,
                  job_name=None,
                  history_name=DEFAULT_HISTORY,
                  work_history_name=DEFAULT_WORK_HISTORY,
                  cwd=Path.cwd(),
-                 work_dir=Path.cwd() / 'work'):
+                 work_dir=None):
+        """Initialize the bookkeeper.
+
+        Parameters
+        ----------
+        job_name : str or None, optional
+            Custom name to append to the stored folder and to history.info.
+            If not given or None, no extra name is added. Default is None.
+        history_name : str, optional
+            The name of the folder in the current directory where the
+            most recent run should be archived. Default is 'history'.
+        work_history_name : str, optional
+            The name of the workhistory subfolder of ./work where
+            intermediate runs may have been stored. Results are also
+            copied from here to ./history_name. Default is workhistory.
+        cwd : Path, optional
+            The current working directory. Default is the current directory.
+        work_dir : Path, optional
+            The work directory used by the viperleed run. Used to look for the
+            original input files. Default is cwd / 'work'.
+        """
         self.cwd = Path(cwd)
         self.top_level_history_path = self.cwd / history_name
         self.work_history_path = self.cwd / work_history_name
-        self.work_dir = Path(work_dir)
+        if work_dir is None:
+            work_dir = self.cwd / 'work'
+        else:
+            work_dir = Path(work_dir)
         self.job_name = job_name
 
         # Make top level history folder if not there yet
@@ -95,13 +119,8 @@ class Bookkeeper():
         # Figure out the number of the tensor (it's the most recent one)
         # and the highest run number currently stored for each tensor in
         # history_path
-        self.tensor_number = leedbase.getMaxTensorIndex(home=self.cwd, zip_only=True)
+        self.tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
         self.max_job_for_tensor = _find_max_run_per_tensor(self.top_level_history_path)
-
-        # TODO: is this right?
-        if self.tensor_number not in self.max_job_for_tensor and mode.discard:
-            # New Tensor to be discarded.
-            _discard_tensors_and_deltas(cwd, self.tensor_number)
 
         # Infer timestamp from log file, if possible
         self.timestamp, self.last_log_lines = _read_most_recent_log(cwd)
@@ -118,6 +137,26 @@ class Bookkeeper():
         [self.cwd / f'{file}_ori' for file in STATE_FILES]
 
     def run(self, mode):
+        """Runs the bookkeeper in the given mode.
+
+        Parameters
+        ----------
+        mode : str or BookkeeperMode
+            Which bookkeeper mode to use. See help(BookkeeperMode).
+
+        Returns
+        -------
+        exit_code : int
+            0 -> success
+            1 -> No files to be copied
+
+        Raises
+        ------
+        OSError
+            If creation of the history folder or any of the subfolders
+            where results are to be stored fails.
+        """
+        mode = BookkeeperMode(mode)
         # FULL_DISCARD does no archiving
         if mode is BookkeeperMode.DISCARD_FULL:
             return self._run_discard_full_mode()
@@ -180,9 +219,9 @@ class Bookkeeper():
         self._discard_common()
 
     def _run_discard_full_mode(self):
-        
         # check for notes in history.info
-        
+        # TODO
+
         # remove history entry
         try:
             shutil.rmtree(self.history_dir)
@@ -197,11 +236,12 @@ class Bookkeeper():
         # replace input files from _ori
         self.replace_state_files_from_ori()
 
+        if self.tensor_number not in self.max_job_for_tensor:
+            self.remove_tensors_and_deltas()
+
         # remove OUT, SUPP and logs
         self.remove_log_files()
         self.remove_out_and_supp()
-
-        #TODO
 
     def _make_and_copy_to_history(self, use_ori=False):
                 # Copy everything to history
@@ -238,6 +278,11 @@ class Bookkeeper():
 
     def remove_log_files(self):
         _move_or_discard_files(self.logs_to_history, self.cwd, True)
+
+    def remove_tensors_and_deltas(self):
+        tensor_file = self.cwd / 'Tensors' / f'Tensors_{self.tensor_number:03d}.zip'
+        delta_file = self.cwd / 'Deltas' / f'Deltas_{self.tensor_number:03d}.zip'
+        _move_or_discard_files((tensor_file, delta_file), self.cwd, True)
 
     def replace_state_files_from_ori(self):
         for file in STATE_FILES:
@@ -836,8 +881,7 @@ def _replace_input_files_from_out(cwd):
 
 
 
-
-
+# This could probably be done by datetime.strptime
 def _translate_timestamp(time_stamp):
     """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
     if len(time_stamp) != 13:
@@ -848,205 +892,6 @@ def _translate_timestamp(time_stamp):
     return f'{day}.{month}.{year} {hour}:{minutes}:{secs}'
 
 
-def _workhistory_has_dirs_to_move(work_history_path):
-    """Return whether work_history_path contains any directory worth moving."""
-    work_history_dirs = _get_current_workhistory_directories(work_history_path)
-    return work_history_path.is_dir() and any(work_history_dirs)
-
-
-def bookkeeper(mode,
-               job_name=None,
-               history_name=DEFAULT_HISTORY,
-               work_history_name=DEFAULT_WORK_HISTORY,
-               work_dir=Path.cwd() / 'work'):
-    """Archive or discard the most recent run found in the current directory.
-
-    Parameters
-    ----------
-    mode : str or BookkeeperMode
-        Which bookkeeper mode to use. See help(BookkeeperMode).
-    job_name : str or None, optional
-        Custom name to append to the stored folder and to history.info.
-        If not given or None, no extra name is added. Default is None.
-    history_name : str, optional
-        The name of the folder in the current directory where the
-        most recent run should be archived. Default is 'history'.
-    work_history_name : str, optional
-        The name of the workhistory subfolder of ./work where
-        intermediate runs may have been stored. Results are also
-        copied from here to ./history_name. Default is workhistory.
-
-    Returns
-    -------
-    exit_code : int
-        0 -> success
-        1 -> No files to be copied
-
-    Raises
-    ------
-    OSError
-        If creation of the history folder or any of the subfolders
-        where results are to be stored fails.
-    """
-    mode = BookkeeperMode(mode)
-
-    # Get paths for history and workhistory
-    cwd = Path.cwd()
-    history_path = cwd / history_name
-    work_history_path = cwd / work_history_name
-
-    # Make history folder if not there yet
-    try:
-        history_path.mkdir(exist_ok=True)
-    except OSError:
-        logger.error('Error creating history folder.')
-        raise
-
-    # Make list of stuff to move:
-    # Log files (calc in root, others in SUPP), and SUPP/OUT folders
-    files_to_history, logs_to_history = _collect_log_files(cwd)
-    files_to_history.extend(_collect_supp_and_out(cwd))
-
-    # Exit early if there's nothing to move:
-    if (not files_to_history
-            and not _workhistory_has_dirs_to_move(work_history_path)):
-        logger.error('Found no OUT or log files to move. Exiting...')
-        return 1
-
-
-    # Figure out the number of the tensor (it's the most recent one)
-    # and the highest run number currently stored for each tensor in
-    # history_path
-    tensor_number = leedbase.getMaxTensorIndex(home=cwd, zip_only=True)
-    max_job_for_tensor = _find_max_run_per_tensor(history_path)
-
-    if tensor_number not in max_job_for_tensor and mode.discard:
-        # New Tensor to be discarded.
-        _discard_tensors_and_deltas(cwd, tensor_number)
-
-    # Infer timestamp from log file, if possible
-    timestamp, last_log_lines = _read_most_recent_log(cwd)
-
-    history_dir = history_path / _get_history_directory_name(
-        tensor_number,
-        job_num=max_job_for_tensor[tensor_number] + 1,
-        suffix=timestamp + ('' if job_name is None else f'_{job_name}'),
-    )
-
-    # Only for mode DISCARD_FULL, we do not archive anything, so let's
-    # get that out of the way first
-    if mode is BookkeeperMode.DISCARD_FULL:
-        pass # TODO
-        return 0
-
-
-    if mode is BookkeeperMode.ARCHIVE and history_dir.is_dir():
-        logger.warning(f'History folder {history_dir} already exists. '
-                        'Exiting without doing anything.')
-        return 1
-
-    # For all other mode we want to create a history entry if not there yet
-    if not history_dir.is_dir():
-
-        if  mode is BookkeeperMode.CLEAR or mode is BookkeeperMode.DISCARD:
-            logger.info(f'History folder {history_dir} does not yet exist.'
-                        ' Running archive mode first.')
-
-        # Copy everything to history
-        _create_new_history_dir(history_dir)
-        _copy_out_and_supp(cwd, history_dir)
-        _copy_input_files_from_original_inputs_and_cwd(
-            cwd, work_dir, history_dir,
-            use_ori=mode is BookkeeperMode.CLEAR
-        )
-        _copy_log_files_to_history(cwd, history_dir)
-
-        tensor_nums = _move_and_cleanup_workhistory(work_history_path,
-                                                    history_path,
-                                                    timestamp,
-                                                    max_job_for_tensor,
-                                                    mode.discard)
-        tensor_nums.add(tensor_number)
-
-        # Rename state files to include '_ori' in their name
-        _rename_state_files_to_ori(cwd)
-
-        # Replace input files from OUT
-        _replace_input_files_from_out(cwd)
-
-        # write history.info, including notes
-        _add_entry_to_history_info_file(
-            cwd,
-            tensor_nums,
-            [max_job_for_tensor[tensor] + 1 for tensor in tensor_nums],
-            job_name,
-            last_log_lines,
-            timestamp,
-            history_path.name
-            )
-
-    ori_files = [cwd / f'{file}_ori' for file in STATE_FILES]
-
-    # If we are in archive mode, we are done
-    if mode is BookkeeperMode.ARCHIVE:
-        return 0
-
-    elif mode is BookkeeperMode.CLEAR:
-        # remove *_ori files
-        _move_or_discard_files(ori_files, cwd, True)
-
-        # remove log files
-        _move_or_discard_files(logs_to_history, cwd, True)
-
-        # remove OUT and SUPP
-        _move_or_discard_files([cwd / DEFAULT_OUT, cwd / DEFAULT_SUPP], cwd, True)
-
-        return 0
-
-    elif mode is BookkeeperMode.DISCARD:
-        # replace input files from _ori
-        _replace_state_files_from_ori(cwd)
-        pass
-    elif mode is BookkeeperMode.DISCARD_FULL:
-        # TODO
-        pass
-
-    if 
-
-
-
-    # Get new history subfolder new_history_dir
-    new_history_dir = _create_new_history_directory(
-        history_path,
-        tensor_number,
-        job_num=max_job_for_tensor[tensor_number] + 1,
-        suffix=timestamp + ('' if job_name is None else f'_{job_name}'),
-        should_mkdir=not mode.discard
-        )
-    if not mode.discard:
-        store_input_files_to_history(cwd, new_history_dir)
-
-    if mode is BookkeeperMode.CONT:
-        _replace_input_files_from_out(cwd)
-
-    # Move (or discard) old stuff: files go to main history, logs go
-    # to SUPP (except main viperleed-calc log); collect also folders
-    # from workhistory
-    _move_or_discard_files(files_to_history, new_history_dir, mode.discard)
-    _move_or_discard_files(logs_to_history, new_history_dir/'SUPP', mode.discard)
-
-
-    if not mode.discard:  # write history.info, including notes
-        _add_entry_to_history_info_file(
-            cwd,
-            tensor_nums,
-            [max_job_for_tensor[tensor] + 1 for tensor in tensor_nums],
-            job_name,
-            last_log_lines,
-            timestamp,
-            new_history_dir.name
-            )
-    return 0
 
 
 class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
