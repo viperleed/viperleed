@@ -39,6 +39,7 @@ HIST_FOLDER_RE = re.compile(
     r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
     )
 _HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
+_HISTORY_INFO_SEPARATOR = '###########'
 
 STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 
@@ -170,6 +171,21 @@ class Bookkeeper():
     def cwd_ori_files(self):
         [self.cwd / f'{file}_ori' for file in STATE_FILES]
 
+    @property
+    def last_history_info_entry_has_notes(self):
+        """Checks the history.info file and """
+        
+        with open(self.cwd / 'history.info', 'r', encoding='utf-8') as hist_info_file:
+            content = hist_info_file.read()
+        last_entry = content.rsplit(_HISTORY_INFO_SEPARATOR, 1)[-1]
+        if not last_entry:
+            return False
+        # check if there is anything after 'Notes: ' or 'DISCARDED'
+        notes = last_entry.split('Notes: ', 1)[-1]
+        notes = notes.replace('DISCARDED', '').strip()
+        return bool(notes)
+
+
     def run(self, mode):
         """Runs the bookkeeper in the given mode.
 
@@ -254,7 +270,11 @@ class Bookkeeper():
 
     def _run_discard_full_mode(self):
         # check for notes in history.info
-        # TODO
+        if self.last_history_info_entry_has_notes:
+            logger.warning('The last entry in history.info has user notes. '
+                           'If you really want to purge the last run, remove '
+                           'the notes first.')
+            return 1
 
         # remove history entry
         try:
@@ -362,6 +382,7 @@ def _rename_state_files_to_ori(path):
         os.rename(path / file, path / f'{file}_ori')
 
 
+
 def store_input_files_to_history(root_path, history_path):
     """Find input files in `root_path` and copy them to `history_path`.
 
@@ -448,7 +469,7 @@ def _add_entry_to_history_info_file(cwd, tensor_nums, job_nums, job_name,
     contents.append(f'Notes: {_read_and_clear_notes_file(cwd)}')
     if discarded:
         contents.append('DISCARDED')
-    contents.append('\n###########')
+    contents.append(f'\n{_HISTORY_INFO_SEPARATOR}')
     try:  # pylint: disable=too-many-try-statements
         with history_info.open('a', encoding='utf-8') as hist_info_file:
             hist_info_file.write('\n'.join(contents))
@@ -481,12 +502,6 @@ def _create_new_history_dir(new_history_path):
                      f'{new_history_path}\n Stopping...')
         raise
 
-
-def _discard_tensors_and_deltas(cwd, tensor_number):
-    """Delete tensor and delta files with tensor_num in cwd."""
-    tensor_file = cwd / 'Tensors' / f'Tensors_{tensor_number:03d}.zip'
-    delta_file = cwd / 'Deltas' / f'Deltas_{tensor_number:03d}.zip'
-    _move_or_discard_files((tensor_file, delta_file), cwd, True)
 
 
 def _discard_workhistory_previous(work_history_path):
