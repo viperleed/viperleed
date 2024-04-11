@@ -22,8 +22,8 @@ from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.base import copytree_exists_ok,get_elapsed_time_str
 
-_DEFAULT_SUPP = "SUPP"
-_DEFAULT_OUT = "OUT"
+DEFAULT_SUPP = "SUPP"
+DEFAULT_OUT = "OUT"
 
 # files to go in SUPP
 _SUPP_FILES = (
@@ -124,7 +124,7 @@ def prerun_clean(rp, logname=""):
             logger.warning(f"Failed to clear {DEFAULT_WORK_HISTORY} folder.")
 
     # remove old SUPP and OUT directories in work
-    for dir in [_DEFAULT_SUPP, _DEFAULT_OUT]:
+    for dir in [DEFAULT_SUPP, DEFAULT_OUT]:
         try:
             shutil.rmtree(rp.workdir / dir)
         except Exception:
@@ -205,7 +205,7 @@ def organize_workdir(tensor_index, delete_unzipped=False,
 def _organize_supp_out(work_path):
     """Helper function for organizing SUPP and OUT directories."""
     # SUPP
-    supp_path = work_path / _DEFAULT_SUPP
+    supp_path = work_path / DEFAULT_SUPP
 
     files_to_copy = set(work_path / f for f in _SUPP_FILES)
     # move directories original_inputs and compile_logs to SUPP
@@ -221,7 +221,7 @@ def _organize_supp_out(work_path):
                                 supp_path)
 
     # OUT
-    out_path = work_path / _DEFAULT_OUT
+    out_path = work_path / DEFAULT_OUT
     out_files = set(work_path / f for f in _OUT_FILES)
     # add POSCAR_OUT, VIBROCC_OUT, PARAMETERS_OUT & any R_OUT files
     out_files.update(work_path.glob("_OUT*"))
@@ -233,8 +233,8 @@ def _organize_supp_out(work_path):
     try:
         parameters_path.rename(parameters_out_path)
     except OSError:
-        logger.error(f"Error renaming {_DEFAULT_OUT}/PARAMETERS to "
-                     f"{_DEFAULT_OUT}/PARAMETERS_OUT.", exc_info=True)
+        logger.error(f"Error renaming {DEFAULT_OUT}/PARAMETERS to "
+                     f"{DEFAULT_OUT}/PARAMETERS_OUT.", exc_info=True)
 
 
 def _copy_files_and_directories(filelist, directory_list, origin, target):

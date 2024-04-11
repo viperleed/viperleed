@@ -26,6 +26,7 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.cli_base import ViPErLEEDCLI
+from viperleed.calc.sections.cleanup import DEFAULT_OUT, DEFAULT_SUPP
 
 logger = logging.getLogger(__name__)
 
