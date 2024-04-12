@@ -181,6 +181,21 @@ class TestBookkeeperArchive:
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
 
+    def test_bookkeeper_archive_again(self,
+                                    after_archive,
+                                    caplog):
+        bookkeeper, mock_dir, history_dir, history_run_dir = after_archive
+        # write stuff to files to check they are not overwritten
+        for file in MOCK_STATE_FILES:
+            (mock_dir / file).write_text('something else')
+        bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
+        for file in MOCK_STATE_FILES:
+            assert (mock_dir / file).read_text() == 'something else'
+        # Bookkeeper should not do anything
+        assert (mock_dir / 'history').exists()
+        # Check that there are no errors or warnings in log
+        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+
 
 
 def test_bookkeeper_clear_mode(bookkeeper, bookkeeper_mock_dir, history_path):
