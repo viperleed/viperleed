@@ -383,7 +383,7 @@ class Bookkeeper():
     def copy_input_files_from_original_inputs_and_cwd(self, use_ori=False):
         """Copy files from original_inputs_path to target_path."""
         for file in ALL_INPUT_FILES:
-            original_file = self.work_dir / file
+            original_file = self.work_dir / ORIGINAL_INPUTS_DIR_NAME / file
             cwd_file = self.cwd / file
             if file in STATE_FILES and use_ori:
                 cwd_file = self.cwd / f'{file}_ori'
