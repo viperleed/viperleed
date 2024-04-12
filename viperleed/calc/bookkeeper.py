@@ -529,7 +529,7 @@ def _add_entry_to_history_info_file(cwd, tensor_nums, job_nums, job_name,
         with history_info.open('a', encoding='utf-8') as hist_info_file:
             hist_info_file.write('\n'.join(contents))
     except OSError:
-        logger.error('Error: Failed to append to history.info file.')
+        logger.error('Failed to append to history.info file.')
 
 
 def _create_new_history_dir(new_history_path):
@@ -750,7 +750,7 @@ def _move_or_discard_one_file(file, target_folder, discard):
     try:
         shutil.move(file, target_folder / file.name)
     except OSError:
-        logger.error(f'Error: Failed to move {file.name}.')
+        logger.error(f'Failed to move {file.name}.')
 
 
 
@@ -759,7 +759,7 @@ def _copy_one_file_to_history(file_path, history_path):
     try:
         shutil.copy2(file_path, history_path / file_path.name)
     except OSError:
-        logger.error(f'Error: Failed to copy {file_path} to history.')
+        logger.error(f'Failed to copy {file_path} to history.')
 
 
 
