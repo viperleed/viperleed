@@ -219,6 +219,39 @@ class TestBookkeeperClear:
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
 
+    def test_bookkeeper_clear_after_run(self,
+                                          after_run,
+                                          caplog):
+        """Check correct behaviour of calling CLEAR after a run without ARCHiVE.
+        E.g. if the run crashed."""
+        bookkeeper, mock_dir, history_path, history_path_run = after_run
+        # bookkeeper should think that it needs archiving
+        assert bookkeeper.archiving_required is True
+        bookkeeper.run(mode=BookkeeperMode.CLEAR)
+        assert history_path.exists()
+        assert history_path_run.is_dir()
+        assert (mock_dir / 'history.info').exists()
+        # Out stored in history
+        for file in MOCK_STATE_FILES:
+            hist_file = history_path_run / 'OUT' / f'{file}_OUT'
+            hist_content = hist_file.read_text()
+            assert MOCK_OUT_CONTENT in hist_content
+        # _ori files, SUPP, OUT and logs should be removed
+        for file in MOCK_STATE_FILES:
+            ori_file = mock_dir / f'{file}_ori'
+            assert not ori_file.is_file()
+        assert not (mock_dir / 'SUPP').exists()
+        assert not (mock_dir / 'OUT').exists()
+        assert len(tuple(mock_dir.glob('*.log'))) == 0
+        # Original SHOULD NOT be replaced by output
+        # (ARCHIVE only does not run if the run crashed, in which case we
+        # don't want to overwrite)
+        for file in MOCK_STATE_FILES:
+            out_content = (mock_dir / file).read_text()
+            assert MOCK_INPUT_CONTENT in out_content
+        # Check that there are no errors or warnings in log
+        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+
 
 def test_bookkeeper_discard_mode(bookkeeper_mock_dir, history_path_run):
     """Check correct skipping of history storage in DISCARD mode."""
