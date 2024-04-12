@@ -402,11 +402,18 @@ class Bookkeeper():
                 _copy_one_file_to_history(original_file, self.history_dir)
             elif cwd_file.is_file():
                 # copy cwd and warn
-                _copy_one_file_to_history(self.cwd, self.history_dir)
+                _copy_one_file_to_history(
+                    self.cwd / file, self.history_dir)
                 logger.warning(f'File {file} not found in '
                             f'{ORIGINAL_INPUTS_DIR_NAME}. Using file from root '
                             'directory instead and renaming to '
                             f'{cwd_file.name}_from_root.')
+                try:
+                    os.rename(self.history_dir / file,
+                            self.history_dir / f'{cwd_file.name}_from_root')
+                except OSError:
+                    logger.error(f'Failed to rename {file} to '
+                                f'{cwd_file.name}_from_root.')
 
     def copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
