@@ -125,10 +125,12 @@ def prerun_clean(rp, logname=""):
 
     # remove old SUPP and OUT directories in work
     for dir in [DEFAULT_SUPP, DEFAULT_OUT]:
-        try:
-            shutil.rmtree(rp.workdir / dir)
-        except Exception:
-            logger.warning(f"Failed to clear work/{dir} folder.")
+        path = rp.workdir / dir
+        if path.is_dir():
+            try:
+                shutil.rmtree(rp.workdir / dir)
+            except Exception:
+                logger.warning(f"Failed to clear work/{dir} folder.")
 
     # get rid of old POSCAR_OUT, VIBROCC_OUT, PARAMETERS_OUT and any R_OUT files:
     old_out_files = rp.workdir.glob('*_OUT*')
