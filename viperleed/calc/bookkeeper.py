@@ -129,9 +129,21 @@ class Bookkeeper():
 
         # get history dir to deal with
         self.history_dir = (self.top_level_history_path /
-                            self._get_history_directory_name())
+                            self._get_new_history_directory_name())
 
-    def _get_history_directory_name(self):
+    @property
+    def base_history_dir_name(self):
+        """The name of the history directory based on timestam, number and name.
+
+        This is not necessarily the name of the history directory! Use
+        self.history_dir.name instead."""
+        suffix = (self.timestamp +
+                  ('' if self.job_name is None else f'_{self.job_name}'))
+        return (
+            f't{self.tensor_number:03d}.r'
+            f'{self.max_job_for_tensor[self.tensor_number] + 1:03d}_{suffix}')
+
+    def _get_new_history_directory_name(self):
         """Return the name of a history directory for a given run.
 
         Folder has form 'tXXX.rYYY_<suffix>'. <suffix> can vary. It may
@@ -153,11 +165,7 @@ class Bookkeeper():
           where <bookie_timestamp2> may be slightly later than
           <bookie_timestamp>, but is most likely the same.
         """
-        suffix = (self.timestamp +
-                  ('' if self.job_name is None else f'_{self.job_name}'))
-        dir_name = (
-            f't{self.tensor_number:03d}.r'
-            f'{self.max_job_for_tensor[self.tensor_number] + 1:03d}_{suffix}')
+        dir_name = self.base_history_dir_name
         if (self.top_level_history_path / dir_name).is_dir():
             bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S',
                                                  time.localtime())
@@ -198,9 +206,8 @@ class Bookkeeper():
         notes = notes.replace('DISCARDED', '').strip()
         return bool(notes)
 
-
     @property
-    def archiving_required(self):
+    def files_needs_archiving(self):
         """Check if there are any files that need archiving."""
         # check for OUT and SUPP
         files_to_archive = [self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP]
@@ -213,6 +220,20 @@ class Bookkeeper():
         files_to_archive = [file for file in files_to_archive
                             if file.is_file() or file.is_dir()]
         return bool(files_to_archive)
+
+    @property
+    def history_with_same_base_name_exists(self):
+        """Check if a history folder with the same base name exists."""
+        all_history_entires = self.top_level_history_path.glob('*')
+        return any(entry.is_dir() and
+                   entry.name.startswith(self.base_history_dir_name)
+                   for entry in all_history_entires)
+
+    @property
+    def archiving_required(self):
+        """Check if archiving is required."""
+        return (self.files_needs_archiving and
+                not self.history_with_same_base_name_exists)
 
     def run(self, mode):
         """Runs the bookkeeper in the given mode.
@@ -249,13 +270,13 @@ class Bookkeeper():
 
 
     def _run_archive_mode(self):
-        if self.history_dir.is_dir():
-            logger.info(f'History directory {self.history_dir.name} already '
-                           'exists. Exiting without doing anything.')
+        if self.history_with_same_base_name_exists:
+            logger.info(f'History directory for run {self.base_history_dir_name}'
+                        'exists. Exiting without doing anything.')
             return 1
-        if not self.archiving_required:
-            logger.info('No files to be moved to history. Exiting without doing '
-                           'anything.')
+        if not self.files_needs_archiving:
+            logger.info('No files to be moved to history. Exiting without doing'
+                           ' anything.')
             return 1
         self._make_and_copy_to_history(use_ori=False)
 
@@ -271,7 +292,7 @@ class Bookkeeper():
         return 0
 
     def _run_clear_mode(self):
-        if not self.history_dir.is_dir() and self.archiving_required:
+        if not self.history_dir.is_dir() and self.files_needs_archiving:
             logger.info(f'History folder {self.history_dir} does not yet exist.'
                         ' Running archive mode first.')
             self._make_and_copy_to_history(use_ori=True)
@@ -287,7 +308,7 @@ class Bookkeeper():
         return 0
 
     def _run_discard_mode(self):
-        if not self.history_dir.is_dir() and self.archiving_required:
+        if not self.history_dir.is_dir() and self.files_needs_archiving:
             logger.info(f'History folder {self.history_dir} does not yet exist.'
                         ' Running archive mode first.')
         self._make_and_copy_to_history(use_ori=False)
