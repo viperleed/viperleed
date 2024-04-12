@@ -187,7 +187,8 @@ class TestBookkeeperArchive:
     def test_bookkeeper_archive_again(self,
                                     after_archive,
                                     caplog):
-        bookkeeper, mock_dir, history_dir, history_run_dir = after_archive
+        """Bookkeeper ARCHIVE after ARCHIVE should not do anything."""
+        bookkeeper, mock_dir, *_ = after_archive
         assert bookkeeper.archiving_required is False
         # write stuff to files to check they are not overwritten
         for file in MOCK_STATE_FILES:
