@@ -50,6 +50,8 @@ from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 logger = logging.getLogger(__name__)
 
 
+OPTIONAL_INPUT_FILES = ('BEAMLIST')
+
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
     if not subdomain:
@@ -732,11 +734,14 @@ def _preserve_original_input(rp, origin_dir):
     if rp.expbeams_file_name:
         files_to_preserve.add(rp.expbeams_file_name)
 
+
     # copy all files to orig_inputs that were used as original input
     for file in files_to_preserve:
         # save under name EXPBEAMS.csv
         file_path = origin_dir / file
         if not file_path.is_file():
+            if file in OPTIONAL_INPUT_FILES:
+                continue
             logger.warning(f"Could not find file {file}. "
                             "It will not be stored in "
                             f"{ORIGINAL_INPUTS_DIR_NAME}.")
