@@ -134,14 +134,20 @@ def test_bookkeeper_archive_mode(bookkeeper,
         assert MOCK_OUT_CONTENT in out_content
 
 
-def test_bookkeeper_cont_mode(bookkeeper_mock_dir, history_path):
-    """Check correct overwriting of input files in continuation mode."""
-    bookkeeper(mode=BookkeeperMode.CONT)
+def test_bookkeeper_clear_mode(bookkeeper, bookkeeper_mock_dir, history_path):
+    """Check correct overwriting of input files in CLEAR mode."""
+    bookkeeper.run(mode=BookkeeperMode.CLEAR)
     assert history_path.exists()
     # Make sure input was overwritten
     for file in MOCK_STATE_FILES:
         input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_OUT_CONTENT in input_content
+    # Make sure _ori files, logs, SUPP & OUT were removed
+    for file in MOCK_STATE_FILES:
+        assert not (bookkeeper_mock_dir / f'{file}_ori').is_file()
+        assert not tuple(bookkeeper_mock_dir.glob(f'*{file}*.log'))
+        assert not (bookkeeper_mock_dir / 'SUPP').exists()
+        assert not (bookkeeper_mock_dir / 'OUT').exists()
 
 
 def test_bookkeeper_discard_mode(bookkeeper_mock_dir, history_path_run):
