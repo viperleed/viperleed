@@ -292,7 +292,11 @@ def test_bookkeeper_discard_mode(bookkeeper_mock_dir, history_path_run):
         input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_INPUT_CONTENT in input_content
 
+class TestBookkeeperDiscardFull:
+    # TODO
+    pass
 
+# TODO: turn this into a parametrize of the bookkeeper fixture
 def test_bookkeeper_with_job_name(history_path):
     """Check correct history storage when a specific job name is set."""
     bookkeeper(mode='default', job_name='test_job')
