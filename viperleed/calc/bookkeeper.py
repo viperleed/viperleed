@@ -276,11 +276,8 @@ class Bookkeeper():
                         ' Running archive mode first.')
             self._make_and_copy_to_history(use_ori=True)
 
-        # replace input files from OUT
-        _replace_input_files_from_out(self.cwd)
-
-        # workhistory and history.info
-        self._deal_with_workhistory_and_history_info(discard=False)
+            # workhistory and history.info
+            self._deal_with_workhistory_and_history_info(discard=False)
 
         # remove OUT, SUPP, logs and _ori files
         self.remove_log_files()
