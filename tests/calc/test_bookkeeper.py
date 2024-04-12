@@ -168,7 +168,6 @@ class TestBookkeeperArchive:
                                     before_run,
                                     caplog):
         bookkeeper, mock_dir = before_run
-        bookkeeper = Bookkeeper(cwd=mock_dir)
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
         # Bookkeeper should not do anything
         assert (mock_dir / 'history').exists()
