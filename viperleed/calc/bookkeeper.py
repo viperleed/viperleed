@@ -829,8 +829,8 @@ def _read_and_clear_notes_file(cwd):
         with notes_path.open('w', encoding='utf-8'):
             pass
     except OSError:
-        print(f'Error: Failed to clear the {notes_path.name} '
-              'file after reading.')
+        logger.error(f'Failed to clear the {notes_path.name} '
+                    'file after reading.')
     return notes
 
 
