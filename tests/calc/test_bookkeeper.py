@@ -171,7 +171,8 @@ class TestBookkeeperArchive:
         bookkeeper = Bookkeeper(cwd=mock_dir)
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
         # Bookkeeper should not do anything
-        assert not (mock_dir / 'history').exists()
+        assert (mock_dir / 'history').exists()
+        assert not tuple((mock_dir / 'history').iterdir())
         assert not (mock_dir / 'history.info').exists()
         # Originals untouched
         for file in MOCK_STATE_FILES:
