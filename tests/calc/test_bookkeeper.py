@@ -379,6 +379,7 @@ def test_bookkeeper_with_job_name(history_path):
     assert (history_path / f't000.r001_{MOCK_TIMESTAMP}_test_job').exists()
 
 
+# TODO: turn this into a parametrize of the bookkeeper fixture
 def test_bookkeeper_with_existing_history_and_alt_name(bookkeeper_mock_dir):
     """Check correct storage with a non-empty, differently named history."""
     # Create some existing history folders
