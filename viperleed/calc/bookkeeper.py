@@ -199,6 +199,21 @@ class Bookkeeper():
         return bool(notes)
 
 
+    @property
+    def archiving_required(self):
+        """Check if there are any files that need archiving."""
+        # check for OUT and SUPP
+        files_to_archive = [self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP]
+        # any calc logs
+        files_to_archive.extend(self.cwd_logs[0])
+        # check workhistory
+        if self.work_history_path.is_dir():
+            files_to_archive.extend(_get_current_workhistory_directories(
+                self.work_history_path, contains='r'))
+        files_to_archive = [file for file in files_to_archive
+                            if file.is_file() or file.is_dir()]
+        return bool(files_to_archive)
+
     def run(self, mode):
         """Runs the bookkeeper in the given mode.
 
@@ -238,6 +253,10 @@ class Bookkeeper():
             logger.warning(f'History directory {self.history_dir.name} already '
                            'exists. Exiting without doing anything.')
             return 1
+        if not self.archiving_required:
+            logger.info('No files to be moved to history. Exiting without doing '
+                           'anything.')
+            return 1
         self._make_and_copy_to_history(use_ori=False)
 
         # rename state files to include '_ori' in their name
@@ -252,7 +271,7 @@ class Bookkeeper():
         return 0
 
     def _run_clear_mode(self):
-        if not self.history_dir.is_dir():
+        if not self.history_dir.is_dir() and self.archiving_required:
             logger.info(f'History folder {self.history_dir} does not yet exist.'
                         ' Running archive mode first.')
         self._make_and_copy_to_history(use_ori=True)
@@ -271,7 +290,7 @@ class Bookkeeper():
         return 0
 
     def _run_discard_mode(self):
-        if not self.history_dir.is_dir():
+        if not self.history_dir.is_dir() and self.archiving_required:
             logger.info(f'History folder {self.history_dir} does not yet exist.'
                         ' Running archive mode first.')
         self._make_and_copy_to_history(use_ori=False)
