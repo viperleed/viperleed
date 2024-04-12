@@ -26,7 +26,7 @@ from ..helpers import execute_in_dir
 MOCK_TIMESTAMP = '010203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in _CALC_LOG_PREFIXES]
 NOTES_TEST_CONTENT = 'This is a test note.'
-MOCK_FILES = ('POSCAR', 'VIBROCC')
+MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
 MOCK_INPUT_CONTENT = 'This is a test input file.'
 MOCK_ORIG_CONTENT = 'This is a test original input file.'
 MOCK_OUT_CONTENT = 'This is a test output file.'
@@ -52,13 +52,13 @@ def fixture_bookkeeper_mock_dir(tmp_path, log_file_name):
     notes_file.write_text(NOTES_TEST_CONTENT)
 
     # create mock input files
-    for file in MOCK_FILES:
+    for file in MOCK_STATE_FILES:
         (tmp_path / file).write_text(MOCK_INPUT_CONTENT)
 
     # create mock original_inputs folder
     original_inputs_path = work_path / ORIGINAL_INPUTS_DIR_NAME
     original_inputs_path.mkdir(parents=True, exist_ok=True)
-    for file in MOCK_FILES:
+    for file in MOCK_STATE_FILES:
         (original_inputs_path / file).write_text(MOCK_ORIG_CONTENT)
 
     # create mock OUT folder
@@ -83,6 +83,11 @@ def fixture_history_path_run(history_path):
     return history_path / f't000.r001_{MOCK_TIMESTAMP}'
 
 
+@fixture(name='bookkeeper')
+def fixture_bookkeeper(bookkeeper_mock_dir):
+    """Return a Bookkeeper instance for testing."""
+    return Bookkeeper(cwd=bookkeeper_mock_dir.resolve())
+
 def test_bookkeeper_mode_enum():
     """Check values of bookkeeper mode enum."""
     assert BookkeeperMode.ARCHIVE is BookkeeperMode('archive')
@@ -97,7 +102,7 @@ def test_store_input_files_to_history(tmp_path, bookkeeper_mock_dir):
     history = tmp_path / DEFAULT_HISTORY
     history.mkdir(parents=True, exist_ok=True)
     store_input_files_to_history(inputs_path, history)
-    for file in MOCK_FILES:
+    for file in MOCK_STATE_FILES:
         hist_file = history / file
         hist_file_content = hist_file.read_text()
         assert MOCK_ORIG_CONTENT in hist_file_content
@@ -112,8 +117,8 @@ def test_bookkeeper_default_mode(bookkeeper_mock_dir,
     assert history_path_run.is_dir()
     assert (bookkeeper_mock_dir / 'history.info').exists()
     # Out stored in history
-    for file in MOCK_FILES:
         hist_file = history_path_run / 'OUT' / f'{file}_OUT_{MOCK_TIMESTAMP}'
+    for file in MOCK_STATE_FILES:
         hist_content = hist_file.read_text()
         assert MOCK_OUT_CONTENT in hist_content
     # Original not overwritten
@@ -127,7 +132,7 @@ def test_bookkeeper_cont_mode(bookkeeper_mock_dir, history_path):
     bookkeeper(mode=BookkeeperMode.CONT)
     assert history_path.exists()
     # Make sure input was overwritten
-    for file in MOCK_FILES:
+    for file in MOCK_STATE_FILES:
         input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_OUT_CONTENT in input_content
 
@@ -137,7 +142,7 @@ def test_bookkeeper_discard_mode(bookkeeper_mock_dir, history_path_run):
     bookkeeper(mode=BookkeeperMode.DISCARD)
     assert not history_path_run.is_dir()
     # Original not overwritten
-    for file in MOCK_FILES:
+    for file in MOCK_STATE_FILES:
         input_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_INPUT_CONTENT in input_content
 
