@@ -274,7 +274,7 @@ class Bookkeeper():
         if not self.history_dir.is_dir() and self.archiving_required:
             logger.info(f'History folder {self.history_dir} does not yet exist.'
                         ' Running archive mode first.')
-        self._make_and_copy_to_history(use_ori=True)
+            self._make_and_copy_to_history(use_ori=True)
 
         # replace input files from OUT
         _replace_input_files_from_out(self.cwd)
