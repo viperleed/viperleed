@@ -121,13 +121,15 @@ class Bookkeeper():
         # and the highest run number currently stored for each tensor in
         # history_path
         self.tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
-        self.max_job_for_tensor = _find_max_run_per_tensor(self.top_level_history_path)
+        self.max_job_for_tensor = _find_max_run_per_tensor(
+            self.top_level_history_path)
 
         # Infer timestamp from log file, if possible
         self.timestamp, self.last_log_lines = _read_most_recent_log(cwd)
 
         # get history dir to deal with
-        self.history_dir = self.top_level_history_path / self._get_history_directory_name()
+        self.history_dir = (self.top_level_history_path /
+                            self._get_history_directory_name())
 
     def _get_history_directory_name(self):
         """Return the name of a history directory for a given run.
@@ -372,9 +374,10 @@ class Bookkeeper():
                 original_timestamp = original_file.stat().st_mtime
                 cwd_timestamp = cwd_file.stat().st_mtime
                 if original_timestamp < cwd_timestamp:
-                    logger.warning(f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} '
-                                'was copied to history, but the file in the '
-                                'input directory is newer.')
+                    logger.warning(
+                        f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
+                        'copied to history, but the file in the input '
+                        'directory is newer.')
             elif original_file.is_file():
                 # just copy original
                 _copy_one_file_to_history(original_file, self.history_dir)
@@ -383,20 +386,21 @@ class Bookkeeper():
                 _copy_one_file_to_history(self.cwd, self.history_dir)
                 logger.warning(f'File {file} not found in '
                             f'{ORIGINAL_INPUTS_DIR_NAME}. Using file from root '
-                            f'directory instead and renaming to {cwd_file.name}_from_root.')
+                            'directory instead and renaming to '
+                            f'{cwd_file.name}_from_root.')
 
     def copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
         for name in (DEFAULT_SUPP, DEFAULT_OUT):
             dir = self.cwd / name
             if not dir.is_dir():
-                logger.warning(f'Could not find {name} directory in {self.cwd}. '
-                            'It will not be copied to history.')
+                logger.warning(f'Could not find {name} directory in '
+                               f'{self.cwd}. It will not be copied to history.')
                 continue
             try:
                 shutil.copytree(dir, self.history_dir / name)
             except OSError:
-                logger.error(f'Error: Failed to copy {name} directory to history.')
+                logger.error(f'Failed to copy {name} directory to history.')
 
     def copy_log_files_to_history(self):
         """Copy log files to history."""
@@ -865,7 +869,6 @@ def _translate_timestamp(time_stamp):
 
 
 
-
 class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
     """The main command-line interface for the bookkeeper utility."""
 
@@ -917,6 +920,7 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
             type=str,
             default=DEFAULT_WORK_HISTORY
             )
+
 
     def __call__(self, args=None):
         """Call the bookkeeper with command-line args."""
