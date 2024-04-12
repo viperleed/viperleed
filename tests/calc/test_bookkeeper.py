@@ -62,8 +62,8 @@ def fixture_bookkeeper_mock_dir(tmp_path, log_file_name):
         (original_inputs_path / file).write_text(MOCK_ORIG_CONTENT)
 
     # create mock OUT folder
-    for file in MOCK_FILES:
-        out_file = out_path / f'{file}_OUT_{MOCK_TIMESTAMP}'
+    for file in MOCK_STATE_FILES:
+        out_file = out_path / f'{file}_OUT'
         out_file.write_text(MOCK_OUT_CONTENT)
 
     with execute_in_dir(tmp_path):
@@ -108,23 +108,30 @@ def test_store_input_files_to_history(tmp_path, bookkeeper_mock_dir):
         assert MOCK_ORIG_CONTENT in hist_file_content
 
 
-def test_bookkeeper_default_mode(bookkeeper_mock_dir,
+def test_bookkeeper_archive_mode(bookkeeper,
+                                 bookkeeper_mock_dir,
                                  history_path,
                                  history_path_run):
-    """Check correct storage of history files in DEFAULT mode."""
-    bookkeeper(mode=BookkeeperMode.DEFAULT)
+    """Check correct storage of history files in ARCHIVE mode."""
+    bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
     assert history_path.exists()
     assert history_path_run.is_dir()
     assert (bookkeeper_mock_dir / 'history.info').exists()
     # Out stored in history
-        hist_file = history_path_run / 'OUT' / f'{file}_OUT_{MOCK_TIMESTAMP}'
     for file in MOCK_STATE_FILES:
+        hist_file = history_path_run / 'OUT' / f'{file}_OUT'
         hist_content = hist_file.read_text()
         assert MOCK_OUT_CONTENT in hist_content
-    # Original not overwritten
-    for file in MOCK_FILES:
+    # Original moved to _ori
+    for file in MOCK_STATE_FILES:
+        ori_file = bookkeeper_mock_dir / f'{file}_ori'
+        assert ori_file.is_file()
         input_content = (bookkeeper_mock_dir / file).read_text()
-        assert MOCK_INPUT_CONTENT in input_content
+        assert MOCK_OUT_CONTENT in input_content
+    # Original replaced by output
+    for file in MOCK_STATE_FILES:
+        out_content = (bookkeeper_mock_dir / file).read_text()
+        assert MOCK_OUT_CONTENT in out_content
 
 
 def test_bookkeeper_cont_mode(bookkeeper_mock_dir, history_path):
