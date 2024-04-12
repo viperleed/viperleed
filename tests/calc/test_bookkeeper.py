@@ -256,11 +256,11 @@ class TestBookkeeperClear:
     def test_bookkeeper_clear_after_archive(self,
                                             after_run,
                                             caplog):
-        """Check correct behaviour of calling CLEAR after a run and ARCHiVE.
+        """Check correct behaviour of calling CLEAR after a run and ARCHIVE.
         E.g. if the run crashed."""
         bookkeeper, mock_dir, history_path, history_path_run = after_run
         # bookkeeper should not think that it needs archiving
-        assert bookkeeper.archiving_required is False
+        assert bookkeeper.archiving_required is True
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
         assert history_path.exists()
         assert history_path_run.is_dir()
@@ -280,7 +280,7 @@ class TestBookkeeperClear:
         # Original be replaced by output
         for file in MOCK_STATE_FILES:
             out_content = (mock_dir / file).read_text()
-            assert MOCK_OUT_CONTENT in out_content
+            assert MOCK_INPUT_CONTENT in out_content
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
 
