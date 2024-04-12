@@ -9,6 +9,7 @@ __created__ = '2023-08-02'
 __license__ = 'GPLv3+'
 
 import shutil
+import logging
 
 from pytest_cases import fixture, parametrize
 
@@ -132,6 +133,8 @@ def test_bookkeeper_archive_mode(bookkeeper,
     for file in MOCK_STATE_FILES:
         out_content = (bookkeeper_mock_dir / file).read_text()
         assert MOCK_OUT_CONTENT in out_content
+    # Check that there are no errors or warnings in log
+    assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
 
 
 def test_bookkeeper_clear_mode(bookkeeper, bookkeeper_mock_dir, history_path):
