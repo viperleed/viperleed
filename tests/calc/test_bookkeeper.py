@@ -142,6 +142,8 @@ class TestBookkeeperArchive:
                                           caplog):
         """Check correct storage of history files in ARCHIVE mode."""
         bookkeeper, mock_dir, history_path, history_path_run = after_run
+        # bookkeeper should think that it needs archiving
+        assert bookkeeper.archiving_required is True
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
         assert history_path.exists()
         assert history_path_run.is_dir()
@@ -168,6 +170,7 @@ class TestBookkeeperArchive:
                                     before_run,
                                     caplog):
         bookkeeper, mock_dir = before_run
+        assert bookkeeper.archiving_required is False
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
         # Bookkeeper should not do anything
         assert (mock_dir / 'history').exists()
@@ -185,6 +188,7 @@ class TestBookkeeperArchive:
                                     after_archive,
                                     caplog):
         bookkeeper, mock_dir, history_dir, history_run_dir = after_archive
+        assert bookkeeper.archiving_required is False
         # write stuff to files to check they are not overwritten
         for file in MOCK_STATE_FILES:
             (mock_dir / file).write_text('something else')
@@ -201,6 +205,8 @@ class TestBookkeeperClear:
     def test_bookkeeper_clear_new(self, before_run, caplog):
         """Check correct overwriting of input files in CLEAR mode."""
         bookkeeper, mock_dir = before_run
+        # bookkeeper should not think that it needs archiving
+        assert bookkeeper.archiving_required is False
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
         # Bookkeeper should not do anything
         assert not tuple((mock_dir / 'history').iterdir())
