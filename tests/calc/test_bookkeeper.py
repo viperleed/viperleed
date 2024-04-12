@@ -33,9 +33,9 @@ MOCK_ORIG_CONTENT = 'This is a test original input file.'
 MOCK_OUT_CONTENT = 'This is a test output file.'
 
 
-@fixture(name='bookkeeper_mock_dir')
+@fixture(name='bookkeeper_mock_dir_after_run')
 @parametrize(log_file_name=MOCK_LOG_FILES)
-def fixture_bookkeeper_mock_dir(tmp_path, log_file_name):
+def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name):
     """Yield a temporary directory for testing the bookkeeper."""
     work_path = tmp_path / DEFAULT_WORK
     out_path = tmp_path / 'OUT'
@@ -72,10 +72,42 @@ def fixture_bookkeeper_mock_dir(tmp_path, log_file_name):
     shutil.rmtree(tmp_path)
 
 
+@fixture(name='after_run')
+def fixture_after_run(bookkeeper_mock_dir_after_run):
+    """Return the path to the temporary directory after the run."""
+    bookkeeper = Bookkeeper(cwd=bookkeeper_mock_dir_after_run)
+    history_path = bookkeeper_mock_dir_after_run / DEFAULT_HISTORY
+    history_run_path = history_path / f't000.r001_{MOCK_TIMESTAMP}'
+    return bookkeeper, bookkeeper_mock_dir_after_run, history_path, history_run_path
+
+
+@fixture(name='after_archive')
+def fixture_bookkeeper_mock_dir_after_archive(after_run):
+    """Yield a temporary directory for testing the bookkeeper."""
+    bookkeeper, bookkeeper_mock_dir_after_run, history_path, history_run_path = after_run
+    bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
+    return bookkeeper, bookkeeper_mock_dir_after_run, history_path, history_run_path
+
+
+@fixture(name='before_run')
+def fixture_bookkeeper_mock_dir_new(tmp_path):
+    """Yield a temporary directory for testing the bookkeeper.
+    This represents a new calculation, i.e., before any viperleed calc or
+    bookkeeper run."""
+    # create mock input files
+    for file in MOCK_STATE_FILES:
+        (tmp_path / file).write_text(MOCK_INPUT_CONTENT)
+
+    bookkeeper = Bookkeeper(cwd=tmp_path)
+    with execute_in_dir(tmp_path):
+        yield bookkeeper, tmp_path
+    shutil.rmtree(tmp_path)
+
+
 @fixture(name='history_path')
-def fixture_history_path(bookkeeper_mock_dir):
+def fixture_history_path(bookkeeper_mock_dir_after_run):
     """Return the path to a history subfolder of `bookkeeper_mock_dir`."""
-    return bookkeeper_mock_dir / DEFAULT_HISTORY
+    return bookkeeper_mock_dir_after_run / DEFAULT_HISTORY
 
 
 @fixture(name='history_path_run')
@@ -83,11 +115,6 @@ def fixture_history_path_run(history_path):
     """Return the path to a history run subfolder of `history_path`."""
     return history_path / f't000.r001_{MOCK_TIMESTAMP}'
 
-
-@fixture(name='bookkeeper')
-def fixture_bookkeeper(bookkeeper_mock_dir):
-    """Return a Bookkeeper instance for testing."""
-    return Bookkeeper(cwd=bookkeeper_mock_dir.resolve())
 
 def test_bookkeeper_mode_enum():
     """Check values of bookkeeper mode enum."""
@@ -97,9 +124,9 @@ def test_bookkeeper_mode_enum():
     assert BookkeeperMode.DISCARD_FULL is BookkeeperMode('discard_full')
 
 
-def test_store_input_files_to_history(tmp_path, bookkeeper_mock_dir):
+def test_store_input_files_to_history(tmp_path, bookkeeper_mock_dir_after_run):
     """Check correct storage of original input files to history."""
-    inputs_path = bookkeeper_mock_dir / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME
+    inputs_path = bookkeeper_mock_dir_after_run / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME
     history = tmp_path / DEFAULT_HISTORY
     history.mkdir(parents=True, exist_ok=True)
     store_input_files_to_history(inputs_path, history)
@@ -109,32 +136,51 @@ def test_store_input_files_to_history(tmp_path, bookkeeper_mock_dir):
         assert MOCK_ORIG_CONTENT in hist_file_content
 
 
-def test_bookkeeper_archive_mode(bookkeeper,
-                                 bookkeeper_mock_dir,
-                                 history_path,
-                                 history_path_run):
-    """Check correct storage of history files in ARCHIVE mode."""
-    bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
-    assert history_path.exists()
-    assert history_path_run.is_dir()
-    assert (bookkeeper_mock_dir / 'history.info').exists()
-    # Out stored in history
-    for file in MOCK_STATE_FILES:
-        hist_file = history_path_run / 'OUT' / f'{file}_OUT'
-        hist_content = hist_file.read_text()
-        assert MOCK_OUT_CONTENT in hist_content
-    # Original moved to _ori
-    for file in MOCK_STATE_FILES:
-        ori_file = bookkeeper_mock_dir / f'{file}_ori'
-        assert ori_file.is_file()
-        input_content = (bookkeeper_mock_dir / file).read_text()
-        assert MOCK_OUT_CONTENT in input_content
-    # Original replaced by output
-    for file in MOCK_STATE_FILES:
-        out_content = (bookkeeper_mock_dir / file).read_text()
-        assert MOCK_OUT_CONTENT in out_content
-    # Check that there are no errors or warnings in log
-    assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+class TestBookkeeperArchive:
+    def test_bookkeeper_archive_after_run(self,
+                                          after_run,
+                                          caplog):
+        """Check correct storage of history files in ARCHIVE mode."""
+        bookkeeper, mock_dir, history_path, history_path_run = after_run
+        bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
+        assert history_path.exists()
+        assert history_path_run.is_dir()
+        assert (mock_dir / 'history.info').exists()
+        # Out stored in history
+        for file in MOCK_STATE_FILES:
+            hist_file = history_path_run / 'OUT' / f'{file}_OUT'
+            hist_content = hist_file.read_text()
+            assert MOCK_OUT_CONTENT in hist_content
+        # Original moved to _ori
+        for file in MOCK_STATE_FILES:
+            ori_file = mock_dir / f'{file}_ori'
+            assert ori_file.is_file()
+            input_content = (mock_dir / file).read_text()
+            assert MOCK_OUT_CONTENT in input_content
+        # Original replaced by output
+        for file in MOCK_STATE_FILES:
+            out_content = (mock_dir / file).read_text()
+            assert MOCK_OUT_CONTENT in out_content
+        # Check that there are no errors or warnings in log
+        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+
+    def test_bookkeeper_archive_new(self,
+                                    before_run,
+                                    caplog):
+        bookkeeper, mock_dir = before_run
+        bookkeeper = Bookkeeper(cwd=mock_dir)
+        bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
+        # Bookkeeper should not do anything
+        assert not (mock_dir / 'history').exists()
+        assert not (mock_dir / 'history.info').exists()
+        # Originals untouched
+        for file in MOCK_STATE_FILES:
+            assert (mock_dir / file).is_file()
+            input_content = (mock_dir / file).read_text()
+            assert MOCK_INPUT_CONTENT in input_content
+        # Check that there are no errors or warnings in log
+        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+
 
 
 def test_bookkeeper_clear_mode(bookkeeper, bookkeeper_mock_dir, history_path):
