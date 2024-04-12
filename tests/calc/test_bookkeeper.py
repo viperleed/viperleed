@@ -17,7 +17,7 @@ from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper import BookkeeperMode
 from viperleed.calc.bookkeeper import _CALC_LOG_PREFIXES
-from viperleed.calc.bookkeeper import bookkeeper
+from viperleed.calc.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper import store_input_files_to_history
 
 from ..helpers import execute_in_dir
@@ -85,9 +85,10 @@ def fixture_history_path_run(history_path):
 
 def test_bookkeeper_mode_enum():
     """Check values of bookkeeper mode enum."""
-    assert BookkeeperMode.DEFAULT is BookkeeperMode('default')
-    assert BookkeeperMode.CONT is BookkeeperMode('cont')
+    assert BookkeeperMode.ARCHIVE is BookkeeperMode('archive')
+    assert BookkeeperMode.CLEAR is BookkeeperMode('clear')
     assert BookkeeperMode.DISCARD is BookkeeperMode('discard')
+    assert BookkeeperMode.DISCARD_FULL is BookkeeperMode('discard_full')
 
 
 def test_store_input_files_to_history(tmp_path, bookkeeper_mock_dir):
