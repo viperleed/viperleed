@@ -335,11 +335,14 @@ class Bookkeeper():
             return 1
 
         # remove history entry
-        try:
-            shutil.rmtree(self.history_dir)
-        except OSError:
-            logger.error(f'Error: Failed to delete {self.history_dir}.')
-            return 1
+        if self.history_dir.is_dir():
+            try:
+                shutil.rmtree(self.history_dir)
+            except OSError:
+                logger.error(f'Error: Failed to delete {self.history_dir}.')
+                return 1
+        else:
+            logger.info(f'History folder {self.history_dir} does not exist.')
 
         self._discard_common()
 
