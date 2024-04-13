@@ -38,6 +38,7 @@ _CALC_LOG_PREFIXES = (
 HIST_FOLDER_RE = re.compile(
     r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
     )
+HISTORY_INFO_NAME = 'history.info'
 _HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
 _HISTORY_INFO_SEPARATOR = '###########'
 
@@ -193,10 +194,17 @@ class Bookkeeper():
         return self.cwd_logs[0] + self.cwd_logs[1]
 
     @property
+    def history_info_file(self):
+        return self.cwd / HISTORY_INFO_NAME
+
+    @property
     def last_history_info_entry_has_notes(self):
         """Checks the history.info file and """
-        
-        with open(self.cwd / 'history.info', 'r', encoding='utf-8') as hist_info_file:
+        if not self.history_info_file.is_file():
+            # no history.info file, so no notes
+            return False
+
+        with open(self.history_info_file, 'r', encoding='utf-8') as hist_info_file:
             content = hist_info_file.read()
         last_entry = content.rsplit(_HISTORY_INFO_SEPARATOR, 1)[-1]
         if not last_entry:
@@ -321,7 +329,7 @@ class Bookkeeper():
     def _run_discard_full_mode(self):
         # check for notes in history.info
         if self.last_history_info_entry_has_notes:
-            logger.warning('The last entry in history.info has user notes. '
+            logger.warning(f'The last entry in {HISTORY_INFO_NAME} has user notes. '
                            'If you really want to purge the last run, remove '
                            'the notes first.')
             return 1
@@ -530,7 +538,7 @@ def _add_entry_to_history_info_file(cwd, tensor_nums, job_nums, job_name,
     -------
     None.
     """
-    history_info = cwd / 'history.info'
+    history_info = cwd / HISTORY_INFO_NAME
     contents = [] if not history_info.is_file() else ['', '']
     contents.append(
         '# TENSORS '.ljust(_HISTORY_INFO_SPACING)
@@ -554,7 +562,7 @@ def _add_entry_to_history_info_file(cwd, tensor_nums, job_nums, job_name,
         with history_info.open('a', encoding='utf-8') as hist_info_file:
             hist_info_file.write('\n'.join(contents))
     except OSError:
-        logger.error('Failed to append to history.info file.')
+        logger.error(f'Failed to append to {HISTORY_INFO_NAME} file.')
 
 
 def _create_new_history_dir(new_history_path):
@@ -947,7 +955,7 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
         parser.add_argument(
             '-j', '--job-name',
             help=('define a string to be appended to the name of the history '
-                  'folder that is created, and is logged in history.info'),
+                  f'folder that is created, and is logged in {HISTORY_INFO_NAME}'),
             type=str
             )
         parser.add_argument(
