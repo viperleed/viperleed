@@ -316,7 +316,7 @@ class TestBookkeeperDiscard:
         bookkeeper, mock_dir, history_path, history_path_run = after_run
         # bookkeeper should think that it needs archiving
         assert bookkeeper.archiving_required is True
-        bookkeeper.run(mode=BookkeeperMode.CLEAR)
+        bookkeeper.run(mode=BookkeeperMode.DISCARD)
         assert history_path.exists()
         assert history_path_run.is_dir()
         assert (mock_dir / 'history.info').exists()
@@ -349,7 +349,7 @@ class TestBookkeeperDiscard:
         bookkeeper, mock_dir, history_path, history_path_run = after_archive
         # bookkeeper should not think that it needs archiving
         assert bookkeeper.archiving_required is False
-        bookkeeper.run(mode=BookkeeperMode.CLEAR)
+        bookkeeper.run(mode=BookkeeperMode.DISCARD)
         assert history_path.exists()
         assert history_path_run.is_dir()
         assert (mock_dir / 'history.info').exists()
@@ -368,7 +368,7 @@ class TestBookkeeperDiscard:
         # Original be replaced by output
         for file in MOCK_STATE_FILES:
             out_content = (mock_dir / file).read_text()
-            assert MOCK_OUT_CONTENT in out_content
+            assert MOCK_INPUT_CONTENT in out_content
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
 
