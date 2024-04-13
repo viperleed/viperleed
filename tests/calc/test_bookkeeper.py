@@ -26,6 +26,7 @@ from ..helpers import execute_in_dir
 
 MOCK_TIMESTAMP = '010203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in _CALC_LOG_PREFIXES]
+MOCK_JOB_NAMES = (None, 'test_jobname')
 NOTES_TEST_CONTENT = 'This is a test note.'
 MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
 MOCK_INPUT_CONTENT = 'This is a test input file.'
@@ -73,11 +74,16 @@ def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name):
 
 
 @fixture(name='after_run')
-def fixture_after_run(bookkeeper_mock_dir_after_run):
+@parametrize(job_name=MOCK_JOB_NAMES)
+def fixture_after_run(bookkeeper_mock_dir_after_run, job_name):
     """Return the path to the temporary directory after the run."""
-    bookkeeper = Bookkeeper(cwd=bookkeeper_mock_dir_after_run)
+    bookkeeper = Bookkeeper(cwd=bookkeeper_mock_dir_after_run,
+                            job_name=job_name)
     history_path = bookkeeper_mock_dir_after_run / DEFAULT_HISTORY
-    history_run_path = history_path / f't000.r001_{MOCK_TIMESTAMP}'
+    dir_name = f't000.r001_{MOCK_TIMESTAMP}'
+    if job_name is not None:
+        dir_name += f'_{job_name}'
+    history_run_path = history_path / dir_name
     return bookkeeper, bookkeeper_mock_dir_after_run, history_path, history_run_path
 
 
@@ -370,12 +376,6 @@ class TestBookkeeperDiscard:
 class TestBookkeeperDiscardFull:
     # TODO
     pass
-
-# TODO: turn this into a parametrize of the bookkeeper fixture
-def test_bookkeeper_with_job_name(history_path):
-    """Check correct history storage when a specific job name is set."""
-    bookkeeper(mode='default', job_name='test_job')
-    assert (history_path / f't000.r001_{MOCK_TIMESTAMP}_test_job').exists()
 
 
 # TODO: turn this into a parametrize of the bookkeeper fixture
