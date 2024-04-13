@@ -311,10 +311,10 @@ class Bookkeeper():
         if not self.history_dir.is_dir() and self.files_needs_archiving:
             logger.info(f'History folder {self.history_dir} does not yet exist.'
                         ' Running archive mode first.')
-        self._make_and_copy_to_history(use_ori=False)
+            self._make_and_copy_to_history(use_ori=False)
 
-        # workhistory and history.info
-        self._deal_with_workhistory_and_history_info(discard=True)
+            # workhistory and history.info
+            self._deal_with_workhistory_and_history_info(discard=True)
 
         self._discard_common()
 
