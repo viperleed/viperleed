@@ -28,6 +28,7 @@ MOCK_TIMESTAMP = '010203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in _CALC_LOG_PREFIXES]
 MOCK_JOB_NAMES = (None, 'test_jobname')
 NOTES_TEST_CONTENT = 'This is a test note.'
+ALT_HISTORY_NAME = 'history_alt_name'
 MOCK_STATE_FILES = ('POSCAR', 'VIBROCC', 'PARAMETERS')
 MOCK_INPUT_CONTENT = 'This is a test input file.'
 MOCK_ORIG_CONTENT = 'This is a test original input file.'
@@ -52,6 +53,14 @@ def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name):
     # create mock notes file
     notes_file = tmp_path / 'notes.txt'
     notes_file.write_text(NOTES_TEST_CONTENT)
+    # create mock Tensor and Delta files
+    (tensors_path / 'Tensors_003.zip').touch()
+    (deltas_path / 'Deltas_003.zip').touch()
+
+    # create non-empty mock alt_history folder
+    alt_history = tmp_path / ALT_HISTORY_NAME
+    for run_name in ('t001.r001_20xxxx-xxxxxx', 't002.r002_20xxxx-xxxxxx'):
+        (alt_history / run_name).mkdir(parents=True, exist_ok=True)
 
     # create mock input files
     for file in MOCK_STATE_FILES:
@@ -75,12 +84,14 @@ def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name):
 
 @fixture(name='after_run')
 @parametrize(job_name=MOCK_JOB_NAMES)
-def fixture_after_run(bookkeeper_mock_dir_after_run, job_name):
+@parametrize(history_name=(DEFAULT_HISTORY, ALT_HISTORY_NAME))
+def fixture_after_run(bookkeeper_mock_dir_after_run, job_name, history_name):
     """Return the path to the temporary directory after the run."""
     bookkeeper = Bookkeeper(cwd=bookkeeper_mock_dir_after_run,
-                            job_name=job_name)
-    history_path = bookkeeper_mock_dir_after_run / DEFAULT_HISTORY
-    dir_name = f't000.r001_{MOCK_TIMESTAMP}'
+                            job_name=job_name,
+                            history_name=history_name)
+    history_path = bookkeeper_mock_dir_after_run / history_name
+    dir_name = f't003.r001_{MOCK_TIMESTAMP}'
     if job_name is not None:
         dir_name += f'_{job_name}'
     history_run_path = history_path / dir_name
@@ -202,8 +213,6 @@ class TestBookkeeperArchive:
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
         for file in MOCK_STATE_FILES:
             assert (mock_dir / file).read_text() == 'something else'
-        # Bookkeeper should not do anything
-        assert (mock_dir / 'history').exists()
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
 
@@ -437,16 +446,3 @@ class TestBookkeeperDiscardFull:
             assert MOCK_INPUT_CONTENT in out_content
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
-
-
-# TODO: turn this into a parametrize of the bookkeeper fixture
-def test_bookkeeper_with_existing_history_and_alt_name(bookkeeper_mock_dir):
-    """Check correct storage with a non-empty, differently named history."""
-    # Create some existing history folders
-    hist_name = 'history_alt_name'
-    alt_history = bookkeeper_mock_dir / hist_name
-    for run_name in ('t001.r001_20xxxx-xxxxxx', 't002.r002_20xxxx-xxxxxx'):
-        (alt_history / run_name).mkdir(parents=True, exist_ok=True)
-    (bookkeeper_mock_dir / 'Tensors' / 'Tensors_003.zip').touch()
-    bookkeeper(mode='default', history_name=hist_name)
-    assert (alt_history / f't003.r001_{MOCK_TIMESTAMP}').exists()
