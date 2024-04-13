@@ -374,8 +374,25 @@ class TestBookkeeperDiscard:
 
 
 class TestBookkeeperDiscardFull:
+    def test_bookkeeper_discard_full_new(self, before_run, caplog):
+        """Check correct overwriting of input files in DISCARD_FULL mode.
+        Should be the same as normal DISCARD in this case."""
+        bookkeeper, mock_dir = before_run
+        # bookkeeper should not think that it needs archiving
+        assert bookkeeper.archiving_required is False
+        bookkeeper.run(mode=BookkeeperMode.DISCARD_FULL)
+        # Bookkeeper should not do anything
+        assert not tuple((mock_dir / 'history').iterdir())
+        assert not (mock_dir / 'history.info').exists()
+        # Originals untouched
+        for file in MOCK_STATE_FILES:
+            assert (mock_dir / file).is_file()
+            input_content = (mock_dir / file).read_text()
+            assert MOCK_INPUT_CONTENT in input_content
+        # Check that there are no errors or warnings in log
+        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+
     # TODO
-    pass
 
 
 # TODO: turn this into a parametrize of the bookkeeper fixture
