@@ -94,7 +94,10 @@ def run_calc(system_name=None,
     fileHandler = logging.FileHandler(log_name, mode="w")
     fileHandler.setFormatter(logFormatter)
     logger.addHandler(fileHandler)
-    if console_output:
+    already_has_stream_handler = any(
+        isinstance(h, logging.StreamHandler) for h in logger.handlers
+        )
+    if console_output and not already_has_stream_handler:
         consoleHandler = logging.StreamHandler()
         consoleHandler.setFormatter(logFormatter)
         logger.addHandler(consoleHandler)

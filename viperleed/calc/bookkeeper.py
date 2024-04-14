@@ -111,6 +111,13 @@ class Bookkeeper():
             self.work_dir = Path(work_dir)
         self.job_name = job_name
 
+        # attach a stream handler to logger if not already present
+        if not any(isinstance(h, logging.StreamHandler)
+                   for h in logger.handlers):
+            logger.addHandler(logging.StreamHandler())
+        logger.setLevel(logging.INFO)
+        logger.propagate = True
+
         # Make top level history folder if not there yet
         try:
             self.top_level_history_path.mkdir(exist_ok=True)
