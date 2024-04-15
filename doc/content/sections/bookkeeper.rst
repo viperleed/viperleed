@@ -46,6 +46,8 @@ By default these files are overwritten by the output files of the previous calcu
   Needs to be run manually with ``viperleed bookkeeper --discard-full``.
 
 
+.. versionchanged:: 0.12.0
+    The bookkeeper behavior was overhauled and the names of the modes were changed.
 
 
 .. _history_info:
