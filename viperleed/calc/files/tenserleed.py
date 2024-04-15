@@ -195,10 +195,6 @@ class TensErLEEDSource:
             raise FileNotFoundError(
                 f'TensErLEED path {_path} is not a directory or a zip file')
 
-        # go one level deeper in case there is a nested directory like
-        # TensErLEED-v1.x.y/TensErLEED-v1.x.y/
-        if self.path.name.startswith('TensErLEED'):
-            self.path = self.path / self.path.name.replace('.zip', '')
 
     @property
     def version(self):
