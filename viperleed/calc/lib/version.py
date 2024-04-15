@@ -10,6 +10,10 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2024-04-15'
 __license__ = 'GPLv3+'
 
+import re
+
+_DOTS_OR_DIGITS = re.compile(r"[.0-9]+")
+
 class Version:
     """Simple class to easily handle versions."""
 
