@@ -28,18 +28,18 @@ TENSERLEED_FOLDER_NAME = 'TensErLEED'
 
 # TensErLEED Versions
 KNOWN_TL_VERSIONS = (
-    '1.6',
-    '1.61',
-    '1.71',
-    '1.72',
-    '1.73',  # TODO: use Version when available
-    '1.74',
-    '1.75',
-    '1.76',
+    '1.6.0',
+    '1.6.1',
+    '1.7.1',
+    '1.7.2',
+    '1.7.3',
+    '1.7.4',
+    '1.7.5',
+    '1.7.6',
     '2.0.0',
     )
 
-_OLD_TL_VERSION_NAMES = {
+OLD_TL_VERSION_NAMES = {
     '1.6': '1.6.0',
     '1.61': '1.6.1',
     '1.71': '1.7.1',
