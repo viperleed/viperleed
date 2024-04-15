@@ -67,7 +67,7 @@ class Version:
         # minor < 0 < patch, but it feels less readable
         if patch > 0 and minor < 0:
             raise ValueError(f"{_name}: Cannot have 'patch' without 'minor'")
-        self.__has_parts = (True, minor > 0, patch > 0)
+        self.__has_parts = (True, minor >= 0, patch >= 0)
         self._parts = (major, max(minor, 0), max(patch, 0))
 
     @property
