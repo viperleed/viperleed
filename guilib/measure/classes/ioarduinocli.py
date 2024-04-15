@@ -38,10 +38,6 @@ from viperleed.guilib.measure.classes import settings
 
 
 NOT_SET = '\u2014'
-# For development use only. If GET_ARCHIVED_FIRMWARE is true, firmware
-# will be taken from .zip archives. If false, regular folders will be
-# searched. Useful for uploading firmware in development.
-GET_ARCHIVED_FIRMWARE = True
 
 
 # FirmwareVersionInfo represents the selected firmware that
@@ -84,13 +80,26 @@ class ViPErLEEDFirmwareError(base.ViPErLEEDErrorEnum):
 
 
 class ArduinoCLI(qtc.QObject):
-    """Base class that can get the Arduino CLI."""
+    """Base class that looks for the Arduino CLI in the file system."""
+
+    # Emitted after the check whether the Arduino CLI is installed.
+    # Two bool values, the first one is true if a CLI version is
+    # installed, the second one is true if the CLI version is too old.
+    cli_found = qtc.pyqtSignal(bool, bool)
 
     def __init__(self, parent=None):
         """Initialise the Arduino CLI getter."""
         super().__init__(parent=parent)
         self.base_path = Path().resolve() / 'hardware/arduino/arduino-cli'
         self.update_cli_path()
+
+    def on_arduino_cli_failed(self, err):
+        """Report an Arduino CLI process failure."""
+        base.emit_error(self,
+            ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
+            err.returncode,
+            err.stderr.decode()
+            )
 
     def get_arduino_cli(self):
         """Pick the correct Arduino CLI tool.
@@ -133,6 +142,30 @@ class ArduinoCLI(qtc.QObject):
         return arduino_cli
 
     @qtc.pyqtSlot()
+    def is_cli_installed(self):
+        """Check if Arduino CLI is installed.
+
+        Emits
+        -----
+        cli_found(bool, bool)
+            Whether the Arduino CLI was found on the PC and whether
+            the CLI needs to be updated to be compatible with the
+            package.
+        """
+        try:
+            self.get_arduino_cli()
+        except FileNotFoundError:
+            self.cli_found.emit(False, True)
+            return
+        version = self._get_installed_cli_version().split('.')
+        # Check if the version is at least 0.19.0, as older versions
+        # are not compatible with the FirmwareUploader.
+        if not int(version[0]) and int(version[1]) < 19:
+            self.cli_found.emit(True, True)
+            return
+        self.cli_found.emit(True, False)
+
+    @qtc.pyqtSlot()
     def update_cli_path(self):
         """Update the Arduino CLI path."""
         path_getter = settings.SystemSettings()
@@ -151,15 +184,15 @@ class ArduinoCLIInstaller(ArduinoCLI):
     # succeeded.
     cli_installation_finished = qtc.pyqtSignal(bool)
 
-    # Emitted after the check if the Arduino CLI is installed.
-    cli_found = qtc.pyqtSignal(bool)
-
     # Emitted with a value that is indicative of how much of
     # the currently running process has been completed.
     progress_occurred = qtc.pyqtSignal(int)
 
     def __init__(self, parent=None):
         """Initialise the Arduino CLI downloader."""
+        # Note that giving this class a parent is not advisable
+        # since we have to manually perform the moveToThread method
+        # for the QNetworkAccessManager.
         super().__init__(parent=parent)
         self.network = qtn.QNetworkAccessManager()
         self.network.setTransferTimeout(timeout=2000)
@@ -208,7 +241,8 @@ class ArduinoCLIInstaller(ArduinoCLI):
 
         # Check if connection failed.
         if reply.error():
-            base.emit_error(self,
+            base.emit_error(
+                self,
                 ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED
                 )
             return
@@ -310,11 +344,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             cores = subprocess.run([cli, 'core', 'list', '--format', 'json'],
                                    capture_output=True, check=True)
         except subprocess.CalledProcessError as err:
-            base.emit_error(self,
-                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
-                err.returncode,
-                err.stderr.decode()
-                )
+            self.on_arduino_cli_failed(err)
             return {}
         return json.loads(cores.stdout)
 
@@ -333,7 +363,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
 
         try:
             ver_json = subprocess.run([cli, 'version', '--format', 'json'],
-                                 capture_output=True, check=True)
+                                      capture_output=True, check=True)
         except subprocess.CalledProcessError:
             return '0.0.0'
         ver = json.loads(ver_json.stdout)
@@ -414,11 +444,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             subprocess.run([cli, 'core', 'install', core_name],
                            capture_output=True, check=True)
         except subprocess.CalledProcessError as err:
-            base.emit_error(self,
-                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
-                err.returncode,
-                err.stderr.decode()
-                )
+            self.on_arduino_cli_failed(err)
 
     @qtc.pyqtSlot(tuple)
     def _on_install_failed(self, _):
@@ -467,11 +493,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
         try:
             subprocess.run([cli, 'upgrade'], capture_output=True, check=True)
         except subprocess.CalledProcessError as err:
-            base.emit_error(self,
-                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
-                err.returncode,
-                err.stderr.decode()
-                )
+            self.on_arduino_cli_failed(err)
 
     @qtc.pyqtSlot()
     def get_arduino_cli_from_git(self):
@@ -498,22 +520,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
         self.network.finished.connect(self._download_newest_cli,
                                       type=qtc.Qt.UniqueConnection)
         self.network.get(request)
-
-    @qtc.pyqtSlot()
-    def is_cli_installed(self):
-        """Check if Arduino CLI is installed.
-
-        Emits
-        -----
-        cli_found(bool)
-            Whether the Arduino CLI was found on the PC.
-        """
-        try:
-            self.get_arduino_cli()
-        except FileNotFoundError:
-            self.cli_found.emit(False)
-            return
-        self.cli_found.emit(True)
 
     def moveToThread(self, thread):     # pylint: disable=invalid-name
         """Move self and self.network to thread."""
@@ -548,6 +554,13 @@ class FirmwareUploader(ArduinoCLI):
         -------
         boards : list of dicts
             A list that contains each matching board as a dict.
+            Each dict representing a controller has the following
+            {key: value} pairs:
+            'matching_boards' : list of dict
+                Holds the board name and the fully qualified board name.
+            'port' : dict
+                Holds information about the port, most importantly the
+                address.
 
         Emits
         -----
@@ -569,21 +582,19 @@ class FirmwareUploader(ArduinoCLI):
             return []
 
         try:
-            boards = subprocess.run([cli, 'board', 'list', '--format', 'json'],
-                                    capture_output=True, check=True)
-        except subprocess.CalledProcessError as err:
-            base.emit_error(self,
-                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
-                err.returncode,
-                err.stderr.decode()
+            boards_json = subprocess.run(
+                [cli, 'board', 'list', '--format', 'json'],
+                capture_output=True, check=True
                 )
+        except subprocess.CalledProcessError as err:
+            self.on_arduino_cli_failed(err)
             self.cli_failed.emit()
             return []
-        boards = json.loads(boards.stdout)
+        boards = json.loads(boards_json.stdout)
         return [b for b in boards if 'matching_boards' in b]
 
-    @qtc.pyqtSlot(dict, FirmwareVersionInfo, Path, bool)
-    def compile(self, selected_ctrl, firmware, tmp_path, upload):
+    @qtc.pyqtSlot(dict, FirmwareVersionInfo)
+    def compile(self, selected_ctrl, firmware):
         """Compile viper-ino for the specified board.
 
         Parameters
@@ -595,20 +606,13 @@ class FirmwareUploader(ArduinoCLI):
             A namedtuple representing the selected firmware that is
             to be uploaded to the selected controller. Contains the
             path from where the firmware is taken.
-        tmp_path : Path
-            The location where the selected firmware archive is
-            to be extracted to. This is not to be confused with
-            the path from which the firmware is taken.
-        upload : bool
-            If true, the extracted firmware will be uploaded to the
-            selected controller.
 
         Emits
         -----
         progress_occurred
-            Emitted at the start, after the firmware was extracted,
-            after the firmware was uploaded, after the extracted
-            firmware folder was removed, and at the end.
+            Emitted at the start, after checking if the selected
+            controller is present, after uploading the firmware, and
+            at the end.
         error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
             If there was no available controller on the given port.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
@@ -639,7 +643,7 @@ class FirmwareUploader(ArduinoCLI):
             self.controllers_detected.emit(available_ctrls)
             self.upload_finished.emit()
             return
-
+        self.progress_occurred.emit(20)
         try:
             cli = self.get_arduino_cli()
         except FileNotFoundError:
@@ -650,35 +654,22 @@ class FirmwareUploader(ArduinoCLI):
             self.cli_failed.emit()
             return
 
-        if GET_ARCHIVED_FIRMWARE:
-            with ZipFile(firmware.path) as firmware_zip:
-                firmware_zip.extractall(tmp_path)
-            firmware_file = tmp_path / firmware.folder_name / 'viper-ino'       # TODO: Add generic inner folder structure to find .ino file
-        else:
-            firmware_file = firmware.path / firmware.folder_name / 'viper-ino'
-        
+        firmware_file = firmware.path / firmware.folder_name / 'viper-ino'
+
         argv = ['compile', '--clean', '-b', selected_ctrl['fqbn'],
                 firmware_file]
-        if upload:
-            argv.extend(['-u', '-p', selected_ctrl['port']])
-        self.progress_occurred.emit(20)
+        argv.extend(['-u', '-p', selected_ctrl['port']])
+
         # subprocess.run([cli, *argv, '--verbose'], capture_output=True, check=True) TODO: track upload progress and adjust progress bar accordingly
         try:
             subprocess.run([cli, *argv], capture_output=True, check=True)
         except subprocess.CalledProcessError as err:
-            base.emit_error(self,
-                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
-                err.returncode,
-                err.stderr.decode()
-                )
-            # No return here to ensure that tmp folder is
-            # removed and buttons are enabled.
-        self.progress_occurred.emit(85)
-        if GET_ARCHIVED_FIRMWARE:
-            # Remove extracted archive
-            shutil.rmtree(tmp_path)
+            self.on_arduino_cli_failed(err)
+            # No return here to ensure that buttons are enabled and
+            # tmp folder (in FirmwareArchiveUploader) is removed.
+
         # Update controller list
-        self.progress_occurred.emit(90)
+        self.progress_occurred.emit(80)
         self.get_viperleed_hardware(True)
         self.progress_occurred.emit(100)
         self.upload_finished.emit()
@@ -695,18 +686,22 @@ class FirmwareUploader(ArduinoCLI):
         detect_viperino : bool
             If True, a check, whether the detected boards already have
             ViPErLEED firmware installed, will be performed. viperino
-            controllers are renamed to their respective uniqued name
+            controllers are renamed to their respective unique name
             in the returned dict and their firmware version is set. If
-            detect_viperino is False, then the controllers_detecte
+            detect_viperino is False, then the controllers_detected
             signal will not be emitted after a successful controller
-            detection.
+            detection. If no controllers were detected, the signal is
+            emitted with an empty dict to force a reset of the
+            displayed controllers on the dialog side.
 
         Returns
         -------
-        viper_boards : dict
+        ctrl_dict : dict
             A dict of the detected Arduino Micro boards containing dicts
-            with information about the controllers. The following
-            {key: value} pairs are present in controller dicts.
+            with information about the controllers. keys are unique
+            names of the detected controllers, including their address,
+            with format '<controller name> (<address>)'. Values are
+            dictionaries with the following {key: value} pairs:
             'port': str
                 COM port address
             'name': str
@@ -728,7 +723,7 @@ class FirmwareUploader(ArduinoCLI):
         ctrl_dict = {}
 
         if not boards:
-            self.controllers_detected.emit({})
+            self.controllers_detected.emit(ctrl_dict)
             return ctrl_dict
 
         # Get all available Arduino Micro controllers.
@@ -755,16 +750,16 @@ class FirmwareUploader(ArduinoCLI):
             return ctrl_dict
 
         # Detect ViPErLEED controllers.
-        for name, (_, info) in base.get_devices('controller').items():
+        for name, (cls, info) in base.get_devices('controller').items():
             port = info.get('address')
             ctrl = next(self.ctrls_with_port(ctrl_dict, port), None)
             if not ctrl:
                 continue
             ctrl_dict[ctrl]['version'] = info.get('firmware', NOT_SET)
-            box_id = info.get('box_id')
+            box_id = getattr(cls, 'box_id', None)
             # box_id of the measuring ViPErinoController is 0! Check
             # must be is not None because of that.
-            if box_id is not None:
+            if box_id:
                 # Notice the -2: the last two entries in name are the
                 # serial number and the '(COM<port>)' bits, which we
                 # don't need.
@@ -791,3 +786,53 @@ class FirmwareUploader(ArduinoCLI):
             The controllers at the desired port.
         """
         return (ctrl for ctrl in ctrls if ctrls[ctrl]['port'] == port)
+
+
+class FirmwareArchiveUploader(FirmwareUploader):
+    """Worker that handles archived firmware uploads in another thread."""
+
+    @qtc.pyqtSlot(dict, FirmwareVersionInfo)
+    def compile(self, selected_ctrl, firmware):
+        """Extract and compile viper-ino for the specified board.
+
+        Parameters
+        ----------
+        selected_ctrl : dict
+            A dict representing the selected controller. It contains the
+            controller name, COM port, and fully qualified board name.
+        firmware : FirmwareVersionInfo
+            A namedtuple representing the selected firmware that is
+            to be uploaded to the selected controller. Contains the
+            path from where the firmware is taken.
+
+        Emits
+        -----
+        progress_occurred
+            Emitted at the start, after extracting the firmware,
+            after checking if the selected controller is present,
+            after uploading the firmware, and at the end.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
+            If there was no available controller on the given port.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
+            If the Arduino CLI was not found.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
+            If the Arduino CLI failed to upload the selected
+            firmware to the controller.
+        controllers_detected(available_ctrls)
+            If the requested controller was no longer present.
+            Contains the detected controllers.
+        cli_failed()
+            If the Arduino CLI process failed.
+        upload_finished()
+            Emitted if the selected controller was no longer connected
+            when trying upload the firmware, or if the upload was
+            successful.
+        """
+        # The folder to which the selected archive is extracted.
+        tmp_path = firmware.path.parent / 'tmp_'
+        with ZipFile(firmware.path) as firmware_zip:
+            firmware_zip.extractall(tmp_path)
+        self.progress_occurred.emit(5)
+        firmware = firmware._replace(path=tmp_path)
+        super().compile(selected_ctrl, firmware)
+        shutil.rmtree(tmp_path)

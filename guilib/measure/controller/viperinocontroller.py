@@ -89,7 +89,9 @@ class ViPErinoController(abc.MeasureControllerABC):
 
     hardware_info_arrived = qtc.pyqtSignal()
 
-    _box_id = 0
+    # The box_id of the class is dictated by the
+    # controller type and must never be changed!
+    box_id = 1
 
     def __init__(self, parent=None, settings=None,
                  address='', sets_energy=False):
@@ -158,11 +160,6 @@ class ViPErinoController(abc.MeasureControllerABC):
         # The thermocouple.Thermocouple instance for this unit.
         # None if not present (or if TEMPERATURE was not measured)
         self.__thermocouple = None
-
-    @property
-    def box_id(self):
-        """Return the box id of the associated controller."""
-        return self._box_id
 
     @property
     def initial_delay(self):
@@ -507,29 +504,13 @@ class ViPErinoController(abc.MeasureControllerABC):
             Each element is a DeviceInfo instance containing the unique
             name of a controller and .more information as a dict.
             The .more dict contains the following keys:
-                'name':
+                'name' : str
                     The controller name. This name may not be unique!
-                'address':
+                'address' : str
                     The COM port on which the controller is connected.
-                'box_id':
-                    The type of ViPErLEED controller.
-                'firmware':
+                'firmware' : Version
                     The firmware version that is installed
                     on the controller.
-                'serial_nr':
-                    The serial number of the controller.
-                'adc_0':
-                    Whether the ADC 0 is present or not.
-                'adc_1':
-                    Whether the ADC 1 is present or not.
-                'lm35':
-                    Whether the LM35 is present or not.
-                'relay':
-                    Whether the relay is present or not.
-                'aux_range':
-                    The volt range of the auxiliary channel.
-                'i0_range':
-                    The volt range of the i0 channel.
         """
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]
@@ -553,23 +534,18 @@ class ViPErinoController(abc.MeasureControllerABC):
         for ctrl in controllers:
             _INVOKE(ctrl, 'get_hardware', qtc.Qt.QueuedConnection)
         if controllers:
-            # Notice: The next line is quite critical. Using a simple
-            # time.sleep() with the same duration DOES NOT WORK, i.e.,
-            # there's no information in the controller.hardware dict.
-            # However, this line seems to ALWAYS TIME OUT (emitting a
-            # serial timeout error), even if there were bytes read and
-            # correctly interpreted.
             controllers[0].serial.port.waitForReadyRead(100)
         for ctrl in controllers:
             with ctrl.lock:
                 hardware = ctrl.hardware.copy()
-                hardware['address'] = ctrl.address
-                hardware['name'] = ctrl.name
             serial_nr = hardware.get('serial_nr', None)
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
                 txt = f"{ctrl.name} ({ctrl.address})"
-                device_list.append(base.DeviceInfo(txt, hardware))
+                more_info = {k: hardware[k] for k in ('firmware', )}             # TODO: populate keys that we need here
+                more_info['address'] = ctrl.address
+                more_info['name'] = ctrl.name
+                device_list.append(base.DeviceInfo(txt, more_info))
             else:
                 print("Not a ViPErLEED controller at", ctrl.address,
                       hardware, flush=True)

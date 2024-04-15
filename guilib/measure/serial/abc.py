@@ -261,7 +261,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                     ).to_bytes(1, self.byte_order)}
 
     @property
-    def port_name(self):
+    def port_name(self):                                                        # TODO: change port_name to address
         """Return the name of the current port as a string."""
         return self.port.portName()
 

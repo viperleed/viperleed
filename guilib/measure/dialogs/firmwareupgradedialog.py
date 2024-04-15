@@ -16,7 +16,7 @@ https://github.com/arduino/arduino-cli/releases
 """
 
 from pathlib import Path
-from re import sub
+import re
 from zipfile import ZipFile
 
 from PyQt5 import QtCore as qtc
@@ -26,13 +26,57 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes import settings
 from viperleed.guilib.measure.classes.ioarduinocli import ArduinoCLIInstaller
 from viperleed.guilib.measure.classes.ioarduinocli import FirmwareUploader
+from viperleed.guilib.measure.classes.ioarduinocli import (
+    FirmwareArchiveUploader
+    )
 from viperleed.guilib.measure.classes.ioarduinocli import FirmwareVersionInfo
 from viperleed.guilib.measure.classes.ioarduinocli import NOT_SET
-from viperleed.guilib.measure.classes.ioarduinocli import GET_ARCHIVED_FIRMWARE
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
+# For development use only. If GET_ARCHIVED_FIRMWARE is true, firmware
+# will be taken from .zip archives. If false, regular folders will be
+# searched. Useful for uploading firmware in development.
+GET_ARCHIVED_FIRMWARE = True
+
+
+def without_cpp_comments(file):
+    """Yield non-empty lines from file that are not comments."""
+    in_comment_block = False
+    for line in file:
+        line, *_ = line.split('//')
+        line = line.strip()
+        if not line:
+            continue
+        if in_comment_block and line.endswith(r'*/'):
+            in_comment_block = False
+            continue   # The next line may be a good one
+        if line.startswith(r'\*'):
+            in_comment_block = True
+        if in_comment_block:
+            continue
+        yield line
+
+
+def get_firmware_version_from_ino_file(file_name):
+    """Return a Version from the contents of file_name."""
+    major, minor = None, None
+    with file_name.open(encoding='utf-8') as file:
+        for line in without_cpp_comments(file):
+            if 'FIRMWARE_VERSION_MAJOR' in line:
+                try:
+                    major = int(re.sub(r'\D', '', line))
+                except ValueError:
+                    continue
+            if 'FIRMWARE_VERSION_MINOR' in line:
+                try:
+                    minor = int(re.sub(r'\D', '', line))
+                except ValueError:
+                    continue
+            if major is not None and minor is not None:
+                return base.Version(major, minor)
+    raise ValueError(f'No firmware version in {file_name}')
 
 
 class FirmwareUpgradeDialog(qtw.QDialog):
@@ -63,7 +107,10 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 },
             }
 
-        self._uploader = FirmwareUploader()
+        if GET_ARCHIVED_FIRMWARE:
+            self._uploader = FirmwareArchiveUploader()
+        else:
+            self._uploader = FirmwareUploader()
         self._upload_thread = qtc.QThread()
         self._uploader.moveToThread(self._upload_thread)
         self._upload_thread.start()
@@ -77,6 +124,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._progress_bar.setValue(0)
 
         self.setWindowTitle('Upgrade ViPErLEED box firmware')
+        # This path is set to the firmware path given in system
+        # settings if present when opening the dialog.
         self.controls['firmware_path'].path = Path().resolve()
         self._compose()
         self._connect()
@@ -192,8 +241,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         self._downloader.progress_occurred.connect(self._progress_bar.setValue)
         self._uploader.progress_occurred.connect(self._progress_bar.setValue)
 
-    @qtc.pyqtSlot(bool)
-    def _continue_open(self, is_installed):
+    @qtc.pyqtSlot(bool, bool)
+    def _continue_open(self, is_installed, is_outdated):
         """Open FirmwareUpgradeDialog if the Arduino CLI is_installed.
 
         If the Arduino CLI is installed this will open up the
@@ -204,6 +253,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         ----------
         is_installed : bool
             True if the Arduino CLI is installed on the PC.
+        is_outdated : bool
+            True if the CLI needs to be updated to be compatible.
 
         Returns
         -------
@@ -213,10 +264,22 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         # The error_occurred signal is reconnected because it is
         # disconnected in the open() method of the dialog.
         self._downloader.error_occurred.connect(self.error_occurred)
-        if is_installed:
+        if is_installed and not is_outdated:
             super().open()
             return
-        self._make_cli_install_disclaimer()
+        if is_installed:
+            disclaimer_text = (
+                '<p>We detected an outdated Arduino CLI version on '
+                'your system. The CLI needs to be updated as this '
+                'version is incompatible with the tool. </p>'
+                )
+        else:
+            disclaimer_text = (
+                '<p>We could not find the Arduino CLI on your system. '
+                'If it is installed, you can set its location in the '
+                'System Settings menu.</p>'
+                )
+        self._make_cli_install_disclaimer(disclaimer_text)
 
     def _ctrl_enable(self, enable):
         """Enable/disable all widgets.
@@ -268,16 +331,16 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     def _find_firmware_versions(self, *_):
         """Search for available firmware versions."""
         firmware_dict = {}
-        f_path = self.controls['firmware_path'].path
+        file_path = self.controls['firmware_path'].path
 
-        if not f_path or f_path == Path():  # User did not select path.
+        if not file_path or file_path == Path():  # User did not select path.
             self._update_combo_box('firmware_versions', firmware_dict)
             return
 
         if GET_ARCHIVED_FIRMWARE:
-            firmware_dict = self._get_archived_firmware(f_path)
+            firmware_dict = self._get_archived_firmware(file_path)
         else:
-            firmware_dict = self._get_firmware(f_path)
+            firmware_dict = self._get_firmware(file_path)
 
         self._update_combo_box('firmware_versions', firmware_dict)
         self._find_most_recent_firmware_version()
@@ -304,22 +367,23 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             f'Most recent firmware version: {max_version}'
             )
 
-    def _get_archived_firmware(self, f_path):
+    def _get_archived_firmware(self, file_path):
         """Get firmware versions that are in a .zip archive.
-        
+
         Parameters
         ----------
-        f_path : Path
+        file_path : Path
             The location where to look for firmware.
-        
+
         Returns
         -------
         firmware_dict : dict
-            A dict containing a FirmwareVersionInfo
-            for each firmware folder.
+            A dict containing a FirmwareVersionInfo for each firmware
+            folder. The keys are the text that is later on displayed
+            in the QComboBox.
         """
         firmware_dict = {}
-        for file in f_path.glob('*.zip'):
+        for file in file_path.glob('*.zip'):
             with ZipFile(file, mode='r') as archive:
                 # !!! We are assuming here that the first folder in the
                 # .zip file matches the name of the firmware version.
@@ -334,41 +398,50 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                                                                  version, file)
         return firmware_dict
 
-    def _get_firmware(self, f_path):
+    def _get_firmware(self, file_path):
         """Get firmware versions that are in a regular folder.
-        
+
+        The directory file_path is searched recursively for supported
+        .ino files. This search can potentially take very long if
+        performed on a large directory.
+
         Parameters
         ----------
-        f_path : Path
+        file_path : Path
             The location where to look for firmware.
-        
+
         Returns
         -------
         firmware_dict : dict
-            A dict containing a FirmwareVersionInfo
-            for each firmware folder.
+            A dict containing a FirmwareVersionInfo for each firmware
+            folder. The keys are the text that is later on displayed
+            in the QComboBox.
         """
         firmware_dict = {}
-        # This search can potentially take very long if performed
-        # on a large directory.
-        for file_name in f_path.rglob('viper-ino.ino'):
-            with file_name.open(encoding='utf-8') as file:
-                for line in file:
-                    if 'FIRMWARE_VERSION_MAJOR' in line:
-                        major = int(sub(r'\D', '', line.split('//')[0]))
-                    if 'FIRMWARE_VERSION_MINOR' in line:
-                        minor = int(sub(r'\D', '', line.split('//')[0]))
-                        break
-            version = base.Version(major, minor)
+        for file_name in file_path.rglob('viper-ino.ino'):
+            try:
+                version = get_firmware_version_from_ino_file(file_name)
+            except ValueError:
+                continue
             folder_name = file_name.parents[1].name
-            folder = str(file_name.parents[1].relative_to(f_path))
+            folder = str(file_name.parents[1].relative_to(file_path))
             firmware_dict[folder] = FirmwareVersionInfo(
                 folder_name, version, file_name.parents[2]
                 )
         return firmware_dict
 
-    def _make_cli_install_disclaimer(self):
-        """Create the dialog asking the user to install Arduino CLI."""
+    def _make_cli_install_disclaimer(self, reason):
+        """Create the dialog asking the user to install Arduino CLI.
+
+        Parameters
+        ----------
+        reason : str
+            The reason why the CLI needs to be updated/installed as str.
+
+        Returns
+        -------
+        None.
+        """
         accept_btn_text = 'Agree and install Arduino CLI'
         disclaimer = qtw.QMessageBox(parent=self)
         disclaimer.setWindowTitle('Arduino CLI not found')
@@ -380,9 +453,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             'under the <a href=https://www.gnu.org/licenses/gpl-3.0.html>'
             'GNU GPL-v3</a> license. You can find the source code and more '
             'information at <a href=https://github.com/arduino/arduino-cli>'
-            'github.com/arduino/arduino-cli</a>.</p><p>We could not find the '
-            'Arduino CLI on your system. If it is installed, you can set its '
-            'location in the System Settings menu.</p>'
+            'github.com/arduino/arduino-cli</a>.</p>'
+            f'{reason}'
             '<p>You can also download and install it automatically. Please '
             'make sure to select the desired install location first in the '
             'Settings menu, otherwise the Arduino CLI will be installed '
@@ -436,7 +508,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         data_dict : dict of dicts
             A dict of available controllers. Each key represents a
             controller and the associated value is a dict with more
-            information about the controller. The expected {key: value}
+            information about the controller. The keys are directly
+            used to display the controllers. The expected {key: value}
             pairs in each controller dict are:
             'port': str
                 COM port address
@@ -488,7 +561,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         which_combo : str
             A str determining which QComboBox should be updated.
         data_dict : dict
-            A dict of available controllers or firmware.
+            A dict of available controllers or firmware. The keys must
+            be strings as they are displayed as the item text in the
+            QComboBox. Values are stored as the item data.
 
         Returns
         -------
@@ -515,8 +590,6 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
         selected_ctrl = self.controls['controllers'].currentData()
         firmware = self.controls['firmware_versions'].currentData()
-        tmp_path = self.controls['firmware_path'].path / 'tmp_'
-        upload = True
         warning = qtw.QMessageBox(parent=self)
         warning.setWindowTitle('About to upload new firmware')
         warning.setText(
@@ -533,8 +606,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         button = warning.clickedButton()
         if button is accept:
             _INVOKE(self._uploader, 'compile', qtc.Q_ARG(dict, selected_ctrl),
-                    qtc.Q_ARG(FirmwareVersionInfo, firmware),
-                    qtc.Q_ARG(Path, tmp_path), qtc.Q_ARG(bool, upload))
+                    qtc.Q_ARG(FirmwareVersionInfo, firmware))
             self._ctrl_enable(False)
 
     @qtc.pyqtSlot()

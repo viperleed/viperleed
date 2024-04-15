@@ -149,7 +149,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             in the settings file, overriding the value that may be
             there. If not given and no value is present in the
             "controller/address" field, an address should be set
-            explicitly via the .address property. Default is an                 TODO: change port_name to address in SerialABC
+            explicitly via the .address property. Default is an
             empty string.
         sets_energy : bool, optional
             Used to determine whether this controller is responsible
@@ -828,18 +828,18 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         DeviceInfo object must contain a .unique_name, and a dict
         holding .more information about the device. .unique_name can
         be the controller name and it's address to make it unique.
-        The .more dict must contain the following keys:
-            'name':
-                The controller name (value of self.name).
-                This name may not be unique!
-            'address':
-                The address of the controller. (e.g. COM port)
 
         Returns
         -------
         devices : list
             Each element is a DeviceInfo instance containing the name
             of a controller and additional information as a dict.
+            The .more dict must contain the following keys:
+                'name':
+                    The controller name (value of self.name).
+                    This name does not need to be unique.
+                'address':
+                    The address of the controller (e.g., COM port).
         """
         return
 

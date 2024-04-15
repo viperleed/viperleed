@@ -676,8 +676,9 @@ class SystemSettings(ViPErLEEDSettings):
          '<nobr>This is the folder in which the Arduino</nobr> '
          'command-line interface is installed.'),
         ('PATHS', 'firmware',
-         '<nobr>This is the folder in which ViPErLEED</nobr> '
-         'controller firmware is saved.'),
+         '<nobr>This is the folder containing archives with firmware '
+         'for ViPErLEED controllers.'),
+
         )
         for section, option, info in _infos:
             handler[section][option].set_info_text(info)
