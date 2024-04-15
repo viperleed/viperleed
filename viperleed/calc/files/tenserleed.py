@@ -216,5 +216,5 @@ class TensErLEEDSource:
         else:
             logger.warning("Could not determine the version of the TensErLEED "
                            f"source code at {self.path}.")
-            return Version('unknown')
 
+            return None
