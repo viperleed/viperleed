@@ -308,11 +308,8 @@ class Bookkeeper():
             return 1
         self._make_and_copy_to_history(use_ori=False)
 
-        # rename state files to include '_ori' in their name
-        _rename_state_files_to_ori(self.cwd)
-
-        # replace input files from OUT
-        _replace_input_files_from_out(self.cwd)
+        # move old files to _ori and replace from OUT
+        _update_state_files_from_out(self.cwd)
 
         # workhistory and history.info
         self._deal_with_workhistory_and_history_info(discard=False)
@@ -483,15 +480,6 @@ class Bookkeeper():
         log_files = calc_logs + other_logs
         for file in log_files:
             _copy_one_file_to_history(file, self.history_dir)
-
-def _rename_state_files_to_ori(path):
-    """Renames the state files in `path` to include '_ori' in their name."""
-    for file in STATE_FILES:
-        if not (path / file).is_file():
-            logger.error(f'No {file} file in {path}.')
-            continue
-        os.rename(path / file, path / f'{file}_ori')
-
 
 
 def store_input_files_to_history(root_path, history_path):
@@ -915,8 +903,8 @@ def _read_most_recent_log(cwd):
     return old_timestamp, last_log_lines
 
 
-def _replace_input_files_from_out(cwd):
-    """Move files from OUT to root, replacing the original ones."""
+def _update_state_files_from_out(cwd):
+    """Moved states files from OUT to root if available and rename old to _ori."""
     out_path = cwd / 'OUT'
     if not out_path.is_dir():
         return
@@ -924,6 +912,7 @@ def _replace_input_files_from_out(cwd):
         out_file = out_path / f'{file}_OUT'
         if out_file.is_file():
             try:
+                shutil.move(cwd / file, cwd / f'{file}_ori')
                 shutil.move(out_file, cwd / file)
             except OSError:
                 print(f'Error: failed to copy {out_file} as new {file}.')
