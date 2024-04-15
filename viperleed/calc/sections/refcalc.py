@@ -475,7 +475,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                           if file and 'muftin' not in file.name.lower())
         validate_multiple_files(files_to_check,
                                 logger, "reference calculation",
-                                rp.TL_VERSION_STR)
+                                rp.TL_VERSION)
 
     if single_threaded:
         home = os.getcwd()
