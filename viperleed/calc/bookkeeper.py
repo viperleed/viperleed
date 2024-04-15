@@ -155,9 +155,15 @@ class Bookkeeper():
         self.history_dir.name instead."""
         suffix = (self.timestamp +
                   ('' if self.job_name is None else f'_{self.job_name}'))
-        return (
-            f't{self.tensor_number:03d}.r'
-            f'{self.max_job_for_tensor[self.tensor_number] + 1:03d}_{suffix}')
+        job_number = self.max_job_for_tensor[self.tensor_number]
+        dir_name = lambda job_number: (
+            f't{self.tensor_number:03d}.r{job_number:03d}_{suffix}')
+        # if there is already a folder with the same name and correct
+        # timestamp/suffix, we take that, otherwise, we increase the job number
+        if not (self.top_level_history_path / dir_name(job_number)).is_dir():
+            job_number += 1
+        return dir_name(job_number)
+
 
     def _get_new_history_directory_name(self):
         """Return the name of a history directory for a given run.
@@ -317,7 +323,8 @@ class Bookkeeper():
         return 0
 
     def _run_clear_mode(self):
-        if not self.history_dir.is_dir() and self.files_needs_archiving:
+        if (not self.history_with_same_base_name_exists
+            and self.files_needs_archiving):
             logger.info(f'History folder {self.history_dir} does not yet exist.'
                         ' Running archive mode first.')
             self._make_and_copy_to_history(use_ori=True)
@@ -333,7 +340,8 @@ class Bookkeeper():
         return 0
 
     def _run_discard_mode(self):
-        if not self.history_dir.is_dir() and self.files_needs_archiving:
+        if (not self.history_with_same_base_name_exists
+            and self.files_needs_archiving):
             logger.info(f'History folder {self.history_dir} does not yet exist.'
                         ' Running archive mode first.')
             self._make_and_copy_to_history(use_ori=False)
