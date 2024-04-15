@@ -352,7 +352,7 @@ class Rparams:
 
         Parameters
         ----------
-        version : float or None, optional
+        version : Version, optional
             Which specific version of TensErLEED should be looked
             up. If not given or None, `Rparams.TL_VERSION` is used.
             If `version == 0`, the highest version is returned.
