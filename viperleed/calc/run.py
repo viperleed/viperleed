@@ -202,7 +202,7 @@ def run_calc(system_name=None,
         return 0
 
     rp.updateDerivedParams()
-    logger.info(f"ViPErLEED is using TensErLEED version {rp.TL_VERSION_STR}.")
+    logger.info(f"ViPErLEED is using TensErLEED version {str(rp.TL_VERSION)}.")
 
     prerun_clean(rp, log_name)
     exit_code = section_loop(rp, slab)
