@@ -30,7 +30,8 @@ import sys
 from warnings import warn
 
 from viperleed import VIPERLEED_TENSORLEED_ENV
-from viperleed.calc.files.tenserleed import KNOWN_TL_VERSIONS
+from viperleed.calc.files.tenserleed import KNOWN_TL_VERSIONS, OLD_TL_VERSION_NAMES
+from viperleed.calc.lib.version import Version
 
 # Where encoded checksums are stored
 CHECKSUMS_FILE_NAME = '_checksums.dat'
@@ -74,8 +75,8 @@ class TLSourceFile:
         ----------
         name : str or pathlike
             Path to the source file
-        version : str
-            String with TensErLEED version. Must be part of KNOWN_TL_VERSIONS.
+        version : Version or str
+            TensErLEED version. Must be part of KNOWN_TL_VERSIONS.
         checksums : Sequence of str
             Valid checksums for this TensErLEED version and file.
             Multiple checksums may be permissible per version to allow
@@ -89,10 +90,13 @@ class TLSourceFile:
         # Get "tensorleed" parent folder:
         #     [2]       [1]         [0] path
         # tensorleed/TensErLEED-vXX/src/xxx.f
-        base_path = self.path.parents[2]
+        base_path = self.path.parents[1]
         self._name = self.path.relative_to(base_path)
 
-        if version not in KNOWN_TL_VERSIONS:
+        if version in OLD_TL_VERSION_NAMES.keys():
+            version = OLD_TL_VERSION_NAMES[version]
+        version = Version(version)
+        if (version not in KNOWN_TL_VERSIONS):
             raise UnknownTensErLEEDVersionError(version)
         self._version = version
 
@@ -100,7 +104,7 @@ class TLSourceFile:
 
     def __hash__(self):
         """Return a hash for this instance."""
-        return hash((self._name, self.tl_version))
+        return hash((self._name, str(self.tl_version)))
 
     def __repr__(self):
         """Return a string representation of self."""
@@ -208,7 +212,7 @@ def validate_checksum(tl_version, filename):
 
     Parameters
     ----------
-    tl_version : str or float
+    tl_version : Version or str
         TensErLEED version
     filename : str or pathlike
         Path to the file to be checked
@@ -228,12 +232,15 @@ def validate_checksum(tl_version, filename):
         for the same file.
     """
     # Ensure TL version is valid
-    if not isinstance(tl_version, (str, float)):
+    if not isinstance(tl_version, (Version, str)):
         raise TypeError('Invalid type for tl_version')
-    clean_tl_version = str(tl_version)
+    version = Version(tl_version)
+    # convert old version names if necessary
+    if str(version) in OLD_TL_VERSION_NAMES.keys():
+        version = Version(OLD_TL_VERSION_NAMES[str(version)])
 
-    if clean_tl_version not in KNOWN_TL_VERSIONS:
-        raise UnknownTensErLEEDVersionError(clean_tl_version)
+    if str(version) not in KNOWN_TL_VERSIONS:
+        raise UnknownTensErLEEDVersionError(version)
 
     # Ensure filename is valid and cleaned up
     if not isinstance(filename, (str, Path)):
@@ -242,7 +249,7 @@ def validate_checksum(tl_version, filename):
                         'Allowed are str and Path.')
 
     file_path = Path(filename).resolve()
-    base_path = file_path.parents[2]  # 3 folders up
+    base_path = file_path.parents[1]  # 3 folders up
     filename_clean = file_path.relative_to(base_path)
 
     # Get checksum
@@ -250,7 +257,7 @@ def validate_checksum(tl_version, filename):
 
     # Get known checksums
     try:
-        reference_checksums = _get_checksums(clean_tl_version, filename_clean)
+        reference_checksums = _get_checksums(version, filename_clean)
     except ValueError as exc:
         raise InvalidChecksumFileError('Could not find checksum '
                                        f'for file {filename_clean}.') from exc
@@ -274,8 +281,8 @@ def validate_multiple_files(files_to_check, logger, calc_part_name, version):
     calc_part_name : str
         String to be written into log referring to
         the part of the calculation (e.g. "refcalc").
-    version : str
-        TensErLEED version used. To be taken from rp.TL_VERSION_STR.
+    version : Version or str
+        TensErLEED version used. To be taken from rp.TL_VERSION.
 
     Raises
     ------
@@ -570,13 +577,10 @@ if __name__ != '__main__':
 
     # Generate set of all files
     TL_INPUT_FILES = set()
-    for file_, f_checksums in VALID_CHECKSUMS.items():
-        folder_ = tuple(Path(file_).parents)[-2]
-        if not folder_.name.startswith('TensErLEED'):
-            raise NotImplementedError('Checksums are only implemented '
-                                      'for TensErLEED files at the moment.')
-        _, f_version = folder_.name.split('v')
-        TL_INPUT_FILES.add(TLSourceFile(file_, f_version, f_checksums))
+    for version, checksums in VALID_CHECKSUMS.items():
+        for file_, f_checksums in checksums.items():
+            TL_INPUT_FILES.add(TLSourceFile(file_, version, f_checksums))
+
 
 else:  # Write new checksum file when executed as a module
     sys.exit(_write_new_checksum_dat_file())
