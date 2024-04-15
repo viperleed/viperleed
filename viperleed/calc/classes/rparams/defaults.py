@@ -54,6 +54,7 @@ DEFAULTS = {
     'SEARCH_MAX_DGEN': {'all': 0, 'best': 0, 'dec': 100},
     'SYMMETRY_FIX': '',
     'THETA': 0,   # perpendicular incidence
+    'TL_VERSION': None,
     'PHI': 0,     # not needed in case of perpendicular incidence
     'ZIP_COMPRESSION_LEVEL': 2,
 

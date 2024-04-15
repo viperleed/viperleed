@@ -43,6 +43,8 @@ from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
+from viperleed.calc.lib.version import Version
+from viperleed.calc.files.tenserleed import get_tenserleed_sources
 
 from .defaults import DEFAULTS, NO_VALUE
 from .limits import PARAM_LIMITS
@@ -53,7 +55,6 @@ from .special.base import SpecialParameter
 _LOGGER = logging.getLogger(parent_name(__name__))
 if _CAN_PLOT:
     plt.style.use('viperleed.calc')
-TENSERLEED_FOLDER_NAME = 'TensErLEED'
 
 
 class Rparams:
@@ -140,8 +141,7 @@ class Rparams:
         self.THEO_ENERGIES = self.get_default('THEO_ENERGIES')
         self.THETA = DEFAULTS['THETA']        # from BEAM_INCIDENCE
         self.TL_IGNORE_CHECKSUM = False
-        self.TL_VERSION = 0.    # requested TensErLEED version
-        self.TL_VERSION_STR = None  # TODO: replace with Version class once available
+        self.TL_VERSION = self.get_default('TL_VERSION')
         self.T_EXPERIMENT = None
         self.T_DEBYE = None
         self.V0_IMAG = 4.5
@@ -345,14 +345,14 @@ class Rparams:
                 self.rfacscatter.append(p)
                 pg = p[0]
 
-    def get_tenserleed_directory(self, version=None):                           # TODO: replace the default for TL_VERSION with Version('unknown')
+    def get_tenserleed_directory(self, wanted_version=None):                           # TODO: replace the default for TL_VERSION with Version('unknown')
         """Return the Path to a TensErLEED directory.
 
         The directory is looked up in Rparams.source_dir.
 
         Parameters
         ----------
-        version : Version, optional
+        version : Version, str, optional
             Which specific version of TensErLEED should be looked
             up. If not given or None, `Rparams.TL_VERSION` is used.
             If `version == 0`, the highest version is returned.
@@ -379,30 +379,25 @@ class Rparams:
                 'source_dir is not set'
                 )
         source_tree = self.source_dir.resolve()
-        version = version or self.TL_VERSION
+        wanted_version = (Version(wanted_version) if wanted_version else 
+                          self.TL_VERSION)
+        sources = get_tenserleed_sources(source_tree)
+        # sort sources by .version attribute
+        sources = sorted(sources, key=lambda x: x.version)
 
-        highest = foundversion = 0.0
-        founddir = None
-        for directory in source_tree.glob(f'{TENSERLEED_FOLDER_NAME}*'):
-            if not directory.is_dir():
-                continue
-            try:
-                foundversion = float(directory.name.split('v')[-1])
-            except (ValueError, IndexError):
-                continue
-            if foundversion == version:
-                return directory
-            if foundversion > highest:
-                highest = foundversion
-                founddir = directory
+        if wanted_version is None:
+            # return highest version
+            return max(sources, key=lambda x: x.version)
 
-        if not founddir:
-            raise FileNotFoundError('Could not find TensErLEED code')
-        if version > 0 and foundversion != version:
-            raise FileNotFoundError(
-                f'Could not find TensErLEED version={version}'
-                )
-        return founddir
+        # otherwise look for the wanted version
+        for source in sources:
+            if source.version == wanted_version:
+                return source
+        raise FileNotFoundError(
+            f'Could not find TensErLEED version={wanted_version} in '
+            f'{source_tree}.'
+            )
+
 
     def updateDerivedParams(self):
         """
@@ -420,27 +415,13 @@ class Rparams:
         if self.source_dir is None:
             raise RuntimeError('Cannot determine highest TensErLEED version '
                                'without specifying a source directory')
-        if self.TL_VERSION == 0.:
+        if self.TL_VERSION is None:
 
             # Fetch most recent TensErLEED version
-            _, version = self.get_tenserleed_directory().name.split('v')
-            self.TL_VERSION = float(version)
-            _LOGGER.debug(f'Detected TensErLEED version {self.TL_VERSION:.2f}')
+            tl_source = self.get_tenserleed_directory()
+            self.TL_VERSION = tl_source.version
+            _LOGGER.debug(f'Detected TensErLEED version {str(self.TL_VERSION)}')
 
-        # TL_VERSION_STR
-        # try simple conversion to string
-        self.TL_VERSION_STR = f'{self.TL_VERSION:.2f}'
-        if self.TL_VERSION_STR not in KNOWN_TL_VERSIONS:
-            # try again without trailing zero
-            if self.TL_VERSION_STR.endswith('0'):
-                self.TL_VERSION_STR = self.TL_VERSION_STR[:-1]
-        if (self.TL_VERSION_STR not in KNOWN_TL_VERSIONS
-                and not self.TL_IGNORE_CHECKSUM):
-            raise UnknownTensErLEEDVersionError(
-                self.TL_VERSION_STR,
-                message=('Consider editing KNOWN_TL_VERSIONS global in '
-                         'checksums.py or setting TL_IGNORE_CHECKSUM = True')
-                )
 
         # SEARCH_CONVERGENCE:
         if self.searchConvInit['gaussian'] is None:
