@@ -56,7 +56,7 @@ The ViPErLEED Python package (viperleed) provides a number of command line tools
 The command ``viperleed bookkeeper`` manually invokes the
 :ref:`bookkeeper<bookkeeper>`.
 
-The bookkeeper runs automatically runs in ``archive`` mode before and in
+The bookkeeper automatically runs in ``archive`` mode before and in
 ``clear`` mode after a calculation.
 See the :ref:`bookkeeper<bookkeeper>` page for details.
 
