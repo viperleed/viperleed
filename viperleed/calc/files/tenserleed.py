@@ -20,6 +20,7 @@ from pathlib import Path
 import zipfile
 
 from viperleed import VIPERLEED_TENSORLEED_ENV
+from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
