@@ -125,6 +125,14 @@ class Bookkeeper():
             logger.error('Error creating history folder.')
             raise
 
+        self.update_from_cwd()
+
+    def update_from_cwd(self):
+        """Updates timestamp, tensor number and log lines, etc. from cwd.
+        
+        This method is called in __init__, but can also be called manually if
+        a new run happens during the lifetime of the bookkeeper.
+        """
         # Figure out the number of the tensor (it's the most recent one)
         # and the highest run number currently stored for each tensor in
         # history_path
@@ -133,7 +141,7 @@ class Bookkeeper():
             self.top_level_history_path)
 
         # Infer timestamp from log file, if possible
-        self.timestamp, self.last_log_lines = _read_most_recent_log(cwd)
+        self.timestamp, self.last_log_lines = _read_most_recent_log(self.cwd)
 
         # get history dir to deal with
         self.history_dir = (self.top_level_history_path /
@@ -271,18 +279,22 @@ class Bookkeeper():
             where results are to be stored fails.
         """
         mode = BookkeeperMode(mode)
-        # FULL_DISCARD does no archiving
-        if mode is BookkeeperMode.DISCARD_FULL:
-            return self._run_discard_full_mode()
 
         # ARCHIVE, CLEAR, DISCARD do archiving
         if mode is BookkeeperMode.ARCHIVE:
+            logger.info("Running bookkeeper in ARCHIVE mode.")
             return self._run_archive_mode()
         elif mode is BookkeeperMode.CLEAR:
+            logger.info("Running bookkeeper in CLEAR mode.")
             return self._run_clear_mode()
         elif mode is BookkeeperMode.DISCARD:
+            logger.info("Running bookkeeper in DISCARD mode.")
             return self._run_discard_mode()
-
+        elif mode is BookkeeperMode.DISCARD_FULL:
+            logger.info("Running bookkeeper in DISCARD_FULL mode.")
+            return self._run_discard_full_mode()
+        else:
+            raise ValueError(f'Unknown mode {mode}')
 
     def _run_archive_mode(self):
         if self.history_with_same_base_name_exists:
