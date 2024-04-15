@@ -287,7 +287,7 @@ class Bookkeeper():
     def _run_archive_mode(self):
         if self.history_with_same_base_name_exists:
             logger.info(
-                f'History directory for run ''{self.base_history_dir_name} '
+                f'History directory for run {self.base_history_dir_name} '
                 'exists. Exiting without doing anything.')
             return 1
         if not self.files_needs_archiving:
