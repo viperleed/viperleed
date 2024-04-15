@@ -20,15 +20,15 @@ By default these files are overwritten by the output files of the previous calcu
 
 - **Archive**: Stores the results of the previous calculation into the 
   ``history`` directory, and overwrites the input files 
-  ref:`PARAMETERS<parameters>`, :ref:`POSCAR<poscar>` and
+  :ref:`PARAMETERS<parameters>`, :ref:`POSCAR<poscar>` and
   :ref:`VIBROCC<viboccin>` with the results of the previous calculation stored
-  in the ``OUT``directory. The previous input files are renamed to 
+  in the ``OUT`` directory. The previous input files are renamed to 
   ``PARAMETERS_ori``, ``POSCAR_ori`` and ``VIBROCC_ori`` for reference
   Runs automatically **at the end of every calculation**.
 
 - **Clear**: Removes files belonging to a previous run if they were already
   stored to ``history``.
-  This includes all ``*_ori`` files, ``.log`` files and the ``OUT`` and
+  This includes all ``*_ori`` files, ``*.log`` files and the ``OUT`` and
   ``SUPP`` directories.
   Runs automatically **at the start of every calculation**.
 
