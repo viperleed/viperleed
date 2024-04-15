@@ -537,7 +537,7 @@ def cleanup(manifest, rp=None):
                 logger.info(o)
 
     # add a message about manually running bookkeeper for domain calculations
-    if rp.domainParams:
+    if rp is not None and rp.domainParams:
         logger.info(
             "Domain calculations have been run. Note that the bookkeeper will "
             "only run automatically in the top level calculation directory. "
