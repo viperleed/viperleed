@@ -535,6 +535,17 @@ def cleanup(manifest, rp=None):
                     o += " ({:.4f} / {:.4f})".format(rp.stored_R[t][1],
                                                      rp.stored_R[t][2])
                 logger.info(o)
+
+    # add a message about manually running bookkeeper for domain calculations
+    if rp.domainParams:
+        logger.info(
+            "Domain calculations have been run. Note that the bookkeeper will "
+            "only run automatically in the top level calculation directory. "
+            "To preserve optimizations for individual domains, please run the "
+            "bookkeeper manually in the respective domain directories."
+            "The command is: viperleed bookkeeper --archive.\n"
+        )
+
     if rp:
         if rp.checklist:
             logger.info("")
