@@ -132,7 +132,8 @@ def initialization(sl, rp, subdomain=False):
     tmpslab = copy.deepcopy(sl)
     tmpslab.sort_original()
     try:
-        poscar.write(tmpslab, filename='POSCAR', comments='all')
+        poscar.write(tmpslab,
+                     filename=rp.workdir/'POSCAR_OUT', comments='all')
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
