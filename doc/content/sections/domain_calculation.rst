@@ -38,7 +38,7 @@ However, as discussed above, it is recommended you run the reference calculation
 .. warning::
 
   The :ref:`bookkeeper<bookkeeper>` functionality is only partially implemented for domain calculations.
-  The bookkeeper will archive and clean up the top level directory as usual, but the domain-specific directories will not be clean up.
+  The bookkeeper will archive and clean up the top level directory as usual, but the domain-specific directories will not be cleaned up.
   To preserve the domain-specific output files, you must manually run the 
   bookkeeper in each of the domain directories using the command ``viperleed bookkeeper --archive``.
   To clean the directories and remove old `_ori` and `.log` files, run the 
