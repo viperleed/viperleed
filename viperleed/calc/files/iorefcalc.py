@@ -22,6 +22,7 @@ from viperleed.calc.classes.beam import Beam
 from viperleed.calc.files.beams import writeAUXBEAMS
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import fortranContLine, splitMaxRight
+from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
@@ -327,7 +328,7 @@ def collectFIN(version=0.):
     """Combines AUXLATGEO, BEAMLIST, AUXNONSTRUCT, PHASESHIFTS, AUXBEAMS
     and AUXGEO into one string (input for refcalc), which it returns. Pass
     beamlist to avoid reading it again."""
-    if version < 1.73:
+    if version < Version('1.7.3'):
         filenames = ["AUXLATGEO", "BEAMLIST", "AUXNONSTRUCT", "PHASESHIFTS",
                      "AUXBEAMS", "AUXGEO"]
     else:
@@ -344,7 +345,7 @@ def collectFIN(version=0.):
 
 def writeAUXLATGEO(sl, rp):
     """Writes AUXLATGEO, which is part of the input FIN for the refcalc."""
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         formatter = {'energies': ff.FortranRecordWriter('3F7.2'),
                      'uc': ff.FortranRecordWriter('2F7.4'),
                      'x_ase_wf': ff.FortranRecordWriter('2F7.4'),
@@ -368,18 +369,17 @@ def writeAUXLATGEO(sl, rp):
     ucbulk = sl.bulkslab.ab_cell.T
     output += formatter['uc'].write(ucbulk[0]).ljust(lj) + 'ARA1\n'
     output += formatter['uc'].write(ucbulk[1]).ljust(lj) + 'ARA2\n'
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         output += ' 0.0    0.0             SS1\n'
         output += ' 0.0    0.0             SS2\n'
         output += ' 0.0    0.0             SS3\n'
         output += ' 0.0    0.0             SS4\n'
     output += formatter['uc'].write(ucsurf[0]).ljust(lj) + 'ARB1\n'
     output += formatter['uc'].write(ucsurf[1]).ljust(lj) + 'ARB2\n'
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         output += ' 0.0    0.0             SO1\n'
         output += ' 0.0    0.0             SO2\n'
         output += ' 0.0    0.0             SO3\n'
-    if rp.TL_VERSION < 1.7:
         output += (formatter['x_ase_wf'].write([0.5, rp.V0_Z_ONSET]).ljust(lj)
                    + 'FR ASE\n')
     else:
@@ -407,7 +407,7 @@ def writeAUXNONSTRUCT(sl, rp):
         logger.error("generatePARAM: Exception while getting data from "
                      "writeAUXBEAMS")
         raise
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         formatter = {'tst': ff.FortranRecordWriter('F7.4'),
                      'incidence': ff.FortranRecordWriter('(F7.2, F6.1)'),
                      'beamnums': ff.FortranRecordWriter('15I4'),
@@ -432,11 +432,11 @@ def writeAUXNONSTRUCT(sl, rp):
     output += (formatter['ints'].write([rp.BULKDOUBLING_MAX]).ljust(45)
                + 'LITER\n')
     output += formatter['ints'].write([rp.LMAX.max]).ljust(45) + 'LMAX\n'
-    if rp.TL_VERSION >= 1.7:
+    if rp.TL_VERSION >= Version('1.7.0'):
         # TODO: if phaseshifts are calculated differently, change format here
         output += (formatter['ints'].write([1]).ljust(45)
                    + 'PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7\n')
-    if rp.TL_VERSION >= 1.73:
+    if rp.TL_VERSION >= Version('1.7.3'):
         output += (formatter['ints'].write([1]).ljust(45)
                    + 'IFORM - formatted input and output\n')
     try:
@@ -451,7 +451,7 @@ def writeAUXNONSTRUCT(sl, rp):
 
 def writeAUXGEO(sl, rp):
     """Writes AUXGEO, which is part of the input FIN for the refcalc."""
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         formatter = {'vibrocc': ff.FortranRecordWriter('2F7.4'),
                      'geo': ff.FortranRecordWriter('3F7.4'),
                      }
