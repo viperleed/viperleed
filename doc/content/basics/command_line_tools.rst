@@ -53,9 +53,12 @@ The ViPErLEED Python package (viperleed) provides a number of command line tools
 ``viperleed bookkeeper``
 ------------------------
 
-The command ``viperleed bookkeeper`` manually invokes the :ref:`bookkeeper<bookkeeper>`.
+The command ``viperleed bookkeeper`` manually invokes the
+:ref:`bookkeeper<bookkeeper>`.
 
-The bookkeeper runs automatically runs in *default* mode before and in *continuation* mode after a calculation. See the :ref:`bookkeeper<bookkeeper>` page for details.
+The bookkeeper runs automatically runs in ``archive`` mode before and in
+``clear`` mode after a calculation.
+See the :ref:`bookkeeper<bookkeeper>` page for details.
 
 The bookkeeper can also be run manually with ``viperleed bookkeeper``.
 It can safely be run multiple times.
@@ -70,15 +73,19 @@ If no new output is detected, it will simply exit without doing anything.
 **Options:**
 
 - ``-h, --help``: Show a list of all available options and exit.
-- ``-c, --cont``: Run in :ref:`continuation mode<bookkeeper>`.
+- ``-a, --archive``: Run in :ref:`continuation mode<bookkeeper>`.
+- ``-c, --clear``: Run in :ref:`continuation mode<bookkeeper>`.
 - ``-d, --discard``: Run in :ref:`discard mode<bookkeeper>`.
+- ``-df, --discard-full``: Run in :ref:`discard full mode<bookkeeper>`.
 - ``-j, --job-name``: Specify a name for the current run.
-  Will be appended to the name of the history folder that is created, and is logged in history.info
+  Will be appended to the name of the history folder that is created, and is
+  logged in history.info
   Passed along to the :ref:`bookkeeper<bookkeeper>`.
 - ``--history-name``: Specify the name of the history folder to be used.
   Default is ``history``.
   Passed along to the :ref:`bookkeeper<bookkeeper>`.
-- ``--work-history-name``: Specify the name of the work history folder to be used.
+- ``--work-history-name``: Specify the name of the work history folder to be
+  used.
   Default is ``workhistory``.
   Passed along to the :ref:`bookkeeper<bookkeeper>`.
 
