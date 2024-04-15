@@ -208,11 +208,11 @@ class TensErLEEDSource:
         # check if "-v" is in the name
         if '-v' in self.path.name:
             version_str = self.path.name.split('-v')[-1]
-            version_str = _OLD_TL_VERSION_NAMES.get(version_str, version_str)
+            version_str = OLD_TL_VERSION_NAMES.get(version_str, version_str)
             return Version(version_str)
         elif (self.path / VERSION_FILE_NAME).is_file():
             version_str = (self.path / VERSION_FILE_NAME).read_text().strip()
-            return Version(version_str)
+            return Version(version_str.replace('v', ''))
         else:
             logger.warning("Could not determine the version of the TensErLEED "
                            f"source code at {self.path}.")
