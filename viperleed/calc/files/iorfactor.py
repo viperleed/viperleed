@@ -37,6 +37,7 @@ from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
@@ -419,7 +420,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     iorf.extend([0]*(len(rp.ivbeams)-len(rp.expbeams)))
 
     f72 = ff.FortranRecordWriter('F7.2')
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         beam_formatter = ff.FortranRecordWriter('25I3')
     else:
         beam_formatter = ff.FortranRecordWriter('25I4')
