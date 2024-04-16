@@ -211,13 +211,25 @@ class TensErLEEDSource:
             version_str = OLD_TL_VERSION_NAMES.get(version_str, version_str)
             return Version(version_str)
         elif (self.path / VERSION_FILE_NAME).is_file():
-            version_str = (self.path / VERSION_FILE_NAME).read_text().strip()
-            return Version(version_str.replace('v', ''))
+            return version_from_version_file(self.path / VERSION_FILE_NAME)
         else:
             logger.warning("Could not determine the version of the TensErLEED "
                            f"source code at {self.path}.")
 
             return None
+
+
+def version_from_version_file(path):
+    """Return the version of the TensErLEED source code from a version file."""
+    # if passed a dir, try to find the version file
+    if path.is_dir():
+        version_file = path / VERSION_FILE_NAME
+        if not version_file.is_file():
+            raise FileNotFoundError(f'No valid version file found in {path}.')
+    else:
+        version_file = path
+    version_str = version_file.read_text().strip()
+    return Version(version_str.replace('v', ''))
 
 
 def get_tenserleed_sources(path):
