@@ -427,7 +427,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             If the Arduino CLI was not found.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
             If installing the Arduino cores failed. This might
-            happen due to core_name being an invalid name.
+            mean that core_name is not a known core.
         cli_installation_finished(False)
             If any error_occurred.
         """
