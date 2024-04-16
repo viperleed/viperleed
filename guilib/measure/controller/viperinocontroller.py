@@ -545,7 +545,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
                 txt = f"{ctrl.name} ({ctrl.address})"
-                more_info = {k: hardware[k] for k in ('firmware', )}             # TODO: populate keys that we need here
+                more_info = {k: hardware[k] for k in ('firmware', )}
                 more_info['address'] = ctrl.address
                 more_info['name'] = ctrl.name
                 device_list.append(base.DeviceInfo(txt, more_info))

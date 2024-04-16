@@ -7,9 +7,9 @@
 Created: 2024-04-03
 Author: Florian Dörr, Michele Riva
 
-Defines the ArduinoCLI, ArduinoCLIInstaller, and FirmwareUploader
-classes that handle Arduino CLI and Arduino core downloads and Arduino
-firmware upgrades.
+Defines the ArduinoCLI, ArduinoCLIInstaller, FirmwareArchiveUploader,
+and FirmwareUploader classes that handle Arduino CLI and Arduino core
+downloads and Arduino firmware upgrades.
 The Arduino CLI is available from
 https://github.com/arduino/arduino-cli/releases
 """
@@ -38,7 +38,7 @@ from viperleed.guilib.measure.classes import settings
 
 
 NOT_SET = '\u2014'
-
+_MIN_CLI_VERSION = '0.19.0'
 
 # FirmwareVersionInfo represents the selected firmware that
 # is to be uploaded to the selected controller. It is used
@@ -93,35 +93,6 @@ class ArduinoCLI(qtc.QObject):
         self.base_path = Path().resolve() / 'hardware/arduino/arduino-cli'
         self.update_cli_path()
 
-    def get_installed_cli_version(self):
-        """Detect version of installed Arduino CLI.
-
-        Returns
-        -------
-        Version string : str
-            The version of the Arduino CLI.
-        """
-        try:
-            cli = self.get_arduino_cli()
-        except FileNotFoundError:
-            return '0.0.0'
-
-        try:
-            ver_json = subprocess.run([cli, 'version', '--format', 'json'],
-                                      capture_output=True, check=True)
-        except subprocess.CalledProcessError:
-            return '0.0.0'
-        ver = json.loads(ver_json.stdout)
-        return ver['VersionString']
-
-    def on_arduino_cli_failed(self, err):
-        """Report an Arduino CLI process failure."""
-        base.emit_error(self,
-            ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
-            err.returncode,
-            err.stderr.decode()
-            )
-
     def get_arduino_cli(self):
         """Pick the correct Arduino CLI tool.
 
@@ -162,6 +133,27 @@ class ArduinoCLI(qtc.QObject):
             raise FileNotFoundError('Arduino CLI not found')
         return arduino_cli
 
+    def get_installed_cli_version(self):
+        """Detect version of installed Arduino CLI.
+
+        Returns
+        -------
+        version : str
+            The version of the Arduino CLI.
+        """
+        try:
+            cli = self.get_arduino_cli()
+        except FileNotFoundError:
+            return '0.0.0'
+
+        try:
+            ver_json = subprocess.run([cli, 'version', '--format', 'json'],
+                                      capture_output=True, check=True)
+        except subprocess.CalledProcessError:
+            return '0.0.0'
+        ver = json.loads(ver_json.stdout)
+        return ver['VersionString']
+
     @qtc.pyqtSlot()
     def is_cli_installed(self):
         """Check if Arduino CLI is installed.
@@ -180,15 +172,23 @@ class ArduinoCLI(qtc.QObject):
             return
         version = self.get_installed_cli_version()
         # Check if the version is at least 0.19.0, as older versions
-        # are not compatible with the FirmwareUploader.
-        if not int(version[0]) and int(version[1]) < 19:
-            self.cli_found.emit(True, True)
-            return
-        self.cli_found.emit(True, False)
+        # are not compatible with the FirmwareUploader. We need the
+        # keyword matching_boards in the dictionary containing the
+        # detected boards.
+        self.cli_found.emit(True, version < _MIN_CLI_VERSION)
+
+    def on_arduino_cli_failed(self, err):
+        """Report an Arduino CLI process failure."""
+        base.emit_error(
+            self,
+            ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED,
+            err.returncode,
+            err.stderr.decode()
+            )
 
     @qtc.pyqtSlot()
     def update_cli_path(self):
-        """Update the Arduino CLI path."""
+        """Read the base path for the CLI from system settings."""
         path_getter = settings.SystemSettings()
         cli_path = path_getter.get('PATHS', 'arduino_cli', fallback=None)
         if cli_path:
@@ -211,10 +211,15 @@ class ArduinoCLIInstaller(ArduinoCLI):
 
     def __init__(self, parent=None):
         """Initialise the Arduino CLI downloader."""
-        # Note that giving this class a parent is not advisable
-        # since we have to manually perform the moveToThread method
-        # for the QNetworkAccessManager.
         super().__init__(parent=parent)
+        # Notice that we do not give self as a parent for self.network.
+        # That's because moving a QNetworkAccessManager automatically
+        # to a new thread together with its parent (at is normally the
+        # case with parent-child relationships) seems to be broken in
+        # Qt5. We move self.network explicitly in self.moveToThread.
+        # Assigning a parent here would break the overridden
+        # self.moveToThread, as children with a parent cannot be moved
+        # 'independently'.
         self.network = qtn.QNetworkAccessManager()
         self.network.setTransferTimeout(timeout=2000)
         # _archive_name is the name of the OS specific Arduino
@@ -279,7 +284,8 @@ class ArduinoCLIInstaller(ArduinoCLI):
         elif 'linux' in platform:
             os_name = 'Linux'
         else:
-            base.emit_error(self,
+            base.emit_error(
+                self,
                 ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI
                 )
             return
@@ -294,7 +300,8 @@ class ArduinoCLIInstaller(ArduinoCLI):
                 self._archive_name = asset['name']
                 break
         else:
-            base.emit_error(self,
+            base.emit_error(
+                self,
                 ViPErLEEDFirmwareError.ERROR_NO_SUITABLE_CLI
                 )
             return
@@ -355,7 +362,8 @@ class ArduinoCLIInstaller(ArduinoCLI):
         try:
             cli = self.get_arduino_cli()
         except FileNotFoundError:
-            base.emit_error(self,
+            base.emit_error(
+                self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
@@ -434,7 +442,8 @@ class ArduinoCLIInstaller(ArduinoCLI):
         try:
             cli = self.get_arduino_cli()
         except FileNotFoundError:
-            base.emit_error(self,
+            base.emit_error(
+                self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
@@ -474,7 +483,8 @@ class ArduinoCLIInstaller(ArduinoCLI):
         try:
             cli = self.get_arduino_cli()
         except FileNotFoundError:
-            base.emit_error(self,
+            base.emit_error(
+                self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
@@ -483,7 +493,8 @@ class ArduinoCLIInstaller(ArduinoCLI):
         try:
             subprocess.run([cli, 'update'], capture_output=True, check=True)
         except subprocess.CalledProcessError:
-            base.emit_error(self,
+            base.emit_error(
+                self,
                 ViPErLEEDFirmwareError.ERROR_INSTALL_FAILED
                 )
             return
@@ -574,7 +585,8 @@ class FirmwareUploader(ArduinoCLI):
         try:
             cli = self.get_arduino_cli()
         except FileNotFoundError:
-            base.emit_error(self,
+            base.emit_error(
+                self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
@@ -637,9 +649,11 @@ class FirmwareUploader(ArduinoCLI):
             self.ctrls_with_port(available_ctrls, selected_ctrl['port'])
             )
         if not selected_ctrl_exists:
-            base.emit_error(self,
-                            ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
-                            selected_ctrl['port'])
+            base.emit_error(
+                self,
+                ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
+                selected_ctrl['port']
+                )
             self.controllers_detected.emit(available_ctrls)
             self.upload_finished.emit()
             return
@@ -647,7 +661,8 @@ class FirmwareUploader(ArduinoCLI):
         try:
             cli = self.get_arduino_cli()
         except FileNotFoundError:
-            base.emit_error(self,
+            base.emit_error(
+                self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
                 self.base_path
                 )
@@ -759,13 +774,13 @@ class FirmwareUploader(ArduinoCLI):
             if not ctrl:
                 continue
             ctrl_dict[ctrl]['version'] = info.get('firmware', NOT_SET)
-            box_id = getattr(cls, 'box_id', None)
-            if box_id:
-                # Notice the -2: the last two entries in name are the
-                # serial number and the '(COM<port>)' bits, which we
-                # don't need.
-                ctrl_dict[ctrl]['name'] = '_'.join(name.split()[:-2])
-                ctrl_dict[name] = ctrl_dict.pop(ctrl)
+            if not getattr(cls, 'box_id', None):
+                continue
+            # Notice the -2: the last two entries in name are the
+            # serial number and the '(COM<port>)' bits, which we
+            # don't need.
+            ctrl_dict[ctrl]['name'] = '_'.join(name.split()[:-2])
+            ctrl_dict[name] = ctrl_dict.pop(ctrl)
 
         self.controllers_detected.emit(ctrl_dict)
         return ctrl_dict

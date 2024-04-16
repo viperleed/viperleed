@@ -25,10 +25,10 @@ from PyQt5 import QtWidgets as qtw
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes import settings
 from viperleed.guilib.measure.classes.ioarduinocli import ArduinoCLIInstaller
-from viperleed.guilib.measure.classes.ioarduinocli import FirmwareUploader
 from viperleed.guilib.measure.classes.ioarduinocli import (
     FirmwareArchiveUploader
     )
+from viperleed.guilib.measure.classes.ioarduinocli import FirmwareUploader
 from viperleed.guilib.measure.classes.ioarduinocli import FirmwareVersionInfo
 from viperleed.guilib.measure.classes.ioarduinocli import NOT_SET
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
@@ -176,14 +176,6 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         layout.addWidget(self.buttons['refresh'])
         return layout
 
-    def _compose_upgrade_and_done_button(self):
-        """Return a layout of the upgrade and the done buttons."""
-        layout = qtw.QHBoxLayout()
-        layout.addWidget(self.buttons['upgrade_cli'])
-        layout.addStretch(1)
-        layout.addWidget(self.buttons['done'])
-        return layout
-
     def _compose_firmware_selection(self):
         """Return a layout of the firmware dropdown and upload button."""
         layout = qtw.QHBoxLayout()
@@ -212,6 +204,14 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         layout = qtw.QHBoxLayout()
         layout.addWidget(qtw.QLabel('Progess:'))
         layout.addWidget(self._progress_bar)
+        return layout
+
+    def _compose_upgrade_and_done_button(self):
+        """Return a layout of the upgrade and the done buttons."""
+        layout = qtw.QHBoxLayout()
+        layout.addWidget(self.buttons['upgrade_cli'])
+        layout.addStretch(1)
+        layout.addWidget(self.buttons['done'])
         return layout
 
     def _connect(self):
@@ -532,6 +532,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
 
     def _set_firmware_path(self):
         """Set firmware_path to the path given in system settings."""
+        # Note that we do not store the path in the system settings.
+        # The user will initially always be directed to the folder
+        # specified in the system settings.
         path_getter = settings.SystemSettings()
         firmware_path = path_getter.get('PATHS', 'firmware', fallback=None)
         if firmware_path:

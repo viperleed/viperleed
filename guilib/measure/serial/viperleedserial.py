@@ -759,15 +759,17 @@ class ViPErLEEDSerial(SerialABC):
         hardware_config : dict
             keys : {'adc_0', 'adc_1', 'lm35', 'relay', 'i0_range',
                     'aux_range', 'serial_nr', 'firmware'}
-            values : bool or str or int
+            values : bool or str or int or None
                 Values are True/False for 'adc_0', 'adc_1', 'lm35',
                 and 'relay', corresponding to the hardware having
                 access to the devices; Values for 'i0_range' and
                 'aux_range' are the strings '0 -- 2.5 V' or
                 '0 -- 10 V'; a human-readable (numbers and letters)
-                serial number as str for 'serial_nr', and a string
+                serial number as str for 'serial_nr', and a Version
                 of the form '<major>.<minor>' for 'firmware'.
-                'box_id' is an int.
+                'box_id' is an int. box_id may be None if the
+                installed firmware version does not have the
+                box ID yet.
 
         Emits
         -----
