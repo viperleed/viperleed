@@ -335,10 +335,9 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             self._update_combo_box('firmware_versions', firmware_dict)
             return
 
-        if GET_ARCHIVED_FIRMWARE:
-            firmware_dict = self._get_archived_firmware(file_path)
-        else:
-            firmware_dict = self._get_firmware(file_path)
+        _get_firmware = (self._get_archived_firmware if GET_ARCHIVED_FIRMWARE
+                         else self._get_firmware)
+        firmware_dict = _get_firmware(file_path)
 
         self._update_combo_box('firmware_versions', firmware_dict)
         self._find_most_recent_firmware_version()
