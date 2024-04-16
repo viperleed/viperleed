@@ -586,16 +586,16 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             return
         warning = qtw.QMessageBox(parent=self)
         warning.setWindowTitle('About to upload new firmware')
+        warning.addButton(qtw.QPushButton('Abort'), warning.RejectRole)
+        accept = qtw.QPushButton('Upload')
+        warning.addButton(accept, warning.AcceptRole)
         warning.setText(
             'Uploading firmware to '
             f'{self.controls["controllers"].currentText()}. '
             'This will delete all firmware that is currently installed '
             'on the device. Do not disconnect the controller during the '
-            'upload. To proceed press "Upload".'
+            f'upload. To proceed press {accept.text()!r}.'
             )
-        warning.addButton(qtw.QPushButton('Abort'), warning.RejectRole)
-        accept = qtw.QPushButton('Upload')
-        warning.addButton(accept, warning.AcceptRole)
         warning.exec_()
         button = warning.clickedButton()
         if button is accept:
