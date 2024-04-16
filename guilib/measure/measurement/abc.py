@@ -919,6 +919,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if any(camera.is_running for camera in self.cameras):
             # Not busy, but some images are still being processed
             return
+        self._missing_data.clear()
         try:
             self.__save_data()
         finally:
@@ -1341,14 +1342,10 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         Returns
         -------
-        has_continued : bool
-            Whether the next step has been initiated (either the next
-            energy step or the conclusion of the whole measurement
-            process). False if any device is still busy, or some of
-            the data from the devices has not been processed yet.
+        None.
         """
         if any(device.busy for device in self.devices):
-            return False
+            return
         if any(miss < 0 for miss in self._missing_data.values()):
             # Check if any device returned more data than expected.
             _too_many = {d.name: v for d, v in self._missing_data.items()
@@ -1361,7 +1358,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             # data while another one has turned not busy (i.e., all are
             # not busy), but the signal of the other devices was not
             # processed yet.
-            return False
+            return
 
         self.data_points.calculate_times()
         self.data_points.nr_steps_done += 1
@@ -1371,7 +1368,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             self._prepare_finalization()
         else:
             self.start_next_measurement()
-        return True
 
     @qtc.pyqtSlot()
     def __report_init_errors(self):
