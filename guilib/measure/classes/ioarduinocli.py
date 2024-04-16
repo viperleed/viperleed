@@ -785,7 +785,8 @@ class FirmwareUploader(ArduinoCLI):
         generator
             The controllers at the desired port.
         """
-        return (ctrl for ctrl in ctrls if ctrls[ctrl]['port'] == port)
+        return (ctrl for ctrl, ctrl_dict in ctrls.items()
+                if ctrl_dict.get('port') == port)
 
 
 class FirmwareArchiveUploader(FirmwareUploader):
