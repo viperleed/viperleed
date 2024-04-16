@@ -595,7 +595,7 @@ class FirmwareUploader(ArduinoCLI):
 
     @qtc.pyqtSlot(dict, FirmwareVersionInfo)
     def compile(self, selected_ctrl, firmware):
-        """Compile viper-ino for the specified board.
+        """Compile firmware and upload it to the specified board.
 
         Parameters
         ----------
