@@ -656,9 +656,12 @@ class FirmwareUploader(ArduinoCLI):
 
         firmware_file = firmware.path / firmware.folder_name / 'viper-ino'
 
-        argv = ['compile', '--clean', '-b', selected_ctrl['fqbn'],
-                firmware_file]
-        argv.extend(['-u', '-p', selected_ctrl['port']])
+        argv = ('compile',
+                '--clean',  # Remove compiled binary when done
+                '--fqbn', selected_ctrl['fqbn'],
+                firmware_file,
+                # Also upload to board after compilation
+                '--upload', '--port', selected_ctrl['port'])
 
         # subprocess.run([cli, *argv, '--verbose'], capture_output=True, check=True) TODO: track upload progress and adjust progress bar accordingly
         try:
