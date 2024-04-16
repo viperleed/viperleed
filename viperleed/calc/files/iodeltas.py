@@ -21,7 +21,7 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.files.beams import writeAUXBEAMS
-from viperleed.calc.lib.version import version
+from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
