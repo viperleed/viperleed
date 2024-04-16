@@ -93,6 +93,27 @@ class ArduinoCLI(qtc.QObject):
         self.base_path = Path().resolve() / 'hardware/arduino/arduino-cli'
         self.update_cli_path()
 
+    def get_installed_cli_version(self):
+        """Detect version of installed Arduino CLI.
+
+        Returns
+        -------
+        Version string : str
+            The version of the Arduino CLI.
+        """
+        try:
+            cli = self.get_arduino_cli()
+        except FileNotFoundError:
+            return '0.0.0'
+
+        try:
+            ver_json = subprocess.run([cli, 'version', '--format', 'json'],
+                                      capture_output=True, check=True)
+        except subprocess.CalledProcessError:
+            return '0.0.0'
+        ver = json.loads(ver_json.stdout)
+        return ver['VersionString']
+
     def on_arduino_cli_failed(self, err):
         """Report an Arduino CLI process failure."""
         base.emit_error(self,
@@ -157,7 +178,7 @@ class ArduinoCLI(qtc.QObject):
         except FileNotFoundError:
             self.cli_found.emit(False, True)
             return
-        version = self._get_installed_cli_version().split('.')
+        version = self.get_installed_cli_version()
         # Check if the version is at least 0.19.0, as older versions
         # are not compatible with the FirmwareUploader.
         if not int(version[0]) and int(version[1]) < 19:
@@ -279,7 +300,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
             return
         self.progress_occurred.emit(15)
 
-        installed_ver = self._get_installed_cli_version()
+        installed_ver = self.get_installed_cli_version()
         if newest_version == installed_ver:
             self.progress_occurred.emit(60)
             self._install_and_upgrade_cores()
@@ -347,27 +368,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
             self.on_arduino_cli_failed(err)
             return {}
         return json.loads(cores.stdout)
-
-    def _get_installed_cli_version(self):
-        """Detect version of installed Arduino CLI.
-
-        Returns
-        -------
-        Version string : str
-            The version of the Arduino CLI.
-        """
-        try:
-            cli = self.get_arduino_cli()
-        except FileNotFoundError:
-            return '0.0.0'
-
-        try:
-            ver_json = subprocess.run([cli, 'version', '--format', 'json'],
-                                      capture_output=True, check=True)
-        except subprocess.CalledProcessError:
-            return '0.0.0'
-        ver = json.loads(ver_json.stdout)
-        return ver['VersionString']
 
     def _install_and_upgrade_cores(self):
         """Download AVR core and upgrade existing cores and libraries.
