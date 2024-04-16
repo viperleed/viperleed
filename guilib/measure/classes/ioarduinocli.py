@@ -760,8 +760,6 @@ class FirmwareUploader(ArduinoCLI):
                 continue
             ctrl_dict[ctrl]['version'] = info.get('firmware', NOT_SET)
             box_id = getattr(cls, 'box_id', None)
-            # box_id of the measuring ViPErinoController is 0! Check
-            # must be is not None because of that.
             if box_id:
                 # Notice the -2: the last two entries in name are the
                 # serial number and the '(COM<port>)' bits, which we

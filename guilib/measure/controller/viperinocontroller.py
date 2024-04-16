@@ -77,6 +77,13 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
 class ViPErinoController(abc.MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
+    # The box ID is the identifier that differentiates viperleed
+    # controller types from each other. The ID of the class must
+    # match the box ID returned by the hardware controller. The
+    # box ID must never be changed! The box ID is 1-based, 0
+    # should never be used for any controller.
+    box_id = 1
+
     cls_lock = threading.RLock()  # Thread safe access to class properties
     _mandatory_settings = [
         # pylint: disable=protected-access
@@ -88,10 +95,6 @@ class ViPErinoController(abc.MeasureControllerABC):
         ]
 
     hardware_info_arrived = qtc.pyqtSignal()
-
-    # The box_id of the class is dictated by the
-    # controller type and must never be changed!
-    box_id = 1
 
     def __init__(self, parent=None, settings=None,
                  address='', sets_energy=False):

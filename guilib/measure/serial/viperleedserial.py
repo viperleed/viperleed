@@ -100,8 +100,10 @@ class ViPErLEEDSerial(SerialABC):
 
     # The box ID is the identifier that differentiates viperleed
     # controller types from each other. The ID of the class must
-    # match the box ID returned by the hardware controller.
-    box_id = 0
+    # match the box ID returned by the hardware controller. The
+    # box ID must never be changed! The box ID is 1-based, 0
+    # should never be used for any controller.
+    box_id = 1
 
     debug_info_arrived = qtc.pyqtSignal(str)
 
