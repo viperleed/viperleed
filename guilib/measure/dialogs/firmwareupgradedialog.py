@@ -418,7 +418,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         for file_name in file_path.rglob('viper-ino.ino'):
             try:
                 version = get_firmware_version_from_ino_file(file_name)
-            except ValueError:
+            except ValueError:  # No firmware version in file_name
                 continue
             folder_name = file_name.parents[1].name
             folder = str(file_name.parents[1].relative_to(file_path))
