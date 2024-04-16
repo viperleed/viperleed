@@ -31,6 +31,7 @@ from warnings import warn
 
 from viperleed import VIPERLEED_TENSORLEED_ENV
 from viperleed.calc.files.tenserleed import KNOWN_TL_VERSIONS, OLD_TL_VERSION_NAMES
+from viperleed.calc.files.tenserleed import get_tenserleed_sources
 from viperleed.calc.lib.version import Version
 
 # Where encoded checksums are stored
@@ -414,7 +415,7 @@ def _write_encoded_checksums(source_file_checksums, encoded_file_path=None):
         file.write(encode_checksums(source_file_checksums))
 
 
-def _add_checksums_for_dir(path,
+def _add_checksums_for_dir(source,
                            checksum_dict_,
                            patterns=('*/GLOBAL', '*/*.f*')):
     """Add checksums for files in path into checksum_dict_.
@@ -423,9 +424,8 @@ def _add_checksums_for_dir(path,
 
     Parameters
     ----------
-    path : str, or path-like
-        Directory containing the files. Typically one of the
-        "TensErLEED-vXXX" directories in tensorleed.
+    source : TLSource
+        Source object for the TensErLEED folder to be added
     checksum_dict_ : dict
         Checksums dict to start with. Should be {path: {checksums}}.
         New checksums will be added to existing values.
@@ -439,15 +439,16 @@ def _add_checksums_for_dir(path,
     -------
     None.
     """
-    path = Path(path).resolve()
-    base_path = path.parent  # /path/to/tensorleed
+    if str(source.version) not in checksum_dict_.keys():
+        checksum_dict_[str(source.version)] = {}
+    version = source.version
     for pattern in patterns:
-        for file in path.glob(pattern):
+        for file in source.path.glob(pattern):
             checksum = get_file_checksum(file)
-            key = str(file.relative_to(base_path).as_posix())
+            key = str(file.relative_to(source.path).as_posix())
             if key not in checksum_dict_:
-                checksum_dict_[key] = set()
-            checksum_dict_[key].add(checksum)
+                checksum_dict_[str(source.version)][key] = set()
+            checksum_dict_[str(source.version)][key].add(checksum)
 
 
 def _parse_args(parser):
@@ -462,8 +463,8 @@ def _parse_args(parser):
     -------
     tl_base_path : Path
         Base path of folder containing TensErLEED source files.
-    tl_folders : tuple
-        Contains Paths to all subfolders contained in tl_base_path
+    tl_sources : tuple
+        Contains TLSource objects for all subfolders contained in tl_base_path
     checksum_dict : dict
         Dictionary containing {filename:set(known_checksums)}.
 
@@ -478,8 +479,8 @@ def _parse_args(parser):
     """
     args = parser.parse_args()
     tl_base_path = _resolve_tensorleed_path_argument(args)
-    tl_folders = tuple(tl_base_path.glob('TensErLEED*'))                        # TODO: would need to be changed to include beamgen, etc.
-    if not tl_folders:
+    tl_sources = get_tenserleed_sources(tl_base_path)
+    if not tl_sources:
         raise FileNotFoundError(
             f'No TensErLEED folders found in {tl_base_path}'
             )
@@ -493,7 +494,7 @@ def _parse_args(parser):
             warn(f'Could not read {CHECKSUMS_FILE_NAME} file. '
                  f'Creating a new one. Info: {exc}')
 
-    return tl_base_path, tl_folders, checksum_dict
+    return tl_base_path, tl_sources, checksum_dict
 
 
 def _resolve_tensorleed_path_argument(args):
@@ -548,16 +549,16 @@ def _write_new_checksum_dat_file():
     parser = argparse.ArgumentParser()
     _add_parser_args(parser)
 
-    tl_base_path, tl_folders, checksum_dict = _parse_args(parser)
+    tl_base_path, tl_sources, checksum_dict = _parse_args(parser)
 
-    for folder in tl_folders:
-        _, version_ = folder.name.split('v')
-        if version_ not in KNOWN_TL_VERSIONS:
+    for source in tl_sources:
+        version = source.version
+        if version not in KNOWN_TL_VERSIONS:
             raise UnknownTensErLEEDVersionError(
                 message=('Unknown TensErLEED version '
-                         f'{version_} in {tl_base_path}')
+                         f'{version} in {tl_base_path}')
                 )
-        _add_checksums_for_dir(folder, checksum_dict)
+        _add_checksums_for_dir(source, checksum_dict)
 
     # Write to file
     _write_encoded_checksums(checksum_dict)
