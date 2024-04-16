@@ -52,7 +52,7 @@ def without_cpp_comments(file):
         if in_comment_block and line.endswith('*/'):
             in_comment_block = False
             continue   # The next line may be a good one
-        if line.startswith(r'\*'):
+        if line.startswith('/*'):
             in_comment_block = True
         if in_comment_block:
             continue
