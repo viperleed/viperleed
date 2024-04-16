@@ -580,13 +580,10 @@ class FirmwareUpgradeDialog(qtw.QDialog):
     @qtc.pyqtSlot()
     def _upload(self):
         """Upload selected firmware to selected controller."""
-        if not self.controls['controllers'].currentData():
-            return
-        if not self.controls['firmware_versions'].currentData():
-            return
-
         selected_ctrl = self.controls['controllers'].currentData()
         firmware = self.controls['firmware_versions'].currentData()
+        if not selected_ctrl or not firmware:
+            return
         warning = qtw.QMessageBox(parent=self)
         warning.setWindowTitle('About to upload new firmware')
         warning.setText(
