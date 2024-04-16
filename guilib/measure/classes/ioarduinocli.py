@@ -211,7 +211,7 @@ class ArduinoCLIInstaller(ArduinoCLI):
         """Download newest version of Arduino CLI from github.
 
         Download newest version of the CLI for the OS if it doesn't
-        match the currently installed version of it. Downloading the CLI
+        match the currently installed version. Downloading the CLI
         is skipped if it is already installed.
 
         Parameters
