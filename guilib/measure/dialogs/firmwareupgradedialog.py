@@ -107,10 +107,8 @@ class FirmwareUpgradeDialog(qtw.QDialog):
                 },
             }
 
-        if GET_ARCHIVED_FIRMWARE:
-            self._uploader = FirmwareArchiveUploader()
-        else:
-            self._uploader = FirmwareUploader()
+        self._uploader = (FirmwareArchiveUploader() if GET_ARCHIVED_FIRMWARE
+                          else FirmwareUploader())
         self._upload_thread = qtc.QThread()
         self._uploader.moveToThread(self._upload_thread)
         self._upload_thread.start()
