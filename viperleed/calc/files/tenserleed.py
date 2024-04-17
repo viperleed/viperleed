@@ -189,8 +189,10 @@ class TensErLEEDSource:
         # Check that the path is a directory or a zip file
         if _path.is_dir():
             self.path = _path
+            self.is_zipped = False
         elif _path.is_file() and _path.suffix == '.zip':
             self.path = zipfile.Path(zipfile.ZipFile(_path))
+            self.is_zipped = True
         else:
             raise FileNotFoundError(
                 f'TensErLEED path {_path} is not a directory or a zip file')
