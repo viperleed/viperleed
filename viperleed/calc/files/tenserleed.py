@@ -184,6 +184,8 @@ def _verify_tensorleed_path(path_):
             f'Using the latter instead of {source}.'
             )
     return with_tenserleed
+
+
 class TensErLEEDSource:
 
     def __init__(self, path):
@@ -228,7 +230,6 @@ class TensErLEEDSource:
         else:
             raise ValueError(f"TensErLEED source at {self.path} is missing"
                              "a version identifier.")
-
 
 
 def version_from_version_file(path):
