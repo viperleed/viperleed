@@ -187,17 +187,15 @@ def _verify_tensorleed_path(path_):
 class TensErLEEDSource:
 
     def __init__(self, path):
-        _path = Path(path).resolve()
+        self.path = Path(path).resolve()
         # Check that the path is a directory or a zip file
-        if _path.is_dir():
-            self.path = _path
+        if self.path.is_dir():
             self.is_zipped = False
-        elif _path.is_file() and _path.suffix == '.zip':
-            self.path = zipfile.Path(zipfile.ZipFile(_path))
+        elif self.path.is_file() and self.path.suffix == '.zip':
             self.is_zipped = True
         else:
             raise FileNotFoundError(
-                f'TensErLEED path {_path} is not a directory or a zip file')
+                f'TensErLEED path {self.path} is not a directory or a zip file')
         # make sure we can determine a version
         try:
             self.version = self._detect_version()
@@ -206,6 +204,9 @@ class TensErLEEDSource:
                    f"{self.path}.")
             logger.error(msg)
             raise ValueError(msg)
+        if self.is_zipped:
+            raise NotImplementedError(
+                f"Please unzip {self.path} before using it.")
 
     def _detect_version(self):
         """Return the version of the TensErLEED source code.
@@ -218,6 +219,7 @@ class TensErLEEDSource:
         # check if "-v" is in the name
         if '-v' in self.path.name:
             version_str = self.path.name.split('-v')[-1]
+            version_str = version_str.replace('.zip','')
             version_str = OLD_TL_VERSION_NAMES.get(version_str, version_str)
             return Version(version_str)
         elif (self.path / VERSION_FILE_NAME).is_file():
