@@ -340,7 +340,7 @@ def move_oldruns(rp, prerun=False):
                               f.endswith(".log") and f.startswith(LOG_PREFIX)
                               and f not in rp.manifest])
         if len(oldlogfiles) > 0:
-            oldTimeStamp = oldlogfiles[-1][7:20]
+            oldTimeStamp = oldlogfiles[-1][-17:-4]
         else:
             oldTimeStamp = "moved-" + rp.timestamp
         dirname = ("t{:03d}.r{:03d}_previous_".format(rp.TENSOR_INDEX, num)

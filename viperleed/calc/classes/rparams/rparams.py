@@ -46,7 +46,7 @@ from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 from viperleed.calc.lib.version import Version
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
 
-from .defaults import DEFAULTS, NO_VALUE
+from .defaults import DEFAULTS, NO_VALUE, TENSERLEED_FOLDER_NAME
 from .limits import PARAM_LIMITS
 from .special.base import NotASpecialParameterError
 from .special.base import SpecialParameter
