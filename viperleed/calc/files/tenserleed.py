@@ -135,6 +135,8 @@ def _verify_tensorleed_path(path_):
     FileNotFoundError
         If `path_` is not the path to an existing directory,
         or if finding a verified tensor-LEED path failed.
+    ValueError
+        If the version of the TensErLEED source code can not be determined.
     """
     source = path_.resolve()
     if not source.is_dir():
@@ -196,10 +198,16 @@ class TensErLEEDSource:
         else:
             raise FileNotFoundError(
                 f'TensErLEED path {_path} is not a directory or a zip file')
+        # make sure we can determine a version
+        try:
+            self.version = self._detect_version()
+        except ValueError:
+            msg = ("Unable to detect Version for TensErLEED source at "
+                   f"{self.path}.")
+            logger.error(msg)
+            raise ValueError(msg)
 
-
-    @property
-    def version(self):
+    def _detect_version(self):
         """Return the version of the TensErLEED source code.
 
         Returns
@@ -215,10 +223,9 @@ class TensErLEEDSource:
         elif (self.path / VERSION_FILE_NAME).is_file():
             return version_from_version_file(self.path / VERSION_FILE_NAME)
         else:
-            logger.warning("Could not determine the version of the TensErLEED "
-                           f"source code at {self.path}.")
+            raise ValueError(f"TensErLEED source at {self.path} is missing"
+                             "a version identifier.")
 
-            return None
 
 
 def version_from_version_file(path):
