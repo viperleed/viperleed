@@ -354,10 +354,10 @@ From there call either ``make intel`` or ``make gcc``, to compile using the Inte
 
 .. _mpirandom:
 
-Randomizer library for TensErLEED < 1.74
+Randomizer library for TensErLEED < v1.7.4
 -----------------------------------------
 
-TensErLEED versions up to 1.73 need the :term:`C`-object files called ``random_.o`` and/or ``MPIrandom_.o``.
+TensErLEED versions up to v1.7.3 need the :term:`C`-object files called ``random_.o`` and/or ``MPIrandom_.o``.
 This file needs to be compiled with a C and C MPI compiler before running.
 Makefiles are also provided for this file.
 If you followed the instructions for obtaining the Fortran compilers, a C compiler is already installed as well from either GCC or Intel.
