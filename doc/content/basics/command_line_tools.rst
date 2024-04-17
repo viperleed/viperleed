@@ -63,6 +63,7 @@ See the :ref:`bookkeeper<bookkeeper>` page for details.
 The bookkeeper can also be run manually with ``viperleed bookkeeper``.
 It can safely be run multiple times.
 If no new output is detected, it will simply exit without doing anything.
+For details on the different modes, see the :ref:`bookkeeper<bookkeeper>` page.
 
 **Usage:**
 
@@ -73,8 +74,8 @@ If no new output is detected, it will simply exit without doing anything.
 **Options:**
 
 - ``-h, --help``: Show a list of all available options and exit.
-- ``-a, --archive``: Run in :ref:`continuation mode<bookkeeper>`.
-- ``-c, --clear``: Run in :ref:`continuation mode<bookkeeper>`.
+- ``-a, --archive``: Run in :ref:`archive mode<bookkeeper>`.
+- ``-c, --clear``: Run in :ref:`clear mode<bookkeeper>`.
 - ``-d, --discard``: Run in :ref:`discard mode<bookkeeper>`.
 - ``-df, --discard-full``: Run in :ref:`discard full mode<bookkeeper>`.
 - ``-j, --job-name``: Specify a name for the current run.
