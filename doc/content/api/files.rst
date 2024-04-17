@@ -24,6 +24,5 @@ In particular, it also provides the functions to read the input files (e.g. :ref
     parameters
     patterninfo
     poscar
-    psgen
     searchpdf
     vibrocc
