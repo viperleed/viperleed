@@ -20,17 +20,6 @@
    \renewenvironment{sphinxtip}[1]
       {\begin{sphinxheavybox}\sphinxstrong{#1} }{\end{sphinxheavybox}}
 
-   % add shortcuts to top of page
-   \AddEverypageHook{
-        \settowidth{\chapterNameLength}{\leftmark}%
-        \begin{textblock}{1}(0,0)%first argument {1} is number of blocks horiz
-        \vspace{0.1cm}
-        \,\ \hyperlink{link_content}{$\rightarrow$Contents}%
-        \,\ \ \ \Acrobatmenu{GoBack}{$\leftarrow$Back}%
-        \,\ \Acrobatmenu{GoForward}{Forward$\rightarrow$}%
-        \end{textblock}%
-    }%end AddEverypageHook
-
    % renew table of contents to include link
    \renewcommand{\sphinxtableofcontents}{%
    \pagenumbering{roman}%
