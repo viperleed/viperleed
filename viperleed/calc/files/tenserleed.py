@@ -171,7 +171,7 @@ def _verify_tensorleed_path(path_):
     # could use Rparams.get_tenserleed_directory() but we
     # do not care about versions and globbing is enough.
     try:
-        with_tenserleed = (
+        with_tenserleed = next(
             d for d in potential_sources
             if any(d.glob(f'{TENSERLEED_FOLDER_NAME}*'))
             )
