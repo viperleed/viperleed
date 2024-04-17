@@ -41,7 +41,7 @@ Others may not redistribute TensErLEED, without permission by the original
 authors.*
 
 Changes to the TensErLEED source code made by the ViPErLEED authors (i.e. the
-patches that constitute v.1.6.1 onwards), are licensed under GPLv3 or later.
+patches that constitute v1.6.1 onwards), are licensed under GPLv3 or later.
 The copyright to these changes remains with the ViPErLEED authors.
 
 EEASISSS
