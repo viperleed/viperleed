@@ -37,6 +37,9 @@ logger = logging.getLogger(__name__)
 # with .format(__sourcedir__=self.source_dir) before globbing.
 # Similar considerations regarding the base names for foldername
 # and exename.
+# TODO: when implementing the compile task class, we should also
+# refactor the tenserleed source class such that we can directly use
+# zipped source directories
 class RefcalcCompileTask():
     """Stores information for a worker to compile a refcalc file, and keeps
     track of the folder that the compiled file is in afterwards."""

@@ -205,6 +205,7 @@ class TensErLEEDSource:
             logger.error(msg)
             raise ValueError(msg)
         if self.is_zipped:
+            # we don't support zipped source code yet (Issue #34).
             raise NotImplementedError(
                 f"Please unzip {self.path} before using it.")
 
