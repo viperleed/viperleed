@@ -236,8 +236,6 @@ def get_tenserleed_sources(path):
     path = Path(path)
     sources = []
     for directory in path.glob(f'*{TENSERLEED_FOLDER_NAME}*'):
-        if not directory.is_dir():
-            continue
         sources.append(TensErLEEDSource(directory))
     if not sources:
         raise FileNotFoundError('No TensErLEED source directories found in '
