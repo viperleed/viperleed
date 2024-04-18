@@ -215,7 +215,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         min_t = self.measurement_interval_min
         if new_interval < min_t:
             raise ValueError(f"{new_interval} out of bounds. "
-                             f"Should be larger than {min_t}")
+                             f"Should be at least {min_t}")
         self.settings.set('measurement_settings', 'measurement_interval',
                           str(new_interval))
         self.__trigger_one_measurement.setInterval(new_interval)
