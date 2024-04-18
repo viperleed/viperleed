@@ -489,12 +489,13 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         """
         controller = self.sender()
         self.data_points.add_data(data, controller)
-        if not self.is_continuous:
-            self._missing_data[controller] -= 1
-            if not self.__energy_step_timer.isActive():
-                # We are at the end of an energy step, and just finished
-                # waiting for the last data. See if we can go on.
-                self._ready_for_next_measurement()
+        if self.is_continuous:
+            return
+        self._missing_data[controller] -= 1
+        if not self.__energy_step_timer.isActive():
+            # We are at the end of an energy step, and just finished
+            # waiting for the last data. See if we can go on.
+            self._ready_for_next_measurement()
 
     @qtc.pyqtSlot()
     def __on_one_measurement_triggered(self):
