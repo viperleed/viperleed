@@ -213,7 +213,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # 50 msec for a "triggered" mode. One should rather use
         # continuous mode.
         min_t = self.measurement_interval_min
-        if not min_t <= new_interval:
+        if new_interval < min_t:
             raise ValueError(f"{new_interval} out of bounds. "
                              f"Should be larger than {min_t}")
         self.settings.set('measurement_settings', 'measurement_interval',
