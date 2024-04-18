@@ -194,7 +194,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                             'measurement_settings/measurement_interval', '')
             interval = min_t
 
-        if not min_t <= interval:
+        if interval < min_t:
             txt = f"{interval} (too short)"
             interval = min_t
             base.emit_error(
