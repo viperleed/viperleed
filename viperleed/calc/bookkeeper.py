@@ -359,16 +359,21 @@ class Bookkeeper():
                            'the notes first.')
             return 1
 
+        # the directory we want to remove is not self.history_dir (since that
+        # would be _moved-<timestamp>), but the one with the same base name!
+        dir_to_remove = (self.top_level_history_path
+                         / self.base_history_dir_name)
         # remove history entry
-        if self.history_dir.is_dir():
+        if dir_to_remove.is_dir():
             try:
-                shutil.rmtree(self.history_dir)
+                shutil.rmtree(dir_to_remove)
             except OSError:
-                logger.error(f'Error: Failed to delete {self.history_dir}.')
+                logger.error(f'Error: Failed to delete {dir_to_remove}.')
                 return 1
             self._discard_common()
         else:
-            logger.info(f'History folder {self.history_dir} does not exist.')
+            logger.error(f'FULL_DISCARD mode failed: could not identify '
+                         'directory to remove. Please proceed manually.')
 
 
     def _discard_common(self):
