@@ -459,10 +459,14 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         self.data_points.add_image(camera)
         camera.process_info.count += 1
 
-        if not self.is_continuous:
-            # We must make sure that we have already stored in the
-            # datapoints all the images that we have ever triggered for.
-            self._missing_data[camera] -= 1
+        if self.is_continuous:
+            # Does currently not happen as cameras are discarded
+            # in continuous mode. If we ever support this we should
+            # also add time stamps for camera images.
+            return
+        # We must make sure that we have already stored in the
+        # datapoints all the images that we have ever triggered for.
+        self._missing_data[camera] -= 1
         if not self.__energy_step_timer.isActive():
             # We are at the end of an energy step, and just finished
             # waiting for the last image. See if we can go on.
