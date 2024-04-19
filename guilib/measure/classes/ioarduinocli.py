@@ -77,7 +77,11 @@ class ViPErLEEDFirmwareError(base.ViPErLEEDErrorEnum):
         'The Arduino CLI failed. Try to reinstall it. '
         'Return code={}. The error was: {}'
         )
-
+    ERROR_CORE_NOT_FOUND = (
+        505,
+        'The installed Arduino CLI version is missing the required core(s) {}. '
+        'Press "Upgrade Arduino CLI" to install the required core.'
+        )
 
 class ArduinoCLI(qtc.QObject):
     """Base class that looks for the Arduino CLI in the file system."""
@@ -558,6 +562,10 @@ class FirmwareUploader(ArduinoCLI):
     # the currently running process has been completed.
     progress_occurred = qtc.pyqtSignal(int)
 
+    # Arduino cores that are required for operation. They can be
+    # installed via the FirmwareUpgradeDialog.
+    required_cores = ['arduino:avr', ]
+
     def _get_boards(self):
         """Get a list of the available Arduino boards.
 
@@ -622,13 +630,16 @@ class FirmwareUploader(ArduinoCLI):
         Emits
         -----
         progress_occurred
-            Emitted at the start, after checking if the selected
+            Emitted at the start, after checking if all required Arduino
+            cores are installed, after checking if the selected
             controller is present, after uploading the firmware, and
             at the end.
-        error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
-            If there was no available controller on the given port.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
             If the Arduino CLI was not found.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_CORE_NOT_FOUND)
+            If a required Arduino core was missing.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
+            If there was no available controller on the given port.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
             If the Arduino CLI failed to upload the selected
             firmware to the controller.
@@ -636,13 +647,50 @@ class FirmwareUploader(ArduinoCLI):
             If the requested controller was no longer present.
             Contains the detected controllers.
         cli_failed()
-            If the Arduino CLI process failed.
+            If any Arduino CLI process failed.
         upload_finished()
             Emitted if the selected controller was no longer connected
-            when trying upload the firmware, or if the upload was
-            successful.
+            when trying upload the firmware, if a required Arduino core
+            was missing, or if the upload was successful.
         """
         self.progress_occurred.emit(0)
+        try:
+            cli = self.get_arduino_cli()
+        except FileNotFoundError:
+            base.emit_error(
+                self,
+                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
+                self.base_path
+                )
+            self.cli_failed.emit()
+            return
+
+        # Check if the required cores are among the installed cores.
+        try:
+            cores_json = subprocess.run(
+                [cli, 'core', 'list', '--format', 'json'],
+                capture_output=True, check=True
+                )
+        except subprocess.CalledProcessError as err:
+            self.on_arduino_cli_failed(err)
+            self.cli_failed.emit()
+            return
+        cores = json.loads(cores_json.stdout)
+
+        missing_cores = []
+        for required_core in self.required_cores:
+            if not any(core['id'] == required_core for core in cores):
+                missing_cores.append(required_core)
+        if any(missing_cores):
+            base.emit_error(
+                self,
+                ViPErLEEDFirmwareError.ERROR_CORE_NOT_FOUND,
+                missing_cores
+                )
+            self.upload_finished.emit()
+            return
+        self.progress_occurred.emit(5)
+
         # Check if the selected controller is present at all.
         available_ctrls = self.get_viperleed_hardware(False)
         selected_ctrl_exists = any(
@@ -658,16 +706,6 @@ class FirmwareUploader(ArduinoCLI):
             self.upload_finished.emit()
             return
         self.progress_occurred.emit(20)
-        try:
-            cli = self.get_arduino_cli()
-        except FileNotFoundError:
-            base.emit_error(
-                self,
-                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
-                self.base_path
-                )
-            self.cli_failed.emit()
-            return
 
         firmware_file = firmware.path / firmware.folder_name / 'viper-ino'
 
