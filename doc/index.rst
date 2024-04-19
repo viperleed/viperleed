@@ -83,7 +83,6 @@ The ViPErLEED package consists of:
    Examples<content/examples>
    ViPErLEED segments<content/work_segments>
    Files<content/files>
-   API<content/api>
 
 .. only:: html
 
@@ -101,13 +100,8 @@ The ViPErLEED package consists of:
 
    content/param_toc
 
-
-.. toctree:: 
-   :maxdepth: 1
-   :caption: Utilities
-
    Utilities<content/utilities>
-   POSCAR utilities<content/utilities/poscar_utils>
+   API<content/api>
 
 .. toctree:: 
    :maxdepth: 1

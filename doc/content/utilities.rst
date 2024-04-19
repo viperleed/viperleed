@@ -18,7 +18,7 @@ These are installed as part of the Python package, and can be called from the co
    :ref:`Bookkeeper<bookkeeper>`: A helper utility built into viperleed calc that sorts files from previous runs into a "history" folder, and keeps track in the history.info file.
 
 .. toctree::
-   :hidden:
 
+   utilities/poscar_utils
    utilities/rearrange_phaseshifts
    utilities/aux_to_exp
