@@ -1212,9 +1212,9 @@ class MeasureControllerABC(ControllerABC):
 
         Notice that this differs from self.initial_delay. This is
         the total amount of time the controller requires to return
-        its measurement. self.initial_delay is instead the time
-        the measurement was acquired (relative to triggering). The
-        two will coincide only when no averaging is performed by
+        its measurement. self.initial_delay is instead the time at
+        which the measurement was acquired (relative to triggering).
+        The two will coincide only when no averaging is performed by
         the controller.
 
         A typical implementation:
