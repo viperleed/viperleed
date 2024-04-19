@@ -585,7 +585,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         _INVOKE(self._downloader, 'get_arduino_cli_from_git')
 
     @qtc.pyqtSlot()
-    def _upload(self):
+    def _upload(self):                                                          # TODO: uploading firmware should add settings file to defaults if missing and update the existing settings file for that specific controller
         """Upload selected firmware to selected controller."""
         selected_ctrl = self.controls['controllers'].currentData()
         firmware = self.controls['firmware_versions'].currentData()
