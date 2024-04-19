@@ -1,5 +1,10 @@
 .. _files:
 
+=====
+Files
+=====
+
+
 .. _list_input_files:
 
 Input files
@@ -26,10 +31,6 @@ depending on the work-segment (:ref:`see above<work-segments>`).
 | :ref:`PHASESHIFTS<PHASESHIFTS>`      | Contains elastic electron scattering phaseshifts  | Generated automatically if needed                                 |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 
-.. toctree::
-   :glob:
-
-   files/input/*
 
 .. _output_files:
 
@@ -84,22 +85,6 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
 
 
-.. toctree::
-
-   files/output/theobeams
-   files/output/fitbeams
-   files/output/rfactorplots
-   files/output/rfactoranalysis
-   files/output/searchreportpdf
-   files/output/searchprogresspdf
-   files/output/errorspdf
-   files/output/fdoptimizationdata
-   files/output/fdoptimizationbeams
-   files/output/log_files
-   files/output/tensorszip
-   files/output/deltaszip
-
-
 .. _supp_files:
 
 Supplementary files
@@ -137,6 +122,27 @@ These files are stored in the ``SUPP`` subfolder of the ``work`` directory.
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
 | :ref:`Phaseshifts-plots.pdf<phaseshiftplots>`                                                | Plots of PHASESHIFTS, generated during initialization                                     |
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
+
+.. toctree::
+   :glob:
+
+   files/input/*
+
+
+.. toctree::
+
+   files/output/theobeams
+   files/output/fitbeams
+   files/output/rfactorplots
+   files/output/rfactoranalysis
+   files/output/searchreportpdf
+   files/output/searchprogresspdf
+   files/output/errorspdf
+   files/output/fdoptimizationdata
+   files/output/fdoptimizationbeams
+   files/output/log_files
+   files/output/tensorszip
+   files/output/deltaszip
 
 .. toctree::
    :glob:
