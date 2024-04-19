@@ -6,7 +6,7 @@ Parameters in the PARAMETERS file
 =================================
 
 Below you can find a comprehensive list of all available parameters in 
-alphabetical order. For curated lists with short explainations 
+alphabetical order. For curated lists with short explanations 
 take a look at:
 
 -   :ref:`List of parameters by Name<paramname>` 
