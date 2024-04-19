@@ -298,7 +298,7 @@ class ViPErLEEDCLI:
             return tuple()
         base_path = Path(importlib.util.find_spec(module_name).origin).parent
         all_modules = [module
-                       for module in pkgutil.iter_modules((base_path,))
+                       for module in pkgutil.iter_modules((str(base_path),))
                        if module.name not in {'__main__', CLI_MODULE_NAME}]
         # All the modules are potentially OK
         modules = (module.name
@@ -309,7 +309,7 @@ class ViPErLEEDCLI:
             if not package.ispkg:
                 continue
             package_path = Path(package.module_finder.path) / package.name
-            sub_modules = pkgutil.iter_modules((package_path,))
+            sub_modules = pkgutil.iter_modules((str(package_path),))
             try:
                 cli_module = next(f'{package.name}.{m.name}'
                                   for m in sub_modules
