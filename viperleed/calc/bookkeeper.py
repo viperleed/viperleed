@@ -366,10 +366,10 @@ class Bookkeeper():
             except OSError:
                 logger.error(f'Error: Failed to delete {self.history_dir}.')
                 return 1
+            self._discard_common()
         else:
             logger.info(f'History folder {self.history_dir} does not exist.')
 
-        self._discard_common()
 
     def _discard_common(self):
         """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
