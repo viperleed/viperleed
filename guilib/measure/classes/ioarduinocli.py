@@ -91,7 +91,7 @@ class ArduinoCLI(qtc.QObject):
         """Initialise the Arduino CLI getter."""
         super().__init__(parent=parent)
         self.base_path = Path().resolve() / 'hardware/arduino/arduino-cli'
-        self.update_cli_path()
+        self.update_cli_path_from_settings()
 
     def get_arduino_cli(self):
         """Pick the correct Arduino CLI tool.
@@ -187,7 +187,7 @@ class ArduinoCLI(qtc.QObject):
             )
 
     @qtc.pyqtSlot()
-    def update_cli_path(self):
+    def update_cli_path_from_settings(self):
         """Read the base path for the CLI from system settings."""
         path_getter = settings.SystemSettings()
         cli_path = path_getter.get('PATHS', 'arduino_cli', fallback=None)

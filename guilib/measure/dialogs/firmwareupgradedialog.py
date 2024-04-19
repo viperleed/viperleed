@@ -530,7 +530,7 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         """Enable buttons after upload or failed upload."""
         self._ctrl_enable(True)
 
-    def _set_firmware_path(self):
+    def _fetch_firmware_path_from_settings(self):
         """Set firmware_path to the path given in system settings."""
         # Note that we do not store the path in the system settings.
         # The user will initially always be directed to the folder
@@ -625,11 +625,11 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         -------
         None.
         """
-        self._set_firmware_path()
+        self._fetch_firmware_path_from_settings()
         self._downloader.cli_found.connect(self._continue_open)
         base.safe_disconnect(self._downloader.error_occurred,
                              self.error_occurred)
         self._progress_bar.setValue(0)
-        _INVOKE(self._downloader, 'update_cli_path')
-        _INVOKE(self._uploader, 'update_cli_path')
+        _INVOKE(self._downloader, 'update_cli_path_from_settings')
+        _INVOKE(self._uploader, 'update_cli_path_from_settings')
         _INVOKE(self._downloader, 'is_cli_installed')
