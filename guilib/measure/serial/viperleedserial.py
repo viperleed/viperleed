@@ -83,11 +83,6 @@ class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
         "has power, but ADC#0 was not detected. This likely indicates a "
         "hardware fault on the board. Check that ADC#0 has power."
         )
-    ERROR_WRONG_BOX_ID = (
-        18,
-        "The box ID {arduino_id} of the hardware does not match the ID "
-        "{local_id} of the software."
-        )
     ERROR_MSG_SENT_TOO_LONG = (
         254,
         "The controller tried to send a message that was longer "
@@ -97,13 +92,6 @@ class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
 
 class ViPErLEEDSerial(SerialABC):
     """Class for communication with Arduino Micro ViPErLEED controller."""
-
-    # The box ID is the identifier that differentiates viperleed
-    # controller types from each other. The ID of the class must
-    # match the box ID returned by the hardware controller. The
-    # box ID must never be changed! The box ID is 1-based, 0
-    # should never be used for any controller.
-    box_id = 1
 
     debug_info_arrived = qtc.pyqtSignal(str)
 
@@ -793,11 +781,7 @@ class ViPErLEEDSerial(SerialABC):
         # ensure backwards compatibility.
         if len(message) == 9:
             info['box_id'] = message.pop(0)
-            if info['box_id'] != self.box_id:
-                base.emit_error(self,
-                                ViPErLEEDHardwareError.ERROR_WRONG_BOX_ID,
-                                arduino_id=info['box_id'],
-                                local_id=self.box_id)
+
         local_version = self.firmware_version
         major, minor, *hardware = message[:4]
         firmware_version = base.Version(major, minor)

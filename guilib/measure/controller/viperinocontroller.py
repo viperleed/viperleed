@@ -53,8 +53,9 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
         )
     UNSUPPORTED_QUANTITY = (
         152,
-        "Cannot measure {0}. If your hardware can measure {0}, "
-        "update its corresponding configuration file (check also typos!)."
+        "Cannot measure {0}. If your hardware can measure {0}, update "
+        "its corresponding configuration file. Make sure to check for "
+        "spelling mistakes."
         )
     REQUESTED_ADC_OFFLINE = (
         153,
@@ -70,6 +71,11 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
         155,
         "No hardware information present. Cannot "
         "{} before get_hardware() is called."
+        )
+    ERROR_WRONG_BOX_ID = (
+        156,
+        "The box ID {arduino_id} of the hardware does not match the ID "
+        "{local_id} of the software."
         )
 
 
@@ -587,8 +593,10 @@ class ViPErinoController(abc.MeasureControllerABC):
             # Got hardware info
             with self.lock:
                 self.hardware = data
-            # Now that we have info, we can check if the quantities
-            # that we should measure can be measured (ADC present)
+            # Now that we have info, we can check the box ID and whether
+            # the quantities that we should measure can be measured.
+            # (ADC present)
+            self._check_box_id()
             self.__check_measurements_possible()
             self.hardware_info_arrived.emit()
             return
@@ -915,6 +923,18 @@ class ViPErinoController(abc.MeasureControllerABC):
                 self.address = correct_port  # Also connects
                 self.disconnect_()
         self.ready_to_show_settings.emit()
+
+    def _check_box_id(self):
+        """Check if the detected box ID matches the box ID of the class."""
+        with self.lock:
+            hardware = self.hardware.copy()
+        if not hardware:
+            return
+        if hardware['box_id'] != self.box_id:
+            base.emit_error(self,
+                            ViPErinoErrors.ERROR_WRONG_BOX_ID,
+                            arduino_id=hardware['box_id'],
+                            local_id=self.box_id)
 
     def __check_measurements_possible(self):
         """Check that it is possible to measure stuff, given the hardware."""
