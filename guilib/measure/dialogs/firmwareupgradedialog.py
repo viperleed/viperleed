@@ -464,6 +464,10 @@ class FirmwareUpgradeDialog(qtw.QDialog):
             'Arduino CLI</li></ul></p>'
             '<p>Make sure you are connected to the internet before '
             'proceeding.</p>'
+            '<p>Note that a window requesting administrator permissions '
+            'may pop up if you are not running the program as an '
+            'administrator. You have to accept for the installation to '
+            'succeed.</p>'
             )
         disclaimer.addButton(qtw.QPushButton('Cancel'), disclaimer.RejectRole)
         accept = qtw.QPushButton(accept_btn_text)
