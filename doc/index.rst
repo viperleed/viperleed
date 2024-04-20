@@ -75,7 +75,7 @@ The ViPErLEED package consists of:
    .. toctree::
       :caption: Contents
 
-.. toctree:: 
+.. toctree::
    :caption: viperleed calc
 
    viperleed calc<content/viperleed_calc>
@@ -83,23 +83,7 @@ The ViPErLEED package consists of:
    Examples<content/examples>
    ViPErLEED segments<content/work_segments>
    Files<content/files>
-
-.. only:: html
-
-   .. toctree:: 
-      :maxdepth: 1
-      :caption: Parameters
-
-      Overview by Name<content/files/input/params_by/param_name>
-      Overview by Section<content/files/input/params_by/param_section>
-      Overview by Topic<content/files/input/params_by/param_topics>
-
-
-.. toctree:: 
-   :hidden:
-
-   content/param_toc
-
+   Parameters<content/param_topics>
    Utilities<content/utilities>
    API<content/api>
 
