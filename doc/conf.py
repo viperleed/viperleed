@@ -77,7 +77,7 @@ html_theme_options = {
     'display_version': True,
     'prev_next_buttons_location': None,
     'style_external_links': True,
-    # Toc options
+    # Toc option
     'collapse_navigation': True,
     'sticky_navigation': True,
     'includehidden': False,
