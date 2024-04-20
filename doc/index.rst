@@ -81,7 +81,7 @@ The ViPErLEED package consists of:
    viperleed calc<content/viperleed_calc>
    Getting started<content/getting_started>
    Examples<content/examples>
-   ViPErLEED segments<content/work_segments>
+   Segments<content/work_segments>
    Files<content/files>
    Parameters<content/param_topics>
    Utilities<content/utilities>
