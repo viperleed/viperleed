@@ -4,4 +4,6 @@
 ViPErLEED Spot-Tracker
 ======================
 
-**TODO Michael**
+**Documentation coming soon!**
+
+.. todo: Add documentation for the spot tracker

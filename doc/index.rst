@@ -56,7 +56,7 @@ The ViPErLEED package consists of:
 - :ref:`The ViPErLEED Spot-Tracker<spot_tracker>`
       Software for extracting :math:`I(V)` curves from the experimental data
       ("movies").
--  The ViPErLEED hardware
+-  :ref:`The ViPErLEED hardware<hardware>`
       A set of hardware, firmware and control software for the easy
       acquisition of LEED-:math:`I(V)` data with pre-existing LEED systems.
 
@@ -92,6 +92,12 @@ The ViPErLEED package consists of:
    :caption: Spot-Tracker
 
    Spot-Tracker<content/spot_tracker>
+
+.. toctree:: 
+   :maxdepth: 1
+   :caption: Hardware
+
+   Hardware<content/hardware>
 
 .. toctree:: 
    :maxdepth: 1
