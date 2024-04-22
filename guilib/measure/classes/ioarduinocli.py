@@ -39,6 +39,10 @@ from viperleed.guilib.measure.classes import settings
 
 NOT_SET = '\u2014'
 _MIN_CLI_VERSION = '0.19.0'
+# Arduino cores that are required for operation. They can be
+# installed via the FirmwareUpgradeDialog.
+REQUIRED_CORES = ('arduino:avr', )
+
 
 # FirmwareVersionInfo represents the selected firmware that
 # is to be uploaded to the selected controller. It is used
@@ -85,6 +89,8 @@ class ViPErLEEDFirmwareError(base.ViPErLEEDErrorEnum):
 
 class ArduinoCLI(qtc.QObject):
     """Base class that looks for the Arduino CLI in the file system."""
+
+    error_occurred = qtc.pyqtSignal(tuple)
 
     # Emitted after the check whether the Arduino CLI is installed.
     # Two bool values, the first one is true if a CLI version is
@@ -201,8 +207,6 @@ class ArduinoCLI(qtc.QObject):
 
 class ArduinoCLIInstaller(ArduinoCLI):
     """Worker that handles downloads in another thread."""
-
-    error_occurred = qtc.pyqtSignal(tuple)
 
     # Emitted when downloading and installing the Arduino CLI, cores and
     # libraries. Sent boolean is true when the full installation
@@ -545,8 +549,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
 class FirmwareUploader(ArduinoCLI):
     """Worker that handles firmware uploads in another thread."""
 
-    error_occurred = qtc.pyqtSignal(tuple)
-
     # Emitted when the upload of firmware to the controller is finished
     # or when it has failed.
     upload_finished = qtc.pyqtSignal()
@@ -562,9 +564,44 @@ class FirmwareUploader(ArduinoCLI):
     # the currently running process has been completed.
     progress_occurred = qtc.pyqtSignal(int)
 
-    # Arduino cores that are required for operation. They can be
-    # installed via the FirmwareUpgradeDialog.
-    required_cores = ['arduino:avr', ]
+    def _check_missing_cores(self):
+        """Return the necessary cores that are missing.
+        
+        Returns
+        -------
+        missing : list of str
+            List of the missing cores.
+        """
+        cores = self.get_installed_cores()
+
+        missing_cores = []
+        for required_core in REQUIRED_CORES:
+            if not any(core['id'] == required_core for core in cores):
+                missing_cores.append(required_core)
+        return missing_cores
+
+    def _controller_missing(self, port):
+        """Return whether there is a controller on the given port.
+        
+        Returns
+        -------
+        missing : bool
+            True if the controller is not present.
+        
+        Emits
+        -----
+        error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
+            If there was no available controller on the given port.
+        """
+        available_ctrls = self.get_viperleed_hardware(False)
+        selected_ctrl_exists = any(self.ctrls_with_port(available_ctrls, port))
+        if selected_ctrl_exists:
+            return False
+        base.emit_error(self,
+                        ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
+                        port)
+        self.controllers_detected.emit(available_ctrls)
+        return True
 
     def _get_boards(self):
         """Get a list of the available Arduino boards.
@@ -667,42 +704,21 @@ class FirmwareUploader(ArduinoCLI):
 
         # Check if the required cores are among the installed cores.
         try:
-            cores_json = subprocess.run(
-                [cli, 'core', 'list', '--format', 'json'],
-                capture_output=True, check=True
-                )
-        except subprocess.CalledProcessError as err:
-            self.on_arduino_cli_failed(err)
+            missing_cores = self._check_missing_cores()
+        except(subprocess.CalledProcessError, FileNotFoundError):
             self.cli_failed.emit()
             return
-        cores = json.loads(cores_json.stdout)
-
-        missing_cores = []
-        for required_core in self.required_cores:
-            if not any(core['id'] == required_core for core in cores):
-                missing_cores.append(required_core)
-        if any(missing_cores):
-            base.emit_error(
-                self,
-                ViPErLEEDFirmwareError.ERROR_CORE_NOT_FOUND,
-                missing_cores
-                )
+        if missing_cores:
+            base.emit_error(self,
+                            ViPErLEEDFirmwareError.ERROR_CORE_NOT_FOUND,
+                            missing_cores
+                            )
             self.upload_finished.emit()
             return
         self.progress_occurred.emit(5)
 
         # Check if the selected controller is present at all.
-        available_ctrls = self.get_viperleed_hardware(False)
-        selected_ctrl_exists = any(
-            self.ctrls_with_port(available_ctrls, selected_ctrl['port'])
-            )
-        if not selected_ctrl_exists:
-            base.emit_error(
-                self,
-                ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND,
-                selected_ctrl['port']
-                )
-            self.controllers_detected.emit(available_ctrls)
+        if self._controller_missing(selected_ctrl['port']):
             self.upload_finished.emit()
             return
         self.progress_occurred.emit(20)
@@ -729,6 +745,50 @@ class FirmwareUploader(ArduinoCLI):
         self.get_viperleed_hardware(True)
         self.progress_occurred.emit(100)
         self.upload_finished.emit()
+
+    def get_installed_cores(self):
+        """Detect installed Arduino CLI cores.
+
+        Returns
+        -------
+        cores : list of dict
+            The installed Arduino CLI cores. Each core is represented
+            by a dict. The key 'id' returns the core name.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the Arduino CLI was not found.
+        subprocess.CalledProcessError
+            If the Arduino CLI failed to detect installed cores.
+
+        Emits
+        -----
+        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
+            If the Arduino CLI was not found.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
+            If the Arduino CLI failed to detect installed cores.
+        """
+        try:
+            cli = self.get_arduino_cli()
+        except FileNotFoundError:
+            base.emit_error(
+                self,
+                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
+                self.base_path
+                )
+            raise
+
+        try:
+            cores_json = subprocess.run(
+                [cli, 'core', 'list', '--format', 'json'],
+                capture_output=True, check=True
+                )
+        except subprocess.CalledProcessError as err:
+            self.on_arduino_cli_failed(err)
+            raise
+
+        return json.loads(cores_json.stdout)
 
     @qtc.pyqtSlot(bool)
     def get_viperleed_hardware(self, detect_viperino):
