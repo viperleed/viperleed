@@ -595,7 +595,6 @@ class ViPErinoController(abc.MeasureControllerABC):
                 self.hardware = data
             # Now that we have info, we can check the box ID and whether
             # the quantities that we should measure can be measured.
-            # (ADC present)
             self._check_box_id()
             self.__check_measurements_possible()
             self.hardware_info_arrived.emit()
@@ -930,10 +929,11 @@ class ViPErinoController(abc.MeasureControllerABC):
             hardware = self.hardware.copy()
         if not hardware:
             return
-        if hardware['box_id'] != self.box_id:
+        arduino_id = hardware.get('box_id')
+        if arduino_id and arduino_id != self.box_id:
             base.emit_error(self,
                             ViPErinoErrors.ERROR_WRONG_BOX_ID,
-                            arduino_id=hardware['box_id'],
+                            arduino_id=arduino_id,
                             local_id=self.box_id)
 
     def __check_measurements_possible(self):

@@ -711,8 +711,7 @@ class FirmwareUploader(ArduinoCLI):
         if missing_cores:
             base.emit_error(self,
                             ViPErLEEDFirmwareError.ERROR_CORE_NOT_FOUND,
-                            missing_cores
-                            )
+                            missing_cores)
             self.upload_finished.emit()
             return
         self.progress_occurred.emit(5)
@@ -775,7 +774,7 @@ class FirmwareUploader(ArduinoCLI):
             base.emit_error(
                 self,
                 ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
-                self.base_path
+                self.base_path,
                 )
             raise
 
