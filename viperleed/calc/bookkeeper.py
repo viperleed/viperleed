@@ -80,8 +80,7 @@ class Bookkeeper():
                  job_name=None,
                  history_name=DEFAULT_HISTORY,
                  work_history_name=DEFAULT_WORK_HISTORY,
-                 cwd=Path.cwd(),
-                 work_dir=None):
+                 cwd=Path.cwd()):
         """Initialize the bookkeeper.
 
         Parameters
@@ -98,17 +97,13 @@ class Bookkeeper():
             copied from here to ./history_name. Default is workhistory.
         cwd : Path, optional
             The current working directory. Default is the current directory.
-        work_dir : Path, optional
-            The work directory used by the viperleed run. Used to look for the
-            original input files. Default is cwd / 'work'.
         """
         self.cwd = Path(cwd)
         self.top_level_history_path = self.cwd / history_name
         self.work_history_path = self.cwd / work_history_name
-        if work_dir is None:
-            self.work_dir = self.cwd / 'work'
-        else:
-            self.work_dir = Path(work_dir)
+        self.orig_inputs_dir = (self.cwd / DEFAULT_SUPP
+                                / ORIGINAL_INPUTS_DIR_NAME)
+
         self.job_name = job_name
 
         # attach a stream handler to logger if not already present
@@ -442,7 +437,7 @@ class Bookkeeper():
     def copy_input_files_from_original_inputs_and_cwd(self, use_ori=False):
         """Copy files from original_inputs_path to target_path."""
         for file in ALL_INPUT_FILES:
-            original_file = self.work_dir / ORIGINAL_INPUTS_DIR_NAME / file
+            original_file = self.orig_inputs_dir / file
             cwd_file = self.cwd / file
             if file in STATE_FILES and use_ori:
                 cwd_file = self.cwd / f'{file}_ori'

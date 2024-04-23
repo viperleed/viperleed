@@ -53,7 +53,6 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             job_name=args.job_name,
             history_name=args.history_name,
             work_history_name=args.work_history_name,
-            work_dir=work_path,
         )
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
 
