@@ -44,38 +44,40 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
 
     TOO_MANY_MEASUREMENT_TYPES = (
         150,
-        "Can measure up to {} quantities (one per ADC), but {} were requested."
+        'Can measure up to {} quantities (one per ADC), but {} were requested.'
         )
     OVERLAPPING_MEASUREMENTS = (
         151,
-        "Cannot measure {} and {} at the same time. "
-        "Measurements are performed by the same ADC."
+        'Cannot measure {} and {} at the same time. '
+        'Measurements are performed by the same ADC.'
         )
     UNSUPPORTED_QUANTITY = (
         152,
-        "Cannot measure {0}. If your hardware can measure {0}, update "
-        "its corresponding configuration file. Make sure to check for "
-        "spelling mistakes."
+        'Cannot measure {0}. If your hardware can measure {0}, update '
+        'its corresponding configuration file. Make sure to check for '
+        'spelling mistakes.'
         )
     REQUESTED_ADC_OFFLINE = (
         153,
-        "Cannot measure {} because its associated ADC was not detected."
+        'Cannot measure {} because its associated ADC was not detected.'
         )
     CANNOT_CONVERT_THERMOCOUPLE = (
         154,
-        "Invalid/missing setting 'conversions'/'thermocouple_type'. "
-        "Cannot convert temperature to °C. Temperatures will appear in "
-        "millivolts (i.e., thermocouple voltage).{}"
+        'Invalid/missing setting "conversions"/"thermocouple_type". '
+        'Cannot convert temperature to °C. Temperatures will appear in '
+        'millivolts (i.e., thermocouple voltage).{}'
         )
     HARDWARE_INFO_MISSING = (
         155,
-        "No hardware information present. Cannot "
-        "{} before get_hardware() is called."
+        'No hardware information present. Cannot '
+        '{} before get_hardware() is called.'
         )
     ERROR_WRONG_BOX_ID = (
         156,
-        "The box ID {arduino_id} of the hardware does not match the ID "
-        "{local_id} of the software."
+        'The box ID {arduino_id} of the hardware does not match the ID '
+        '{local_id} of the software. Please report this error to the '
+        'ViPErLEED team. Make sure to include which hardware, which '
+        'firmware version and which ViPErLEED version was used.'
         )
 
 

@@ -592,6 +592,9 @@ class FirmwareUploader(ArduinoCLI):
         -----
         error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
             If there was no available controller on the given port.
+        controllers_detected(available_ctrls)
+            If the controller is indeed missing, the remaining
+            controllers are emitted.
         """
         available_ctrls = self.get_viperleed_hardware(False)
         selected_ctrl_exists = any(self.ctrls_with_port(available_ctrls, port))
@@ -714,7 +717,7 @@ class FirmwareUploader(ArduinoCLI):
                             missing_cores)
             self.upload_finished.emit()
             return
-        self.progress_occurred.emit(5)
+        self.progress_occurred.emit(10)
 
         # Check if the selected controller is present at all.
         if self._controller_missing(selected_ctrl['port']):
@@ -922,13 +925,16 @@ class FirmwareArchiveUploader(FirmwareUploader):
         Emits
         -----
         progress_occurred
-            Emitted at the start, after extracting the firmware,
-            after checking if the selected controller is present,
-            after uploading the firmware, and at the end.
-        error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
-            If there was no available controller on the given port.
+            Emitted at the start, after extracting the firmware, after
+            checking if all required Arduino cores are installed, after
+            checking if the selected controller is present, after
+            uploading the firmware, and at the end.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
             If the Arduino CLI was not found.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_CORE_NOT_FOUND)
+            If a required Arduino core was missing.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
+            If there was no available controller on the given port.
         error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
             If the Arduino CLI failed to upload the selected
             firmware to the controller.
@@ -939,8 +945,8 @@ class FirmwareArchiveUploader(FirmwareUploader):
             If the Arduino CLI process failed.
         upload_finished()
             Emitted if the selected controller was no longer connected
-            when trying upload the firmware, or if the upload was
-            successful.
+            when trying upload the firmware, if a required Arduino core
+            was missing, or if the upload was successful.
         """
         # The folder to which the selected archive is extracted.
         tmp_path = firmware.path.parent / 'tmp_'
