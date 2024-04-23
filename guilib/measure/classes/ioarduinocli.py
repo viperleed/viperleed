@@ -172,8 +172,7 @@ class ArduinoCLI(qtc.QObject):
         cores : list of dict
             The installed Arduino CLI cores. Each core is represented
             by a dict. The key 'id' of each dict returns the core name.
-            The following {key: value} pairs are only present for each
-            dict if the core detection does not fail.
+            Each item contains the following {key: value} pairs:
             'id': str
                 qualified name of the core
             'installed': str
