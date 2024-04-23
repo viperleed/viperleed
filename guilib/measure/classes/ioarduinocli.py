@@ -164,6 +164,69 @@ class ArduinoCLI(qtc.QObject):
         ver = json.loads(ver_json.stdout)
         return ver['VersionString']
 
+    def get_installed_cores(self):
+        """Detect installed Arduino CLI cores.
+
+        Returns
+        -------
+        cores : list of dict
+            The installed Arduino CLI cores. Each core is represented
+            by a dict. The key 'id' of each dict returns the core name.
+            The following {key: value} pairs are only present for each
+            dict if the core detection does not fail.
+            'id': str
+                qualified name of the core
+            'installed': str
+                Version currently installed
+            'latest': str
+                Latest version available
+            'name': str
+                Descriptive name of core
+            'maintainer': str
+                Maintainer of the core code
+            'website': str
+                Url of the maintainer
+            'email': str
+                Email address of the maintainer
+            'boards': list of dict
+                List of Arduino boards that use this core.
+                Each board is represented as a dict.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the Arduino CLI was not found.
+        subprocess.CalledProcessError
+            If the Arduino CLI failed to detect installed cores.
+
+        Emits
+        -----
+        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
+            If the Arduino CLI was not found.
+        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
+            If the Arduino CLI failed to detect installed cores.
+        """
+        try:
+            cli = self.get_arduino_cli()
+        except FileNotFoundError:
+            base.emit_error(
+                self,
+                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
+                self.base_path,
+                )
+            raise
+
+        try:
+            cores_json = subprocess.run(
+                [cli, 'core', 'list', '--format', 'json'],
+                capture_output=True, check=True
+                )
+        except subprocess.CalledProcessError as err:
+            self.on_arduino_cli_failed(err)
+            raise
+
+        return json.loads(cores_json.stdout)
+
     @qtc.pyqtSlot()
     def is_cli_installed(self):
         """Check if Arduino CLI is installed.
@@ -329,61 +392,6 @@ class ArduinoCLIInstaller(ArduinoCLI):
                                       type=qtc.Qt.UniqueConnection)
         self.network.get(request)
         self.progress_occurred.emit(25)
-
-    # This method is currently unused.                                          TODO: check if it can be used to accelerate the CLI upgrade by checking if the required core is already installed.
-    def _get_arduino_cores(self):
-        """Return a dictionary of the cores currently installed.
-
-        Returns
-        -------
-        dict
-            The following {key: value} pairs are only present if the
-            core detection does not fail. The returned dict will be
-            empty if the detection fails.
-
-            'id': str
-                qualified name of the core
-            'installed': str
-                Version currently installed
-            'latest': str
-                Latest version available
-            'name': str
-                Descriptive name of core
-            'maintainer': str
-                Maintainer of the core code
-            'website': str
-                Url of the maintainer
-            'email': str
-                Email address of the maintainer
-            'boards': dict
-                Dictionary of Arduino boards that use this core
-
-        Emits
-        -----
-        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
-            If the Arduino CLI was not found.
-        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
-            If detecting the Arduino cores failed.
-        cli_installation_finished(False)
-            If any error_occurred.
-        """
-        try:
-            cli = self.get_arduino_cli()
-        except FileNotFoundError:
-            base.emit_error(
-                self,
-                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
-                self.base_path
-                )
-            return {}
-
-        try:
-            cores = subprocess.run([cli, 'core', 'list', '--format', 'json'],
-                                   capture_output=True, check=True)
-        except subprocess.CalledProcessError as err:
-            self.on_arduino_cli_failed(err)
-            return {}
-        return json.loads(cores.stdout)
 
     def _install_and_upgrade_cores(self):
         """Download AVR core and upgrade existing cores and libraries.
@@ -566,7 +574,7 @@ class FirmwareUploader(ArduinoCLI):
 
     def _check_missing_cores(self):
         """Return the necessary cores that are missing.
-        
+
         Returns
         -------
         missing : list of str
@@ -582,12 +590,12 @@ class FirmwareUploader(ArduinoCLI):
 
     def _controller_missing(self, port):
         """Return whether there is no controller on the given port.
-        
+
         Returns
         -------
         missing : bool
             True if the controller is not present.
-        
+
         Emits
         -----
         error_occurred(ViPErLEEDFirmwareError.ERROR_CONTROLLER_NOT_FOUND)
@@ -747,50 +755,6 @@ class FirmwareUploader(ArduinoCLI):
         self.get_viperleed_hardware(True)
         self.progress_occurred.emit(100)
         self.upload_finished.emit()
-
-    def get_installed_cores(self):
-        """Detect installed Arduino CLI cores.
-
-        Returns
-        -------
-        cores : list of dict
-            The installed Arduino CLI cores. Each core is represented
-            by a dict. The key 'id' returns the core name.
-
-        Raises
-        ------
-        FileNotFoundError
-            If the Arduino CLI was not found.
-        subprocess.CalledProcessError
-            If the Arduino CLI failed to detect installed cores.
-
-        Emits
-        -----
-        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND)
-            If the Arduino CLI was not found.
-        error_occurred(ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_FAILED)
-            If the Arduino CLI failed to detect installed cores.
-        """
-        try:
-            cli = self.get_arduino_cli()
-        except FileNotFoundError:
-            base.emit_error(
-                self,
-                ViPErLEEDFirmwareError.ERROR_ARDUINO_CLI_NOT_FOUND,
-                self.base_path,
-                )
-            raise
-
-        try:
-            cores_json = subprocess.run(
-                [cli, 'core', 'list', '--format', 'json'],
-                capture_output=True, check=True
-                )
-        except subprocess.CalledProcessError as err:
-            self.on_arduino_cli_failed(err)
-            raise
-
-        return json.loads(cores_json.stdout)
 
     @qtc.pyqtSlot(bool)
     def get_viperleed_hardware(self, detect_viperino):
