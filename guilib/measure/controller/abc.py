@@ -726,20 +726,21 @@ class ControllerABC(DeviceABC):
         handler.add_section('measurement_settings')
         info = (
             ('i0_settle_time', 'I<sub>0</sub> settle time',
-             "<nobr>The time intervally required for the I<sub>0</sub> "
-             "current</nobr> to reach a stable value after a new energy "
-             "has been set. This should be calibrated for a typical step "
-             "size (e.g., 0.5 eV)."),
+             '<nobr>The time intervall required for the I<sub>0</sub> '
+             'current</nobr> to reach a stable value after a new energy '
+             'has been set. This should be calibrated for a typical step '
+             'size (e.g., 0.5 eV).'),
             ('hv_settle_time', 'Energy settle time',
-             "<nobr>The time intervally required for the true beam "
-             "energy</nobr> to reach a stable value after a new "
-             "energy has been set. This should be calibrated for "
-             "a typical step size (e.g., 0.5 eV)."),
+             '<nobr>The time intervall required for the true beam '
+             'energy</nobr> to reach a stable value after a new '
+             'energy has been set. This should be calibrated for '
+             'a typical step size (e.g., 0.5 eV).'),
             ('first_settle_time', 'First-energy settle time',
-             "<nobr>The time intervally required for the true beam energy</nobr>"
-             " to reach a stable value when the first energy of a ramp is set."
-             " This is usually significantly longer than the one used during"
-             " a ramp, as setting the first energy requires a large step.")
+             '<nobr>The time intervall required for the true beam '
+             'energy</nobr> to reach a stable value when the first energy '
+             'of a ramp is set. This is usually significantly longer than '
+             'the one used during a ramp, as setting the first energy '
+             'requires a large step.')
             )
         for option_name, display_name, tip in info:
             widget = InfIntSpinBox()

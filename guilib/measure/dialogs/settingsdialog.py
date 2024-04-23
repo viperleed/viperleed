@@ -841,18 +841,18 @@ class SettingsDialogSection(SettingsDialogSectionBase):
 class SettingsDialog(qtw.QDialog):
     """A dialog to display settings."""
 
-    # This signal is emitted whenever the the OK, Cancel, or Apply
+    # This signal is emitted whenever the OK, Cancel, or Apply
     # buttons are pressed, and only in case settings changed since
     # the last time this signal was emitted (or since the dialog
     # was shown). Users can .connect to this signal and use the
-    # slot to update the object whose settings are being edited
+    # slot to update the object whose settings are being edited.
     settings_changed = qtc.pyqtSignal()
 
     # This signal is emitted every time the dialog finishes and if
     # any change occurred to the settings. It carries True if edited
     # settings were saved to file, False otherwise. Users can connect
     # to his signal, and may want to restore the original settings if
-    # False
+    # False.
     settings_saved = qtc.pyqtSignal(bool)
 
     def __init__(self, handled_obj=None, settings=None, title=None, **kwargs):
@@ -867,7 +867,7 @@ class SettingsDialog(qtw.QDialog):
             settings should be given instead.
         settings : ViPErLEEDSettings, optional
             A ViPErLEEDSettings to be displayed in full. This
-            argument is ignored if an handled_obj is passed.
+            argument is ignored if a handled_obj is passed.
         **kwargs : object
             Other keyword arguments passed on to QDialog
 
