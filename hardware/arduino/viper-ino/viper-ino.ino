@@ -17,9 +17,10 @@ Date: 09.02.2022
 #define DEBUG   false    // Debug mode, writes to serial line, for use in serial monitor
 
 // The box ID is an indentifier that is necessary for the PC to know what
-// type of Arduino it is handling. 0 is the identifier of a ViPErino
-// controller that performs LEED measurements.
-#define BOX_ID  0
+// type of Arduino it is handling. 1 is the identifier of a ViPErino
+// controller that performs LEED measurements. The box ID must never be
+// changed!
+#define BOX_ID  1
 
 // Firmware version (MAX: v255.255). CURENTLY: v0.9
 #define FIRMWARE_VERSION_MAJOR    0  // max 255

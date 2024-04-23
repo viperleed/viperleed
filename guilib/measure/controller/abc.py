@@ -58,7 +58,7 @@ def ensure_connected(method):
         self.connect_()
         if not self.serial or not self.serial.is_open:
             base.emit_error(self, ControllerErrors.NOT_CONNECTED,
-            method.__name__, self.name, self.port_name)
+                            method.__name__, self.name, self.address)
             return None
         try:
             return method(*args, **kwargs)
@@ -97,7 +97,7 @@ class ControllerErrors(base.ViPErLEEDErrorEnum):
     NOT_CONNECTED = (
         105,
         "Impossible to execute {} on controller {}. "
-        "Port {} could not be opened."
+        "Device at address {} could not be opened."
         )
 
 
@@ -129,12 +129,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     ready_to_show_settings = qtc.pyqtSignal()
 
     _mandatory_settings = [
-        ('controller', 'serial_port_class'),
+        ('controller', 'serial_class'),
         ('controller', 'device_name'),
         ]
 
     def __init__(self, parent=None, settings=None,
-                 port_name='', sets_energy=False):
+                 address='', sets_energy=False):
         """Initialise the controller instance.
 
         Parameters
@@ -143,14 +143,14 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             The controller settings. If not given, it should be set
             via the .settings property before the controller can
             be used.
-        port_name : str, optional
-            Name of the serial port to be used to communicate with
+        address : str, optional
+            Address (e.g., serial port) to be used to communicate with
             the controller. If this is given, it will also be stored
             in the settings file, overriding the value that may be
             there. If not given and no value is present in the
-            "controller/port_name" field, a port name should be set
-            explicitly via the .serial.port_name property. Default
-            is an empty string.
+            "controller/address" field, an address should be set
+            explicitly via the .address property. Default is an
+            empty string.
         sets_energy : bool, optional
             Used to determine whether this controller is responsible
             for setting the electron energy by communicating with the
@@ -160,7 +160,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         Raises
         ------
         TypeError
-            If no port_name is given, and none was present in the
+            If no address is given, and none was present in the
             settings file.
         """
         super().__init__(parent=parent)
@@ -183,7 +183,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__force_stop_timer.setInterval(200)
         self.__force_stop_timer.timeout.connect(self.send_unsent_messages)
 
-        self.__port_name = port_name
+        self.__address = address
         self.__energy_calibration = None
 
         # Set in self.set_energy to the sum of the waiting times
@@ -269,7 +269,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         No change of the busy state can occur if the controller
         has a queue of messages that have still to be sent to
         the hardware. Also, the value given is discarded if the
-        serial port is currently busy (i.e., waiting for a response).
+        serial is currently busy (i.e., waiting for a response).
         In this latter case, the controller will always be busy.
 
         Parameters
@@ -446,32 +446,32 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         return base.as_valid_filename(self.name)
 
     @property
-    def port_name(self):
-        """Return the name of the serial port for this controller."""
+    def address(self):
+        """Return the address for this controller."""
         name = ""
         try:
             name = self.serial.port_name
         except AttributeError:
             pass
-        return name if name else 'UNKNOWN PORT'
+        return name if name else 'UNKNOWN ADDRESS'
 
-    @port_name.setter
-    def port_name(self, port_name):
-        """Set the port name for this controller."""
-        if not isinstance(port_name, str):
-            raise TypeError("port_name must be a string")
-        if port_name == self.port_name:
+    @address.setter
+    def address(self, address):
+        """Set the address for this controller."""
+        if not isinstance(address, str):
+            raise TypeError("address must be a string")
+        if address == self.address:
             return
-        self.__port_name = port_name
+        self.__address = address
         if self.settings:
-            self.settings.set('controller', 'port_name', port_name)
+            self.settings.set('controller', 'address', address)
         if not self.serial:
             return
-        self.serial.port = port_name
+        self.serial.port = address
 
     @property
     def serial(self):
-        """Return the serial port instance used."""
+        """Return the serial instance used."""
         return self.__serial
 
     @property
@@ -520,13 +520,13 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         """Set new settings for this controller.
 
         Settings are accepted and loaded only if they are valid.
-        Notice that the serial port name in the new settings will
-        be used only the first time a valid settings is loaded if
-        no valid port_name was given before (either at instantiation
-        or using the .port_name property). Explicitly use the
-        .port_name property to set a new communication port. If
-        you want the port name to be taken from new settings, set
-        .port_name to an empty string, then load the new settings.
+        Notice that the serial name in the new settings will be
+        used only the first time a valid settings is loaded if no
+        valid address was given before (either at instantiation
+        or using the .address property). Explicitly use the
+        .address property to set a new communication address. If
+        you want the address to be taken from new settings, set
+        .address to an empty string, then load the new settings.
 
         Parameters
         ----------
@@ -535,7 +535,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
             settings from a default file will be made. new_settings
             (or the default) will be checked for the following
             mandatory sections/options:
-                'controller'/'serial_port_class'
+                'controller'/'serial_class'
             (if self.sets_energy:
                 'measurement_settings'/'i0_settle_time'
                 'measurement_settings'/'hv_settle_time')
@@ -566,42 +566,46 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         if not self.are_settings_ok(new_settings):
             return
 
-        # Take care of the port name, syncing the contents of
-        # the future settings and the value in self.__port_name.
+        # Take care of the address, syncing the contents of
+        # the future settings and the value in self.__address.
         # Also, save changes to file, unless we have been reading
         # from the default configuration.
-        _settings_port = new_settings.get('controller', 'port_name',
-                                          fallback=self.__port_name)
-        if not self.__port_name:
-            self.__port_name = _settings_port
+        _settings_serial = new_settings.get('controller', 'address',
+                                            fallback=self.__address)
+        if not self.__address:
+            self.__address = _settings_serial
         else:
-            new_settings['controller']['port_name'] = self.__port_name
+            new_settings['controller']['address'] = self.__address
             if _name is None:  # Not read from _defaults
                 new_settings.update_file()
 
-        serial_cls_name = new_settings.get('controller', 'serial_port_class')
+        serial_cls_name = new_settings.get('controller', 'serial_class',
+                                           fallback='')                         # TODO: remove fallback in 1.0
+        if not serial_cls_name:                                                 # TODO: only here for backwards compatibility, remove in 1.0
+            serial_cls_name = new_settings.get('controller',
+                                               'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
             try:
                 serial_class = base.class_from_name('serial', serial_cls_name)
             except ValueError:
                 base.emit_error(
                     self, ControllerErrors.INVALID_SETTINGS,
-                    'controller/serial_port_class', ''
+                    'controller/serial_class', ''
                     )
                 return
             self.__serial = serial_class(new_settings,
-                                         port_name=self.__port_name)
+                                         port_name=self.__address)
             self.serial.error_occurred.connect(self.error_occurred)
         else:
             # The next line will also check that new_settings contains
-            # appropriate settings for the serial port class used.
+            # appropriate settings for the serial class used.
             self.serial.port_settings = new_settings
-            self.serial.port_name = self.__port_name
+            self.serial.port_name = self.__address
 
         # Notice that the .connect_() will run anyway, even if the
         # settings are invalid (i.e., missing mandatory fields for
         # the serial)!
-        if self.__port_name:
+        if self.__address:
             self.serial.connect_()
         self.__settings = self.serial.port_settings
         self._time_to_trigger = 0
@@ -647,15 +651,22 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
                                         *extra_mandatory)
 
         # Backwards compatibility fix
-        new = ('measurement_settings', 'nr_samples')
-        old = ('measurement_settings', 'num_meas_to_average')
-        if '/'.join(new) in invalid:
-            _invalid = settings.has_settings(old)
-            if not _invalid:
-                settings.set(*new, settings.get(*old))
-                settings.remove_option(*old)
-                settings.update_file()
-                invalid.remove('/'.join(new))
+        new = (
+            ('measurement_settings', 'nr_samples'),
+            ('controller', 'serial_class'),
+            )
+        old = (
+            ('measurement_settings', 'num_meas_to_average'),
+            ('controller', 'serial_port_class'),
+            )
+        for new_setting, old_setting in zip(new, old):
+            if '/'.join(new_setting) in invalid:
+                old_missing = settings.has_settings(old_setting)
+                if not old_missing:
+                    settings.set(*new_setting, settings.get(*old_setting))
+                    settings.remove_option(*old_setting)
+                    settings.update_file()
+                    invalid.remove('/'.join(new_setting))
 
         if invalid:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
@@ -704,8 +715,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @qtc.pyqtSlot()
     def connect_(self):
-        """Connect serial port."""
-        # TODO: should we complain if .__port_name is False-y?
+        """Connect serial."""
+        # TODO: should we complain if .__address is False-y?
         if not self.serial or self.serial.is_open:
             # Invalid or already connected
             return
@@ -736,7 +747,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @qtc.pyqtSlot()
     def disconnect_(self):
-        """Disconnect serial port."""
+        """Disconnect serial."""
         try:
             self.serial.disconnect_()
         except (TypeError, AttributeError):
@@ -809,7 +820,27 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @abstractmethod
     def list_devices(self):
-        """List all devices of this class."""
+        """List all devices of this class.
+
+        This method must return a list of DeviceInfo instances. The
+        DeviceInfo class is located in the hardwarebase module. Each
+        controller is represented by a single DeviceInfo instance. The
+        DeviceInfo object must contain a .unique_name, and a dict
+        holding .more information about the device. .unique_name can
+        be the controller name and it's address to make it unique.
+
+        Returns
+        -------
+        devices : list
+            Each element is a DeviceInfo instance containing the name
+            of a controller and additional information as a dict.
+            The .more dict must contain the following keys:
+                'name':
+                    The controller name (value of self.name).
+                    This name does not need to be unique.
+                'address':
+                    The address of the controller (e.g., COM port).
+        """
         return
 
     # pylint: disable=unused-argument
@@ -820,7 +851,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
     # pylint: enable=unused-argument
 
     def moveToThread(self, thread):      # pylint: disable=invalid-name
-        """Move self and its serial port to a new thread."""
+        """Move self and its serial to a new thread."""
         try:
             self.serial.moveToThread(thread)
         except AttributeError:
@@ -1086,7 +1117,7 @@ class MeasureControllerABC(ControllerABC):
         ]
 
     def __init__(self, parent=None, settings=None,
-                 port_name='', sets_energy=False):
+                 address='', sets_energy=False):
         """Initialise controller class object.
 
         This is an upgraded version of its parent class as it
@@ -1096,10 +1127,10 @@ class MeasureControllerABC(ControllerABC):
         ----------
         settings : ConfigParser
             The controller settings
-        port_name : str, optional
-            Name of the serial port to be used to communicate with
+        address : str, optional
+            Address (e.g., serial port) to be used to communicate with
             the controller. This parameter is optional only in case
-            settings contains a 'controller'/'port_name' option. If
+            settings contains a 'controller'/'address' option. If
             this is given, it will also be stored in the settings
             file, overriding the value that may be there. Default is
             an empty string.
@@ -1112,11 +1143,11 @@ class MeasureControllerABC(ControllerABC):
         Raises
         ------
         TypeError
-            If no port_name is given, and none was present in the
+            If no address is given, and none was present in the
             settings file.
         """
         super().__init__(parent=parent, settings=settings,
-                         port_name=port_name, sets_energy=sets_energy)
+                         address=address, sets_energy=sets_energy)
 
         # This dictionary must be overridden in subclasses.
         # It must contain all possible measurement types the controller
@@ -1480,7 +1511,7 @@ class MeasureControllerABC(ControllerABC):
         new_settings : dict or ConfigParser
             The new settings. Will be checked for the following
             mandatory sections/options:
-                'controller'/'serial_port_class'
+                'controller'/'serial_class'
 
         Emits
         -----

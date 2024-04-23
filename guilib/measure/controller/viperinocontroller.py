@@ -44,32 +44,40 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
 
     TOO_MANY_MEASUREMENT_TYPES = (
         150,
-        "Can measure up to {} quantities (one per ADC), but {} were requested."
+        'Can measure up to {} quantities (one per ADC), but {} were requested.'
         )
     OVERLAPPING_MEASUREMENTS = (
         151,
-        "Cannot measure {} and {} at the same time. "
-        "Measurements are performed by the same ADC."
+        'Cannot measure {} and {} at the same time. '
+        'Measurements are performed by the same ADC.'
         )
     UNSUPPORTED_QUANTITY = (
         152,
-        "Cannot measure {0}. If your hardware can measure {0}, "
-        "update its corresponding configuration file (check also typos!)."
+        'Cannot measure {0}. If your hardware can measure {0}, update '
+        'its corresponding configuration file. Make sure to check for '
+        'spelling mistakes.'
         )
     REQUESTED_ADC_OFFLINE = (
         153,
-        "Cannot measure {} because its associated ADC was not detected."
+        'Cannot measure {} because its associated ADC was not detected.'
         )
     CANNOT_CONVERT_THERMOCOUPLE = (
         154,
-        "Invalid/missing setting 'conversions'/'thermocouple_type'. "
-        "Cannot convert temperature to °C. Temperatures will appear in "
-        "millivolts (i.e., thermocouple voltage).{}"
+        'Invalid/missing setting "conversions"/"thermocouple_type". '
+        'Cannot convert temperature to °C. Temperatures will appear in '
+        'millivolts (i.e., thermocouple voltage).{}'
         )
     HARDWARE_INFO_MISSING = (
         155,
-        "No hardware information present. Cannot "
-        "{} before get_hardware() is called."
+        'No hardware information present. Cannot '
+        '{} before get_hardware() is called.'
+        )
+    ERROR_WRONG_BOX_ID = (
+        156,
+        'The box ID {arduino_id} of the hardware does not match the ID '
+        '{local_id} of the software. Please report this error to the '
+        'ViPErLEED team. Make sure to include which hardware, which '
+        'firmware version and which ViPErLEED version was used.'
         )
 
 
@@ -77,8 +85,14 @@ class ViPErinoErrors(base.ViPErLEEDErrorEnum):
 class ViPErinoController(abc.MeasureControllerABC):
     """Controller class for the ViPErLEED Arduino Micro."""
 
-    _devices = {}
-    cls_lock = threading.Lock()  # Access to _devices thread safe
+    # The box ID is the identifier that differentiates viperleed
+    # controller types from each other. The ID of the class must
+    # match the box ID returned by the hardware controller. The
+    # box ID must never be changed! The box ID is 1-based, 0
+    # should never be used for any controller.
+    box_id = 1
+
+    cls_lock = threading.RLock()  # Thread safe access to class properties
     _mandatory_settings = [
         # pylint: disable=protected-access
         *abc.MeasureControllerABC._mandatory_settings,
@@ -91,7 +105,7 @@ class ViPErinoController(abc.MeasureControllerABC):
     hardware_info_arrived = qtc.pyqtSignal()
 
     def __init__(self, parent=None, settings=None,
-                 port_name='', sets_energy=False):
+                 address='', sets_energy=False):
         """Initialise ViPErino controller object.
 
         Initialise prepare_todos dictionaries. The key is a
@@ -103,10 +117,10 @@ class ViPErinoController(abc.MeasureControllerABC):
         ----------
         settings : ConfigParser
             The controller settings
-        port_name : str, optional
-            Name of the serial port to be used to communicate with
+        address : str, optional
+            Address (the serial port) to be used to communicate with
             the controller. This parameter is optional only in case
-            settings contains a 'controller'/'port_name' option. If
+            settings contains a 'controller'/'address' option. If
             this is given, it will also be stored in the settings
             file, overriding the value that may be there. Default is
             an empty string.
@@ -119,11 +133,11 @@ class ViPErinoController(abc.MeasureControllerABC):
         Raises
         ------
         TypeError
-            If no port_name is given, and none was present in the
+            If no address is given, and none was present in the
             settings file.
         """
         super().__init__(parent=parent, settings=settings,
-                         port_name=port_name, sets_energy=sets_energy)
+                         address=address, sets_energy=sets_energy)
         # Initialise dictionaries for the measurement preparation.
         self.begin_prepare_todos['get_hardware'] = True
         self.begin_prepare_todos['calibrate_adcs'] = True
@@ -139,7 +153,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         # .acquire() instance.lock (or use a context manager). The
         # class-level lock instance.cls_lock should be used if any
         # attribute common to all instances is to be modified instead.
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
         # __adc_measurement_types[i] contains the QuantityInfo
         # that should be measured by ADC[i] (ADC0, ADC1, ..., LM35)
@@ -493,21 +507,30 @@ class ViPErinoController(abc.MeasureControllerABC):
         return handler
 
     def list_devices(self):  # too-complex, too-many-branches
-        """List Arduino Micro VipErLEED hardware -- can be slow."""
+        """List Arduino Micro VipErLEED hardware -- can be slow.
+
+        Returns
+        -------
+        device_list : list
+            Each element is a DeviceInfo instance containing the unique
+            name of a controller and .more information as a dict.
+            The .more dict contains the following keys:
+                'name' : str
+                    The controller name. This name may not be unique!
+                'address' : str
+                    The COM port on which the controller is connected.
+                'firmware' : Version
+                    The firmware version that is installed
+                    on the controller.
+        """
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]
-        with self.cls_lock:
-            for port in self._devices.copy():
-                if port not in port_names:
-                    del self._devices[port]
-            if all(p in self._devices for p in port_names):
-                return list(self._devices.values())
 
         device_list = []
         threads = []
         controllers = []
         for port in port_names:
-            ctrl = ViPErinoController(port_name=port)
+            ctrl = ViPErinoController(address=port)
             if not ctrl.has_valid_settings:
                 print("Something is wrong with the ViPErino default settings")
                 return []
@@ -522,12 +545,6 @@ class ViPErinoController(abc.MeasureControllerABC):
         for ctrl in controllers:
             _INVOKE(ctrl, 'get_hardware', qtc.Qt.QueuedConnection)
         if controllers:
-            # Notice: The next line is quite critical. Using a simple
-            # time.sleep() with the same duration DOES NOT WORK, i.e.,
-            # there's no information in the controller.hardware dict.
-            # However, this line seems to ALWAYS TIME OUT (emitting a
-            # serial timeout error), even if there were bytes read and
-            # correctly interpreted.
             controllers[0].serial.port.waitForReadyRead(100)
         for ctrl in controllers:
             with ctrl.lock:
@@ -535,12 +552,13 @@ class ViPErinoController(abc.MeasureControllerABC):
             serial_nr = hardware.get('serial_nr', None)
             _INVOKE(ctrl, 'disconnect_', qtc.Qt.BlockingQueuedConnection)
             if serial_nr:
-                txt = f"{ctrl.name} ({ctrl.port_name})"
-                with self.cls_lock:
-                    self._devices[ctrl.port_name] = txt
-                device_list.append(txt)
+                txt = f"{ctrl.name} ({ctrl.address})"
+                more_info = {k: hardware[k] for k in ('firmware', )}
+                more_info['address'] = ctrl.address
+                more_info['name'] = ctrl.name
+                device_list.append(base.DeviceInfo(txt, more_info))
             else:
-                print("Not a ViPErLEED controller at", ctrl.port_name,
+                print("Not a ViPErLEED controller at", ctrl.address,
                       hardware, flush=True)
         for thread in threads:
             thread.quit()
@@ -577,8 +595,9 @@ class ViPErinoController(abc.MeasureControllerABC):
             # Got hardware info
             with self.lock:
                 self.hardware = data
-            # Now that we have info, we can check if the quantities
-            # that we should measure can be measured (ADC present)
+            # Now that we have info, we can check the box ID and whether
+            # the quantities that we should measure can be measured.
+            self._check_box_id()
             self.__check_measurements_possible()
             self.hardware_info_arrived.emit()
             return
@@ -894,19 +913,30 @@ class ViPErinoController(abc.MeasureControllerABC):
         self.disconnect_()
 
         # Check that the serial no. in self.settings and the one in
-        # self.hardware match. Update the serial port if they don't
+        # self.hardware match. Update the serial port if they don't.
         settings_name = self.settings.get("controller", "device_name",
                                           fallback='')
         if settings_name != self.name:
-            self._devices.clear()
-            self.list_devices()
-            ports = {name.split(' (')[0]: port
-                     for port, name in self._devices.items()}
+            ports = {ctrl.more['name']: ctrl.more['address']
+                     for ctrl in self.list_devices()}
             correct_port = ports.get(self.name, '')
             if correct_port:
-                self.port_name = correct_port  # Also connects
+                self.address = correct_port  # Also connects
                 self.disconnect_()
         self.ready_to_show_settings.emit()
+
+    def _check_box_id(self):
+        """Check if the detected box ID matches the box ID of the class."""
+        with self.lock:
+            hardware = self.hardware.copy()
+        if not hardware:
+            return
+        arduino_id = hardware.get('box_id')
+        if arduino_id and arduino_id != self.box_id:
+            base.emit_error(self,
+                            ViPErinoErrors.ERROR_WRONG_BOX_ID,
+                            arduino_id=arduino_id,
+                            local_id=self.box_id)
 
     def __check_measurements_possible(self):
         """Check that it is possible to measure stuff, given the hardware."""

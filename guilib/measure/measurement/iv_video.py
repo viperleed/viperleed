@@ -135,7 +135,7 @@ class IVVideo(MeasurementABC):
             if not ctrl.measures():
                 continue
             ctrl_time = ctrl.time_to_first_measurement + ctrl.time_to_trigger
-            txt = f"{ctrl.name} at {ctrl.port_name}:"
+            txt = f"{ctrl.name} at {ctrl.address}:"
             print(txt, f"{ctrl_time:>{30-len(txt)}.2f} ms")
         for cam in self.cameras:
             txt = f"{cam.name}:"

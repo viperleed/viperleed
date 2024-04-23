@@ -488,7 +488,7 @@ class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
                 # return any measurement.
                 if complain:
                     emit_error(self, DataErrors.NO_DATA_FOR_CONTROLLER,
-                               ctrl.port_name)
+                               ctrl.address)
                 continue
 
             if self.continuous:

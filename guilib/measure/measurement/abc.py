@@ -56,7 +56,7 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
     RUNTIME_ERROR = (303, "Runtime error. Info: {}")
     WRONG_CONTROLLER_CLASS = (
         304,
-        "The secondary controller on port {!r} is not a subclass "
+        "The secondary controller at address {!r} is not a subclass "
         "of MeasureControllerABC. All secondary controllers need "
         "to be a subclass of MeasureControllerABC."
         )
@@ -836,7 +836,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                               type=_UNIQUE)
 
     def _connect_controller(self, ctrl):
-        """Connect port and signals of a controller."""
+        """Connect serial and signals of a controller."""
         ctrl.connect_()
         base.safe_connect(ctrl.data_ready, self._on_controller_data_ready,
                           type=_UNIQUE)
@@ -885,7 +885,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             disconnect(ctrl.controller_busy, slot)
 
     def __disconnect_primary_controller(self):
-        """Disconnect port and signals of the primary controller."""
+        """Disconnect serial and signals of the primary controller."""
         primary = self.primary_controller
         if primary is None:
             return
@@ -895,7 +895,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self._disconnect_controller(primary)
 
     def __disconnect_secondary_controllers(self):
-        """Disconnect ports and signals of the secondary controllers."""
+        """Disconnect serials and signals of the secondary controllers."""
         about_to_trigger = self.primary_controller.about_to_trigger
         for ctrl in self.secondary_controllers:
             base.safe_disconnect(about_to_trigger, ctrl.measure_now)
@@ -1092,21 +1092,21 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                             f'No controller_class in {config.last_file}')
             raise RuntimeError
 
-        # For now, check that the port name is in the settings.                 # TODO: add getting port name from device list
+        # For now, check that the address is in the settings.                 # TODO: add getting address from device list
         # Later on, this check will only happen if the unique name
         # of the controller in the settings file that was passed
         # is not found in the device list.
-        invalid = config.has_settings(('controller', 'port_name'))
+        invalid = config.has_settings(('controller', 'address'))
         if invalid:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            'controller/port_name',
-                            f'No port_name in {config.last_file}')
+                            'controller/address',
+                            f'No address in {config.last_file}')
             raise RuntimeError
-        port_name = config.get('controller', 'port_name')
-        if not port_name:
+        address = config.get('controller', 'address')
+        if not address:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
-                            'controller/port_name',
-                            f'No port_name in {config.last_file}')
+                            'controller/address',
+                            f'No address in {config.last_file}')
             raise RuntimeError
 
         cls_name = config['controller']['controller_class']
@@ -1130,7 +1130,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                             "Measured quantities is not a sequence "
                             f"in {self.settings.last_file}")
 
-        controller = cls(settings=config, port_name=port_name,
+        controller = cls(settings=config, address=address,
                          sets_energy=is_primary)
         # Connect error signal. The connection with __on_init_errors
         # has any impact only during initialization of self, but it
@@ -1189,7 +1189,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                 continue
             if not isinstance(ctrl, MeasureControllerABC):
                 base.emit_error(self, MeasurementErrors.WRONG_CONTROLLER_CLASS,
-                                ctrl.port_name)
+                                ctrl.address)
                 continue
             thread = qtc.QThread()
             thread.finished.connect(thread.deleteLater)

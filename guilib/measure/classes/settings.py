@@ -597,13 +597,22 @@ class SystemSettings(ViPErLEEDSettings):
 
     __instance = None
     __non_null = (
-            ('PATHS', 'configuration'),
-            ('PATHS', 'measurements'),
+        ('PATHS', 'configuration'),
+        ('PATHS', 'measurements'),
         )
 
     # __mandatory can later be extended as __non_null + (...)
     # Can also decide to add depending on the Version of viperleed
     __mandatory = __non_null
+
+    # __non_mandatory entries are settings that can be added, but
+    # that are not enforced. They should be used if the setting is
+    # only required by a part of the package that is not essential
+    # for it's core functionality.
+    __non_mandatory = (
+        ('PATHS', 'arduino_cli'),
+        ('PATHS', 'firmware'),
+        )
 
     def __new__(cls, *args, **kwargs):
         """Return an uninitialized instance of cls."""
@@ -655,14 +664,21 @@ class SystemSettings(ViPErLEEDSettings):
         # Add some informative text to the entries
         _infos = (
         ('PATHS', 'configuration',
-         "<nobr>This is the directory that contains all the</nobr> "
-         "configuration files for your devices and measurements. "
-         "It must be set before you can run any measurement."),
+         '<nobr>This is the directory that contains all the</nobr> '
+         'configuration files for your devices and measurements. '
+         'It must be set before you can run any measurement.'),
         ('PATHS', 'measurements',
-         "<nobr>This is the default folder where all your</nobr> "
-         "measurements will be automatically saved. IN THE FUTURE "
-         "you will be able to decide if you want to be asked each "
-         "time a measurement starts."),
+         '<nobr>This is the default folder where all your</nobr> '
+         'measurements will be automatically saved. IN THE FUTURE '
+         'you will be able to decide if you want to be asked each '
+         'time a measurement starts.'),
+        ('PATHS', 'arduino_cli',
+         '<nobr>This is the folder in which the Arduino</nobr> '
+         'command-line interface is installed.'),
+        ('PATHS', 'firmware',
+         '<nobr>This is the folder containing archives with</nobr> '
+         'firmware for ViPErLEED controllers.'),
+
         )
         for section, option, info in _infos:
             handler[section][option].set_info_text(info)
@@ -694,7 +710,7 @@ class SystemSettings(ViPErLEEDSettings):
             If any mandatory setting is missing (after potentially
             filling the non-null ones)
         """
-        invalid = self.has_settings(*self.__non_null)
+        invalid = self.has_settings(*self.__non_null, *self.__non_mandatory)
 
         # We're missing settings. Let's add them back...
         for missing in invalid:

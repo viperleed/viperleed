@@ -96,6 +96,8 @@ class PathSelector(qtw.QWidget):
     @property
     def parent_directory(self):
         """Return the directory containing the current selection."""
+        if self.path is None:
+            return Path().resolve()
         return self.path.parent.resolve()
 
     @property

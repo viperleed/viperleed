@@ -29,7 +29,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #      Could perhaps be solved if we try halving the frame rate when
 #      a timeout occurs (with limits on the number of retries and/or the
 #      slowest sensible frame rate).
-# BUG: Progress bar "Finding bad pixels" gets reproducibly stuck at 12% 
+# BUG: Progress bar "Finding bad pixels" gets reproducibly stuck at 12%
 #      in Prague; then timeout error. Cannot reproduce at all here with
 #      any of my cameras. Should prepare a debug version with some logging
 # BUG: IS: hardware may be so slow that all frames are lost when estimating
@@ -264,6 +264,8 @@ class Measure(ViPErLEEDPluginBase):
             'camera_viewers': [],
             'error_box': _QMSG(self),                                           # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
             'device_settings': {},     # keys: unique names; No cameras
+            'firmware_upgrade':
+                dialogs.firmwareupgradedialog.FirmwareUpgradeDialog(self),
             }
         self._glob = {
             'plot': MeasurementPlot(),
@@ -399,13 +401,16 @@ class Measure(ViPErLEEDPluginBase):
         cameras.clear()
         controllers.clear()
 
-        for cam_name, cam_cls in base.get_devices("camera").items():
+        # The get_devices method does return the device name, class and,
+        # additional information. The class and additional information
+        # are returned as a tuple.
+        for cam_name, (cam_cls, _) in base.get_devices("camera").items():
             act = cameras.addAction(cam_name)
             act.setData(cam_cls)
             act.triggered.connect(self.__on_camera_clicked)
-        for ctrl_name, ctrl_cls in base.get_devices("controller").items():
+        for ctrl_name, cls_and_info in base.get_devices("controller").items():
             act = controllers.addAction(ctrl_name)
-            act.setData(ctrl_cls)
+            act.setData(cls_and_info)
             act.triggered.connect(self.__on_controller_clicked)
 
         # Leave enabled only those containing entries
@@ -526,8 +531,8 @@ class Measure(ViPErLEEDPluginBase):
         act.triggered.connect(self.__on_bad_pixels_selected)
 
         act = tools_menu.addAction("Upload/upgrade firmware...")
-        act.setEnabled(False)                                                   # TODO: fix when implemented
-        # act.triggered.connect(self._dialogs['firmware_upgrade'].show)
+        act.setEnabled(True)
+        act.triggered.connect(self._dialogs['firmware_upgrade'].open)
 
         # System settings
         act = self._ctrls['menus']['sys_settings']
@@ -553,7 +558,9 @@ class Measure(ViPErLEEDPluginBase):
         self._dialogs['error_box'].finished.connect(
             self.__report_errors
             )
-
+        self._dialogs['firmware_upgrade'].error_occurred.connect(
+            self.error_occurred
+            )
         # OTHERS
         self.error_occurred.connect(self.__on_error_occurred)
         self.__measurement_thread.finished.connect(self.__switch_enabled)
@@ -592,42 +599,28 @@ class Measure(ViPErLEEDPluginBase):
                              interactions_enabled=False)
                 )
 
-    def __make_ctrl_settings_dialog(self, ctrl_cls, name, port):
+    def __delete_outdated_ctrl_dialog(self, ctrl_name):
+        """Remove controller dialogs for ctrl_name."""
+        this_ctrl_dialogs = [
+            (full_name, dialog)
+            for full_name, dialog in self._dialogs['device_settings'].items()
+            if full_name.startswith(ctrl_name)
+            ]
+        for full_name, dialog in this_ctrl_dialogs:
+            dialog.reject()  # Also closes the dialog
+            dialog.deleteLater()
+            del self._dialogs['device_settings'][full_name]
+
+    def __make_ctrl_settings_dialog(self, ctrl_cls, name, address, full_name):
         """Make a new settings dialog for a controller."""
-        ctrl = self.__make_device(ctrl_cls, name, port_name=port)
+        ctrl = self.__make_device(ctrl_cls, name, address=address)
         if not ctrl:
             return
 
         dialog = dialogs.SettingsDialog(ctrl, parent=self)                      # TODO: modal?
         ctrl.ready_to_show_settings.connect(dialog.open)
         dialog.finished.connect(ctrl.disconnect_)
-        self._dialogs['device_settings'][name] = dialog
-
-    def __on_bad_pixels_selected(self):
-        """Stop all cameras, then open the dialog."""
-        _ok_to_open = True
-        for viewer in self._dialogs['camera_viewers']:
-            if viewer.camera.is_running:
-                _ok_to_open &= viewer.camera.stop()
-            # Since we will delete all of the viewers, we can as well
-            # make sure they won't show up again after we close them
-            viewer.show_auto = False
-            viewer.close()
-        if not _ok_to_open:
-            # Retry soon
-            self._timers['retry_open_bpx_dialog'].start()
-            return
-
-        for viewer in self._dialogs['camera_viewers']:
-            viewer.camera.disconnect_()
-        # After disconnecting cameras, it does not really make
-        # sense to keep the viewers around: we will not reuse
-        # the disconnected cameras anyway
-        self._dialogs['camera_viewers'] = []
-
-        self.__switch_enabled(False)
-        self._ctrls['abort'].setEnabled(False)
-        self._dialogs['bad_px_finder'].open()
+        self._dialogs['device_settings'][full_name] = dialog
 
     def __make_device(self, device_cls, device_name, **other_info):
         """React to the selection of a device."""
@@ -681,6 +674,32 @@ class Measure(ViPErLEEDPluginBase):
 
         return device
 
+    def __on_bad_pixels_selected(self):
+        """Stop all cameras, then open the dialog."""
+        _ok_to_open = True
+        for viewer in self._dialogs['camera_viewers']:
+            if viewer.camera.is_running:
+                _ok_to_open &= viewer.camera.stop()
+            # Since we will delete all of the viewers, we can as well
+            # make sure they won't show up again after we close them
+            viewer.show_auto = False
+            viewer.close()
+        if not _ok_to_open:
+            # Retry soon
+            self._timers['retry_open_bpx_dialog'].start()
+            return
+
+        for viewer in self._dialogs['camera_viewers']:
+            viewer.camera.disconnect_()
+        # After disconnecting cameras, it does not really make
+        # sense to keep the viewers around: we will not reuse
+        # the disconnected cameras anyway
+        self._dialogs['camera_viewers'] = []
+
+        self.__switch_enabled(False)
+        self._ctrls['abort'].setEnabled(False)
+        self._dialogs['bad_px_finder'].open()
+
     def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
         cam_cls = self.sender().data()
@@ -727,15 +746,19 @@ class Measure(ViPErLEEDPluginBase):
     def __on_controller_clicked(self, *_):
         """Show settings of the controller selected."""
         action = self.sender()
-        ctrl_name = action.text()
-        ctrl_cls = action.data()
-        ctrl_name, ctrl_port = (s.strip() for s in ctrl_name.split("("))
-        ctrl_port = ctrl_port.replace(")", "")
+        full_name = action.text()
+        ctrl_cls, ctrl_info = action.data()
+        # Note that ctrl_name may be different from
+        # the displayed controller name full_name.
+        ctrl_name = ctrl_info['name']
+        ctrl_address = ctrl_info['address']
 
-        if ctrl_name not in self._dialogs['device_settings']:
-            self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_name, ctrl_port)
+        if full_name not in self._dialogs['device_settings']:
+            self.__delete_outdated_ctrl_dialog(ctrl_name)
+            self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_name,
+                                             ctrl_address, full_name)
 
-        _dialog = self._dialogs['device_settings'].get(ctrl_name, None)
+        _dialog = self._dialogs['device_settings'].get(full_name, None)
         if not _dialog:
             # Something went wrong with creating the dialog
             return
@@ -1003,7 +1026,7 @@ class Measure(ViPErLEEDPluginBase):
             if isinstance(sender, CameraABC):
                 source = f"camera {sender.name}"
             elif isinstance(sender, ControllerABC):
-                source = f"controller {sender.name} at {sender.port_name}"
+                source = f"controller {sender.name} at {sender.address}"
             elif isinstance(sender, MeasurementABC):
                 source = f"measurement {sender.__class__.__name__}"
             else:

@@ -16,3 +16,4 @@ from viperleed.guilib.measure.dialogs.settingsdialog import (
     SettingsDialogOption, SettingsDialogSection, SettingsHandler,
     SettingsDialog
     )
+from viperleed.guilib.measure.dialogs import firmwareupgradedialog

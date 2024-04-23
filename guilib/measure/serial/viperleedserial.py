@@ -83,11 +83,6 @@ class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
         "has power, but ADC#0 was not detected. This likely indicates a "
         "hardware fault on the board. Check that ADC#0 has power."
         )
-    ERROR_WRONG_BOX_ID = (
-        18,
-        "The box ID {arduino_id} of the hardware does not match the ID "
-        "{local_id} of the software."
-        )
     ERROR_MSG_SENT_TOO_LONG = (
         254,
         "The controller tried to send a message that was longer "
@@ -97,11 +92,6 @@ class ViPErLEEDHardwareError(base.ViPErLEEDErrorEnum):
 
 class ViPErLEEDSerial(SerialABC):
     """Class for communication with Arduino Micro ViPErLEED controller."""
-
-    # The box ID is the identifier that differentiates viperleed
-    # controller types from each other. The ID of the class must
-    # match the box ID returned by the hardware controller.
-    box_id = 0
 
     debug_info_arrived = qtc.pyqtSignal(str)
 
@@ -758,14 +748,17 @@ class ViPErLEEDSerial(SerialABC):
         hardware_config : dict
             keys : {'adc_0', 'adc_1', 'lm35', 'relay', 'i0_range',
                     'aux_range', 'serial_nr', 'firmware'}
-            values : bool or str
+            values : bool or str or int or None
                 Values are True/False for 'adc_0', 'adc_1', 'lm35',
                 and 'relay', corresponding to the hardware having
                 access to the devices; Values for 'i0_range' and
                 'aux_range' are the strings '0 -- 2.5 V' or
                 '0 -- 10 V'; a human-readable (numbers and letters)
-                serial number as str for 'serial_nr', and a string
+                serial number as str for 'serial_nr', and a Version
                 of the form '<major>.<minor>' for 'firmware'.
+                'box_id' is an int. box_id may be None if the
+                installed firmware version does not have the
+                box ID yet.
 
         Emits
         -----
@@ -774,16 +767,22 @@ class ViPErLEEDSerial(SerialABC):
             the hardware do not match up or if the hardware did
             not detect any ADCs to take measurements with.
         """
+        info = {'adc_0': False,
+                'adc_1': False,
+                'lm35': False,
+                'relay': False,
+                'i0_range': '0 \u2013 10 V',
+                'aux_range': '0 \u2013 10 V',
+                'serial_nr': 'NO_SERIAL_NR',
+                'firmware': None,
+                'box_id': None}
+
         # TODO: from version 1.0 onwards we do not want to pop the
         # first byte of the message. We only do this for now to
         # ensure backwards compatibility.
         if len(message) == 9:
-            arduino_id = message.pop(0)
-            if arduino_id != self.box_id:
-                base.emit_error(self,
-                                ViPErLEEDHardwareError.ERROR_WRONG_BOX_ID,
-                                arduino_id=arduino_id,
-                                local_id=self.box_id)
+            info['box_id'] = message.pop(0)
+
         local_version = self.firmware_version
         major, minor, *hardware = message[:4]
         firmware_version = base.Version(major, minor)
@@ -795,16 +794,8 @@ class ViPErLEEDSerial(SerialABC):
         # TODO: here we may want to report a (non fatal) warning in
         # case the firmware version in the hardware is newer than the
         # one of the settings.
-        hardware_bits = self.port_settings['hardware_bits']
-        info = {'adc_0': False,
-                'adc_1': False,
-                'lm35': False,
-                'relay': False,
-                'i0_range': '0 \u2013 10 V',
-                'aux_range': '0 \u2013 10 V',
-                'serial_nr': 'NO_SERIAL_NR',
-                'firmware': None}
 
+        hardware_bits = self.port_settings['hardware_bits']
         hardware = int.from_bytes(hardware, self.byte_order)
         for key, value in hardware_bits.items():
             present_or_closed = bool(int(value) & hardware)

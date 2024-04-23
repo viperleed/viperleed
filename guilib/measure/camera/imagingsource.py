@@ -583,15 +583,18 @@ class ImagingSourceCamera(abc.CameraABC):
         return handler
 
     def list_devices(self):
-        """Return a list of available device names.
+        """Return a list of available devices.
 
         Returns
         -------
-        devices : list
-            Each element is a string representing
-            the name of a camera device.
+        devices : list of DeviceInfo
+            Information for each of the detected Imaging Source cameras.
+            For each item, only .unique_name is set, i.e., there is no
+            .more information.
         """
-        return self.driver.devices
+        # Use empty dictionaries as there is no
+        # additional information to pass along.
+        return [base.DeviceInfo(name) for name in self.driver.devices]
 
     def open(self):
         """Open the camera device.

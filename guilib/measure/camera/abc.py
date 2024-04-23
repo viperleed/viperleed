@@ -981,13 +981,21 @@ class CameraABC(qtc.QObject, metaclass=base.QMetaABC):
 
     @abstractmethod
     def list_devices(self):
-        """Return a list of available device names.
+        """Return a list of available devices.
+
+        This method must return a list of DeviceInfo instances. The
+        DeviceInfo class is located in the hardwarebase module. Each
+        camera is represented by a single DeviceInfo instance. The
+        DeviceInfo object contains the uninque device name and a dict
+        holding additional information about the device. If there is
+        no additional information about the camera, then this dict can
+        be empty.
 
         Returns
         -------
         devices : list
-            Each element is a string representing
-            the name of a camera device.
+            Each element is a DeviceInfo instance containing the
+            name of a camera and additional information as a dict.
         """
         return
 

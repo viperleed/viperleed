@@ -13,11 +13,12 @@ by multiple ViPErLEED hardware objects.
 """
 
 from abc import ABCMeta
+from dataclasses import dataclass, field
+import enum
 import inspect
 from pathlib import Path
-import enum
-import sys
 import re
+import sys
 
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
 
@@ -395,9 +396,10 @@ def get_devices(package):
     -------
     devices : dict
         Dictionary of available, supported devices. Keys are
-        names of available devices, values are the driver classes
-        that can be used to handle the devices (one class per
-        device).
+        names of available devices, values are tuples containing
+        the driver classes that can be used to handle the devices
+        (one class per device) and additional information about the
+        device as a dict.
 
     Raises
     ------
@@ -417,8 +419,8 @@ def get_devices(package):
         if hasattr(cls, 'list_devices'):
             dummy_instance = cls()
             dev_list = dummy_instance.list_devices()
-            for dev_name in dev_list:
-                devices[dev_name] = cls
+            for device in dev_list:
+                devices[device.unique_name] = (cls, device.more)
     return devices
 
 
@@ -455,6 +457,27 @@ def safe_disconnect(signal, *slot):
 
 
 ################################### CLASSES ###################################
+
+
+@dataclass
+class DeviceInfo:
+    """A container for information about discovered devices.
+
+    Attributes
+    ----------
+    unique_name : str
+        Unique name identifying the discovered device
+    more : dict
+        Extra, optional, information about the discovered device.
+    """
+    unique_name: str
+    more: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        """Check that we have a string unique_name."""
+        if not isinstance(self.unique_name, str):
+            raise TypeError(f'{type(self).__name__}: '
+                            'unique_name must be a string')
 
 
 class QMetaABC(ABCMeta, type(qtc.QObject)):
@@ -661,6 +684,7 @@ class Version:
         if not _as_string:
             # Empty version
             raise ValueError(f"{_name}: version cannot be an empty string")
+        _as_string = _as_string.replace('v', '')
         if not _DOTS_OR_DIGITS.match(_as_string):
             raise ValueError(
                 f"{_name}: version can contain only digits and dots"
