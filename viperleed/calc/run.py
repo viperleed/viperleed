@@ -339,9 +339,9 @@ def _verify_tensorleed_path(path_):
     # could use Rparams.get_tenserleed_directory() but we
     # do not care about versions and globbing is enough.
     try:
-        with_tenserleed = (
+        with_tenserleed = next(
             d for d in potential_sources
-            if any(d.glob(f'{rparams.TENSERLEED_FOLDER_NAME}*'))
+            if any(d.glob(f'{rparams.defaults.TENSERLEED_FOLDER_NAME}*'))
             )
     except StopIteration:
         raise FileNotFoundError('Could not find a known tensor-LEED '

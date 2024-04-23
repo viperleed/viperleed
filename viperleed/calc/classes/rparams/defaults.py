@@ -17,6 +17,10 @@ __license__ = 'GPLv3+'
 
 import logging
 
+
+# The name we expect for folders containing TensErLEED Fortran code
+TENSERLEED_FOLDER_NAME = 'TensErLEED'
+
 # Notice that we cannot use a module-level global object(), as this
 # module may be imported a number of times when using multiprocessing
 NO_VALUE = None

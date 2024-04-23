@@ -76,7 +76,7 @@ class Atom:                                                                     
         Which index in the displacement range corresponds to
         'no change'
     dispInitialized : bool
-        disp_ variables get initialized after readVIBROCC by Atom.initDisp
+        disp_* variables get initialized after readVIBROCC by Atom.initDisp
     known_deltas : list of str
         Filenames of delta files generated or found for this atom
     offset_geo, offset_vib, offset_occ : dict

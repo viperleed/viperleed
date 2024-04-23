@@ -13,5 +13,4 @@ Libraries
     leedbase
     checksums
     periodic_table
-    symmetry
     woods_notation
