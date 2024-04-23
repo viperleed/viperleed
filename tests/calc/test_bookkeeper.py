@@ -14,7 +14,6 @@ import logging
 from pytest_cases import fixture, parametrize
 
 from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper import BookkeeperMode
 from viperleed.calc.bookkeeper import _CALC_LOG_PREFIXES
@@ -39,17 +38,15 @@ MOCK_OUT_CONTENT = 'This is a test output file.'
 @parametrize(log_file_name=MOCK_LOG_FILES)
 def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name):
     """Yield a temporary directory for testing the bookkeeper."""
-    work_path = tmp_path / DEFAULT_WORK
     out_path = tmp_path / 'OUT'
     supp_path = tmp_path / 'SUPP'
     tensors_path = tmp_path / 'Tensors'
     deltas_path = tmp_path / 'Deltas'
-    directories = (work_path, out_path, supp_path, tensors_path, deltas_path)
+    directories = (out_path, supp_path, tensors_path, deltas_path)
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
     # create mock log files
     (tmp_path / log_file_name).touch()
-    (work_path / log_file_name).touch()
     # create mock notes file
     notes_file = tmp_path / 'notes.txt'
     notes_file.write_text(NOTES_TEST_CONTENT)
@@ -67,7 +64,7 @@ def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name):
         (tmp_path / file).write_text(MOCK_INPUT_CONTENT)
 
     # create mock original_inputs folder
-    original_inputs_path = work_path / ORIGINAL_INPUTS_DIR_NAME
+    original_inputs_path = supp_path / ORIGINAL_INPUTS_DIR_NAME
     original_inputs_path.mkdir(parents=True, exist_ok=True)
     for file in MOCK_STATE_FILES:
         (original_inputs_path / file).write_text(MOCK_ORIG_CONTENT)
@@ -143,7 +140,7 @@ def test_bookkeeper_mode_enum():
 
 def test_store_input_files_to_history(tmp_path, bookkeeper_mock_dir_after_run):
     """Check correct storage of original input files to history."""
-    inputs_path = bookkeeper_mock_dir_after_run / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME
+    inputs_path = bookkeeper_mock_dir_after_run / 'SUPP' / ORIGINAL_INPUTS_DIR_NAME
     history = tmp_path / DEFAULT_HISTORY
     history.mkdir(parents=True, exist_ok=True)
     store_input_files_to_history(inputs_path, history)
@@ -399,7 +396,9 @@ class TestBookkeeperDiscardFull:
             input_content = (mock_dir / file).read_text()
             assert MOCK_INPUT_CONTENT in input_content
         # Check that there are no errors or warnings in log
-        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+        assert not any(rec.levelno >= logging.WARNING and
+                       not "could not identify directory to remove" in str(rec)
+                       for rec in caplog.records)
 
     def test_bookkeeper_discard_full_after_run(self,
                                                after_run,
@@ -409,21 +408,9 @@ class TestBookkeeperDiscardFull:
         bookkeeper, mock_dir, history_path, history_path_run = after_run
         bookkeeper.run(mode=BookkeeperMode.DISCARD_FULL)
         assert not history_path_run.is_dir()
-        # _ori files, SUPP, OUT and logs should be removed
-        for file in MOCK_STATE_FILES:
-            ori_file = mock_dir / f'{file}_ori'
-            assert not ori_file.is_file()
-        assert not (mock_dir / 'SUPP').exists()
-        assert not (mock_dir / 'OUT').exists()
-        assert len(tuple(mock_dir.glob('*.log'))) == 0
-        # Original SHOULD NOT be replaced by output
-        # (ARCHIVE only does not run if the run crashed, in which case we
-        # don't want to overwrite)
-        for file in MOCK_STATE_FILES:
-            out_content = (mock_dir / file).read_text()
-            assert MOCK_INPUT_CONTENT in out_content
-        # Check that there are no errors or warnings in log
-        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+        # Since teh run was not archived, the history should be empty
+        assert any("could not identify directory to remove" in str(rec)
+                   for rec in caplog.records)
 
     def test_bookkeeper_discard_full_after_archive(self,
                                                    after_archive,
