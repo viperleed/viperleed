@@ -581,7 +581,7 @@ class FirmwareUploader(ArduinoCLI):
         return missing_cores
 
     def _controller_missing(self, port):
-        """Return whether there is a controller on the given port.
+        """Return whether there is no controller on the given port.
         
         Returns
         -------
