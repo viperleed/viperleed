@@ -695,11 +695,12 @@ class FirmwareUploader(ArduinoCLI):
             If the requested controller was no longer present.
             Contains the detected controllers.
         cli_failed()
-            If any Arduino CLI process failed.
+            If any Arduino CLI process failed, or if a required Arduino
+            core was missing.
         upload_finished()
             Emitted if the selected controller was no longer connected
-            when trying upload the firmware, if a required Arduino core
-            was missing, or if the upload was successful.
+            when trying upload the firmware, or if the upload was
+            successful.
         """
         self.progress_occurred.emit(0)
         try:
@@ -723,7 +724,7 @@ class FirmwareUploader(ArduinoCLI):
             base.emit_error(self,
                             ViPErLEEDFirmwareError.ERROR_CORE_NOT_FOUND,
                             missing_cores)
-            self.upload_finished.emit()
+            self.cli_failed.emit()
             return
         self.progress_occurred.emit(10)
 
@@ -906,11 +907,12 @@ class FirmwareArchiveUploader(FirmwareUploader):
             If the requested controller was no longer present.
             Contains the detected controllers.
         cli_failed()
-            If the Arduino CLI process failed.
+            If the Arduino CLI process failed, or if a required Arduino
+            core was missing.
         upload_finished()
             Emitted if the selected controller was no longer connected
-            when trying upload the firmware, if a required Arduino core
-            was missing, or if the upload was successful.
+            when trying upload the firmware, or if the upload was
+            successful.
         """
         # The folder to which the selected archive is extracted.
         tmp_path = firmware.path.parent / 'tmp_'
