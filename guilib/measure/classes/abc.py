@@ -28,6 +28,7 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import QMetaABC
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
+from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 
 
@@ -140,7 +141,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             new_settings = ViPErLEEDSettings.from_settings(
                             new_settings
                             )
-        except(ValueError, settings.NoSettingsError):
+        except(ValueError, NoSettingsError):
             emit_error(QObjectABCErrors.MISSING_SETTINGS,
                             type(self).__name__)
             return False
