@@ -236,7 +236,7 @@ class UIErrors(base.ViPErLEEDErrorEnum):
 
 
 # too-many-instance-attributes
-class Measure(ViPErLEEDPluginBase):
+class Measure(ViPErLEEDPluginBase):                                             # TODO: Figure out how to inherit error_occurred from QObjectWithError. QObjectMeta hook?
     """A GUI that allows to take measurements."""
 
     error_occurred = qtc.pyqtSignal(tuple)

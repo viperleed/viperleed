@@ -20,9 +20,10 @@ import enum
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
-from viperleed.guilib.measure.hardwarebase import (
-    ViPErLEEDErrorEnum, emit_error, QMetaABC
-    )
+from viperleed.guilib.measure.classes.abc import QObjectWithError
+from viperleed.guilib.measure.hardwarebase import emit_error
+from viperleed.guilib.measure.hardwarebase import QMetaABC
+from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 
 
 _ALIASES = {
@@ -202,10 +203,8 @@ _EXCEPTIONAL = (QuantityInfo.IMAGES, QuantityInfo.ENERGY,
 
 
 # too-many-instance-attributes
-class DataPoints(qtc.QObject, MutableSequence, metaclass=QMetaABC):
+class DataPoints(QObjectWithError, MutableSequence, metaclass=QMetaABC):
     """Data storage class."""
-
-    error_occurred = qtc.pyqtSignal(tuple)
 
     def __init__(self, *args, primary_controller=None, time_resolved=None,
                  continuous=None, parent=None):

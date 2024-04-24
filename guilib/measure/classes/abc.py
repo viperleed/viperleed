@@ -8,23 +8,30 @@ Created: 2024-04-04
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains QObjectWithErrorABC, QObjectWithSettingsABC, and
-HardwareABC. QObjectWithErrorABC is the base class of
-QObjectWithSettingsABC, Masure, CalibrationTask, and DataPoints.
-QObjectWithSettingsABC is the base class of HardwareABC and
-MeasurementABC. HardwareABC is the base class of DeviceABC and
-SerialABC. DeviceABC is the base class of ControllerABC and CameraABC.
+This module contains QObjectABCErrors, QObjectWithError,
+QObjectWithSettingsABC, HardwareABC and DeviceABC.
+QObjectWithError is the base class of QObjectWithSettingsABC,
+CalibrationTask, and DataPoints. QObjectWithSettingsABC is the base
+class of HardwareABC and MeasurementABC. HardwareABC is the base class
+of DeviceABC and SerialABC. DeviceABC is the base class of ControllerABC
+and CameraABC.
+
+Note that all of the classes defined in this module are subclasses of
+QObject. Any subclass of a QObject cannot inherit from a second QObject,
+which means one cannot do: NewClass(QObjectSubclass1, QObjectSubclass2)
 """
 
 from abc import abstractmethod
 
 from PyQt5 import QtCore as qtc
 
-from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.classes import settings
+from viperleed.guilib.measure.hardwarebase import emit_error
+from viperleed.guilib.measure.hardwarebase import QMetaABC
+from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
+from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 
 
-class QObjectABCErrors(base.ViPErLEEDErrorEnum):                                # TODO: make sure all classes attach their class name if they use these errors.
+class QObjectABCErrors(ViPErLEEDErrorEnum):                                # TODO: make sure all classes attach their class name if they use these errors.
     """Class for errors shared among many ViPErLEED objects."""
     MISSING_SETTINGS = (900,
                         '{} cannot operate without settings. Load an '
@@ -37,23 +44,27 @@ class QObjectABCErrors(base.ViPErLEEDErrorEnum):                                
                         )
 
 
-class QObjectWithErrorABC(qtc.QObject, metaclass=base.QMetaABC):
-    """Abstract base class of measurement objects with error detection."""
+class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
+    """Base class of measurement objects with error detection."""
 
     # Emitted whenver an error has been detected. Contains
     # information about the error which occurred.
     error_occurred = qtc.pyqtSignal(tuple)
 
+    def __init__(self, *args, **kwargs):
+        """Initialise instance."""
+        super().__init__(*args, **kwargs)
 
-class QObjectWithSettingsABC(QObjectWithErrorABC):
+
+class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     """Abstract base class of measurement objects with settings."""
 
     _mandatory_settings = []
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Initialise instance."""
-        self._settings = settings.ViPErLEEDSettings()
-        super().__init__(**kwargs)
+        self._settings = ViPErLEEDSettings()
+        super().__init__(*args, **kwargs)
 
     @property
     def settings(self):
@@ -68,6 +79,10 @@ class QObjectWithSettingsABC(QObjectWithErrorABC):
     @abstractmethod
     def find_settings(self):                                                    # TODO: abstract or base implementation?
         """Find appropriate settings for this instance."""
+        # How about making hardwarebase._find_matching_configs a class
+        # specific method that is capable to deal with outdated
+        # settings files instead of just looking for the exact name in
+        # the settings file?
 
     def are_settings_invalid(self, new_settings):
         """Check if there are any invalid settings.
@@ -122,17 +137,17 @@ class QObjectWithSettingsABC(QObjectWithErrorABC):
             not fit the mandatory settings.
         """
         try:
-            new_settings = settings.ViPErLEEDSettings.from_settings(
+            new_settings = ViPErLEEDSettings.from_settings(
                             new_settings
                             )
         except(ValueError, settings.NoSettingsError):
-            base.emit_error(QObjectABCErrors.MISSING_SETTINGS,
+            emit_error(QObjectABCErrors.MISSING_SETTINGS,
                             type(self).__name__)
             return False
 
         invalid = self.are_settings_invalid(new_settings)
         if invalid:
-            base.emit_error(QObjectABCErrors.INVALID_SETTINGS,
+            emit_error(QObjectABCErrors.INVALID_SETTINGS,
                             type(self).__name__, ', '.join(invalid), '')
             return False
 
@@ -148,11 +163,11 @@ class HardwareABC(QObjectWithSettingsABC):
     # Contains the busy state the device changed to.
     busy_changed = qtc.pyqtSignal(bool)
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Initialise instance."""
         # Busy state of the device.
         self._busy = False
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
     @property
     def busy(self):
@@ -196,7 +211,16 @@ class HardwareABC(QObjectWithSettingsABC):
 class DeviceABC(HardwareABC):
     """Abstract base class of hardware device objects."""
 
+    def __init__(self, *args, **kwargs):
+        """Initialise instance."""
+        super().__init__(*args, **kwargs)
+
     @abstractmethod
     def list_devices(self):
-        """List all devices of this class."""
-        return
+        """List all devices of this class.
+
+        Returns
+        -------
+        devices : list
+            Each element is a string representing the name of a device.
+        """
