@@ -22,7 +22,7 @@ import sys
 
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc)
 
-from viperleed.guilib import dialogs
+from viperleed.guilib.dialogs.dropdowndialog import DropdownDialog
 
 # TODO: not nice. Also, there's two places where the _defaults
 # path is used. Here and in classes.settings. However, due to circular
@@ -366,7 +366,7 @@ def get_device_config(device_name, **kwargs):
     # Found multiple config files that match.
     # Let the user pick which one to use
     names = [f.name for f in device_config_files]
-    dropdown = dialogs.DropdownDialog(
+    dropdown = DropdownDialog(
         "Found multiple settings files",
         "Found multiple settings files for device "
         f"{device_name} in {directory} and subfolders.\n"

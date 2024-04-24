@@ -16,7 +16,7 @@ from pathlib import Path
 from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc)
 
-from viperleed.guilib import dialogs
+from viperleed.guilib.dialogs.busywindow import BusyWindow
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure import camera as _m_camera
 from viperleed.guilib.widgetslib import change_control_text_color
@@ -82,9 +82,9 @@ class BadPixelsFinderDialog(qtw.QDialog):
                 'delay_busy_hide': (qtc.QTimer(self), 100),
                 },
             'dialogs': {
-                'camera_busy': dialogs.BusyWindow(parent=self,
-                                                  text="Preparing camera...",
-                                                  max_onscreen_time=10)
+                'camera_busy': BusyWindow(parent=self,
+                                          text="Preparing camera...",
+                                          max_onscreen_time=10)
                 }
             }
 

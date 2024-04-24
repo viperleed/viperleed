@@ -209,7 +209,13 @@ from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure.widgets.cameraviewer import CameraViewer
 from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
-from viperleed.guilib.measure import dialogs
+from viperleed.guilib.measure.dialogs.badpxfinderdialog import (
+    BadPixelsFinderDialog
+    )
+from viperleed.guilib.measure.dialogs.firmwareupgradedialog import (
+    FirmwareUpgradeDialog
+    )
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsDialog
 from viperleed.guilib.measure.classes.settings import (
     ViPErLEEDSettings, MissingSettingsFileError, SystemSettings
     )
@@ -257,15 +263,15 @@ class Measure(ViPErLEEDPluginBase):
         # are set to modal where appropriate (in __compose)
         self._dialogs = {
             'sys_settings':
-                dialogs.SettingsDialog(handled_obj=SystemSettings(),
+                SettingsDialog(handled_obj=SystemSettings(),
                                        title="System settings"),
             'bad_px_finder':
-                dialogs.badpxfinderdialog.BadPixelsFinderDialog(),
+                BadPixelsFinderDialog(),
             'camera_viewers': [],
             'error_box': _QMSG(self),                                           # TODO: can look at qtw.QErrorMessage for errors that can be dismissed
             'device_settings': {},     # keys: unique names; No cameras
             'firmware_upgrade':
-                dialogs.firmwareupgradedialog.FirmwareUpgradeDialog(self),
+                FirmwareUpgradeDialog(self),
             }
         self._glob = {
             'plot': MeasurementPlot(),
@@ -617,7 +623,7 @@ class Measure(ViPErLEEDPluginBase):
         if not ctrl:
             return
 
-        dialog = dialogs.SettingsDialog(ctrl, parent=self)                      # TODO: modal?
+        dialog = SettingsDialog(ctrl, parent=self)                              # TODO: modal?
         ctrl.ready_to_show_settings.connect(dialog.open)
         dialog.finished.connect(ctrl.disconnect_)
         self._dialogs['device_settings'][full_name] = dialog
