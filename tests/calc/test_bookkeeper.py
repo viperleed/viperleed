@@ -344,6 +344,9 @@ class TestBookkeeperDiscard:
         for file in MOCK_STATE_FILES:
             out_content = (mock_dir / file).read_text()
             assert MOCK_INPUT_CONTENT in out_content
+        # A 'DISCARDED' note should be in history.info
+        with bookkeeper.history_info_file.open() as f:
+            assert 'DISCARDED' in f.read()
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
 
@@ -375,6 +378,9 @@ class TestBookkeeperDiscard:
         for file in MOCK_STATE_FILES:
             out_content = (mock_dir / file).read_text()
             assert MOCK_INPUT_CONTENT in out_content
+        # A 'DISCARDED' note should be in history.info
+        with bookkeeper.history_info_file.open() as f:
+            assert 'DISCARDED' in f.read()
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
 
