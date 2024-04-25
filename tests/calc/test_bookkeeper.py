@@ -11,13 +11,16 @@ __license__ = 'GPLv3+'
 import shutil
 import logging
 
+import pytest
 from pytest_cases import fixture, parametrize
 
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
-from viperleed.calc.bookkeeper import BookkeeperMode
-from viperleed.calc.bookkeeper import _CALC_LOG_PREFIXES
+from viperleed.calc.bookkeeper import _CALC_LOG_PREFIXES, HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper import HISTORY_INFO_SEPARATOR
 from viperleed.calc.bookkeeper import Bookkeeper
+from viperleed.calc.bookkeeper import BookkeeperMode
+from viperleed.calc.bookkeeper import HistoryInfoFile
 from viperleed.calc.bookkeeper import store_input_files_to_history
 
 from ..helpers import execute_in_dir
@@ -25,6 +28,35 @@ from ..helpers import execute_in_dir
 
 MOCK_TIMESTAMP = '010203-040506'
 MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in _CALC_LOG_PREFIXES]
+MOCK_HISTORY_INFO_FILES = {
+    'no history.info': None,
+    'empty history.info': "",
+    'entry with job name': (
+        '# TENSORS   \n# JOB ID    \n# JOB NAME  test_jobname\n'
+        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes: This is a test note.\n'),
+    'entry without job name': (
+        '# TENSORS   \n# JOB ID    \n'
+        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes: This is a test note.\n'),
+    'entry without note': (
+        '# TENSORS   \n# JOB ID    \n'
+        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes:\n'),
+    'entry discarded': (
+        '# TENSORS   \n# JOB ID    \n# JOB NAME  test_jobname\n'
+        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes: This is a test note.\n'
+        'DISCARDED\n'),
+    'two entries without job name': (
+        '# TENSORS   \n# JOB ID    \n'
+        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes: This is a test note.\n'
+        f'{HISTORY_INFO_SEPARATOR}\n'
+        '# TENSORS   \n# JOB ID    \n'
+        '# TIME      03.02.01 04:05:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes: This is a test note.\n'),
+}
 MOCK_JOB_NAMES = (None, 'test_jobname')
 NOTES_TEST_CONTENT = 'This is a test note.'
 ALT_HISTORY_NAME = 'history_alt_name'
@@ -35,8 +67,11 @@ MOCK_OUT_CONTENT = 'This is a test output file.'
 
 
 @fixture(name='bookkeeper_mock_dir_after_run')
-@parametrize(log_file_name=MOCK_LOG_FILES)
-def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name):
+@parametrize(log_file_name=MOCK_LOG_FILES, ids=MOCK_LOG_FILES)
+@parametrize(history_info_file=MOCK_HISTORY_INFO_FILES.values(),
+             ids=MOCK_HISTORY_INFO_FILES.keys())
+def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name,
+                                          history_info_file):
     """Yield a temporary directory for testing the bookkeeper."""
     out_path = tmp_path / 'OUT'
     supp_path = tmp_path / 'SUPP'
@@ -50,6 +85,11 @@ def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name):
     # create mock notes file
     notes_file = tmp_path / 'notes.txt'
     notes_file.write_text(NOTES_TEST_CONTENT)
+    # mock history.info file
+    if history_info_file is not None:
+        hist_info_path = tmp_path / HISTORY_INFO_NAME
+        with open(hist_info_path, 'w') as f:
+            f.write(history_info_file)
     # create mock Tensor and Delta files
     (tensors_path / 'Tensors_003.zip').touch()
     (deltas_path / 'Deltas_003.zip').touch()
@@ -130,6 +170,12 @@ def fixture_history_path_run(history_path):
     return history_path / f't000.r001_{MOCK_TIMESTAMP}'
 
 
+@fixture(name='history_info_file')
+def fixture_history_info(after_run):
+    bookkeeper, *_ = after_run
+    history_info = bookkeeper.history_info
+    return history_info, bookkeeper.cwd / HISTORY_INFO_NAME
+
 def test_bookkeeper_mode_enum():
     """Check values of bookkeeper mode enum."""
     assert BookkeeperMode.ARCHIVE is BookkeeperMode('archive')
@@ -189,7 +235,6 @@ class TestBookkeeperArchive:
         # Bookkeeper should not do anything
         assert (mock_dir / 'history').exists()
         assert not tuple((mock_dir / 'history').iterdir())
-        assert not (mock_dir / 'history.info').exists()
         # Originals untouched
         for file in MOCK_STATE_FILES:
             assert (mock_dir / file).is_file()
@@ -223,7 +268,6 @@ class TestBookkeeperClear:
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
         # Bookkeeper should not do anything
         assert not tuple((mock_dir / 'history').iterdir())
-        assert not (mock_dir / 'history.info').exists()
         # Originals untouched
         for file in MOCK_STATE_FILES:
             assert (mock_dir / file).is_file()
@@ -306,14 +350,16 @@ class TestBookkeeperDiscard:
         bookkeeper.run(mode=BookkeeperMode.DISCARD)
         # Bookkeeper should not do anything
         assert not tuple((mock_dir / 'history').iterdir())
-        assert not (mock_dir / 'history.info').exists()
         # Originals untouched
         for file in MOCK_STATE_FILES:
             assert (mock_dir / file).is_file()
             input_content = (mock_dir / file).read_text()
             assert MOCK_INPUT_CONTENT in input_content
         # Check that there are no errors or warnings in log
-        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+        assert not any(
+            rec.levelno >= logging.WARNING
+            and not "Failed to mark last entry as discarded" in str(rec)
+            for rec in caplog.records)
 
     def test_bookkeeper_discard_after_run(self,
                                           after_run,
@@ -345,10 +391,13 @@ class TestBookkeeperDiscard:
             out_content = (mock_dir / file).read_text()
             assert MOCK_INPUT_CONTENT in out_content
         # A 'DISCARDED' note should be in history.info
-        with bookkeeper.history_info_file.open() as f:
-            assert 'DISCARDED' in f.read()
+        assert bookkeeper.history_info.last_entry_was_discarded
+        assert "DISCARDED" in bookkeeper.history_info.path.read_text()
         # Check that there are no errors or warnings in log
-        assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+        assert not any(
+            rec.levelno >= logging.WARNING
+            and not "discarded" in str(rec)
+            for rec in caplog.records)
 
     def test_bookkeeper_discard_after_archive(self,
                                             after_archive,
@@ -379,7 +428,7 @@ class TestBookkeeperDiscard:
             out_content = (mock_dir / file).read_text()
             assert MOCK_INPUT_CONTENT in out_content
         # A 'DISCARDED' note should be in history.info
-        with bookkeeper.history_info_file.open() as f:
+        with bookkeeper.history_info.path.open() as f:
             assert 'DISCARDED' in f.read()
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
@@ -395,7 +444,6 @@ class TestBookkeeperDiscardFull:
         bookkeeper.run(mode=BookkeeperMode.DISCARD_FULL)
         # Bookkeeper should not do anything
         assert not tuple((mock_dir / 'history').iterdir())
-        assert not (mock_dir / 'history.info').exists()
         # Originals untouched
         for file in MOCK_STATE_FILES:
             assert (mock_dir / file).is_file()
@@ -403,7 +451,7 @@ class TestBookkeeperDiscardFull:
             assert MOCK_INPUT_CONTENT in input_content
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING and
-                       not "could not identify directory to remove" in str(rec)
+                       not "remove" in str(rec) # catch two expected warnings
                        for rec in caplog.records)
 
     def test_bookkeeper_discard_full_after_run(self,
@@ -412,11 +460,17 @@ class TestBookkeeperDiscardFull:
         """Calling DISCARD_FULL after a run without ARCHiVE. E.g. if the run
         crashed."""
         bookkeeper, mock_dir, history_path, history_path_run = after_run
+        notes_in_history_info = (
+            'This is a test note.' in (mock_dir / HISTORY_INFO_NAME).read_text())
         bookkeeper.run(mode=BookkeeperMode.DISCARD_FULL)
         assert not history_path_run.is_dir()
         # Since teh run was not archived, the history should be empty
-        assert any("could not identify directory to remove" in str(rec)
-                   for rec in caplog.records)
+        if notes_in_history_info:
+            assert any("last entry in history.info has user notes" in str(rec)
+                       for rec in caplog.records)
+        else:
+            assert any("could not identify directory to remove" in str(rec)
+                    for rec in caplog.records)
 
     def test_bookkeeper_discard_full_after_archive(self,
                                                    after_archive,
@@ -426,6 +480,10 @@ class TestBookkeeperDiscardFull:
         """
         bookkeeper, mock_dir, history_path, history_path_run = after_archive
         bookkeeper.run(mode=BookkeeperMode.DISCARD_FULL)
+        if bookkeeper.history_info.last_entry_has_notes:
+            # should prevent the removal of the history
+            assert history_path_run.is_dir()
+            return
         assert not history_path_run.is_dir()
         # _ori files, SUPP, OUT and logs should be removed
         for file in MOCK_STATE_FILES:
@@ -439,3 +497,63 @@ class TestBookkeeperDiscardFull:
             assert MOCK_INPUT_CONTENT in out_content
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
+
+
+class TestHistoryInfoFile:
+
+    def test_history_info_read_contents(self,history_info_file):
+        """Check that the history.info file is read correctly."""
+        history_info, actual_file = history_info_file
+        assert actual_file.exists()
+        assert history_info.path == actual_file
+
+    def test_history_info_entry_parsing(self,history_info_file):
+        history_info, actual_file = history_info_file
+        assert bool(history_info.last_entry) == bool(actual_file.read_text())
+
+    def test_history_info_has_notes(self,history_info_file):
+        """Check that the history.info file is read correctly."""
+        history_info, actual_file = history_info_file
+        if 'This is a test note.' in actual_file.read_text():
+            assert history_info.last_entry.notes == 'This is a test note.'
+
+    def test_history_info_discarded(self,history_info_file):
+        """Check that the history.info file is read correctly."""
+        history_info, actual_file = history_info_file
+        discarded_in_entry = 'DISCARDED' in actual_file.read_text()
+        assert history_info.last_entry_was_discarded == discarded_in_entry
+
+    def test_history_info_regenerate_from_entries(self,history_info_file):
+        """Check that the history.info file can be regenerated after parsing."""
+        history_info, actual_file = history_info_file
+        actual_text = actual_file.read_text()
+        assert actual_text == history_info.raw_contents
+        last_entry = history_info.last_entry
+        if last_entry is None:
+            return
+        history_info.remove_last_entry()
+        history_info.append_entry(last_entry)
+        assert actual_text.strip() == history_info.raw_contents.strip()
+
+    def test_history_info_discard_last_entry(self, history_info_file):
+        """Check we can discard the last history.info entry."""
+        history_info, actual_file = history_info_file
+        last_entry = history_info.last_entry
+        if last_entry is None or last_entry.discarded:
+            return
+        history_info.discard_last_entry()
+        assert history_info.last_entry_was_discarded
+
+    def test_history_info_remove_last_entry(self, history_info_file):
+        """Check we can remove the last history.info entry."""
+        history_info, *_ = history_info_file
+        # check number of entries before and run checks accordingly
+        n_entries = history_info.path.read_text().count('# TENSORS')
+        if n_entries == 0:
+            assert history_info.last_entry is None
+            with pytest.raises(ValueError):
+                history_info.remove_last_entry()
+        else:
+            assert history_info.last_entry is not None
+            history_info.remove_last_entry()
+            assert history_info.path.read_text().count('# TENSORS') == n_entries - 1
