@@ -398,16 +398,57 @@ class Bookkeeper():
                                                     discard)
         tensor_nums.add(self.tensor_number)
 
-        _add_entry_to_history_info_file(
-            self.cwd,
+        self._add_entry_to_history_info_file(
             tensor_nums,
-            [self.max_job_for_tensor[tensor] + 1 for tensor in tensor_nums],
-            self.job_name,
-            self.last_log_lines,
-            self.timestamp,
-            self.top_level_history_path.name,
-            discarded=discard
+            discarded=discard,
             )
+
+    def _add_entry_to_history_info_file(self, tensor_nums, discarded):
+        """Add information about the current run to history.info.
+
+        Parameters
+        ----------
+        tensor_nums : Sequence of int
+            The progressive numbers of the tensors that were used
+            or created during this run (and were moved to history).
+        discarded : bool
+            Whether this run was discarded.
+
+        Returns
+        -------
+        None.
+        """
+        history_info = self.cwd / HISTORY_INFO_NAME
+        job_nums = [self.max_job_for_tensor[tensor] + 1
+                    for tensor in tensor_nums]
+        contents = [] if not history_info.is_file() else ['', '']
+        contents.append(
+            '# TENSORS '.ljust(_HISTORY_INFO_SPACING)
+            + ('None' if tensor_nums == {0} else str(tensor_nums)[1:-1])        # TODO: perhaps we should sort the tensor numbers?
+            )
+        contents.append('# JOB ID '.ljust(_HISTORY_INFO_SPACING)
+                        + str(job_nums)[1:-1])                                  # TODO: perhaps we should sort the job numbers?
+        if self.job_name is not None:
+            contents.append(f'# JOB NAME {self.job_name}')
+        contents.extend(_infer_run_info_from_log(self.last_log_lines))
+        contents.append(
+            '# TIME '.ljust(_HISTORY_INFO_SPACING)
+            + f'{_translate_timestamp(self.timestamp)}'
+            )
+        contents.append(
+            '# FOLDER '.ljust(_HISTORY_INFO_SPACING)
+            + f'{self.history_dir.name}'
+        )
+        contents.append(f'Notes: {_read_and_clear_notes_file(self.cwd)}')
+        if discarded:
+            contents.append('DISCARDED')
+        contents.append(f'\n{_HISTORY_INFO_SEPARATOR}')
+        try:  # pylint: disable=too-many-try-statements
+            with history_info.open('a', encoding='utf-8') as hist_info_file:
+                hist_info_file.write('\n'.join(contents))
+        except OSError:
+            logger.error(f'Failed to append to {HISTORY_INFO_NAME} file.')
+
 
     def remove_ori_files(self):
         _move_or_discard_files(self.cwd_ori_files, self.cwd, True)
@@ -519,69 +560,6 @@ def store_input_files_to_history(root_path, history_path):
             shutil.copy2(file, history_path/file.name)
         except OSError as exc:
             print(f'Failed to copy file {file} to history: {exc}')
-
-
-# While there are indeed many arguments to this function, packing them
-# up into a dedicated dataclass seems a bit overkill. Appropriately
-# documenting them should be enough.
-# pylint: disable-next=too-many-arguments
-def _add_entry_to_history_info_file(cwd, tensor_nums, job_nums, job_name,
-                                    last_log_lines, timestamp, dirname,
-                                    discarded=False):
-    """Add information about the current run to history.info.
-
-    Parameters
-    ----------
-    cwd : Path
-        The current directory, containing history.info
-        and the optional notes files.
-    tensor_nums : Sequence of int
-        The progressive numbers of the tensors that were used
-        or created during this run (and were moved to history).
-    job_nums : Sequence of int
-        The new job numbers for the current run (one per tensor).
-    job_name : str
-        Alternative name, typically given by the user as
-        a command-line argument.
-    last_log_lines : Sequence of str
-        The lines read from the most recent viperleed.calc
-        log file.
-    timestamp : str
-        The time-stamp for this run. Typically derived
-        from the name of the viperleed.calc log file.
-    dirname : str
-        The name of the new history directory that was
-        created during this bookkeeper run.
-
-    Returns
-    -------
-    None.
-    """
-    history_info = cwd / HISTORY_INFO_NAME
-    contents = [] if not history_info.is_file() else ['', '']
-    contents.append(
-        '# TENSORS '.ljust(_HISTORY_INFO_SPACING)
-        + ('None' if tensor_nums == {0} else str(tensor_nums)[1:-1])            # TODO: perhaps we should sort the tensor numbers?
-        )
-    contents.append('# JOB ID '.ljust(_HISTORY_INFO_SPACING)
-                    + str(job_nums)[1:-1])                                      # TODO: perhaps we should sort the job numbers?
-    if job_name is not None:
-        contents.append(f'# JOB NAME {job_name}')
-    contents.extend(_infer_run_info_from_log(last_log_lines))
-    contents.append(
-        '# TIME '.ljust(_HISTORY_INFO_SPACING)
-        + f'{_translate_timestamp(timestamp)}'
-        )
-    contents.append('# FOLDER '.ljust(_HISTORY_INFO_SPACING) + f'{dirname}')
-    contents.append(f'Notes: {_read_and_clear_notes_file(cwd)}')
-    if discarded:
-        contents.append('DISCARDED')
-    contents.append(f'\n{_HISTORY_INFO_SEPARATOR}')
-    try:  # pylint: disable=too-many-try-statements
-        with history_info.open('a', encoding='utf-8') as hist_info_file:
-            hist_info_file.write('\n'.join(contents))
-    except OSError:
-        logger.error(f'Failed to append to {HISTORY_INFO_NAME} file.')
 
 
 def _create_new_history_dir(new_history_path):
