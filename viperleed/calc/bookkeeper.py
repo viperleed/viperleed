@@ -10,9 +10,11 @@ __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from collections import defaultdict
+from dataclasses import dataclass
 from enum import Enum
 from operator import attrgetter
 from pathlib import Path
+from typing import List
 import logging
 import os
 import re
@@ -40,7 +42,7 @@ HIST_FOLDER_RE = re.compile(
     )
 HISTORY_INFO_NAME = 'history.info'
 _HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
-_HISTORY_INFO_SEPARATOR = '###########'
+HISTORY_INFO_SEPARATOR = '\n###########\n'
 
 STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 
@@ -105,7 +107,6 @@ class Bookkeeper():
                                 / ORIGINAL_INPUTS_DIR_NAME)
 
         self.job_name = job_name
-
         # attach a stream handler to logger if not already present
         if not any(isinstance(h, logging.StreamHandler)
                    for h in logger.handlers):
@@ -119,6 +120,10 @@ class Bookkeeper():
         except OSError:
             logger.error('Error creating history folder.')
             raise
+
+        # history.info handler - creates file if not yet there
+        self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
+                                            create_new=True)
 
         self.update_from_cwd()
 
@@ -209,26 +214,6 @@ class Bookkeeper():
     def all_cwd_logs(self):
         return self.cwd_logs[0] + self.cwd_logs[1]
 
-    @property
-    def history_info_file(self):
-        return self.cwd / HISTORY_INFO_NAME
-
-    @property
-    def last_history_info_entry_has_notes(self):
-        """Checks the history.info file and """
-        if not self.history_info_file.is_file():
-            # no history.info file, so no notes
-            return False
-
-        with open(self.history_info_file, 'r', encoding='utf-8') as hist_info_file:
-            content = hist_info_file.read()
-        last_entry = content.rsplit(_HISTORY_INFO_SEPARATOR, 1)[-1]
-        if not last_entry:
-            return False
-        # check if there is anything after 'Notes: ' or 'DISCARDED'
-        notes = last_entry.split('Notes: ', 1)[-1]
-        notes = notes.replace('DISCARDED', '').strip()
-        return bool(notes)
 
     @property
     def files_needs_archiving(self):
@@ -345,10 +330,15 @@ class Bookkeeper():
             self._deal_with_workhistory_and_history_info(discard=True)
 
         self._discard_common()
+        try:
+            self.history_info.discard_last_entry()
+        except ValueError:
+            logger.warning('Error: Failed to mark last entry as discarded in '
+                         f'{HISTORY_INFO_NAME}.')
 
     def _run_discard_full_mode(self):
         # check for notes in history.info
-        if self.last_history_info_entry_has_notes:
+        if self.history_info.last_entry_has_notes:
             logger.warning(f'The last entry in {HISTORY_INFO_NAME} has user notes. '
                            'If you really want to purge the last run, remove '
                            'the notes first.')
@@ -369,6 +359,12 @@ class Bookkeeper():
         else:
             logger.error(f'FULL_DISCARD mode failed: could not identify '
                          'directory to remove. Please proceed manually.')
+        # remove history entry from history.info
+        try:
+            self.history_info.remove_last_entry()
+        except ValueError:
+            logger.warning('Error: Failed to remove last entry from '
+                         f'{HISTORY_INFO_NAME}.')
 
 
     def _discard_common(self):
@@ -398,56 +394,16 @@ class Bookkeeper():
                                                     discard)
         tensor_nums.add(self.tensor_number)
 
-        self._add_entry_to_history_info_file(
-            tensor_nums,
+        self.history_info.append_entry(HistoryInfoEntry(
+            tensor_nums=list(tensor_nums),
+            job_nums=[self.max_job_for_tensor[tensor] + 1
+                      for tensor in tensor_nums],
+            job_name=self.job_name,
+            timestamp=self.timestamp,
+            folder_name=self.history_dir.name,
+            notes=_read_and_clear_notes_file(self.cwd),
             discarded=discard,
-            )
-
-    def _add_entry_to_history_info_file(self, tensor_nums, discarded):
-        """Add information about the current run to history.info.
-
-        Parameters
-        ----------
-        tensor_nums : Sequence of int
-            The progressive numbers of the tensors that were used
-            or created during this run (and were moved to history).
-        discarded : bool
-            Whether this run was discarded.
-
-        Returns
-        -------
-        None.
-        """
-        history_info = self.cwd / HISTORY_INFO_NAME
-        job_nums = [self.max_job_for_tensor[tensor] + 1
-                    for tensor in tensor_nums]
-        contents = [] if not history_info.is_file() else ['', '']
-        contents.append(
-            '# TENSORS '.ljust(_HISTORY_INFO_SPACING)
-            + ('None' if tensor_nums == {0} else str(tensor_nums)[1:-1])        # TODO: perhaps we should sort the tensor numbers?
-            )
-        contents.append('# JOB ID '.ljust(_HISTORY_INFO_SPACING)
-                        + str(job_nums)[1:-1])                                  # TODO: perhaps we should sort the job numbers?
-        if self.job_name is not None:
-            contents.append(f'# JOB NAME {self.job_name}')
-        contents.extend(_infer_run_info_from_log(self.last_log_lines))
-        contents.append(
-            '# TIME '.ljust(_HISTORY_INFO_SPACING)
-            + f'{_translate_timestamp(self.timestamp)}'
-            )
-        contents.append(
-            '# FOLDER '.ljust(_HISTORY_INFO_SPACING)
-            + f'{self.history_dir.name}'
-        )
-        contents.append(f'Notes: {_read_and_clear_notes_file(self.cwd)}')
-        if discarded:
-            contents.append('DISCARDED')
-        contents.append(f'\n{_HISTORY_INFO_SEPARATOR}')
-        try:  # pylint: disable=too-many-try-statements
-            with history_info.open('a', encoding='utf-8') as hist_info_file:
-                hist_info_file.write('\n'.join(contents))
-        except OSError:
-            logger.error(f'Failed to append to {HISTORY_INFO_NAME} file.')
+            ))
 
 
     def remove_ori_files(self):
@@ -560,6 +516,138 @@ def store_input_files_to_history(root_path, history_path):
             shutil.copy2(file, history_path/file.name)
         except OSError as exc:
             print(f'Failed to copy file {file} to history: {exc}')
+
+class HistoryInfoFile:
+    """Deals with the history.info file in a history directory."""
+
+    def __init__(self, file_path, create_new=False):
+        self.path = file_path
+        if not self.path.is_file():
+            if not create_new:
+                raise FileNotFoundError("history.info file not found at "
+                                        f"{self.path}.")
+            # create new file
+            self.path.touch()
+
+    @property
+    def raw_contents(self):
+        with open(self.path, 'r', encoding='utf-8') as f:
+            raw_contents = f.read()
+        return raw_contents
+
+    @property
+    def last_entry(self):
+        if not self.raw_contents:
+            return None
+        return self._parse_entry(
+            self.raw_contents.split(HISTORY_INFO_SEPARATOR.strip())[-1])
+
+    @property
+    def last_entry_has_notes(self):
+        if self.last_entry is None:
+            return False
+        return bool(self.last_entry.notes)
+
+    @property
+    def last_entry_was_discarded(self):
+        if self.last_entry is None:
+            return False
+        return self.last_entry.discarded
+
+    def append_entry(self, entry):
+        skip_separator = (
+            self.raw_contents.strip().endswith(HISTORY_INFO_SEPARATOR.strip())
+            or not self.raw_contents.strip())
+        with open(self.path, 'a', encoding='utf-8') as f:
+            if not skip_separator:
+                f.write(HISTORY_INFO_SEPARATOR)
+            f.write(str(entry))
+
+    def discard_last_entry(self):
+        """Mark the last entry in the history.info file as discarded."""
+        if self.last_entry is None:
+            raise ValueError("No entries to discard.")
+        last_entry = self.last_entry
+        if last_entry.discarded:
+            logger.warning('Last entry is already discarded.')
+        last_entry.discarded = True
+        self.remove_last_entry()
+        self.append_entry(last_entry)
+
+    def remove_last_entry(self):
+        """Discard the last entry form the history.info file."""
+        if self.last_entry is None:
+            raise ValueError("No entries to remove.")
+        if HISTORY_INFO_SEPARATOR.strip() in self.raw_contents:
+            content_without_last = self.raw_contents.rsplit(
+                HISTORY_INFO_SEPARATOR.strip(), 1)[0]
+        else:
+            # only one entry
+            content_without_last = ''
+        if content_without_last.endswith('\n'):
+            content_without_last = content_without_last[:-len('\n')]
+        # clear file and write back entries
+        self.path.write_text(content_without_last)
+
+    def _parse_entry(self, entry_str):
+        # remove leading and trailing whitespace
+        entry_str = entry_str.strip()
+        # check for 'DISCARDED' at the end
+        if entry_str.endswith('DISCARDED'):
+            discarded = True
+            entry_str = entry_str[:-len('DISCARDED')]
+        else:
+            discarded = False
+        # split at 'Notes: '
+        general_info, notes = entry_str.split('Notes:', 1)
+        notes = notes.replace('Notes: ', '').strip()
+        # parse general_info
+        general_info = iter(general_info.split('\n'))
+        tensors = [int(num) for num in
+                   next(general_info).replace('# TENSORS ', '').split()[1:]]
+        jobs = [int(num) for num in
+                next(general_info).replace('# JOB ID ', '').split()[1:]]
+        name_or_time = next(general_info)
+        if name_or_time.startswith('# JOB NAME '):
+            job_name = name_or_time.replace('# JOB NAME ', '').strip()
+            time = next(general_info)
+        else:
+            job_name = ''
+            time = name_or_time
+        time = time.replace('# TIME ', '').strip()
+        folder = next(general_info).replace('# FOLDER ', '').strip()
+
+        return HistoryInfoEntry(tensors, jobs, job_name,
+                                time, folder, notes, discarded)
+
+@dataclass
+class HistoryInfoEntry:
+    tensor_nums: List[int]
+    job_nums: List[int]
+    job_name: str
+    timestamp: str
+    folder_name: str
+    notes: str
+    discarded: bool
+
+    def __str__(self):
+        tensor_str = 'None' if self.tensor_nums == [0] else str(self.tensor_nums)[1:-1]
+        job_str = str(self.job_nums)[1:-1]
+        # translate timestamp if necessary
+        time_str = (_translate_timestamp(self.timestamp)
+                    if '-' in self.timestamp else self.timestamp)
+        folder_str = self.folder_name
+        return (
+            '\n'
+            + '# TENSORS '.ljust(_HISTORY_INFO_SPACING) + tensor_str + '\n'
+            + '# JOB ID '.ljust(_HISTORY_INFO_SPACING) + job_str + '\n'
+            + ('# JOB NAME '.ljust(_HISTORY_INFO_SPACING) + self.job_name + '\n'
+                if self.job_name else '')
+            + '# TIME '.ljust(_HISTORY_INFO_SPACING) + time_str + '\n'
+            + '# FOLDER '.ljust(_HISTORY_INFO_SPACING) + folder_str + '\n'
+            + 'Notes: ' + self.notes.strip()
+            + ('\nDISCARDED' if self.discarded else '')
+            )
 
 
 def _create_new_history_dir(new_history_path):
