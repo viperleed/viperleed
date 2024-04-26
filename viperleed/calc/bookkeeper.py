@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from operator import attrgetter
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 import logging
 import os
 import re
@@ -393,17 +393,39 @@ class Bookkeeper():
                                                     self.max_job_for_tensor,
                                                     discard)
         tensor_nums.add(self.tensor_number)
+        
+        run_info, r_ref, r_super = self._infer_run_info_from_log()
 
         self.history_info.append_entry(HistoryInfoEntry(
             tensor_nums=list(tensor_nums),
             job_nums=[self.max_job_for_tensor[tensor] + 1
                       for tensor in tensor_nums],
-            job_name=self.job_name,
             timestamp=self.timestamp,
+            discarded=discard,
             folder_name=self.history_dir.name,
             notes=_read_and_clear_notes_file(self.cwd),
-            discarded=discard,
+            # optionals
+            job_name=self.job_name,
+            run_info=run_info,
+            r_ref=r_ref,
+            r_super=r_super,
             ))
+
+    def _infer_run_info_from_log(self):
+        run_info, r_ref, r_super = None, None, None
+        for line in self.last_log_lines:
+            if line.startswith('Executed segments: '):
+                run_info = line.split('Executed segments: ')[1].strip()
+                break
+        for line in self.last_log_lines:
+            if 'refcalc' in line:
+                r_ref = float(line.split(':', maxsplit=1)[1].strip())
+                break
+        for line in self.last_log_lines:
+            if 'superpos' in line:
+                r_super = float(line.split(':', maxsplit=1)[1].strip())
+                break
+        return run_info, r_ref, r_super
 
 
     def remove_ori_files(self):
@@ -598,7 +620,7 @@ class HistoryInfoFile:
             entry_str = entry_str[:-len('DISCARDED')]
         else:
             discarded = False
-        # split at 'Notes: '
+        # split at 'Notes: ' because that is the only one that can be multiline
         general_info, notes = entry_str.split('Notes:', 1)
         notes = notes.replace('Notes: ', '').strip()
         # parse general_info
@@ -607,28 +629,52 @@ class HistoryInfoFile:
                    next(general_info).replace('# TENSORS ', '').split()[1:]]
         jobs = [int(num) for num in
                 next(general_info).replace('# JOB ID ', '').split()[1:]]
-        name_or_time = next(general_info)
-        if name_or_time.startswith('# JOB NAME '):
-            job_name = name_or_time.replace('# JOB NAME ', '').strip()
-            time = next(general_info)
-        else:
-            job_name = ''
-            time = name_or_time
-        time = time.replace('# TIME ', '').strip()
-        folder = next(general_info).replace('# FOLDER ', '').strip()
+        the_rest = next(general_info)
+        # optionals
+        job_name, run_info, r_ref, r_super = None, None, None, None
+        if the_rest.startswith('# JOB NAME '):
+            job_name = the_rest.replace('# JOB NAME ', '').strip()
+            the_rest = next(general_info)
+        if the_rest.startswith('# RUN '):
+            run_info = the_rest.replace('# RUN ', '').strip()
+            the_rest = next(general_info)
+        if the_rest.startswith('# TIME'):
+            time = the_rest.replace('# TIME ', '').strip()
+            the_rest = next(general_info)
+        if the_rest.startswith('# R REF'):
+            r_ref = float(the_rest.replace('# R REF ', ''))
+            the_rest = next(general_info)
+        if the_rest.startswith('# R SUPER'):
+            r_super = float(the_rest.replace('# R SUPER ', ''))
+            the_rest = next(general_info)
+        folder = the_rest.replace('# FOLDER ', '').strip()
 
-        return HistoryInfoEntry(tensors, jobs, job_name,
-                                time, folder, notes, discarded)
+        # this should be all, if there is more, we have a problem
+        try:
+            # there may be empty lines at the end
+            while not next(general_info):
+                pass
+        except StopIteration:
+            pass
+        else:
+            raise ValueError("Error parsing history.info file.")
+
+        return HistoryInfoEntry(tensors, jobs, time, folder, notes, discarded,
+                                job_name, run_info, r_ref, r_super)
 
 @dataclass
 class HistoryInfoEntry:
     tensor_nums: List[int]
     job_nums: List[int]
-    job_name: str
     timestamp: str
     folder_name: str
     notes: str
     discarded: bool
+    job_name: Optional[str] = None
+    run_info: Optional[str] = None
+    r_ref: Optional[float] = None
+    r_super: Optional[float] = None
+
 
     def __str__(self):
         tensor_str = 'None' if self.tensor_nums == [0] else str(self.tensor_nums)[1:-1]
@@ -643,7 +689,13 @@ class HistoryInfoEntry:
             + '# JOB ID '.ljust(_HISTORY_INFO_SPACING) + job_str + '\n'
             + ('# JOB NAME '.ljust(_HISTORY_INFO_SPACING) + self.job_name + '\n'
                 if self.job_name else '')
+            + ('# RUN '.ljust(_HISTORY_INFO_SPACING) + self.run_info + '\n'
+                if self.run_info else '')
             + '# TIME '.ljust(_HISTORY_INFO_SPACING) + time_str + '\n'
+            + ('# R REF '.ljust(_HISTORY_INFO_SPACING) +f'{self.r_ref:.4f}\n'
+                if self.r_ref is not None else '')
+            + ('# R SUPER '.ljust(_HISTORY_INFO_SPACING) + f'{self.r_super:.4f}\n'
+                if self.r_super is not None else '')
             + '# FOLDER '.ljust(_HISTORY_INFO_SPACING) + folder_str + '\n'
             + 'Notes: ' + self.notes.strip()
             + ('\nDISCARDED' if self.discarded else '')
@@ -750,41 +802,6 @@ def _get_workhistory_directories(work_history_path, contains=''):
     globbed = (work_history_path.glob(f'*{contains}*') if contains
                else work_history_path.iterdir())
     return (d for d in globbed if d.is_dir() and HIST_FOLDER_RE.match(d.name))
-
-
-def _infer_run_info_from_log(last_log_lines):
-    """Yield history.info lines about executed segments and R-factors."""
-    if not last_log_lines:
-        return
-    for i, line in enumerate(reversed(last_log_lines)):
-        # try to read what was executed
-        if line.startswith('Executed segments: '):
-            run_info = line.split('Executed segments: ')[1].strip()
-            yield '# RUN '.ljust(_HISTORY_INFO_SPACING) + run_info
-            break
-    else:
-        return
-
-    # Now try to read final R-factors
-    _section_to_shorhand = {
-        'refcalc': 'REF',
-        'superpos': 'SUPER',
-        }
-    for j, line in enumerate(reversed(last_log_lines)):
-        if not line.startswith('Final R'):
-            continue
-        if j >= i:  # R factors are after the segments
-            return
-        try:
-            shorthand = next(
-                short
-                for section, short in _section_to_shorhand.items()
-                if section in line
-                )
-        except StopIteration:
-            continue
-        yield (f'# R {shorthand} '.ljust(_HISTORY_INFO_SPACING)
-               + line.split(':', maxsplit=1)[1].strip())
 
 
 def _move_and_cleanup_workhistory(work_history_path,
