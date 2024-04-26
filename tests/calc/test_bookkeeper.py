@@ -43,6 +43,18 @@ MOCK_HISTORY_INFO_FILES = {
         '# TENSORS   \n# JOB ID    \n'
         '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
         'Notes:\n'),
+    'with RUN': (
+        '# TENSORS   \n# JOB ID    \n'
+        '# RUN       1 2 3\n# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes:\n'),
+    'with R REF': (
+        '# TENSORS   \n# JOB ID    \n'
+        '# TIME      03.02.01 04:03:06\n# R REF     0.1234\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes:\n'),
+    'with R SUPER': (
+        '# TENSORS   \n# JOB ID    \n'
+        '# TIME      03.02.01 04:03:06\n# R SUPER   0.1234\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes:\n'),
     'entry discarded': (
         '# TENSORS   \n# JOB ID    \n# JOB NAME  test_jobname\n'
         '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
