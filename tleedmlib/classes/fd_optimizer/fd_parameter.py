@@ -73,7 +73,7 @@ def apply_scaling(sl, rp, which, scale):
         m[2, 2] *= scale
     sl.update_fractional_from_cartesian()
     sl.ucell = np.dot(sl.ucell, m)
-    sl.update_cartesian_from_fractional(updateOrigin=True)
+    sl.update_cartesian_from_fractional(update_origin=True)
     sl.bulkslab.update_fractional_from_cartesian()
     sl.bulkslab.ucell = np.dot(sl.bulkslab.ucell, m)
     sl.bulkslab.update_cartesian_from_fractional()
