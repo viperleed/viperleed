@@ -418,11 +418,11 @@ class Bookkeeper():
                 run_info = line.split('Executed segments: ')[1].strip()
                 break
         for line in self.last_log_lines:
-            if 'refcalc' in line:
+            if 'Final R (refcalc)' in line:
                 r_ref = float(line.split(':', maxsplit=1)[1].strip())
                 break
         for line in self.last_log_lines:
-            if 'superpos' in line:
+            if 'Final R (superpos)' in line:
                 r_super = float(line.split(':', maxsplit=1)[1].strip())
                 break
         return run_info, r_ref, r_super
