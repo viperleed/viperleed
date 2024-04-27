@@ -482,15 +482,11 @@ def make_errors_figs(errors, formatting=None):
             error_estimates = err.get_error_estimates
             if error_estimates[0]:
                 l_bound = p_best-error_estimates[0]
-                draw_error(axs[figcount], l_bound,
-                           err.r_min, err.var_r, err.p_best,
-                           r_interval=(rmax-rmin),
+                draw_error(axs[figcount], l_bound, err, r_interval=(rmax-rmin),
                            font_size_scale=font_size_scale)
             if error_estimates[1]:
                 u_bound = p_best+error_estimates[1]
-                draw_error(axs[figcount], u_bound,
-                           err.r_min, err.var_r, err.p_best,
-                           r_interval=(rmax-rmin),
+                draw_error(axs[figcount], u_bound, err, r_interval=(rmax-rmin),
                            font_size_scale=font_size_scale)
             axs[figcount].set_ylabel('Pendry R-factor', 6*font_size_scale)
             axs[figcount].legend(fontsize=3*font_size_scale, frameon=False)
@@ -569,6 +565,11 @@ def draw_error(axis, bound, error, r_interval, font_size_scale=1.0):
         R-factor range shown in the plot (rmax - rmin). Used for
         graphical scaling.
     """
+
+    r_min = min(error.rfacs)
+    p_best = error.lin_disp[error.rfacs.index(r_min)]
+    var_r =error.var_r
+
     # put vertical line at minimum R-factor
     #axis.vlines(x=p_best, color="black", ymin=0, ymax=2, lw=0.5)
     # put dashed line at bound
