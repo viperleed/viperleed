@@ -28,9 +28,8 @@ Even when SUPERLATTICE is defined, an automatic search for the best bulk unit ce
    -  In matrix notation use the convention ``'M = m11 m12, m21 m22``', with **a**\ :sub:`surf` = m\ :sub:`11`\ ·\ **a**\ :sub:`bulk` + m\ :sub:`12`\ ·\ **b**\ :sub:`bulk`, and **b**\ :sub:`surf` = m\ :sub:`21`\ ·\ **a**\ :sub:`bulk` + m\ :sub:`22`\ ·\ **b**\ :sub:`bulk`, i.e., the bulk row vectors **a**\ :sub:`bulk` and **b**\ :sub:`bulk` get multiplied with **M** from the left to obtain the surface row vectors **a**\ :sub:`surf` and **b**\ :sub:`surf` respectively. In matrix notation all elements should be signed **integers** (floats will also be accepted, but this is not recommended).
 
 
-.. attention::
-
-   Make sure to get the relation between the structure in the :ref:`POSCAR<POSCAR>`  file and the superlattice right [e.g., in c(4x8) "4" must refer to the **a** and "8" to the **b** lattice vector of the POSCAR, not reverse, unless :ref:`SYMMETRY_CELL_TRANSFORM<SYMMETRY_CELL_TRANSFORM>`  specfies that the superstructure cell differs from the cell given in the POSCAR file. **TODO** is it correct like this? The one should mention that the POSCAR must contain exactly one superstructure cell, unless SYMMETRY_CELL_TRANSFORM defines it otherwise (also in the POSCAR description)! **TODO** which POSCAR? The user-supplied one or the one after symmetry detection??? -ms
+.. todo::
+   Make sure to get the relation between the structure in the :ref:`POSCAR<POSCAR>` file and the superlattice right [e.g., in c(4x8) "4" must refer to the **a** and "8" to the **b** lattice vector of the POSCAR, not reverse, unless :ref:`SYMMETRY_CELL_TRANSFORM<SYMMETRY_CELL_TRANSFORM>`  specfies that the superstructure cell differs from the cell given in the POSCAR file. **TODO** is it correct like this? The one should mention that the POSCAR must contain exactly one superstructure cell, unless SYMMETRY_CELL_TRANSFORM defines it otherwise (also in the POSCAR description)! **TODO** which POSCAR? The user-supplied one or the one after symmetry detection??? -ms
 
 
 When using Wood notation, the regular expression interpreting the input is:

@@ -20,8 +20,8 @@ changes are then made to POSCAR:
 -  The unit cell will be simplified to a higher-symmetry / lower-circumference form, if possible. If this happens, a warning will appear in the log together with the transformation matrix.
 -  Rhombic, oblique and hexagonal cells will be transformed from acute to obtuse
 -  The origin will be shifted to a high-symmetry point, that is, the highest-order rotation axis, or if no rotation axis is found, a mirror or glide plane.
--  For atoms that were recognized as symmetry-equivalent within :ref:`SYMMETRY_EPS<SYMPREC>`, the atomic positions will be averaged to fully correspond to the system's symmetry (using either an automatically determined plane group, or the one defined in :ref:`SYMMETRY_FIX<ISYM>`). This behavior can be altered with the :ref:`SYMMETRIZE_INPUT<SYMMETRY_NOMOVE>`  parameter.
--  Atoms that lie within :ref:`SYMMETRY_EPS<SYMPREC>`  of a rotation axis or mirror plane will be moved onto that axis or plane to fully correspond to the system's symmetry. This can also be prevented via :ref:`SYMMETRIZE_INPUT<SYMMETRY_NOMOVE>`.
+-  For atoms that were recognized as symmetry-equivalent within :ref:`SYMMETRY_EPS<sym_eps>`, the atomic positions will be averaged to fully correspond to the system's symmetry (using either an automatically determined plane group, or the one defined in :ref:`SYMMETRY_FIX<ISYM>`). This behavior can be altered with the :ref:`SYMMETRIZE_INPUT<SYMMETRY_NOMOVE>`  parameter.
+-  Atoms that lie within :ref:`SYMMETRY_EPS<sym_eps>`  of a rotation axis or mirror plane will be moved onto that axis or plane to fully correspond to the system's symmetry. This can also be prevented via :ref:`SYMMETRIZE_INPUT<SYMMETRY_NOMOVE>`.
 -  If a symmetry reduction that requires rotation of the unit cell has been set in the :ref:`SYMMETRY_FIX<ISYM>`  parameter, the unit cell will be rotated in the POSCAR.
 -  Comments will be added in the POSCAR file, which predict the behaviour of the system during the subsequent calculations (see below).
 
@@ -48,7 +48,7 @@ POSCAR_oricell
 --------------
 
 A separate **POSCAR_oricell** file is created (see SUPP folder), which contains comments and corrections of atomic positions, but with the same orientation and position of the unit cell as in the original POSCAR.
-This can be used for direct comparison (e.g., in VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011`) with the original file, and can be useful to judge whether the :ref:`SYMMETRY_EPS<SYMPREC>`  value chosen is appropriate.
+This can be used for direct comparison (e.g., in VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011`) with the original file, and can be useful to judge whether the :ref:`SYMMETRY_EPS<sym_eps>`  value chosen is appropriate.
 
 .. _poscar_bulk:
 

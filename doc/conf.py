@@ -1,34 +1,47 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""Configuration file for the Sphinx documentation builder.
+
+For the full list of built-in configuration values, see the documentation:
+https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""
+
+__authors__ = (
+    'Alexander M. Imre (@ammimre)',
+    )
+__created__ = '2022-10-17'
+
+import datetime
+
+import sphinx_rtd_theme
+
+import viperleed
+
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import datetime
-import sphinx_rtd_theme
-
 project = 'ViPErLEED'
 copyright = f'{datetime.date.today().year}, ViPErLEED-developers'
 author = 'ViPErLEED-developers'
-release = '0.11.0'
+release = viperleed.__version__
+
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-              'sphinx.ext.autodoc',
-#              'sphinx.ext.napoleon'        # for Numpy docstrings ?
+              'myst_nb',                    # for including Jupyter notebooks
+              'sphinx_rtd_theme',           # HTML theme
+              'sphinx.ext.autodoc',         # for API documentation from docstrings
+              'sphinx.ext.autosummary',     # for API documentation from docstrings
               'sphinx.ext.extlinks',
+              'sphinx.ext.intersphinx',     # for linking to other docs
               'sphinx.ext.mathjax',
+              'sphinx.ext.napoleon',        # for Numpy style docstrings
+              'sphinx.ext.todo',            # for TODOs
               'sphinx.ext.viewcode',
-              'sphinx.ext.intersphinx',
-              'sphinx_rtd_theme',
               'sphinxcontrib.bibtex',       # to use .bib files for bibliography
               'sphinxcontrib.inkscapeconverter', # for SVG images
               'sphinxcontrib.spelling',     # spell checking for the docs ;)
-              'myst_nb',                    # for including Jupyter notebooks
               ]
 
 source_suffix = '.rst'
@@ -54,13 +67,13 @@ html_theme = "sphinx_rtd_theme"
 #html_theme = 'sphinx_book_theme'
 #html_theme = 'piccolo_theme'
 
-html_favicon = '../guilib/icons/favicon.ico'
-
+html_favicon = '../viperleed/guilib/icons/favicon.ico'
+html_logo = '_static/viperleed_logo_oneline.svg'
 html_static_path = ['_static']
 
 # RTD theme specific
 html_theme_options = {
-    'logo_only': False,
+    'logo_only': True,
     'display_version': True,
     'prev_next_buttons_location': None,
     'style_external_links': True,
@@ -92,7 +105,7 @@ latex_elements = {
     \usepackage{newunicodechar}
     \newunicodechar{α}{$\alpha$}
     \newunicodechar{Δ}{$\Delta$}
-    
+
     \textblockorigin{28mm}{16.5mm} % position x,y wrt top-left corner of page
     %\setlength{\TPHorizModule}{\pdfpagewidth} % text block width = page width
     \setlength{\TPHorizModule}{\textwidth} % text block width = text width

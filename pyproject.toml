@@ -11,17 +11,37 @@ requires-python = '>=3.7'
 dynamic = ['version']
 readme = 'README.md'
 dependencies = [
+    'fortranformat',
+    'matplotlib',
     'numpy',
-    'wrapt',
+    'psutil',
     'quicktions',
     'scipy',
-    'sklearn',
-    'matplotlib',
-    'psutil',
+    'scikit-learn',
+    'wrapt',
+    ]
+keywords = [
+    'LEED',
+    'electron',
+    'diffraction',
+    'IV',
+    'I(V)',
+    'surface',
+    'science',
+    'physics',
     ]
 
-[project.license]
-# TODO: add license information
+[project.urls]
+Homepage = 'https://viperleed.org'
+
+[tool.setuptools]
+py-modules = ["viperleed"]
+
+[tool.setuptools.dynamic]
+version = {attr = "viperleed.__version__"}
+
+[project.scripts]
+viperleed = "viperleed.cli:ViPErLEEDMain.run_as_script"
 
 [project.optional-dependencies]
 GUI = [
@@ -32,9 +52,22 @@ hardware = [
     'requests',
     ]
 dev = [
+    'build',
     'line_profiler',
-    'sphinx',
+    'pytest-cases',
+    'pytest-subtests',
+    'pytest<8',  # Till Issue #337 of pytest-cases is fixed
     'pytest',
+    'twine',
+    ]
+doc = [
+    'myst-nb',
+    'sphinx-rtd-theme',
+    'sphinx',
+    'sphinxcontrib-bibtex',
+    'sphinxcontrib-qthelp',
+    'sphinxcontrib-spelling',
+    'sphinxcontrib-svg2pdfconverter',
     ]
 
 [tool.pytest.ini_options]
