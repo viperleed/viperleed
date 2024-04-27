@@ -743,22 +743,23 @@ class SingleParameterBruteForceOptimizer(OneDimensionalFDOptimizer):
         plot_r_plus_var_r(ax, self.x, self.R, min(self.R), max(self.R),
                           (ax.get_xlim()[0], ax.get_xlim()[1]), var_R)
 
-        # draw error estimates
-        x_sorted, R_sorted = self.x_R_sorted
-        min_id = np.argmin(self.x_R_sorted[1])
-        R_minus_R_min_var_R = R_sorted - np.min(self.R) - var_R
-        # lower bound
-        if get_n_zero_crossings(R_minus_R_min_var_R[:min_id+1]) == 1:
-            draw_error(ax,
-                       get_zero_crossing(x_sorted[:min_id+1], R_minus_R_min_var_R[:min_id+1]),
-                       R_sorted[min_id], var_R, x_sorted[min_id],
-                       ax.get_ylim()[1] - ax.get_ylim()[0])
-        # upper bound
-        if get_n_zero_crossings(R_minus_R_min_var_R[min_id:]) == 1:
-            draw_error(ax,
-                       get_zero_crossing(x_sorted[min_id:], R_minus_R_min_var_R[min_id:]),
-                       R_sorted[min_id], var_R, x_sorted[min_id],
-                       ax.get_ylim()[1] - ax.get_ylim()[0])
+        # TODO: adapt error class to do this
+        # # draw error estimates
+        # x_sorted, R_sorted = self.x_R_sorted
+        # min_id = np.argmin(self.x_R_sorted[1])
+        # R_minus_R_min_var_R = R_sorted - np.min(self.R) - var_R
+        # # lower bound
+        # if get_n_zero_crossings(R_minus_R_min_var_R[:min_id+1]) == 1:
+        #     draw_error(ax,
+        #                get_zero_crossing(x_sorted[:min_id+1], R_minus_R_min_var_R[:min_id+1]),
+        #                R_sorted[min_id], var_R, x_sorted[min_id],
+        #                ax.get_ylim()[1] - ax.get_ylim()[0])
+        # # upper bound
+        # if get_n_zero_crossings(R_minus_R_min_var_R[min_id:]) == 1:
+        #     draw_error(ax,
+        #                get_zero_crossing(x_sorted[min_id:], R_minus_R_min_var_R[min_id:]),
+        #                R_sorted[min_id], var_R, x_sorted[min_id],
+        #                ax.get_ylim()[1] - ax.get_ylim()[0])
 
 
     def _calc_var_r(self):
