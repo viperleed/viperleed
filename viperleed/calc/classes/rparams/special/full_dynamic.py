@@ -7,16 +7,16 @@ Created on 2023-12-19
 """
 from dataclasses import dataclass
 
-from ._base import SpecialParameter
-from .._defaults import NO_VALUE
+from .base import SpecialParameter
+from ..defaults import NO_VALUE
 
-from viperleed.tleedmlib.classes.fd_optimizer import FDParameter
-from viperleed.tleedmlib.classes.fd_optimizer.fd_parameter import FD_PARAMETERS, AVAILABLE_FD_PARAMETERS
-from viperleed.tleedmlib.classes.fd_optimizer.errors import (
+from viperleed.calc.classes.fd_optimizer import FDParameter
+from viperleed.calc.classes.fd_optimizer.fd_parameter import FD_PARAMETERS, AVAILABLE_FD_PARAMETERS
+from viperleed.calc.classes.fd_optimizer.errors import (
     FDParameterOutOfBoundsError, FDInvalidParameterError)
-from viperleed.tleedmlib.classes.fd_optimizer.fd_optimizers import (
+from viperleed.calc.classes.fd_optimizer.fd_optimizers import (
     PARABOLA_SYNONYMS, ERROR_SYNONYMS, SCIPY_SYNONYMS)
-from viperleed.tleedmlib.classes.fd_optimizer.fd_optimizers import (
+from viperleed.calc.classes.fd_optimizer.fd_optimizers import (
     SingleParameterParabolaFit, SingleParameterBruteForceOptimizer,
     SingleParameterMinimizer, ParameterMinimizer
 )

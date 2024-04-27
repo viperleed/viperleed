@@ -26,15 +26,16 @@ import scipy.optimize
 import logging
 
 from .fd_parameter import FDParameter
+from .errors import FullDynamicOptimizationOutOfBoundsError
 
-from viperleed.tleedmlib.classes.fd_optimizer.fd_parameter import apply_scaling
-from viperleed.tleedmlib.classes.r_error import get_zero_crossing, get_n_zero_crossings
-from viperleed.tleedmlib.files.iorfactor import read_rfactor_columns
-from viperleed.tleedmlib.files.ivplot import plot_iv
-from viperleed.tleedmlib.files.ioerrorcalc import plot_r_plus_var_r, draw_error
-from viperleed.tleedmlib.sections.refcalc import refcalc as section_refcalc
-from viperleed.tleedmlib.sections.rfactor import rfactor as section_rfactor
-from viperleed.tleedmlib.files import parameters, poscar
+from viperleed.calc.classes.fd_optimizer.fd_parameter import apply_scaling
+from viperleed.calc.classes.r_error import get_zero_crossing, get_n_zero_crossings
+from viperleed.calc.files.iorfactor import read_rfactor_columns
+from viperleed.calc.files.ivplot import plot_iv
+from viperleed.calc.files.ioerrorcalc import plot_r_plus_var_r, draw_error
+from viperleed.calc.sections.refcalc import refcalc as section_refcalc
+from viperleed.calc.sections.rfactor import rfactor as section_rfactor
+from viperleed.calc.files import parameters, poscar
 
 
 # TODO: move to io_fd_optimization ?
