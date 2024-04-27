@@ -20,17 +20,6 @@
    \renewenvironment{sphinxtip}[1]
       {\begin{sphinxheavybox}\sphinxstrong{#1} }{\end{sphinxheavybox}}
 
-   % add shortcuts to top of page
-   \AddEverypageHook{
-        \settowidth{\chapterNameLength}{\leftmark}%
-        \begin{textblock}{1}(0,0)%first argument {1} is number of blocks horiz
-        \vspace{0.1cm}
-        \,\ \hyperlink{link_content}{$\rightarrow$Contents}%
-        \,\ \ \ \Acrobatmenu{GoBack}{$\leftarrow$Back}%
-        \,\ \Acrobatmenu{GoForward}{Forward$\rightarrow$}%
-        \end{textblock}%
-    }%end AddEverypageHook
-
    % renew table of contents to include link
    \renewcommand{\sphinxtableofcontents}{%
    \pagenumbering{roman}%
@@ -51,28 +40,32 @@ ViPErLEED documentation
 
 Welcome to the documentation for :term:`ViPErLEED` and the :term:`Python`
 package :term:`tleedm`.
-For details please see the ViPErLEED publication series (**TODO**).
-
-
 The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims at
 drastically reducing the effort for a intensity [LEED-:math:`I(V)`] analysis,
 both on the computational and on the experimental side.
 
+.. todo:: Add: See also the ViPErLEED publication series (**TODO: add link **).
+
 The ViPErLEED package consists of:
 
-   - :ref:`The viperleed calc package<viperleed_calc>`
+- :ref:`The viperleed calc package<viperleed_calc>`
       A Python package for the calculation of :math:`I(V)` curves,
       quantitative analysis of :term:`LEED` data, and surface structure 
       optimization.
       See the :ref:`Getting Started page<getting_started>`.
-   - :ref:`The ViPErLEED Spot-Tracker<spot_tracker>`
+- :ref:`The ViPErLEED Spot-Tracker<spot_tracker>`
       Software for extracting :math:`I(V)` curves from the experimental data
       ("movies").
-   -  The ViPErLEED hardware
+-  :ref:`The ViPErLEED hardware<hardware>`
       A set of hardware, firmware and control software for the easy
       acquisition of LEED-:math:`I(V)` data with pre-existing LEED systems.
 
-**TODO** Include ViPErLEED TOC figure.
+.. _toc_figure:
+.. figure:: /_static/paper_figures/ViPErLEED-overview.svg
+   :width: 70%
+   :align: center
+
+   Overview of the parts of the ViPErLEED project.
 
 
 .. Table of contents in LaTeX pdf called Contents
@@ -82,51 +75,29 @@ The ViPErLEED package consists of:
    .. toctree::
       :caption: Contents
 
-.. toctree:: 
+.. toctree::
+   :caption: viperleed calc
 
    viperleed calc<content/viperleed_calc>
-   Getting started<content/getting_started>
    Examples<content/examples>
-   ViPErLEED segments<content/work_segments>
-   ASE Interface<content/aseapi>
-
-.. toctree:: 
-   :maxdepth: 2
-   :caption: Files
-
-   Input files<content/input_files>
-   Output files<content/output_files>
-   Supplementary files<content/supp_files>
-
-
-.. only:: html
-
-   .. toctree:: 
-      :maxdepth: 1
-      :caption: Parameters
-
-      Overview by Name<content/files/input/params_by/param_name>
-      Overview by Section<content/files/input/params_by/param_section>
-      Overview by Topic<content/files/input/params_by/param_topics>
-
-
-.. toctree:: 
-   :hidden:
-
-   content/param_toc
-
-
-.. toctree:: 
-   :maxdepth: 1
-   :caption: Utilities
-
+   Getting started<content/getting_started>
+   Segments<content/work_segments>
+   Files<content/files>
+   Parameters<content/param_topics>
    Utilities<content/utilities>
+   API<content/api>
 
 .. toctree:: 
    :maxdepth: 1
    :caption: Spot-Tracker
 
    Spot-Tracker<content/spot_tracker>
+
+.. toctree:: 
+   :maxdepth: 1
+   :caption: Hardware
+
+   Hardware<content/hardware>
 
 .. toctree:: 
    :maxdepth: 1

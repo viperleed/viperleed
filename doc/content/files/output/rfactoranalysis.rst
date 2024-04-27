@@ -1,7 +1,7 @@
 .. _rfactoranalysis:
 
-Rfactor_analysis.pdf
-====================
+Rfactor_analysis
+================
 
 The Rfactor_analysis files (Rfactor_analysis_refcalc.pdf and Rfactor_analysis_superpos.pdf) 
 plot the results of the r-factor calculations, as well as rudimentary analysis.

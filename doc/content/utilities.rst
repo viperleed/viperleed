@@ -3,17 +3,22 @@
 Utilities
 ---------
 
-ViPErLEED includes several small utilities for file processing and organization. 
-Proper embedding of these into a shared interface is pending; the following list is a loose summary and may not be complete.
+ViPErLEED includes several additional utilities for file processing and organization.
+These are installed as part of the Python package, and can be called from the command line via ``viperleed poscar`` or ``viperleed util`` followed by the utility name.
 
--  :ref:`Bookkeeper<bookkeeper>`: Helper utility for the TensErLEED Manager tleedm. Sorts files from previous runs into a "history" folder, and keeps track in the history.info file.
--  :ref:`Combine-POSCAR, POSCAR_get_bulk_repeat<poscar_combine_repeat>`: Very simple POSCAR editing scripts.
--  :ref:`ModifyPhaseshifts<modify_phaseshifts>`: Simple utility for taking an existing PHASESHIFTS file and duplicating and/or re-arranging blocks.
--  :ref:`AUXEXPBEAMS_TO_EXPBEAMS<aux_to_exp>`: Transforms :ref:`AUXEXPBEAMS<AUXEXPBEAMS>`  format files (input for TensErLEED) to :ref:`EXPBEAMS.csv<EXPBEAMS>`  format.
-   **TODO Alex, Florian** usage (how to call it)
+- :ref:`POSCAR utilities<poscar_utils>`: A set of utilities for quick POSCAR manipulation. Examples include deleting parts of cell, structure symmetry detection or setting flags for use with :term:`DFT` software. These are called via ``viperleed poscar`` followed by the utility name.
+- :ref:`rearrange_phaseshifts<rearrange_phaseshifts>`: A simple utility for taking an existing :ref:`PHASESHIFTS file<phaseshifts>` and duplicating and/or re-arranging blocks.
+- :ref:`AUXEXPBEAMS_TO_EXPBEAMS<aux_to_exp>`: Transforms :ref:`AUXEXPBEAMS<AUXEXPBEAMS>`  format files (input for TensErLEED) to :ref:`EXPBEAMS.csv<EXPBEAMS>`  format.
 
-.. toctree:: 
-    utilities/bookkeeper
-    utilities/poscar_combine_repeat
-    utilities/modify_phaseshifts
-    utilities/aux_to_exp
+.. tip:: 
+    If you find yourself using a utility frequently, you can add an alias to your ``.bashrc`` file.
+
+
+.. seealso::
+   :ref:`Bookkeeper<bookkeeper>`: A helper utility built into viperleed calc that sorts files from previous runs into a "history" folder, and keeps track in the history.info file.
+
+.. toctree::
+
+   utilities/poscar_utils
+   utilities/rearrange_phaseshifts
+   utilities/aux_to_exp

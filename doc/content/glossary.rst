@@ -6,6 +6,19 @@ Glossary
 
 .. glossary::
 
+    API
+      Application Programming Interface
+
+    ASE
+      Atomic Simulation Environment. See the `ASE homepage <https://wiki.fysik.dtu.dk/ase/>`__.
+
+    Environment variable
+      A variable that is set in the environment of a process.
+      It is used to pass information to a process.
+      ViPErLEED uses the environment variable `VIPERLEED_TENSORLEED` to locate
+      the TensErLEED source code if the path is not given explicitly.
+      See also :ref:`here<how_to_run>`.
+
     LEED
       Low energy electron diffraction
 
@@ -17,7 +30,8 @@ Glossary
       Density functional theory
 
     TensErLEED
-      Erlangen package for tensor LEED
+      Erlangen package for tensor LEED.
+      See also the paper by :cite:t:`blumFastLEEDIntensity2001a`.
 
     ViPErLEED
       The Vienna Package for Erlangen LEED
@@ -44,6 +58,9 @@ Glossary
 
     Python
       The Python programming language. See the Python `homepage <https://www.python.org>`__.
+
+    PyPI
+      The Python Package Index. See the `PyPI homepage <https://pypi.org>`__.
 
     Fortran
       The Fortran programming language.

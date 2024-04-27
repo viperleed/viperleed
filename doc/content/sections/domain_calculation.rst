@@ -29,8 +29,8 @@ The DOMAIN parameter can point to an absolute or relative path from which the in
 If the target path is a directory in which previous ViPErLEED calculations have been executed, the program will check whether there is a Tensors folder and fetch the highest-number Tensors.zip file.
 For more information, see the :ref:`DOMAIN<DOMAIN>`  page. Use the :ref:`DOMAIN_STEP<DOMAIN_STEP>`  parameter to define the step width for domain area variations.
 
-Then, run the :ref:`job script<job_script>`. A subfolder will be created for each domain, in which the input files will be placed.
-All structure-specific output files (e.g. POSCAR_OUT, VIBROCC_OUT) will go to these subfolders, *not* the original paths from which the inputs were fetched; output concerning all domains taken together will go to the main folder (e.g. the :ref:`Search-progress.pdf<searchprogresspdf>` file and :ref:`Rfactor plots<Rfactorplots>`  after the Superpos calculation).
+Then, run :ref:`viperleed calc<cli_calc>` as usual. A subfolder will be created for each domain, in which the input files will be placed.
+All structure-specific output files (e.g. POSCAR_OUT, VIBROCC_OUT) will go to these subdirectories, *not* the original paths from which the inputs were fetched; output concerning all domains taken together will go to the main folder (e.g. the :ref:`Search-progress.pdf<searchprogresspdf>` file and :ref:`Rfactor plots<Rfactorplots>`  after the Superpos calculation).
 
 To specify which segments should be run, either use the :ref:`RUN<RUN>`  parameter as usual, or set ``RUN = 4`` as a shorthand for a domain calculation. This will be interpreted as ``RUN = 1-3`` or ``RUN = 2-3``, depending on whether the input files are compatible Tensors.zip files or whether a reference calculation is needed. For ``RUN = 4``, reference calculations will only be executed for the domains that need them; specify ``RUN = 1-3`` explicitly to re-run reference calculations for all domains.
 However, as discussed above, it is recommended you run the reference calculations separately beforehand for better control, and specify ``RUN = 2-3`` explicitly here.
@@ -42,7 +42,7 @@ However, as discussed above, it is recommended you run the reference calculation
 The DISPLACEMENTS file for domains
 ----------------------------------
 
-Instead of specifying :ref:`DISPLACEMENTS<DISPLACEMENTS>`  in each of the input subfolders, DISPLACEMENTS are defined in the main folder for all domains. The syntax is similar to the way consecutive searches are specified, with an extra header line specifying which domain is being addressed, e.g. for a calculation with two domains called ``1x1`` and ``2x1``:
+Instead of specifying :ref:`DISPLACEMENTS<DISPLACEMENTS>` in each of the input subdirectories, DISPLACEMENTS are defined in the main folder for all domains. The syntax is similar to the way consecutive searches are specified, with an extra header line specifying which domain is being addressed, e.g. for a calculation with two domains called ``1x1`` and ``2x1``:
 
 ::
 

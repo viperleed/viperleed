@@ -123,6 +123,8 @@ The syntax for this block differs somewhat from the vibrational amplitudes and o
 
 On the right-hand side, the syntax is similar to the vibrational amplitudes and displacements blocks. For vibrational amplitudes or occupations, one value per element is expected, while for position offsets, three values per element are expected. The three values for geometry are cartesian x, y and z offsets, in ångströms, where positive z means away from the surface.
 
+.. _vibrocc_out:
+
 VIBROCC_OUT
 -----------
 

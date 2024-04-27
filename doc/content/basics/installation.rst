@@ -4,30 +4,50 @@
 Installation
 ============
 
+Below, we provide a short guide on how to install all required components of ViPErLEED.
 
 
-Below, we provide a short guide on how to install all required components of tleedm.
+Installing Python
+=================
 
-**TODO**: Tleedm refactor so we can install it!!!
+ViPErLEED (except for the Spottracker ImageJ Plugin) requires a working Python installation.
+You can install Python using a package manager, as part of a `Anaconda <https://anaconda.org>`_ or Miniconda distribution, or as binary from the `Python website <https://www.python.org/downloads/>`__.
 
-Python
-======
+.. note::
 
-**TODO !!! - needs package refactor first**
+    ViPErLEED requires Python 3.7 or newer, though we recommend using the latest available Python version.
 
-A conda environment and a pip environment are available.
+
+Installing ViPErLEED
+====================
+
+ViPErLEED is available on the :term:`Python Package Index (PyPI)<PyPI>` and can be installed using the Python package manager ``pip``.
+We recommend installing ViPErLEED in a virtual environment for easier dependency management.
+
+.. todo::
+
+    Add instructions for creating a virtual environment.
+
+To install ViPErLEED from :term:`PyPI` using ``pip``, run the following command in your terminal:
+
+.. code-block:: console
+
+    $ pip install viperleed
+
+This will install the latest version of ViPErLEED and all required dependencies.
+It will also automatically install the :ref:`ViPErLEED command line tools<command_line_tools>` which can be called from the terminal using the ``viperleed`` command.
 
 
 Fortran compilers
 =================
 
-The tleedm (TensErLEED manager) package acts as a wrapper and feature extension to the :term:`TensErLEED` package.
+The viperleed calc package acts as a wrapper and feature extension to the :term:`TensErLEED` package.
 It requires TensErLEED source files to be present and will compile them (with task-specific adjustments) *at run-time*.
 This requires the presence of a suitable :term:`Fortran` 77 & 90 compiler on the system.
-Unlike the original version of TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`, all TensErLEED versions supported by ViPErLEED (TensErLEED :math:`\ge` 1.6) also require :term:`BLAS` and :term:`LAPACK` libraries to be available.
-ViPErLEED supports :term:`gfortran` from the GNU Compiler Collection (:term:`gcc`) and the Intel Fortran compiler :term:`ifort` without additional configuration.
+Unlike the original version of TensErLEED by Blum and Heinz :cite:p:`blumFastLEEDIntensity2001a`, all TensErLEED versions supported by viperleed calc (TensErLEED >= 1.6) also require :term:`BLAS` and :term:`LAPACK` libraries to be available.
+Viperleed calc supports :term:`gfortran` from the GNU Compiler Collection (:term:`gcc`) and the Intel Fortran compiler :term:`ifort` without additional configuration.
 You can use the :ref:`FORTRAN_COMP<fortran_comp>` parameter to use any other Fortran compiler installed on your system.
-ViPErLEED will default to using :term:`ifort` if available.
+viperleed calc will default to using :term:`ifort` if available.
 Use the parameter :ref:`FORTRAN_COMP<fortran_comp>` to adjust this behavior.
 
 
@@ -36,8 +56,8 @@ To use the :term:`MPI` version of TensErLEED, you need to also install an :term:
 We recommend using Open MPI on Linux and MacOS.
 The MPI compiler for :term:`gfortran` is :term:`mpifort`, for :term:`ifort` it is :term:`mpiifort` (sic!).
 
-If you are running ViPErLEED on a :term:`HPC` system, appropriate Fortran compilers and a preferred :term:`MPI` implementation are likely already installed.
-Please consult the documentation for your system and the administrators of details regarding their usage.
+If you are running viperleed calc on a :term:`HPC` system, appropriate Fortran compilers and a preferred :term:`MPI` implementation are likely already installed.
+Please consult the documentation for your HPC system and the administrators of details regarding their usage.
 
 :term:`tleedm` can run on Linux, MacOS and Microsoft Windows, but the installation of the compilers in particular differs significantly for each system.
 
@@ -46,7 +66,7 @@ Please consult the documentation for your system and the administrators of detai
     -  If you are running on an Intel-processor-based system, we recommend using ``ifort``. It is known from experience to give better performance for TensErLEED.
     -  Using the :term:`MPI` version of TensErLEED is not strictly required, but **highly** recommended.
        Execution times for the :ref:`structure search<sec_search>` may be significantly higher without :term:`MPI`.
-       A working MPI implementation is necessary to make use of multi-processing in the :ref:`structure-search section<sec_search>`, even if you are working on a single processor.
+       A working MPI implementation is necessary to make use of multi-processing in the :ref:`structure-search section<sec_search>`, even if you are working on a single node.
 
 
 
@@ -122,7 +142,7 @@ Windows
 .. warning::
     To run tleedm and TensErLEED under Windows, we recommend using the :term:`Windows Subsystem for Linux<WSL>` (WSL, available starting from Windows 10).
     Follow the `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
-    With the :term:`WSL` installed, you can follow the same instructions as provided in `the Linux section<ifort_linux>`.
+    With the :term:`WSL` installed, you can follow the same instructions as provided in :ref:`the Linux section<ifort_linux>`.
     Running natively on Windows is possible (:ref:`see below<native_windows>`), but experimental and *not recommended*.
 
 To install the Intel oneAPI Toolkits under Windows please follow `the guide provided by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-windows/top.html>`__.
@@ -316,14 +336,20 @@ Compiling static files
 In addition to the TensErLEED source code, which is compiled *at run-time*, ViPErLEED needs a few auxilary programs that need compiling before a calculation can be started.
 These can be compiled automatically using a provided Makefile (see below).
 
-Beamgen and eeasisss
---------------------
+eeasisss
+--------
+
+.. todo::
+    Compile eeasisss at run time, instead of using a pre-compiled version?
 
 These scripts are used by ViPErLEED during the :ref:`initialization`, to generate :ref:`BEAMLIST<beamlist>` and :ref:`PHASESHIFTS<phaseshifts>`.
 If they are not present, ViPErLEED cannot create this file if required.
 
-To compile these scripts from source, go into the ``viperleed/tensorleed`` directory.
-From there call either ``make intel`` or ``make gcc``, to compile using the Intel or GCC Fortran compilers, respecitvely.
+This scripts is used by ViPErLEED during the :ref:`initialization`, to generate :ref:`PHASESHIFTS<phaseshifts>`.
+If it is not present, ViPErLEED cannot create these files if required.
+
+To compile eeasisss from source, go into the ``viperleed/tensorleed`` directory.
+From there call either ``make intel`` or ``make gcc``, to compile using the Intel or GCC Fortran compilers, respectively.
 
 
 .. _mpirandom:
@@ -336,7 +362,7 @@ This file needs to be compiled with a C and C MPI compiler before running.
 Makefiles are also provided for this file.
 If you followed the instructions for obtaining the Fortran compilers, a C compiler is already installed as well from either GCC or Intel.
 
-To compile the randomizer library for TensErLEED version ``x.yy``, go into the directory ``viperleed/tensorleed/TensErLEED-x.yy`` and call either ``make intel`` or ``make gcc`` to compile using the Intel or GCC :term:`C` compilers, respecitvely.
+To compile the randomizer library for TensErLEED version ``x.yy``, go into the directory ``viperleed/tensorleed/TensErLEED-x.yy`` and call either ``make intel`` or ``make gcc`` to compile using the Intel or GCC :term:`C` compilers, respectively.
 
 
 

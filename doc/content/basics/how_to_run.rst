@@ -4,9 +4,10 @@
 Directory Structure and How To Run
 ==================================
 
-In ViPErLEED, each calculation must have its own directory. 
+In ViPErLEED, each calculation must have its own directory.
 The input and output files have fixed names (case sensitive!), see :ref:`the list of files<list_input_files>`. 
 Below, we give an example directory tree with the files needed to start a LEED :math:`I(V)` calculation in ViPErLEED.
+See the :ref:`installation instructions<installation>` for a guide on how to install ViPErLEED.
 See also the ViPErLEED examples section for some working calculations to help you get started.
 
 Minimum input
@@ -18,23 +19,20 @@ To set up a ViPErLEED calculation, first create a source directory (in this exam
     :caption: Minimum input directory tree
 
     my_surface
-    ├── IVEBAMS [and/or EXPBEAMS]
+    ├── EXPBEAMS.csv [and/or IVBEAMS]
     ├── POSCAR
-    ├── PARAMETERS
-    └── job.py [or job.sh]
+    └── PARAMETERS
 
 The minimum information required to start a :ref:`reference calculation<ref-calc>` is contained in three files:
 
--   :ref:`EXPBEAMS<expbeams>`: This file contains the experimentally measured LEED-:math:`I(V)` curves in :term:`CSV` format.
+-   :ref:`EXPBEAMS.csv<expbeams>`: This file contains the experimentally measured LEED-:math:`I(V)` curves in :term:`CSV` format.
     Unless specified otherwise in :ref:`PARAMETERS<parameters>`, ViPErLEED will use the information in the :ref:`EXPBEAMS.csv file<expbeams>` to set energy ranges (:ref:`THEO_ENERGIES<theo_energies>`) and choose which beams should be written to the output file (:ref:`file IVBEAMS<ivbeams>`).
     Alternatively, you can also provide the :ref:`IVBEAMS file<ivbeams>` directly.
 -   :ref:`POSCAR<poscar>`: This file contains the structure for the :ref:`reference calculation<ref-calc>`.
     ViPErLEED will determine the applicable symmetry from the :ref:`POSCAR file<poscar>`. See also the :ref:`symmetry settings<symmetry_settings>` and :ref:`input-structure settings<input_structure_settings>`.
 -   :ref:`PARAMETERS<parameters>`: This file contains the settings for the calculation (see :ref:`the list of parameters<paramname>`).
     If no :ref:`VIBROCC file<viboccin>` is given, :ref:`PARAMETERS<parameters>` needs to contain values for :ref:`T_EXPERIMENT<t_experiment>` and :ref:`T_DEBYE<t_debye>`.
--   :ref:`job.py / job.sh<job_script>`: This is the entry point for the ViPErLEED calculation.
-    Defines the paths to the ViPErLEED source code and the desired ``work`` directory and start the :term:`tleedm` calculation when executed.
-    Example job scripts are provided.
+
 
 To run also a :ref:`delta amplitudes calculation<sec_deltas>` and/or a :ref:`structure search<sec_search>`, you additionally need to provide a :ref:`DISPLACEMENTS file<displacements>` that contains the requested perturbations of the structure.
 
@@ -42,42 +40,41 @@ To run also a :ref:`delta amplitudes calculation<sec_deltas>` and/or a :ref:`str
     Setting up a :ref:`domain calculation<domain_calculation>` with multiple coexisting surface structures, requires a slightly different directory tree.
     See the :ref:`domain-calculation page<domain_calculation>`.
 
+
 Starting the calculation
 ========================
 
 Once you have set up the input files you are ready to start the calculation.
-If you are running ViPErLEED from Python (recommend), make sure that all tleedm dependencies are in the Python PATH, i.e. make sure all Python dependencies are available, otherwise this will raise an Error.
-You can then start a ViPErLEED calculation by invoking the :ref:`job script<job_script>` via the command line.
+
+You can then start a ViPErLEED calculation by invoking ``viperleed calc`` via the command line.
+A list of all available command line options for ``viperleed calc`` can be found :ref:`here<cli_calc>`.
+
+A typical call may look like this:
 
 .. code-block:: console
-    
-    $ src_path="path/to/source_dir"
-    $ wrk_path="path/to/work_dir"
+
+    $ tensorleed_path="path/to/tensorleed_dir"
+    $ work_path="path/to/work_dir"
     $
-    $ python3 job.py -s $src_path -w $wrk_path
+    $ viperleed calc -w $work_path -t $tensorleed_path
 
-Here the source directory ``src_dir`` refers to the path of the ViPErLEED source code.
-The work directory ``work_dir`` is the directory where the calculation will be executed and all temporary files will be stored.
+Here, the work directory ``work_dir`` is the directory where the calculation will be executed and all temporary files will be stored.
 ``work_dir`` will be created if it does not yet exist.
-You can also set the source and work directory path directly in the job script, rather than giving them as command line arguments.
+The ``tensorleed_path`` is the path to the TensErLEED source code.
+If the ``-t`` option is not given, ViPErLEED will look for the TensErLEED source code under the ``$VIPERLEED_TENSORLEED`` :term:`environment variable`.
 
-If you are running using a pre-packaged version of tleedm, you can start the calculation by running the job shell script ``job.sh``. Make sure to edit the source and work path in the script beforehand.
-
-.. code-block:: console
-    
-    $ ./job.sh
 
 .. tip:: 
-    As a ViPErLEED calculation can take a long time, it is recommended to start the calculation using `nohup <https://en.wikipedia.org/wiki/Nohup>`__ or in a `tmux <https://github.com/tmux/tmux/wiki>`__ session. This way, the calculation will not be aborted if the user is logged out (or the connection of an ``ssh`` session breaks).
+    As a calculation can take a long time, it is recommended to start the calculation using `nohup <https://en.wikipedia.org/wiki/Nohup>`__ or in a `tmux <https://github.com/tmux/tmux/wiki>`__ session. This way, the calculation will not be aborted if the user is logged out (or the connection of an ``ssh`` session breaks).
 
 HPC systems
 -----------
 
-If you are running ViPErLEED on an :term:`HPC` system with a workload scheduler such as `slurm <https://slurm.schedmd.com/documentation.html>`__, make sure to load the required compilers, :term:`MPI` implementations and Python packages in the submission-script (system-dependent, e.g. ``module load mpiifort``).
+If you are running ViPErLEED on an :term:`HPC` system with a workload scheduler such as `slurm <https://slurm.schedmd.com/documentation.html>`__, make sure to load the required compilers, :term:`MPI` implementations, and Python packages/environment in the submission-script (system-dependent, e.g. ``module load mpiifort``).
 
-Such a submission script usually contains details on the requested hardware (declared via ``#SBATCH`` in slurm) and instructions on which precompiled packages to make available.
+Such a submission script usually contains details on the requested hardware (e.g. declared via ``#SBATCH`` in slurm) and instructions on which precompiled packages to make available.
 Below, you find an example for a submission script for the `Vienna Scientific Cluster (VSC-4) <https://vsc.ac.at//home/>`__, which uses the slurm workload manager.
-The script first loads the required Intel compilers and :term:`conda` distribution, before executing ViPErLEED using the :ref:`job script<job_script>`.
+The script first loads the required Intel compilers and :term:`conda` distribution, before executing ViPErLEED using the :ref:`viperleed command<cli_calc>`.
 
 
 .. literalinclude :: /_static/example_job_script.txt
@@ -89,10 +86,9 @@ The script first loads the required Intel compilers and :term:`conda` distributi
 Output organization
 ===================
 
-A large number of files are created in the directory that tleedm is executed in.
-The :ref:`job script<job_script>` usually defines the path to a ``work`` directory (typically just a subdirectory of the source directory ``my_surface``) that will be used during the calculation.
-ViPErLEED will copy input files there, execute tleedm, and then copy the relevant output files back to the data directory.
-For this purpose, tleedm also creates a :ref:`manifest` file that lists the relevant output files which will be copied back.
+A large number of files are created in the work directory is executed in defined by the :ref:`-w option of viperleed calc<cli_calc>`.
+ViPErLEED will copy input files there, run all requested calculations, and then copy the relevant output files back to the input directory.
+For this purpose, ViPErLEED also creates a :ref:`manifest` file that lists the relevant output files which will be copied back.
 
 The directory tree after a run may look something like this:
 
@@ -104,7 +100,6 @@ The directory tree after a run may look something like this:
     ├── POSCAR
     ├── POSCAR_user
     ├── PARAMETERS
-    ├── job.py
     ├── IVBEAMS
     ├── VIBROCC
     ├── PHASESHIFTS
