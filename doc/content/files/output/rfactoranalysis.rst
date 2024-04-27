@@ -22,7 +22,7 @@ This allows quick identification of the areas contributing most to the
 R-factor.
 
 
-.. figure:: /_static/output_examples/Search-progress.svg
+.. figure:: /_static/output_examples/Rfactor_analysis_refcalc_example.svg
    :width: 60%
    :align: center
 
