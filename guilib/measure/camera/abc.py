@@ -47,38 +47,38 @@ class CameraErrors(base.ViPErLEEDErrorEnum):
     """Data class for base camera errors."""
 
     INVALID_SETTINGS = (200,
-                        "Invalid camera settings: Required settings "
-                        "{!r} missing or values inappropriate. "
-                        "Check configuration file.\n{}")
+                        'Invalid camera settings: Required settings '
+                        '{!r} missing or values inappropriate. '
+                        'Check configuration file.\n{}')
     MISSING_SETTINGS = (201,
-                        "Camera cannot operate without settings. Load "
-                        "an appropriate settings file before proceeding.")
+                        'Camera cannot operate without settings. Load '
+                        'an appropriate settings file before proceeding.')
     CAMERA_NOT_FOUND = (202,
-                        "Could not find camera {}.\n\nMake sure the camera "
-                        "is connected, has power, and is not currently in "
-                        "use in an other program.\n\nTry (re-)plugging it, "
-                        "and give the camera enough time to boot up.")
+                        'Could not find camera {}.\n\nMake sure the camera '
+                        'is connected, has power, and is not currently in '
+                        'use in an other program.\n\nTry (re-)plugging it, '
+                        'and give the camera enough time to boot up.')
     SETTINGS_MISMATCH = (203,
-                         "Different {} settings found in camera and "
-                         "configuration file: camera={}, settings={}.")
+                         'Different {} settings found in camera and '
+                         'configuration file: camera={}, settings={}.')
     INVALID_SETTING_WITH_FALLBACK = (204,
-                                     "Invalid camera settings value {} for "
-                                     "setting {!r}. Using {} instead. Consider"
-                                     " fixing your configuration file.")
-    UNSUPPORTED_OPERATION = (205, "Cannot {} in {} mode. Switch mode before.")
+                                     'Invalid camera settings value {} for '
+                                     'setting {!r}. Using {} instead. Consider'
+                                     ' fixing your configuration file.')
+    UNSUPPORTED_OPERATION = (205, 'Cannot {} in {} mode. Switch mode before.')
     BINNING_ROI_MISMATCH = (206,
-                            "Region of interest size ({} x {}) is incompatible"
-                            " with binning factor {}. Reducing region of "
-                            "interest to ({} x {}). A few pixels on the "
-                            "lower-right corner may be removed.")
-    UNSUPPORTED_WHILE_BUSY = (207, "Cannot {} while camera is busy.")
+                            'Region of interest size ({} x {}) is incompatible'
+                            ' with binning factor {}. Reducing region of '
+                            'interest to ({} x {}). A few pixels on the '
+                            'lower-right corner may be removed.')
+    UNSUPPORTED_WHILE_BUSY = (207, 'Cannot {} while camera is busy.')
     TIMEOUT = (208,   # Only in triggered mode
-               "No frames returned by camera {} in the last {} seconds. "
-               "Check that the camera is plugged in and powered. If it "
-               "is, try rebooting the camera.")
+               'No frames returned by camera {} in the last {} seconds. '
+               'Check that the camera is plugged in and powered. If it '
+               'is, try rebooting the camera.')
     DEFAULT_SETTINGS_CORRUPTED = (
         209,
-        "No or multiple default settings found for camera class {!r}."
+        'No or multiple default settings found for camera class {!r}.'
         )
 
 

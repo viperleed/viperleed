@@ -46,13 +46,13 @@ class DataErrors(ViPErLEEDErrorEnum):
     """Errors that might occur during a measurement cycle."""
 
     INVALID_MEASUREMENT = (400,
-                           "The returned data dictionary contained a key "
-                           "that was not specified in the DataPoints class.")
+                           'The returned data dictionary contained a key '
+                           'that was not specified in the DataPoints class.')
     UNKNOWN_QUANTITIES = (401,
-                         "Unknown quantity/quantities {} will be ignored")
+                         'Unknown quantity/quantities {} will be ignored')
     NO_DATA_FOR_CONTROLLER = (402,
-                              "Controller at {} did not return any data. "
-                              "Consider increasing energy_step_duration.")
+                              'Controller at {} did not return any data. '
+                              'Consider increasing energy_step_duration.')
 
 
 class QuantityInfo(enum.Enum):

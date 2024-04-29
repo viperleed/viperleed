@@ -75,29 +75,29 @@ class ControllerErrors(base.ViPErLEEDErrorEnum):
     # essentially unusable, apart from allowing to load appropriate
     # settings.
     INVALID_SETTINGS = (100,
-                        "Invalid controller settings: Required "
-                        "settings {} missing or values "
-                        "inappropriate. Check configuration file.\n{}")
+                        'Invalid controller settings: Required '
+                        'settings {} missing or values '
+                        'inappropriate. Check configuration file.\n{}')
     MISSING_SETTINGS = (101,
-                        "Controller cannot operate without settings. "
-                        "Load an appropriate settings file before "
-                        "proceeding.")
+                        'Controller cannot operate without settings. '
+                        'Load an appropriate settings file before '
+                        'proceeding.')
     DEFAULT_SETTINGS_CORRUPTED = (102,
-                                  "No or multiple default settings "
-                                  "found for controller class {!r}.")
+                                  'No or multiple default settings '
+                                  'found for controller class {!r}.')
     CANNOT_MEASURE = (103,
-                      "A subclass of ControllerABC is not supposed to "
-                      "measure any quantities. Subclass MeasureControllerABC "
-                      "instead.")
+                      'A subclass of ControllerABC is not supposed to '
+                      'measure any quantities. Subclass MeasureControllerABC '
+                      'instead.')
     INVALID_SETTING_WITH_FALLBACK = (
         104,
-        "Invalid/unreadable controller settings value {} for setting {!r}. "
-        "Using {} instead. Consider fixing your configuration file."
+        'Invalid/unreadable controller settings value {} for setting {!r}. '
+        'Using {} instead. Consider fixing your configuration file.'
         )
     NOT_CONNECTED = (
         105,
-        "Impossible to execute {} on controller {}. "
-        "Device at address {} could not be opened."
+        'Impossible to execute {} on controller {}. '
+        'Device at address {} could not be opened.'
         )
 
 

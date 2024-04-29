@@ -52,10 +52,6 @@ class QObjectWithError(qtc.QObject):                                            
     # information about the error which occurred.
     error_occurred = qtc.pyqtSignal(tuple)
 
-    def __init__(self, *args, **kwargs):
-        """Initialise instance."""
-        super().__init__(*args, **kwargs)
-
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     """Abstract base class of measurement objects with settings."""

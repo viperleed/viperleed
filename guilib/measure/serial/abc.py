@@ -24,43 +24,44 @@ from PyQt5 import (QtCore as qtc,
                    QtSerialPort as qts)
 
 # ViPErLEED modules
-from viperleed.guilib.measure.hardwarebase import (ViPErLEEDErrorEnum,
-                                                   QMetaABC, emit_error)
-from viperleed.guilib.measure.classes.settings import (ViPErLEEDSettings,
-                                                       NoSettingsError)
+from viperleed.guilib.measure.classes.settings import NoSettingsError
+from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
+from viperleed.guilib.measure.hardwarebase import emit_error
+from viperleed.guilib.measure.hardwarebase import QMetaABC
+from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 
 
 SERIAL_ERROR_MESSAGES = {
-    qts.QSerialPort.NoError: "",
+    qts.QSerialPort.NoError: '',
     qts.QSerialPort.DeviceNotFoundError:
-        ("No device on port {}. Please check the communication "
-         "cables and/or update the list of ports."),
+        ('No device on port {}. Please check the communication '
+         'cables and/or update the list of ports.'),
     qts.QSerialPort.PermissionError:
-        ("Permission error while opening port {}. The port may be "
-         "already in use, or you may not have sufficient privileges."),
+        ('Permission error while opening port {}. The port may be '
+         'already in use, or you may not have sufficient privileges.'),
     qts.QSerialPort.OpenError:
-        ("Cannot open again a port on the same object. "
-         "Close port {} by calling disconnect(), then try again."),
+        ('Cannot open again a port on the same object. '
+         'Close port {} by calling disconnect(), then try again.'),
     qts.QSerialPort.NotOpenError:
-        ("Cannot perform the requested operation on a "
-         "closed port. Open {} by calling .connect()."),
+        ('Cannot perform the requested operation on a '
+         'closed port. Open {} by calling .connect().'),
     qts.QSerialPort.WriteError:
-        "Writing data to port {} failed.",
+        'Writing data to port {} failed.',
     qts.QSerialPort.ReadError:
-        "Reading data from port {} failed.",
+        'Reading data from port {} failed.',
     qts.QSerialPort.ResourceError:
-        ("Port {} became unavailable to the system. Device may be "
-         "disconnected from the system. Check connection cables."),
+        ('Port {} became unavailable to the system. Device may be '
+         'disconnected from the system. Check connection cables.'),
     qts.QSerialPort.UnsupportedOperationError:
-        ("Cannot perform the requested operation on port {}: operation is "
-         "either not supported or prohibited by the operating system."),
+        ('Cannot perform the requested operation on port {}: operation is '
+         'either not supported or prohibited by the operating system.'),
     qts.QSerialPort.TimeoutError:
-        ("Serial timeout error on port {}. This should not normally occur. "
-         "It means someone incorrectly implemented a subclass of "
-         "SerialABC, using waitForBytesWritten or waitForReadyRead "
-         "instead of asynchronous behavior."),
+        ('Serial timeout error on port {}. This should not normally occur. '
+         'It means someone incorrectly implemented a subclass of '
+         'SerialABC, using waitForBytesWritten or waitForReadyRead '
+         'instead of asynchronous behavior.'),
     qts.QSerialPort.UnknownError:
-        "An unknown error occurred while accessing port {}."
+        'An unknown error occurred while accessing port {}.'
 }
 
 
@@ -68,31 +69,31 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
     """Data class for basic serial errors not available in QSerialPort."""
 
     NO_MESSAGE_ERROR = (50,
-                        "Empty message received from controller.")
+                        'Empty message received from controller.')
     NO_START_MARKER_ERROR = (51,
-                             "Inconsistent message received from "
-                             "controller (missing start marker). "
-                             "Probably a communication error.")
+                             'Inconsistent message received from '
+                             'controller (missing start marker). '
+                             'Probably a communication error.')
     TIMEOUT_ERROR = (52,
-                     "Serial Timeout: No message received in the "
-                     "last {} sec. Check the communication cable "
-                     "and/or serial-port settings in .ini file.")
+                     'Serial Timeout: No message received in the '
+                     'last {} sec. Check the communication cable '
+                     'and/or serial-port settings in .ini file.')
     UNSUPPORTED_COMMAND_ERROR = (53,
-                                 "Command {} is not supported "
-                                 "by the controller. Check implementation "
-                                 "and/or your configuration file.")
+                                 'Command {} is not supported '
+                                 'by the controller. Check implementation '
+                                 'and/or your configuration file.')
     # The following two are fatal errors, and should make the GUI
     # essentially unusable, apart from loading appropriate settings
     INVALID_PORT_SETTINGS = (54,
-                             "Invalid serial port settings: Required "
-                             "settings {!r} missing or values "
-                             "inappropriate. Check configuration file.")
+                             'Invalid serial port settings: Required '
+                             'settings {!r} missing or values '
+                             'inappropriate. Check configuration file.')
     MISSING_SETTINGS = (55,
-                        "Serial port cannot operate without settings. "
-                        "Load an appropriate settings file before "
-                        "proceeding.")
+                        'Serial port cannot operate without settings. '
+                        'Load an appropriate settings file before '
+                        'proceeding.')
     PORT_NOT_OPEN = (56,
-                     "Serial port could not be opened.")
+                     'Serial port could not be opened.')
 
 
 # too-many-public-methods, too-many-instance-attributes, too-many-lines
