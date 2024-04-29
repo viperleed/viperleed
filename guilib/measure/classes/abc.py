@@ -39,11 +39,16 @@ class QObjectABCErrors(ViPErLEEDErrorEnum):                                # TOD
                         'appropriate settings file before proceeding.'
                         )
     INVALID_SETTINGS = (901,
-                        'Invalid settings for class {}. Required '
+                        'Invalid settings for instance of {}. Required '
                         'settings {} missing or value inappropriate. '
                         'Check configuration file.\n{}'
                         )
-
+    INVALID_SETTING_WITH_FALLBACK = (
+        902,
+        'Invalid settings for instance of {}. Invalid/unreadable '
+        'measurement settings value {} for setting {!r}. Using {} '
+        'instead. Consider fixing your configuration file.'
+        )
 
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
     """Base class of measurement objects with error detection."""
@@ -73,13 +78,13 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
 
-    @abstractmethod
-    def find_settings(self):                                                    # TODO: abstract or base implementation?
-        """Find appropriate settings for this instance."""
-        # How about making hardwarebase._find_matching_configs a class
-        # specific method that is capable to deal with outdated
-        # settings files instead of just looking for the exact name in
-        # the settings file?
+    # @abstractmethod
+    # def find_settings(self):                                                    # TODO: abstract or base implementation?
+        # """Find appropriate settings for this instance."""
+        # # How about making hardwarebase._find_matching_configs a class
+        # # specific method that is capable to deal with outdated
+        # # settings files instead of just looking for the exact name in
+        # # the settings file?
 
     def are_settings_invalid(self, new_settings):
         """Check if there are any invalid settings.
@@ -208,9 +213,9 @@ class HardwareABC(QObjectWithSettingsABC):
 class DeviceABC(HardwareABC):
     """Abstract base class of hardware device objects."""
 
-    def __init__(self, *args, **kwargs):
-        """Initialise instance."""
-        super().__init__(*args, **kwargs)
+    # def __init__(self, *args, **kwargs):
+        # """Initialise instance."""
+        # super().__init__(*args, **kwargs)
 
     @abstractmethod
     def list_devices(self):

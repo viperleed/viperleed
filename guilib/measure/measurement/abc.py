@@ -23,14 +23,17 @@ import time
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.classes.datapoints import (DataPoints,
-                                                         QuantityInfo)
-from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, SystemSettings, NoSettingsError, NotASequenceError
-    )
 from viperleed.guilib.measure.camera.abc import CameraErrors
-from viperleed.guilib.measure.controller.abc import (ControllerErrors,
-                                                     MeasureControllerABC)
+from viperleed.guilib.measure.classes.abc import QObjectABCErrors
+from viperleed.guilib.measure.classes.abc import QObjectWithSettingsABC
+from viperleed.guilib.measure.classes.datapoints import DataPoints
+from viperleed.guilib.measure.classes.datapoints import QuantityInfo
+from viperleed.guilib.measure.classes.settings import NoSettingsError
+from viperleed.guilib.measure.classes.settings import NotASequenceError
+from viperleed.guilib.measure.classes.settings import SystemSettings
+from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
+from viperleed.guilib.measure.controller.abc import ControllerErrors
+from viperleed.guilib.measure.controller.abc import MeasureControllerABC
 
 
 _QUEUED = qtc.Qt.QueuedConnection
@@ -40,34 +43,21 @@ _UNIQUE = qtc.Qt.UniqueConnection
 class MeasurementErrors(base.ViPErLEEDErrorEnum):
     """Errors that might occur during a measurement cycle."""
 
-    MISSING_SETTINGS = (300,
-                        "Measurements cannot be taken without settings. "
-                        "Load an appropriate settings file before "
-                        "proceeding.")
-    INVALID_SETTINGS = (301,
-                        "Invalid measurement settings: Required "
-                        "settings {!r} missing or wrong. Check "
-                        "configuration file.\n{}")
-    INVALID_SETTING_WITH_FALLBACK = (
-        302,
-        "Invalid/unreadable measurement settings value {} for setting {!r}. "
-        "Using {} instead. Consider fixing your configuration file."
-        )
-    RUNTIME_ERROR = (303, "Runtime error. Info: {}")
+    RUNTIME_ERROR = (300, 'Runtime error. Info: {}')
     WRONG_CONTROLLER_CLASS = (
-        304,
-        "The secondary controller at address {!r} is not a subclass "
-        "of MeasureControllerABC. All secondary controllers need "
-        "to be a subclass of MeasureControllerABC."
+        301,
+        'The secondary controller at address {!r} is not a subclass '
+        'of MeasureControllerABC. All secondary controllers need '
+        'to be a subclass of MeasureControllerABC.'
         )
     MISSING_CAMERA = (
-        305,
-        "No camera available for the measurement. Check both the "
-        "measurement and the camera configuration files."
+        302,
+        'No camera available for the measurement. Check both the '
+        'measurement and the camera configuration files.'
         )
     TOO_MUCH_DATA = (
-        306,
-        "The devices {} returned more data than expected."
+        303,
+        'The devices {} returned more data than expected.'
         )
 
 # Progression:
@@ -80,11 +70,8 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
 # * .start_next_measurement() or ._prepare_finalization()
 
 # too-many-instance-attributes
-class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     # TODO: doc about inner workings
+class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc about inner workings
     """Generic measurement class."""
-
-    # Something went wrong
-    error_occurred = qtc.pyqtSignal(tuple)
 
     # Whole measurement is over
     finished = qtc.pyqtSignal()
@@ -120,7 +107,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                                            (self.__class__.__name__,))]
         self.__current_energy = 0
         self.__previous_energy = 0
-        self.__settings = ViPErLEEDSettings()
         self.__primary_controller = None
         self.__secondary_controllers = []
         self.__cameras = []
@@ -268,16 +254,6 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         self.__secondary_controllers = new_controllers
         self.__connect_secondary_controllers()
 
-    @property
-    def settings(self):
-        """Return the current ViPErLEEDSettings for the measurement."""
-        return self.__settings
-
-    @settings.setter
-    def settings(self, new_settings):
-        """Change settings of the measurement."""
-        self.set_settings(new_settings)
-
     def set_settings(self, new_settings):       # TODO: check what happens if trying to make a controller that already exists
         """Change settings of the measurement.
 
@@ -307,27 +283,14 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         Emits
         -----
-        MeasurementErrors.MISSING_SETTINGS
+        QObjectABCErrors.MISSING_SETTINGS
             If new_settings is missing.
-        MeasurementErrors.INVALID_SETTINGS
+        QObjectABCErrors.INVALID_SETTINGS
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
-        try:
-            new_settings = ViPErLEEDSettings.from_settings(new_settings)
-        except (ValueError, NoSettingsError):
-            base.emit_error(self, MeasurementErrors.MISSING_SETTINGS)
+        if not super().set_settings(new_settings):
             return False
-
-        invalid = new_settings.has_settings(*self._mandatory_settings,
-                                            *self._other_mandatory_settings)
-
-        if invalid:
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
-                            ', '.join(invalid), '')
-            return False
-
-        self.__settings = new_settings
 
         if not self.__make_primary_ctrl():
             # Something went wrong (already reported in __make_primary)
@@ -357,7 +320,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                                           'start_energy', fallback=0)
         except (TypeError, ValueError):
             # Not a float
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/start_energy', '')
             return 0.0
 
@@ -402,7 +366,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         elif shape.lower() == 'linear':
             values = self.__get_linear_step(*params)
         else:
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/step_profile',
                             f'Unknown profile shape {shape}')
             values = tuple()
@@ -420,7 +385,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         for i, time_ in enumerate(profile[1::2]):
             time_ = int(time_)
             if time_ < 0:
-                base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                                type(self).__name__,
                                 'measurement_settings/step_profile',
                                 '\nInfo: Time intervals must be non-negative')
                 return tuple()
@@ -431,7 +397,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         """Return energies and times for a simple linear step."""
         if len(params) != 2:
             # Too many/too few
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/step_profile',
                             'Too many/few parameters for linear profile. '
                             f'Expected 2, found {len(params)}')
@@ -440,14 +407,16 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         try:
             n_steps, tot_time = (int(p) for p in params)
         except (TypeError, ValueError):
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/step_profile',
                             'Could not convert to integer the '
                             'parameters for linear profile')
             return tuple()
 
         if n_steps <= 0 or tot_time < 0:
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/step_profile',
                             'Linear-step parameters should be '
                             'positive integers')
@@ -498,6 +467,27 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             self.settings.set('measurement_settings', 'was_aborted', 'True')
         self.__force_end_timer.start()
         self._prepare_finalization()
+
+    def are_settings_invalid(self, new_settings):
+        """Check if there are any invalid settings.
+
+        Parameters
+        ----------
+        new_settings : ViPErLEEDSettings
+            The new settings.
+
+        Returns
+        -------
+        invalid_settings : list
+            Invalid required_settings of self as a list of strings.
+            Each entry can be either '<section>', '<section>/<option>',
+            or '<section>/<option> not one of <value1>, <value2>, ...'
+        """
+        invalid_settings = new_settings.has_settings(
+            *self._mandatory_settings,
+            *self._other_mandatory_settings
+            )
+        return invalid_settings 
 
     @qtc.pyqtSlot()
     def begin_preparation(self):
@@ -977,7 +967,7 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
 
         Emits
         -----
-        MeasurementErrors.INVALID_SETTINGS
+        QObjectABCErrors.INVALID_SETTINGS
             If the camera_settings given could not be found.
         CameraErrors.INVALID_SETTINGS
             If failed to make a camera instance.
@@ -985,7 +975,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         try:
             config = self.__get_device_settings(camera_settings)
         except RuntimeError as err:
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'devices/path to camera configuration', err)
             raise
 
@@ -1074,14 +1065,15 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -----
         MeasurementErrors.MISSING_CLASS_NAME
             If the controller class name is missing.
-        MeasurementErrors.INVALID_SETTINGS
+        QObjectABCErrors.INVALID_SETTINGS
             If the controller could not be instantiated
             from the given name.
         """
         try:
             config = self.__get_device_settings(configname)
         except RuntimeError as err:
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'devices/path to controller configuration', err)
             raise
 
@@ -1125,7 +1117,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if not isinstance(measurements, Sequence):
             section = ('primary_controller' if is_primary
                        else 'secondary_controllers')
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             f"devices/{section}",
                             "Measured quantities is not a sequence "
                             f"in {self.settings.last_file}")
@@ -1149,7 +1142,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
             info = ()
 
         if len(info) != 2:
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'devices/primary_controller', '')
             return False
 
@@ -1172,7 +1166,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                 'devices', 'secondary_controllers', fallback=()
                 )
         except NotASequenceError:
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'devices/secondary_controllers',
                             'Could not be converted to a sequence')
             infos = tuple()
@@ -1180,7 +1175,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         secondary_controllers = []
         for info in infos:
             if len(info) != 2:
-                base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+                base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                                type(self).__name__,
                                 'devices/secondary_controllers', '')
                 continue
             try:
