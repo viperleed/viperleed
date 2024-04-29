@@ -28,12 +28,14 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import QMetaABC
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
+from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 
 
 class QObjectABCErrors(ViPErLEEDErrorEnum):                                # TODO: make sure all classes attach their class name if they use these errors.
     """Class for errors shared among many ViPErLEED objects."""
+
     MISSING_SETTINGS = (900,
                         '{} cannot operate without settings. Load an '
                         'appropriate settings file before proceeding.'
@@ -46,10 +48,12 @@ class QObjectABCErrors(ViPErLEEDErrorEnum):                                # TOD
     INVALID_SETTING_WITH_FALLBACK = (
         902,
         'Invalid settings for instance of {}. Invalid/unreadable '
-        'measurement settings value {} for setting {!r}. Using {} '
-        'instead. Consider fixing your configuration file.'
+        'settings value {} for setting {!r}. Using {} instead. '
+        'Consider fixing your configuration file.'
         )
-
+    DEFAULT_SETTINGS_CORRUPTED = (903,
+                                  'No or multiple default settings '
+                                  'found for instance of {!r}.')
 
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
     """Base class of measurement objects with error detection."""
@@ -107,13 +111,17 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """
         return new_settings.has_settings(*self._mandatory_settings)
 
-    def set_settings(self, new_settings):                                       # TODO: make sure reimplementations and extensions also return bool
+    def set_settings(self, new_settings, find_from=None):                                       # TODO: make sure reimplementations and extensions also return bool
         """Set new settings for this instance.
 
         Parameters
         ----------
         new_settings : dict or ConfigParser or str or Path
             The new settings.
+        find_from : str or None, optional
+            The string to look for in a configuration file to
+            be loaded and returned. If None, no search will be
+            performed.
 
         Returns
         -------
@@ -138,19 +146,21 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             If any element of the new_settings does
             not fit the mandatory settings.
         """
-        try:
-            new_settings = ViPErLEEDSettings.from_settings(
-                            new_settings
-                            )
+        try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones
+            new_settings = ViPErLEEDSettings.from_settings(new_settings,
+                                                           find_from=find_from)
         except(ValueError, NoSettingsError):
-            emit_error(QObjectABCErrors.MISSING_SETTINGS,
-                            type(self).__name__)
+            emit_error(self, QObjectABCErrors.MISSING_SETTINGS,
+                       type(self).__name__)
             return False
-
+        except NoDefaultSettingsError:
+            base.emit_error(self, QObjectABCErrors.DEFAULT_SETTINGS_CORRUPTED,
+                            find_from)
+            return False
         invalid = self.are_settings_invalid(new_settings)
         if invalid:
-            emit_error(QObjectABCErrors.INVALID_SETTINGS,
-                            type(self).__name__, ', '.join(invalid), '')
+            emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                       type(self).__name__, ', '.join(invalid), '')
             return False
 
         self._settings = new_settings
@@ -161,6 +171,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 # pylint: disable-next=abstract-method
 class HardwareABC(QObjectWithSettingsABC):
     """Abstract base class of hardware related objects."""
+
     # Emitted whenever the busy state of the device changes.
     # Contains the busy state the device changed to.
     busy_changed = qtc.pyqtSignal(bool)
@@ -173,6 +184,17 @@ class HardwareABC(QObjectWithSettingsABC):
 
     @property
     def busy(self):
+        """Return busy state of instance."""
+        return self.get_busy()
+
+    @busy.setter
+    def busy(self, is_busy):
+        """Set busy state of instance."""
+        # Note that "busy =" will therefore be
+        # performed in the calling thread.
+        self.set_busy(is_busy)
+
+    def get_busy(self):
         """Return whether the instance is busy.
 
         Returns
@@ -181,13 +203,6 @@ class HardwareABC(QObjectWithSettingsABC):
         True if the instence is busy.
         """
         return self._busy
-
-    @busy.setter
-    def busy(self, is_busy):
-        """Set busy state of instance."""
-        # Note that "busy =" will therefore be
-        # performed in the calling thread.
-        self.set_busy(is_busy)
 
     @qtc.pyqtSlot(bool)
     def set_busy(self, is_busy):
@@ -218,7 +233,7 @@ class DeviceABC(HardwareABC):
         # super().__init__(*args, **kwargs)
 
     @abstractmethod
-    def list_devices(self):
+    def list_devices(self):                                                     # TODO: Base implementation?
         """List all devices of this class.
 
         Returns

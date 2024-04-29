@@ -19,11 +19,12 @@ import time
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
 
-from viperleed.guilib.measure.controller import abc
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.classes.abc import QObjectABCErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
+from viperleed.guilib.measure.controller import abc
 
 # For settings dialog:
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
@@ -170,7 +171,7 @@ class ViPErinoController(abc.MeasureControllerABC):
 
         # The thermocouple.Thermocouple instance for this unit.
         # None if not present (or if TEMPERATURE was not measured)
-        self.__thermocouple = None
+        self._thermocouple = None
 
     @property
     def initial_delay(self):
@@ -200,7 +201,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             # pylint: disable=redefined-variable-type
             # Seems a pylint bug.
             meas_f = 50.0
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             f"adc_update_rate/{update_rate_raw}", "")
         return 1000 / meas_f
 
@@ -244,9 +246,9 @@ class ViPErinoController(abc.MeasureControllerABC):
         with self.lock:
             version = self.hardware.get("firmware", None)
         if version is None:
-            # Get it from the settings. Notice that the are_settings_ok
-            # extension already checks that the firmware version in the
-            # settings is present and valid
+            # Get it from the settings. Notice that the
+            # are_settings_invalid extension already checks that the
+            # firmware version in the settings is present and valid
             version = base.Version(
                 self.settings.get("controller", "firmware_version")
                 )
@@ -262,7 +264,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             Returns None in case it was not possible to derive
             the correct thermocouple from the settings.
         """
-        if self.__thermocouple is None:
+        if self._thermocouple is None:
             tc_type = self.settings.get('conversions', 'thermocouple_type',
                                         fallback=None)
             if tc_type is None:
@@ -271,27 +273,27 @@ class ViPErinoController(abc.MeasureControllerABC):
                                 '\nInfo: missing entry in settings.')
                 return None
             try:
-                self.__thermocouple = Thermocouple(tc_type)
+                self._thermocouple = Thermocouple(tc_type)
             except ValueError as err:
                 # Unknown thermocouple type
                 base.emit_error(self,
                                 ViPErinoErrors.CANNOT_CONVERT_THERMOCOUPLE,
                                 f'\nInfo: {err}.')
                 return None
-        return self.__thermocouple
+        return self._thermocouple
 
     @thermocouple.setter
     def thermocouple(self, new_tc):
         """Set a new thermocouple. The type is stored in settings."""
         if new_tc is None or isinstance(new_tc, Thermocouple):
-            self.__thermocouple = new_tc
+            self._thermocouple = new_tc
         else:
             try:
-                self.__thermocouple = Thermocouple(new_tc)
+                self._thermocouple = Thermocouple(new_tc)
             except (ValueError, TypeError):
                 return
         try:
-            type_ = self.__thermocouple.type_
+            type_ = self._thermocouple.type_
         except AttributeError:  # None
             type_ = 'None'
         self.settings.set('conversions', 'thermocouple_type', type_)
@@ -301,27 +303,32 @@ class ViPErinoController(abc.MeasureControllerABC):
         """Return the interval between trigger and 1st measurement (msec)."""
         return (self.nr_samples + 2) * self.measurement_interval
 
-    def are_settings_ok(self, settings):
-        """Return whether a ViPErLEEDSettings is compatible with self."""
+    def are_settings_invalid(self, settings):
+        """Check if there are any invalid settings.
+
+        Parameters
+        ----------
+        new_settings : ViPErLEEDSettings
+            The new settings.
+
+        Returns
+        -------
+        invalid : list
+            Invalid required settings of self as a list of strings.
+            Each entry can be either '<section>', '<section>/<option>',
+            or '<section>/<option> not one of <value1>, <value2>, ...'
+        """
         invalid = settings.has_settings(("controller", "firmware_version"))
-        if invalid:
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
-                            "controller/firmware_version",
-                            "Info: Entry is missing.")
-            return False
+        if not invalid:
+            try:
+                version = base.Version(settings["controller"]["firmware_version"])
+            except (TypeError, ValueError) as err:
+                invalid.append("controller/firmware_version")
 
-        try:
-            version = base.Version(settings["controller"]["firmware_version"])
-        except (TypeError, ValueError) as err:
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
-                            "controller/firmware_version",
-                            f"Info: Value is invalid -- {err}")
-            return False
-
-        self.__thermocouple = None  # In case it changed
+        self._thermocouple = None  # In case it changed
 
         mandatory_cmd_names = list(_MANDATORY_CMD_NAMES)
-        if version >= "0.7":
+        if version and version >= "0.7":
             mandatory_cmd_names.append("PC_DEBUG")
         mandatory_commands = (("available_commands", cmd)
                               for cmd in mandatory_cmd_names)
@@ -334,7 +341,8 @@ class ViPErinoController(abc.MeasureControllerABC):
         self._mandatory_settings = [*self.__class__._mandatory_settings,
                                     *mandatory_commands]
 
-        return super().are_settings_ok(settings)
+        invalid.extend(super().are_settings_invalid(settings))
+        return invalid
 
     def available_adcs(self):
         """Return a list of available ADC measurements.
@@ -427,7 +435,8 @@ class ViPErinoController(abc.MeasureControllerABC):
                                                'adc_update_rate', fallback=4)
         except (TypeError, ValueError):
             # Cannot convert to int
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/adc_update_rate', '')
             return
         with self.lock:
@@ -712,7 +721,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             v_ref_dac = self.settings.getfloat('energy_calibration',
                                                'v_ref_dac')
         except (TypeError, ValueError):
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'energy_calibration/v_ref_dac', "")
             v_ref_dac = 2.5
 
@@ -741,7 +751,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             timeout = self.settings.getint("serial_port_settings", "timeout",
                                            fallback=0)
         except (TypeError, ValueError):
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'serial_port_settings/timeout', "")
             timeout = 0
         timeout = max(timeout, 0) + sum(energies_and_times[1::2])
@@ -770,12 +781,13 @@ class ViPErinoController(abc.MeasureControllerABC):
         try:
             available_adcs = self.available_adcs()
         except NotASequenceError:
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'controller/measurement_devices', '')
             return
         except (KeyError, ValueError, TypeError, RuntimeError) as err:
-            base.emit_error(self, abc.ControllerErrors.INVALID_SETTINGS,
-                            'controller', err)
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__, 'controller', err)
             return
 
         n_devices = len(available_adcs)

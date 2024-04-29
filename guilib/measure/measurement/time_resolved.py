@@ -360,7 +360,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         -------
         None.
         """
-        base.safe_disconnect(self.primary_controller.controller_busy,
+        base.safe_disconnect(self.primary_controller.busy_changed,
                              self.__check_is_finished)
         if self.aborted:
             # We entered this call after the measurement was aborted,
@@ -559,10 +559,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         __request_continuous_mode(False)
             Tell the controller to turn continuous mode off.
         """
-        # First disconnect controller_busy from slots that may be
-        # inadvertently called in the super() call below
+        # First disconnect controller busy_changed from slots that may
+        # be inadvertently called in the super() call below.
         for ctrl in self.controllers:
-            base.safe_disconnect(ctrl.controller_busy,
+            base.safe_disconnect(ctrl.busy_changed,
                                  self.__check_is_finished)
 
         # Disconnect other signals that we will not need any longer.
@@ -615,5 +615,5 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # sure it properly turns "not busy" when it is done stopping.
         primary = self.primary_controller
         primary.busy = True
-        primary.controller_busy.connect(self.__check_is_finished, type=_UNIQUE)
+        primary.busy_changed.connect(self.__check_is_finished, type=_UNIQUE)
         primary.stop()

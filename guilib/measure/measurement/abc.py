@@ -479,7 +479,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         Returns
         -------
         invalid_settings : list
-            Invalid required_settings of self as a list of strings.
+            Invalid required settings of self as a list of strings.
             Each entry can be either '<section>', '<section>/<option>',
             or '<section>/<option> not one of <value1>, <value2>, ...'
         """
@@ -527,7 +527,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
             # When controllers will turn "not busy" at the end of
             # this first preparation segment, go to second segment
-            ctrl.controller_busy.connect(self.__continue_preparation)
+            ctrl.busy_changed.connect(self.__continue_preparation)
 
         # Disconnect the camera_busy signal here, and reconnect
         # it later in .__check_preparation_finished(). This prevents
@@ -735,7 +735,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         if any(device.busy for device in self.devices):
             return
         for ctrl in self.controllers:
-            ctrl.controller_busy.disconnect(self.__check_preparation_finished)
+            ctrl.busy_changed.disconnect(self.__check_preparation_finished)
         for camera in self.cameras:
             camera.camera_busy.disconnect(self.__check_preparation_finished)
 
@@ -788,13 +788,13 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         if any(controller.busy for controller in self.controllers):
             return
 
-        # Use the controller_busy to move from this segment of
+        # Use the busy_changed to move from this segment of
         # the preparation to the exit point of the preparation,
         # that will later start the measurement loop.
         for ctrl in self.controllers:
-            base.safe_disconnect(ctrl.controller_busy,
+            base.safe_disconnect(ctrl.busy_changed,
                                  self.__continue_preparation)
-            ctrl.controller_busy.connect(self.__check_preparation_finished,
+            ctrl.busy_changed.connect(self.__check_preparation_finished,
                                          type=_UNIQUE)
 
         # The camera_busy signals are connected only now, rather
@@ -872,7 +872,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                       self.__check_preparation_finished,
                       self.__cleanup_and_end, self._finalize)
         for slot in busy_slots:
-            disconnect(ctrl.controller_busy, slot)
+            disconnect(ctrl.busy_changed, slot)
 
     def __disconnect_primary_controller(self):
         """Disconnect serial and signals of the primary controller."""
@@ -896,7 +896,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
     def _finalize(self, *_):
         """Finish the measurement: save data, then set energy to zero.
 
-        This is the slot connected to the controller_busy signal of
+        This is the slot connected to the busy_changed signal of
         all controllers, and to the .stopped signal of all cameras,
         after ._is_finished() returns True, or after .abort()ing the
         measurement. Signals are disconnected again once all devices
@@ -924,7 +924,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             # set the LEED energy to zero (and detect it has been set)
             primary = self.primary_controller
             primary.connect_()
-            primary.controller_busy.connect(self.__cleanup_and_end,
+            primary.busy_changed.connect(self.__cleanup_and_end,
                                             type=_UNIQUE)
             self.current_energy = 0
             self.set_leed_energy(self.current_energy, 50, trigger_meas=False)
@@ -1316,15 +1316,14 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                 base.safe_disconnect(about_to_trigger, ctrl.measure_now)
 
         for ctrl in self.controllers:
-            base.safe_disconnect(ctrl.controller_busy,
+            base.safe_disconnect(ctrl.busy_changed,
                                  self.__continue_preparation)
-            base.safe_disconnect(ctrl.controller_busy,
+            base.safe_disconnect(ctrl.busy_changed,
                                  self.__check_preparation_finished)
             # Force all controllers to busy, such that ._finalize()
             # is called for all when they turn "not busy" anymore
             ctrl.busy = True
-            base.safe_connect(ctrl.controller_busy, self._finalize,
-                              type=_UNIQUE)
+            base.safe_connect(ctrl.busy_changed, self._finalize, type=_UNIQUE)
 
         for camera in self.cameras:
             base.safe_connect(camera.stopped, self._finalize, type=_UNIQUE)

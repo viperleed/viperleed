@@ -29,7 +29,6 @@ from viperleed.guilib.measure.classes.abc import HardwareABC
 from viperleed.guilib.measure.classes.abc import QObjectABCErrors
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.hardwarebase import emit_error
-from viperleed.guilib.measure.hardwarebase import QMetaABC
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 
 
