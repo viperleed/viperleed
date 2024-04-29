@@ -237,8 +237,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # data, and the second element is the timeout parameter.
         self.__unsent_messages = []
         if self.serial:
-            self.serial.serial_busy.connect(self.send_unsent_messages,
-                                            type=_QUEUED_UNIQUE)
+            self.serial.busy_changed.connect(self.send_unsent_messages,
+                                             type=_QUEUED_UNIQUE)
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
@@ -599,7 +599,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         else:
             # The next line will also check that new_settings contains
             # appropriate settings for the serial class used.
-            self.serial.port_settings = new_settings
+            self.serial.settings = new_settings
             self.serial.port_name = self.__address
 
         # Notice that the .connect_() will run anyway, even if the
@@ -607,7 +607,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         # the serial)!
         if self.__address:
             self.serial.connect_()
-        self.__settings = self.serial.port_settings
+        self.__settings = self.serial.settings
         self._time_to_trigger = 0
         self.__hash = -1
 
@@ -704,12 +704,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__can_continue_preparation = False
 
         self.busy = True
-        base.safe_disconnect(self.serial.serial_busy,
+        base.safe_disconnect(self.serial.busy_changed,
                              self.send_unsent_messages)
         # Note that here we do not need to use a _QUEUED_UNIQUE
         # connection, as preparation steps never cause the
         # accumulation of unsent messages
-        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
+        base.safe_connect(self.serial.busy_changed, self.__do_preparation_step,
                           type=_UNIQUE)
         self.__do_preparation_step()
 
@@ -736,12 +736,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         self.__can_continue_preparation = True
 
         self.busy = True
-        base.safe_disconnect(self.serial.serial_busy,
+        base.safe_disconnect(self.serial.busy_changed,
                              self.send_unsent_messages)
         # Note that here we do not need to use a _QUEUED_UNIQUE
         # connection, as preparation steps never cause the
         # accumulation of unsent messages
-        base.safe_connect(self.serial.serial_busy, self.__do_preparation_step,
+        base.safe_connect(self.serial.busy_changed, self.__do_preparation_step,
                           type=_UNIQUE)
         self.__do_preparation_step()
 
@@ -1011,7 +1011,7 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
         -------
         None.
         """
-        serial_busy = self.serial.serial_busy
+        serial_busy = self.serial.busy_changed
         base.safe_disconnect(serial_busy, self.__do_preparation_step)
         base.safe_connect(serial_busy, self.send_unsent_messages,
                           type=_QUEUED_UNIQUE)
@@ -1085,12 +1085,12 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Disconnect signal: will be reconnected
         # during the call to continue_preparation
-        self.serial.serial_busy.disconnect(self.__do_preparation_step)
+        self.serial.busy_changed.disconnect(self.__do_preparation_step)
         if self.__can_continue_preparation:
             # The whole preparation is now over.
             # Guarantee that any unsent message that may have come
             # while the preparation was running is now sent.
-            base.safe_connect(self.serial.serial_busy,
+            base.safe_connect(self.serial.busy_changed,
                               self.send_unsent_messages,
                               type=_QUEUED_UNIQUE)
         self.busy = False
@@ -1478,9 +1478,9 @@ class MeasureControllerABC(ControllerABC):
         Subclasses must extend this method. If continuous is True the
         controller has to continue measuring and return data without
         receiving further instructions. The base-class implementation
-        connects the serial_busy with self.busy: when the hardware
-        acknowledges the receipt of the command the controller should
-        turn "not busy".
+        connects the serial.busy_changed with self.busy: when the
+        hardware acknowledges the receipt of the command the controller
+        should turn "not busy".
 
         Parameters
         ----------
@@ -1492,7 +1492,7 @@ class MeasureControllerABC(ControllerABC):
         None.
         """
         try:
-            base.safe_connect(self.serial.serial_busy, self.set_busy,
+            base.safe_connect(self.serial.busy_changed, self.set_busy,
                               type=_QUEUED_UNIQUE)
         except AttributeError:
             # Probably arrived here due to an __init__ error

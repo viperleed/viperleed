@@ -898,7 +898,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         try:
             super().stop()
         except AttributeError:
-            # super().stop accesses serial_busy, which may
+            # super().stop accesses serial.busy_changed, which may
             # not exist if settings are somewhat funky.
             return
         stop = self.settings.get('available_commands', 'PC_STOP')

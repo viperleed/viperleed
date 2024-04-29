@@ -17,15 +17,17 @@ Graphical User Interface.
 """
 # Python standard modules
 from abc import abstractmethod
-from configparser import NoSectionError, NoOptionError
+from configparser import NoOptionError
+from configparser import NoSectionError
 
 # Non-standard modules
-from PyQt5 import (QtCore as qtc,
-                   QtSerialPort as qts)
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtSerialPort as qts
 
 # ViPErLEED modules
+from viperleed.guilib.measure.classes.abc import HardwareABC
+from viperleed.guilib.measure.classes.abc import QObjectABCErrors
 from viperleed.guilib.measure.classes.settings import NoSettingsError
-from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import QMetaABC
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
@@ -84,25 +86,15 @@ class ExtraSerialErrors(ViPErLEEDErrorEnum):
                                  'and/or your configuration file.')
     # The following two are fatal errors, and should make the GUI
     # essentially unusable, apart from loading appropriate settings
-    INVALID_PORT_SETTINGS = (54,
-                             'Invalid serial port settings: Required '
-                             'settings {!r} missing or values '
-                             'inappropriate. Check configuration file.')
-    MISSING_SETTINGS = (55,
-                        'Serial port cannot operate without settings. '
-                        'Load an appropriate settings file before '
-                        'proceeding.')
-    PORT_NOT_OPEN = (56,
+    PORT_NOT_OPEN = (54,
                      'Serial port could not be opened.')
 
 
 # too-many-public-methods, too-many-instance-attributes, too-many-lines
-class SerialABC(qtc.QObject, metaclass=QMetaABC):
+class SerialABC(HardwareABC):
     """Base class for serial communication for a ViPErLEED controller."""
 
-    error_occurred = qtc.pyqtSignal(tuple)
     data_received = qtc.pyqtSignal(object)
-    serial_busy = qtc.pyqtSignal(bool)
     about_to_trigger = qtc.pyqtSignal()
 
     __move_to_thread_requested = qtc.pyqtSignal(bool)  # True==connect          # TODO: Can be done with QMetaObject.invokeMethod
@@ -122,9 +114,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             serial port itself one only needs a 'serial_port_settings'
             section. In practice, it is likely safer to pass the whole
             ConfigParser object used for the controller class. It can
-            be changed using the .port_settings property, or with the
-            set_port_settings() setter method. See the documentation
-            of set_port_settings() for more details on other mandatory
+            be changed using the self.settings property, or with the
+            set_settings() setter method. See the documentation
+            of set_settings() for more details on other mandatory
             content of the settings argument.
         port_name : str or QSerialPortInfo, optional
             The name (or info) of the serial port. If not given,
@@ -152,10 +144,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
 
-        # .__serial_settings is set via the following call to
-        # set_port_settings() for extra checks and preprocessing
-        self.__serial_settings = ViPErLEEDSettings()
-        self.set_port_settings(settings)
+        self.set_settings(settings)
 
         # .unprocessed_messages is a list of all the messages
         # that came on the serial line and that have not been
@@ -175,17 +164,9 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         # after the error has been identified with identify_error()
         self.__messages_since_error = []
 
-        # __busy keeps track of whether the serial line is currently
-        # busy, e.g., a message was sent and we should wait for the
-        # reply to come before we send another message. Accessed via
-        # the .busy property. message_requires_response(message) will
-        # determine whether the serial is busy after sending message
-        self.__busy = False
-
         # Keep track of whether we got an unacceptable message
         # after a .send_message()
         self.__got_unacceptable_response = False
-
 
         self.__open = False
 
@@ -206,33 +187,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             be used in functions converting bytes to human-readable
             data types [e.g., int.from_bytes(bytes_obj, byte_order)].
         """
-        return self.port_settings.get('serial_port_settings',
-                                      'BYTE_ORDER')
-
-    @property
-    def busy(self):
-        """Return whether the serial port is busy."""
-        return self.__busy
-
-    @busy.setter
-    def busy(self, is_busy):
-        """Set the serial to busy True/False.
-
-        Parameters
-        ----------
-        is_busy : bool
-            True if serial is busy
-
-        Emits
-        -----
-        serial_busy(self.busy)
-            If the busy state changes.
-        """
-        was_busy = self.busy
-        is_busy = bool(is_busy)
-        if was_busy is not is_busy:
-            self.__busy = is_busy
-            self.serial_busy.emit(self.busy)
+        return self.settings.get('serial_port_settings', 'BYTE_ORDER')
 
     @property
     def is_open(self):
@@ -251,13 +206,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
                 Only the 'START' marker may be None, in case no
                 start marker is used.
         """
-        start_marker = self.port_settings.getint('serial_port_settings',
-                                                 'MSG_START', fallback=None)
+        start_marker = self.settings.getint('serial_port_settings',
+                                            'MSG_START', fallback=None)
         if start_marker is not None:
             start_marker = start_marker.to_bytes(1, self.byte_order)
 
         return {'START':  start_marker,
-                'END': self.port_settings.getint(
+                'END': self.settings.getint(
                     'serial_port_settings', 'MSG_END'
                     ).to_bytes(1, self.byte_order)}
 
@@ -272,7 +227,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
 
         This will disconnect an already-open port, but will not
         connect to the port with the newly set name. Explicitly
-        use .connect() (after changing .port_settings, if needed).
+        use .connect() (after changing self.settings, if needed).
 
         This method can be used as a slot for a signal carrying a
         string or a QSerialPortInfo.
@@ -323,19 +278,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__port = qts.QSerialPort(port_name, parent=self)
         self.connect_()
 
-    def __get_port_settings(self):
-        """Return the current settings for the port.
-
-        Returns
-        -------
-        port_settings : ConfigParser
-            The ConfigParser containing all the settings, among
-            which the port settings that are available in section
-            'serial_port_settings'.
-        """
-        return self.__serial_settings
-
-    def set_port_settings(self, new_settings):
+    def set_settings(self, new_settings):
         """Change settings of the port.
 
         This will disconnect an already-open port, but will not
@@ -401,32 +344,23 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             or path and if an element of the mandatory_settings is
             None or has a length greater than 3.
 
+        Returns
+        -------
+        settings_valid : bool
+            True if the new settings given were accepted.
+
         Emits
         -----
-        ExtraSerialErrors.MISSING_SETTINGS
+        QObjectABCErrors.MISSING_SETTINGS
             If new_settings is missing.
-        ExtraSerialErrors.INVALID_PORT_SETTINGS
+        QObjectABCErrors.INVALID_SETTINGS
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
-        try:
-            new_settings = ViPErLEEDSettings.from_settings(new_settings)
-        except (ValueError, NoSettingsError):
-            emit_error(self, ExtraSerialErrors.MISSING_SETTINGS)
-            return
-
-        invalid = new_settings.has_settings(*self._mandatory_settings)
-
-        if invalid:
-            error_msg = invalid
-            emit_error(self, ExtraSerialErrors.INVALID_PORT_SETTINGS,
-                       error_msg)
-            return
-
-        self.__serial_settings = new_settings
+        if not super().set_settings(new_settings):
+            return False
         self.disconnect_()
-
-    port_settings = property(__get_port_settings, set_port_settings)
+        return True
 
     def clear_errors(self):
         """Clear all errors.
@@ -751,7 +685,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             the worker times out an ExtraSerialErrors.TIMEOUT_ERROR is
             emitted. If not given or None, the timeout will be taken
             from the option 'serial_port_settings'/'timeout' of
-            self.port_settings. Should this option not exist, timeout
+            self.settings. Should this option not exist, timeout
             will fall back to -1 (i.e., no timeout). Default is None
 
         Returns
@@ -769,9 +703,8 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         self.__got_unacceptable_response = False
 
         if timeout is None:
-            timeout = self.port_settings.getint('serial_port_settings',
-                                                'timeout',
-                                                fallback=-1)
+            timeout = self.settings.getint('serial_port_settings', 'timeout',
+                                           fallback=-1)
 
         timeout = int(timeout)
         if timeout >= 0:
@@ -835,7 +768,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             The message to be checked. Integrity checks only involve
             making sure that the message is not empty before and after
             removal of a start marker, if used. If a start marker is
-            used (i.e., a MSG_START is present in self.port_settings),
+            used (i.e., a MSG_START is present in self.settings),
             the method considers the message valid only if the first
             character is a MSG_START.
 
@@ -853,7 +786,7 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
             If message is empty (before or after removal of MSG_START)
         error_occurred(ExtraSerialErrors.NO_START_MARKER_ERROR)
             If the first byte of message is not MSG_START, if there
-            is a MSG_START in self.port_settings.
+            is a MSG_START in self.settings.
         """
         if not message:
             emit_error(self, ExtraSerialErrors.NO_MESSAGE_ERROR)
@@ -964,13 +897,13 @@ class SerialABC(qtc.QObject, metaclass=QMetaABC):
         error_occurred(ExtraSerialErrors.TIMEOUT_ERROR)
             Always
         """
-        timeout = self.port_settings.getint('serial_port_settings', 'timeout')
+        timeout = self.settings.getint('serial_port_settings', 'timeout')
         emit_error(self, ExtraSerialErrors.TIMEOUT_ERROR,
                    round(timeout/1000, 1))
 
     def __set_up_serial_port(self):
         """Load settings to serial port."""
-        settings = self.port_settings
+        settings = self.settings
         self.port.setBaudRate(
             int(settings.getfloat('serial_port_settings',
                                   'baud_rate',

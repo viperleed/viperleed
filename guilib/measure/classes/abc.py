@@ -50,6 +50,7 @@ class QObjectABCErrors(ViPErLEEDErrorEnum):                                # TOD
         'instead. Consider fixing your configuration file.'
         )
 
+
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
     """Base class of measurement objects with error detection."""
 
@@ -106,7 +107,6 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """
         return new_settings.has_settings(*self._mandatory_settings)
 
-    @qtc.pyqtSlot(object)
     def set_settings(self, new_settings):                                       # TODO: make sure reimplementations and extensions also return bool
         """Set new settings for this instance.
 
@@ -191,7 +191,7 @@ class HardwareABC(QObjectWithSettingsABC):
 
     @qtc.pyqtSlot(bool)
     def set_busy(self, is_busy):
-        """Set busy state of instance.
+        """Set busy state of the instance.
 
         Paramaters
         ----------
