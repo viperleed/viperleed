@@ -23,7 +23,6 @@ import time
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.camera.abc import CameraErrors
 from viperleed.guilib.measure.classes.abc import QObjectABCErrors
 from viperleed.guilib.measure.classes.abc import QObjectWithSettingsABC
 from viperleed.guilib.measure.classes.datapoints import DataPoints
@@ -529,11 +528,11 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             # this first preparation segment, go to second segment
             ctrl.busy_changed.connect(self.__continue_preparation)
 
-        # Disconnect the camera_busy signal here, and reconnect
+        # Disconnect the camera.busy_changed signal here, and reconnect
         # it later in .__check_preparation_finished(). This prevents
         # early calls to _on_camera_busy_changed.
         for camera in self.cameras:
-            base.safe_disconnect(camera.camera_busy,
+            base.safe_disconnect(camera.busy_changed,
                                  self._on_camera_busy_changed)
 
         # Notice that we have to handle only controllers:
@@ -737,7 +736,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         for ctrl in self.controllers:
             ctrl.busy_changed.disconnect(self.__check_preparation_finished)
         for camera in self.cameras:
-            camera.camera_busy.disconnect(self.__check_preparation_finished)
+            camera.busy_changed.disconnect(self.__check_preparation_finished)
 
         # Finally, reconnect all devices to
         # be ready to actually take measurements
@@ -788,8 +787,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         if any(controller.busy for controller in self.controllers):
             return
 
-        # Use the busy_changed to move from this segment of
-        # the preparation to the exit point of the preparation,
+        # Use the controller.busy_changed to move from this segment
+        # of the preparation to the exit point of the preparation,
         # that will later start the measurement loop.
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.busy_changed,
@@ -797,13 +796,13 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             ctrl.busy_changed.connect(self.__check_preparation_finished,
                                          type=_UNIQUE)
 
-        # The camera_busy signals are connected only now, rather
+        # The camera.busy_changed signals are connected only now, rather
         # than during begin_preparation. This prevents early calls
         # to the __check_preparation_finished method, should cameras
         # be ready early.
         for camera in self.cameras:
-            camera.camera_busy.connect(self.__check_preparation_finished,
-                                       type=_UNIQUE)
+            camera.busy_changed.connect(self.__check_preparation_finished,
+                                        type=_UNIQUE)
         self.__preparation_continued.emit()
 
     def __connect_cameras(self):
@@ -814,7 +813,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         # slow. We are thus supposing that the camera objects already
         # have the right settings.
         for camera in self.cameras:
-            base.safe_connect(camera.camera_busy, self._on_camera_busy_changed,
+            base.safe_connect(camera.busy_changed,
+                              self._on_camera_busy_changed,
                               type=_UNIQUE | qtc.Qt.QueuedConnection)
             base.safe_connect(self._request_stop_devices, camera.stop,
                               type=_UNIQUE)
@@ -853,7 +853,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         """Disconnect necessary camera signals."""
         disconnect = base.safe_disconnect
         for camera in self.cameras:
-            disconnect(camera.camera_busy, self._on_camera_busy_changed)
+            disconnect(camera.busy_changed, self._on_camera_busy_changed)
             disconnect(self._camera_timer.timeout, camera.trigger_now)
             disconnect(self.__preparation_started, camera.start)
             disconnect(camera.stopped, self._finalize)
@@ -924,8 +924,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             # set the LEED energy to zero (and detect it has been set)
             primary = self.primary_controller
             primary.connect_()
-            primary.busy_changed.connect(self.__cleanup_and_end,
-                                            type=_UNIQUE)
+            primary.busy_changed.connect(self.__cleanup_and_end, type=_UNIQUE)
             self.current_energy = 0
             self.set_leed_energy(self.current_energy, 50, trigger_meas=False)
 
@@ -968,9 +967,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         Emits
         -----
         QObjectABCErrors.INVALID_SETTINGS
-            If the camera_settings given could not be found.
-        CameraErrors.INVALID_SETTINGS
-            If failed to make a camera instance.
+            If the camera_settings given could not be found,
+            or if failed to make a camera instance.
         """
         try:
             config = self.__get_device_settings(camera_settings)
@@ -982,7 +980,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         invalid = config.has_settings(('camera_settings', 'class_name'))
         if invalid:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'camera_settings/class_name',
                             f'No class_name in {config.last_file}')
             raise RuntimeError
@@ -991,7 +990,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         try:
             camera_class = base.class_from_name('camera', camera_cls_name)
         except ValueError:
-            base.emit_error(self, CameraErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'camera_settings/class_name', '')
             raise RuntimeError from None
 
@@ -999,7 +999,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         if camera.mode != 'triggered':
             # Force mode to be triggered
             camera.settings.set("camera_settings", "mode", "triggered")
-            # base.emit_error(self, CameraErrors.INVALID_SETTINGS,              # TODO: Should we make this a non-critical warning?
+            # base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,          # TODO: Should we make this a non-critical warning?
+                            # type(self).__name__,
                             # 'camera_settings/mode', 'Camera {camera.name}: '
                             # 'Cannot measure in live mode.')
         return camera
@@ -1222,7 +1223,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
     def _on_camera_busy_changed(self, busy):
         """Receive not busy signal from camera.
 
-        Receive the camera_busy signal and check if all cameras
+        Receive the camera.busy_changed signal and check if all cameras
         and controllers are ready if the camera that emitted the
         signal was not busy.
 

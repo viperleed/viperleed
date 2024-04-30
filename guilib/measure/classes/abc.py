@@ -228,10 +228,6 @@ class HardwareABC(QObjectWithSettingsABC):
 class DeviceABC(HardwareABC):
     """Abstract base class of hardware device objects."""
 
-    # def __init__(self, *args, **kwargs):
-        # """Initialise instance."""
-        # super().__init__(*args, **kwargs)
-
     @abstractmethod
     def list_devices(self):                                                     # TODO: Base implementation?
         """List all devices of this class.
