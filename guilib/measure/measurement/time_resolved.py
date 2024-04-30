@@ -131,6 +131,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except (TypeError, ValueError):
             # Not an int
             base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/energy_step_duration', '')
             interval = min_t
 
@@ -172,6 +173,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except ValueError:
             # Not a valid boolean
             base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/is_continuous', '')
             return False
 
@@ -191,6 +193,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except (TypeError, ValueError):
             # Not an int
             base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/measurement_interval', '')
             interval = min_t
 
