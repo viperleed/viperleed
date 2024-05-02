@@ -147,7 +147,8 @@ class ViPErLEEDSettings(ConfigParser):
         return str(self.as_dict())
 
     @classmethod  # too-complex
-    def from_settings(cls, settings, find_from=None, tolerant_match=False):
+    def from_settings(cls, settings, find_from=None, tolerant_match=False,
+                      obj_cls=None):
         """Return a ViPErLEEDSettings from the settings passed.
 
         Parameters
@@ -156,15 +157,19 @@ class ViPErLEEDSettings(ConfigParser):
             The settings to load from. If settings is None,
             find_from will be used to search for a default settings.
             If a ViPErLEEDSettings, no copy is made.
-        find_from : str or None, optional
-            The string to look for in a configuration file to
-            be loaded and returned. If None, no search will be
-            performed.
+        find_from : str, DeviceInfo
+            If find_from is a string, it is the string to be looked up in the
+            configuration files to identify that a file is meant for the
+            device. If it is a DeviceInfo, the way to determine the correct
+            settings is up to the reimplementation of find_matching_configs
+            in obj_cls.
         tolerant_match : bool, optional
             Whether matching of find_from should be performed in
             a tolerant way, i.e., neglecting parts of find_from
             between square brackets. Default is False, i.e., use
             the whole string given.
+        obj_cls : object
+            The class of the object to get settings for.
 
         Returns
         -------
@@ -182,12 +187,11 @@ class ViPErLEEDSettings(ConfigParser):
             If settings is invalid, and looking for default settings
             failed.
         """
-        if settings is None and not find_from:
+        if settings is None and (not find_from or not obj_cls):
             raise ValueError(f"{cls.__name__}: cannot create from nothing.")
         if isinstance(settings, cls):
             return settings
-
-        if not settings and not find_from:
+        if not settings and (not find_from or not obj_cls):
             raise ValueError(f"{cls.__name__}: cannot create from nothing.")
 
         config = cls()
@@ -209,8 +213,8 @@ class ViPErLEEDSettings(ConfigParser):
                 )
 
         # Failed to read from settings. Try with find_from.
-        get_cfg = gl.measure.hardwarebase.get_device_config
-        settings = get_cfg(find_from, prompt_if_invalid=False,
+        get_cfg = gl.measure.hardwarebase.get_object_config
+        settings = get_cfg(obj_cls, find_from, prompt_if_invalid=False,
                            tolerant_match=tolerant_match)
         if settings:
             try:

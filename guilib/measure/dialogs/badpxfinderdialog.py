@@ -433,9 +433,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if self.active_camera and self.active_camera.name == camera_name:
             # Same selection
             return
+        camera_cls, _ = self.__available_cameras[camera_name]
 
         # New camera selected.
-        config_name = base.get_device_config(camera_name,
+        config_name = base.get_object_config(camera_cls, camera_name,
                                              directory=_default_config_path(),
                                              parent_widget=self)
 
@@ -450,8 +451,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         if not self.__camera_busy.isVisible():
             self.__camera_busy.show()
-        cls, _ = self.__available_cameras[camera_name]
-        self.active_camera = cls()
+        self.active_camera = camera_cls()
         self.active_camera.error_occurred.connect(self.__on_error_occurred)
         self.active_camera.started.connect(self.adjustSize)
         self.active_camera.preparing.connect(self.__on_camera_preparing)
