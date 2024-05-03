@@ -786,17 +786,17 @@ class ControllerABC(DeviceABC):
     def list_devices(self):
         """List all devices of this class.
 
-        This method must return a list of DeviceInfo instances. The
-        DeviceInfo class is located in the hardwarebase module. Each
-        controller is represented by a single DeviceInfo instance. The
-        DeviceInfo object must contain a .unique_name, and a dict
+        This method must return a list of SettingsInfo instances. The
+        SettingsInfo class is located in the hardwarebase module. Each
+        controller is represented by a single SettingsInfo instance. The
+        SettingsInfo object must contain a .unique_name, and a dict
         holding .more information about the device. .unique_name can
         be the controller name and it's address to make it unique.
 
         Returns
         -------
         devices : list
-            Each element is a DeviceInfo instance containing the name
+            Each element is a SettingsInfo instance containing the name
             of a controller and additional information as a dict.
             The .more dict must contain the following keys:
                 'name':

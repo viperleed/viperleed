@@ -521,7 +521,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         Returns
         -------
         device_list : list
-            Each element is a DeviceInfo instance containing the unique
+            Each element is a SettingsInfo instance containing the unique
             name of a controller and .more information as a dict.
             The .more dict contains the following keys:
                 'name' : str
@@ -565,7 +565,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                 more_info = {k: hardware[k] for k in ('firmware', )}
                 more_info['address'] = ctrl.address
                 more_info['name'] = ctrl.name
-                device_list.append(base.DeviceInfo(txt, more_info))
+                device_list.append(base.SettingsInfo(txt, more_info))
             else:
                 print("Not a ViPErLEED controller at", ctrl.address,
                       hardware, flush=True)

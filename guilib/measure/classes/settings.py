@@ -157,10 +157,10 @@ class ViPErLEEDSettings(ConfigParser):
             The settings to load from. If settings is None,
             find_from will be used to search for a default settings.
             If a ViPErLEEDSettings, no copy is made.
-        find_from : str, DeviceInfo
+        find_from : str, SettingsInfo
             If find_from is a string, it is the string to be looked up in the
             configuration files to identify that a file is meant for the
-            device. If it is a DeviceInfo, the way to determine the correct
+            device. If it is a SettingsInfo, the way to determine the correct
             settings is up to the reimplementation of find_matching_configs
             in obj_cls.
         tolerant_match : bool, optional

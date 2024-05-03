@@ -589,14 +589,14 @@ class ImagingSourceCamera(abc.CameraABC):
 
         Returns
         -------
-        devices : list of DeviceInfo
+        devices : list of SettingsInfo
             Information for each of the detected Imaging Source cameras.
             For each item, only .unique_name is set, i.e., there is no
             .more information.
         """
         # Use empty dictionaries as there is no
         # additional information to pass along.
-        return [base.DeviceInfo(name) for name in self.driver.devices]
+        return [base.SettingsInfo(name) for name in self.driver.devices]
 
     def open(self):
         """Open the camera device.

@@ -923,10 +923,10 @@ class CameraABC(DeviceABC):
     def list_devices(self):
         """Return a list of available devices.
 
-        This method must return a list of DeviceInfo instances. The
-        DeviceInfo class is located in the hardwarebase module. Each
-        camera is represented by a single DeviceInfo instance. The
-        DeviceInfo object contains the uninque device name and a dict
+        This method must return a list of SettingsInfo instances. The
+        SettingsInfo class is located in the hardwarebase module. Each
+        camera is represented by a single SettingsInfo instance. The
+        SettingsInfo object contains the uninque device name and a dict
         holding additional information about the device. If there is
         no additional information about the camera, then this dict can
         be empty.
@@ -934,7 +934,7 @@ class CameraABC(DeviceABC):
         Returns
         -------
         devices : list
-            Each element is a DeviceInfo instance containing the
+            Each element is a SettingsInfo instance containing the
             name of a camera and additional information as a dict.
         """
         return

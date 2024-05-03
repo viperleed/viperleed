@@ -222,10 +222,10 @@ def _get_object_config_not_found(obj_cls, obj_info, **kwargs):
     ----------
     obj_cls : object
         The class of the object to get settings for.
-    obj_info : str, DeviceInfo
+    obj_info : str, SettingsInfo
         If obj_info is a string, it is the string to be looked up in the
         configuration files to identify that a file is meant for the
-        device. If it is a DeviceInfo, the way to determine the correct
+        device. If it is a SettingsInfo, the way to determine the correct
         settings is up to the reimplementation of find_matching_configs
         in obj_cls.
     **kwargs : dict
@@ -291,10 +291,10 @@ def get_object_config(obj_cls, obj_info, **kwargs):
     ----------
     obj_cls : object
         The class of the object to get settings for.
-    obj_info : str, DeviceInfo
+    obj_info : str, SettingsInfo
         If obj_info is a string, it is the string to be looked up in the
         configuration files to identify that a file is meant for the
-        device. If it is a DeviceInfo, the way to determine the correct
+        device. If it is a SettingsInfo, the way to determine the correct
         settings is up to the reimplementation of find_matching_configs
         in obj_cls.
     **kwargs : dict, optional
@@ -395,8 +395,7 @@ def get_devices(package):
         Dictionary of available, supported devices. Keys are
         names of available devices, values are tuples containing
         the driver classes that can be used to handle the devices
-        (one class per device) and additional information about the
-        device as a dict.
+        (one class per device) and the SettingsInfo from list_devices.
 
     Raises
     ------
@@ -457,8 +456,8 @@ def safe_disconnect(signal, *slot):
 
 
 @dataclass
-class DeviceInfo:
-    """A container for information about discovered devices.
+class SettingsInfo:
+    """A container for information about settings of objects.
 
     Attributes
     ----------
