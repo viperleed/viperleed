@@ -282,10 +282,11 @@ def _get_object_config_not_found(obj_cls, obj_info, **kwargs):
     return None
 
 
-def get_object_config(obj_cls, obj_info, **kwargs):
+def get_object_config(obj_cls, obj_info, **kwargs):                             # TODO: This currently may execute in secondary threads. Split settings search from reporting errors and multiple-settings-found.
     """Return the configuration file for a specific device.
 
     Only configuration files with a .ini suffix are considered.
+    This method must be executed in the main GUI thread.
 
     Parameters
     ----------
@@ -416,7 +417,7 @@ def get_devices(package):
             dummy_instance = cls()
             dev_list = dummy_instance.list_devices()
             for device in dev_list:
-                devices[device.unique_name] = (cls, device.more)
+                devices[device.unique_name] = (cls, device)
     return devices
 
 

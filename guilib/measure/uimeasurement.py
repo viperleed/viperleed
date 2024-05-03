@@ -410,9 +410,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         # The get_devices method does return the device name, class and,
         # additional information. The class and additional information
         # are returned as a tuple.
-        for cam_name, (cam_cls, _) in base.get_devices("camera").items():
+        for cam_name, cls_and_info in base.get_devices("camera").items():
             act = cameras.addAction(cam_name)
-            act.setData(cam_cls)
+            act.setData(cls_and_info)
             act.triggered.connect(self.__on_camera_clicked)
         for ctrl_name, cls_and_info in base.get_devices("controller").items():
             act = controllers.addAction(ctrl_name)
@@ -617,25 +617,27 @@ class Measure(ViPErLEEDPluginBase):                                             
             dialog.deleteLater()
             del self._dialogs['device_settings'][full_name]
 
-    def __make_ctrl_settings_dialog(self, ctrl_cls, name, address, full_name):
+    def __make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
         """Make a new settings dialog for a controller."""
-        ctrl = self.__make_device(ctrl_cls, name, address=address)
+        address = ctrl_info.more['address']
+        ctrl = self.__make_device(ctrl_cls, ctrl_info, address=address)
         if not ctrl:
             return
 
         dialog = SettingsDialog(ctrl, parent=self)                              # TODO: modal?
         ctrl.ready_to_show_settings.connect(dialog.open)
         dialog.finished.connect(ctrl.disconnect_)
+        full_name = ctrl_info.unique_name
         self._dialogs['device_settings'][full_name] = dialog
 
-    def __make_device(self, device_cls, device_name, **other_info):
+    def __make_device(self, device_cls, settings_info, **other_info):
         """React to the selection of a device."""
         # Find an appropriate settings file, searching in the default
         # configuration folder, and falling back on the base default
         _cfg_dir = self.system_settings.paths['configuration']
         kwargs = {"directory": _cfg_dir, "parent_widget": self,
                   "third_btn_text": "Create a new settings file"}
-        config = base.get_object_config(device_cls, device_name, **kwargs)
+        config = base.get_object_config(device_cls, settings_info, **kwargs)
 
         if config == "":  # pylint: disable=C1901
             # Did not find one, and user dismissed the dialog.
@@ -671,6 +673,10 @@ class Measure(ViPErLEEDPluginBase):                                             
         elif issubclass(device_cls, CameraABC):
             section = "camera_settings"
 
+        if settings_info.more['name']:
+            device_name = settings_info.more['name']
+        else:
+            device_name = settings_info.unique_name
         device.settings[section]['device_name'] = device_name
         new_cfg_path = Path(_cfg_dir) / f"{device.name_clean}.ini"
         if new_cfg_path.exists():
@@ -708,7 +714,7 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
-        cam_cls = self.sender().data()
+        cam_cls, cam_info = self.sender().data()
 
         # Decide whether we can take the camera object
         # (and its settings) from the known camera viewers
@@ -718,7 +724,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                 return
 
         # Not already available. Make a new camera.
-        camera = self.__make_device(cam_cls, cam_name)
+        camera = self.__make_device(cam_cls, cam_info)
         if not camera:
             return
 
@@ -751,18 +757,15 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def __on_controller_clicked(self, *_):
         """Show settings of the controller selected."""
-        action = self.sender()
-        full_name = action.text()
-        ctrl_cls, ctrl_info = action.data()
+        full_name = self.sender().text()
+        ctrl_cls, ctrl_info = self.sender().data()
         # Note that ctrl_name may be different from
         # the displayed controller name full_name.
-        ctrl_name = ctrl_info['name']
-        ctrl_address = ctrl_info['address']
+        ctrl_name = ctrl_info.more['name']
 
         if full_name not in self._dialogs['device_settings']:
             self.__delete_outdated_ctrl_dialog(ctrl_name)
-            self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_name,
-                                             ctrl_address, full_name)
+            self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_info)
 
         _dialog = self._dialogs['device_settings'].get(full_name, None)
         if not _dialog:
