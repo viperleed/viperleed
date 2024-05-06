@@ -16,7 +16,7 @@ Below, in :numref:`fig-symmetry-figures`, we show an overview of the 17 plane gr
 
 .. _fig-symmetry-figures:
 
-.. figure:: /_static/paper_figures/PlaneGroups.svg
+.. figure:: /_static/paper_figures/PlaneGroups_embedded.svg
     :alt: Overview of planegroups and possible symmetry operations.
     :align: center
     :height: 1000px
