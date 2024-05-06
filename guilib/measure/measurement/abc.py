@@ -253,7 +253,31 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         self.__secondary_controllers = new_controllers
         self.__connect_secondary_controllers()
 
-    def set_settings(self, new_settings):       # TODO: check what happens if trying to make a controller that already exists
+    @classmethod
+    def find_configs_from_info(cls, obj_info, config_files, tolerant_match):
+        """Find appropriate settings for this instance from SettingsInfo.
+
+        Paramaters
+        ----------
+        obj_info : SettingsInfo
+            The additional information that should be used to find
+            appropriate settings.
+        config_files : list
+            A list of paths to configuration files.
+        tolerant_match : bool
+            Whether obj_info should be matched tolerantly. If False,
+            the information is matched exactly. This can be used
+            to find matching default configuration files.
+
+        Returns
+        -------
+        measurement_config_files : list
+            A list of the found settigns paths that
+            contain appropriate settings.
+        """
+        return []                                                               # TODO: Implement
+
+    def set_settings(self, new_settings):                                       # TODO: check what happens if trying to make a controller that already exists
         """Change settings of the measurement.
 
         Settings are loaded only if they are valid. Otherwise
@@ -486,7 +510,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             *self._mandatory_settings,
             *self._other_mandatory_settings
             )
-        return invalid_settings 
+        return invalid_settings
 
     @qtc.pyqtSlot()
     def begin_preparation(self):

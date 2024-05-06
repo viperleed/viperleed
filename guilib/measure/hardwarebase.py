@@ -222,12 +222,10 @@ def _get_object_config_not_found(obj_cls, obj_info, **kwargs):
     ----------
     obj_cls : object
         The class of the object to get settings for.
-    obj_info : str, SettingsInfo
-        If obj_info is a string, it is the string to be looked up in the
-        configuration files to identify that a file is meant for the
-        device. If it is a SettingsInfo, the way to determine the correct
-        settings is up to the reimplementation of find_matching_configs
-        in obj_cls.
+    obj_info : SettingsInfo
+        This SettingsInfo is necessary to determine the correct
+        settings. How exactly is up to the reimplementation of
+        find_matching_configs in obj_cls.
     **kwargs : dict
         The same arguments given to get_object_config
 
@@ -246,11 +244,7 @@ def _get_object_config_not_found(obj_cls, obj_info, **kwargs):
     directory = kwargs.get("directory", DEFAULTS_PATH)
     third_btn_text = kwargs.get("third_btn_text", "")
 
-    if isinstance(obj_info, str):
-        obj_name = obj_info
-    else:
-        obj_name = obj_info.unique_name
-
+    obj_name = obj_info.unique_name
     msg_box = qtw.QMessageBox(parent=parent_widget)
     msg_box.setWindowTitle("No settings file found")
     msg_box.setText(
@@ -292,12 +286,10 @@ def get_object_config(obj_cls, obj_info, **kwargs):                             
     ----------
     obj_cls : object
         The class of the object to get settings for.
-    obj_info : str, SettingsInfo
-        If obj_info is a string, it is the string to be looked up in the
-        configuration files to identify that a file is meant for the
-        device. If it is a SettingsInfo, the way to determine the correct
-        settings is up to the reimplementation of find_matching_configs
-        in obj_cls.
+    obj_info : SettingsInfo
+        This SettingsInfo is necessary to determine the correct
+        settings. How exactly is up to the reimplementation of
+        find_matching_configs in obj_cls.
     **kwargs : dict, optional
         directory : str or Path, optional
             The base of the directory tree in which the
@@ -305,10 +297,9 @@ def get_object_config(obj_cls, obj_info, **kwargs):                             
             search is recursive. Default is the path to
             the _defaults directory.
         tolerant_match : bool, optional
-            Whether obj_info as str should be looked up tolerantly
-            or not. If False, obj_info is matched exactly,
-            otherwise parts of obj_info within square brackets
-            are ignored. Default is True.
+            Whether settings in obj_info should be looked up tolerantly
+            or not. What this entails is up to the reimplementation of
+            find_matching_configs. Default is True.
         prompt_if_invalid : bool, optional
             In case the search for a config file failed, pop up
             a dialog asking the user for input. The search is
@@ -359,10 +350,7 @@ def get_object_config(obj_cls, obj_info, **kwargs):                             
 
     # Found multiple config files that match.
     # Let the user pick which one to use
-    if isinstance(obj_info, str):
-        obj_name = obj_info
-    else:
-        obj_name = obj_info.unique_name
+    obj_name = obj_info.unique_name
     names = [f.name for f in device_config_files]
     dropdown = DropdownDialog(
         "Found multiple settings files",

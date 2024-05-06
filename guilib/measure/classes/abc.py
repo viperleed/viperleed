@@ -29,6 +29,7 @@ from PyQt5 import QtCore as qtc
 from viperleed.guilib.measure.hardwarebase import _device_name_re
 from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import QMetaABC
+from viperleed.guilib.measure.hardwarebase import SettingsInfo
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
@@ -101,29 +102,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
     @classmethod
     def find_matching_configs(cls, obj_info, directory, tolerant_match):
-        """Find .ini files for obj_info in the tree starting at directory."""
-        directory = Path(directory).resolve()
-        config_files = directory.glob('**/*.ini')
-        if isinstance(obj_info, str):
-            device_config_files = cls.find_configs_from_name(
-                                    obj_info, config_files, tolerant_match
-                                    )
-        else:
-            device_config_files = cls.find_configs_from_info(
-                                    obj_info, config_files, tolerant_match
-                                    )
-        return device_config_files
+        """Find .ini files for obj_info in the tree starting at directory.
 
-    def find_configs_from_info(obj_info, config_files, tolerant_match):
-        """Find appropriate settings for this instance from DeviceInfo.
-        
-        This method can be reimplemented in subclasses to find
-        appropriate settings from obj_info. After this method has
-        determined appropriate settings, it must return them as a list.
-        
         Paramaters
         ----------
-        obj_info : DeviceInfo
+        obj_info : SettingsInfo
             The additional information that should be used to find
             appropriate settings.
         config_files : list
@@ -132,23 +115,48 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             Whether the device name should be matched tolerantly. If
             False, the device name is matched exactly, otherwise parts
             of it within square brackets are ignored.
-        
+
         Returns
         -------
-        device_config_files : list
+        obj_config_files : list
+            A list of the found settigns paths that
+            contain appropriate settings.
+        """
+        directory = Path(directory).resolve()
+        config_files = directory.glob('**/*.ini')
+        obj_config_files = cls.find_configs_from_info(
+                                obj_info, config_files, tolerant_match
+                                )
+        return obj_config_files
+
+    @classmethod
+    @abstractmethod
+    def find_configs_from_info(cls, obj_info, config_files, tolerant_match):
+        """Find appropriate settings for this instance from SettingsInfo.
+
+        This method must be reimplemented in subclasses to find
+        appropriate settings from obj_info. After this method has
+        determined appropriate settings, it must return them as a list.
+
+        Paramaters
+        ----------
+        obj_info : SettingsInfo
+            The additional information that should be used to find
+            appropriate settings.
+        config_files : list
+            A list of paths to configuration files.
+        tolerant_match : bool
+            Whether obj_info should be matched tolerantly. If False,
+            the information is matched exactly. This can be used
+            to find matching default configuration files.
+
+        Returns
+        -------
+        obj_config_files : list
             A list of the found settigns paths that
             contain appropriate settings.
         """
         return []
-
-    def find_configs_from_name(obj_name, config_files, tolerant_match):
-        """Find appropriate settings for this instance from name."""
-        device_config_files = []
-        for config_name in config_files:
-            with open(config_name, 'r', encoding='utf-8') as config_file:
-                if _device_name_found(config_file, obj_name, tolerant_match):
-                    device_config_files.append(config_name)
-        return device_config_files
 
     def are_settings_invalid(self, new_settings):
         """Check if there are any invalid settings.
@@ -205,6 +213,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             If any element of the new_settings does
             not fit the mandatory settings.
         """
+        # Make a dummy SettingsInfo that will
+        # be used to find settings from default name.
+        if isinstance(find_from, str):
+            find_from = SettingsInfo(find_from)
+            find_from.more['name'] = find_from.unique_name
         try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones
             new_settings = ViPErLEEDSettings.from_settings(
                             new_settings, find_from=find_from, obj_cls=self

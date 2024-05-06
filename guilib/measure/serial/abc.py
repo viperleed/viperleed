@@ -277,6 +277,14 @@ class SerialABC(HardwareABC):
         self.__port = qts.QSerialPort(port_name, parent=self)
         self.connect_()
 
+    @classmethod
+    def find_configs_from_info(*_):
+        """Return empty list."""
+        # Generally speaking controllers have to find the approriate
+        # settings for their serial. Therefore this method should never
+        # be called.
+        return []
+
     def set_settings(self, new_settings):
         """Change settings of the port.
 

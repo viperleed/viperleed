@@ -28,6 +28,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ImagingSourceError, SinkFormat,
     )
 from viperleed.guilib.measure.classes.abc import QObjectABCErrors
+from viperleed.guilib.measure.classes.abc import _device_name_found
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 
 
@@ -530,6 +531,35 @@ class ImagingSourceCamera(abc.CameraABC):
     def close(self):
         """Close the camera device."""
         self.driver.close()
+
+    @classmethod
+    def find_configs_from_info(cls, obj_info, config_files, tolerant_match):
+        """Find appropriate settings for this instance from SettingsInfo.
+
+        Paramaters
+        ----------
+        obj_info : SettingsInfo
+            Provides the unique camera name.
+        config_files : list
+            A list of paths to configuration files.
+        tolerant_match : bool
+            Whether the device name should be matched tolerantly. If
+            False, the device name is matched exactly, otherwise parts
+            of it within square brackets are ignored.
+
+        Returns
+        -------
+        device_config_files : list
+            A list of the found settigns paths that
+            contain appropriate settings.
+        """
+        obj_name = obj_info.unique_name
+        device_config_files = []
+        for config_name in config_files:
+            with open(config_name, 'r', encoding='utf-8') as config_file:
+                if _device_name_found(config_file, obj_name, tolerant_match):
+                    device_config_files.append(config_name)
+        return device_config_files
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings.

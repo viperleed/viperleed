@@ -433,10 +433,10 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if self.active_camera and self.active_camera.name == camera_name:
             # Same selection
             return
-        camera_cls, _ = self.__available_cameras[camera_name]
+        camera_cls, camera_info = self.__available_cameras[camera_name]
 
         # New camera selected.
-        config_name = base.get_object_config(camera_cls, camera_name,
+        config_name = base.get_object_config(camera_cls, camera_info,
                                              directory=_default_config_path(),
                                              parent_widget=self)
 
