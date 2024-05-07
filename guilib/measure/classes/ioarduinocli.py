@@ -833,11 +833,11 @@ class FirmwareUploader(ArduinoCLI):
 
         # Detect ViPErLEED controllers.
         for name, (cls, info) in base.get_devices('controller').items():
-            port = info.get('address')
+            port = info.more.get('address')
             ctrl = next(self.ctrls_with_port(ctrl_dict, port), None)
             if not ctrl:
                 continue
-            ctrl_dict[ctrl]['version'] = info.get('firmware', NOT_SET)
+            ctrl_dict[ctrl]['version'] = info.more.get('firmware', NOT_SET)
             if not getattr(cls, 'box_id', None):
                 continue
             # Notice the -2: the last two entries in name are the

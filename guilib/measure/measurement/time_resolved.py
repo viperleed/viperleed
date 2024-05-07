@@ -16,9 +16,9 @@ from math import ceil
 
 from PyQt5 import QtCore as qtc
 
-from viperleed.guilib.measure.measurement.abc import (MeasurementABC,
-                                                      MeasurementErrors)
+from viperleed.guilib.measure.classes.abc import QObjectABCErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
+from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure import hardwarebase as base
 
 
@@ -130,14 +130,15 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             'energy_step_duration')
         except (TypeError, ValueError):
             # Not an int
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/energy_step_duration', '')
             interval = min_t
 
         if interval < min_t:
             base.emit_error(
-                self, MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
-                f'{interval} (too short)',
+                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                type(self).__name__, f'{interval} (too short)',
                 'measurement_settings/energy_step_duration', min_t
                 )
             interval = min_t
@@ -171,7 +172,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             'is_continuous')
         except ValueError:
             # Not a valid boolean
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/is_continuous', '')
             return False
 
@@ -190,7 +192,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             fallback=min_t)
         except (TypeError, ValueError):
             # Not an int
-            base.emit_error(self, MeasurementErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'measurement_settings/measurement_interval', '')
             interval = min_t
 
@@ -198,8 +201,9 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             txt = f"{interval} (too short)"
             interval = min_t
             base.emit_error(
-                self, MeasurementErrors.INVALID_SETTING_WITH_FALLBACK,
-                txt, 'measurement_settings/measurement_interval', interval
+                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                type(self).__name__, txt,
+                'measurement_settings/measurement_interval', interval
                 )
             self.settings.set('measurement_settings', 'measurement_interval',
                               str(interval))
@@ -359,7 +363,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         -------
         None.
         """
-        base.safe_disconnect(self.primary_controller.controller_busy,
+        base.safe_disconnect(self.primary_controller.busy_changed,
                              self.__check_is_finished)
         if self.aborted:
             # We entered this call after the measurement was aborted,
@@ -558,10 +562,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         __request_continuous_mode(False)
             Tell the controller to turn continuous mode off.
         """
-        # First disconnect controller_busy from slots that may be
-        # inadvertently called in the super() call below
+        # First disconnect controller busy_changed from slots that may
+        # be inadvertently called in the super() call below.
         for ctrl in self.controllers:
-            base.safe_disconnect(ctrl.controller_busy,
+            base.safe_disconnect(ctrl.busy_changed,
                                  self.__check_is_finished)
 
         # Disconnect other signals that we will not need any longer.
@@ -614,5 +618,5 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # sure it properly turns "not busy" when it is done stopping.
         primary = self.primary_controller
         primary.busy = True
-        primary.controller_busy.connect(self.__check_is_finished, type=_UNIQUE)
+        primary.busy_changed.connect(self.__check_is_finished, type=_UNIQUE)
         primary.stop()

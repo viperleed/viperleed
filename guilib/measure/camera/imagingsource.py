@@ -19,15 +19,16 @@ import numpy as np
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.camera import (
+    abc, imagingsourcecalibration as is_calib
+    )
 from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
     ImagingSourceError, SinkFormat,
     )
-from viperleed.guilib.measure.camera import (
-    abc,
-    imagingsourcecalibration as is_calib
-    )
-from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.classes.abc import QObjectABCErrors
+from viperleed.guilib.measure.classes.abc import _device_name_found
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 
 
@@ -67,7 +68,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
 
     Emits
     -----
-    camera.camera_busy(False)
+    camera.busy_changed(False)
         After enough frames have been received while estimating the
         optimal frame rate.
     camera.abort_trigger_burst()
@@ -439,8 +440,8 @@ class ImagingSourceCamera(abc.CameraABC):
         _min, _max = self.get_black_level_limits()
         if black_level < _min or black_level > _max:
             base.emit_error(
-                self, abc.CameraErrors.INVALID_SETTINGS,
-                'camera_settings/black_level',
+                self, QObjectABCErrors.INVALID_SETTINGS,
+                type(self).__name__, 'camera_settings/black_level',
                 f"{black_level} [out of range ({_min}, {_max})]",
                 )
             return -2
@@ -459,8 +460,9 @@ class ImagingSourceCamera(abc.CameraABC):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
             base.emit_error(
-                self, abc.CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                color_fmt_s, 'camera_settings/color_format', 'Y16'
+                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                type(self).__name__, color_fmt_s,
+                'camera_settings/color_format', 'Y16'
                 )
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
@@ -475,8 +477,9 @@ class ImagingSourceCamera(abc.CameraABC):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
             base.emit_error(
-                self, abc.CameraErrors.INVALID_SETTING_WITH_FALLBACK,
-                color_fmt, 'camera_settings/color_format', 'Y16'
+                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                type(self).__name__, color_fmt,
+                'camera_settings/color_format', 'Y16'
                 )
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
@@ -528,6 +531,35 @@ class ImagingSourceCamera(abc.CameraABC):
     def close(self):
         """Close the camera device."""
         self.driver.close()
+
+    @classmethod
+    def find_configs_from_info(cls, obj_info, config_files, tolerant_match):
+        """Find appropriate settings for this instance from SettingsInfo.
+
+        Paramaters
+        ----------
+        obj_info : SettingsInfo
+            Provides the unique camera name.
+        config_files : list
+            A list of paths to configuration files.
+        tolerant_match : bool
+            Whether the device name should be matched tolerantly. If
+            False, the device name is matched exactly, otherwise parts
+            of it within square brackets are ignored.
+
+        Returns
+        -------
+        device_config_files : list
+            A list of the found settigns paths that
+            contain appropriate settings.
+        """
+        obj_name = obj_info.unique_name
+        device_config_files = []
+        for config_name in config_files:
+            with open(config_name, 'r', encoding='utf-8') as config_file:
+                if _device_name_found(config_file, obj_name, tolerant_match):
+                    device_config_files.append(config_name)
+        return device_config_files
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings.
@@ -587,14 +619,14 @@ class ImagingSourceCamera(abc.CameraABC):
 
         Returns
         -------
-        devices : list of DeviceInfo
+        devices : list of SettingsInfo
             Information for each of the detected Imaging Source cameras.
             For each item, only .unique_name is set, i.e., there is no
             .more information.
         """
         # Use empty dictionaries as there is no
         # additional information to pass along.
-        return [base.DeviceInfo(name) for name in self.driver.devices]
+        return [base.SettingsInfo(name) for name in self.driver.devices]
 
     def open(self):
         """Open the camera device.
@@ -815,7 +847,7 @@ class ImagingSourceCamera(abc.CameraABC):
         # Connect the busy signal here. The callback
         # takes care of making the camera not busy
         # when done with the estimate.
-        base.safe_connect(self.camera_busy, self.__start_postponed,
+        base.safe_connect(self.busy_changed, self.__start_postponed,
                           type=qtc.Qt.UniqueConnection)
 
         self.is_finding_best_frame_rate = True
@@ -864,7 +896,7 @@ class ImagingSourceCamera(abc.CameraABC):
             # Postpone actual starting to after optimization is over.
             # Once done, the camera will be automatically started with
             # a call to __start_postponed() (connected in the next
-            # call to the camera_busy signal).
+            # call to the busy_changed signal).
             self.start_frame_rate_optimization()
         else:
             self.best_next_rate = 1024
@@ -874,14 +906,14 @@ class ImagingSourceCamera(abc.CameraABC):
     def __start_postponed(self, *_):
         """Actually start camera after frame-rate estimate is over.
 
-        This method is connected to the camera_busy signal right
+        This method is connected to the busy_changed signal right
         before the camera starts estimating the best frame rate.
 
         Parameters
         ----------
         *_ : object
             Unused arguments. Necessary to allow connection to
-            the camera_busy signal.
+            the busy_changed signal.
 
         Returns
         -------
@@ -890,7 +922,7 @@ class ImagingSourceCamera(abc.CameraABC):
         if self.is_finding_best_frame_rate:
             return
 
-        base.safe_disconnect(self.camera_busy, self.__start_postponed)
+        base.safe_disconnect(self.busy_changed, self.__start_postponed)
 
         # Call base that starts the processing thread if needed
         super().start()

@@ -18,6 +18,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.classes.abc import QObjectWithError
 
 
 _INVOKE = qtc.QMetaObject.invokeMethod
@@ -167,7 +168,7 @@ class CalibrationTaskOperation(IntEnum):
         self._fmt_args = (fmt_args, fmt_kwargs)
 
 
-class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
+class CalibrationTask(QObjectWithError, metaclass=base.QMetaABC):
     """Abstract class for device-calibration tasks.
 
     Notice that CalibrationTask instances are parent-less. As such
@@ -179,7 +180,6 @@ class CalibrationTask(qtc.QObject, metaclass=base.QMetaABC):
 
     aborted = qtc.pyqtSignal()
     done = qtc.pyqtSignal()
-    error_occurred = qtc.pyqtSignal(tuple)
 
     # Typical arguments of progress_occurred:
     # - the first one is always self.progress_name
