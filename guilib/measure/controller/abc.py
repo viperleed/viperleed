@@ -550,10 +550,10 @@ class ControllerABC(DeviceABC):
                 self._settings.update_file()
 
         serial_cls_name = self._settings.get('controller', 'serial_class',
-                                           fallback='')                         # TODO: remove fallback in 1.0
+                                             fallback='')                       # TODO: remove fallback in 1.0
         if not serial_cls_name:                                                 # TODO: only here for backwards compatibility, remove in 1.0
             serial_cls_name = self._settings.get('controller',
-                                               'serial_port_class')
+                                                 'serial_port_class')
         if self.serial.__class__.__name__ != serial_cls_name:
             try:
                 serial_class = base.class_from_name('serial', serial_cls_name)
@@ -577,7 +577,6 @@ class ControllerABC(DeviceABC):
         # the serial)!
         if self.__address:
             self.serial.connect_()
-        # self._settings = self.serial.settings                                 # TODO: No longer necessary?
         self._time_to_trigger = 0
         self.__hash = -1
         return True

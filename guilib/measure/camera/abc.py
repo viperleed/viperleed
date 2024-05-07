@@ -466,8 +466,7 @@ class CameraABC(DeviceABC):
             base.emit_error(self,
                             QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
                             type(self).__name__, mode, 'camera_settings/mode',
-                            'triggered'
-                            )
+                            'triggered')
             mode = 'triggered'
             self.settings.set('camera_settings', 'mode', mode)
         return mode
@@ -493,8 +492,7 @@ class CameraABC(DeviceABC):
                             QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
                             type(self).__name__,
                             f"{n_frames} [out of range ({min_n}, {max_n})]",
-                            'measurement_settings/n_frames', 1
-                            )
+                            'measurement_settings/n_frames', 1)
             n_frames = 1
             self.settings.set('measurement_settings', 'n_frames', '1')
         self.__properties['n_frames'] = n_frames

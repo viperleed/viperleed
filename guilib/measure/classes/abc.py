@@ -75,7 +75,7 @@ class QObjectABCErrors(ViPErLEEDErrorEnum):
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
     """Base class of measurement objects with error detection."""
 
-    # Emitted whenver an error has been detected. Contains
+    # Emitted whenever an error has been detected. Contains
     # information about the error which occurred.
     error_occurred = qtc.pyqtSignal(tuple)
 
@@ -104,7 +104,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def find_matching_configs(cls, obj_info, directory, tolerant_match):
         """Find .ini files for obj_info in the tree starting at directory.
 
-        Paramaters
+        Parameters
         ----------
         obj_info : SettingsInfo
             The additional information that should be used to find
@@ -112,14 +112,13 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         config_files : list
             A list of paths to configuration files.
         tolerant_match : bool
-            Whether the device name should be matched tolerantly. If
-            False, the device name is matched exactly, otherwise parts
-            of it within square brackets are ignored.
+            Whether obj_info should be matched tolerantly. If False,
+            the information is matched exactly.
 
         Returns
         -------
         obj_config_files : list
-            A list of the found settigns paths that
+            A list of the found settings paths that
             contain appropriate settings.
         """
         directory = Path(directory).resolve()
@@ -138,7 +137,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         appropriate settings from obj_info. After this method has
         determined appropriate settings, it must return them as a list.
 
-        Paramaters
+        Parameters
         ----------
         obj_info : SettingsInfo
             The additional information that should be used to find
@@ -153,7 +152,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         Returns
         -------
         obj_config_files : list
-            A list of the found settigns paths that
+            A list of the found settings paths that
             contain appropriate settings.
         """
         return []
@@ -178,7 +177,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """
         return new_settings.has_settings(*self._mandatory_settings)
 
-    def set_settings(self, new_settings, find_from=None):                                       # TODO: make sure reimplementations and extensions also return bool
+    def set_settings(self, new_settings, find_from=None):
         """Set new settings for this instance.
 
         Parameters
@@ -227,7 +226,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
                        type(self).__name__)
             return False
         except NoDefaultSettingsError:
-            base.emit_error(self, QObjectABCErrors.DEFAULT_SETTINGS_CORRUPTED,
+            emit_error(self, QObjectABCErrors.DEFAULT_SETTINGS_CORRUPTED,
                             find_from)
             return False
         invalid = self.are_settings_invalid(new_settings)
@@ -273,7 +272,7 @@ class HardwareABC(QObjectWithSettingsABC):
         Returns
         -------
         busy : bool
-        True if the instence is busy.
+        True if the instance is busy.
         """
         return self._busy
 
@@ -281,7 +280,7 @@ class HardwareABC(QObjectWithSettingsABC):
     def set_busy(self, is_busy):
         """Set busy state of the instance.
 
-        Paramaters
+        Parameters
         ----------
         is_busy : bool
             True if the instance is busy.
@@ -302,11 +301,18 @@ class DeviceABC(HardwareABC):
     """Abstract base class of hardware device objects."""
 
     @abstractmethod
-    def list_devices(self):                                                     # TODO: Base implementation?
+    def list_devices(self):
         """List all devices of this class.
+
+        This method must return a list of SettingsInfo instances. The
+        SettingsInfo class is located in the hardwarebase module. Each
+        controller is represented by a single SettingsInfo instance. The
+        SettingsInfo object must contain a .unique_name and can contain
+        .more information as a dict.
 
         Returns
         -------
         devices : list
-            Each element is a string representing the name of a device.
+            Each element is a SettingsInfo instance containing the name
+            of a device and additional information as a dict.
         """

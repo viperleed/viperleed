@@ -344,8 +344,7 @@ class ViPErLEEDSerial(SerialABC):
             return False
 
         if self.firmware_version >= "0.7":
-            _debug = self.settings.getint("available_commands",
-                                               "pc_debug")
+            _debug = self.settings.getint("available_commands", "pc_debug")
             if self.__is_waiting_for_debug_msg:
                 self.__is_waiting_for_debug_msg = False
                 return True

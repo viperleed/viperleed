@@ -309,7 +309,7 @@ class ViPErinoController(abc.MeasureControllerABC):
 
         Parameters
         ----------
-        new_settings : ViPErLEEDSettings
+        settings : ViPErLEEDSettings
             The new settings.
 
         Returns
