@@ -61,7 +61,17 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # controller to return measurements. The time interval
         # is read from the settings.
         trigger = self.__trigger_one_measurement = qtc.QTimer(parent=self)
+        trigger.setSingleShot(True)
         trigger.timeout.connect(self.__on_one_measurement_triggered)
+
+        # A third timer that attempts to trigger again if
+        # __trigger_one_measurement failed to do so.
+        self._retry_triggering = qtc.QTimer(parent=self)
+        self._retry_triggering.setSingleShot(True)
+        self._retry_triggering.setInterval(10)
+        self._retry_triggering.timeout.connect(
+            self.__on_one_measurement_triggered
+            )
 
         # Finally, set the _camera_timer interval to zero, so
         # we can fire it at the same time as measurements are
@@ -251,6 +261,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             timers = (
                 self.__trigger_one_measurement,
                 self.__energy_step_timer,
+                self._retry_triggering,
                 )
         except AttributeError:
             # .abort() happened during super().__init__
@@ -503,28 +514,35 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
     @qtc.pyqtSlot()
     def __on_one_measurement_triggered(self):
-       """Increment the number of missing data for all devices."""
-       if self.is_continuous:
-           return
+        """Increment the number of missing data for all devices."""
+        if self.is_continuous or self.aborted:
+            # Also return if aborted because the _retry_triggering timer
+            # might time out before the abort method stops it, which
+            # would lead to this method being called after an abort.
+            return
+        if any(self._missing_data.values()):
+            self._retry_triggering.start()
+            return
 
-       # Notice that we always invoke with a QueuedConnection (which is
-       # the default for objects in another thread) even if the object
-       # is in the same thread. This is to ensure that the next portion
-       # of code runs as fast as possible, and does not stall in calling
-       # methods in the same thread as the measurement
-       remaining_time = self.__energy_step_timer.remainingTime()
-       for ctrl in self.controllers:
-           if not ctrl.measures():
-               continue
-           if remaining_time < ctrl.time_to_first_measurement:
-               continue
-           _INVOKE(ctrl, 'measure_now', _QUEUED)
-           self._missing_data[ctrl] += 1
-       for camera in self.cameras:
-           if remaining_time < camera.time_to_image_ready:
-               continue
-           _INVOKE(camera, 'trigger_now', _QUEUED)
-           self._missing_data[camera] += 1
+        # Notice that we always invoke with a QueuedConnection (which is
+        # the default for objects in another thread) even if the object
+        # is in the same thread. This is to ensure that the next portion
+        # of code runs as fast as possible, and does not stall in calling
+        # methods in the same thread as the measurement
+        remaining_time = self.__energy_step_timer.remainingTime()
+        for ctrl in self.controllers:
+            if not ctrl.measures():
+                continue
+            if remaining_time < ctrl.time_to_first_measurement:
+                continue
+            _INVOKE(ctrl, 'measure_now', _QUEUED)
+            self._missing_data[ctrl] += 1
+        for camera in self.cameras:
+            if remaining_time < camera.time_to_image_ready:
+                continue
+            _INVOKE(camera, 'trigger_now', _QUEUED)
+            self._missing_data[camera] += 1
+        self.__trigger_one_measurement.start()
 
     def __prepare_continuous_mode(self):
         """Adjust the preparations to fit continuous mode.
@@ -602,7 +620,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         """
         if not self.is_continuous:
             # Stop triggering for this step...
-            self.__trigger_one_measurement.stop()
             # ...and check if we can initiate the next one
             super()._ready_for_next_measurement()
             return
