@@ -1099,13 +1099,18 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         # Later on, this check will only happen if the unique name
         # of the controller in the settings file that was passed
         # is not found in the device list.
+        # Backwards compatibility fix for port_name:
+        address = 'address'
         invalid = config.has_settings(('controller', 'address'))
+        if invalid:
+            address = 'port_name'
+            invalid = config.has_settings(('controller', 'port_name'))
         if invalid:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'controller/address',
                             f'No address in {config.last_file}')
             raise RuntimeError
-        address = config.get('controller', 'address')
+        address = config.get('controller', address)
         if not address:
             base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
                             'controller/address',
