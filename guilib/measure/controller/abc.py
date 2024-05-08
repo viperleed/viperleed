@@ -1085,7 +1085,8 @@ class ControllerABC(qtc.QObject, metaclass=base.QMetaABC):
 
         # Disconnect signal: will be reconnected
         # during the call to continue_preparation
-        self.serial.serial_busy.disconnect(self.__do_preparation_step)
+        base.safe_disconnect(self.serial.serial_busy,
+                             self.__do_preparation_step)
         if self.__can_continue_preparation:
             # The whole preparation is now over.
             # Guarantee that any unsent message that may have come

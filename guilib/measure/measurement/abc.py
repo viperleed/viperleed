@@ -533,7 +533,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
                 pass
             # Measurements that may still be delivered during
             # preparation should be discarded:
-            ctrl.data_ready.disconnect(self._on_controller_data_ready)
+            base.safe_disconnect(ctrl.data_ready,
+                                 self._on_controller_data_ready)
 
             # When controllers will turn "not busy" at the end of
             # this first preparation segment, go to second segment
@@ -745,9 +746,11 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         if any(device.busy for device in self.devices):
             return
         for ctrl in self.controllers:
-            ctrl.controller_busy.disconnect(self.__check_preparation_finished)
+            base.safe_disconnect(ctrl.controller_busy,
+                                 self.__check_preparation_finished)
         for camera in self.cameras:
-            camera.camera_busy.disconnect(self.__check_preparation_finished)
+            base.safe_disconnect(camera.camera_busy,
+                                 self.__check_preparation_finished)
 
         # Finally, reconnect all devices to
         # be ready to actually take measurements
