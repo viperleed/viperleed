@@ -1346,6 +1346,8 @@ class MeasurementABC(qtc.QObject, metaclass=base.QMetaABC):                     
         -------
         None.
         """
+        if self.aborted:
+            return
         if any(device.busy for device in self.devices):
             return
         if any(miss < 0 for miss in self._missing_data.values()):
