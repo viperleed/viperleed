@@ -211,12 +211,12 @@ def _device_name_re(name):
     return re.compile("|".join(r'^.*' + p + r'\s*$' for p in _patterns))
 
 
-def _get_object_config_not_found(obj_cls, obj_info, **kwargs):
+def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     """Return a device config when it was not found in the original path.
 
-    This function is only called as part of get_object_config
+    This function is only called as part of get_object_settings
     in case the no config file was found with the original arguments
-    given to get_object_config. Prompts the user for an action.
+    given to get_object_settings. Prompts the user for an action.
 
     Parameters
     ----------
@@ -225,9 +225,9 @@ def _get_object_config_not_found(obj_cls, obj_info, **kwargs):
     obj_info : SettingsInfo
         This SettingsInfo is necessary to determine the correct
         settings. How exactly is up to the reimplementation of
-        find_matching_configs in obj_cls.
+        find_matching_settings in obj_cls.
     **kwargs : dict
-        The same arguments given to get_object_config
+        The same arguments given to get_object_settings
 
     Returns
     -------
@@ -269,17 +269,17 @@ def _get_object_config_not_found(obj_cls, obj_info, **kwargs):
             )
         if new_path:
             kwargs["directory"] = new_path
-            return get_object_config(obj_cls, obj_info, **kwargs)
+            return get_object_settings(obj_cls, obj_info, **kwargs)
     if third_btn and _clicked is not third_btn:
         # User had another option but dismissed the dialog
         return ""
     return None
 
 
-def get_object_config(obj_cls, obj_info, **kwargs):                             # TODO: This currently may execute in secondary threads. Split settings search from reporting errors and multiple-settings-found.
-    """Return the configuration file for a specific device.
+def get_object_settings(obj_cls, obj_info, **kwargs):                           # TODO: This currently may execute in secondary threads. Split settings search from reporting errors and multiple-settings-found.
+    """Return the settings file for a specific device.
 
-    Only configuration files with a .ini suffix are considered.
+    Only settings files with a .ini suffix are considered.
     This method must be executed in the main GUI thread.
 
     Parameters
@@ -289,17 +289,16 @@ def get_object_config(obj_cls, obj_info, **kwargs):                             
     obj_info : SettingsInfo
         This SettingsInfo is necessary to determine the correct
         settings. How exactly is up to the reimplementation of
-        find_matching_configs in obj_cls.
+        find_matching_settings in obj_cls.
     **kwargs : dict, optional
         directory : str or Path, optional
-            The base of the directory tree in which the
-            configuration file should be looked for. The
-            search is recursive. Default is the path to
-            the _defaults directory.
+            The base of the directory tree in which the settings file
+            should be looked for. The search is recursive. Default is
+            the path to the _defaults directory.
         tolerant_match : bool, optional
             Whether settings in obj_info should be looked up tolerantly
             or not. What this entails is up to the reimplementation of
-            find_matching_configs. Default is True.
+            find_matching_settings. Default is True.
         prompt_if_invalid : bool, optional
             In case the search for a config file failed, pop up
             a dialog asking the user for input. The search is
@@ -321,8 +320,8 @@ def get_object_config(obj_cls, obj_info, **kwargs):                             
     Returns
     -------
     path_to_config : Path, "", or None
-        The path to the only configuration file successfully
-        found. None or "" if no configuration file was found.
+        The path to the only settings file successfully
+        found. None or "" if no settings file was found.
         None is always returned if prompt_if_invalid is False,
         or because the user dismissed the pop-up. The empty
         string is returned if an alternative option was given
@@ -334,7 +333,7 @@ def get_object_config(obj_cls, obj_info, **kwargs):                             
     prompt_if_invalid = kwargs.get("prompt_if_invalid", True)
     parent_widget = kwargs.get("parent_widget", None)
 
-    device_config_files = obj_cls.find_matching_configs(
+    device_config_files = obj_cls.find_matching_settings(
                             obj_info, directory, tolerant_match
                             )
 
@@ -346,7 +345,7 @@ def get_object_config(obj_cls, obj_info, **kwargs):                             
         return None
 
     if not device_config_files:
-        return _get_object_config_not_found(obj_cls, obj_info, **kwargs)
+        return _get_object_settings_not_found(obj_cls, obj_info, **kwargs)
 
     # Found multiple config files that match.
     # Let the user pick which one to use

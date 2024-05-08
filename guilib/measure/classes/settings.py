@@ -161,7 +161,7 @@ class ViPErLEEDSettings(ConfigParser):
             find_from contains information to look for in the
             configuration files, the way to determine the correct
             settings is up to the reimplementation of
-            find_matching_configs in obj_cls.
+            find_matching_settings in obj_cls.
         tolerant_match : bool, optional
             Whether matching of find_from should be performed in
             a tolerant way, i.e., neglecting parts of find_from
@@ -212,9 +212,9 @@ class ViPErLEEDSettings(ConfigParser):
                 )
 
         # Failed to read from settings. Try with find_from.
-        get_cfg = gl.measure.hardwarebase.get_object_config
-        settings = get_cfg(obj_cls, find_from, prompt_if_invalid=False,
-                           tolerant_match=tolerant_match)
+        get_settings = gl.measure.hardwarebase.get_object_settings
+        settings = get_settings(obj_cls, find_from, prompt_if_invalid=False,
+                                tolerant_match=tolerant_match)
         if settings:
             try:
                 config.read(settings)

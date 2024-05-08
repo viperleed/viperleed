@@ -12,8 +12,8 @@ This module contains the definition of the ViPErinoController
 class and its associated ViPErLEEDErrorEnum class ViPErinoErrors
 which gives commands to the ViPErinoSerialWorker class.
 """
-import threading
 import re
+import threading
 import time
 
 from PyQt5 import QtCore as qtc
@@ -33,9 +33,9 @@ from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
 
 
 _MANDATORY_CMD_NAMES = (
-    "PC_AUTOGAIN", "PC_CONFIGURATION", "PC_SET_UP_ADCS", "PC_OK", "PC_RESET",
-    "PC_SET_VOLTAGE", "PC_ERROR", "PC_CALIBRATION", "PC_MEASURE_ONLY",
-    "PC_CHANGE_MEAS_MODE", "PC_STOP", "PC_SET_VOLTAGE_ONLY", "PC_SET_SERIAL_NR"
+    'PC_AUTOGAIN', 'PC_CONFIGURATION', 'PC_SET_UP_ADCS', 'PC_OK', 'PC_RESET',
+    'PC_SET_VOLTAGE', 'PC_ERROR', 'PC_CALIBRATION', 'PC_MEASURE_ONLY',
+    'PC_CHANGE_MEAS_MODE', 'PC_STOP', 'PC_SET_VOLTAGE_ONLY', 'PC_SET_SERIAL_NR'
     )
 
 _INVOKE = qtc.QMetaObject.invokeMethod

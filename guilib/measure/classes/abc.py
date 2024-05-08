@@ -101,7 +101,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         self.set_settings(new_settings)
 
     @classmethod
-    def find_matching_configs(cls, obj_info, directory, tolerant_match):
+    def find_matching_settings(cls, obj_info, directory, tolerant_match):
         """Find .ini files for obj_info in the tree starting at directory.
 
         Parameters

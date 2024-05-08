@@ -637,7 +637,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         _cfg_dir = self.system_settings.paths['configuration']
         kwargs = {"directory": _cfg_dir, "parent_widget": self,
                   "third_btn_text": "Create a new settings file"}
-        config = base.get_object_config(device_cls, settings_info, **kwargs)
+        config = base.get_object_settings(device_cls, settings_info, **kwargs)
 
         if config == "":  # pylint: disable=C1901
             # Did not find one, and user dismissed the dialog.
