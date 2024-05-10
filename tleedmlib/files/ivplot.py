@@ -236,7 +236,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 [ax.set_xlim(*xlims) for ax in axs]
                 [ax.set_ylim(*ylims) for ax in axs]
                 [ax.get_yaxis().set_visible(False) for ax in axs]
-                [sp.set_linewidth(0.7 * line_width * gen_scaling) for ax in axs
+                [sp.set_linewidth(0.5 * line_width * gen_scaling) for ax in axs
                  for sp in ax.spines.values()]
                 [ax.xaxis.set_major_locator(majortick) for ax in axs]
                 if minortick is not None:
@@ -253,7 +253,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
                             top=axes_visible['top'], axis='x',
                             direction='in', labelsize=0.9*font_size*gen_scaling,
                             pad=0.5*font_size*gen_scaling,
-                            width=0.7 * line_width * gen_scaling,
+                            width=0.5 * line_width * gen_scaling,
                             length=ticklen)
                         ax.spines['bottom'].set_visible(True)
                     else:
@@ -261,7 +261,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
                             which='both', bottom=axes_visible['bottom'],
                             top=axes_visible['top'], axis='x', direction='in',
                             labelbottom=False,
-                            width=0.7 * line_width * gen_scaling,
+                            width=0.5 * line_width * gen_scaling,
                             length=ticklen)
                     if minortick is not None:
                         ax.tick_params(which='minor', length=ticklen*0.5)
@@ -328,7 +328,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
 
         try:
             for fig in figs:
-                pdf.savefig(fig)
+                pdf.savefig(fig, bbox_inches='tight')
                 plt.close(fig)
         except Exception:
             logger.error("plot_iv: Error while writing {}: ".format(filename),
