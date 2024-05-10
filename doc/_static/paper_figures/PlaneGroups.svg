@@ -150,14 +150,14 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.76205864"
-     inkscape:cx="528.17458"
-     inkscape:cy="1748.5531"
+     inkscape:cx="518.98893"
+     inkscape:cy="370.70638"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1920"
      inkscape:window-height="1017"
-     inkscape:window-x="-8"
+     inkscape:window-x="1672"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
      inkscape:object-nodes="true"
@@ -7778,15 +7778,15 @@
        transform="translate(0,-3.9062621)"><tspan
          x="425.67203"
          y="515.14807"
-         id="tspan30">Mirror planes may also be along <tspan
+         id="tspan9">Mirror planes may also be along <tspan
    style="font-weight:bold"
-   id="tspan27">a</tspan>.
+   id="tspan7">a</tspan>.
 </tspan><tspan
          x="425.67203"
          y="522.96057"
-         id="tspan33">Then glide planes are along <tspan
+         id="tspan14">Then glide planes are along <tspan
    style="font-weight:bold"
-   id="tspan32">b</tspan></tspan></text>
+   id="tspan11">b</tspan></tspan></text>
     <path
        style="font-variation-settings:normal;display:inline;opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#0050ff;stroke-width:1.00031;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#marker118_Fnone_S-0050ff);stop-color:#000000;stop-opacity:1"
        d="m 159.62318,1680.5599 2.21281,18.965"
@@ -8375,9 +8375,9 @@
        y="0"><tspan
          x="83.439453"
          y="-141.16065"
-         id="tspan36"><tspan
+         id="tspan27"><tspan
            style="font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans'"
-           id="tspan35">*Full plane-group designation. Currently not accepted in ViPErLEED</tspan></tspan></text>
+           id="tspan16">*Full plane-group designation. Currently not accepted in ViPErLEED</tspan></tspan></text>
     <text
        id="text51"
        y="133.33162"
@@ -8422,6 +8422,17 @@
          x="215.45262"
          y="707.05963"
          style="color:#000000;font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.25px;line-height:125%;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000000;letter-spacing:0px;word-spacing:0px;text-transform:none;writing-mode:lr-tb;direction:ltr;baseline-shift:baseline;text-anchor:start;white-space:normal;clip-rule:nonzero;display:inline;overflow:visible;visibility:visible;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate">b</tspan></text>
+    <text
+       id="text8"
+       y="287.47992"
+       x="51.247738"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.875px;line-height:0%;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';text-align:end;letter-spacing:0px;word-spacing:0px;text-anchor:end;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         y="287.47992"
+         x="51.247738"
+         id="tspan8"
+         sodipodi:role="line"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.875px;line-height:1.25;font-family:'DejaVu Sans';-inkscape-font-specification:'DejaVu Sans';fill:#808080;fill-opacity:1">c1m1*</tspan></text>
   </g>
   <g
      inkscape:groupmode="layer"
