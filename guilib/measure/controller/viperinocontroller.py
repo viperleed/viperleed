@@ -27,7 +27,6 @@ from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 from viperleed.guilib.measure.controller import abc
 
 # For settings dialog:
-from viperleed.guilib.measure.classes.abc import _device_name_found
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
 
@@ -451,35 +450,6 @@ class ViPErinoController(abc.MeasureControllerABC):
         message = [update_rate, *self.__adc_channels[:lm35_idx]]
         self.send_message(cmd, message)
 
-    @classmethod
-    def find_configs_from_info(cls, obj_info, config_files, tolerant_match):
-        """Find appropriate settings for this instance from SettingsInfo.
-
-        Paramaters
-        ----------
-        obj_info : SettingsInfo
-            The additional information that should be used to find
-            appropriate settings.
-        config_files : list
-            A list of paths to configuration files.
-        tolerant_match : bool
-            Whether the device info should be matched tolerantly. If
-            False, the device info is matched exactly.
-
-        Returns
-        -------
-        device_config_files : list
-            A list of the found settigns paths that
-            contain appropriate settings.
-        """
-        obj_name = obj_info.more['name']
-        device_config_files = []
-        for config_name in config_files:
-            with open(config_name, 'r', encoding='utf-8') as config_file:
-                if _device_name_found(config_file, obj_name, tolerant_match):
-                    device_config_files.append(config_name)
-        return device_config_files
-
     @qtc.pyqtSlot()
     @abc.ensure_connected
     def get_hardware(self):
@@ -544,6 +514,43 @@ class ViPErinoController(abc.MeasureControllerABC):
         # And add info from super() ['measurement_settings']
         handler.add_from_handler(super().get_settings_handler())
         return handler
+
+    @classmethod
+    def is_matching_settings(cls, obj_info, config, tolerant_match, default):
+        """Determine if the settings file is for this controller.
+
+        Paramaters
+        ----------
+        obj_info : SettingsInfo
+            The additional information that should
+            be used to check settings.
+        config : ConfigParser
+            The settings to check.
+        tolerant_match : bool
+            Whether the info should be matched tolerantly.
+            If False, the settings is matched exactly.
+        default : bool
+            Wheter a default settings is searched or not.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is suitable.
+        """
+        if default:
+            controller_class = config.get('controller', 'controller_class',
+                                          fallback=None)
+            if obj_info.more['name'] == controller_class:
+                return True
+        else:
+            controller_name = config.get('controller', 'device_name',
+                                         fallback=None)
+            firmware_version = config.get('controller', 'firmware_version',
+                                          fallback=None)
+            if obj_info.more['name'] == controller_name:
+                # if obj_info.more['firmware'] == firmware_version:             # TODO: add firmware check
+                return True
+        return False
 
     def list_devices(self):  # too-complex, too-many-branches
         """List Arduino Micro VipErLEED hardware -- can be slow.

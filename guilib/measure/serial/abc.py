@@ -278,12 +278,12 @@ class SerialABC(HardwareABC):
         self.connect_()
 
     @classmethod
-    def find_configs_from_info(*_):
-        """Return empty list."""
+    def is_matching_settings(*_):
+        """Return False."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
         # be called.
-        return []
+        return False
 
     def set_settings(self, new_settings):
         """Change settings of the port.

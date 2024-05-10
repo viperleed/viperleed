@@ -254,28 +254,28 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         self.__connect_secondary_controllers()
 
     @classmethod
-    def find_configs_from_info(cls, obj_info, config_files, tolerant_match):
-        """Find appropriate settings for this instance from SettingsInfo.
+    def is_matching_settings(cls, obj_info, config, tolerant_match, default):
+        """Determine if the settings file is for a measurement.
 
         Paramaters
         ----------
         obj_info : SettingsInfo
-            The additional information that should be used to find
-            appropriate settings.
-        config_files : list
-            A list of paths to configuration files.
+            The additional information that should
+            be used to check settings.
+        config : ConfigParser
+            The settings to check.
         tolerant_match : bool
-            Whether obj_info should be matched tolerantly. If False,
-            the information is matched exactly. This can be used
-            to find matching default configuration files.
+            Whether the info should be matched tolerantly.
+            If False, the settings is matched exactly.
+        default : bool
+            Wheter a default settings is searched or not.
 
         Returns
         -------
-        measurement_config_files : list
-            A list of the found settigns paths that
-            contain appropriate settings.
+        is_suitable : bool
+            True if the settings file is suitable.
         """
-        return []                                                               # TODO: Implement
+        return False                                                            # TODO: Implement
 
     def set_settings(self, new_settings):                                       # TODO: check what happens if trying to make a controller that already exists
         """Change settings of the measurement.

@@ -316,6 +316,10 @@ def get_object_settings(obj_cls, obj_info, **kwargs):                           
             find-a-config case. This function may return an empty
             string only if this is given and if the user dismisses
             the dialog. Default is an empty string.
+        default : bool
+            Wheter a default settings is searched or not. If True the
+            matching check for a default settings is performed. Default
+            value is False.
 
     Returns
     -------
@@ -328,13 +332,14 @@ def get_object_settings(obj_cls, obj_info, **kwargs):                           
         as a third_btn_text parameter, but the user anyway
         dismissed the dialog.
     """
-    directory = kwargs.get("directory", DEFAULTS_PATH)
-    tolerant_match = kwargs.get("tolerant_match", True)
-    prompt_if_invalid = kwargs.get("prompt_if_invalid", True)
-    parent_widget = kwargs.get("parent_widget", None)
+    directory = kwargs.get('directory', DEFAULTS_PATH)
+    tolerant_match = kwargs.get('tolerant_match', True)
+    prompt_if_invalid = kwargs.get('prompt_if_invalid', True)
+    parent_widget = kwargs.get('parent_widget', None)
+    default = kwargs.get('default', False)
 
     device_config_files = obj_cls.find_matching_settings(
-                            obj_info, directory, tolerant_match
+                            obj_info, directory, tolerant_match, default
                             )
 
     if device_config_files and len(device_config_files) == 1:

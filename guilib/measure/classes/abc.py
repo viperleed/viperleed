@@ -22,11 +22,11 @@ which means one cannot do: NewClass(QObjectSubclass1, QObjectSubclass2)
 """
 
 from abc import abstractmethod
+from configparser import ConfigParser
 from pathlib import Path
 
 from PyQt5 import QtCore as qtc
 
-from viperleed.guilib.measure.hardwarebase import _device_name_re
 from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import QMetaABC
 from viperleed.guilib.measure.hardwarebase import SettingsInfo
@@ -34,20 +34,6 @@ from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
-
-
-def _comment(line):
-    """Return whether a line is a comment or not."""
-    line = line.strip()
-    return any(line.startswith(c) for c in '#;')
-
-
-def _device_name_found(config_file, obj_name, tolerant_match):
-    """Return whether obj_name is found in config."""
-    dev_re = _device_name_re(obj_name)
-    if tolerant_match:
-        return any(dev_re.match(l) for l in config_file if not _comment(l))
-    return any(obj_name in l for l in config_file if not _comment(l))
 
 
 class QObjectABCErrors(ViPErLEEDErrorEnum):
@@ -101,7 +87,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         self.set_settings(new_settings)
 
     @classmethod
-    def find_matching_settings(cls, obj_info, directory, tolerant_match):
+    def find_matching_settings(cls, obj_info, directory, tolerant_match,
+                               default):
         """Find .ini files for obj_info in the tree starting at directory.
 
         Parameters
@@ -109,53 +96,31 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         obj_info : SettingsInfo
             The additional information that should be used to find
             appropriate settings.
-        config_files : list
-            A list of paths to configuration files.
+        directory : str or Path
+            The location in which to look for configuration files.
         tolerant_match : bool
             Whether obj_info should be matched tolerantly. If False,
             the information is matched exactly.
+        default : bool
+            Wheter a default settings is searched or not. If True the
+            matching check for a default settings is performed.
 
         Returns
         -------
-        obj_config_files : list
+        obj_settings_files : list
             A list of the found settings paths that
             contain appropriate settings.
         """
         directory = Path(directory).resolve()
-        config_files = directory.glob('**/*.ini')
-        obj_config_files = cls.find_configs_from_info(
-                                obj_info, config_files, tolerant_match
-                                )
-        return obj_config_files
-
-    @classmethod
-    @abstractmethod
-    def find_configs_from_info(cls, obj_info, config_files, tolerant_match):
-        """Find appropriate settings for this instance from SettingsInfo.
-
-        This method must be reimplemented in subclasses to find
-        appropriate settings from obj_info. After this method has
-        determined appropriate settings, it must return them as a list.
-
-        Parameters
-        ----------
-        obj_info : SettingsInfo
-            The additional information that should be used to find
-            appropriate settings.
-        config_files : list
-            A list of paths to configuration files.
-        tolerant_match : bool
-            Whether obj_info should be matched tolerantly. If False,
-            the information is matched exactly. This can be used
-            to find matching default configuration files.
-
-        Returns
-        -------
-        obj_config_files : list
-            A list of the found settings paths that
-            contain appropriate settings.
-        """
-        return []
+        settings_files = directory.glob('**/*.ini')
+        obj_settings_files = []
+        for settings_file in settings_files:
+            config = ConfigParser()
+            config.read(settings_file)
+            if cls.is_matching_settings(obj_info, config, tolerant_match,
+                                        default):
+                obj_settings_files.append(settings_file)
+        return obj_settings_files
 
     def are_settings_invalid(self, new_settings):
         """Check if there are any invalid settings.
@@ -176,6 +141,30 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             or '<section>/<option> not one of <value1>, <value2>, ...'
         """
         return new_settings.has_settings(*self._mandatory_settings)
+
+    @classmethod
+    @abstractmethod
+    def is_matching_settings(cls, obj_info, config, tolerant_match, default):
+        """Determine if the settings file is for this instance.
+
+        Paramaters
+        ----------
+        obj_info : SettingsInfo
+            The additional information that should
+            be used to check settings.
+        config : ConfigParser
+            The settings to check.
+        tolerant_match : bool
+            Whether the info should be matched tolerantly.
+            If False, the settings is matched exactly.
+        default : bool
+            Wheter a default settings is searched or not.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is suitable.
+        """
 
     def set_settings(self, new_settings, find_from=None):
         """Set new settings for this instance.

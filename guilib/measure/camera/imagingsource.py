@@ -28,7 +28,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ImagingSourceError, SinkFormat,
     )
 from viperleed.guilib.measure.classes.abc import QObjectABCErrors
-from viperleed.guilib.measure.classes.abc import _device_name_found
+from viperleed.guilib.measure.hardwarebase import _device_name_re
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 
 
@@ -533,33 +533,44 @@ class ImagingSourceCamera(abc.CameraABC):
         self.driver.close()
 
     @classmethod
-    def find_configs_from_info(cls, obj_info, config_files, tolerant_match):
-        """Find appropriate settings for this instance from SettingsInfo.
+    def is_matching_settings(cls, obj_info, config, tolerant_match, default):
+        """Determine if the settings file is for this instance.
 
         Paramaters
         ----------
         obj_info : SettingsInfo
-            Provides the unique camera name.
-        config_files : list
-            A list of paths to configuration files.
+            The additional information that should
+            be used to check settings.
+        config : ConfigParser
+            The settings to check.
         tolerant_match : bool
-            Whether the device name should be matched tolerantly. If
-            False, the device name is matched exactly, otherwise parts
-            of it within square brackets are ignored.
+            Whether the info should be matched tolerantly.
+            If False, the settings is matched exactly.
+        default : bool
+            Wheter a default settings is searched or not.
 
         Returns
         -------
-        device_config_files : list
-            A list of the found settigns paths that
-            contain appropriate settings.
+        is_suitable : bool
+            True if the settings file is suitable.
         """
-        obj_name = obj_info.unique_name
-        device_config_files = []
-        for config_name in config_files:
-            with open(config_name, 'r', encoding='utf-8') as config_file:
-                if _device_name_found(config_file, obj_name, tolerant_match):
-                    device_config_files.append(config_name)
-        return device_config_files
+        if default:
+            camera_class = config.get('camera_settings', 'class_name',
+                                     fallback=None)
+            if obj_info.more['name'] == camera_class:
+                return True
+        else:
+            camera_name = config.get('camera_settings', 'device_name',
+                                     fallback=None)
+            if not camera_name:
+                return False
+            if tolerant_match:
+                camera_name = _device_name_re(camera_name)
+                if bool(camera_name.match(obj_info.unique_name)):
+                    return True
+            elif obj_info.unique_name == camera_name:
+                return True
+        return False
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings.

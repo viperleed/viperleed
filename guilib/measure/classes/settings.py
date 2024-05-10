@@ -210,11 +210,10 @@ class ViPErLEEDSettings(ConfigParser):
                 f"{cls.__name__}: could not load settings, and "
                 "no find_from was provided to look for a default."
                 )
-
-        # Failed to read from settings. Try with find_from.
+        # Failed to read from settings. Try with find_from.                     TODO: make this a separate method
         get_settings = gl.measure.hardwarebase.get_object_settings
         settings = get_settings(obj_cls, find_from, prompt_if_invalid=False,
-                                tolerant_match=tolerant_match)
+                                tolerant_match=tolerant_match, default=True)
         if settings:
             try:
                 config.read(settings)
