@@ -519,7 +519,7 @@ class ViPErinoController(abc.MeasureControllerABC):
     def is_matching_settings(cls, obj_info, config, tolerant_match, default):
         """Determine if the settings file is for this controller.
 
-        Paramaters
+        Parameters
         ----------
         obj_info : SettingsInfo
             The additional information that should

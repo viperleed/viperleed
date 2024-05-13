@@ -145,7 +145,7 @@ class ControllerABC(DeviceABC):
             If no address is given, and none was present in the
             settings file.
         """
-        super().__init__(parent=parent)
+        super().__init__(settings=settings, parent=parent)
         self.__sets_energy = sets_energy
         self.__serial = None
         self.__hash = -1
@@ -178,7 +178,7 @@ class ControllerABC(DeviceABC):
 
         self.error_occurred.connect(self.__on_init_errors)
 
-        self.set_settings(settings)
+        self.set_settings(self._settings_to_load)
 
         # self.time_stamp is used to calculate times of measurements.
         # Even a non-measuring primary controller needs it to enable
@@ -505,11 +505,9 @@ class ControllerABC(DeviceABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or None
-            The new settings. If False-y, an attempt to retrieve
-            settings from a default file will be made. new_settings
-            (or the default) will be checked for the following
-            mandatory sections/options:
+        new_settings : dict or ConfigParser or str or Path
+            The new settings. new_settings (or the default) will be
+            checked for the following mandatory sections/options:
                 'controller'/'serial_class'
             (if self.sets_energy:
                 'measurement_settings'/'i0_settle_time'
@@ -528,12 +526,7 @@ class ControllerABC(DeviceABC):
             or if the serial class specified in the settings could not
             be instantiated.
         """
-        # Look for a default only if no settings are given. Note that
-        # the call to super will already store valid new_settings in
-        # self._settings, also if the settings were pulled from a
-        # default settings file(e.g., if new_settings is None).
-        _name = self.__class__.__name__ if not new_settings else None
-        if not super().set_settings(new_settings, find_from=_name):
+        if not super().set_settings(new_settings):
             return False
 
         # Take care of the address, syncing the contents of
@@ -546,7 +539,7 @@ class ControllerABC(DeviceABC):
             self.__address = _settings_serial
         else:
             self._settings['controller']['address'] = self.__address
-            if _name is None:  # Not read from _defaults
+            if not self._uses_default_settings:
                 self._settings.update_file()
 
         serial_cls_name = self._settings.get('controller', 'serial_class',

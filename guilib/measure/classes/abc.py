@@ -27,11 +27,11 @@ from pathlib import Path
 
 from PyQt5 import QtCore as qtc
 
+from viperleed.guilib.measure.hardwarebase import DEFAULTS_PATH
 from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import QMetaABC
 from viperleed.guilib.measure.hardwarebase import SettingsInfo
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
-from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 
@@ -71,9 +71,16 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
     _mandatory_settings = []
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, settings=None, **kwargs):
         """Initialise instance."""
         self._settings = ViPErLEEDSettings()
+        self._settings_to_load = settings
+        self._uses_default_settings = False
+        if not settings:
+            # Look for a default only if no settings are given.
+            _name = self.__class__.__name__
+            self._settings_to_load = self.find_default_settings(_name)
+            self._uses_default_settings = True
         super().__init__(*args, **kwargs)
 
     @property
@@ -85,6 +92,45 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def settings(self, new_settings):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
+
+    def find_default_settings(self, find_from, tolerant_match=False):
+        """Find default settings for this object.
+
+        Parameters
+        ----------
+        find_from : SettingsInfo or str
+            find_from contains information to look for in the
+            configuration files. The way to determine the correct
+            settings is up to the reimplementation of
+            find_matching_settings in self. If it is a str it
+            is converted into a SettingsInfo.
+        tolerant_match : bool, optional
+            Whether matching of find_from should be performed in
+            a tolerant way. Default is False.
+
+        Returns
+        -------
+        path_to_config : Path or "" or None
+            The path to the only settings file successfully found.
+            None or "" if too many or no settings file were found.
+
+        Emits
+        -----
+        QObjectABCErrors.DEFAULT_SETTINGS_CORRUPTED
+            If no default settings were detected.
+        """
+        # Make a dummy SettingsInfo that will
+        # be used to find settings from default name.
+        if isinstance(find_from, str):
+            find_from = SettingsInfo(find_from)
+            find_from.more['name'] = find_from.unique_name
+        settings = self.find_matching_settings(find_from, DEFAULTS_PATH,
+                                              tolerant_match, default=True)
+        if not settings or len(settings) != 1:
+            emit_error(self, QObjectABCErrors.DEFAULT_SETTINGS_CORRUPTED,
+                       find_from.unique_name)
+            return
+        return settings[0]
 
     @classmethod
     def find_matching_settings(cls, obj_info, directory, tolerant_match,
@@ -147,7 +193,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def is_matching_settings(cls, obj_info, config, tolerant_match, default):
         """Determine if the settings file is for this instance.
 
-        Paramaters
+        Parameters
         ----------
         obj_info : SettingsInfo
             The additional information that should
@@ -166,17 +212,13 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             True if the settings file is suitable.
         """
 
-    def set_settings(self, new_settings, find_from=None):
+    def set_settings(self, new_settings):
         """Set new settings for this instance.
 
         Parameters
         ----------
         new_settings : dict or ConfigParser or str or Path
             The new settings.
-        find_from : str or None, optional
-            The string to look for in a configuration file to
-            be loaded and returned. If None, no search will be
-            performed.
 
         Returns
         -------
@@ -201,22 +243,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             If any element of the new_settings does
             not fit the mandatory settings.
         """
-        # Make a dummy SettingsInfo that will
-        # be used to find settings from default name.
-        if isinstance(find_from, str):
-            find_from = SettingsInfo(find_from)
-            find_from.more['name'] = find_from.unique_name
         try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones
-            new_settings = ViPErLEEDSettings.from_settings(
-                            new_settings, find_from=find_from, obj_cls=self
-                            )
+            new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except(ValueError, NoSettingsError):
             emit_error(self, QObjectABCErrors.MISSING_SETTINGS,
                        type(self).__name__)
-            return False
-        except NoDefaultSettingsError:
-            emit_error(self, QObjectABCErrors.DEFAULT_SETTINGS_CORRUPTED,
-                            find_from)
             return False
         invalid = self.are_settings_invalid(new_settings)
         if invalid:

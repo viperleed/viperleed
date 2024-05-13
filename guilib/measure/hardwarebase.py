@@ -276,7 +276,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     return None
 
 
-def get_object_settings(obj_cls, obj_info, **kwargs):                           # TODO: This currently may execute in secondary threads. Split settings search from reporting errors and multiple-settings-found.
+def get_object_settings(obj_cls, obj_info, **kwargs):
     """Return the settings file for a specific device.
 
     Only settings files with a .ini suffix are considered.

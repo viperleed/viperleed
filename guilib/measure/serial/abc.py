@@ -128,7 +128,10 @@ class SerialABC(HardwareABC):
         TypeError
             If no settings are given.
         """
-        super().__init__(**kwargs)
+        # Note that looking for default settings for the serial
+        # will always fail, but the serial is guaranteed to be given
+        # settings from the controller that instantiates it.
+        super().__init__(settings=settings, **kwargs)
 
         self.__init_errors = []  # Report these with a little delay
         self.__init_err_timer = qtc.QTimer(self)
@@ -143,7 +146,7 @@ class SerialABC(HardwareABC):
         self.__timeout.setSingleShot(True)
         self.__timeout.timeout.connect(self.__on_serial_timeout)
 
-        self.set_settings(settings)
+        self.set_settings(self._settings_to_load)
 
         # .unprocessed_messages is a list of all the messages
         # that came on the serial line and that have not been
@@ -300,7 +303,7 @@ class SerialABC(HardwareABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or string
+        new_settings : dict or ConfigParser or str or Path
             Configuration of port. It must have a 'serial_port_settings'
             section.
             The following fields in new_settings['serial_port_settings']

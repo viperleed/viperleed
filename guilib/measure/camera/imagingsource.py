@@ -536,7 +536,7 @@ class ImagingSourceCamera(abc.CameraABC):
     def is_matching_settings(cls, obj_info, config, tolerant_match, default):
         """Determine if the settings file is for this instance.
 
-        Paramaters
+        Parameters
         ----------
         obj_info : SettingsInfo
             The additional information that should

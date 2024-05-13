@@ -186,7 +186,7 @@ class IVVideo(MeasurementABC):
 
         Parameters
         ----------
-        new_settings : dict, ConfigParser, string or path
+        new_settings : dict or ConfigParser or str or Path
             Configuration of the measurement.
 
         Returns

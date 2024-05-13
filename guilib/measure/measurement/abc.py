@@ -98,9 +98,9 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         ('measurement_settings', 'start_energy'),
         ]
 
-    def __init__(self, measurement_settings):
+    def __init__(self, settings):
         """Initialise measurement instance."""
-        super().__init__()
+        super().__init__(settings=settings)
         self._other_mandatory_settings = [('measurement_settings',
                                            'measurement_class',
                                            (self.__class__.__name__,))]
@@ -142,7 +142,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         self.__force_end_timer.setInterval(4500)
         self.__force_end_timer.timeout.connect(self.__cleanup_and_end)
 
-        self.set_settings(measurement_settings)
+        self.set_settings(self._settings_to_load)
 
         if self.__init_errors:
             self.__init_err_timer.start(20)
@@ -257,7 +257,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
     def is_matching_settings(cls, obj_info, config, tolerant_match, default):
         """Determine if the settings file is for a measurement.
 
-        Paramaters
+        Parameters
         ----------
         obj_info : SettingsInfo
             The additional information that should
@@ -289,7 +289,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         Parameters
         ----------
-        new_settings : dict, ConfigParser, string or path
+        new_settings : dict or ConfigParser or str or Path
             Configuration of the measurement.
 
         Returns

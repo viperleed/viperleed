@@ -157,7 +157,7 @@ class CameraABC(DeviceABC):
         **kwargs : object
             Other unused keyword arguments.
         """
-        super().__init__(parent=parent)
+        super().__init__(settings=settings, parent=parent)
         self.driver = driver
         self.__connected = False
         self.__bad_pixels = None
@@ -198,7 +198,7 @@ class CameraABC(DeviceABC):
         self.__calibration_tasks = {'bad_pixels': [], 'starting': []}
 
         try:
-            self.set_settings(settings)
+            self.set_settings(self._settings_to_load)
         except self.exceptions:
             # Start a short QTimer to report errors that occurred here
             # AFTER the whole __init__ is done, i.e., when we suppose
@@ -610,11 +610,9 @@ class CameraABC(DeviceABC):
 
         Parameters
         ----------
-        new_settings : object or None
+        new_settings : dict or ConfigParser or str or Path
             Whatever can be used to create a ViPErLEEDSettings.
-            If None or False-y, will look for a default settings
-            file in the _defaults directory. The following
-            sections/options are mandatory:
+            The following sections/options are mandatory:
             'camera_settings'/'class_name'
                 Name of the concrete class that implements
                 the abstract methods of CameraABC.
@@ -633,15 +631,13 @@ class CameraABC(DeviceABC):
             except self.exceptions:
                 pass
 
-        # Look for a default only if no settings are given.
-        _name = self.__class__.__name__ if not new_settings else None
         # Checking of non-mandatory data is done in property getters.
-        if not super().set_settings(new_settings, find_from=_name):
+        if not super().set_settings(new_settings):
             return False
 
         self.disconnect_()
 
-        if _name:
+        if self._uses_default_settings:
             # When loading from default settings, there's no point in           # TODO: should also clear bad pixels if present
             # trying to connect: the device name is certainly wrong.
             return True

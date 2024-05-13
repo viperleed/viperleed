@@ -82,10 +82,6 @@ class NoSettingsError(Exception):
     """Exception raised when failed to read settings file(s)."""
 
 
-class NoDefaultSettingsError(Exception):
-    """Exception raised when no default settings file was found."""
-
-
 class NotASequenceError(Exception):
     """Exception raised when getsequence fails to return a sequence."""
 
@@ -146,29 +142,15 @@ class ViPErLEEDSettings(ConfigParser):
         """Return a simple string representation of self."""
         return str(self.as_dict())
 
-    @classmethod  # too-complex
-    def from_settings(cls, settings, find_from=None, tolerant_match=False,
-                      obj_cls=None):
+    @classmethod
+    def from_settings(cls, settings):
         """Return a ViPErLEEDSettings from the settings passed.
 
         Parameters
         ----------
-        settings : str or os.PathLike or ViPErLEEDSettings or None
-            The settings to load from. If settings is None,
-            find_from will be used to search for a default settings.
+        settings : str or os.PathLike or ViPErLEEDSettings
+            The settings to load from.
             If a ViPErLEEDSettings, no copy is made.
-        find_from : SettingsInfo
-            find_from contains information to look for in the
-            configuration files, the way to determine the correct
-            settings is up to the reimplementation of
-            find_matching_settings in obj_cls.
-        tolerant_match : bool, optional
-            Whether matching of find_from should be performed in
-            a tolerant way, i.e., neglecting parts of find_from
-            between square brackets. Default is False, i.e., use
-            the whole string given.
-        obj_cls : object
-            The class of the object to get settings for.
 
         Returns
         -------
@@ -178,20 +160,15 @@ class ViPErLEEDSettings(ConfigParser):
         Raises
         ------
         ValueError
-            If settings is not a ViPErLEEDSettings, it is
-            False-y and find_from is False-y.
+            If there are no settings to create a ViPErLEEDSettings from.
         NoSettingsError
-            If settings is invalid and find_from was not given.
-        NoDefaultSettingsError
-            If settings is invalid, and looking for default settings
-            failed.
+            If settings is invalid.
         """
-        if settings is None and (not find_from or not obj_cls):
+        if not settings:
             raise ValueError(f"{cls.__name__}: cannot create from nothing.")
+
         if isinstance(settings, cls):
             return settings
-        if not settings and (not find_from or not obj_cls):
-            raise ValueError(f"{cls.__name__}: cannot create from nothing.")
 
         config = cls()
         if isinstance(settings, (dict, ConfigParser)):
@@ -201,29 +178,9 @@ class ViPErLEEDSettings(ConfigParser):
         try:
             config.read(settings)
         except (TypeError, MissingSettingsFileError):
-            pass
+            raise NoSettingsError(f"{cls.__name__}: could not load settings.")
         else:
             return config
-
-        if not find_from:
-            raise NoSettingsError(
-                f"{cls.__name__}: could not load settings, and "
-                "no find_from was provided to look for a default."
-                )
-        # Failed to read from settings. Try with find_from.                     TODO: make this a separate method
-        get_settings = gl.measure.hardwarebase.get_object_settings
-        settings = get_settings(obj_cls, find_from, prompt_if_invalid=False,
-                                tolerant_match=tolerant_match, default=True)
-        if settings:
-            try:
-                config.read(settings)
-            except MissingSettingsFileError:
-                pass
-            else:
-                return config
-        raise NoDefaultSettingsError(
-            f"{cls.__name__}: could not find (or load) a suitable default."
-            )
 
     def __bool__(self):
         """Return True if there is any section."""
