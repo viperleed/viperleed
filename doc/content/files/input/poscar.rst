@@ -31,7 +31,7 @@ Comment lines
 The POSCAR file contains the following **comment lines** after initialization:
 
 -  **Plane group**: planar symmetry group of the slab.
-   If :ref:`SYMMETRY_FIX<ISYM>` is used to select a certain group, this will be indicated, while the full symmetry of the slab is mentioned in brackets. In the POSCAR_oricell file, this is prepended by stars, since the original cell might not display the correct symmetry. See also the :ref:`list of planegroups below<planegroups>`, or |click|.
+   If :ref:`SYMMETRY_FIX<ISYM>` is used to select a certain group, this will be indicated, while the full symmetry of the slab is mentioned in brackets. In the POSCAR_oricell file, this is prepended by stars, since the original cell might not display the correct symmetry. See also the :ref:`list of planegroups <planegroups>`.
 
 The atoms are then listed one per line, grouped by element.
 For each atom the following information is given:
@@ -92,19 +92,3 @@ In these cases, the POSCAR_vacuum_corrected file may be used as a starting point
     When preparing a new set of input files from POSCAR_vacuum_corrected, be careful to adapt any :ref:`PARAMETERS<parameters>` that are defined as fractions of the unit-cell c vector (e.g., :ref:`LAYER_CUTS<layer_cuts>`, :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`, :ref:`BULK_REPEAT<BULK_REPEAT>`).
 
 A POSCAR file with a gap smaller than 5 Å will not cause ViPErLEED to stop, but a POSCAR_vacuum_corrected file is nonetheless generated. It can be used, e.g., to judge the appropriate identification of which atoms are at the top and which ones belong to the bulk-like portion of the input POSCAR.
-
-
-.. _planegroups:
-
-Overview of Planegroups
------------------------
-
-
-.. figure:: /_static/planegroups.pdf
-    :alt: Overview of planegroups and possible symmetry operations.
-    :align: center
-    :height: 900px
-
-    Overview of plane groups and possible symmetry operations.
-
-.. |click| replace:: :download:`click here to download the PDF</_static/planegroups.pdf>`
