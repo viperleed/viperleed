@@ -167,7 +167,7 @@ The detected layers and bulk repeat vector are also shown in
 :numref:`fig_Fe2O3_layers` for clarity.
 
 .. _fig_Fe2O3_layers:
-.. figure:: /_static/paper_figures/Hematite-Layers.svg
+.. figure:: /_static/paper_figures/Hematite-Layers_embedded.svg
    :width: 60%
    :align: center
 

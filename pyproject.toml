@@ -144,9 +144,9 @@ enable = ['useless-suppression',
           'use-implicit-booleaness-not-comparison-to-zero',
           'use-implicit-booleaness-not-comparison-to-string']
 disable = [
-	'logging-fstring-interpolation',
-	'consider-using-assignment-expr',  # We want to support 3.7 too
-	]
+    'logging-fstring-interpolation',
+    'consider-using-assignment-expr',  # We want to support 3.7 too
+    ]
 
 [tool.pylint.reports]
 output-format = 'colorized'
