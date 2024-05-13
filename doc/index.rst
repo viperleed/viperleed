@@ -44,7 +44,7 @@ The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims at
 drastically reducing the effort for a intensity [LEED-:math:`I(V)`] analysis,
 both on the computational and on the experimental side.
 
-.. todo:: Add: See also the ViPErLEED publication series (**TODO: add link **).
+.. todo:: Add: See also the ViPErLEED publication series (**TODO: add link**).
 
 The ViPErLEED package consists of:
 
