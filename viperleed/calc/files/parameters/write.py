@@ -306,8 +306,6 @@ class ParametersFileEditor(AbstractContextManager):
     def write_modified_parameters(self):
         """Write a new PARAMETERS, modifying all the requested lines."""
         cwd = Path().resolve()
-        if self._filename not in self._rpars.manifest and self._path == cwd:
-            self._rpars.manifest.append(self._filename)
 
         if not self._to_modify:
             return
