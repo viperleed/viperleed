@@ -36,9 +36,8 @@ _LOGGER = logging.getLogger(parent_name(__name__))
 
 def comment_out(rpars, modpar, comment=''):
     """Comment out modpar in the PARAMETERS file."""
-    _check_parameters_out_file(rpars)
     editor = ParametersFileEditor(
-        rpars, path=rpars.workdir / 'PARAMETERS_OUT',
+        rpars, path=rpars.workdir,
         )
     with editor:
         editor.comment_out_parameter(modpar, comment=comment)
@@ -73,19 +72,12 @@ def modify(rpars, modpar, new=None, comment=''):
         String value of the parameter as inserted in the
         PARAMETERS file.
     """
-    _check_parameters_out_file(rpars)
     editor = ParametersFileEditor(
-        rpars, path=rpars.workdir / 'PARAMETERS_OUT',
+        rpars, path=rpars.workdir,
         )
     with editor:
         new_param = editor.modify_param(modpar, new_value=new, comment=comment)
     return new_param.fmt_value
-
-def _check_parameters_out_file(rpars):
-    """Checks is PARAMETERS_OUT exists and creates it if not."""
-    if not (rpars.workdir / 'PARAMETERS_OUT').is_file():
-        shutil.copy(rpars.workdir / 'PARAMETERS',
-                    rpars.workdir / 'PARAMETERS_OUT')
 
 # This is almost a dataclass (but not quite), all the
 # information is static and generated only once via

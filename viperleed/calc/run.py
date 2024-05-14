@@ -152,7 +152,6 @@ def run_calc(system_name=None,
                              "execution...")
                 cleanup(tmp_manifest)
                 return 2
-            tmp_manifest.append("POSCAR_user")
     try:
         # interpret the PARAMETERS file
         parameters.interpret(rp, slab=slab, silent=False)
