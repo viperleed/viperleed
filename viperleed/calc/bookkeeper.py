@@ -625,9 +625,14 @@ class HistoryInfoFile:
             entry_str = entry_str[:-len('DISCARDED')]
         else:
             discarded = False
-        # split at 'Notes: ' because that is the only one that can be multiline
-        general_info, notes = entry_str.split('Notes:', 1)
-        notes = notes.replace('Notes: ', '').strip()
+        # Notes may also be optional
+        if 'Notes:' not in entry_str:
+            notes = ''
+            general_info = entry_str
+        else:
+            # split at 'Notes: ' because that is the only one that can be multiline
+            general_info, notes = entry_str.split('Notes:', 1)
+            notes = notes.replace('Notes: ', '').strip()
         # parse general_info
         general_info = iter(general_info.split('\n'))
         tensors = [int(num) for num in
