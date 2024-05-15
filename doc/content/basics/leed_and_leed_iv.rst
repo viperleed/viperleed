@@ -7,7 +7,7 @@ LEED-I(V) (also sometimes referred to as LEED-I(E)) is the quantitative analysis
 of low-energy electron diffraction (LEED) patterns.
 For a detailed introduction on the theory and applications of LEED, and
 LEED-I(V) in particular, we suggest e.g. Chapter 4 in
-:cite:t:`fausterSurfacePhysicsFundamentals2020,fausterOberflachenphysikGrundlagenUnd2013`
+:cite:t:`fausterSurfacePhysicsFundamentals2020`
 or the overview by :cite:t:`heinzElectronBasedMethods2013`.
 
 In essence, the goal of any :term:`LEED-I(V)` calculation is the calculation of
