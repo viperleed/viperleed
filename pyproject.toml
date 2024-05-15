@@ -1,4 +1,7 @@
 [build-system]
+# Note for pip install -e .: requires pip >=21.3 that introduced
+# editable-install capabilities from a pyproject.toml file instead
+# of setup.py or setup.conf
 requires = ['setuptools']
 build-backend = 'setuptools.build_meta'
 # TODO: check version of setuptools
