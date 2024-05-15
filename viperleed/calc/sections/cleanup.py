@@ -226,7 +226,7 @@ def _organize_supp_out(work_path):
     out_path = work_path / DEFAULT_OUT
     out_files = set(work_path / f for f in _OUT_FILES)
     # add POSCAR_OUT, VIBROCC_OUT, PARAMETERS_OUT & any R_OUT files
-    out_files.update(work_path.glob("_OUT*"))
+    out_files.update(work_path.glob("*_OUT*"))
     _copy_files_and_directories(out_files, (), work_path, out_path)
 
     # Rename OUT/PARAMETERS to OUT/PARAMETERS_OUT for naming consistency
