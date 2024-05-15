@@ -45,6 +45,8 @@ _HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
 HISTORY_INFO_SEPARATOR = '\n###########\n'
 
 STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
+# optional input files that may be generated at runtime - do not warn if missing
+RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 class BookkeeperMode(Enum):
     """Enumeration of bookkeeper modes.
@@ -474,6 +476,9 @@ class Bookkeeper():
                 # just copy original
                 _copy_one_file_to_history(original_file, self.history_dir)
             elif cwd_file.is_file():
+                # if file is optional input file, ignore
+                if file in RUNTIME_GENERATED_INPUT_FILES:
+                    continue
                 # copy cwd and warn
                 _copy_one_file_to_history(
                     self.cwd / file, self.history_dir)
