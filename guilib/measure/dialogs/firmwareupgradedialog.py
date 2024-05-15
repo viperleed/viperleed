@@ -619,6 +619,13 @@ class FirmwareUpgradeDialog(qtw.QDialog):
         super().accept()
 
     @qtc.pyqtSlot()
+    def close(self):
+        """Stop threads, then quit."""
+        self._upload_thread.quit()
+        self._download_thread.quit()
+        super().close()
+
+    @qtc.pyqtSlot()
     def open(self):
         """Check if the Arduino CLI is installed before opening dialog.
 

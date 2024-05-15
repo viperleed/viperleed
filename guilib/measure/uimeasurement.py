@@ -357,6 +357,7 @@ class Measure(ViPErLEEDPluginBase):
             return
 
         self._dialogs['sys_settings'].close()
+        self._dialogs['firmware_upgrade'].close()
         super().closeEvent(event)
 
     def keyPressEvent(self, event):      # pylint: disable=invalid-name
