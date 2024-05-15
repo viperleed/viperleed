@@ -137,7 +137,6 @@ def initialization(sl, rp, subdomain=False):
     except Exception:
         logger.error("Exception occurred while writing new POSCAR")
         raise
-    rp.manifest.append('POSCAR')
     # generate POSCAR_oricell
     tmpslab.revert_unit_cell()
     try:
