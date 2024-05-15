@@ -534,23 +534,42 @@ class ViPErinoController(abc.MeasureControllerABC):
 
         Returns
         -------
-        is_suitable : bool
-            True if the settings file is suitable.
+        sorting_info : tuple
+            A tuple that can be used the sort the detected settings.
+            Larger values in the tupel indicate a higher degree of
+            conformity. The order of the values in the tuple is the
+            order of their significance.
         """
+        controller_class = config.get('controller', 'controller_class',
+                                      fallback=None)
+        controller_name = config.get('controller', 'device_name',
+                                     fallback=None)
+        ver = config.get('controller', 'firmware_version', fallback=None)
+        firmware_ver = base.Version(ver) if ver else base.Version('0.0')
+
         if default:
-            controller_class = config.get('controller', 'controller_class',
-                                          fallback=None)
             if obj_info.more['name'] == controller_class:
-                return True
-        else:
-            controller_name = config.get('controller', 'device_name',
-                                         fallback=None)
-            firmware_version = config.get('controller', 'firmware_version',
-                                          fallback=None)
-            if obj_info.more['name'] == controller_name:
-                # if obj_info.more['firmware'] == firmware_version:             # TODO: add firmware check
-                return True
-        return False
+                if tolerant_match:
+                    # If tolerant_match is True the GUI is in the
+                    # process of determining which devices are connected.
+                    # This means we do not know which firmware the
+                    # controller has installed yet.
+                    return (firmware_ver.minor,)
+                # If tolerant_match is False, then we are looking for a
+                # default that does specifically match the firmware of
+                # the device we are looking at.
+                if obj_info.more['firmware'] == firmware_ver:
+                    return (firmware_ver.minor,)
+        elif obj_info.more['name'] == controller_name:
+            if tolerant_match:
+                if obj_info.more['firmware'].major == firmware_ver.major:
+                    # For a tolerant match checking the firmware major
+                    # is good enough, as settings with the same major
+                    # are bound to be at least partially compatible.
+                    return (firmware_ver.minor,)
+            if obj_info.more['firmware'] == firmware_ver:
+                return (firmware_ver.minor,)
+        return ()
 
     def list_devices(self):  # too-complex, too-many-branches
         """List Arduino Micro VipErLEED hardware -- can be slow.
@@ -569,6 +588,12 @@ class ViPErinoController(abc.MeasureControllerABC):
                     The firmware version that is installed
                     on the controller.
         """
+        # TODO: When detecting controllers we will have to run list_devices
+        # for each firmware major once and after having detected controllers
+        # we have to return the SettingsInfo for each controller from the
+        # best matching firmware version (on serial side). This means
+        # we will discard the SettingsInfo obtained with serials running
+        # on a different major if .unique_name matches.
         ports = qts.QSerialPortInfo().availablePorts()
         port_names = [p.portName() for p in ports]
 

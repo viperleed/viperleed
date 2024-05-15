@@ -339,8 +339,8 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
     default = kwargs.get('default', False)
 
     device_config_files = obj_cls.find_matching_settings(
-                            obj_info, directory, tolerant_match, default
-                            )
+        obj_info, directory, tolerant_match, default
+        )
 
     if device_config_files and len(device_config_files) == 1:
         # Found exactly one config file

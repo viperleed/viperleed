@@ -23,6 +23,7 @@ which means one cannot do: NewClass(QObjectSubclass1, QObjectSubclass2)
 
 from abc import abstractmethod
 from configparser import ConfigParser
+from operator import itemgetter
 from pathlib import Path
 
 from PyQt5 import QtCore as qtc
@@ -93,7 +94,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
 
-    def find_default_settings(self, find_from, tolerant_match=False):
+    def find_default_settings(self, find_from, tolerant_match=True):
         """Find default settings for this object.
 
         Parameters
@@ -106,7 +107,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             is converted into a SettingsInfo.
         tolerant_match : bool, optional
             Whether matching of find_from should be performed in
-            a tolerant way. Default is False.
+            a tolerant way. Default is True.
 
         Returns
         -------
@@ -154,39 +155,27 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         Returns
         -------
         obj_settings_files : list
-            A list of the found settings paths that
-            contain appropriate settings.
+            A list of the found settings paths that contain appropriate
+            settings sorted by how well the settings match from best to
+            worst.
         """
         directory = Path(directory).resolve()
         settings_files = directory.glob('**/*.ini')
         obj_settings_files = []
+        tmp = []
         for settings_file in settings_files:
             config = ConfigParser()
             config.read(settings_file)
-            if cls.is_matching_settings(obj_info, config, tolerant_match,
-                                        default):
-                obj_settings_files.append(settings_file)
+            conformity = cls.is_matching_settings(
+                obj_info, config, tolerant_match, default
+                )
+            if conformity:
+                tmp.append((settings_file, conformity))
+
+        obj_settings_files, _ = zip(
+            *sorted(tmp, key=itemgetter(1), reverse=True)
+            )
         return obj_settings_files
-
-    def are_settings_invalid(self, new_settings):
-        """Check if there are any invalid settings.
-
-        Reimplementations can add additional mandatory settings in
-        run time.
-
-        Parameters
-        ----------
-        new_settings : ViPErLEEDSettings
-            The new settings.
-
-        Returns
-        -------
-        invalid_settings : list
-            Invalid required_settings of self as a list of strings.
-            Each entry can be either '<section>', '<section>/<option>',
-            or '<section>/<option> not one of <value1>, <value2>, ...'
-        """
-        return new_settings.has_settings(*self._mandatory_settings)
 
     @classmethod
     @abstractmethod
@@ -208,9 +197,32 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Returns
         -------
-        is_suitable : bool
-            True if the settings file is suitable.
+        sorting_info : tuple
+            A tuple that can be used the sort the detected settings.
+            Larger values in the tupel indicate a higher degree of
+            conformity. The order of the values in the tuple is the
+            order of their significance.
         """
+
+    def are_settings_invalid(self, new_settings):
+        """Check if there are any invalid settings.
+
+        Reimplementations can add additional mandatory settings in
+        run time.
+
+        Parameters
+        ----------
+        new_settings : ViPErLEEDSettings
+            The new settings.
+
+        Returns
+        -------
+        invalid_settings : list
+            Invalid required_settings of self as a list of strings.
+            Each entry can be either '<section>', '<section>/<option>',
+            or '<section>/<option> not one of <value1>, <value2>, ...'
+        """
+        return new_settings.has_settings(*self._mandatory_settings)
 
     def set_settings(self, new_settings):
         """Set new settings for this instance.

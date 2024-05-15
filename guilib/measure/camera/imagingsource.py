@@ -552,25 +552,26 @@ class ImagingSourceCamera(abc.CameraABC):
         Returns
         -------
         is_suitable : bool
-            True if the settings file is suitable.
+            A tuple that can be used the sort the detected settings.
+            Larger values in the tupel indicate a higher degree of
+            conformity. The order of the values in the tuple is the
+            order of their significance.
         """
+        camera_class = config.get('camera_settings', 'class_name',
+                                  fallback=None)
+        camera_name = config.get('camera_settings', 'device_name',
+                                 fallback=None)
         if default:
-            camera_class = config.get('camera_settings', 'class_name',
-                                     fallback=None)
             if obj_info.more['name'] == camera_class:
-                return True
-        else:
-            camera_name = config.get('camera_settings', 'device_name',
-                                     fallback=None)
-            if not camera_name:
-                return False
+                return (1,)
+        elif camera_name:
             if tolerant_match:
                 camera_name = _device_name_re(camera_name)
                 if bool(camera_name.match(obj_info.unique_name)):
-                    return True
+                    return (1,)
             elif obj_info.unique_name == camera_name:
-                return True
-        return False
+                return (1,)
+        return ()
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings.
