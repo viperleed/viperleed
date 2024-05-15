@@ -500,7 +500,6 @@ class ViPErinoController(abc.MeasureControllerABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        # Start by adding info that we want shown on top
         handler = SettingsHandler(self.settings)
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
@@ -508,11 +507,10 @@ class ViPErinoController(abc.MeasureControllerABC):
         handler.add_option('controller', 'device_name',
                            handler_widget=_settings.SerialNumberEditor(self),
                            display_name="Serial No.")
+        handler.add_from_handler(super().get_settings_handler())
         handler.add_complex_section(
             _settings.HardwareConfigurationEditor(controller=self)              # TODO: add ADC_update rate for measurement
             )
-        # And add info from super() ['measurement_settings']
-        handler.add_from_handler(super().get_settings_handler())
         return handler
 
     @classmethod

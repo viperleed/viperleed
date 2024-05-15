@@ -21,14 +21,12 @@ import functools
 
 from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import DeviceABC
 from viperleed.guilib.measure.classes.abc import QObjectABCErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes import settings as _m_settings
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
 
 
@@ -721,7 +719,7 @@ class ControllerABC(DeviceABC):
         This method should be extended in subclasses, i.e., do
         handler = super().get_settings_handler(), and then add
         appropriate sections and/or options to it using the
-        handler.add_section, and handler.add_option methods
+        handler.add_section, and handler.add_option methods.
 
         The base-class implementation returns a handler that
         already contains the following settings:
@@ -741,7 +739,7 @@ class ControllerABC(DeviceABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        handler = SettingsHandler(self.settings)
+        handler = super().get_settings_handler()
         if not self.sets_energy:
             return handler
 
@@ -1229,7 +1227,7 @@ class MeasureControllerABC(ControllerABC):
         This method should be extended in subclasses, i.e., do
         handler = super().get_settings_handler(), and then add
         appropriate sections and/or options to it using the
-        handler.add_section, and handler.add_option methods
+        handler.add_section, and handler.add_option methods.
 
         The base-class implementation returns a handler that
         already contains the following settings:
@@ -1256,7 +1254,7 @@ class MeasureControllerABC(ControllerABC):
         widget = InfIntSpinBox()
         widget.setMinimum(1)
         tip = ("<nobr>The number of measurements the controller should"
-               "</nobr> average over before returning a value to the PC")
+               "</nobr> average over before returning a value to the PC.")
         handler.add_option('measurement_settings', 'nr_samples',
                            handler_widget=widget, display_name='No. samples',
                            tooltip=tip)

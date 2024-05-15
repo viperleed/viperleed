@@ -245,7 +245,7 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
             warnings.warn(
                 f"{self.__class__.__name__}: section {section_name} "
                 f"was not added with add_section(). Option {option_name}"
-                " will appear without a bounding frame"
+                " will appear without a bounding frame."
                 )
 
         if handler_widget is None and option_type is not None:
@@ -299,6 +299,29 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         self.__complex_sections.append(section)
         section.updated.connect(self.__updated_timer.start)
 
+    def add_static_option(self, section_name, option_name, handler_widget,
+                          *args, **kwargs):
+        """Add a static option that may not come from settings."""
+        if section_name not in self:
+            warnings.warn(
+                f'{self.__class__.__name__}: section {section_name} '
+                f'was not added with add_section(). Option {option_name}'
+                ' will appear without a bounding frame.'
+                )
+        option = SettingsDialogOption(option_name, handler_widget,
+                                      static=True, *args, **kwargs)
+        self[section_name][option_name] = option
+        if self.has_section(section_name):
+            self.__sections[section_name].add_option(option)
+        else:
+            self.__widgets.append(option)
+
+    def add_static_section(self, section_name):
+        """Add a static section that may not come from settings."""
+        section = SettingsDialogSection(section_name)
+        self.__sections[section_name] = section
+        self.__widgets.append(section)
+
     def add_section(self, section_name, **kwargs):
         """Add a titled section to self."""
         if section_name not in self.__config:
@@ -334,7 +357,8 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         """Update values in handlers from the config."""
         for sec_name, options in self.items():
             for opt_name, option in options.items():
-                option.set_(self.__config[sec_name][opt_name])
+                if not option.static:
+                    option.set_(self.__config[sec_name][opt_name])
         for section in self.__complex_sections:
             section.update_widgets()
 
@@ -389,12 +413,13 @@ class SettingsDialogOption(qtc.QObject):
             if only a QWidget class is given.
         display_name : str, optional
             The name of this section when displayed in a SettingsDialog.
-            If not given or False-y, the name is take from option_name:
-            underscores are removed, and all words are capitalized
+            If not given or False-y, the name is taken from option_name:
+            underscores are removed, and all words are capitalized.
         tooltip : str, optional
             A descriptive text that will be used as tooltip, displayed
-            when the hovering over, or clicking on the info icon. If an
-            empty string no tooltip is shown. Default is an empty string
+            when hovering over, or clicking on the info icon. If it
+            is an empty string, no tooltip is shown. Default is an
+            empty string.
         read_only : bool, optional
             Whether the user is allowed to change the ViPErLEEDSettings
             by interacting with the handler of this SettingsDialogOption.
@@ -406,6 +431,9 @@ class SettingsDialogOption(qtc.QObject):
             Vertical alignment of label field relative to handler_widget.
             Only the first character matters. Any character other than 'c'
             or 'b' will be treated as 'top'. Default is 'top'.
+        static : bool
+            Whether the handler is handling static data or not.
+            Default is False.
         **kwargs : object
             Other keyword arguments passed on to handler_widget if
             only a QWidget class is given.
@@ -417,6 +445,7 @@ class SettingsDialogOption(qtc.QObject):
         display_name = kwargs.pop('display_name', None)
         tooltip = kwargs.pop('tooltip', '')
         v_align = kwargs.pop('label_alignment', 't')
+        self._static = kwargs.pop('static', False)
 
         super().__init__(kwargs.pop('parent', None))
         self.option_name = option_name
@@ -429,8 +458,9 @@ class SettingsDialogOption(qtc.QObject):
         self.__handler_widget = handler_widget
         self.__label = qtw.QLabel()
         self.__info = None
-        self.__check_handler()
-        self.__connect_handler()
+        if not self._static:
+            self.__check_handler()
+            self.__connect_handler()
         self.__update_handler_from_read_only()
 
         self.display_name = self.__make_label_widget(display_name, tooltip,
@@ -479,6 +509,11 @@ class SettingsDialogOption(qtc.QObject):
     def read_only(self):
         """Return whether this option can be modified."""
         return self.__read_only
+
+    @property
+    def static(self):
+        """Return whether the option is static."""
+        return self._static
 
     def get_(self):
         """Return the value of this option as a string."""

@@ -1455,3 +1455,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                                f"folder {self.settings.base_dir}") from None
         return device_cfg
 
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings."""
+        return super().get_settings_handler()

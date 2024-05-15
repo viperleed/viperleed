@@ -27,6 +27,7 @@ from operator import itemgetter
 from pathlib import Path
 
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure.hardwarebase import DEFAULTS_PATH
 from viperleed.guilib.measure.hardwarebase import emit_error
@@ -35,6 +36,7 @@ from viperleed.guilib.measure.hardwarebase import SettingsInfo
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
 
 class QObjectABCErrors(ViPErLEEDErrorEnum):
@@ -223,6 +225,35 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             or '<section>/<option> not one of <value1>, <value2>, ...'
         """
         return new_settings.has_settings(*self._mandatory_settings)
+
+    @abstractmethod
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings.
+
+        This method should be extended in subclasses, i.e., do
+        handler = super().get_settings_handler(), and then add
+        appropriate sections and/or options to it using the
+        handler.add_section, and handler.add_option methods.
+
+        The base-class implementation returns a handler that
+        contains the location of the settings file.
+
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this instance to users.
+        """
+        handler = SettingsHandler(self.settings)
+        handler.add_static_section('File')
+        widget = qtw.QLabel()
+        widget.setText(str(self.settings.last_file).split('\\')[-1])
+        handler.add_static_option(
+            'File', 'config', widget,
+            display_name='Settings file',
+            tooltip=str(self.settings.last_file),
+            )
+        return handler
 
     def set_settings(self, new_settings):
         """Set new settings for this instance.

@@ -441,6 +441,10 @@ class SerialABC(HardwareABC):
         """
         return message
 
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings."""
+        return super().get_settings_handler()
+
     @abstractmethod
     def identify_error(self, messages_since_error):
         """Identify which error occurred.

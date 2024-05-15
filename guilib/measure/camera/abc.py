@@ -30,7 +30,6 @@ from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.classes.abc import DeviceABC
 from viperleed.guilib.measure.classes.abc import QObjectABCErrors
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
@@ -796,7 +795,7 @@ class CameraABC(DeviceABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        handler = SettingsHandler(self.settings)
+        handler = super().get_settings_handler()
         handler.add_option('camera_settings', 'mode',
                            handler_widget=qtw.QLabel,
                            read_only=True)
