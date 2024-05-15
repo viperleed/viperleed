@@ -233,7 +233,8 @@ def _organize_supp_out(work_path):
     parameters_path = Path("PARAMETERS")
     parameters_out_path = out_path / "PARAMETERS_OUT"
     try:
-        parameters_path.rename(parameters_out_path)
+        # copy the file to OUT/PARAMETERS_OUT
+        shutil.copy2(parameters_path, parameters_out_path)
     except OSError:
         logger.error(f"Error renaming {DEFAULT_OUT}/PARAMETERS to "
                      f"{DEFAULT_OUT}/PARAMETERS_OUT.", exc_info=True)
