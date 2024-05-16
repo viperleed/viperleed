@@ -116,9 +116,9 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Returns
         -------
-        path_to_config : Path or "" or None
+        path_to_config : Path or ''
             The path to the only settings file successfully found.
-            None or "" if too many or no settings file were found.
+            '' if too many or no settings file were found.
 
         Emits
         -----
@@ -137,13 +137,13 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             # No default settings was found.
             emit_error(self, QObjectABCErrors.NO_DEFAULT_SETTINGS_FOUND,
                        find_from.unique_name)
-            return
-        elif exact_match and len(settings) != 1:
+            return ''
+        if exact_match and len(settings) != 1:
             # Too many default settings were found
             # while trying to find an exact match.
             emit_error(self, QObjectABCErrors.TOO_MANY_DEFAULT_SETTINGS,
                        find_from.unique_name)
-            return
+            return ''
         return settings[0]
 
     @classmethod
@@ -286,7 +286,9 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         handler = SettingsHandler(self.settings)
         handler.add_static_section('File')
         widget = qtw.QLabel()
-        widget.setText(str(self.settings.last_file).split('\\')[-1])
+        widget.setText(
+            str(self.settings.last_file).rsplit('\\', maxsplit=1)[-1]
+            )
         handler.add_static_option(
             'File', 'config', widget,
             display_name='Settings file',
