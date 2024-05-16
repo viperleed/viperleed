@@ -60,14 +60,14 @@ dev = [
     'pytest-cases',
     'pytest-subtests',
     'pytest<8',  # Till Issue #337 of pytest-cases is fixed
-    'pytest',
     'twine',
     ]
-doc = [
-    'myst-nb',
+doc = [  # Requires >= py3.9!
+    'myst-nb>1.0',
+    'myst-parser>1.0',
     'setuptools',  # Workaround for sphinxcontrib-bibtex #345
     'sphinx-rtd-theme',
-    'sphinx',
+    'sphinx>6.1',
     'sphinxcontrib-bibtex',
     'sphinxcontrib-qthelp',
     'sphinxcontrib-spelling',
