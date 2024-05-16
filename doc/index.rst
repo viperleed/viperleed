@@ -61,7 +61,7 @@ The ViPErLEED package consists of:
       acquisition of LEED-:math:`I(V)` data with pre-existing LEED systems.
 
 .. _toc_figure:
-.. figure:: /_static/paper_figures/ViPErLEED-overview.svg
+.. figure:: /_static/paper_figures/ViPErLEED-overview_embedded.svg
    :width: 70%
    :align: center
 
