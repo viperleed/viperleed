@@ -514,7 +514,46 @@ class ViPErinoController(abc.MeasureControllerABC):
         return handler
 
     @classmethod
-    def is_matching_settings(cls, obj_info, config, tolerant_match, default):
+    def is_matching_default_settings(cls, obj_info, config, exact_match):
+        """Determine if the default settings file is for this controller.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo
+            The additional information that should
+            be used to check settings.
+        config : ConfigParser
+            The settings to check.
+        exact_match : bool
+            Whether obj_info should be matched exactly.
+            If True, the information is matched exactly.
+
+        Returns
+        -------
+        sorting_info : tuple
+            A tuple that can be used the sort the detected settings.
+            Larger values in the tuple indicate a higher degree of
+            conformity. The order of the values in the tuple is the
+            order of their significance.
+        """
+        controller_class = config.get('controller', 'controller_class',
+                                      fallback=None)
+        ver = config.get('controller', 'firmware_version', fallback=None)
+        firmware_ver = base.Version(ver or '0.0')
+        class_matches = obj_info.more['name'] == controller_class
+        firmware_matches = obj_info.more.get('firmware') == firmware_ver
+        if class_matches and (not exact_match or firmware_matches):
+            # If exact_match is False we are looking for any default
+            # that may satisfy the requirements of the controller while
+            # likely not knowing the firmware version of the controller.
+            # If exact_match is True, then we are looking for a
+            # default that does specifically match the firmware of
+            # the device we are looking at.
+            return (firmware_ver.minor,)
+        return ()
+
+    @classmethod
+    def is_matching_settings(cls, obj_info, config, exact_match):
         """Determine if the settings file is for this controller.
 
         Parameters
@@ -524,49 +563,34 @@ class ViPErinoController(abc.MeasureControllerABC):
             be used to check settings.
         config : ConfigParser
             The settings to check.
-        tolerant_match : bool
-            Whether the info should be matched tolerantly.
-            If False, the settings is matched exactly.
-        default : bool
-            Wheter a default settings is searched or not.
+        exact_match : bool
+            Whether obj_info should be matched exactly.
+            If True, the information is matched exactly.
 
         Returns
         -------
         sorting_info : tuple
             A tuple that can be used the sort the detected settings.
-            Larger values in the tupel indicate a higher degree of
+            Larger values in the tuple indicate a higher degree of
             conformity. The order of the values in the tuple is the
             order of their significance.
         """
-        controller_class = config.get('controller', 'controller_class',
-                                      fallback=None)
+
         controller_name = config.get('controller', 'device_name',
                                      fallback=None)
         ver = config.get('controller', 'firmware_version', fallback=None)
         firmware_ver = base.Version(ver) if ver else base.Version('0.0')
 
-        if default:
-            if obj_info.more['name'] == controller_class:
-                if tolerant_match:
-                    # If tolerant_match is True the GUI is in the
-                    # process of determining which devices are connected.
-                    # This means we do not know which firmware the
-                    # controller has installed yet.
-                    return (firmware_ver.minor,)
-                # If tolerant_match is False, then we are looking for a
-                # default that does specifically match the firmware of
-                # the device we are looking at.
-                if obj_info.more['firmware'] == firmware_ver:
-                    return (firmware_ver.minor,)
-        elif obj_info.more['name'] == controller_name:
-            if tolerant_match:
-                if obj_info.more['firmware'].major == firmware_ver.major:
-                    # For a tolerant match checking the firmware major
-                    # is good enough, as settings with the same major
-                    # are bound to be at least partially compatible.
-                    return (firmware_ver.minor,)
-            if obj_info.more['firmware'] == firmware_ver:
-                return (firmware_ver.minor,)
+        if obj_info.more['name'] != controller_name:
+            pass
+        elif obj_info.more['firmware'] == firmware_ver:
+            return (firmware_ver.minor,)
+        elif (not exact_match
+              and obj_info.more['firmware'].major == firmware_ver.major):
+            # For a tolerant match checking the firmware major
+            # is good enough, as settings with the same major
+            # are bound to be at least partially compatible.
+            return (firmware_ver.minor,)
         return ()
 
     def list_devices(self):  # too-complex, too-many-branches

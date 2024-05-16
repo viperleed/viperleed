@@ -225,7 +225,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     obj_info : SettingsInfo
         This SettingsInfo is necessary to determine the correct
         settings. How exactly is up to the reimplementation of
-        find_matching_settings in obj_cls.
+        find_matching_settings_files in obj_cls.
     **kwargs : dict
         The same arguments given to get_object_settings
 
@@ -289,16 +289,16 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
     obj_info : SettingsInfo
         This SettingsInfo is necessary to determine the correct
         settings. How exactly is up to the reimplementation of
-        find_matching_settings in obj_cls.
+        find_matching_settings_files in obj_cls.
     **kwargs : dict, optional
         directory : str or Path, optional
             The base of the directory tree in which the settings file
             should be looked for. The search is recursive. Default is
             the path to the _defaults directory.
-        tolerant_match : bool, optional
-            Whether settings in obj_info should be looked up tolerantly
+        exact_match : bool, optional
+            Whether settings in obj_info should be looked up exactly
             or not. What this entails is up to the reimplementation of
-            find_matching_settings. Default is True.
+            find_matching_settings_files. Default is False.
         prompt_if_invalid : bool, optional
             In case the search for a config file failed, pop up
             a dialog asking the user for input. The search is
@@ -317,7 +317,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
             string only if this is given and if the user dismisses
             the dialog. Default is an empty string.
         default : bool
-            Wheter a default settings is searched or not. If True the
+            Whether a default settings is searched or not. If True the
             matching check for a default settings is performed. Default
             value is False.
 
@@ -333,13 +333,13 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         dismissed the dialog.
     """
     directory = kwargs.get('directory', DEFAULTS_PATH)
-    tolerant_match = kwargs.get('tolerant_match', True)
+    exact_match = kwargs.get('exact_match', False)
     prompt_if_invalid = kwargs.get('prompt_if_invalid', True)
     parent_widget = kwargs.get('parent_widget', None)
     default = kwargs.get('default', False)
 
-    device_config_files = obj_cls.find_matching_settings(
-        obj_info, directory, tolerant_match, default
+    device_config_files = obj_cls.find_matching_settings_files(
+        obj_info, directory, exact_match, default
         )
 
     if device_config_files and len(device_config_files) == 1:

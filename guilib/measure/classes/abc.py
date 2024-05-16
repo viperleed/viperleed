@@ -57,9 +57,12 @@ class QObjectABCErrors(ViPErLEEDErrorEnum):
         'settings value {} for setting {!r}. Using {} instead. '
         'Consider fixing your configuration file.'
         )
-    DEFAULT_SETTINGS_CORRUPTED = (903,
-                                  'No or multiple default settings '
-                                  'found for instance of {!r}.')
+    NO_DEFAULT_SETTINGS_FOUND = (903,
+                                 'No default settings found '
+                                 'for instance of {!r}.')
+    TOO_MANY_DEFAULT_SETTINGS = (904,
+                                 'Too many default settings that '
+                                 'match instance of {!r} exactly.')
 
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
     """Base class of measurement objects with error detection."""
@@ -96,7 +99,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
 
-    def find_default_settings(self, find_from, tolerant_match=True):
+    def find_default_settings(self, find_from, exact_match=False):
         """Find default settings for this object.
 
         Parameters
@@ -105,11 +108,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             find_from contains information to look for in the
             configuration files. The way to determine the correct
             settings is up to the reimplementation of
-            find_matching_settings in self. If it is a str it
-            is converted into a SettingsInfo.
-        tolerant_match : bool, optional
-            Whether matching of find_from should be performed in
-            a tolerant way. Default is True.
+            find_matching_settings_files in self. If it is
+            a str it is converted into a SettingsInfo.
+        exact_match : bool, optional
+            Whether find_from should be matched exactly.
+            Default is False.
 
         Returns
         -------
@@ -119,7 +122,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Emits
         -----
-        QObjectABCErrors.DEFAULT_SETTINGS_CORRUPTED
+        QObjectABCErrors.NO_DEFAULT_SETTINGS_FOUND
             If no default settings were detected.
         """
         # Make a dummy SettingsInfo that will
@@ -127,17 +130,25 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         if isinstance(find_from, str):
             find_from = SettingsInfo(find_from)
             find_from.more['name'] = find_from.unique_name
-        settings = self.find_matching_settings(find_from, DEFAULTS_PATH,
-                                              tolerant_match, default=True)
-        if not settings or len(settings) != 1:
-            emit_error(self, QObjectABCErrors.DEFAULT_SETTINGS_CORRUPTED,
+        settings = self.find_matching_settings_files(
+            find_from, DEFAULTS_PATH, exact_match, default=True
+            )
+        if not settings:
+            # No default settings was found.
+            emit_error(self, QObjectABCErrors.NO_DEFAULT_SETTINGS_FOUND,
+                       find_from.unique_name)
+            return
+        elif exact_match and len(settings) != 1:
+            # Too many default settings were found
+            # while trying to find an exact match.
+            emit_error(self, QObjectABCErrors.TOO_MANY_DEFAULT_SETTINGS,
                        find_from.unique_name)
             return
         return settings[0]
 
     @classmethod
-    def find_matching_settings(cls, obj_info, directory, tolerant_match,
-                               default):
+    def find_matching_settings_files(cls, obj_info, directory, exact_match,
+                                     default):
         """Find .ini files for obj_info in the tree starting at directory.
 
         Parameters
@@ -147,11 +158,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             appropriate settings.
         directory : str or Path
             The location in which to look for configuration files.
-        tolerant_match : bool
-            Whether obj_info should be matched tolerantly. If False,
-            the information is matched exactly.
+        exact_match : bool
+            Whether obj_info should be matched exactly.
+            If True, the information is matched exactly.
         default : bool
-            Wheter a default settings is searched or not. If True the
+            Whether a default settings is searched or not. If True the
             matching check for a default settings is performed.
 
         Returns
@@ -168,9 +179,14 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         for settings_file in settings_files:
             config = ConfigParser()
             config.read(settings_file)
-            conformity = cls.is_matching_settings(
-                obj_info, config, tolerant_match, default
-                )
+            if default:
+                conformity = cls.is_matching_default_settings(
+                    obj_info, config, exact_match
+                    )
+            else:
+                conformity = cls.is_matching_settings(
+                    obj_info, config, exact_match
+                    )
             if conformity:
                 tmp.append((settings_file, conformity))
 
@@ -181,7 +197,32 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
     @classmethod
     @abstractmethod
-    def is_matching_settings(cls, obj_info, config, tolerant_match, default):
+    def is_matching_default_settings(cls, obj_info, config, exact_match):
+        """Determine if the default settings file is for this instance.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo
+            The additional information that should
+            be used to check settings.
+        config : ConfigParser
+            The settings to check.
+        exact_match : bool
+            Whether obj_info should be matched exactly.
+            If True, the information is matched exactly.
+
+        Returns
+        -------
+        sorting_info : tuple
+            A tuple that can be used the sort the detected settings.
+            Larger values in the tuple indicate a higher degree of
+            conformity. The order of the values in the tuple is the
+            order of their significance.
+        """
+
+    @classmethod
+    @abstractmethod
+    def is_matching_settings(cls, obj_info, config, exact_match):
         """Determine if the settings file is for this instance.
 
         Parameters
@@ -191,17 +232,15 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             be used to check settings.
         config : ConfigParser
             The settings to check.
-        tolerant_match : bool
-            Whether the info should be matched tolerantly.
-            If False, the settings is matched exactly.
-        default : bool
-            Wheter a default settings is searched or not.
+        exact_match : bool
+            Whether obj_info should be matched exactly.
+            If True, the information is matched exactly.
 
         Returns
         -------
         sorting_info : tuple
             A tuple that can be used the sort the detected settings.
-            Larger values in the tupel indicate a higher degree of
+            Larger values in the tuple indicate a higher degree of
             conformity. The order of the values in the tuple is the
             order of their significance.
         """

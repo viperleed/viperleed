@@ -533,8 +533,8 @@ class ImagingSourceCamera(abc.CameraABC):
         self.driver.close()
 
     @classmethod
-    def is_matching_settings(cls, obj_info, config, tolerant_match, default):
-        """Determine if the settings file is for this instance.
+    def is_matching_default_settings(cls, obj_info, config, exact_match):
+        """Determine if the default settings file is for this camera.
 
         Parameters
         ----------
@@ -543,34 +543,55 @@ class ImagingSourceCamera(abc.CameraABC):
             be used to check settings.
         config : ConfigParser
             The settings to check.
-        tolerant_match : bool
-            Whether the info should be matched tolerantly.
-            If False, the settings is matched exactly.
-        default : bool
-            Wheter a default settings is searched or not.
+        exact_match : bool
+            Whether obj_info should be matched exactly.
+            If True, the information is matched exactly.
 
         Returns
         -------
         is_suitable : bool
             A tuple that can be used the sort the detected settings.
-            Larger values in the tupel indicate a higher degree of
+            Larger values in the tuple indicate a higher degree of
             conformity. The order of the values in the tuple is the
             order of their significance.
         """
         camera_class = config.get('camera_settings', 'class_name',
                                   fallback=None)
+        if obj_info.more['name'] == camera_class:
+            return (1,)
+        return ()
+
+    @classmethod
+    def is_matching_settings(cls, obj_info, config, exact_match):
+        """Determine if the settings file is for this camera.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo
+            The additional information that should
+            be used to check settings.
+        config : ConfigParser
+            The settings to check.
+        exact_match : bool
+            Whether obj_info should be matched exactly.
+            If True, the information is matched exactly.
+
+        Returns
+        -------
+        is_suitable : bool
+            A tuple that can be used the sort the detected settings.
+            Larger values in the tuple indicate a higher degree of
+            conformity. The order of the values in the tuple is the
+            order of their significance.
+        """
         camera_name = config.get('camera_settings', 'device_name',
                                  fallback=None)
-        if default:
-            if obj_info.more['name'] == camera_class:
+        if camera_name and not exact_match:
+            camera_name = _device_name_re(camera_name)
+            if bool(camera_name.match(obj_info.unique_name)):
                 return (1,)
-        elif camera_name:
-            if tolerant_match:
-                camera_name = _device_name_re(camera_name)
-                if bool(camera_name.match(obj_info.unique_name)):
-                    return (1,)
-            elif obj_info.unique_name == camera_name:
-                return (1,)
+        elif obj_info.unique_name == camera_name:
+            return (1,)
         return ()
 
     def get_settings_handler(self):

@@ -281,12 +281,20 @@ class SerialABC(HardwareABC):
         self.connect_()
 
     @classmethod
-    def is_matching_settings(*_):
-        """Return False."""
+    def is_matching_default_settings(*_):
+        """Return empty tuple."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
         # be called.
-        return False
+        return ()
+
+    @classmethod
+    def is_matching_settings(*_):
+        """Return empty tuple."""
+        # Generally speaking controllers have to find the approriate
+        # settings for their serial. Therefore this method should never
+        # be called.
+        return ()
 
     def set_settings(self, new_settings):
         """Change settings of the port.

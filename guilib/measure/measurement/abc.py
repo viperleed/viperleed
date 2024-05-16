@@ -254,7 +254,29 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         self.__connect_secondary_controllers()
 
     @classmethod
-    def is_matching_settings(cls, obj_info, config, tolerant_match, default):
+    def is_matching_default_settings(cls, obj_info, config, exact_match):
+        """Determine if the default settings file is for a measurement.
+
+        Parameters
+        ----------
+        obj_info : SettingsInfo
+            The additional information that should
+            be used to check settings.
+        config : ConfigParser
+            The settings to check.
+        exact_match : bool
+            Whether obj_info should be matched exactly.
+            If True, the information is matched exactly.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is suitable.
+        """
+        return ()
+
+    @classmethod
+    def is_matching_settings(cls, obj_info, config, exact_match):
         """Determine if the settings file is for a measurement.
 
         Parameters
@@ -264,18 +286,16 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             be used to check settings.
         config : ConfigParser
             The settings to check.
-        tolerant_match : bool
-            Whether the info should be matched tolerantly.
-            If False, the settings is matched exactly.
-        default : bool
-            Wheter a default settings is searched or not.
+        exact_match : bool
+            Whether obj_info should be matched exactly.
+            If True, the information is matched exactly.
 
         Returns
         -------
         is_suitable : bool
             True if the settings file is suitable.
         """
-        return False                                                            # TODO: Implement
+        return ()                                                            # TODO: Implement
 
     def set_settings(self, new_settings):                                       # TODO: check what happens if trying to make a controller that already exists
         """Change settings of the measurement.
