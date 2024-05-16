@@ -65,6 +65,7 @@ dev = [
     ]
 doc = [
     'myst-nb',
+    'setuptools',  # Workaround for sphinxcontrib-bibtex #345
     'sphinx-rtd-theme',
     'sphinx',
     'sphinxcontrib-bibtex',
