@@ -1,14 +1,14 @@
 .. _example_Fe2O3:
 
-====================
-Hematite (012)-(1×1)
-====================
+==================================
+Example System: Fe₂O₃(1−102)-(1×1)
+==================================
 
 Hematite (:math:`\alpha \text{-Fe}_2\text{O}_3`) is one of the most common
 naturally occurring iron oxides. Its surfaces are popular model
 systems for (single-atom) catalysis
 :cite:p:`kraushoferAtomicscaleStructureHematite2018,franceschiModelSystemPhotocatalysis2020`,
-photocatalysis and the study of mineral-water interfaces.
+photocatalysis and the study of mineral–water interfaces.
 
 The :math:`(1\bar{1}02)` surface (also referred to as :math:`(012)`, or r-cut)
 exhibits two stable terminations under :term:`UHV` conditions: a stoichiometric
@@ -16,7 +16,7 @@ exhibits two stable terminations under :term:`UHV` conditions: a stoichiometric
 :cite:p:`kraushoferAtomicscaleStructureHematite2018`.
 Here we use the bulk-truncated (1×1) surface as an example system of a "medium
 complexity" oxide surface and will compare experimental LEED :math:`I(V)` data
-[#]_ with a theory calculation in ViPErLEED.
+with a theory calculation in ViPErLEED.
 
 All input files needed to follow along on your own machine can be found
 :download:`here</_static/example_systems/Fe2O3(012)-(1x1)/input_files.zip>`.
@@ -51,7 +51,7 @@ For this example, we use the structure by
     :ref:`tensor LEED approximation<tensor_leed>`, but they can be optimized in
     a :ref:`full-dynamic optimization<fdoptimization>`.
 
-To go from the rhombohedral bulk unit cell to the unit cell for the
+To go from the hexagonal bulk unit cell to the unit cell for the
 :math:`(1\bar{1}02)` (r-cut) surface, we need to apply a suitable change of
 basis:
 
@@ -354,10 +354,6 @@ optimization for the first two layers (atoms ``* L1-2``), and then adding the
 third layer atoms (atoms ``* L1-3``) to the optimization, we could reliably
 further reduce the R-factor to about :math:`R_P \approx 0.16`. [#]_
 
-
-.. [#] The data was obtained by Alexander M. Imre and Michele Riva, with further
-       support provided by Florian Kraushofer, Giada Franceschi, Tilman
-       Kißlinger and Lutz Hammer.
 
 .. [#] We found that optimizing all three layers right away with the default 
        convergence parameters lead to the R-factor getting stuck in a local
