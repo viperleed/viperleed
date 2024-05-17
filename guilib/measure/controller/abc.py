@@ -574,7 +574,7 @@ class ControllerABC(DeviceABC):
 
     @abstractmethod
     def are_settings_invalid(self, settings):
-        """Check if there are any invalid settings..
+        """Check if there are any invalid settings.
 
         This method should be extended in subclasses. This method is
         guaranteed to be called once each time new settings are loaded,

@@ -838,7 +838,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             base.safe_disconnect(ctrl.busy_changed,
                                  self.__continue_preparation)
             ctrl.busy_changed.connect(self.__check_preparation_finished,
-                                         type=_UNIQUE)
+                                      type=_UNIQUE)
 
         # The camera.busy_changed signals are connected only now, rather
         # than during begin_preparation. This prevents early calls

@@ -318,19 +318,19 @@ class ViPErinoController(abc.MeasureControllerABC):
             Each entry can be either '<section>', '<section>/<option>',
             or '<section>/<option> not one of <value1>, <value2>, ...'
         """
-        invalid = settings.has_settings(("controller", "firmware_version"))
+        invalid = settings.has_settings(('controller', 'firmware_version'))
         if not invalid:
             try:
-                version = base.Version(settings["controller"]["firmware_version"])
+                version = base.Version(settings['controller']['firmware_version'])
             except (TypeError, ValueError) as err:
-                invalid.append("controller/firmware_version")
+                invalid.append('controller/firmware_version')
 
         self._thermocouple = None  # In case it changed
 
         mandatory_cmd_names = list(_MANDATORY_CMD_NAMES)
-        if version and version >= "0.7":
-            mandatory_cmd_names.append("PC_DEBUG")
-        mandatory_commands = (("available_commands", cmd)
+        if version and version >= '0.7':
+            mandatory_cmd_names.append('PC_DEBUG')
+        mandatory_commands = (('available_commands', cmd)
                               for cmd in mandatory_cmd_names)
 
         # pylint: disable=protected-access
@@ -503,10 +503,10 @@ class ViPErinoController(abc.MeasureControllerABC):
         handler = SettingsHandler(self.settings)
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
-                           display_name="Firmware version", read_only=True)
+                           display_name='Firmware version', read_only=True)
         handler.add_option('controller', 'device_name',
                            handler_widget=_settings.SerialNumberEditor(self),
-                           display_name="Serial No.")
+                           display_name='Serial No.')
         handler.add_from_handler(super().get_settings_handler())
         handler.add_complex_section(
             _settings.HardwareConfigurationEditor(controller=self)              # TODO: add ADC_update rate for measurement

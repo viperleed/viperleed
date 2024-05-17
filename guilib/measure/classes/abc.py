@@ -162,8 +162,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             Whether obj_info should be matched exactly.
             If True, the information is matched exactly.
         default : bool
-            Whether a default settings is searched or not. If True the
-            matching check for a default settings is performed.
+            Whether a default settings is searched or not. If True,
+            the matching check for a default settings is performed.
 
         Returns
         -------
