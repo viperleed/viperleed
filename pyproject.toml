@@ -38,7 +38,7 @@ keywords = [
 Homepage = 'https://viperleed.org'
 
 [tool.setuptools]
-py-modules = ["viperleed"]
+packages = ["viperleed"]
 
 [tool.setuptools.dynamic]
 version = {attr = "viperleed.__version__"}
