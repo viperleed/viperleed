@@ -123,6 +123,14 @@ class Bookkeeper():
             logger.error('Error creating history folder.')
             raise
 
+        # attach file handler for history/bookkeeper.log
+        bookkeeper_log_path = self.top_level_history_path / 'bookkeeper.log'
+        logger.addHandler(logging.FileHandler(bookkeeper_log_path,
+                                              mode='a'))
+
+        logger.info('\n### Bookeeper running at '
+                    f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###')
+
         # history.info handler - creates file if not yet there
         self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
                                             create_new=True)
