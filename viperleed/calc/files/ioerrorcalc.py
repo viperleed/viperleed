@@ -428,9 +428,9 @@ def make_errors_figs(errors, formatting=None):
                 plt.tight_layout()
                 fig, axs = plt.subplots(fig_order[0], fig_order[1],
                                         figsize=figsize, squeeze=True)
+                axs = axs.flatten()
                 [sp.set_linewidth(0.7 * line_width) for ax in axs
                 for sp in ax.spines.values()]
-                axs = axs.flatten()
             err = mode_errors.pop(0)
             rmax = max(r for r in err.rfacs)
             x_values = err.lin_disp

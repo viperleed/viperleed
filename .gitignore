@@ -4,6 +4,9 @@
 test.py
 *wrong*
 
+# editable install files and folders
+**/*egg-info*
+
 # macOS files
 .DS_Store
 **/.DS_Store

@@ -68,12 +68,12 @@ html_theme = "sphinx_rtd_theme"
 #html_theme = 'piccolo_theme'
 
 html_favicon = '../viperleed/guilib/icons/favicon.ico'
-
+html_logo = '_static/viperleed_logo_oneline.svg'
 html_static_path = ['_static']
 
 # RTD theme specific
 html_theme_options = {
-    'logo_only': False,
+    'logo_only': True,
     'display_version': True,
     'prev_next_buttons_location': None,
     'style_external_links': True,

@@ -13,8 +13,8 @@ groupings :ref:`here<PARAMETERS>`.
    "**→**" usually require user input for simple but non-trivial 
    systems.
 
-TLEEDM execution
-================
+viperleed calc execution
+========================
 
 Defines what to calculate and where to start.
 
@@ -279,3 +279,16 @@ Output style
   +==============================================================+==========================================================================================================================================+
   | :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`                          | Change appearance of the R-factor plot files                                                                                             |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
+
+
+.. toctree::
+    :hidden:
+
+    param_name
+    param_section
+
+.. toctree:: 
+    :hidden:
+    :glob:
+
+    /content/parameters/*

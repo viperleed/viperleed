@@ -1,4 +1,7 @@
 [build-system]
+# Note for pip install -e .: requires pip >=21.3 that introduced
+# editable-install capabilities from a pyproject.toml file instead
+# of setup.py or setup.conf
 requires = ['setuptools']
 build-backend = 'setuptools.build_meta'
 # TODO: check version of setuptools
@@ -57,13 +60,14 @@ dev = [
     'pytest-cases',
     'pytest-subtests',
     'pytest<8',  # Till Issue #337 of pytest-cases is fixed
-    'pytest',
     'twine',
     ]
-doc = [
-    'myst-nb',
+doc = [  # Requires >= py3.9!
+    'myst-nb>1.0',
+    'myst-parser>1.0',
+    'setuptools',  # Workaround for sphinxcontrib-bibtex #345
     'sphinx-rtd-theme',
-    'sphinx',
+    'sphinx>6.1',
     'sphinxcontrib-bibtex',
     'sphinxcontrib-qthelp',
     'sphinxcontrib-spelling',
@@ -144,9 +148,9 @@ enable = ['useless-suppression',
           'use-implicit-booleaness-not-comparison-to-zero',
           'use-implicit-booleaness-not-comparison-to-string']
 disable = [
-	'logging-fstring-interpolation',
-	'consider-using-assignment-expr',  # We want to support 3.7 too
-	]
+    'logging-fstring-interpolation',
+    'consider-using-assignment-expr',  # We want to support 3.7 too
+    ]
 
 [tool.pylint.reports]
 output-format = 'colorized'

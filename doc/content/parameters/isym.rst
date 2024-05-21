@@ -29,7 +29,7 @@ are listed in the table below.
   :ref:`POSCAR<POSCAR>`, and will allow only symmetry *reduction*, 
   i.e., the group you select must be a subgroup of the group of your 
   input :ref:`POSCAR<POSCAR>`.
-  Take a look |here| for (i) a graphical representation of the 
+  Take a look :ref:`here<planegroups>` for (i) a graphical representation of the 
   operations in the group of your slab, (ii) a graphical representation 
   of the diplacements allowed for each plane group, and (iii) a list of 
   subgroups for each plane group.
@@ -40,7 +40,7 @@ are listed in the table below.
   initialization.
 
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``group`` | Special cases: reduction from some groups requires specification of which subgroup (see |here|)                                                                  |
+| ``group`` | Special cases: reduction from some groups requires specification of which subgroup (see :ref:`here<planegroups>`)                                                |
 +===========+==================================================================================================================================================================+
 | ``p1``    | --                                                                                                                                                               |
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -58,7 +58,7 @@ are listed in the table below.
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |           | from ``p6m`` specify ``cm[1 0]``, ``cm[0 1]``, ``cm[1 1]``, ``cm[1 -1]``, ``cm[1 2]``, or ``cm[2 1]``                                                            |
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``rcm``   | Note: not a real plane group, see |pdf file| (``cm`` with non-primitive cell. Calculation times will be longer than with the primitive cell!)                    |
+| ``rcm``   | Note: not a real plane group, see :ref:`here<planegroups>` (``cm`` with non-primitive cell. Calculation times will be longer than with the primitive cell!)      |
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |           | from ``rcmm`` specify either ``rcm[1 0]`` or ``rcm[0 1]``                                                                                                        |
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -70,7 +70,7 @@ are listed in the table below.
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``cmm``   | from ``p6m`` specify ``cmm[1 2]`` (or ``cmm[1 0]``), ``cmm[2 1]`` (or ``cmm[0 1]``), ``cmm[1 -1]`` (or ``cmm[1 1]``). Alternatives in parentheses are equivalent |
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``rcmm``  | Note: not a real plane group, see |pdf file| (``cmm`` with non-primitive cell. Calculation times will be longer than with the primitive cell!)                   |
+| ``rcmm``  | Note: not a real plane group, see :ref:`here<planegroups>` (``cmm`` with non-primitive cell. Calculation times will be longer than with the primitive cell!)     |
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``p4``    | --                                                                                                                                                               |
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -88,6 +88,3 @@ are listed in the table below.
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``p6m``   | --                                                                                                                                                               |
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-.. |here| replace:: :ref:`here<planegroups>`
-.. |pdf file| replace:: :download:`the PDF file</_static/planegroups.pdf>`
