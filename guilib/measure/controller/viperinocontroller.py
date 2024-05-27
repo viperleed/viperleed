@@ -625,7 +625,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         for port in port_names:
             ctrl = ViPErinoController(address=port)
             if not ctrl.has_valid_settings:
-                print("Something is wrong with the ViPErino default settings")
+                # Something is wrong with the default configuration file.
                 return []
             if not ctrl.serial.is_open:
                 # Port is already in use

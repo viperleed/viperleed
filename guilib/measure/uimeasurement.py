@@ -197,18 +197,19 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtWidgets as qtw
 
 # ViPErLEED modules
-from viperleed.guilib.pluginsbase import ViPErLEEDPluginBase
-from viperleed.guilib.widgetslib import move_to_front, AllGUIFonts
-from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
-from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.basewidgets import QDoubleValidatorNoDot
-
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.camera.abc import CameraABC
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import DataPoints
+from viperleed.guilib.measure.classes.settings import MissingSettingsFileError
+from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
+from viperleed.guilib.measure.classes.settings import SystemSettings
+from viperleed.guilib.measure.classes.settings import (
+    TooManyDefaultSettingsError
+    )
+from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import ControllerABC
-from viperleed.guilib.measure.measurement.abc import MeasurementABC
-from viperleed.guilib.measure.widgets.cameraviewer import CameraViewer
-from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
 from viperleed.guilib.measure.dialogs.badpxfinderdialog import (
     BadPixelsFinderDialog
     )
@@ -216,9 +217,13 @@ from viperleed.guilib.measure.dialogs.firmwareupgradedialog import (
     FirmwareUpgradeDialog
     )
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsDialog
-from viperleed.guilib.measure.classes.settings import (
-    ViPErLEEDSettings, MissingSettingsFileError, SystemSettings
-    )
+from viperleed.guilib.measure.measurement import ALL_MEASUREMENTS
+from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.widgets.cameraviewer import CameraViewer
+from viperleed.guilib.measure.widgets.measurement_plot import MeasurementPlot
+from viperleed.guilib.pluginsbase import ViPErLEEDPluginBase
+from viperleed.guilib.widgetslib import AllGUIFonts
+from viperleed.guilib.widgetslib import move_to_front
 
 
 TITLE = 'Measure LEED-IV'
@@ -410,11 +415,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         # The get_devices method does return the device name, class and,
         # additional information. The class and additional information
         # are returned as a tuple.
-        for cam_name, cls_and_info in base.get_devices("camera").items():
+        for cam_name, cls_and_info in self._detect_devices("camera"):
             act = cameras.addAction(cam_name)
             act.setData(cls_and_info)
             act.triggered.connect(self.__on_camera_clicked)
-        for ctrl_name, cls_and_info in base.get_devices("controller").items():
+        for ctrl_name, cls_and_info in self._detect_devices("controller"):
             act = controllers.addAction(ctrl_name)
             act.setData(cls_and_info)
             act.triggered.connect(self.__on_controller_clicked)
@@ -617,6 +622,18 @@ class Measure(ViPErLEEDPluginBase):                                             
             dialog.deleteLater()
             del self._dialogs['device_settings'][full_name]
 
+    def _detect_devices(self, device_type):
+        """Detect and return devices of a certain type."""
+        detected_devices = []
+        try:
+            detected_devices = base.get_devices(device_type).items()
+        except (NoDefaultSettingsError, TooManyDefaultSettingsError) as err:
+            base.emit_error(self,
+                            QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
+                            str(err) + ' Contact the ViPErLEED team '
+                            'to fix your default settings.')
+        return detected_devices
+
     def __make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
         """Make a new settings dialog for a controller."""
         address = ctrl_info.more['address']
@@ -660,11 +677,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         # Not found, but user wants to make a new one. Use _defaults
         device = device_cls(**other_info)
         if not device.has_valid_settings:
-            # Something is wrong with the default configuration file
-            # This would normally be reported by the device, but
-            # we're not going to return it (nor connect to its
-            # error_occurred)
-            print("SOMETHING WRONG WITH DEFAULT CONFIG")                        # TODO
+            # Something is wrong with the default configuration file.
             return None
 
         # Edit the device name in the settings, then save to file

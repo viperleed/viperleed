@@ -34,7 +34,11 @@ from viperleed.guilib.measure.hardwarebase import DEFAULTS_PATH
 from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import SettingsInfo
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
+from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
+from viperleed.guilib.measure.classes.settings import (
+    TooManyDefaultSettingsError
+    )
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
@@ -61,12 +65,8 @@ class QObjectSettingsErrors(ViPErLEEDErrorEnum):
         'settings value {} for setting {!r}. Using {} instead. '
         'Consider fixing your configuration file.'
         )
-    NO_DEFAULT_SETTINGS_FOUND = (903,
-                                 'No default settings found '
-                                 'for instance of {!r}.')
-    TOO_MANY_DEFAULT_SETTINGS = (904,
-                                 'Too many default settings that '
-                                 'match instance of {!r} exactly.')
+    DEFAULT_SETTINGS_CORRUPTED = (903,
+                                  'Default settings corrupted. {!r}')
 
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
     """Base class of measurement objects with error detection."""
@@ -120,16 +120,17 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Returns
         -------
-        path_to_config : Path or ''
-            The path to the only settings file successfully found.
-            '' if too many or no settings file were found.
+        path_to_config : Path
+            The path to the only settings file successfully found
+            or the best match if no exact match was required.
 
-        Emits
+        Raises
         -----
-        QObjectSettingsErrors.NO_DEFAULT_SETTINGS_FOUND
-            If no default settings were detected.
-        QObjectSettingsErrors.TOO_MANY_DEFAULT_SETTINGS
-            If too many default settings were detected.
+        NoDefaultSettingsError
+            If no default settings were found.
+        TooManyDefaultSettingsError
+            If multiple matching default settings were found
+            and an exact match was asked for.
         """
         # Make a dummy SettingsInfo that will
         # be used to find settings from default name.
@@ -141,15 +142,17 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             )
         if not settings:
             # No default settings was found.
-            emit_error(self, QObjectSettingsErrors.NO_DEFAULT_SETTINGS_FOUND,
-                       find_from.unique_name)
-            return ''
+            raise NoDefaultSettingsError(
+                'No default settings found for '
+                f'instance of {type(self).__name__}.'
+                )
         if exact_match and len(settings) != 1:
             # Too many default settings were found
             # while trying to find an exact match.
-            emit_error(self, QObjectSettingsErrors.TOO_MANY_DEFAULT_SETTINGS,
-                       find_from.unique_name)
-            return ''
+            raise TooManyDefaultSettingsError(
+                'Too many default settings that match '
+                f'instance of {type(self).__name__}.'
+                )
         return settings[0]
 
     @classmethod
@@ -178,8 +181,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             settings sorted by how well the settings match from best to
             worst.
         """
-        directory = Path(directory).resolve()
-        settings_files = directory.glob('**/*.ini')
+        settings_files = Path(directory).resolve().glob('**/*.ini')
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
                else cls.is_matching_settings)

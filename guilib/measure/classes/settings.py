@@ -82,8 +82,16 @@ class NoSettingsError(Exception):
     """Exception raised when failed to read settings file(s)."""
 
 
+class NoDefaultSettingsError(Exception):
+    """Exception raised when no default settings file was found."""
+
+
 class NotASequenceError(Exception):
     """Exception raised when getsequence fails to return a sequence."""
+
+
+class TooManyDefaultSettingsError(Exception):
+    """Exception raised when too many default settings files were found."""
 
 
 class ViPErLEEDSettings(ConfigParser):

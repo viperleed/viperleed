@@ -322,14 +322,13 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
 
     Returns
     -------
-    path_to_config : Path, "", or None
-        The path to the only settings file successfully
-        found. None or "" if no settings file was found.
-        None is always returned if prompt_if_invalid is False,
-        or because the user dismissed the pop-up. The empty
-        string is returned if an alternative option was given
-        as a third_btn_text parameter, but the user anyway
-        dismissed the dialog.
+    path_to_config : Path or None
+        The path to the only settings file successfully found.
+        None if no settings file was found. None is always
+        returned if prompt_if_invalid is False, or because the
+        user dismissed the pop-up. The empty string is returned
+        if an alternative option was given as a third_btn_text
+        parameter, but the user anyway dismissed the dialog.
     """
     directory = kwargs.get('directory', DEFAULTS_PATH)
     exact_match = kwargs.get('exact_match', False)
