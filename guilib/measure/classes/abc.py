@@ -24,6 +24,7 @@ which means one cannot do: NewClass(QObjectSubclass1, QObjectSubclass2)
 from abc import ABCMeta
 from abc import abstractmethod
 from configparser import ConfigParser
+from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
 
@@ -31,9 +32,8 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure.hardwarebase import DEFAULTS_PATH
-from viperleed.guilib.measure.hardwarebase import emit_error
-from viperleed.guilib.measure.hardwarebase import SettingsInfo
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
+from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import SettingsError
@@ -439,11 +439,12 @@ class DeviceABC(HardwareABC):
     def list_devices(self):
         """List all devices of this class.
 
-        This method must return a list of SettingsInfo instances. The
-        SettingsInfo class is located in the hardwarebase module. Each
+        This method must return a list of SettingsInfo instances. Each
         controller is represented by a single SettingsInfo instance. The
         SettingsInfo object must contain a .unique_name and can contain
-        .more information as a dict.
+        .more information as a dict. The information contained within
+        a SettingsInfo must be enough to determine a suitable settings
+        file for the device from it.
 
         Returns
         -------
@@ -451,3 +452,27 @@ class DeviceABC(HardwareABC):
             Each element is a SettingsInfo instance containing the name
             of a device and additional information as a dict.
         """
+
+
+@dataclass
+class SettingsInfo:
+    """A container for information about settings of objects.
+
+    Instances of this class should be constructed in a manner that
+    allows the constructing class to find settings from the instance.
+
+    Attributes
+    ----------
+    unique_name : str
+        Unique name identifying the discovered device
+    more : dict
+        Extra, optional, information about the discovered device.
+    """
+    unique_name: str
+    more: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        """Check that we have a string unique_name."""
+        if not isinstance(self.unique_name, str):
+            raise TypeError(f'{type(self).__name__}: '
+                            'unique_name must be a string')

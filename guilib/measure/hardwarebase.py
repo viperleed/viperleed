@@ -12,7 +12,6 @@ This module contains utility functions and classes shared
 by multiple ViPErLEED hardware objects.
 """
 
-from dataclasses import dataclass, field
 import enum
 import inspect
 from pathlib import Path
@@ -439,30 +438,6 @@ def safe_disconnect(signal, *slot):
 
 
 ################################### CLASSES ###################################
-
-
-@dataclass
-class SettingsInfo:
-    """A container for information about settings of objects.
-    
-    Instances of this class should be constructed in a manner that
-    allows the constructing class to find settings from the instance.
-
-    Attributes
-    ----------
-    unique_name : str
-        Unique name identifying the discovered device
-    more : dict
-        Extra, optional, information about the discovered device.
-    """
-    unique_name: str
-    more: dict = field(default_factory=dict)
-
-    def __post_init__(self):
-        """Check that we have a string unique_name."""
-        if not isinstance(self.unique_name, str):
-            raise TypeError(f'{type(self).__name__}: '
-                            'unique_name must be a string')
 
 
 class ViPErLEEDErrorEnum(tuple, enum.Enum):

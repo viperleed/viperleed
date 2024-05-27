@@ -17,8 +17,8 @@ from PyQt5 import (QtWidgets as qtw,
                    QtCore as qtc)
 
 from viperleed.guilib.dialogs.busywindow import BusyWindow
-from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure import camera as _m_camera
+from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.widgetslib import change_control_text_color

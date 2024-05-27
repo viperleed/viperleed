@@ -21,6 +21,7 @@ from PyQt5 import QtSerialPort as qts
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
+from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
@@ -649,7 +650,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                 more_info = {k: hardware[k] for k in ('firmware', )}
                 more_info['address'] = ctrl.address
                 more_info['name'] = ctrl.name
-                device_list.append(base.SettingsInfo(txt, more_info))
+                device_list.append(SettingsInfo(txt, more_info))
             else:
                 print("Not a ViPErLEED controller at", ctrl.address,
                       hardware, flush=True)

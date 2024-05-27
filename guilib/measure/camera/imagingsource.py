@@ -28,6 +28,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ImagingSourceError, SinkFormat,
     )
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
+from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.hardwarebase import _device_name_re
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 
@@ -659,7 +660,7 @@ class ImagingSourceCamera(abc.CameraABC):
         """
         # Use empty dictionaries as there is no
         # additional information to pass along.
-        return [base.SettingsInfo(name) for name in self.driver.devices]
+        return [SettingsInfo(name) for name in self.driver.devices]
 
     def open(self):
         """Open the camera device.
