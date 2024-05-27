@@ -20,7 +20,7 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtSerialPort as qts
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.classes.abc import QObjectABCErrors
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
@@ -201,7 +201,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             # pylint: disable=redefined-variable-type
             # Seems a pylint bug.
             meas_f = 50.0
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             f"adc_update_rate/{update_rate_raw}", "")
         return 1000 / meas_f
@@ -435,7 +435,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                                                'adc_update_rate', fallback=4)
         except (TypeError, ValueError):
             # Cannot convert to int
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'measurement_settings/adc_update_rate', '')
             return
@@ -805,7 +805,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             v_ref_dac = self.settings.getfloat('energy_calibration',
                                                'v_ref_dac')
         except (TypeError, ValueError):
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'energy_calibration/v_ref_dac', "")
             v_ref_dac = 2.5
@@ -835,7 +835,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             timeout = self.settings.getint("serial_port_settings", "timeout",
                                            fallback=0)
         except (TypeError, ValueError):
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'serial_port_settings/timeout', "")
             timeout = 0
@@ -865,12 +865,12 @@ class ViPErinoController(abc.MeasureControllerABC):
         try:
             available_adcs = self.available_adcs()
         except NotASequenceError:
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'controller/measurement_devices', '')
             return
         except (KeyError, ValueError, TypeError, RuntimeError) as err:
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__, 'controller', err)
             return
 

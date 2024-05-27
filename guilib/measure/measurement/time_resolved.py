@@ -16,7 +16,7 @@ from math import ceil
 
 from PyQt5 import QtCore as qtc
 
-from viperleed.guilib.measure.classes.abc import QObjectABCErrors
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.measure import hardwarebase as base
@@ -130,14 +130,14 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             'energy_step_duration')
         except (TypeError, ValueError):
             # Not an int
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'measurement_settings/energy_step_duration', '')
             interval = min_t
 
         if interval < min_t:
             base.emit_error(
-                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 type(self).__name__, f'{interval} (too short)',
                 'measurement_settings/energy_step_duration', min_t
                 )
@@ -172,7 +172,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             'is_continuous')
         except ValueError:
             # Not a valid boolean
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'measurement_settings/is_continuous', '')
             return False
@@ -192,7 +192,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                                             fallback=min_t)
         except (TypeError, ValueError):
             # Not an int
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'measurement_settings/measurement_interval', '')
             interval = min_t
@@ -201,7 +201,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             txt = f"{interval} (too short)"
             interval = min_t
             base.emit_error(
-                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 type(self).__name__, txt,
                 'measurement_settings/measurement_interval', interval
                 )

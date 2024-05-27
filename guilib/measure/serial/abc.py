@@ -26,7 +26,6 @@ from PyQt5 import QtSerialPort as qts
 
 # ViPErLEED modules
 from viperleed.guilib.measure.classes.abc import HardwareABC
-from viperleed.guilib.measure.classes.abc import QObjectABCErrors
 from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.hardwarebase import emit_error
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
@@ -369,9 +368,9 @@ class SerialABC(HardwareABC):
 
         Emits
         -----
-        QObjectABCErrors.MISSING_SETTINGS
+        QObjectSettingsErrors.MISSING_SETTINGS
             If new_settings is missing.
-        QObjectABCErrors.INVALID_SETTINGS
+        QObjectSettingsErrors.INVALID_SETTINGS
             If any element of the new_settings does not fit the
             mandatory_settings.
         """

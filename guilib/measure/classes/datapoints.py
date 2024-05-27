@@ -20,9 +20,9 @@ import enum
 from PyQt5 import QtCore as qtc
 
 # ViPErLEED modules
+from viperleed.guilib.measure.classes.abc import QMetaABC
 from viperleed.guilib.measure.classes.abc import QObjectWithError
 from viperleed.guilib.measure.hardwarebase import emit_error
-from viperleed.guilib.measure.hardwarebase import QMetaABC
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 
 

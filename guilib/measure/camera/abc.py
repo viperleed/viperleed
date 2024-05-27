@@ -29,7 +29,7 @@ from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
 from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.classes.abc import DeviceABC
-from viperleed.guilib.measure.classes.abc import QObjectABCErrors
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
@@ -247,11 +247,12 @@ class CameraABC(DeviceABC):
 
         min_bin, max_bin = self.get_binning_limits()
         if binning_factor < min_bin or binning_factor > max_bin:
-            base.emit_error(self,
-                            QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
-                            type(self).__name__, f'{binning_factor} '
-                            f'[out of range ({min_bin}, {max_bin})]',
-                            'camera_settings/binning', 1)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                type(self).__name__, f'{binning_factor} '
+                f'[out of range ({min_bin}, {max_bin})]',
+                'camera_settings/binning', 1
+                )
             binning_factor = 1
             self.settings.set('camera_settings', 'binning', '1')
         self.__properties['binning'] = binning_factor
@@ -341,7 +342,7 @@ class CameraABC(DeviceABC):
 
         min_exp, max_exp = self.get_exposure_limits()
         if exposure_time < min_exp or exposure_time > max_exp:
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'measurement_settings/exposure',
                             f'\nInfo: out of range ({min_exp}, {max_exp})')
@@ -399,7 +400,7 @@ class CameraABC(DeviceABC):
 
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'measurement_settings/gain',
                             f'\nInfo: out of range ({min_gain}, {max_gain})')
@@ -462,10 +463,10 @@ class CameraABC(DeviceABC):
                                  fallback='triggered')
 
         if mode not in ('live', 'triggered'):
-            base.emit_error(self,
-                            QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
-                            type(self).__name__, mode, 'camera_settings/mode',
-                            'triggered')
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                type(self).__name__, mode, 'camera_settings/mode', 'triggered'
+                )
             mode = 'triggered'
             self.settings.set('camera_settings', 'mode', mode)
         return mode
@@ -487,11 +488,12 @@ class CameraABC(DeviceABC):
 
         min_n, max_n = self.get_n_frames_limits()
         if n_frames < min_n or n_frames > max_n:
-            base.emit_error(self,
-                            QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
-                            type(self).__name__,
-                            f"{n_frames} [out of range ({min_n}, {max_n})]",
-                            'measurement_settings/n_frames', 1)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                type(self).__name__,
+                f"{n_frames} [out of range ({min_n}, {max_n})]",
+                'measurement_settings/n_frames', 1
+                )
             n_frames = 1
             self.settings.set('measurement_settings', 'n_frames', '1')
         self.__properties['n_frames'] = n_frames
@@ -557,7 +559,7 @@ class CameraABC(DeviceABC):
         full_roi = 0, 0, *size_max
 
         if not self.__is_valid_roi(roi, limits):
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'camera_settings/roi', '\nInfo: ROI is invalid. '
                             f'You can use the full sensor: roi = {full_roi}')
@@ -694,12 +696,13 @@ class CameraABC(DeviceABC):
         """Return whether error_info relates to 'bad pixels'."""
         error_code, error_msg = error_info
         try:
-            error = QObjectABCErrors.from_code(error_code)
+            error = QObjectSettingsErrors.from_code(error_code)
         except AttributeError:
             return False
 
         error_msg = error_msg.replace('_', ' ')
-        if error is QObjectABCErrors.INVALID_SETTINGS and "bad pixel" in error_msg:
+        if (error is QObjectSettingsErrors.INVALID_SETTINGS and 
+            "bad pixel" in error_msg):
             return True
         return False
 
@@ -994,17 +997,17 @@ class CameraABC(DeviceABC):
 
         Emits
         -----
-        error_occurred(QObjectABCErrors.INVALID_SETTINGS)
+        error_occurred(QObjectSettingsErrors.INVALID_SETTINGS)
             If settings file does not have a 'bad_pixels_path' option
             in section 'camera_settings'.
-        error_occurred(QObjectABCErrors.INVALID_SETTINGS)
+        error_occurred(QObjectSettingsErrors.INVALID_SETTINGS)
             If the path specified does not contain a valid bad-pixels
             file for this camera.
         """
         bad_pix_path = self.settings.get("camera_settings", "bad_pixels_path",
                                          fallback='')
         if not bad_pix_path:
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'camera_settings/bad_pixels_path',
                             '\nInfo: No bad_pixels_path found.')
@@ -1012,7 +1015,7 @@ class CameraABC(DeviceABC):
         try:
             self.__bad_pixels.read(bad_pix_path)
         except (FileNotFoundError, ValueError) as err:
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'camera_settings/bad_pixels_path',
                             f'\nInfo: {err}')
@@ -1578,7 +1581,7 @@ class CameraABC(DeviceABC):
             self.settings.set('camera_settings', 'roi', str(roi))
             return roi
 
-        base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+        base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                         type(self).__name__, 'camera_settings/roi',
                         f'\nInfo: ROI {roi} is invalid after '
                         'adjusting top-left corner position')

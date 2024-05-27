@@ -24,7 +24,7 @@ from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import DeviceABC
-from viperleed.guilib.measure.classes.abc import QObjectABCErrors
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
@@ -292,7 +292,7 @@ class ControllerABC(DeviceABC):
             except _m_settings.NotASequenceError:
                 coef = (0, 1)
                 base.emit_error(
-                    self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                    self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                     type(self).__name__, '',
                     'energy_calibration/coefficients', coef
                     )
@@ -334,7 +334,7 @@ class ControllerABC(DeviceABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'measurement_settings/hv_settle_time')
         return settle_t
@@ -357,7 +357,7 @@ class ControllerABC(DeviceABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'measurement_settings/i0_settle_time')
         return settle_t
@@ -397,7 +397,7 @@ class ControllerABC(DeviceABC):
         except (TypeError, ValueError):
             # Not an int
             settle_t = fallback
-            base.emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
                             'measurement_settings/i0_settle_time')
         return settle_t
@@ -550,7 +550,7 @@ class ControllerABC(DeviceABC):
                 serial_class = base.class_from_name('serial', serial_cls_name)
             except ValueError:
                 base.emit_error(
-                    self, QObjectABCErrors.INVALID_SETTINGS,
+                    self, QObjectSettingsErrors.INVALID_SETTINGS,
                     type(self).__name__, 'controller/serial_class', ''
                     )
                 return False
@@ -1137,10 +1137,10 @@ class MeasureControllerABC(ControllerABC):
         except (TypeError, ValueError):
             # Not a float
             delay = fallback
-            base.emit_error(self,
-                            QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
-                            type(self).__name__, '',
-                            'controller/initial_delay', delay)
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
+                type(self).__name__, '', 'controller/initial_delay', delay
+                )
         return delay
 
     @property
@@ -1180,13 +1180,13 @@ class MeasureControllerABC(ControllerABC):
         except (TypeError, ValueError):
             nr_samples = 1
             base.emit_error(
-                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 type(self).__name__, '',
                 'measurement_settings/nr_samples', nr_samples
                 )
         if nr_samples <= 0:
             base.emit_error(
-                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 type(self).__name__, nr_samples,
                 'measurement_settings/nr_samples', 1
                 )

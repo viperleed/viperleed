@@ -20,7 +20,7 @@ from viperleed.guilib.dialogs.busywindow import BusyWindow
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure import camera as _m_camera
 from viperleed.guilib.measure.classes import settings as _m_settings
-from viperleed.guilib.measure.classes.abc import QObjectABCErrors
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.widgetslib import change_control_text_color
 
 
@@ -464,15 +464,15 @@ class BadPixelsFinderDialog(qtw.QDialog):
         """React to an error situation."""
         error_code, error_msg = error_info
         try:
-            error = QObjectABCErrors.from_code(error_code)
+            error = QObjectSettingsErrors.from_code(error_code)
         except AttributeError:
             error = None
-        if error is QObjectABCErrors.MISSING_SETTINGS:
+        if error is QObjectSettingsErrors.MISSING_SETTINGS:
             # Swallow a MISSING_SETTINGS error since we always
             # create the active_camera without settings, and give
             # it settings shortly afterwards.
             return
-        if (error is QObjectABCErrors.INVALID_SETTINGS
+        if (error is QObjectSettingsErrors.INVALID_SETTINGS
                 and "bad_pixel" in error_msg.replace(" ", "_")):
             # Swallow bad-pixels path errors that may occur
             # before the calibration is started

@@ -12,7 +12,6 @@ This module contains utility functions and classes shared
 by multiple ViPErLEED hardware objects.
 """
 
-from abc import ABCMeta
 from dataclasses import dataclass, field
 import enum
 import inspect
@@ -467,10 +466,6 @@ class SettingsInfo:
         if not isinstance(self.unique_name, str):
             raise TypeError(f'{type(self).__name__}: '
                             'unique_name must be a string')
-
-
-class QMetaABC(ABCMeta, type(qtc.QObject)):
-    """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
 
 
 class ViPErLEEDErrorEnum(tuple, enum.Enum):

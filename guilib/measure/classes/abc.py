@@ -8,7 +8,7 @@ Created: 2024-04-04
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains QObjectABCErrors, QObjectWithError,
+This module contains QObjectSettingsErrors, QObjectWithError,
 QObjectWithSettingsABC, HardwareABC and DeviceABC.
 QObjectWithError is the base class of QObjectWithSettingsABC,
 CalibrationTask, and DataPoints. QObjectWithSettingsABC is the base
@@ -21,6 +21,7 @@ QObject. Any subclass of a QObject cannot inherit from a second QObject,
 which means one cannot do: NewClass(QObjectSubclass1, QObjectSubclass2)
 """
 
+from abc import ABCMeta
 from abc import abstractmethod
 from configparser import ConfigParser
 from operator import itemgetter
@@ -31,7 +32,6 @@ from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure.hardwarebase import DEFAULTS_PATH
 from viperleed.guilib.measure.hardwarebase import emit_error
-from viperleed.guilib.measure.hardwarebase import QMetaABC
 from viperleed.guilib.measure.hardwarebase import SettingsInfo
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 from viperleed.guilib.measure.classes.settings import NoSettingsError
@@ -39,8 +39,12 @@ from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
 
-class QObjectABCErrors(ViPErLEEDErrorEnum):
-    """Class for errors shared among many ViPErLEED objects."""
+class QMetaABC(ABCMeta, type(qtc.QObject)):
+    """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
+
+
+class QObjectSettingsErrors(ViPErLEEDErrorEnum):
+    """Class for settings errors of ViPErLEED objects."""
 
     MISSING_SETTINGS = (900,
                         '{} cannot operate without settings. Load an '
@@ -68,7 +72,7 @@ class QObjectWithError(qtc.QObject):                                            
     """Base class of measurement objects with error detection."""
 
     # Emitted whenever an error has been detected. Contains
-    # information about the error which occurred.
+    # information about the error in the form (code, message).
     error_occurred = qtc.pyqtSignal(tuple)
 
 
@@ -84,7 +88,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         self._uses_default_settings = False
         if not settings:
             # Look for a default only if no settings are given.
-            _name = self.__class__.__name__
+            _name = type(self).__name__
             self._settings_to_load = self.find_default_settings(_name)
             self._uses_default_settings = True
         super().__init__(*args, **kwargs)
@@ -122,8 +126,10 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Emits
         -----
-        QObjectABCErrors.NO_DEFAULT_SETTINGS_FOUND
+        QObjectSettingsErrors.NO_DEFAULT_SETTINGS_FOUND
             If no default settings were detected.
+        QObjectSettingsErrors.TOO_MANY_DEFAULT_SETTINGS
+            If too many default settings were detected.
         """
         # Make a dummy SettingsInfo that will
         # be used to find settings from default name.
@@ -135,13 +141,13 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             )
         if not settings:
             # No default settings was found.
-            emit_error(self, QObjectABCErrors.NO_DEFAULT_SETTINGS_FOUND,
+            emit_error(self, QObjectSettingsErrors.NO_DEFAULT_SETTINGS_FOUND,
                        find_from.unique_name)
             return ''
         if exact_match and len(settings) != 1:
             # Too many default settings were found
             # while trying to find an exact match.
-            emit_error(self, QObjectABCErrors.TOO_MANY_DEFAULT_SETTINGS,
+            emit_error(self, QObjectSettingsErrors.TOO_MANY_DEFAULT_SETTINGS,
                        find_from.unique_name)
             return ''
         return settings[0]
@@ -174,24 +180,18 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """
         directory = Path(directory).resolve()
         settings_files = directory.glob('**/*.ini')
-        obj_settings_files = []
-        tmp = []
+        files_and_scores = []
+        is_matching = (cls.is_matching_default_settings if default
+               else cls.is_matching_settings)
         for settings_file in settings_files:
             config = ConfigParser()
             config.read(settings_file)
-            if default:
-                conformity = cls.is_matching_default_settings(
-                    obj_info, config, exact_match
-                    )
-            else:
-                conformity = cls.is_matching_settings(
-                    obj_info, config, exact_match
-                    )
+            conformity = is_matching(obj_info, config, exact_match)
             if conformity:
-                tmp.append((settings_file, conformity))
+                files_and_scores.append((settings_file, conformity))
 
         obj_settings_files, _ = zip(
-            *sorted(tmp, key=itemgetter(1), reverse=True)
+            *sorted(files_and_scores, key=itemgetter(1), reverse=True)
             )
         return obj_settings_files
 
@@ -320,22 +320,22 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Emits
         -----
-        QObjectABCErrors.MISSING_SETTINGS
+        QObjectSettingsErrors.MISSING_SETTINGS
             If the settings have not been found
             or if new_settings was None.
-        QObjectABCErrors.INVALID_SETTINGS
+        QObjectSettingsErrors.INVALID_SETTINGS
             If any element of the new_settings does
             not fit the mandatory settings.
         """
         try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except(ValueError, NoSettingsError):
-            emit_error(self, QObjectABCErrors.MISSING_SETTINGS,
+            emit_error(self, QObjectSettingsErrors.MISSING_SETTINGS,
                        type(self).__name__)
             return False
         invalid = self.are_settings_invalid(new_settings)
         if invalid:
-            emit_error(self, QObjectABCErrors.INVALID_SETTINGS,
+            emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                        type(self).__name__, ', '.join(invalid), '')
             return False
 

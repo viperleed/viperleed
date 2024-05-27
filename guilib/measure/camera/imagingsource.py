@@ -27,7 +27,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
     ImagingSourceError, SinkFormat,
     )
-from viperleed.guilib.measure.classes.abc import QObjectABCErrors
+from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.hardwarebase import _device_name_re
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 
@@ -440,7 +440,7 @@ class ImagingSourceCamera(abc.CameraABC):
         _min, _max = self.get_black_level_limits()
         if black_level < _min or black_level > _max:
             base.emit_error(
-                self, QObjectABCErrors.INVALID_SETTINGS,
+                self, QObjectSettingsErrors.INVALID_SETTINGS,
                 type(self).__name__, 'camera_settings/black_level',
                 f"{black_level} [out of range ({_min}, {_max})]",
                 )
@@ -460,7 +460,7 @@ class ImagingSourceCamera(abc.CameraABC):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
             base.emit_error(
-                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 type(self).__name__, color_fmt_s,
                 'camera_settings/color_format', 'Y16'
                 )
@@ -477,7 +477,7 @@ class ImagingSourceCamera(abc.CameraABC):
             # pylint: disable=redefined-variable-type
             # Probably a bug.
             base.emit_error(
-                self, QObjectABCErrors.INVALID_SETTING_WITH_FALLBACK,
+                self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
                 type(self).__name__, color_fmt,
                 'camera_settings/color_format', 'Y16'
                 )
