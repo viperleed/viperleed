@@ -254,19 +254,17 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         self.__connect_secondary_controllers()
 
     @classmethod
-    def is_matching_default_settings(cls, obj_info, config, exact_match):
+    def is_matching_default_settings(cls, obj_info, config, match_exactly):
         """Determine if the default settings file is for a measurement.
 
         Parameters
         ----------
         obj_info : SettingsInfo
-            The additional information that should
-            be used to check settings.
+            The information that should be used to check 'config'.
         config : ConfigParser
             The settings to check.
-        exact_match : bool
+        match_exactly : bool
             Whether obj_info should be matched exactly.
-            If True, the information is matched exactly.
 
         Returns
         -------
@@ -276,19 +274,17 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         return ()
 
     @classmethod
-    def is_matching_settings(cls, obj_info, config, exact_match):
+    def is_matching_settings(cls, obj_info, config, match_exactly):
         """Determine if the settings file is for a measurement.
 
         Parameters
         ----------
         obj_info : SettingsInfo
-            The additional information that should
-            be used to check settings.
+            The information that should be used to check 'config'.
         config : ConfigParser
             The settings to check.
-        exact_match : bool
+        match_exactly : bool
             Whether obj_info should be matched exactly.
-            If True, the information is matched exactly.
 
         Returns
         -------

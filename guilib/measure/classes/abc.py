@@ -36,6 +36,7 @@ from viperleed.guilib.measure.hardwarebase import SettingsInfo
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
 from viperleed.guilib.measure.classes.settings import NoSettingsError
+from viperleed.guilib.measure.classes.settings import SettingsError
 from viperleed.guilib.measure.classes.settings import (
     TooManyDefaultSettingsError
     )
@@ -103,7 +104,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
 
-    def find_default_settings(self, find_from, exact_match=False):
+    def find_default_settings(self, find_from, match_exactly=False):
         """Find default settings for this object.
 
         Parameters
@@ -114,7 +115,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             settings is up to the reimplementation of
             find_matching_settings_files in self. If it is
             a str it is converted into a SettingsInfo.
-        exact_match : bool, optional
+        match_exactly : bool, optional
             Whether find_from should be matched exactly.
             Default is False.
 
@@ -138,7 +139,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             find_from = SettingsInfo(find_from)
             find_from.more['name'] = find_from.unique_name
         settings = self.find_matching_settings_files(
-            find_from, DEFAULTS_PATH, exact_match, default=True
+            find_from, DEFAULTS_PATH, match_exactly, default=True
             )
         if not settings:
             # No default settings was found.
@@ -146,7 +147,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
                 'No default settings found for '
                 f'instance of {type(self).__name__}.'
                 )
-        if exact_match and len(settings) != 1:
+        if match_exactly and len(settings) != 1:
             # Too many default settings were found
             # while trying to find an exact match.
             raise TooManyDefaultSettingsError(
@@ -156,7 +157,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         return settings[0]
 
     @classmethod
-    def find_matching_settings_files(cls, obj_info, directory, exact_match,
+    def find_matching_settings_files(cls, obj_info, directory, match_exactly,
                                      default):
         """Find .ini files for obj_info in the tree starting at directory.
 
@@ -167,9 +168,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             appropriate settings.
         directory : str or Path
             The location in which to look for configuration files.
-        exact_match : bool
+        match_exactly : bool
             Whether obj_info should be matched exactly.
-            If True, the information is matched exactly.
         default : bool
             Whether a default settings is searched or not. If True,
             the matching check for a default settings is performed.
@@ -193,7 +193,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         for settings_file in settings_files:
             config = ConfigParser()
             config.read(settings_file)
-            conformity = is_matching(obj_info, config, exact_match)
+            conformity = is_matching(obj_info, config, match_exactly)
             if conformity:
                 files_and_scores.append((settings_file, conformity))
 
@@ -206,59 +206,60 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
     @classmethod
     @abstractmethod
-    def is_matching_default_settings(cls, obj_info, config, exact_match):
+    def is_matching_default_settings(cls, obj_info, config, match_exactly):
         """Determine if the default settings file is for this instance.
 
         Parameters
         ----------
         obj_info : SettingsInfo
-            The additional information that should
-            be used to check settings.
+            The information that should be used to check 'config'.
         config : ConfigParser
             The settings to check.
-        exact_match : bool
+        match_exactly : bool
             Whether obj_info should be matched exactly.
-            If True, the information is matched exactly.
 
         Returns
         -------
         sorting_info : tuple
             A tuple that can be used the sort the detected settings.
             Larger values in the tuple indicate a higher degree of
-            conformity. The order of the values in the tuple is the
-            order of their significance.
+            conformity. The order of the items in the tuple is the
+            order of their significance. This return value is used
+            to determine the best-matching settings files when
+            multiple files are found.
         """
 
     @classmethod
     @abstractmethod
-    def is_matching_settings(cls, obj_info, config, exact_match):
+    def is_matching_settings(cls, obj_info, config, match_exactly):
         """Determine if the settings file is for this instance.
 
         Parameters
         ----------
         obj_info : SettingsInfo
-            The additional information that should
-            be used to check settings.
+            The information that should be used to check 'config'.
         config : ConfigParser
             The settings to check.
-        exact_match : bool
+        match_exactly : bool
             Whether obj_info should be matched exactly.
-            If True, the information is matched exactly.
 
         Returns
         -------
         sorting_info : tuple
             A tuple that can be used the sort the detected settings.
             Larger values in the tuple indicate a higher degree of
-            conformity. The order of the values in the tuple is the
-            order of their significance.
+            conformity. The order of the items in the tuple is the
+            order of their significance. This return value is used
+            to determine the best-matching settings files when
+            multiple files are found.
         """
 
     def are_settings_invalid(self, new_settings):
         """Check if there are any invalid settings.
 
-        Reimplementations can add additional mandatory settings in
-        run time.
+        Reimplementations can add additional mandatory settings at
+        runtime. The base implementation will check if all of the
+        _mandatory_settings are present in the provided settings.
 
         Parameters
         ----------
@@ -292,21 +293,36 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             The handler used in a SettingsDialog to display the
             settings of this instance to users.
         """
+        if self._uses_default_settings:
+            raise SettingsError(
+                f'Instance of {type(self).__name__} tried to return '
+                'a settings handler using default settings.'
+                )
+        if not self.settings:
+            # Remember to catch this exception before catching
+            # SettingsError. Otherwise NoSettingsError will be
+            # swallowed up as it is a subclass of SettingsError.
+            raise NoSettingsError(
+                f'Instance of {type(self).__name__} tried to return '
+                'a settings handler without settings.'
+                )
         handler = SettingsHandler(self.settings)
         handler.add_static_section('File')
         widget = qtw.QLabel()
-        widget.setText(
-            str(self.settings.last_file).rsplit('\\', maxsplit=1)[-1]
-            )
+        file = self.settings.last_file
+        widget.setText(file.stem if file else 'None')
         handler.add_static_option(
             'File', 'config', widget,
             display_name='Settings file',
-            tooltip=str(self.settings.last_file),
+            tooltip=str(file) if file else None,
             )
         return handler
 
     def set_settings(self, new_settings):
         """Set new settings for this instance.
+
+        Check and set settings. This method is used in
+        the setter of the settings property.
 
         Parameters
         ----------
@@ -336,7 +352,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             If any element of the new_settings does
             not fit the mandatory settings.
         """
-        try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones
+        try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except(ValueError, NoSettingsError):
             emit_error(self, QObjectSettingsErrors.MISSING_SETTINGS,
@@ -358,7 +374,7 @@ class HardwareABC(QObjectWithSettingsABC):
     """Abstract base class of hardware related objects."""
 
     # Emitted whenever the busy state of the device changes.
-    # Contains the busy state the device changed to.
+    # Contains the new busy state of the device.
     busy_changed = qtc.pyqtSignal(bool)
 
     def __init__(self, *args, **kwargs):
@@ -374,18 +390,24 @@ class HardwareABC(QObjectWithSettingsABC):
 
     @busy.setter
     def busy(self, is_busy):
-        """Set busy state of instance."""
-        # Note that "busy =" will therefore be
-        # performed in the calling thread.
+        """Set busy state of instance.
+
+        Note that 'busy =' will be performed in the calling
+        thread. To avoid this, one can invoke the set_busy slot.
+        """
         self.set_busy(is_busy)
 
     def get_busy(self):
         """Return whether the instance is busy.
 
+        Note that this method is called in the getter of the busy
+        property. If this method is overridden, this will also
+        change the value that is returned by the busy property.
+
         Returns
         -------
         busy : bool
-        True if the instance is busy.
+            True if the instance is busy.
         """
         return self._busy
 
@@ -405,7 +427,7 @@ class HardwareABC(QObjectWithSettingsABC):
         """
         was_busy = self.busy
         is_busy = bool(is_busy)
-        if was_busy is not is_busy:
+        if was_busy != is_busy:
             self._busy = is_busy
             self.busy_changed.emit(self.busy)
 

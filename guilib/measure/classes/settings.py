@@ -74,23 +74,27 @@ def _interpolate_config_path(filenames):
             filenames[i] = fname.replace("__CONFIG__", _sys_path)
 
 
-class MissingSettingsFileError(Exception):
+class SettingsError(Exception):
+    """Base exception for all settings-related errors."""
+
+
+class MissingSettingsFileError(SettingsError):
     """Exception raised when failed to read settings file(s)."""
 
 
-class NoSettingsError(Exception):
+class NoSettingsError(SettingsError):
     """Exception raised when failed to read settings file(s)."""
 
 
-class NoDefaultSettingsError(Exception):
+class NoDefaultSettingsError(SettingsError):
     """Exception raised when no default settings file was found."""
 
 
-class NotASequenceError(Exception):
+class NotASequenceError(SettingsError):
     """Exception raised when getsequence fails to return a sequence."""
 
 
-class TooManyDefaultSettingsError(Exception):
+class TooManyDefaultSettingsError(SettingsError):
     """Exception raised when too many default settings files were found."""
 
 

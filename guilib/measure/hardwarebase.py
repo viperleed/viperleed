@@ -214,7 +214,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     """Return a device config when it was not found in the original path.
 
     This function is only called as part of get_object_settings
-    in case the no config file was found with the original arguments
+    in case no settings file was found with the original arguments
     given to get_object_settings. Prompts the user for an action.
 
     Parameters
@@ -260,7 +260,7 @@ def _get_object_settings_not_found(obj_cls, obj_info, **kwargs):
     msg_box.exec_()
     msg_box.setParent(None)  # py garbage collector will take care
     _clicked = msg_box.clickedButton()
-    if msg_box.clickedButton() is btn:
+    if _clicked is btn:
         new_path = qtw.QFileDialog.getExistingDirectory(
             parent=parent_widget,
             caption="Choose directory of device settings",
@@ -279,7 +279,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
     """Return the settings file for a specific device.
 
     Only settings files with a .ini suffix are considered.
-    This method must be executed in the main GUI thread.
+    This function must be executed in the main GUI thread.
 
     Parameters
     ----------
@@ -294,7 +294,7 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
             The base of the directory tree in which the settings file
             should be looked for. The search is recursive. Default is
             the path to the _defaults directory.
-        exact_match : bool, optional
+        match_exactly : bool, optional
             Whether settings in obj_info should be looked up exactly
             or not. What this entails is up to the reimplementation of
             find_matching_settings_files. Default is False.
@@ -315,10 +315,6 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
             find-a-config case. This function may return an empty
             string only if this is given and if the user dismisses
             the dialog. Default is an empty string.
-        default : bool
-            Whether a default settings is searched or not. If True the
-            matching check for a default settings is performed. Default
-            value is False.
 
     Returns
     -------
@@ -331,13 +327,13 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
         parameter, but the user anyway dismissed the dialog.
     """
     directory = kwargs.get('directory', DEFAULTS_PATH)
-    exact_match = kwargs.get('exact_match', False)
+    match_exactly = kwargs.get('match_exactly', False)
     prompt_if_invalid = kwargs.get('prompt_if_invalid', True)
     parent_widget = kwargs.get('parent_widget', None)
-    default = kwargs.get('default', False)
+    default = True if directory is DEFAULTS_PATH else False
 
     device_config_files = obj_cls.find_matching_settings_files(
-        obj_info, directory, exact_match, default
+        obj_info, directory, match_exactly, default
         )
 
     if device_config_files and len(device_config_files) == 1:
@@ -352,12 +348,11 @@ def get_object_settings(obj_cls, obj_info, **kwargs):
 
     # Found multiple config files that match.
     # Let the user pick which one to use
-    obj_name = obj_info.unique_name
     names = [f.name for f in device_config_files]
     dropdown = DropdownDialog(
         "Found multiple settings files",
         "Found multiple settings files for "
-        f"{obj_name} in {directory} and subfolders.\n"
+        f"{obj_info.unique_name} in {directory} and subfolders.\n"
         "Select which one should be used:",
         names, parent=parent_widget
         )
@@ -449,6 +444,9 @@ def safe_disconnect(signal, *slot):
 @dataclass
 class SettingsInfo:
     """A container for information about settings of objects.
+    
+    Instances of this class should be constructed in a manner that
+    allows the constructing class to find settings from the instance.
 
     Attributes
     ----------

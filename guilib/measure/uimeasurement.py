@@ -203,11 +203,8 @@ from viperleed.guilib.measure.camera.abc import CameraABC
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import DataPoints
 from viperleed.guilib.measure.classes.settings import MissingSettingsFileError
-from viperleed.guilib.measure.classes.settings import NoDefaultSettingsError
+from viperleed.guilib.measure.classes.settings import SettingsError
 from viperleed.guilib.measure.classes.settings import SystemSettings
-from viperleed.guilib.measure.classes.settings import (
-    TooManyDefaultSettingsError
-    )
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import ControllerABC
 from viperleed.guilib.measure.dialogs.badpxfinderdialog import (
@@ -627,7 +624,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         detected_devices = []
         try:
             detected_devices = base.get_devices(device_type).items()
-        except (NoDefaultSettingsError, TooManyDefaultSettingsError) as err:
+        except SettingsError as err:
             base.emit_error(self,
                             QObjectSettingsErrors.DEFAULT_SETTINGS_CORRUPTED,
                             str(err) + ' Contact the ViPErLEED team '
