@@ -182,6 +182,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             worst.
         """
         settings_files = Path(directory).resolve().glob('**/*.ini')
+        if not default:
+            # Filter out default settings.
+            settings_files = [file for file in settings_files
+                              if not '_defaults' in str(file)]
+
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
                else cls.is_matching_settings)
