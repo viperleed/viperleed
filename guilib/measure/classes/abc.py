@@ -190,6 +190,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             if conformity:
                 files_and_scores.append((settings_file, conformity))
 
+        if not files_and_scores:
+            return []
         obj_settings_files, _ = zip(
             *sorted(files_and_scores, key=itemgetter(1), reverse=True)
             )
