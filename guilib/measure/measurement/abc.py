@@ -31,7 +31,6 @@ from viperleed.guilib.measure.classes.settings import NoSettingsError
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
-from viperleed.guilib.measure.controller.abc import ControllerErrors
 from viperleed.guilib.measure.controller.abc import MeasureControllerABC
 
 
@@ -1120,7 +1119,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         invalid = config.has_settings(('controller', 'controller_class'))
         if invalid:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'controller/controller_class',
                             f'No controller_class in {config.last_file}')
             raise RuntimeError
@@ -1131,13 +1131,15 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         # is not found in the device list.
         invalid = config.has_settings(('controller', 'address'))
         if invalid:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'controller/address',
                             f'No address in {config.last_file}')
             raise RuntimeError
         address = config.get('controller', 'address')
         if not address:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'controller/address',
                             f'No address in {config.last_file}')
             raise RuntimeError
@@ -1146,7 +1148,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         try:
             cls = base.class_from_name('controller', cls_name)
         except ValueError:
-            base.emit_error(self, ControllerErrors.INVALID_SETTINGS,
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            type(self).__name__,
                             'controller/controller_class',
                             f'Unknown class {cls_name} in {config.last_file}')
             raise RuntimeError from None
