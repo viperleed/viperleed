@@ -288,7 +288,7 @@ class SerialABC(HardwareABC):
         return ()
 
     @classmethod
-    def is_matching_settings(*_):
+    def is_matching_user_settings(*_):
         """Return empty tuple."""
         # Generally speaking controllers have to find the approriate
         # settings for their serial. Therefore this method should never
@@ -318,7 +318,7 @@ class SerialABC(HardwareABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or str or Path
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             Configuration of port. It must have a 'serial_port_settings'
             section.
             The following fields in new_settings['serial_port_settings']
@@ -458,7 +458,7 @@ class SerialABC(HardwareABC):
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
-        return super().get_settings_handler()
+        return self.get_settings_handler_with_file_name()
 
     @abstractmethod
     def identify_error(self, messages_since_error):

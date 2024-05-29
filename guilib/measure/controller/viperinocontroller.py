@@ -325,7 +325,8 @@ class ViPErinoController(abc.MeasureControllerABC):
                 version = base.Version(settings['controller']['firmware_version'])
             except (TypeError, ValueError) as err:
                 invalid.append('controller/firmware_version')
-
+        if invalid:
+            return invalid
         self._thermocouple = None  # In case it changed
 
         mandatory_cmd_names = list(_MANDATORY_CMD_NAMES)
@@ -501,7 +502,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        handler = SettingsHandler(self.settings)
+        handler = self.get_settings_handler_with_file_name()
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
                            display_name='Firmware version', read_only=True)
@@ -554,7 +555,7 @@ class ViPErinoController(abc.MeasureControllerABC):
         return ()
 
     @classmethod
-    def is_matching_settings(cls, obj_info, config, match_exactly):
+    def is_matching_user_settings(cls, obj_info, config, match_exactly):
         """Determine if the settings file is for this controller.
 
         Parameters

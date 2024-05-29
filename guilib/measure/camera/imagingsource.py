@@ -561,7 +561,7 @@ class ImagingSourceCamera(abc.CameraABC):
         return (1,)
 
     @classmethod
-    def is_matching_settings(cls, obj_info, config, match_exactly):
+    def is_matching_user_settings(cls, obj_info, config, match_exactly):
         """Determine if the settings file is for this camera.
 
         Parameters
@@ -623,7 +623,8 @@ class ImagingSourceCamera(abc.CameraABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        handler = super().get_settings_handler()
+        handler = self.get_settings_handler_with_file_name()
+        handler.add_from_handler(super().get_settings_handler())
 
         # pylint: disable=redefined-variable-type
         # Triggered for _widget. While this is true, it is clear what

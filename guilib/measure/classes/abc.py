@@ -89,32 +89,53 @@ class QObjectWithError(qtc.QObject):                                            
 
 
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
-    """Abstract base class of measurement objects with settings."""
+    """Abstract base class of measurement objects with settings.
 
-    # The _mandatory_settings are the settings that must be present in
-    # a configuration file for it to be valid. To see how a configration
-    # file should look like, look at the .ini files in the _defaults
-    # folder. Do not edit the files in the _defaults folder!
+    Private attributes
+    ------------------
+    _mandatory_settings : list
+        The _mandatory_settings are the settings that must be present in
+        a configuration file for it to be valid. To see how a configration
+        file should look like, look at the .ini files in the _defaults
+        folder. Do not edit the files in the _defaults folder!
+    _settings : ViPErLEEDSettings
+        To get the settings of any QObjectWithSettingsABC use the
+        settings property. In a similar manner, to set settings
+        either use the settings property or the set_settings
+        method.
+    _settings_to_load : ViPErLEEDSettings
+        _settings_to_load are the settings that should be loaded
+        into _settings via set_settings. If no settings is given,
+        _settings_to_load will automatically be the best matching
+        suitable default settings file.
+    _uses_default_settings : bool
+        _uses_default_settings remembers if a default settings was
+        loaded and can be used during runtime to adjust behaviour
+        according to this.
+    """
+
     _mandatory_settings = []
 
     def __init__(self, *args, settings=None, **kwargs):
-        """Initialise instance."""
-        # This __init__ should be executed at the beginning of
-        # subclasses. If this is not possible, it has to be executed
-        # before the settings of an instance are set.
-        # To get the settings of any QObjectWithSettingsABC use the
-        # settings property. In a similar manner, to set settings
-        # either use the settings property or the set_settings
-        # method.
+        """Initialise instance.
+
+        This __init__ should be executed at the beginning of
+        subclasses. If this is not possible, it has to be executed
+        before the settings of an instance are set.
+
+        Parameters
+        ----------
+        *args : object
+            Unused positional arguments.
+        settings : dict or ConfigParser or str or Path or ViPErLEEDSettings or
+                   None, optional
+            The object settings. If not given or None,
+            a suitable default is searched.
+        **kwargs : object
+            Unused keyword arguments.
+        """
         self._settings = ViPErLEEDSettings()
-        # _settings_to_load are the settings that should be loaded
-        # into _settings via set_settings. If no settings is given,
-        # _settings_to_load will automatically be the best matching
-        # suitable default settings file.
         self._settings_to_load = settings
-        # _uses_default_settings remembers if a default settings was
-        # loaded and can be used during runtime to adjust behaviour
-        # according to this.
         self._uses_default_settings = False
         if not settings:
             # Look for a default only if no settings are given.
@@ -131,6 +152,22 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def settings(self, new_settings):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
+
+    def _check_before_getting_settings_handler(self):
+        """Check if getting a SettingsHandler is possible."""
+        if not self.settings:
+            # Remember to catch this exception before catching
+            # SettingsError. Otherwise NoSettingsError will be
+            # swallowed up as it is a subclass of SettingsError.
+            raise NoSettingsError(
+                f'Instance of {type(self).__name__} tried to return '
+                'a settings handler without settings.'
+                )
+        if self._uses_default_settings:
+            raise SettingsError(
+                f'Instance of {type(self).__name__} tried to return '
+                'a settings handler using default settings.'
+                )
 
     def find_default_settings(self, find_from=None, match_exactly=False):
         """Find default settings for this object.
@@ -202,7 +239,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             Whether a default settings is searched or not. If True,
             is_matching_default_settings is used to determine
             whether a configuration file is appropriate. If False,
-            is_matching_settings is used instead.
+            is_matching_user_settings is used instead.
 
         Returns
         -------
@@ -219,7 +256,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         files_and_scores = []
         is_matching = (cls.is_matching_default_settings if default
-               else cls.is_matching_settings)
+               else cls.is_matching_user_settings)
         for settings_file in settings_files:
             config = ConfigParser()
             config.read(settings_file)
@@ -244,7 +281,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         This method must use obj_info to determine if a config is
         suitable for the instance. To perform this check one can
         .get values from config and compare the information from
-        obj_info.more to it. In contrast to is_matching_settings,
+        obj_info.more to it. In contrast to is_matching_user_settings,
         this method can be called before the connected hardware is
         known. Therefore, all information to compare to must come
         from the object class itself. If match_exactly is true, the
@@ -273,7 +310,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
     @classmethod
     @abstractmethod
-    def is_matching_settings(cls, obj_info, config, match_exactly):
+    def is_matching_user_settings(cls, obj_info, config, match_exactly):
         """Determine if the settings file is for this instance.
 
         This method must use obj_info to determine if a config is
@@ -361,21 +398,26 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             The handler used in a SettingsDialog to display the
             settings of this instance to users.
         """
-        if self._uses_default_settings:
-            raise SettingsError(
-                f'Instance of {type(self).__name__} tried to return '
-                'a settings handler using default settings.'
-                )
-        if not self.settings:
-            # Remember to catch this exception before catching
-            # SettingsError. Otherwise NoSettingsError will be
-            # swallowed up as it is a subclass of SettingsError.
-            raise NoSettingsError(
-                f'Instance of {type(self).__name__} tried to return '
-                'a settings handler without settings.'
-                )
+        self._check_before_getting_settings_handler()
         handler = SettingsHandler(self.settings)
-        handler.add_static_section('File')
+        return handler
+        
+    def get_settings_handler_with_file_name(self):
+        """Return a SettingsHandler with the file name of the settings.
+        
+        This method can be used to either extend or replace
+        get_settings_handler in subclasses to get a settings
+        handler that displays the file name of the loaded
+        settings file.
+        
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this instance to users.
+        """
+        self._check_before_getting_settings_handler()
+        handler = SettingsHandler(self.settings)
         widget = qtw.QLabel()
         file = self.settings.last_file
         widget.setText(file.stem if file else 'None')
@@ -394,7 +436,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or str or Path
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             The new settings.
 
         Returns

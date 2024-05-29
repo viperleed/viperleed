@@ -186,7 +186,7 @@ class IVVideo(MeasurementABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or str or Path
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             Configuration of the measurement.
 
         Returns

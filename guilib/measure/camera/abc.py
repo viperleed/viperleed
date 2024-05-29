@@ -607,7 +607,7 @@ class CameraABC(DeviceABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or str or Path
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             Whatever can be used to create a ViPErLEEDSettings.
             The following sections/options are mandatory:
             'camera_settings'/'class_name'

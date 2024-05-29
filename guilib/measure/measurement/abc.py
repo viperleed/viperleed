@@ -273,7 +273,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         return ()
 
     @classmethod
-    def is_matching_settings(cls, obj_info, config, match_exactly):
+    def is_matching_user_settings(cls, obj_info, config, match_exactly):
         """Determine if the settings file is for a measurement.
 
         Parameters
@@ -322,7 +322,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or str or Path
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             Configuration of the measurement.
 
         Returns
@@ -1494,4 +1494,4 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
-        return super().get_settings_handler()
+        return self.get_settings_handler_with_file_name()

@@ -509,7 +509,7 @@ class ControllerABC(DeviceABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser or str or Path
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             The new settings. new_settings will be checked
             for the following mandatory sections/options:
                 'controller'/'serial_class'
@@ -1453,7 +1453,7 @@ class MeasureControllerABC(ControllerABC):
 
         Parameters
         ----------
-        new_settings : dict or ConfigParser
+        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             The new settings. Will be checked for the following
             mandatory sections/options:
                 'controller'/'serial_class'

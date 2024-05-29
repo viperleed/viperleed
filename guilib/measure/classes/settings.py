@@ -160,7 +160,7 @@ class ViPErLEEDSettings(ConfigParser):
 
         Parameters
         ----------
-        settings : str or os.PathLike or ViPErLEEDSettings
+        settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
             The settings to load from.
             If a ViPErLEEDSettings, no copy is made.
 
