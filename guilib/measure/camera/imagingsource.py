@@ -78,7 +78,7 @@ def on_frame_ready_(__grabber_handle, image_start_pixel,
         a numpy array with a copy of the image data.
     """
     camera = process_info.camera
-    if not camera.connected:
+    if not camera or not camera.connected:
         return
 
     process_info.frame_times.append(timer())
