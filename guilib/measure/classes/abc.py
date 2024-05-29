@@ -8,8 +8,8 @@ Created: 2024-04-04
 Author: Michele Riva
 Author: Florian Doerr
 
-This module contains QObjectSettingsErrors, QObjectWithError,
-QObjectWithSettingsABC, HardwareABC and DeviceABC.
+This module contains QObjectSettingsErrors, DeviceABCErrors,
+QObjectWithError, QObjectWithSettingsABC, HardwareABC and DeviceABC.
 QObjectWithError is the base class of QObjectWithSettingsABC,
 CalibrationTask, and DataPoints. QObjectWithSettingsABC is the base
 class of HardwareABC and MeasurementABC. HardwareABC is the base class
@@ -48,25 +48,36 @@ class QMetaABC(ABCMeta, type(qtc.QObject)):
     """Metaclass common to QObject and ABCMeta allowing @abstractmethod."""
 
 
-class QObjectSettingsErrors(ViPErLEEDErrorEnum):
-    """Class for settings errors of ViPErLEED objects."""
+class DeviceABCErrors(ViPErLEEDErrorEnum):
+    """Errors of ViPErLEED devices."""
 
-    MISSING_SETTINGS = (900,
+    DEVICE_NOT_FOUND = (
+        120,
+        'Unable to connect to device {}. Make sure the device '
+        'has power, is connected, and not in use by another program. You can '
+        'try replugging it. Make sure to give it enough time to boot up.'
+        )
+
+
+class QObjectSettingsErrors(ViPErLEEDErrorEnum):
+    """Settings errors of ViPErLEED objects."""
+
+    MISSING_SETTINGS = (100,
                         '{} cannot operate without settings. Load an '
                         'appropriate settings file before proceeding.'
                         )
-    INVALID_SETTINGS = (901,
+    INVALID_SETTINGS = (101,
                         'Invalid settings for instance of {}. Required '
                         'settings {} missing or value inappropriate. '
                         'Check configuration file.\n{}'
                         )
     INVALID_SETTING_WITH_FALLBACK = (
-        902,
+        102,
         'Invalid settings for instance of {}. Invalid/unreadable '
         'settings value {} for setting {!r}. Using {} instead. '
         'Consider fixing your configuration file.'
         )
-    DEFAULT_SETTINGS_CORRUPTED = (903,
+    DEFAULT_SETTINGS_CORRUPTED = (103,
                                   'Default settings corrupted. {!r}')
 
 class QObjectWithError(qtc.QObject):                                            # TODO: The Measure class was meant to inherit from this class. Due to double inheritance from QObject this is not possible through standard inheritance.
@@ -80,17 +91,34 @@ class QObjectWithError(qtc.QObject):                                            
 class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     """Abstract base class of measurement objects with settings."""
 
+    # The _mandatory_settings are the settings that must be present in
+    # a configuration file for it to be valid. To see how a configration
+    # file should look like, look at the .ini files in the _defaults
+    # folder. Do not edit the files in the _defaults folder!
     _mandatory_settings = []
 
     def __init__(self, *args, settings=None, **kwargs):
         """Initialise instance."""
+        # This __init__ should be executed at the beginning of
+        # subclasses. If this is not possible, it has to be executed
+        # before the settings of an instance are set.
+        # To get the settings of any QObjectWithSettingsABC use the
+        # settings property. In a similar manner, to set settings
+        # either use the settings property or the set_settings
+        # method.
         self._settings = ViPErLEEDSettings()
+        # _settings_to_load are the settings that should be loaded
+        # into _settings via set_settings. If no settings is given,
+        # _settings_to_load will automatically be the best matching
+        # suitable default settings file.
         self._settings_to_load = settings
+        # _uses_default_settings remembers if a default settings was
+        # loaded and can be used during runtime to adjust behaviour
+        # according to this.
         self._uses_default_settings = False
         if not settings:
             # Look for a default only if no settings are given.
-            _name = type(self).__name__
-            self._settings_to_load = self.find_default_settings(_name)
+            self._settings_to_load = self.find_default_settings()
             self._uses_default_settings = True
         super().__init__(*args, **kwargs)
 
@@ -104,17 +132,20 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
 
-    def find_default_settings(self, find_from, match_exactly=False):
+    def find_default_settings(self, find_from=None, match_exactly=False):
         """Find default settings for this object.
+
+        To extend the functionality of this method, reimplement the
+        method and call super().find_default_settings in the end.
 
         Parameters
         ----------
-        find_from : SettingsInfo or str
+        find_from : SettingsInfo or None, optional
             find_from contains information to look for in the
             configuration files. The way to determine the correct
             settings is up to the reimplementation of
-            find_matching_settings_files in self. If it is
-            a str it is converted into a SettingsInfo.
+            is_settings_for_this_class and is_matching_default_settings
+            in self. Default is None.
         match_exactly : bool, optional
             Whether find_from should be matched exactly.
             Default is False.
@@ -135,9 +166,6 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """
         # Make a dummy SettingsInfo that will
         # be used to find settings from default name.
-        if isinstance(find_from, str):
-            find_from = SettingsInfo(find_from)
-            find_from.more['name'] = find_from.unique_name
         settings = self.find_matching_settings_files(
             find_from, DEFAULTS_PATH, match_exactly, default=True
             )
@@ -172,7 +200,9 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             Whether obj_info should be matched exactly.
         default : bool
             Whether a default settings is searched or not. If True,
-            the matching check for a default settings is performed.
+            is_matching_default_settings is used to determine
+            whether a configuration file is appropriate. If False,
+            is_matching_settings is used instead.
 
         Returns
         -------
@@ -193,6 +223,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         for settings_file in settings_files:
             config = ConfigParser()
             config.read(settings_file)
+            if not cls.is_settings_for_this_class(config):
+                continue
             conformity = is_matching(obj_info, config, match_exactly)
             if conformity:
                 files_and_scores.append((settings_file, conformity))
@@ -209,9 +241,19 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
         """Determine if the default settings file is for this instance.
 
+        This method must use obj_info to determine if a config is
+        suitable for the instance. To perform this check one can
+        .get values from config and compare the information from
+        obj_info.more to it. In contrast to is_matching_settings,
+        this method can be called before the connected hardware is
+        known. Therefore, all information to compare to must come
+        from the object class itself. If match_exactly is true, the
+        default has to be a perfect match. Only one default at a time
+        can fulfill this criteria.
+
         Parameters
         ----------
-        obj_info : SettingsInfo
+        obj_info : SettingsInfo or None
             The information that should be used to check 'config'.
         config : ConfigParser
             The settings to check.
@@ -234,6 +276,13 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
     def is_matching_settings(cls, obj_info, config, match_exactly):
         """Determine if the settings file is for this instance.
 
+        This method must use obj_info to determine if a config is
+        suitable for the instance. To perform this check one can
+        .get values from config and compare the information from
+        obj_info.more and obj_info.unique_name to it. If
+        match_exactly is true, the config has to be a perfect match
+        and must allow full functionality of the connected hardware.
+
         Parameters
         ----------
         obj_info : SettingsInfo
@@ -252,6 +301,25 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             order of their significance. This return value is used
             to determine the best-matching settings files when
             multiple files are found.
+        """
+
+    @classmethod
+    @abstractmethod
+    def is_settings_for_this_class(cls, config):
+        """Determine if the settings file is for this class.
+
+        This method must use cls attributes to determine if
+        a config is suitable for the class.
+
+        Parameters
+        ----------
+        config : ConfigParser
+            The settings to check.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is for the class.
         """
 
     def are_settings_invalid(self, new_settings):
@@ -427,8 +495,8 @@ class HardwareABC(QObjectWithSettingsABC):
         """
         was_busy = self.busy
         is_busy = bool(is_busy)
+        self._busy = is_busy
         if was_busy != is_busy:
-            self._busy = is_busy
             self.busy_changed.emit(self.busy)
 
 

@@ -20,16 +20,15 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.camera import (
-    abc, imagingsourcecalibration as is_calib
-    )
+from viperleed.guilib.measure.camera import abc
+from viperleed.guilib.measure.camera import imagingsourcecalibration as is_cal
 from viperleed.guilib.measure.camera.drivers.imagingsource import (
     ISCamera as ImagingSourceDriver, FrameReadyCallbackType,
     ImagingSourceError, SinkFormat,
     )
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
-from viperleed.guilib.measure.hardwarebase import _device_name_re
+from viperleed.guilib.measure.hardwarebase import device_name_re
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 
 
@@ -333,9 +332,9 @@ class ImagingSourceCamera(abc.CameraABC):
                     CURRENTLY UNUSED.
         """
         tasks = super().calibration_tasks
-        if not any(isinstance(t, is_calib.DarkLevelCalibration)
+        if not any(isinstance(t, is_cal.DarkLevelCalibration)
                    for t in tasks['bad_pixels']):
-            tasks['bad_pixels'].append(is_calib.DarkLevelCalibration(self))
+            tasks['bad_pixels'].append(is_cal.DarkLevelCalibration(self))
         return tasks
 
     @property
@@ -537,9 +536,12 @@ class ImagingSourceCamera(abc.CameraABC):
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
         """Determine if the default settings file is for this camera.
 
+        Note that we can just return matching here, as we already
+        know that the class matches.
+
         Parameters
         ----------
-        obj_info : SettingsInfo
+        obj_info : SettingsInfo or None
             The information that should be used to check 'config'.
         config : ConfigParser
             The settings to check.
@@ -548,7 +550,7 @@ class ImagingSourceCamera(abc.CameraABC):
 
         Returns
         -------
-        is_suitable : bool
+        sorting_info : tuple
             A tuple that can be used the sort the detected settings.
             Larger values in the tuple indicate a higher degree of
             conformity. The order of the items in the tuple is the
@@ -556,11 +558,7 @@ class ImagingSourceCamera(abc.CameraABC):
             to determine the best-matching settings files when
             multiple files are found.
         """
-        camera_class = config.get('camera_settings', 'class_name',
-                                  fallback=None)
-        if obj_info.more['name'] == camera_class:
-            return (1,)
-        return ()
+        return (1,)
 
     @classmethod
     def is_matching_settings(cls, obj_info, config, match_exactly):
@@ -577,7 +575,7 @@ class ImagingSourceCamera(abc.CameraABC):
 
         Returns
         -------
-        is_suitable : bool
+        sorting_info : tuple
             A tuple that can be used the sort the detected settings.
             Larger values in the tuple indicate a higher degree of
             conformity. The order of the items in the tuple is the
@@ -587,13 +585,30 @@ class ImagingSourceCamera(abc.CameraABC):
         """
         camera_name = config.get('camera_settings', 'device_name',
                                  fallback=None)
-        if camera_name and not match_exactly:
-            camera_name = _device_name_re(camera_name)
-            if bool(camera_name.match(obj_info.unique_name)):
-                return (1,)
-        elif obj_info.unique_name == camera_name:
-            return (1,)
-        return ()
+        if match_exactly:
+            return (1,) if camera_name == obj_info.unique_name else ()
+        if camera_name is None:
+            return ()
+        camera_name_re = device_name_re(camera_name)
+        return (1,) if camera_name_re.match(obj_info.unique_name) else ()
+
+    @classmethod
+    def is_settings_for_this_class(cls, config):
+        """Determine if the settings file is for this camera.
+
+        Parameters
+        ----------
+        config : ConfigParser
+            The settings to check.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is for this camera.
+        """
+        camera_class = config.get('camera_settings', 'class_name',
+                                  fallback=None)
+        return cls.__name__ == camera_class
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings.

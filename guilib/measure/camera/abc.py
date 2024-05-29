@@ -29,6 +29,7 @@ from viperleed.guilib.measure.camera.imageprocess import ImageProcessor
 from viperleed.guilib.measure.camera import badpixels
 from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.classes.abc import DeviceABC
+from viperleed.guilib.measure.classes.abc import DeviceABCErrors
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
@@ -47,22 +48,17 @@ from viperleed.guilib.measure.widgets.spinboxes import TolerantCommaSpinBox
 class CameraErrors(base.ViPErLEEDErrorEnum):
     """Data class for base camera errors."""
 
-    CAMERA_NOT_FOUND = (200,
-                        'Could not find camera {}.\n\nMake sure the camera '
-                        'is connected, has power, and is not currently in '
-                        'use in an other program.\n\nTry (re-)plugging it, '
-                        'and give the camera enough time to boot up.')
-    SETTINGS_MISMATCH = (201,
+    SETTINGS_MISMATCH = (200,
                          'Different {} settings found in camera and '
                          'configuration file: camera={}, settings={}.')
-    UNSUPPORTED_OPERATION = (202, 'Cannot {} in {} mode. Switch mode before.')
-    BINNING_ROI_MISMATCH = (203,
+    UNSUPPORTED_OPERATION = (201, 'Cannot {} in {} mode. Switch mode before.')
+    BINNING_ROI_MISMATCH = (202,
                             'Region of interest size ({} x {}) is incompatible'
                             ' with binning factor {}. Reducing region of '
                             'interest to ({} x {}). A few pixels on the '
                             'lower-right corner may be removed.')
-    UNSUPPORTED_WHILE_BUSY = (204, 'Cannot {} while camera is busy.')
-    TIMEOUT = (205,   # Only in triggered mode
+    UNSUPPORTED_WHILE_BUSY = (203, 'Cannot {} while camera is busy.')
+    TIMEOUT = (204,   # Only in triggered mode
                'No frames returned by camera {} in the last {} seconds. '
                'Check that the camera is plugged in and powered. If it '
                'is, try rebooting the camera.')
@@ -701,7 +697,7 @@ class CameraABC(DeviceABC):
             return False
 
         error_msg = error_msg.replace('_', ' ')
-        if (error is QObjectSettingsErrors.INVALID_SETTINGS and 
+        if (error is QObjectSettingsErrors.INVALID_SETTINGS and
             "bad pixel" in error_msg):
             return True
         return False
@@ -761,7 +757,7 @@ class CameraABC(DeviceABC):
     def connect_(self):
         """Connect to the camera."""
         if not self.open():
-            base.emit_error(self, CameraErrors.CAMERA_NOT_FOUND, self.name)
+            base.emit_error(self, DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
             self.connected = False
             return
         self.load_camera_settings()
@@ -925,7 +921,9 @@ class CameraABC(DeviceABC):
         SettingsInfo object contains the uninque device name and a dict
         holding additional information about the device. If there is
         no additional information about the camera, then this dict can
-        be empty.
+        be empty. The information contained within a SettingsInfo must
+        be enough to determine a suitable settings file for the device
+        from it.
 
         Returns
         -------

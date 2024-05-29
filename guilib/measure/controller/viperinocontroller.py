@@ -520,7 +520,7 @@ class ViPErinoController(abc.MeasureControllerABC):
 
         Parameters
         ----------
-        obj_info : SettingsInfo
+        obj_info : SettingsInfo or None
             The information that should be used to check 'config'.
         config : ConfigParser
             The settings to check.
@@ -537,20 +537,20 @@ class ViPErinoController(abc.MeasureControllerABC):
             to determine the best-matching settings files when
             multiple files are found.
         """
-        controller_class = config.get('controller', 'controller_class',
-                                      fallback=None)
-        ver = config.get('controller', 'firmware_version', fallback=None)
-        firmware_ver = base.Version(ver or '0.0')
-        class_matches = obj_info.more['name'] == controller_class
-        firmware_matches = obj_info.more.get('firmware') == firmware_ver
-        if class_matches and (not match_exactly or firmware_matches):
+        ver = base.Version(
+            config.get('controller', 'firmware_version', fallback='0.0')
+            )
+
+        firmware_matches = (obj_info.more.get('firmware') == ver if obj_info
+                            else False)
+        if not match_exactly or firmware_matches:                               # TODO: check major in the future (compare class major to settings file major)
             # If match_exactly is False we are looking for any default
             # that may satisfy the requirements of the controller while
             # likely not knowing the firmware version of the controller.
             # If match_exactly is True, then we are looking for a
             # default that does specifically match the firmware of
             # the device we are looking at.
-            return (firmware_ver.minor,)
+            return (ver.minor,)
         return ()
 
     @classmethod
@@ -576,23 +576,40 @@ class ViPErinoController(abc.MeasureControllerABC):
             to determine the best-matching settings files when
             multiple files are found.
         """
-
         controller_name = config.get('controller', 'device_name',
                                      fallback=None)
-        ver = config.get('controller', 'firmware_version', fallback=None)
-        firmware_ver = base.Version(ver) if ver else base.Version('0.0')
-
+        ver = base.Version(
+            config.get('controller', 'firmware_version', fallback='0.0')
+            )
         if obj_info.more['name'] != controller_name:
-            pass
-        elif obj_info.more['firmware'] == firmware_ver:
-            return (firmware_ver.minor,)
-        elif (not match_exactly
-              and obj_info.more['firmware'].major == firmware_ver.major):
+            return ()
+        if obj_info.more['firmware'] == ver:
+            return (ver.minor,)
+        if (not match_exactly
+              and obj_info.more['firmware'].major == ver.major):
             # For a tolerant match checking the firmware major
             # is good enough, as settings with the same major
             # are bound to be at least partially compatible.
-            return (firmware_ver.minor,)
+            return (ver.minor,)
         return ()
+
+    @classmethod
+    def is_settings_for_this_class(cls, config):
+        """Determine if the settings file is for this controller.
+
+        Parameters
+        ----------
+        config : ConfigParser
+            The settings to check.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is for this controller.
+        """
+        controller_class = config.get('controller', 'controller_class',
+                                      fallback=None)
+        return cls.__name__ == controller_class
 
     def list_devices(self):  # too-complex, too-many-branches
         """List Arduino Micro VipErLEED hardware -- can be slow.

@@ -9,8 +9,7 @@ Author: Michele Riva
 Author: Florian Doerr
 
 This module contains the definition of the ControllerABC and the
-MeasureController class abstract base classes and their associated
-ViPErLEEDErrorEnum class ControllerErrors used for giving basic
+MeasureController class abstract base classes used for giving basic
 commands to the LEED electronics.
 """
 
@@ -23,10 +22,11 @@ from numpy.polynomial.polynomial import Polynomial
 from PyQt5 import QtCore as qtc
 
 from viperleed.guilib.measure import hardwarebase as base
+from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.classes.abc import DeviceABC
+from viperleed.guilib.measure.classes.abc import DeviceABCErrors
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
-from viperleed.guilib.measure.classes import settings as _m_settings
 from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
 
 
@@ -57,8 +57,7 @@ def ensure_connected(method):
                 ) from None
         self.connect_()
         if not self.serial or not self.serial.is_open:
-            base.emit_error(self, ControllerErrors.NOT_CONNECTED,
-                            method.__name__, self.name, self.address)
+            base.emit_error(self, DeviceABCErrors.DEVICE_NOT_FOUND, self.name)
             return None
         try:
             return method(*args, **kwargs)
@@ -66,23 +65,6 @@ def ensure_connected(method):
             self.disconnect_()
             raise
     return _wrapper
-
-
-class ControllerErrors(base.ViPErLEEDErrorEnum):
-    """Class for controller errors."""
-
-    # The following three are fatal errors, and should make the GUI
-    # essentially unusable, apart from allowing to load appropriate
-    # settings.
-    CANNOT_MEASURE = (100,
-                      'A subclass of ControllerABC is not supposed to '
-                      'measure any quantities. Subclass MeasureControllerABC '
-                      'instead.')
-    NOT_CONNECTED = (
-        101,
-        'Impossible to execute {} on controller {}. '
-        'Device at address {} could not be opened.'
-        )
 
 
 # too-many-public-methods
@@ -234,10 +216,12 @@ class ControllerABC(DeviceABC):
     def get_busy(self):
         """Return whether the controller is busy.
 
+        If the serial is busy, the controller is always busy.
+
         Returns
         -------
         busy : bool
-        True if the controller is busy.
+            True if the controller is busy.
         """
         if self.serial and self.serial.busy:
             return True
@@ -265,13 +249,9 @@ class ControllerABC(DeviceABC):
         """
         if self.__unsent_messages:
             return
-        was_busy = self.busy
-        is_busy = bool(is_busy)
         if self.serial and self.serial.busy:
             is_busy = True
-        self._busy = is_busy
-        if was_busy is not is_busy:
-            self.busy_changed.emit(self.busy)
+        super().set_busy(is_busy)
 
     @property
     def energy_calibration_curve(self):
@@ -489,7 +469,33 @@ class ControllerABC(DeviceABC):
             return 0
         return self._time_to_trigger
 
-    def set_settings(self, new_settings):  # too-complex
+    def _update_serial_from_settings(self):
+        """Set serial settings from new controller settings."""
+        serial_cls_name = self._settings.get('controller', 'serial_class',
+                                             fallback='')                       # TODO: remove fallback in 1.0
+        if not serial_cls_name:                                                 # TODO: only here for backwards compatibility, remove in 1.0
+            serial_cls_name = self._settings.get('controller',
+                                                 'serial_port_class')
+        if self.serial.__class__.__name__ != serial_cls_name:
+            serial_class = base.class_from_name('serial', serial_cls_name)
+            self.__serial = serial_class(self._settings,
+                                         port_name=self.__address)
+            self.serial.error_occurred.connect(self.error_occurred)
+        else:
+            # The next line will also check that self._settings contains
+            # appropriate settings for the serial class used.
+            self.serial.settings = self._settings
+            self.serial.port_name = self.__address
+
+        # Notice that the .connect_() will run anyway, even if the
+        # settings are invalid (i.e., missing mandatory fields for
+        # the serial)!
+        if self.__address:
+            self.serial.connect_()
+        self._time_to_trigger = 0
+        self.__hash = -1
+
+    def set_settings(self, new_settings):
         """Set new settings for this controller.
 
         Settings are accepted and loaded only if they are valid.
@@ -504,8 +510,8 @@ class ControllerABC(DeviceABC):
         Parameters
         ----------
         new_settings : dict or ConfigParser or str or Path
-            The new settings. new_settings (or the default) will be
-            checked for the following mandatory sections/options:
+            The new settings. new_settings will be checked
+            for the following mandatory sections/options:
                 'controller'/'serial_class'
             (if self.sets_energy:
                 'measurement_settings'/'i0_settle_time'
@@ -539,37 +545,14 @@ class ControllerABC(DeviceABC):
             self._settings['controller']['address'] = self.__address
             if not self._uses_default_settings:
                 self._settings.update_file()
-
-        serial_cls_name = self._settings.get('controller', 'serial_class',
-                                             fallback='')                       # TODO: remove fallback in 1.0
-        if not serial_cls_name:                                                 # TODO: only here for backwards compatibility, remove in 1.0
-            serial_cls_name = self._settings.get('controller',
-                                                 'serial_port_class')
-        if self.serial.__class__.__name__ != serial_cls_name:
-            try:
-                serial_class = base.class_from_name('serial', serial_cls_name)
-            except ValueError:
-                base.emit_error(
-                    self, QObjectSettingsErrors.INVALID_SETTINGS,
-                    type(self).__name__, 'controller/serial_class', ''
-                    )
-                return False
-            self.__serial = serial_class(self._settings,
-                                         port_name=self.__address)
-            self.serial.error_occurred.connect(self.error_occurred)
-        else:
-            # The next line will also check that self._settings contains
-            # appropriate settings for the serial class used.
-            self.serial.settings = self._settings
-            self.serial.port_name = self.__address
-
-        # Notice that the .connect_() will run anyway, even if the
-        # settings are invalid (i.e., missing mandatory fields for
-        # the serial)!
-        if self.__address:
-            self.serial.connect_()
-        self._time_to_trigger = 0
-        self.__hash = -1
+        try:
+            self._update_serial_from_settings()
+        except ValueError:
+            base.emit_error(
+                self, QObjectSettingsErrors.INVALID_SETTINGS,
+                type(self).__name__, 'controller/serial_class', ''
+                )
+            return False
         return True
 
     @abstractmethod
@@ -780,8 +763,10 @@ class ControllerABC(DeviceABC):
         SettingsInfo class is located in the hardwarebase module. Each
         controller is represented by a single SettingsInfo instance. The
         SettingsInfo object must contain a .unique_name, and a dict
-        holding .more information about the device. .unique_name can
-        be the controller name and it's address to make it unique.
+        holding .more information about the device. .unique_name may
+        contain the controller name and it's address to make it unique.
+        The information contained within a SettingsInfo must be enough
+        to determine a suitable settings file for the device from it.
 
         Returns
         -------
@@ -951,7 +936,10 @@ class ControllerABC(DeviceABC):
     def set_measurements(self, quantities):
         """Set measured_quantities property."""
         if quantities:
-            base.emit_error(self, ControllerErrors.CANNOT_MEASURE)
+            raise TypeError(
+                'A subclass of ControllerABC is not supposed to measure '
+                'any quantities. Subclass MeasureControllerABC instead.'
+                )
 
     @abstractmethod
     @qtc.pyqtSlot()

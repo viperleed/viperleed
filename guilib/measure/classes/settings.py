@@ -177,7 +177,7 @@ class ViPErLEEDSettings(ConfigParser):
             If settings is invalid.
         """
         if not settings:
-            raise ValueError(f"{cls.__name__}: cannot create from nothing.")
+            raise ValueError(f'{cls.__name__}: cannot create from nothing.')
 
         if isinstance(settings, cls):
             return settings
@@ -189,8 +189,9 @@ class ViPErLEEDSettings(ConfigParser):
 
         try:
             config.read(settings)
-        except (TypeError, MissingSettingsFileError):
-            raise NoSettingsError(f"{cls.__name__}: could not load settings.")
+        except (TypeError, MissingSettingsFileError) as exc:
+            raise NoSettingsError(f'{cls.__name__}: could not '
+                                  'load settings.') from exc
         else:
             return config
 

@@ -154,7 +154,7 @@ _MATCH_SQUARES = re.compile(r'(\[)(\[*(?:[^\[\]]*|\[[^\]]*\])*\]*)(\])')
 # )
 # (\])                 # closed bracket capture group
 
-def _device_name_re(name):
+def device_name_re(name):
     """Return a re.Pattern object that matches name tolerantly.
 
     Returns

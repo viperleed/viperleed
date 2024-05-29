@@ -258,7 +258,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         Parameters
         ----------
-        obj_info : SettingsInfo
+        obj_info : SettingsInfo or None
             The information that should be used to check 'config'.
         config : ConfigParser
             The settings to check.
@@ -290,7 +290,25 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         is_suitable : bool
             True if the settings file is suitable.
         """
-        return ()                                                            # TODO: Implement
+        return ()                                                               # TODO: Implement
+
+    @classmethod
+    def is_settings_for_this_class(cls, config):
+        """Determine if the settings file is for this measurement.
+
+        Parameters
+        ----------
+        config : ConfigParser
+            The settings to check.
+
+        Returns
+        -------
+        is_suitable : bool
+            True if the settings file is for this measurement.
+        """
+        meas_class = config.get('measurement_settings', 'measurement_class',
+                                fallback=None)
+        return cls.__name__ == meas_class
 
     def set_settings(self, new_settings):                                       # TODO: check what happens if trying to make a controller that already exists
         """Change settings of the measurement.

@@ -295,6 +295,14 @@ class SerialABC(HardwareABC):
         # be called.
         return ()
 
+    @classmethod
+    def is_settings_for_this_class(*_):
+        """Return False."""
+        # Generally speaking controllers have to find the approriate
+        # settings for their serial. Therefore this method should never
+        # be called.
+        return False
+
     def set_settings(self, new_settings):
         """Change settings of the port.
 
