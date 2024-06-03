@@ -28,7 +28,6 @@ from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 from viperleed.guilib.measure.controller import abc
 
 # For settings dialog:
-from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
 
 
@@ -314,19 +313,28 @@ class ViPErinoController(abc.MeasureControllerABC):
 
         Returns
         -------
-        invalid : list
-            Invalid required settings of self as a list of strings.
-            Each entry can be either '<section>', '<section>/<option>',
-            or '<section>/<option> not one of <value1>, <value2>, ...'
+        invalid_settings : list of tuples
+            Invalid required_settings of self as a list of tuples.
+            The first entry in each tuple can be either '<section>',
+            '<section>/<option>', or
+            '<section>/<option> not one of <value1>, <value2>, ...'.
+            Further entries are information on what is wrong with
+            the setttings.
         """
-        invalid = settings.has_settings(('controller', 'firmware_version'))
-        if not invalid:
+        invalid_settings = settings.has_settings(('controller',
+                                                  'firmware_version'))
+        if not invalid_settings:
             try:
-                version = base.Version(settings['controller']['firmware_version'])
+                version = base.Version(
+                    settings['controller']['firmware_version']
+                    )
             except (TypeError, ValueError) as err:
-                invalid.append('controller/firmware_version')
-        if invalid:
-            return invalid
+                invalid_settings.append(('controller/firmware_version',
+                                         f'Info: Value is invalid -- {err}'))
+        else:
+            invalid_settings = [(invalid,) for invalid in invalid_settings]
+        if invalid_settings:
+            return invalid_settings
         self._thermocouple = None  # In case it changed
 
         mandatory_cmd_names = list(_MANDATORY_CMD_NAMES)
@@ -343,8 +351,8 @@ class ViPErinoController(abc.MeasureControllerABC):
         self._mandatory_settings = [*self.__class__._mandatory_settings,
                                     *mandatory_commands]
 
-        invalid.extend(super().are_settings_invalid(settings))
-        return invalid
+        invalid_settings.extend(super().are_settings_invalid(settings))
+        return invalid_settings
 
     def available_adcs(self):
         """Return a list of available ADC measurements.
@@ -523,20 +531,22 @@ class ViPErinoController(abc.MeasureControllerABC):
         ----------
         obj_info : SettingsInfo or None
             The information that should be used to check 'config'.
+            If not None, then the 'firmware' version of the controller
+            is matched against the 'firmware_version' of the config.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
-            Whether obj_info should be matched exactly.
+            Whether the firmware version should match exactly or not.
 
         Returns
         -------
         sorting_info : tuple
             A tuple that can be used the sort the detected settings.
-            Larger values in the tuple indicate a higher degree of
-            conformity. The order of the items in the tuple is the
-            order of their significance. This return value is used
-            to determine the best-matching settings files when
-            multiple files are found.
+            The firmware minor of matching settings is returned as an
+            indicator of how well the firmware matches. If an exact
+            match is required, the firmware version has to be exactly
+            the same. If no exact match is required, the highest
+            firmware minor will be preferred.
         """
         ver = base.Version(
             config.get('controller', 'firmware_version', fallback='0.0')
@@ -562,21 +572,25 @@ class ViPErinoController(abc.MeasureControllerABC):
         ----------
         obj_info : SettingsInfo
             The information that should be used to check 'config'.
+            .more must contain the 'name' of the controller and the
+            installed 'firmware' version.
         config : ConfigParser
             The settings to check.
         match_exactly : bool
-            Whether obj_info should be matched exactly.
+            Whether the firmware version should match exactly or not.
 
         Returns
         -------
         sorting_info : tuple
             A tuple that can be used the sort the detected settings.
-            Larger values in the tuple indicate a higher degree of
-            conformity. The order of the items in the tuple is the
-            order of their significance. This return value is used
-            to determine the best-matching settings files when
-            multiple files are found.
+            The firmware minor of matching settings is returned as an
+            indicator of how well the firmware matches. If an exact
+            match is required, the firmware version has to be exactly
+            the same, so all matching files will return the same
+            sorting value. If no exact match is required, the highest
+            firmware minor with a matching major will be preferred.
         """
+        super().is_matching_user_settings(obj_info, config, match_exactly)
         controller_name = config.get('controller', 'device_name',
                                      fallback=None)
         ver = base.Version(

@@ -339,6 +339,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             to determine the best-matching settings files when
             multiple files are found.
         """
+        if not isinstance(obj_info, SettingsInfo):
+            raise TypeError(
+                f'obj_info should be of type SettingsInfo '
+                f'but is of type {type(obj_info).__name__}.'
+                )
 
     @classmethod
     @abstractmethod
@@ -373,12 +378,16 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
 
         Returns
         -------
-        invalid_settings : list
-            Invalid required_settings of self as a list of strings.
-            Each entry can be either '<section>', '<section>/<option>',
-            or '<section>/<option> not one of <value1>, <value2>, ...'
+        invalid_settings : list of tuples
+            Invalid required_settings of self as a list of tuples.
+            The first entry in each tuple can be either '<section>',
+            '<section>/<option>', or
+            '<section>/<option> not one of <value1>, <value2>, ...'.
+            Further entries are information on what is wrong with
+            the setttings.
         """
-        return new_settings.has_settings(*self._mandatory_settings)
+        return [(invalid,) for invalid in
+                new_settings.has_settings(*self._mandatory_settings)]
 
     @abstractmethod
     def get_settings_handler(self):
@@ -401,15 +410,15 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         self._check_before_getting_settings_handler()
         handler = SettingsHandler(self.settings)
         return handler
-        
+
     def get_settings_handler_with_file_name(self):
         """Return a SettingsHandler with the file name of the settings.
-        
+
         This method can be used to either extend or replace
         get_settings_handler in subclasses to get a settings
         handler that displays the file name of the loaded
         settings file.
-        
+
         Returns
         -------
         handler : SettingsHandler
@@ -469,9 +478,9 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
                        type(self).__name__)
             return False
         invalid = self.are_settings_invalid(new_settings)
-        if invalid:
+        for missing, *info in invalid:
             emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                       type(self).__name__, ', '.join(invalid), '')
+                       type(self).__name__, missing, ' '.join(info))
             return False
 
         self._settings = new_settings

@@ -575,10 +575,13 @@ class ControllerABC(DeviceABC):
 
         Returns
         -------
-        invalid : list
-            Invalid required settings of self as a list of strings.
-            Each entry can be either '<section>', '<section>/<option>',
-            or '<section>/<option> not one of <value1>, <value2>, ...'
+        invalid_settings : list of tuples
+            Invalid required_settings of self as a list of tuples.
+            The first entry in each tuple can be either '<section>',
+            '<section>/<option>', or
+            '<section>/<option> not one of <value1>, <value2>, ...'.
+            Further entries are information on what is wrong with
+            the setttings.
         """
         # The next extra settings are mandatory only for a
         # controller that sets the LEED energy on the optics
@@ -588,8 +591,8 @@ class ControllerABC(DeviceABC):
                                ('measurement_settings', 'hv_settle_time'),
                                ('measurement_settings', 'first_settle_time'))
 
-        invalid = settings.has_settings(*self._mandatory_settings,
-                                        *extra_mandatory)
+        invalid_settings = settings.has_settings(*self._mandatory_settings,
+                                                 *extra_mandatory)
 
         # Backwards compatibility fix
         new = (
@@ -601,15 +604,15 @@ class ControllerABC(DeviceABC):
             ('controller', 'serial_port_class'),
             )
         for new_setting, old_setting in zip(new, old):
-            if '/'.join(new_setting) in invalid:
+            if '/'.join(new_setting) in invalid_settings:
                 old_missing = settings.has_settings(old_setting)
                 if not old_missing:
                     settings.set(*new_setting, settings.get(*old_setting))
                     settings.remove_option(*old_setting)
                     settings.update_file()
-                    invalid.remove('/'.join(new_setting))
+                    invalid_settings.remove('/'.join(new_setting))
 
-        return invalid
+        return [(invalid,) for invalid in invalid_settings]
 
     @qtc.pyqtSlot(tuple)
     def begin_preparation(self, energies_and_times):

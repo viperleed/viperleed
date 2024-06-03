@@ -13,13 +13,14 @@ while finding bad pixels for a camera.
 
 from pathlib import Path
 
-from PyQt5 import (QtWidgets as qtw,
-                   QtCore as qtc)
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.dialogs.busywindow import BusyWindow
-from viperleed.guilib.measure import camera as _m_camera
 from viperleed.guilib.measure import hardwarebase as base
-from viperleed.guilib.measure.classes import settings as _m_settings
+from viperleed.guilib.measure.camera import badpixels
+from viperleed.guilib.measure.classes.settings import SystemSettings
+from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.widgetslib import change_control_text_color
 
@@ -31,8 +32,8 @@ NOT_SET = "\u2014"
 NO_BAD_PX_PATH = "None selected"
 
 
-def _default_config_path():
-    return _m_settings.SystemSettings().paths['configuration']
+def _user_config_path():
+    return SystemSettings().paths['configuration']
 
 
 class BadPixelsFinderDialog(qtw.QDialog):
@@ -389,7 +390,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         if not previous:
             bad_px = cam.bad_pixels
         else:
-            bad_px = _m_camera.badpixels.BadPixels(cam)
+            bad_px = badpixels.BadPixels(cam)
             try:
                 bad_px.read(self.__ctrls['bad_px_path'].text(),
                             most_recent=False)
@@ -437,7 +438,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
 
         # New camera selected.
         config_name = base.get_object_settings(
-            camera_cls, camera_info, directory=_default_config_path(),
+            camera_cls, camera_info, directory=_user_config_path(),
             parent_widget=self
             )
 
@@ -447,7 +448,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
             self.__ctrls['bad_px_path'].setText(NO_BAD_PX_PATH)
             self.active_camera = None
             return
-        settings = _m_settings.ViPErLEEDSettings.from_settings(config_name)
+        settings = ViPErLEEDSettings.from_settings(config_name)
         settings['camera_settings']['device_name'] = camera_name
 
         if not self.__camera_busy.isVisible():
@@ -647,7 +648,7 @@ class BadPixelsFinderDialog(qtw.QDialog):
         # bars properly shown immediately.
         qtw.qApp.processEvents()
 
-        self.__finder = _m_camera.badpixels.BadPixelsFinder(self.active_camera)
+        self.__finder = badpixels.BadPixelsFinder(self.active_camera)
         self.__finder.progress_occurred.connect(self.__on_progress)
         self.__finder.done.connect(self.__on_finder_done)
         self.__finder.done.connect(self.__finder.deleteLater)

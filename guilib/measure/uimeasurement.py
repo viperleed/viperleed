@@ -266,7 +266,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._dialogs = {
             'sys_settings':
                 SettingsDialog(handled_obj=SystemSettings(),
-                                       title="System settings"),
+                               title="System settings"),
             'bad_px_finder':
                 BadPixelsFinderDialog(),
             'camera_viewers': [],
@@ -646,8 +646,8 @@ class Measure(ViPErLEEDPluginBase):                                             
 
     def __make_device(self, device_cls, settings_info, **other_info):
         """React to the selection of a device."""
-        # Find an appropriate settings file, searching in the default
-        # configuration folder, and falling back on the base default
+        # Find an appropriate settings file, searching in the user
+        # configuration folder, and falling back on the base default.
         _cfg_dir = self.system_settings.paths['configuration']
         kwargs = {"directory": _cfg_dir, "parent_widget": self,
                   "third_btn_text": "Create a new settings file"}
@@ -683,10 +683,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         elif issubclass(device_cls, CameraABC):
             section = "camera_settings"
 
-        if settings_info.more['name']:
-            device_name = settings_info.more['name']
-        else:
-            device_name = settings_info.unique_name
+        device_name = settings_info.more['name'] or settings_info.unique_name
         device.settings[section]['device_name'] = device_name
         new_cfg_path = Path(_cfg_dir) / f"{device.name_clean}.ini"
         if new_cfg_path.exists():

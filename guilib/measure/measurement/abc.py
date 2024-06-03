@@ -290,6 +290,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         is_suitable : bool
             True if the settings file is suitable.
         """
+        super().is_matching_user_settings(obj_info, config, match_exactly)
         return ()                                                               # TODO: Implement
 
     @classmethod
@@ -358,8 +359,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         self.__make_tmp_directory_tree()
 
         self._missing_data = {c: 1
-                             for c in self.controllers
-                             if c.measures()}
+                              for c in self.controllers
+                              if c.measures()}
         for camera in self.cameras:
             self._missing_data[camera] = 1
 
@@ -534,16 +535,19 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         Returns
         -------
-        invalid_settings : list
-            Invalid required settings of self as a list of strings.
-            Each entry can be either '<section>', '<section>/<option>',
-            or '<section>/<option> not one of <value1>, <value2>, ...'
+        invalid_settings : list of tuples
+            Invalid required_settings of self as a list of tuples.
+            The first entry in each tuple can be either '<section>',
+            '<section>/<option>', or
+            '<section>/<option> not one of <value1>, <value2>, ...'.
+            Further entries are information on what is wrong with
+            the setttings.
         """
         invalid_settings = new_settings.has_settings(
             *self._mandatory_settings,
             *self._other_mandatory_settings
             )
-        return invalid_settings
+        return [(invalid,) for invalid in invalid_settings]
 
     @qtc.pyqtSlot()
     def begin_preparation(self):
@@ -790,10 +794,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         """
         if any(device.busy for device in self.devices):
             return
-        for ctrl in self.controllers:
-            ctrl.busy_changed.disconnect(self.__check_preparation_finished)
-        for camera in self.cameras:
-            camera.busy_changed.disconnect(self.__check_preparation_finished)
+        for device in self.devices:
+            device.busy_changed.disconnect(self.__check_preparation_finished)
 
         # Finally, reconnect all devices to
         # be ready to actually take measurements
@@ -850,15 +852,12 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.busy_changed,
                                  self.__continue_preparation)
-            ctrl.busy_changed.connect(self.__check_preparation_finished,
-                                      type=_UNIQUE)
-
         # The camera.busy_changed signals are connected only now, rather
         # than during begin_preparation. This prevents early calls
         # to the __check_preparation_finished method, should cameras
         # be ready early.
-        for camera in self.cameras:
-            camera.busy_changed.connect(self.__check_preparation_finished,
+        for device in self.devices:
+            device.busy_changed.connect(self.__check_preparation_finished,
                                         type=_UNIQUE)
         self.__preparation_continued.emit()
 

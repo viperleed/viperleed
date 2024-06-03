@@ -583,6 +583,7 @@ class ImagingSourceCamera(abc.CameraABC):
             to determine the best-matching settings files when
             multiple files are found.
         """
+        super().is_matching_user_settings(obj_info, config, match_exactly)
         camera_name = config.get('camera_settings', 'device_name',
                                  fallback=None)
         if match_exactly:
