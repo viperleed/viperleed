@@ -52,17 +52,17 @@ both on the computational and on the experimental side.
 :numref:`toc_figure` shows an overview of the contents of the ViPErLEED package.
 It consists of:
 
+-  :ref:`The ViPErLEED hardware<hardware>`
+      A set of hardware, firmware and control software for the easy
+      acquisition of |LEED-IV| data with pre-existing LEED systems.
+- :ref:`The ViPErLEED Spot Tracker<spot_tracker>`
+      Software for extracting :math:`I(V)` curves from the experimental data
+      ("movies").
 - :ref:`The viperleed.calc package<viperleed_calc>`
       A Python package for the calculation of :math:`I(V)` curves,
       quantitative analysis of :term:`LEED` data, and surface structure
       optimization.
       See the :ref:`Getting Started page<getting_started>`.
-- :ref:`The ViPErLEED Spot Tracker<spot_tracker>`
-      Software for extracting :math:`I(V)` curves from the experimental data
-      ("movies").
--  :ref:`The ViPErLEED hardware<hardware>`
-      A set of hardware, firmware and control software for the easy
-      acquisition of |LEED-IV| data with pre-existing LEED systems.
 
 .. _toc_figure:
 .. figure:: /_static/paper_figures/ViPErLEED-overview_embedded.svg
