@@ -40,18 +40,17 @@
 ViPErLEED documentation
 =======================
 
-Welcome to the documentation for :term:`ViPErLEED` and for the ``viperleed``
+Welcome to the documentation of :term:`ViPErLEED` and of the ``viperleed``
 :term:`Python` package.
-The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims
-at drastically reducing the effort for a quantitative low-energy electron
-diffraction [i.e., |LEED-IV|] analysis on both experimental and computational
-fronts.
+The ViPErLEED project comprises a set of :ref:`open-source<license>` tools that
+aims at drastically reducing the effort for quantitative low-energy electron
+diffraction [i.e., |LEED-IV|] on both experimental and computational fronts.
 
 .. todo::
     See also the ViPErLEED publication series (LINKS).
 
-:numref:`toc_figure` shows an overview of the ViPErLEED project.
-It consists of:
+:numref:`toc_figure` shows an overview of the tools provided by the ViPErLEED 
+project:
 
 -  :ref:`The ViPErLEED hardware<hardware>`
       A set of hardware, firmware and control software for the easy
