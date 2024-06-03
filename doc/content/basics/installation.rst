@@ -1,6 +1,6 @@
-.. _installation:
-
 .. include:: /substitutions.rst
+
+.. _installation:
 
 ============
 Installation

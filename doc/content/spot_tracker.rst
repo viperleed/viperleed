@@ -1,7 +1,7 @@
 .. _spot_tracker:
 
 ======================
-ViPErLEED Spot-Tracker
+ViPErLEED Spot Tracker
 ======================
 
 **Documentation coming soon!**

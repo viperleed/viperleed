@@ -1,6 +1,6 @@
-.. _example_Ir(100)-O:
-
 .. include:: /substitutions.rst
+
+.. _example_Ir(100)-O:
 
 ===============================
 Example System: Ir(100)-(2×1)-O

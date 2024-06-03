@@ -1,6 +1,6 @@
-.. _license:
-
 .. include:: /substitutions.rst
+
+.. _license:
 
 ===================
 License Information

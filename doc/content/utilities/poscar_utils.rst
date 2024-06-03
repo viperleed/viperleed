@@ -1,6 +1,6 @@
-.. _poscar_utils:
-
 .. include:: /substitutions.rst
+
+.. _poscar_utils:
 
 POSCAR utilities
 ################

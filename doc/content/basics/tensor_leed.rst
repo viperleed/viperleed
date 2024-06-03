@@ -1,6 +1,6 @@
-.. _tensor_leed:
-
 .. include:: /substitutions.rst
+
+.. _tensor_leed:
 
 ========================
 The tensor-LEED approach

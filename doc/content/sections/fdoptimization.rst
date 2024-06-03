@@ -1,6 +1,6 @@
-.. _fdoptimization:
-
 .. include:: /substitutions.rst
+
+.. _fdoptimization:
 
 Full-dynamic optimization
 =========================
@@ -38,5 +38,5 @@ already calculated.
 
 R-factor values corresponding to the calculated values of the parameter
 under variation are output to
-:ref:`FD_Optimization.csv and FD_Optimization.pdf<fdoptimizationdata>`.
-I(V) curves are output to :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`.
+:ref:`FD_Optimization.csv and FD_Optimization.pdf<fdoptimizationdata>`. |IV|
+curves are output to :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`.

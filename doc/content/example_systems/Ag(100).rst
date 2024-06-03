@@ -1,6 +1,6 @@
-.. _example_ag_100:
-
 .. include:: /substitutions.rst
+
+.. _example_ag_100:
 
 =============================
 Example System: Ag(100)-(1x1)
@@ -184,8 +184,8 @@ chosen settings) we find a result for the R-factor at the very end of the
 
 Additionally, in the :ref:`OUT directory<dir_organization_output>`, we find a
 file :ref:`THEOBEAMS.csv<theobeams>`, which contains the calculated theoretical
-:math:`I(V)` curves and a file :ref:`Rfactor_plots_refcalc.pdf<rfactorplots>`,
-in which the experimental and theoretical beams are plotted.
+|IV| curves and a file :ref:`Rfactor_plots_refcalc.pdf<rfactorplots>`, in which
+the experimental and theoretical beams are plotted.
 The latter should look something like this:
 
 .. figure:: /_static/example_systems/Ag(100)/refalc_result_plot.png
@@ -193,13 +193,13 @@ The latter should look something like this:
    :align: center
 
    First page of the file Rfactor_plots_refcalc.pdf showing experimental and
-   theoretical :math:`I(V)` curves.
+   theoretical |IV| curves.
 
 
-The :math:`I(V)` curves clearly show a good qualitative agreement, but the
-R-factor of :math:`R \approx 0.17` is not great for such a simple system!
-We therefore proceed to the :ref:`delta-amplitudes<sec_deltas>` calculation
-and the :ref:`structure search<sec_search>`.
+The |IV| curves clearly show a good qualitative agreement, but the R factor of
+:math:`R \approx 0.17` is not great for such a simple system! We therefore
+proceed to the :ref:`delta-amplitudes<sec_deltas>` calculation and the
+:ref:`structure search<sec_search>`.
 
 .. note::
    The :ref:`reference calculation<ref-calc>` also produces the

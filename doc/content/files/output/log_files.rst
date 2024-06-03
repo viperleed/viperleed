@@ -1,6 +1,6 @@
-.. _log_files:
-
 .. include:: /substitutions.rst
+
+.. _log_files:
 
 =========
 Log files

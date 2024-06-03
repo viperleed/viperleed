@@ -1,11 +1,16 @@
+.. include:: /substitutions.rst
+
 .. _ivshiftrange:
 
 IV_SHIFT_RANGE
 ==============
 
-IV_SHIFT_RANGE defines how much calculated and experimental I(V) curves are allowed to shift (in eV) during calculation of the R-Factor, and (optionally) the step width.
+IV_SHIFT_RANGE defines how much calculated and experimental |IV| curves are
+allowed to shift (in electronvolts) during calculation of the R factor, and
+(optionally) the step width.
 
-**Default**: from -3 to +3 eV, with step from experimental or calculated curves (whichever is smaller)
+**Default**: from -3 to +3 eV, with step from experimental or calculated curves
+(whichever is smaller)
 
 **Syntax:**
 
@@ -19,4 +24,5 @@ IV_SHIFT_RANGE defines how much calculated and experimental I(V) curves are allo
 **Acceptable values:** Either 2 or 3 float values. Step has to be positive.
 Underscore is interpreted as default value.
 
-**See also**: :ref:`FILAMENT_WF<FILWF>`  parameter (Filament work function, shifts the electron energy with respect to the Fermi level).
+**See also**: :ref:`FILAMENT_WF<FILWF>`  parameter (filament work function,
+shifts the electron energy with respect to the Fermi level).

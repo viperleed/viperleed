@@ -1,6 +1,6 @@
-.. _initialization:
-
 .. include:: /substitutions.rst
+
+.. _initialization:
 
 ==============
 Initialization

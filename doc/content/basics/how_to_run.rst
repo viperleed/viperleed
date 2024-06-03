@@ -1,6 +1,6 @@
-.. _how_to_run:
-
 .. include:: /substitutions.rst
+
+.. _how_to_run:
 
 ==================================
 Directory Structure and How To Run

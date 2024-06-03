@@ -1,6 +1,6 @@
-.. _glossary:
-
 .. include:: /substitutions.rst
+
+.. _glossary:
 
 ========
 Glossary

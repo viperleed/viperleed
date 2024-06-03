@@ -6,5 +6,6 @@
 
 
 .. |calc| replace:: ``viperleed.calc``
-.. |LEED-IV| replace:: LEED-\ :math:`I(V)`
-.. |LEED IV| replace:: LEED :math:`I(V)`
+.. |IV|   replace:: :math:`I(V)`
+.. |LEED-IV| replace:: LEED-|IV|
+.. |LEED IV| replace:: LEED |IV|

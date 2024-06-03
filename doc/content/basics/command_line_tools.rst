@@ -1,6 +1,6 @@
-.. _command_line_tools:
-
 .. include:: /substitutions.rst
+
+.. _command_line_tools:
 
 Command Line Tools
 ==================

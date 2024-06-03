@@ -1,6 +1,6 @@
-.. _tl_ignore_checksum:
-
 .. include:: /substitutions.rst
+
+.. _tl_ignore_checksum:
 
 TL_IGNORE_CHECKSUM
 ==================

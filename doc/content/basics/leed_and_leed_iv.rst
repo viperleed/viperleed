@@ -1,6 +1,6 @@
-.. _leed_and_leed_iv:
-
 .. include:: /substitutions.rst
+
+.. _leed_and_leed_iv:
 
 |LEED IV|
 =========
@@ -16,9 +16,9 @@ In essence, the goal of any |LEED-IV| calculation is the calculation of
 energy-dependent electron-scattering amplitudes and intensities of diffracted
 electron beams.
 These intensity curves, taken as a function of the primary beam energy,
-[often referred to as :math:`I(V)` curves or spectra] are very sensitive
-to the precise position and vibrational amplitudes of each atom in the
-surface unit cell.
+[often referred to as |IV| curves or spectra] are very sensitive to the
+precise position and vibrational amplitudes of each atom in the surface
+unit cell.
 
 In ViPErLEED, these calculations are performed by the |calc| Python package,
 which acts as a comprehensive wrapper and major feature extension to the

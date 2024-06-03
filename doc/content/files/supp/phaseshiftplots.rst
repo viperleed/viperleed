@@ -1,6 +1,6 @@
-.. _phaseshiftplots:
-
 .. include:: /substitutions.rst
+
+.. _phaseshiftplots:
 
 Phaseshifts-plots.pdf
 =====================

@@ -1,6 +1,8 @@
+.. include:: /substitutions.rst
+
 .. _paramname:
 
-List of Parameters by Name
+List of PARAMETERS by Name
 ==========================
 
 See below for an alphabetical list of all parameters.
@@ -72,7 +74,7 @@ Alternatively, these pages contain the same information:
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`PHASESHIFT_EPS<PHASESHIFTMIN>`                    | Cutoff in phaseshifts magnitudes to determine :ref:`LMAX<LMAX>`                                                                         |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`                     | Change appearance of I(V) plot files like :ref:`Rfactor_plots.pdf<Rfactorplots>`                                                        |
+  | :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`                     | Change appearance of |IV| plot files like :ref:`Rfactor_plots.pdf<Rfactorplots>`                                                        |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`RUN<RUN>`                                   | Which parts of ViPErLEED / TensErLEED should be run, in order                                                                           |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+

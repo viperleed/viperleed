@@ -1,6 +1,6 @@
-.. _poscar:
-
 .. include:: /substitutions.rst
+
+.. _poscar:
 
 POSCAR
 ======

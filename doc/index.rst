@@ -43,25 +43,25 @@ ViPErLEED documentation
 Welcome to the documentation for :term:`ViPErLEED` and for the ``viperleed``
 :term:`Python` package.
 The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims
-at drastically reducing the effort for an intensity [i.e., |LEED-IV|] analysis,
-both on the computational and on the experimental side.
+at drastically reducing the effort for a quantitative low-energy electron
+diffraction [i.e., |LEED-IV|] analysis on both experimental and computational
+fronts.
 
 .. todo::
     See also the ViPErLEED publication series (LINKS).
 
-:numref:`toc_figure` shows an overview of the contents of the ViPErLEED package.
+:numref:`toc_figure` shows an overview of the ViPErLEED project.
 It consists of:
 
 -  :ref:`The ViPErLEED hardware<hardware>`
       A set of hardware, firmware and control software for the easy
       acquisition of |LEED-IV| data with pre-existing LEED systems.
 - :ref:`The ViPErLEED Spot Tracker<spot_tracker>`
-      Software for extracting :math:`I(V)` curves from the experimental data
+      Software for extracting |IV| curves from the experimental data
       ("movies").
 - :ref:`The viperleed.calc package<viperleed_calc>`
-      A Python package for the calculation of :math:`I(V)` curves,
-      quantitative analysis of :term:`LEED` data, and surface structure
-      optimization.
+      A Python package for the calculation of |IV| curves, quantitative
+      analysis of :term:`LEED` data, and surface structure optimization.
       See the :ref:`Getting Started page<getting_started>`.
 
 .. _toc_figure:

@@ -1,6 +1,6 @@
-.. api_calc_files:
-
 .. include:: /substitutions.rst
+
+.. _api_calc_files:
 
 Files and I/O
 =============

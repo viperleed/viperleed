@@ -117,6 +117,7 @@ latex_elements = {
         \sphinxincludegraphics[width=0.15\textwidth]{{{latex_logo.rsplit('/', 1)[1]}}}%
         \par%
         }}%
+      \renewcommand{{\sphinxcrossref}}[1]{{#1}}%
     }}%
     '''
     }

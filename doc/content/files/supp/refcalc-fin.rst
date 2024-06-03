@@ -1,6 +1,6 @@
-.. _refcalc-fin:
-
 .. include:: /substitutions.rst
+
+.. _refcalc-fin:
 
 refcalc-FIN
 ===========

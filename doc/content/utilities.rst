@@ -1,6 +1,6 @@
-.. _utilities:
-
 .. include:: /substitutions.rst
+
+.. _utilities:
 
 Utilities
 ---------

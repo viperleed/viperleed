@@ -1,6 +1,6 @@
-.. _expbeams:
-
 .. include:: /substitutions.rst
+
+.. _expbeams:
 
 EXPBEAMS
 ========

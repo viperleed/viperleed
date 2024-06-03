@@ -1,6 +1,6 @@
-.. _suppress_exe:
-
 .. include:: /substitutions.rst
+
+.. _suppress_exe:
 
 SUPPRESS_EXECUTION
 ==================

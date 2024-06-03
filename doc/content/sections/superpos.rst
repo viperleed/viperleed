@@ -1,6 +1,6 @@
-.. _super_pos:
-
 .. include:: /substitutions.rst
+
+.. _super_pos:
 
 =========================
 Superposition Calculation

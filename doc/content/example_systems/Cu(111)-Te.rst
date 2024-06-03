@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _example_Cu-Te:
 
 ====================================
@@ -216,10 +218,10 @@ on the previous value of :math:`R_P \approx 0.33`.
 Full-dynamic Optimization
 =========================
 
-If we now visually compare experimental with calculated :math:`I(V)` curves, we
-already notice a good qualitative agreement. However, we find that the peak
-widths in the experimental dataset seem to be consistently narrower than in
-our calculation. This is generally a sign that the imaginary part of the
+If we now visually compare experimental with calculated |IV| curves, we already
+notice a good qualitative agreement. However, we find that the peak widths in
+the experimental dataset seem to be consistently narrower than in our
+calculation. This is generally a sign that the imaginary part of the
 inner potential (:math:`V_{0\text{i}}`) of our calculation is off.
 To be more precise, :math:`V_{0\text{i}}` is likely too large, as
 higher :math:`V_{0\text{i}}` increases peak-widths and smoothens out
@@ -242,13 +244,13 @@ To do this, we set :ref:`RUN = 6<run>` and add this line to
     Always make sure that the optimized value used for :math:`V_{0\text{i}}`
     is (i) reasonable (:math:`V_{0\text{i}} \lesssim 7 \text{eV}`),
     (ii) forms an actual minimum, and (iii) gives qualitatively correct
-    :math:`I(V)` curves.
+    |IV| curves.
 
-    Since higher :math:`V_{0\text{i}}` smoothens out the :math:`I(V)` curves,
-    it is possible to deceptively decrease the R-factor by arbitrarily
-    increasing :math:`V_{0\text{i}}`. This usually happens in cases of very
-    high R-factor values, where :math:`V_{0\text{i}}` optimization is not
-    the main concern anyhow.
+    Since higher :math:`V_{0\text{i}}` smoothens out the |IV| curves, it is
+    possible to deceptively decrease the R factor by arbitrarily increasing
+    :math:`V_{0\text{i}}`. This usually happens in cases of very high R-factor
+    values, where :math:`V_{0\text{i}}` optimization is not the main concern
+    anyhow.
 
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_Optimization.svg
    :width: 60%

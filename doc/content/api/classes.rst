@@ -1,6 +1,6 @@
-.. api_calc_classes:
-
 .. include:: /substitutions.rst
+
+.. _api_calc_classes:
 
 Classes
 =======

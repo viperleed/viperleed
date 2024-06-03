@@ -1,6 +1,6 @@
-.. _symmetry_find_ori:
-
 .. include:: /substitutions.rst
+
+.. _symmetry_find_ori:
 
 SYMMETRY_FIND_ORI
 =================

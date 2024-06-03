@@ -1,6 +1,6 @@
-.. _viperleed_calc:
-
 .. include:: /substitutions.rst
+
+.. _viperleed_calc:
 
 ==============
 viperleed.calc

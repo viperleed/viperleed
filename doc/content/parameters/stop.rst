@@ -1,6 +1,6 @@
-.. _stop:
-
 .. include:: /substitutions.rst
+
+.. _stop:
 
 STOP
 ====

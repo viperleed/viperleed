@@ -1,6 +1,6 @@
-.. _api_index:
-
 .. include:: /substitutions.rst
+
+.. _api_index:
 
 ====================
 ViPErLEED Python API

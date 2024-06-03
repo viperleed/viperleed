@@ -1,6 +1,6 @@
-.. _sdtl:
-
 .. include:: /substitutions.rst
+
+.. _sdtl:
 
 SD.TL
 =====

@@ -1,6 +1,6 @@
-.. _ncores:
-
 .. include:: /substitutions.rst
+
+.. _ncores:
 
 N_CORES
 =======

@@ -1,14 +1,14 @@
-.. _example_Fe2O3:
-
 .. include:: /substitutions.rst
+
+.. _example_Fe2O3:
 
 ==================================
 Example System: Fe₂O₃(1−102)-(1×1)
 ==================================
 
-Hematite (:math:`\alpha \text{-Fe}_2\text{O}_3`) is one of the most common
-naturally occurring iron oxides. Its surfaces are popular model
-systems for (single-atom) catalysis
+Hematite (\ :math:`\alpha\text{-Fe}_2\text{O}_3`) is one of the most common
+naturally occurring iron oxides. Its surfaces are popular model systems for
+(single-atom) catalysis
 :cite:p:`kraushoferAtomicscaleStructureHematite2018,franceschiModelSystemPhotocatalysis2020`,
 photocatalysis and the study of mineral–water interfaces.
 
@@ -201,14 +201,13 @@ what happens in each section of a ViPErLEED |LEED-IV| calculation
 :ref:`here<work-segments>`.
 
 In short, the :ref:`reference calculation<ref-calc>` performs a full-dynamic
-LEED calculation to generate :math:`I(V)` curves for the input structure.
-:math:`I(V)` curves are very sensitive to the exact atomic positions and
-vibrational amplitudes.
+LEED calculation to generate |IV| curves for the input structure. |IV| curves
+are very sensitive to the exact atomic positions and vibrational amplitudes.
 Because of this, it is generally necessary to optimize the structure to get
-the best fit to the experimental :math:`I(V)` data.
-The reference calculation is the starting point for this optimization,
-but full-dynamic calculations are computationally too expensive for the
-optimization which may require a very large number of iterations.
+the best fit to the experimental |IV| data. The reference calculation is the
+starting point for this optimization, but full-dynamic calculations are
+computationally too expensive for the optimization which may require a very
+large number of iterations.
 We can perform the optimization in a computationally more efficient way by
 using a perturbative approach, where we calculate the effect of small changes
 to the input structure.
@@ -282,8 +281,8 @@ This is because our measurement was performed on a UHV manipulator that does
 not have enough degrees of freedom in rotation to perfectly align the sample
 with the LEED optics.
 We thus know that we need to optimize the incidence angle of the electron beam
-to get a closer correspondence between the experimental and calculated
-:math:`I(V)` curves.
+to get a closer correspondence between the experimental and calculated |IV|
+curves.
 
 The incidence angle is not a parameter that is accessible in the tensor
 LEED approximation.
@@ -302,7 +301,7 @@ Here, we set the initial step size to 1° and converge criterion to 0.1°.
 After running the calculation, we find a minimum at about
 :math:`\theta \approx 0.87°` which already reduces the R-factor to about
 :math:`R_P \approx 0.22`.
-We can also see that the I(V) curves and consequently the R-factor are very
+We can also see that the |IV| curves and consequently the R-factor are very
 sensitive to the incidence angle in the
 :ref:`FD_Optimization.pdf<fdoptimizationbeams>` and
 :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` files (see
@@ -323,7 +322,7 @@ sensitive to the incidence angle in the
    :width: 70%
    :align: center
 
-   I(V) curves for beam (1|1) as shown in
+   |IV| curves for beam (1|1) as shown in
    :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`.
 
 .. note::
@@ -331,12 +330,11 @@ sensitive to the incidence angle in the
    If the incidence angle is off-normal, it is generally advisable to optimize
    it relatively early on, before performing structural optimization deeper
    into the surface.
-   Otherwise, the error in the :math:`I(V)` curves may incorrectly be
-   compensated by moving the atoms relative to the incident beam, which
-   will result in incorrect positions relative to the bulk. This becomes
-   more likely if bulk-like layers contribute only weakly to the :math:`I(V)`
-   curves, *i.e.* when also optimizing layers far from
-   the surface.
+   Otherwise, the error in the |IV| curves may incorrectly be compensated by
+   moving the atoms relative to the incident beam, which will result in
+   incorrect positions relative to the bulk. This becomes more likely if
+   bulk-like layers contribute only weakly to the |IV| curves, i.e., when
+   also optimizing layers far below the surface.
 
 
 Refining the structure

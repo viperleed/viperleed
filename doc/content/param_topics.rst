@@ -1,6 +1,6 @@
-.. _paramtopics:
-
 .. include:: /substitutions.rst
+
+.. _paramtopics:
 
 ===========================
 List of parameters by topic
