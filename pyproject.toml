@@ -63,6 +63,7 @@ dev = [
     'twine',
     ]
 doc = [  # Requires >= py3.9!
+    'ase',         # For notebooks
     'myst-nb>1.0',
     'myst-parser>1.0',
     'setuptools',  # Workaround for sphinxcontrib-bibtex #345
