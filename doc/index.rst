@@ -2,11 +2,12 @@
 
 .. raw:: latex
 
+   % Modify color of links to conform with those in html
    \def\Hy@colorlink#1{\begingroup\fontshape{\default}\selectfont}%
    \begingroup
    \sphinxsetup{%
-      InnerLinkColor={rgb}{0,0.120,0.204},
-      OuterLinkColor={rgb}{0,0.120,0.204}
+      InnerLinkColor={RGB}{41,128,185},
+      OuterLinkColor={RGB}{41,128,185}
    }
 
    % use heavy boxes for note, hint, important & tip
