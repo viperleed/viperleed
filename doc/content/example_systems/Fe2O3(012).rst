@@ -151,7 +151,7 @@ Initialization
 ==============
 
 We can now run the initialization to check if all input files are interpreted
-correctly. If so, the :ref:`log<log_files_tleedm>` should look similar to this:
+correctly. If so, the :ref:`log<log_files_calc>` should look similar to this:
 
 .. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/log_init.txt
    :language: console

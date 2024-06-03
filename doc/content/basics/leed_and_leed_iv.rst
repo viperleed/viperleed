@@ -20,15 +20,15 @@ These intensity curves, taken as a function of the primary beam energy,
 to the precise position and vibrational amplitudes of each atom in the
 surface unit cell.
 
-In ViPErLEED, these calculations are performed by the viperleed calc Python
-package, which acts as a comprehensive wrapper and major feature extension to
-the established :term:`TensErLEED` program package.
-Based on the input structure and the desired calculation parameters,
-ViPErLEED can calculate the |LEED-IV| spectra for a given surface structure
-(see also :ref:`reference calculation<ref-calc>`), compare these to
-experimental data (see also :ref:`R-factor calculation<r-factor_calculation>`),
-and perform a structure optimization (see :ref:`search<sec_search>`) using the
-:ref:`tensor LEED approach<tensor_leed>`.
+In ViPErLEED, these calculations are performed by the |calc| Python package,
+which acts as a comprehensive wrapper and major feature extension to the
+established :term:`TensErLEED` program package. Based on the input structure
+and the desired calculation parameters, ViPErLEED can calculate the |LEED-IV|
+spectra for a given surface structure (see also
+:ref:`reference calculation<ref-calc>`), compare these to experimental data
+(see also :ref:`R-factor calculation<r-factor_calculation>`), and perform a
+structure optimization (see :ref:`search<sec_search>`) using the
+:ref:`tensor-LEED approach<tensor_leed>`.
 
 For computational details please have a look at the ViPErLEED paper (**TODO**)
 and the original work describing TensErLEED by Blum and Heinz

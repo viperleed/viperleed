@@ -1,5 +1,7 @@
 .. _log_files:
 
+.. include:: /substitutions.rst
+
 =========
 Log files
 =========
@@ -7,12 +9,12 @@ Log files
 ViPErLEED produces multiple log files with names like ``<section>-<timestamp>.log`` that contain various information about the ViPErLEED run.
 ``<section>`` corresponds to the part of ViPErLEED that produced the log files, while ``<timestamp>`` marks the time when the file was *first created* (in the format ``yyMMdd-hhmmss``).
 
-.. _log_files_tleedm:
+.. _log_files_calc:
 
-``tleedm-<timestamp>.log``
+``calc-<timestamp>.log``
 ==========================
 
-This is the main log file for :term:`tleedm` and contains the most important information for the run, including all raised warnings, error messages and – if enabled – debug information.
+This is the main log file for |calc| and contains the most important information for the run, including all raised warnings, error messages and – if enabled – debug information.
 The verbosity of the log file can be controlled with the parameter :ref:`LOG_LEVEL<log_level>`.
 The contents of this file will also be printed to the standard output.
 *If something goes wrong in a ViPErLEED run, this is the first place to look.*

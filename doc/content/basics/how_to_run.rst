@@ -70,9 +70,8 @@ Starting the calculation
 Once you have set up the input files you are ready to start the calculation.
 
 You can then start a ViPErLEED calculation by invoking ``viperleed calc``
-via the command line.
-A list of all available command line options for ``viperleed calc`` can be
-found :ref:`here<cli_calc>`.
+(or |calc|) via the command line. A list of all available command-line
+options for |calc| can be found :ref:`here<cli_calc>`.
 
 A typical call may look like this:
 
@@ -88,7 +87,7 @@ will be executed and all temporary files will be stored.
 ``work_dir`` will be created if it does not yet exist.
 The ``tensorleed_path`` is the path to the TensErLEED source code.
 If the ``-t`` option is not given, ViPErLEED will look for the TensErLEED
-source code under the ``$VIPERLEED_TENSORLEED`` :term:`environment variable`.
+source code under the ``VIPERLEED_TENSORLEED`` :term:`environment variable`.
 
 
 .. tip::
@@ -128,11 +127,11 @@ Output organization
 ===================
 
 A large number of files are created in the work directory is executed in
-defined by the :ref:`-w option of viperleed calc<cli_calc>`.
-ViPErLEED will copy input files there, run all requested calculations,
-and then copy the relevant output files back to the input directory.
-For this purpose, ViPErLEED also creates a :ref:`manifest` file that
-lists the relevant output files which will be copied back.
+defined by the :ref:`-w option<cli_calc>` of |calc|. ViPErLEED will copy
+input files there, run all requested calculations, and then copy the
+relevant output files back to the input directory. For this purpose,
+ViPErLEED also creates a :ref:`manifest` file that lists the relevant
+output files which will be copied back.
 
 The directory tree after a run may look something like this:
 
@@ -162,7 +161,7 @@ The directory tree after a run may look something like this:
     │   └── Tensors_001.zip
     ├── Deltas
     │   └── Deltas_001.zip
-    └── tleedm-$timestamp.log
+    └── calc-$timestamp.log
 
 ViPErLEED will create the additional input files :ref:`IVBEAMS<ivbeams>`,
 :ref:`BEAMLIST<beamlist>`, :ref:`PHASESHIFTS<phaseshifts>`,
@@ -188,7 +187,7 @@ a ``Deltas`` directory will be created that contains the resulting
 :ref:`delta files<deltaszip>`.
 
 In case of automated multiple search runs (which can be specified in the
-:ref:`DISPLACEMENTS<DISPLACEMENTS>` file), tleedm creates a ``workhistory``
+:ref:`DISPLACEMENTS<DISPLACEMENTS>` file), |calc| creates a ``workhistory``
 directory.
 A snapshot of all input and output files that may be relevant and may get
 overwritten will be moved into a subfolder of ``workhistory``.

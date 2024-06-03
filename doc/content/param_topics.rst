@@ -1,5 +1,7 @@
 .. _paramtopics:
 
+.. include:: /substitutions.rst
+
 ===========================
 List of parameters by topic
 ===========================
@@ -13,8 +15,8 @@ groupings :ref:`here<PARAMETERS>`.
    "**→**" usually require user input for simple but non-trivial 
    systems.
 
-viperleed calc execution
-========================
+|calc| execution
+================
 
 Defines what to calculate and where to start.
 

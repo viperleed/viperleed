@@ -3,7 +3,7 @@
 .. include:: /substitutions.rst
 
 ==============
-viperleed calc
+viperleed.calc
 ==============
 
 |calc| is the Python package that makes up the core of the computational part 

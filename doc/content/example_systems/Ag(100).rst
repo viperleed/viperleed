@@ -73,10 +73,10 @@ to do:
    :caption: PARAMETERS file for the initial reference calculation
 
 GLOBAL PARAMETERS
-   Since we only want to run the :ref:`initialization` for now, we set
-   :ref:`RUN = 0<run>`.
-   For this example, we also limit our energy range to 45-700 eV, with an
-   energy step of 3 eV (:ref:`THEO_ENERGIES<theo_energies>`).
+   Since we only want to run the :ref:`initialization<initialization>` for now,
+   we set :ref:`RUN = 0<run>`. For this example, we also limit our energy range
+   to 45-700 eV, with an energy step of 3 eV
+   (:ref:`THEO_ENERGIES<theo_energies>`).
 
 PARAMETERS FOR INTERPRETING POSCAR
    We then tell ViPErLEED how to interpret the structure given in the
@@ -117,7 +117,7 @@ That's all the input we need to start the initialization run.
    Insert an example command for how to start the calculation here.
 
 Once the run finishes, we can have a look at the
-:ref:`log file<log_files_tleedm>` to see if everything went as expected.
+:ref:`log file<log_files_calc>` to see if everything went as expected.
 Unless there was some configuration error, the log should now contain lines
 like this:
 
@@ -172,7 +172,7 @@ default, ViPErLEED will use the :ref:`Pendry R-factor<r-factor_calculation>`.
 
 Once the reference calculation finishes (only takes about 1 minute with the
 chosen settings) we find a result for the R-factor at the very end of the
-:ref:`log file<log_files_tleedm>`:
+:ref:`log file<log_files_calc>`:
 
 .. code-block:: console
 
@@ -236,7 +236,7 @@ run the delta-amplitudes calculation and structure-optimization back-to-back
 by setting :ref:`RUN = 2-3<run>` in :ref:`PARAMETERS<parameters>`.
 For a large system, this step can take many hours to finish, but for our simple
 system it only takes about 4 minutes to converge (using 10 CPU cores).
-At the end, when we take another look at our :ref:`log file<log_files_tleedm>`,
+At the end, when we take another look at our :ref:`log file<log_files_calc>`,
 we already see that the R-factor dropped significantly from
 :math:`R \approx 0.17` to :math:`R \approx 0.095`.
 That's not bad, but we can do a bit better yet.

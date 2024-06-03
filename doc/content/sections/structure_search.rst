@@ -70,9 +70,9 @@ configuration as defined by :ref:`SEARCH_START<searchstart>` and
 the section on the
 :ref:`optimization algorithm used in ViPErLEED<optimization_algorithm>`.
 
-ViPErLEED periodically monitors the search progress by reading the :ref:`SDTL`
-file and will report on the current best R-factor and the amount of sampled
-structures.
+ViPErLEED periodically monitors the search progress by reading the
+:ref:`SDTL<sdtl>` file and will report on the current best R factor
+and the amount of sampled structures.
 From this information, the files :ref:`search-progress.pdf<searchprogresspdf>`
 and :ref:`search-report.pdf<searchreportpdf>` will be generated and updated,
 which provides a graphical overview of the structure search progress and

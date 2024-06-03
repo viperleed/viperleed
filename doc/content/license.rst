@@ -1,5 +1,7 @@
 .. _license:
 
+.. include:: /substitutions.rst
+
 ===================
 License Information
 ===================
@@ -18,10 +20,9 @@ of the software. For inquiries or questions, please contact the ViPErLEED
 developers under info@viperleed.org.
 
 All files in the main repository and all files authored by the ViPErLEED
-developers are licensed under the the :term:`GPLv3`.
-This explicitly includes the ViPErLEED Python package (``viperleed calc``,
-``gui``, ``utils``), ViPErLEED electronics (firmware, schematics, software) and
-the associated documentation.
+developers are licensed under the :term:`GPLv3`. This explicitly includes
+the ViPErLEED Python package (|calc|, ``gui``, ``utils``), ViPErLEED
+electronics (firmware, schematics, software) and the associated documentation.
 
 
 The ViPErLEED Spot tracker is licensed under ... **TODO Michael**
