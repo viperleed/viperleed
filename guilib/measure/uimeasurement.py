@@ -567,7 +567,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             self.__report_errors
             )
         self._dialogs['firmware_upgrade'].error_occurred.connect(
-            self.error_occurred
+            self.__on_error_occurred
             )
         # OTHERS
         self.error_occurred.connect(self.__on_error_occurred)
@@ -1045,6 +1045,8 @@ class Measure(ViPErLEEDPluginBase):                                             
                 source = f"controller {sender.name} at {sender.address}"
             elif isinstance(sender, MeasurementABC):
                 source = f"measurement {sender.__class__.__name__}"
+            elif isinstance(sender, FirmwareUpgradeDialog):
+                source = f"firmware upgrade dialog"
             else:
                 source = "system or unknown"
 
