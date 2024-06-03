@@ -20,7 +20,7 @@ depending on the work-segment (:ref:`see above<work-segments>`).
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | :ref:`POSCAR<POSCAR>`                | Structural information                            | Always required                                                   |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-| :ref:`VIBROCC<VIBOCCIN>`             | Vibrational amplitudes and site occupations       | Always required, can be generated automatically                   |
+| :ref:`VIBROCC<vibrocc>`              | Vibrational amplitudes and site occupations       | Always required, can be generated automatically                   |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | :ref:`IVBEAMS<IVBEAMS>`              | Which beams to calculate                          | Always required, can be generated automatically from EXPBEAMS.csv |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
@@ -45,7 +45,7 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
 +======================================================================+==================================================================+===================================================+
 | :ref:`POSCAR_OUT<POSCAR>`                                            | Best-fit structure                                               | Search                                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`VIBROCC_OUT<VIBOCCIN>`                                         | Best-fit vibrational amplitudes and occupations                  | Search                                            |
+| :ref:`VIBROCC_OUT<vibrocc>`                                          | Best-fit vibrational amplitudes and occupations                  | Search                                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
 | :ref:`THEOBEAMS.csv, THEOBEAMS.pdf<THEOBEAMS>`                       | Theoretical I(V) curves                                          | Reference calculation                             |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
@@ -90,7 +90,8 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
 Supplementary files
 -------------------
 
-ViPErLEED produces supplementary files that are required during execution, that contain intermediate results or that may be of interest for debugging purposes.
+ViPErLEED produces supplementary files that are required during execution, that 
+contain intermediate results or that may be of interest for debugging purposes.
 These files are stored in the ``SUPP`` subfolder of the ``work`` directory.
 
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+

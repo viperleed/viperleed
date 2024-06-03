@@ -3,12 +3,15 @@
 List of parameters by section
 =============================
 
-This page lists parameters for ViPErLEED by which section of ViPErLEED/TensErLEED they are (most) relevant for. Parameters may occur multiple times, and not all parameters are listed.
-See the :ref:`main PARAMETERS page<PARAMETERS>` for a complete alphabetical list and other groupings.
+This page lists parameters for ViPErLEED by which section of
+ViPErLEED/TensErLEED they are (most) relevant for. Parameters
+may occur multiple times, and not all parameters are listed.
+See the :ref:`main PARAMETERS page<PARAMETERS>` for a complete
+alphabetical list and other groupings.
 
 .. note::
-    While all parameters have a default value, parameters marked with a 
-    "**→**" usually require user input for simple but non-trivial 
+    While all parameters have a default value, parameters marked with
+    a "**→**" usually require user input for simple but non-trivial
     systems.
 
 Initialization
@@ -47,15 +50,15 @@ Initialization
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`THEO_ENERGIES<theo_energies>`        | What energy range to calculate                                                                               |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_DEBYE<T_DEBYE>`                    | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                 |
+  | :ref:`T_DEBYE<T_DEBYE>`                    | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<vibrocc>`)                  |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`          | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)           |
+  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`          | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<vibrocc>`)            |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`      | Scaling factor, only for automatically generating :ref:`VIBROCC<VIBOCCIN>`                                   |
+  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`      | Scaling factor, only for automatically generating :ref:`VIBROCC<vibrocc>`                                    |
   +--------------------------------------------+--------------------------------------------------------------------------------------------------------------+
 
 .. note::
-  Parameters setting the symmetry strongly affect all sections, but are 
+  Parameters setting the symmetry strongly affect all sections, but are
   not listed again below.
 
 Reference calculation
@@ -170,7 +173,8 @@ Behaviour is mainly governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`. So
 Search
 ------
 
-Behaviour is also governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`. The most relevant parameters are:
+Behaviour is also governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`.
+The most relevant parameters are:
 
 .. table::
   :width: 100%
@@ -215,12 +219,14 @@ Behaviour is also governed by the :ref:`DISPLACEMENTS file<DISPLACEMENTS>`. The 
 Domain search
 -------------
 
-As the :ref:`domain search<domain_calculation>`  may involve all of the segments above, the parameters listed there are relevant. The following additional parameters affect domains specifically:
+As the :ref:`domain search<domain_calculation>`  may involve all of the
+segments above, the parameters listed there are relevant. The following
+additional parameters affect domains specifically:
 
 .. table::
   :width: 100%
   :widths: 25 75
-  
+
   +----------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | Parameter                                                | Function                                                                                                                                 |
   +==========================================================+==========================================================================================================================================+

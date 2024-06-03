@@ -3,7 +3,7 @@
 DOMAIN
 ======
 
-The DOMAIN parameter defines a file source for optimization using 
+The DOMAIN parameter defines a file source for optimization using
 domains, i.e. when multiple structures are optimized at the same time.
 See also the page about :ref:`Domain calculations<domain_calculation>`.
 
@@ -21,12 +21,31 @@ Syntax
    ! or:
    DOMAIN 1x1 = Tensors/Tensors_003        ! relative path; will first check if the directory exists, but otherwise also accept Tensors_003.zip as a file
 
-A unique name should be defined for each domain on the left-hand side. If no names are defined, the domains will be numbered instead. The right-hand side accepts relative or absolute paths either to directories, or to Tensors.zip files. Input files from the different domains will then be compared to determine if a new reference calculation is needed. If the source is a Tensors.zip file, the input files saved in the .zip archive will be compared. If they are compatible (i.e. same number and order of beams, same unit cell, same energy range etc.), then no further reference calculation is executed, and the Tensor files are used as-is. If the right-hand side is a directory instead, the program will first check for existing Tensors files in that directory, and check them as described above. If no Tensors files are found, or if the Tensors files are incompatible, the target path will be searched for the required input files, and a new reference calculation will be executed.
+A unique name should be defined for each domain on the left-hand side. If no
+names are defined, the domains will be numbered instead. The right-hand side
+accepts relative or absolute paths either to directories, or to Tensors.zip
+files. Input files from the different domains will then be compared to
+determine if a new reference calculation is needed. If the source is a
+Tensors.zip file, the input files saved in the .zip archive will be compared.
+If they are compatible (i.e. same number and order of beams, same unit cell,
+same energy range etc.), then no further reference calculation is executed,
+and the Tensor files are used as-is. If the right-hand side is a directory
+instead, the program will first check for existing Tensors files in that
+directory, and check them as described above. If no Tensors files are found,
+or if the Tensors files are incompatible, the target path will be searched
+for the required input files, and a new reference calculation will be executed.
 
-The target directories or Tensor archives must contain the following input files:
+The target directories or Tensor archives
+must contain the following input files:
 
--   :ref:`PARAMETERS<PARAMETERS>`  (most parameters from the subfolders will be ignored, but those relevant to interpreting the respective POSCAR files are required)
--   :ref:`POSCAR<POSCAR>` 
--   :ref:`VIBROCC<VIBOCCIN>` 
+-   :ref:`PARAMETERS<PARAMETERS>`  (most parameters from the subfolders
+    will be ignored, but those relevant to interpreting the respective
+    POSCAR files are required)
+-   :ref:`POSCAR<POSCAR>`
+-   :ref:`VIBROCC<vibrocc>`
 
-In Tensor archives, an :ref:`IVBEAMS<IVBEAMS>`  file is also required in order to check compatibility with other sources. If a :ref:`PHASESHIFTS<PHASESHIFTS>`  file is present and compatible with the input, it will be used; otherwise, a new PHASESHIFTS file will be generated automatically.
+In Tensor archives, an :ref:`IVBEAMS<IVBEAMS>`  file is also
+required in order to check compatibility with other sources.
+If a :ref:`PHASESHIFTS<PHASESHIFTS>`  file is present and
+compatible with the input, it will be used; otherwise, a new
+PHASESHIFTS file will be generated automatically.

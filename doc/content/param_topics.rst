@@ -81,11 +81,11 @@ Elements, vibrational amplitudes and element concentrations
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`SITE_DEF<SITEDEF>`                               | Define which sites in the :ref:`POSCAR file<POSCAR>` are special, i.e. have different vibrational amplitude                              |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_DEBYE<T_DEBYE>`                                      | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                                             |
+  | :ref:`T_DEBYE<T_DEBYE>`                                      | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<vibrocc>`)                                              |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`                            | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                                       |
+  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`                            | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<vibrocc>`)                                        |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`                        | Scaling factor, only for automatically generating :ref:`VIBROCC<VIBOCCIN>`                                                               |
+  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`                        | Scaling factor, only for automatically generating :ref:`VIBROCC<vibrocc>`                                                                |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 
 .. _symmetry_settings:

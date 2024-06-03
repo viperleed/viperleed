@@ -1,5 +1,7 @@
 .. _glossary:
 
+.. include:: /substitutions.rst
+
 ========
 Glossary
 ========
@@ -44,8 +46,8 @@ Glossary
       3D Visualization software for structural models :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
       See also the VESTA `homepage <https://jp-minerals.org/vesta/en/>`__.
 
-    LEED-:math:`I(V)`
-      Energy dependent low energy electron diffraction.
+    |LEED-IV|
+      Energy-dependent low-energy electron diffraction.
 
     GUI
       Graphical User Interface

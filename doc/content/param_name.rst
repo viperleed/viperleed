@@ -3,21 +3,22 @@
 List of Parameters by Name
 ==========================
 
-See below for an alphabetical list of all parameters. Alternatively, these pages contain the same information:
+See below for an alphabetical list of all parameters.
+Alternatively, these pages contain the same information:
 
--   :ref:`List of parameters by topic<paramtopics>` 
--   :ref:`List of parameters by TensErLEED section<paramsection>` 
+-   :ref:`List of parameters by topic<paramtopics>`
+-   :ref:`List of parameters by TensErLEED section<paramsection>`
 
 .. note::
-   While all parameters have a default value, parameters marked with a 
-   "**→**" usually require user input for simple but non-trivial 
+   While all parameters have a default value, parameters marked with a
+   "**→**" usually require user input for simple but non-trivial
    systems.
 
 
 .. table::
   :width: 100%
   :widths: 25 75
-  
+
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | Parameter                                               | Function                                                                                                                                |
   +=========================================================+=========================================================================================================================================+
@@ -125,9 +126,9 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`TL_IGNORE_CHECKSUM<TL_IGNORE_CHECKSUM>`           | Skip calculation of TensErLEED source code checksums                                                                                    |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_DEBYE<T_DEBYE>`                                 | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                                            |
+  | :ref:`T_DEBYE<T_DEBYE>`                                 | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<vibrocc>`)                                             |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`                       | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                                      |
+  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`                       | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<vibrocc>`)                                       |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`V0_IMAG<v0_imag>`                                 | Imaginary part of the inner potential                                                                                                   |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -135,7 +136,7 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`V0_Z_ONSET<INPOTZ>`                               | How far from the topmost atom the inner potential begins                                                                                |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`                   | Scaling factor, only for automatically generating :ref:`VIBROCC<VIBOCCIN>`                                                              |
+  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`                   | Scaling factor, only for automatically generating :ref:`VIBROCC<vibrocc>`                                                               |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`ZIP_COMPRESSION_LEVEL<zip_compression_level>`     | Compression level for :ref:`tensor<tensorszip>` and :ref:`delta-amplitude files<deltaszip>` ZIP archives.                               |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
