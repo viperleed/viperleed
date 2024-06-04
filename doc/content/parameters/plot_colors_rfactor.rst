@@ -105,7 +105,7 @@ PLOT_IV line_width
 ``PLOT_IV line_width`` defines the width of
 the lines used to plot the |IV| curves.
 
-**Default**: ``all``
+**Default**: 1.0
 
 **Syntax:**
 
