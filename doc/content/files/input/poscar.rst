@@ -149,7 +149,7 @@ POSCAR_OUT
 After executing a search, a POSCAR_OUT file will be produced in the OUT folder.
 This takes the same format as the POSCAR file after initialization, and the new
 positions are those of the best-fit structure found during the search (i.e.,
-corresponding to the lowest R factor).
+corresponding to the lowest |R factor|).
 
 
 .. _poscar_vacuum_corrected:

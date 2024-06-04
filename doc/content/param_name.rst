@@ -52,7 +52,7 @@ Alternatively, these pages contain the same information:
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`HALTING<HALTING>`                                 | Sensitivity to things going wrong, i.e. how easily should ViPErLEED stop                                                                |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`IV_SHIFT_RANGE<IVSHIFTRANGE>`                     | Range and step size for shifting experimental and theoretical curves during R-factor calculation                                        |
+  | :ref:`IV_SHIFT_RANGE<IVSHIFTRANGE>`                     | Range and step size for shifting experimental and theoretical curves during |R-factor| calculation                                      |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`KEEP_REFCALC_DIRS<keep_refcalc_dirs>`             | Toggle to keep the reference calculating execution directories                                                                          |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -78,15 +78,15 @@ Alternatively, these pages contain the same information:
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`RUN<RUN>`                                   | Which parts of ViPErLEED / TensErLEED should be run, in order                                                                           |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`R_FACTOR_TYPE<RFACTORTYPE>`                       | Which definition of the R-factor to use                                                                                                 |
+  | :ref:`R_FACTOR_TYPE<RFACTORTYPE>`                       | Which definition of the |R factor| to use                                                                                               |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`R_FACTOR_LEGACY<RFACTORLEGACY>`                   | Use old TensErLEED R-factor calculation                                                                                                 |
+  | :ref:`R_FACTOR_LEGACY<RFACTORLEGACY>`                   | Use old TensErLEED |R-factor| calculation                                                                                               |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`R_FACTOR_SMOOTH<RFACTORSMOOTH>`                   | How strongly experimental beams are smoothed                                                                                            |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`SCREEN_APERTURE<SCREEN_APERTURE>`                 | The aperture of the acceptance cone of the LEED screen                                                                                  |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`SEARCH_BEAMS<SEARCHBEAMS>`                        | Whether to use R-factor of integer, fractional, or all beams for the search                                                             |
+  | :ref:`SEARCH_BEAMS<SEARCHBEAMS>`                        | Whether to use |R factor| of integer, fractional, or all beams for the search                                                           |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`SEARCH_CONVERGENCE<SEARCH_CONVERGENCE>`           | Convergence criteria for the search, and convergence-dependent parameter control                                                        |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+

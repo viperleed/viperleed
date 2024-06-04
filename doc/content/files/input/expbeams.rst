@@ -9,8 +9,8 @@ The EXPBEAMS file contains the experimental data (beam intensities vs.
 energy, without normalization) to be compared against. The TensErLEED
 Manager will look for an EXPBEAMS.csv file (with or without the .csv
 extension) at initialization, but can also run without it up to the
-search. Executing search or R-factor calculations is only possible with
-an EXPBEAMS file as it requires experimental data to compare to.
+search. Executing search or |R-factor| calculations is only possible
+with an EXPBEAMS file as it requires experimental data to compare to.
 
 Format
 ------
@@ -67,7 +67,7 @@ file format with the :ref:`AUXEXPBEAMS_to_EXPBEAMS utility<aux_to_exp>`.
     minimum intensity equal to zero (issuing warnings of having done so).
     This behavior prevents errors while writing input files for the FORTRAN
     routines from TensErLEED. However, as this artificial offset affects
-    the minima of the intensities, the R-factor may be impacted
+    the minima of the intensities, the |R factor| may be impacted
     significantly.
     We strongly advise that the problematic beams are fixed or discarded
     by removing them from :ref:`IVBEAMS<IVBEAMS>`.

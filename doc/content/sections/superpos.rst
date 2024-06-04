@@ -12,11 +12,11 @@ of "classic" TensErLEED and is automatically executed by |calc| after the
 
 It takes the :ref:`delta files<deltaszip>` and the result of the structure
 search – which at that point is only a set of optimized parameters – and
-performs the name-giving superposition, i.e. summing up of delta-amplitudes
+performs the name-giving superposition, i.e., summing up of delta-amplitudes
 to a final set of beam-amplitudes and intensities. Then, it generates an
 output of theoretical beams in the same format as  yielded by the
 :ref:`refercence Calculation<ref-calc>` (see :ref:`file FITBEAMS<fitbeams>`).
-Finally, an R factor is calculated based on this file and the files
+Finally, an |R factor| is calculated based on this file and the files
 :ref:`Rfactor_plots_superpos.pdf<rfactorplots>` and
 :ref:`Rfactor_analysis_superpos.pdf<rfactoranalysis>` are produced
 (see the corresponding sections for details/examples).

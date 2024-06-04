@@ -15,4 +15,4 @@ convention and defined in the ``search-PARAM`` file.
 TensErLEED appends information about the current last search generation to the
 file at predefined intervals. For every individual in the search population,
 ``SD.TL`` lists the current parameter-indices, best-fit real part of the inner
-potential and the corresponding R-factor.
+potential and the corresponding |R factor|.

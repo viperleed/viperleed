@@ -48,7 +48,7 @@ For this example, we use the structure by
     careful to choose a model with the correct **experimental** lattice
     parameters (as determined by :term:`XRD`).
     Lattice parameters from e.g. :term:`DFT` calculations may be off by ~1%,
-    which will strongly affect the R-factor.
+    which will strongly affect the |R factor|.
     Lattice parameters are not accessible in the
     :ref:`tensor LEED approximation<tensor_leed>`, but they can be optimized in
     a :ref:`full-dynamic optimization<fdoptimization>`.
@@ -241,17 +241,16 @@ second reference calculation of the optimized structure.
 
 Once finished, you can check the log files to see if the calculation ran
 without errors.
-You can also find the final R-factor at the end of the log file:
+You can also find the final |R factor| at the end of the log file:
 
 .. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/log_search_1.txt
    :language: console
    :caption: Final log
 
-You may notice that the initial R-factor (:math:`R_P \approx 0.78`) is very
-high.
-This is not unusual when starting from a totally un-relaxed bulk-truncated
-structure, as these may require multiple iterations of reference calculations,
-and structure optimizations to converge.
+You may notice that the initial |R factor| (\ :math:`R_\mathrm{P}\approx0.78`)
+is very high. This is not unusual when starting from a totally un-relaxed
+bulk-truncated structure, as these may require multiple iterations of
+reference calculations, and structure optimizations to converge.
 
 .. _fig_Fe2O3_search_progress_1:
 .. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/Search-report-first_optimization.svg
@@ -263,23 +262,23 @@ and structure optimizations to converge.
 
 .. note::
 
-   You may also notice that the R-factor for the second reference calculation
-   is quite different from the R-factor obtained at the end of the structure
+   You may also notice that the |R factor| for the second reference calculation
+   is quite different from the |R factor| obtained at the end of the structure
    optimization. This is to be expected, as the perturbative tensor LEED
    approximation used in the structure optimization is only valid for small
    changes to the structure.
    The final reference calculation removes this error and gives a more accurate
-   R-factor.
+   |R factor|.
 
 
 Optimizing the Incidence Angle
 ==============================
 
-In our case, the R-factor has improved significantly after the first structure
-optimization, but is still far from a good fit at :math:`R_P \approx 0.40`.
-This is because our measurement was performed on a UHV manipulator that does
-not have enough degrees of freedom in rotation to perfectly align the sample
-with the LEED optics.
+In our case, the |R factor| has improved significantly after the
+first structure optimization, but is still far from a good fit at
+:math:`R_\mathrm{P} \approx 0.40`. This is because our measurement
+was performed on a UHV manipulator that does not have enough degrees
+of freedom in rotation to perfectly align the sample with the LEED optics.
 We thus know that we need to optimize the incidence angle of the electron beam
 to get a closer correspondence between the experimental and calculated |IV|
 curves.
@@ -299,10 +298,9 @@ the ``OPTIMIZE`` parameter to specify which parameter we want to optimize:
 
 Here, we set the initial step size to 1° and converge criterion to 0.1°.
 After running the calculation, we find a minimum at about
-:math:`\theta \approx 0.87°` which already reduces the R-factor to about
-:math:`R_P \approx 0.22`.
-We can also see that the |IV| curves and consequently the R-factor are very
-sensitive to the incidence angle in the
+:math:`\theta \approx 0.87°` which already reduces the |R factor| to about
+:math:`R_\mathrm{P} \approx 0.22`. We can also see that the |IV| curves, and
+consequently the |R factor|, are very sensitive to the incidence angle in the
 :ref:`FD_Optimization.pdf<fdoptimizationbeams>` and
 :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` files (see
 :numref:`fig_Fe2O3_fd_opt_theta_values` and
@@ -313,7 +311,7 @@ sensitive to the incidence angle in the
    :width: 70%
    :align: center
 
-   R-factor as a function of the incidence angle as shown in
+   |R factor| as a function of the incidence angle as shown in
    :ref:`FD_Optimization.pdf<fdoptimizationbeams>`.
 
 
@@ -341,26 +339,25 @@ Refining the structure
 ======================
 
 After optimizing the incidence angle, we can perform another structure
-optimization to refine the structure.
-To do this, we again provide a :ref:`DISPLACEMENTS file<displacements>`
-to specify the range of parameters we want to optimize.
-We can then run the calculation by setting the :ref:`RUN` parameter back
-to ``1-3 1``.
-Note also that we should now remove or comment out the ``OPTIMIZE`` parameter,
-as the superfluous parameter will raise a warning otherwise.
+optimization to refine the structure. To do this, we again provide a
+:ref:`DISPLACEMENTS file<displacements>` to specify the range of parameters
+we want to optimize. We can then run the calculation by setting the
+:ref:`RUN` parameter back to ``1-3 1``. Note also that we should now
+remove or comment out the ``OPTIMIZE`` parameter, as the superfluous
+parameter will raise a warning otherwise.
 
 At this point, the best strategy to achieve the optimal fit is generally not
 known *a priori*, and the process may involve some trial and error.
-In particular, you may need to play around with multiple iterations of coarse-
-and fine-grained structure optimizations, and possibly also adjust the
-:ref:`convergence parameters<search_convergence>`.
+In particular, you may need to play around with multiple iterations
+of coarse- and fine-grained structure optimizations, and possibly
+also adjust the :ref:`convergence parameters<search_convergence>`.
 
 In this case, we found that by first performing another looped structure
 optimization for the first two layers (atoms ``* L1-2``), and then adding the
 third layer atoms (atoms ``* L1-3``) to the optimization, we could reliably
-further reduce the R-factor to about :math:`R_P \approx 0.16`. [#]_
+further reduce the |R factor| to about :math:`R_\mathrm{P} \approx 0.16`. [#]_
 
 
 .. [#] We found that optimizing all three layers right away with the default
-       convergence parameters lead to the R-factor getting stuck in a local
+       convergence parameters lead to the |R factor| getting stuck in a local
        minimum on at least one occasion.

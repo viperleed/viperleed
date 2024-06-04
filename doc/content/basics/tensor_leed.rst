@@ -11,8 +11,7 @@ approach employed by TensErLEED and consequently also ViPErLEED. Please
 note that this neither is, nor aims to be a comprehensive or rigorous
 introduction to the topic. The descriptions below are only intended to
 provide a quick overview of the method and serve as explanation and
-motivation for the various sections of a |LEED-IV| calculation in
-ViPErLEED.
+motivation for the various sections of a |LEED-IV| calculation in ViPErLEED.
 
 For an in-depth description of all parts of the tensor LEED approach,
 we refer to the papers by Rous and Pendry (see
@@ -95,8 +94,8 @@ are evaluated to calculate amplitude changes
 :math:`\delta \tilde{A}_{i,n,p}^{\mathrm{per}}`.
 
 The resulting delta-amplitudes are stored in the :ref:`delta files<deltaszip>`
-and will be used in the :ref:`structure search<sec_search>` to calculate
-the intensities and subsequently the :ref:`R-factor<r-factor_calculation>`
+and will be used in the :ref:`structure search<sec_search>` to calculate the
+intensities and subsequently the :math:`R` :ref:`factor<r-factor_calculation>`
 for each structure candidate. :cite:p:`blumFastLEEDIntensity2001a`
 
 .. note::
@@ -116,7 +115,7 @@ compute the amplitudes by simply summing up amplitude changes (deltas)
 for all affected atoms.
 
 Consequently, using these resulting amplitudes and intensities,
-an R-factor vs. the experimental intensities can now be obtained
+an |R factor| vs. the experimental intensities can now be obtained
 for any structure in the configuration space. Then, the best-fit
 structure must be found by an optimization (minimization of the
 R factor) in the configuration space.
@@ -163,7 +162,7 @@ optimization in the tensor LEED approximation and also |LEED IV| in general:
     is one of the **main features** of ViPErLEED.
 
 
--   When using Pendry's R factor, the R factor hyper-surfaces tend to be
+-   When using Pendry's |R factor|, the |R factor| hyper-surfaces tend to be
     inherently non-smooth :cite:p:`rousTensorLEEDApproximation1992`. Users
     should be aware that local minima are possible and that the optimization
     algorithm might get stuck in these minima if the parameter space is not
@@ -196,24 +195,24 @@ Optimization Algorithm
 
 .. _optimization_algorithm:
 
-The rough R-factor surface, together with its grid-based nature greatly limits
-the pool of applicable optimization algorithms. TensErLEED employs a modified
-random sampling strategy with a down-step criterion as described by Kottcke
-and Heinz :cite:p:`kottckeNewApproachAutomated1997`. The optimization is
-performed in parallel for a set of individuals (= independent parameter
-combinations), as defined by the parameter :ref:`SEARCH_POPULATION<searchpop>`.
-The starting points for the optimization is defined by
-:ref:`SEARCH_START<searchstart>`.
+The rough |R-factor| surface, together with its grid-based nature greatly
+limits the pool of applicable optimization algorithms. TensErLEED employs
+a modified random sampling strategy with a down-step criterion as described
+by Kottcke and Heinz :cite:p:`kottckeNewApproachAutomated1997`.
+The optimization is performed in parallel for a set of individuals
+(= independent parameter combinations), as defined by the parameter
+:ref:`SEARCH_POPULATION<searchpop>`. The starting points for the
+optimization is defined by :ref:`SEARCH_START<searchstart>`.
 
 For each search step (called "generation" based on the terminology of genetic
 algorithms), a new grid point in the parameter space is selected *randomly*,
 but based on a probability distribution centered on the current position.
-The R-factor is calculated for the selected parameter combination and the
-new parameter set is accepted **only if** the R-factor for the new
-configuration is lower then for the previous configuration. The width
-of the probability distribution is determined by the current R-factor
-and the parameter:ref:`SEARCH_CONVERGENCE<search_convergence>` (in
-particular the ``gaussian`` flag).
+The |R factor| is calculated for the selected parameter combination and the new
+parameter set is accepted **only if** the |R factor| for the new configuration
+is lower then for the previous configuration. The width of the probability
+distribution is determined by the current |R factor| and the parameter
+:ref:`SEARCH_CONVERGENCE<search_convergence>` (in particular, the ``gaussian``
+flag).
 
 ViPErLEED enables more sophisticated control over the search process than
 is possible with TensErLEED alone. Different types of convergence criteria

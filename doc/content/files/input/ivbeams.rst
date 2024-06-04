@@ -6,8 +6,8 @@ IVBEAMS
 =======
 
 The IVBEAMS file lists the beams for which output should be generated.
-These are the beams for which the R-factors will be calculated, as well
-as those on which the structural optimization will run.
+These are the beams for which the |R factor|\ s will be calculated, as
+well as those on which the structural optimization will run.
 
 If no IVBEAMS file is found, but the file with experimental |IV| curves
 (:ref:`EXPBEAMS file<EXPBEAMS>`) is present, an IVBEAMS file will be

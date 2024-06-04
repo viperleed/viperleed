@@ -9,3 +9,5 @@
 .. |IV|   replace:: *I*\ (\ *V*\ )
 .. |LEED-IV| replace:: LEED-|IV|
 .. |LEED IV| replace:: LEED |IV|
+.. |R-factor| replace:: :math:`R`\ -factor
+.. |R factor| replace:: :math:`R` factor

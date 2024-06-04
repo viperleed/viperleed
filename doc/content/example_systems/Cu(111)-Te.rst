@@ -143,9 +143,9 @@ entry on the :ref:`DISPLACEMENTS file<displacements>`.
 As usual, we can see a visualization of the optimization convergence in the
 file :ref:`Search-report.pdf<searchreportpdf>` in the ``OUT`` directory.
 :numref:`Cu(111)-Te_search_report` shows the first page output of
-:ref:`Search-report.pdf<searchreportpdf>`. The upper figure shows the R factor
-as a function of the search progress (search generations). The lower figure
-shows the deviation of the structural parameters over time.
+:ref:`Search-report.pdf<searchreportpdf>`. The upper figure shows the
+|R factor| as a function of the search progress (search generations).
+The lower figure shows the deviation of the structural parameters over time.
 Together, these two plots give an idea, of how converged the search is.
 
 .. _Cu(111)-Te_search_report:
@@ -156,12 +156,12 @@ Together, these two plots give an idea, of how converged the search is.
    First page of the file :ref:`Search-report.pdf<searchreportpdf>` produced
    for the first (rough) structure-optimization.
 
-The initial reference-calculation yields an
-:ref:`R-factor<r-factor_calculation>` :math:`R_P \approx 0.82` since
-our starting configuration is very far from the ideal positions.
-Over this rough optimization, where parameter values are shifted by up
-to 0.24 Å compared to the initial model (this is a lot !), the R-factor
-quickly drops to :math:`R_P \approx 0.47`. This is still quite poor,
+The initial reference-calculation :ref:`yields <r-factor_calculation>` an
+|R factor| :math:`R_\mathrm{P} \approx 0.82` since our starting configuration
+is very far from the ideal positions. Over this rough optimization, where
+parameter values are shifted by up to 0.24 Å compared to the initial model
+(this is a lot !), the |R factor| quickly drops to
+:math:`R_\mathrm{P} \approx 0.47`. This is still quite poor,
 but the progress is encouraging.
 
 Remember to keep the best fit-structure by calling the
@@ -172,10 +172,10 @@ flag before proceeding:
 
         $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
 
-Once we run the next reference-calculation, we notice that we
-get an R factor of :math:`R_P \approx 0.33`, even though we
-got :math:`R_P \approx 0.47` at the end of the previous run
-– **a big difference**! This comes from the mentioned **Tensor LEED error**.
+Once we run the next reference-calculation, we notice that we get an
+|R factor| of :math:`R_\mathrm{P} \approx 0.33`, even though we got
+:math:`R_\mathrm{P} \approx 0.47` at the end of the previous run
+– **a big difference**. This comes from the mentioned **Tensor LEED error**.
 
 Fine DISPLACEMENTS and Search Parameters
 ========================================
@@ -204,16 +204,16 @@ optimization. For this stage, a choice of 10 pm range with 1 pm steps
             SEARCH_CONVERGENCE dgen dec = 50 1.5
 
    After the previous search steps, the parameters are close to the optimum.
-   Therefore, the danger of getting trapped in a local R-factor minimum close
-   to the starting position is low, and we can initialize the search at the
-   previously determined values.
+   Therefore, the danger of getting trapped in a local |R-factor| minimum
+   close to the starting position is low, and we can initialize the search
+   at the previously determined values.
    The :ref:`SEARCH_CONVERGENCE<search_convergence>` dgen parameter ensures
    that the search range shrinks more rapidly than with standard parameters.
 
 
 The optimization on the 1 pm (0.01 Å) grid allows us to further reduce the
-R-factor to about :math:`R_P \approx 0.23`, which is again a good improvement
-on the previous value of :math:`R_P \approx 0.33`.
+R-factor to about :math:`R_\mathrm{P} \approx 0.23`, which is again a good improvement
+on the previous value of :math:`R_\mathrm{P} \approx 0.33`.
 
 Full-dynamic Optimization
 =========================
@@ -227,8 +227,8 @@ To be more precise, :math:`V_{0\text{i}}` is likely too large, as
 higher :math:`V_{0\text{i}}` increases peak-widths and smoothens out
 the curves.
 
-:math:`V_{0\text{i}}` strongly affects the R-factor, but is hard to estimate
-for an unknown system. Since we didn't specify a value for
+:math:`V_{0\text{i}}` strongly affects the |R factor|, but is hard to
+estimate for an unknown system. Since we didn't specify a value for
 :math:`V_{0\text{i}}` in PARAMETERS, ViPErLEED took the default value of
 4.5 eV (see :ref:`V0_IMAG<v0_imag>`). The parameter :math:`V_{0\text{i}}`
 is not accessible in the tensor LEED approximation, but we can use a
@@ -247,10 +247,10 @@ To do this, we set :ref:`RUN = 6<run>` and add this line to
     |IV| curves.
 
     Since higher :math:`V_{0\text{i}}` smoothens out the |IV| curves, it is
-    possible to deceptively decrease the R factor by arbitrarily increasing
-    :math:`V_{0\text{i}}`. This usually happens in cases of very high R-factor
-    values, where :math:`V_{0\text{i}}` optimization is not the main concern
-    anyhow.
+    possible to deceptively decrease the |R factor| by arbitrarily increasing
+    :math:`V_{0\text{i}}`.
+    This usually happens in cases of very high |R-factor| values, where
+    :math:`V_{0\text{i}}` optimization is not the main concern anyhow.
 
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_Optimization.svg
    :width: 60%
@@ -266,7 +266,7 @@ for subsequent runs. Furthermore, ViPErLEED produces the files
 :ref:`FD_Optimization.pdf<fdoptimizationdata>` in the ``OUT`` directory.
 :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` shows the calculated
 diffraction intensities for different values of the optimized parameter,
-while :ref:`FD_Optimization.pdf<fdoptimizationdata>` shows the R factors
+while :ref:`FD_Optimization.pdf<fdoptimizationdata>` shows the |R factor|\ s
 corresponding to each trial value.
 
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_beams.svg
@@ -295,8 +295,8 @@ You may want to finish up with a last "fine-tuning" of the vibrational
 amplitudes and (:math:`z`) positions. See e.g. file ``DISPLACEMENTS_fine_2``
 in the input files, but feel free to play around with the setting yourself,
 to get a feeling for the available options. Altogether, this should bring
-us to an R-factor :math:`R_P \approx 0.19`, which is already a good agreement
-for such a heavily corrugated surface, details see discussion in
+us to an |R factor| :math:`R_\mathrm{P} \approx 0.19`, which is already a good
+agreement for such a heavily corrugated surface, details see discussion in
 Ref. :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 
 Error calculation
@@ -316,9 +316,9 @@ as well:
    :caption: DISPLACEMENTS for error calculation in x direction
 
 The results are plotted in the file :ref:`Errors.pdf<errorspdf>`.
-We see that displacements for atoms in all layers have a drastic impact on
-the R-factor – so we can be fairly confident that all varied atoms are indeed
-present within the true surface structure.
+We see that displacements for atoms in all layers have a drastic impact
+on the |R factor| – so we can be fairly confident that all varied atoms
+are indeed present within the true surface structure.
 
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/Errors_x_vib.svg
    :width: 100%

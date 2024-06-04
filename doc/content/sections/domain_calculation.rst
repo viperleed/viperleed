@@ -6,11 +6,12 @@
 Domain calculations
 ===================
 
-If multiple structures coexist on the sample, then the experimental beams
-are a superposition from the beam sets diffracted from each of the different
-structural domains. This means that the different structures must be optimized
-at the same time to optimize the R factor between theoretical and experimental
-|IV| curves. This page covers how the input file structure for ViPErLEED
+If multiple structures coexist on the sample, then the experimental 
+beams are a superposition from the beam sets diffracted from each 
+of the different structural domains. This means that the different 
+structures must be optimized at the same time to optimize the 
+|R factor| between theoretical and experimental |IV| curves. 
+This page covers how the input file structure for ViPErLEED 
 changes when domains are present.
 
 While domain calculations can be run from scratch (i.e., including the

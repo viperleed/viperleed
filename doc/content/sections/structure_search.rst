@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _sec_search:
 
 ================
@@ -5,8 +7,8 @@ Structure Search
 ================
 
 The structure search (referred to as ``search`` in the code) is
-the third part of a :ref:`Tensor LEED<tensor_leed>` calculation as implemented
-in ViPErLEED (:ref:`RUN<run>` = 3).
+the third part of a :ref:`Tensor LEED<tensor_leed>` calculation as 
+implemented in ViPErLEED (:ref:`RUN<run>` = 3).
 It must follow a :ref:`reference calculation<ref-calc>` and a
 :ref:`delta amplitude calculation<sec_deltas>` and requires stored
 :ref:`delta files<deltaszip>` to run.
@@ -17,10 +19,10 @@ parameter space defined in the :ref:`DISPLACEMENTS file<displacements>`.
 During the structure search, the optimization algorithm (see
 Ref. :cite:p:`kottckeNewApproachAutomated1997`) samples surface structures
 in the configuration-space defined in :ref:`DISPLACEMENTS<displacements>`.
-Diffraction intensities and a corresponding R-factor are calculated for these
-structures based on combinations of the pre-computed delta-amplitudes.
+Diffraction intensities and a corresponding |R factor| are calculated for 
+these structures based on combinations of the pre-computed delta-amplitudes.
 The optimization tries to find the combination of parameters yielding the
-lowest possible R factor.
+lowest possible |R factor|.
 
 The behavior of the structure optimization algorithm is affected by multiple
 parameters (see :ref:`search behaviour<search_settings>`). For details on the
@@ -71,7 +73,7 @@ the section on the
 :ref:`optimization algorithm used in ViPErLEED<optimization_algorithm>`.
 
 ViPErLEED periodically monitors the search progress by reading the
-:ref:`SDTL<sdtl>` file and will report on the current best R factor
+:ref:`SDTL<sdtl>` file and will report on the current best |R factor|
 and the amount of sampled structures.
 From this information, the files :ref:`search-progress.pdf<searchprogresspdf>`
 and :ref:`search-report.pdf<searchreportpdf>` will be generated and updated,

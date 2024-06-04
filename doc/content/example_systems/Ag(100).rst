@@ -3,11 +3,11 @@
 .. _example_ag_100:
 
 =============================
-Example System: Ag(100)-(1x1)
+Example System: Ag(100)-(1×1)
 =============================
 
 In this section, we go through setting up and executing a simple ViPErLEED
-calculation for the Ag(100)-(1x1) surface.\ [#]_
+calculation for the Ag(100)-(1×1) surface.\ [#]_
 
 This tutorial is designed such that you can follow along on your own system.
 
@@ -35,14 +35,14 @@ Introduction
 Our starting point for this example is:
 
 -  We have experimental |LEED-IV| curves for our surface taken at normal
-   incidence, saved in the file :ref:`EXPBEAMS.csv<expbeams>`.
--  We would like to compare these intensities with a Ag(100)-(1x1) surface
-   that was hand-made from the bulk crystal structure. It is stored as a
-   :ref:`POSCAR file<poscar>` (see below).
+   incidence, saved in file :ref:`EXPBEAMS.csv<expbeams>`.
+-  We would like to compare these intensities with a Ag(100)-(1×1) surface
+   that was handmade from the bulk crystal structure. It is stored as a
+   :ref:`POSCAR file<poscar>` (see :ref:`below<ag_init>`).
 
 In this example, we want to set up a ViPErLEED calculation and structure
-optimization based on just these inputs.
-Our goal is to get the lowest possible R-factor starting from this reference
+optimization based on these inputs alone.
+Our goal is to get the lowest possible |R factor| starting from this reference
 structure.
 If we manage to get a good agreement between the experimental and theoretical
 curves, we can be confident that our structure model is correct.
@@ -54,8 +54,10 @@ theoretical results.
 Afterwards, we perform a :ref:`delta-amplitudes<sec_deltas>` calculation and
 :ref:`structure search<sec_search>` to refine the results.
 
-Initialization Run and Phaseshift generation
-============================================
+.. _ag_init:
+
+Initialization Run and Generation of Phase Shifts
+=================================================
 
 To start off, we place the files :ref:`EXPBEAMS.csv<expbeams>` and
 :ref:`POSCAR<poscar>` in our source directory.
@@ -155,8 +157,8 @@ The second page shows the (rather similar) phase shifts for lower-lying
 bulk atoms.
 
 
-Reference Calculation and R-factor
-==================================
+Reference Calculation and *R* Factor
+====================================
 
 In this simple case, we don't actually need any further settings to
 run the :ref:`reference calculation<ref-calc>`. We can just start the
@@ -166,12 +168,12 @@ calculation again, after setting :ref:`RUN = 1<run>` to select the
 Note that the initialization will still be automatically executed at the start
 of every ViPErLEED run.
 Similarly, if an :ref:`EXPBEAMS.csv files<expbeams>` is provided as is the
-case here, the :ref:`R-factor calculation<r-factor_calculation>` will be
+case here, the |R-factor| :ref:`calculation<r-factor_calculation>` will be
 automatically calculated and reported after each reference calculation. By
-default, ViPErLEED will use the :ref:`Pendry R-factor<r-factor_calculation>`.
+:ref:`default<r-factor_calculation>`, ViPErLEED uses the Pendry |R factor|.
 
 Once the reference calculation finishes (only takes about 1 minute with the
-chosen settings) we find a result for the R-factor at the very end of the
+chosen settings) we find a result for the |R factor| at the very end of the
 :ref:`log file<log_files_calc>`:
 
 .. code-block:: console
@@ -196,22 +198,22 @@ The latter should look something like this:
    theoretical |IV| curves.
 
 
-The |IV| curves clearly show a good qualitative agreement, but the R factor of
-:math:`R \approx 0.17` is not great for such a simple system! We therefore
-proceed to the :ref:`delta-amplitudes<sec_deltas>` calculation and the
-:ref:`structure search<sec_search>`.
+The |IV| curves clearly show a good qualitative agreement, but the |R factor|
+of :math:`R_\mathrm{P} \approx 0.17` is not great for such a simple system. We
+therefore proceed to the :ref:`delta-amplitudes<sec_deltas>` calculation and
+the :ref:`structure search<sec_search>`.
 
 .. note::
    The :ref:`reference calculation<ref-calc>` also produces the
    :ref:`tensor files<tensorszip>` which are saved in the ``Tensors``
    directory.
    They are required as starting point for the delta-amplitude calculation
-   nd will be recognized automatically by ViPErLEED.
+   and will be recognized automatically by ViPErLEED.
 
 Delta-Amplitudes and Structure Search
 =====================================
 
-To improve our R-factor, we can run a local structure-optimization using the
+To improve our |R factor|, we can run a local structure-optimization using the
 :ref:`tensor LEED approach<tensor_leed>`.
 To do this in ViPErLEED, we run a :ref:`delta-amplitude<sec_deltas>`
 calculation followed by a :ref:`structure search<sec_search>`.
@@ -237,9 +239,9 @@ by setting :ref:`RUN = 2-3<run>` in :ref:`PARAMETERS<parameters>`.
 For a large system, this step can take many hours to finish, but for our simple
 system it only takes about 4 minutes to converge (using 10 CPU cores).
 At the end, when we take another look at our :ref:`log file<log_files_calc>`,
-we already see that the R-factor dropped significantly from
-:math:`R \approx 0.17` to :math:`R \approx 0.095`.
-That's not bad, but we can do a bit better yet.
+we already see that the |R factor| dropped significantly from
+:math:`R_\mathrm{P} \approx 0.17` to :math:`R_\mathrm{P} \approx 0.095`.
+That's not bad, but we can do a bit better.
 
 Now that we found a better configuration, we can use the
 :ref:`bookkeeper utility<bookkeeper>` with the ``--cont``
@@ -271,7 +273,7 @@ as the the last run!
    This will remove errors due to the
    :ref:`tensor LEED approximation<tensor_leed>` from the final result.
 
-Once finished, we get a R-factor of :math:`R = 0.0836`!
+Once finished, we get an |R factor| of :math:`R_\mathrm{P} = 0.0836`.
 To visualize how our optimization went, we can also take a look at the
 :ref:`Search-progress.pdf file<searchprogresspdf>` in the ``OUT`` directory:
 
@@ -296,14 +298,15 @@ to proceed with the analysis.
 
 For a more complicated system it may not be clear, which structure parameters
 are most important.
-In this case we could run an :ref:`error calculation<error_calculation>` which
-can show how much the displacement of any individual atom impacts the R-factor.
-The error calculation also provides us with an estimate for the statistical
-accuracy of the determined parameter values, for details see :ref:`errorspdf`.
+In this case we could run an :ref:`error calculation<error_calculation>`
+which can show how much the displacement of any individual atom impacts the
+|R factor|. The error calculation also provides us with an estimate for the
+statistical accuracy of the determined parameter values, for details see
+:ref:`errorspdf`.
 
 Alternatively, we could turn to a :ref:`full-dynamic optimization<fdoptimization>`
 to also tackle parameters that are not accessible under the tensor LEED
 approximation such as :math:`V_{0i}`, the unit cell dimensions (not relevant
 here, since well-known for Ag), or the electron beam incidence angle.
 
-.. [#] The unpublished data was provided courtesy of Lutz Hammer.
+.. [#] The unpublished data was provided by Lutz Hammer.

@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _averagebeams:
 
 =============
@@ -36,7 +38,7 @@ definition of ``theta`` and ``phi``.
 If AVERAGE_BEAMS is disabled entirely (i.e. ``off``), then 
 :ref:`IVBEAMS<IVBEAMS>`  and :ref:`EXPBEAMS.csv<EXPBEAMS>` 
 are taken at face value. Only beams with the same label will 
-be recognized as equivalent and compared in the R-factor calculation. 
+be recognized as equivalent and compared in the |R-factor| calculation. 
 If :ref:`IVBEAMS<IVBEAMS>`  is not present, the generated 
 :ref:`IVBEAMS<IVBEAMS>`  file will contain the same beams as the 
 :ref:`EXPBEAMS.csv<EXPBEAMS>`  file. Note that this affects not only 

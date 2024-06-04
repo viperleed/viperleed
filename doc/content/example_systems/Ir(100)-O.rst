@@ -16,9 +16,9 @@ We will begin by running a reference calculation and a rough structure
 optimization. Following this, we move to a finer search grid and run a
 :ref:`full-dynamic optimization <fdoptimization>` of the inner potential
 :math:`V_{0\text{i}}`.
-Finally, once we achieve a satisfactory R-factor, we will use the
+Finally, once we achieve a satisfactory |R factor|, we will use the
 ViPErLEED :ref:`error calculation<error_calculation>` to estimate
-how much small changes of atomic positions affect the R-factor.
+how much small changes of atomic positions affect the |R factor|.
 This will give rough margins for the statistical uncertainties of
 the determined parameters.
 
@@ -174,10 +174,10 @@ and :ref:`PHASESHIFTS<phaseshifts>`.
 
     You will need to **restart the run manually** after making these checks.
 
-When the run is finished, we will see in the log file that the R-factor has
-decreased quite a bit. The first reference calculation gave a values of
-:math:`R_P \approx 0.55`, but :math:`R_P` has dropped to around
-:math:`\approx 0.21` over the search - very promising!
+When the run is finished, we will see in the log file that the |R factor|
+has decreased quite a bit. The first reference calculation gave a values
+of :math:`R_\mathrm{P} \approx 0.55`, but :math:`R_\mathrm{P}` has dropped
+to around :math:`\approx 0.21` over the search - very promising!
 We can get a better idea of how the search has converged by taking a
 look at the file :ref:`Search-progress.pdf<searchprogresspdf>` in the
 ``SUPP`` directory.
@@ -189,7 +189,7 @@ look at the file :ref:`Search-progress.pdf<searchprogresspdf>` in the
 
    Upper half of page 1 for ``Search-progress.pdf``.
 
-:numref:`fig_Ir_O_search_progress_1` shows a plot of the decreasing R-factor
+:numref:`fig_Ir_O_search_progress_1` shows a plot of the decreasing |R factor|
 during the various stages of the search. We clearly see that both geometric
 optimizations made quick progress in terms of convergence - as should be
 expected when starting from an unrelaxed surface slab such as here.
@@ -222,36 +222,36 @@ for iridium has gone up.
 Fine DISPLACEMENTS and Tensor LEED Error
 ========================================
 
-The rough optimization has already significantly brought down the R-factor.
-We should now continue with a finer search grid.
-For this, we use a similar :ref:`DISPLACEMENTS file<displacements>`, but
-with much smaller range and step size (see below). We now re-run with
-:ref:`RUN = 1-3<run>` to perform a fresh reference calculation for the
-new starting positions. This is advisable, because parameter deviations
-during the previous fit were not negligible.
+The rough optimization has already significantly brought down the |R factor|.
+We should now continue with a finer search grid. For this, we use a similar
+:ref:`DISPLACEMENTS file<displacements>`, but with much smaller range and step
+size (see below). We now re-run with :ref:`RUN = 1-3<run>` to perform a fresh
+reference calculation for the new starting positions. This is advisable,
+because parameter deviations during the previous fit were not negligible.
 
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_fine
    :language: console
    :caption: DISPLACEMENTS
 
 When looking at the log file after the reference calculation, we further
-notice something important: The R-factor of the reference calculation
-(:math:`R_P \approx 0.18`) *is different* from the one we obtained from
-the superposition calculation at the end of the previous run
-(:math:`R_P \approx 0.21`). This comes from the **error of the Tensor LEED **
-**approximation** used for the structure-optimization! Fortunately – in this
-case – the real R-factor (as obtained from the reference calculation) is lower.
-However, this is not always the case. You should **never** rely on the R-factor
-produced by the superposition calculation as a final result, but rather run a
-final reference calculation at the end of your analysis.
+notice something important: The |R factor| of the reference calculation
+(\ :math:`R_\mathrm{P} \approx 0.18`) *is different* from the one we
+obtained from the superposition calculation at the end of the previous
+run (\ :math:`R_\mathrm{P} \approx 0.21`). This comes from the **error**
+**of the Tensor LEED approximation** used for the structure-optimization!
+Fortunately – in this case – the real |R factor| (as obtained from the
+reference calculation) is lower. However, this is not always the case.
+You should **never** rely on the |R factor| produced by the superposition
+calculation as a final result, but rather run a final reference calculation
+at the end of your analysis.
 
 Full-dynamic Optimization
 =========================
 
-After the finer search run finishes, we see that the R-factor has again dropped
-quite a lot. The R-factor is now below 0.1, which already indicates very good
-agreement, but we can get better yet. However, before proceeding, we should
-accept the new best fit structure fit by calling the
+After the finer search run finishes, we see that the |R factor| has again
+dropped quite a lot. The |R factor| is now below 0.1, which already indicates
+very good agreement, but we can get better yet. However, before proceeding, we
+should accept the new best fit structure fit by calling the
 :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag:
 
     .. code-block:: console
@@ -280,8 +280,8 @@ We then chose to run the :ref:`full-dynamic optimization<fdoptimization>` by
 setting the parameter :ref:`RUN = 6<run>` and restarting. Once finished, the
 log file will let us know of the optimized value for the chosen parameter.
 ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the ``OUT``
-directory which contains a visualization of the R-factors calculated for the
-various values of the parameter and a fit parabola.
+directory which contains a visualization of the |R factor|\ s calculated for
+the various values of the parameter and a fit parabola.
 
 .. figure:: /_static/example_systems/Ir(100)-O/figures/FD_Optimization.svg
    :width: 60%
@@ -298,15 +298,15 @@ Following the :math:`V_{0\text{i}}` optimization we can also run a final
 structure-optimization, since the new value for :math:`V_{0\text{i}}` may
 have slightly affected the optimal positions.
 Using a (very fine) :math:`0.002` Å grid (``DISPLACEMENTS_very_fine`` in
-the provided example files) we manage to get a final R-factor of around
-:math:`R_P \approx 0.088`.
+the provided example files) we manage to get a final |R factor| of around
+:math:`R_\mathrm{P} \approx 0.088`.
 
 Error calculation
 =================
 
 Now that we have found a good structure fit, we can run a ViPErLEED
 :ref:`error calculation<error_calculation>` to estimate how sensitive
-the R-factor is to small changes of specific parameters. As input for
+the |R factor| is to small changes of specific parameters. As input for
 the error calculation, we need a :ref:`DISPLACEMENTS file<displacements>`
 containing the desired range and steps. The format of the file is the
 same as used for the delta-amplitudes calculation and structure search.
@@ -321,7 +321,7 @@ segment :ref:`RUN = 5<run>`. The :ref:`result <errorspdf>` will again be saved
 in the ``OUT`` directory. ViPErLEED generates a plot of the Error curves in
 ``Errors.pdf`` and stores the raw data in ``Errors.csv``.
 :ref:`Errors.pdf<errorspdf>` shows that displacements of surface atoms even
-by a few pm drastically increase the R-factor. Here, atom 1 is the oxygen
+by a few pm drastically increase the |R factor|. Here, atom 1 is the oxygen
 adsorbate and atoms 2 and 3 are the topmost iridium species.
 
 .. figure:: /_static/example_systems/Ir(100)-O/figures/errors_geo.svg
@@ -337,7 +337,7 @@ adsorbate and atoms 2 and 3 are the topmost iridium species.
    section on :ref:`Errors.pdf<errorspdf>`).
 
 Similarly, changes in the vibrational amplitude of the surface atoms also
-strongly affect the R-factor:
+strongly affect the |R factor|:
 
 .. figure:: /_static/example_systems/Ir(100)-O/figures/errors_vib.svg
    :width: 50%
@@ -353,7 +353,7 @@ be more asymmetric, as these amplitudes enter the calculation differently
 
 .. warning::
    Error curves are also subject to **errors of the tensor LEED approximation**.
-   R-factor values obtained for large deviations should be taken with care.
+   |R-factor| values obtained for large deviations should be taken with care.
 
 .. [1] It is not recommended to fit any vibrational amplitude of bulk atoms as
        long as reliable information about the substrate Debye temperature is

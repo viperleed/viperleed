@@ -26,8 +26,8 @@ established :term:`TensErLEED` program package. Based on the input structure
 and the desired calculation parameters, ViPErLEED can calculate the |LEED-IV|
 spectra for a given surface structure (see also
 :ref:`reference calculation<ref-calc>`), compare these to experimental data
-(see also :ref:`R-factor calculation<r-factor_calculation>`), and perform a
-structure optimization (see :ref:`search<sec_search>`) using the
+(see also |R-factor| :ref:`calculation<r-factor_calculation>`), and perform
+a structure optimization (see :ref:`search<sec_search>`) using the
 :ref:`tensor-LEED approach<tensor_leed>`.
 
 For computational details please have a look at the ViPErLEED paper (**TODO**)
