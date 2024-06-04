@@ -412,7 +412,8 @@ def deltas(sl, rp, subdomain=False):
     deltaCompTasks = []  # keep track of what versions to compile
     deltaRunTasks = []   # which deltas to run
     tensordir = "Tensors_"+str(rp.TENSOR_INDEX).zfill(3)
-    tl_path = rp.get_tenserleed_directory()
+    tl_source = rp.get_tenserleed_directory()
+    tl_path = tl_source.path
     for (at, el) in atElTodo:
         din, din_short, param = iodeltas.generateDeltaInput(
             at, el, sl, rp, dbasic, auxbeams, phaseshifts)
@@ -510,7 +511,7 @@ def deltas(sl, rp, subdomain=False):
     if not rp.TL_IGNORE_CHECKSUM:
         validate_multiple_files(deltaCompTasks[0].get_source_files(),
                                 logger, "delta calculations",
-                                rp.TL_VERSION_STR)
+                                rp.TL_VERSION)
 
     # compile files
     logger.info("Compiling fortran files...")

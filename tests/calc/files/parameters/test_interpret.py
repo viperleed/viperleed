@@ -28,6 +28,7 @@ from viperleed.calc.files.parameters.checker import ParametersChecker
 from viperleed.calc.files.parameters.known_parameters import is_deprecated
 from viperleed.calc.files.parameters.utils import Assignment
 from viperleed.calc.files.parameters.utils import NumericBounds as Bounds
+from viperleed.calc.lib.version import Version
 
 from ...poscar_slabs import CasePOSCARSlabs
 from .case_parameters import case_parameters_slab
@@ -1329,6 +1330,29 @@ class TestTheoEnergies(_TestInterpretBase):
     @parametrize('val,exc', invalid.values(), ids=invalid)
     def test_interpret_invalid(self, val, exc, interpreter):
         """Ensure invalid THEO_ENERGIES raises exceptions."""
+        self.check_raises(interpreter, val, exc)
+
+
+class TestTLVersion(_TestInterpretBase):
+    """Test for interpreting TL_VERSION"""
+    param = 'TL_VERSION'
+    valid = {
+        '2.0.0': ('v2.0.0', Version(2, 0, 0)),
+        'old format': ('1.76', Version(1, 7, 6)),
+        'with v': ('v2.0.0', Version(2, 0, 0)),
+    }
+    invalid = {
+        'non version string': ('abc', err.ParameterConversionError)
+    }
+
+    @parametrize('val,expect', valid.values(), ids=valid)
+    def test_interpret_valid(self, val, expect, interpreter):
+        """Check correct interpretation of valid TL_VERSION."""
+        self.check_assigned(interpreter, val, expect)
+
+    @parametrize('val,exc', invalid.values(), ids=invalid)
+    def test_interpret_invalid(self, val, exc, interpreter):
+        """Ensure invalid TL_VERSION raises exceptions."""
         self.check_raises(interpreter, val, exc)
 
 

@@ -440,7 +440,7 @@ compile using the Intel or GCC Fortran compilers, respectively.
 
 .. _mpirandom:
 
-Randomizer library for TensErLEED < 1.74
+Randomizer library for TensErLEED < v1.7.4
 -----------------------------------------
 
 TensErLEED versions up to 1.73 need the :term:`C`-object files called
