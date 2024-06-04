@@ -2,12 +2,12 @@
 
 .. raw:: latex
 
+   % Modify color of links to conform with those in html
    \def\Hy@colorlink#1{\begingroup\fontshape{\default}\selectfont}%
    \begingroup
    \sphinxsetup{%
-      InnerLinkColor={rgb}{0,0.120,0.204},
-      OuterLinkColor={rgb}{0,0.120,0.204}
-
+      InnerLinkColor={RGB}{41,128,185},
+      OuterLinkColor={RGB}{41,128,185}
    }
 
    % use heavy boxes for note, hint, important & tip
@@ -34,31 +34,34 @@
    \pagenumbering{arabic}%
    }
 
+.. include:: /substitutions.rst
+
 =======================
 ViPErLEED documentation
 =======================
 
-Welcome to the documentation for :term:`ViPErLEED` and the :term:`Python`
-package :term:`tleedm`.
-The ViPErLEED project is a set of :ref:`open-source<license>` tools that aims at
-drastically reducing the effort for a intensity [LEED-:math:`I(V)`] analysis,
-both on the computational and on the experimental side.
+Welcome to the documentation of :term:`ViPErLEED` and of the ``viperleed``
+:term:`Python` package.
+The ViPErLEED project comprises a set of :ref:`open-source<license>` tools that
+aims at drastically reducing the effort for quantitative low-energy electron
+diffraction [i.e., |LEED-IV|] on both experimental and computational fronts.
 
-.. todo:: Add: See also the ViPErLEED publication series (**TODO: add link **).
+.. todo::
+    See also the ViPErLEED publication series (LINKS).
 
-The ViPErLEED package consists of:
+:numref:`toc_figure` shows an overview of the tools provided by the ViPErLEED 
+project:
 
-- :ref:`The viperleed calc package<viperleed_calc>`
-      A Python package for the calculation of :math:`I(V)` curves,
-      quantitative analysis of :term:`LEED` data, and surface structure 
-      optimization.
-      See the :ref:`Getting Started page<getting_started>`.
-- :ref:`The ViPErLEED Spot-Tracker<spot_tracker>`
-      Software for extracting :math:`I(V)` curves from the experimental data
-      ("movies").
 -  :ref:`The ViPErLEED hardware<hardware>`
       A set of hardware, firmware and control software for the easy
-      acquisition of LEED-:math:`I(V)` data with pre-existing LEED systems.
+      acquisition of |LEED-IV| data with pre-existing LEED systems.
+- :ref:`The ViPErLEED Spot Tracker<spot_tracker>`
+      Software for extracting |IV| curves from the experimental data
+      ("movies").
+- :ref:`The viperleed.calc package<viperleed_calc>`
+      A Python package for the calculation of |IV| curves, quantitative
+      analysis of :term:`LEED` data, and surface structure optimization.
+      See the :ref:`Getting Started page<getting_started>`.
 
 .. _toc_figure:
 .. figure:: /_static/paper_figures/ViPErLEED-overview_embedded.svg
@@ -76,9 +79,9 @@ The ViPErLEED package consists of:
       :caption: Contents
 
 .. toctree::
-   :caption: viperleed calc
+   :caption: viperleed.calc
 
-   viperleed calc<content/viperleed_calc>
+   viperleed.calc<content/viperleed_calc>
    Examples<content/examples>
    Getting started<content/getting_started>
    Segments<content/work_segments>
@@ -87,19 +90,19 @@ The ViPErLEED package consists of:
    Utilities<content/utilities>
    API<content/api>
 
-.. toctree:: 
+.. toctree::
    :maxdepth: 1
-   :caption: Spot-Tracker
+   :caption: Spot tracker
 
    Spot-Tracker<content/spot_tracker>
 
-.. toctree:: 
+.. toctree::
    :maxdepth: 1
-   :caption: Hardware
+   :caption: Hardware and measurements
 
    Hardware<content/hardware>
 
-.. toctree:: 
+.. toctree::
    :maxdepth: 1
    :caption: References
 

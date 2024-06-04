@@ -1,9 +1,12 @@
-.. api_calc_classes:
+.. include:: /substitutions.rst
+
+.. _api_calc_classes:
 
 Classes
 =======
 
-The ``viperleed calc`` package uses a number of classes to represent the input data, parameters and the results of LEED-I(V) calculations.
+The |calc| package uses a number of classes to represent the input
+data, parameters and the results of |LEED-IV| calculations.
 
 .. currentmodule:: viperleed.calc.classes
 

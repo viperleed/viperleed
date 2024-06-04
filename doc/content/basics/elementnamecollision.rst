@@ -28,7 +28,7 @@ could rename ``La`` to ``A`` in the POSCAR, then use
 ``ELEMENT_MIX A = La Sr`` to specify that these atoms are actually either
 ``La`` or ``Sr``. If you do not do this, but simply use 
 ``ELEMENT_MIX La = La Sr``, you produce an **element name collision**, 
-meaning that in your later input (e.g. in the :ref:`VIBROCC<VIBOCCIN>` 
+meaning that in your later input (e.g. in the :ref:`VIBROCC<vibrocc>` 
 and :ref:`DISPLACEMENTS<DISPLACEMENTS>`  files), there will be no clear 
 way to distinguish whether you wanted to refer to the POSCAR element 
 (i.e. all atoms in that position), or one specific chemical element.
@@ -48,7 +48,7 @@ POSCAR elements, i.e. assign your input to all atoms in the given site,
 wherever this makes sense.
 Chemical elements will only take precedence 
 where interpreting as POSCAR elements would be nonsensical, that is on 
-the right-hand side of input in the :ref:`VIBROCC<VIBOCCIN>` file, and 
+the right-hand side of input in the :ref:`VIBROCC<vibrocc>` file, and 
 in :ref:`OCC_DELTA<OCCDELTA>`  blocks in the 
 :ref:`DISPLACEMENTS<DISPLACEMENTS>`  file.
 

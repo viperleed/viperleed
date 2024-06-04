@@ -1,4 +1,4 @@
-.. _viboccin:
+.. _vibrocc:
 
 =======
 VIBROCC

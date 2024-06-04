@@ -5,13 +5,13 @@ T_DEBYE
 
 T_DEBYE is used to
 :ref:`automatically generate an initial guess for atomic vibrational amplitudes<vibrocc_auto>`
-for the file :ref:`VIBROCC <viboccin>`.
+for the file :ref:`VIBROCC <vibrocc>`.
 It is the Debye temperature, which is used to calculate the vibrational
 amplitude of each atom in the system.
-T_DEBYE will **never** be used if the :ref:`VIBROCC file<viboccin>` exists and
-defines a vibrational amplitude for every site.
+T_DEBYE will **never** be used if the :ref:`VIBROCC file<vibrocc>`
+exists and defines a vibrational amplitude for every site.
 
-**Default:** No default. Execution cannot proceed if T_DEBYE is not 
+**Default:** No default. Execution cannot proceed if T_DEBYE is not
 defined and VIBROCC file is missing.
 
 **Allowed values:** positive float, temperature in Kelvin
@@ -27,9 +27,9 @@ defined and VIBROCC file is missing.
     The parameters T_DEBYE,
     :ref:`T_EXPERIMENT<t_experiment>` and :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`
     will normally be used only once, to calculate an initial guess for
-    vibrational amplitudes and generate a :ref:`VIBROCC file <viboccin>`. 
+    vibrational amplitudes and generate a :ref:`VIBROCC file <vibrocc>`.
     Afterwards, all three parameters will automatically be commented out in the
     :ref:`PARAMETERS` file; the vibration amplitudes will be defined in the
     VIBROCC file instead.
     Even if the parameters were un-commented again, they would never be used
-    as long as a :ref:`VIBROCC file <viboccin>` is present.
+    as long as a :ref:`VIBROCC file <vibrocc>` is present.

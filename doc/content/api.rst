@@ -1,16 +1,21 @@
+.. include:: /substitutions.rst
+
 .. _api_index:
 
 ====================
 ViPErLEED Python API
 ====================
 
-A core part of the :ref:`ViPErLEED project<index>` is the ``viperleed calc`` Python package.
-(See :ref:`here<installation>` for installation instructions.)
-While ``viperleed calc`` can be used as a standalone tool to perform LEED-I(V) calculations, it also contains a number of useful library functions related to surface science and electron diffraction.
-Through the :term:`API`, users can access all of the functionality of ``viperleed calc`` from within their own Python programs.
+A core part of the :ref:`ViPErLEED project<index>` is the |calc|
+Python package. (See :ref:`here<installation>` for installation instructions.)
+While |calc| can be used as a standalone tool to perform |LEED-IV|
+calculations, it also contains a number of useful library functions related 
+to surface science and electron diffraction. Through the :term:`API`, users can 
+access all of the functionality of |calc| from within their own Python programs.
 
-To use the API, you can simply import the ``viperleed`` package and call the desired functions.
-Here is a simple example of how to use the API to find the plane group of a slab from a :ref:`POSCAR file<poscar>`:
+To use the API, you can simply import the ``viperleed`` package and call
+the desired functions. Here is a simple example of how to use the API to 
+find the plane group of a slab from a :ref:`POSCAR file<poscar>`:
 
 .. code-block:: python
 

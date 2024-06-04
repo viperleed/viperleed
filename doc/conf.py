@@ -94,21 +94,30 @@ nb_output_stderr = "remove-warn" # remove matplotlib user warnings
 latex_show_urls = 'inline'
 latex_show_pagerefs = False # show page numbers
 inkscape_converter_args = ['--export-area-page']
+latex_logo = '_static/viperleed_logo_circled.pdf'
 latex_elements = {
     'papersize': 'a4paper',
     'passoptionstopackages': r'\PassOptionsToPackage{svgnames}{xcolor}',
     'figure_align': 'H', # Latex figure (float) alignment
-    'preamble': r'''
-    \usepackage{braket}
-    \usepackage[overlay,absolute]{textpos}% for header in PDF screen version
-    \usepackage{everypage}
-    \usepackage{newunicodechar}
-    \newunicodechar{α}{$\alpha$}
-    \newunicodechar{Δ}{$\Delta$}
+    'preamble': fr'''
+    \usepackage{{braket}}
+    \usepackage[overlay,absolute]{{textpos}}% for header in PDF screen version
+    \usepackage{{everypage}}
+    \usepackage{{newunicodechar}}
+    \newunicodechar{{α}}{{$\alpha$}}
+    \newunicodechar{{Δ}}{{$\Delta$}}
 
-    \textblockorigin{28mm}{16.5mm} % position x,y wrt top-left corner of page
-    %\setlength{\TPHorizModule}{\pdfpagewidth} % text block width = page width
-    \setlength{\TPHorizModule}{\textwidth} % text block width = text width
-    \newlength{\chapterNameLength}%
+    \textblockorigin{{28mm}}{{16.5mm}} % position x,y wrt top-left corner of page
+    %\setlength{{\TPHorizModule}}{{\pdfpagewidth}} % text block width = page width
+    \setlength{{\TPHorizModule}}{{\textwidth}} % text block width = text width
+    \newlength{{\chapterNameLength}}%
+    % Modify the size of the ViPErLEED logo. See sphinx-doc/sphinx/issues/11930
+    \AtBeginDocument{{%
+      \renewcommand{{\sphinxlogo}}{{%
+        \sphinxincludegraphics[width=0.15\textwidth]{{{latex_logo.rsplit('/', 1)[1]}}}%
+        \par%
+        }}%
+      \renewcommand{{\sphinxcrossref}}[1]{{#1}}%
+    }}%
     '''
     }

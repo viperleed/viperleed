@@ -38,7 +38,7 @@ keywords = [
 Homepage = 'https://viperleed.org'
 
 [tool.setuptools]
-py-modules = ["viperleed"]
+packages = ["viperleed"]
 
 [tool.setuptools.dynamic]
 version = {attr = "viperleed.__version__"}
@@ -63,6 +63,7 @@ dev = [
     'twine',
     ]
 doc = [  # Requires >= py3.9!
+    'ase',         # For notebooks
     'myst-nb>1.0',
     'myst-parser>1.0',
     'setuptools',  # Workaround for sphinxcontrib-bibtex #345

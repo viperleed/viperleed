@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _files:
 
 =====
@@ -20,13 +22,13 @@ depending on the work-segment (:ref:`see above<work-segments>`).
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | :ref:`POSCAR<POSCAR>`                | Structural information                            | Always required                                                   |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-| :ref:`VIBROCC<VIBOCCIN>`             | Vibrational amplitudes and site occupations       | Always required, can be generated automatically                   |
+| :ref:`VIBROCC<vibrocc>`              | Vibrational amplitudes and site occupations       | Always required, can be generated automatically                   |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | :ref:`IVBEAMS<IVBEAMS>`              | Which beams to calculate                          | Always required, can be generated automatically from EXPBEAMS.csv |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | :ref:`DISPLACEMENTS<DISPLACEMENTS>`  | What to vary during the search                    | Required for delta calculations and search                        |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-| :ref:`EXPBEAMS.csv<EXPBEAMS>`        | Experimental I(V) curves                          | Required for R-factor calculations and search                     |
+| :ref:`EXPBEAMS.csv<EXPBEAMS>`        | Experimental |IV| curves                          | Required for R-factor calculations and search                     |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | :ref:`PHASESHIFTS<PHASESHIFTS>`      | Contains elastic electron scattering phaseshifts  | Generated automatically if needed                                 |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
@@ -45,17 +47,17 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
 +======================================================================+==================================================================+===================================================+
 | :ref:`POSCAR_OUT<POSCAR>`                                            | Best-fit structure                                               | Search                                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`VIBROCC_OUT<VIBOCCIN>`                                         | Best-fit vibrational amplitudes and occupations                  | Search                                            |
+| :ref:`VIBROCC_OUT<vibrocc>`                                          | Best-fit vibrational amplitudes and occupations                  | Search                                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`THEOBEAMS.csv, THEOBEAMS.pdf<THEOBEAMS>`                       | Theoretical I(V) curves                                          | Reference calculation                             |
+| :ref:`THEOBEAMS.csv, THEOBEAMS.pdf<THEOBEAMS>`                       | Theoretical |IV| curves                                          | Reference calculation                             |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`FITBEAMS.csv<FITBEAMS>`                                        | Theoretical I(V) curves                                          | Superpos calculation                              |
+| :ref:`FITBEAMS.csv<FITBEAMS>`                                        | Theoretical |IV| curves                                          | Superpos calculation                              |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
 | :ref:`Search-progress.pdf<searchprogresspdf>`                        | Progress information on current search                           | Search                                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
 | :ref:`Search-report.pdf<searchreportpdf>`                            | Summary of several consecutive searches                          | Search                                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`Rfactor_plots.pdf<rfactorplots>`                               | Plots of experimental and theoretical I(V) curves with R-factors | R-factor calculation                              |
+| :ref:`Rfactor_plots.pdf<rfactorplots>`                               | Plots of experimental and theoretical |IV| curves with R factors | R-factor calculation                              |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
 | :ref:`Rfactor_analysis.pdf<rfactoranalysis>`                         | Same as Rfactor_plots, with Y-functions and analysis             | R-factor calculation                              |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
@@ -63,7 +65,7 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
 | :ref:`FD_Optimization.csv, FD_Optimization.pdf<fdoptimizationdata>`  | R-factors for variation in full-dynamic optimization             | :ref:`Full-dynamic optimization<Fdoptimization>`  |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`                | I(V) curves generated during full-dynamic optimization           | :ref:`Full-dynamic optimization<Fdoptimization>`  |
+| :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`                | |IV| curves generated during full-dynamic optimization           | :ref:`Full-dynamic optimization<Fdoptimization>`  |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
 | :ref:`PatternInfo.tlm<PatternInfo>`                                  | Input for :term:`GUI`                                            | Initialization                                    |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
@@ -79,9 +81,9 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
 | :ref:`SD.TL<sdtl>`                                                   | Search parameter values and R-factors per generation             | Search                                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`refcalc-fd.out<fd_out>`                                        | Theoretical I(V) curves                                          | Reference calculation                             |
+| :ref:`refcalc-fd.out<fd_out>`                                        | Theoretical |IV| curves                                          | Reference calculation                             |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`superpos-spec.out<superpos-spec_out>`                          | Theoretical I(V) curves                                          | Superpos calculation                              |
+| :ref:`superpos-spec.out<superpos-spec_out>`                          | Theoretical |IV| curves                                          | Superpos calculation                              |
 +----------------------------------------------------------------------+------------------------------------------------------------------+---------------------------------------------------+
 
 
@@ -90,7 +92,8 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
 Supplementary files
 -------------------
 
-ViPErLEED produces supplementary files that are required during execution, that contain intermediate results or that may be of interest for debugging purposes.
+ViPErLEED produces supplementary files that are required during execution, that 
+contain intermediate results or that may be of interest for debugging purposes.
 These files are stored in the ``SUPP`` subfolder of the ``work`` directory.
 
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
