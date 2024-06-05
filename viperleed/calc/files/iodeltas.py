@@ -21,6 +21,7 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.files.beams import writeAUXBEAMS
+from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def checkDelta(filename, at, el, rp):
     except FileNotFoundError:
         logger.error("Error reading file "+filename)
         raise
-    if rp.TL_VERSION < 1.7:  # formatting changed to I5 in version 1.7
+    if rp.TL_VERSION < Version('1.7.0'):  # formatting changed to I5 in version 1.7
         intlen = 3
     else:
         intlen = 5
@@ -270,7 +271,7 @@ def generateDeltaInput(atom, targetel, sl, rp, deltaBasic="", auxbeams="",
     f74x3 = ff.FortranRecordWriter('3F7.4')
     ol = i4.write([iel])
     din += ol.ljust(29) + "IEL  - element in PHASESHIFT list"    
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         din += """
 -------------------------------------------------------------------
 --- undisplaced position of atomic site in question             ---
@@ -376,7 +377,7 @@ C  MNCSTEP: number of geometric variation steps to be performed """
 def generateDeltaBasic(sl, rp):
     """Generates the part of the input for delta-amplitudes that is the same
     for all atoms, and returns it as a string."""
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         formatter = {'energies': ff.FortranRecordWriter('3F7.2'),
                      'uc': ff.FortranRecordWriter('2F7.4'),
                      'angles': ff.FortranRecordWriter('2F7.4'),
@@ -404,7 +405,7 @@ def generateDeltaBasic(sl, rp):
     output += formatter['uc'].write(ucsurf[1]).ljust(lj) + 'ARB2\n'
     output += (formatter['angles'].write([rp.THETA, rp.PHI]).ljust(lj)
                + 'THETA PHI\n')
-    if rp.TL_VERSION >= 1.7:
+    if rp.TL_VERSION >= Version('1.7.0'):
         # TODO: if phaseshifts are calculated differently, change format here
         output += (formatter['int'].write([1]).ljust(lj)
                    + 'PSFORMAT  1: Rundgren_v1.6; 2: Rundgren_v1.7\n')

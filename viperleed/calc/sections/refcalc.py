@@ -26,6 +26,7 @@ from viperleed.calc.lib import leedbase
 from viperleed.calc.lib import parallelization
 from viperleed.calc.lib.base import splitMaxRight
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,9 @@ logger = logging.getLogger(__name__)
 # with .format(__sourcedir__=self.source_dir) before globbing.
 # Similar considerations regarding the base names for foldername
 # and exename.
+# TODO: when implementing the compile task class, we should also
+# refactor the tenserleed source class such that we can directly use
+# zipped source directories
 class RefcalcCompileTask():
     """Stores information for a worker to compile a refcalc file, and keeps
     track of the folder that the compiled file is in afterwards."""
@@ -238,7 +242,7 @@ def run_refcalc(runtask):
         shutil.copy2(os.path.join(workfolder, "amp.out"),
                      os.path.join(targetpath, "amp" + en_str + ".out"))
     except FileNotFoundError:
-        if runtask.tl_version >= 1.73:
+        if runtask.tl_version >= Version('1.7.3'):
             logger.warning("Refcalc output file amp.out not found.")
     except Exception as e:      # warn but continue
         logger.warning("Failed to copy refcalc output file amp.out "
@@ -271,7 +275,7 @@ def run_refcalc(runtask):
 def edit_fin_energy_lmax(runtask):
     """modify FIN: replace the energy range (second line)"""
     comment, _, rest = runtask.fin.split("\n", maxsplit=2)
-    if runtask.tl_version < 1.7:
+    if runtask.tl_version < Version('1.7.0'):
         eformatter = ff.FortranRecordWriter('3F7.2')
         lj = 24
     else:
@@ -314,7 +318,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
     except Exception:
         logger.error("Exception during writeAUXNONSTRUCT: ")
         raise
-    if rp.TL_VERSION < 1.73:
+    if rp.TL_VERSION < Version('1.7.3'):
         try:
             beams.writeAUXBEAMS(ivbeams=rp.ivbeams, beamlist=rp.beamlist)
         except Exception:
@@ -341,7 +345,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             "Execution will proceed. The exception was: ",
             exc_info=True
             )
-    if rp.TL_VERSION < 1.7:   # muftin.f deprecated in version 1.7
+    if rp.TL_VERSION < Version('1.7.0'):   # muftin.f deprecated in version 1.7
         try:
             iorefcalc.writeMuftin(rp)
         except Exception:
@@ -355,7 +359,8 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
 
     energies = np.arange(rp.THEO_ENERGIES.start, rp.THEO_ENERGIES.stop+0.01,         # TODO: use better arange
                          rp.THEO_ENERGIES.step)
-    tl_path = rp.get_tenserleed_directory()
+    tl_source = rp.get_tenserleed_directory()
+    tl_path = tl_source.path
     rp.updateCores()
     single_threaded = (rp.N_CORES <= 1)
     if rp.FORTRAN_COMP[0] == "":
@@ -366,7 +371,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
             raise RuntimeError("Fortran compile error")
 
     # first, figure out for which LMAX to compile:
-    if single_threaded or rp.LMAX.has_single_value or rp.TL_VERSION <= 1.6:
+    if single_threaded or rp.LMAX.has_single_value or rp.TL_VERSION <= Version('1.6'):
         which_lmax = {rp.LMAX.max,}
     else:    # find appropriate LMAX per energy
         ps_en = [(i, ps[0]*leedbase.HARTREE_TO_EV) for (i, ps) in enumerate(rp.phaseshifts)]
@@ -475,7 +480,7 @@ def refcalc(sl, rp, subdomain=False, parent_dir=Path()):
                           if file and 'muftin' not in file.name.lower())
         validate_multiple_files(files_to_check,
                                 logger, "reference calculation",
-                                rp.TL_VERSION_STR)
+                                rp.TL_VERSION)
 
     if single_threaded:
         home = os.getcwd()

@@ -40,8 +40,9 @@ from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
 from viperleed.calc.files.beamgen import calc_and_write_beamlist
 from viperleed.calc.lib import leedbase
-from viperleed.calc.lib.base import NonIntegerMatrixError
 from viperleed.calc.lib.base import angle, rotation_matrix
+from viperleed.calc.lib.base import NonIntegerMatrixError
+from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import writeWoodsNotation
 from viperleed.calc.psgen import runPhaseshiftGen, runPhaseshiftGen_old
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
@@ -280,7 +281,7 @@ def initialization(sl, rp, subdomain=False):
                 "read it. A new PHASESHIFTS file will be generated."
                 "The exception during read was: ", exc_info=True)
             rp.setHaltingLevel(1)
-    if rp.TL_VERSION >= 1.71 and rp.V0_REAL != 'default':
+    if rp.TL_VERSION >= Version('1.7.1') and rp.V0_REAL != 'default':
         # check V0_REAL - may have to replace firstline
         if type(rp.V0_REAL) != list:
             logger.warning("Parameter V0_REAL currently does not support "
@@ -642,7 +643,7 @@ def init_domains(rp):
             dp.refcalcRequired = True
             continue
         # check LMAX - should be obsolete since TensErLEED version 1.6
-        if rp.TL_VERSION <= 1.6 and rp.LMAX.max != dp.rp.LMAX.max:
+        if rp.TL_VERSION <= Version('1.6.0') and rp.LMAX.max != dp.rp.LMAX.max:
             logger.info("%sLMAX is mismatched.", cmessage)
             dp.refcalcRequired = True
         # check beam incidence
@@ -669,7 +670,7 @@ def init_domains(rp):
             for var in ["THEO_ENERGIES", "THETA", "PHI", "N_CORES", "ivbeams",
                         "source_dir"]:
                 setattr(dp.rp, var, copy.deepcopy(getattr(rp, var)))
-            if rp.TL_VERSION <= 1.6:  # not required since TensErLEED v1.61
+            if rp.TL_VERSION <= Version('1.6.0'):  # not required since TensErLEED v1.61
                 dp.rp.LMAX.max = rp.LMAX.max
 
     # repeat initialization for all slabs that require a supercell

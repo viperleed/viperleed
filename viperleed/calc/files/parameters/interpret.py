@@ -38,15 +38,18 @@ from viperleed.calc.classes.rparams import IVShiftRange
 from viperleed.calc.classes.rparams import LayerCuts
 from viperleed.calc.classes.rparams import SymmetryEps
 from viperleed.calc.classes.rparams import TheoEnergies
+from viperleed.calc.files.tenserleed import OLD_TL_VERSION_NAMES
 from viperleed.calc.lib import periodic_table
 from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.base import readIntRange, readVector
 from viperleed.calc.lib.base import recombineListElements, splitSublists
+from viperleed.calc.lib.version import Version
 from viperleed.calc.lib.woods_notation import readWoodsNotation
 from viperleed.calc.sections.calc_section import CalcSection as Section
 
 from .checker import ParametersChecker
 from .errors import ParameterBooleanConversionError
+from .errors import ParameterConversionError
 from .errors import ParameterError
 from .errors import ParameterFloatConversionError
 from .errors import ParameterHasNoValueError
@@ -96,7 +99,6 @@ _SIMPLE_NUMERICAL_PARAMS = {
     'T_DEBYE' : POSITIVE_FLOAT,
     'T_EXPERIMENT' : POSITIVE_FLOAT,
     'V0_IMAG' : POSITIVE_FLOAT,
-    'TL_VERSION' : POSITIVE_FLOAT,
     # Other floats
     'V0_Z_ONSET' : NumericBounds(),
     'ATTENUATION_EPS' : NumericBounds(range_=(1e-6, 1),
@@ -1711,6 +1713,19 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
                 f'{param} parameter: (Eto - Efrom) % Estep != 0, Efrom '
                 f'was corrected to {self.rpars.THEO_ENERGIES.start}'
                 )
+
+    def interpret_tl_version(self, assignment):
+        """Assign parameter TL_VERSION."""
+        param = 'TL_VERSION'
+        self._ensure_simple_assignment(assignment)
+        version_str = assignment.value.lower()
+        version_str = version_str.replace('v', '')
+        if version_str in OLD_TL_VERSION_NAMES.keys():
+            version_str = OLD_TL_VERSION_NAMES[version_str]
+        try:
+            self.rpars.TL_VERSION = Version(version_str)
+        except ValueError:
+            raise ParameterConversionError(param, version_str)
 
     def interpret_v0_real(self, assignment):
         """Assign parameter V0_REAL."""

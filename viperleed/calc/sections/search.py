@@ -38,6 +38,7 @@ from viperleed.calc.files import searchpdf
 from viperleed.calc.files.displacements import readDISPLACEMENTS_block
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.checksums import validate_multiple_files
+from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +191,7 @@ def _write_control_chem(rp, generation, configs):
     lines = ["\n",  # Starts with one empty line
              f"Parameters of generation No.{generation:>6d}:\n"]
     astep = rp.DOMAIN_STEP if rp.domainParams else 100
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         ctrl_width = 3
     else:
         ctrl_width = 4
@@ -738,8 +739,9 @@ def search(sl, rp):
             raise FileNotFoundError("Fortran compile error") from exc
     # get fortran files
     try:
-        tldir = rp.get_tenserleed_directory()
-        srcpath = tldir / 'src'
+        tl_source = rp.get_tenserleed_directory()
+        tl_path = tl_source.path
+        srcpath = tl_path / 'src'
         if usempi:
             src_file = next(srcpath.glob('search.mpi*'), None)
         else:
@@ -747,11 +749,11 @@ def search(sl, rp):
                          if 'mpi' not in f.name)
             src_file = next(src_files, None)
         if src_file is None:
-            raise FileNotFoundError(f"No Fortran source for search in {tldir}")
+            raise FileNotFoundError(f"No Fortran source for search in {tl_path}")
         shutil.copy2(src_file, src_file.name)
-        libpath = tldir / 'lib'
+        libpath = tl_path / 'lib'
         libpattern = "lib.search"
-        if usempi and rp.TL_VERSION <= 1.73:
+        if usempi and rp.TL_VERSION <= Version('1.7.3'):
             libpattern += ".mpi"
         lib_file = next(libpath.glob(libpattern + "*"), None)
         if lib_file is None:
@@ -767,7 +769,7 @@ def search(sl, rp):
             hashname = ""
 
         randname = "MPIrandom_.o" if usempi else "random_.o"
-        if rp.TL_VERSION <= 1.73:
+        if rp.TL_VERSION <= Version('1.7.3'):
             # these are short C scripts - use pre-compiled versions
 
             # try to copy randomizer lib object file
@@ -791,7 +793,7 @@ def search(sl, rp):
                           srcpath / globalname,
                           hashing_file)
         validate_multiple_files(files_to_check, logger,
-                                "search", rp.TL_VERSION_STR)
+                                "search", rp.TL_VERSION)
 
     # compile fortran files
     searchname = f"search-{rp.timestamp}"
@@ -818,7 +820,7 @@ def search(sl, rp):
         (f"{fcomp[0]} -o search.o -c {format_tag}", src_file.name, fcomp[1])
         )
     to_link = "search.o lib.search.o restrict.o"
-    if rp.TL_VERSION <= 1.73:
+    if rp.TL_VERSION <= Version('1.7.3'):
         to_link += f" {randname}"
     if hashname:
         to_link += " intarr_hashing.o"
