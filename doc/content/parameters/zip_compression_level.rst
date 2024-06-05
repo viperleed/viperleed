@@ -10,7 +10,7 @@ ZIP archives storing the :ref:`tensor<tensorszip>` and
 
 **Default:** 2
 
-**Allowed values:** Integer values 0-9
+**Allowed values:** Integer values 0–9
 
 **Syntax:**
 

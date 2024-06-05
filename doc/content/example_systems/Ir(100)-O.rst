@@ -46,7 +46,7 @@ As reference structure, we use a :ref:`POSCAR file<poscar>`, containing a
 hand-made Ir(100) surface, which we hand made from a bulk structure with
 an additional adsorbed oxygen atom placed at a bridge site, such that each
 surface iridium atom binds to one oxygen atom.
-The height above the surface was chosen to achieve a reasonable Ir-O bond
+The height above the surface was chosen to achieve a reasonable Ir–O bond
 length. See below for a visualization (using
 :term:`VESTA` :cite:`mommaVESTAThreedimensionalVisualization2011`)
 of the structure.
@@ -177,7 +177,7 @@ and :ref:`PHASESHIFTS<phaseshifts>`.
 When the run is finished, we will see in the log file that the |R factor|
 has decreased quite a bit. The first reference calculation gave a values
 of :math:`R_\mathrm{P} \approx 0.55`, but :math:`R_\mathrm{P}` has dropped
-to around :math:`\approx 0.21` over the search - very promising!
+to around :math:`\approx 0.21` over the search: very promising.
 We can get a better idea of how the search has converged by taking a
 look at the file :ref:`Search-progress.pdf<searchprogresspdf>` in the
 ``SUPP`` directory.
@@ -191,17 +191,17 @@ look at the file :ref:`Search-progress.pdf<searchprogresspdf>` in the
 
 :numref:`fig_Ir_O_search_progress_1` shows a plot of the decreasing |R factor|
 during the various stages of the search. We clearly see that both geometric
-optimizations made quick progress in terms of convergence - as should be
-expected when starting from an unrelaxed surface slab such as here.
-The other pages of the file give us some insight into how each atomic
-parameter developed during the structure optimization.
+optimizations made quick progress in terms of convergence. This is expected
+when starting from an unrelaxed surface slab like the one used here. The other
+pages of the file give us some insight into how each atomic parameter developed
+during the structure optimization.
 
 .. _fig_Ir_O_search_progress_2:
 .. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_2.svg
    :width: 70%
    :align: center
 
-   Page 2-4 of ``Search-progress.pdf`` (white space cropped).
+   Page 2–4 of ``Search-progress.pdf`` (white space cropped).
 
 :numref:`fig_Ir_O_search_progress_2` shows that the (:math:`z`) position of
 the  oxygen adsorbate has changed a good amount. Further, we see that the

@@ -54,7 +54,7 @@ Syntax
    RUN = ref-search ref   ! same as 1-3 1
 
 Initialization will always be run, even if the leading 0 is not there. Indices
-1-3 are meant to be performed in that order, and any other (without data from
+1–3 are meant to be performed in that order, and any other (without data from
 a previous run) will fail.
 
 Index 4 is a helper index for :ref:`domain calculations<domain_calculation>`,

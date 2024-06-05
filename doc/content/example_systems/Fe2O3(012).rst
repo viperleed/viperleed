@@ -31,7 +31,7 @@ All input files needed to follow along on your own machine can be found
    If you want to follow along on your own machine, note that the calculation
    may take *a long time* to complete.
    On a modern 48-core machine, each looped structure-optimization took about
-   6-10 hours to finish.
+   6–10 hours to finish.
 
 Introduction
 ============

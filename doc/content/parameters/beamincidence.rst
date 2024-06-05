@@ -64,7 +64,7 @@ polar angle theta, the second as the azimuth phi.
       order to account for the fact that the electron beam has a finite 
       aperture angle.
       (For averaging, see the :ref:`AVERAGE_BEAMS<AVERAGEBEAMS>`  parameter). 
-      This commonly leads to ``theta`` values in the order of 0.3--0.5°. 
+      This commonly leads to ``theta`` values in the order of 0.3–0.5°. 
       This option makes sense only if the |R factor| is very low and the 
       surface has sufficiently high symmetry (at least threefold rotation 
       symmetry or mirror/glide planes in two directions), so that averaging 

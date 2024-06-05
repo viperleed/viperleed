@@ -31,8 +31,8 @@ well as in the search of the best structure, the theoretical spectra will be
 shifted a bit along the energy axis to find the best match with experiment
 (see :ref:`IV_SHIFT_RANGE<IVSHIFTRANGE>` to control this shift).
 
-If (Eto-Efrom) is not an integer multiple of Estep, the Efrom will be modified
-to a slightly lower energy such that this is the case.
+If ``Eto-Efrom`` is not an integer multiple of ``Estep``, ``Efrom`` will 
+be modified to a slightly lower energy such that this is the case.
 
 **TODO**: perhaps we should have the default in case EXPBEAMS is there: look at
 the IV_SHIFT_RANGE to decide how much to 'expand' the THEO_ENERGIES rather than

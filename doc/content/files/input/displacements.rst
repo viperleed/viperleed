@@ -57,7 +57,7 @@ such that the symmetry is preserved during the search
 by a mirror symmetry plane). If multiple assignments are made for the same
 atom, the assignments will be ignored if they are consistent, but the user
 will be warned and the program may stop if there is a contradiction. For
-example, if some of the iridium atoms 2-11 in the code above were linked
+example, if some of the iridium atoms 2–11 in the code above were linked
 by a mirror plane, assigning a displacement in z direction to all of them
 would be accepted, but assigning the very same in-plane displacement
 (not parallel to the mirror plane) to all of them would lead to a

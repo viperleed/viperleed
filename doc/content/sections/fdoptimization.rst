@@ -26,9 +26,9 @@ control the behaviour of the optimization can also be set using
 :ref:`OPTIMIZE<OPTIMIZE>`.
 
 The algorithm for full-dynamic optimization is essentially to calculate
-R-factors for at least three values of the parameter under variation,
+|R factor|\ s for at least three values of the parameter under variation,
 then fit a parabola. If the minimum of the parabola is outside of the
-current scope (i.e. the already known points), then more points are
+current scope (i.e., the already known points), then more points are
 added to expand the scope such that at least one point at either side
 of the minimum is present. Otherwise, the next calculation will be performed
 at the parabola minimum. The parabola fit is repeated after obtaining any new
@@ -36,7 +36,7 @@ data point. Convergence is reached when the new predicted minimum is within a
 given distance (defined by :ref:`OPTIMIZE<OPTIMIZE>`) of a point that was
 already calculated.
 
-R-factor values corresponding to the calculated values of the parameter
+|R-factor| values corresponding to the calculated values of the parameter
 under variation are output to
 :ref:`FD_Optimization.csv and FD_Optimization.pdf<fdoptimizationdata>`. |IV|
 curves are output to :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>`.

@@ -18,13 +18,13 @@ Different sites can have different occupancies and vibrational amplitudes.
 The first argument is the element name in the :ref:`POSCAR<POSCAR>` file for
 sites that are being defined.
 After the "=" sign, comma-delimited groups should contain names of the sites
-and the atom numbers to be assigned (number of atom in the POSCAR list / 
+and the atom numbers to be assigned (number of atom in the POSCAR list /
 same as progressional numbers in :term:`VESTA`'s
 Edit>Data>Structure parameters, **not** the :term:`VESTA` number per type,
 i.e., not the number in 'Fe2', 'O16' etc.). The top(*N*) function selects
-the *N* topmost atoms of the given POSCAR element. 4-10 or 4:10 will select
-atoms 4 to 10, including 4 and 10. In the example, atoms 1 and 2 will get
-site type 'tet', atoms 4 through 10 and atom 12 will get site type 'oct',
+the *N* topmost atoms of the given POSCAR element. ``4-10`` or ``4:10`` will
+select atoms 4 to 10, including 4 and 10. In the example, atoms 1 and 2 will
+get site type 'tet', atoms 4 through 10 and atom 12 will get site type 'oct',
 and the two topmost Fe atoms will get site type 'surf'. The two topmost O
 atoms will get site type 'surf'.
 For atoms identified by number, the element label must match the element label

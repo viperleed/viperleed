@@ -126,7 +126,7 @@ used during the TensErLEED calculations. You can check whether the bulk
 unit cell was recognized correctly by opening POSCAR_bulk in VESTA and
 editing the boundary such that multiple cells are shown in all three
 directions. For the same purpose, the **POSCAR_bulk_appended** is the
-original POSCAR file with 1-3 bulk units (depending on the bulk thickness)
+original POSCAR file with 1–3 bulk units (depending on the bulk thickness)
 appended at the bottom, meant to check whether the bulk cell is aligned
 correctly with the slab.
 

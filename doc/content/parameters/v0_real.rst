@@ -53,7 +53,7 @@ It is advisable to **stick to the Default** (i.e., do not define
 V0_REAL), unless you have provided an externally generated
 :ref:`PHASESHIFTS<PHASESHIFTS>` file. In this case, it is best to
 define the parameter with the ``RUNDGREN`` command and copying the
-c0-c3 constants from the first line of any of the PS.r.\* output
+c0–c3 constants from the first line of any of the PS.r.\* output
 files of the phase-shift calculation tool (c0 is the second number,
 c1 the third, and so on).
 

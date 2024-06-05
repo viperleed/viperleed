@@ -20,7 +20,7 @@ automatically from the :ref:`POSCAR<POSCAR>` file.
 **Accepted values**: ``true``, ``True``, ``false``, ``False`` or any 
 combination of small/capital letters or any abbreviation of the words 
 ``true`` and ``false`` (only the first character matters).
-Alternatively, ``<group>`` can be the Hermann-Mauguin symbol for the 
+Alternatively, ``<group>`` can be the Hermann–Mauguin symbol for the 
 planar group you want to constrain your symmetry to. Acceptable values 
 are listed in the table below.
 

@@ -71,8 +71,9 @@ Note that for all methods except ordinary linear regression, the penalty term
 affects not only the curvature of the parabola, but also the position of the
 minimum, as this is given by the ``w1_i * x_i`` term. Fitting is performed with
 the parameter values centered around the current best configuration (i.e., the
-combination yielding the lowest R-value in the search so far), so Ridge, Lasso
-and Elastic Net will all favour solutions close to the best known configuration.
+combination yielding the lowest |R-factor| value in the search so far), so 
+Ridge, Lasso and Elastic Net will all favour solutions close to the best 
+known configuration.
 
 alpha
 -----

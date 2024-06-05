@@ -11,7 +11,7 @@ ViPErLEED
 
 :term:`ViPErLEED` is released as open-source under the :term:`GPLv3` (or later)
 license.
-Copyright (c) 2019-2024, ViPErLEED Developers.
+Copyright (c) 2019–2024, ViPErLEED Developers.
 
 The ViPErLEED project aims to provide free and open software.
 However, because ViPErLEED is building on existing software, the

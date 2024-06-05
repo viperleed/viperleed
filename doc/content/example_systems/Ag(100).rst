@@ -44,13 +44,13 @@ In this example, we want to set up a ViPErLEED calculation and structure
 optimization based on these inputs alone.
 Our goal is to get the lowest possible |R factor| starting from this reference
 structure.
-If we manage to get a good agreement between the experimental and theoretical
+If we manage to get a good agreement between the experimental and calculated
 curves, we can be confident that our structure model is correct.
 
 We will start off by setting up our input files and running an
 :ref:`initialization<initialization>` to check for any errors in them.
 Then, we run a :ref:`reference calculation<ref-calc>` to get some initial
-theoretical results.
+calculated results.
 Afterwards, we perform a :ref:`delta-amplitudes<sec_deltas>` calculation and
 :ref:`structure search<sec_search>` to refine the results.
 
@@ -68,7 +68,7 @@ Both files have defined formats.
    :caption: POSCAR file containing the initial structure.
 
 We then create a :ref:`PARAMETERS file<parameters>` which tells ViPErLEED what
-to do:
+to do
 
 .. literalinclude :: /_static/example_systems/Ag(100)/PARAMETERS
    :language: console
@@ -77,8 +77,8 @@ to do:
 GLOBAL PARAMETERS
    Since we only want to run the :ref:`initialization<initialization>` for now,
    we set :ref:`RUN = 0<run>`. For this example, we also limit our energy range
-   to 45-700 eV, with an energy step of 3 eV
-   (:ref:`THEO_ENERGIES<theo_energies>`).
+   to 45–700 eV, with an energy step of 3 eV
+   (\ :ref:`THEO_ENERGIES<theo_energies>`).
 
 PARAMETERS FOR INTERPRETING POSCAR
    We then tell ViPErLEED how to interpret the structure given in the
