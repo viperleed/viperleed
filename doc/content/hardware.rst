@@ -1,7 +1,7 @@
 .. _hardware:
 
 ==================
-ViPErLEED Hardware
+ViPErLEED hardware
 ==================
 
 **Documentation coming soon!**

@@ -1,6 +1,6 @@
 .. _refcalc-input:
 
-Reference calculation input files
+Reference-calculation input files
 =================================
 
 Below is a short list of files used for the

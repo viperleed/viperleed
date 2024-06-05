@@ -3,7 +3,7 @@
 .. _super_pos:
 
 =========================
-Superposition Calculation
+Superposition calculation
 =========================
 
 The superposition calculation (``superpos`` in the code) is the last section

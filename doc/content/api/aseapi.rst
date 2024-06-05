@@ -2,7 +2,7 @@
 
 .. _aseapi:
 
-Atomic Simulation Environment Interface
+Atomic Simulation Environment interface
 =======================================
 
 .. _aseapi_intro:

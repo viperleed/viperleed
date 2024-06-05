@@ -46,7 +46,7 @@ Defines what to calculate and where to start.
 
 .. _input_structure_settings:
 
-Input Structure
+Input structure
 ===============
 
 .. table::
@@ -164,8 +164,8 @@ Computational setup
   | **→** :ref:`N_CORES<NCORES>`                                 | The number of CPUs to use                                                                                                                |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 
-R-factor
-========
+|R factor|
+==========
 
 .. table::
   :width: 100%

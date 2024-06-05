@@ -64,11 +64,11 @@ ranges have the same size, i.e.,
 ::
 
    = VIB_DELTA
-   Ir_top = -0.05 0.05 0.01       ! vary vibrational amplitudes for all atoms in Ir_top sites over the range [-0.05, 0.05] with step 0.01
-   Ir_def = -0.025 0.025 0.005    ! vary vibrational amplitudes for all atoms in Ir_def sites over the range [-0.025, 0.025] with step 0.005
+   Ir_top = -0.05 0.05 0.01     ! vary vibrational amplitudes for all atoms in Ir_top sites over the range [-0.05, 0.05] with step 0.01
+   Ir_def = -0.025 0.025 0.005  ! vary vibrational amplitudes for all atoms in Ir_def sites over the range [-0.025, 0.025] with step 0.005
 
    = CONSTRAIN
-   vib Ir = linked            ! keep the vibrational amplitude index of all Ir_top atoms the same at all times
+   vib Ir = linked              ! keep the vibrational amplitude index of all Ir_top atoms the same at all times
 
 Note that while in this example, the *indices* for vibrational variation
 of Ir_top and Ir_def are tied together, that does in no way mean that the
@@ -81,12 +81,12 @@ concerted fashion by linking the respective parameters:
 
 ::
 
-   =GEO_DELTA
-   O L(1-2) z = -0.05 0.05 0.005       ! move oxygen atoms in layers 1 and 2 along z over range [-0.05, 0.05] with step 0.005
-   Ir L(1) z = 0.03 -0.03 0.003        ! move iridium atoms in layer 1 along z over range [0.03, -0.03] with step 0.003
+   = GEO_DELTA
+   O L(1-2) z = -0.05 0.05 0.005     ! move oxygen atoms in layers 1 and 2 along z over range [-0.05, 0.05] with step 0.005
+   Ir L(1) z = 0.03 -0.03 0.003      ! move iridium atoms in layer 1 along z over range [0.03, -0.03] with step 0.003
 
    = CONSTRAIN
-   geo O L(1-2), Ir L(1) = linked     ! link the indices for the displacement ranges above
+   geo O L(1-2), Ir L(1) = linked    ! link the indices for the displacement ranges above
 
 In this example, all oxygen atoms in layers 1 and 2 would move in a concerted
 fashion, as would the iridium atoms in layer 1. Furthermore, by linking them

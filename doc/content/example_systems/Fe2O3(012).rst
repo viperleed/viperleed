@@ -3,7 +3,7 @@
 .. _example_Fe2O3:
 
 ==================================
-Example System: Fe₂O₃(1−102)-(1×1)
+Example system: Fe₂O₃(1−102)-(1×1)
 ==================================
 
 Hematite (\ :math:`\alpha\text{-Fe}_2\text{O}_3`) is one of the most common
@@ -192,7 +192,7 @@ expect.
 In particular, one should make sure that the bulk stoichiometry for
 POSCAR_bulk, and the bulk layer spacing for POSCAR_bulk_appended, are correct.
 
-Reference Calculation and Structure Optimization
+Reference calculation and structure optimization
 ================================================
 
 If the initialization ran without errors, we can proceed to the reference
@@ -271,7 +271,7 @@ reference calculations, and structure optimizations to converge.
    |R factor|.
 
 
-Optimizing the Incidence Angle
+Optimizing the incidence angle
 ==============================
 
 In our case, the |R factor| has improved significantly after the

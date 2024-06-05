@@ -20,7 +20,7 @@ and the explanation of how the approach is implemented in TensErLEED
 in the original publication of the TensErLEED software
 :cite:p:`blumFastLEEDIntensity2001a`.
 
-Reference Calculation
+Reference calculation
 =====================
 
 In the :ref:`reference calculation<ref-calc>`, the full dynamic scattering
@@ -71,7 +71,7 @@ point for the subsequent :ref:`delta amplitude calculation<sec_deltas>`
 and :ref:`structure search<sec_search>`.
 
 
-Delta-Amplitude Calculation
+Delta-amplitude calculation
 ===========================
 
 The individual perturbations to the reference structure may be (arbitrary
@@ -105,7 +105,7 @@ for each structure candidate. :cite:p:`blumFastLEEDIntensity2001a`
 
 .. _tensor_leed_search:
 
-Structure Search
+Structure search
 ================
 
 Once the amplitude changes for all required perturbations have been
@@ -190,7 +190,7 @@ optimization in the tensor LEED approximation and also |LEED IV| in general:
     required. See the entry on the :ref:`DISPLACEMENTS file<displacements>`
     for details and workarounds (such as looping searches).
 
-Optimization Algorithm
+Optimization algorithm
 ======================
 
 .. _optimization_algorithm:

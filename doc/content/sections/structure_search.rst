@@ -3,7 +3,7 @@
 .. _sec_search:
 
 ================
-Structure Search
+Structure search
 ================
 
 The structure search (referred to as ``search`` in the code) is
@@ -34,7 +34,7 @@ See :ref:`the section on structure search in tensor leed<tensor_leed_search>`
 for details.
 
 
-Structure Search in ViPErLEED
+Structure search in ViPErLEED
 =============================
 
 The structure search in ViPErLEED is based on the structure search section of

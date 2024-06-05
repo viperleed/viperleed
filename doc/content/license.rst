@@ -3,7 +3,7 @@
 .. _license:
 
 ===================
-License Information
+License information
 ===================
 
 ViPErLEED

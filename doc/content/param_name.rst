@@ -2,7 +2,7 @@
 
 .. _paramname:
 
-List of PARAMETERS by Name
+List of PARAMETERS by name
 ==========================
 
 See below for an alphabetical list of all parameters.

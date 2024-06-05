@@ -10,7 +10,7 @@ file is divided in layers. Full dynamic multiple scattering is calculated
 inside each layer. The electron beams are then propagated as attenuated
 plane waves in between adjacent layers.
 
-.. note:
+.. note::
 
    The :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` parameter offers an easy
    way to detect the bulk repeat unit automatically, which will set both

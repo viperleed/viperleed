@@ -116,8 +116,8 @@ Reference calculation
   | :ref:`V0_Z_ONSET<INPOTZ>`                   | How far from the topmost atom the inner potential begins                                                     |
   +---------------------------------------------+--------------------------------------------------------------------------------------------------------------+
 
-R-factor calculation
---------------------
+|R-factor| calculation
+----------------------
 
 .. table::
   :width: 100%

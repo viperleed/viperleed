@@ -3,7 +3,7 @@
 .. _how_to_run:
 
 ==================================
-Directory Structure and How To Run
+Directory structure and how to run
 ==================================
 
 In ViPErLEED, each calculation must have its own directory.

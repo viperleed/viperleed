@@ -6,8 +6,6 @@
 DISPLACEMENTS
 =============
 
-
-
 The DISPLACEMENTS file defines the variations of geometry, vibrational
 amplitudes and element concentrations that should be considered in the
 search. In other words, the DISPLACEMENTS file defines the parameter
@@ -244,4 +242,3 @@ you could do:
 
    </loop>
    </loop>
-

@@ -34,5 +34,5 @@ An interface to the Atomic Simulation Environment (:term:`ASE`) is
 :ref:`also available<aseapi>`.
 
 
-.. todo:
+.. todo::
     Mention you can import the package and use it in your own code.

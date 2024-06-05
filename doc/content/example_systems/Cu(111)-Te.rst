@@ -3,7 +3,7 @@
 .. _example_Cu-Te:
 
 ====================================
-Example System: Cu(111)-Te ad-chains
+Example system: Cu(111)-Te ad-chains
 ====================================
 
 The following example covers a ViPErLEED analysis and structure optimization
@@ -177,7 +177,7 @@ Once we run the next reference-calculation, we notice that we get an
 :math:`R_\mathrm{P} \approx 0.47` at the end of the previous run
 – **a big difference**. This comes from the mentioned **Tensor LEED error**.
 
-Fine DISPLACEMENTS and Search Parameters
+Fine DISPLACEMENTS and search parameters
 ========================================
 
 Since in the former fit no parameter value reached the edge of the respective
@@ -215,7 +215,7 @@ The optimization on the 1 pm (0.01 Å) grid allows us to further reduce the
 R-factor to about :math:`R_\mathrm{P} \approx 0.23`, which is again a good improvement
 on the previous value of :math:`R_\mathrm{P} \approx 0.33`.
 
-Full-dynamic Optimization
+Full-dynamic optimization
 =========================
 
 If we now visually compare experimental with calculated |IV| curves, we already

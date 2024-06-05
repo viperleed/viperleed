@@ -1,7 +1,7 @@
 .. _vibdelta:
 
 ================================
-Vibrational amplitude variations
+Vibrational-amplitude variations
 ================================
 
 Vibration amplitude variations to be used during the

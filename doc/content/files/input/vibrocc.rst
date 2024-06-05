@@ -168,7 +168,6 @@ independently, the vibrations and occupations written for each site
 will be the average, and values for the single atoms will be written as
 search offsets.
 
-
 .. _vibrocc_auto:
 
 Automatic generation of VIBROCC

@@ -115,9 +115,6 @@ Glossary
       The Python programming language. See the Python
       `homepage <https://www.python.org>`__.
 
-    WSL
-      Windows Subsystem for Linux. See also `the page by Microsoft <https://learn.microsoft.com/en-us/windows/wsl/about>`__.
-
     UHV
       Ultra-high vacuum
 
@@ -127,6 +124,9 @@ Glossary
     |calc|
       The Python package of ViPErLEED that deals with calculations
       of |LEED-IV| curves.
+
+    WSL
+      Windows Subsystem for Linux. See also `the page by Microsoft <https://learn.microsoft.com/en-us/windows/wsl/about>`__.
 
     XRD
       X-ray diffraction.

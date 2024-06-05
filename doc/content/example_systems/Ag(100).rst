@@ -3,7 +3,7 @@
 .. _example_ag_100:
 
 =============================
-Example System: Ag(100)-(1×1)
+Example system: Ag(100)-(1×1)
 =============================
 
 In this section, we go through setting up and executing a simple ViPErLEED
@@ -56,7 +56,7 @@ Afterwards, we perform a :ref:`delta-amplitudes<sec_deltas>` calculation and
 
 .. _ag_init:
 
-Initialization Run and Generation of Phase Shifts
+Initialization run and generation of phase shifts
 =================================================
 
 To start off, we place the files :ref:`EXPBEAMS.csv<expbeams>` and
@@ -157,7 +157,7 @@ The second page shows the (rather similar) phase shifts for lower-lying
 bulk atoms.
 
 
-Reference Calculation and *R* Factor
+Reference calculation and *R* factor
 ====================================
 
 In this simple case, we don't actually need any further settings to
@@ -210,7 +210,7 @@ the :ref:`structure search<sec_search>`.
    They are required as starting point for the delta-amplitude calculation
    and will be recognized automatically by ViPErLEED.
 
-Delta-Amplitudes and Structure Search
+Delta amplitudes and structure search
 =====================================
 
 To improve our |R factor|, we can run a local structure-optimization using the

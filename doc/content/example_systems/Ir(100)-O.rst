@@ -3,7 +3,7 @@
 .. _example_Ir(100)-O:
 
 ===============================
-Example System: Ir(100)-(2×1)-O
+Example system: Ir(100)-(2×1)-O
 ===============================
 
 In this tutorial we go through a ViPErLEED structure analysis for an Ir(100)
@@ -219,7 +219,7 @@ for iridium has gone up.
 
         $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
 
-Fine DISPLACEMENTS and Tensor LEED Error
+Fine DISPLACEMENTS and tensor-LEED error
 ========================================
 
 The rough optimization has already significantly brought down the |R factor|.
@@ -245,7 +245,7 @@ You should **never** rely on the |R factor| produced by the superposition
 calculation as a final result, but rather run a final reference calculation
 at the end of your analysis.
 
-Full-dynamic Optimization
+Full-dynamic optimization
 =========================
 
 After the finer search run finishes, we see that the |R factor| has again

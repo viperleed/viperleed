@@ -21,6 +21,6 @@ automatically)
 **Acceptable values**: True, False, T, F (not case sensitive)
 
 Note that SUPPRESS_EXECUTION will force the program to stop after each segment 
-(e.g. after starting the reference calculation). This also means that output 
+(e.g., after starting the reference calculation). This also means that output 
 will be present in the form that TensErLEED outputs, and not automatically 
 processed for easy analysis.
