@@ -151,7 +151,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """Set new settings for this instance."""
         self.set_settings(new_settings)
 
-    def _check_before_getting_settings_handler(self):
+    def check_before_getting_settings_handler(self):
         """Check if getting a SettingsHandler is possible."""
         if not self.settings:
             # Remember to catch this exception before catching
@@ -405,34 +405,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             The handler used in a SettingsDialog to display the
             settings of this instance to users.
         """
-        self._check_before_getting_settings_handler()
+        self.check_before_getting_settings_handler()
         handler = SettingsHandler(self.settings)
-        return handler
-
-    def get_settings_handler_with_file_name(self):
-        """Return a SettingsHandler with the file name of the settings.
-
-        This method can be used to either extend or replace
-        get_settings_handler in subclasses to get a settings
-        handler that displays the file name of the loaded
-        settings file.
-
-        Returns
-        -------
-        handler : SettingsHandler
-            The handler used in a SettingsDialog to display the
-            settings of this instance to users.
-        """
-        self._check_before_getting_settings_handler()
-        handler = SettingsHandler(self.settings)
-        widget = qtw.QLabel()
-        file = self.settings.last_file
-        widget.setText(file.stem if file else 'None')
-        handler.add_static_option(
-            'File', 'config', widget,
-            display_name='Settings file',
-            tooltip=str(file) if file else None,
-            )
         return handler
 
     def set_settings(self, new_settings):

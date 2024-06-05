@@ -32,6 +32,7 @@ from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import MeasureControllerABC
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
 
 _QUEUED = qtc.Qt.QueuedConnection
@@ -1474,4 +1475,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
-        return self.get_settings_handler_with_file_name()
+        self.check_before_getting_settings_handler()
+        handler = SettingsHandler(self.settings, display_config=True)
+        return handler

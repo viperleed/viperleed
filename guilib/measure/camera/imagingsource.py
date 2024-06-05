@@ -28,6 +28,7 @@ from viperleed.guilib.measure.camera.drivers.imagingsource import (
     )
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.abc import SettingsInfo
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.hardwarebase import device_name_re
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
 
@@ -622,7 +623,8 @@ class ImagingSourceCamera(abc.CameraABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        handler = self.get_settings_handler_with_file_name()
+        self.check_before_getting_settings_handler()
+        handler = SettingsHandler(self.settings, display_config=True)
         handler.add_from_handler(super().get_settings_handler())
 
         # pylint: disable=redefined-variable-type

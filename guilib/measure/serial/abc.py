@@ -27,6 +27,7 @@ from PyQt5 import QtSerialPort as qts
 # ViPErLEED modules
 from viperleed.guilib.measure.classes.abc import HardwareABC
 from viperleed.guilib.measure.classes.settings import NoSettingsError
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.hardwarebase import ViPErLEEDErrorEnum
 from viperleed.guilib.measure.hardwarebase import emit_error
 
@@ -464,7 +465,9 @@ class SerialABC(HardwareABC):
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
-        return self.get_settings_handler_with_file_name()
+        self.check_before_getting_settings_handler()
+        handler = SettingsHandler(self.settings, display_config=True)
+        return handler
 
     @abstractmethod
     def identify_error(self, messages_since_error):

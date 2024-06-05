@@ -1046,7 +1046,9 @@ class Measure(ViPErLEEDPluginBase):                                             
             elif isinstance(sender, MeasurementABC):
                 source = f'measurement {sender.__class__.__name__}'
             elif isinstance(sender, SerialABC):
-                source = f'{type(sender).__name__} on {sender.port_name}'
+                # Theoretically we should only receive error
+                # messages from controller instances.
+                source = f'{type(sender).__name__} at {sender.port_name}'
             elif isinstance(sender, FirmwareUpgradeDialog):
                 source = f'firmware upgrade dialog'
             else:

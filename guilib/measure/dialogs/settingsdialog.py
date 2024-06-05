@@ -148,8 +148,19 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
     settings_changed = qtc.pyqtSignal()
     redraw_needed = qtc.pyqtSignal()  # Should trigger redraw of dialog
 
-    def __init__(self, config, parent=None):
-        """Initialize instance."""
+    def __init__(self, config, parent=None, display_config=False):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        display_config : bool, optional
+            Whether the name of the settings file (and path to the file)
+            should be displayed. Default is False.
+
+        Returns
+        -------
+        None
+        """
         super(qtc.QObject, self).__init__(parent)
         self.__dict = collections.defaultdict(dict)
         self.__sub_handlers = []
@@ -165,6 +176,16 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         self.__updated_timer.setInterval(10)
         self.__updated_timer.setSingleShot(True)
         self.__updated_timer.timeout.connect(self.redraw_needed)
+
+        if display_config:
+            widget = qtw.QLabel()
+            file = config.last_file
+            widget.setText(file.stem if file else 'None')
+            self.add_static_option(
+                'File', 'config', widget,
+                display_name='Settings file',
+                tooltip=str(file) if file else None,
+                )
 
     def __delitem__(self, item):
         """Delete a section."""

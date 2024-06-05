@@ -26,6 +26,7 @@ from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
 from viperleed.guilib.measure.classes.thermocouple import Thermocouple
 from viperleed.guilib.measure.controller import abc
+from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 
 # For settings dialog:
 from viperleed.guilib.measure.controller import _vprctrlsettings as _settings
@@ -508,7 +509,8 @@ class ViPErinoController(abc.MeasureControllerABC):
             The handler used in a SettingsDialog to display the
             settings of this controller to users.
         """
-        handler = self.get_settings_handler_with_file_name()
+        self.check_before_getting_settings_handler()
+        handler = SettingsHandler(self.settings, display_config=True)
         handler.add_option('controller', 'firmware_version',
                            handler_widget=_settings.FWVersionViewer(self),
                            display_name='Firmware version', read_only=True)
