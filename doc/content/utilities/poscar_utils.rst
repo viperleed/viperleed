@@ -36,7 +36,7 @@ attach_bulk
 ===========
 
 Interactive script that takes a slab POSCAR and adds a bulk POSCAR on the
-bottom, expanding the the unit cell in the :math:`\vec{c}` direction
+bottom, expanding the the unit cell in the :math:`\mathbf{c}` direction
 accordingly.
 
 **Usage**
@@ -56,7 +56,7 @@ delete_above
 ============
 
 Deletes all atoms in the POSCAR file above the specified fraction of the
-:math:`\vec{c}` vector.
+:math:`\mathbf{c}` vector.
 
 With the ``--verbose`` option, the utility prints the number of atoms deleted.
 This can also be useful to quickly check the number of atoms above a certain
@@ -70,7 +70,7 @@ height.
 
 **Additional Options**
 
-- ``c`` (required): the fraction (floating point number) of :math:`\vec{c}`
+- ``c`` (required): the fraction (floating point number) of :math:`\mathbf{c}`
   above which to delete atoms.
 
 
@@ -80,7 +80,7 @@ delete_below
 ============
 
 Same as :ref:`poscar_utils_delete_above`, but deletes all atoms below the
-specified fraction of the :math:`\vec{c}` vector.
+specified fraction of the :math:`\mathbf{c}` vector.
 
 **Usage**
 
@@ -90,7 +90,7 @@ specified fraction of the :math:`\vec{c}` vector.
 
 **Options**
 
-- ``c`` (required): the fraction (floating point number) of :math:`\vec{c}`
+- ``c`` (required): the fraction (floating point number) of :math:`\mathbf{c}`
   below which to delete atoms.
 
 .. _poscar_utils_delete_between:
@@ -99,7 +99,7 @@ delete_between
 ==============
 
 Same as :ref:`poscar_utils_delete_above` and :ref:`poscar_utils_delete_below`,
-but deletes all atoms between the specified fractions of the :math:`\vec{c}`
+but deletes all atoms between the specified fractions of the :math:`\mathbf{c}`
 vector.
 
 **Usage**
@@ -258,10 +258,10 @@ POSCAR file by adding or removing vacuum around the slab.
 project_c_to_z
 ==============
 
-Projects the :math:`\vec{c}` vector of the POSCAR file onto the
-:math:`\vec{z}` axis. Note this does not alter atomic coordinates,
+Projects the :math:`\mathbf{c}` vector of the POSCAR file onto the
+:math:`\mathbf{z}` axis. Note this does not alter atomic coordinates,
 only the orientation of the lattice vectors. The bulk-stacking
-direction is assumed to be along the :math:`\vec{z}` vector.
+direction is assumed to be along the :math:`\mathbf{z}` vector.
 See also the :ref:`page on used conventions<conventions>`.
 
 **Usage**
@@ -319,8 +319,8 @@ unit cell basis vectors in the POSCAR file, not the scaling factor (line 2).
 
 - ``scaling``: (required) One or three scaling factors for the unit cell.
   If three values are given, the scaling factors are applied to the
-  :math:`\vec{a}`, :math:`\vec{b}`, and :math:`\vec{c}` vector, respectively.
-  If only one value is given, an isotropic scaling is applied.
+  :math:`\mathbf{a}`, :math:`\mathbf{b}`, and :math:`\mathbf{c}` vector, 
+  respectively. If only one value is given, an isotropic scaling is applied.
 
 .. _poscar_utils_sort_by_z:
 
@@ -376,8 +376,8 @@ The vasp_relax utility adds the following information to the POSCAR file:
 - the tag ``Selective dynamics``, which indicates to VASP that selected ion
   positions are allowed to move
 - three boolean flags (`T`, `F`) for each atom indicating whether the atom
-  is  allowed to move along the :math:`\vec{a}`, :math:`\vec{b}`, and
-  :math:`\vec{c}` unit cell vectors, respectively
+  is  allowed to move along the :math:`\mathbf{a}`, :math:`\mathbf{b}`, and
+  :math:`\mathbf{c}` unit-cell vectors, respectively
 
 In general, it can be useful to optimize the positions of the topmost layers
 of atoms, while keeping the positions of the atoms in the bulk fixed.
@@ -393,7 +393,7 @@ to move to prevent the bulk lattice parameters from changing.
 
 **Additional Options**
 
-- ``above_c``: (required) the fraction of the :math:`\vec{c}` vector above
+- ``above_c``: (required) the fraction of the :math:`\mathbf{c}` vector above
   which to allow atoms to move
 - ``--all_directions``: allow all atoms to move along all three unit cell
-  vectors (default: only allow movement along :math:`\vec{c}`)
+  vectors (default: only allow movement along :math:`\mathbf{c}`)

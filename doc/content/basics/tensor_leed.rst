@@ -54,7 +54,7 @@ These delta-amplitudes can be expressed as
 
 .. math::
 
-    \delta \tilde{A}_{i,n}^{\mathrm{per}} = \sum_{l,m;l',m'} T^{\mathrm{ref}}_{i,n;l,m;l',m'} \braket{\vec{r_i},l,m| \delta t_{i,n} |\vec{r_i},l',m'}
+    \delta \tilde{A}_{i,n}^{\mathrm{per}} = \sum_{l,m;l',m'} T^{\mathrm{ref}}_{i,n;l,m;l',m'} \braket{\mathbf{r_i},l,m| \delta t_{i,n} |\mathbf{r_i},l',m'}
 
 using the perturbed atomic :math:`t`-matrices :math:`\delta t_i` and the
 tensor quantities :math:`T^{\mathrm{ref}}_{i,n;l,m;l',m'}`. The sum runs over
@@ -88,7 +88,7 @@ and then the expression
 
 .. math::
 
-    \delta \tilde{A}_{i,n,p}^{\mathrm{per}} = \sum_{l,m;l',m'} T^{\mathrm{ref}}_{i,n;l,m;l',m'} \braket{\vec{r_i},l,m| \delta \tilde{t}_{i,n,p} |\vec{r_i},l',m'}
+    \delta \tilde{A}_{i,n,p}^{\mathrm{per}} = \sum_{l,m;l',m'} T^{\mathrm{ref}}_{i,n;l,m;l',m'} \braket{\mathbf{r_i},l,m| \delta \tilde{t}_{i,n,p} |\mathbf{r_i},l',m'}
 
 are evaluated to calculate amplitude changes
 :math:`\delta \tilde{A}_{i,n,p}^{\mathrm{per}}`.

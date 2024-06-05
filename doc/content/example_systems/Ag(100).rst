@@ -83,8 +83,9 @@ GLOBAL PARAMETERS
 PARAMETERS FOR INTERPRETING POSCAR
    We then tell ViPErLEED how to interpret the structure given in the
    :ref:`POSCAR file<poscar>`.
-   Using :ref:`BULK_LIKE_BELOW` parameter, we specify that below 0.45 (unit
-   cell fraction along :math:`\vec{c}`) the given structure is bulk-like.
+   Using the :ref:`BULK_LIKE_BELOW` parameter, we specify that below 
+   0.45 (unit-cell fraction along :math:`\mathbf{c}`) the given structure
+   is bulklike.
 
    With the :ref:`SITE_DEF<sitedef>` command, we further define that the first
    atom in the POSCAR file (here the topmost atom) should be treated as a

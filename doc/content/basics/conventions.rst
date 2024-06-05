@@ -6,13 +6,14 @@ Conventions
 Coordinate system
 -----------------
 
-The lattice vectors describing the unit cell are named :math:`\vec{a}`, 
-:math:`\vec{b}`, and :math:`\vec{c}`. :math:`\vec{a}` and :math:`\vec{b}` 
-must be in the :math:`xy` plane, and :math:`\vec{c}` must have a positive 
-:math:`z` component. The :math:`+z` direction is considered to be pointing 
-outwards from the surface. For :math:`(1 \times 1)` cells, it is common (and 
-highly recommended) to choose the :math:`\vec{a}` and :math:`\vec{b}` vectors 
-such that :math:`\mid \vec{a} \mid \leq \mid \vec{b} \mid`
+The lattice vectors describing the unit cell are named :math:`\mathbf{a}`, 
+:math:`\mathbf{b}`, and :math:`\mathbf{c}`. :math:`\mathbf{a}` and 
+:math:`\mathbf{b}` must be in the :math:`xy` plane, and :math:`\mathbf{c}` must 
+have a positive :math:`z` component. The :math:`+z` direction is considered to 
+be pointing outwards from the surface (i.e., towards the vacuum). For 
+:math:`(1 \times 1)` cells, it is common (and highly recommended) to 
+choose the :math:`\mathbf{a}` and :math:`\mathbf{b}` vectors such that 
+:math:`\mid \mathbf{a} \mid \leq \mid \mathbf{b} \mid`
 
 Units
 -----
@@ -38,13 +39,13 @@ Beam Indices
 ------------
 
 Diffraction beam orders are defined by the indices :math:`h` and 
-:math:`k`, relating the incident (\ :math:`\vec{k}`) and outgoing 
-wave vectors (\ :math:`\vec{k'}`) via
+:math:`k`, relating the incident (\ :math:`\mathbf{k}`) and outgoing 
+wave vectors (\ :math:`\mathbf{k'}`) via
 
 .. math::
-    \vec{k'} = \vec{k} + \begin{pmatrix}h \\ k \end{pmatrix} \begin{pmatrix}\vec{a^*} \\ \vec{b^*}\end{pmatrix}
+    \mathbf{k'} = \mathbf{k} + \begin{pmatrix}h \\ k \end{pmatrix} \begin{pmatrix}\mathbf{a^*} \\ \mathbf{b^*}\end{pmatrix}
 
-where :math:`\vec{a^*}` and :math:`\vec{b^*}` are the reciprocal lattice 
+where :math:`\mathbf{a^*}` and :math:`\mathbf{b^*}` are the reciprocal-lattice 
 vectors. Beams are commonly labeled as :math:`(h|k)`, :math:`(h,k)` or 
 :math:`(hk)`. ViPErLEED generally uses the syntax ``(h | k)`` for machine 
 readability and to avoid ambiguity.

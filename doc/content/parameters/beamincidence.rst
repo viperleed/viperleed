@@ -15,7 +15,7 @@ ViPErLEED considers the incident wave vector to be in direction from the
 electron gun towards the surface, i.e.
 
 .. math::
-   \vec{k} = |\vec{k}|(-\cos(\phi)\sin(\theta)\hat{u}_x - \sin(\phi)\sin(\theta)\hat{u}_y - \cos(\theta) \hat{u}_z) .
+   \mathbf{k} = |\mathbf{k}|(-\cos(\phi)\sin(\theta)\hat{u}_x - \sin(\phi)\sin(\theta)\hat{u}_y - \cos(\theta) \hat{u}_z) .
 
 
 

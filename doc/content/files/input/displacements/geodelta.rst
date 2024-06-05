@@ -63,10 +63,10 @@ Possible directions for displacements are:
    In-plane displacements along the direction identified by the lattice
    vector with the whitespace-separated indices    ``n1`` (:math:`n_1`)
    and ``n2`` (:math:`n_2`).
-   The first integer refers to the first vector :math:`\vec{a}` in the
+   The first integer refers to the first vector :math:`\mathbf{a}` in the
    :ref:`POSCAR<POSCAR>` file.
    The displacement direction will be positive in the direction of the
-   vector :math:`\vec{v} = n_1 \vec{a} + n_2 \vec{b}`.
+   vector :math:`\mathbf{v} = n_1 \mathbf{a} + n_2 \mathbf{b}`.
    ``n1`` and ``n2`` accept floating point values.
    Notice that the direction vector will be normalized, so
    ``[1 3]`` and ``[9 27]`` correspond to the same direction.
@@ -81,10 +81,9 @@ Possible directions for displacements are:
 ``xy[m1 m2]``
 
    In-plane displacements along the vector
-   :math:`\vec{v}` = :math:`m1 \vec{x} + m2 \vec{y}` where
-   :math:`\vec{x}` and :math:`\vec{y}` are the unit vectors along the
-   cartesian axes.
-   The direction vectors will be normalized.
+   :math:`\mathbf{v}` = :math:`m1 \mathbf{x} + m2 \mathbf{y}`, where
+   :math:`\mathbf{x}` and :math:`\mathbf{y}` are the unit vectors along 
+   the Cartesian axes. The direction vectors will be normalized.
 
    ..  code-block:: none
 
@@ -97,9 +96,9 @@ Possible directions for displacements are:
    commands is used to specify the center:
 
    -  ``azi(ab[c1 c2])`` or just ``azi([c1 c2])`` means
-      :math:`C = c_1 \vec{a} + c_2 \vec{b}` and
+      :math:`C = c_1 \mathbf{a} + c_2 \mathbf{b}` and
    -  ``azi(xy[c3 c4])`` means
-      :math:`C = c_3 \vec{x} + c_4 \vec{y}`.
+      :math:`C = c_3 \mathbf{x} + c_4 \mathbf{y}`.
 
    The range on the right again defines a range of displacements in
    Ångström, in this case measured along the defined circular arc.
@@ -122,8 +121,8 @@ Possible directions for displacements are:
    point of reference, i.e.,
 
    -  ``r(ab[c1 c2])`` or ``r([c1 c2])`` means
-      :math:`C = c_1 \vec{a} + c_2 \vec{b}` and
-   -  ``r(xy[c3 c4])`` means :math:`C = c_3 \vec{x} + c_4 \vec{y}`.
+      :math:`C = c_1 \mathbf{a} + c_2 \mathbf{b}` and
+   -  ``r(xy[c3 c4])`` means :math:`C = c_3 \mathbf{x} + c_4 \mathbf{y}`.
 
    Positive values are interpreted as moving the atom *away* from point
    C, negative values move the atoms *towards* point C.

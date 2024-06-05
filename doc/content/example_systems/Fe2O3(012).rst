@@ -74,10 +74,10 @@ introduce some duplicate atoms, which can be deleted using "Edit" ->
 "Structure parameters" -> "Remove duplicate atoms".
 
 To create a suitable surface slab (as expected by ViPErLEED), we can then
-replicate the unit cell along :math:`\vec{c}` and (optionally) remove the
+replicate the unit cell along :math:`\mathbf{c}` and (optionally) remove the
 topmost layer to create a vacuum interface.
 In VESTA you can do this similarly, by applying a transformation which
-stretches the cell in the :math:`\vec{c}` direction, e.g.:
+stretches the cell in the :math:`\mathbf{c}` direction, e.g.:
 
 .. math::
     \begin{pmatrix}
