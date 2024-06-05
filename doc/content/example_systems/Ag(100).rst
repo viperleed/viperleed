@@ -83,7 +83,7 @@ GLOBAL PARAMETERS
 PARAMETERS FOR INTERPRETING POSCAR
    We then tell ViPErLEED how to interpret the structure given in the
    :ref:`POSCAR file<poscar>`.
-   Using the :ref:`BULK_LIKE_BELOW` parameter, we specify that below 
+   Using the :ref:`BULK_LIKE_BELOW` parameter, we specify that below
    0.45 (unit-cell fraction along :math:`\mathbf{c}`) the given structure
    is bulklike.
 
@@ -106,12 +106,14 @@ PARAMETERS FOR VIBROCC
    the vibrational amplitudes are given in the :ref:`VIBROCC file<vibrocc>`.
    However, rather than writing the :ref:`VIBROCC file<vibrocc>` ourselves,
    we can also let ViPErLEED calculate bulk vibrational amplitudes by providing
-   the parameters :ref:`T_DEBYE<t_debye>`, :ref:`T_EXPERIMENT<t_experiment>`.
-   By further providing :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`, we can make an
-   educated guess at the vibrational amplitudes for the surface atoms.
-   The latter parameter means that all atoms defined as "surf" (with SITE_DEF)
-   have vibration amplitudes 1.3 times higher than calculated from the Debye
-   temperature.
+   the :ref:`T_DEBYE<t_debye>` and :ref:`T_EXPERIMENT<t_experiment>`
+   parameters. By further providing :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`,
+   we guess the vibrational amplitudes for the surface atoms.
+   The VIBR_AMP_SCALE assignment means that all atoms defined as ``surf`` (via
+   SITE_DEF) have vibration amplitudes 1.3 times higher than those calculated
+   from the Debye temperature. All other atoms, who are implicitly assigned a
+   ``def`` tag, will be given vibrational amplitudes
+   :ref:`determined <vibrocc_auto>` from the Debye temperature.
 
 
 That's all the input we need to start the initialization run.
@@ -137,22 +139,23 @@ like this:
 As expected, ViPErLEED recognized our surface be of p4m symmetry with a simple
 :math:`(1 \times 1)` termination.
 
-During the initialization, ViPErLEED also automatically calculated electron
-scattering phaseshifts (based on atomic species and positions) to be used as
-input for the following calculations.
+During the initialization, ViPErLEED also automatically calculated
+electron-scattering phase shifts (based on atomic species and positions)
+to be used as input for the following calculations.
 They are stored in the :ref:`PHASESHIFTS file<phaseshifts>` that was copied
 into the source directory.
 This format, however, is hard to interpret for a human reader.
 Instead we can look at a plotted version of the same data in the file
 :ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the ``SUPP`` subdirectory.
-The first page shows the energy-dependent phaseshifts for the surface atom
-and looks like this:
+The first page shows the energy-dependent phase shifts for the surface atom
+is shown in :numref:`fig_ag_phaseshifts`.
 
+.. _fig_ag_phaseshifts:
 .. figure:: /_static/example_systems/Ag(100)/phaseshifts_plots.png
    :width: 450px
    :align: center
 
-   Phaseshifts_plots.pdf
+   First page of the ``Phaseshifts_plots.pdf`` file for Ag(100)-(1×1).
 
 The second page shows the (rather similar) phase shifts for lower-lying
 bulk atoms.
@@ -161,16 +164,16 @@ bulk atoms.
 Reference calculation and *R* factor
 ====================================
 
-In this simple case, we don't actually need any further settings to
-run the :ref:`reference calculation<ref-calc>`. We can just start the
-calculation again, after setting :ref:`RUN = 1<run>` to select the
-:ref:`reference calculation<ref-calc>` section.
+In this simple case, we don't need any further settings to run the
+:ref:`reference calculation<ref-calc>`. We can just invoke |calc|
+again after setting :ref:`RUN = 1<run>` to select
+the :ref:`reference calculation<ref-calc>` section.
 
-Note that the initialization will still be automatically executed at the start
+Note that the initialization is automatically executed at the start
 of every ViPErLEED run.
 Similarly, if an :ref:`EXPBEAMS.csv files<expbeams>` is provided as is the
-case here, the |R-factor| :ref:`calculation<r-factor_calculation>` will be
-automatically calculated and reported after each reference calculation. By
+case here, the |R-factor| :ref:`calculation<r-factor_calculation>` is
+automatically executed after each reference calculation. By
 :ref:`default<r-factor_calculation>`, ViPErLEED uses the Pendry |R factor|.
 
 Once the reference calculation finishes (only takes about 1 min with the
@@ -185,18 +188,20 @@ chosen settings) we find a result for the |R factor| at the very end of the
    Executed segments: 0 1 11
    Final R (refcalc): 0.1732
 
-Additionally, in the :ref:`OUT directory<dir_organization_output>`, we find a
-file :ref:`THEOBEAMS.csv<theobeams>`, which contains the calculated theoretical
-|IV| curves and a file :ref:`Rfactor_plots_refcalc.pdf<rfactorplots>`, in which
-the experimental and theoretical beams are plotted.
-The latter should look something like this:
+Additionally, in the :ref:`OUT directory<dir_organization_output>`, we
+find a file :ref:`THEOBEAMS.csv<theobeams>`, which contains the calculated
+|IV| curves and a file :ref:`Rfactor_plots_refcalc.pdf<rfactorplots>`, in
+which the experimental and calculated beams are plotted. An extract is shown
+in :numref:`fig_ag_iv_plot`.
 
+.. _fig_ag_iv_plot:
 .. figure:: /_static/example_systems/Ag(100)/refalc_result_plot.png
    :width: 450px
    :align: center
 
-   First page of the file Rfactor_plots_refcalc.pdf showing experimental and
-   theoretical |IV| curves.
+   First page of the ``Rfactor_plots_refcalc.pdf`` file, showing
+   experimental (orange) and calculated (blue) |IV| curves for
+   the first reference-calculation run for Ag(100)-(1×1).
 
 
 The |IV| curves clearly show a good qualitative agreement, but the |R factor|
@@ -230,17 +235,17 @@ vary in the optimization. In ViPErLEED, we give this information in the
 See the page on the :ref:`DISPLACEMENTS file<displacements>` for
 details on the syntax.
 Here, we allow the :math:`z` positions of all silver atoms in the first
-4 layers to vary by up to :math:`\pm 0.20` Å with a step-width of
-:math:`0.01` Å.
+four layers to vary by up to :math:`\pm 0.20` Å with a step-width of
+:math:`0.01` Å.
 
 
-After setting up the :ref:`DISPLACEMENTS file<displacements>`, we can now
-run the delta-amplitudes calculation and structure-optimization back-to-back
+After setting up the :ref:`DISPLACEMENTS file<displacements>`, we can
+run the delta-amplitudes calculation and structure optimization
 by setting :ref:`RUN = 2-3<run>` in :ref:`PARAMETERS<parameters>`.
 For a large system, this step can take many hours to finish, but for our simple
 system it only takes about 4 min to converge (using 10 CPU cores).
 At the end, when we take another look at our :ref:`log file<log_files_calc>`,
-we already see that the |R factor| dropped significantly from
+we find that the |R factor| dropped significantly from
 :math:`R_\mathrm{P} \approx 0.17` to :math:`R_\mathrm{P} \approx 0.095`.
 That's not bad, but we can do a bit better.
 
@@ -260,35 +265,37 @@ We change the DISPLACEMENTS accordingly:
    :language: console
    :caption: DISPLACEMENTS with a finer grid
 
-Here we allow :math:`\pm 0.020` Å variation on a :math:`0.004` Å grid.
+Here we allow :math:`\pm 0.020` Å variation on a :math:`0.004` Å grid.
 Additionally, we also allow the topmost atom to change its vibrational
 amplitude.
-This may not seem like much, but this already gives :math:`11^5` grid
-points (11 per varied parameter) and will take about three times as long
-as the the last run!
+This may not seem like much, but already gives :math:`11^5` grid
+points (11 values for 5 varied parameters) and will take about three
+times as long as the the last run.
 
 .. important::
    Because we changed our reference structure, it is advisable to re-run
    starting with the reference calculation by setting :ref:`RUN = 1-3 1<run>`.
-   Note, we also add a second reference calculation at the end.
+   Note that we also add a second reference calculation at the end.
    This will remove errors due to the
    :ref:`tensor-LEED approximation<tensor_leed>` from the final result.
 
 Once finished, we get an |R factor| of :math:`R_\mathrm{P} = 0.0836`.
 To visualize how our optimization went, we can also take a look at the
-:ref:`Search-progress.pdf file<searchprogresspdf>` in the ``OUT`` directory:
+:ref:`Search-progress.pdf file<searchprogresspdf>` in the ``OUT`` directory.
+The first page is shown in :numref:`fig_ag_search_progress`.
 
+.. _fig_ag_search_progress:
 .. figure:: /_static/example_systems/Ag(100)/search_convergence_plot.png
    :width: 450px
    :align: center
 
-   First page of the file Search-progress.pdf showing convergence of the
+   First page of the ``Search-progress.pdf`` file showing convergence of the
    structure search (top) and development of atomistic parameters (bottom).
 
 The final result of the optimization (POSCAR with coordinates and VIBROCC
 with vibrational amplitudes) are saved in the ``OUT`` directory. Interatomic
 distances and angles can easily be measured in a visualization software such
-as :term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
+as :term:`VESTA` :cite:p:`mommaVESTAThreedimensionalVisualization2011`.
 
 Next steps
 ==========
@@ -297,10 +304,10 @@ Further optimizing the structure is possible, but not very instructive.
 Instead we conclude this example by mentioning two other options on how
 to proceed with the analysis.
 
-For a more complicated system it may not be clear, which structure parameters
+For a more complicated system, it may not be clear which structure parameters
 are most important.
-In this case we could run an :ref:`error calculation<error_calculation>`
-which can show how much the displacement of any individual atom impacts the
+In this case, we could run an :ref:`error calculation<error_calculation>`
+that shows how much the displacement an individual atom impacts the
 |R factor|. The error calculation also provides us with an estimate for the
 statistical accuracy of the determined parameter values, for details see
 :ref:`errorspdf`.
