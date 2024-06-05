@@ -9,8 +9,8 @@ IV_SHIFT_RANGE defines how much calculated and experimental |IV| curves are
 allowed to shift (in electronvolts) during calculation of the |R factor|, and
 (optionally) the step width.
 
-**Default**: from -3 to +3 eV, with step from experimental or calculated curves
-(whichever is smaller)
+**Default**: from -3 to +3 eV, with step from experimental or calculated 
+curves (whichever is smaller)
 
 **Syntax:**
 

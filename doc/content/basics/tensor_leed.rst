@@ -186,7 +186,7 @@ optimization in the tensor LEED approximation and also |LEED IV| in general:
     limitation that geometrical displacements are limited to one dimension
     per atom. Per search run, atoms can only be displaced along a pre-defined
     parametrized curve, rather than freely in 3D space. To optimize the
-    position of atoms in 3 dimensions, multiple sequential search runs are
+    position of atoms in three dimensions, multiple sequential search runs are
     required. See the entry on the :ref:`DISPLACEMENTS file<displacements>`
     for details and workarounds (such as looping searches).
 

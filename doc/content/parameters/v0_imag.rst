@@ -20,7 +20,7 @@ equivalent Fortran parameters are VPI, VPIS, VPIO.)
 **Accepted input**: Positive real value.
 
 .. note::
-   -  Typical values are between 4 and 5 eV.
+   -  Typical values are between 4 and 5 eV.
    -  The value and energy dependence of ``V0_IMAG`` can be *estimated* as
       the half width at half maximum (FWHM) of non-overlapping peaks in the
       experimental |IV| curves :cite:p:`heinzElectronBasedMethods2013`.

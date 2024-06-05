@@ -77,7 +77,7 @@ to do
 GLOBAL PARAMETERS
    Since we only want to run the :ref:`initialization<initialization>` for now,
    we set :ref:`RUN = 0<run>`. For this example, we also limit our energy range
-   to 45–700 eV, with an energy step of 3 eV
+   to 45–700 eV, with an energy step of 3 eV
    (\ :ref:`THEO_ENERGIES<theo_energies>`).
 
 PARAMETERS FOR INTERPRETING POSCAR
@@ -172,7 +172,7 @@ case here, the |R-factor| :ref:`calculation<r-factor_calculation>` will be
 automatically calculated and reported after each reference calculation. By
 :ref:`default<r-factor_calculation>`, ViPErLEED uses the Pendry |R factor|.
 
-Once the reference calculation finishes (only takes about 1 minute with the
+Once the reference calculation finishes (only takes about 1 min with the
 chosen settings) we find a result for the |R factor| at the very end of the
 :ref:`log file<log_files_calc>`:
 
@@ -237,7 +237,7 @@ After setting up the :ref:`DISPLACEMENTS file<displacements>`, we can now
 run the delta-amplitudes calculation and structure-optimization back-to-back
 by setting :ref:`RUN = 2-3<run>` in :ref:`PARAMETERS<parameters>`.
 For a large system, this step can take many hours to finish, but for our simple
-system it only takes about 4 minutes to converge (using 10 CPU cores).
+system it only takes about 4 min to converge (using 10 CPU cores).
 At the end, when we take another look at our :ref:`log file<log_files_calc>`,
 we already see that the |R factor| dropped significantly from
 :math:`R_\mathrm{P} \approx 0.17` to :math:`R_\mathrm{P} \approx 0.095`.
@@ -263,7 +263,7 @@ Here we allow :math:`\pm 0.020` Å variation on a :math:`0.004` Å grid.
 Additionally, we also allow the topmost atom to change its vibrational
 amplitude.
 This may not seem like much, but this already gives :math:`11^5` grid
-points (11 per varied parameter) and will take about 3 times as long
+points (11 per varied parameter) and will take about three times as long
 as the the last run!
 
 .. important::

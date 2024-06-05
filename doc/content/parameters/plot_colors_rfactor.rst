@@ -164,5 +164,5 @@ is given, layout is automatically chosen as:
    columns = round(sqrt(N/2))
    rows = ceil(N/columns)
 
-The width of the figure is fixed as 7 inch. Height is adapted as needed,
+The width of the figure is fixed as 7 inch. Height is adapted as needed,
 with panels keeping a 2:1 aspect ratio.

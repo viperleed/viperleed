@@ -80,7 +80,7 @@ value.
 
 Note that ``convergence`` is given in units corresponding to the parameter,
 e.g., a convergence 0.1 for V0i means convergence is reached when the minimum
-is within 0.1 eV of a known point.
+is within 0.1 eV of a known point.
 
 minpoints, maxpoints
 --------------------

@@ -223,9 +223,9 @@ We do this by providing a :ref:`DISPLACEMENTS file<displacements>`:
    :caption: DISPLACEMENTS
 
 Here, we specify that we want to optimize the atomic out-of-plane positions of
-all atoms in the first and second layer from -0.05 to 0.05 Å in steps of 0.01 Å.
-We optimize the vibrational amplitudes of the surface atoms in the same way.
-We subsequently optimize in-plane position of the first two layers.
+all atoms in the first and second layer from -0.05 to 0.05 Å in steps of 
+0.01 Å. We optimize the vibrational amplitudes of the surface atoms in the 
+same way. We subsequently optimize in-plane position of the first two layers.
 Note also the ``<loop>`` and ``</loop>`` tags at the beginning and end of the
 file, which indicate that these steps should be repeated until convergence.
 For more details on the syntax, see the page on the

@@ -92,7 +92,7 @@ In this example, all oxygen atoms in layers 1 and 2 would move in a concerted
 fashion, as would the iridium atoms in layer 1. Furthermore, by linking them
 *in the same line*, the movements of oxygen and iridium are coupled as given
 by the two ranges, so when oxygen moves up, iridium moves down (e.g., when O
-moves to +0.01 A, Ir moves to -0.006 A).
+moves to +0.01 A, Ir moves to -0.006 A).
 
 Freezing parameters
 -------------------

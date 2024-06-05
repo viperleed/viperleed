@@ -39,9 +39,9 @@ but the files will be much larger.
    :width: 70%
    :align: center
 
-   Benchmark results for a ~250MB :ref:`tensor file<tensorszip>`: Compressed
-   file size and compression time vs. compression level. Average over 10
-   repetitions.
+   Benchmark results for a ~250 MB :ref:`tensor file<tensorszip>`:
+   Compressed file size and compression time vs. compression level.
+   Average over 10 repetitions.
 
 
 ViPErLEED uses the Python

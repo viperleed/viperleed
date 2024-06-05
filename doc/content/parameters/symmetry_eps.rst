@@ -10,7 +10,7 @@ for determining which atoms are in the same plane. If two values are given,
 the first is used for in-plane comparison, while the second is used for Z
 comparison.
 
-**Default**: SYMMETRY_EPS = 0.1 (i.e., 0.1 angstrom)
+**Default**: SYMMETRY_EPS = 0.1 (i.e., 0.1 angstrom)
 
 **Syntax**:
 

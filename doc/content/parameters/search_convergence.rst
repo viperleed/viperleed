@@ -4,7 +4,7 @@ SEARCH_CONVERGENCE
 ==================
 
 SEARCH_CONVERGENCE defines a number of parameters controlling the behaviour of
-the Tensor LEED search. See Ref. :cite:t:`kottckeNewApproachAutomated1997` for
+the Tensor LEED search. See Ref. :cite:t:`kottckeNewApproachAutomated1997` for
 an explanation of the search algorithm used by TensErLEED.
 
 Most importantly, the SEARCH_CONVERGENCE flag ``gaussian`` (corresponds to RMUT

@@ -99,7 +99,7 @@ all methods listed above become ordinary linear regression for ``alpha = 0``.
    parameter would be to re-define this prefactor to RR, i.e., influence the
    |R-factor| cutoff.
 
-   **Acceptable values**: ]0, 1[, or 0 to deactivate.
+   **Acceptable values**: (0, 1), or 0 to deactivate.
 
    Limits which points on the |R-factor| landscape should be used for the fit.
    An interval centered around the best known configuration is placed on each

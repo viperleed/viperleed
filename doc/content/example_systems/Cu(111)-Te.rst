@@ -24,7 +24,7 @@ version of ViPErLEED :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 
    Snapshot of the experimental LEED pattern of
    :math:`(5\times \sqrt{3})_{\text{rect}}` at an incident electron energy
-   of 60 eV. Diffraction spots are labelled by the ViPErLEED spot tracker
+   of 60 eV. Diffraction spots are labelled by the ViPErLEED spot tracker
    (**TODO link**).
 
 .. only:: html
@@ -50,11 +50,11 @@ superstructure of copper telluride on the hexagonal Cu(111) substrate.
 The tellurium coverage is 0.40 monolayers, which corresponds to 4 tellurium
 atoms per surface unit cell.
 
-From experiments, we have a set of 79 beams in our energy range (20 to 500eV)
-– stored in the file :ref:`EXPBEAMS.csv<expbeams>`. These beams correspond to
-a total energy range of around 17500 eV, of which only around 1800 eV are from
-integer beams. :numref:`Cu(111)-Te_LEED_pattern` shows a Snapshot of the
-experimental LEED pattern.
+From experiments, we have a set of 79 beams in our energy range (20 to
+500 eV), stored in the file :ref:`EXPBEAMS.csv<expbeams>`. These beams
+correspond to a total energy range of around 17500 eV, of which only
+around 1800 eV  are from integer beams. :numref:`Cu(111)-Te_LEED_pattern`
+shows a snapshot of the experimental LEED pattern.
 
 For our example analysis we start from a qualitatively correct structure
 model (:ref:`POSCAR file<poscar>`) with correct layer stacking
@@ -132,13 +132,13 @@ entry on the :ref:`DISPLACEMENTS file<displacements>`.
 
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_rough_1
    :language: console
-   :caption: DISPLACEMENTS (30 pm range)
+   :caption: DISPLACEMENTS (30 pm range)
 
 .. note::
-    Note that we allow displacements of up to 0.3 Å for tellurium to speed up
-    the convergence in this example. Normally, this is not recommended,
+    Note that we allow displacements of up to 0.3 Å for tellurium to speed 
+    up the convergence in this example. Normally, this is not recommended,
     because :ref:`tensor LEED approximation<tensor_leed>` will lead to
-    substation errors for displacement of 0.3 Å.
+    substation errors for displacement of 0.3 Å.
 
 As usual, we can see a visualization of the optimization convergence in the
 file :ref:`Search-report.pdf<searchreportpdf>` in the ``OUT`` directory.
@@ -159,7 +159,7 @@ Together, these two plots give an idea, of how converged the search is.
 The initial reference-calculation :ref:`yields <r-factor_calculation>` an
 |R factor| :math:`R_\mathrm{P} \approx 0.82` since our starting configuration
 is very far from the ideal positions. Over this rough optimization, where
-parameter values are shifted by up to 0.24 Å compared to the initial model
+parameter values are shifted by up to 0.24 Å compared to the initial model
 (this is a lot !), the |R factor| quickly drops to
 :math:`R_\mathrm{P} \approx 0.47`. This is still quite poor,
 but the progress is encouraging.
@@ -182,12 +182,12 @@ Fine DISPLACEMENTS and search parameters
 
 Since in the former fit no parameter value reached the edge of the respective
 variation range, we should follow up by running a second, less coarse,
-optimization. For this stage, a choice of 10 pm range with 1 pm steps
-(0.1 Å range with 0.01 Å steps) should be reasonable:
+optimization. For this stage, a choice of 10 pm range with 1 pm steps
+(0.1 Å range with 0.01 Å steps) should be reasonable:
 
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_rough_2
    :language: console
-   :caption: DISPLACEMENTS (0.1 Å range)
+   :caption: DISPLACEMENTS (0.1 Å range)
 
 .. hint::
     In preparing this example we found that the default search parameters
@@ -211,9 +211,9 @@ optimization. For this stage, a choice of 10 pm range with 1 pm steps
    that the search range shrinks more rapidly than with standard parameters.
 
 
-The optimization on the 1 pm (0.01 Å) grid allows us to further reduce the
-R-factor to about :math:`R_\mathrm{P} \approx 0.23`, which is again a good improvement
-on the previous value of :math:`R_\mathrm{P} \approx 0.33`.
+The optimization on the 1 pm (0.01 Å) grid allows us to further reduce 
+the |R factor| to about :math:`R_\mathrm{P} \approx 0.23`, which is again a 
+good improvement on the previous value of :math:`R_\mathrm{P} \approx 0.33`.
 
 Full-dynamic optimization
 =========================
@@ -230,7 +230,7 @@ the curves.
 :math:`V_{0\text{i}}` strongly affects the |R factor|, but is hard to
 estimate for an unknown system. Since we didn't specify a value for
 :math:`V_{0\text{i}}` in PARAMETERS, ViPErLEED took the default value of
-4.5 eV (see :ref:`V0_IMAG<v0_imag>`). The parameter :math:`V_{0\text{i}}`
+4.5 eV (see :ref:`V0_IMAG<v0_imag>`). The parameter :math:`V_{0\text{i}}`
 is not accessible in the tensor LEED approximation, but we can use a
 :ref:`full-dynamic optimization<fdoptimization>` to find an optimal value.
 To do this, we set :ref:`RUN = 6<run>` and add this line to
@@ -289,15 +289,15 @@ them at all in the previous optimization step:
 
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_fine_1
    :language: console
-   :caption: DISPLACEMENTS (0.5 pm range)
+   :caption: DISPLACEMENTS (0.5 pm range)
 
 You may want to finish up with a last "fine-tuning" of the vibrational
-amplitudes and (:math:`z`) positions. See e.g. file ``DISPLACEMENTS_fine_2``
+amplitudes and (\ :math:`z`) positions. See e.g. file ``DISPLACEMENTS_fine_2``
 in the input files, but feel free to play around with the setting yourself,
 to get a feeling for the available options. Altogether, this should bring
 us to an |R factor| :math:`R_\mathrm{P} \approx 0.19`, which is already a good
 agreement for such a heavily corrugated surface, details see discussion in
-Ref. :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
+Ref. :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 
 Error calculation
 =================
@@ -317,12 +317,12 @@ as well:
 
 The results are plotted in the file :ref:`Errors.pdf<errorspdf>`.
 We see that displacements for atoms in all layers have a drastic impact
-on the |R factor| – so we can be fairly confident that all varied atoms
+on the |R factor|. Thus, we can be fairly confident that all varied atoms
 are indeed present within the true surface structure.
 
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/Errors_x_vib.svg
    :width: 100%
    :align: center
 
-   Page 1 of file ``Errors.pdf`` for (left) displacements in (:math:`x`)
+   Page 1 of file ``Errors.pdf`` for (left) displacements in (:math:`x`)
    direction and (right) changes of vibrational amplitudes.

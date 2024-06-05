@@ -35,8 +35,8 @@ following functional form for the real part of the inner potential
 
 V(EE) = :ref:`FILAMENT_WF<FILWF>`  - max(c0,c1+c2/sqrt(EE+c3)),
 
-as per Eq. (A8) in Rundgren's paper,
-Ref. :cite:p:`rundgrenOptimizedSurfaceslabExcitedstate2003`.
+as per Eq. (A8) in Rundgren's paper,
+Ref. :cite:p:`rundgrenOptimizedSurfaceslabExcitedstate2003`.
 
 .. seealso::
     :cite:t:`rundgrenElasticElectronatomScattering2007,rundgrenLowenergyElectronDiffraction2021`

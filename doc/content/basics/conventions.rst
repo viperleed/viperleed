@@ -19,7 +19,7 @@ Units
 
 ViPErLEED uses units of Ångström (Å) for all distances and vibrational 
 amplitudes in inputs and outputs. Some plots may display picometers 
-(1 pm = 0.01 Å), but this will **always** be clearly labeled.
+(1 pm = 0.01 Å), but this will **always** be clearly labeled.
 
 Energies for input and output are in units of electronvolts (eV).
 Parts of TensErLEED and certain phaseshift-generation programs may use 

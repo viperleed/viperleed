@@ -21,7 +21,7 @@ when calculating the muffin-tin potentials.
    FILAMENT_WF = <wf>
 
 **Acceptable**: a single floating-point number (``<wf>`` above). Also the
-special keys LaB6 (2.65 eV) and W (4.5 eV) are allowed.
+special keys LaB6 (2.65 eV) and W (4.5 eV) are allowed.
 
 **Note**: An erroneous setting of this parameter is not critical since
 the search/|R-factor| algorithm will anyway allow a relative shift of

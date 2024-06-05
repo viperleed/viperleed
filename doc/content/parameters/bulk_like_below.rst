@@ -40,7 +40,7 @@ components of less than or equal to the thickness of the slab below
 BULK_LIKE_BELOW are considered. The minimal such translation vector
 is by definition the minimal :ref:`BULK_REPEAT<BULK_REPEAT>`  vector.
 By default, :ref:`N_BULK_LAYERS<n_bulk_layers>`  is 1, but if a further
-cut with layer spacing of at least 1.2 Å is possible within the bulk
+cut with layer spacing of at least 1.2 Å is possible within the bulk
 repeat unit, then :ref:`N_BULK_LAYERS<n_bulk_layers>`  will be chosen
 as 2 and :ref:`LAYER_CUTS<layer_cuts>`  will be set accordingly.
 

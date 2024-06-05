@@ -7,7 +7,7 @@ SEARCH_POPULATION defines the number of trial structures used in parallel
 during the search. The trial structures from this population can be mixed
 in the genetic algorithm.
 
-See Ref. :cite:p:`kottckeNewApproachAutomated1997` for an explanation of the
+See Ref. :cite:p:`kottckeNewApproachAutomated1997` for an explanation of the
 search algorithm used by TensErLEED.
 
 **Default:** min(48, 15 + number of independent search parameters), rounded up

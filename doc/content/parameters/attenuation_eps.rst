@@ -28,7 +28,7 @@ than ATTENUATION_EPS to interact with the next layer.
 .. note::
   *  This parameter can usually be left to its default value.
      Tweaking (typically increasing) it can help convergence only in those cases
-     in which the minimum interlayer distance goes below 1.0 Å.
+     in which the minimum interlayer distance goes below 1.0 Å.
   *  Smaller values will increase the calculation time as more beams will be
      considered.
   *  Small values of ATTENUATION_EPS can lead to numerical instabilities and

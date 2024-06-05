@@ -36,5 +36,5 @@ be modified to a slightly lower energy such that this is the case.
 
 **TODO**: perhaps we should have the default in case EXPBEAMS is there: look at
 the IV_SHIFT_RANGE to decide how much to 'expand' the THEO_ENERGIES rather than
-having a fixed 3eV expansion on both sides? (Should probably be slightly more
-than IV_SHIFT_RANGE since interpolation is rather bad at the ends. -ms)
+having a fixed 3 eV expansion on both sides? (Should probably be slightly 
+more than IV_SHIFT_RANGE since interpolation is rather bad at the ends. -ms)
