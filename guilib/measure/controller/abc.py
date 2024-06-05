@@ -316,7 +316,7 @@ class ControllerABC(DeviceABC):
             settle_t = fallback
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
-                            'measurement_settings/hv_settle_time')
+                            'measurement_settings/hv_settle_time', '')
         return settle_t
 
     @property
@@ -339,7 +339,7 @@ class ControllerABC(DeviceABC):
             settle_t = fallback
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
-                            'measurement_settings/i0_settle_time')
+                            'measurement_settings/i0_settle_time', '')
         return settle_t
 
     @property
@@ -379,7 +379,7 @@ class ControllerABC(DeviceABC):
             settle_t = fallback
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             type(self).__name__,
-                            'measurement_settings/i0_settle_time')
+                            'measurement_settings/i0_settle_time', '')
         return settle_t
 
     @property
