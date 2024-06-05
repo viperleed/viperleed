@@ -6,14 +6,14 @@
 The tensor-LEED approach
 ========================
 
-Here, we provide a very rudimentary introduction to the tensor LEED
+Here, we provide a very rudimentary introduction to the tensor-LEED
 approach employed by TensErLEED and consequently also ViPErLEED. Please
 note that this neither is, nor aims to be a comprehensive or rigorous
 introduction to the topic. The descriptions below are only intended to
 provide a quick overview of the method and serve as explanation and
 motivation for the various sections of a |LEED-IV| calculation in ViPErLEED.
 
-For an in-depth description of all parts of the tensor LEED approach,
+For an in-depth description of all parts of the tensor-LEED approach,
 we refer to the papers by Rous and Pendry (see
 Refs. :cite:p:`rousTensorLEEDTechnique1986,rousTheoryTensorLEED1989`)
 and the explanation of how the approach is implemented in TensErLEED
@@ -130,9 +130,9 @@ calculation for every configuration is usually orders of magnitude more
 expensive. :cite:p:`rousTensorLEEDTechnique1986`
 
 That being said, there remain some fundamental caveats to the structure
-optimization in the tensor LEED approximation and also |LEED IV| in general:
+optimization in the tensor-LEED approximation and also |LEED IV| in general:
 
--   Since the tensor LEED method is a perturbative approach, it only works
+-   Since the tensor-LEED method is a perturbative approach, it only works
     reliably for *small* perturbations. What constitutes a *small* perturbation
     is naturally system-dependent, but generally, the limit lies in the range
     of 0.2 Å to 0.3 Å at best :cite:`rousTensorLEEDTechnique1986`. For larger
@@ -168,7 +168,7 @@ optimization in the tensor LEED approximation and also |LEED IV| in general:
     algorithm might get stuck in these minima if the parameter space is not
     opened up sufficiently.
 
--   As described above, the tensor LEED implementation in TensErLEED separates
+-   As described above, the tensor-LEED implementation in TensErLEED separates
     the calculation of delta-amplitudes and the structure optimization into two
     mostly independent stages. As a direct consequence, the optimization can
     **only** be performed on a pre-defined grid of perturbation vectors (as

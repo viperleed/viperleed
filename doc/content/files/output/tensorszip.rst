@@ -8,7 +8,7 @@ format 'T\_\ *N*', where *N* is the number of the atom (same numbering as in
 :ref:`POSCAR<POSCAR>`).
 
 The resulting files contain the tensor quantities :math:`T^{ref}_{i;l,m;l',m'}`
-(see :ref:`tensor leed approximation<tensor_leed>`) and refercence amplitudes.
+(see :ref:`tensor_leed`) and reference amplitudes.
 These Tensor files are then collected in a directory Tensors\_\ *XYZ*, where
 *XYZ* is the 'Tensor index', a running number which is incremented by one every
 time a reference calculation is executed. Finally, the input files relevant for

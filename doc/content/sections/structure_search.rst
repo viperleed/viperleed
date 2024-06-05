@@ -7,7 +7,7 @@ Structure search
 ================
 
 The structure search (referred to as ``search`` in the code) is
-the third part of a :ref:`Tensor LEED<tensor_leed>` calculation as 
+the third part of a :ref:`tensor-LEED<tensor_leed>` calculation as 
 implemented in ViPErLEED (:ref:`RUN<run>` = 3).
 It must follow a :ref:`reference calculation<ref-calc>` and a
 :ref:`delta amplitude calculation<sec_deltas>` and requires stored
@@ -30,7 +30,7 @@ available options for geometrical, vibrational and occupational displacement
 vectors see the entry on the :ref:`DISPLACEMENTS file<displacements>`.
 There are some caveats to the structure optimization in tensor LEED in general
 and the implementation in TensErLEED in particular.
-See :ref:`the section on structure search in tensor leed<tensor_leed_search>`
+See :ref:`the section on structure search in tensor LEED<tensor_leed_search>`
 for details.
 
 

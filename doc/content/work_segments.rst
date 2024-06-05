@@ -7,7 +7,7 @@ ViPErLEED work segments
 
 ViPErLEED operates using a set of self-contained work segments (see also the
 :ref:`RUN<RUN>`  parameter). The three main segments, following the logic of
-calculations using the Tensor LEED approximation, are:
+calculations using the tensor-LEED approximation, are:
 
 #. :ref:`Reference calculation<ref-calc>`: Full-dynamic LEED calculation,
    which outputs a set of :ref:`theoretical beams<THEOBEAMS>` for a
@@ -34,7 +34,7 @@ execution when appropriate:
    if appropriate.
 -  :ref:`Superpos calculation<super_pos>`: Automatically runs after the search.
    Generates a set of theoretical beams for the actual best fit configuration
-   based on the Tensor LEED approximation,
+   based on the tensor-LEED approximation,
 -  |R-factor| :ref:`calculation<r-factor_calculation>`: Automatically runs
    after the :ref:`reference calculation<ref-calc>` and superpos segments,
    if an :ref:`experimental beams file<EXPBEAMS>` is present. Calculates the

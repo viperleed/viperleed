@@ -214,8 +214,8 @@ the :ref:`structure search<sec_search>`.
 Delta amplitudes and structure search
 =====================================
 
-To improve our |R factor|, we can run a local structure-optimization using the
-:ref:`tensor LEED approach<tensor_leed>`.
+To improve our |R factor|, we can run a local structure optimization using the
+:ref:`tensor-LEED approach<tensor_leed>`.
 To do this in ViPErLEED, we run a :ref:`delta-amplitude<sec_deltas>`
 calculation followed by a :ref:`structure search<sec_search>`.
 
@@ -272,7 +272,7 @@ as the the last run!
    starting with the reference calculation by setting :ref:`RUN = 1-3 1<run>`.
    Note, we also add a second reference calculation at the end.
    This will remove errors due to the
-   :ref:`tensor LEED approximation<tensor_leed>` from the final result.
+   :ref:`tensor-LEED approximation<tensor_leed>` from the final result.
 
 Once finished, we get an |R factor| of :math:`R_\mathrm{P} = 0.0836`.
 To visualize how our optimization went, we can also take a look at the
@@ -306,7 +306,7 @@ statistical accuracy of the determined parameter values, for details see
 :ref:`errorspdf`.
 
 Alternatively, we could turn to a :ref:`full-dynamic optimization<fdoptimization>`
-to also tackle parameters that are not accessible under the tensor LEED
+to also tackle parameters that are not accessible under the tensor-LEED
 approximation such as :math:`V_{0i}`, the unit cell dimensions (not relevant
 here, since well-known for Ag), or the electron beam incidence angle.
 

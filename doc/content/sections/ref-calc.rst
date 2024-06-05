@@ -12,7 +12,7 @@ a so-called reference calculation is performed.
 In the code, the reference calculation is often shortened to ``ref-calc``.
 
 Following the reference calculation, a local structure optimization can be
-performed using the :ref:`Tensor LEED approach<tensor_leed>`.
+performed using the :ref:`tensor-LEED approach<tensor_leed>`.
 This is accomplished by running a :ref:`delta amplitude calculation<sec_deltas>`
 and a :ref:`structure search<sec_search>`.
 

@@ -238,7 +238,7 @@ notice something important: The |R factor| of the reference calculation
 (\ :math:`R_\mathrm{P} \approx 0.18`) *is different* from the one we
 obtained from the superposition calculation at the end of the previous
 run (\ :math:`R_\mathrm{P} \approx 0.21`). This comes from the **error**
-**of the Tensor LEED approximation** used for the structure-optimization!
+**of the tensor-LEED approximation** used for the structure-optimization!
 Fortunately – in this case – the real |R factor| (as obtained from the
 reference calculation) is lower. However, this is not always the case.
 You should **never** rely on the |R factor| produced by the superposition
@@ -261,7 +261,7 @@ should accept the new best fit structure fit by calling the
 Now, remember that in the :ref:`PARAMETERS file<parameters>` above, we had
 to put in an initial guess for the imaginary part of the inner potential
 :math:`V_{0\text{i}}`. We would now like to also optimize this global parameter
-– however it is not accessible in :ref:`the tensor LEED approach<tensor_leed>`,
+– however it is not accessible in :ref:`the tensor-LEED approach<tensor_leed>`,
 which only can treat perturbations on an atom-by-atom basis.
 Instead, we can use the :ref:`full-dynamic optimization<fdoptimization>` to
 find an optimal value for :math:`V_{0\text{i}}`.
@@ -352,7 +352,7 @@ be more asymmetric, as these amplitudes enter the calculation differently
 (Debye-Waller factor).
 
 .. warning::
-   Error curves are also subject to **errors of the tensor LEED approximation**.
+   Error curves are also subject to **errors of the tensor-LEED approximation**.
    |R-factor| values obtained for large deviations should be taken with care.
 
 .. [1] It is not recommended to fit any vibrational amplitude of bulk atoms as

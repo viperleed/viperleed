@@ -7,7 +7,7 @@ Full-dynamic optimization
 
 |LEED-IV| calculations require setting some parameters that cannot be
 (exactly) determined in experiment, but that also are not accessible
-to variation within the Tensor LEED approximation. These include
+to variation within the tensor-LEED approximation. These include
 :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`, :ref:`V0_IMAG<v0_imag>`
 and the exact dimensions of the unit cell. In order to fit these
 parameters, multiple full-dynamic (i.e. "reference") calculations have

@@ -5,17 +5,17 @@ Delta-amplitudes calculation
 ============================
 
 The delta amplitude calculation (called with :ref:`RUN = 2<run>`) is the
-second part of a :ref:`Tensor LEED<tensor_leed>` calculation as implemented
+second part of a :ref:`tensor-LEED<tensor_leed>` calculation as implemented
 in ViPErLEED.
 It requires a :ref:`reference calculation<ref-calc>` to be completed
 beforehand and the :ref:`tensor files<tensorszip>` to be stored.
 
 In the delta calculation, these :ref:`tensor files<tensorszip>`,
 i.e., the tensor quantities :math:`T^{ref}_{i;l,m;l',m'}` (see
-:ref:`tensor leed<tensor_leed>`), which only depend on the reference
-structure, are combined with the requested perturbations (see file
-:ref:`DISPLACEMENTS<displacements>` for details) to calculate amplitude
-changes.
+:ref:`tensor_leed`), which only depend on the reference
+structure, are combined with the requested perturbations
+(see file :ref:`DISPLACEMENTS<displacements>` for details)
+to calculate amplitude changes.
 
 Delta-amplitudes calculation in ViPErLEED
 -----------------------------------------

@@ -99,7 +99,7 @@ Freezing parameters
 
 Apart from linking parameters, CONSTRAIN blocks can also be used to freeze a
 parameter to a specific value. This can be used to enforce an offset for a
-given value (within the limitations of Tensor LEED) without having to re-do
+given value (within the limitations of tensor LEED) without having to re-do
 the reference calculation. It is also equivalent to giving a displacement
 range with only a single value.
 

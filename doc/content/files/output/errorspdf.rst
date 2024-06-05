@@ -39,7 +39,7 @@ may not be the same for the entire group.
 
 .. attention::
   The |R factor| values obtained in the error calculation contain
-  errors from the :ref:`tensor LEED approximation<tensor_leed>`.
+  errors from the :ref:`tensor-LEED approximation<tensor_leed>`.
 
 Errors_summary.csv
 ==================

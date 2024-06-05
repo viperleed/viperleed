@@ -10,7 +10,7 @@ the same maximum for every beam.
 
 **Format:** Like :ref:`EXPBEAMS.csv<EXPBEAMS>`
 
-Note that the FITBEAMS contain errors due to the Tensor LEED approximation.
+Note that the FITBEAMS contain errors due to the tensor-LEED approximation.
 A new reference calculation should be performed to obtain reliable data.
 The corresponding output file from the reference calculation is named
 :ref:`THEOBEAMS.csv<THEOBEAMS>`

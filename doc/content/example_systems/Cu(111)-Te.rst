@@ -137,7 +137,7 @@ entry on the :ref:`DISPLACEMENTS file<displacements>`.
 .. note::
     Note that we allow displacements of up to 0.3 Å for tellurium to speed 
     up the convergence in this example. Normally, this is not recommended,
-    because :ref:`tensor LEED approximation<tensor_leed>` will lead to
+    because :ref:`tensor-LEED approximation<tensor_leed>` will lead to
     substation errors for displacement of 0.3 Å.
 
 As usual, we can see a visualization of the optimization convergence in the
@@ -175,7 +175,7 @@ flag before proceeding:
 Once we run the next reference-calculation, we notice that we get an
 |R factor| of :math:`R_\mathrm{P} \approx 0.33`, even though we got
 :math:`R_\mathrm{P} \approx 0.47` at the end of the previous run
-– **a big difference**. This comes from the mentioned **Tensor LEED error**.
+– **a big difference**. This comes from the mentioned **tensor-LEED error**.
 
 Fine DISPLACEMENTS and search parameters
 ========================================
@@ -231,7 +231,7 @@ the curves.
 estimate for an unknown system. Since we didn't specify a value for
 :math:`V_{0\text{i}}` in PARAMETERS, ViPErLEED took the default value of
 4.5 eV (see :ref:`V0_IMAG<v0_imag>`). The parameter :math:`V_{0\text{i}}`
-is not accessible in the tensor LEED approximation, but we can use a
+is not accessible in the tensor-LEED approximation, but we can use a
 :ref:`full-dynamic optimization<fdoptimization>` to find an optimal value.
 To do this, we set :ref:`RUN = 6<run>` and add this line to
 :ref:`PARAMETERS<parameters>`:

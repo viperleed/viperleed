@@ -24,4 +24,4 @@ Finally, an |R factor| is calculated based on this file and the files
 .. note::
     It is recommended to run another reference calculation for the final
     structure as the :ref:`FITBEAMS file<fitbeams>` will contain errors
-    due to the :ref:`tensor LEED approximation<tensor_leed>`.
+    due to the :ref:`tensor-LEED approximation<tensor_leed>`.
