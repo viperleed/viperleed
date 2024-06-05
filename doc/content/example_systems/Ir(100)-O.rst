@@ -97,7 +97,7 @@ very similar to the one described in the tutorial for the
 .. _list_ir_parameters:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/PARAMETERS
    :language: console
-   :caption: PARAMETERS
+   :caption: PARAMETERS file for Ir(100)-(2×1)-O.
 
 GLOBAL PARAMETERS
     At the top of the file, we specify some general settings, such as the
@@ -141,15 +141,16 @@ PARAMETERS FOR VIBROCC
 For the delta-amplitudes calculation and structure optimization, we also need
 to set up a :ref:`DISPLACEMENTS file<displacements>`. Since this is the first
 run starting from a totally unrelaxed model, we begin with a rather large range
-and a relatively rough grid.
+and a relatively rough grid, as in :numref:`list_ir_displacements_rough`.
 
+.. _list_ir_displacements_rough:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_rough
    :language: console
-   :caption: DISPLACEMENTS
+   :caption: DISPLACEMENTS file for the first optimization of Ir(100)-(2×1)-O.
 
 By setting multiple search blocks in DISPLACEMENTS, we can tell ViPErLEED to
 execute them one after the other. When starting to optimize a new system such
-as here, it is generally a good idea to start with a geometric optimization
+as here, it is generally a good idea to begin with a geometric optimization
 perpendicular to the surface (i.e., along :math:`z`). This is because the
 |LEED-IV| curves are most sensitive to out-of-plane displacements.
 
@@ -242,7 +243,7 @@ during the previous fit were not negligible.
 .. _list_ir_displacements_fine:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_fine
    :language: console
-   :caption: DISPLACEMENTS
+   :caption: DISPLACEMENTS file for the fine optimization of Ir(100)-(2×1)-O.
 
 When looking at the log file after the reference calculation, we further
 notice something important: The |R factor| of the reference calculation
@@ -250,8 +251,8 @@ notice something important: The |R factor| of the reference calculation
 obtained from the :ref:`superposition<super_pos>` calculation at the end
 of the previous run (\ :math:`R_\mathrm{P} \approx 0.21`). This comes from
 the **error of the tensor-LEED approximation** used for the structure
-optimization. Fortunately — in this case — the real |R factor| (as obtained
-from the reference calculation) is lower. However, this is not always the case.
+optimization. In this case, the real |R factor| — as obtained from the
+reference calculation — is lower. However, this is not always the case.
 You should **never** rely on the |R factor| produced by the superposition
 calculation as a final result, but rather run a final reference calculation
 at the end of your analysis.\ [3]_
@@ -269,18 +270,19 @@ proceeding, we should accept the new best-fit structure by calling the
 
         $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
 
-Now, remember that in the :ref:`PARAMETERS file<parameters>` above, we had
-to put in an initial guess for the imaginary part of the inner potential
-|V0i|. We would now like to also optimize this global parameter. However,
-it is not accessible in :ref:`the tensor-LEED approach<tensor_leed>`,
-which only can treat perturbations on an atom-by-atom basis.
-Instead, we can use the :ref:`full-dynamic optimization<fdoptimization>` to
-find an optimal value for |V0i|.
+Now, remember that in the :ref:`PARAMETERS file<parameters>` of
+:numref:`list_ir_parameters` we had to put in an initial guess for the
+imaginary part of the inner potential |V0i|. We would now like to also
+optimize this non-structural parameter. However, it is not accessible
+in :ref:`the tensor-LEED approach<tensor_leed>`, which can only treat
+perturbations on an atom-by-atom basis. Instead, we can use the
+:ref:`full-dynamic optimization<fdoptimization>` to find an optimal
+value for |V0i|.
 
 During the :ref:`full-dynamic optimization<fdoptimization>`, multiple reference
-calculations will be run while the chosen global parameter is varied.
-ViPErLEED will then try to determine an optimal value using a parabola fit.
-We select |V0i| for optimization by adding the following line to PARAMETERS:
+calculations are run while the chosen global parameter is varied. ViPErLEED
+then tries to determine an optimal value using a parabola fit. We select |V0i|
+for optimization by adding the following line to PARAMETERS:
 
 .. code-block:: console
 
@@ -353,7 +355,7 @@ oxygen adsorbate and atoms 2 and 3 are the topmost iridium ones.
    :cite:p:`heinzElectronBasedMethods2013` (see also the section on
    :ref:`Errors.pdf<errorspdf>`).
 
-Similarly, changes in the vibrational amplitude of the surface atoms
+Changes in the vibrational amplitude of the surface atoms
 (\ :numref:`fig_ir_errors_vib`) also strongly affect the |R factor|.
 
 .. _fig_ir_errors_vib:
@@ -365,7 +367,7 @@ Similarly, changes in the vibrational amplitude of the surface atoms
    vibrational amplitude of the topmost atoms.
 
 In general, error plots for geometric displacement tend to show a parabolic
-profile close to the minimum. Error plots for vibrational amplitude tend to
+profile close to the minimum. Error plots for vibrational amplitudes tend to
 be more asymmetric, as these amplitudes enter the calculation differently
 (i.e., via the Debye–Waller factor).
 
