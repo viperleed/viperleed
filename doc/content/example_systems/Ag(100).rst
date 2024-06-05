@@ -307,7 +307,7 @@ statistical accuracy of the determined parameter values, for details see
 
 Alternatively, we could turn to a :ref:`full-dynamic optimization<fdoptimization>`
 to also tackle parameters that are not accessible under the tensor-LEED
-approximation such as :math:`V_{0i}`, the unit cell dimensions (not relevant
-here, since well-known for Ag), or the electron beam incidence angle.
+approximation such as |V0i|, the unit-cell dimensions (not relevant here,
+as they are well known for Ag), or the incidence angle of the electron beam.
 
 .. [#] The unpublished data was provided by Lutz Hammer.

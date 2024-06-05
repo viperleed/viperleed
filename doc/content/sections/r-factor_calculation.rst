@@ -44,11 +44,11 @@ is defined as
 The |R factor| can be calculated for all beams :math:`g` together or
 individually. :math:`Y(E)` is the Pendry Y-function that contains the
 beam intensities :math:`I(E)`, the derivative :math:`I'(E)=\frac{dI{E}}{dE}`,
-and the imaginary part of the inner potential :math:`V_{0\text{i}}` (see
-parameter :ref:`V0_imag`).
+and the imaginary part of the inner potential |V0i| (see parameter
+:ref:`V0_imag`).
 
 .. math::
-    Y(E) = \frac{I(E)/I'(E)}{[I(E)/I'(E)]^2 + V_{0\text{i}}^2}
+    Y(E) = \frac{I(E)/I'(E)}{[I(E)/I'(E)]^2 + V_{0\mathrm{i}}^2}
 
 :math:`R_\mathrm{P}` becomes 0 in the case of perfect agreement between curves.
 For uncorrelated data, :math:`R_\mathrm{P} = 1`, while values larger than 1

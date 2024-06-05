@@ -135,7 +135,7 @@ entry on the :ref:`DISPLACEMENTS file<displacements>`.
    :caption: DISPLACEMENTS (30 pm range)
 
 .. note::
-    Note that we allow displacements of up to 0.3 Å for tellurium to speed 
+    Note that we allow displacements of up to 0.3 Å for tellurium to speed
     up the convergence in this example. Normally, this is not recommended,
     because :ref:`tensor-LEED approximation<tensor_leed>` will lead to
     substation errors for displacement of 0.3 Å.
@@ -211,8 +211,8 @@ optimization. For this stage, a choice of 10 pm range with 1 pm steps
    that the search range shrinks more rapidly than with standard parameters.
 
 
-The optimization on the 1 pm (0.01 Å) grid allows us to further reduce 
-the |R factor| to about :math:`R_\mathrm{P} \approx 0.23`, which is again a 
+The optimization on the 1 pm (0.01 Å) grid allows us to further reduce
+the |R factor| to about :math:`R_\mathrm{P} \approx 0.23`, which is again a
 good improvement on the previous value of :math:`R_\mathrm{P} \approx 0.33`.
 
 Full-dynamic optimization
@@ -222,16 +222,14 @@ If we now visually compare experimental with calculated |IV| curves, we already
 notice a good qualitative agreement. However, we find that the peak widths in
 the experimental dataset seem to be consistently narrower than in our
 calculation. This is generally a sign that the imaginary part of the
-inner potential (:math:`V_{0\text{i}}`) of our calculation is off.
-To be more precise, :math:`V_{0\text{i}}` is likely too large, as
-higher :math:`V_{0\text{i}}` increases peak-widths and smoothens out
-the curves.
+inner potential (|V0i|) of our calculation is off. To be more precise,
+|V0i| is likely too large, as larger |V0i| increases peak widths and
+smoothens out the curves.
 
-:math:`V_{0\text{i}}` strongly affects the |R factor|, but is hard to
-estimate for an unknown system. Since we didn't specify a value for
-:math:`V_{0\text{i}}` in PARAMETERS, ViPErLEED took the default value of
-4.5 eV (see :ref:`V0_IMAG<v0_imag>`). The parameter :math:`V_{0\text{i}}`
-is not accessible in the tensor-LEED approximation, but we can use a
+|V0i| strongly affects the |R factor|, but is hard to estimate for an unknown
+system. Since we didn't specify a value for |V0i| in PARAMETERS, ViPErLEED took
+the default value of 4.5 eV (see :ref:`V0_IMAG<v0_imag>`). The parameter
+|V0i| is not accessible in the tensor-LEED approximation, but we can use a
 :ref:`full-dynamic optimization<fdoptimization>` to find an optimal value.
 To do this, we set :ref:`RUN = 6<run>` and add this line to
 :ref:`PARAMETERS<parameters>`:
@@ -241,27 +239,25 @@ To do this, we set :ref:`RUN = 6<run>` and add this line to
     OPTIMIZE V0i = step 0.5
 
 .. warning::
-    Always make sure that the optimized value used for :math:`V_{0\text{i}}`
-    is (i) reasonable (:math:`V_{0\text{i}} \lesssim 7 \text{eV}`),
-    (ii) forms an actual minimum, and (iii) gives qualitatively correct
-    |IV| curves.
+    Always make sure that the optimized value used for |V0i| is (i) reasonable
+    (|V0i|\ :math:` \lesssim 7` eV), (ii) forms an actual minimum, and (iii)
+    gives qualitatively correct |IV| curves.
 
-    Since higher :math:`V_{0\text{i}}` smoothens out the |IV| curves, it is
-    possible to deceptively decrease the |R factor| by arbitrarily increasing
-    :math:`V_{0\text{i}}`.
+    Since higher |V0i| smoothens out the |IV| curves, it is possible to
+    deceptively decrease the |R factor| by arbitrarily increasing |V0i|.
     This usually happens in cases of very high |R-factor| values, where
-    :math:`V_{0\text{i}}` optimization is not the main concern anyhow.
+    |V0i| optimization is not the main concern anyhow.
 
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/FD_Optimization.svg
    :width: 60%
    :align: center
 
    File ``FD_Optimization.pdf`` showing parabolic fit and minimum value for
-   :math:`V_{0\text{i}}`.
+   |V0i|.
 
-The optimized value for :math:`V_{0\text{i}}` will be output in the log
-file and automatically added to the :ref:`PARAMETERS file<parameters>`
-for subsequent runs. Furthermore, ViPErLEED produces the files
+The optimized value for |V0i| will be output in the log file and automatically
+added to the :ref:`PARAMETERS file<parameters>` for subsequent runs.
+Furthermore, ViPErLEED produces the files
 :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` and
 :ref:`FD_Optimization.pdf<fdoptimizationdata>` in the ``OUT`` directory.
 :ref:`FD_Optimization_beams.pdf<fdoptimizationbeams>` shows the calculated
@@ -274,9 +270,8 @@ corresponding to each trial value.
    :align: center
 
    Part of ``FD_Optimization_beams.pdf`` showing the effects of
-   :math:`V_{0\text{i}}` on the :math:`(1|0)` beam. Note that
-   the :math:`V_{0i}` variation only leads to minor changes of
-   the spectral appearance.
+   |V0i| on the :math:`(1|0)` beam. Note that the |V0i| variation
+   only leads to minor changes of the spectral appearance.
 
 Refined structure fit
 =====================

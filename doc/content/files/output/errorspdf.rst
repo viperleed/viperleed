@@ -23,10 +23,10 @@ may not be the same for the entire group.
 
   .. math::
 
-    \frac{\mathrm{var}(R)}{R} = \sqrt{ \frac{8 * V_{0i} }{ \delta E} }
+    \frac{\mathrm{var}(R)}{R} = \sqrt{ \frac{8 * V_{0\mathrm{i}} }{ \delta E} }
 
-  where :math:`R` is the |R factor| of the best-fit structure, :math:`V_{0i}`
-  is the imaginary part of the inner potential, and :math:`\delta E` is the
+  where :math:`R` is the |R factor| of the best-fit structure, |V0i| is
+  the imaginary part of the inner potential, and :math:`\delta E` is the
   total energy range of the beam set. For more information, see
   :cite:t:`pendryReliabilityFactorsLEED1980`.
 

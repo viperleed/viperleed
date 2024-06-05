@@ -14,8 +14,7 @@ and input model was provided courtesy of Lutz Hammer .
 
 We will begin by running a reference calculation and a rough structure
 optimization. Following this, we move to a finer search grid and run a
-:ref:`full-dynamic optimization <fdoptimization>` of the inner potential
-:math:`V_{0\text{i}}`.
+:ref:`full-dynamic optimization <fdoptimization>` of the inner potential |V0i|.
 Finally, once we achieve a satisfactory |R factor|, we will use the
 ViPErLEED :ref:`error calculation<error_calculation>` to estimate
 how much small changes of atomic positions affect the |R factor|.
@@ -99,10 +98,11 @@ very similar to the one described in the tutorial for the
 GLOBAL PARAMETERS
     At the top of the file, we specify some general settings, such as the
     energy range to be used and our initial guess for the imaginary part
-    of the inner potential :math:`V_{0\text{i}}`. We will run a
-    :ref:`reference calculation<ref-calc>`, :ref:`delta-amplitude<sec_deltas>`,
-    and a :ref:`structure search<sec_search>` back-to-back, so we specify
-    :ref:`RUN = 1-3<run>`.
+    of the inner potential |V0i|.
+    We will run a :ref:`reference calculation<ref-calc>`,
+    :ref:`delta-amplitude<sec_deltas>`, and a
+    :ref:`structure search<sec_search>` back-to-back,
+    so we specify :ref:`RUN = 1-3<run>`.
 
     To reduce computation time for this example, we also limit the maximum
     angular momentum quantum number to be used in the calculations by
@@ -260,17 +260,16 @@ should accept the new best fit structure fit by calling the
 
 Now, remember that in the :ref:`PARAMETERS file<parameters>` above, we had
 to put in an initial guess for the imaginary part of the inner potential
-:math:`V_{0\text{i}}`. We would now like to also optimize this global parameter
-– however it is not accessible in :ref:`the tensor-LEED approach<tensor_leed>`,
+|V0i|. We would now like to also optimize this global parameter. However,
+it is not accessible in :ref:`the tensor-LEED approach<tensor_leed>`,
 which only can treat perturbations on an atom-by-atom basis.
 Instead, we can use the :ref:`full-dynamic optimization<fdoptimization>` to
-find an optimal value for :math:`V_{0\text{i}}`.
+find an optimal value for |V0i|.
 
 During the :ref:`full-dynamic optimization<fdoptimization>`, multiple reference
 calculations will be run while the chosen global parameter is varied.
 ViPErLEED will then try to determine an optimal value using a parabola fit.
-We select :math:`V_{0\text{i}}` for optimization by adding the following line
-to PARAMETERS:
+We select |V0i| for optimization by adding the following line to PARAMETERS:
 
 .. code-block:: console
 
@@ -294,12 +293,11 @@ the various values of the parameter and a fit parabola.
     :ref:`PARAMETERS file<parameters>` and comment out the line containing
     the previous value.
 
-Following the :math:`V_{0\text{i}}` optimization we can also run a final
-structure-optimization, since the new value for :math:`V_{0\text{i}}` may
-have slightly affected the optimal positions.
-Using a (very fine) :math:`0.002` Å grid (``DISPLACEMENTS_very_fine`` in
-the provided example files) we manage to get a final |R factor| of around
-:math:`R_\mathrm{P} \approx 0.088`.
+Following the |V0i| optimization we can also run a final structure
+optimization, since the new value for |V0i| may have slightly affected
+the optimal positions. Using a (very fine) :math:`0.002` Å grid
+(``DISPLACEMENTS_very_fine`` in the provided example files) we
+manage to get a final |R factor| of around :math:`R_\mathrm{P} \approx 0.088`.
 
 Error calculation
 =================

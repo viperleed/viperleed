@@ -5,9 +5,11 @@
 ..       .. include:: /substitutions.rst
 
 
-.. |calc| replace:: ``viperleed.calc``
-.. |IV|   replace:: *I*\ (\ *V*\ )
-.. |LEED-IV| replace:: LEED-|IV|
-.. |LEED IV| replace:: LEED |IV|
+.. |calc|     replace:: ``viperleed.calc``
+.. |IV|       replace:: *I*\ (\ *V*\ )
+.. |LEED-IV|  replace:: LEED-|IV|
+.. |LEED IV|  replace:: LEED |IV|
 .. |R-factor| replace:: :math:`R`\ -factor
 .. |R factor| replace:: :math:`R` factor
+.. |V0i|      replace:: :math:`V_{0\mathrm{i}}`
+.. |V0r|      replace:: :math:`V_{0\mathrm{r}}`
