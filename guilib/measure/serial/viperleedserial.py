@@ -299,7 +299,6 @@ class ViPErLEEDSerial(SerialABC):
         except KeyError:
             # error_state is not present in the config file.
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             f'arduino_states with code {error_state}', '')
             fmt_data = {'error_name': current_error.name,
                         'state': f"state with code {error_state}",

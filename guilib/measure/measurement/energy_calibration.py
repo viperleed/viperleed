@@ -86,8 +86,7 @@ class MeasureEnergyCalibration(MeasurementABC):
             delta = fallback
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, '', 'measurement_settings/delta_energy',
-                fallback
+                '', 'measurement_settings/delta_energy', fallback
                 )
         return delta
 
@@ -109,8 +108,7 @@ class MeasureEnergyCalibration(MeasurementABC):
             egy = fallback
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, '', 'measurement_settings/end_energy',
-                fallback
+                '', 'measurement_settings/end_energy', fallback
                 )
         return egy                                                              # TODO: warn if end == 1000
 
@@ -132,7 +130,6 @@ class MeasureEnergyCalibration(MeasurementABC):
         if not any(c.measures(_MEASURED_EGY) for c in self.controllers):
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTINGS,
-                type(self).__name__,
                 'devices/primary_controller or devices/secondary_controllers',
                 '\nCannot run an energy calibration if no '
                 'controller measures the beam energy.'
@@ -146,7 +143,6 @@ class MeasureEnergyCalibration(MeasurementABC):
             # Require at least 10 eV for a reasonable calibration
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTINGS,
-                type(self).__name__,
                 'measurement_settings/start_energy and /end_energy',
                 f"\nToo small energy range ({abs(egy_range)} eV) for "
                 "calibration. It should be at least 10 eV."
@@ -157,7 +153,6 @@ class MeasureEnergyCalibration(MeasurementABC):
             # Require at least 10 data points for a decent fit
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTINGS,
-                type(self).__name__,
                 'measurement_settings/start_energy, /end_energy, '
                 'and /delta_energy',
                 f"\nToo few energies ({n_steps}) for a reasonable fit "
@@ -257,8 +252,7 @@ class MeasureEnergyCalibration(MeasurementABC):
             domain = (-10, 1100)
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, '', 'energy_calibration/domain',
-                domain
+                '', 'energy_calibration/domain', domain
                 )
 
         fit_polynomial, (residuals, *_) = (
@@ -298,7 +292,6 @@ class MeasureEnergyCalibration(MeasurementABC):
         except (NotASequenceError, ValueError):
             # Something wrong with the settings?
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'devices/primary_controller', '')
             return
 

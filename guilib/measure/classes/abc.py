@@ -63,19 +63,17 @@ class QObjectSettingsErrors(ViPErLEEDErrorEnum):
     """Settings errors of ViPErLEED objects."""
 
     MISSING_SETTINGS = (100,
-                        '{} cannot operate without settings. Load an '
+                        'Cannot operate without settings. Load an '
                         'appropriate settings file before proceeding.'
                         )
     INVALID_SETTINGS = (101,
-                        'Invalid settings for instance of {}. Required '
-                        'settings {} missing or value inappropriate. '
-                        'Check configuration file.\n{}'
+                        'Invalid settings. Required settings {} missing or '
+                        'value inappropriate. Check configuration file.\n{}'
                         )
     INVALID_SETTING_WITH_FALLBACK = (
         102,
-        'Invalid settings for instance of {}. Invalid/unreadable '
-        'settings value {} for setting {!r}. Using {} instead. '
-        'Consider fixing your configuration file.'
+        'Invalid settings. Invalid/unreadable settings value {} for setting '
+        '{!r}. Using {} instead. Consider fixing your configuration file.'
         )
     DEFAULT_SETTINGS_CORRUPTED = (103,
                                   'Default settings corrupted. {!r}')
@@ -108,8 +106,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         into _settings via set_settings. If no settings is given,
         _settings_to_load will automatically be the best matching
         suitable default settings file.
-    _uses_default_settings : bool
-        _uses_default_settings remembers if a default settings was
+    uses_default_settings : bool
+        uses_default_settings remembers if a default settings was
         loaded and can be used during runtime to adjust behaviour
         according to this.
     """
@@ -136,11 +134,11 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         """
         self._settings = ViPErLEEDSettings()
         self._settings_to_load = settings
-        self._uses_default_settings = False
+        self.uses_default_settings = False
         if not settings:
             # Look for a default only if no settings are given.
             self._settings_to_load = self.find_default_settings()
-            self._uses_default_settings = True
+            self.uses_default_settings = True
         super().__init__(*args, **kwargs)
 
     @property
@@ -163,7 +161,7 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
                 f'Instance of {type(self).__name__} tried to return '
                 'a settings handler without settings.'
                 )
-        if self._uses_default_settings:
+        if self.uses_default_settings:
             raise SettingsError(
                 f'Instance of {type(self).__name__} tried to return '
                 'a settings handler using default settings.'
@@ -474,13 +472,12 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
         try:                                                                    # TODO: make method that searches through invalid for old values and replaces deprecated ones, make it a method of the ViPErLEEDSettings class
             new_settings = ViPErLEEDSettings.from_settings(new_settings)
         except(ValueError, NoSettingsError):
-            emit_error(self, QObjectSettingsErrors.MISSING_SETTINGS,
-                       type(self).__name__)
+            emit_error(self, QObjectSettingsErrors.MISSING_SETTINGS)
             return False
         invalid = self.are_settings_invalid(new_settings)
         for missing, *info in invalid:
             emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                       type(self).__name__, missing, ' '.join(info))
+                       missing, ' '.join(info))
             return False
 
         self._settings = new_settings

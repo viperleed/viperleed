@@ -131,14 +131,13 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except (TypeError, ValueError):
             # Not an int
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/energy_step_duration', '')
             interval = min_t
 
         if interval < min_t:
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, f'{interval} (too short)',
+                f'{interval} (too short)',
                 'measurement_settings/energy_step_duration', min_t
                 )
             interval = min_t
@@ -173,7 +172,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except ValueError:
             # Not a valid boolean
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/is_continuous', '')
             return False
 
@@ -193,7 +191,6 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         except (TypeError, ValueError):
             # Not an int
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/measurement_interval', '')
             interval = min_t
 
@@ -202,8 +199,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             interval = min_t
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, txt,
-                'measurement_settings/measurement_interval', interval
+                txt, 'measurement_settings/measurement_interval', interval
                 )
             self.settings.set('measurement_settings', 'measurement_interval',
                               str(interval))

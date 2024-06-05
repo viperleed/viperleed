@@ -51,7 +51,6 @@ class IVVideo(MeasurementABC):
             # Not a float
             delta = fallback
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/delta_energy', '')
         return delta
 
@@ -72,7 +71,6 @@ class IVVideo(MeasurementABC):
             # Not a float
             egy = fallback
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/end_energy', '')
         return egy
 

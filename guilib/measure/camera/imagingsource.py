@@ -441,7 +441,7 @@ class ImagingSourceCamera(abc.CameraABC):
         if black_level < _min or black_level > _max:
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTINGS,
-                type(self).__name__, 'camera_settings/black_level',
+                'camera_settings/black_level',
                 f"{black_level} [out of range ({_min}, {_max})]",
                 )
             return -2
@@ -461,8 +461,7 @@ class ImagingSourceCamera(abc.CameraABC):
             # Probably a bug.
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, color_fmt_s,
-                'camera_settings/color_format', 'Y16'
+                color_fmt_s, 'camera_settings/color_format', 'Y16'
                 )
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)
@@ -478,8 +477,7 @@ class ImagingSourceCamera(abc.CameraABC):
             # Probably a bug.
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, color_fmt,
-                'camera_settings/color_format', 'Y16'
+                color_fmt, 'camera_settings/color_format', 'Y16'
                 )
             color_fmt = SinkFormat.Y16
         self.settings.set('camera_settings', 'color_format', color_fmt.name)

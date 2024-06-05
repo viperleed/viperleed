@@ -245,7 +245,7 @@ class CameraABC(DeviceABC):
         if binning_factor < min_bin or binning_factor > max_bin:
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, f'{binning_factor} '
+                f'{binning_factor} '
                 f'[out of range ({min_bin}, {max_bin})]',
                 'camera_settings/binning', 1
                 )
@@ -339,7 +339,6 @@ class CameraABC(DeviceABC):
         min_exp, max_exp = self.get_exposure_limits()
         if exposure_time < min_exp or exposure_time > max_exp:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/exposure',
                             f'\nInfo: out of range ({min_exp}, {max_exp})')
             exposure_time = min_exp
@@ -397,7 +396,6 @@ class CameraABC(DeviceABC):
         min_gain, max_gain = self.get_gain_limits()
         if gain < min_gain or gain > max_gain:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/gain',
                             f'\nInfo: out of range ({min_gain}, {max_gain})')
             gain = min_gain
@@ -461,7 +459,7 @@ class CameraABC(DeviceABC):
         if mode not in ('live', 'triggered'):
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, mode, 'camera_settings/mode', 'triggered'
+                mode, 'camera_settings/mode', 'triggered'
                 )
             mode = 'triggered'
             self.settings.set('camera_settings', 'mode', mode)
@@ -486,7 +484,6 @@ class CameraABC(DeviceABC):
         if n_frames < min_n or n_frames > max_n:
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__,
                 f"{n_frames} [out of range ({min_n}, {max_n})]",
                 'measurement_settings/n_frames', 1
                 )
@@ -556,7 +553,6 @@ class CameraABC(DeviceABC):
 
         if not self.__is_valid_roi(roi, limits):
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'camera_settings/roi', '\nInfo: ROI is invalid. '
                             f'You can use the full sensor: roi = {full_roi}')
             self.settings.set('camera_settings', 'roi', 'None')
@@ -634,7 +630,7 @@ class CameraABC(DeviceABC):
 
         self.disconnect_()
 
-        if self._uses_default_settings:
+        if self.uses_default_settings:
             # When loading from default settings, there's no point in           # TODO: should also clear bad pixels if present
             # trying to connect: the device name is certainly wrong.
             return True
@@ -1006,7 +1002,6 @@ class CameraABC(DeviceABC):
                                          fallback='')
         if not bad_pix_path:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'camera_settings/bad_pixels_path',
                             '\nInfo: No bad_pixels_path found.')
             return
@@ -1014,7 +1009,6 @@ class CameraABC(DeviceABC):
             self.__bad_pixels.read(bad_pix_path)
         except (FileNotFoundError, ValueError) as err:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'camera_settings/bad_pixels_path',
                             f'\nInfo: {err}')
             return
@@ -1580,7 +1574,7 @@ class CameraABC(DeviceABC):
             return roi
 
         base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                        type(self).__name__, 'camera_settings/roi',
+                        'camera_settings/roi',
                         f'\nInfo: ROI {roi} is invalid after '
                         'adjusting top-left corner position')
         self.settings.set('camera_settings', 'roi', 'None')

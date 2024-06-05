@@ -1018,7 +1018,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             return False
 
         cls_name = meas_config['measurement_settings']['measurement_class']
-        datapts.time_resolved = (cls_name == "TimeResolved")
+        datapts.time_resolved = (cls_name == 'TimeResolved')
         if datapts.is_time_resolved:
             datapts.continuous = meas_config.getboolean('measurement_settings',
                                                         'is_continuous')
@@ -1040,21 +1040,23 @@ class Measure(ViPErLEEDPluginBase):                                             
         err_text = []
         for sender, error_code, error_message in self._glob['errors']:
             if isinstance(sender, CameraABC):
-                source = f"camera {sender.name}"
+                source = f'camera {sender.name}'
             elif isinstance(sender, ControllerABC):
-                source = f"controller {sender.name} at {sender.address}"
+                source = f'controller {sender.name} at {sender.address}'
             elif isinstance(sender, MeasurementABC):
-                source = f"measurement {sender.__class__.__name__}"
+                source = f'measurement {sender.__class__.__name__}'
+            elif isinstance(sender, SerialABC):
+                source = f'{type(sender).__name__} on {sender.port_name}'
             elif isinstance(sender, FirmwareUpgradeDialog):
-                source = f"firmware upgrade dialog"
+                source = f'firmware upgrade dialog'
             else:
-                source = "system or unknown"
+                source = 'system or unknown'
 
-            err_text.append(f"ERROR from {source}\n"
-                            f"(Code: {error_code})"
-                            f"\n\n{error_message}")
+            err_text.append(f'ERROR from {source}\n'
+                            f'(Code: {error_code})'
+                            f'\n\n{error_message}')
 
-        err_box.setText("\n\n".join(err_text))
+        err_box.setText('\n\n'.join(err_text))
         err_box.open()
         self._glob['errors'] = []
 

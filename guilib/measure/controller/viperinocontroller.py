@@ -202,8 +202,7 @@ class ViPErinoController(abc.MeasureControllerABC):
             # Seems a pylint bug.
             meas_f = 50.0
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
-                            f"adc_update_rate/{update_rate_raw}", "")
+                            f"adc_update_rate/{update_rate_raw}", '')
         return 1000 / meas_f
 
     @property
@@ -446,7 +445,6 @@ class ViPErinoController(abc.MeasureControllerABC):
         except (TypeError, ValueError):
             # Cannot convert to int
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/adc_update_rate', '')
             return
         with self.lock:
@@ -839,8 +837,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                                                'v_ref_dac')
         except (TypeError, ValueError):
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
-                            'energy_calibration/v_ref_dac', "")
+                            'energy_calibration/v_ref_dac', '')
             v_ref_dac = 2.5
 
         dac_out_vs_nominal_energy = 10/1000  # 10 V / 1000 eV
@@ -869,8 +866,7 @@ class ViPErinoController(abc.MeasureControllerABC):
                                            fallback=0)
         except (TypeError, ValueError):
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
-                            'serial_port_settings/timeout', "")
+                            'serial_port_settings/timeout', '')
             timeout = 0
         timeout = max(timeout, 0) + sum(energies_and_times[1::2])
         self.send_message(cmd, energies_and_times, timeout=timeout)
@@ -899,12 +895,11 @@ class ViPErinoController(abc.MeasureControllerABC):
             available_adcs = self.available_adcs()
         except NotASequenceError:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'controller/measurement_devices', '')
             return
         except (KeyError, ValueError, TypeError, RuntimeError) as err:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__, 'controller', err)
+                            'controller', err)
             return
 
         n_devices = len(available_adcs)

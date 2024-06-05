@@ -273,8 +273,7 @@ class ControllerABC(DeviceABC):
                 coef = (0, 1)
                 base.emit_error(
                     self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                    type(self).__name__, '',
-                    'energy_calibration/coefficients', coef
+                    '', 'energy_calibration/coefficients', coef
                     )
             try:
                 domain = self.settings.getsequence('energy_calibration',
@@ -315,7 +314,6 @@ class ControllerABC(DeviceABC):
             # Not an int
             settle_t = fallback
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/hv_settle_time', '')
         return settle_t
 
@@ -338,7 +336,6 @@ class ControllerABC(DeviceABC):
             # Not an int
             settle_t = fallback
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/i0_settle_time', '')
         return settle_t
 
@@ -378,7 +375,6 @@ class ControllerABC(DeviceABC):
             # Not an int
             settle_t = fallback
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/i0_settle_time', '')
         return settle_t
 
@@ -543,15 +539,13 @@ class ControllerABC(DeviceABC):
             self.__address = _settings_serial
         else:
             self._settings['controller']['address'] = self.__address
-            if not self._uses_default_settings:
+            if not self.uses_default_settings:
                 self._settings.update_file()
         try:
             self._update_serial_from_settings()
         except ValueError:
-            base.emit_error(
-                self, QObjectSettingsErrors.INVALID_SETTINGS,
-                type(self).__name__, 'controller/serial_class', ''
-                )
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'controller/serial_class', '')
             return False
         return True
 
@@ -1130,7 +1124,7 @@ class MeasureControllerABC(ControllerABC):
             delay = fallback
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, '', 'controller/initial_delay', delay
+                '', 'controller/initial_delay', delay
                 )
         return delay
 
@@ -1172,14 +1166,12 @@ class MeasureControllerABC(ControllerABC):
             nr_samples = 1
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, '',
-                'measurement_settings/nr_samples', nr_samples
+                '', 'measurement_settings/nr_samples', nr_samples
                 )
         if nr_samples <= 0:
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTING_WITH_FALLBACK,
-                type(self).__name__, nr_samples,
-                'measurement_settings/nr_samples', 1
+                nr_samples, 'measurement_settings/nr_samples', 1
                 )
             nr_samples = 1
         return nr_samples

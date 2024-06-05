@@ -378,7 +378,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         except (TypeError, ValueError):
             # Not a float
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/start_energy', '')
             return 0.0
 
@@ -424,7 +423,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             values = self.__get_linear_step(*params)
         else:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/step_profile',
                             f'Unknown profile shape {shape}')
             values = tuple()
@@ -443,7 +441,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             time_ = int(time_)
             if time_ < 0:
                 base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                                type(self).__name__,
                                 'measurement_settings/step_profile',
                                 '\nInfo: Time intervals must be non-negative')
                 return tuple()
@@ -455,7 +452,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         if len(params) != 2:
             # Too many/too few
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/step_profile',
                             'Too many/few parameters for linear profile. '
                             f'Expected 2, found {len(params)}')
@@ -465,7 +461,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             n_steps, tot_time = (int(p) for p in params)
         except (TypeError, ValueError):
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/step_profile',
                             'Could not convert to integer the '
                             'parameters for linear profile')
@@ -473,7 +468,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         if n_steps <= 0 or tot_time < 0:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'measurement_settings/step_profile',
                             'Linear-step parameters should be '
                             'positive integers')
@@ -1030,14 +1024,12 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             config = self.__get_device_settings(camera_settings)
         except RuntimeError as err:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'devices/path to camera configuration', err)
             raise
 
         invalid = config.has_settings(('camera_settings', 'class_name'))
         if invalid:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'camera_settings/class_name',
                             f'No class_name in {config.last_file}')
             raise RuntimeError
@@ -1047,7 +1039,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             camera_class = base.class_from_name('camera', camera_cls_name)
         except ValueError:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'camera_settings/class_name', '')
             raise RuntimeError from None
 
@@ -1056,7 +1047,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             # Force mode to be triggered
             camera.settings.set("camera_settings", "mode", "triggered")
             # base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,          # TODO: Should we make this a non-critical warning?
-                            # type(self).__name__,
                             # 'camera_settings/mode', 'Camera {camera.name}: '
                             # 'Cannot measure in live mode.')
         return camera
@@ -1130,14 +1120,12 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             config = self.__get_device_settings(configname)
         except RuntimeError as err:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'devices/path to controller configuration', err)
             raise
 
         invalid = config.has_settings(('controller', 'controller_class'))
         if invalid:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'controller/controller_class',
                             f'No controller_class in {config.last_file}')
             raise RuntimeError
@@ -1149,14 +1137,12 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         invalid = config.has_settings(('controller', 'address'))
         if invalid:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'controller/address',
                             f'No address in {config.last_file}')
             raise RuntimeError
         address = config.get('controller', 'address')
         if not address:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'controller/address',
                             f'No address in {config.last_file}')
             raise RuntimeError
@@ -1166,7 +1152,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             cls = base.class_from_name('controller', cls_name)
         except ValueError:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'controller/controller_class',
                             f'Unknown class {cls_name} in {config.last_file}')
             raise RuntimeError from None
@@ -1179,7 +1164,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             section = ('primary_controller' if is_primary
                        else 'secondary_controllers')
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             f"devices/{section}",
                             "Measured quantities is not a sequence "
                             f"in {self.settings.last_file}")
@@ -1204,7 +1188,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         if len(info) != 2:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'devices/primary_controller', '')
             return False
 
@@ -1228,7 +1211,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                 )
         except NotASequenceError:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            type(self).__name__,
                             'devices/secondary_controllers',
                             'Could not be converted to a sequence')
             infos = tuple()
@@ -1237,7 +1219,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         for info in infos:
             if len(info) != 2:
                 base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                                type(self).__name__,
                                 'devices/secondary_controllers', '')
                 continue
             try:
