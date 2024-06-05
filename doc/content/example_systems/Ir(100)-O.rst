@@ -7,19 +7,19 @@ Example system: Ir(100)-(2×1)-O
 ===============================
 
 In this tutorial we go through a ViPErLEED structure analysis for an Ir(100)
-surface with adsorbed oxygen, creating a (:math:`2\times1`) superstructure.
+surface with adsorbed oxygen, creating a (\ :math:`2\times1`) superstructure.
 The structure and analysis is based on
-Ref. :cite:p:`ferstlStructureOrderingOxygen2016` and the experimental data
-and input model was provided courtesy of Lutz Hammer .
+Ref. :cite:p:`ferstlStructureOrderingOxygen2016`. The experimental
+data and input model were provided by Lutz Hammer.
 
 We will begin by running a reference calculation and a rough structure
 optimization. Following this, we move to a finer search grid and run a
 :ref:`full-dynamic optimization <fdoptimization>` of the inner potential |V0i|.
-Finally, once we achieve a satisfactory |R factor|, we will use the
-ViPErLEED :ref:`error calculation<error_calculation>` to estimate
-how much small changes of atomic positions affect the |R factor|.
-This will give rough margins for the statistical uncertainties of
-the determined parameters.
+After achieving a satisfactory |R factor|, we use the ViPErLEED
+:ref:`error calculation<error_calculation>` to estimate how much
+small changes of atomic positions affect the |R factor|. This will
+give margins for the statistical uncertainties of the determined
+parameters.
 
 .. only:: html
 
@@ -36,24 +36,26 @@ the determined parameters.
    :ref:`the more basic tutorial<example_ag_100>`
    first, which explains the setup in more detail.
 
+.. _sec_ir_intro:
+
 Introduction
 ============
 
-We start from experimental |LEED-IV| curves which are saved in the file
+We start from experimental |LEED-IV| curves which are saved in file
 :ref:`EXPBEAMS.csv<expbeams>`.
-As reference structure, we use a :ref:`POSCAR file<poscar>`, containing a
-hand-made Ir(100) surface, which we hand made from a bulk structure with
-an additional adsorbed oxygen atom placed at a bridge site, such that each
-surface iridium atom binds to one oxygen atom.
+As reference structure, we use a :ref:`POSCAR file<poscar>` containing an
+Ir(100) surface that was hand made from a bulk structure. An additional
+adsorbed oxygen atom is placed at a bridge site, such that each surface
+iridium atom binds to one oxygen atom.
 The height above the surface was chosen to achieve a reasonable Ir–O bond
-length. See below for a visualization (using
-:term:`VESTA` :cite:`mommaVESTAThreedimensionalVisualization2011`)
-of the structure.
-In this visualization, we also drew a plane through the unit cell
-orthogonal to :math:`c` (at unit cell fraction 0.35).
-We will use the :ref:`BULK_LIKE_BELOW` parameter to declare everything
-below this cut-off "bulk-like."
+length. See :numref:`fig_ir_start` for a visualization of the structure
+(using :term:`VESTA` :cite:`mommaVESTAThreedimensionalVisualization2011`).
+In this visualization, we also drew a plane orthogonal to the unit-cell
+vector |c| at fractional position :math:`c=0.35`. We will use the
+:ref:`BULK_LIKE_BELOW` parameter to declare that everything below
+this cutoff is bulklike.
 
+.. _fig_ir_start:
 .. list-table::
     :align: center
     :width: 100%
@@ -72,11 +74,10 @@ below this cut-off "bulk-like."
             POSCAR rendered in :term:`VESTA`, view along |c|.
 
 .. hint::
-   Of course there are other possible structural models like adsorption at
-   hollow, top or Ir-sharing bridge sites. Even surface reconstructions as
-   e.g. a missing-row reconstruction are conceivable. Here, we concentrate
-   exclusively on the correct structural model, which  is known from the
-   literature
+   Of course there are other possible structural models, including adsorption
+   at hollow, top, or Ir-sharing bridge sites. Even surface reconstructions
+   (e.g., missing row) are conceivable. Here, we concentrate exclusively on
+   the correct structural model, which is known from the literature
    :cite:p:`johnsonUnusualBridgedSite2000,ferstlStructureOrderingOxygen2016`.
 
    Often the adsorption site (or generally, the structural model) may not be
@@ -90,8 +91,10 @@ PARAMETERS and rough DISPLACEMENTS
 
 We start by setting up a rudimentary :ref:`PARAMETERS file<parameters>`,
 very similar to the one described in the tutorial for the
-:ref:`Ag(100)-(1x1) surface<example_ag_100>`:
+:ref:`Ag(100)-(1×1) surface<example_ag_100>`, as per
+:numref:`list_ir_parameters`.
 
+.. _list_ir_parameters:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/PARAMETERS
    :language: console
    :caption: PARAMETERS
@@ -102,7 +105,7 @@ GLOBAL PARAMETERS
     of the inner potential |V0i|.
     We will run a :ref:`reference calculation<ref-calc>`,
     :ref:`delta-amplitude<sec_deltas>`, and a
-    :ref:`structure search<sec_search>` back-to-back,
+    :ref:`structure search<sec_search>` back to back,
     so we specify :ref:`RUN = 1-3<run>`.
 
     To reduce computation time for this example, we also limit the maximum
@@ -110,12 +113,12 @@ GLOBAL PARAMETERS
     TensErLEED with the :ref:`LMAX<lmax>` parameter.
 
 PARAMETERS FOR INTERPRETING THE POSCAR
-    As mentioned above, we let ViPErLEED find the bulk-repeat unit by itself.
-    For this, we set the :ref:`BULK_LIKE_BELOW` parameter at the height where
-    we drew the plane previously.
+    As mentioned in the :ref:`sec_ir_intro`, we let ViPErLEED find the
+    bulk-repeat unit by itself. For this, we set the :ref:`BULK_LIKE_BELOW`
+    parameter at the height where we drew the plane in :numref:`fig_ir_start`.
 
     Using the :ref:`SITE_DEF<sitedef>` parameter, we specify that the topmost
-    Iridium atoms should be treated separately. These Ir atoms are differently
+    iridium atoms should be treated separately. These Ir atoms are differently
     coordinated than bulk Ir atoms and thus will presumably have a different
     vibrational amplitude. For completeness, we also specify the site type
     ``O_ads`` for the adsorbed oxygen atom. However, since there is only one
@@ -135,10 +138,10 @@ PARAMETERS FOR VIBROCC
     required, but it helps with readability.
 
 
-For the delta-amplitudes and structure-optimization, we also need to set up a
-:ref:`DISPLACEMENTS file<displacements>`. Since this is the first run starting
-from a totally un-relaxed model, we begin with a rather large range and a
-rather rough grid.
+For the delta-amplitudes calculation and structure optimization, we also need
+to set up a :ref:`DISPLACEMENTS file<displacements>`. Since this is the first
+run starting from a totally unrelaxed model, we begin with a rather large range
+and a relatively rough grid.
 
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_rough
    :language: console
@@ -147,20 +150,24 @@ rather rough grid.
 By setting multiple search blocks in DISPLACEMENTS, we can tell ViPErLEED to
 execute them one after the other. When starting to optimize a new system such
 as here, it is generally a good idea to start with a geometric optimization
-perpendicular to the surface (:math:`z`). This is because the |LEED-IV| curves
-are most sensitive to out-of-plane displacements. Here, we then follow up with
-rough optimizations of in-plane positions and vibrational amplitudes of
-surface atoms [1]_.
+perpendicular to the surface (i.e., along :math:`z`). This is because the
+|LEED-IV| curves are most sensitive to out-of-plane displacements.
+
+We then follow up with rough optimizations of in-plane positions and
+vibrational amplitudes of surface atoms.\ [1]_
 For the in-plane optimization, we use a simplified assignment for all four
-layers although for 2nd and 4th layer Ir atoms any movement in x-direction
-is forbidden by symmetry. ViPErLEED will automatically sort out any
-symmetry-forbidden displacements, cf. numref:`fig_Ir_O_search_progress_2`.
+layers, although any movement along the :math:`x` direction (here parallel
+to the |a| unit vector) is forbidden by symmetry for Ir atoms in the 2nd and
+4th layers.\ [2]_ ViPErLEED will automatically sort out any symmetry-forbidden
+displacements, cf. :numref:`fig_Ir_O_search_progress_2`.
 
 .. note::
    TensErLEED cannot simultaneously optimize displacements in different
    directions for a given atom. Vibrational amplitudes can be optimized
    together with one geometric displacement; here we do it separately to
-   speed up the calculation.
+   speed up the calculation. However, it is generally advisable to combine
+   vibrational-amplitude displacements and displacements along the :math:`z`
+   direction, as the parameters may be coupled.
 
 With the files set up, we can start the ViPErLEED calculation.
 During the first initialization ViPErLEED will generate :ref:`IVBEAMS<ivbeams>`
@@ -170,25 +177,25 @@ and :ref:`PHASESHIFTS<phaseshifts>`.
 .. note::
     You will notice that the first time we run a new system, ViPErLEED stops
     execution after the initialization. This is on purpose, and is supposed
-    to give the user a chance to double-check the recognized symmetry and
+    to give the user a chance to double check the recognized symmetry and
     annotated POSCAR.
 
     You will need to **restart the run manually** after making these checks.
 
 When the run is finished, we will see in the log file that the |R factor|
-has decreased quite a bit. The first reference calculation gave a values
+has decreased quite a bit. The first reference calculation gave a value
 of :math:`R_\mathrm{P} \approx 0.55`, but :math:`R_\mathrm{P}` has dropped
-to around :math:`\approx 0.21` over the search: very promising.
-We can get a better idea of how the search has converged by taking a
-look at the file :ref:`Search-progress.pdf<searchprogresspdf>` in the
-``SUPP`` directory.
+to around :math:`\approx 0.21` over the search. We can get a better idea of
+how the search has converged by taking a look at the file
+:ref:`Search-progress.pdf<searchprogresspdf>` in the ``SUPP`` directory.
 
 .. _fig_Ir_O_search_progress_1:
 .. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_1.svg
    :width: 70%
    :align: center
 
-   Upper half of page 1 for ``Search-progress.pdf``.
+   Upper half of page 1 for ``Search-progress.pdf`` for the rough initial
+   structure optimization of Ir(100)-(2×1)-O.
 
 :numref:`fig_Ir_O_search_progress_1` shows a plot of the decreasing |R factor|
 during the various stages of the search. We clearly see that both geometric
@@ -202,7 +209,8 @@ during the structure optimization.
    :width: 70%
    :align: center
 
-   Page 2–4 of ``Search-progress.pdf`` (white space cropped).
+   Pages 2–4 of ``Search-progress.pdf`` for the rough initial
+   structure optimization of Ir(100)-(2×1)-O (white space removed).
 
 :numref:`fig_Ir_O_search_progress_2` shows that the (:math:`z`) position of
 the  oxygen adsorbate has changed a good amount. Further, we see that the
@@ -226,10 +234,12 @@ Fine DISPLACEMENTS and tensor-LEED error
 The rough optimization has already significantly brought down the |R factor|.
 We should now continue with a finer search grid. For this, we use a similar
 :ref:`DISPLACEMENTS file<displacements>`, but with much smaller range and step
-size (see below). We now re-run with :ref:`RUN = 1-3<run>` to perform a fresh
-reference calculation for the new starting positions. This is advisable,
-because parameter deviations during the previous fit were not negligible.
+size (see :numref:`list_ir_displacements_fine`). We now rerun with
+:ref:`RUN = 1-3<run>` to perform a fresh reference calculation for the
+new starting positions. This is advisable because parameter deviations
+during the previous fit were not negligible.
 
+.. _list_ir_displacements_fine:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_fine
    :language: console
    :caption: DISPLACEMENTS
@@ -237,22 +247,22 @@ because parameter deviations during the previous fit were not negligible.
 When looking at the log file after the reference calculation, we further
 notice something important: The |R factor| of the reference calculation
 (\ :math:`R_\mathrm{P} \approx 0.18`) *is different* from the one we
-obtained from the superposition calculation at the end of the previous
-run (\ :math:`R_\mathrm{P} \approx 0.21`). This comes from the **error**
-**of the tensor-LEED approximation** used for the structure-optimization!
-Fortunately – in this case – the real |R factor| (as obtained from the
-reference calculation) is lower. However, this is not always the case.
+obtained from the :ref:`superposition<super_pos>` calculation at the end
+of the previous run (\ :math:`R_\mathrm{P} \approx 0.21`). This comes from
+the **error of the tensor-LEED approximation** used for the structure
+optimization. Fortunately — in this case — the real |R factor| (as obtained
+from the reference calculation) is lower. However, this is not always the case.
 You should **never** rely on the |R factor| produced by the superposition
 calculation as a final result, but rather run a final reference calculation
-at the end of your analysis.
+at the end of your analysis.\ [3]_
 
 Full-dynamic optimization
 =========================
 
 After the finer search run finishes, we see that the |R factor| has again
-dropped quite a lot. The |R factor| is now below 0.1, which already indicates
-very good agreement, but we can get better yet. However, before proceeding, we
-should accept the new best fit structure fit by calling the
+dropped quite significantly. The |R factor| is now below 0.1, which already
+indicates very good agreement, but we can get better yet. However, before
+proceeding, we should accept the new best-fit structure by calling the
 :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag:
 
     .. code-block:: console
@@ -282,12 +292,16 @@ log file will let us know of the optimized value for the chosen parameter.
 ViPErLEED also produces a file called ``FD_Optimization.pdf`` in the ``OUT``
 directory which contains a visualization of the |R factor|\ s calculated for
 the various values of the parameter and a fit parabola.
+It is shown in :numref:`fig_ir_fdopt`.
 
+
+.. _fig_ir_fdopt:
 .. figure:: /_static/example_systems/Ir(100)-O/figures/FD_Optimization.svg
    :width: 60%
    :align: center
 
-   ``FD_Optimization.pdf``.
+   ``FD_Optimization.pdf`` file resulting from the full-dynamic optimization
+   of the imaginary part of the inner potential, |V0i|, for Ir(100)-(2×1)-O.
 
 .. note::
     ViPErLEED will also automatically add the new, optimized value to the
@@ -310,19 +324,22 @@ the error calculation, we need a :ref:`DISPLACEMENTS file<displacements>`
 containing the desired range and steps. The format of the file is the
 same as used for the delta-amplitudes calculation and structure search.
 
+.. _list_ir_error_calc:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_errors
    :language: console
    :caption: DISPLACEMENTS file for the error calculation.
 
 
-Using this DISPLACEMENTS file, we run the error calculation by selecting the
-segment :ref:`RUN = 5<run>`. The :ref:`result <errorspdf>` will again be saved
-in the ``OUT`` directory. ViPErLEED generates a plot of the Error curves in
-``Errors.pdf`` and stores the raw data in ``Errors.csv``.
-:ref:`Errors.pdf<errorspdf>` shows that displacements of surface atoms even
-by a few pm drastically increase the |R factor|. Here, atom 1 is the oxygen
-adsorbate and atoms 2 and 3 are the topmost iridium species.
+Using the DISPLACEMENTS file in :numref:`list_ir_error_calc`, we run the error
+calculation by selecting the segment :ref:`RUN = 5<run>`.
+The :ref:`result <errorspdf>` will again be saved in the ``OUT`` directory.
+ViPErLEED generates a plot of the error curves in ``Errors.pdf`` and stores
+the raw data in ``Errors.csv``. The ``Errors.pdf`` file in
+:numref:`fig_ir_errors_geo` shows that displacement of surface atoms even by a
+few picometers drastically increases the |R factor|. Here, atom 1 is the
+oxygen adsorbate and atoms 2 and 3 are the topmost iridium ones.
 
+.. _fig_ir_errors_geo:
 .. figure:: /_static/example_systems/Ir(100)-O/figures/errors_geo.svg
    :width: 50%
    :align: center
@@ -331,24 +348,26 @@ adsorbate and atoms 2 and 3 are the topmost iridium species.
 
 .. note::
    The point of intersection between the error curve for a parameter and the
-   horizontal line labeled :math:`R + \textrm{var}(R)` gives a measure for the
-   statistical error :cite:p:`heinzElectronBasedMethods2013` (see also the
-   section on :ref:`Errors.pdf<errorspdf>`).
+   horizontal line labeled :math:`R_\mathrm{P} + \textrm{var}(R_\mathrm{P})`
+   gives a measure for the statistical error of the parameter
+   :cite:p:`heinzElectronBasedMethods2013` (see also the section on
+   :ref:`Errors.pdf<errorspdf>`).
 
-Similarly, changes in the vibrational amplitude of the surface atoms also
-strongly affect the |R factor|:
+Similarly, changes in the vibrational amplitude of the surface atoms
+(\ :numref:`fig_ir_errors_vib`) also strongly affect the |R factor|.
 
+.. _fig_ir_errors_vib:
 .. figure:: /_static/example_systems/Ir(100)-O/figures/errors_vib.svg
    :width: 50%
    :align: center
 
-   Part of ``Errors.pdf`` showing the effects of changes in vibrational
-   amplitude.
+   Part of ``Errors.pdf`` showing the effects of changes in the
+   vibrational amplitude of the topmost atoms.
 
-In general error-plots for geometric displacement tend to show a parabolic
+In general, error plots for geometric displacement tend to show a parabolic
 profile close to the minimum. Error plots for vibrational amplitude tend to
 be more asymmetric, as these amplitudes enter the calculation differently
-(Debye-Waller factor).
+(i.e., via the Debye–Waller factor).
 
 .. warning::
    Error curves are also subject to **errors of the tensor-LEED approximation**.
@@ -357,3 +376,12 @@ be more asymmetric, as these amplitudes enter the calculation differently
 .. [1] It is not recommended to fit any vibrational amplitude of bulk atoms as
        long as reliable information about the substrate Debye temperature is
        available.
+.. [2] Actually, no in-plane movement is allowed for these Ir atoms. They
+       coincide with twofold rotation axes of the pmm group. See also the
+       ``FreeDir`` column in the POSCAR file after initialization.
+.. [3] There is one exception to this rule. The full-dynamic reference
+       calculation cannot provide exact results when an atom has mixed
+       chemical composition and the elements have different optimized
+       positions. This is because only one position can be specified
+       for each atom. In this case, the tensor-LEED approximation is
+       the only viable alternative.
