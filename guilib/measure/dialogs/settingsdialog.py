@@ -308,8 +308,8 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
                 f'was not added with add_section(). Option {option_name}'
                 ' will appear without a bounding frame.'
                 )
-        option = SettingsDialogOption(option_name, handler_widget,
-                                      static=True, *args, **kwargs)
+        option = StaticSettingsDialogOption(option_name, handler_widget, *args,
+                                            read_only=True, **kwargs)
         self[section_name][option_name] = option
         if self.has_section(section_name):
             self.__sections[section_name].add_option(option)
@@ -357,8 +357,9 @@ class SettingsHandler(collections.abc.MutableMapping, qtc.QObject,
         """Update values in handlers from the config."""
         for sec_name, options in self.items():
             for opt_name, option in options.items():
-                if not option.static:
-                    option.set_(self.__config[sec_name][opt_name])
+                if isinstance(option, StaticSettingsDialogOption):
+                    continue
+                option.set_(self.__config[sec_name][opt_name])
         for section in self.__complex_sections:
             section.update_widgets()
 
@@ -431,9 +432,6 @@ class SettingsDialogOption(qtc.QObject):
             Vertical alignment of label field relative to handler_widget.
             Only the first character matters. Any character other than 'c'
             or 'b' will be treated as 'top'. Default is 'top'.
-        static : bool
-            Whether the handler is handling static data or not.
-            Default is False.
         **kwargs : object
             Other keyword arguments passed on to handler_widget if
             only a QWidget class is given.
@@ -445,25 +443,23 @@ class SettingsDialogOption(qtc.QObject):
         display_name = kwargs.pop('display_name', None)
         tooltip = kwargs.pop('tooltip', '')
         v_align = kwargs.pop('label_alignment', 't')
-        self._static = kwargs.pop('static', False)
 
         super().__init__(kwargs.pop('parent', None))
         self.option_name = option_name
-        self.__advanced = kwargs.pop('is_advanced', False)
-        self.__read_only = bool(kwargs.pop('read_only', False))
+        self._advanced = kwargs.pop('is_advanced', False)
+        self._read_only = bool(kwargs.pop('read_only', False))
 
         if isinstance(handler_widget, type(qtw.QWidget)):
             handler_widget = handler_widget(*args, **kwargs)
 
-        self.__handler_widget = handler_widget
-        self.__label = qtw.QLabel()
-        self.__info = None
-        if not self._static:
-            self.__check_handler()
-            self.__connect_handler()
-        self.__update_handler_from_read_only()
+        self._handler_widget = handler_widget
+        self._label = qtw.QLabel()
+        self._info = None
+        self._check_handler()
+        self._connect_handler()
+        self._update_handler_from_read_only()
 
-        self.display_name = self.__make_label_widget(display_name, tooltip,
+        self.display_name = self._make_label_widget(display_name, tooltip,
                                                      v_align)
 
     def __iter__(self):
@@ -477,43 +473,38 @@ class SettingsDialogOption(qtc.QObject):
     @property
     def advanced(self):
         """Return whether this option is considered advanced."""
-        return self.__advanced
+        return self._advanced
 
     @advanced.setter
     def advanced(self, is_advanced):
         """Set whether this option is considered advanced."""
-        self.__advanced = bool(is_advanced)
+        self._advanced = bool(is_advanced)
 
     @property
     def handler_widget(self):
         """Return the handler widget for this option."""
-        return self.__handler_widget
+        return self._handler_widget
 
     @handler_widget.setter
     def handler_widget(self, new_widget):
         """Set a new handler widget."""
         if new_widget is self.handler_widget:
             return
-        self.__handler_widget = new_widget
-        self.__check_handler()
-        self.__connect_handler()
-        self.__update_handler_from_read_only()
+        self._handler_widget = new_widget
+        self._check_handler()
+        self._connect_handler()
+        self._update_handler_from_read_only()
         self.handler_widget_changed.emit()
 
     @property
     def label(self):
         """Return the QLabel widget for this option's label."""
-        return self.__label
+        return self._label
 
     @property
     def read_only(self):
         """Return whether this option can be modified."""
-        return self.__read_only
-
-    @property
-    def static(self):
-        """Return whether the option is static."""
-        return self._static
+        return self._read_only
 
     def get_(self):
         """Return the value of this option as a string."""
@@ -525,15 +516,15 @@ class SettingsDialogOption(qtc.QObject):
 
     def set_info_text(self, text):
         """Set informative text."""
-        self.__info.set_info_text(text)
-        self.__info.setVisible(bool(text))
+        self._info.set_info_text(text)
+        self._info.setVisible(bool(text))
 
     def setVisible(self, visible):   # pylint: disable=invalid-name
         """Set the visibility of all children."""
         for child in self:
             child.setVisible(visible)
 
-    def __check_handler(self):
+    def _check_handler(self):
         """Check that the handler widget can be used."""
         to_have = ('get_', 'set_')
         if not self.read_only:
@@ -546,7 +537,7 @@ class SettingsDialogOption(qtc.QObject):
                 f"has no {'/'.join(missing)} method(s)"
                 )
 
-    def __connect_handler(self):
+    def _connect_handler(self):
         """Connect self.handler_widget if not self.read_only."""
         if self.read_only:
             return
@@ -555,9 +546,9 @@ class SettingsDialogOption(qtc.QObject):
         if not isinstance(signal, qtc.pyqtBoundSignal):
             # Probably a method returning the signal itself
             signal = signal()
-        signal.connect(self.__notify_change)
+        signal.connect(self._notify_change)
 
-    def __make_label_widget(self, label_text, info_text, v_align):
+    def _make_label_widget(self, label_text, info_text, v_align):
         """Return a QWidget to act as option label."""
         # Get a reasonable label_text
         if not label_text:
@@ -577,11 +568,11 @@ class SettingsDialogOption(qtc.QObject):
 
         # Get an appropriate size for the info object
         info_size = self.label.fontMetrics().boundingRect(label_text).height()
-        self.__info = FieldInfo(info_text, size=info_size)
+        self._info = FieldInfo(info_text, size=info_size)
 
         # Fill layout
         h_align_layout.addWidget(self.label)
-        h_align_layout.addWidget(self.__info)
+        h_align_layout.addWidget(self._info)
         v_align_layout.addLayout(h_align_layout)
 
         # Sort out vertical alignment, using stretches. "Top"
@@ -605,11 +596,11 @@ class SettingsDialogOption(qtc.QObject):
 
     @qtc.pyqtSlot()
     @qtc.pyqtSlot(object)
-    def __notify_change(self, _=None):
+    def _notify_change(self, _=None):
         """Emit a value_changed signal with the new value of this option."""
         self.value_changed.emit(self.get_())
 
-    def __update_handler_from_read_only(self):
+    def _update_handler_from_read_only(self):
         """Update the state of handler_widget according to self.read_only."""
         handler = self.handler_widget
 
@@ -680,7 +671,7 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
 
         tooltip = kwargs.get('tooltip', '')
 
-        self.__advanced = kwargs.get('is_advanced', False)
+        self._advanced = kwargs.get('is_advanced', False)
 
         self._info = qtw.QLabel()
         self.central_widget = qtw.QWidget()
@@ -696,12 +687,12 @@ class SettingsDialogSectionBase(qtw.QGroupBox):
     @property
     def advanced(self):
         """Return whether this section contains only advanced settings."""
-        return self.__advanced
+        return self._advanced
 
     @advanced.setter
     def advanced(self, advanced):
         """Mark this section as containing only advanced settings."""
-        self.__advanced = bool(advanced)
+        self._advanced = bool(advanced)
 
     def set_info(self, info_text):
         """Add informative text in a QLabel."""
@@ -1072,3 +1063,64 @@ class SettingsDialog(qtw.QDialog):
         """Enable/disable 'Apply' depending on whether anything changed."""
         settings_changed = self.settings != self.__settings['applied']
         self.__ctrls['apply'].setEnabled(settings_changed)
+
+
+class StaticSettingsDialogOption(SettingsDialogOption):
+    """Read only settings dialog option."""
+
+    def __init__(self, option_name, handler_widget, *args, **kwargs):
+        """Initialize instance.
+
+        Parameters
+        ----------
+        option_name : str
+            The name of this option in the settings file.
+        handler_widget : QWidget or type(QWidget)
+            The widget instance or widget class to be used to
+            display the option. If a class, an instance is created.
+        *args : object
+            Other positional arguments  passed on to handler_widget
+            if only a QWidget class is given.
+        display_name : str, optional
+            The name of this section when displayed in a SettingsDialog.
+            If not given or False-y, the name is taken from option_name:
+            underscores are removed, and all words are capitalized.
+        tooltip : str, optional
+            A descriptive text that will be used as tooltip, displayed
+            when hovering over, or clicking on the info icon. If it
+            is an empty string, no tooltip is shown. Default is an
+            empty string.
+        read_only : bool
+            Whether the user is allowed to change the ViPErLEEDSettings
+            by interacting with the handler of this SettingsDialogOption.
+            Must be True, otherwise a RuntimeError is raised.
+        is_advanced : bool, optional
+            Whether this option is to be displayed only in "Advanced"
+            mode. Default is False.
+        label_alignment : {'top', 'centre', 'bottom'}
+            Vertical alignment of label field relative to handler_widget.
+            Only the first character matters. Any character other than 'c'
+            or 'b' will be treated as 'top'. Default is 'top'.
+        **kwargs : object
+            Other keyword arguments passed on to handler_widget if
+            only a QWidget class is given.
+
+        Returns
+        -------
+        None.
+
+        Raises
+        ------
+        RuntimeError
+            read_only is not True. Indicates wrong
+            use of StaticSettingsDialogOption.
+        """
+        if kwargs.get('read_only') != True:
+            raise RuntimeError(
+                'A StaticSettingsDialogOption may only be read_only. You '
+                'are seeing this message due to a faulty implementation.'
+                )
+        super().__init__(option_name, handler_widget, *args, **kwargs)
+
+    def _check_handler(self):
+        """Disable handler check."""
