@@ -60,15 +60,16 @@ below this cut-off "bulk-like."
 
     * - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_a.png
 
-            POSCAR rendered in :term:`VESTA`, view along :math:`a`.
+            POSCAR rendered in :term:`VESTA`, view along |a|.
 
       - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_b.png
 
-            POSCAR rendered in :term:`VESTA`, view along :math:`b` (slightly off-axis).
+            POSCAR rendered in :term:`VESTA`, view along |b|
+            (slightly off-axis).
 
       - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_c.png
 
-            POSCAR rendered in :term:`VESTA`, view along :math:`c`.
+            POSCAR rendered in :term:`VESTA`, view along |c|.
 
 .. hint::
    Of course there are other possible structural models like adsorption at

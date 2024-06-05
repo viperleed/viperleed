@@ -80,15 +80,15 @@ Below, you see a rendering of the initial structure (produced using
 
     * - .. figure:: /_static/example_systems/Cu(111)-Te/figures/view_a.png
 
-            POSCAR rendered in :term:`VESTA` view along :math:`a`.
+            POSCAR rendered in :term:`VESTA` view along |a|.
 
       - .. figure:: /_static/example_systems/Cu(111)-Te/figures/view_b.png
 
-            POSCAR rendered in :term:`VESTA` view along :math:`b`.
+            POSCAR rendered in :term:`VESTA` view along |b|.
 
       - .. figure:: /_static/example_systems/Cu(111)-Te/figures/view_c.png
 
-            POSCAR rendered in :term:`VESTA` view along :math:`c`.
+            POSCAR rendered in :term:`VESTA` view along |c|.
 
 
 PARAMETERS

@@ -5,6 +5,9 @@
 ..       .. include:: /substitutions.rst
 
 
+.. |a|        replace:: :math:`\mathbf{a}`
+.. |b|        replace:: :math:`\mathbf{b}`
+.. |c|        replace:: :math:`\mathbf{c}`
 .. |calc|     replace:: ``viperleed.calc``
 .. |IV|       replace:: *I*\ (\ *V*\ )
 .. |LEED-IV|  replace:: LEED-|IV|

@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _geodelta:
 
 Geometrical displacements
@@ -62,9 +64,8 @@ Possible directions for displacements are:
 ``ab[n1 n2]`` (or just ``[n1 n2]``)
    In-plane displacements along the direction identified by the lattice
    vector with the whitespace-separated indices    ``n1`` (:math:`n_1`)
-   and ``n2`` (:math:`n_2`).
-   The first integer refers to the first vector :math:`\mathbf{a}` in the
-   :ref:`POSCAR<POSCAR>` file.
+   and ``n2`` (:math:`n_2`). The first integer refers to the first vector
+   |a| in the :ref:`POSCAR<POSCAR>` file.
    The displacement direction will be positive in the direction of the
    vector :math:`\mathbf{v} = n_1 \mathbf{a} + n_2 \mathbf{b}`.
    ``n1`` and ``n2`` accept floating point values.
@@ -82,7 +83,7 @@ Possible directions for displacements are:
 
    In-plane displacements along the vector
    :math:`\mathbf{v}` = :math:`m1 \mathbf{x} + m2 \mathbf{y}`, where
-   :math:`\mathbf{x}` and :math:`\mathbf{y}` are the unit vectors along 
+   :math:`\mathbf{x}` and :math:`\mathbf{y}` are the unit vectors along
    the Cartesian axes. The direction vectors will be normalized.
 
    ..  code-block:: none
