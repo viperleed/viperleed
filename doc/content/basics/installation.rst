@@ -433,15 +433,17 @@ This scripts is used by ViPErLEED during the
 :ref:`PHASESHIFTS<phaseshifts>`. If it is not present,
 ViPErLEED cannot create these files if required.
 
-To compile eeasisss from source, go into the ``viperleed/tensorleed``
-directory. From there call either ``make intel`` or ``make gcc``, to
+To compile eeasisss from source, navigate to your local copy of the
+``viperleed-tensorleed``
+`repository <https://github.com/viperleed/viperleed-tensorleed>`__.
+From there, call either ``make intel`` or ``make gcc`` to
 compile using the Intel or GCC Fortran compilers, respectively.
 
 
 .. _mpirandom:
 
 Randomizer library for TensErLEED < v1.7.4
------------------------------------------
+------------------------------------------
 
 TensErLEED versions up to 1.73 need the :term:`C`-object files called
 ``random_.o`` and/or ``MPIrandom_.o``. This file needs to be compiled
