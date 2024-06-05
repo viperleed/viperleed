@@ -26,7 +26,7 @@ This tutorial is designed such that you can follow along on your own system.
    If this is your first time running ViPErLEED, first make sure to follow the
    :ref:`installation instructions<installation>`.
    For details on how to execute ViPErLEED on your system, see the
-   :ref:`How To Run section<how_to_run>`.
+   :ref:`How to run<how_to_run>` section.
 
 
 Introduction
@@ -38,7 +38,7 @@ Our starting point for this example is:
    incidence, saved in file :ref:`EXPBEAMS.csv<expbeams>`.
 -  We would like to compare these intensities with a Ag(100)-(1×1) surface
    that was handmade from the bulk crystal structure. It is stored as a
-   :ref:`POSCAR file<poscar>` (see :ref:`below<ag_init>`).
+   :ref:`POSCAR file<poscar>` (see :numref:`list_ag_poscar`).
 
 In this example, we want to set up a ViPErLEED calculation and structure
 optimization based on these inputs alone.
@@ -48,11 +48,11 @@ If we manage to get a good agreement between the experimental and calculated
 curves, we can be confident that our structure model is correct.
 
 We will start off by setting up our input files and running an
-:ref:`initialization<initialization>` to check for any errors in them.
-Then, we run a :ref:`reference calculation<ref-calc>` to get some initial
-calculated results.
-Afterwards, we perform a :ref:`delta-amplitudes<sec_deltas>` calculation and
-:ref:`structure search<sec_search>` to refine the results.
+:ref:`initialization<initialization>` to check for any errors.
+Then, we run a :ref:`reference calculation<ref-calc>` to get
+some initial calculated results.
+Afterwards, we perform a :ref:`delta-amplitudes<sec_deltas>` calculation
+and :ref:`structure search<sec_search>` to refine the results.
 
 .. _ag_init:
 
@@ -63,16 +63,19 @@ To start off, we place the files :ref:`EXPBEAMS.csv<expbeams>` and
 :ref:`POSCAR<poscar>` in our source directory.
 Both files have defined formats.
 
+.. _list_ag_poscar:
 .. literalinclude :: /_static/example_systems/Ag(100)/POSCAR
    :language: console
    :caption: POSCAR file containing the initial structure.
 
-We then create a :ref:`PARAMETERS file<parameters>` which tells ViPErLEED what
-to do
+We then create a :ref:`PARAMETERS file<parameters>`
+(cf. :numref:`list_ag_paramters`) which tells
+ViPErLEED what to do.
 
+.. _list_ag_paramters:
 .. literalinclude :: /_static/example_systems/Ag(100)/PARAMETERS
    :language: console
-   :caption: PARAMETERS file for the initial reference calculation
+   :caption: PARAMETERS file for the initial reference calculation.
 
 GLOBAL PARAMETERS
    Since we only want to run the :ref:`initialization<initialization>` for now,
@@ -106,12 +109,12 @@ PARAMETERS FOR VIBROCC
    However, rather than writing the :ref:`VIBROCC file<vibrocc>` ourselves,
    we can also let ViPErLEED calculate bulk vibrational amplitudes by providing
    the :ref:`T_DEBYE<t_debye>` and :ref:`T_EXPERIMENT<t_experiment>`
-   parameters. By further providing :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`,
+   parameters. By further setting :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`,
    we guess the vibrational amplitudes for the surface atoms.
    The VIBR_AMP_SCALE assignment means that all atoms defined as ``surf`` (via
-   SITE_DEF) have vibration amplitudes 1.3 times higher than those calculated
-   from the Debye temperature. All other atoms, who are implicitly assigned a
-   ``def`` tag, will be given vibrational amplitudes
+   SITE_DEF) have vibration amplitudes 1.3 times larger than those calculated
+   from the Debye temperature. All other atoms, which are implicitly assigned
+   a ``def`` tag, will be given vibrational amplitudes
    :ref:`determined <vibrocc_auto>` from the Debye temperature.
 
 
@@ -123,7 +126,7 @@ That's all the input we need to start the initialization run.
 Once the run finishes, we can have a look at the
 :ref:`log file<log_files_calc>` to see if everything went as expected.
 Unless there was some configuration error, the log should now contain lines
-like this:
+like these
 
 .. code-block:: console
 
@@ -135,8 +138,8 @@ like this:
    Found SUPERLATTICE = (1x1)
    ...
 
-As expected, ViPErLEED recognized our surface be of p4m symmetry with a simple
-:math:`(1 \times 1)` termination.
+As expected, ViPErLEED recognized our surface to be of p4m symmetry with
+a simple :math:`(1 \times 1)` termination.
 
 During the initialization, ViPErLEED also automatically calculated
 electron-scattering phase shifts (based on atomic species and positions)
@@ -146,8 +149,8 @@ into the source directory.
 This format, however, is hard to interpret for a human reader.
 Instead we can look at a plotted version of the same data in the file
 :ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the ``SUPP`` subdirectory.
-The first page shows the energy-dependent phase shifts for the surface atom
-is shown in :numref:`fig_ag_phaseshifts`.
+The first page (see :numref:`fig_ag_phaseshifts`) shows the energy-dependent
+phase shifts for the surface atom.
 
 .. _fig_ag_phaseshifts:
 .. figure:: /_static/example_systems/Ag(100)/phaseshifts_plots.png
@@ -225,16 +228,18 @@ calculation followed by a :ref:`structure search<sec_search>`.
 
 First, however, we need to provide instructions about which parameters to
 vary in the optimization. In ViPErLEED, we give this information in the
-:ref:`DISPLACEMENTS file<displacements>`:
+:ref:`DISPLACEMENTS file<displacements>` (see
+:numref:`list_ag_displacements_rough`).
 
+.. _list_ag_displacements_rough:
 .. literalinclude :: /_static/example_systems/Ag(100)/DISPLACEMENTS
    :language: console
-   :caption: DISPLACEMENTS
+   :caption: DISPLACEMENTS over a rough grid for Ag(100)-(1×1).
 
 See the page on the :ref:`DISPLACEMENTS file<displacements>` for
 details on the syntax.
 Here, we allow the :math:`z` positions of all silver atoms in the first
-four layers to vary by up to :math:`\pm 0.20` Å with a step-width of
+four layers to vary by up to :math:`\pm 0.20` Å with a step width of
 :math:`0.01` Å.
 
 
@@ -258,13 +263,15 @@ starting point, overwriting the old POSCAR and VIBROCC files:
    $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
 
 Starting from this configuration, let's optimize with a finer grid.
-We change the DISPLACEMENTS accordingly:
+We change the DISPLACEMENTS accordingly, as in
+:numref:`list_ag_displacements_fine`
 
+.. _list_ag_displacements_fine:
 .. literalinclude :: /_static/example_systems/Ag(100)/DISPLACEMENTS_fine
    :language: console
    :caption: DISPLACEMENTS with a finer grid
 
-Here we allow :math:`\pm 0.020` Å variation on a :math:`0.004` Å grid.
+Here we allow a :math:`\pm 0.020` Å variation on a :math:`0.004` Å grid.
 Additionally, we also allow the topmost atom to change its vibrational
 amplitude.
 This may not seem like much, but already gives :math:`11^5` grid
@@ -272,7 +279,7 @@ points (11 values for 5 varied parameters) and will take about three
 times as long as the the last run.
 
 .. important::
-   Because we changed our reference structure, it is advisable to re-run
+   Because we changed our reference structure, it is advisable to rerun
    starting with the reference calculation by setting :ref:`RUN = 1-3 1<run>`.
    Note that we also add a second reference calculation at the end.
    This will remove errors due to the
@@ -306,7 +313,7 @@ to proceed with the analysis.
 For a more complicated system, it may not be clear which structure parameters
 are most important.
 In this case, we could run an :ref:`error calculation<error_calculation>`
-that shows how much the displacement an individual atom impacts the
+that shows how much the displacement of an individual atom impacts the
 |R factor|. The error calculation also provides us with an estimate for the
 statistical accuracy of the determined parameter values, for details see
 :ref:`errorspdf`.
