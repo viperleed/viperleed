@@ -522,7 +522,14 @@ def largest_nr_grid_points(rpars, theobeams, for_error,
      _, interp_step) = prepare_rfactor_energy_ranges(rpars, theobeams,
                                                      for_error, n_expand)
     interp_exp = EnergyRange(experiment.start, experiment.stop, interp_step)
-    interp_theo = EnergyRange(theory.start, theory.stop, interp_step)
+    section = 'refcalc' if not for_error else 'superpos'
+
+    # Make sure to use the whole stored range of energies (which corresponds
+    # also to what is in fd.out) and not just the overlapping one!
+    interp_theo = EnergyRange(
+        min([min(b.energies) for b in rpars.theobeams[section]]),
+        max([max(b.energies) for b in rpars.theobeams[section]]),
+        interp_step)
 
     n_max = max((experiment.n_energies,
                  theory.n_energies,
