@@ -690,7 +690,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             print(f"{section} config file name conflict! Overwriting existing")  # TODO: ask what to do with the (invalid) file
         with new_cfg_path.open('w', encoding='utf-8') as fproxy:
             device.settings.write(fproxy)
-
+        device.uses_default_settings = False
         return device
 
     def __on_bad_pixels_selected(self):
