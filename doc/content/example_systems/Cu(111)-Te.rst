@@ -76,21 +76,12 @@ so we should expect significant relaxation during structure optimization.
 
 .. _Cu-Te_structure_fig:
 
-.. list-table::
-    :align: center
-    :width: 100%
+.. figure:: /_static/example_systems/Cu(111)-Te/figures/view_a_b_c.svg
+   :width: 100%
+   :align: center
 
-    * - .. figure:: /_static/example_systems/Cu(111)-Te/figures/view_a.png
-
-            POSCAR rendered in :term:`VESTA`; view along |a|.
-
-      - .. figure:: /_static/example_systems/Cu(111)-Te/figures/view_b.png
-
-            POSCAR rendered in :term:`VESTA`; view along |b|.
-
-      - .. figure:: /_static/example_systems/Cu(111)-Te/figures/view_c.png
-
-            POSCAR rendered in :term:`VESTA`; view along |c|.
+   POSCAR rendered in :term:`VESTA`, viewed along |a| (left), |b| (center) and
+   |c| (right). Cu atoms are shown in blue, Te atoms in orange.
 
 
 PARAMETERS
