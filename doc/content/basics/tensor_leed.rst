@@ -223,3 +223,23 @@ the parameter :ref:`SEARCH_CULL<search_cull>`, whenever
 search population can be dropped and re-initialized to get out of local minima.
 By default, the search population is partially re-initialized using a custom
 genetic algorithm (see :ref:`SEARCH_CULL<search_cull>` for details).
+
+.. _tensor_leed_errors:
+
+Tensor-LEED Errors
+==================
+
+Since the tensor-LEED approach is based on first-order perturbation theory, it
+is inherently limited to small perturbations.
+The larger the perturbation, the larger the error incurred by the approximation
+and the less reliable the results.
+
+This should be kept in mind when interpreting the results of any ViPErLEED
+segment that uses the tensor-LEED approach (i.e. the
+:ref:`structure search<sec_search>`, but also the
+:ref:`error calculation<error_calculation>`).
+In particular, it is **strongly** recommended to run a new reference calculation
+after the structure optimization has converged to get rid of any accumulated
+errors.
+It may also be necessary to iterate between structure search and reference
+calculation to get the best possible fit.
