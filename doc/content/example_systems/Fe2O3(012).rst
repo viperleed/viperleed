@@ -6,22 +6,28 @@
 Example system: Fe₂O₃(1−102)-(1×1)
 ==================================
 
-Hematite (\ :math:`\alpha\text{-Fe}_2\text{O}_3`) is one of the most common
-naturally occurring iron oxides. Its surfaces are popular model systems for
-(single-atom) catalysis
+Hematite (`ɑ`-Fe₂O₃) is one of the most common, naturally occurring iron
+oxides. Its surfaces are popular model systems for (single-atom) catalysis
 :cite:p:`kraushoferAtomicscaleStructureHematite2018,franceschiModelSystemPhotocatalysis2020`,
 photocatalysis and the study of mineral–water interfaces.
 
-The :math:`(1\bar{1}02)` surface (also referred to as :math:`(012)`, or r-cut)
-exhibits two stable terminations under :term:`UHV` conditions: a stoichiometric
-(1×1) bulk-truncated termination, and a reduced (2×1) reconstruction
-:cite:p:`kraushoferAtomicscaleStructureHematite2018`.
-Here we use the bulk-truncated (1×1) surface as an example system of a "medium
-complexity" oxide surface and will compare experimental |LEED-IV| data with a
-theory calculation in ViPErLEED.
+The :math:`(1\bar{1}02)` surface — also referred to as :math:`(012)`, or r-cut
+— exhibits two stable terminations under :term:`UHV` conditions: a
+stoichiometric, bulk-truncated, (1×1) termination, and a reduced (2×1)
+reconstruction :cite:p:`kraushoferAtomicscaleStructureHematite2018`.
+Here we use the bulk-truncated (1×1) surface as an example system of an
+oxide surface with medium complexity and will compare experimental |LEED-IV|
+data with a theory calculation in ViPErLEED.
 
-All input files needed to follow along on your own machine can be found
-:download:`here</_static/example_systems/Fe2O3(012)-(1x1)/input_files.zip>`.
+.. only:: html
+
+   All input files needed to follow along on your own machine can be found
+   :download:`here</_static/example_systems/Fe2O3(012)-(1x1)/input_files.zip>`.
+
+.. only:: not html
+
+   You can download the input files to follow along in the online version of
+   the documentation at `viperleed.org <viperleed.org>`__.
 
 .. tip::
    If you are new to ViPErLEED, check out :ref:`this tutorial<example_ag_100>`
@@ -30,16 +36,17 @@ All input files needed to follow along on your own machine can be found
 .. note::
    If you want to follow along on your own machine, note that the calculation
    may take *a long time* to complete.
-   On a modern 48-core machine, each looped structure-optimization took about
+   On a modern 48-core machine, each looped structure optimization took about
    6–10 hours to finish.
+
+.. _sec_fe2o3_intro:
 
 Introduction
 ============
 
 To set up the calculation, we need to start from a structure model of the (1×1)
 surface in the POSCAR format. We can easily build this ourselves from a
-(:math:`\alpha \text{-Fe}_2\text{O}_3`) bulk structure.
-For this example, we use the structure by
+(`ɑ`-Fe₂O₃) bulk structure. For this example, we use the structure by
 :cite:t:`maslenSynchrotronXrayStudy1994`, which can be found on the
 `Crystallography Open Database (entry 2101167) <http://www.crystallography.net/cod/2101167.html>`_.
 
@@ -47,35 +54,43 @@ For this example, we use the structure by
     Bulk structures can be found in various online databases, but you should be
     careful to choose a model with the correct **experimental** lattice
     parameters (as determined by :term:`XRD`).
-    Lattice parameters from e.g. :term:`DFT` calculations may be off by ~1%,
+    Lattice parameters from, e.g., :term:`DFT` calculations may be off by ~1%,
     which will strongly affect the |R factor|. Lattice parameters are not
     accessible in the :ref:`tensor-LEED approximation<tensor_leed>`, but they
     can be optimized in a :ref:`full-dynamic optimization<fdoptimization>`.
 
 To go from the hexagonal bulk unit cell to the unit cell for the
-:math:`(1\bar{1}02)` (r-cut) surface, we need to apply a suitable change of
-basis:
+:math:`(1\bar{1}02)` surface, we need to apply a suitable change of
+basis
 
 .. math::
-    (a', b', c') = (a,b,c) P
+    (\mathbf{a}', \mathbf{b}', \mathbf{c}') = (\mathbf{a},\mathbf{b},\mathbf{c}) P,
 
+with
+
+.. math::
     P  = \frac{1}{3} \begin{pmatrix}
                         3 & 1  & 2 \\
                         0 & 2  & 4 \\
                         0 & -1 & 1
-                     \end{pmatrix}
+                     \end{pmatrix} .
 
-In :term:`VESTA`, you can do this by selecting "Edit" -> "Edit Data" ->
-"Unit cell" -> "Transform". To avoid problems later on, it is useful to also
-delete the unit cell symmetry at this point in "Edit" -> "Edit Data" ->
-"Unit cell" -> "Remove symmetry". The unit cell transformation will also
-introduce some duplicate atoms, which can be deleted using "Edit" ->
-"Structure parameters" -> "Remove duplicate atoms".
+In :term:`VESTA`, you can do this by selecting "Edit" → "Edit Data" →
+"Unit cell" → "Transform". To avoid problems later on, it is useful to
+also delete the unit cell symmetry before applying a transformation. You
+can do that in "Edit" → "Edit Data" → "Unit cell" → "Remove symmetry".
+When applying the transformation, VESTA may prompt you and ask what to
+do with the atoms in the new unit cell. Make sure to choose
+*"Search atoms in the new unit-cell and add them as new sites"*. The
+unit-cell transformation will introduce duplicate atoms, which can be
+deleted using "Edit" → "Structure parameters" → "Remove duplicate atoms".
 
 To create a suitable surface slab (as expected by ViPErLEED), we can then
 replicate the unit cell along |c| and (optionally) remove the topmost layer
-to create a vacuum interface. In VESTA you can do this similarly, by applying
-a transformation which stretches the cell in the |c| direction, e.g.:
+to create a vacuum interface. In VESTA you can do this by applying a
+transformation that "stretches" the cell in the |c| direction. You may
+have to use the "Initialize current matrix" button first to apply the
+transformation to the previously transformed unit cell. Use
 
 .. math::
     \begin{pmatrix}
@@ -84,11 +99,7 @@ a transformation which stretches the cell in the |c| direction, e.g.:
       0 & 0 & 2
     \end{pmatrix}
 
-You may have to use the "Initialize current matrix" button first to apply
-the transformation to the previously transformed unit cell. When applying
-the transformation, VESTA may prompt you and ask what to do with the atoms
-in the new unit cell.
-Make sure to choose
+to make the slab twice as thick along |c|. Choose again
 *"Search atoms in the new unit-cell and add them as new sites"*.
 You can then add a vacuum gap by applying the same transformation again,
 this time not adding any new atoms (choose *"Do nothing"* in the prompt).
@@ -97,36 +108,44 @@ which layer is our surface.
 
 Our starting POSCAR file contains 40 atoms in total, which corresponds to
 4 repeat units (layers) of 4 Fe and 6 O atoms each.
+See :numref:`fig_Fe2O3_layers` for a side view of the structure.
 
 
 PARAMETERS and VIBROCC
 ======================
 
 As in the previous examples, we begin with a simple
-:ref:`PARAMETERS file<parameters>`:
+:ref:`PARAMETERS file<parameters>` (\ :numref:`list_fe2o3_parameters`).
 
+.. _list_fe2o3_parameters:
 .. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/PARAMETERS
    :language: console
-   :caption: PARAMETERS
+   :caption: PARAMETERS for `ɑ`-Fe₂O₃\ :math:`(1\overline{1}02)`-(1×1).
 
 The settings concerning global parameters and the :ref:`VIBROCC file<vibrocc>`
-have been discussed in detail elsewhere (see e.g. :ref:`here<example_ag_100>`).
-Note, however, the parameters concerning the structure interpretation.
-To let ViPErLEED know what we consider the bulk structure, we generally need to
-define the parameters :ref:`BULK_REPEAT`, :ref:`LAYER_CUTS<layer_cuts>`
-and :ref:`N_BULK_LAYERS<n_bulk_layers>`.
-Alternatively, as is done here, we could also specify the parameter
-:ref:`BULK_LIKE_BELOW` with a suitable value (0.35 for the given POSCAR file).
+have been discussed in detail elsewhere [see, e.g.,
+the :ref:`Ag(100) example<example_ag_100>`]. In particular, we specify the parameter
+:ref:`BULK_LIKE_BELOW` with a suitable value (0.35 for the POSCAR file
+constructed in the :ref:`sec_fe2o3_intro`). ViPErLEED will use it to
+derive the values of the :ref:`BULK_REPEAT`, :ref:`LAYER_CUTS<layer_cuts>`,
+and :ref:`N_BULK_LAYERS<n_bulk_layers>` parameters, as shown in section
+:ref:`sec_fe2o3_init` below.
 
 We also use the :ref:`SITE_DEF<sitedef>` parameter to define which sites should
-be treated separately by ViPErLEED.
-In this case, we declare two ``surface`` sites each for iron and oxygen. This
-will assign the two topmost atoms of each species to the surface, and treat
-them as different sites in the calculation.
-They will thus be assigned different electron-atom scattering phaseshifts (see
-file :ref:`PHASESHIFTS`) and different vibrational amplitudes.
+be treated separately by ViPErLEED. In this case, we declare two ``surf``\ ace
+sites for iron and oxygen, selecting the two topmost atoms of each species.
+These atoms will be assigned dedicated vibrational amplitudes and electron–atom
+scattering phase shifts (see file :ref:`PHASESHIFTS`). All remaining atoms
+are automatically given a ``def``\ ault label instead.
 
+Note also that we set the :ref:`BEAM_INCIDENCE parameter<beamincidence>` to
+:math:`\phi=90°` to match the input structure with the crystal orientation
+used in the experiment. This setting won't have any effect initially, since
+the polar angle is set to :math:`\theta = 0°`. However, we will optimize
+:math:`\theta` later on, at which point the value of :math:`\phi` will
+be important.
 
+**TODO**: Update with new fe2o3 calculations.
 Initial vibrational amplitudes can be calculated based on the sample's Debye
 temperature with the parameters :ref:`T_DEBYE`, :ref:`T_EXPERIMENT` and
 :ref:`VIBR_AMP_SCALE<vibr_amp_scale>`. Instead, you can also provide the
@@ -137,33 +156,32 @@ amplitudes directly in the :ref:`VIBROCC file<vibrocc>`:
    :caption: VIBROCC
 
 
-Note also that we set the :ref:`BEAM_INCIDENCE parameter<beamincidence>` to
-:math:`\phi=90°` to match our input structure with the crystal orientation used
-in the experiment.
-This setting won't have any effect initially, since the azimuthal angle is set
-:math:`\theta = 0°`.
-However, we will optimize :math:`\theta` later on, at which point the value of
-:math:`\phi` will be important.
+.. _sec_fe2o3_init:
 
 Initialization
 ==============
 
 We can now run the initialization to check if all input files are interpreted
-correctly. If so, the :ref:`log<log_files_calc>` should look similar to this:
+correctly. If so, the :ref:`log<log_files_calc>` should look similar to
+:numref:`list_fe2o3_init_log`.
 
+.. _list_fe2o3_init_log:
 .. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/log_init.txt
    :language: console
-   :caption: Initialization log
+   :caption:
+        Log file after initialization for
+        `ɑ`-Fe₂O₃\ :math:`(1\overline{1}02)`-(1×1).
 
 The initialization log shows that the input files are interpreted correctly and
 that the right plane group (``pg[0 1]``) is detected.
 It also shows that the bulk structure and repeat vector have been identified.
-This is reflected in the PARAMETERS file, which was updated in-place and should
-now contain the following lines:
+This is reflected in the PARAMETERS file, which should now contain additional
+lines as in :numref:`list_fe2o3_auto_parameters`.
 
+.. _list_fe2o3_auto_parameters:
 .. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/PARAMETERS_bulk_detected
    :language: console
-   :caption: PARAMETERS after initialization
+   :caption: PARAMETERS after initialization.
 
 The detected layers and bulk repeat vector are also shown in
 :numref:`fig_Fe2O3_layers` for clarity.
@@ -178,17 +196,16 @@ The detected layers and bulk repeat vector are also shown in
    (TODO: add reference).
 
 
-At this stage, before proceeding, you should always double-check the detected
-bulk structure and spacing, as it is crucial for the calculation.
+At this stage, before proceeding, you should always check the detected bulk
+structure and spacing, as it is crucial for the calculation.
 To help with this, ViPErLEED provides the files
 :ref:`POSCAR_bulk and POSCAR_bulk_appended<poscar_bulk>`.
-The former contains the crystal bulk structure as detected by ViPErLEED, and
+The former contains the crystal structure of the bulk as detected by ViPErLEED;
 the latter contains the surface slab with additional bulk layers appended to
-it.
-You can visualize these files in VESTA to check if the bulk structure is as you
-expect.
-In particular, one should make sure that the bulk stoichiometry for
-POSCAR_bulk, and the bulk layer spacing for POSCAR_bulk_appended, are correct.
+it. You can visualize these files in VESTA to check if the bulk structure is
+as you expect. In particular, one should make sure that the bulk stoichiometry
+for ``POSCAR_bulk``, and the bulk layer spacing for ``POSCAR_bulk_appended``,
+are correct.
 
 Reference calculation and structure optimization
 ================================================
@@ -201,11 +218,10 @@ what happens in each section of a ViPErLEED |LEED-IV| calculation
 In short, the :ref:`reference calculation<ref-calc>` performs a full-dynamic
 LEED calculation to generate |IV| curves for the input structure. |IV| curves
 are very sensitive to the exact atomic positions and vibrational amplitudes.
-Because of this, it is generally necessary to optimize the structure to get
-the best fit to the experimental |IV| data. The reference calculation is the
-starting point for this optimization, but full-dynamic calculations are
-computationally too expensive for the optimization which may require a very
-large number of iterations.
+Because of this, it is necessary to optimize the structure to get the best fit
+to the experimental |IV| data. The reference calculation is the starting point
+for this optimization, but full-dynamic calculations are computationally too
+expensive for the optimization, which requires a large number of iterations.
 We can perform the optimization in a computationally more efficient way by
 using a perturbative approach, where we calculate the effect of small changes
 to the input structure.
@@ -213,49 +229,56 @@ This is done in the :ref:`delta-amplitudes calculation<sec_deltas>` and
 :ref:`structure optimization<sec_search>`.
 
 To run these sections, we also need to specify which parameters we want to vary
-(i.e. the parameter space).
-We do this by providing a :ref:`DISPLACEMENTS file<displacements>`:
+(i.e., the parameter space).
+We do this by providing a :ref:`DISPLACEMENTS file<displacements>`, as in
+:numref:`list_fe2o3_displacements_1`.
 
+.. _list_fe2o3_displacements_1:
 .. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/DISPLACEMENTS_L1-2_looped
    :language: console
    :caption: DISPLACEMENTS
 
-Here, we specify that we want to optimize the atomic out-of-plane positions of
-all atoms in the first and second layer from -0.05 to 0.05 Å in steps of
-0.01 Å. We optimize the vibrational amplitudes of the surface atoms in the
-same way. We subsequently optimize in-plane position of the first two layers.
-Note also the ``<loop>`` and ``</loop>`` tags at the beginning and end of the
-file, which indicate that these steps should be repeated until convergence.
+Here, we specify that we want to optimize the atomic out-of-plane positions
+of all atoms in the first and second layer from −0.05 Å to
++0.05 Å in steps of 0.01 Å. At the same time, we also optimize the
+vibrational amplitudes of the surface atoms. We subsequently turn to the
+in-plane position of the atoms in the first two layers. Note also the
+``<loop>`` and ``</loop>`` tags at the beginning and end of the file,
+which indicate that these steps should be repeated until convergence.
 For more details on the syntax, see the page on the
 :ref:`DISPLACEMENTS file<displacements>`.
 
-
 We can now start the calculation by setting the :ref:`RUN` parameter to
-``1-3 1`` and starting the program.
-This will execute the reference calculation, the Delta-Amplitude calculation
-and the looped structure optimization in order.
-By appending the ``1`` to the ``1-3``, we also tell ViPErLEED to finish with a
-second reference calculation of the optimized structure.
+``1-3 1`` and starting |calc| again. This will execute the reference
+calculation, the delta-amplitude calculation and the looped structure
+optimization in order. By appending the ``1`` to the ``1-3``, we also
+tell ViPErLEED to finish with a second reference calculation of the
+optimized structure.
 
 Once finished, you can check the log files to see if the calculation ran
 without errors.
-You can also find the final |R factor| at the end of the log file:
+You can also find the final |R factor| at the end of the log file (see
+the extract in :numref:`list_fe2o3_log_search_1`).
 
+.. _list_fe2o3_log_search_1:
 .. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/log_search_1.txt
    :language: console
    :caption: Final log
 
-You may notice that the initial |R factor| (\ :math:`R_\mathrm{P}\approx0.78`)
-is very high. This is not unusual when starting from a totally un-relaxed
-bulk-truncated structure, as these may require multiple iterations of
-reference calculations, and structure optimizations to converge.
+:numref:`fig_Fe2O3_search_progress_1` shows the evolution of the |R factor|
+during the optimization process.
+The initial |R factor| (:math:`R_\mathrm{P}\approx0.78`) is very high.
+This is not unusual when starting from a totally unrelaxed, bulk-truncated
+structure, as multiple iterations of reference calculation and structure
+optimizations are usually necessary for convergence.
 
 .. _fig_Fe2O3_search_progress_1:
 .. figure:: /_static/example_systems/Fe2O3(012)-(1x1)/figures/Search-report-first_optimization.svg
    :width: 70%
    :align: center
 
-   Upper half of page 1 for ``Search-progress.pdf``.
+   Upper half of page 1 for the ``Search-progress.pdf`` file for the
+   first optimization run of `ɑ`-Fe₂O₃\ :math:`(1\overline{1}02)`-(1×1).
 
 
 .. note::
@@ -281,20 +304,24 @@ We thus know that we need to optimize the incidence angle of the electron beam
 to get a closer correspondence between the experimental and calculated |IV|
 curves.
 
-The incidence angle is not a parameter that is accessible in the tensor
-LEED approximation.
-In ViPErLEED, we can instead optimize the incidence angle using a
-full-dynamic optimization, which optimizes a parameter by performing
-a full-dynamic reference calculation at each iteration.
+The incidence angle is not a parameter that is accessible in the
+tensor-LEED approximation. In ViPErLEED, we can instead optimize the
+incidence angle using a full-dynamic optimization, which optimizes a
+parameter by performing a full-dynamic reference calculation at each
+iteration.
 
-To do this, we need to edit PARAMETERS to set the :ref:`RUN` as ``6`` provide
-the ``OPTIMIZE`` parameter to specify which parameter we want to optimize:
+To do this, we need to edit the PARAMETERS file (see
+:numref:`list_fe2o3_opt_theta_params`) to set :ref:`RUN=6<run>` and provide
+the ``OPTIMIZE`` parameter to specify which parameter we want to optimize.
 
+.. _list_fe2o3_opt_theta_params:
 .. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/PARAMETERS_optimize_theta
    :language: console
-   :caption: PARAMETERS with OPTIMIZE specified for the incidence angle theta
+   :caption:
+       PARAMETERS, with OPTIMIZE specified for the polar incidence
+       angle :math:`\theta` of the primary electron beam.
 
-Here, we set the initial step size to 1° and converge criterion to 0.1°.
+Here, we set the initial step size to 1° and convergence criterion to 0.1°.
 After running the calculation, we find a minimum at about
 :math:`\theta \approx 0.87°` which already reduces the |R factor| to about
 :math:`R_\mathrm{P} \approx 0.22`. We can also see that the |IV| curves, and
@@ -309,7 +336,7 @@ consequently the |R factor|, are very sensitive to the incidence angle in the
    :width: 70%
    :align: center
 
-   |R factor| as a function of the incidence angle as shown in
+   |R factor| as a function of the polar incidence angle as shown in
    :ref:`FD_Optimization.pdf<fdoptimizationbeams>`.
 
 
@@ -323,14 +350,13 @@ consequently the |R factor|, are very sensitive to the incidence angle in the
 
 .. note::
 
-   If the incidence angle is off-normal, it is generally advisable to optimize
-   it relatively early on, before performing structural optimization deeper
-   into the surface.
-   Otherwise, the error in the |IV| curves may incorrectly be compensated by
-   moving the atoms relative to the incident beam, which will result in
-   incorrect positions relative to the bulk. This becomes more likely if
-   bulk-like layers contribute only weakly to the |IV| curves, i.e., when
-   also optimizing layers far below the surface.
+   If the incidence angle is off-normal, it is advisable to optimize it
+   relatively early on, before performing structural optimization deeper
+   into the surface. Otherwise, the error in the |IV| curves may incorrectly
+   be compensated by moving the atoms relative to the incident beam, which
+   will result in incorrect positions relative to the bulk. This becomes more
+   likely if bulklike layers contribute only weakly to the |IV| curves, i.e.,
+   when optimizing layers far below the surface.
 
 
 Refining the structure
@@ -352,10 +378,9 @@ also adjust the :ref:`convergence parameters<search_convergence>`.
 
 In this case, we found that by first performing another looped structure
 optimization for the first two layers (atoms ``* L1-2``), and then adding the
-third layer atoms (atoms ``* L1-3``) to the optimization, we could reliably
-further reduce the |R factor| to about :math:`R_\mathrm{P} \approx 0.16`. [#]_
+third-layer atoms (atoms ``* L1-3``) to the optimization, we could reliably
+reduce the |R factor| to about :math:`R_\mathrm{P} \approx 0.16`.\ [#]_
 
 
-.. [#] We found that optimizing all three layers right away with the default
-       convergence parameters lead to the |R factor| getting stuck in a local
-       minimum on at least one occasion.
+.. [#] Optimizing all three layers right away with the default convergence
+       parameters caused the |R factor| to get trapped in a local minimum.
