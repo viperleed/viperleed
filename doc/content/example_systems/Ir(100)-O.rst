@@ -56,22 +56,12 @@ vector |c| at fractional position :math:`c=0.35`. We will use the
 this cutoff is bulklike.
 
 .. _fig_ir_start:
-.. list-table::
-    :align: center
-    :width: 100%
+.. figure:: /_static/example_systems/Ir(100)-O/figures/view_a_b_c.svg
+   :width: 100%
+   :align: center
 
-    * - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_a.png
-
-            POSCAR rendered in :term:`VESTA`, view along |a|.
-
-      - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_b.png
-
-            POSCAR rendered in :term:`VESTA`, view along |b|
-            (slightly off-axis).
-
-      - .. figure:: /_static/example_systems/Ir(100)-O/figures/view_c.png
-
-            POSCAR rendered in :term:`VESTA`, view along |c|.
+   POSCAR rendered in :term:`VESTA`, viewed along |a| (left), |b| (center) and
+   |c| (right).
 
 .. hint::
    Of course there are other possible structural models, including adsorption
