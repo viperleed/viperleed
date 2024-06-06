@@ -99,25 +99,32 @@ latex_elements = {
     'papersize': 'a4paper',
     'passoptionstopackages': r'\PassOptionsToPackage{svgnames}{xcolor}',
     'figure_align': 'H', # Latex figure (float) alignment
-    'preamble': fr'''
-    \usepackage{{braket}}
-    \usepackage[overlay,absolute]{{textpos}}% for header in PDF screen version
-    \usepackage{{everypage}}
-    \usepackage{{newunicodechar}}
-    \newunicodechar{{α}}{{$\alpha$}}
-    \newunicodechar{{Δ}}{{$\Delta$}}
+    'preamble': r'''
+\usepackage{braket}
+\usepackage[overlay,absolute]{textpos}% for header in PDF screen version
+\usepackage{everypage}
+\usepackage{newunicodechar}
+\newunicodechar{α}{$\alpha$}
+\newunicodechar{Δ}{$\Delta$}
 
-    \textblockorigin{{28mm}}{{16.5mm}} % position x,y wrt top-left corner of page
-    %\setlength{{\TPHorizModule}}{{\pdfpagewidth}} % text block width = page width
-    \setlength{{\TPHorizModule}}{{\textwidth}} % text block width = text width
-    \newlength{{\chapterNameLength}}%
-    % Modify the size of the ViPErLEED logo. See sphinx-doc/sphinx/issues/11930
-    \AtBeginDocument{{%
-      \renewcommand{{\sphinxlogo}}{{%
-        \sphinxincludegraphics[width=0.15\textwidth]{{{latex_logo.rsplit('/', 1)[1]}}}%
-        \par%
-        }}%
-      \renewcommand{{\sphinxcrossref}}[1]{{#1}}%
+\textblockorigin{28mm}{16.5mm} % position x,y wrt top-left corner of page
+%\setlength{\TPHorizModule}{\pdfpagewidth} % text block width = page width
+\setlength{\TPHorizModule}{\textwidth} % text block width = text width
+\newlength{\chapterNameLength}%
+''' + fr'''
+% Modify the size of the ViPErLEED logo. See sphinx-doc/sphinx/issues/11930
+\AtBeginDocument{{%
+  \renewcommand{{\sphinxlogo}}{{%
+    \sphinxincludegraphics[width=0.15\textwidth]{{{latex_logo.rsplit('/', 1)[1]}}}%
+    \par%
     }}%
-    '''
+  \renewcommand{{\sphinxcrossref}}[1]{{#1}}%
+}}%
+''' + r'''
+% Fix citations in figure captions. They are broken in sphinx when
+% using sphinxcontrib-bibtex (as we do). See original issue #276 at
+% https://github.com/mcmtroffaes/sphinxcontrib-bibtex/issues/276
+\usepackage{etoolbox}
+\AtBeginEnvironment{figure}{\pretocmd{\hyperlink}{\protect}{}{}}
+''',
     }
