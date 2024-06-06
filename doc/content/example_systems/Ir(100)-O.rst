@@ -61,7 +61,7 @@ this cutoff is bulklike.
    :align: center
 
    POSCAR rendered in :term:`VESTA`, viewed along |a| (left), |b| (center) and
-   |c| (right).
+   |c| (right). Ir atoms are shown in blue, oxygen in red.
 
 .. hint::
    Of course there are other possible structural models, including adsorption
