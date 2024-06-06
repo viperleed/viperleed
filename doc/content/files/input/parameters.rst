@@ -18,7 +18,7 @@ Parameter names should be given at the beginning of a line, e.g.:
 
    ! a comment
 
-   SITE_DEF Fe = siteA 38 41, siteB 50-55, topSite top(2)          !another comment
+   SITE_DEF Fe = siteA 38 41, siteB 50-55, topSite top(2)   !another comment
    SITE_DEF O = topSite top(2)
 
 The order of parameters is not important, but defining a parameter 

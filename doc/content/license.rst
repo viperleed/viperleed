@@ -1,7 +1,9 @@
+.. include:: /substitutions.rst
+
 .. _license:
 
 ===================
-License Information
+License information
 ===================
 
 ViPErLEED
@@ -9,7 +11,7 @@ ViPErLEED
 
 :term:`ViPErLEED` is released as open-source under the :term:`GPLv3` (or later)
 license.
-Copyright (c) 2019-2024, ViPErLEED Developers.
+Copyright (c) 2019–2024, ViPErLEED Developers.
 
 The ViPErLEED project aims to provide free and open software.
 However, because ViPErLEED is building on existing software, the
@@ -18,10 +20,9 @@ of the software. For inquiries or questions, please contact the ViPErLEED
 developers under info@viperleed.org.
 
 All files in the main repository and all files authored by the ViPErLEED
-developers are licensed under the the :term:`GPLv3`.
-This explicitly includes the ViPErLEED Python package (``viperleed calc``,
-``gui``, ``utils``), ViPErLEED electronics (firmware, schematics, software) and
-the associated documentation.
+developers are licensed under the :term:`GPLv3`. This explicitly includes
+the ViPErLEED Python package (|calc|, ``gui``, ``utils``), ViPErLEED
+electronics (firmware, schematics, software) and the associated documentation.
 
 
 The ViPErLEED Spot tracker is licensed under ... **TODO Michael**
@@ -41,7 +42,7 @@ Others may not redistribute TensErLEED, without permission by the original
 authors.*
 
 Changes to the TensErLEED source code made by the ViPErLEED authors (i.e. the
-patches that constitute v.1.6.1 onwards), are licensed under GPLv3 or later.
+patches that constitute v1.6.1 onwards), are licensed under GPLv3 or later.
 The copyright to these changes remains with the ViPErLEED authors.
 
 EEASISSS

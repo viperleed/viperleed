@@ -1,9 +1,12 @@
+.. include:: /substitutions.rst
+
 .. _searchbeams:
 
 SEARCH_BEAMS
 ============
 
-SEARCH_BEAMS defines whether the search should optimize the R-factor for integer rods, for fractional rods, or for all rods ("average").
+SEARCH_BEAMS defines whether the search should optimize the |R factor| for 
+integer beams, for fractional beams, or for all beams ("average").
 
 **Default:** average
 

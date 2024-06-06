@@ -30,6 +30,7 @@ from viperleed.calc.files.iorfactor import prepare_rfactor_energy_ranges
 from viperleed.calc.files.vibrocc import writeVIBROCC
 from viperleed.calc.lib import leedbase
 from viperleed.calc.lib.base import BackwardsReader, readIntLine
+from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
@@ -368,7 +369,7 @@ def writeRfInfo(sl, rp, file_path="rf.info"):
         else:
             iorf.append(1)
 
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         formatter = {'energies': ff.FortranRecordWriter('F7.2'),
                      'int': ff.FortranRecordWriter('I3'),
                      'beams': ff.FortranRecordWriter("25I3"),
@@ -582,7 +583,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
     # i3 = ff.FortranRecordWriter("I3")
     i1 = ff.FortranRecordWriter("I1")
     maxgen = rp.SEARCH_MAX_GEN
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         formatter = {'int': ff.FortranRecordWriter('I3'),
                      'gens': ff.FortranRecordWriter('I6'),
                      'rmut': ff.FortranRecordWriter('F7.4'),
@@ -613,7 +614,7 @@ C MNATOMS IS RELICT FROM OLDER VERSIONS
     output += (formatter['int'].write([rp.SEARCH_BEAMS]).ljust(16)
                + "Optimization of which beam group do you want? "
                "(0=Aver,1=Int,2=Half)\n")
-    if rp.TL_VERSION >= 1.71:
+    if rp.TL_VERSION >= Version('1.7.1'):
         outdata = 0
         if rp.PARABOLA_FIT["type"] != "none":
             outdata = 1

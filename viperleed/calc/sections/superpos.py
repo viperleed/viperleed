@@ -96,11 +96,12 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
         rp.getFortranComp()
     # Get FORTRAN files                                                         # TODO: use CompileTask subclass (Issue #43)
     try:
-        tldir = rp.get_tenserleed_directory()
-        src_dir = tldir / 'src'
+        tl_source = rp.get_tenserleed_directory()
+        tl_path = tl_source.path
+        src_dir = tl_path / 'src'
         src_path = next(f for f in src_dir.glob('superpos*'))                   # TODO: StopIteration; Probably also want *.f* in the glob?
         shutil.copy2(src_path, src_path.name)
-        lib_dir = tldir / 'lib'
+        lib_dir = tl_path / 'lib'
         lib_path = next(f for f in lib_dir.glob('lib.superpos*'))               # TODO: StopIteration; Probably also want *.f* in the glob?
         shutil.copy2(lib_path, lib_path.name)
         globalname = "GLOBAL"
@@ -115,7 +116,7 @@ def superpos(sl, rp, subdomain=False, for_error=False, only_vary=None):
                           src_path,
                           src_dir / globalname)
         validate_multiple_files(files_to_check, logger,
-                                "superpos", rp.TL_VERSION_STR)
+                                "superpos", rp.TL_VERSION)
 
     # Compile FORTRAN files
     sposname = Path(f"superpos-{rp.timestamp}")

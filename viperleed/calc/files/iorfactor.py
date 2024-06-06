@@ -37,6 +37,7 @@ from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.version import Version
 
 logger = logging.getLogger(__name__)
 
@@ -419,7 +420,7 @@ def writeWEXPEL(sl, rp, theobeams, filename="WEXPEL", for_error=False):
     iorf.extend([0]*(len(rp.ivbeams)-len(rp.expbeams)))
 
     f72 = ff.FortranRecordWriter('F7.2')
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         beam_formatter = ff.FortranRecordWriter('25I3')
     else:
         beam_formatter = ff.FortranRecordWriter('25I4')
@@ -521,7 +522,14 @@ def largest_nr_grid_points(rpars, theobeams, for_error,
      _, interp_step) = prepare_rfactor_energy_ranges(rpars, theobeams,
                                                      for_error, n_expand)
     interp_exp = EnergyRange(experiment.start, experiment.stop, interp_step)
-    interp_theo = EnergyRange(theory.start, theory.stop, interp_step)
+    section = 'refcalc' if not for_error else 'superpos'
+
+    # Make sure to use the whole stored range of energies (which corresponds
+    # also to what is in fd.out) and not just the overlapping one!
+    interp_theo = EnergyRange(
+        min([min(b.energies) for b in rpars.theobeams[section]]),
+        max([max(b.energies) for b in rpars.theobeams[section]]),
+        interp_step)
 
     n_max = max((experiment.n_energies,
                  theory.n_energies,

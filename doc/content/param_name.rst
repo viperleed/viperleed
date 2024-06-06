@@ -1,23 +1,26 @@
+.. include:: /substitutions.rst
+
 .. _paramname:
 
-List of Parameters by Name
+List of PARAMETERS by name
 ==========================
 
-See below for an alphabetical list of all parameters. Alternatively, these pages contain the same information:
+See below for an alphabetical list of all parameters.
+Alternatively, these pages contain the same information:
 
--   :ref:`List of parameters by topic<paramtopics>` 
--   :ref:`List of parameters by TensErLEED section<paramsection>` 
+-   :ref:`List of parameters by topic<paramtopics>`
+-   :ref:`List of parameters by TensErLEED section<paramsection>`
 
 .. note::
-   While all parameters have a default value, parameters marked with a 
-   "**→**" usually require user input for simple but non-trivial 
+   While all parameters have a default value, parameters marked with a
+   "**→**" usually require user input for simple but non-trivial
    systems.
 
 
 .. table::
   :width: 100%
   :widths: 25 75
-  
+
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | Parameter                                               | Function                                                                                                                                |
   +=========================================================+=========================================================================================================================================+
@@ -49,7 +52,7 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`HALTING<HALTING>`                                 | Sensitivity to things going wrong, i.e. how easily should ViPErLEED stop                                                                |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`IV_SHIFT_RANGE<IVSHIFTRANGE>`                     | Range and step size for shifting experimental and theoretical curves during R-factor calculation                                        |
+  | :ref:`IV_SHIFT_RANGE<IVSHIFTRANGE>`                     | Range and step size for shifting experimental and theoretical curves during |R-factor| calculation                                      |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`KEEP_REFCALC_DIRS<keep_refcalc_dirs>`             | Toggle to keep the reference calculating execution directories                                                                          |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -71,19 +74,19 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`PHASESHIFT_EPS<PHASESHIFTMIN>`                    | Cutoff in phaseshifts magnitudes to determine :ref:`LMAX<LMAX>`                                                                         |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`                     | Change appearance of I(V) plot files like :ref:`Rfactor_plots.pdf<Rfactorplots>`                                                        |
+  | :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`                     | Change appearance of |IV| plot files like :ref:`Rfactor_plots.pdf<Rfactorplots>`                                                        |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`RUN<RUN>`                                   | Which parts of ViPErLEED / TensErLEED should be run, in order                                                                           |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`R_FACTOR_TYPE<RFACTORTYPE>`                       | Which definition of the R-factor to use                                                                                                 |
+  | :ref:`R_FACTOR_TYPE<RFACTORTYPE>`                       | Which definition of the |R factor| to use                                                                                               |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`R_FACTOR_LEGACY<RFACTORLEGACY>`                   | Use old TensErLEED R-factor calculation                                                                                                 |
+  | :ref:`R_FACTOR_LEGACY<RFACTORLEGACY>`                   | Use old TensErLEED |R-factor| calculation                                                                                               |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`R_FACTOR_SMOOTH<RFACTORSMOOTH>`                   | How strongly experimental beams are smoothed                                                                                            |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`SCREEN_APERTURE<SCREEN_APERTURE>`                 | The aperture of the acceptance cone of the LEED screen                                                                                  |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`SEARCH_BEAMS<SEARCHBEAMS>`                        | Whether to use R-factor of integer, fractional, or all beams for the search                                                             |
+  | :ref:`SEARCH_BEAMS<SEARCHBEAMS>`                        | Whether to use |R factor| of integer, fractional, or all beams for the search                                                           |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`SEARCH_CONVERGENCE<SEARCH_CONVERGENCE>`           | Convergence criteria for the search, and convergence-dependent parameter control                                                        |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -125,9 +128,9 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`TL_IGNORE_CHECKSUM<TL_IGNORE_CHECKSUM>`           | Skip calculation of TensErLEED source code checksums                                                                                    |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_DEBYE<T_DEBYE>`                                 | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                                            |
+  | :ref:`T_DEBYE<T_DEBYE>`                                 | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<vibrocc>`)                                             |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`                       | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                                      |
+  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`                       | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<vibrocc>`)                                       |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`V0_IMAG<v0_imag>`                                 | Imaginary part of the inner potential                                                                                                   |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -135,7 +138,7 @@ See below for an alphabetical list of all parameters. Alternatively, these pages
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`V0_Z_ONSET<INPOTZ>`                               | How far from the topmost atom the inner potential begins                                                                                |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`                   | Scaling factor, only for automatically generating :ref:`VIBROCC<VIBOCCIN>`                                                              |
+  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`                   | Scaling factor, only for automatically generating :ref:`VIBROCC<vibrocc>`                                                               |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`ZIP_COMPRESSION_LEVEL<zip_compression_level>`     | Compression level for :ref:`tensor<tensorszip>` and :ref:`delta-amplitude files<deltaszip>` ZIP archives.                               |
   +---------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+

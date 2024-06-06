@@ -15,6 +15,8 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+from viperleed.calc.lib.version import Version
+
 
 def writeSuperposInput(sl, rp, config, param_name="PARAM",
                        contrin_name="superpos-CONTRIN",
@@ -176,7 +178,7 @@ C
         raise
 
     # collect contrin output
-    if rp.TL_VERSION < 1.7:
+    if rp.TL_VERSION < Version('1.7.0'):
         formatter = {'int': ff.FortranRecordWriter('I3'),
                      'occ': ff.FortranRecordWriter('10F7.4'),
                      'var': ff.FortranRecordWriter('I3'),

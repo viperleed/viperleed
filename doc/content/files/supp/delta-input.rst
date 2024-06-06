@@ -1,7 +1,7 @@
 .. _delta-input:
 
-Delta calculation input
-=======================
+Delta-amplitudes calculation input
+==================================
 
 Since the input files for the delta calculations are highly redundant 
 (one "delta calculation" is performed for each separate delta file), 

@@ -1,3 +1,5 @@
+.. include:: /substitutions.rst
+
 .. _paramtopics:
 
 ===========================
@@ -13,8 +15,8 @@ groupings :ref:`here<PARAMETERS>`.
    "**→**" usually require user input for simple but non-trivial 
    systems.
 
-viperleed calc execution
-========================
+|calc| execution
+================
 
 Defines what to calculate and where to start.
 
@@ -44,7 +46,7 @@ Defines what to calculate and where to start.
 
 .. _input_structure_settings:
 
-Input Structure
+Input structure
 ===============
 
 .. table::
@@ -81,11 +83,11 @@ Elements, vibrational amplitudes and element concentrations
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`SITE_DEF<SITEDEF>`                               | Define which sites in the :ref:`POSCAR file<POSCAR>` are special, i.e. have different vibrational amplitude                              |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_DEBYE<T_DEBYE>`                                      | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                                             |
+  | :ref:`T_DEBYE<T_DEBYE>`                                      | Debye temperature of the system (only for automatically generating :ref:`VIBROCC<vibrocc>`)                                              |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`                            | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<VIBOCCIN>`)                                       |
+  | :ref:`T_EXPERIMENT<T_EXPERIMENT>`                            | Measurement temperature in experiment (only for automatically generating :ref:`VIBROCC<vibrocc>`)                                        |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`                        | Scaling factor, only for automatically generating :ref:`VIBROCC<VIBOCCIN>`                                                               |
+  | :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`                        | Scaling factor, only for automatically generating :ref:`VIBROCC<vibrocc>`                                                                |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 
 .. _symmetry_settings:
@@ -162,8 +164,8 @@ Computational setup
   | **→** :ref:`N_CORES<NCORES>`                                 | The number of CPUs to use                                                                                                                |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 
-R-factor
-========
+|R factor|
+==========
 
 .. table::
   :width: 100%
@@ -172,11 +174,11 @@ R-factor
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | Parameter                                                    | Function                                                                                                                                 |
   +==============================================================+==========================================================================================================================================+
-  | :ref:`IV_SHIFT_RANGE<IVSHIFTRANGE>`                          | Range and step size for shifting experimental and theoretical curves during R-factor calculation                                         |
+  | :ref:`IV_SHIFT_RANGE<IVSHIFTRANGE>`                          | Range and step size for shifting experimental and theoretical curves during |R-factor| calculation                                       |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`R_FACTOR_TYPE<RFACTORTYPE>`                            | Which definition of the R-factor to use                                                                                                  |
+  | :ref:`R_FACTOR_TYPE<RFACTORTYPE>`                            | Which definition of the |R factor| to use                                                                                                |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`R_FACTOR_LEGACY<RFACTORLEGACY>`                        | Use legacy TensErLEED R-factor                                                                                                           |
+  | :ref:`R_FACTOR_LEGACY<RFACTORLEGACY>`                        | Use legacy TensErLEED |R factor|                                                                                                         |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`R_FACTOR_SMOOTH<RFACTORSMOOTH>`                        | How strongly experimental beams are smoothed                                                                                             |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
@@ -193,7 +195,7 @@ Search behaviour
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | Parameter                                                    | Function                                                                                                                                 |
   +==============================================================+==========================================================================================================================================+
-  | :ref:`SEARCH_BEAMS<SEARCHBEAMS>`                             | Whether to use R-factor of integer, fractional, or all beams for the search                                                              |
+  | :ref:`SEARCH_BEAMS<SEARCHBEAMS>`                             | Whether to use |R factor| of integer, fractional, or all beams for the search                                                            |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`SEARCH_CONVERGENCE<SEARCH_CONVERGENCE>`                | Convergence criteria for the search, and convergence-dependent parameter control                                                         |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
@@ -277,7 +279,7 @@ Output style
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | Parameter                                                    | Function                                                                                                                                 |
   +==============================================================+==========================================================================================================================================+
-  | :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`                          | Change appearance of the R-factor plot files                                                                                             |
+  | :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`                          | Change appearance of the |R-factor| plot files                                                                                           |
   +--------------------------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 
 

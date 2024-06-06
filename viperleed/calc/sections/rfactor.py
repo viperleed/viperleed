@@ -439,10 +439,11 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
 
     # get fortran files and compile
     try:
-        tldir = rp.get_tenserleed_directory()
-        libpath = tldir / "lib"
+        tl_source = rp.get_tenserleed_directory()
+        tl_path = tl_source.path
+        libpath = tl_path / "lib"
         libname = next(libpath.glob("rfacsb*"))                                 # StopIteration??
-        srcpath = tldir / "src"
+        srcpath = tl_path / "src"
         srcname = next(srcpath.glob("rfactor.*"))                               # StopIteration??
         shutil.copy2(libname, libname.name)  # Copy here from source
         shutil.copy2(srcname, srcname.name)  # Copy here from source
@@ -461,7 +462,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
         files_to_check = (Path(libpath) / libname,
                           Path(srcpath) / srcname)
         validate_multiple_files(files_to_check, logger,
-                                "R-factor", rp.TL_VERSION_STR)
+                                "R-factor", rp.TL_VERSION)
 
     logger.info("Compiling fortran input files...")
     rfacname = f"rfactor-{rp.timestamp}"
