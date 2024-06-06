@@ -75,7 +75,7 @@ html_static_path = ['_static']
 html_theme_options = {
     'logo_only': True,
     'display_version': True,
-    'prev_next_buttons_location': None,
+    'prev_next_buttons_location': 'both',
     'style_external_links': True,
     # Toc options
     'collapse_navigation': True,
