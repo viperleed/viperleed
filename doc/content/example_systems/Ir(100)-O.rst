@@ -240,7 +240,7 @@ notice something important: The |R factor| of the reference calculation
 (\ :math:`R_\mathrm{P} \approx 0.18`) *is different* from the one we
 obtained from the :ref:`superposition<super_pos>` calculation at the end
 of the previous run (\ :math:`R_\mathrm{P} \approx 0.21`). This comes from
-the **error of the tensor-LEED approximation** used for the structure
+the :ref:`error of the tensor-LEED approximation<tensor_leed_errors>` used for the structure
 optimization. In this case, the real |R factor| — as obtained from the
 reference calculation — is lower. However, this is not always the case.
 You should **never** rely on the |R factor| produced by the superposition

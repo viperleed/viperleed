@@ -181,7 +181,8 @@ flag before proceeding:
 The |R factor| resulting from an additional reference calculation, is
 decreased to :math:`R_\mathrm{P} \approx 0.33` compared to the
 :math:`R_\mathrm{P} \approx 0.47` value at the end of the optimization run
-— **a big difference**. This comes from the mentioned **tensor-LEED error**.
+— **a big difference**. This comes from the mentioned
+:ref:`tensor-LEED error<tensor_leed_errors>`.
 
 Fine DISPLACEMENTS and search parameters
 ========================================
