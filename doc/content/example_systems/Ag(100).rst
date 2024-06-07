@@ -153,7 +153,7 @@ The first page (see :numref:`fig_ag_phaseshifts`) shows the energy-dependent
 phase shifts for the surface atom.
 
 .. _fig_ag_phaseshifts:
-.. figure:: /_static/example_systems/Ag(100)/Phaseshifts_plots.pdf
+.. figure:: /_static/example_systems/Ag(100)/Phaseshifts_plots.svg
    :width: 450px
    :align: center
 
@@ -197,7 +197,7 @@ which the experimental and calculated beams are plotted. An extract is shown
 in :numref:`fig_ag_iv_plot`.
 
 .. _fig_ag_iv_plot:
-.. figure:: /_static/example_systems/Ag(100)/Rfactor_plots_refcalc.pdf
+.. figure:: /_static/example_systems/Ag(100)/Rfactor_plots_refcalc.svg
    :width: 450px
    :align: center
 
@@ -291,7 +291,7 @@ To visualize how our optimization went, we can also take a look at the
 The first page is shown in :numref:`fig_ag_search_progress`.
 
 .. _fig_ag_search_progress:
-.. figure:: /_static/example_systems/Ag(100)/Search-progress.pdf
+.. figure:: /_static/example_systems/Ag(100)/Search-progress.svg
    :width: 450px
    :align: center
 
