@@ -36,10 +36,8 @@ interface, see :ref:`this tutorial<example_Ni(110)>`.
     change in the future.
     If you have any suggestions for features or feedback concerning the ASE
     interface, feel free to contact the ViPErLEED team (preferably by opening
-    an issue on the ViPErLEED GitHub page).
-
-.. todo::
-    Add link to viperleed github
+    an issue on the
+    `ViPErLEED GitHub page <https://github.com/viperleed/viperleed>`__).
 
 
 .. _aseapi_auto_sites:
