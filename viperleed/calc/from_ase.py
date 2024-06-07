@@ -522,8 +522,8 @@ def rfactor_from_csv(                                                           
     if not _HAS_NEW_RFACTOR:
         raise ModuleNotFoundError(
             "Missing R-factor compiled Fortran extension module. "
-            "Run make in viperleed/calc/extensions, then try again",
-            name='viperleed.calc.extensions.rfactor'
+            "Run make in viperleed/extensions, then try again",
+            name='viperleed.extensions.rfactor'
             )
 
     # Use Pendry R-factor - TODO: discuss if this should be a user
