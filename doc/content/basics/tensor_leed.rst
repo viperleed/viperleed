@@ -226,7 +226,7 @@ genetic algorithm (see :ref:`SEARCH_CULL<search_cull>` for details).
 
 .. _tensor_leed_errors:
 
-Tensor-LEED Errors
+Tensor-LEED errors
 ==================
 
 Since the tensor-LEED approach is based on first-order perturbation theory, it
@@ -235,7 +235,7 @@ The larger the perturbation, the larger the error incurred by the approximation
 and the less reliable the results.
 
 This should be kept in mind when interpreting the results of any ViPErLEED
-segment that uses the tensor-LEED approach (i.e. the
+segment that uses the tensor-LEED approach (i.e., the
 :ref:`structure search<sec_search>`, but also the
 :ref:`error calculation<error_calculation>`).
 In particular, it is **strongly** recommended to run a new reference calculation
@@ -243,3 +243,12 @@ after the structure optimization has converged to get rid of any accumulated
 errors.
 It may also be necessary to iterate between structure search and reference
 calculation to get the best possible fit.
+
+There is one case, however, in which a full-dynamic calculation can yield more
+erroneous results than tensor LEED. The full-dynamic reference calculation
+cannot provide exact results when an atom has mixed chemical composition
+and the elements have different optimized positions. This is because only
+one position can be specified for each atom. In this case, the tensor-LEED
+approximation is the only viable alternative. It should anyway be used with
+care. In particular, the position deviations of the different chemical species
+from the "mean" position used for the full-dynamic calculation should be small.
