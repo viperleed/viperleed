@@ -289,48 +289,69 @@ shows the |R factor|\ s corresponding to each trial value.
 Refined structure fit
 =====================
 
-As usual, we can now perform some final structure fits with a fine-grained
-(sub pm steps) grid. In particular, we should also optimize the
+As usual, we can now perform some final structure fits over a fine-grained
+grid with subpicometer step. In particular, we should also optimize the
 **vibrational amplitudes**, which we have skipped so far. We recommend
 starting with the vibrational amplitudes here, since we have not touched
-them at all in the previous optimization step:
+them at all in the previous optimization step.
+:numref:`list_cu-te_diplacements_very_fine` shows the DISPLACEMENTS file
+for the refined structure optimization.
 
+.. _list_cu-te_diplacements_very_fine:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_fine_1
    :language: console
-   :caption: DISPLACEMENTS (0.5 pm range)
+   :caption: DISPLACEMENTS (0.5 pm step) for Cu(111)-Te.
 
-You may want to finish up with a last "fine-tuning" of the vibrational
-amplitudes and (\ :math:`z`) positions. See e.g. file ``DISPLACEMENTS_fine_2``
-in the input files, but feel free to play around with the setting yourself,
-to get a feeling for the available options. Altogether, this should bring
-us to an |R factor| :math:`R_\mathrm{P} \approx 0.19`, which is already a good
-agreement for such a heavily corrugated surface, details see discussion in
+You may want to finish up with a last "fine tuning" of the vibrational
+amplitudes and (\ :math:`z`) positions. See, for instance,
+``DISPLACEMENTS_fine_2`` in the input files, but feel free to play around
+with the setting yourself, to get a feeling for the available options.
+Altogether, this should bring us to a Pendry |R factor|
+:math:`R_\mathrm{P} \approx 0.19`, which is already a good agreement for
+such a heavily corrugated surface. For more details concerning corrugated
+surfaces see the discussion in
 Ref. :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 
 Error calculation
 =================
 
 We can also perform an error calculation for this system to gauge how
-sensitive our result is to minor changes of structural parameters.
-For this, we need to set up a :ref:`DISPLACEMENTS file<displacements>`
-specifying the requested steps. Here is an example for displacements
-in (:math:`x`) direction, but example for (:math:`y`), (:math:`z`)
-and vibrational amplitudes are provided in the
-:download:`input files</_static/example_systems/Cu(111)-Te/input_files.zip>`
-as well:
+sensitive our result is to minor changes of structural parameters. This
+can also give us an estimate of the uncertainty of the fit parameters.
+To run an error calculation, we need a :ref:`DISPLACEMENTS file<displacements>`
+specifying the requested steps.
 
+.. only:: html
+
+   :numref:`list_cu-te_errors_x` shows an example for displacements along the
+   :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
+   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibrational
+   amplitudes are provided in the
+   :download:`input files</_static/example_systems/Cu(111)-Te/input_files.zip>`.
+
+.. only:: not html
+
+   :numref:`list_cu-te_errors_x` shows an example for displacements along the
+   :math:`x` direction (i.e., parallel to the |a| unit-cell vector for the
+   POSCAR file used here). Examples for :math:`y`, :math:`z`, and vibrational
+   amplitudes are provided in the input files available in the online version
+   of the documentation at `viperleed.org <viperleed.org>`__.
+
+.. _list_cu-te_errors_x:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_errors_x
    :language: console
-   :caption: DISPLACEMENTS for error calculation in x direction
+   :caption: DISPLACEMENTS for error calculation in :math:`x` direction.
 
-The results are plotted in the file :ref:`Errors.pdf<errorspdf>`.
-We see that displacements for atoms in all layers have a drastic impact
-on the |R factor|. Thus, we can be fairly confident that all varied atoms
-are indeed present within the true surface structure.
+The results are plotted in the :ref:`Errors.pdf<errorspdf>` file, shown in
+:numref:`fig_cu-te_errors`. We see that displacements for atoms in all
+layers have a drastic impact on the |R factor|. Thus, we can be fairly
+confident that all varied atoms are indeed present within the true surface
+structure.
 
+.. _fig_cu-te_errors:
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/Errors_x_vib.svg
    :width: 100%
    :align: center
 
-   Page 1 of file ``Errors.pdf`` for (left) displacements in (:math:`x`)
+   Page 1 of file ``Errors.pdf`` for (left) displacements in :math:`x`
    direction and (right) changes of vibrational amplitudes.
