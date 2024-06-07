@@ -1,5 +1,8 @@
 .. include:: /substitutions.rst
 
+.. |5rt3| replace:: (5 × √3)\ :sub:`rect`
+.. |CuTe| replace:: Cu(111)-\ |5rt3|\ -Te
+
 .. _example_Cu-Te:
 
 ====================================
@@ -10,21 +13,19 @@ The following example covers a ViPErLEED analysis and structure optimization
 for a copper-telluride layer on Cu(111) based on the paper by
 :cite:t:`kisslingerSubmonolayerCopperTelluride2021`. The experimental data and
 the outline for the analysis steps described below were provided by the authors
-of the publication.
-This system deals with a :math:`(5\times \sqrt{3})_{\text{rect}}`
-superstructure and has 10 atoms per bulk layer. It serves as an example for how
-a more challenging system can be treated with ViPErLEED. In fact, the analysis
-presented in the original publication was performed using an early development
-version of ViPErLEED :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
+of the publication. This system deals with a |5rt3| superstructure and has 10
+atoms per bulk layer. It serves as an example for how a rather challenging
+system can be treated with ViPErLEED. The analysis presented in the original
+publication was performed using an early development version of ViPErLEED
+:cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 
 .. _Cu(111)-Te_LEED_pattern:
 .. figure:: /_static/example_systems/Cu(111)-Te/figures/Cu(111)-Te_LEED_pattern.png
    :width: 40%
    :align: center
 
-   Snapshot of the experimental LEED pattern of
-   :math:`(5\times \sqrt{3})_{\text{rect}}` at an incident electron energy
-   of 60 eV. Diffraction spots are labelled by the ViPErLEED spot tracker
+   Experimental LEED pattern of |CuTe| at an incident electron energy of
+   60 eV. Diffraction spots are labelled by the ViPErLEED spot tracker
    :cite:p:`viperleedSpot`.
 
 .. only:: html
@@ -45,10 +46,9 @@ version of ViPErLEED :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
 Introduction
 ============
 
-The system we are analyzing is a :math:`(5\times \sqrt{3})_{\text{rect}}`
-superstructure of copper telluride on the hexagonal Cu(111) substrate.
-The tellurium coverage is 0.40 monolayers, which corresponds to 4 tellurium
-atoms per surface unit cell.
+The system we are analyzing is a |5rt3| superstructure of copper telluride on
+the hexagonal Cu(111) substrate. The tellurium coverage is 0.40 monolayers,
+which corresponds to four tellurium atoms per surface unit cell.
 
 From experiments, we have a set of 79 beams in our energy range (20 to
 500 eV), stored in the :ref:`EXPBEAMS.csv<expbeams>` file. These beams
@@ -80,30 +80,28 @@ so we should expect significant relaxation during structure optimization.
    :width: 100%
    :align: center
 
-   POSCAR rendered in :term:`VESTA`, viewed along |a| (left), |b| (center) and
-   |c| (right). Cu atoms are shown in blue, Te atoms in yellow.
+   POSCAR of |CuTe| rendered in :term:`VESTA`, viewed along |a| (left), |b|
+   (center), and |c| (right). Cu atoms are shown in blue, Te atoms in yellow.
 
 
 PARAMETERS
 ==========
 
-Similar to the previous examples, we start by
-setting up a :ref:`PARAMETERS file<parameters>`,
-as in :numref:`list_cu-te_parameters`.
+Similar to the previous examples, we start by setting up a
+:ref:`PARAMETERS file<parameters>` file as in :numref:`list_cu-te_parameters`.
 
 .. _list_cu-te_parameters:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/PARAMETERS
    :language: console
-   :caption: PARAMETERS file for Cu(111)-Te.
+   :caption: PARAMETERS file for |CuTe|.
 
-Most of the parameters set in this file have been explained in
+Most of the parameters in this file have been explained in
 :ref:`previous examples<example_ag_100>`, so we will skip some details
 here. Worth mentioning in this particular case is that we use
-:ref:`SITE_DEF<sitedef>` to define the two topmost copper and
-tellurium atoms as explicit surface sites. We are further using
-the :ref:`SUPERLATTICE parameter<superlattice>` to manually define
-the surface superlattice type and orientation (to match the
-convention used in :ref:`EXPBEAMS.csv<expbeams>`). We use the explicit
+:ref:`SITE_DEF<sitedef>` to define the two topmost copper and tellurium atoms 
+as explicit sites. We also give the in-plane relationship between the surface 
+and bulk via the :ref:`SUPERLATTICE parameter<superlattice>`, to match the
+convention used in :ref:`EXPBEAMS.csv<expbeams>`. We use the explicit
 matrix notation as this particular reconstruction cannot be expressed
 in Wood's notation.
 
@@ -138,16 +136,16 @@ used, see the entry on the :ref:`DISPLACEMENTS file<displacements>`.
 .. _list_cu-te_diplacements_rough:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_rough_1
    :language: console
-   :caption: DISPLACEMENTS (30 pm range) for Cu(111)-Te.
+   :caption: DISPLACEMENTS (30 pm range) for |CuTe|.
 
 .. note::
     Note that we allow displacements of up to 0.3 Å for tellurium to speed
     up the convergence in this example. Normally, this is not recommended,
     because the :ref:`tensor-LEED approximation<tensor_leed>` will lead to
-    substation errors for displacement of 0.3 Å.
+    substantial :ref:`errors<tensor_leed_errors>` for such large displacements.
 
 As usual, we can see a visualization of the optimization convergence in the
-file :ref:`Search-report.pdf<searchreportpdf>` in the ``OUT`` directory.
+:ref:`Search-report.pdf<searchreportpdf>` file of the ``OUT`` directory.
 :numref:`Cu(111)-Te_search_report` shows the first page of the
 :ref:`Search-report.pdf<searchreportpdf>` file. The upper panel shows the
 |R factor| as a function of the search progress (search generations). The
@@ -161,11 +159,11 @@ the optimization.
    :align: center
 
    First page of the :ref:`Search-report.pdf<searchreportpdf>` file produced
-   by |calc| for the first (rough) structure optimization for Cu(111)-Te.
+   by |calc| for the first, rough structure optimization for |CuTe|.
 
 The initial reference calculation :ref:`yields <r-factor_calculation>` an
 |R factor| :math:`R_\mathrm{P} \approx 0.82` since our starting configuration
-is very far from the ideal positions. Over the rough optimization parameter
+is very far from the ideal positions. Over the rough optimization, parameter
 values are shifted by up to 0.24 Å compared to the initial model (this is
 a lot!). The |R factor| drops to :math:`R_\mathrm{P} \approx 0.47`. This is
 still quite poor, but the progress is encouraging.
@@ -196,7 +194,7 @@ optimization. For this stage, a choice of 10 pm range with 1 pm steps
 .. _list_cu-te_diplacements_fine:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_rough_2
    :language: console
-   :caption: DISPLACEMENTS (10 pm range) for Cu(111)-Te.
+   :caption: DISPLACEMENTS (10 pm range) for |CuTe|.
 
 .. hint::
     In preparing this example we found that the default search parameters
@@ -283,7 +281,7 @@ shows the |R factor|\ s corresponding to each trial value.
    :align: center
 
    Part of ``FD_Optimization_beams.pdf`` showing the effects of
-   |V0i| on the :math:`(1|0)` beam. Note that the |V0i| variation
+   |V0i| on the (1|0) beam. Note that the |V0i| variation
    only leads to minor changes of the spectral appearance.
 
 Refined structure fit
@@ -300,7 +298,7 @@ for the refined structure optimization.
 .. _list_cu-te_diplacements_very_fine:
 .. literalinclude :: /_static/example_systems/Cu(111)-Te/DISPLACEMENTS_fine_1
    :language: console
-   :caption: DISPLACEMENTS (0.5 pm step) for Cu(111)-Te.
+   :caption: DISPLACEMENTS (0.5 pm step) for |CuTe|.
 
 You may want to finish up with a last "fine tuning" of the vibrational
 amplitudes and (\ :math:`z`) positions. See, for instance,
