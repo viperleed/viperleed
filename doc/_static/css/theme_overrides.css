@@ -29,3 +29,7 @@ a:visited {
 .wy-menu-vertical li.toctree-l1.current a:visited{
     color: #404040 !important;
 }
+/* Change colors behind ViPErLEED logo*/
+.wy-side-nav-search {
+    background-color: #6ab1e1 !important;
+}
