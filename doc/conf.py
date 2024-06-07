@@ -39,6 +39,7 @@ extensions = [
               'sphinx.ext.napoleon',        # for Numpy style docstrings
               'sphinx.ext.todo',            # for TODOs
               'sphinx.ext.viewcode',
+              'sphinx_design',
               'sphinxcontrib.bibtex',       # to use .bib files for bibliography
               'sphinxcontrib.inkscapeconverter', # for SVG images
               'sphinxcontrib.spelling',     # spell checking for the docs ;)
@@ -59,6 +60,9 @@ bibtex_bibfiles = ['references.bib']
 bibtex_default_style = 'unsrt' # use numbers
 bibtex_reference_style = 'label' # use numbers in text too
 
+
+# For tabs
+myst_enable_extensions = ["colon_fence"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
