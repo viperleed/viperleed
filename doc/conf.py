@@ -16,7 +16,7 @@ import sphinx_rtd_theme
 import viperleed
 
 
-# -- Project information -----------------------------------------------------
+# -- Project information ----------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'ViPErLEED'
@@ -25,24 +25,24 @@ author = 'ViPErLEED-developers'
 release = viperleed.__version__
 
 
-# -- General configuration ---------------------------------------------------
+# -- General configuration --------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-              'myst_nb',                    # for including Jupyter notebooks
-              'sphinx_rtd_theme',           # HTML theme
-              'sphinx.ext.autodoc',         # for API documentation from docstrings
-              'sphinx.ext.autosummary',     # for API documentation from docstrings
-              'sphinx.ext.extlinks',
-              'sphinx.ext.intersphinx',     # for linking to other docs
-              'sphinx.ext.mathjax',
-              'sphinx.ext.napoleon',        # for Numpy style docstrings
-              'sphinx.ext.todo',            # for TODOs
-              'sphinx.ext.viewcode',
-              'sphinxcontrib.bibtex',       # to use .bib files for bibliography
-              'sphinxcontrib.inkscapeconverter', # for SVG images
-              'sphinxcontrib.spelling',     # spell checking for the docs ;)
-              ]
+    'myst_nb',                 # for including Jupyter notebooks
+    'sphinx_rtd_theme',        # HTML theme
+    'sphinx.ext.autodoc',      # for API documentation from docstrings
+    'sphinx.ext.autosummary',  # for API documentation from docstrings
+    'sphinx.ext.extlinks',     
+    'sphinx.ext.intersphinx',  # for linking to other docs
+    'sphinx.ext.mathjax',      
+    'sphinx.ext.napoleon',     # for Numpy style docstrings
+    'sphinx.ext.todo',         # for TODOs
+    'sphinx.ext.viewcode',
+    'sphinxcontrib.bibtex',    # to use .bib files for bibliography
+    'sphinxcontrib.inkscapeconverter', # for SVG images
+    'sphinxcontrib.spelling',  # spell checking for the docs ;)
+    ]
 
 source_suffix = '.rst'
 
@@ -60,10 +60,10 @@ bibtex_default_style = 'unsrt' # use numbers
 bibtex_reference_style = 'label' # use numbers in text too
 
 
-# -- Options for HTML output -------------------------------------------------
+# -- Options for HTML output ------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_rtd_theme"
+html_theme = 'sphinx_rtd_theme'
 #html_theme = 'sphinx_book_theme'
 #html_theme = 'piccolo_theme'
 
@@ -81,16 +81,24 @@ html_theme_options = {
     'collapse_navigation': True,
     'sticky_navigation': True,
     'includehidden': False,
-}
+    }
 
 html_css_files = [
     'css/theme_overrides.css',
-]
+    ]
 
-# -- Options for LaTeX output ------------------------------------------------
+
+# -- Options for jupyter notebook execution ---------------------------
+# See https://myst-nb.readthedocs.io/en/latest/index.html
+# Use a specific kernel instead of the one stored in the notebook 
+# metadata. This allows building the documentation on multiple OSes
+nb_kernel_rgx_aliases = {'.+': 'python3'}
+
+
+# -- Options for LaTeX output -----------------------------------------
 # https://www.sphinx-doc.org/en/master/latex.html
 latex_engine = 'xelatex'
-nb_output_stderr = "remove-warn" # remove matplotlib user warnings
+nb_output_stderr = 'remove-warn' # remove matplotlib user warnings
 latex_show_urls = 'inline'
 latex_show_pagerefs = False # show page numbers
 inkscape_converter_args = ['--export-area-page']
