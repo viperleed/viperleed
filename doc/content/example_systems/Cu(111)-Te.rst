@@ -81,7 +81,7 @@ so we should expect significant relaxation during structure optimization.
    :align: center
 
    POSCAR rendered in :term:`VESTA`, viewed along |a| (left), |b| (center) and
-   |c| (right). Cu atoms are shown in blue, Te atoms in orange.
+   |c| (right). Cu atoms are shown in blue, Te atoms in yellow.
 
 
 PARAMETERS
