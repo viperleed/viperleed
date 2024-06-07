@@ -439,6 +439,19 @@ To compile eeasisss from source, navigate to your local copy of the
 From there, call either ``make intel`` or ``make gcc`` to
 compile using the Intel or GCC Fortran compilers, respectively.
 
+.. _rfactor_exentsion:
+
+R-factor extension for ASE
+--------------------------
+
+For using the atomic simulation environment (ASE) with ViPErLEED, you may need
+to compile the R-factor extension for viperleed calc.
+This extension is used to calculate the R-factor in conjunction with the ASE
+package and relies on `F2PY <https://numpy.org/doc/stable/f2py/index.html>`__
+which is installed by default with NumPy.
+
+To compile the R-factor extension, navigate to your local copy of the viperleed
+package and call ``make`` in the extensions directory.
 
 .. _mpirandom:
 
