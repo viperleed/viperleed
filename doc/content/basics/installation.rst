@@ -212,92 +212,91 @@ MPI wrapper :term:`mpifort`.
 
 .. _gnu_linux:
 
-Linux
-#####
+.. tabs::
 
-First, using your distributions package-manager, update the package list and
-install the newest version of :term:`gfortran`. In this manual, we use ``apt``,
-the standard package-manager for Debian based distributions.\ [#]_
+  .. tab:: Linux
 
+    First, using your distributions package-manager, update the package list and
+    install the newest version of :term:`gfortran`. In this manual, we use ``apt``,
+    the standard package-manager for Debian based distributions.\ [#]_
 
-.. code-block:: console
-
-    $ sudo apt update
-    $ sudo apt install gfortran -y
-
-The compiler can be invoked with the ``gfortran`` command. You can show the
-version and check whether :term:`gfortran` was installed properly using
-
-.. code-block:: console
-
-    $ gfortran --version
-
-In addition to :term:`gfortran`, you also need to install the :term:`BLAS`
-and :term:`LAPACK` libraries.
-
-.. code-block:: console
-
-    $ sudo apt install libblas-dev liblapack-dev
-
-Next install Open MPI (or alternatively another MPI implementation of your
-choice) to make ``mpirun`` available:
-
-.. code-block:: console
-
-    $ sudo apt install openmpi-bin
-
-Finally, install the :term:`gfortran` MPI wrapper ``mpifort``:
-
-.. code-block:: console
-
-    $ sudo apt install libopenmpi-dev
-
-
-macOS
-#####
-
-
-For running under MacOS, it is recommended to first install a package manager
-such as `brew <https://brew.sh>`__. This will also install the XCode Command
-Line Tools which are required for installing most other components.
-
-Using the ``brew`` command, you can then easily install gfortran and the
-Open MPI implementation (automatically including ``mpifort``).
-
-.. code-block:: console
-
-    $ brew install gfortran
-    $ brew install open-mpi
-
-There is no need to install :term:`BLAS` and :term:`LAPACK`, as MacOS
-already ships with these libraries pre-installed.
-
-.. warning::
-    If the XCode Command Line Tools are not installed before you install
-    :term:`gfortran`, you will get an error stating that the ``-lSystem``
-    library is not available. If this happens, make sure to first install
-    the XCode Command Line Tools via
 
     .. code-block:: console
 
-        $ xcode-select --install
+        $ sudo apt update
+        $ sudo apt install gfortran -y
 
-    and then reinstall :term:`gfortran`:
+    The compiler can be invoked with the ``gfortran`` command. You can show the
+    version and check whether :term:`gfortran` was installed properly using
 
     .. code-block:: console
 
-        $ brew reinstall gfortran
+        $ gfortran --version
 
-Windows
-#######
+    In addition to :term:`gfortran`, you also need to install the :term:`BLAS`
+    and :term:`LAPACK` libraries.
 
-.. warning::
-    To run |calc| and TensErLEED under Windows, we recommend using the
-    :term:`Windows Subsystem for Linux<WSL>`. Follow the
-    `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
-    With the :term:`WSL` installed, you can follow the same instructions
-    as for :ref:`Linux<gnu_linux>`. Running natively on Windows is possible
-    (:ref:`see below<native_windows>`), but experimental and *not recommended*.
+    .. code-block:: console
+
+        $ sudo apt install libblas-dev liblapack-dev
+
+    Next install Open MPI (or alternatively another MPI implementation of your
+    choice) to make ``mpirun`` available:
+
+    .. code-block:: console
+
+        $ sudo apt install openmpi-bin
+
+    Finally, install the :term:`gfortran` MPI wrapper ``mpifort``:
+
+    .. code-block:: console
+
+        $ sudo apt install libopenmpi-dev
+
+
+  .. tab:: macOS
+
+    For running under MacOS, it is recommended to first install a package manager
+    such as `brew <https://brew.sh>`__. This will also install the XCode Command
+    Line Tools which are required for installing most other components.
+
+    Using the ``brew`` command, you can then easily install gfortran and the
+    Open MPI implementation (automatically including ``mpifort``).
+
+    .. code-block:: console
+
+        $ brew install gfortran
+        $ brew install open-mpi
+
+    There is no need to install :term:`BLAS` and :term:`LAPACK`, as MacOS
+    already ships with these libraries pre-installed.
+
+    .. warning::
+        If the XCode Command Line Tools are not installed before you install
+        :term:`gfortran`, you will get an error stating that the ``-lSystem``
+        library is not available. If this happens, make sure to first install
+        the XCode Command Line Tools via
+
+        .. code-block:: console
+
+            $ xcode-select --install
+
+        and then reinstall :term:`gfortran`:
+
+        .. code-block:: console
+
+            $ brew reinstall gfortran
+
+
+  .. tab:: Windows
+
+    .. warning::
+        To run |calc| and TensErLEED under Windows, we recommend using the
+        :term:`Windows Subsystem for Linux<WSL>`. Follow the
+        `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
+        With the :term:`WSL` installed, you can follow the same instructions
+        as for :ref:`Linux<gnu_linux>`. Running natively on Windows is possible
+        (:ref:`see below<native_windows>`), but experimental and *not recommended*.
 
 
 .. _native_windows:
