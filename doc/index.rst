@@ -86,6 +86,7 @@ project:
 
    viperleed.calc<content/viperleed_calc>
    Examples<content/examples>
+   Installation<content/installation>
    Getting started<content/getting_started>
    Segments<content/work_segments>
    Files<content/files>

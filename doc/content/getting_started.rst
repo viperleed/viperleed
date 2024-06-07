@@ -9,7 +9,6 @@ Getting started
     Conventions<basics/conventions>
     Plane symmetry groups<basics/planegroups>
     Element Names<basics/elementnamecollision>
-    Installation<basics/installation>
     Command Line Tools<basics/command_line_tools>
     How to Run<basics/how_to_run>
     Notes for developers<basics/notes_for_developers>
