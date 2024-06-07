@@ -6,8 +6,11 @@ https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 __authors__ = (
     'Alexander M. Imre (@ammimre)',
+    'Michele Riva (@michele-riva)',
     )
+__copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2022-10-17'
+__license__ = 'GPLv3+'
 
 import datetime
 
@@ -16,20 +19,19 @@ import sphinx_rtd_theme
 import viperleed
 
 
-# -- Project information ----------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+# -- Project information ---------------------------------------------- https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'ViPErLEED'
-copyright = f'{datetime.date.today().year}, ViPErLEED-developers'
-author = 'ViPErLEED-developers'
+copyright = f'{datetime.date.today().year}, ViPErLEED developers'
+author = 'ViPErLEED developers'
 release = viperleed.__version__
 
 
-# -- General configuration --------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+# -- General configuration -------------------------------------------- https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     'myst_nb',                 # for including Jupyter notebooks
+    'sphinx_design',
     'sphinx_rtd_theme',        # HTML theme
     'sphinx.ext.autodoc',      # for API documentation from docstrings
     'sphinx.ext.autosummary',  # for API documentation from docstrings
@@ -60,16 +62,16 @@ bibtex_default_style = 'unsrt' # use numbers
 bibtex_reference_style = 'label' # use numbers in text too
 
 
-# -- Options for HTML output ------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+# -- Options for HTML output ----------------------------------------- https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
-#html_theme = 'sphinx_book_theme'
-#html_theme = 'piccolo_theme'
 
 html_favicon = '../viperleed/guilib/icons/favicon.ico'
 html_logo = '_static/viperleed_logo_oneline.svg'
 html_static_path = ['_static']
+
+# For tabs
+myst_enable_extensions = ['colon_fence']
 
 # RTD theme specific
 html_theme_options = {

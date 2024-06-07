@@ -69,6 +69,7 @@ doc = [  # Requires >= py3.9!
     'setuptools',  # Workaround for sphinxcontrib-bibtex #345
     'sphinx-rtd-theme',
     'sphinx>6.1',
+    'sphinx-design',
     'sphinxcontrib-bibtex',
     'sphinxcontrib-qthelp',
     'sphinxcontrib-spelling',

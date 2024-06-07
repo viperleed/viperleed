@@ -30,16 +30,17 @@ same :ref:`conventions<conventions>` (e.g. vacuum side of surface towards
 The ASE API provides a number of Python function that allow calling and
 starting |LEED-IV| calculations. For an example of how to use the ASE 
 interface, see :ref:`this tutorial<example_Ni(110)>`.
+Please note that the ASE interface may require installing the R-factor
+extension as described in the
+:ref:`installation instructions<rfactor_exentsion>`.
 
 .. note::
     The ViPErLEED ASE interface is an area of active development and may
     change in the future.
     If you have any suggestions for features or feedback concerning the ASE
     interface, feel free to contact the ViPErLEED team (preferably by opening
-    an issue on the ViPErLEED GitHub page).
-
-.. todo::
-    Add link to viperleed github
+    an issue on the
+    `ViPErLEED GitHub page <https://github.com/viperleed/viperleed>`__).
 
 
 .. _aseapi_auto_sites:

@@ -105,101 +105,100 @@ of the compilers in particular differs significantly for each system.
 
 .. _ifort_linux:
 
-Linux
-#####
+.. tab-set::
 
-Installation of the Intel compilers and :term:`MPI` implementation for
-Linux can be performed using a few shell commands. In this manual, we
-use ``apt``, the standard package-manager for Debian based distributions.
-For installation instructions with other package-managers see the
-`guides by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top.html>`__.
+  .. tab-item:: Linux
 
-As a first step, update the package index:
+    Installation of the Intel compilers and :term:`MPI` implementation for
+    Linux can be performed using a few shell commands. In this manual, we
+    use ``apt``, the standard package-manager for Debian based distributions.
+    For installation instructions with other package-managers see the
+    `guides by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top.html>`__.
 
-.. code-block:: console
+    As a first step, update the package index:
 
-    $ sudo apt update && sudo apt upgrade
+    .. code-block:: console
 
-Then follow the
-`instructions by Intel to add the Intel oneAPI repository <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/apt.html#apt>`__.
-Following this, you can install the required packages with the package-manager.
-For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel
-HPC Toolkit (``intel-hpckit``):
+        $ sudo apt update && sudo apt upgrade
 
-.. code-block:: console
+    Then follow the
+    `instructions by Intel to add the Intel oneAPI repository <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/apt.html#apt>`__.
+    Following this, you can install the required packages with the package-manager.
+    For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel
+    HPC Toolkit (``intel-hpckit``):
 
-    $ sudo apt install intel-basekit -y
-    $ sudo apt install intel-hpckit -y
+    .. code-block:: console
 
-.. note::
-    The toolkits are multiple GB in size and
-    will take a while to download and install.
+        $ sudo apt install intel-basekit -y
+        $ sudo apt install intel-hpckit -y
 
-The :term:`BLAS` and :term:`LAPACK` libraries are packaged in the Intel
-Math Kernel Library (MKL), which is part of the Base Toolkit, while an
-:term:`MPI` implementation is packaged with the HPC Toolkit.
+    .. note::
+        The toolkits are multiple GB in size and
+        will take a while to download and install.
 
-After installation, we still need to configure the system and add the
-compilers to our system path (see also
-`here <https://www.intel.com/content/www/us/en/develop/documentation/get-started-with-intel-oneapi-hpc-linux/top/before-you-begin.html#before-you-begin>`__).
-First, we need to make sure the required build tools (such as Cmake)
-are present:
+    The :term:`BLAS` and :term:`LAPACK` libraries are packaged in the Intel
+    Math Kernel Library (MKL), which is part of the Base Toolkit, while an
+    :term:`MPI` implementation is packaged with the HPC Toolkit.
 
-.. code-block:: console
+    After installation, we still need to configure the system and add the
+    compilers to our system path (see also
+    `here <https://www.intel.com/content/www/us/en/develop/documentation/get-started-with-intel-oneapi-hpc-linux/top/before-you-begin.html#before-you-begin>`__).
+    First, we need to make sure the required build tools (such as Cmake)
+    are present:
 
-    $ sudo apt install cmake pkg-config build-essential -y
+    .. code-block:: console
 
-Then, we finally need to configure the Intel one API installation such that
-it is discovered by our environment. For this, we need to source the file
-`/opt/intel/oneapi/setvars.sh` which sets the required :term:`CLI` arguments.
-We recommend you do this by adding the following line to the end of your shell
-startup script (usually `~/.bashrc`):
+        $ sudo apt install cmake pkg-config build-essential -y
 
-.. code-block:: console
+    Then, we finally need to configure the Intel one API installation such that
+    it is discovered by our environment. For this, we need to source the file
+    `/opt/intel/oneapi/setvars.sh` which sets the required :term:`CLI` arguments.
+    We recommend you do this by adding the following line to the end of your shell
+    startup script (usually `~/.bashrc`):
 
-    source /opt/intel/oneapi/setvars.sh
+    .. code-block:: console
 
-Afterwards, the required compilers should be available for use.
-You can check whether :term:`ifort` is present using:
+        source /opt/intel/oneapi/setvars.sh
 
-.. code-block:: console
+    Afterwards, the required compilers should be available for use.
+    You can check whether :term:`ifort` is present using:
 
-    $ which ifort
+    .. code-block:: console
 
-If the result is a path, it means that the shell knows the compiler exists.
-You can do the same check with `mpirun` and `mpiifort` to check that they
-are properly configured as well.
+        $ which ifort
 
-macOS
-#####
+    If the result is a path, it means that the shell knows the compiler exists.
+    You can do the same check with `mpirun` and `mpiifort` to check that they
+    are properly configured as well.
 
-.. warning::
-    Newer Macs using "Apple Silicon" ARM-based chips are incompatible with the
-    Intel compilers (since they don't use Intel chips).
-    Use :term:`gfortran` and :term:`mpifort` instead.
+  .. tab-item:: macOS
 
-To install the Intel oneAPI Toolkits under macOS please follow
-`the guide provided by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-macos/top.html>`__.
-As for Linux, you will need to install the Intel Base Toolkit and the
-Intel HPC Toolkit.
+    .. warning::
+        Newer Macs using "Apple Silicon" ARM-based chips are incompatible with the
+        Intel compilers (since they don't use Intel chips).
+        Use :term:`gfortran` and :term:`mpifort` instead.
 
-Windows
-#######
+    To install the Intel oneAPI Toolkits under macOS please follow
+    `the guide provided by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-macos/top.html>`__.
+    As for Linux, you will need to install the Intel Base Toolkit and the
+    Intel HPC Toolkit.
 
-.. warning::
-    To run |calc| and TensErLEED under Windows, we recommend using the
-    :term:`Windows Subsystem for Linux<WSL>` (WSL, available starting
-    from Windows 10). Follow the
-    `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
-    With the :term:`WSL` installed, you can follow the same instructions
-    as provided in :ref:`the Linux section<ifort_linux>`. Running natively
-    on Windows is possible (:ref:`see below<native_windows>`), but experimental
-    and *not recommended*.
+  .. tab-item:: Windows
 
-To install the Intel oneAPI Toolkits under Windows please follow
-`the guide provided by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-windows/top.html>`__.
-As for Linux, you will need to install the Intel Base Toolkit and the
-Intel HPC Toolkit.
+    .. warning::
+        To run |calc| and TensErLEED under Windows, we recommend using the
+        :term:`Windows Subsystem for Linux<WSL>` (WSL, available starting
+        from Windows 10). Follow the
+        `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
+        With the :term:`WSL` installed, you can follow the same instructions
+        as provided in :ref:`the Linux section<ifort_linux>`. Running natively
+        on Windows is possible (:ref:`see below<native_windows>`), but experimental
+        and *not recommended*.
+
+    To install the Intel oneAPI Toolkits under Windows please follow
+    `the guide provided by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-windows/top.html>`__.
+    As for Linux, you will need to install the Intel Base Toolkit and the
+    Intel HPC Toolkit.
 
 
 ``gfortran`` and ``mpifort``
@@ -212,98 +211,97 @@ MPI wrapper :term:`mpifort`.
 
 .. _gnu_linux:
 
-Linux
-#####
+.. tab-set::
 
-First, using your distributions package-manager, update the package list and
-install the newest version of :term:`gfortran`. In this manual, we use ``apt``,
-the standard package-manager for Debian based distributions.\ [#]_
+  .. tab-item:: Linux
 
+    First, using your distributions package-manager, update the package list and
+    install the newest version of :term:`gfortran`. In this manual, we use ``apt``,
+    the standard package-manager for Debian based distributions.\ [#]_
 
-.. code-block:: console
-
-    $ sudo apt update
-    $ sudo apt install gfortran -y
-
-The compiler can be invoked with the ``gfortran`` command. You can show the
-version and check whether :term:`gfortran` was installed properly using
-
-.. code-block:: console
-
-    $ gfortran --version
-
-In addition to :term:`gfortran`, you also need to install the :term:`BLAS`
-and :term:`LAPACK` libraries.
-
-.. code-block:: console
-
-    $ sudo apt install libblas-dev liblapack-dev
-
-Next install Open MPI (or alternatively another MPI implementation of your
-choice) to make ``mpirun`` available:
-
-.. code-block:: console
-
-    $ sudo apt install openmpi-bin
-
-Finally, install the :term:`gfortran` MPI wrapper ``mpifort``:
-
-.. code-block:: console
-
-    $ sudo apt install libopenmpi-dev
-
-
-macOS
-#####
-
-
-For running under MacOS, it is recommended to first install a package manager
-such as `brew <https://brew.sh>`__. This will also install the XCode Command
-Line Tools which are required for installing most other components.
-
-Using the ``brew`` command, you can then easily install gfortran and the
-Open MPI implementation (automatically including ``mpifort``).
-
-.. code-block:: console
-
-    $ brew install gfortran
-    $ brew install open-mpi
-
-There is no need to install :term:`BLAS` and :term:`LAPACK`, as MacOS
-already ships with these libraries pre-installed.
-
-.. warning::
-    If the XCode Command Line Tools are not installed before you install
-    :term:`gfortran`, you will get an error stating that the ``-lSystem``
-    library is not available. If this happens, make sure to first install
-    the XCode Command Line Tools via
 
     .. code-block:: console
 
-        $ xcode-select --install
+        $ sudo apt update
+        $ sudo apt install gfortran -y
 
-    and then reinstall :term:`gfortran`:
+    The compiler can be invoked with the ``gfortran`` command. You can show the
+    version and check whether :term:`gfortran` was installed properly using
 
     .. code-block:: console
 
-        $ brew reinstall gfortran
+        $ gfortran --version
 
-Windows
-#######
+    In addition to :term:`gfortran`, you also need to install the :term:`BLAS`
+    and :term:`LAPACK` libraries.
 
-.. warning::
-    To run |calc| and TensErLEED under Windows, we recommend using the
-    :term:`Windows Subsystem for Linux<WSL>`. Follow the
-    `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
-    With the :term:`WSL` installed, you can follow the same instructions
-    as for :ref:`Linux<gnu_linux>`. Running natively on Windows is possible
-    (:ref:`see below<native_windows>`), but experimental and *not recommended*.
+    .. code-block:: console
+
+        $ sudo apt install libblas-dev liblapack-dev
+
+    Next install Open MPI (or alternatively another MPI implementation of your
+    choice) to make ``mpirun`` available:
+
+    .. code-block:: console
+
+        $ sudo apt install openmpi-bin
+
+    Finally, install the :term:`gfortran` MPI wrapper ``mpifort``:
+
+    .. code-block:: console
+
+        $ sudo apt install libopenmpi-dev
+
+
+  .. tab-item:: macOS
+
+    For running under MacOS, it is recommended to first install a package manager
+    such as `brew <https://brew.sh>`__. This will also install the XCode Command
+    Line Tools which are required for installing most other components.
+
+    Using the ``brew`` command, you can then easily install gfortran and the
+    Open MPI implementation (automatically including ``mpifort``).
+
+    .. code-block:: console
+
+        $ brew install gfortran
+        $ brew install open-mpi
+
+    There is no need to install :term:`BLAS` and :term:`LAPACK`, as MacOS
+    already ships with these libraries pre-installed.
+
+    .. warning::
+        If the XCode Command Line Tools are not installed before you install
+        :term:`gfortran`, you will get an error stating that the ``-lSystem``
+        library is not available. If this happens, make sure to first install
+        the XCode Command Line Tools via
+
+        .. code-block:: console
+
+            $ xcode-select --install
+
+        and then reinstall :term:`gfortran`:
+
+        .. code-block:: console
+
+            $ brew reinstall gfortran
+
+
+  .. tab-item:: Windows
+
+    .. warning::
+        To run |calc| and TensErLEED under Windows, we recommend using the
+        :term:`Windows Subsystem for Linux<WSL>`. Follow the
+        `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
+        With the :term:`WSL` installed, you can follow the same instructions
+        as for :ref:`Linux<gnu_linux>`. Running natively on Windows is possible
+        (:ref:`see below<native_windows>`), but experimental and *not recommended*.
 
 
 .. _native_windows:
 
 Natively running on (64-bit) Windows
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+====================================
 
 Here are some notes on which steps are needed to run (tested up to refcalc)
 natively on Windows (tested only from python source), i.e., get a working
@@ -439,6 +437,20 @@ To compile eeasisss from source, navigate to your local copy of the
 From there, call either ``make intel`` or ``make gcc`` to
 compile using the Intel or GCC Fortran compilers, respectively.
 
+.. _rfactor_exentsion:
+
+
+R-factor extension for ASE
+--------------------------
+
+For using the atomic simulation environment (ASE) with ViPErLEED, you may need
+to compile the R-factor extension for viperleed calc.
+This extension is used to calculate the R-factor in conjunction with the ASE
+package and relies on `F2PY <https://numpy.org/doc/stable/f2py/index.html>`__
+which is installed by default with NumPy.
+
+To compile the R-factor extension, navigate to your local copy of the viperleed
+package and call ``make`` in the extensions directory.
 
 .. _mpirandom:
 
