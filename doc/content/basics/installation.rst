@@ -27,9 +27,10 @@ the `Python website <https://www.python.org/downloads/>`__.
 Installing ViPErLEED
 ====================
 
-ViPErLEED is available on the :term:`Python Package Index (PyPI)<PyPI>` and can
-be installed using the Python package manager ``pip``. We recommend installing
-ViPErLEED in a `virtual environment <https://docs.python.org/3/library/venv.html>`__
+ViPErLEED is available on the :term:`Python Package Index (PyPI)<PyPI>` 
+and can be installed using the Python package manager ``pip``. We recommend 
+installing ViPErLEED in a 
+`virtual environment <https://docs.python.org/3/library/venv.html>`__
 for easier dependency management.
 
 .. todo::
@@ -43,10 +44,10 @@ in your terminal:
 
     $ pip install viperleed
 
-This will install the latest version of ViPErLEED and all required dependencies.
-It will also automatically install the
-:ref:`ViPErLEED command line tools<command_line_tools>` which can be called
-from the terminal using the ``viperleed`` command.
+This will install the latest version of ViPErLEED and all required
+dependencies. It will also automatically install the
+:ref:`ViPErLEED command line tools<command_line_tools>` which can
+be called from the terminal using the ``viperleed`` command.
 
 
 Fortran compilers
@@ -123,9 +124,9 @@ of the compilers in particular differs significantly for each system.
 
     Then follow the
     `instructions by Intel to add the Intel oneAPI repository <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/installation/install-using-package-managers/apt.html#apt>`__.
-    Following this, you can install the required packages with the package-manager.
-    For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``) and the Intel
-    HPC Toolkit (``intel-hpckit``):
+    Following this, you can install the required packages with the package
+    manager. For ViPErLEED you need the Intel Base Toolkit (``intel-basekit``)
+    and the Intel HPC Toolkit (``intel-hpckit``):
 
     .. code-block:: console
 
@@ -152,9 +153,9 @@ of the compilers in particular differs significantly for each system.
 
     Then, we finally need to configure the Intel one API installation such that
     it is discovered by our environment. For this, we need to source the file
-    `/opt/intel/oneapi/setvars.sh` which sets the required :term:`CLI` arguments.
-    We recommend you do this by adding the following line to the end of your shell
-    startup script (usually `~/.bashrc`):
+    `/opt/intel/oneapi/setvars.sh` which sets the required :term:`CLI`
+    arguments. We recommend you do this by adding the following line to
+    the end of your shell startup script (usually `~/.bashrc`):
 
     .. code-block:: console
 
@@ -174,8 +175,8 @@ of the compilers in particular differs significantly for each system.
   .. tab-item:: macOS
 
     .. warning::
-        Newer Macs using "Apple Silicon" ARM-based chips are incompatible with the
-        Intel compilers (since they don't use Intel chips).
+        Newer Macs using "Apple Silicon" ARM-based chips are incompatible
+        with the Intel compilers (since they don't use Intel chips).
         Use :term:`gfortran` and :term:`mpifort` instead.
 
     To install the Intel oneAPI Toolkits under macOS please follow
@@ -192,8 +193,8 @@ of the compilers in particular differs significantly for each system.
         `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
         With the :term:`WSL` installed, you can follow the same instructions
         as provided in :ref:`the Linux section<ifort_linux>`. Running natively
-        on Windows is possible (:ref:`see below<native_windows>`), but experimental
-        and *not recommended*.
+        on Windows is possible (:ref:`see below<native_windows>`), but
+        experimental and *not recommended*.
 
     To install the Intel oneAPI Toolkits under Windows please follow
     `the guide provided by Intel <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-windows/top.html>`__.
@@ -215,9 +216,9 @@ MPI wrapper :term:`mpifort`.
 
   .. tab-item:: Linux
 
-    First, using your distributions package-manager, update the package list and
-    install the newest version of :term:`gfortran`. In this manual, we use ``apt``,
-    the standard package-manager for Debian based distributions.\ [#]_
+    First, using your distributions package-manager, update the package list
+    and install the newest version of :term:`gfortran`. In this manual, we use
+    ``apt``, the standard package-manager for Debian based distributions.\ [#]_
 
 
     .. code-block:: console
@@ -255,12 +256,13 @@ MPI wrapper :term:`mpifort`.
 
   .. tab-item:: macOS
 
-    For running under MacOS, it is recommended to first install a package manager
-    such as `brew <https://brew.sh>`__. This will also install the XCode Command
-    Line Tools which are required for installing most other components.
+    For running under MacOS, it is recommended to first install a package
+    manager such as `brew <https://brew.sh>`__. This will also install the
+    XCode Command Line Tools which are required for installing most other
+    components.
 
-    Using the ``brew`` command, you can then easily install gfortran and the
-    Open MPI implementation (automatically including ``mpifort``).
+    Using the ``brew`` command, you can then easily install gfortran and
+    the Open MPI implementation (automatically including ``mpifort``).
 
     .. code-block:: console
 
@@ -295,7 +297,8 @@ MPI wrapper :term:`mpifort`.
         `instructions by Microsoft to install the WSL <https://learn.microsoft.com/en-us/windows/wsl/install>`__.
         With the :term:`WSL` installed, you can follow the same instructions
         as for :ref:`Linux<gnu_linux>`. Running natively on Windows is possible
-        (:ref:`see below<native_windows>`), but experimental and *not recommended*.
+        (\ :ref:`see below<native_windows>`), but experimental and
+        *not recommended*.
 
 
 .. _native_windows:
@@ -437,20 +440,21 @@ To compile eeasisss from source, navigate to your local copy of the
 From there, call either ``make intel`` or ``make gcc`` to
 compile using the Intel or GCC Fortran compilers, respectively.
 
+
 .. _rfactor_exentsion:
 
-
-R-factor extension for ASE
---------------------------
+|R-factor| extension for ASE
+----------------------------
 
 For using the atomic simulation environment (ASE) with ViPErLEED, you may need
-to compile the R-factor extension for viperleed calc.
-This extension is used to calculate the R-factor in conjunction with the ASE
+to compile the |R-factor| extension for |calc|.
+This extension is used to calculate the |R factor| in conjunction with the ASE
 package and relies on `F2PY <https://numpy.org/doc/stable/f2py/index.html>`__
 which is installed by default with NumPy.
 
-To compile the R-factor extension, navigate to your local copy of the viperleed
-package and call ``make`` in the extensions directory.
+To compile the |R-factor| extension module, navigate to your local copy of the
+viperleed package and call ``make`` in the extensions directory.
+
 
 .. _mpirandom:
 
