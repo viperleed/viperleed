@@ -193,7 +193,7 @@ The detected layers and bulk repeat vector are also shown in
 
    Visualization of the crystal structure with highlighted layers, and the bulk
    repeat vector. Fe atoms are depicted as large yellow spheres, O atoms as
-   small red ones. This figure is taken from the ViPErLEED paper
+   small red ones. This figure is taken from the first ViPErLEED paper
    :cite:p:`viperleedCalc`.
 
 
