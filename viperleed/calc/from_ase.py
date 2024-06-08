@@ -803,6 +803,8 @@ def plot_iv_from_csv(
     for file, is_content in zip(beam_file, beam_file_is_content):
         tmp_file = StringIO(file) if is_content else file
         beam_list = readOUTBEAMS(filename=tmp_file, sep=",")
+        if not beam_list:
+            continue
 
         if which_beams == [] or which_beams == "all" or which_beams is None:
             pass
@@ -830,6 +832,10 @@ def plot_iv_from_csv(
         else:
             for jj in range(len(beam_labels)):
                 labels[jj] += ", " + beam_labels[jj]
+
+    if not all_beam_data:
+        # Nothing to plot
+        raise ValueError("No beams to plot in beam_file")
 
     return plot_iv(all_beam_data, output_file, labels=labels, legends=legends)
 
