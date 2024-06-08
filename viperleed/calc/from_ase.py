@@ -292,14 +292,19 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
 
     # We are ready to run ViPErLEED! Have fun!
     try:
-        run_calc(slab=slab,
-                 preset_params=_make_preset_params(rparams, slab))
+        exit_code = run_calc(slab=slab,
+                             preset_params=_make_preset_params(rparams, slab))
     except Exception as err:
         # If ViPErLEED fails, move back to home directory
         os.chdir(home)
         raise RuntimeError("ViPErLEED calculation failed") from err
 
-    # ViPErLEED should have suceeded if you arrive here. However, we may not
+    if exit_code:
+        os.chdir(home)
+        raise RuntimeError("ViPErLEED calculation failed. "
+                           "See log file for details.")
+
+    # ViPErLEED should have succeeded if you arrive here. However, we may not
     # have run a refcalc (id == 1). In that case, return empty strings.
     if 1 not in rparams.RUN:
         os.chdir(home)
