@@ -318,6 +318,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 a.axis('off')
     except Exception:
         logger.error("plot_iv: Error while compiling figures.", exc_info=True)
+    finally:
         logger.setLevel(loglevel)
 
     # if a filename is given write to PDF, else return list of figs
