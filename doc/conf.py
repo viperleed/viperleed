@@ -30,7 +30,8 @@ release = viperleed.__version__
 # -- General configuration -------------------------------------------- https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'myst_nb',                 # for including Jupyter notebooks
+    'myst_nb',                 # For including Jupyter notebooks
+    'sphinx_copybutton',       # For a copy button in code blocks
     'sphinx_design',
     'sphinx_rtd_theme',        # HTML theme
     'sphinx.ext.autodoc',      # for API documentation from docstrings
