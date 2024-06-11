@@ -121,6 +121,7 @@ PARAMETERS FOR VIBROCC
 That's all the input we need to start the initialization run.
 
 .. todo::
+
    Insert an example command for how to start the calculation here.
 
 Once the run finishes, we can have a look at the
@@ -296,7 +297,7 @@ The first page is shown in :numref:`fig_ag_search_progress`.
    :align: center
 
    First page of the ``Search-progress.pdf`` file showing convergence of the
-   structure search (top) and development of atomistic parameters (bottom).
+   structure search (top) and development of atomic parameters (bottom).
 
 The final result of the optimization (POSCAR with coordinates and VIBROCC
 with vibrational amplitudes) are saved in the ``OUT`` directory. Interatomic

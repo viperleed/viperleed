@@ -32,18 +32,18 @@ release = viperleed.__version__
 extensions = [
     'myst_nb',                 # For including Jupyter notebooks
     'sphinx_copybutton',       # For a copy button in code blocks
-    'sphinx_design',
+    'sphinx_design',           # For tabs, dropdowns, ...
     'sphinx_rtd_theme',        # HTML theme
     'sphinx.ext.autodoc',      # for API documentation from docstrings
     'sphinx.ext.autosummary',  # for API documentation from docstrings
     'sphinx.ext.extlinks',     
-    'sphinx.ext.intersphinx',  # for linking to other docs
+    'sphinx.ext.intersphinx',  # For linking to other docs
     'sphinx.ext.mathjax',      
-    'sphinx.ext.napoleon',     # for Numpy style docstrings
-    'sphinx.ext.todo',         # for TODOs
+    'sphinx.ext.napoleon',     # For Numpy-style docstrings
+    'sphinx.ext.todo',         # For TODOs
     'sphinx.ext.viewcode',
-    'sphinxcontrib.bibtex',    # to use .bib files for bibliography
-    'sphinxcontrib.inkscapeconverter', # for SVG images
+    'sphinxcontrib.bibtex',    # To use .bib files for bibliography
+    'sphinxcontrib.inkscapeconverter',  # For SVG images
     'sphinxcontrib.spelling',  # spell checking for the docs ;)
     ]
 
@@ -54,8 +54,9 @@ numfig = True # enumerate figures
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-# Wordlist to ignore for spell checker
-spelling_word_list_filename='spelling_wordlist.txt'
+# Spell-checker options
+spelling_warning = True
+spelling_word_list_filename = 'spelling_wordlist.txt'  # Ignore these
 
 # For bibliography
 bibtex_bibfiles = ['references.bib']

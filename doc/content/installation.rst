@@ -496,9 +496,9 @@ for how to install ``gfortran`` on various operating systems.
         an MPI implementation nor an the ``mpirun`` Fortran compiler.
 
     .. warning::
-        The notes below are for installing the very basic, unoptimized
-        LAPACK/BLAS versions. Hence, execution of the code will be
-        rather **slow**.
+        The notes below are for installing the very basic, non-optimized
+        LAPACK/BLAS versions. Hence, execution of the code will be rather
+        **slow**.
 
     -  Install `MSys2 <https://www.msys2.org/>`__, which then installs MinGW,
        then open the MSys2 shell.
@@ -538,9 +538,9 @@ for how to install ``gfortran`` on various operating systems.
 
             git clone https://github.com/msys2/MINGW-packages.git
 
-       This is the basic, unoptimized version.
-       There are ways to also build better versions . See
-       `here <https://icl.cs.utk.edu/lapack-for-windows/lapack/>`__.
+       This is the basic, non-optimized version. There are ways to also
+       build better versions.
+       See `here <https://icl.cs.utk.edu/lapack-for-windows/lapack/>`__.
     -  Move to the LAPACK directory with
 
        .. code-block:: bash
@@ -705,12 +705,12 @@ which is installed by default with NumPy.
 
 .. _mpirandom:
 
-Randomizer library for TensErLEED < v1.7.4
-------------------------------------------
+Random numbers library for TensErLEED < v1.7.4
+----------------------------------------------
 
 .. note::
     Users wishing to run natively on Windows can skip this step,
-    as the randomizers are used only in the structure-optimization
+    as the random numbers are used only in the structure-optimization
     :ref:`section<sec_search>`, which is currently incompatible with
     native execution on Windows due to limitations on the Python code.
 
@@ -721,10 +721,10 @@ followed the :ref:`instructions<install_fortran_comp>` for obtaining the
 Fortran compilers, you should already have the necessary C compilers installed
 (from either GCC or Intel).
 
-To compile the randomizer library for TensErLEED version ``x.y.z``, go into
-the directory ``viperleed/tensorleed/TensErLEED-x.y.z`` and call either
-``make intel`` or ``make gcc`` to compile using the Intel or GCC :term:`C`
-compilers, respectively.
+To compile the random-number generation library for TensErLEED version
+``x.y.z``, go into the directory ``viperleed/tensorleed/TensErLEED-x.y.z``
+and call either ``make intel`` or ``make gcc`` to compile using the Intel
+or GCC :term:`C` compilers, respectively.
 
 
 

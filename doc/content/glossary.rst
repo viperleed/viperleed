@@ -43,7 +43,7 @@ Glossary
       See also :ref:`here<how_to_run>`.
 
     fcc
-      Face-centred-cubic crystal structure.
+      Face-centered-cubic crystal structure.
 
     Fortran
       The Fortran programming language.

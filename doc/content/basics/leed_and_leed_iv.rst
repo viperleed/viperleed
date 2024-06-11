@@ -19,7 +19,7 @@ These intensity curves, taken as a function of the primary beam energy —
 often referred to as |IV| curves, or spectra — are very sensitive to the
 precise position and vibrational amplitudes of each atom in the surface
 unit cell. Comparing calculated and experimental |IV| curves allows one
-to accept or discard structural models for surfaces with picometer-level
+to accept or discard structural models for surfaces with picometre-level
 accuracy.
 
 In ViPErLEED, |LEED-IV| calculations are performed by the |calc| Python

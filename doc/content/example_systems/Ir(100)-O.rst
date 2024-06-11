@@ -112,7 +112,7 @@ PARAMETERS FOR INTERPRETING THE POSCAR
     coordinated than bulk Ir atoms and thus will presumably have a different
     vibrational amplitude. For completeness, we also specify the site type
     ``O_ads`` for the adsorbed oxygen atom. However, since there is only one
-    oxygen atom in the structure, this will not change the behaviour and we
+    oxygen atom in the structure, this will not change the behavior and we
     could also skip that line.
 
 PARAMETERS FOR VIBROCC
@@ -148,8 +148,8 @@ We then follow up with rough optimizations of in-plane positions and
 vibrational amplitudes of surface atoms.\ [1]_
 For the in-plane optimization, we use a simplified assignment for all four
 layers, although any movement along the :math:`x` direction (here parallel
-to the |a| unit vector) is forbidden by symmetry for Ir atoms in the 2nd and
-4th layers.\ [2]_ ViPErLEED will automatically sort out any symmetry-forbidden
+to the |a| unit vector) is forbidden by symmetry for Ir atoms in the second and
+fourth layers.\ [2]_ ViPErLEED automatically sorts out any symmetry-forbidden
 displacements, cf. :numref:`fig_Ir_O_search_progress_2`.
 
 .. note::
@@ -240,11 +240,11 @@ notice something important: The |R factor| of the reference calculation
 (\ :math:`R_\mathrm{P} \approx 0.18`) *is different* from the one we
 obtained from the :ref:`superposition<super_pos>` calculation at the end
 of the previous run (\ :math:`R_\mathrm{P} \approx 0.21`). This comes from
-the :ref:`error of the tensor-LEED approximation<tensor_leed_errors>` used 
-for the structure optimization. In this case, the real |R factor| — as 
-obtained from the reference calculation — is lower. However, this is not 
-always the case. You should **never** rely on the |R factor| produced by the 
-superposition calculation as a final result, but rather run a final reference 
+the :ref:`error of the tensor-LEED approximation<tensor_leed_errors>` used
+for the structure optimization. In this case, the real |R factor| — as
+obtained from the reference calculation — is lower. However, this is not
+always the case. You should **never** rely on the |R factor| produced by the
+superposition calculation as a final result, but rather run a final reference
 calculation at the end of your analysis.\ [3]_
 
 Full-dynamic optimization
@@ -302,7 +302,7 @@ It is shown in :numref:`fig_ir_fdopt`.
 
 Following the |V0i| optimization we can also run a final structure
 optimization, since the new value for |V0i| may have slightly affected
-the optimal positions. Using a (very fine) :math:`0.002` Å grid
+the optimal positions. Using a (very fine) :math:`0.002` Å grid
 (``DISPLACEMENTS_very_fine`` in the provided example files) we
 manage to get a final |R factor| of around :math:`R_\mathrm{P} \approx 0.088`.
 
@@ -328,7 +328,7 @@ The :ref:`result <errorspdf>` will again be saved in the ``OUT`` directory.
 ViPErLEED generates a plot of the error curves in ``Errors.pdf`` and stores
 the raw data in ``Errors.csv``. The ``Errors.pdf`` file in
 :numref:`fig_ir_errors_geo` shows that displacement of surface atoms even by a
-few picometers drastically increases the |R factor|. Here, atom 1 is the
+few picometres drastically increases the |R factor|. Here, atom 1 is the
 oxygen adsorbate and atoms 2 and 3 are the topmost iridium ones.
 
 .. _fig_ir_errors_geo:

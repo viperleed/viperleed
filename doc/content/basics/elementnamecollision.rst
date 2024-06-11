@@ -22,7 +22,7 @@ to contain mixtures of two or more elements. This split should be specified by
 :ref:`ELEMENT_MIX<ELSPLIT>`. In these cases, it is strongly recommended to
 rename the elements in the POSCAR file such that the POSCAR elements and
 chemical elements don't overlap. For example, if  your POSCAR contains
-atoms labelled ``La`` but your material contains  some mixture of ``La``
+atoms labeled ``La`` but your material contains  some mixture of ``La``
 and ``Sr`` in those sites, you could rename ``La`` to ``A`` in the POSCAR,
 then use ``ELEMENT_MIX A = La Sr`` to specify that these atoms are actually
 either ``La`` or ``Sr``. If you do not do this, but simply use

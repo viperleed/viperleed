@@ -136,7 +136,7 @@ be treated separately by ViPErLEED. In this case, we declare two ``surf``\ ace
 sites for iron and oxygen, selecting the two topmost atoms of each species.
 These atoms will be assigned dedicated vibrational amplitudes and electron–atom
 scattering phase shifts (see file :ref:`PHASESHIFTS`). All remaining atoms
-are automatically given a ``def``\ ault label instead.
+are automatically given a ``def``\ :spelling:ignore:`ault` label instead.
 
 Note also that we set the :ref:`BEAM_INCIDENCE parameter<beamincidence>` to
 :math:`\phi=90°` to match the input structure with the crystal orientation

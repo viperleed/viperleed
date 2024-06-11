@@ -25,7 +25,7 @@ publication was performed using an early development version of ViPErLEED
    :align: center
 
    Experimental LEED pattern of |CuTe| at an incident electron energy of
-   60 eV. Diffraction spots are labelled by the ViPErLEED spot tracker
+   60 eV. Diffraction spots are labeled by the ViPErLEED spot tracker
    :cite:p:`viperleedSpot`.
 
 .. only:: html
@@ -232,7 +232,7 @@ the experimental dataset seem to be consistently narrower than in our
 calculation. This is generally a sign that the imaginary part of the
 inner potential (|V0i|) of our calculation is off. To be more precise,
 |V0i| is likely too large, as larger |V0i| increases peak widths and
-smoothens out the curves.
+smooths out the curves.
 
 |V0i| strongly affects the |R factor|, but is hard to estimate for an unknown
 system. Since we didn't specify a value for |V0i| in PARAMETERS, ViPErLEED took
@@ -251,7 +251,7 @@ To do this, we set :ref:`RUN = 6<run>` and add this line to
     (\ :math:`V_{0\mathrm{i}} \lesssim 7` eV), (ii) forms an actual minimum,
     and (iii) gives qualitatively correct |IV| curves.
 
-    Since larger |V0i| values smoothen out the |IV| curves, it is possible to
+    Since larger |V0i| values smooth out the |IV| curves, it is possible to
     deceptively decrease the |R factor| by arbitrarily increasing |V0i|. This
     usually happens in cases of very high |R-factor| values, where |V0i|
     optimization is not the main concern anyhow.
@@ -288,7 +288,7 @@ Refined structure fit
 =====================
 
 As usual, we can now perform some final structure fits over a fine-grained
-grid with subpicometer step. In particular, we should also optimize the
+grid with subpicometre step. In particular, we should also optimize the
 **vibrational amplitudes**, which we have skipped so far. We recommend
 starting with the vibrational amplitudes here, since we have not touched
 them at all in the previous optimization step.
