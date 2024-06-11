@@ -38,9 +38,9 @@ find the plane group of a slab from a :ref:`POSCAR file<poscar>`:
 .. toctree::
     :maxdepth: 1
 
-    ASE Interface<api/aseapi>
-    Classes<api/classes>
-    Files<api/files>
-    Libraries<api/libraries>
-    Sections<api/sections>
-    Errors<api/errors>
+    ASE interface<api/aseapi>
+    api/classes
+    api/files
+    api/libraries
+    api/sections
+    api/errors

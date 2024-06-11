@@ -77,13 +77,13 @@ to the experimental beam set.
    :maxdepth: 1
    :caption: Sections
 
-   Initialization<sections/initialization>
-   Reference calculation<sections/ref-calc>
-   Delta-amplitudes<sections/deltas>
+   sections/initialization
+   sections/ref-calc
+   Delta amplitudes<sections/deltas>
    Search<sections/structure_search>
    Superpos<sections/superpos>
-   Domain calculations<sections/domain_calculation>
-   Error calculations<sections/error_calculation>
-   Full-dynamic optimization<sections/fdoptimization>
+   sections/domain_calculation
+   sections/error_calculation
+   sections/fdoptimization
    R factors<sections/r-factor_calculation>
-   Bookkeeper<sections/bookkeeper>
+   sections/bookkeeper

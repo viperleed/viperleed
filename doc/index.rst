@@ -84,21 +84,21 @@ project:
 .. toctree::
    :caption: viperleed.calc
 
-   viperleed.calc<content/viperleed_calc>
-   Examples<content/examples>
-   Installation<content/installation>
-   Getting started<content/getting_started>
-   Segments<content/work_segments>
-   Files<content/files>
+   content/viperleed_calc
+   content/examples
+   content/installation
+   content/getting_started
+   content/work_segments
+   content/files
    Parameters<content/param_topics>
-   Utilities<content/utilities>
-   API<content/api>
+   content/utilities
+   content/api
 
 .. toctree::
    :maxdepth: 1
    :caption: Spot tracker
 
-   Spot-Tracker<content/spot_tracker>
+   Spot tracker<content/spot_tracker>
 
 .. toctree::
    :maxdepth: 1
@@ -110,9 +110,9 @@ project:
    :maxdepth: 1
    :caption: References
 
-   Citing ViPErLEED<content/citing>
-   References<references>
-   Glossary<content/glossary>
+   content/citing
+   references
+   content/glossary
    License<content/license>
 
 .. raw:: latex
