@@ -60,8 +60,8 @@ incorrect structure model. |R factor|\ s for more open surfaces, such as
 missing-row-reconstructed Pt(110), can be higher than 0.2.
 
 Note that some smoothing algorithms applied to both, the experimental and the
-calculated data, such as the smoothing suggested by Pendry in
-:cite:p:`pendryReliabilityFactorsLEED1980`, apparently lowers the |R factor|,
+calculated data, such as the smoothing suggested by
+:cite:t:`pendryReliabilityFactorsLEED1980`, apparently lowers the |R factor|,
 because it effectively raises the minima of the |IV| curves. At minima, where
 the intensities approach zero, :math:`R_\mathrm{P}` is especially sensitive to
 small differences; artificially increasing the intensity there leads to lower

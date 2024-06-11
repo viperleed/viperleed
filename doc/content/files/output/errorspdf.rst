@@ -28,7 +28,7 @@ may not be the same for the entire group.
   where :math:`R` is the |R factor| of the best-fit structure, |V0i| is
   the imaginary part of the inner potential, and :math:`\delta E` is the
   total energy range of the beam set. For more information, see
-  :cite:t:`pendryReliabilityFactorsLEED1980`.
+  Ref. :cite:alp:`pendryReliabilityFactorsLEED1980`.
 
   If the Pendry |R factor| is used, the value of :math:`R + \textrm{var}(R)`
   will be calculated for each error type and drawn as a horizontal line in

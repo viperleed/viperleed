@@ -9,7 +9,7 @@ Example system: Ir(100)-(2×1)-O
 In this tutorial we go through a ViPErLEED structure analysis for an Ir(100)
 surface with adsorbed oxygen, creating a (\ :math:`2\times1`) superstructure.
 The structure and analysis is based on
-Ref. :cite:p:`ferstlStructureOrderingOxygen2016`. The experimental
+Ref. :cite:alp:`ferstlStructureOrderingOxygen2016`. The experimental
 data and input model were provided by Lutz Hammer.
 
 We will begin by running a reference calculation and a rough structure

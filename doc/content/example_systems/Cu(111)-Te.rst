@@ -308,7 +308,7 @@ Altogether, this should bring us to a Pendry |R factor|
 :math:`R_\mathrm{P} \approx 0.19`, which is already a good agreement for
 such a heavily corrugated surface. For more details concerning corrugated
 surfaces see the discussion in
-Ref. :cite:p:`kisslingerSubmonolayerCopperTelluride2021`.
+Ref. :cite:alp:`kisslingerSubmonolayerCopperTelluride2021`.
 
 Error calculation
 =================

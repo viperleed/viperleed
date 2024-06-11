@@ -17,7 +17,7 @@ calculation to run. The complexity depends on the size of the
 parameter space defined in the :ref:`DISPLACEMENTS file<displacements>`.
 
 During the structure search, the optimization algorithm (see
-Ref. :cite:p:`kottckeNewApproachAutomated1997`) samples surface structures
+Ref. :cite:alp:`kottckeNewApproachAutomated1997`) samples surface structures
 in the configuration-space defined in :ref:`DISPLACEMENTS<displacements>`.
 Diffraction intensities and a corresponding |R factor| are calculated for 
 these structures based on combinations of the pre-computed delta-amplitudes.
