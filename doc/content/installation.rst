@@ -76,7 +76,7 @@ into a local directory of your choice.
 |calc| will need to know where the tensor-LEED code is located on your machine.
 You can either specify this each time you run |calc| via
 :ref:`command-line arguments<cli_calc>` or you can define
-the ``VIPERLEED_TENSORLEED`` environment variable.
+the :envvar:`VIPERLEED_TENSORLEED` environment variable.
 
 .. tab-set::
 
@@ -88,10 +88,10 @@ the ``VIPERLEED_TENSORLEED`` environment variable.
 
             export VIPERLEED_TENSORLEED="<path/to/your/local/copy/of/viperleed-tensorleed>"
 
-        The above will only set the ``VIPERLEED_TENSORLEED`` environment
+        The above will only set the :envvar:`VIPERLEED_TENSORLEED` environment
         variable for the current session of the shell. To make the changes
         permanent, you can add the ``export`` statement, e.g., to
-        your ``~/.bashrc``, via
+        your :file:`~/.bashrc`, via
 
         .. code-block:: bash
 
@@ -108,19 +108,21 @@ the ``VIPERLEED_TENSORLEED`` environment variable.
 
         in a CMD terminal. You then may need to reboot your system. Notice
         the use of ``setx`` rather than ``set``: the latter only sets the
-        ``VIPERLEED_TENSORLEED`` environment variable for the active session.
+        :envvar:`VIPERLEED_TENSORLEED` environment variable for the active session.
 
   .. tab-item:: Windows, via System Properties
 
-        Open up the Windows "Run" dialog (shortcut :kbd:`Win+R`), type
-        ``sysdm.cpl``, then press :kbd:`Enter` to open the "System Properties"
-        editor. Navigate to the "Advanced" tab, and click the
-        "Environment Variables..." button. In the "User variables for
-        <user name>" section, click "New...". Use ``VIPERLEED_TENSORLEED`` as
-        the "Variable name". For "Variable value" use the full path to the
-        folder containing the archives you have downloaded from the
-        ``viperleed-tensorleed`` GitHub page. You may need to reboot
-        your system.
+        Open up the Windows :guilabel:`Run` dialog (shortcut :kbd:`Win+R`),
+        type ``sysdm.cpl``, then press :kbd:`Enter` to open the
+        :guilabel:`System Properties` editor. Navigate to the
+        :guilabel:`Advanced` tab, and click the
+        :guilabel:`Environment Variables...` button.
+        In the :guilabel:`User variables for <user name>` section,
+        click :guilabel:`New...`. Use ``VIPERLEED_TENSORLEED`` as
+        the :guilabel:`Variable name`. For :guilabel:`Variable value`
+        use the full path to the folder containing the archives you
+        have downloaded from the ``viperleed-tensorleed`` GitHub page.
+        You may need to reboot your system.
 
 .. _wsl:
 
@@ -138,11 +140,12 @@ and *not recommended*.
     require WSL.
 
 Installing WSL may require enabling some "developer" features (especially
-on Windows 10). To this end, open the "Run" dialog (\ :kbd:`Win+R`), type
-``optionalfeatures``, then press :kbd:`Enter`. Make sure that "Virtual
-Machine Platform" and "Windows Subsystem for Linux" are selected in the
-"Windows Features" dialog. You may need to restart your computer after
-selecting them. Then, on the Microsoft Store, download your preferred
+on Windows 10). To this end, open the :guilabel:`Run` dialog (\ :kbd:`Win+R`),
+type ``optionalfeatures``, then press :kbd:`Enter`. Make sure that
+:guilabel:`Virtual Machine Platform` and
+:guilabel:`Windows Subsystem for Linux` are selected in the
+:guilabel:`Windows Features` dialog. You may need to restart your computer
+after selecting them. Then, on the Microsoft Store, download your preferred
 Linux distribution (e.g., Ubuntu). Once your distribution is downloaded,
 you can install it by clicking on it. Follow the instructions in the terminal
 to create a new user (note: user names should be lowercase only). You can then
@@ -257,7 +260,7 @@ The full documentation of the |oneAPI| is available from the
 
     Once installation completes, we need to configure the system and add the
     compilers to our system path. First, we need to make sure the required
-    build tools (e.g., ``cmake``) are present:
+    build tools (e.g., :program:`cmake`) are present:
 
     .. code-block:: bash
 
@@ -265,9 +268,9 @@ The full documentation of the |oneAPI| is available from the
 
     Then, we configure the |oneAPI| installation such that it is discovered
     by our environment. For this, we need to ``source`` the file
-    ``/opt/intel/oneapi/setvars.sh`` that sets the required :term:`CLI`
+    :file:`/opt/intel/oneapi/setvars.sh` that sets the required :term:`CLI`
     arguments. We recommend you do this by adding the following line to
-    the end of the startup script of your shell (usually ``~/.bashrc``):
+    the end of the startup script of your shell (usually :file:`~/.bashrc`):
 
     .. code-block:: bash
 
@@ -334,22 +337,27 @@ The full documentation of the |oneAPI| is available from the
     `this guide <https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/2024-1/use-the-setvars-script-with-windows.html>`__
     from Intel.
 
-    Notice that ``cmd.exe`` can use a mechanism similar to the ``.barchrc``
-    startup script for Linux's ``bash``. This means that dedicated commands
-    can be executed upon startup of each ``cmd`` session. To set this up:
+    Notice that :program:`cmd` can use a mechanism similar to the
+    :file:`.barchrc` startup script for Linux's :program:`bash`. This
+    means that dedicated commands can be executed upon startup of each
+    :program:`cmd` session. To set this up:
 
-    -  Open the Windows registry editor via the "Run" dialog (\ :kbd:`Win+R`):
-       type ``regedit``, then press :kbd:`Enter`. Confirm the administrator
-       permissions.
-    -  Navigate to ``HKEY_CURRENT_USER\Software\Microsoft\Command Processor``.
-       If ``Command Processor`` does not exist, right click on ``Microsoft``,
-       select "New" → "Key", and name the new entry ``Command Processor``.
-    -  Find the ``AutoRun`` entry in the right panel. If no ``AutoRun`` exists,
-       create a "New" → "String value" by right clicking. Name it ``AutoRun``.
-    -  Skip this passage if the ``AutoRun`` entry already has a value.
-       "Modify..." the empty value of the ``AutoRun`` entry to
-       ``%USERPROFILE%\cmd-autorun.bat``. ``%USERPROFILE%`` is the path
-       to your user directory. You can find its value by typing
+    -  Open the Windows registry editor via the :guilabel:`Run` dialog
+       (\ :kbd:`Win+R`): type ``regedit``, then press :kbd:`Enter`. Confirm
+       the administrator permissions.
+    -  Navigate to
+       :guilabel:`HKEY_CURRENT_USER/Software/Microsoft/Command Processor/`.
+       If :guilabel:`Command Processor` does not exist, right click on
+       :guilabel:`Microsoft`, select :menuselection:`New --> Key`, and
+       name the new entry ``Command Processor``.
+    -  Find the :guilabel:`AutoRun` entry in the right
+       panel. If no :guilabel:`AutoRun` exists, create
+       a :menuselection:`New --> String value` by right
+       clicking. Name it ``AutoRun``.
+    -  Skip this passage if the :guilabel:`AutoRun` entry already has a value.
+       :menuselection:`Modify...` the empty value of the :guilabel:`AutoRun`
+       entry to ``%USERPROFILE%\cmd-autorun.bat``. ``%USERPROFILE%`` is the
+       path to your user directory. You can find its value by typing
 
        .. code-block:: bat
 
@@ -358,9 +366,9 @@ The full documentation of the |oneAPI| is available from the
        in a terminal. On Windows 10 and later, you can also directly navigate
        to the location in Explorer by typing ``%USERPROFILE%`` in the Windows
        Start menu or in the address bar of an Explorer window.
-    -  Navigate to the file path set as a value for the ``AutoRun`` entry.
-       You can create a new file with the correct name if it does not exist.
-       Then append the following lines to the end:
+    -  Navigate to the file path set as a value for the :guilabel:`AutoRun`
+       entry. You can create a new file with the correct name if it does not
+       exist. Then append the following lines to the end:
 
        .. code-block:: bat
 
@@ -369,7 +377,7 @@ The full documentation of the |oneAPI| is available from the
          @echo on
 
     -  Close the registry editor.
-    -  Open a new ``cmd.exe`` session, and test that the |oneAPI| compilers
+    -  Open a new :program:`cmd` session, and test that the |oneAPI| compilers
        are now visible via
 
        .. code-block:: bat
@@ -397,7 +405,7 @@ for how to install ``gfortran`` on various operating systems.
   .. tab-item:: Linux
 
     First, using your package manager, update the package list and install the
-    newest version of ``gfortran``. In this manual, we use ``apt``, the
+    newest version of ``gfortran``. In this manual, we use :program:`apt`, the
     standard package manager for Debian-based distributions.\ [#]_
 
     .. code-block:: bash
@@ -437,11 +445,11 @@ for how to install ``gfortran`` on various operating systems.
 
     For running under MacOS, it is recommended to first install a package
     manager such as `brew <https://brew.sh>`__. This will also install the
-    XCode command-line tools which are required for installing most other
-    components.
+    :program:`XCode` command-line tools which are required for installing
+    most other components.
 
-    Using the ``brew`` command, you can then easily install ``gfortran`` and
-    the Open MPI implementation (automatically including ``mpifort``).
+    Using the :program:`brew` command, you can then easily install ``gfortran``
+    and the Open MPI implementation (automatically including ``mpifort``).
 
     .. code-block:: bash
 
@@ -452,10 +460,10 @@ for how to install ``gfortran`` on various operating systems.
     already ships with these libraries preinstalled.
 
     .. warning::
-        If the XCode command-line tools are not installed before you install
-        ``gfortran``, you will get an error stating that the ``-lSystem``
-        library is not available. If this happens, make sure to first install
-        the XCode command-line tools via
+        If the :program:`XCode` command-line tools are not installed before
+        you install ``gfortran``, you will get an error stating that the
+        ``-lSystem`` library is not available. If this happens, make sure
+        to first install the :program:`XCode` command-line tools via
 
         .. code-block:: bash
 
@@ -502,7 +510,7 @@ for how to install ``gfortran`` on various operating systems.
 
     -  Install `MSys2 <https://www.msys2.org/>`__, which then installs MinGW,
        then open the MSys2 shell.
-    -  Update MSys2 running
+    -  Update :program:`MSys2` running
 
        .. code-block:: bash
 
@@ -514,17 +522,17 @@ for how to install ``gfortran`` on various operating systems.
 
             pacman -S mingw-w64-x86_64-toolchain
 
-    -  Add the ``"<path_to_mingw_installation>/mingw64/bin"`` entry to your
-       ``Path`` environment variable. This way, calling ``gfortran`` from the
+    -  Add the :file:`<path_to_mingw_installation>/mingw64/bin` entry to your
+       :envvar:`Path` environment variable. This way, calling ``gfortran`` from the
        terminal will find the one just installed with no need to explicitly
        passing the whole path.
-       See the notes in :ref:`this section<install_tensorleed>` for how to
-       access the environment-variable settings on Windows.
-       Edit the ``Path`` environment variable by appending
-       ``"<path_to_mingw_installation>/mingw64/bin"``. On Windows 7, use a
-       semicolon as separator.
+       See the notes in :ref:`this section<install_tensorleed>` for how
+       to access the environment-variable settings on Windows. Edit the
+       :envvar:`Path` environment variable by appending
+       :file:`<path_to_mingw_installation>/mingw64/bin`.
+       On Windows 7, use a semicolon as separator.
 
-    -  Install developer tools, ``cmake`` and ``git`` with
+    -  Install developer tools, :program:`cmake`, and :program:`git` with
 
        .. code-block:: bash
 
@@ -552,12 +560,12 @@ for how to install ``gfortran`` on various operating systems.
 
             makepkg-mingw
 
-       Should ``curl`` complain about some certificates, you can also
+       Should :program:`curl` complain about some certificates, you can also
        `download <http://www.netlib.org/lapack/>`__ the LAPACK/BLAS source
        code as a ``.tar.gz`` archive.
-       Take the version that ``curl`` complains about, and place the archive
-       in the package folder, which you can find in
-       ``<path_to_mingw_installation>/home/<user_name>/MINGW-packages/mingw-w64-lapack``.
+       Take the version that :program:`curl` complains about, and place the
+       archive in the package folder, which you can find in
+       :file:`<path_to_mingw_installation>/home/<user_name>/MINGW-packages/mingw-w64-lapack`.
        This build will take quite a while.
 
     -  Install LAPACK/BLAS packages with
@@ -566,8 +574,8 @@ for how to install ``gfortran`` on various operating systems.
 
             pacman -U mingw-w64-x86_64-lapack-<REPLACE_WITH_VERSION>.pkg.tar.zst
 
-       Note that the archive may have a different suffix. Run ``ls`` in the
-       same folder to check the correct name.
+       Note that the archive may have a different suffix. Run ``ls`` in
+       the same folder to check the correct name.
 
     You can then test the LAPACK installation with
 
@@ -614,13 +622,15 @@ EEASiSSS
     Compile eeasisss at run time, instead of using a pre-compiled version?
 
 This is the "Elastic Electron–Atom Scattering in Solids and Surface Slabs"
-(EEASiSSS) program by :cite:t:`rundgrenElasticElectronatomScattering2007`.
-Its source code is distributed by the ViPErLEED developers in the
-``viperleed-tensorleed`` GitHub
+(\ :program:`EEASiSSS`) program by
+:cite:t:`rundgrenElasticElectronatomScattering2007`.
+Its source code is distributed by the ViPErLEED developers
+in the ``viperleed-tensorleed`` GitHub
 `repository <https://github.com/viperleed/viperleed-tensorleed>`__
 with permission from the author.
 
-EEASiSSS is used by ViPErLEED during the :ref:`initialization<initialization>`
+:program:`EEASiSSS` is used by ViPErLEED during the
+:ref:`initialization<initialization>` section
 to generate the :ref:`PHASESHIFTS<phaseshifts>` file.
 
 The EEASiSSS source code is included, together with TensErLEED, in the
@@ -636,7 +646,8 @@ compilation from source as described in the following.
 
     .. tab-item:: Linux, MacOS, Windows Subsystem for Linux
 
-        EEASiSSS can be compiled automatically using the provided ``Makefile``.
+        :program:`EEASiSSS` can be compiled automatically using
+        the provided ``Makefile``.
 
         Navigate to your local version of the ``viperleed-tensorleed``
         repository using
@@ -692,15 +703,15 @@ which is installed by default with NumPy.
 
         To build the |R-factor| extension module, navigate to your local
         copy of  the ``viperleed`` package in the terminal and call
-        ``make`` in the ``extensions`` directory.
+        ``make`` in the :file:`extensions` directory.
 
     .. tab-item:: Windows, native
 
         There are no automatic means to build the |R-factor| extension module
         on Windows. Native-Windows users must manually build the extension
         using F2PY. See the UNIX ``Makefile``  for build flags. You can find
-        the ``Makefile`` in the ``extensions`` directory of your local copy of
-        the ``viperleed`` package.
+        the ``Makefile`` in the :file:`extensions` directory of your local 
+        copy of the ``viperleed`` package.
 
 
 .. _mpirandom:

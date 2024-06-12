@@ -75,15 +75,18 @@ with
                         0 & -1 & 1
                      \end{pmatrix} .
 
-In :term:`VESTA`, you can do this by selecting "Edit" → "Edit Data" →
-"Unit cell" → "Transform". To avoid problems later on, it is useful to
-also delete the unit cell symmetry before applying a transformation. You
-can do that in "Edit" → "Edit Data" → "Unit cell" → "Remove symmetry".
-When applying the transformation, VESTA may prompt you and ask what to
-do with the atoms in the new unit cell. Make sure to choose
-*"Search atoms in the new unit-cell and add them as new sites"*. The
-unit-cell transformation will introduce duplicate atoms, which can be
-deleted using "Edit" → "Structure parameters" → "Remove duplicate atoms".
+In :term:`VESTA`, you can do this by selecting
+:menuselection:`Edit --> Edit Data --> Unit cell --> Transform`. To
+avoid problems later on, it is useful to also delete the unit cell
+symmetry before applying a transformation. You can do that by pressing
+the :guilabel:`Remove symmetry` button in
+:menuselection:`Edit --> Edit Data --> Unit cell`.
+When applying the transformation, VESTA may prompt you and ask what
+to do with the atoms in the new unit cell. Make sure to choose
+:guilabel:`Search atoms in the new unit-cell and add them as new sites`.
+The unit-cell transformation will introduce duplicate atoms, which can be
+deleted using the :guilabel:`Remove duplicate atoms` button in
+:menuselection:`Edit --> Structure parameters`.
 
 To create a suitable surface slab (as expected by ViPErLEED), we can then
 replicate the unit cell along |c| and (optionally) remove the topmost layer
@@ -100,14 +103,14 @@ transformation to the previously transformed unit cell. Use
     \end{pmatrix}
 
 to make the slab twice as thick along |c|. Choose again
-*"Search atoms in the new unit-cell and add them as new sites"*.
+:guilabel:`Search atoms in the new unit-cell and add them as new sites`.
 You can then add a vacuum gap by applying the same transformation again,
-this time not adding any new atoms (choose *"Do nothing"* in the prompt).
-This is not strictly required by ViPErLEED, but makes it easier to recognize
-which layer is our surface.
+this time not adding any new atoms (choose :guilabel:`Do nothing` in the
+prompt). This is not strictly required by ViPErLEED, but makes it easier
+to recognize which layer is our surface.
 
-Our starting POSCAR file contains 40 atoms in total, which corresponds to
-4 repeat units (layers) of 4 Fe and 6 O atoms each.
+Our starting POSCAR file contains 40 atoms in total, which corresponds
+to four repeat units (layers) of 4 Fe and 6 O atoms each.
 See :numref:`fig_Fe2O3_layers` for a side view of the structure.
 
 

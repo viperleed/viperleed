@@ -85,9 +85,9 @@ A typical call may look like this:
 Here, the work directory ``work_dir`` is the directory where the calculation
 will be executed and all temporary files will be stored.
 ``work_dir`` will be created if it does not yet exist.
-The ``tensorleed_path`` is the path to the TensErLEED source code.
-If the ``-t`` option is not given, ViPErLEED will look for the TensErLEED
-source code under the ``VIPERLEED_TENSORLEED`` :term:`environment variable`.
+The ``tensorleed_path`` is the path to the TensErLEED source code. If the 
+``-t`` option is not given, ViPErLEED will look for the TensErLEED source 
+code under the :envvar:`VIPERLEED_TENSORLEED` :term:`environment variable`.
 
 
 .. tip::

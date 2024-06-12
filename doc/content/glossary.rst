@@ -36,11 +36,10 @@ Glossary
       Density functional theory
 
     Environment variable
-      A variable that is set in the environment of a process.
-      It is used to pass information to a process.
-      ViPErLEED uses the environment variable `VIPERLEED_TENSORLEED` to locate
-      the TensErLEED source code if the path is not given explicitly.
-      See also :ref:`here<how_to_run>`.
+      A variable that is set in the environment of a process. It is used to
+      pass information to a process. ViPErLEED uses the environment variable
+      :envvar:`VIPERLEED_TENSORLEED` to locate the TensErLEED source code if
+      the path is not given explicitly. See also :ref:`here<how_to_run>`.
 
     fcc
       Face-centered-cubic crystal structure.
