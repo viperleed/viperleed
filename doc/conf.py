@@ -31,6 +31,7 @@ release = viperleed.__version__
 
 extensions = [
     'myst_nb',                 # For including Jupyter notebooks
+    'sphinxarg.ext',           # Auto-generation of argparse CLI docs
     'sphinx_copybutton',       # For a copy button in code blocks
     'sphinx_design',           # For tabs, dropdowns, ...
     'sphinx_rtd_theme',        # HTML theme

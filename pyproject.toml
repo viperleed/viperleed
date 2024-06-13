@@ -70,6 +70,9 @@ doc = [  # Requires >= py3.9!
     'setuptools',  # Workaround for sphinxcontrib-bibtex #345
     'sphinx-rtd-theme',
     'sphinx>6.1',
+    # For now take the sphinx-argparse fork by @michele-riva, till
+    # the edits are released in the main sphinx-argparse repo
+    'sphinx-argparse@git+https://github.com/michele-riva/sphinx-argparse@collated-edits',
     'sphinx-copybutton',
     'sphinx-design',
     'sphinxcontrib-bibtex',
