@@ -102,24 +102,21 @@ of the :ref:`eeasisss_compile` source code, obtained as described in
         containing the tensor-LEED source code.
 
     my_tensorleed/
-    ├── EEASiSSS/
-    │       @amimre add some sketch of contents
-    │       ...
-    ├── TensErLEED-v1.6.0/
-    │   ├── src/
-    │   │    ├──ref-calc.f
-    │   │    └──...
-    │   ├── lib/
-    │   │    ├──lib.tleed.f
-    │   │    └──...
-    │   ├── random_.c
-    │   └── Makefile       <-- For random_.c
-    ├── TensErLEED-v1.7.3/
-    │   ...
+    ├── eeasisss_code/      <-- EEASiSSS source code, compiled with make
+    │   └── ...
     ├── TensErLEED-v2.0.0/
-    │   ...
+    │   ├── src/
+    │   │    ├── ref-calc.f
+    │   │    └── ...
+    │   └── lib/
+    │        ├── lib.tleed.f
+    │        └── ...
+    ├── TensErLEED-v1.7.3/  <-- optional older release
+    │   ├── random_.c
+    │   ├── Makefile        <-- For random_.c, versions < v.1.7.4 only
+    │   └── ...
     ⋮
-    └── Makefile           <-- For EEASiSSS
+    └── Makefile            <-- For EEASiSSS
 
 
 |calc| will need to know where the tensor-LEED code is located on your machine.
