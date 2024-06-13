@@ -724,7 +724,7 @@ Randomizer library for TensErLEED < v1.7.4
     :ref:`section<sec_search>`, which is currently incompatible with
     native execution on Windows due to limitations on the Python code.
 
-TensErLEED versions up to 1.7.3 need the :term:`C`-object files called
+TensErLEED versions up to v1.7.3 need the :term:`C`-object files called
 ``random_.o`` and ``MPIrandom_.o``. These files must be precompiled with C and
 C MPI compilers, respectively. A ``Makefile`` is also provided for them. If you
 followed the :ref:`instructions<install_fortran_comp>` for obtaining the
@@ -732,8 +732,8 @@ Fortran compilers, you should already have the necessary C compilers installed
 (from either GCC or Intel).
 
 To compile the randomizer library for TensErLEED version ``x.y.z``, go into
-the directory ``viperleed/tensorleed/TensErLEED-x.y.z`` and call either
-``make intel`` or ``make gcc`` to compile using the Intel or GCC :term:`C`
+the respective `directory containing the TensErLEED source files and call either
+``make intel`` or ``make gcc`` to compile them using the Intel or GCC :term:`C`
 compilers, respectively.
 
 
