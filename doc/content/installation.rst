@@ -72,15 +72,25 @@ on your machine. You can obtain all the necessary source code from the
 GitHub repository. We suggest downloading the most recent
 `release <https://github.com/viperleed/viperleed-tensorleed/releases/latest>`__
 into a local directory of your choice.
+Note that you may need to uncompress the TensErLEED source files after
+downloading.
+
+If you want to use older version of TensErLEED, you can also download older
+releases from the
+`releases tab <https://github.com/viperleed/viperleed-tensorleed/releases>`__
+of the ``viperleed-tensorleed`` repository. You can have multiple versions of
+TensErLEED on your system at the same time. |calc| will use the most recent
+available version by default. To select a different version you can use the
+:ref:`TL_VERSION<tl_version>` parameter.
 
 |calc| will need to know where the tensor-LEED code is located on your machine.
 You can either specify this each time you run |calc| via
 :ref:`command-line arguments<cli_calc>` or you can define
-the :envvar:`VIPERLEED_TENSORLEED` environment variable.
+the :envvar:`VIPERLEED_TENSORLEED` environment variable:
 
 .. tab-set::
 
-  .. tab-item:: Linux, MacOS, Windows Subsystem for Linux
+  .. tab-item:: Linux, macOS, Windows Subsystem for Linux
 
         You can set an environment variable via
 
@@ -182,7 +192,7 @@ computationally most expensive part of ViPErLEED and TensErLEED, supports
 parallelized compilation and execution with :term:`MPI`. To use the :term:`MPI`
 version of TensErLEED, you need to install an :term:`MPI` implementation
 as well as the :term:`MPI` compiler corresponding to your Fortran compiler.
-We recommend using Open MPI on Linux and MacOS.
+We recommend using Open MPI on Linux and macOS.
 The MPI compiler for :term:`gfortran` is :term:`mpifort`, for :term:`ifort`
 it is :term:`mpiifort`.
 
@@ -191,7 +201,7 @@ compilers and a preferred :term:`MPI` implementation are likely already
 installed. For details regarding their usage, consult the documentation
 for your HPC system as well as its administrators.
 
-|calc| can run on Linux, MacOS and Microsoft Windows, but the installation
+|calc| can run on Linux, macOS and Microsoft Windows, but the installation
 of the compilers differs significantly for each system.
 
 .. note::
@@ -274,9 +284,13 @@ The full documentation of the |oneAPI| is available from the
 
     .. code-block:: bash
 
-        source /opt/intel/oneapi/setvars.sh
+        source <install-dir>/<toolkit-version>/oneapi-vars.sh
 
     Afterwards, the required compilers should be available for use.
+    See also
+    `this page by Intel <https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/2024-1/use-the-setvars-and-oneapi-vars-scripts-with-linux.html>`__
+    for more details.
+
     You can check whether :term:`ifort` is present by using
 
     .. code-block:: bash
@@ -287,7 +301,7 @@ The full documentation of the |oneAPI| is available from the
     You can do the same check with ``mpirun`` and ``mpiifort`` to check that
     they are properly configured as well.
 
-  .. tab-item:: MacOS
+  .. tab-item:: macOS
 
     .. warning::
         Newer Macs using "Apple Silicon" ARM-based chips are incompatible
@@ -296,7 +310,7 @@ The full documentation of the |oneAPI| is available from the
 
     Follow the
     `Intel guide <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-macos/top.html>`__
-    to install the |oneAPI| toolkits under MacOS. As for
+    to install the |oneAPI| toolkits under macOS. As for
     :ref:`Linux<ifort_linux>`, you will need to install the |oneAPI| Base
     Toolkit and the |oneAPI| HPC Toolkit.
 
@@ -441,9 +455,9 @@ for how to install ``gfortran`` on various operating systems.
         sudo apt install libopenmpi-dev
 
 
-  .. tab-item:: MacOS
+  .. tab-item:: macOS
 
-    For running under MacOS, it is recommended to first install a package
+    For running under macOS, it is recommended to first install a package
     manager such as `brew <https://brew.sh>`__. This will also install the
     :program:`XCode` command-line tools which are required for installing
     most other components.
@@ -456,7 +470,7 @@ for how to install ``gfortran`` on various operating systems.
         brew install gfortran
         brew install open-mpi
 
-    There is no need to install :term:`BLAS` and :term:`LAPACK`, as MacOS
+    There is no need to install :term:`BLAS` and :term:`LAPACK`, as macOS
     already ships with these libraries preinstalled.
 
     .. warning::
@@ -644,7 +658,7 @@ compilation from source as described in the following.
 
 .. tab-set::
 
-    .. tab-item:: Linux, MacOS, Windows Subsystem for Linux
+    .. tab-item:: Linux, macOS, Windows Subsystem for Linux
 
         :program:`EEASiSSS` can be compiled automatically using
         the provided ``Makefile``.
@@ -699,7 +713,7 @@ which is installed by default with NumPy.
 
 .. tab-set::
 
-    .. tab-item:: Linux, MacOS, Windows Subsystem for Linux
+    .. tab-item:: Linux, macOS, Windows Subsystem for Linux
 
         To build the |R-factor| extension module, navigate to your local
         copy of  the ``viperleed`` package in the terminal and call
@@ -710,7 +724,7 @@ which is installed by default with NumPy.
         There are no automatic means to build the |R-factor| extension module
         on Windows. Native-Windows users must manually build the extension
         using F2PY. See the UNIX ``Makefile``  for build flags. You can find
-        the ``Makefile`` in the :file:`extensions` directory of your local 
+        the ``Makefile`` in the :file:`extensions` directory of your local
         copy of the ``viperleed`` package.
 
 
@@ -725,18 +739,18 @@ Random numbers library for TensErLEED < v1.7.4
     :ref:`section<sec_search>`, which is currently incompatible with
     native execution on Windows due to limitations on the Python code.
 
-TensErLEED versions up to 1.7.3 need the :term:`C`-object files called
+TensErLEED versions up to v1.7.3 need the :term:`C`-object files called
 ``random_.o`` and ``MPIrandom_.o``. These files must be precompiled with C and
 C MPI compilers, respectively. A ``Makefile`` is also provided for them. If you
 followed the :ref:`instructions<install_fortran_comp>` for obtaining the
 Fortran compilers, you should already have the necessary C compilers installed
 (from either GCC or Intel).
 
-To compile the random-number generation library for TensErLEED version
-``x.y.z``, go into the directory ``viperleed/tensorleed/TensErLEED-x.y.z``
-and call either ``make intel`` or ``make gcc`` to compile using the Intel
-or GCC :term:`C` compilers, respectively.
-
+To compile the random-number generation library for a certain TensErLEED
+version, navigate in your terminal to the respective
+:ref:`directory containing the TensErLEED source files<install_tensorleed>`
+and call either ``make intel`` or ``make gcc`` to compile
+them using the Intel or GCC :term:`C` compilers, respectively.
 
 
 .. [1]  If you are completely new to using a terminal, take a look at
