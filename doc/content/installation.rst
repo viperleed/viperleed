@@ -73,7 +73,8 @@ GitHub repository. We suggest downloading the most recent
 `release <https://github.com/viperleed/viperleed-tensorleed/releases/latest>`__
 into a local directory of your choice.
 Note that you may need to uncompress the TensErLEED source files after
-downloading.
+downloading. See also :numref:`list_tensorleed_folder` for the expected
+folder structure.
 
 If you want to use older version of TensErLEED, you can also download older
 releases from the
@@ -83,10 +84,63 @@ TensErLEED on your system at the same time. |calc| will use the most recent
 available version by default. To select a different version you can use the
 :ref:`TL_VERSION<tl_version>` parameter.
 
+When using multiple tensor-LEED versions, the folder containing the tensor-LEED
+code is expected to have the structure in :numref:`list_tensorleed_folder`. The
+name of the top-level folder is up to the user (\ :file:`my_tensorleed` in
+:numref:`list_tensorleed_folder`). However, folder names for the TensErLEED
+source code should be named exactly :file:`TensErLEED-v1.X.Z` for versions
+earlier than v2.0.0. The folder name for later versions is only required to
+begin with :file:`TensErLEED`. The top-level folder (\ :file:`my_tensorleed` in
+:numref:`list_tensorleed_folder`) is expected to contain the compiled version
+of the :ref:`eeasisss_compile` source code, obtained as described in
+:ref:`static_compile`.
+
+.. _list_tensorleed_folder:
+.. code-block::
+    :caption:
+        Expected structure of the directory
+        containing the tensor-LEED source code.
+
+    my_tensorleed/
+    ├── EEASiSSS/
+    │       @amimre add some sketch of contents
+    │       ...
+    ├── TensErLEED-v1.6.0/
+    │   ├── src/
+    │   │    ├──ref-calc.f
+    │   │    └──...
+    │   ├── lib/
+    │   │    ├──lib.tleed.f
+    │   │    └──...
+    │   ├── random_.c
+    │   └── Makefile       <-- For random_.c
+    ├── TensErLEED-v1.7.3/
+    │   ...
+    ├── TensErLEED-v2.0.0/
+    │   ...
+    ⋮
+    └── Makefile           <-- For EEASiSSS
+
+
 |calc| will need to know where the tensor-LEED code is located on your machine.
 You can either specify this each time you run |calc| via
 :ref:`command-line arguments<cli_calc>` or you can define
-the :envvar:`VIPERLEED_TENSORLEED` environment variable:
+the :envvar:`VIPERLEED_TENSORLEED` environment variable.
+See :ref:`set_envvar` for more details. With reference to
+:numref:`list_tensorleed_folder`, the :envvar:`VIPERLEED_TENSORLEED`
+environment variable (or the command-line argument) can equivalently
+point to either ``my_tensorleed`` or to any of its subfolders.
+
+
+.. _set_envvar:
+
+Setting an environment variable
+===============================
+
+In this section we briefly describe how an :term:`environment variable`
+is set on various platforms. The following examples are for the
+:envvar:`VIPERLEED_TENSORLEED` environment variable that |calc|
+can use to locate the :ref:`tensor-LEED code<install_tensorleed>`.
 
 .. tab-set::
 
@@ -133,6 +187,7 @@ the :envvar:`VIPERLEED_TENSORLEED` environment variable:
         use the full path to the folder containing the archives you
         have downloaded from the ``viperleed-tensorleed`` GitHub page.
         You may need to reboot your system.
+
 
 .. _wsl:
 
@@ -540,10 +595,9 @@ for how to install ``gfortran`` on various operating systems.
        :envvar:`Path` environment variable. This way, calling ``gfortran`` from the
        terminal will find the one just installed with no need to explicitly
        passing the whole path.
-       See the notes in :ref:`this section<install_tensorleed>` for how
-       to access the environment-variable settings on Windows. Edit the
-       :envvar:`Path` environment variable by appending
-       :file:`<path_to_mingw_installation>/mingw64/bin`.
+       See :ref:`set_envvar` for how to access the environment-variable
+       settings on Windows. Edit the :envvar:`Path` environment variable
+       by appending :file:`<path_to_mingw_installation>/mingw64/bin`.
        On Windows 7, use a semicolon as separator.
 
     -  Install developer tools, :program:`cmake`, and :program:`git` with
@@ -628,6 +682,8 @@ Compiling static files
 In addition to the TensErLEED source code, which is compiled *at run-time*,
 ViPErLEED needs a few auxiliary programs that need compiling before a
 calculation can be started.
+
+.. _eeasisss_compile:
 
 EEASiSSS
 --------
