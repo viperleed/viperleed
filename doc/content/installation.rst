@@ -90,7 +90,7 @@ the ``VIPERLEED_TENSORLEED`` environment variable:
 
 .. tab-set::
 
-  .. tab-item:: Linux, MacOS, Windows Subsystem for Linux
+  .. tab-item:: Linux, macOS, Windows Subsystem for Linux
 
         You can set an environment variable via
 
@@ -189,7 +189,7 @@ computationally most expensive part of ViPErLEED and TensErLEED, supports
 parallelized compilation and execution with :term:`MPI`. To use the :term:`MPI`
 version of TensErLEED, you need to install an :term:`MPI` implementation
 as well as the :term:`MPI` compiler corresponding to your Fortran compiler.
-We recommend using Open MPI on Linux and MacOS.
+We recommend using Open MPI on Linux and macOS.
 The MPI compiler for :term:`gfortran` is :term:`mpifort`, for :term:`ifort`
 it is :term:`mpiifort`.
 
@@ -198,7 +198,7 @@ compilers and a preferred :term:`MPI` implementation are likely already
 installed. For details regarding their usage, consult the documentation
 for your HPC system as well as its administrators.
 
-|calc| can run on Linux, MacOS and Microsoft Windows, but the installation
+|calc| can run on Linux, macOS and Microsoft Windows, but the installation
 of the compilers differs significantly for each system.
 
 .. note::
@@ -298,7 +298,7 @@ The full documentation of the |oneAPI| is available from the
     You can do the same check with ``mpirun`` and ``mpiifort`` to check that
     they are properly configured as well.
 
-  .. tab-item:: MacOS
+  .. tab-item:: macOS
 
     .. warning::
         Newer Macs using "Apple Silicon" ARM-based chips are incompatible
@@ -307,7 +307,7 @@ The full documentation of the |oneAPI| is available from the
 
     Follow the
     `Intel guide <https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-macos/top.html>`__
-    to install the |oneAPI| toolkits under MacOS. As for
+    to install the |oneAPI| toolkits under macOS. As for
     :ref:`Linux<ifort_linux>`, you will need to install the |oneAPI| Base
     Toolkit and the |oneAPI| HPC Toolkit.
 
@@ -447,9 +447,9 @@ for how to install ``gfortran`` on various operating systems.
         sudo apt install libopenmpi-dev
 
 
-  .. tab-item:: MacOS
+  .. tab-item:: macOS
 
-    For running under MacOS, it is recommended to first install a package
+    For running under macOS, it is recommended to first install a package
     manager such as `brew <https://brew.sh>`__. This will also install the
     XCode command-line tools which are required for installing most other
     components.
@@ -462,7 +462,7 @@ for how to install ``gfortran`` on various operating systems.
         brew install gfortran
         brew install open-mpi
 
-    There is no need to install :term:`BLAS` and :term:`LAPACK`, as MacOS
+    There is no need to install :term:`BLAS` and :term:`LAPACK`, as macOS
     already ships with these libraries preinstalled.
 
     .. warning::
@@ -648,7 +648,7 @@ compilation from source as described in the following.
 
 .. tab-set::
 
-    .. tab-item:: Linux, MacOS, Windows Subsystem for Linux
+    .. tab-item:: Linux, macOS, Windows Subsystem for Linux
 
         EEASiSSS can be compiled automatically using the provided ``Makefile``.
 
@@ -702,7 +702,7 @@ which is installed by default with NumPy.
 
 .. tab-set::
 
-    .. tab-item:: Linux, MacOS, Windows Subsystem for Linux
+    .. tab-item:: Linux, macOS, Windows Subsystem for Linux
 
         To build the |R-factor| extension module, navigate to your local
         copy of  the ``viperleed`` package in the terminal and call
