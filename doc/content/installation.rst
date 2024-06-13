@@ -281,9 +281,13 @@ The full documentation of the |oneAPI| is available from the
 
     .. code-block:: bash
 
-        source /opt/intel/oneapi/setvars.sh
+        source <install-dir>/<toolkit-version>/oneapi-vars.sh
 
     Afterwards, the required compilers should be available for use.
+    See also
+    `this page by Intel <https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/2024-1/use-the-setvars-and-oneapi-vars-scripts-with-linux.html>`__
+    for more details.
+
     You can check whether :term:`ifort` is present by using
 
     .. code-block:: bash
