@@ -102,7 +102,7 @@ of the :ref:`eeasisss_compile` source code, obtained as described in
         containing the tensor-LEED source code.
 
     my_tensorleed/
-    ├── eeasisss_code/      <-- EEASiSSS source code, compiled with make
+    ├── eeasisss_src/       <-- EEASiSSS source code, compiled with make
     │   └── ...
     ├── TensErLEED-v2.0.0/
     │   ├── src/
