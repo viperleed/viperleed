@@ -72,11 +72,21 @@ on your machine. You can obtain all the necessary source code from the
 GitHub repository. We suggest downloading the most recent
 `release <https://github.com/viperleed/viperleed-tensorleed/releases/latest>`__
 into a local directory of your choice.
+Note that you may need to uncompress the TensErLEED source files after
+downloading.
+
+If you want to use older version of TensErLEED, you can also download older
+releases from the
+`releases tab <https://github.com/viperleed/viperleed-tensorleed/releases/latest>`__
+of the viperleed-tensorleed repository. You can have multiple versions of
+TensErLEED on your system at the same time. |calc| will use the most recent
+available version by default. To select a different version you can use the
+:ref:`TL_VERSION<tl_version>` parameter.
 
 |calc| will need to know where the tensor-LEED code is located on your machine.
 You can either specify this each time you run |calc| via
 :ref:`command-line arguments<cli_calc>` or you can define
-the ``VIPERLEED_TENSORLEED`` environment variable.
+the ``VIPERLEED_TENSORLEED`` environment variable:
 
 .. tab-set::
 
