@@ -33,6 +33,7 @@ from viperleed.guilib.measure.classes.settings import SystemSettings
 from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import MeasureControllerABC
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
+from viperleed.guilib.measure.measurement import _meassettings as _settings
 
 _QUEUED = qtc.Qt.QueuedConnection
 _UNIQUE = qtc.Qt.UniqueConnection
