@@ -80,15 +80,15 @@ If you want to use older version of TensErLEED, you can also download older
 releases from the
 `releases tab <https://github.com/viperleed/viperleed-tensorleed/releases>`__
 of the ``viperleed-tensorleed`` repository. You can have multiple versions of
-TensErLEED on your system at the same time. |calc| will use the most recent
-available version by default. To select a different version you can use the
+TensErLEED on your system at the same time. |calc| will use the most recent one
+by default. To select a different version you can use the
 :ref:`TL_VERSION<tl_version>` parameter.
 
 When using multiple tensor-LEED versions, the folder containing the tensor-LEED
 code is expected to have the structure in :numref:`list_tensorleed_folder`. The
 name of the top-level folder is up to the user (\ :file:`my_tensorleed` in
 :numref:`list_tensorleed_folder`). However, folder names for the TensErLEED
-source code should be named exactly :file:`TensErLEED-v1.X.Z` for versions
+source code should be named exactly :file:`TensErLEED-v1.X.Y` for versions
 earlier than v2.0.0. The folder name for later versions is only required to
 begin with :file:`TensErLEED`. The top-level folder (\ :file:`my_tensorleed` in
 :numref:`list_tensorleed_folder`) is expected to contain the compiled version
@@ -125,8 +125,8 @@ You can either specify this each time you run |calc| via
 the :envvar:`VIPERLEED_TENSORLEED` environment variable.
 See :ref:`set_envvar` for more details. With reference to
 :numref:`list_tensorleed_folder`, the :envvar:`VIPERLEED_TENSORLEED`
-environment variable (or the command-line argument) can equivalently
-point to either ``my_tensorleed`` or to any of its subfolders.
+environment variable (or the command-line argument) can equivalently point
+to either ``my_tensorleed`` or to any of its :file:`TensErLEED*` subfolders.
 
 
 .. _set_envvar:
@@ -167,9 +167,10 @@ can use to locate the :ref:`tensor-LEED code<install_tensorleed>`.
 
             setx VIPERLEED_TENSORLEED "<path/to/your/local/copy/of/viperleed-tensorleed"
 
-        in a CMD terminal. You then may need to reboot your system. Notice
-        the use of ``setx`` rather than ``set``: the latter only sets the
-        :envvar:`VIPERLEED_TENSORLEED` environment variable for the active session.
+        in a :program:`CMD` terminal. You then may need to reboot your
+        system. Notice the use of ``setx`` rather than ``set``: the latter
+        only sets the :envvar:`VIPERLEED_TENSORLEED` environment variable
+        for the active session.
 
   .. tab-item:: Windows, via System Properties
 
@@ -695,15 +696,12 @@ Its source code is distributed by the ViPErLEED developers
 in the ``viperleed-tensorleed`` GitHub
 `repository <https://github.com/viperleed/viperleed-tensorleed>`__
 with permission from the author.
+See also :ref:`this section<install_tensorleed>` for more information
+on how to obtain the source code.
 
 :program:`EEASiSSS` is used by ViPErLEED during the
 :ref:`initialization<initialization>` section
 to generate the :ref:`PHASESHIFTS<phaseshifts>` file.
-
-The EEASiSSS source code is included, together with TensErLEED, in the
-``viperleed-tensorleed`` GitHub
-`repository <https://github.com/viperleed/viperleed-tensorleed>`__.
-See :ref:`this section<install_tensorleed>` for more information.
 
 Install the Fortran compiler of your choice following
 :ref:`these instructions<install_fortran_comp>`. Then proceed to
@@ -714,10 +712,8 @@ compilation from source as described in the following.
     .. tab-item:: Linux, macOS, Windows Subsystem for Linux
 
         :program:`EEASiSSS` can be compiled automatically using
-        the provided ``Makefile``.
-
-        Navigate to your local version of the ``viperleed-tensorleed``
-        repository using
+        the provided ``Makefile``. Navigate to your local version
+        of the ``viperleed-tensorleed`` repository using
 
         .. code-block:: bash
 
@@ -729,7 +725,6 @@ compilation from source as described in the following.
     .. tab-item:: Native Windows
 
         EEASiSSS can be compiled automatically using the provided ``make.bat``.
-
         Navigate to your local version of the ``viperleed-tensorleed``
         repository using
 
