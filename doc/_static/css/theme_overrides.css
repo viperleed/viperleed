@@ -33,3 +33,13 @@ a:visited {
 .wy-side-nav-search {
     background-color: #6ab1e1 !important;
 }
+
+/* Place equation numbers on the right side instead
+   of above. See sphinx_rtd_theme/issues/301 */
+span.eqno {
+    float: right;
+}
+span.eqno a.headerlink {
+    position: relative;
+    z-index: 1;
+}

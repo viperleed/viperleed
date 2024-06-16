@@ -338,7 +338,7 @@ the requested steps.
    :language: console
    :caption: DISPLACEMENTS for error calculation in :math:`x` direction.
 
-The results are plotted in the :ref:`Errors.pdf<errorspdf>` file, shown in
+The results are plotted in the :ref:`errorspdf` file, shown in
 :numref:`fig_cu-te_errors`. We see that displacements for atoms in all
 layers have a drastic impact on the |R factor|. Thus, we can be fairly
 confident that all varied atoms are indeed present within the true surface

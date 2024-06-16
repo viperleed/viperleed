@@ -7,29 +7,29 @@ Structure search
 ================
 
 The structure search (referred to as ``search`` in the code) is
-the third part of a :ref:`tensor-LEED<tensor_leed>` calculation as 
-implemented in ViPErLEED (:ref:`RUN<run>` = 3).
+the third part of a :ref:`tensor-LEED<tensor_leed>` calculation as
+implemented in ViPErLEED (:ref:`RUN = 3<run>`).
 It must follow a :ref:`reference calculation<ref-calc>` and a
-:ref:`delta amplitude calculation<sec_deltas>` and requires stored
-:ref:`delta files<deltaszip>` to run.
-In almost all cases it is the most computationally expensive part of the
-calculation to run. The complexity depends on the size of the
-parameter space defined in the :ref:`DISPLACEMENTS file<displacements>`.
+:ref:`delta-amplitudes calculation<sec_deltas>`. It requires stored
+:ref:`delta files<deltaszip>` to run. In almost all cases, it is the
+most computationally expensive part of a |LEED-IV| calculation. The
+complexity depends on the size of the parameter space defined in the
+:ref:`DISPLACEMENTS` file.
 
 During the structure search, the optimization algorithm (see
 Ref. :cite:alp:`kottckeNewApproachAutomated1997`) samples surface structures
-in the configuration-space defined in :ref:`DISPLACEMENTS<displacements>`.
-Diffraction intensities and a corresponding |R factor| are calculated for 
-these structures based on combinations of the pre-computed delta-amplitudes.
-The optimization tries to find the combination of parameters yielding the
-lowest possible |R factor|.
+in the configuration space defined in :ref:`DISPLACEMENTS`. Diffraction
+intensities and the corresponding |R factor| are calculated for these
+structures based on combinations of the precomputed delta amplitudes.
+The optimization tries to find the combination of parameters yielding
+the smallest possible |R factor|.
 
-The behavior of the structure optimization algorithm is affected by multiple
-parameters (see :ref:`search behaviour<search_settings>`). For details on the
-available options for geometrical, vibrational and occupational displacement
-vectors see the entry on the :ref:`DISPLACEMENTS file<displacements>`.
-There are some caveats to the structure optimization in tensor LEED in general
-and the implementation in TensErLEED in particular.
+The behavior of the structure-optimization algorithm is affected by multiple
+parameters (see :ref:`search behaviour<search_settings>`). See the section
+describing the :ref:`DISPLACEMENTS` file for details on the available options
+for geometric, vibrational, and occupation displacements. There are some
+caveats to the structure optimization in tensor LEED in general, and to
+the implementation in TensErLEED in particular.
 See :ref:`the section on structure search in tensor LEED<tensor_leed_search>`
 for details.
 
@@ -37,70 +37,71 @@ for details.
 Structure search in ViPErLEED
 =============================
 
-The structure search in ViPErLEED is based on the structure search section of
-TensErLEED, though as with the other sections, ViPErLEED takes care of handling
-the input and output for the legacy code. The search is also the only part of
+The structure search in ViPErLEED is based on the corresponding section of
+TensErLEED. As with the other sections, ViPErLEED takes care of handling the
+input and output for the legacy code. The search is also the only part of
 ViPErLEED and TensErLEED that makes use of processes communicating via
-:term:`MPI`, if available (highly recommended). When a structure search is
-executed in ViPErLEED the following main steps are performed before the actual
-calculation starts:
+:term:`MPI`, if available (highly recommended).
 
-#.  The :ref:`file DISPLACEMENTS<displacements>` is read and interpreted.
+When a structure search is executed in ViPErLEED, the following main steps
+are performed before the actual calculation starts:
+
+#.  The :ref:`displacements` file is read and interpreted.
 #.  The current :ref:`delta files<deltaszip>` are loaded and checked for
     compatibility.
-#.  ViPErLEED generates and writes the TensErLEED inpute files
-    ``rf.info``, ``PARAM`` and ``search.steu`` based on the slab
-    and :ref:`EXPBEAMS file<expbeams>`.
+#.  The TensErLEED input files :file:`rf.info`, :file:`PARAM`, and
+    :file:`search.steu` are prepared based on the slab and on the
+    :ref:`EXPBEAMS file<expbeams>`. (They are available for inspection among
+    the :ref:`supplementary files<supp_files>` in the :file:`SUPP` directory.)
 #.  Based on the slab symmetry and the
-    :ref:`symmetry settings<symmetry_settings>`, ViPErLEED determines the
-    symmetry-linked parameters and writes the parameter-space input file
-    control.chem.
-#.  ViPErLEED will then, based on :ref:`N_CORES<ncores>` and the presence
-    of ``mpirun`` fetch the corresponding TensErLEED source code files and
-    compile them **at run-time**. **Note** that this will require the
-    pre-compiled object files :ref:`random_.o or MPIrandom_.o<mpirandom>`
-    to be present.
-    See the :ref:`installation section<installation>` for details.
-#.  The :ref:`search log file<log_files>` ``search-$timestamp`` is created
-    and will be filled with progress information as the search continues.
+    :ref:`symmetry settings<symmetry_settings>`, symmetry-linked parameters
+    are identified. The :file:`control.chem` input file for TensErLEED is
+    written.
+#.  Based on the :ref:`NCORES` parameter and on the presence of
+    :program:`mpirun` on the machine, the correct TensErLEED source files
+    are collected. They are then compiled **at run time** (compilation
+    information saved to :file:`SUPP/compile_logs/compile-search.log`).
+    When using early TensErLEED versions (< v1.7.4) the precompiled object
+    files :file:`random_.o` or :file:`MPIrandom_.o` must be available at
+    this stage. More information on compiling these files can be found in
+    :ref:`this<mpirandom>` part of the :ref:`installation` section.
+#.  The :ref:`search log file<log_files>` :file:`search-<timestamp>.log` is
+    created. It will be filled with progress information as the search
+    continues.
 
-With the preparation finished, the search is now executed (via ``mpirun`` if
-available). Trial surface structures will be sampled using the algorithm
-described by :cite:t:`kottckeNewApproachAutomated1997`, with a starting
-configuration as defined by :ref:`SEARCH_START<searchstart>` and
-:ref:`SEARCH_POPULATION<searchpop>` parallel trial individuals. See also
-the section on the
+With the preparation finished, the search is now executed (via
+:program:`mpirun`, if available). Trial surface structures are sampled
+using the algorithm described by :cite:t:`kottckeNewApproachAutomated1997`,
+with starting configurations as defined by :ref:`searchstart`, and
+:ref:`searchpop` parallel trial individuals. See also the section on the
 :ref:`optimization algorithm used in ViPErLEED<optimization_algorithm>`.
 
-ViPErLEED periodically monitors the search progress by reading the
-:ref:`SDTL<sdtl>` file and will report on the current best |R factor|
-and the amount of sampled structures.
-From this information, the files :ref:`search-progress.pdf<searchprogresspdf>`
-and :ref:`search-report.pdf<searchreportpdf>` will be generated and updated,
-which provides a graphical overview of the structure search progress and
-convergence. :ref:`search-progress.pdf<searchprogresspdf>` contains information
-related exclusively to the current TensErLEED structure-optimization, i.e., one
-block in the :ref:`DISPLACEMENTS file<displacements>`. ViPErLEED enables the
-user to chain and/or loop multiple TensErLEED structure-optimizations (see the
-:ref:`DISPLACEMENTS file<displacements>` syntax for details). In that case,
-:ref:`search-report.pdf<searchreportpdf>` summarizes the overall progress
-over all optimization runs.
+ViPErLEED periodically monitors the progress of the search, reporting the best
+|R factor| achieved up to that point and the number of sampled configurations.
+Based on the information read from the :ref:`sdtl` file produced by TensErLEED,
+the :ref:`searchprogresspdf` and :ref:`searchreportpdf`  files are generated
+and periodically updated. They provide a graphical overview of the progress of
+the structure search and of its convergence. :ref:`searchprogresspdf` contains
+information related exclusively to the current TensErLEED structure
+optimization, i.e., one block in the :ref:`displacements` file. ViPErLEED
+enables the user to chain or loop multiple TensErLEED structure optimizations
+(see the :ref:`displacements` syntax for details). In that case,
+:ref:`searchreportpdf` summarizes the overall progress, including
+all optimization runs.
 
-Once all required convergence criteria are met, the search will
-be cleanly aborted, the resulting files will be processed and
-:ref:`search-progress.pdf<searchprogresspdf>` and
-:ref:`search-report.pdf<searchreportpdf>` will be updated one
-last time with the final values. After this, the structure-search
-section is finished and ViPErLEED will continue with the next
-section as defined in the :ref:`RUN parameter<run>` (or stop
-if there are none).
+Once all the convergence criteria (see :ref:`SEARCH_CONVERGENCE`) are
+met, the search is cleanly aborted, the results are processed, and the
+:ref:`searchprogresspdf` and :ref:`searchreportpdf` files are updated
+one last time with the final values. This concludes the structure-search
+section. ViPErLEED proceeds by first executing a :ref:`super_pos`, then
+continuing to the next segment as defined in the  :ref:`RUN` parameter
+(or it stops if there is none).
 
 .. warning::
   **Remember** to call the :ref:`bookkeeper utility<bookkeeper>` with
   the ``-c`` flag after a ViPErLEED run containing a structure search,
   if you want to continue from the found best-fit structure.
-  **Otherwise the progress will be discarded** and following
-  runs will start again from the refercence structure, unless
-  :ref:`POSCAR<poscar>` and :ref:`VIBROCC<vibrocc>` are
-  manually copied from the ``OUT`` directory.
+  **Otherwise the progress will be discarded** and following runs will
+  start again from the reference structure, unless :ref:`POSCAR` and
+  :ref:`VIBROCC` are manually copied from the ``OUT`` directory.
 

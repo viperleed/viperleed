@@ -8,7 +8,7 @@ ViPErLEED work segments
 -----------------------
 
 ViPErLEED operates using a set of self-contained work segments (see also the
-:ref:`RUN<RUN>`  parameter). The three main segments, following the logic of
+:ref:`RUN` parameter). The three main segments, following the logic of
 calculations using |t-LEED|, are:
 
 #. :ref:`ref-calc`: Full-dynamic LEED calculation, which outputs a set
@@ -26,13 +26,13 @@ calculations using |t-LEED|, are:
    beams and :ref:`a given set of experimental beams<EXPBEAMS>` is minimized.
 
 Which of these segments should be executed must be specified using the
-:ref:`RUN<RUN>` parameter, using the segment numbers in the list above or
-a contraction of their names. More information on the allowed contractions
-are found in the documentation for :ref:`RUN<RUN>`.
+:ref:`RUN` parameter, using the segment numbers in the list above or a
+contraction of their names. More information on the allowed contractions
+are found in the documentation for :ref:`RUN`.
 
 Besides these three main segments, there are also the following minor segments,
 which are inserted automatically during normal ViPErLEED execution when
-appropriate (but can also be explicitly selected via :ref:`RUN<RUN>`):
+appropriate (but can also be explicitly selected via :ref:`RUN`):
 
 -  :ref:`initialization`: Always runs at the beginning. Reads and checks input
    files, runs symmetry search, generates derived input files if appropriate.
@@ -54,11 +54,10 @@ Further specialized segments include:
    :ref:`delta amplitudes<sec_deltas>` for variations of a single parameter,
    and outputs the |R factor| for every single configuration along that axis.
 -  :ref:`fdoptimization`: Optimizes parameters that are not accessible to
-   |t-LEED|, like :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`,
-   :ref:`V0_IMAG<v0_imag>`, or unit-cell scaling. This is achieved by
-   performing multiple full-dynamic (i.e., "reference") calculations
-   (but without producing Tensor files). The behavior is controlled
-   by the :ref:`OPTIMIZE<OPTIMIZE>` parameter.
+   |t-LEED|, like :ref:`BEAMINCIDENCE`, :ref:`V0_IMAG`, or unit-cell scaling. 
+   This is achieved by performing multiple full-dynamic (i.e., "reference") 
+   calculations (but without producing Tensor files). The behavior is 
+   controlled by the :ref:`OPTIMIZE` parameter.
 
 The pages listed above cover normal operation, in which the theoretical beams
 correspond to only one surface structure. If multiple structures coexist on

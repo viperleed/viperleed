@@ -173,10 +173,10 @@ and :ref:`PHASESHIFTS` files.
 
 When the run is finished, we will see in the log file that the |R factor|
 has decreased quite a bit. The first reference calculation gave a value
-of :math:`R_\mathrm{P} \approx 0.55`, but :math:`R_\mathrm{P}` has dropped
-to around :math:`\approx 0.21` over the search. We can get a better idea of
-how the search has converged by taking a look at the file
-:ref:`Search-progress.pdf<searchprogresspdf>` in the ``SUPP`` directory.
+of :math:`R_\mathrm{P} \approx 0.55`, but |RP| has dropped to around
+:math:`\approx 0.21` over the search. We can get a better idea of how
+the search has converged by taking a look at the file :ref:`searchprogresspdf`
+in the ``SUPP`` directory.
 
 .. _fig_Ir_O_search_progress_1:
 .. figure:: /_static/example_systems/Ir(100)-O/figures/progress_1_page_1.svg
@@ -322,9 +322,9 @@ calculation and structure search.
 
 Using the DISPLACEMENTS file in :numref:`list_ir_error_calc`, we run the error
 calculation by selecting the segment :ref:`RUN = 5<run>`.
-The :ref:`result <errorspdf>` will again be saved in the ``OUT`` directory.
-ViPErLEED generates a plot of the error curves in ``Errors.pdf`` and stores
-the raw data in ``Errors.csv``. The ``Errors.pdf`` file in
+The :ref:`result <errorspdf_header>` will again be saved in the :file:`OUT`
+directory. ViPErLEED generates a plot of the error curves in :file:`Errors.pdf`
+and stores the raw data in :file:`Errors.csv`. The :file:`Errors.pdf` file in
 :numref:`fig_ir_errors_geo` shows that displacement of surface atoms even by a
 few picometres drastically increases the |R factor|. Here, atom 1 is the
 oxygen adsorbate and atoms 2 and 3 are the topmost iridium ones.
@@ -334,14 +334,14 @@ oxygen adsorbate and atoms 2 and 3 are the topmost iridium ones.
    :width: 50%
    :align: center
 
-   Part of ``Errors.pdf`` showing the effects of geometric displacements.
+   Part of :file:`Errors.pdf` showing the effects of geometric displacements.
 
 .. note::
    The point of intersection between the error curve for a parameter and the
    horizontal line labeled :math:`R_\mathrm{P} + \textrm{var}(R_\mathrm{P})`
    gives a measure for the statistical error of the parameter
    :cite:p:`heinzElectronBasedMethods2013` (see also the section on
-   :ref:`Errors.pdf<errorspdf>`).
+   :ref:`Errors<error_calculation>`).
 
 Changes in the vibrational amplitude of the surface atoms
 (\ :numref:`fig_ir_errors_vib`) also strongly affect the |R factor|.

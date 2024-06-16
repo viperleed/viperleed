@@ -12,7 +12,9 @@
 .. |IV|       replace:: *I*\ (\ *V*\ )
 .. |LEED-IV|  replace:: LEED-|IV|
 .. |LEED IV|  replace:: LEED |IV|
+.. |lmax|     replace:: *ℓ*\ :sub:`max`
 .. |R-factor| replace:: :math:`R`\ -factor
 .. |R factor| replace:: :math:`R` factor
+.. |RP|       replace:: :math:`R_\mathrm{P}`
 .. |V0i|      replace:: :math:`V_{0\mathrm{i}}`
 .. |V0r|      replace:: :math:`V_{0\mathrm{r}}`
