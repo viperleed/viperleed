@@ -25,7 +25,7 @@ the agreement (in terms of |R factor|) with an experimental set of beams.
 
 Surface structures passed to |calc| via the :term:`API` need to fulfill the
 same :ref:`conventions<conventions>` (e.g. vacuum side of surface towards
-+\ **z** direction) as applicable for :ref:`POSCAR files<poscar>`.
++\ **z** direction) as applicable for :ref:`POSCAR` files.
 
 The ASE API provides a number of Python function that allow calling and
 starting |LEED-IV| calculations. For an example of how to use the ASE 
@@ -50,7 +50,7 @@ Automatic site definitions
 
 To facilitate batch processing of structures, the ASE interface allows for a
 simplistic automated assignment of site definitions (usually done via the
-:ref:`parameter SITE_DEF<sitedef>`).
+:ref:`sitedef` parameter).
 
 If the SITE_DEF parameter is not defined in a ViPErLEED run using the
 ASE interface, ViPErLEED will try to assign "surface" sites on its own.
@@ -63,7 +63,7 @@ Atoms that are "visible" are declared as surface atoms (site ``surf``),
 while all other atoms will be given the default site type (``def``).
 This will create, at maximum, two site types per species.
 If you want to define additional site types, it is currently necessary
-to define them explicitly in the :ref:`POSCAR file<poscar>`.
+to define them explicitly in the :ref:`POSCAR` file.
 
 
 .. automodule:: viperleed.calc.from_ase

@@ -38,14 +38,13 @@ for the required input files, and a new reference calculation will be executed.
 The target directories or Tensor archives
 must contain the following input files:
 
--   :ref:`PARAMETERS<PARAMETERS>`  (most parameters from the subfolders
-    will be ignored, but those relevant to interpreting the respective
-    POSCAR files are required)
--   :ref:`POSCAR<POSCAR>`
--   :ref:`VIBROCC<vibrocc>`
+-   :ref:`PARAMETERS` (most parameters from the subfolders will be ignored,
+    but those relevant to interpreting the respective POSCAR files are
+    required)
+-   :ref:`POSCAR`
+-   :ref:`VIBROCC`
 
-In Tensor archives, an :ref:`IVBEAMS<IVBEAMS>`  file is also
-required in order to check compatibility with other sources.
-If a :ref:`PHASESHIFTS<PHASESHIFTS>`  file is present and
-compatible with the input, it will be used; otherwise, a new
-PHASESHIFTS file will be generated automatically.
+In Tensor archives, an :ref:`IVBEAMS` file is also required in order to check
+compatibility with other sources. If a :ref:`PHASESHIFTS` file is present and
+compatible with the input, it will be used; otherwise, a new PHASESHIFTS file
+will be generated automatically.

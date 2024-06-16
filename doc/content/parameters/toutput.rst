@@ -3,9 +3,9 @@
 TENSOR_OUTPUT
 =============
 
-TENSOR_OUTPUT defines whether Tensor output is required for non-bulk layers
-(starting from the top) in the refcalc. Layers are defined by the
-:ref:`LAYER_CUTS<layer_cuts>`  parameter.
+TENSOR_OUTPUT defines whether Tensor output is required for non-bulk 
+layers (starting from the top) in the refcalc. Layers are defined by 
+the :ref:`LAYER_CUTS`  parameter.
 
 **Default:** 1 for all layers
 
@@ -49,5 +49,5 @@ on, and ``TENSOR_OUTPUT = False`` disables output for all layers.
    not be optimized
 -  Notice that defining this parameter requires you to know already how many
    layers you are going to split your slab into. Therefore, it's a good idea
-   to check layer numbering in the :ref:`POSCAR file<POSCAR>` after
+   to check layer numbering in the :ref:`POSCAR` file after
    initialization to make sure you are addressing the correct layers.

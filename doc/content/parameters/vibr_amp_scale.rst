@@ -27,8 +27,8 @@ Scaling factors can be defined on a single line (comma delimited pairs),
 or on multiple lines.
 
 The site types are labelled as ``El_sitename``, where ``El`` is an element
-as found in the :ref:`POSCAR file<POSCAR>`, and ``sitename`` is a site name
-defined in the :ref:`PARAMETERS file<PARAMETERS>` under :ref:`SITE_DEF<SITEDEF>`.
+as found in the :ref:`POSCAR` file, and ``sitename`` is a site name
+defined in the :ref:`PARAMETERS` file under :ref:`SITEDEF`.
 Asterisks ``*`` are treated as wildcard characters, so ``*surf`` in the example
 above will match both ``Fe_surf`` and ``O_surf``.
 (The same convention as in the VIBROCC file.)
@@ -39,12 +39,10 @@ Fe_surf atoms will be set to 0.13 Å.
 
 .. note::
 
-    The parameters :ref:`T_DEBYE<t_debye>`,
-    :ref:`T_EXPERIMENT<t_experiment>` and VIBR_AMP_SCALE
+    The parameters :ref:`T_DEBYE`, :ref:`T_EXPERIMENT` and VIBR_AMP_SCALE
     will normally be used only once, to calculate an initial guess for
-    vibrational amplitudes and generate a :ref:`VIBROCC file <vibrocc>`.
-    Afterwards, all three parameters will automatically be commented out in the
+    vibrational amplitudes and generate a :ref:`VIBROCC` file. Afterwards, 
+    all three parameters will automatically be commented out in the
     :ref:`PARAMETERS` file; the vibration amplitudes will be defined in the
-    VIBROCC file instead.
-    Even if the parameters were un-commented again, they would never be used
-    as long as a :ref:`VIBROCC file <vibrocc>` is present.
+    VIBROCC file instead. Even if the parameters were un-commented again, 
+    they would never be used as long as a :ref:`VIBROCC` file is present.

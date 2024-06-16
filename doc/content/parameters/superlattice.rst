@@ -3,7 +3,7 @@
 SUPERLATTICE
 ============
 
-SUPERLATTICE defines the relationship between the real-space unit vectors 
+SUPERLATTICE defines the relationship between the real-space unit vectors
 of the bulk and those of the surface.
 
 **Default:** Detect automatically from bulk. See below for details.
@@ -20,9 +20,9 @@ of the bulk and those of the surface.
    SUPERLATTICE M = 1 1, -1 1              # same as (sqrt(2) x sqrt(2))R45
 
 If SUPERLATTICE is not defined, ViPErLEED will perform a search for possible
-unit cell vectors for the bulk (as defined by :ref:`LAYER_CUTS<layer_cuts>`
-and :ref:`N_BULK_LAYERS<n_bulk_layers>`), and choose two vectors that minimize
-the unit cell area and circumference. The resulting SUPERLATTICE matrix will
+unit cell vectors for the bulk (as defined by :ref:`LAYER_CUTS` and
+:ref:`N_BULK_LAYERS`), and choose two vectors that minimize the unit
+cell area and circumference. The resulting SUPERLATTICE matrix will
 then be further optimized to bring the bulk unit cell to its highest symmetry
 form (preserving the area). Note that for many systems, multiple choices of the
 bulk unit cell are possible, but result in different SUPERLATTICE definitions;
@@ -31,11 +31,11 @@ this choice will be made arbitrarily if SUPERLATTICE is not actively defined.
 Even when SUPERLATTICE is defined, an automatic search for the best bulk unit
 cell will run. If a unit cell with a smaller area is found, the program will
 warn and stop. If required, halting can be suppressed using the
-:ref:`HALTING<HALTING>` parameter.
+:ref:`HALTING` parameter.
 
 .. note::
 
-   -  For Wood notation, use only positive float values. The separator 
+   -  For Wood notation, use only positive float values. The separator
       in the brackets should be the letter 'x', as in the examples.
    -  In matrix notation use the convention ``'M = m11 m12, m21 m22``', with
       **a**\ :sub:`surf` = m\ :sub:`11`\ ·\ **a**\ :sub:`bulk`
@@ -49,12 +49,11 @@ warn and stop. If required, halting can be suppressed using the
       is not recommended).
 
 .. note::
-   Make sure to get the relation between the structure in the
-   :ref:`POSCAR<POSCAR>` file and the superlattice right. For example, in
-   c(4x8)  "4" must refer to the **a** and "8" to the **b** lattice vector
-   of the POSCAR, not reverse, unless
-   :ref:`SYMMETRY_CELL_TRANSFORM<SYMMETRY_CELL_TRANSFORM>` specifies that
-   the superstructure cell differs from the cell given in the POSCAR file.
+   Make sure to get the relation between the structure in the :ref:`POSCAR`
+   file and the superlattice right. For example, in c(4x8)  "4" must refer
+   to the **a** and "8" to the **b** lattice vector of the POSCAR, not reverse,
+   unless :ref:`SYMMETRY_CELL_TRANSFORM` specifies that the superstructure cell
+   differs from the cell given in the POSCAR file.
 
 .. todo::
    Is it correct like this? Then one should mention that the POSCAR must

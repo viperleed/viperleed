@@ -15,7 +15,7 @@ Different sites can have different occupancies and vibrational amplitudes.
    SITE_DEF Fe = tet 1 2, oct 4-10 12, surf top(2)
    SITE_DEF O = surf top(2)
 
-The first argument is the element name in the :ref:`POSCAR<POSCAR>` file for
+The first argument is the element name in the :ref:`POSCAR` file for
 sites that are being defined.
 After the "=" sign, comma-delimited groups should contain names of the sites
 and the atom numbers to be assigned (number of atom in the POSCAR list /

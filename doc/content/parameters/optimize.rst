@@ -23,7 +23,7 @@ The OPTIMIZE parameter defines the behaviour of
 
 The left-hand side defines which parameter to optimize. Allowed values (not
 case sensitive) are ``v0i`` for :ref:`V0_IMAG<v0_imag>`, ``theta`` and ``phi``
-for the :ref:`BEAM_INCIDENCE<BEAMINCIDENCE>`  angles, ``a``, ``b`` and ``c``
+for the :ref:`BEAMINCIDENCE`  angles, ``a``, ``b`` and ``c``
 for the unit cell vectors, as well as ``ab`` and ``abc`` for simultaneous,
 proportional scaling of multiple unit cell vectors.
 

@@ -38,7 +38,7 @@ Our starting point for this example is:
    incidence, saved in file :ref:`EXPBEAMS.csv<expbeams>`.
 -  We would like to compare these intensities with a Ag(100)-(1×1) surface
    that was handmade from the bulk crystal structure. It is stored as a
-   :ref:`POSCAR file<poscar>` (see :numref:`list_ag_poscar`).
+   :ref:`POSCAR` file (see :numref:`list_ag_poscar`).
 
 In this example, we want to set up a ViPErLEED calculation and structure
 optimization based on these inputs alone.
@@ -60,17 +60,15 @@ Initialization run and generation of phase shifts
 =================================================
 
 To start off, we place the files :ref:`EXPBEAMS.csv<expbeams>` and
-:ref:`POSCAR<poscar>` in our source directory.
-Both files have defined formats.
+:ref:`POSCAR` in our source directory. Both files have defined formats.
 
 .. _list_ag_poscar:
 .. literalinclude :: /_static/example_systems/Ag(100)/POSCAR
    :language: console
    :caption: POSCAR file containing the initial structure.
 
-We then create a :ref:`PARAMETERS file<parameters>`
-(cf. :numref:`list_ag_paramters`) which tells
-ViPErLEED what to do.
+We then create a :ref:`PARAMETERS` file (cf. :numref:`list_ag_paramters`)
+which tells ViPErLEED what to do.
 
 .. _list_ag_paramters:
 .. literalinclude :: /_static/example_systems/Ag(100)/PARAMETERS
@@ -78,21 +76,20 @@ ViPErLEED what to do.
    :caption: PARAMETERS file for the initial reference calculation.
 
 GLOBAL PARAMETERS
-   Since we only want to run the :ref:`initialization<initialization>` for now,
-   we set :ref:`RUN = 0<run>`. For this example, we also limit our energy range
-   to 45–700 eV, with an energy step of 3 eV
-   (\ :ref:`THEO_ENERGIES<theo_energies>`).
+   Since we only want to run the :ref:`initialization` for now, we set
+   :ref:`RUN = 0<run>`. For this example, we also limit our energy range
+   to 45–700 eV, with an energy step of 3 eV (\ :ref:`THEO_ENERGIES`).
 
 PARAMETERS FOR INTERPRETING POSCAR
    We then tell ViPErLEED how to interpret the structure given in the
-   :ref:`POSCAR file<poscar>`.
+   :ref:`POSCAR` file.
    Using the :ref:`BULK_LIKE_BELOW` parameter, we specify that below
    0.45 (unit-cell fraction along |c|) the given structure is bulklike.
 
-   With the :ref:`SITE_DEF<sitedef>` command, we further define that the first
-   atom in the POSCAR file (here the topmost atom) should be treated as a
-   distinct species. See the page on the :ref:`SITE_DEF<sitedef>` parameter
-   for details on how this works, and see also the notes on
+   With the :ref:`sitedef` command, we further define that the first atom in
+   the POSCAR file (here the topmost atom) should be treated as a distinct
+   species. See the page on the :ref:`sitedef` parameter for details  on how
+   this works, and see also the notes on
    :ref:`element names<elementnamecollision>`.
 
    .. hint::
@@ -104,13 +101,13 @@ PARAMETERS FOR VIBROCC
    In addition to the atomic positions, the calculation of scattering
    intensities also requires vibrational amplitudes for every atom in
    the unit cell.
-   While the atomic positions are contained in the :ref:`POSCAR file<poscar>`,
-   the vibrational amplitudes are given in the :ref:`VIBROCC file<vibrocc>`.
-   However, rather than writing the :ref:`VIBROCC file<vibrocc>` ourselves,
-   we can also let ViPErLEED calculate bulk vibrational amplitudes by providing
-   the :ref:`T_DEBYE<t_debye>` and :ref:`T_EXPERIMENT<t_experiment>`
-   parameters. By further setting :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`,
-   we guess the vibrational amplitudes for the surface atoms.
+   While the atomic positions are contained in the :ref:`POSCAR` file,
+   the vibrational amplitudes are given in the :ref:`VIBROCC` file.
+   However, rather than writing the :ref:`VIBROCC` file ourselves, we
+   can also let ViPErLEED calculate bulk vibrational amplitudes by providing
+   the :ref:`T_DEBYE` and :ref:`T_EXPERIMENT` parameters. By further setting
+   :ref:`VIBR_AMP_SCALE`, we guess the vibrational amplitudes for the surface
+   atoms.
    The VIBR_AMP_SCALE assignment means that all atoms defined as ``surf`` (via
    SITE_DEF) have vibration amplitudes 1.3 times larger than those calculated
    from the Debye temperature. All other atoms, which are implicitly assigned
@@ -144,9 +141,8 @@ a simple :math:`(1 \times 1)` termination.
 
 During the initialization, ViPErLEED also automatically calculated
 electron-scattering phase shifts (based on atomic species and positions)
-to be used as input for the following calculations.
-They are stored in the :ref:`PHASESHIFTS file<phaseshifts>` that was copied
-into the source directory.
+to be used as input for the following calculations. They are stored in the
+:ref:`PHASESHIFTS` file that was copied into the source directory.
 This format, however, is hard to interpret for a human reader.
 Instead we can look at a plotted version of the same data in the file
 :ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the ``SUPP`` subdirectory.
@@ -229,24 +225,22 @@ calculation followed by a :ref:`structure search<sec_search>`.
 
 First, however, we need to provide instructions about which parameters to
 vary in the optimization. In ViPErLEED, we give this information in the
-:ref:`DISPLACEMENTS file<displacements>` (see
-:numref:`list_ag_displacements_rough`).
+:ref:`DISPLACEMENTS` file (see :numref:`list_ag_displacements_rough`).
 
 .. _list_ag_displacements_rough:
 .. literalinclude :: /_static/example_systems/Ag(100)/DISPLACEMENTS
    :language: console
    :caption: DISPLACEMENTS over a rough grid for Ag(100)-(1×1).
 
-See the page on the :ref:`DISPLACEMENTS file<displacements>` for
-details on the syntax.
+See the page on the :ref:`DISPLACEMENTS` file for details on the syntax.
 Here, we allow the :math:`z` positions of all silver atoms in the first
 four layers to vary by up to :math:`\pm 0.20` Å with a step width of
 :math:`0.01` Å.
 
 
-After setting up the :ref:`DISPLACEMENTS file<displacements>`, we can
-run the delta-amplitudes calculation and structure optimization
-by setting :ref:`RUN = 2-3<run>` in :ref:`PARAMETERS<parameters>`.
+After setting up the :ref:`DISPLACEMENTS` file, we can run the delta-amplitudes
+calculation and structure optimization by setting :ref:`RUN = 2-3<run>` in 
+:ref:`PARAMETERS`.
 For a large system, this step can take many hours to finish, but for our simple
 system it only takes about 4 min to converge (using 10 CPU cores).
 At the end, when we take another look at our :ref:`log file<log_files_calc>`,

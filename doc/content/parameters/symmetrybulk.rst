@@ -21,7 +21,7 @@ input structure.
    SYMMETRY_BULK = p2 m[0 1]   ! use plane group p2, with an additional mirror along b. Only allowed for rectangular or square cells.
 
 **Accepted values**: At least one entry must be a valid plane group (see
-:ref:`SYMMETRY_FIX<ISYM>` and :ref:`plane symmetry groups<planegroups>`).
+:ref:`ISYM` and :ref:`plane symmetry groups<planegroups>`).
 Additional rotational symmetry can be specified by ``ri``, with ``i`` the
 order for rotation. Additional mirror planes can be specified using syntax
 ``m[i1 i2]``, where ``i1`` and ``i2`` specify a direction for the mirror

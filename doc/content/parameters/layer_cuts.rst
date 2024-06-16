@@ -5,20 +5,19 @@
 LAYER_CUTS
 ==========
 
-LAYER_CUTS determines how the slab provided in the :ref:`POSCAR<POSCAR>`
-file is divided in layers. Full dynamic multiple scattering is calculated
-inside each layer. The electron beams are then propagated as attenuated
-plane waves in between adjacent layers.
+LAYER_CUTS determines how the slab provided in the :ref:`POSCAR` file is 
+divided in layers. Full dynamic multiple scattering is calculated inside 
+each layer. The electron beams are then propagated as attenuated plane 
+waves in between adjacent layers.
 
 .. note::
 
-   The :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>` parameter offers an easy
-   way to detect the bulk repeat unit automatically, which will set both
-   :ref:`N_BULK_LAYERS<n_bulk_layers>` and LAYER_CUTS.
-   However, be careful combining :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`
-   with :ref:`LAYER_CUTS<LAYER_CUTS>` because the former will overwrite
-   the latter during initialization producing a fixed list of cut positions.
-   Particular care should be taken in adapting ``dc(float)`` and ``dz(float)``
+   The :ref:`BULK_LIKE_BELOW` parameter offers an easy way to detect the bulk 
+   repeat unit automatically, which will set both :ref:`N_BULK_LAYERS` and 
+   LAYER_CUTS. However, be careful combining :ref:`BULK_LIKE_BELOW` with 
+   LAYER_CUTS because the former will overwrite the latter during 
+   initialization producing a fixed list of cut positions. Particular 
+   care should be taken in adapting ``dc(float)`` and ``dz(float)``
    cut types after initialization.
 
 **Allowed values:** ``list`` of floats (0 < ``x`` < 1),
@@ -73,7 +72,7 @@ plane waves in between adjacent layers.
       than 1.0 Å, the only viable option is treating the whole slab as a
       *single layer*. Notice that one should be **very careful** in handling
       this case, and the computing time will be high. In order to treat this,
-      the :ref:`POSCAR<POSCAR>`  input should contain a very thick slab (at
+      the :ref:`POSCAR` input should contain a very thick slab (at
       least three times the largest inelastic mean free path for the energy
       range used) such that all beams have negligible amplitude when 'exiting'
       the bottom surface. This should be constructed by manually adding layers

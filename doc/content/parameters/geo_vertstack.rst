@@ -4,10 +4,10 @@ LAYER_STACK_VERTICAL
 ====================
 
 LAYER_STACK_VERTICAL defines whether the interlayer vectors of non-bulk layers
-in the :ref:`AUXGEO<refcalc-input>`  file (input to the underlying TensErLEED
-program) are parallel to z (if True) or parallel to the **c** vector of the
-input unit cell (if False). In this file, the atom coordinates per layer will
-change accordingly.
+in the :ref:`AUXGEO` file (input to the underlying TensErLEED program) are
+parallel to z (if True) or parallel to the **c** vector of the input unit
+cell (if False). In this file, the atom coordinates per layer will change
+accordingly.
 
 This parameter is for debugging only, it does not affect the result of the
 calculation.

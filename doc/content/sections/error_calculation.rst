@@ -8,32 +8,31 @@ Error calculations
 Once a best-fit structure has been determined, it is useful to see how
 strongly small changes to specific parameters affect the |R factor|.
 In the error calculation, displacements (given by the
-:ref:`DISPLACEMENTS file<DISPLACEMENTS>`) are applied to one parameter
+:ref:`DISPLACEMENTS` file) are applied to one parameter
 at a time, and the |R factor| is output for each step of the variation 
 range. If multiple parameters are linked (e.g., by symmetry), these 
 parameters are treated as one, and varied together.
 
-To run the error calculation, set :ref:`RUN<run>` as ``RUN = 5`` in the
-:ref:`PARAMETERS<PARAMETERS>` file. It is recommended to first run a
+To run the error calculation, set :ref:`RUN` as ``RUN = 5`` in 
+the :ref:`PARAMETERS` file. It is recommended to first run a
 reference calculation in the same run (e.g. ``RUN = 1 5``),
 as the error curves may not be centered otherwise.
 
 Required input files are the same as for running delta calculations and a
 search, i.e., the structural input files, :ref:`experimental beams<EXPBEAMS>`,
 a set of :ref:`Tensors<Tensorszip>` from a reference calculation, and a
-:ref:`DISPLACEMENTS file<DISPLACEMENTS>` defining what parameters should
-be varied. Note that defining multiple search sections in the
-:ref:`DISPLACEMENTS file<DISPLACEMENTS>`, as is possible for the search,
-is not allowed here: Instead, only the first search section of the
-:ref:`DISPLACEMENTS file<DISPLACEMENTS>` will be read (or the last,
-if the error calculation is run following a search). Defining geometrical,
-vibrational and occupation variations all in the same
-:ref:`DISPLACEMENTS file<DISPLACEMENTS>` is allowed, but the different
-variations will be split up, so the result is the same as executing
-multiple error calculations. This means, you cannot have error calculations
-for multiple geometrical displacement directions (e.g., :math:`x` *and*
-:math:`z`) at the same time since this would require multiple consecutive
-search sections in the DISPLACEMENTS file.
+:ref:`DISPLACEMENTS` file defining what parameters should be varied. Note 
+that defining multiple search sections in the :ref:`DISPLACEMENTS` file, 
+as is possible for the search, is not allowed here: Instead, only the 
+first search section of the :ref:`DISPLACEMENTS` file will be read (or 
+the last, if the error calculation is run following a search). Defining 
+geometrical, vibrational and occupation variations all in the same
+:ref:`DISPLACEMENTS` file is allowed, but the different variations will be 
+split up, so the result is the same as executing multiple error calculations. 
+This means, you cannot have error calculations for multiple geometrical 
+displacement directions (e.g., :math:`x` *and* :math:`z`) at the same 
+time since this would require multiple consecutive search sections in 
+the DISPLACEMENTS file.
 
 The error calculation does *not* require a set of
 :ref:`Delta files<Deltaszip>`, since the normal delta calculation routines

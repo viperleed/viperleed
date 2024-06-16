@@ -47,7 +47,7 @@ Or, if ``mpiifort`` is not present, but mpifort is:
 .. warning::
    If you are using an older version of gfortran packaged with GCC 9 or
    earlier, you need to remove the compiler flag ``-fallow-argument-mismatch``.
-   So, specify in :ref:`PARAMETERS<parameters>`:
+   So, specify in :ref:`PARAMETERS`:
 
    ::
 
@@ -106,7 +106,7 @@ library structure. Therefore, explicitly declaring ``FORTRAN_COMP`` and
       command as an explicit string, fixing paths if necessary.
    -  **mpifort**: if compiling with mpifort causes an error like
       :literal:`Symbol `time' causes overflow in R_X86_64_PC32 relocation`
-      in the search log (use :ref:`LOG_SEARCH<LOG_SEARCH>`  to produce such
+      in the search log (use :ref:`LOG_SEARCH` to produce such
       a log), this can be resolved by using mpifort with the additional flag
       ``-no-pie`` (set by default by ViPErLEED for the ``mpifort`` option,
       see above).

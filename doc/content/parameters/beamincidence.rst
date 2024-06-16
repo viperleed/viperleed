@@ -9,7 +9,7 @@ BEAM_INCIDENCE defines the incidence angles (in degrees) of the electron beam
 on the surface. The polar angle ``theta`` is measured from the surface normal,
 the azimuthal angle ``phi`` is positive counterclockwise when looking at the
 solid from vacuum, with ``phi=0`` **corresponding to the positive x axis**, as
-defined in the :ref:`POSCAR<POSCAR>` file. See also the diagram shown in
+defined in the :ref:`POSCAR` file. See also the diagram shown in
 :numref:`fig_theta_and_phi`.
 ViPErLEED considers the incident wave vector to be in direction from the
 electron gun towards the surface, i.e.
@@ -45,7 +45,7 @@ polar angle theta, the second as the azimuth phi.
 
    Definition of angles ``theta`` (\ :math:`\theta`) and ``phi`` 
    (\ :math:`\phi`) relative to the coordinate system of the 
-   :ref:`POSCAR<POSCAR>` file.
+   :ref:`POSCAR` file.
 
 .. hint::
    -  In general, unless the experiment was performed at large off-normal 
@@ -63,7 +63,7 @@ polar angle theta, the second as the azimuth phi.
       from zero) and average the resulting almost-equivalent beams in 
       order to account for the fact that the electron beam has a finite 
       aperture angle.
-      (For averaging, see the :ref:`AVERAGE_BEAMS<AVERAGEBEAMS>`  parameter). 
+      (For averaging, see the :ref:`AVERAGEBEAMS`  parameter). 
       This commonly leads to ``theta`` values in the order of 0.3–0.5°. 
       This option makes sense only if the |R factor| is very low and the 
       surface has sufficiently high symmetry (at least threefold rotation 

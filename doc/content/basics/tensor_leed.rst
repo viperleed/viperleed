@@ -141,7 +141,7 @@ the tensor-LEED approximation:
     When the trajectory of the structure optimization approaches the limit
     of applicability of tensor LEED, the range of the structural search can
     be extended by running new reference and delta-amplitudes calculations.
-    In ViPErLEED, the :ref:`RUN parameter<run>` can be used to chain multiple
+    In ViPErLEED, the :ref:`RUN` parameter can be used to chain multiple
     reference calculations, delta-amplitude calculations, and structure
     searches.
 
@@ -173,10 +173,10 @@ the tensor-LEED approximation:
     the calculation of delta amplitudes and the structure optimization into two
     independent stages. As a direct consequence, the optimization can **only**
     be performed on a predefined grid of perturbations (as given by the
-    :ref:`DISPLACEMENTS file<displacements>` in ViPErLEED). Further, to achieve
-    the best possible fit, the grid-based nature makes it necessary to run
-    multiple sets of delta-amplitude calculations and structure optimizations
-    with increasingly finer pitch.
+    :ref:`DISPLACEMENTS` file in ViPErLEED). Further, to achieve the best
+    possible fit, the grid-based nature makes it necessary to run multiple
+    sets of delta-amplitude calculations and structure optimizations with
+    increasingly finer pitch.
 
     .. note::
         Starting with a fine grid over a large variation range
@@ -185,11 +185,11 @@ the tensor-LEED approximation:
 
 -   The structure search implemented in TensErLEED has the additional
     limitation that geometric displacements are limited to one dimension
-    per atom. During each search run, atoms can only be displaced along
-    a predefined curve rather than freely in 3D space. To optimize the
-    position of atoms in three dimensions, multiple sequential search runs are
-    needed. See the entry on the :ref:`DISPLACEMENTS file<displacements>`
-    for details and workarounds (such as looping searches).
+    per atom. During each search run, atoms can only be displaced along a
+    predefined curve rather than freely in 3D space. To optimize the position
+    of atoms in three dimensions, multiple sequential search runs are needed.
+    See the entry on the :ref:`DISPLACEMENTS` file for details and  workarounds
+    (such as looping searches).
 
 
 .. _optimization_algorithm:
@@ -202,9 +202,8 @@ limits the pool of applicable optimization algorithms. TensErLEED employs
 a modified random-sampling strategy with a down-step criterion as described
 by :cite:t:`kottckeNewApproachAutomated1997`. The optimization is performed
 in parallel for a set of individuals (i.e., independent parameter
-combinations), defined in ViPErLEED by the :ref:`SEARCH_POPULATION<searchpop>`
-parameter. The initial configurations for the optimization are defined by
-:ref:`SEARCH_START<searchstart>`.
+combinations), defined in ViPErLEED by the :ref:`searchpop` parameter. The
+initial configurations for the optimization are defined by :ref:`searchstart`.
 
 For each search step (called "generation", based on the terminology of genetic
 algorithms), a new grid point in the parameter space is selected *randomly*,
@@ -214,16 +213,16 @@ parameter set is accepted **only if** the |R factor| for the new configuration
 is smaller than for the previous configuration.
 The width of the probability distribution is determined by the current
 |R factor|, the number of displacements, and the ``gaussian`` flag of
-the :ref:`SEARCH_CONVERGENCE<search_convergence>` parameter.
+the :ref:`SEARCH_CONVERGENCE` parameter.
 
 ViPErLEED enables more sophisticated control over the search process than
 is possible with TensErLEED alone. Different types of convergence criteria
 and an automatic scaling of the probability distribution can be set via
-:ref:`SEARCH_CONVERGENCE<search_convergence>`. Furthermore, whenever
+:ref:`SEARCH_CONVERGENCE`. Furthermore, whenever
 :ref:`partial convergence<search_convergence>` is reached, a portion of the
 search population can be dropped and reinitialized to escape from local minima.
 By default, the search population is partially reinitialized using a custom
-genetic algorithm (see :ref:`SEARCH_CULL<search_cull>` for details).
+genetic algorithm (see :ref:`SEARCH_CULL` for details).
 
 .. _tensor_leed_errors:
 

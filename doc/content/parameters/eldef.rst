@@ -4,10 +4,10 @@ ELEMENT_RENAME
 ==============
 
 ELEMENT_RENAME defines what chemical element should be used for an element
-in the :ref:`POSCAR file<POSCAR>`, if the name given in the POSCAR and the
+in the :ref:`POSCAR` file, if the name given in the POSCAR and the
 chemical element symbol differ.
 
-**Default:** Assume that each of the element names in the :ref:`POSCAR<POSCAR>`
+**Default:** Assume that each of the element names in the :ref:`POSCAR`
 file matches the symbol of a chemical element (case-insensitive).
 
 **Syntax:**
@@ -17,12 +17,12 @@ file matches the symbol of a chemical element (case-insensitive).
    ELEMENT_RENAME A = Fe
    ELEMENT_RENAME B = O
 
-**Acceptable values**: On the left, :ref:`POSCAR<POSCAR>`  names (exact match,
-apart from case). On the right, chemical elements from the periodic table (not
+**Acceptable values**: On the left, :ref:`POSCAR`  names (exact match, apart 
+from case). On the right, chemical elements from the periodic table (not
 case sensitive).
 
 In the first line of the example, A is the element name present in the
-:ref:`POSCAR file<POSCAR>`  (line after the definition of the unit cell
+:ref:`POSCAR` file (line after the definition of the unit cell
 vectors) to define a specific site, while Fe is the chemical element to
 be used for these sites.
 
@@ -35,9 +35,9 @@ be used for these sites.
 -  If chemical elements are being defined for multiple POSCAR elements, have
    multiple lines starting with ELEMENT_RENAME and the respective POSCAR
    elements left of the '=' sign.
--  ELEMENT_RENAME is complementary to :ref:`ELEMENT_MIX<ELSPLIT>`, so no
-   POSCAR element for which ELEMENT_RENAME is defined should appear as an
-   ELEMENT_RENAME parameter, and vice versa.
+-  ELEMENT_RENAME is complementary to :ref:`ELSPLIT`, so no POSCAR element 
+   for which ELEMENT_RENAME is defined should appear as an ELEMENT_RENAME 
+   parameter, and vice versa.
 -  The VESTA program for viewing structures reads only the first two
    characters of the POSCAR element name
    :cite:p:`mommaVESTAThreedimensionalVisualization2011`. If you use VESTA,

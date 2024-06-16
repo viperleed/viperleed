@@ -28,8 +28,8 @@ one wants to move during the search.
 
 The values on the right are interpreted as range of displacements in Ångström.
 How atoms are addressed on the left is described on the main
-:ref:`DISPLACEMENTS<DISPLACEMENTS>`  page. However, The GEO_DELTA block
-contains one additional value on the left, which defines the *direction*
+:ref:`DISPLACEMENTS` page. However, The GEO_DELTA block contains 
+one additional value on the left, which defines the *direction*
 of the displacement, as described below.
 
 When multiple searches are executed consecutively or in a loop, the
@@ -65,7 +65,7 @@ Possible directions for displacements are:
    In-plane displacements along the direction identified by the lattice
    vector with the whitespace-separated indices    ``n1`` (:math:`n_1`)
    and ``n2`` (:math:`n_2`). The first integer refers to the first vector
-   |a| in the :ref:`POSCAR<POSCAR>` file.
+   |a| in the :ref:`POSCAR` file.
    The displacement direction will be positive in the direction of the
    vector :math:`\mathbf{v} = n_1 \mathbf{a} + n_2 \mathbf{b}`.
    ``n1`` and ``n2`` accept floating point values.
@@ -165,16 +165,15 @@ and the other one is out-of-plane:
       [= (``start``\ +\ ``stop``)/2] (i.e., ``step`` has precedence).
    -  Displacements of atoms will be **cross-checked for symmetry **
       **conservation** (unless you have turned off symmetry via
-      :ref:`SYMMETRY_FIX<ISYM>`  and/or :ref:`SYM_DELTA<SYMDELTA>`),
+      :ref:`ISYM` and/or :ref:`SYMDELTA`),
       and the program will throw an **error** if inconsistencies arise.
       In general: atoms at *n*-fold rotational axes cannot be displaced;
       atoms on mirror planes can be moved only along the planes. You can
       find which displacement directions conserve the symmetry of your
-      structure input in the comments added to the :ref:`POSCAR<POSCAR>`
+      structure input in the comments added to the :ref:`POSCAR`
       file. Refer to the relation between plane groups in the
-      :ref:`SYMMETRY_FIX<ISYM>`  page in case you required a lowering of
-      the symmetry of your slab via :ref:`SYMMETRY_FIX<ISYM>`  or
-      :ref:`SYM_DELTA<SYMDELTA>`.
+      :ref:`ISYM`  page in case you required a lowering of the 
+      symmetry of your slab via :ref:`ISYM` or :ref:`SYMDELTA`.
    -  During one optimization run, an atom can only be displaced along
       **one** axis (so, for example, **not** sampling all in-plane directions
       at once). This is due to the way that the TensErLEED search is currently
@@ -183,5 +182,5 @@ and the other one is out-of-plane:
       out-of-plane geometry of your sample (small :math:`k_{\textrm{par}}`),
       it is a good idea to *first* run a few optimization runs on the *z*
       positions only, and treat in-plane displacements later as a refinement
-      (unless your :ref:`POSCAR<POSCAR>`  model is *very far off* from the
-      real structure).
+      (unless your :ref:`POSCAR` model is *very far off* from the real 
+      structure).

@@ -55,10 +55,10 @@ tool for running |LEED-IV| calculations.
         :showusagemain: viperleed calc, viperleed.calc
 
         -v --verbose
-            Overwrites the :ref:`LOG_LEVEL <log_level>` parameter to the value
+            Overwrites the :ref:`LOG_LEVEL` parameter to the value
             ``verbose``.
         -vv --very-verbose
-            Overwrites the :ref:`LOG_LEVEL <log_level>` parameter to the value
+            Overwrites the :ref:`LOG_LEVEL` parameter to the value
             ``vverbose``.
         --tensorleed -t
             If not provided, the path is searched in the environment variable

@@ -22,7 +22,7 @@ to a multiple of the number of available cores.
    SEARCH_POPULATION = 24
 
 For best performance, SEARCH_POPULATION should be an integer multiple of the
-number of available cores :ref:`N_CORES<NCORES>`.
+number of available cores :ref:`NCORES`.
 
 Since each trial structure evolves by randomly modifying its parameters,
 there is always a risk of some structures getting stuck in a local minimum,

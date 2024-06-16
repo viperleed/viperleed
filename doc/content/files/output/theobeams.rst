@@ -22,7 +22,7 @@ latter use polynomial interpolation on a denser energy grid, while
 THEOBEAM.pdf uses only the raw data as output by the reference calculation.
 
 The appearance of the |IV| plots in THEOBEAMS.pdf can be modified with
-the :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`  parameter.
+the :ref:`PLOT_COLORS_RFACTOR`  parameter.
 
 .. _complex_amplitudes_csv:
 

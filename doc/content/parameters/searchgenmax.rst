@@ -22,6 +22,6 @@ algorithm used by TensErLEED.
 When automatic refinement of :ref:`RMUT` is active, SEARCH_MAX_GEN will
 nevertheless count *all* steps and stop after the specified total number,
 instead of resetting whenever the Gaussian width changes (see
-:ref:`SEARCH_CONVERGENCE<SEARCH_CONVERGENCE>`). SEARCH_MAX_GEN is therefore
-the parameter most suited for setting an upper limit to the search time,
-if convergence is poor.
+:ref:`SEARCH_CONVERGENCE`). SEARCH_MAX_GEN is therefore the
+parameter most suited for setting an upper limit to the search
+time, if convergence is poor.

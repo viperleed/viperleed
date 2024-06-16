@@ -41,6 +41,6 @@ N_CORES defines the number of cores available for TensErLEED execution.
 The TensErLEED search program is executed using ``mpirun``, with the number
 of cores specified by N_CORES. If mpirun / mpiifort are not present on the
 computer running |calc|, no parallelization will be performed in the search
-(see also :ref:`FORTRAN_COMP<FORTRAN_COMP>`).
+(see also :ref:`FORTRAN_COMP`).
 Reference and Delta calculations instead use python multiprocessing to execute
 multiple TensErLEED processes, so those can run without an MPI compiler.

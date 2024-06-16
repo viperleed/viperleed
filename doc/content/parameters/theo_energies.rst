@@ -29,7 +29,7 @@ such that the theoretical calculation interval is a few eV larger than the
 experimental energy range. During the determination of the |R factor|\ s, as
 well as in the search of the best structure, the theoretical spectra will be
 shifted a bit along the energy axis to find the best match with experiment
-(see :ref:`IV_SHIFT_RANGE<IVSHIFTRANGE>` to control this shift).
+(see :ref:`IVSHIFTRANGE` to control this shift).
 
 If ``Eto-Efrom`` is not an integer multiple of ``Estep``, ``Efrom`` will 
 be modified to a slightly lower energy such that this is the case.

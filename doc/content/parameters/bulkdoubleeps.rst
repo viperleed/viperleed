@@ -22,7 +22,7 @@ arise from an input error in the geometry. Cannot be smaller than 0.0001 due
 to Fortran reading it as an F7.4
 
 **What is layer doubling?** During layer doubling, the layers defined as
-bulk with :ref:`N_BULK_LAYERS<n_bulk_layers>`  will be used to determine
+bulk with :ref:`N_BULK_LAYERS`  will be used to determine
 the scattered intensity due to the bulk. This follows a layer doubling
 scheme, in which
 
@@ -33,6 +33,6 @@ scheme, in which
    stack... and so on.
 
 The doubling process is repeated a maximum number of times equal to
-:ref:`BULKDOUBLING_MAX<BULKDOUBLEITER>`, and until the reflection/transmission
-matrices do not change by more that BULKDOUBLING_EPS between two subsequent
+:ref:`BULKDOUBLEITER`, and until the reflection/transmission matrices 
+do not change by more that BULKDOUBLING_EPS between two subsequent
 doubling iterations.

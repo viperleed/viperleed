@@ -9,11 +9,9 @@ the search will be stopped.
 
 .. note::
    This is a very naive convergence parameter, and others (e.g.,
-   :ref:`SEARCH_MAX_DGEN_BEST<search_max_dgen_best>` ) might be
-   more suitable for most applications.
+   :ref:`SEARCH_MAX_DGEN_BEST` ) might be more suitable for most applications.
 
-**Default:** not active, search is limited only by
-:ref:`SEARCH_MAX_GEN<SEARCHGENMAX>`
+**Default:** not active, search is limited only by :ref:`SEARCHGENMAX`
 
 **Allowed values:** Positive integer
 

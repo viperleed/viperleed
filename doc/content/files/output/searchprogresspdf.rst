@@ -20,7 +20,7 @@ the average |R factor| over all members of the population; the grey area plots
 the range between the current best and current worst structure. Note that both
 the range and the average may sometimes increase, for example if the population
 is re-initialized (partly) at random, or if new population members are
-generated due to :ref:`SEARCH_CULL<SEARCH_CULL>`.
+generated due to :ref:`SEARCH_CULL`.
 
 At regular intervals, the |R-factor| scatter for the entire population is
 plotted as points. The best-fit population is black, the worst-fit population
@@ -45,7 +45,7 @@ of the best 10% of structures, or any other structure (reflecting the
 become very large, then this means that few improvements are being found,
 so the search is either converged or the current settings are badly suited
 for finding improvements. These situations may automatically be handled by
-the :ref:`SEARCH_CONVERGENCE<SEARCH_CONVERGENCE>`  settings, i.e., by
+the :ref:`SEARCH_CONVERGENCE`  settings, i.e., by
 decreasing the :ref:`SEARCH_CONVERGENCE gaussian<rmut>` parameter whenever
 the generation delta becomes large.
 

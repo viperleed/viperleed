@@ -58,13 +58,13 @@ Initialization will always be run, even if the leading 0 is not there. Indices
 a previous run) will fail.
 
 Index 4 is a helper index for :ref:`domain calculations<domain_calculation>`,
-and should only be used together with the :ref:`DOMAIN<DOMAIN>`  parameter.
+and should only be used together with the :ref:`DOMAIN`  parameter.
 If index 4 is specified in RUN, the input files for the different domains
 will be checked for compatibility; if Tensor files exist for all domains
 and are compatible, the calculation will proceed straight to DeltaAmplitudes
 and Search. Otherwise, reference calculations will be run as needed for the
-domains. Note that you can also specify domains by the :ref:`DOMAIN<DOMAIN>`
-parameter and use RUN as normal, without setting it to 4. In that case, the
-program will try to execute the specified segments, and stop if that's not
-possible (e.g., if no reference calculation was specified, but the Tensors
-are missing or incompatible).
+domains. Note that you can also specify domains by the :ref:`DOMAIN` parameter
+and use RUN as normal, without setting it to 4. In that case, the program will
+try to execute the specified segments, and stop if that's not possible (e.g.,
+if no reference calculation was specified, but the Tensors are missing or
+incompatible).

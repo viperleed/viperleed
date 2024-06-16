@@ -21,9 +21,9 @@ expansion, used for calculating the scattering matrices within each layer.
 (0.01) (only first letter of flags is read, case-insensitive).
 Typical 0.001 to 0.1.
 
-LMAX may further be limited by the :ref:`LMAX<LMAX>` parameter, which can be
-used to define upper and lower bounds for acceptable LMAX, or also to fix LMAX
-to a specific value (in the latter case, PHASESHIFT_EPS is ignored).
+LMAX may further be limited by the :ref:`LMAX` parameter, which can be used to 
+define upper and lower bounds for acceptable LMAX, or also to fix LMAX to a 
+specific value (in the latter case, PHASESHIFT_EPS is ignored).
 By default, LMAX is allowed to vary between 6 and 18.
 
 

@@ -7,9 +7,8 @@ The parameter LOG_LEVEL controls the verbosity of the output log.
 LOG_LEVEL follows the standard Python logging levels, as defined by the
 `logging module <https://docs.python.org/3/library/logging.html>`__.
 As such, higher lower values correspond to higher verbosity with any value
-below 10 being debug messages. In :ref:`PARAMETERS<parameters>` LOG_LEVEL
-can be assigned an integer value in the range [0, 50], or one of the
-following shorthands:
+below 10 being debug messages. In :ref:`PARAMETERS` LOG_LEVEL can be assigned 
+an integer value in the range [0, 50], or one of the following shorthands:
 
 - ``debug``, ``True``: 10
 - ``verbose``, ``v``: 5

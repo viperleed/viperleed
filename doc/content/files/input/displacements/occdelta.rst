@@ -33,8 +33,8 @@ Syntax
 
 where
 
--  ``POSCAREL`` is the :ref:`POSCAR<POSCAR>` element and **not**
-   the chemical species defined via :ref:`ELEMENT_MIX<ELSPLIT>`.
+-  ``POSCAREL`` is the :ref:`POSCAR` element and **not** the chemical species 
+   defined via :ref:`ELSPLIT`.
    See also :ref:`element name collision<elementnamecollision>`.
 -  ``site`` is optional, and has the same functionality as the one in
    the :ref:`Geometrical displacements<GEODELTA>`.
@@ -49,9 +49,8 @@ comma-separated list. Each list element can have the two possible forms:
    chem start end step
    fix1 chem1 + fix2 chem2 (+ ...) start end step
 
-where ``chem*`` is one of the **chemical** elements that you have
-defined via :ref:`ELSPLIT<ELSPLIT>` or the special flag ``Vac`` (not
-case sensitive) for vacancies.
+where ``chem*`` is one of the **chemical** elements that you have defined via 
+:ref:`ELSPLIT` or the special flag ``Vac`` (not case sensitive) for vacancies.
 Notice that a **maximum of five distinct chemical elements**
 (including vacancies) can be used at each atomic position.
 
@@ -95,7 +94,7 @@ Example
    M_top = Fe 0.3 0.5 0.05, Ni 0.6 0.4 0.05, Ti 0.1
 
 How atoms are addressed on the left is described on the main
-:ref:`DISPLACEMENTS<DISPLACEMENTS>` page. Note that if you want to vary the
+:ref:`DISPLACEMENTS` page. Note that if you want to vary the
 concentrations of multiple elements, the *number of steps* in the ranges must
 be the same, and none of the steps must have a total occupation greater than 1.
 To keep an element at a constant concentration while varying others, you can
@@ -105,9 +104,9 @@ example for Ti above. Alternatively, the same input format with of
 also interpreted as a constant concentration.
 
 In the OCC_DELTA block, the element on the left *must* be the element as
-defined in the :ref:`POSCAR file<POSCAR>`, and the elements on the right
-*must* be chemical elements, defined either by :ref:`ELEMENT_MIX<ELSPLIT>`
-or :ref:`ELEMENT_RENAME<ELDEF>`  in the :ref:`PARAMETERS file<PARAMETERS>`.
+defined in the :ref:`POSCAR` file, and the elements on the right
+*must* be chemical elements, defined either by :ref:`ELSPLIT`
+or :ref:`ELDEF` in the :ref:`PARAMETERS` file.
 
 Note that a **maximum of five distinct chemical elements** (including
 vacancies) can be used at each atomic position.
@@ -130,9 +129,8 @@ also accepts single-value input (per element) on the right:
    -  As for the :ref:`Geometrical displacements<GEODELTA>` and for the
       :ref:`Vibrational amplitudes<VIBDELTA>`, the concentration steps
       above will be applied to all symmetry-equivalent atoms, unless
-      you turn off symmetry via :ref:`SYMMETRY_FIX<ISYM>` or
-      :ref:`SYM_DELTA<SYMDELTA>`.
+      you turn off symmetry via :ref:`ISYM` or :ref:`SYMDELTA`.
    -  The **minimum** number of blocks is **one**.
       You can use this to specify a *fixed* chemical substitution on the
       atomic site, which can differ from the one you specified in the
-      :ref:`VIBROCC<vibrocc>`  file. This is generally not recommended.
+      :ref:`VIBROCC`  file. This is generally not recommended.

@@ -15,7 +15,7 @@ access all of the functionality of |calc| from within their own Python programs.
 
 To use the API, you can simply import the ``viperleed`` package and call
 the desired functions. Here is a simple example of how to use the API to 
-find the plane group of a slab from a :ref:`POSCAR file<poscar>`:
+find the plane group of a slab from a :ref:`POSCAR` file:
 
 .. code-block:: python
 

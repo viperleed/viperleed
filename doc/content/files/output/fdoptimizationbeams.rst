@@ -12,6 +12,6 @@ point tested during optimization, as well as the experimental data.
 
 The file format is generally equivalent to the one of the
 :ref:`Rfactor_plots.pdf<Rfactorplots>`  files. Appearance of the |IV|
-plots can be modified with the :ref:`PLOT_IV<PLOT_COLORS_RFACTOR>`
-parameter. |R factor|\ s are between the *best* theoretical dataset
+plots can be modified with the :ref:`PLOT_COLORS_RFACTOR` parameter. 
+|R factor|\ s are between the *best* theoretical dataset
 (marked by the thicker line) and the experimental data.

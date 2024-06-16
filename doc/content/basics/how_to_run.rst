@@ -13,7 +13,7 @@ In ViPErLEED, each set of calculations for one system must have its own
 directory. This is because the input and output files have **case sensitive**,
 fixed names, see :ref:`the list of files<list_input_files>`. A typical approach
 is to create one such directory for each experimental dataset and each time
-a new structural model (i.e., :ref:`POSCAR file<poscar>`) is considered.
+a new structural model (i.e., :ref:`POSCAR` file) is considered.
 
 :numref:`list_minimum_dir_inputs` shows an example directory tree
 with the files needed to start a |LEED-IV| calculation in ViPErLEED.
@@ -42,29 +42,27 @@ The minimum information required to start
 a :ref:`reference calculation<ref-calc>`
 is contained in three files:
 
--   :ref:`IVBEAMS file<ivbeams>`: This file contains information on
+-   :ref:`IVBEAMS` file: This file contains information on
     which beams should be written to the output. It can be generated
     automatically starting from an :ref:`EXPBEAMS.csv<expbeams>` file
     that contains the |LEED-IV| curves measured experimentally. If an
     :ref:`EXPBEAMS.csv<expbeams>` file is provided, |calc| will use it
-    also to decide the energy range to calculate
-    (\ :ref:`THEO_ENERGIES<theo_energies>`), unless
-    specified otherwise in :ref:`PARAMETERS<parameters>`.
--   :ref:`PARAMETERS<parameters>`: This file contains the settings for the
-    calculation (see :ref:`the list of parameters<paramname>`). If no
-    :ref:`VIBROCC file<vibrocc>` is given, the :ref:`PARAMETERS<parameters>`
-    file must contain values for :ref:`T_EXPERIMENT<t_experiment>` and
-    :ref:`T_DEBYE<t_debye>`.
--   :ref:`POSCAR<poscar>`: This file contains the structure for the
+    also to decide the energy range to calculate (\ :ref:`THEO_ENERGIES`),
+    unless specified otherwise in :ref:`PARAMETERS`.
+-   :ref:`PARAMETERS`: This file contains the settings for the calculation
+    (see :ref:`the list of parameters<paramname>`). If no :ref:`VIBROCC`
+    file is given, the :ref:`PARAMETERS` file must contain values for
+    :ref:`T_EXPERIMENT` and :ref:`T_DEBYE`.
+-   :ref:`POSCAR`: This file contains the structure for the
     :ref:`reference calculation<ref-calc>`. ViPErLEED will determine the
-    applicable symmetry from the :ref:`POSCAR file<poscar>`. See also the
+    applicable symmetry from the :ref:`POSCAR` file. See also the
     :ref:`symmetry settings<symmetry_settings>` and
     :ref:`input-structure settings<input_structure_settings>`.
 
 
 To run also a :ref:`delta amplitudes calculation<sec_deltas>` or a
 :ref:`structure search<sec_search>`, you additionally need to provide a
-:ref:`DISPLACEMENTS file<displacements>` that contains the requested
+:ref:`DISPLACEMENTS` file that contains the requested
 perturbations of the structure.
 
 .. note::
@@ -201,14 +199,14 @@ a subfolder of :file:`my_surface`.
     ├── manifest
     └── ...
 
-|calc| will create the additional input files :ref:`IVBEAMS<ivbeams>`,
-:ref:`PHASESHIFTS<phaseshifts>`, and :ref:`VIBROCC<vibrocc>` if not
-provided by the user; see the respective sections for details.
+|calc| will create the additional input files :ref:`IVBEAMS`,
+:ref:`PHASESHIFTS`, and :ref:`VIBROCC` if not provided by the
+user; see the respective sections for details.
 
-During the very first run, the original :ref:`POSCAR file<poscar>`
-is renamed to ``POSCAR_user``, while the new ``POSCAR`` contains
-the structure as interpreted by |calc|. See the section
-on the :ref:`POSCAR file<poscar>` for more details.
+During the very first run, the original :ref:`POSCAR` file is renamed to
+:file:`POSCAR_user`, while the new :file:`POSCAR` contains the structure
+as interpreted by |calc|. See the section on the :ref:`POSCAR` file for
+more details.
 
 Information about the progress of the calculation and about errors
 in the user input are printed to the terminal and recorded in the
@@ -229,8 +227,8 @@ a ``Deltas`` directory will be created that contains the resulting
 :ref:`delta files<deltaszip>`.
 
 In case of automated multiple-search runs (which can be specified in the
-:ref:`DISPLACEMENTS<DISPLACEMENTS>` file), |calc| creates a ``workhistory``
-directory. It contains one subfolder for each intermediate run, storing
-input and output files that will be overwritten during subsequent runs.
+:ref:`DISPLACEMENTS` file), |calc| creates a ``workhistory`` directory.
+It contains one subfolder for each intermediate run, storing input and
+output files that will be overwritten during subsequent runs.
 
 .. todo:: Add also a few words about bookkeper here.

@@ -133,10 +133,10 @@ utility but here a symmetrized POSCAR file is returned.
 **Additional Options**
 
 - ``-e, --symmetry-eps``: Epsilon for in-plane symmetry detection in Å. Behaves
-  like :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file. Default: 0.1Å
+  like :ref:`sym_eps` in the :ref:`PARAMETERS` file. Default: 0.1Å
 - ``--symmetry-eps-z``: Epsilon for out-of-plane symmetry detection in Å.
   Behaves like the second argument of :ref:`sym_eps` in the
-  :ref:`PARAMETERS<parameters>` file. If not provided, the value of
+  :ref:`PARAMETERS` file. If not provided, the value of
   ``--symmetry-eps`` is used.
 - ``--planegroup``: Planegroup to enforce.
   Default: detected automatically from the slab.
@@ -167,11 +167,11 @@ in ViPErLEED calculations.
 **Additional Options**
 
 - ``-e, --symmetry-eps``: Epsilon for in-plane symmetry detection in Å.
-  Behaves like :ref:`sym_eps` in the :ref:`PARAMETERS<parameters>` file.
+  Behaves like :ref:`sym_eps` in the :ref:`PARAMETERS` file.
   Default: 0.1Å
 - ``--symmetry-eps-z``: Epsilon for out-of-plane symmetry detection in Å. .
   Behaves like the second argument of :ref:`sym_eps` in the
-  :ref:`PARAMETERS<parameters>` file. If not provided, the value of
+  :ref:`PARAMETERS` file. If not provided, the value of
   ``--symmetry-eps`` is used.
 
 
@@ -182,8 +182,8 @@ get_bulk_repeat
 
 Interactive script that reads a POSCAR file, asks at what c value the bulk
 starts, then automatically reduces the size of the POSCAR to non-redundant
-bulk layers only, and outputs the appropriate
-:ref:`N_BULK_LAYERS<n_bulk_layers>` and :ref:`BULK_REPEAT` values.
+bulk layers only, and outputs the appropriate :ref:`N_BULK_LAYERS` and
+:ref:`BULK_REPEAT` values.
 Additionally, the files ``POSCAR_bulk`` containing the bulk unit-cell and
 a file ``POSCAR_min`` containing the minimal surface slab will be written.
 
@@ -344,9 +344,9 @@ element block. To reorder the element blocks themselves, use
 strip_comments
 ==============
 
-Strips all comments from the POSCAR file (e.g. :ref:`SITE_DEF<sitedef>`
-information added by ViPErLEED). This can also be used to strip ion
-velocities from a VASP POSCAR file.
+Strips all comments from the POSCAR file (e.g. :ref:`sitedef` information added
+by ViPErLEED). This can also be used to strip ion velocities from a VASP POSCAR
+file.
 
 **Usage**
 

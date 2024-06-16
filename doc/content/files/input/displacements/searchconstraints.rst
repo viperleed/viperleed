@@ -3,10 +3,9 @@
 Constraints for structure optimization
 ======================================
 
-This block of the :ref:`DISPLACEMENTS file<DISPLACEMENTS>` allows you
-to define specific constraints other than symmetry for the structure-
-optimization routine. The commands are introduced by a header line of
-the form
+This block of the :ref:`DISPLACEMENTS` file allows you to define specific 
+constraints other than symmetry for the structure-optimization routine. The 
+commands are introduced by a header line of the form
 
 ..  code-block:: none
 
@@ -20,7 +19,7 @@ The general syntax for a line in the CONSTRAIN block is (examples given below):
 
 -  ``flag`` is either ``geo``, ``vib`` or ``occ``, depending what type of
    parameter should be addressed (compare to the other blocks in the
-   :ref:`DISPLACEMENTS file<DISPLACEMENTS>`).
+   :ref:`DISPLACEMENTS` file).
 -  The syntax for addessing ``atoms`` is the same as in the other blocks, i.e.,
    by POSCAR element, chemical element, or site type, with optional further
    restriction by atom or layer number. Listing multiple sets of atoms in one
@@ -73,7 +72,7 @@ ranges have the same size, i.e.,
 Note that while in this example, the *indices* for vibrational variation
 of Ir_top and Ir_def are tied together, that does in no way mean that the
 *values* have to be the same. Both the *base values* (defined in the
-:ref:`VIBROCC file<vibrocc>`) and the actual values within the displacement
+:ref:`VIBROCC` file) and the actual values within the displacement
 ranges can differ.
 
 You can also force atoms from different sites and/or elements to move in a

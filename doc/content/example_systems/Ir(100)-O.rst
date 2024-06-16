@@ -42,11 +42,10 @@ Introduction
 ============
 
 We start from experimental |LEED-IV| curves which are saved in file
-:ref:`EXPBEAMS.csv<expbeams>`.
-As reference structure, we use a :ref:`POSCAR file<poscar>` containing an
-Ir(100) surface that was hand made from a bulk structure. An additional
-adsorbed oxygen atom is placed at a bridge site, such that each surface
-iridium atom binds to one oxygen atom.
+:ref:`EXPBEAMS.csv<expbeams>`. As reference structure, we use a :ref:`POSCAR`
+file containing an Ir(100) surface that was hand made from a bulk structure.
+An additional adsorbed oxygen atom is placed at a bridge site, such that each
+surface iridium atom binds to one oxygen atom.
 The height above the surface was chosen to achieve a reasonable Ir–O bond
 length. See :numref:`fig_ir_start` for a visualization of the structure
 (using :term:`VESTA` :cite:`mommaVESTAThreedimensionalVisualization2011`).
@@ -79,7 +78,7 @@ this cutoff is bulklike.
 PARAMETERS and rough DISPLACEMENTS
 ==================================
 
-We start by setting up a rudimentary :ref:`PARAMETERS file<parameters>`,
+We start by setting up a rudimentary :ref:`PARAMETERS` file,
 very similar to the one described in the tutorial for the
 :ref:`Ag(100)-(1×1) surface<example_ag_100>`, as per
 :numref:`list_ir_parameters`.
@@ -100,15 +99,15 @@ GLOBAL PARAMETERS
 
     To reduce computation time for this example, we also limit the maximum
     angular momentum quantum number to be used in the calculations by
-    TensErLEED with the :ref:`LMAX<lmax>` parameter.
+    TensErLEED with the :ref:`LMAX` parameter.
 
 PARAMETERS FOR INTERPRETING THE POSCAR
     As mentioned in the :ref:`sec_ir_intro`, we let ViPErLEED find the
     bulk-repeat unit by itself. For this, we set the :ref:`BULK_LIKE_BELOW`
     parameter at the height where we drew the plane in :numref:`fig_ir_start`.
 
-    Using the :ref:`SITE_DEF<sitedef>` parameter, we specify that the topmost
-    iridium atoms should be treated separately. These Ir atoms are differently
+    Using the :ref:`sitedef` parameter, we specify that the topmost iridium
+    atoms should be treated separately. These Ir atoms are differently
     coordinated than bulk Ir atoms and thus will presumably have a different
     vibrational amplitude. For completeness, we also specify the site type
     ``O_ads`` for the adsorbed oxygen atom. However, since there is only one
@@ -116,12 +115,11 @@ PARAMETERS FOR INTERPRETING THE POSCAR
     could also skip that line.
 
 PARAMETERS FOR VIBROCC
-    Since we don't have a :ref:`VIBROCC file<vibrocc>` yet, we need to specify
-    the parameters :ref:`T_DEBYE<t_debye>`, :ref:`T_EXPERIMENT<t_experiment>`,
-    and :ref:`VIBR_AMP_SCALE<VIBR_AMP_SCALE>`. Note that we can only give one
-    value for the Debye temperature for both oxygen and iridium. The initial
-    vibrational amplitudes will be calculated as explained in the section on
-    :ref:`T_DEBYE<t_debye>`.
+    Since we don't have a :ref:`VIBROCC` file yet, we need to specify the
+    parameters :ref:`T_DEBYE`, :ref:`T_EXPERIMENT`, and :ref:`VIBR_AMP_SCALE`.
+    Note that we can only give one value for the Debye temperature for both
+    oxygen and iridium. The initial vibrational amplitudes will be calculated
+    as explained in the section on :ref:`T_DEBYE`.
 
 .. tip::
     Grouping the settings in the PARAMETERS file as described above is not
@@ -129,9 +127,9 @@ PARAMETERS FOR VIBROCC
 
 
 For the delta-amplitudes calculation and structure optimization, we also need
-to set up a :ref:`DISPLACEMENTS file<displacements>`. Since this is the first
-run starting from a totally unrelaxed model, we begin with a rather large range
-and a relatively rough grid, as in :numref:`list_ir_displacements_rough`.
+to set up a :ref:`DISPLACEMENTS` file. Since this is the first run starting
+from a totally unrelaxed model, we begin with a rather large range and a
+relatively rough grid, as in :numref:`list_ir_displacements_rough`.
 
 .. _list_ir_displacements_rough:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_rough
@@ -161,8 +159,8 @@ displacements, cf. :numref:`fig_Ir_O_search_progress_2`.
    direction, as the parameters may be coupled.
 
 With the files set up, we can start the ViPErLEED calculation.
-During the first initialization ViPErLEED will generate :ref:`IVBEAMS<ivbeams>`
-and :ref:`PHASESHIFTS<phaseshifts>`.
+During the first initialization ViPErLEED will generate :ref:`IVBEAMS`
+and :ref:`PHASESHIFTS` files.
 
 
 .. note::
@@ -210,8 +208,8 @@ for iridium has gone up.
 
 .. important::
     We want to accept the optimized positions as the new starting
-    configuration, so we need to replace our old :ref:`POSCAR<poscar>`
-    and :ref:`VIBROCC<vibrocc>` files with the optimized ones.
+    configuration, so we need to replace our old :ref:`POSCAR` and
+    :ref:`VIBROCC` files with the optimized ones.
     This can be done either manually or automatically by calling the
     :ref:`bookkeeper utility<bookkeeper>` with the ``--cont`` flag:
 
@@ -224,11 +222,11 @@ Fine DISPLACEMENTS and tensor-LEED error
 
 The rough optimization has already significantly brought down the |R factor|.
 We should now continue with a finer search grid. For this, we use a similar
-:ref:`DISPLACEMENTS file<displacements>`, but with much smaller range and step
-size (see :numref:`list_ir_displacements_fine`). We now rerun with
-:ref:`RUN = 1-3<run>` to perform a fresh reference calculation for the
-new starting positions. This is advisable because parameter deviations
-during the previous fit were not negligible.
+:ref:`DISPLACEMENTS` file, but with much smaller range and step size (see
+:numref:`list_ir_displacements_fine`). We now rerun with :ref:`RUN = 1-3<run>`
+to perform a fresh reference calculation for the new starting positions. This
+is advisable because parameter deviations during the previous fit were not
+negligible.
 
 .. _list_ir_displacements_fine:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_fine
@@ -260,7 +258,7 @@ proceeding, we should accept the new best-fit structure by calling the
 
         $ python3 bookkeeper.py --cont #[or ./bookkeeper --cont]
 
-Now, remember that in the :ref:`PARAMETERS file<parameters>` of
+Now, remember that in the :ref:`PARAMETERS` file of
 :numref:`list_ir_parameters` we had to put in an initial guess for the
 imaginary part of the inner potential |V0i|. We would now like to also
 optimize this non-structural parameter. However, it is not accessible
@@ -297,8 +295,8 @@ It is shown in :numref:`fig_ir_fdopt`.
 
 .. note::
     ViPErLEED will also automatically add the new, optimized value to the
-    :ref:`PARAMETERS file<parameters>` and comment out the line containing
-    the previous value.
+    :ref:`PARAMETERS` file and comment out the line containing the previous
+    value.
 
 Following the |V0i| optimization we can also run a final structure
 optimization, since the new value for |V0i| may have slightly affected
@@ -310,11 +308,11 @@ Error calculation
 =================
 
 Now that we have found a good structure fit, we can run a ViPErLEED
-:ref:`error calculation<error_calculation>` to estimate how sensitive
-the |R factor| is to small changes of specific parameters. As input for
-the error calculation, we need a :ref:`DISPLACEMENTS file<displacements>`
-containing the desired range and steps. The format of the file is the
-same as used for the delta-amplitudes calculation and structure search.
+:ref:`error calculation<error_calculation>` to estimate how sensitive the
+|R factor| is to small changes of specific parameters. As input for the error
+calculation, we need a :ref:`DISPLACEMENTS` file containing the desired range
+and steps. The format of the file is the same as used for the delta-amplitudes
+calculation and structure search.
 
 .. _list_ir_error_calc:
 .. literalinclude :: /_static/example_systems/Ir(100)-O/DISPLACEMENTS_errors

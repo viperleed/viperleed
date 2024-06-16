@@ -6,18 +6,16 @@ The SYM_DELTA tag
 
 .. warning::
   SYM_DELTA is not well tested yet, and has at least one known bug.
-  Use of :ref:`SYMMETRY_FIX<ISYM>`  instead of SYM_DELTA is encouraged
-  where possible.
+  Use of :ref:`ISYM` instead of SYM_DELTA is encouraged where possible.
 
-SYM_DELTA is a tag in the :ref:`DISPLACEMENTS<DISPLACEMENTS>` file that
-allows you to temporarily change the symmetry of your slab, such that
-displacements then assigned to atoms will be applied to fewer or no
-"symmetry-equivalent" atoms.
-If you require lowering of symmetry, this
-will apply only to those input lines between two SYM_DELTA lines (e.g.,
-start a block with one line turning off symmetry or changing the
-symmetry group, and end it with one line turning the full symmetry
-back on or changing the symmetry to another group).
+SYM_DELTA is a tag in the :ref:`DISPLACEMENTS` file that allows you to
+temporarily change the symmetry of your slab, such that displacements
+then assigned to atoms will be applied to fewer or no "symmetry-equivalent"
+atoms. If you require lowering of symmetry, this will apply only to those
+input lines between two SYM_DELTA lines (e.g., start a block with one line
+turning off symmetry or changing the symmetry group, and end it with one
+line turning the full symmetry back on or changing the symmetry to another
+group).
 
 Example
 -------
@@ -43,12 +41,11 @@ Acceptable values
 -  One can also directly specify a symmetry group with ``SYM_DELTA = group``.
    That group will then be used to restrict geometrical displacements or link
    symmetry-equivalent atoms. This is functionally equivalent to changing the
-   value of :ref:`SYMMETRY_FIX<ISYM>`, but only for the operations that follow.
-   Note that only symmetry *reduction* from the overall slab symmetry is
-   allowed. See :ref:`SYMMETRY_FIX<ISYM>`  for a more detailed explanation
-   of allowed symmetry changes.
+   value of :ref:`ISYM`, but only for the operations that follow. Note that
+   only symmetry *reduction* from the overall slab symmetry is allowed. See
+   :ref:`ISYM`  for a more detailed explanation of allowed symmetry changes.
 
 The use of SYM_DELTA should be reserved for **highly specific** cases and is
 **generally discouraged**. If the desired effect can be achieved by lowering
-the *overall* symmetry, then using the :ref:`SYMMETRY_FIX<ISYM>` tag of the
-:ref:`PARAMETERS<PARAMETERS>` file is always preferable.
+the *overall* symmetry, then using the :ref:`ISYM` tag of the :ref:`PARAMETERS`
+file is always preferable.

@@ -18,19 +18,19 @@ depending on the work-segment (:ref:`see above<work-segments>`).
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | File                                 | Function                                          | Required                                                          |
 +======================================+===================================================+===================================================================+
-| :ref:`PARAMETERS<PARAMETERS>`        | What to execute, and how to interpret other input | Always required                                                   |
+| :ref:`PARAMETERS`                    | What to execute, and how to interpret other input | Always required                                                   |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-| :ref:`POSCAR<POSCAR>`                | Structural information                            | Always required                                                   |
+| :ref:`POSCAR`                        | Structural information                            | Always required                                                   |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-| :ref:`VIBROCC<vibrocc>`              | Vibrational amplitudes and site occupations       | Always required, can be generated automatically                   |
+| :ref:`VIBROCC`                       | Vibrational amplitudes and site occupations       | Always required, can be generated automatically                   |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-| :ref:`IVBEAMS<IVBEAMS>`              | Which beams to calculate                          | Always required, can be generated automatically from EXPBEAMS.csv |
+| :ref:`IVBEAMS`                       | Which beams to calculate                          | Always required, can be generated automatically from EXPBEAMS.csv |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-| :ref:`DISPLACEMENTS<DISPLACEMENTS>`  | What to vary during the search                    | Required for delta calculations and search                        |
+| :ref:`DISPLACEMENTS`                 | What to vary during the search                    | Required for delta calculations and search                        |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 | :ref:`EXPBEAMS.csv<EXPBEAMS>`        | Experimental |IV| curves                          | Required for |R-factor| calculations and search                   |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
-| :ref:`PHASESHIFTS<PHASESHIFTS>`      | Contains elastic electron scattering phaseshifts  | Generated automatically if needed                                 |
+| :ref:`PHASESHIFTS`                   | Contains elastic electron scattering phaseshifts  | Generated automatically if needed                                 |
 +--------------------------------------+---------------------------------------------------+-------------------------------------------------------------------+
 
 
@@ -75,11 +75,11 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
 +----------------------------------------------------------------------+------------------------------------------------------------------------+---------------------------------------------------+
 | **Raw output files from TensErLEED:**                                                                                                                                                             |
 +----------------------------------------------------------------------+------------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`R_OUT<r_out>`                                                  | |R factor|\ s for every beam and every inner potential shift           | |R-factor| calculation                            |
+| :ref:`R_OUT`                                                         | |R factor|\ s for every beam and every inner potential shift           | |R-factor| calculation                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------------+---------------------------------------------------+
 | :ref:`control.chem<controlchem>`                                     | Search parameter values for the latest generation                      | Search                                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------------+---------------------------------------------------+
-| :ref:`SD.TL<sdtl>`                                                   | Search parameter values and |R factor|\ s per generation               | Search                                            |
+| :ref:`sdtl`                                                          | Search parameter values and |R factor|\ s per generation               | Search                                            |
 +----------------------------------------------------------------------+------------------------------------------------------------------------+---------------------------------------------------+
 | :ref:`refcalc-fd.out<fd_out>`                                        | Theoretical |IV| curves                                                | Reference calculation                             |
 +----------------------------------------------------------------------+------------------------------------------------------------------------+---------------------------------------------------+
@@ -101,11 +101,11 @@ These files are stored in the ``SUPP`` subfolder of the ``work`` directory.
 +==============================================================================================+===========================================================================================+
 | Input for TensErLEED                                                                         |                                                                                           |
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`BEAMLIST<BEAMLIST>`                                                                    | All relevant beams                                                                        |
+| :ref:`BEAMLIST`                                                                              | All relevant beams                                                                        |
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`AUXBEAMS<AUXBEAMS>`                                                                    | Information on beams used by multiple TensErLEED parts, based on :ref:`IVBEAMS<IVBEAMS>`  |
+| :ref:`AUXBEAMS`                                                                              | Information on beams used by multiple TensErLEED parts, based on :ref:`IVBEAMS<IVBEAMS>`  |
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
-| :ref:`AUXEXPBEAMS<AUXEXPBEAMS>`                                                              | Contents of :ref:`EXPBEAMS.csv<EXPBEAMS>`, formatted for TensErLEED                       |
+| :ref:`AUXEXPBEAMS`                                                                           | Contents of :ref:`EXPBEAMS.csv<EXPBEAMS>`, formatted for TensErLEED                       |
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
 | :ref:`refcalc-PARAM, muftin.f, AUXGEO, AUXLATGEO, AUXNONSTRUCT, refcalc-FIN<refcalc-input>`  | Input files for the reference calculation                                                 |
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+

@@ -86,13 +86,13 @@ search is considered to be reached when **partial convergence** is reached
 twice in a row without any changes in the meantime, i.e. when lowering
 ``gaussian`` does not lead to any further improvement. Once full convergence
 is reached, the search will be stopped.
-Note that an upper limit of generations,
-independent of convergence, is given by :ref:`SEARCH_MAX_GEN<SEARCHGENMAX>`.
+Note that an upper limit of generations, independent of convergence, is given
+by :ref:`SEARCHGENMAX`.
 
 .. note::
    ``dgen`` also affects the output interval for the raw TenErLEED file
-   :ref:`SD.TL<sdtl>`. Very values for ``dgen`` (:math:`\lesssim` 10) may
-   slow down the search due to I/O overhead.
+   :ref:`sdtl`. Very values for ``dgen`` (:math:`\lesssim` 10) may slow
+   down the search due to I/O overhead.
 
 **Default:** partial convergence when best 10% of structures do not change in
 200 generations, scaling factor = 0.75/(scaling factor of ``gaussian``).

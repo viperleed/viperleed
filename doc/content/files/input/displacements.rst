@@ -34,14 +34,14 @@ Indentation is allowed, but does not affect the function.
 In each of the lines in the blocks, the left side of the ``=`` sign defines
 which atoms are being assigned displacements, while the right side defines
 the range of displacements to apply. Generally, atoms can be addressed by
-:ref:`POSCAR<POSCAR>`  element, chemical element, or site type. If there is
+:ref:`POSCAR` element, chemical element, or site type. If there is
 an :ref:`element name collision<ElementNameCollision>`, the element will be
 interpreted as the POSCAR element, so the assignment will be made for *all*
-elements in :ref:`ELEMENT_MIX<ELSPLIT>`. Supplying a list of atom numbers
-(**N** in :ref:`POSCAR<POSCAR>`, or by layer number using ``L(x)`` for layer
-``x``) to further limit which atoms are being addressed is optional. If no
-numbers are given, the displacements on the right are applied to all atoms
-of the given element/site.
+elements in :ref:`ELSPLIT`. Supplying a list of atom numbers (**N** in
+:ref:`POSCAR`, or by layer number using ``L(x)`` for layer ``x``) to
+further limit which atoms are being addressed is optional. If no
+numbers are given, the displacements on the right are applied to
+all atoms of the given element/site.
 
 The exact syntax of the three blocks differs slightly, and is explained in
 detail here:
@@ -51,19 +51,18 @@ detail here:
 -  :ref:`Chemical substitution<OCCDELTA>`
 
 Generally, any displacement applied to one atom will also be applied to
-all symmetry-equivalent atoms (see Linking in :ref:`POSCAR<POSCAR>`),
-such that the symmetry is preserved during the search
-(eg. in-plane geometrical displacements will be mirrored for atoms linked
-by a mirror symmetry plane). If multiple assignments are made for the same
-atom, the assignments will be ignored if they are consistent, but the user
-will be warned and the program may stop if there is a contradiction. For
-example, if some of the iridium atoms 2–11 in the code above were linked
-by a mirror plane, assigning a displacement in z direction to all of them
-would be accepted, but assigning the very same in-plane displacement
-(not parallel to the mirror plane) to all of them would lead to a
-contradiction, as this would break the symmetry. In that case, it would
-be preferable to assign the displacement explicitly to only *one* of the
-symmetry-equivalent atoms.
+all symmetry-equivalent atoms (see Linking in :ref:`POSCAR`), such that
+the symmetry is preserved during the search (eg. in-plane geometrical
+displacements will be mirrored for atoms linked by a mirror symmetry plane).
+If multiple assignments are made for the same atom, the assignments will be
+ignored if they are consistent, but the user will be warned and the program
+may stop if there is a contradiction. For example, if some of the iridium
+atoms 2–11 in the code above were linked by a mirror plane, assigning a
+displacement in z direction to all of them would be accepted, but assigning
+the very same in-plane displacement (not parallel to the mirror plane) to
+all of them would lead to a contradiction, as this would break the symmetry.
+In that case, it would be preferable to assign the displacement explicitly
+to only *one* of the symmetry-equivalent atoms.
 
 .. note::
     See the :ref:`Domain calculations<domain_calculation>` page for information
@@ -195,7 +194,7 @@ always be directly before a ``== SEARCH`` statement, or before the end of
 the file. Loops will end when their latest iteration does not yield a better
 |R factor| than the previous iteration (note that this means each looped block
 will be executed at least twice). For example, to optimize the z coordinate,
-then search x based on the optimized z, and then loop back to searching z 
+then search x based on the optimized z, and then loop back to searching z
 with the optimized x, the example above could be modified like this:
 
 ..  code-block:: none
@@ -216,8 +215,8 @@ with the optimized x, the example above could be modified like this:
 
    </loop>
 
-You can also nest loops; for example, to optimize z, then loop in-plane 
-optimization to get optimal x and y for that z, then start again with z, 
+You can also nest loops; for example, to optimize z, then loop in-plane
+optimization to get optimal x and y for that z, then start again with z,
 you could do:
 
 ..  code-block:: none

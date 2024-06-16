@@ -24,9 +24,9 @@ Example
    Ir_top = -0.05 0.05 0.01      ! Vibrational amplitude of Iridium atoms in Ir_top sites will be varied over the range [-0.05, 0.05] with step 0.01
 
 How atoms are addressed on the left is described on the main
-:ref:`DISPLACEMENTS<DISPLACEMENTS>`  page. The values on the
-right will be interpreted relative to the atom's vibrational
-amplitude as defined in the :ref:`VIBROCC file<vibrocc>`.
+:ref:`DISPLACEMENTS`  page. The values on the right will be interpreted 
+relative to the atom's vibrational amplitude as defined in the :ref:`VIBROCC`
+file.
 
 For some applications, it can be useful to apply a static displacement,
 without re-doing the reference calculation. For this purpose, the
@@ -57,11 +57,10 @@ of the atom, you can also clear the offset manually:
 .. note::
    -  The range of vibrational amplitudes defined with the command will be
       applied to all symmetry-equivalent atoms, unless you turn off symmetry
-      constraints via :ref:`SYMMETRY_FIX<ISYM>`  or :ref:`SYM_DELTA<SYMDELTA>`.
+      constraints via :ref:`ISYM`  or :ref:`SYMDELTA`.
    -  Vibrational amplitudes must be *positive* values, so the program will
       throw an error if the combination of the given range with the center
-      point defined in the :ref:`VIBROCC file<vibrocc>`  results in negative
-      values.
+      point defined in the :ref:`VIBROCC` file results in negative values.
    -  If your combination of ``start``, ``end`` and ``step`` values does not
       yield an odd number of steps, the interval will be expanded symmetrically
       around the midpoint.

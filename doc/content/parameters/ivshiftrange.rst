@@ -24,5 +24,5 @@ curves (whichever is smaller)
 **Acceptable values:** Either 2 or 3 float values. Step has to be positive.
 Underscore is interpreted as default value.
 
-**See also**: :ref:`FILAMENT_WF<FILWF>`  parameter (filament work function,
+**See also**: :ref:`FILWF` parameter (filament work function,
 shifts the electron energy with respect to the Fermi level).

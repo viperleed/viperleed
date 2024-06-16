@@ -48,7 +48,7 @@ Errors_summary.csv
 Every line lists one independently varied parameter with corresponding
 information. The information given for each parameter is:
 
-- atom numbers (as in :ref:`POSCAR<poscar>`),
+- atom numbers (as in :ref:`POSCAR`),
 - displacement mode (``geo``, ``vib``, ``occ``)
 - displacement direction,
 - minimum |R factor| of the error curve,
@@ -59,7 +59,7 @@ information. The information given for each parameter is:
   see above; labeled ``-Δp`` and ``+Δp``).
 
 For geometrical displacements the column ``Direction`` lists the direction
-requested in :ref:`DISPLACEMENTS<displacements>`.
+requested in :ref:`DISPLACEMENTS`.
 
 The contents of ``Errors_summary.csv`` may look something like this:
 
@@ -78,7 +78,7 @@ Errors.zip
 Results for each individual parameter varied during the error calculation
 are collected and stored in the ZIP archive ``Errors.zip``. Files are named
 ``Errors_{mode}_atoms#{ids}.csv``, where ``{mode}`` is one of ``geo``, ``vib``,
-or ``occ`` and ``{ids}`` is the atom numbers (as in :ref:`POSCAR<poscar>`).
+or ``occ`` and ``{ids}`` is the atom numbers (as in :ref:`POSCAR`).
 For geometrical displacements and vibrational amplitude changes, each file has
 two columns: the first column lists the displacement and the right column the
 corresponding |R factor|. For occupational errors, additional columns list the

@@ -11,7 +11,7 @@ in a POSCAR file ("POSCAR elements") need not be actual chemical elements (as
 given in the periodic table).
 See :ref:`element name collision<ElementNameCollision>`  for the distinction
 between POSCAR elements and chemical elements, and the
-:ref:`ELEMENT_MIX<ELSPLIT>`  and :ref:`ELEMENT_RENAME<ELDEF>`
+:ref:`ELSPLIT` and :ref:`ELDEF`
 parameters for mapping between POSCAR element names and chemical elements.
 
 The POSCAR file format is the same as used in VASP input, and can be exported
@@ -48,19 +48,17 @@ changes are then made to POSCAR:
    highest-order rotation axis, or if no rotation axis is found, a
    mirror or glide plane.
 -  For atoms that were recognized as symmetry-equivalent within
-   :ref:`SYMMETRY_EPS<sym_eps>`, the atomic positions will be
-   averaged to fully correspond to the system's symmetry (using
-   either an automatically determined plane group, or the one
-   defined in :ref:`SYMMETRY_FIX<ISYM>`). This behavior can be
-   altered with the :ref:`SYMMETRIZE_INPUT<SYMMETRY_NOMOVE>`
-   parameter.
--  Atoms that lie within :ref:`SYMMETRY_EPS<sym_eps>`  of a rotation
+   :ref:`sym_eps`, the atomic positions will be averaged to fully
+   correspond to the system's symmetry (using either an automatically
+   determined plane group, or the one defined in :ref:`ISYM`). This
+   behavior can be altered with the :ref:`SYMMETRY_NOMOVE` parameter.
+-  Atoms that lie within :ref:`sym_eps`  of a rotation
    axis or mirror plane will be moved onto that axis or plane to fully
    correspond to the system's symmetry. This can also be prevented via
-   :ref:`SYMMETRIZE_INPUT<SYMMETRY_NOMOVE>`.
+   :ref:`SYMMETRY_NOMOVE`.
 -  If a symmetry reduction that requires rotation of the unit cell has
-   been set in the :ref:`SYMMETRY_FIX<ISYM>`  parameter, the unit cell
-   will be rotated in the POSCAR.
+   been set in the :ref:`ISYM` parameter, the unit cell will be rotated
+   in the POSCAR.
 -  Comments will be added in the POSCAR file, which predict the behaviour
    of the system during the subsequent calculations (see below).
 
@@ -70,7 +68,7 @@ Comment lines
 The POSCAR file contains the following **comment lines** after initialization:
 
 -  **Plane group**: planar symmetry group of the slab.
-   If :ref:`SYMMETRY_FIX<ISYM>` is used to select a certain group, this will be
+   If :ref:`ISYM` is used to select a certain group, this will be
    indicated, while the full symmetry of the slab is mentioned in brackets. In
    the POSCAR_oricell file, this is prepended by stars, since the original cell
    might not display the correct symmetry. See also the
@@ -84,14 +82,14 @@ For each atom the following information is given:
    conserved from the original POSCAR. This numbering convention is applied
    everywhere in |calc|.
 -  **SiteLabel**: ``element_sitetype``, as determined from
-   :ref:`SITE_DEF<SITEDEF>`.
+   :ref:`SITEDEF`.
 -  **Layer**: The layer that the atom is in, as determined from
-   :ref:`LAYER_CUTS<layer_cuts>`.
+   :ref:`LAYER_CUTS`.
 -  **Linking**: Progressive label that indicates which atoms are related to one
    another by the symmetry **Group**. When one of the atoms from an equivalence
-   group is moved via the :ref:`DISPLACEMENTS<DISPLACEMENTS>`, its equivalent
-   ones will be also moved such that the symmetry is conserved (see the
-   :ref:`DISPLACEMENTS<DISPLACEMENTS>`  file for further details).
+   group is moved via the :ref:`DISPLACEMENTS`, its equivalent ones will be
+   also moved such that the symmetry is conserved (see the :ref:`DISPLACEMENTS`
+   file for further details).
 -  **FreeDir**: Allowed in-plane movement direction for the atom during LEED
    optimization. Will be ``locked`` if the atom is on a rotation axis, and
    ``[i j]`` if the atom is on a mirror plane, where the allowed direction is
@@ -110,35 +108,33 @@ comments and corrections of atomic positions, but with the same orientation and
 position of the unit cell as in the original POSCAR.
 This can be used for direct comparison (e.g., in VESTA
 :cite:p:`mommaVESTAThreedimensionalVisualization2011`) with the original file,
-and can be useful to judge whether the :ref:`SYMMETRY_EPS<sym_eps>`  value
-chosen is appropriate.
+and can be useful to judge whether the :ref:`sym_eps` value chosen is
+appropriate.
 
 .. _poscar_bulk:
 
 POSCAR_bulk
 -----------
 
-In addition, a **POSCAR_bulk** file is created (see SUPP folder) based on
-the :ref:`LAYER_CUTS<layer_cuts>`, :ref:`N_BULK_LAYERS<n_bulk_layers>`,
-:ref:`BULK_REPEAT<BULK_REPEAT>` and :ref:`SUPERLATTICE<SUPERLATTICE>`
-parameters. The structure in this file represents the bulk as it will be
-used during the TensErLEED calculations. You can check whether the bulk
-unit cell was recognized correctly by opening POSCAR_bulk in VESTA and
-editing the boundary such that multiple cells are shown in all three
-directions. For the same purpose, the **POSCAR_bulk_appended** is the
-original POSCAR file with 1–3 bulk units (depending on the bulk thickness)
-appended at the bottom, meant to check whether the bulk cell is aligned
-correctly with the slab.
+In addition, a **POSCAR_bulk** file is created (see SUPP folder) based
+on the :ref:`LAYER_CUTS`, :ref:`N_BULK_LAYERS`, :ref:`BULK_REPEAT` and
+:ref:`SUPERLATTICE` parameters. The structure in this file represents
+the bulk as it will be used during the TensErLEED calculations. You can
+check whether the bulk unit cell was recognized correctly by opening
+POSCAR_bulk in VESTA and editing the boundary such that multiple cells
+are shown in all three directions. For the same purpose, the
+**POSCAR_bulk_appended** is the original POSCAR file with 1–3 bulk units
+(depending on the bulk thickness) appended at the bottom, meant to check
+whether the bulk cell is aligned correctly with the slab.
 
 .. _poscar_mincell:
 
 POSCAR_mincell
 --------------
 
-If the :ref:`SYMMETRY_CELL_TRANSFORM<SYMMETRY_CELL_TRANSFORM>`  parameter
-is set, or if a smaller-area unit cell is found during the symmetry search,
-an additional **POSCAR_mincell** file will be written, containing the atoms
-in the reduced unit cell.
+If the :ref:`SYMMETRY_CELL_TRANSFORM` parameter is set, or if a smaller-area
+unit cell is found during the symmetry search, an additional **POSCAR_mincell**
+file will be written, containing the atoms in the reduced unit cell.
 
 
 .. _poscar_out:
@@ -173,9 +169,9 @@ point to produce an acceptable input POSCAR for a subsequent run.
 
 .. note::
     When preparing a new set of input files from POSCAR_vacuum_corrected, be
-    careful to adapt any :ref:`PARAMETERS<parameters>` that are defined as
-    fractions of the unit-cell c vector (e.g., :ref:`LAYER_CUTS<layer_cuts>`,
-    :ref:`BULK_LIKE_BELOW<BULK_LIKE_BELOW>`, :ref:`BULK_REPEAT<BULK_REPEAT>`).
+    careful to adapt any :ref:`PARAMETERS` that are defined as fractions of 
+    the unit-cell c vector (e.g., :ref:`LAYER_CUTS`, :ref:`BULK_LIKE_BELOW`, 
+    :ref:`BULK_REPEAT`).
 
 A POSCAR file with a gap smaller than 5 Å will not cause ViPErLEED to stop, but
 a POSCAR_vacuum_corrected file is nonetheless generated. It can be used, e.g.,

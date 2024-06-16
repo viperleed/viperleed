@@ -81,8 +81,8 @@ releases from the
 `releases tab <https://github.com/viperleed/viperleed-tensorleed/releases>`__
 of the ``viperleed-tensorleed`` repository. You can have multiple versions of
 TensErLEED on your system at the same time. |calc| will use the most recent one
-by default. To select a different version you can use the
-:ref:`TL_VERSION<tl_version>` parameter.
+by default. To select a different version you can use the :ref:`TL_VERSION`
+parameter.
 
 When using multiple tensor-LEED versions, the folder containing the tensor-LEED
 code is expected to have the structure in :numref:`list_tensorleed_folder`. The
@@ -235,10 +235,9 @@ Unlike the original version of TensErLEED by
 libraries to be available. |calc| supports :term:`gfortran` from the GNU
 Compiler Collection (:term:`gcc`) and the Intel Fortran compiler :term:`ifort`
 without additional configuration.
-You can set the :ref:`FORTRAN_COMP<fortran_comp>` parameter to use any other
-Fortran compiler installed on your system. |calc| will default to using
-:term:`ifort` if available. Use the parameter :ref:`FORTRAN_COMP<fortran_comp>`
-to adjust this behavior.
+You can set the :ref:`FORTRAN_COMP` parameter to use any other Fortran compiler
+installed on your system. |calc| will default to using :term:`ifort` if
+available. Use the parameter :ref:`FORTRAN_COMP` to adjust this behavior.
 
 The :ref:`structure-search section<sec_search>`, which is usually the
 computationally most expensive part of ViPErLEED and TensErLEED, supports
@@ -652,8 +651,8 @@ for how to install ``gfortran`` on various operating systems.
        g++ lapack_test.cpp -llapack -o lapack_test     # build
        ./lapack_test                                   # run
 
-    For actually running, set the :ref:`FORTRAN_COMP<fortran_comp>` parameter
-    in the :ref:`PARAMETERS file<parameters>` as follows:
+    For actually running, set the :ref:`FORTRAN_COMP` parameter in the
+    :ref:`PARAMETERS` file as follows:
 
     .. todo:: Michele: is -std=legacy required on native Windows?
 
@@ -699,9 +698,8 @@ with permission from the author.
 See also :ref:`this section<install_tensorleed>` for more information
 on how to obtain the source code.
 
-:program:`EEASiSSS` is used by ViPErLEED during the
-:ref:`initialization<initialization>` section
-to generate the :ref:`PHASESHIFTS<phaseshifts>` file.
+:program:`EEASiSSS` is used by ViPErLEED during the :ref:`initialization`
+section to generate the :ref:`PHASESHIFTS` file.
 
 Install the Fortran compiler of your choice following
 :ref:`these instructions<install_fortran_comp>`. Then proceed to

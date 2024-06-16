@@ -13,7 +13,7 @@ the calculated and experimental |IV| curves.
 
 As the comparison of two curves is not an unambiguous task, multiple
 |R factor| implementations exist. The used |R factor| is chosen via
-the :ref:`R_FACTOR_TYPE<RFACTORTYPE>` parameter.
+the :ref:`RFACTORTYPE` parameter.
 ViPErLEED supports Pendry's |R factor| :math:`R_\mathrm{P}`,
 :cite:p:`pendryReliabilityFactorsLEED1980`, and :math:`R_2`
 :cite:p:`spornAccuracyQuantitativeLEED1998`.
@@ -77,8 +77,8 @@ smooth experimental data beforehand using the |IV|-curve editor in the
 file should thus already contain the smoothed data.
 
 
-(Using the :ref:`R_FACTOR_SMOOTH<RFACTORSMOOTH>` parameter for smoothing the
-experimental |IV| curves is discouraged; the smoothing algorithm applied there
-is inferior to that used by the |IV|-curve editor.)
+(Using the :ref:`RFACTORSMOOTH` parameter for smoothing the experimental |IV|
+curves is discouraged; the smoothing algorithm applied there is inferior to
+that used by the |IV|-curve editor.)
 
 .. [#] Unpublished data by Lutz Hammer and coworkers.

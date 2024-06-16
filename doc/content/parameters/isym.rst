@@ -7,7 +7,7 @@ SYMMETRY_FIX allows you to constrain the symmetry of the displacements,
 vibrational amplitudes, and concentrations during LEED optimization.
 
 **Default**: SYMMETRY_FIX = True: Use the symmetry determined 
-automatically from the :ref:`POSCAR<POSCAR>` file.
+automatically from the :ref:`POSCAR` file.
 
 **Syntax:**
 
@@ -26,17 +26,17 @@ are listed in the table below.
 
 .. note:: 
   The program will evaluate the symmetry group of your input 
-  :ref:`POSCAR<POSCAR>`, and will allow only symmetry *reduction*, 
+  :ref:`POSCAR`, and will allow only symmetry *reduction*, 
   i.e., the group you select must be a subgroup of the group of your 
-  input :ref:`POSCAR<POSCAR>`.
+  input :ref:`POSCAR`.
   Take a look :ref:`here<planegroups>` for (i) a graphical representation of the 
   operations in the group of your slab, (ii) a graphical representation 
   of the diplacements allowed for each plane group, and (iii) a list of 
   subgroups for each plane group.
   The symmetry group of your input slab is detected from the atomic 
   coordinates in your input 
-  :ref:`POSCAR<POSCAR>` (see also the parameter 
-  :ref:`SYMMETRY_EPS<sym_eps>`), and written to the POSCAR header after 
+  :ref:`POSCAR` (see also the parameter 
+  :ref:`sym_eps`), and written to the POSCAR header after 
   initialization.
 
 +-----------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
