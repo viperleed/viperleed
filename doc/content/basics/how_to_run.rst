@@ -33,7 +33,7 @@ To set up a ViPErLEED calculation, first create a source directory
         Minimum input directory tree for
         a :ref:`reference calculation<ref-calc>`.
 
-    my_surface
+    my_surface/
     ├── IVBEAMS or EXPBEAMS.csv
     ├── PARAMETERS
     └── POSCAR
