@@ -72,7 +72,7 @@ on your machine. You can obtain all the necessary source code from the
 GitHub repository. We suggest downloading the most recent
 `release <https://github.com/viperleed/viperleed-tensorleed/releases/latest>`__
 into a local directory of your choice.
-Note that you may need to uncompress the TensErLEED source files after
+Note that you may need to decompress the TensErLEED source files after
 downloading. See also :numref:`list_tensorleed_folder` for the expected
 folder structure.
 

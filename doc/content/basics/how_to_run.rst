@@ -163,7 +163,7 @@ output files back to the input directory. For this purpose, it also creates
 a :ref:`manifest` file that lists the files and directories to be copied back.
 
 :numref:`list_organization_output` shows an example of the directory tree
-after a run. The :file:`my_work` directory may be on a different filesystem
+after a run. The :file:`my_work` directory may be on a different file-system
 path (including a different drive, a network path, or a remote server) or be
 a subfolder of :file:`my_surface`.
 

@@ -10,8 +10,10 @@ Bichler
 Bickel
 Blaha
 Blum
+bookkeper
 bottommost
 bulklike
+calc
 cmake
 Cmake
 conda
@@ -37,6 +39,7 @@ Georg
 gfortran
 Giada
 Gruyter
+gui
 Hafner
 Hammer
 Heinz
@@ -65,7 +68,7 @@ libblas
 liblapack
 Lundgren
 Lutz
-MacOS
+macOS
 Makefile
 Maslen
 Mauguin
@@ -103,6 +106,7 @@ picometres
 Platzgummer
 pmm
 POSCAR
+poscar
 pre
 precompiled
 prefactor
@@ -131,6 +135,7 @@ Streltsov
 Streltsova
 subdirectory
 subfolder
+subfolders
 sublayer
 submonolayer
 subpicometre
@@ -154,6 +159,8 @@ Ulrike
 undercoordinated
 unformatted
 unrelaxed
+util
+utils
 Varga
 vibrational
 wavenumber
