@@ -56,19 +56,19 @@ $(BUILD_DIR)/MS_smoothing.pyf: correct_sha256
 	f2py -m MS_smoothing $(SRC_DIR)/smoothing/MS_smoothing.f90 -h $(BUILD_DIR)/MS_smoothing.pyf --overwrite-signature --debug-capi
 
 correct_sha256:
-	SMOOTHING_ACTUAL_SHA=`$(SHA256_CMD) $(SRC_DIR)/smoothing/MS_smoothing.f90`; \
+	@SMOOTHING_ACTUAL_SHA=`cat $(SRC_DIR)/smoothing/MS_smoothing.f90 | tr -d '\r' | $(SHA256_CMD)`; \
 		case "$$SMOOTHING_ACTUAL_SHA " in \
 			($(SMOOTHING_SHA256)\ *) : ok ;; \
 			(*) echo $(SRC_DIR)/smoothing/MS_smoothing.f90 checksum mismatch, expected=\"$(SMOOTHING_SHA256)\" actual=\"$$SMOOTHING_ACTUAL_SHA\"; \
 			exit 1 ;; \
 		esac
-	INTERPOLATION_ACTUAL_SHA=`$(SHA256_CMD) $(SRC_DIR)/interpolation/interpolation.f90`; \
+	@INTERPOLATION_ACTUAL_SHA=`cat $(SRC_DIR)/interpolation/interpolation.f90 | tr -d '\r' | $(SHA256_CMD)`; \
 		case "$$INTERPOLATION_ACTUAL_SHA " in \
 			($(INTERPOLATION_SHA256)\ *) : ok ;; \
 			(*) echo $(SRC_DIR)/interpolation/interpolation.f90 checksum mismatch, expected=\"$(INTERPOLATION_SHA256)\" actual=\"$$INTERPOLATION_ACTUAL_SHA\"; \
 			exit 1 ;; \
 		esac
-	RFACTOR_ACTUAL_SHA=`$(SHA256_CMD) $(SRC_DIR)/rfactor/rfactor.f90`; \
+	@RFACTOR_ACTUAL_SHA=`cat $(SRC_DIR)/rfactor/rfactor.f90 | tr -d '\r' | $(SHA256_CMD)`; \
 		case "$$RFACTOR_ACTUAL_SHA " in \
 			($(RFACTOR_SHA256)\ *) : ok ;; \
 			(*) echo $(SRC_DIR)/rfactor/rfactor.f90 checksum mismatch, expected=\"$(RFACTOR_SHA256)\" actual=\"$$RFACTOR_ACTUAL_SHA\"; \
