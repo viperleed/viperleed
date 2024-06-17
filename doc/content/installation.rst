@@ -329,20 +329,20 @@ The full documentation of the |oneAPI| is available from the
         sudo apt install cmake pkg-config build-essential -y
 
     Then, we configure the |oneAPI| installation such that it is discovered
-    by our environment. For this, we need to ``source`` the file
-    :file:`/opt/intel/oneapi/setvars.sh` that sets the required :term:`CLI`
-    arguments. We recommend you do this by adding the following line to
-    the end of the startup script of your shell (usually :file:`~/.bashrc`):
+    by our environment. For this, we need to :program:`source` the correct
+    :file:`*vars.sh` file that sets the required :term:`CLI` arguments.
+    We recommend you do this by adding the following line to the end of
+    the startup script of your shell (usually :file:`~/.bashrc`):
 
     .. code-block:: bash
 
-        source <install-dir>/<toolkit-version>/oneapi-vars.sh
+        source <full/path/to/intel/oneapi/shell/script>
+
+    Follow
+    `this guide by Intel <https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/2024-1/use-the-setvars-and-oneapi-vars-scripts-with-linux.html>`__
+    to determine the correct shell script for your release version.
 
     Afterwards, the required compilers should be available for use.
-    See also
-    `this page by Intel <https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/2024-1/use-the-setvars-and-oneapi-vars-scripts-with-linux.html>`__
-    for more details.
-
     You can check whether :term:`ifort` is present by using
 
     .. code-block:: bash
@@ -404,7 +404,7 @@ The full documentation of the |oneAPI| is available from the
     from Intel.
 
     Notice that :program:`cmd` can use a mechanism similar to the
-    :file:`.barchrc` startup script for Linux's :program:`bash`. This
+    :file:`.bashrc` startup script for Linux's :program:`bash`. This
     means that dedicated commands can be executed upon startup of each
     :program:`cmd` session. To set this up:
 
@@ -430,8 +430,9 @@ The full documentation of the |oneAPI| is available from the
           echo %USERPROFILE%
 
        in a terminal. On Windows 10 and later, you can also directly navigate
-       to the location in Explorer by typing ``%USERPROFILE%`` in the Windows
-       Start menu or in the address bar of an Explorer window.
+       to the location in :program:`Explorer` by typing ``%USERPROFILE%`` in
+       the Windows Start menu or in the address bar of an :program:`Explorer`
+       window.
     -  Navigate to the file path set as a value for the :guilabel:`AutoRun`
        entry. You can create a new file with the correct name if it does not
        exist. Then append the following lines to the end:
