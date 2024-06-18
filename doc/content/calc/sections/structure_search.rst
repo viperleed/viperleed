@@ -16,13 +16,12 @@ most computationally expensive part of a |LEED-IV| calculation. The
 complexity depends on the size of the parameter space defined in the
 :ref:`DISPLACEMENTS` file.
 
-During the structure search, the optimization algorithm (see
-Ref. :cite:alp:`kottckeNewApproachAutomated1997`) samples surface structures
-in the configuration space defined in :ref:`DISPLACEMENTS`. Diffraction
-intensities and the corresponding |R factor| are calculated for these
-structures based on combinations of the precomputed delta amplitudes.
-The optimization tries to find the combination of parameters yielding
-the smallest possible |R factor|.
+During the structure search, the optimization algorithm samples surface
+structures in the configuration space defined in :ref:`DISPLACEMENTS`.
+Diffraction intensities and the corresponding |R factor| are calculated
+for these structures based on combinations of the precomputed delta
+amplitudes. The optimization tries to find the combination of parameters
+yielding the smallest possible |R factor|.
 
 The behavior of the structure-optimization algorithm is affected by multiple
 parameters (see :ref:`search behaviour<search_settings>`). See the section
@@ -32,6 +31,40 @@ caveats to the structure optimization in tensor LEED in general, and to
 the implementation in TensErLEED in particular.
 See :ref:`the section on structure search in tensor LEED<tensor_leed_search>`
 for details.
+
+
+.. _optimization_algorithm:
+
+Optimization algorithm
+======================
+
+The rough |R-factor| surface :cite:p:`rousTensorLEEDApproximation1992` greatly
+limits the pool of applicable optimization algorithms. TensErLEED employs
+a modified random-sampling strategy with a down-step criterion, as described
+by :cite:t:`kottckeNewApproachAutomated1997`. The optimization is performed
+in parallel for a set of individuals (i.e., independent parameter
+combinations), defined in ViPErLEED by the :ref:`searchpop` parameter. The
+initial configurations for the optimization are defined by :ref:`searchstart`.
+
+For each search step (called "generation", based on the terminology of genetic
+algorithms), a new grid point in the parameter space is selected *randomly*,
+but based on a probability distribution centered on the current position.
+The |R factor| is calculated for the selected parameter combination and the new
+parameter set is accepted **only if** the |R factor| for the new configuration
+is smaller than for the previous configuration.
+The width of the probability distribution is determined by the current
+|R factor|, the number of displacements, and the ``gaussian`` flag of
+the :ref:`SEARCH_CONVERGENCE` parameter.
+
+ViPErLEED enables more sophisticated control over the search process than
+is possible with TensErLEED alone. Different types of convergence criteria
+and an automatic scaling of the probability distribution can be set via
+:ref:`SEARCH_CONVERGENCE`. Furthermore, whenever
+:ref:`partial convergence<search_convergence>` is reached, a portion of the
+search population can be dropped and reinitialized to escape from local minima.
+By default, the search population is partially reinitialized using a custom
+genetic algorithm (see :ref:`SEARCH_CULL` for details).
+
 
 
 Structure search in ViPErLEED
@@ -69,12 +102,8 @@ are performed before the actual calculation starts:
     created. It will be filled with progress information as the search
     continues.
 
-With the preparation finished, the search is now executed (via
-:program:`mpirun`, if available). Trial surface structures are sampled
-using the algorithm described by :cite:t:`kottckeNewApproachAutomated1997`,
-with starting configurations as defined by :ref:`searchstart`, and
-:ref:`searchpop` parallel trial individuals. See also the section on the
-:ref:`optimization algorithm used in ViPErLEED<optimization_algorithm>`.
+With the preparation finished, the TensErLEED search program
+is started (using :program:`mpirun`, if available).
 
 ViPErLEED periodically monitors the progress of the search, reporting the best
 |R factor| achieved up to that point and the number of sampled configurations.

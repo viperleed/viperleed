@@ -4,29 +4,11 @@
 Notes for developers
 ====================
 
-Make sure to work in a suitable virtual environment, for example via
-
-.. tab-set::
-
-    .. tab-item:: Linux, macOS, WSL
-
-        .. code-block:: bash
-
-            pythonX.Y -m venv <virtual_env_name>
-            source "path/to/<virtual_env_name>/bin/activate"
-
-    .. tab-item:: Windows
-
-        .. code-block:: bat
-
-            py -X.Y -m venv <virtual_env_name>
-            "path\to\<virtual_env_name>\Scripts\activate.bat"
-
-To disable a virtual environment, call ``deactivate``.
+Make sure to work in a suitable virtual environment. See :ref:`use_venv`
+for more information.
 
 
-
-Running Tests
+Running tests
 -------------
 
 ViPErLEED comes with a suite of tests and uses

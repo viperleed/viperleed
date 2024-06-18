@@ -92,7 +92,7 @@ file should already contain smoothed data.
 
 .. tip::
     We highly recommend to smooth experimental data beforehand using the
-    |IV|-curve editor of the :ref:`ViPErLEED ImageJ plugins<spot_tracker>`.
+    |IV|-curve editor of the :ref:`imagej_plugins`.
     Using the :ref:`RFACTORSMOOTH` parameter for smoothing the experimental
     |IV| curves is discouraged, as the smoothing algorithm applied there is
     inferior to that used by the |IV|-curve editor.

@@ -3,7 +3,7 @@
 .. _paramtopics:
 
 ===========================
-List of parameters by topic
+List of PARAMETERS by topic
 ===========================
 
 This page lists parameters for ViPErLEED by grouping them into 
@@ -293,4 +293,4 @@ Output style
     :hidden:
     :glob:
 
-    /content/parameters/*
+    parameters/*

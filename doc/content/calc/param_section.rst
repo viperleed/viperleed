@@ -2,7 +2,7 @@
 
 .. _paramsection:
 
-List of parameters by section
+List of PARAMETERS by section
 =============================
 
 This page lists parameters for ViPErLEED by which section of

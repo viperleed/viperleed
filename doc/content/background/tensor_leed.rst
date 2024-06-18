@@ -8,21 +8,21 @@ The tensor-LEED approach
 
 This section provides a rudimentary introduction to the tensor-LEED approach
 employed by TensErLEED and, consequently, also ViPErLEED. Note that this
-neither is, nor aims to be a comprehensive or rigorous introduction to the
+is neither, nor aims to be a comprehensive or rigorous introduction to the
 topic. The descriptions below are only intended to provide a quick overview
 of the method, and serve as explanation and motivation for the various sections
 of a |LEED-IV| calculation in ViPErLEED.
 
 An in-depth description of all parts of the tensor-LEED approach is presented
 in Refs. :cite:alp:`rousTensorLEEDTechnique1986,rousTheoryTensorLEED1989`.
-The original publication of the TensErLEED software
-:cite:p:`blumFastLEEDIntensity2001a` explains how the tensor-LEED approach is
-implemented in TensErLEED.
+The original publication of the TensErLEED software explains 
+how the tensor-LEED approach is implemented in TensErLEED
+:cite:p:`blumFastLEEDIntensity2001a`.
 
 Reference calculation
 =====================
 
-The :ref:`reference calculation<ref-calc>` determines the the full-dynamic
+The :ref:`reference calculation<ref-calc>` determines the full-dynamic
 scattering (i.e., including all multiple-scattering contributions) of an
 electron wave incident at a "reference" structure. This calculation yields
 the complex scattering amplitudes :math:`A^{\mathrm{ref}}_{\mathbf{g}}` (and
@@ -42,7 +42,7 @@ changes to atomic vibrational amplitudes, or chemical substitutions
 Each atom :math:`i` is assigned a "\ :math:`t` matrix", :math:`t_i`, based on
 electron-scattering phase shifts and positions within the unit cell.
 The perturbed structure is consequently characterized by altered atomic
-:math:`t` matrices, :math:`\tilde{t_i} = t_i + \delta \tilde{t_i}`.
+:math:`t` matrices, :math:`\tilde{t_i} = t_i + \delta t_i`.
 
 The amplitude for a beam :math:`\mathbf{g}`  diffracted at the perturbed
 structure can be written as
@@ -68,10 +68,10 @@ TensErLEED paper by :cite:t:`blumFastLEEDIntensity2001a`.
 
 The quantities :math:`T^{\mathrm{ref}}_{i,\mathbf{g};l,m;l',m'}` only depend
 on the reference structure and are commonly just referred to as "tensors".
-Importantly, the tensors can be calculated during the reference calculation
-(saved in the :ref:`tensor files<tensorszip>`). They are the starting point
-for the subsequent :ref:`delta amplitude calculation<sec_deltas>` and
-:ref:`structure search<sec_search>`.
+Importantly, the tensors can be calculated during the reference calculation.
+They are the starting point for the subsequent
+:ref:`delta amplitude calculation<sec_deltas>`
+and :ref:`structure search<sec_search>`.
 
 
 Delta-amplitude calculation
@@ -80,27 +80,26 @@ Delta-amplitude calculation
 The individual perturbations to the reference structure may be combinations of
 geometric displacements, changes in the vibrational amplitudes, or chemical
 substitutions. As tensor LEED is based on first-order perturbation theory,
-these perturbations and the resulting amplitude changes  can be treated on
-an atom-by-atom basis.
+these perturbations — and the resulting amplitude changes — can be treated
+on an atom-by-atom basis.
 
 For each atom :math:`i` and for each requested perturbation :math:`p` to that
 atom, the delta-amplitude calculation evaluates the perturbed :math:`t` matrix
-:math:`\tilde{t}_{i,p} = t_i + \delta\tilde{t}_{i,p}`
+:math:`\tilde{t}_{i,p} = t_i + \delta t_{i,p}`
 and the corresponding amplitude changes
 
 .. math::
 
-    \delta{}A_{i,\mathbf{g},p} = \sum_{l,m;l',m'} T^{\mathrm{ref}}_{i,\mathbf{g};l,m;l',m'} \braket{\mathbf{r}_i,l,m| \delta\tilde{t}_{i,p} |\mathbf{r}_i,l',m'} .
+    \delta{}A_{i,\mathbf{g},p} = \sum_{l,m;l',m'} T^{\mathrm{ref}}_{i,\mathbf{g};l,m;l',m'} \braket{\mathbf{r}_i,l,m| \delta t_{i,p} |\mathbf{r}_i,l',m'} .
 
-The resulting delta-amplitudes are stored in the :ref:`delta files<deltaszip>`
-and are used in the :ref:`structure search<sec_search>` to calculate the
+The resulting delta-amplitudes are used in the
+:ref:`structure search<sec_search>` to calculate the
 perturbed intensities for each structure candidate
 :cite:p:`blumFastLEEDIntensity2001a`.
 
 .. note::
-    Depending on the size of the unit cell and the requested perturbations,
-    the parameter space (and the :ref:`delta files<deltaszip>`) may become
-    very big.
+    Depending on the size of the unit cell and the requested
+    perturbations, the parameter space may become very big.
 
 .. _tensor_leed_search:
 
@@ -109,8 +108,13 @@ Structure search
 
 Once the amplitude changes for all required perturbations have been
 obtained, the final diffraction amplitudes can be calculated using
-a simple superposition: the overall amplitude change is the sum of
-the amplitude changes for all the affected atoms. The total diffracted
+a simple superposition: the overall amplitude change is the sum
+
+.. math::
+
+    \delta{}A^\mathrm{tot}_\mathbf{g} = \sum_{i,p} \delta{}A_{i,\mathbf{g},p}
+
+of the amplitude changes for all the affected atoms. The total diffracted
 amplitudes then result by adding the amplitude changes to the reference
 amplitudes.
 
@@ -133,17 +137,15 @@ the tensor-LEED approximation:
 -   Since the tensor-LEED method is perturbative, it only works reliably for
     *small* perturbations. What exactly constitutes a *small* perturbation
     depends on the system. The applicability of tensor LEED is  normally
-    limited to displacements of at most 0.2 Å (only in very simple
-    cases up to 0.3 Å) :cite:`rousTensorLEEDTechnique1986`. For larger
-    displacements, the search might give the right trends but the results
-    should be taken with caution (see also :ref:`tensor_leed_errors`).
+    limited to displacements of at most 0.2 Å (only in very simple cases
+    up to 0.3 Å) :cite:`rousTensorLEEDTechnique1986`.
+    For larger displacements, the optimization might give
+    the right trends but the results should be taken with
+    caution (see also :ref:`tensor_leed_errors`).
 
     When the trajectory of the structure optimization approaches the limit
     of applicability of tensor LEED, the range of the structural search can
     be extended by running new reference and delta-amplitudes calculations.
-    In ViPErLEED, the :ref:`RUN` parameter can be used to chain multiple
-    reference calculations, delta-amplitude calculations, and structure
-    searches.
 
 -   The parameter space grows quickly with the number of atoms in the unit
     cell. Luckily, many symmetries inherent to the surface structure can be
@@ -172,9 +174,8 @@ the tensor-LEED approximation:
 -   As described above, the tensor-LEED implementation in TensErLEED separates
     the calculation of delta amplitudes and the structure optimization into two
     independent stages. As a direct consequence, the optimization can **only**
-    be performed on a predefined grid of perturbations (as given by the
-    :ref:`DISPLACEMENTS` file in ViPErLEED). Further, to achieve the best
-    possible fit, the grid-based nature makes it necessary to run multiple
+    be performed on a predefined grid of perturbations. Further, to achieve the
+    best possible fit, the grid-based nature makes it necessary to run multiple
     sets of delta-amplitude calculations and structure optimizations with
     increasingly finer pitch.
 
@@ -188,41 +189,9 @@ the tensor-LEED approximation:
     per atom. During each search run, atoms can only be displaced along a
     predefined curve rather than freely in 3D space. To optimize the position
     of atoms in three dimensions, multiple sequential search runs are needed.
-    See the entry on the :ref:`DISPLACEMENTS` file for details and  workarounds
+    See the entry on the :ref:`DISPLACEMENTS` file for details and workarounds
     (such as looping searches).
 
-
-.. _optimization_algorithm:
-
-Optimization algorithm
-======================
-
-The rough |R-factor| surface, together with its grid-based nature greatly
-limits the pool of applicable optimization algorithms. TensErLEED employs
-a modified random-sampling strategy with a down-step criterion as described
-by :cite:t:`kottckeNewApproachAutomated1997`. The optimization is performed
-in parallel for a set of individuals (i.e., independent parameter
-combinations), defined in ViPErLEED by the :ref:`searchpop` parameter. The
-initial configurations for the optimization are defined by :ref:`searchstart`.
-
-For each search step (called "generation", based on the terminology of genetic
-algorithms), a new grid point in the parameter space is selected *randomly*,
-but based on a probability distribution centered on the current position.
-The |R factor| is calculated for the selected parameter combination and the new
-parameter set is accepted **only if** the |R factor| for the new configuration
-is smaller than for the previous configuration.
-The width of the probability distribution is determined by the current
-|R factor|, the number of displacements, and the ``gaussian`` flag of
-the :ref:`SEARCH_CONVERGENCE` parameter.
-
-ViPErLEED enables more sophisticated control over the search process than
-is possible with TensErLEED alone. Different types of convergence criteria
-and an automatic scaling of the probability distribution can be set via
-:ref:`SEARCH_CONVERGENCE`. Furthermore, whenever
-:ref:`partial convergence<search_convergence>` is reached, a portion of the
-search population can be dropped and reinitialized to escape from local minima.
-By default, the search population is partially reinitialized using a custom
-genetic algorithm (see :ref:`SEARCH_CULL` for details).
 
 .. _tensor_leed_errors:
 
