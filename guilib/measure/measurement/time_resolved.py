@@ -20,7 +20,8 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
-
+from viperleed.guilib.widgets.basewidgets import QCheckBoxInvertedSignal
+from viperleed.guilib.widgetslib import make_spin_box
 
 _INVOKE = qtc.QMetaObject.invokeMethod
 _QUEUED = qtc.Qt.QueuedConnection
@@ -283,6 +284,60 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             if ramp_finished:
                 energy = self.start_energy
         return energy
+
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings."""
+        handler = super().get_settings_handler()
+        info = (
+            ('energy_step_duration', 'Energy step duration',
+             '<nobr>The time a measurement will remain at each energy.</nobr>'),
+            ('measurement_interval', 'Measurement interval',
+             '<nobr>The time between measurements at a certain energy in'
+             '</nobr> a triggered, time-resolved measurement.')
+            )
+        for option_name, display_name, tip in info:
+            widget = make_spin_box(int, maximum=32767, suffix='ms')
+            handler.add_option(
+                'measurement_settings', option_name, handler_widget=widget,
+                display_name=display_name, tooltip=tip
+                )
+
+        info = (
+            ('is_continuous', 'Continuous measurement',
+             '<nobr>If selected, the measurement will be a continuous,'
+             '</nobr> time-resolved measurement.'),
+            ('endless', 'Endless measurement',
+             '<nobr>If selected, the measurement will return to the start'
+             '</nobr> energy after reaching the end and go on. This kind '
+             'of measurement has to be aborted for it to end.'),
+            ('constant_energy', 'Constant energy',
+             '<nobr>If selected, the measurement will allways remain at'
+             '</nobr> the start energy. This kind of measurement has to '
+             'aborted for it to end.'),
+            )
+        for option_name, display_name, tip in info:
+            widget = QCheckBoxInvertedSignal()
+            handler.add_option(
+                'measurement_settings', option_name, handler_widget=widget,
+                display_name=display_name, tooltip=tip
+                )
+
+        end_energy = handler['measurement_settings']['end_energy']
+        delta_energy = handler['measurement_settings']['delta_energy']
+        constant = handler['measurement_settings']['constant_energy']
+        continuous = handler['measurement_settings']['is_continuous']
+        interval = handler['measurement_settings']['measurement_interval']
+        for option in (end_energy, delta_energy):
+            constant.handler_widget.unchecked.connect(option.set_enabled)
+            constant.handler_widget.unchecked.connect(
+                option.handler_widget.setVisible
+                )
+        continuous.handler_widget.unchecked.connect(interval.set_enabled)
+        continuous.handler_widget.unchecked.connect(
+            interval.handler_widget.setVisible
+            )
+
+        return handler
 
     def set_settings(self, new_settings):
         """Change settings of the measurement."""

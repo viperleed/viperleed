@@ -21,6 +21,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 import time
 
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
@@ -34,6 +35,7 @@ from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import MeasureControllerABC
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.measurement import _meassettings as _settings
+from viperleed.guilib.widgetslib import make_spin_box
 
 _QUEUED = qtc.Qt.QueuedConnection
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -596,6 +598,65 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         self.__preparation_started.emit(
             (self.start_energy, primary.long_settle_time)
             )
+
+    @abstractmethod
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings.
+
+        This method should be extended in subclasses, i.e., do
+        handler = super().get_settings_handler(), and then add
+        appropriate sections and/or options to it using the
+        handler.add_section, and handler.add_option methods.
+
+        The base-class implementation returns a handler that
+        already contains the following settings:
+            'measurement_settings'/'start_energy'
+            'measurement_settings'/'delta_energy'
+            'measurement_settings'/'end_energy'
+            'measurement_settings'/'step_profile'
+
+        Returns
+        -------
+        handler : SettingsHandler
+            The handler used in a SettingsDialog to display the
+            settings of this measurement to users.
+        """
+        self.check_before_getting_settings_handler()
+        handler = SettingsHandler(self.settings, display_config=True)
+        handler.add_section('measurement_settings')
+        type_display = qtw.QLabel()
+        type_display.setText(type(self).__name__)
+        handler.add_static_option('measurement_settings', 'measurement_class',
+                                  type_display, display_name='Measurment type')
+        info = (
+            ('start_energy', 'Start energy',
+             '<nobr>The energy at which the measurement starts.</nobr>'),
+            ('delta_energy', 'Step height',
+             '<nobr>The energy difference between two measurement '
+             'steps.</nobr>'),
+            ('end_energy', 'End energy',
+             '<nobr>The energy value at which the measurement is '
+             'supposed</nobr> to stop.'),
+            )
+        for option_name, display_name, tip in info:
+            widget = make_spin_box(float, maximum=1000000000, suffix='eV')
+            widget.setDecimals(1)
+            handler.add_option(
+                'measurement_settings', option_name, handler_widget=widget,
+                display_name=display_name, tooltip=tip
+                )
+        delta_energy = handler['measurement_settings']['delta_energy']
+        delta_energy.handler_widget.setMinimum(-1000)
+        delta_energy.handler_widget.setSingleStep(0.5)
+
+        widget = _settings.StepProfileViewer()
+        tip = ('<nobr>The step profile when performing </nobr>'
+               'a step from one energy to another.')
+        handler.add_option('measurement_settings', 'step_profile',
+                           handler_widget=widget, display_name='Step profile',
+                           tooltip=tip
+                           )
+        return handler
 
     def moveToThread(self, thread):  # pylint: disable=invalid-name
         """Move self and primary controller to a new thread."""
@@ -1472,9 +1533,3 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             raise RuntimeError(f"No config file '{configname}' in "
                                f"folder {self.settings.base_dir}") from None
         return device_cfg
-
-    def get_settings_handler(self):
-        """Return a SettingsHandler object for displaying settings."""
-        self.check_before_getting_settings_handler()
-        handler = SettingsHandler(self.settings, display_config=True)
-        return handler

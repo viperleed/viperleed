@@ -89,6 +89,11 @@ class IVVideo(MeasurementABC):
                               / self.__delta_energy))
         return len(str(num_meas))
 
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings."""
+        handler = super().get_settings_handler()
+        return handler
+
     def start_next_measurement(self):
         """Set energy and measure.
 

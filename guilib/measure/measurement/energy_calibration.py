@@ -168,6 +168,19 @@ class MeasureEnergyCalibration(MeasurementABC):
                                              'coefficients', '(0, 1)')
         super().begin_preparation()
 
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings."""
+        handler = super().get_settings_handler()
+        min_energy = self.settings.getfloat('measurement_settings',
+                                            'min_energy', fallback=5.)
+        option = handler['measurement_settings']['start_energy']
+        option.handler_widget.setMinimum(min_energy)
+        option.set_info_text(
+            '<nobr>The energy at which the measurement starts.</nobr> The '
+            f'minimum start energy is {min_energy} eV.'
+            )
+        return handler
+
     def start_next_measurement(self):
         """Set energy and measure.
 
