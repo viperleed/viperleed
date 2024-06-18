@@ -293,8 +293,7 @@ class FractionalStepEditor(ProfileStep):
     def _add_step(self, fraction=None, duration=None):
         """Add a step to the fractional step profile."""
         layout = qtw.QHBoxLayout()
-        fraction_handler = qtw.QDoubleSpinBox()
-        fraction_handler.setSingleStep(0.05)
+        fraction_handler = make_spin_box(float, step=0.05)
         duration_handler = make_spin_box(int, maximum=32767, suffix='ms')
         for value, handler in zip((fraction, duration),
                                   (fraction_handler, duration_handler)):
