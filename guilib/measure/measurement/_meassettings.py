@@ -17,14 +17,9 @@ from ast import literal_eval
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
+from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
 from viperleed.guilib.widgets.basewidgets import ButtonWithLabel
-
-
-def spin_box_with_maximum(maximum):
-    """Return a QSpinBox with a specified maximum."""
-    box = qtw.QSpinBox()
-    box.setMaximum(maximum)
-    return box
+from viperleed.guilib.widgetslib import make_spin_box
 
 
 class StepProfileViewer(ButtonWithLabel):
@@ -229,12 +224,8 @@ class LinearStepEditor(ProfileStep):
         """Initialise object."""
         super().__init__()
         self._controls = {
-            'step_number' : spin_box_with_maximum(100),
-            'duration' : spin_box_with_maximum(32767),
-            }
-        self._labels = {
-            'step_number' : qtw.QLabel(),
-            'duration' : qtw.QLabel(),
+            'step_number' : make_spin_box(int, maximum=32767),
+            'duration' : make_spin_box(int, maximum=9999, suffix='ms'),
             }
         self._compose()
 
@@ -248,16 +239,24 @@ class LinearStepEditor(ProfileStep):
     def _compose_step_nr_selection(self):
         """Return a layout of the step number selection."""
         layout = qtw.QHBoxLayout()
-        self._labels['step_number'].setText('# of intermediate steps:')
-        layout.addWidget(self._labels['step_number'])
+        step_number_label = qtw.QLabel()
+        step_number_label.setText('Nr. of steps:')
+        layout.addWidget(step_number_label)
+        size = step_number_label.fontMetrics().boundingRect('a').height()
+        info = ('The number of intermediate steps.')
+        layout.addWidget(FieldInfo(info, size=size))
         layout.addWidget(self._controls['step_number'])
         return layout
 
     def _compose_duration_selection(self):
         """Return a layout of the duration selection."""
         layout = qtw.QHBoxLayout()
-        self._labels['duration'].setText('Intermediate step duration:')
-        layout.addWidget(self._labels['duration'])
+        duration_label = qtw.QLabel()
+        duration_label.setText('Step duration:')
+        layout.addWidget(duration_label)
+        size = duration_label.fontMetrics().boundingRect('a').height()
+        info = ('The settle time after each energy.')
+        layout.addWidget(FieldInfo(info, size=size))
         layout.addWidget(self._controls['duration'])
         return layout
 
@@ -286,10 +285,6 @@ class FractionalStepEditor(ProfileStep):
             'add_step' : qtw.QPushButton(),
             'remove_step' : qtw.QPushButton(),
             }
-        self._labels = {
-            'fraction' : qtw.QLabel(),
-            'duration' : qtw.QLabel(),
-            }
         self._steps = []
         self._connect()
         self._compose()
@@ -300,9 +295,9 @@ class FractionalStepEditor(ProfileStep):
         layout = qtw.QHBoxLayout()
         fraction_handler = qtw.QDoubleSpinBox()
         fraction_handler.setSingleStep(0.05)
+        duration_handler = make_spin_box(int, maximum=32767, suffix='ms')
         for value, handler in zip((fraction, duration),
-                                  (fraction_handler,
-                                   spin_box_with_maximum(32767))):
+                                  (fraction_handler, duration_handler)):
             if value:
                 handler.setValue(value)
             layout.addWidget(handler)
@@ -328,10 +323,18 @@ class FractionalStepEditor(ProfileStep):
     def _compose_labels(self):
         """Return a layout of the labels."""
         layout = qtw.QHBoxLayout()
-        self._labels['fraction'].setText('energy (% of total)')
-        layout.addWidget(self._labels['fraction'])
-        self._labels['duration'].setText('duration (ms)')
-        layout.addWidget(self._labels['duration'])
+        fraction_label = qtw.QLabel()
+        fraction_label.setText('energy')
+        layout.addWidget(fraction_label)
+        size = fraction_label.fontMetrics().boundingRect('a').height()
+        info = ('<nobr>The energies to set given as a '
+                'fraction</nobr> of the total beam energy.')
+        layout.addWidget(FieldInfo(info, size=size))
+        duration_label = qtw.QLabel()
+        duration_label.setText('duration')
+        layout.addWidget(duration_label)
+        info = '<nobr>The settle time after each</nobr> energy given in ms.'
+        layout.addWidget(FieldInfo(info, size=size))
         return layout
 
     def _connect(self):
