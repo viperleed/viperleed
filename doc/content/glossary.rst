@@ -80,6 +80,13 @@ Glossary
     ifort
       Intel Fortran compiler.
 
+    ImageJ
+      ImageJ is a public domain image processing and analysis software commonly
+      used in the scientific community.
+      The ViPErLEED spot-tracker, curve editor and several associated utilities
+      are implemented as ImageJ plugins.
+      See also the `ImageJ homepage <https://imagej.net/ij/>`__.
+
     Jupyter
       The Jupyter project for interactive computing.
       Jupyter notebooks are commonly used as interactive Python environments.
