@@ -79,6 +79,11 @@ doc = [  # Requires >= py3.9!
     'sphinxcontrib-qthelp',
     'sphinxcontrib-spelling',
     'sphinxcontrib-svg2pdfconverter',
+    # The following modules are not necessary for sphinx, but are
+    # needed for the build/scripts/embed_fonts.py utility
+    'brotli',    # Some dependency of parsel? We do not use it explicitly
+    'fontTools',
+    'parsel',
     ]
 
 [tool.pytest.ini_options]
