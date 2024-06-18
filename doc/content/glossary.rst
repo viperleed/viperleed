@@ -21,6 +21,16 @@ Glossary
     C
       The C programming language.
 
+    CC BY 4.0
+      Creative Commons Attribution 4.0 License.
+      This documentation for all parts of the ViPErLEED project is licensed
+      under the CC BY 4.0 license.
+      The license allows free sharing and adaptation of the source material,
+      but requires attribution to the original authors (e.g. via citation in a
+      scientific publication).
+      For more details see
+      `here <https://creativecommons.org/licenses/by/4.0/>`__.
+
     CLI
       Command-line interface
 
