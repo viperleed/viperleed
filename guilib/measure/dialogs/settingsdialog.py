@@ -536,6 +536,11 @@ class SettingsDialogOption(qtc.QObject):
         """Set value displayed by this handler."""
         self.handler_widget.set_(value)
 
+    def set_enabled(self, enabled):
+        """Enable or disable this option."""
+        for child in self:
+            child.setEnabled(enabled)
+
     def set_info_text(self, text):
         """Set informative text."""
         self._info.set_info_text(text)
@@ -1058,6 +1063,8 @@ class SettingsDialog(qtw.QDialog):
     @qtc.pyqtSlot(bool)
     def __on_show_advanced_toggled(self, visible):
         """Show or hide advanced options."""
+        if not self.handler.has_advanced_options():
+            return
         if visible:
             btn_text = "Show less"
         else:
