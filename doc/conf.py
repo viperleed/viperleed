@@ -103,6 +103,7 @@ nb_kernel_rgx_aliases = {'.+': 'python3'}
 # -- Options for LaTeX output -----------------------------------------
 # https://www.sphinx-doc.org/en/master/latex.html
 latex_engine = 'xelatex'
+latex_toplevel_sectioning = 'part'
 nb_output_stderr = 'remove-warn' # remove matplotlib user warnings
 latex_show_urls = 'inline'
 latex_show_pagerefs = False # show page numbers
@@ -111,7 +112,7 @@ latex_logo = '_static/viperleed_logo_circled.pdf'
 latex_elements = {
     'papersize': 'a4paper',
     'passoptionstopackages': r'\PassOptionsToPackage{svgnames}{xcolor}',
-    'figure_align': 'H', # Latex figure (float) alignment
+    'figure_align': 'tb', # Latex figure (float) alignment
     'preamble': r'''
 \usepackage{braket}
 \usepackage[overlay,absolute]{textpos}% for header in PDF screen version

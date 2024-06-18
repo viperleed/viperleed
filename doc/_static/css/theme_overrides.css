@@ -33,3 +33,51 @@ a:visited {
 .wy-side-nav-search {
     background-color: #6ab1e1 !important;
 }
+
+/* Place equation numbers on the right side instead of above. See
+https://github.com/readthedocs/sphinx_rtd_theme/pull/383#issuecomment-348803509 */
+div.math {
+    position: relative;
+    padding-right: 2.5em;
+}
+.eqno {
+    height: 100%;
+    position: absolute;
+    right: 0;
+    padding-left: 5px;
+    padding-bottom: 5px;
+    /* Fix for mouse over in Firefox */
+    padding-right: 1px;
+}
+.eqno:before {
+    /* Force vertical alignment of number */
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+    content: "";
+}
+/* The following would move the label left-right when hovering. Annoying.
+/*.eqno .headerlink {
+    display: none;
+    visibility: hidden;
+    font-size: 14px;
+    padding-left: .3em;
+}
+.eqno:hover .headerlink {
+    display: inline-block;
+    visibility: hidden;
+    margin-right: -1.05em;
+}
+.eqno .headerlink:after {
+    visibility: visible;
+    content: "\f0c1";
+    font-family: FontAwesome;
+    display: inline-block;
+    margin-left: -.9em;
+}*/
+/* Make responsive */
+.MathJax_Display {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+}

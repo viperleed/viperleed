@@ -55,16 +55,15 @@ GitHub at `<https://github.com/viperleed>`__.
 :numref:`toc_figure` shows an overview of the tools provided by the ViPErLEED
 project:
 
--  :ref:`The ViPErLEED hardware<hardware>`
+-  The :ref:`ViPErLEED hardware<hardware>`
       A set of hardware, firmware and control software for the easy
       acquisition of |LEED-IV| data with pre-existing LEED systems.
-- :ref:`The ViPErLEED Spot Tracker<spot_tracker>`
+-  The :ref:`imagej_plugins`
       Software for extracting |IV| curves from the experimental data
       ("movies").
-- :ref:`The viperleed.calc package<viperleed_calc>`
+-  The :ref:`viperleed.calc package<viperleed_calc>`
       A Python package for the calculation of |IV| curves, quantitative
-      analysis of :term:`LEED` data, and surface structure optimization.
-      See the :ref:`Getting Started page<getting_started>`.
+      analysis of :term:`LEED` data, and surface-structure optimization.
 
 .. _toc_figure:
 .. figure:: /_static/paper_figures/ViPErLEED-overview_embedded.svg
@@ -82,38 +81,46 @@ project:
       :caption: Contents
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Getting started
+
+   content/installation
+   content/command_line_tools
+   content/background
+
+.. toctree::
+   :maxdepth: 2
    :caption: viperleed.calc
 
-   content/viperleed_calc
-   content/examples
-   content/installation
-   content/getting_started
-   content/work_segments
-   content/files
-   Parameters<content/param_topics>
-   content/utilities
-   content/api
+   viperleed calc<content/viperleed_calc>
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Spot tracker
+   :maxdepth: 2
+   :caption: ViPErLEED ImageJ plugins
 
-   Spot tracker<content/spot_tracker>
+   content/imagej_plugins
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Hardware and measurements
 
    Hardware<content/hardware>
 
 .. toctree::
+    :maxdepth: 1
+    :caption: ViPErLEED Python API
+
+    content/api
+
+.. toctree::
    :maxdepth: 1
-   :caption: References
+   :caption: Appendix
 
    content/citing
    references
    content/glossary
    License<content/license>
+   content/notes_for_developers
 
 .. raw:: latex
 
