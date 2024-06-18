@@ -155,7 +155,7 @@ beforehand for better control, and specify ``RUN = 2-3`` explicitly here.
 The DISPLACEMENTS file for domains
 ----------------------------------
 
-Instead of specifying :ref:`DISPLACEMENTS` in each of the input subdirectories,
+Instead of specifying :ref:`DISPLACEMENTS` in each of the input subfolders,
 DISPLACEMENTS are defined in the main folder for all domains.
 The syntax is similar to the way consecutive searches are specified, with an
 extra header line specifying which domain is being addressed, e.g., for a

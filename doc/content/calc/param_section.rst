@@ -146,7 +146,7 @@ Reference calculation
 Delta-amplitudes calculation
 ----------------------------
 
-Behaviour is mainly governed by the :ref:`DISPLACEMENTS` file. Some relevant parameters are:
+Behavior is mainly governed by the :ref:`DISPLACEMENTS` file. Some relevant parameters are:
 
 .. table::
   :width: 100%
@@ -175,7 +175,7 @@ Behaviour is mainly governed by the :ref:`DISPLACEMENTS` file. Some relevant par
 Search
 ------
 
-Behaviour is also governed by the :ref:`DISPLACEMENTS` file.
+Behavior is also governed by the :ref:`DISPLACEMENTS` file.
 The most relevant parameters are:
 
 .. table::

@@ -4,6 +4,7 @@ adatoms
 adsorbate
 adsorbates
 ångström
+anticorrelation
 ase
 azimuthal
 Bichler
@@ -26,8 +27,10 @@ Diebold
 Drmota
 DS
 electronvolts
+Eq
 Erlangen
 eV
+extrema
 Fauster
 Ferstl
 fcc
@@ -49,6 +52,7 @@ Hulva
 hypersurface
 hypersurfaces
 ifort
+inequivalent
 initio
 Interatomic
 interlayer
@@ -109,6 +113,7 @@ POSCAR
 poscar
 pre
 precompiled
+precomputed
 prefactor
 prepended
 priori
@@ -133,7 +138,6 @@ stoichiometric
 stoichiometry
 Streltsov
 Streltsova
-subdirectory
 subfolder
 subfolders
 sublayer

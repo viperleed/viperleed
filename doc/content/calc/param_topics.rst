@@ -159,7 +159,7 @@ Computational setup
   +----------------------------------+-----------------------------------------------------------+
   | Parameter                        | Function                                                  |
   +==================================+===========================================================+
-  | :ref:`FORTRAN_COMP`              | Which fortran compiler to use, and tags for compiling     |
+  | :ref:`FORTRAN_COMP`              | Which Fortran compiler to use, and tags for compiling     |
   +----------------------------------+-----------------------------------------------------------+
   | **→** :ref:`NCORES`              | The number of CPUs to use                                 |
   +----------------------------------+-----------------------------------------------------------+
@@ -185,8 +185,8 @@ Computational setup
 
 .. _search_settings:
 
-Search behaviour
-================
+Search behavior
+===============
 
 .. table::
   :width: 100%
@@ -207,7 +207,7 @@ Search behaviour
   +----------------------------------+-----------------------------------------------------------------------------------------------------+
   | :ref:`SEARCHSTART`               | How to initialize the search population                                                             |
   +----------------------------------+-----------------------------------------------------------------------------------------------------+
-  | :ref:`OPTIMIZE`                  | Controls behaviour of :ref:`full-dynamic optimization<Fdoptimization>` runs                         |
+  | :ref:`OPTIMIZE`                  | Controls behavior of :ref:`full-dynamic optimization<Fdoptimization>` runs                          |
   +----------------------------------+-----------------------------------------------------------------------------------------------------+
 
 Structural domains

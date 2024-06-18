@@ -145,7 +145,7 @@ to be used as input for the following calculations. They are stored in the
 :ref:`PHASESHIFTS` file that was copied into the source directory.
 This format, however, is hard to interpret for a human reader.
 Instead we can look at a plotted version of the same data in the file
-:ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the ``SUPP`` subdirectory.
+:ref:`Phaseshifts_plots.pdf<phaseshiftplots>` in the ``SUPP`` subfolder.
 The first page (see :numref:`fig_ag_phaseshifts`) shows the energy-dependent
 phase shifts for the surface atom.
 

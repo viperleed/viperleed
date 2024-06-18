@@ -131,9 +131,10 @@ used to calculate the (estimate of the) statistical uncertainty for
 
 
 .. [1] It is a common mistake to refer to |varR| as the "variance" of the
-       |R factor|. This is **wrong**, as, dimensionally speaking, it does
-       not correspond to a variance (it is proportional to |RP|, not to
-       its square). If it were a variance, it would not make sense to
-       calculate |R+varR|. The original "\ :math:`\mathrm{var}`" abbreviation
-       was probably intended as a contraction for "variation"
+       |R factor|. This is **wrong**, as, from a dimensional point of view,
+       it does not correspond to a variance (it is proportional to |RP|,
+       not to its square). If it were a variance, it would not make sense
+       to calculate |R+varR|.
+       The original "\ :math:`\mathrm{var}`" abbreviation was
+       probably intended as a contraction for "variation"
        :cite:p:`pendryReliabilityFactorsLEED1980`.

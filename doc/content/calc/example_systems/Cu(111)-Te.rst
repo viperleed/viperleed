@@ -233,11 +233,11 @@ inner potential (|V0i|) of our calculation is off. To be more precise,
 smooths out the curves.
 
 |V0i| strongly affects the |R factor|, but is hard to estimate for an unknown
-system. Since we didn't specify a value for |V0i| in PARAMETERS, ViPErLEED took
-the default value of 4.5 eV (see :ref:`V0_IMAG<v0_imag>`). The parameter
-|V0i| is not accessible in the tensor-LEED approximation, but we can use a
-:ref:`full-dynamic optimization<fdoptimization>` to find an optimal value.
-To do this, we set :ref:`RUN = 6<run>` and add this line to
+system. Since we did not specify a value for |V0i| in PARAMETERS, ViPErLEED
+took the default value of 4.5 eV (see :ref:`V0_IMAG<v0_imag>`). The
+parameter |V0i| is not accessible in the tensor-LEED approximation, but
+we can use a :ref:`full-dynamic optimization<fdoptimization>` to find an
+optimal value. To do this, we set :ref:`RUN = 6<run>` and add this line to
 :ref:`PARAMETERS`:
 
 .. code-block:: console

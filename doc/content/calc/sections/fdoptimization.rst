@@ -23,7 +23,7 @@ To set up a full-dynamic optimization in |calc|, set
    RUN = 6
 
 in the :ref:`PARAMETERS` file, and specify which quantity to vary with
-the :ref:`OPTIMIZE` parameter. Options to control the behaviour of the
+the :ref:`OPTIMIZE` parameter. Options to control the behavior of the
 optimization are also available via :ref:`OPTIMIZE`.
 
 The algorithm for full-dynamic optimization calculates |R factor|\ s for at
