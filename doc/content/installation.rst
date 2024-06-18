@@ -80,7 +80,7 @@ Windows 10. Running |calc| natively on Windows is possible, but experimental
 and *not recommended*.
 
 .. note::
-    The ViPErLEED graphical user interface, e.g., used for acquiring |LEED-IV|
+    The ViPErLEED graphical user interface, used, e.g., for acquiring |LEED-IV|
     :ref:`measurements<hardware>`, runs natively on Windows, and does not
     require WSL.
 
