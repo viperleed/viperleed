@@ -80,14 +80,15 @@ def __notify_qbuttongroup(_self):
 _DEFAULT_HOOKS = {
     qtw.QLabel: ('text', 'setText', None, None),
     qtw.QLineEdit: ('text', 'setText', 'textChanged', None),
-    qtw.QCheckBox: ('isChecked', 'setChecked', 'stateChanged', (str, bool)),    # BUG: converter(value) == (str, bool)(value) --> tuple not callable
+    qtw.QCheckBox: ('isChecked', 'setChecked', 'stateChanged',
+                    ast.literal_eval),
     qtw.QSpinBox: ('cleanText', 'setValue', 'valueChanged', int),
     qtw.QDoubleSpinBox: ('cleanText', 'setValue', 'valueChanged', float),
     qtw.QButtonGroup: (__get_qbuttongroup, __set_qbuttongroup,
                        __notify_qbuttongroup, None),
     qtw.QSlider: ('value', 'setValue', 'valueChanged', int),
-    qtw.QPushButton: ('isChecked', 'setChecked', 'toggled', bool),              # BUG: converter(value) == bool(value) == True whatever non-empty string value!
-    qtw.QAction: ('isChecked', 'setChecked', 'toggled', bool),                  # BUG: converter(value) == bool(value) == True whatever non-empty string value!
+    qtw.QPushButton: ('isChecked', 'setChecked', 'toggled', bool),              # BUG: converter(value) == bool(value) == True whatever non-empty string value! -> perhaps literal_eval?
+    qtw.QAction: ('isChecked', 'setChecked', 'toggled', bool),                  # BUG: converter(value) == bool(value) == True whatever non-empty string value! -> perhaps literal_eval?
     PathSelector: ('get_posix_path', 'set_path', 'path_changed', None),
     }
 
