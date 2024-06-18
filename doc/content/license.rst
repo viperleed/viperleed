@@ -22,10 +22,11 @@ developers under info@viperleed.org.
 All files in the main repository and all files authored by the ViPErLEED
 developers are licensed under the :term:`GPLv3`. This explicitly includes
 the ViPErLEED Python package (|calc|, ``gui``, ``utils``), ViPErLEED
-electronics (firmware, schematics, software) and the associated documentation.
+electronics (firmware, schematics, software) and the ViPErLEED :term:`ImageJ`
+plugins.
 
-
-The ViPErLEED Spot tracker is licensed under ... **TODO Michael**
+The documentation for all parts of ViPErLEED is licensed under the
+:term:`CC BY 4.0` license.
 
 
 TensErLEED
