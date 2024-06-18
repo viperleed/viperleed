@@ -54,3 +54,18 @@ class ButtonWithLabel(qtw.QWidget):
     def set_button_text(self, text):
         """Set the text of the button."""
         self.button.setText(text)
+
+class QCheckBoxInvertedSignal(qtw.QCheckBox):
+    """QCheckBox with extra unchecked signal."""
+
+    unchecked = qtc.pyqtSignal(bool)
+
+    def __init__(self, **kwargs):
+        """Initialise widget."""
+        super().__init__(**kwargs)
+        self.stateChanged.connect(self.emit_inverted_signal)
+
+    @qtc.pyqtSlot(int)
+    def emit_inverted_signal(self, value):
+        """Emit unchecked signal."""
+        self.unchecked.emit(not bool(value))
