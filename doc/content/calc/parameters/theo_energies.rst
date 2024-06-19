@@ -31,10 +31,24 @@ well as in the search of the best structure, the theoretical spectra will be
 shifted a bit along the energy axis to find the best match with experiment
 (see :ref:`IVSHIFTRANGE` to control this shift).
 
-If ``Eto-Efrom`` is not an integer multiple of ``Estep``, ``Efrom`` will 
+If ``Eto-Efrom`` is not an integer multiple of ``Estep``, ``Efrom`` will
 be modified to a slightly lower energy such that this is the case.
 
-**TODO**: perhaps we should have the default in case EXPBEAMS is there: look at
-the IV_SHIFT_RANGE to decide how much to 'expand' the THEO_ENERGIES rather than
-having a fixed 3 eV expansion on both sides? (Should probably be slightly 
-more than IV_SHIFT_RANGE since interpolation is rather bad at the ends. -ms)
+.. todo::
+    @michele-riva said:
+    Perhaps we should have a different default in case EXPBEAMS is there:
+    Look at the IV_SHIFT_RANGE to decide how much to 'expand' the THEO_ENERGIES
+    rather than having a fixed 3 eV expansion on both sides?
+    @scmhid-iap said:
+    Should probably be slightly more than IV_SHIFT_RANGE since interpolation
+    is rather bad at the ends.
+
+    @michele-riva said:
+    The above is still not done as of June 2024. The complication with using
+    IV_SHIFT_RANGE too is that the latter may have its bounds modified in
+    iorfactor.py, as TensErLEED requires the bounds to be integer multiples
+    of the step, which may be undefined till we reach an R-factor calculation.
+    We could be a bit generous, as suggested by @scmhid-iap, and expand the
+    energy range by the IV_SHIFT_RANGE limits + XXX eV on both sides. We have
+    to choose XXX. Probably something >= 3eV. Perhaps XXX could be taken from
+    the step of IV_SHIFT_RANGE, if available.
