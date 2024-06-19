@@ -3,7 +3,7 @@
 DOMAIN_STEP
 ===========
 
-DOMAIN_STEP defines the area fraction step (in %) for the domain search,
+DOMAIN_STEP defines the area fraction step (in percent) for the domain search,
 i.e. the grid on which the relative weight of domains is being varied.
 See also the page about :ref:`Domain calculations<domain_calculation>`.
 

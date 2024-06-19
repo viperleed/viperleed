@@ -52,3 +52,6 @@ of your structure, and may need to be corrected manually.
 
 If :ref:`BULK_REPEAT` is already defined, BULK_LIKE_BELOW will
 be *ignored* (with a warning).
+
+.. todo::
+    Add examples of one correct and one incorrect definition with figures.
