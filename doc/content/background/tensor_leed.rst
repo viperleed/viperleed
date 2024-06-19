@@ -106,6 +106,15 @@ perturbed intensities for each structure candidate
 Structure search
 ================
 
+.. todo:
+    Add info on parameter redundancy and how many parameters should/can be
+    optimized and fitted.
+    Mention rule of thumb of ~100eV energy range per parameter (because of
+    parameter correlation).
+    Mention that everything optimized counts as a parameter, i.e. geometry,
+    vibrations and chemical perturbations but also V0r shift, incidence angles,
+    and all FD parameters.
+
 Once the amplitude changes for all required perturbations have been
 obtained, the final diffraction amplitudes can be calculated using
 a simple superposition: the overall amplitude change is the sum
