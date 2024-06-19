@@ -1,4 +1,4 @@
-.. _symmetry_nomove:
+.. _symmetrize_input:
 
 SYMMETRIZE_INPUT
 ================

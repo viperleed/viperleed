@@ -18,7 +18,7 @@ files, and gives the following information on each parameter:
 -   Which atom is affected by the parameter 
     (same atom numbering as in :ref:`POSCAR`).
 -   Which element of that atom is affected by the parameter 
-    (only relevant if :ref:`ELSPLIT` is used).
+    (only relevant if :ref:`ELEMENT_MIX` is used).
 -   What is being varied by the parameter, i.e. **geo**\ metry, 
     **vib**\ rational amplitude, or site **occ**\ upation.
 -   The number of steps in the parameter's displacements range.

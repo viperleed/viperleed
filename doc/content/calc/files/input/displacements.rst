@@ -37,7 +37,7 @@ the range of displacements to apply. Generally, atoms can be addressed by
 :ref:`POSCAR` element, chemical element, or site type. If there is
 an :ref:`element name collision<ElementNameCollision>`, the element will be
 interpreted as the POSCAR element, so the assignment will be made for *all*
-elements in :ref:`ELSPLIT`. Supplying a list of atom numbers (**N** in
+elements in :ref:`ELEMENT_MIX`. Supplying a list of atom numbers (**N** in
 :ref:`POSCAR`, or by layer number using ``L(x)`` for layer ``x``) to
 further limit which atoms are being addressed is optional. If no
 numbers are given, the displacements on the right are applied to

@@ -36,7 +36,7 @@ Defines what to calculate and where to start.
   +----------------------------------+--------------------------------------------------------------------------+
   | :ref:`TENSOR_INDEX`              | Which Tensor files to use for the delta calculation and search           |
   +----------------------------------+--------------------------------------------------------------------------+
-  | :ref:`TOUTPUT`                   | Disable Tensor output for some or all layers                             |
+  | :ref:`TENSOR_OUTPUT`             | Disable Tensor output for some or all layers                             |
   +----------------------------------+--------------------------------------------------------------------------+
   | :ref:`THEO_ENERGIES`             | What energy range to calculate                                           |
   +----------------------------------+--------------------------------------------------------------------------+
@@ -78,9 +78,9 @@ Elements, vibrational amplitudes and element concentrations
   +----------------------------------+------------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                             |
   +==================================+======================================================================================================+
-  | :ref:`ELSPLIT`                   | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements          |
+  | :ref:`ELEMENT_MIX`               | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements          |
   +----------------------------------+------------------------------------------------------------------------------------------------------+
-  | :ref:`ELDEF`                     | Declare that an element in the POSCAR file is actually a different chemical element                  |
+  | :ref:`ELEMENT_RENAME`            | Declare that an element in the POSCAR file is actually a different chemical element                  |
   +----------------------------------+------------------------------------------------------------------------------------------------------+
   | **→** :ref:`SITEDEF`             | Define which sites in the :ref:`POSCAR` file are special, i.e. have different vibrational amplitude  |
   +----------------------------------+------------------------------------------------------------------------------------------------------+
@@ -103,7 +103,7 @@ Symmetry determination and control
   +----------------------------------+---------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                          |
   +==================================+===================================================================================================+
-  | :ref:`SYMMETRY_NOMOVE`           | Whether to move atoms in the :ref:`POSCAR` file to perfectly match the symmetry                   |
+  | :ref:`SYMMETRIZE_INPUT`          | Whether to move atoms in the :ref:`POSCAR` file to perfectly match the symmetry                   |
   +----------------------------------+---------------------------------------------------------------------------------------------------+
   | :ref:`SYMMETRYBULK`              | Manually set the symmetry to be used in beam averaging for the bulk, ignoring automatic detection |
   +----------------------------------+---------------------------------------------------------------------------------------------------+
@@ -261,7 +261,7 @@ Debugging
   +==================================+=================================================================================================+
   | :ref:`KEEP_REFCALC_DIRS`         | Toggle to keep the reference calculating execution directories                                  |
   +----------------------------------+-------------------------------------------------------------------------------------------------+
-  | :ref:`GEO_VERTSTACK`             | How to choose layer stacking vectors in the TensErLEED input (debugging functionality only)     |
+  | :ref:`LAYER_STACK_VERTICAL`      | How to choose layer stacking vectors in the TensErLEED input (debugging functionality only)     |
   +----------------------------------+-------------------------------------------------------------------------------------------------+
   | :ref:`LOG_LEVEL`                 | Set verbosity of the log file                                                                   |
   +----------------------------------+-------------------------------------------------------------------------------------------------+
@@ -280,7 +280,7 @@ Output style
   +----------------------------------+-------------------------------------------------+
   | Parameter                        | Function                                        |
   +==================================+=================================================+
-  | :ref:`PLOT_COLORS_RFACTOR`       | Change appearance of the |R-factor| plot files  |
+  | :ref:`PLOT_IV`                   | Change appearance of the |R-factor| plot files  |
   +----------------------------------+-------------------------------------------------+
 
 

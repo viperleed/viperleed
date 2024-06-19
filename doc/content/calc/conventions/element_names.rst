@@ -13,12 +13,13 @@ Two (sometimes overlapping) categories exist:
    in principle have arbitrary names.\ [#]_
 -  Chemical elements, as they appear in the periodic table: Each of the POSCAR
    elements that does not already have names of chemical elements must be
-   specified by either the :ref:`ELSPLIT` or the :ref:`ELDEF` parameters.
+   specified by either the :ref:`ELEMENT_MIX` or the :ref:`ELEMENT_RENAME`
+   parameters.
 
 The main reason why this distinction is necessary is mixed occupation of sites.
 It is possible for specific atomic positions (as specified in the POSCAR file)
 to contain mixtures of two or more elements. This split should be specified by
-:ref:`ELSPLIT`. In these cases, it is strongly recommended to rename the
+:ref:`ELEMENT_MIX`. In these cases, it is strongly recommended to rename the
 elements in the POSCAR file such that the POSCAR elements and
 chemical elements don't overlap. For example, if  your POSCAR contains
 atoms labeled ``La`` but your material contains  some mixture of ``La``

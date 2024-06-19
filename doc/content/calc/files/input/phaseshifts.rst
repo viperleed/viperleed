@@ -12,7 +12,7 @@ a consistency check will be performed for the following features:
     (:ref:`THEO_ENERGIES`)
 -   The number of blocks per energy must either match the number of
     chemical elements (i.e. elements in :ref:`POSCAR` plus
-    potentially elements added by :ref:`ELSPLIT`), or the
+    potentially elements added by :ref:`ELEMENT_MIX`), or the
     number of distinct sites (see :ref:`SITEDEF`) times the
     number of elements that can occupy any given site (i.e. the format
     generated automatically, :ref:`see below<phaseshift_format>`).
@@ -38,7 +38,7 @@ For each energy, there is **one block per site and element occupying**
 **that site**, where sites are defined by :ref:`SITEDEF` and
 elements are at least the elements from the :ref:`POSCAR` 
 file, with additional entries if elements were added via 
-the :ref:`ELSPLIT` parameter.
+the :ref:`ELEMENT_MIX` parameter.
 
 In each such block, there is **one floating point value per angular**
 **momentum number** :math:`L`, representing the phase shift that an

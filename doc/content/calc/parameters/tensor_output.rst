@@ -1,4 +1,4 @@
-.. _toutput:
+.. _tensor_output:
 
 TENSOR_OUTPUT
 =============

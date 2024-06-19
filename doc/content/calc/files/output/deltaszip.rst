@@ -11,7 +11,7 @@ Delta files are named using the pattern 'DEL\_\ *N*\ \_\ *El*\ \_\ *k*',
 where *N* is the number of the atom (same numbering as in
 :ref:`POSCAR`), *El* is the chemical element being addressed by
 this Delta file (may differ from POSCAR element through
-:ref:`ELSPLIT`), and *k* is a running index
+:ref:`ELEMENT_MIX`), and *k* is a running index
 to distinguish multiple Delta files generated for the same
 atom and element (see below).
 

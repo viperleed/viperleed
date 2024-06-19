@@ -10,9 +10,9 @@ number of atoms for each type), and their coordinates. Note that the atom names
 in a POSCAR file ("POSCAR elements") need not be actual chemical elements (as
 given in the periodic table).
 See :ref:`element name collision<ElementNameCollision>`  for the distinction
-between POSCAR elements and chemical elements, and the
-:ref:`ELSPLIT` and :ref:`ELDEF`
-parameters for mapping between POSCAR element names and chemical elements.
+between POSCAR elements and chemical elements, and the :ref:`ELEMENT_MIX` and
+:ref:`ELEMENT_RENAME` parameters for mapping between POSCAR element names and
+chemical elements.
 
 The POSCAR file format is the same as used in VASP input, and can be exported
 directly from VESTA :cite:p:`mommaVESTAThreedimensionalVisualization2011`
@@ -51,11 +51,11 @@ changes are then made to POSCAR:
    :ref:`sym_eps`, the atomic positions will be averaged to fully
    correspond to the system's symmetry (using either an automatically
    determined plane group, or the one defined in :ref:`ISYM`). This
-   behavior can be altered with the :ref:`SYMMETRY_NOMOVE` parameter.
+   behavior can be altered with the :ref:`SYMMETRIZE_INPUT` parameter.
 -  Atoms that lie within :ref:`sym_eps`  of a rotation
    axis or mirror plane will be moved onto that axis or plane to fully
    correspond to the system's symmetry. This can also be prevented via
-   :ref:`SYMMETRY_NOMOVE`.
+   :ref:`SYMMETRIZE_INPUT`.
 -  If a symmetry reduction that requires rotation of the unit cell has
    been set in the :ref:`ISYM` parameter, the unit cell will be rotated
    in the POSCAR.

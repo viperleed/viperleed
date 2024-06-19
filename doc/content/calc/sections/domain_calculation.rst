@@ -51,11 +51,11 @@ except for the ones specifically concerned with the structures,
 i.e., **without** :ref:`POSCAR` and :ref:`VIBROCC`. Likewise, the
 :ref:`PARAMETERS` file should contain **no** parameters concerned with
 interpretation of :file:`POSCAR` or :file:`VIBROCC`, such as, e.g.,
-:ref:`BULK_REPEAT`, :ref:`ELSPLIT`, :ref:`SITEDEF`, etc.; if any such parameter
-is present, it will be ignored. Finally, in the :file:`PARAMETERS` file, **do**
-define the :ref:`DOMAIN` parameter once for each of the domains that should
-be included. The :ref:`DOMAIN` parameter can point to an absolute or
-relative path from which the input data for a given domain should be
+:ref:`BULK_REPEAT`, :ref:`ELEMENT_MIX`, :ref:`SITEDEF`, etc.; if any such
+parameter is present, it will be ignored. Finally, in the :file:`PARAMETERS`
+file, **do** define the :ref:`DOMAIN` parameter once for each of the domains
+that should be included. The :ref:`DOMAIN` parameter can point to an absolute
+or relative path from which the input data for a given domain should be
 fetched. The path may point to a complete :file:`Tensors_<index>.zip`
 :ref:`file<tensorszip>` (e.g., :file:`my_domain_2/Tensors/Tensors_005.zip` in
 :numref:`list_domains_directories`) or to a folder containing the

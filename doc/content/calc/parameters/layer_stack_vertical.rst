@@ -1,4 +1,4 @@
-.. _geo_vertstack:
+.. _layer_stack_vertical:
 
 LAYER_STACK_VERTICAL
 ====================

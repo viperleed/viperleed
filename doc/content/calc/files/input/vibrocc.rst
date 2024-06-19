@@ -8,12 +8,11 @@ VIBROCC
 
 The VIBROCC file lists the starting guesses for vibrational amplitudes
 (in ångstrom) and site occupations. The minimum input is a vibrational
-amplitude for each element in the :ref:`POSCAR` file. If the
-:ref:`ELSPLIT`  parameter is defined for an element in the :ref:`PARAMETERS`
-file, explicitly assigning vibrational amplitudes and occupations to all
-sub-elements is recommended. See also :ref:`this page<occdelta>` for
-instructions on how to vary the occupation of a site during structure
-optimization.
+amplitude for each element in the :ref:`POSCAR` file. If the :ref:`ELEMENT_MIX`
+parameter is defined for an element in the :ref:`PARAMETERS` file, explicitly
+assigning vibrational amplitudes and occupations to all sub-elements is
+recommended. See also :ref:`this page<occdelta>` for instructions on how
+to vary the occupation of a site during structure optimization.
 
 Additionally, the VIBROCC file can contain a block defining offsets in
 vibrational amplitudes, occupation, or position per element for specific

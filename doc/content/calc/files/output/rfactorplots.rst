@@ -26,8 +26,8 @@ polynomial interpolation of both theoretical and experimental curves, as
 well as smoothing of experimental curves (:ref:`RFACTORSMOOTH`) and 
 normalization may have been applied.
 
-The appearance of the |R-factor| plots can be modified with the
-:ref:`PLOT_COLORS_RFACTOR` parameter.
+The appearance of the |R-factor| plots can be modified with the :ref:`PLOT_IV`
+parameter.
 
 
 .. figure:: /_static/output_examples/Rfactor_plots.svg

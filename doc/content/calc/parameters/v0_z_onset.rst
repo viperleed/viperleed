@@ -1,6 +1,6 @@
 .. include:: /substitutions.rst
 
-.. _inpotz:
+.. _v0_z_onset:
 
 V0_Z_ONSET
 ==========

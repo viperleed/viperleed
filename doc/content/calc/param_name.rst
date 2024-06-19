@@ -42,9 +42,9 @@ Alternatively, these pages contain the same information:
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`DOMAIN_STEP`               | Step width for structural domain coverage during search                                                                                 |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`ELSPLIT`                   | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements                                             |
+  | :ref:`ELEMENT_MIX`               | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements                                             |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`ELDEF`                     | Declare that an element in the POSCAR file is actually a different chemical element                                                     |
+  | :ref:`ELEMENT_RENAME`            | Declare that an element in the POSCAR file is actually a different chemical element                                                     |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`FILWF`                     | The LEED filament work function                                                                                                         |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -58,7 +58,7 @@ Alternatively, these pages contain the same information:
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`LAYER_CUTS`                | How to separate the :ref:`POSCAR` file into layers                                                                                      |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`GEO_VERTSTACK`             | How to choose layer stacking vectors in the TensErLEED input (debugging functionality only)                                             |
+  | :ref:`LAYER_STACK_VERTICAL`      | How to choose layer stacking vectors in the TensErLEED input (debugging functionality only)                                             |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`LMAX`                      | Maximum angular momentum number; usually determined via :ref:`PHASESHIFTMIN`                                                            |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -74,7 +74,7 @@ Alternatively, these pages contain the same information:
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`PHASESHIFTMIN`             | Cutoff in phaseshifts magnitudes to determine :ref:`LMAX`                                                                               |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`PLOT_COLORS_RFACTOR`       | Change appearance of |IV| plot files like :ref:`Rfactor_plots.pdf<Rfactorplots>`                                                        |
+  | :ref:`PLOT_IV`                   | Change appearance of |IV| plot files like :ref:`Rfactorplots`                                                        |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`RUN`                 | Which parts of ViPErLEED / TensErLEED should be run, in order                                                                           |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -106,7 +106,7 @@ Alternatively, these pages contain the same information:
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`SUPPRESS_EXE`              | Generate TensErLEED input files, but stop ViPErLEED before executing TensErLEED (for debugging)                                         |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`SYMMETRY_NOMOVE`           | Whether to move atoms in the :ref:`POSCAR` file to perfectly match the symmetry                                                         |
+  | :ref:`SYMMETRIZE_INPUT`          | Whether to move atoms in the :ref:`POSCAR` file to perfectly match the symmetry                                                         |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`SYMMETRYBULK`              | Manually set the symmetry to be used in beam averaging for the bulk, ignoring automatic detection                                       |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
@@ -120,7 +120,7 @@ Alternatively, these pages contain the same information:
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`TENSOR_INDEX`              | Which Tensor files to use for the delta calculation and search                                                                          |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
-  | :ref:`TOUTPUT`                   | Disable Tensor output for some or all layers                                                                                            |
+  | :ref:`TENSOR_OUTPUT`             | Disable Tensor output for some or all layers                                                                                            |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | :ref:`theo_energies`             | What energy range to calculate                                                                                                          |
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+

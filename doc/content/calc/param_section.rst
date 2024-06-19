@@ -32,7 +32,7 @@ Initialization
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`BULK_REPEAT`               | Thickness of the bulk repeat unit, or a bulk repeat vector                                                   |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`ELSPLIT`                   | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements                  |
+  | :ref:`ELEMENT_MIX`               | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements                  |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`LAYER_CUTS`                | How to separate the :ref:`POSCAR` file into layers                                                           |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -42,7 +42,7 @@ Initialization
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`SUPERLATTICE`        | The relationship between the surface and bulk unit cells                                                     |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`SYMMETRY_NOMOVE`           | Whether to move atoms in the :ref:`POSCAR` file to perfectly match the symmetry                              |
+  | :ref:`SYMMETRIZE_INPUT`          | Whether to move atoms in the :ref:`POSCAR` file to perfectly match the symmetry                              |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`SYM_EPS`                   | Error tolerance during symmetry search                                                                       |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -83,7 +83,7 @@ Reference calculation
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`BULK_REPEAT`               | Thickness of the bulk repeat unit, or a bulk repeat vector                                                   |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`ELSPLIT`                   | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements                  |
+  | :ref:`ELEMENT_MIX`               | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements                  |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`FILWF`                     | The LEED filament work function                                                                              |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -105,7 +105,7 @@ Reference calculation
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | **→** :ref:`SUPERLATTICE`        | The relationship between the surface and bulk unit cells                                                     |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
-  | :ref:`TOUTPUT`                   | Disable Tensor output for some or all layers                                                                 |
+  | :ref:`TENSOR_OUTPUT`             | Disable Tensor output for some or all layers                                                                 |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`THEO_ENERGIES`             | What energy range to calculate                                                                               |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
@@ -130,7 +130,7 @@ Reference calculation
   +----------------------------------+----------------------------------------------------------------------------------------------------+
   | :ref:`IVSHIFTRANGE`              | Range and step size for shifting experimental and theoretical curves during |R-factor| calculation |
   +----------------------------------+----------------------------------------------------------------------------------------------------+
-  | :ref:`PLOT_COLORS_RFACTOR`       | Change appearance of the |R-factor| plot files                                                     |
+  | :ref:`PLOT_IV`                   | Change appearance of the |R-factor| plot files                                                     |
   +----------------------------------+----------------------------------------------------------------------------------------------------+
   | :ref:`RFACTORTYPE`               | Which definition of the |R factor| to use                                                          |
   +----------------------------------+----------------------------------------------------------------------------------------------------+
@@ -155,7 +155,7 @@ Behavior is mainly governed by the :ref:`DISPLACEMENTS` file. Some relevant para
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                                     |
   +==================================+==============================================================================================================+
-  | :ref:`ELSPLIT`                   | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements                  |
+  | :ref:`ELEMENT_MIX`               | Declare that sites in the :ref:`POSCAR` file can be occupied by different chemical elements                  |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+
   | :ref:`LMAX`                      | Maximum angular momentum number; usually determined via :ref:`PHASESHIFTMIN`                                 |
   +----------------------------------+--------------------------------------------------------------------------------------------------------------+

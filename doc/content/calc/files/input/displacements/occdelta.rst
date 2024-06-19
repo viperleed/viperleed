@@ -34,7 +34,7 @@ Syntax
 where
 
 -  ``POSCAREL`` is the :ref:`POSCAR` element and **not** the chemical species 
-   defined via :ref:`ELSPLIT`.
+   defined via :ref:`ELEMENT_MIX`.
    See also :ref:`element name collision<elementnamecollision>`.
 -  ``site`` is optional, and has the same functionality as the one in
    the :ref:`Geometrical displacements<GEODELTA>`.
@@ -49,9 +49,9 @@ comma-separated list. Each list element can have the two possible forms:
    chem start end step
    fix1 chem1 + fix2 chem2 (+ ...) start end step
 
-where ``chem*`` is one of the **chemical** elements that you have defined via 
-:ref:`ELSPLIT` or the special flag ``Vac`` (not case sensitive) for vacancies.
-Notice that a **maximum of five distinct chemical elements**
+where ``chem*`` is one of the **chemical** elements that you have defined
+via :ref:`ELEMENT_MIX` or the special flag ``Vac`` (not case sensitive) for
+vacancies. Notice that a **maximum of five distinct chemical elements**
 (including vacancies) can be used at each atomic position.
 
 ``start``, ``end``, ``step``, and ``fix*`` are floating point numbers
@@ -105,8 +105,8 @@ also interpreted as a constant concentration.
 
 In the OCC_DELTA block, the element on the left *must* be the element as
 defined in the :ref:`POSCAR` file, and the elements on the right
-*must* be chemical elements, defined either by :ref:`ELSPLIT`
-or :ref:`ELDEF` in the :ref:`PARAMETERS` file.
+*must* be chemical elements, defined either by :ref:`ELEMENT_MIX`
+or :ref:`ELEMENT_RENAME` in the :ref:`PARAMETERS` file.
 
 Note that a **maximum of five distinct chemical elements** (including
 vacancies) can be used at each atomic position.

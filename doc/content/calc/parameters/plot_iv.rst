@@ -1,6 +1,6 @@
 .. include:: /substitutions.rst
 
-.. _plot_colors_rfactor:
+.. _plot_iv:
 
 PLOT_IV
 =======

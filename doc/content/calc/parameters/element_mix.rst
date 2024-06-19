@@ -1,4 +1,4 @@
-.. _elsplit:
+.. _element_mix:
 
 ELEMENT_MIX
 ===========
@@ -25,8 +25,9 @@ multiple elements, which can have different properties (e.g., vibrational
 amplitudes), and read different phase-shift files during the LEED calculation.
 The elements on the right-hand side should be actual chemical elements, with
 the two-letter abbreviation as it is found in the periodic table. ELEMENT_MIX
-is complementary to :ref:`ELDEF`, so no POSCAR element for which ELEMENT_MIX
-is defined should appear as an ELEMENT_RENAME parameter, and vice versa.
+is complementary to :ref:`ELEMENT_RENAME`, so no POSCAR element for which
+ELEMENT_MIX is defined should appear as an ELEMENT_RENAME parameter, and
+vice versa.
 
 **Acceptable values**: Due to current limits in the code, a maximum of **five**
 different species can occupy one site. If the occupations of the elements

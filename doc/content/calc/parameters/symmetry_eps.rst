@@ -26,5 +26,5 @@ For atoms that are recognized as symmetry-equivalent within SYMMETRY_EPS,
 atomic positions will be averaged during initialization to fully reflect
 that symmetry. The choice of SYMMETRY_EPS, in combination with :ref:`ISYM`,
 will therefore determine how strongly the atom positions in the :ref:`POSCAR`
-file are modified during initialization. You can use :ref:`SYMMETRY_NOMOVE`
+file are modified during initialization. You can use :ref:`SYMMETRIZE_INPUT`
 to suppress symmetrization.

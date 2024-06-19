@@ -220,7 +220,7 @@ in the ``SUPP`` directory. These files contain intermediate results or may
 be of interest for debugging purposes.
 
 If a :ref:`refercence calculation<ref-calc>` is run with
-:ref:`Tensor output<toutput>`, a ``Tensors`` directory will
+:ref:`Tensor output<TENSOR_OUTPUT>`, a ``Tensors`` directory will
 be created that stores the :ref:`tensor files<tensorszip>`.
 Similarly, if a :ref:`delta-amplitudes<sec_deltas>` calculation is run,
 a ``Deltas`` directory will be created that contains the resulting

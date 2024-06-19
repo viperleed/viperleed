@@ -10,8 +10,7 @@ calculations during :ref:`full-dynamic optimization<Fdoptimization>`. |IV|
 curves are drawn for every beam, showing theoretical curves at every data
 point tested during optimization, as well as the experimental data.
 
-The file format is generally equivalent to the one of the
-:ref:`Rfactor_plots.pdf<Rfactorplots>`  files. Appearance of the |IV|
-plots can be modified with the :ref:`PLOT_COLORS_RFACTOR` parameter. 
-|R factor|\ s are between the *best* theoretical dataset
-(marked by the thicker line) and the experimental data.
+The file format is generally equivalent to the one of the :ref:`Rfactorplots`
+files. Appearance of the |IV| plots can be modified with the :ref:`PLOT_IV`
+parameter. |R factor|\ s are between the *best* theoretical dataset (marked
+by the thicker line) and the experimental data.

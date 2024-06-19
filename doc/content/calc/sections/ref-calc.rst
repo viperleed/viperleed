@@ -56,9 +56,9 @@ all files, removes temporary directories, and combines the results into a
 :ref:`THEOBEAMS.csv<THEOBEAMS>` file. The calculated beams are also plotted
 for inspection in :ref:`THEOBEAMS.pdf<theobeams>`.
 
-Finally, unless the tensor output was disabled via :ref:`toutput`, ViPErLEED
-collects the :ref:`tensor files<tensorszip>` created by TensErLEED. They are
-stored, in compressed form, in the :file:`Tensors` directory.
+Finally, unless the tensor output was disabled via :ref:`TENSOR_OUTPUT`,
+ViPErLEED collects the :ref:`tensor files<tensorszip>` created by TensErLEED.
+They are stored, in compressed form, in the :file:`Tensors` directory.
 
 
 .. todo::

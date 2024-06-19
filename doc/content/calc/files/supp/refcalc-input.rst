@@ -29,9 +29,9 @@ Lateral geometry information; contains the energy range to calculate
 AUXGEO
 ------
 Geometry information; this essentially translates the input from :ref:`POSCAR`
-and :ref:`VIBROCC`, together with all parameters relevant for interpretation
-of these files, into the format expected by TensErLEED. Also contains
-information about which layer should produce Tensor output (:ref:`TOUTPUT`).
+and :ref:`VIBROCC`, together with all parameters relevant for interpretation of
+these files, into the format expected by TensErLEED. Also contains information
+about which layer should produce Tensor output (:ref:`TENSOR_OUTPUT`).
 
 .. _refcalc-fin:
 
