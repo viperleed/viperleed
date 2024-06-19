@@ -1,10 +1,11 @@
+.. include:: /substitutions.rst
+
 .. _refcalc-input:
 
 Reference-calculation input files
 =================================
 
-Below is a short list of files used for the
-:ref:`Reference Calculation<ref-calc>`.
+Below is a short list of files used for the :ref:`ref-calc`.
 
 .. _auxnonstruct:
 
@@ -32,12 +33,22 @@ and :ref:`VIBROCC`, together with all parameters relevant for interpretation
 of these files, into the format expected by TensErLEED. Also contains
 information about which layer should produce Tensor output (:ref:`TOUTPUT`).
 
+.. _refcalc-fin:
+
 refcalc-FIN
 -----------
-Compiled reference calculation input file that is actually fed into the
-refcalc script. Combines (and is completely redundant with) the input
-from AUXNONSTRUCT, AUXLATGEO and AUXGEO (see above), as well as :ref:`AUXBEAMS`
-and :ref:`PHASESHIFTS`.
+Contains the input for the TensErLEED reference calculation. Combines (and is
+completely redundant with) the input from :ref:`AUXLATGEO`, :ref:`BEAMLIST`,
+:ref:`AUXNONSTRUCT`, :ref:`PHASESHIFTS`,  :ref:`AUXBEAMS` and :ref:`AUXGEO`.
+
+The refcalc-FIN file does not have to be in the folder for the reference
+calculation to run, but rather is piped directly into TensErLEED from |calc|.
+
+.. todo::
+    This was the list before. Check which one is the right order!
+
+    :ref:`AUXNONSTRUCT`, :ref:`AUXLATGEO`, and :ref:`AUXGEO`, as
+    well as :ref:`AUXBEAMS` and :ref:`PHASESHIFTS`.
 
 muftin.f
 --------

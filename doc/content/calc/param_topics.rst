@@ -6,13 +6,14 @@
 List of PARAMETERS by topic
 ===========================
 
-This page lists parameters for ViPErLEED by grouping them into 
-categories. You can find an alphabetical list and other 
-groupings :ref:`here<PARAMETERS>`.
+This page lists parameters for ViPErLEED by grouping them
+into categories. Not all parameters are listed. See the
+:ref:`main PARAMETERS page<PARAMETERS>` for a complete
+alphabetical list and other groupings.
 
 .. note::
-   While all parameters have a default value, parameters marked with a 
-   "**→**" usually require user input for simple but non-trivial 
+   While all parameters have a default value, parameters marked with a
+   "**→**" usually require user input for simple but non-trivial
    systems.
 
 |calc| execution
@@ -22,7 +23,7 @@ Defines what to calculate and where to start.
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+--------------------------------------------------------------------------+
   | Parameter                        | Function                                                                 |
@@ -51,7 +52,7 @@ Input structure
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+----------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                         |
@@ -72,7 +73,7 @@ Elements, vibrational amplitudes and element concentrations
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+------------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                             |
@@ -97,7 +98,7 @@ Symmetry determination and control
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+---------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                          |
@@ -118,7 +119,7 @@ Experimental setup
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+---------------------------------------------------------------------------+
   | Parameter                        | Function                                                                  |
@@ -137,7 +138,7 @@ Inner potential
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+-----------------------------------------------------------+
   | Parameter                        | Function                                                  |
@@ -154,7 +155,7 @@ Computational setup
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+-----------------------------------------------------------+
   | Parameter                        | Function                                                  |
@@ -169,7 +170,7 @@ Computational setup
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+-----------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                            |
@@ -190,7 +191,7 @@ Search behavior
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+-----------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                            |
@@ -215,7 +216,7 @@ Structural domains
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                                                                 |
@@ -232,7 +233,7 @@ TensErLEED approximations
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+-------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                      |
@@ -253,7 +254,7 @@ Debugging
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+-------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                        |
@@ -274,7 +275,7 @@ Output style
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 30 70
 
   +----------------------------------+-------------------------------------------------+
   | Parameter                        | Function                                        |
@@ -284,12 +285,6 @@ Output style
 
 
 .. toctree::
-    :hidden:
-
-    param_name
-    param_section
-
-.. toctree:: 
     :hidden:
     :glob:
 

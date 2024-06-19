@@ -8,8 +8,8 @@ List of PARAMETERS by name
 See below for an alphabetical list of all parameters.
 Alternatively, these pages contain the same information:
 
--   :ref:`List of parameters by topic<paramtopics>`
--   :ref:`List of parameters by TensErLEED section<paramsection>`
+-   :ref:`paramtopics`
+-   :ref:`paramsection`
 
 .. note::
    While all parameters have a default value, parameters marked with a
@@ -19,7 +19,7 @@ Alternatively, these pages contain the same information:
 
 .. table::
   :width: 100%
-  :widths: 25 75
+  :widths: 32 68
 
   +----------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+
   | Parameter                        | Function                                                                                                                                |
