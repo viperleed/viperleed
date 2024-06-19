@@ -9,8 +9,8 @@ THEO_ENERGIES can be defined to set the electron energy range on which the
 reference calculation, as well as the search algorithm will be performed.
 
 **Default**: if no experimental data file is available,
-THEO_ENERGIES = 20 800 3, otherwise THEO_ENERGIES = ``Efrom`` ``Eto`` 3,
-with ``Efrom`` = min(exp. energy)-3 and ``Eto``\ =max(exp. energy)+3
+``THEO_ENERGIES = 20 800 3``, otherwise ``THEO_ENERGIES = Efrom Eto 3``,
+with ``Efrom = min(exp. energy) - 3`` and ``Eto = max(exp. energy) + 3``
 
 **Syntax:**
 
@@ -31,7 +31,7 @@ well as in the search of the best structure, the theoretical spectra will be
 shifted a bit along the energy axis to find the best match with experiment
 (see :ref:`IVSHIFTRANGE` to control this shift).
 
-If ``Eto-Efrom`` is not an integer multiple of ``Estep``, ``Efrom`` will
+If ``Eto - Efrom`` is not an integer multiple of ``Estep``, ``Efrom`` will
 be modified to a slightly lower energy such that this is the case.
 
 .. todo::
