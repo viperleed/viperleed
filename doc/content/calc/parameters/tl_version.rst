@@ -22,3 +22,8 @@ directory.
    TL_VERSION = v1.7.6
 
 If the specified version is not found, execution will stop.
+
+Version numbers use the canonical format ``v<major>.<minor>.<patch>`` to
+denote major, minor and patch updates. The ``v`` prefix is optional.
+Versions prior to ``v2.0.0`` will also be recognized when given in the
+legacy format of ``v<major>.<minor><patch>``.

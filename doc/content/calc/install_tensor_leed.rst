@@ -37,8 +37,9 @@ When using multiple tensor-LEED versions, the folder containing the tensor-LEED
 code is expected to have the structure in :numref:`list_tensorleed_folder`. The
 name of the top-level folder is up to the user (\ :file:`my_tensorleed` in
 :numref:`list_tensorleed_folder`). However, folder names for the TensErLEED
-source code should be named exactly :file:`TensErLEED-v1.X.Y` for versions
-earlier than v2.0.0. The folder name for later versions is only required to
+source code should be named :file:`TensErLEED-v1.X.Y` for versions earlier
+than v2.0.0 (see also parameter :ref:`tl_version` for more details).
+The folder name for later versions is only required to
 begin with :file:`TensErLEED`. The top-level folder (\ :file:`my_tensorleed` in
 :numref:`list_tensorleed_folder`) is expected to contain the compiled version
 of the :ref:`eeasisss_compile` source code, obtained as described in
