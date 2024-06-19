@@ -5,7 +5,7 @@ https://www.sphinx-doc.org/en/master/usage/configuration.html
 """
 
 __authors__ = (
-    'Alexander M. Imre (@ammimre)',
+    'Alexander M. Imre (@amimre)',
     'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
