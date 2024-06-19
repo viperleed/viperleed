@@ -284,8 +284,12 @@ Output style
   +----------------------------------+-------------------------------------------------+
 
 
+All PARAMETERS
+==============
+
 .. toctree::
-    :hidden:
+    :maxdepth: 1
     :glob:
 
     parameters/*
+
