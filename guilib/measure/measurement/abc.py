@@ -35,7 +35,7 @@ from viperleed.guilib.measure.classes.settings import ViPErLEEDSettings
 from viperleed.guilib.measure.controller.abc import MeasureControllerABC
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.measurement import _meassettings as _settings
-from viperleed.guilib.widgetslib import make_spin_box
+from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
 
 _QUEUED = qtc.Qt.QueuedConnection
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -639,14 +639,13 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
              'supposed</nobr> to stop.'),
             )
         for option_name, display_name, tip in info:
-            widget = make_spin_box(float, maximum=1000000000, suffix='eV')
-            widget.setDecimals(1)
+            widget = CoercingDoubleSpinBox(range_=(0, 1000), suffix=' eV')
             handler.add_option(
                 'measurement_settings', option_name, handler_widget=widget,
                 display_name=display_name, tooltip=tip
                 )
         delta_energy = handler['measurement_settings']['delta_energy']
-        delta_energy.handler_widget.setMinimum(-1000)
+        delta_energy.handler_widget.soft_minimum = -1000
         delta_energy.handler_widget.setSingleStep(0.5)
 
         widget = _settings.StepProfileViewer()

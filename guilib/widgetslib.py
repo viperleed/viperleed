@@ -290,47 +290,6 @@ def get_all_children_widgets(parent, exclude_parent=False, recursive=True):
     return childrenWidgs
 
 
-def make_spin_box(kind, maximum=99, minimum=0, step=0, suffix=''):
-    """Return a QSpinBox with a specified maximum.
-
-    Parameters
-    ----------
-    kind : {int, float}
-        Used to determine the type of SpinBox to create.
-    maximum : int, optional
-        The maximum value of the SpinBox. Default is 99.
-    minimum : int, optional
-        The minimum value of the SpinBox. Default is 0.
-    step : int or float, float
-        The increment of the SpinBox value.
-    suffix : str, optional
-        The suffix of the SpinBox. Default is '', no suffix.
-
-    Returns
-    -------
-    box : QSpinBox or QDoubleSpinBox
-        The desired box with the requested settings.
-
-    Raises
-    ------
-    ValueError
-        If the given kind was neither int nor float.
-    """
-    if kind not in (int, float):
-        raise ValueError('The type given to make_spin_box must be int '
-                         f'or float, but {kind} was given.')
-    box = qtw.QSpinBox() if kind is int else qtw.QDoubleSpinBox()
-    box.setMaximum(maximum)
-    box.setMinimum(minimum)
-    if kind is int:
-        step = int(step)
-    if step:
-        box.setSingleStep(step)
-    if suffix:
-        box.setSuffix(' ' + suffix)
-    return box
-
-
 def move_to_front(window):  # TODO: move to a nicer place
     """Move a window to the front."""
     window.show()

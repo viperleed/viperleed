@@ -174,7 +174,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         min_energy = self.settings.getfloat('measurement_settings',
                                             'min_energy', fallback=5.)
         option = handler['measurement_settings']['start_energy']
-        option.handler_widget.setMinimum(min_energy)
+        option.handler_widget.soft_minimum = min_energy
         option.set_info_text(
             '<nobr>The energy at which the measurement starts.</nobr> The '
             f'minimum start energy is {min_energy} eV.'

@@ -20,8 +20,8 @@ from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
+from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.guilib.widgets.basewidgets import QCheckBoxInvertedSignal
-from viperleed.guilib.widgetslib import make_spin_box
 from viperleed.guilib.widgetslib import retain_size_when_hidden
 
 _INVOKE = qtc.QMetaObject.invokeMethod
@@ -297,7 +297,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
              '</nobr> a triggered, time-resolved measurement.')
             )
         for option_name, display_name, tip in info:
-            widget = make_spin_box(int, maximum=32767, suffix='ms')
+            widget = CoercingSpinBox(range_=(0, 32767), suffix=' ms')
             handler.add_option(
                 'measurement_settings', option_name, handler_widget=widget,
                 display_name=display_name, tooltip=tip

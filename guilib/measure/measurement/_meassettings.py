@@ -18,8 +18,9 @@ from PyQt5 import QtCore as qtc
 from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
+from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 from viperleed.guilib.widgets.basewidgets import ButtonWithLabel
-from viperleed.guilib.widgetslib import make_spin_box
 
 
 class StepProfileViewer(ButtonWithLabel):
@@ -231,8 +232,8 @@ class LinearStepEditor(ProfileStep):
         """Initialise object."""
         super().__init__()
         self._controls = {
-            'step_number' : make_spin_box(int, maximum=32767),
-            'duration' : make_spin_box(int, maximum=9999, suffix='ms'),
+            'step_number' : CoercingSpinBox(range_=(0, 32767)),
+            'duration' : CoercingSpinBox(range_=(0, 9999), suffix=' ms'),
             }
         self._compose()
 
@@ -305,8 +306,9 @@ class FractionalStepEditor(ProfileStep):
     def _add_step(self, fraction=None, duration=None):
         """Add a step to the fractional step profile."""
         layout = qtw.QHBoxLayout()
-        fraction_handler = make_spin_box(float, step=0.05)
-        duration_handler = make_spin_box(int, maximum=32767, suffix='ms')
+        fraction_handler = CoercingDoubleSpinBox(decimals=2, range_=(0, 2),
+                                                 step=0.05)
+        duration_handler = CoercingSpinBox(range_=(0, 32767), suffix=' ms')
         for value, handler in zip((fraction, duration),
                                   (fraction_handler, duration_handler)):
             if value:
