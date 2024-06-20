@@ -156,7 +156,10 @@ class StepProfileEditor(qtw.QDialog):
     def _compose_editor(self):
         """Compose editor section."""
         layout = qtw.QHBoxLayout()
-        layout.addWidget(self._controls['profile'])
+        profile_with_stretch = qtw.QVBoxLayout()
+        profile_with_stretch.addWidget(self._controls['profile'])
+        profile_with_stretch.addStretch(1)
+        layout.addLayout(profile_with_stretch)
         layout.addWidget(self.linear_editor)
         layout.addWidget(self.fraction_editor)
         self.linear_editor.hide()
@@ -177,7 +180,7 @@ class StepProfileEditor(qtw.QDialog):
         self.linear_editor.hide()
         self.fraction_editor.hide()
         self._controls['profile'].currentData().show()
-        self.adjustSize()
+        self._delay.start()
 
     def _populate_profile_options(self):
         """Add profile options to profile selection."""
@@ -238,6 +241,7 @@ class LinearStepEditor(ProfileStep):
         layout = qtw.QVBoxLayout()
         layout.addLayout(self._compose_step_nr_selection())
         layout.addLayout(self._compose_duration_selection())
+        layout.addStretch(1)
         self.setLayout(layout)
 
     def _compose_step_nr_selection(self):
@@ -310,13 +314,14 @@ class FractionalStepEditor(ProfileStep):
             handler.destroyed.connect(self._emit_step_count_reduced)
             layout.addWidget(handler)
         self._steps.append(layout)
-        self.layout().addLayout(layout)
+        self.layout().insertLayout(self.layout().count() - 1, layout)
 
     def _compose(self):
         """Place children widgets."""
         layout = qtw.QVBoxLayout()
         layout.addLayout(self._compose_buttons())
         layout.addLayout(self._compose_labels())
+        layout.addStretch(1)
         self.setLayout(layout)
 
     def _compose_buttons(self):
@@ -362,16 +367,16 @@ class FractionalStepEditor(ProfileStep):
     def _remove_step(self):
         """Remove a step from the fractional step profile."""
         layout = self.layout()
-        if layout.count() < 3:
+        if layout.count() < 4:
             return
-        item = layout.itemAt(layout.count() - 1)
+        item = layout.itemAt(layout.count() - 2)
         layout.removeItem(item)
         for widget_index in range(item.layout().count()):
             item.itemAt(widget_index).widget().deleteLater()
 
     def set_profile(self, profile):
         """Set fractional profile."""
-        while self.layout().count() >= 3:
+        while self.layout().count() >= 4:
             self._remove_step()
         self.profile = profile
         for fraction, duration in zip(profile[0::2], profile[1::2]):
@@ -381,7 +386,7 @@ class FractionalStepEditor(ProfileStep):
         """Set the profile to the selected values."""
         tmp = []
         layout = self.layout()
-        for index in range(2, layout.count()):
+        for index in range(2, layout.count() - 1):
             item = layout.itemAt(index)
             for widget_index in range(item.layout().count()):
                 tmp.append(item.itemAt(widget_index).widget().value())
