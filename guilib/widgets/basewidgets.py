@@ -55,6 +55,7 @@ class ButtonWithLabel(qtw.QWidget):
         """Set the text of the button."""
         self.button.setText(text)
 
+
 class QCheckBoxInvertedSignal(qtw.QCheckBox):
     """QCheckBox with extra unchecked signal."""
 

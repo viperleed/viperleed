@@ -38,11 +38,11 @@ class StepProfileViewer(ButtonWithLabel):
         self.set_button_text('Edit')
         self.profile_editor = StepProfileEditor(parent=self)
         self._connect()
-        self.delay = qtc.QTimer()
-        self.delay.setSingleShot(True)
-        self.delay.setInterval(10)
-        self.delay.timeout.connect(self._connect_finished)
-        self.delay.start()
+        self._delay = qtc.QTimer()
+        self._delay.setSingleShot(True)
+        self._delay.setInterval(10)
+        self._delay.timeout.connect(self._connect_finished)
+        self._delay.start()
 
     def _connect_finished(self):
         """Connect finished signal after full instantiation."""
@@ -323,14 +323,14 @@ class FractionalStepEditor(ProfileStep):
         """Return a layout of the labels."""
         layout = qtw.QHBoxLayout()
         fraction_label = qtw.QLabel()
-        fraction_label.setText('energy')
+        fraction_label.setText('Step fraction')
         layout.addWidget(fraction_label)
         size = fraction_label.fontMetrics().boundingRect('a').height()
         info = ('<nobr>The energies to set given as a '
-                'fraction</nobr> of the total beam energy.')
+                'fraction</nobr> of "Delta energy".')
         layout.addWidget(FieldInfo(info, size=size))
         duration_label = qtw.QLabel()
-        duration_label.setText('duration')
+        duration_label.setText('Duration')
         layout.addWidget(duration_label)
         info = '<nobr>The settle time after each</nobr> energy given in ms.'
         layout.addWidget(FieldInfo(info, size=size))
