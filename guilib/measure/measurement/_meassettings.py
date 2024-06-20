@@ -103,6 +103,10 @@ class StepProfileEditor(qtw.QDialog):
         self.setWindowTitle('Step profile editor')
         self.setWindowFlags(self.windowFlags()
                             & ~qtc.Qt.WindowContextHelpButtonHint)
+        self._delay = qtc.QTimer()
+        self._delay.setSingleShot(True)
+        self._delay.setInterval(3)
+        self._delay.timeout.connect(self.adjustSize)
         self._compose()
         self._connect()
 
@@ -166,7 +170,7 @@ class StepProfileEditor(qtw.QDialog):
             )
         self._controls['accept'].clicked.connect(self.accept)
         self._controls['cancel'].clicked.connect(self.reject)
-        self.fraction_editor.step_count_reduced.connect(self.adjustSize)
+        self.fraction_editor.step_count_reduced.connect(self._delay.start)
 
     def _on_profile_selected(self):
         """Update the displayed step profile editor."""
@@ -285,6 +289,10 @@ class FractionalStepEditor(ProfileStep):
             'add_step' : qtw.QPushButton(),
             'remove_step' : qtw.QPushButton(),
             }
+        # In order to keep track whether a step has properly been removed
+        # from the editor, we have to keep track of how many widgets have
+        # been deleted.
+        self._n_widgets_removed = 0
         self._steps = []
         self._connect()
         self._compose()
@@ -299,6 +307,7 @@ class FractionalStepEditor(ProfileStep):
                                   (fraction_handler, duration_handler)):
             if value:
                 handler.setValue(value)
+            handler.destroyed.connect(self._emit_step_count_reduced)
             layout.addWidget(handler)
         self._steps.append(layout)
         self.layout().addLayout(layout)
@@ -341,6 +350,14 @@ class FractionalStepEditor(ProfileStep):
         self._controls['add_step'].clicked.connect(self._add_step)
         self._controls['remove_step'].clicked.connect(self._remove_step)
 
+    def _emit_step_count_reduced(self):
+        """Emit the step_count_reduced signal once both widgets are deleted."""
+        self._n_widgets_removed += 1
+        if self._n_widgets_removed < 2:
+            return
+        self.step_count_reduced.emit()
+        self._n_widgets_removed = 0
+
     @qtc.pyqtSlot()
     def _remove_step(self):
         """Remove a step from the fractional step profile."""
@@ -351,7 +368,6 @@ class FractionalStepEditor(ProfileStep):
         layout.removeItem(item)
         for widget_index in range(item.layout().count()):
             item.itemAt(widget_index).widget().deleteLater()
-        self.step_count_reduced.emit()
 
     def set_profile(self, profile):
         """Set fractional profile."""
