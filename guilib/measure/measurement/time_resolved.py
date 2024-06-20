@@ -22,6 +22,7 @@ from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.measurement.abc import MeasurementABC
 from viperleed.guilib.widgets.basewidgets import QCheckBoxInvertedSignal
 from viperleed.guilib.widgetslib import make_spin_box
+from viperleed.guilib.widgetslib import retain_size_when_hidden
 
 _INVOKE = qtc.QMetaObject.invokeMethod
 _QUEUED = qtc.Qt.QueuedConnection
@@ -332,10 +333,12 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             constant.handler_widget.unchecked.connect(
                 option.handler_widget.setVisible
                 )
+            retain_size_when_hidden(option.handler_widget)
         continuous.handler_widget.unchecked.connect(interval.set_enabled)
         continuous.handler_widget.unchecked.connect(
             interval.handler_widget.setVisible
             )
+        retain_size_when_hidden(interval.handler_widget)
 
         return handler
 

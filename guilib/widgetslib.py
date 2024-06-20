@@ -415,6 +415,13 @@ def raise_on_qt_messages():
     qtc.qInstallMessageHandler(__handler)
 
 
+def retain_size_when_hidden(widget):
+    """Retain widget size when widget is not visible."""
+    policy = widget.sizePolicy()
+    policy.setRetainSizeWhenHidden(True)
+    widget.setSizePolicy(policy)
+
+
 ################################################################################
 #                                   CLASSES                                    #
 ################################################################################
