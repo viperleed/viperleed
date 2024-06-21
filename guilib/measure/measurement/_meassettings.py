@@ -232,8 +232,8 @@ class LinearStepEditor(ProfileStep):
         """Initialise object."""
         super().__init__()
         self._controls = {
-            'step_number' : CoercingSpinBox(range_=(0, 32767)),
-            'duration' : CoercingSpinBox(range_=(0, 9999), suffix=' ms'),
+            'step_number' : CoercingSpinBox(soft_range=(0, 32767)),
+            'duration' : CoercingSpinBox(soft_range=(0, 9999), suffix=' ms'),
             }
         self._compose()
 
@@ -306,9 +306,9 @@ class FractionalStepEditor(ProfileStep):
     def _add_step(self, fraction=None, duration=None):
         """Add a step to the fractional step profile."""
         layout = qtw.QHBoxLayout()
-        fraction_handler = CoercingDoubleSpinBox(decimals=2, range_=(0, 2),
+        fraction_handler = CoercingDoubleSpinBox(decimals=2, soft_range=(0, 2),
                                                  step=0.05)
-        duration_handler = CoercingSpinBox(range_=(0, 32767), suffix=' ms')
+        duration_handler = CoercingSpinBox(soft_range=(0, 32767), suffix=' ms')
         for value, handler in zip((fraction, duration),
                                   (fraction_handler, duration_handler)):
             if value:

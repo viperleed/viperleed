@@ -297,7 +297,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
              '</nobr> a triggered, time-resolved measurement.')
             )
         for option_name, display_name, tip in info:
-            widget = CoercingSpinBox(range_=(0, 32767), suffix=' ms')
+            widget = CoercingSpinBox(soft_range=(0, 32767), suffix=' ms')
             handler.add_option(
                 'measurement_settings', option_name, handler_widget=widget,
                 display_name=display_name, tooltip=tip

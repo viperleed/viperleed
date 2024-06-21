@@ -31,7 +31,7 @@ from viperleed.guilib.measure.classes.abc import SettingsInfo
 from viperleed.guilib.measure.dialogs.settingsdialog import SettingsHandler
 from viperleed.guilib.measure.hardwarebase import device_name_re
 from viperleed.guilib.measure.widgets.mappedcombobox import MappedComboBox
-
+from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 
 _CUSTOM_NAME_RE = re.compile(r"\[.*\]")
 
@@ -632,8 +632,8 @@ class ImagingSourceCamera(abc.CameraABC):
         # _widget is used for in each portion of filling the handler
 
         # Black level
-        _widget = qtw.QSpinBox()
-        _widget.setRange(*self.get_black_level_limits())
+        _widget = CoercingSpinBox(soft_range=self.get_black_level_limits())
+        _widget.setMinimum(0)
         _widget.setAccelerated(True)
         _tip = (
             "<nobr>Dark Level, Black Level, or Brightness is a measure of"

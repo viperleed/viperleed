@@ -21,8 +21,7 @@ from PyQt5 import (QtCore as qtc,
                    QtWidgets as qtw,
                    QtGui as qtg)
 
-from viperleed.guilib.widgetslib import (change_control_text_color,
-                                         move_to_front)
+from viperleed.gui import resources_path
 from viperleed.guilib.measure import hardwarebase as base
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
 from viperleed.guilib.measure.classes.settings import NotASequenceError
@@ -33,8 +32,9 @@ from viperleed.guilib.measure.dialogs.settingsdialog import (
 from viperleed.guilib.measure.serial.viperleedserial import (
     ViPErLEEDHardwareError, ExtraSerialErrors
     )
-from viperleed.guilib.measure.widgets.spinboxes import TolerantCommaSpinBox
-from viperleed.gui import resources_path
+from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.guilib.widgetslib import (change_control_text_color,
+                                         move_to_front)
 
 # pylint: disable=too-many-lines
 # Makes sense to keep all the widgets in a single module
@@ -943,7 +943,7 @@ class _I0EditDialog(_EditDialogBase):
             ))
         super().__init__(controller, *args, **kwargs)
 
-        self.__gain = TolerantCommaSpinBox()
+        self.__gain = CoercingDoubleSpinBox(decimals=8)
         self.__gain_info = None
 
         self.__compose()
@@ -985,9 +985,6 @@ class _I0EditDialog(_EditDialogBase):
         layout.addWidget(self.__gain)
 
         self.central_widget.setLayout(layout)
-
-        self.__gain.setRange(float('-inf'), float('inf'))
-        self.__gain.setDecimals(8)
 
     def __connect(self):
         """Connect appropriate signals."""

@@ -27,7 +27,7 @@ from viperleed.guilib.measure.classes.abc import DeviceABC
 from viperleed.guilib.measure.classes.abc import DeviceABCErrors
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.classes.datapoints import QuantityInfo
-from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
+from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 
 
 _UNIQUE = qtc.Qt.UniqueConnection
@@ -743,9 +743,8 @@ class ControllerABC(DeviceABC):
              'requires a large step.')
             )
         for option_name, display_name, tip in info:
-            widget = InfIntSpinBox()
-            widget.setSuffix(' ms')
-            widget.setSingleStep(10)
+            widget = CoercingSpinBox(step=10, suffix=' ms')
+            widget.setMinimum(0)
             handler.add_option(
                 'measurement_settings', option_name, handler_widget=widget,
                 display_name=display_name, tooltip=tip
@@ -1235,8 +1234,8 @@ class MeasureControllerABC(ControllerABC):
         handler = super().get_settings_handler()
         if not handler.has_section('measurement_settings'):
             handler.add_section('measurement_settings')
-        widget = InfIntSpinBox()
-        widget.setMinimum(1)
+        widget = CoercingSpinBox(soft_range=(1, float('inf')))
+        widget.setMinimum(0)
         tip = ("<nobr>The number of measurements the controller should"
                "</nobr> average over before returning a value to the PC.")
         handler.add_option('measurement_settings', 'nr_samples',

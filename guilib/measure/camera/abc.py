@@ -33,8 +33,8 @@ from viperleed.guilib.measure.classes.abc import DeviceABCErrors
 from viperleed.guilib.measure.classes.abc import QObjectSettingsErrors
 from viperleed.guilib.measure.widgets.roieditor import ROIEditor
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
-from viperleed.guilib.measure.widgets.spinboxes import InfIntSpinBox
-from viperleed.guilib.measure.widgets.spinboxes import TolerantCommaSpinBox
+from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.guilib.measure.widgets.spinboxes import CoercingSpinBox
 
 
 # pylint: disable=too-many-lines,too-many-public-methods
@@ -802,12 +802,11 @@ class CameraABC(DeviceABC):
         # _widget is used for in each portion of filling the handler
 
         # Exposure time in ms
-        _widget = TolerantCommaSpinBox()                                          # TODO: use prefix-adaptive widget
-        _widget.setRange(*self.get_exposure_limits())
-        _widget.setSuffix(" ms")
+        _widget = CoercingDoubleSpinBox(soft_range=self.get_exposure_limits(),  # TODO: use prefix-adaptive widget
+                                        decimals=2, step=5., suffix=' ms')
         _widget.setStepType(_widget.AdaptiveDecimalStepType)
-        _widget.setSingleStep(5.0)
         _widget.setAccelerated(True)
+        _widget.setMinimum(_widget.soft_minimum)
         _tip = (
             "<nobr>Exposure time used for each frame. For LEED\u2011IV "
             "videos it is best</nobr> to choose the exposure time <b>as long "
@@ -820,9 +819,8 @@ class CameraABC(DeviceABC):
                            handler_widget=_widget, tooltip=_tip)
 
         # Gain in dB                                                            # TODO: add also a gain factor!
-        _widget = TolerantCommaSpinBox()
-        _widget.setRange(*self.get_gain_limits())
-        _widget.setSuffix(" dB")
+        _widget = CoercingDoubleSpinBox(soft_range=self.get_gain_limits(),
+                                        decimals=1, suffix=" dB")
         _widget.setAccelerated(True)
         _tip = (
             "<nobr>ADC gain used for each frame. For LEED\u2011IV videos it "
@@ -838,8 +836,8 @@ class CameraABC(DeviceABC):
             _range = self.get_n_frames_limits()
         else:
             _range = (1, float('inf'))
-        _widget = InfIntSpinBox()
-        _widget.setRange(*_range)
+        _widget = CoercingSpinBox(soft_range=_range)
+        _widget.setMinimum(0)
         _widget.setAccelerated(True)
         _tip = (
             "<nobr>Number of frames to be averaged for saving images.</nobr> "
@@ -879,8 +877,8 @@ class CameraABC(DeviceABC):
                            tooltip=_tip)
 
         # Binning factor                                                        # TODO: add a mention of the image size after processing. Also, add some warning if > 10
-        _widget = qtw.QSpinBox()
-        _widget.setRange(*self.get_binning_limits())
+        _widget = CoercingSpinBox(soft_range=self.get_binning_limits())
+        _widget.setMinimum(0)
         _tip = (
             "<nobr>Binning factor used to reduce the size of images. Binning "
             "consists</nobr> in averaging pixel intensities over a (bin "

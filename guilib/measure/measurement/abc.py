@@ -639,7 +639,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
              'supposed</nobr> to stop.'),
             )
         for option_name, display_name, tip in info:
-            widget = CoercingDoubleSpinBox(range_=(0, 1000), suffix=' eV')
+            widget = CoercingDoubleSpinBox(decimals=1, soft_range=(0, 1000),
+                                           suffix=' eV')
             handler.add_option(
                 'measurement_settings', option_name, handler_widget=widget,
                 display_name=display_name, tooltip=tip
