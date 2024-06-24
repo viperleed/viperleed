@@ -566,6 +566,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         """
         self.__aborted = False
         self.settings.set('measurement_settings', 'was_aborted', 'False')
+        self.settings.set('measurement_info', 'started',
+                          strftime("%Y-%m-%d_%H-%M-%S", localtime()))
         self.running = True
         self.current_energy = self.start_energy
 
@@ -623,6 +625,21 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         """
         self.check_before_getting_settings_handler()
         handler = SettingsHandler(self.settings, display_config=True)
+
+        handler.add_section('measurement_info')
+        line_edit = qtw.QLineEdit()
+        handler.add_option('measurement_info', 'tag',
+                           handler_widget=line_edit,
+                           display_name='Measurement tag',
+                           )
+
+        text_field = qtw.QTextEdit()
+        text_field.setMaximumHeight(90)                                         # TODO: How to do this properly?
+        handler.add_option('measurement_info', 'extra',
+                           handler_widget=text_field,
+                           display_name='Aditional information',
+                           )
+
         handler.add_section('measurement_settings')
         type_display = qtw.QLabel()
         type_display.setText(type(self).__name__)
@@ -676,7 +693,11 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         tmp_path = self.__temp_dir
         base_path = tmp_path.parent
-        final_path = base_path / strftime("%Y-%m-%d_%H-%M-%S", localtime())
+        tag = self.settings.get('measurement_info', 'tag', fallback='')
+        name_tag = (' ' + tag) if tag else ''
+        current_time = strftime("%Y-%m-%d_%H-%M-%S", localtime())
+        self.settings.set('measurement_info', 'ended', current_time)
+        final_path = base_path / (current_time + name_tag)
         move_to_archive = []
 
         if self.data_points:

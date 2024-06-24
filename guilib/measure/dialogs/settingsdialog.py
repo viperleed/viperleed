@@ -90,6 +90,7 @@ _DEFAULT_HOOKS = {
     qtw.QPushButton: ('isChecked', 'setChecked', 'toggled', bool),              # BUG: converter(value) == bool(value) == True whatever non-empty string value! -> perhaps literal_eval?
     qtw.QAction: ('isChecked', 'setChecked', 'toggled', bool),                  # BUG: converter(value) == bool(value) == True whatever non-empty string value! -> perhaps literal_eval?
     PathSelector: ('get_posix_path', 'set_path', 'path_changed', None),
+    qtw.QTextEdit: ('toHtml', 'setHtml', 'textChanged', None),
     }
 
 
