@@ -632,10 +632,9 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                            handler_widget=line_edit,
                            display_name='Measurement tag',
                            )
-
         text_field = qtw.QTextEdit()
-        text_field.setMaximumHeight(90)                                         # TODO: How to do this properly?
-        handler.add_option('measurement_info', 'extra',
+        text_field.setMaximumHeight(int(text_field.sizeHint().height()/2))
+        handler.add_option('measurement_info', 'info',
                            handler_widget=text_field,
                            display_name='Aditional information',
                            )
