@@ -1,4 +1,7 @@
 [build-system]
+# Note for pip install -e .: requires pip >=21.3 that introduced
+# editable-install capabilities from a pyproject.toml file instead
+# of setup.py or setup.conf
 requires = ['setuptools']
 build-backend = 'setuptools.build_meta'
 # TODO: check version of setuptools
@@ -11,17 +14,37 @@ requires-python = '>=3.7'
 dynamic = ['version']
 readme = 'README.md'
 dependencies = [
+    'fortranformat',
+    'matplotlib',
     'numpy',
-    'wrapt',
+    'psutil',
     'quicktions',
     'scipy',
-    'sklearn',
-    'matplotlib',
-    'psutil',
+    'scikit-learn',
+    'wrapt',
+    ]
+keywords = [
+    'LEED',
+    'electron',
+    'diffraction',
+    'IV',
+    'I(V)',
+    'surface',
+    'science',
+    'physics',
     ]
 
-[project.license]
-# TODO: add license information
+[project.urls]
+Homepage = 'https://viperleed.org'
+
+[tool.setuptools]
+packages = ["viperleed"]
+
+[tool.setuptools.dynamic]
+version = {attr = "viperleed.__version__"}
+
+[project.scripts]
+viperleed = "viperleed.cli:ViPErLEEDMain.run_as_script"
 
 [project.optional-dependencies]
 GUI = [
@@ -32,9 +55,35 @@ hardware = [
     'requests',
     ]
 dev = [
+    'build',
     'line_profiler',
-    'sphinx',
-    'pytest',
+    'make-to-batch',   # To generate Windows make.bat from Makefiles
+    'pytest-cases',
+    'pytest-subtests',
+    'pytest<8',  # Till Issue #337 of pytest-cases is fixed
+    'twine',
+    ]
+doc = [  # Requires >= py3.9!
+    'ase',         # For notebooks
+    'myst-nb>1.0',
+    'myst-parser>1.0',
+    'setuptools',  # Workaround for sphinxcontrib-bibtex #345
+    'sphinx-rtd-theme',
+    'sphinx>6.1',
+    # For now take the sphinx-argparse fork by @michele-riva, till
+    # the edits are released in the main sphinx-argparse repo
+    'sphinx-argparse@git+https://github.com/michele-riva/sphinx-argparse@collated-edits',
+    'sphinx-copybutton',
+    'sphinx-design',
+    'sphinxcontrib-bibtex',
+    'sphinxcontrib-qthelp',
+    'sphinxcontrib-spelling',
+    'sphinxcontrib-svg2pdfconverter',
+    # The following modules are not necessary for sphinx, but are
+    # needed for the build/scripts/embed_fonts.py utility
+    'brotli',    # Some dependency of parsel? We do not use it explicitly
+    'fontTools',
+    'parsel',
     ]
 
 [tool.pytest.ini_options]
