@@ -38,11 +38,12 @@ from pathlib import Path
 from types import MethodType as _bound_method
 import warnings
 
-from PyQt5 import (QtCore as qtc,
-                   QtWidgets as qtw)
+from PyQt5 import QtCore as qtc
+from PyQt5 import QtWidgets as qtw
 
 from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.measure.widgets.fieldinfo import FieldInfo
+from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
 
 # TODO: find a proper mechanism to make "invalid" values disable
 # "Apply" or "Ok" (but leave "Cancel" enabled). Probably equip
@@ -1010,7 +1011,7 @@ class SettingsDialog(qtw.QDialog):
         self.handler.update_widgets()  # Fill widgets from settings
 
         # Dialog buttons
-        _bbox = qtw.QDialogButtonBox
+        _bbox = QNoDefaultDialogButtonBox
         buttons = _bbox(_bbox.Ok | _bbox.Cancel | _bbox.Apply)
 
         self.__ctrls['apply'] = apply_btn = buttons.buttons()[-1]

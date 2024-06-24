@@ -705,6 +705,10 @@ class ControllerABC(DeviceABC):
         already contains the following settings:
         - the handler of self.serial                                            # TODO! Probably all settings are advanced, except, perhaps the port name
 
+        Use the QNoDefaultPushButton from the basewidgets module
+        in order to prevent any button from being set as the
+        default button of the dialog.
+
         and, if self.sets_energy:
         - 'measurement_settings'/'i0_settle_time'
         - 'measurement_settings'/'hv_settle_time'
@@ -1215,6 +1219,10 @@ class MeasureControllerABC(ControllerABC):
         The base-class implementation returns a handler that
         already contains the following settings:
         - the handler of self.serial
+
+        Use the QNoDefaultPushButton from the basewidgets module
+        in order to prevent any button from being set as the
+        default button of the dialog.
 
         and, if self.sets_energy:
         - 'measurement_settings'/'i0_settle_time'

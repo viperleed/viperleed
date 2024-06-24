@@ -33,7 +33,7 @@ class ButtonWithLabel(qtw.QWidget):
         """
         super().__init__(**kwargs)
         self.label = qtw.QLabel()
-        self.button = qtw.QPushButton()
+        self.button = QNoDefaultPushButton()
         self._compose(tight)
 
     def _compose(self, tight):
@@ -70,3 +70,29 @@ class QCheckBoxInvertedSignal(qtw.QCheckBox):
     def emit_inverted_signal(self, value):
         """Emit unchecked signal."""
         self.unchecked.emit(not bool(value))
+
+
+class QNoDefaultDialogButtonBox(qtw.QDialogButtonBox):
+    """QDialogButtonBox without default button."""
+
+    def event(self, event):
+        """Overwrite event to skip setting default."""
+        if event.type() == qtc.QEvent.Show:
+            self._unset_default_buttons()
+            return qtw.QWidget().event(event)
+        return super().event(event)
+
+    def _unset_default_buttons(self):
+        """Ensure no buttons is a default."""
+        for button in self.buttons():
+            button.setAutoDefault(False)
+            button.setDefault(False)
+
+
+class QNoDefaultPushButton(qtw.QPushButton):
+    """QPushbutton that is not a default button."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialise button."""
+        super().__init__(*args, **kwargs)
+        self.setAutoDefault(False)

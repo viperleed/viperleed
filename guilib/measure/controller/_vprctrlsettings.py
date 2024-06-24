@@ -33,6 +33,7 @@ from viperleed.guilib.measure.serial.viperleedserial import (
     ViPErLEEDHardwareError, ExtraSerialErrors
     )
 from viperleed.guilib.measure.widgets.spinboxes import CoercingDoubleSpinBox
+from viperleed.guilib.widgets.basewidgets import QNoDefaultPushButton
 from viperleed.guilib.widgetslib import (change_control_text_color,
                                          move_to_front)
 
@@ -102,8 +103,8 @@ class SerialNumberEditor(qtw.QWidget):
         self.__ctrl = controller
 
         self.__edit = qtw.QLineEdit()
-        self.__rand_btn = qtw.QPushButton("Generate randomly")
-        self.__set_btn = qtw.QPushButton("Set")
+        self.__rand_btn = QNoDefaultPushButton("Generate randomly")
+        self.__set_btn = QNoDefaultPushButton("Set")
         self.__old_serial = ''
         self.notify_ = self.serial_number_changed
 

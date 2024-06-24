@@ -610,6 +610,10 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         appropriate sections and/or options to it using the
         handler.add_section, and handler.add_option methods.
 
+        Use the QNoDefaultPushButton from the basewidgets module
+        in order to prevent any button from being set as the
+        default button of the dialog.
+
         The base-class implementation returns a handler that
         already contains the following settings:
             'measurement_settings'/'start_energy'
@@ -636,7 +640,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         text_field.setMaximumHeight(int(text_field.sizeHint().height()/2))
         handler.add_option('measurement_info', 'info',
                            handler_widget=text_field,
-                           display_name='Aditional information',
+                           display_name='Additional information',
                            )
 
         handler.add_section('measurement_settings')
