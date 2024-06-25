@@ -116,7 +116,7 @@ Supplementary files
 
 ViPErLEED produces supplementary files that are required during execution, that
 contain intermediate results or that may be of interest for debugging purposes.
-These files are stored in the ``SUPP`` subfolder of the ``work`` directory.
+These files are stored in the ``SUPP`` subfolder of the root directory.
 
 +----------------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------+
 | File                                                                                         | Function                                                                                  |
