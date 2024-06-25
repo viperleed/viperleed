@@ -231,4 +231,10 @@ In case of automated multiple-search runs (which can be specified in the
 It contains one subfolder for each intermediate run, storing input and
 output files that will be overwritten during subsequent runs.
 
+.. note:
+    For :ref:`multi-domain calculations<domain_calculation>` the input structure
+    will be different, as separate directories are used for the inputs of each
+    domain. See the :ref:`domain-calculation section<domain_calculation>` for 
+    more details.
+
 .. todo:: Add also a few words about bookkeper here.
