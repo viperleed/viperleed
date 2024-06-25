@@ -179,6 +179,8 @@ a subfolder of :file:`my_surface`.
     │   └── ...
     ├── SUPP/
     │   ├── POSCAR_bulk
+    │   ├── POSCAR_bulk_appended
+    │   ├── POSCAR_oricell
     │   └── ...
     ├── Tensors/
     │   ├── Tensors_001.zip
@@ -217,7 +219,11 @@ The ``OUT`` directory (created automatically) contains the results of the
 calculation, see the :ref:`list of output files<output_files>` for details.
 |calc| also produces some :ref:`supplementary files<supp_files>`, stored
 in the ``SUPP`` directory. These files contain intermediate results or may
-be of interest for debugging purposes.
+be of interest for debugging purposes. For example, the files
+:ref:`POSCAR_bulk, POSCAR_bulk_appended<poscar_bulk>` and 
+:ref:`POSCAR_oricell<_poscar_oricell>` which are helpful to asses the
+correctness of the detected plane group and bulk structure will be stored in the
+``SUPP`` directory.
 
 If a :ref:`refercence calculation<ref-calc>` is run with
 :ref:`Tensor output<TENSOR_OUTPUT>`, a ``Tensors`` directory will
