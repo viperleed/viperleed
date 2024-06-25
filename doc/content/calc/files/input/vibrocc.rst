@@ -79,7 +79,7 @@ line ``= regex off``. Note that if regular expressions is on, the asterisk
 
 On the right-hand side of the '=' sign, you can either give only one value, or
 give multiple values for different elements. Here, the elements are either the
-ones found in the :ref:`POSCAR` file, or the ones defined in :ref:`ELSPLIT`.
+ones found in the :ref:`POSCAR` file, or the ones defined in :ref:`element_mix`.
 If element names in the POSCAR file and in ELEMENT_MIX overlap, the assignment
 will nevertheless be made only for the chemical element, see
 :ref:`element name collision<ElementNameCollision>`.
@@ -87,7 +87,7 @@ If only one value is given in the ``Vibrational Amplitudes`` block, the
 vibrational amplitudes for all elements in this site will be set to this
 value. If only one value is given in the ``Occupations`` block, this value
 will be set for the main site element (e.g. O for the O_top site), or for
-all main elements in a site affected by :ref:`ELSPLIT`. The occupations for
+all main elements in a site affected by :ref:`element_mix`. The occupations for
 all other elements will be set to zero for this site.
 
 Total occupation in a site can be smaller than one, which will be interpreted
@@ -98,9 +98,9 @@ re-scaled to 1.
 For simple systems, the ``Occupations`` block need not contain values for
 elements with 100% site occupation, and can even be left out entirely. The
 default value is 1.0 for the site's main element and 0.0 for all other
-elements. If the site is affected by :ref:`ELSPLIT`, the occupation will
-be evenly split between the sub-elements defined in :ref:`ELSPLIT`. A
-simple example with 100% occupations and no :ref:`ELSPLIT`  might therefore
+elements. If the site is affected by :ref:`element_mix`, the occupation will
+be evenly split between the sub-elements defined in :ref:`element_mix`. A
+simple example with 100% occupations and no :ref:`element_mix`  might therefore
 look like this:
 
 ::
@@ -124,7 +124,7 @@ occupational offsets from the site's values. This has two use cases:
    different values for these atoms. These values will be written to the
    VIBROCC_OUT file to intialize a potential continuation job with the exact
    results from the previous search, instead of an average.
--  If there are multiple elements sharing a site via :ref:`ELSPLIT`, the
+-  If there are multiple elements sharing a site via :ref:`element_mix`, the
    positions of the different chemical species may be different depending on
    the element. This cannot be mapped in the POSCAR file or the reference
    calculation of :term:`TensErLEED`, but can be mapped to the calculation
