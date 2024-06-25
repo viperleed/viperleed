@@ -221,7 +221,7 @@ calculation, see the :ref:`list of output files<output_files>` for details.
 in the ``SUPP`` directory. These files contain intermediate results or may
 be of interest for debugging purposes. For example, the files
 :ref:`POSCAR_bulk, POSCAR_bulk_appended<poscar_bulk>` and 
-:ref:`POSCAR_oricell<_poscar_oricell>` which are helpful to asses the
+:ref:`POSCAR_oricell<poscar_oricell>` which are helpful to asses the
 correctness of the detected plane group and bulk structure will be stored in the
 ``SUPP`` directory.
 
@@ -237,7 +237,7 @@ In case of automated multiple-search runs (which can be specified in the
 It contains one subfolder for each intermediate run, storing input and
 output files that will be overwritten during subsequent runs.
 
-.. note:
+.. note::
     For :ref:`multi-domain calculations<domain_calculation>` the input structure
     will be different, as separate directories are used for the inputs of each
     domain. See the :ref:`domain-calculation section<domain_calculation>` for 
