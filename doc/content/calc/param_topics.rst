@@ -147,7 +147,7 @@ Inner potential
   +----------------------------------+-----------------------------------------------------------+
   | :ref:`MUFTIN`                    | Real part of the inner potential                          |
   +----------------------------------+-----------------------------------------------------------+
-  | :ref:`INPOTZ`                    | How far from the topmost atom the inner potential begins  |
+  | :ref:`v0_z_onset`                | How far from the topmost atom the inner potential begins  |
   +----------------------------------+-----------------------------------------------------------+
 
 Computational setup

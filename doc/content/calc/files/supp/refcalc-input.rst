@@ -22,7 +22,7 @@ AUXLATGEO
 ---------
 Lateral geometry information; contains the energy range to calculate
 (from :ref:`THEO_ENERGIES`), the surface and bulk unit-cell vectors
-(from :ref:`POSCAR` and :ref:`SUPERLATTICE`), and :ref:`INPOTZ`.
+(from :ref:`POSCAR` and :ref:`SUPERLATTICE`), and :ref:`v0_z_onset`.
 
 .. _auxgeo:
 
