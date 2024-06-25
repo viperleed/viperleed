@@ -191,7 +191,7 @@ a subfolder of :file:`my_surface`.
     ├── IVBEAMS              <-- input, or created by calc
     ├── PARAMETERS           <-- input, may be edited by calc
     ├── PHASESHIFTS          <-- input, or created by calc
-    ├── POSCAR
+    ├── POSCAR               <-- input, may be edited by calc
     ├── POSCAR_user          <-- input
     └── VIBROCC              <-- input, or created by calc
 
