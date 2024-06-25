@@ -5,9 +5,9 @@
 
 .. _how_to_run:
 
-==================================
-Directory structure and how to run
-==================================
+=====================================
+How to run and directory organization
+=====================================
 
 In ViPErLEED, each set of calculations for one system must have its own
 directory. This is because the input and output files have **case sensitive**,
@@ -144,8 +144,8 @@ the :ref:`viperleed command<cli_calc>`.
 
 .. _dir_organization_output:
 
-Output organization
-===================
+Directory organization
+======================
 
 |calc| executes calculations in a work directory, distinct from the directory
 containing the input files. The path to such work directory can be specified
