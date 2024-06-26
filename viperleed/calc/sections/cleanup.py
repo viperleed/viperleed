@@ -59,6 +59,7 @@ _SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
 # files to go in OUT
 _OUTFILES = ("THEOBEAMS.csv", "THEOBEAMS_norm.csv", "THEOBEAMS.pdf",
              "PatternInfo.tlm", "SD.TL", "refcalc-fd.out", "refcalc-amp.out",
+             "experiment_symmetry.ini",
              "Rfactor_plots_refcalc.pdf", "control.chem",
              "Search-progress.pdf", "Search-progress.csv",
              "Search-report.pdf", "FITBEAMS.csv", "FITBEAMS_norm.csv",

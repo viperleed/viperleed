@@ -34,7 +34,7 @@ from viperleed.calc.classes.slab import WrongVacuumPositionError
 from viperleed.calc.files import beams as iobeams
 from viperleed.calc.files import iotensors
 from viperleed.calc.files import parameters
-from viperleed.calc.files import patterninfo
+from viperleed.calc.files import experiment_symmetry
 from viperleed.calc.files import phaseshifts
 from viperleed.calc.files import poscar
 from viperleed.calc.files import vibrocc
@@ -357,7 +357,7 @@ def initialization(sl, rp, subdomain=False):
         raise
 
     if not subdomain:
-        patterninfo.writePatternInfo(sl, rp)
+        experiment_symmetry.write_experiment_symmetry(sl, rp)
 
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
         if rp.fileLoaded["EXPBEAMS"]:
