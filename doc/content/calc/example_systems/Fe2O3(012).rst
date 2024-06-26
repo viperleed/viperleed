@@ -147,15 +147,13 @@ This setting won't have any effect initially, since the polar angle is set to
 :math:`\theta = 0°`. However, we will optimize :math:`\theta` later on, at 
 which point the value of :math:`\phi` will be important.
 
-**TODO**: Update with new fe2o3 calculations.
-Initial vibrational amplitudes can be calculated based on the sample's Debye
-temperature with the parameters :ref:`T_DEBYE`, :ref:`T_EXPERIMENT` and
-:ref:`VIBR_AMP_SCALE`. Instead, you can also provide the amplitudes directly 
-in the :ref:`VIBROCC` file:
-
-.. literalinclude :: /_static/example_systems/Fe2O3(012)-(1x1)/VIBROCC
-   :language: console
-   :caption: VIBROCC
+To set initial vibrational amplitudes for the surface atoms, we can either
+supply a :ref:`VIBROCC` file, or let ViPErLEED calculate them based on the
+Debye temperature of the sample.
+In this case, we set the Debye temperature and experiment temperature via the 
+:ref:`T_DEBYE`, :ref:`T_EXPERIMENT` parameters.
+Note that this Debye temperature was chosen based on literature values and an
+previous optimization run. For more details, see the main ViPErLEED publication.
 
 
 .. _sec_fe2o3_init:
