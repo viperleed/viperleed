@@ -15,14 +15,14 @@ The bookkeeper has four modes as described below.
 It runs automatically before and after each ViPErLEED calculation, but can also be run manually at any time.
 Most importantly, the bookkeeper automatically moves and updates the file
 :ref:`PARAMETERS<parameters>`, :ref:`POSCAR<poscar>` and
-:ref:`VIBROCC<viboccin>`.
+:ref:`VIBROCC<vibrocc>`.
 By default these files are overwritten by the output files of the previous calculation, so that a new calculation can
 be started without having to manually copy the output files.
 
 - **Archive**: Stores the results of the previous calculation into the 
   ``history`` directory, and overwrites the input files 
   :ref:`PARAMETERS<parameters>`, :ref:`POSCAR<poscar>` and
-  :ref:`VIBROCC<viboccin>` with the results of the previous calculation stored
+  :ref:`VIBROCC<vibrocc>` with the results of the previous calculation stored
   in the ``OUT`` directory. The previous input files are renamed to 
   ``PARAMETERS_ori``, ``POSCAR_ori`` and ``VIBROCC_ori`` for reference
   Runs automatically **at the end of every calculation**.
