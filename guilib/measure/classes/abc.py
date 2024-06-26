@@ -199,10 +199,8 @@ class QObjectWithSettingsABC(QObjectWithError, metaclass=QMetaABC):
             If multiple matching default settings were found
             and an exact match was asked for.
         """
-        # Make a dummy SettingsInfo that will
-        # be used to find settings from default name.
         settings = self.find_matching_settings_files(
-            find_from, DEFAULTS_PATH, match_exactly, default=True
+            find_from, DEFAULTS_PATH, match_exactly, True
             )
         if not settings:
             # No default settings was found.
