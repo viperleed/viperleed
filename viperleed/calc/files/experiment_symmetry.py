@@ -40,7 +40,7 @@ def write_experiment_symmetry(sl, rp, filename='experiment_symmetry.ini'):
         with open(filename, 'w') as wf:
             wf.write(output)
     except Exception:
-        logger.error(f'Failed to write '{filename}')
+        logger.error(f'Failed to write {filename}')
         raise
     logger.debug(f'Wrote to {filename} successfully')
     return
