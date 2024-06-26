@@ -1,8 +1,10 @@
 viperleed.calc is released as open-source under the GPLv3 (or later) license.
+The ViPErLEED documentation is released under the CC BY 4.0 license.
 Copyright (c) 2019–2024, ViPErLEED Developers.
 The GPLv3 (or later) license applies to all files in the master branch of the
-main viperleed repository (https://github.com/viperleed/viperleed). Other
-branches are to be considered un-released development versions.
+main viperleed repository (https://github.com/viperleed/viperleed), except for
+the documentation. Other branches are to be considered un-released development
+versions.
 
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
