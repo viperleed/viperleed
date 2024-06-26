@@ -26,7 +26,7 @@ etc.) and translate the information into :term:`TensErLEED` input files.
     iosuperpos
     ivplot
     parameters
-    patterninfo
+    experiment_symmetry_ini
     poscar
     searchpdf
     vibrocc
