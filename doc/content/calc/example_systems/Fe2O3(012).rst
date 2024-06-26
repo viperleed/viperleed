@@ -19,6 +19,12 @@ Here we use the bulk-truncated (1×1) surface as an example system of an
 oxide surface with medium complexity and will compare experimental |LEED-IV|
 data with a theory calculation in ViPErLEED.
 
+This example is a simplified version of the example calculation shown in the
+main ViPErLEED paper :cite:p:`viperleedCalc`. For more details on the full
+calculation, see the paper and the supplementary information.
+
+.. todo:: add citation for supplementary information
+
 .. only:: html
 
    All input files needed to follow along on your own machine can be found
@@ -379,6 +385,9 @@ In this case, we found that by first performing another looped structure
 optimization for the first two layers (atoms ``* L1-2``), and then adding the
 third-layer atoms (atoms ``* L1-3``) to the optimization, we could reliably
 reduce the |R factor| to about :math:`R_\mathrm{P} \approx 0.16`.\ [#]_
+
+For reference, the final |R factor| obtained by in the more detailed calculation
+discussed in the main ViPErLEED paper was :math:`R_\mathrm{P} = 0.1537`.
 
 
 .. [#] Optimizing all three layers right away with the default convergence
