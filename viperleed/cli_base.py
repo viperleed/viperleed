@@ -298,6 +298,7 @@ class ViPErLEEDCLI:
             return tuple()
         base_path = Path(importlib.util.find_spec(module_name).origin).parent
         all_modules = [module
+                       # str(Path) due to cpython/issues/88227
                        for module in pkgutil.iter_modules((str(base_path),))
                        if module.name not in {'__main__', CLI_MODULE_NAME}]
         # All the modules are potentially OK

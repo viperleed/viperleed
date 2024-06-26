@@ -33,6 +33,18 @@ command-line interface (see :ref:`here<how_to_run>`).
 An interface to the Atomic Simulation Environment (:term:`ASE`) is
 :ref:`also available<aseapi>`.
 
+You can also import the ``viperleed`` package and any of its functionality
+in your own Python code. See :ref:`api_index` for more details.
 
-.. todo::
-    Mention you can import the package and use it in your own code.
+.. toctree::
+    :maxdepth: 1
+    
+    calc/install_tensor_leed
+    calc/examples
+    calc/conventions
+    How to run<calc/how_to_run>
+    calc/work_segments
+    calc/files
+    Parameters<calc/param_topics>
+    calc/utilities/bookkeeper_cli
+    calc/utilities

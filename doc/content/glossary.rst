@@ -21,6 +21,16 @@ Glossary
     C
       The C programming language.
 
+    CC BY 4.0
+      Creative Commons Attribution 4.0 License.
+      This documentation for all parts of the ViPErLEED project is licensed
+      under the CC BY 4.0 license.
+      The license allows free sharing and adaptation of the source material,
+      but requires attribution to the original authors (e.g. via citation in a
+      scientific publication).
+      For more details see
+      `here <https://creativecommons.org/licenses/by/4.0/>`__.
+
     CLI
       Command-line interface
 
@@ -36,14 +46,13 @@ Glossary
       Density functional theory
 
     Environment variable
-      A variable that is set in the environment of a process.
-      It is used to pass information to a process.
-      ViPErLEED uses the environment variable `VIPERLEED_TENSORLEED` to locate
-      the TensErLEED source code if the path is not given explicitly.
-      See also :ref:`here<how_to_run>`.
+      A variable that is set in the environment of a process. It is used to
+      pass information to a process. ViPErLEED uses the environment variable
+      :envvar:`VIPERLEED_TENSORLEED` to locate the TensErLEED source code if
+      the path is not given explicitly. See also :ref:`here<how_to_run>`.
 
     fcc
-      Face-centred-cubic crystal structure.
+      Face-centered-cubic crystal structure.
 
     Fortran
       The Fortran programming language.
@@ -70,6 +79,13 @@ Glossary
 
     ifort
       Intel Fortran compiler.
+
+    ImageJ
+      ImageJ is a public domain image processing and analysis software commonly
+      used in the scientific community.
+      The ViPErLEED spot-tracker, curve editor and several associated utilities
+      are implemented as ImageJ plugins.
+      See also the `ImageJ homepage <https://imagej.net/ij/>`__.
 
     Jupyter
       The Jupyter project for interactive computing.

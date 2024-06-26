@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['../viperleed/bookkeeper.py'],
+a = Analysis(['../viperleed/calc/bookkeeper.py'],
              binaries=[],
              datas=[],
              hiddenimports=[],

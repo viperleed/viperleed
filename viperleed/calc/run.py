@@ -97,8 +97,6 @@ def run_calc(system_name=None,
     logger.info(f"Starting new log: {log_name}\nTime of execution (UTC): "
                 + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     logger.info(f"This is ViPErLEED version {__version__}\n")
-    logger.info("! THIS VERSION IS A PRE-RELEASE NOT MEANT FOR PUBLIC "         # TODO: remove for v1.0
-                "DISTRIBUTION !\n")
 
     tmp_manifest = ["SUPP", "OUT", log_name]
     try:

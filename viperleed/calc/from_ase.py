@@ -292,24 +292,30 @@ def run_from_ase(exec_path, ase_object, inputs_path=None,
 
     # We are ready to run ViPErLEED! Have fun!
     try:
-        run_calc(slab=slab,
-                 preset_params=_make_preset_params(rparams, slab))
+        exit_code = run_calc(slab=slab,
+                             preset_params=_make_preset_params(rparams, slab))
     except Exception as err:
         # If ViPErLEED fails, move back to home directory
         os.chdir(home)
         raise RuntimeError("ViPErLEED calculation failed") from err
 
-    # ViPErLEED should have suceeded if you arrive here. However, we may not
+    if exit_code:
+        os.chdir(home)
+        raise RuntimeError("ViPErLEED calculation failed. "
+                           "See log file for details.")
+
+    # ViPErLEED should have succeeded if you arrive here. However, we may not
     # have run a refcalc (id == 1). In that case, return empty strings.
     if 1 not in rparams.RUN:
         os.chdir(home)
         return "", "", "", rparams.V0_IMAG
 
     # read out the THEOBEAMS.csv file and complex amplitudes
-    content_list = _read_refcalc_output(rparams)
-
-    # Move back home
-    os.chdir(home)
+    try:
+        content_list = _read_refcalc_output(rparams)
+    finally:
+        # Always move back home, even if there were errors
+        os.chdir(home)
 
     if cleanup_work:
         try:
@@ -434,7 +440,7 @@ def _make_work_dir(exec_path):
     return work_path
 
 
-def _read_refcalc_output(rparams):
+def _read_refcalc_output(rpars):
     """Return the contents of the output files produced by a refcalc."""
     # List of file name and earliest version in which it appeared
     output_files = (
@@ -450,7 +456,7 @@ def _read_refcalc_output(rparams):
         if _path.is_file():
             with _path.open("r", encoding="utf-8") as fproxy:
                 content_str = fproxy.read()
-        elif rparams.TL_VERSION >= min_version:
+        elif rpars.TL_VERSION >= min_version:
             _LOGGER.error(f"Could not find file {filename}")
         content_list.append(content_str)
     return content_list
@@ -521,8 +527,8 @@ def rfactor_from_csv(                                                           
     if not _HAS_NEW_RFACTOR:
         raise ModuleNotFoundError(
             "Missing R-factor compiled Fortran extension module. "
-            "Run make in viperleed/calc/extensions, then try again",
-            name='viperleed.calc.extensions.rfactor'
+            "Run make in viperleed/extensions, then try again",
+            name='viperleed.extensions.rfactor'
             )
 
     # Use Pendry R-factor - TODO: discuss if this should be a user
@@ -797,6 +803,8 @@ def plot_iv_from_csv(
     for file, is_content in zip(beam_file, beam_file_is_content):
         tmp_file = StringIO(file) if is_content else file
         beam_list = readOUTBEAMS(filename=tmp_file, sep=",")
+        if not beam_list:
+            continue
 
         if which_beams == [] or which_beams == "all" or which_beams is None:
             pass
@@ -824,6 +832,10 @@ def plot_iv_from_csv(
         else:
             for jj in range(len(beam_labels)):
                 labels[jj] += ", " + beam_labels[jj]
+
+    if not all_beam_data:
+        # Nothing to plot
+        raise ValueError("No beams to plot in beam_file")
 
     return plot_iv(all_beam_data, output_file, labels=labels, legends=legends)
 

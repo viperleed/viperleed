@@ -57,6 +57,7 @@ hardware = [
 dev = [
     'build',
     'line_profiler',
+    'make-to-batch',   # To generate Windows make.bat from Makefiles
     'pytest-cases',
     'pytest-subtests',
     'pytest<8',  # Till Issue #337 of pytest-cases is fixed
@@ -69,10 +70,20 @@ doc = [  # Requires >= py3.9!
     'setuptools',  # Workaround for sphinxcontrib-bibtex #345
     'sphinx-rtd-theme',
     'sphinx>6.1',
+    # For now take the sphinx-argparse fork by @michele-riva, till
+    # the edits are released in the main sphinx-argparse repo
+    'sphinx-argparse@git+https://github.com/michele-riva/sphinx-argparse@collated-edits',
+    'sphinx-copybutton',
+    'sphinx-design',
     'sphinxcontrib-bibtex',
     'sphinxcontrib-qthelp',
     'sphinxcontrib-spelling',
     'sphinxcontrib-svg2pdfconverter',
+    # The following modules are not necessary for sphinx, but are
+    # needed for the build/scripts/embed_fonts.py utility
+    'brotli',    # Some dependency of parsel? We do not use it explicitly
+    'fontTools',
+    'parsel',
     ]
 
 [tool.pytest.ini_options]

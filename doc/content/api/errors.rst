@@ -1,8 +1,7 @@
 .. api_calc_errors:
 
-Errors
-======
-
+Exceptions
+==========
 
 
 .. autoexception:: viperleed.calc.classes.slab.SlabError

@@ -225,9 +225,9 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 # need a new figure
                 fig_exists = True # at least one fig exists
                 fig_index_on_page = 0
-                plt.tight_layout()
                 fig, axs = plt.subplots(yfigs, xfigs, figsize=figsize,
                                         squeeze=False)
+                fig.tight_layout()
                 axs = axs.flatten(order='C')  # flatten row-style
                 fig.subplots_adjust(left=(0.03 / (xfigs * gen_scaling*font_size/10)),
                                     right=(1 - 0.03 / (xfigs * gen_scaling*font_size/10)),
@@ -318,6 +318,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
                 a.axis('off')
     except Exception:
         logger.error("plot_iv: Error while compiling figures.", exc_info=True)
+    finally:
         logger.setLevel(loglevel)
 
     # if a filename is given write to PDF, else return list of figs

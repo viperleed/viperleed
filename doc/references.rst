@@ -1,6 +1,6 @@
-.. only:: html or text
+.. _references:
 
-   .. _references:
+.. only:: html or text
 
    ==========
    References

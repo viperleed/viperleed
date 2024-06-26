@@ -1,14 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-
 block_cipher = None
 
-
 a = Analysis(
-    ['../viperleed/calc.py'],
+    ['../viperleed/calc/__main__.py'],
     pathex=[],
     binaries=[],
-    datas=[('../viperleed/lib/_checksums.dat', 'viperleed/lib/'), ('../viperleed/tleedm.mplstyle', 'viperleed/')],
+    datas=[('../viperleed/calc/lib/_checksums.dat', 'viperleed/calc/lib/'),
+           ('../viperleed/calc.mplstyle', 'viperleed/')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
