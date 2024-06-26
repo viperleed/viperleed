@@ -144,13 +144,16 @@ discussed above, it is recommended to run the reference calculations separately
 beforehand for better control, and specify ``RUN = 2-3`` explicitly here.
 
 .. warning::
-  In the current version of the :ref:`bookkeeper`, archiving the results of a
-  domain calculations is implemented only in a rudimentary manner. Only
-  the :file:`history` folder and :file:`history.info` file for the root
-  directory (\ :file:`my_domain_calc` in :numref:`list_domains_directories`)
-  are handled automatically. For this reason, the ``--cont`` functionality
-  does not work as expected.
 
+  The :ref:`bookkeeper<bookkeeper>` functionality is only partially implemented
+  for domain calculations.
+  The bookkeeper will archive and clean up the top level directory as usual, but
+  the domain-specific directories will not be cleaned up.
+  To preserve the domain-specific output files, you must manually run the 
+  bookkeeper in each of the domain directories using the command
+  ``viperleed bookkeeper --archive``.
+  To clean the directories and remove old `_ori` and `.log` files, run the 
+  bookkeeper with the ``-clear`` flag.
 
 The DISPLACEMENTS file for domains
 ----------------------------------
