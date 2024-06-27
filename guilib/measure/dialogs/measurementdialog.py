@@ -54,7 +54,7 @@ class MeasurementDialog(qtw.QDialog):
         self._cfg_dir = Path(new_cfg_dir)
         had_no_path = True
         if self._ctrls['settings_folder'].path:
-            had_path = False
+            had_no_path = False
         self._ctrls['settings_folder'].path = self._cfg_dir
         if had_no_path:
             self._ctrls['settings_folder'].path_changed.emit(self._cfg_dir)
