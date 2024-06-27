@@ -1,4 +1,4 @@
-.. _experiment_symmetry_ini:
+.. _experiment_symmetry:
 
 experiment_symmetry.ini
 =======================
