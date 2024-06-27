@@ -50,6 +50,8 @@ OLD_TL_VERSION_NAMES = {
     '1.76': '1.7.6',
     }
 
+CURRENT_TL_VERSION = max([Version(v) for v in KNOWN_TL_VERSIONS])
+
 VERSION_FILE_NAME = 'version'
 
 _KNOWN_TENSORLEED_TOP_FOLDERS = {
