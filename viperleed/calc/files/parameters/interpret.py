@@ -922,10 +922,12 @@ class ParameterInterpreter:  # pylint: disable=too-many-public-methods
             self.rpars.setHaltingLevel(3)
             raise ParameterUnknownFlagError(param, f'{which!r}')
         if Section.FD_OPTIMIZATION.value not in self.rpars.RUN:                 # TODO: remove .value when using CalcSection in RUN
-            err_ = ('RUN does not include a full-dynamic-optimization section '
+            msg_ = ('RUN does not include a full-dynamic-optimization section '
                     f'(RUN = {Section.FD_OPTIMIZATION.value}). It makes no '
-                    'sense to provide an OPTIMIZE parameter')
-            raise SuperfluousParameterError(param, message=err_)
+                    'sense to provide an OPTIMIZE parameter. OPTIMIZE will be '
+                    'ignored.')
+            _LOGGER.warning(msg_)
+            self.rpars.setHaltingLevel(1)
         self.rpars.OPTIMIZE['which'] = which
         if not assignment.other_values:
             try:
