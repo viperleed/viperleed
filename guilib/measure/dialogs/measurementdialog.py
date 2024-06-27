@@ -39,6 +39,7 @@ class MeasurementDialog(qtw.QDialog):
             'type_selection': qtw.QComboBox(),
             'settings_folder': PathSelector(select_file=False),
             'settings_file': qtw.QComboBox(),
+            'clone_settings': qtw.QCheckBox(),
             }
         self._cfg_dir = Path()
         self._compose_and_connect()
@@ -70,12 +71,19 @@ class MeasurementDialog(qtw.QDialog):
         layout.addWidget(self._ctrls['type_selection'])
         layout.addWidget(self._ctrls['settings_folder'])
         layout.addWidget(self._ctrls['settings_file'])
+        self._ctrls['clone_settings'].setText('Create new settings'
+                                              ' from old settings.')
+        self._ctrls['clone_settings'].setLayoutDirection(qtc.Qt.RightToLeft)
+        layout.addWidget(self._ctrls['clone_settings'])
         layout.addWidget(buttons)
         self._ctrls['settings_folder'].path_changed.connect(
             self._find_appropriate_settings
             )
         self._ctrls['type_selection'].currentIndexChanged.connect(
             self._find_appropriate_settings
+            )
+        self._ctrls['settings_file'].currentTextChanged.connect(
+            self._switch_clone_settings
             )
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
@@ -87,6 +95,9 @@ class MeasurementDialog(qtw.QDialog):
         cls = self._ctrls['type_selection'].currentData()
         settings_folder = self._ctrls['settings_folder'].path
         self._ctrls['settings_file'].clear()
+        self._ctrls['settings_file'].addItem(
+            'Create new settigns from default settings', 'default'
+            )
         if not settings_folder or settings_folder == Path():
             return
         matching_settings = cls.find_matching_settings_files(
@@ -95,19 +106,32 @@ class MeasurementDialog(qtw.QDialog):
         for settings in matching_settings:
             self._ctrls['settings_file'].addItem(settings.stem, settings)
 
+    def _clone_and_return_settings(self, cls, source_path):
+        """Take from source path and clone to a path."""
+        current_time = strftime("_%Y-%m-%d_%H-%M-%S", localtime())
+        name = cls.__name__
+        settings_path = self.cfg_dir / (name + current_time + '.ini')
+        shutil.copy2(source_path, settings_path)
+        return settings_path
+
+    @qtc.pyqtSlot()
+    def _switch_clone_settings(self, *_):
+        """Disable/enable clone settings choice."""
+        current_choice = self._ctrls['settings_file'].currentData()
+        enable = False if current_choice == 'default' else True
+        self._ctrls['clone_settings'].setEnabled(enable)
+
     def accept(self):
         """Emit selected measurement type and settings path and close."""
         cls = self._ctrls['type_selection'].currentData()
         settings_path = self._ctrls['settings_file'].currentData()
+        default_path = cls.find_matching_settings_files(None, DEFAULTS_PATH,
+                                                        False, True)[0]
 
-        if not settings_path:
-            default_path = cls.find_matching_settings_files(
-                None, DEFAULTS_PATH, False, True
-                )[0]
-            current_time = strftime("_%Y-%m-%d_%H-%M-%S", localtime())
-            name = cls.__name__
-            settings_path = self.cfg_dir / (name + current_time + '.ini')
-            shutil.copy2(default_path, settings_path)
+        if not settings_path or settings_path in ('default', default_path):
+            settings_path = self._clone_and_return_settings(cls, default_path)
+        elif self._ctrls['clone_settings'].isChecked():
+            settings_path = self._clone_and_return_settings(cls, settings_path)
 
         config = ViPErLEEDSettings()
         try:
