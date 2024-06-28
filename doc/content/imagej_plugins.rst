@@ -9,7 +9,7 @@ For further details, see also the corresponing paper: :cite:t:`viperleedSpot`.
 
 .. only:: html
 
-    :download:`Download the documentation here.</_static/imagej_plugins/SI_GUI_documentation.pdf>`
+    :download:`Download the documentation here.</_static/imagej_plugins/ViPErLEED_ImageJ_Plugins_GUI_documentation.pdf>`
 
 .. only:: not html
 
