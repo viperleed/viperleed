@@ -82,7 +82,7 @@ the requested calculations. They are stored in the ``OUT`` subfolder.
     +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
     | :ref:`fdoptimizationbeams`                      | |IV| curves generated during full-dynamic optimization                 | :ref:`Fdoptimization`         |
     +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
-    | :ref:`experiment_symmetry`                      | Input for :term:`GUI`                                                  | :ref:`Initialization`         |
+    | :ref:`PatternInfo`                              | Input for :term:`GUI`                                                  | :ref:`Initialization`         |
     +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+
     | :ref:`Tensors.zip<tensorszip>`                  | Tensor files for Delta-amplitudes calculation                          | :ref:`ref-calc`               |
     +-------------------------------------------------+------------------------------------------------------------------------+-------------------------------+

@@ -44,9 +44,9 @@ The major steps are listed below in order of execution.
 7.  Check whether a :ref:`PHASESHIFTS` file is present and
     consistent with the structure and settings. If not, and a phase-shifts
     calculation utility is available, generate new phase shifts automatically.
-8.  Generate the :ref:`BEAMLIST`, :ref:`experiment_symmetry`, and, if not
-    provided by the user, :ref:`IVBEAMS` files.
-9. Create the :file:`original_inputs` directory in which all files used to
+8.  Generate the :ref:`BEAMLIST`, :ref:`patterninfo`, and, if not provided by 
+    the user, :ref:`IVBEAMS` files.
+9.  Create the :file:`original_inputs` directory in which all files used to
     start the calculation are stored. This way it is possible to look up the
     used settings, even if, for example, the PARAMETERS file was altered by
     the user during the run.
