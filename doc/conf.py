@@ -98,6 +98,7 @@ html_css_files = [
 # Use a specific kernel instead of the one stored in the notebook 
 # metadata. This allows building the documentation on multiple OSes
 nb_kernel_rgx_aliases = {'.+': 'python3'}
+nb_execution_mode = "off"  # use cached version for now
 
 
 # -- Options for LaTeX output -----------------------------------------
