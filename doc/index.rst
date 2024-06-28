@@ -81,30 +81,30 @@ project:
       :caption: Contents
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Getting started
+    :maxdepth: 2
+    :caption: Getting started
 
-   content/installation
-   content/command_line_tools
-   content/background
-
-.. toctree::
-   :maxdepth: 2
-   :caption: viperleed.calc
-
-   viperleed calc<content/viperleed_calc>
+    content/installation
+    content/command_line_tools
+    content/background
 
 .. toctree::
-   :maxdepth: 2
-   :caption: ViPErLEED ImageJ plugins
+    :maxdepth: 2
+    :caption: viperleed.calc
 
-   content/imagej_plugins
+    viperleed calc<content/viperleed_calc>
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Hardware and measurements
+    :maxdepth: 2
+    :caption: ViPErLEED ImageJ plugins
 
-   Hardware<content/hardware>
+    content/imagej_plugins
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Hardware and measurements
+
+    Hardware<content/hardware>
 
 .. toctree::
     :maxdepth: 1
@@ -112,15 +112,36 @@ project:
 
     content/api
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Appendix
 
-   content/citing
-   references
-   content/glossary
-   License<content/license>
-   content/notes_for_developers
+..
+    HANDLING OF APPENDICES
+    The next part is a bit ugly. Its purpose is to make only one \part
+    in LaTeX named "Appendix" (see content/appendix.rst) and have its
+    contents be "chapters". Using for latex the same definition as
+    for the non-latex case would make each chapter of "Appendix" a
+    part by itself, which is ugly. On the other hand, we really want
+    the contents of the appendix to appear at the top level in the
+    navigation bar in HTML.
+
+
+.. only:: latex
+
+    .. toctree::
+
+        content/appendix
+
+.. only:: not latex
+
+    .. toctree::
+        :maxdepth: 1
+        :caption: Appendix
+
+        content/appendix/citing
+        content/appendix/references
+        content/appendix/glossary
+        License<content/appendix/license>
+        content/appendix/notes_for_developers
+
 
 .. raw:: latex
 
