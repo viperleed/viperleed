@@ -28,7 +28,7 @@ iosuperpos
     Writing files relevant to the superpos calculation.
 ivplot
     Functions for producing plots of I(V) curves.
-patterninfo
+experiment_symmetry
     Functions for producing input files usable in the pattern
     simulator plug-in of the ViPErLEED GUI.
 poscar

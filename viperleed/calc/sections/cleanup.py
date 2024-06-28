@@ -59,6 +59,10 @@ _SUPP_FILES = (
 
 _SUPP_DIRS = (ORIGINAL_INPUTS_DIR_NAME, "compile_logs")
 
+# Label given to workhistory folders when cleaning up stray remains
+# from previous viperleed.calc executions from the work directory
+PREVIOUS_LABEL = 'previous'
+
 # files to go in OUT
 _OUT_FILES = (
     "Complex_amplitudes_imag.csv",
@@ -67,6 +71,7 @@ _OUT_FILES = (
     "Errors_summary.csv",
     "Errors.pdf",
     "Errors.zip",
+    "experiment_symmetry.ini",
     "FD_Optimization_beams.pdf",
     "FD_Optimization.csv",
     "FD_Optimization.pdf",
@@ -88,10 +93,6 @@ _OUT_FILES = (
     "THEOBEAMS.csv",
     "THEOBEAMS.pdf",
     )
-
-# Label given to workhistory folders when cleaning up stray remains
-# from previous viperleed.calc executions from the work directory
-PREVIOUS_LABEL = 'previous'
 
 # output files that can be used as input in future runs - keep during prerun
 iofiles = ["control.chem", "refcalc-fd.out", "superpos-spec.out"]
