@@ -12,6 +12,6 @@ display a simulated LEED pattern for the structure.
 Changelog
 ---------
 
-.. versionchanged:: viperleed.calc v1.0.0
+.. versionchanged:: 1.0.0
    The name of the file was changed from PatternInfo.tlm to
     experiment_symmetry.ini.
