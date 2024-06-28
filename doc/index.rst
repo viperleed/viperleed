@@ -65,7 +65,7 @@ project:
 -  The :ref:`viperleed.calc package<viperleed_calc>`
       A Python package for the calculation of |IV| curves, quantitative
       analysis of :term:`LEED` data, and surface-structure optimization
-       :cite:p:`viperleedCalc`.
+      :cite:p:`viperleedCalc`.
 
 .. _toc_figure:
 .. figure:: /_static/paper_figures/ViPErLEED-overview_embedded.svg
