@@ -16,6 +16,10 @@
 a:visited {
     color: #2980b9 !important;
 }
+/* Change colors of pre formatted text*/
+.pre{
+    color: #000000 !important;
+}
 /* Same in sidebar */
 .wy-menu-vertical a:visited {
     color: #d9d9d9 !important;
