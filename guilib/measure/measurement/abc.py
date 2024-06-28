@@ -323,7 +323,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                                 fallback=None)
         return cls.__name__ == meas_class
 
-    def set_settings(self, new_settings):                                       # TODO: check what happens if trying to make a controller that already exists
+    def set_settings(self, new_settings):
         """Change settings of the measurement.
 
         Settings are loaded only if they are valid. Otherwise
@@ -358,8 +358,15 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
+        self.__aborted = False # Set False in case of abort through settings
         if not super().set_settings(new_settings):
             return False
+
+        # We have to disconnect all devices before we attempt to connect to
+        # them again. The primary controller should be disconnected last.
+        self.__disconnect_secondary_controllers()
+        self.__disconnect_cameras()
+        self.__disconnect_primary_controller()
 
         if not self.__make_primary_ctrl():
             # Something went wrong (already reported in __make_primary)
@@ -591,7 +598,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                 pass
             # Measurements that may still be delivered during
             # preparation should be discarded:
-            ctrl.data_ready.disconnect(self._on_controller_data_ready)
+            base.safe_disconnect(ctrl.data_ready,
+                                 self._on_controller_data_ready)
 
             # When controllers will turn "not busy" at the end of
             # this first preparation segment, go to second segment
@@ -1031,9 +1039,11 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
     def __disconnect_secondary_controllers(self):
         """Disconnect serials and signals of the secondary controllers."""
-        about_to_trigger = self.primary_controller.about_to_trigger
+        primary = self.primary_controller
         for ctrl in self.secondary_controllers:
-            base.safe_disconnect(about_to_trigger, ctrl.measure_now)
+            if primary and primary.about_to_trigger:
+                base.safe_disconnect(primary.about_to_trigger,
+                                     ctrl.measure_now)
             self._disconnect_controller(ctrl)
 
     @qtc.pyqtSlot(bool)
@@ -1061,9 +1071,9 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             self.__save_data()
         finally:
             # Disconnect all devices and their signals
-            self.__disconnect_primary_controller()
             self.__disconnect_secondary_controllers()
             self.__disconnect_cameras()
+            self.__disconnect_primary_controller()
 
             # Keep only the primary controller connected, so we can
             # set the LEED energy to zero (and detect it has been set)
