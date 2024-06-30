@@ -10,6 +10,7 @@ __license__ = 'GPLv3+'
 
 import logging
 
+from viperleed.calc.classes.slab import MissingBulkSlabError
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +33,16 @@ def write(sl, rp, filename='experiment_symmetry.ini'):
     if sl.bulkslab is None:
         logger.error('experiment_symmetry.ini: bulk slab has not been'
                      'initialized.')
-        raise RuntimeError('experiment_symmetry.write called without bulk'
-                           'slab.')
+        raise MissingBulkSlabError(
+            'experiment_symmetry.write called without bulk slab.'
+            )
     output += f'bulkGroup = {sl.bulkslab.foundplanegroup}\n'
     output += f'bulk3Dsym = {sl.bulkslab.get_bulk_3d_str()}'
     # write output
     try:
         with open(filename, 'w') as wf:
             wf.write(output)
-    except Exception:
+    except OSError:
         logger.error(f'Failed to write {filename}')
         raise
     logger.debug(f'Wrote to {filename} successfully')
