@@ -16,7 +16,7 @@ from viperleed.calc.classes.slab import MissingBulkSlabError
 _LOGGER = logging.getLogger(__name__)
 
 
-def write(slab, rpars):
+def write(slab, rpars):                                                         # TODO: shouldn't this use getLEEDdict from leedbase? Otherwise the info in rpars may be lost.
     """Write the experiment_symmetry.ini file for the ViPErLEED GUI.
 
     The experiment_symmetry.ini file can be used by the ViPErLEED
