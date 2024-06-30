@@ -51,7 +51,8 @@ from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 logger = logging.getLogger(__name__)
 
 
-OPTIONAL_INPUT_FILES = ('BEAMLIST')
+OPTIONAL_INPUT_FILES = ('BEAMLIST',)
+
 
 def initialization(sl, rp, subdomain=False):
     """Runs the initialization."""
@@ -719,14 +720,13 @@ def init_domains(rp):
 
 
 def _preserve_original_input(rp, origin_dir):
-    """Create original_inputs directory and copies the input files there."""
-
+    """Create the original_inputs directory and copy input files there."""
     try:
         rp.inputs_dir.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        raise RuntimeError(f"Could not create directory "
-                           f"{ORIGINAL_INPUTS_DIR_NAME}. "
-                           "Check disk permissions.") from exc
+        raise RuntimeError(f'Could not create directory '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}. '
+                           'Check disk permissions.') from exc
 
     # We will copy all files that have potentially been used as
     # inputs. Make sure the correct version of EXPBEAMS is stored
@@ -743,16 +743,16 @@ def _preserve_original_input(rp, origin_dir):
         if not file_path.is_file():
             if file in OPTIONAL_INPUT_FILES:
                 continue
-            logger.warning(f"Could not find file {file}. "
-                            "It will not be stored in "
-                            f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            logger.warning(f'Could not find file {file}. '
+                           'It will not be stored in '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rp.setHaltingLevel(1)
             return
         try:
             shutil.copy2(file_path, rp.inputs_dir)
         except OSError:
-            logger.warning(f"Could not copy file {file} to "
-                           f"{ORIGINAL_INPUTS_DIR_NAME}.")
+            logger.warning(f'Could not copy file {file} to '
+                           f'{ORIGINAL_INPUTS_DIR_NAME}.')
             rp.setHaltingLevel(1)
 
 
