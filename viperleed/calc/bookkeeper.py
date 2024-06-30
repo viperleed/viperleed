@@ -258,7 +258,7 @@ class Bookkeeper():
                 not self.history_with_same_base_name_exists)
 
     def run(self, mode):
-        """Runs the bookkeeper in the given mode.
+        """Run the bookkeeper in the given mode.
 
         Parameters
         ----------
@@ -273,24 +273,27 @@ class Bookkeeper():
 
         Raises
         ------
+        ValueError
+            If `mode` is not a valid bookkeeper mode.
+        NotImplementedError
+            If `mode` is not a valid bookkeeper mode, but
+            there is no method named _run_<mode>_mode.
         OSError
             If creation of the history folder or any of the subfolders
             where results are to be stored fails.
         """
-        mode = BookkeeperMode(mode)
+        try:
+            mode = BookkeeperMode(mode)
+        except ValueError as exc:
+            raise ValueError(f'Unknown mode {mode}') from exc
+
+        try:
+            method = getattr(self, f'_run_{mode.name.lower()}_mode')
+        except AttributeError as exc:
+            raise NotImplementedError from exc
 
         _LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
-        # ARCHIVE, CLEAR, DISCARD do archiving
-        if mode is BookkeeperMode.ARCHIVE:
-            return self._run_archive_mode()
-        elif mode is BookkeeperMode.CLEAR:
-            return self._run_clear_mode()
-        elif mode is BookkeeperMode.DISCARD:
-            return self._run_discard_mode()
-        elif mode is BookkeeperMode.DISCARD_FULL:
-            return self._run_discard_full_mode()
-        else:
-            raise ValueError(f'Unknown mode {mode}')
+        return method()
 
     def _run_archive_mode(self):
         if self.history_with_same_base_name_exists:
