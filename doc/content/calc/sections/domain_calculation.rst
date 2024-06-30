@@ -52,17 +52,18 @@ i.e., **without** :ref:`POSCAR` and :ref:`VIBROCC`. Likewise, the
 :ref:`PARAMETERS` file should contain **no** parameters concerned with
 interpretation of :file:`POSCAR` or :file:`VIBROCC`, such as, e.g.,
 :ref:`BULK_REPEAT`, :ref:`ELEMENT_MIX`, :ref:`SITEDEF`, etc.; if any such
-parameter is present, it will be ignored. Finally, in the :file:`PARAMETERS`
-file, **do** define the :ref:`DOMAIN` parameter once for each of the domains
-that should be included. The :ref:`DOMAIN` parameter can point to an absolute
-or relative path from which the input data for a given domain should be
-fetched. The path may point to a complete :file:`Tensors_<index>.zip`
-:ref:`file<tensorszip>` (e.g., :file:`my_domain_2/Tensors/Tensors_005.zip` in
+parameter is present, |calc| will throw an error.
+Finally, in the :file:`PARAMETERS` file, **do define** the :ref:`DOMAIN`
+parameter once for each of the domains that should be included. The
+:ref:`DOMAIN` parameter can point to an absolute or relative path from
+which the input data for a given domain should be fetched. The path may
+point to a complete :file:`Tensors_<index>.zip` :ref:`file<tensorszip>`
+(e.g., :file:`my_domain_2/Tensors/Tensors_005.zip` in
 :numref:`list_domains_directories`) or to a folder containing the
 :ref:`usual input files<list_input_files>` for a reference calculation
 (:ref:`EXPBEAMS` and :ref:`DISPLACEMENTS` files in the subfolder are ignored),
-as those in :file:`my_domain_1` of :numref:`list_domains_directories`. If the
-target path is a directory in which previous ViPErLEED calculations
+as those in :file:`my_domain_1` of :numref:`list_domains_directories`. If
+the target path is a directory in which previous ViPErLEED calculations
 have been executed, |calc| will check whether there is a :file:`Tensors`
 folder, and fetch the highest-number :file:`Tensors_<index>.zip` file.
 For more information, see the :ref:`DOMAIN` page. Use the :ref:`DOMAIN_STEP`
@@ -144,16 +145,22 @@ discussed above, it is recommended to run the reference calculations separately
 beforehand for better control, and specify ``RUN = 2-3`` explicitly here.
 
 .. warning::
+    The :ref:`bookkeeper<bookkeeper>` functionality is only partially
+    implemented for domain calculations. Only the :file:`history` folder and
+    :file:`history.info` file for the root directory (\ :file:`my_domain_calc`
+    in :numref:`list_domains_directories`) are handled automatically.
+    The domain-specific subfolders (i.e., :file:`Domain_1` and
+    :file:`Domain_another` in :numref:`list_domains_directories`) will not be
+    cleaned up. To preserve the domain-specific output files, you must manually
+    run the :program:`bookkeeper` in each of the domain subfolders using the
+    command ``viperleed bookkeeper --archive``. Then, to clean the directories
+    and remove old ``*_ori`` and ``*.log`` files, run the :program:`bookkeeper`
+    with the ``--clear`` flag in each of the domain subfolders. If you do not
+    run the :program:`bookkeeper` (in ``--archive`` mode) in the subfolders,
+    the results of a structure optimization (especially, files :file:`POSCAR`
+    and :file:`VIBROCC`) **will be lost**: the next calculation will **start**
+    **from the same inputs as the previous one**.
 
-  The :ref:`bookkeeper<bookkeeper>` functionality is only partially implemented
-  for domain calculations.
-  The bookkeeper will archive and clean up the top level directory as usual, but
-  the domain-specific directories will not be cleaned up.
-  To preserve the domain-specific output files, you must manually run the 
-  bookkeeper in each of the domain directories using the command
-  ``viperleed bookkeeper --archive``.
-  To clean the directories and remove old `_ori` and `.log` files, run the 
-  bookkeeper with the ``-clear`` flag.
 
 The DISPLACEMENTS file for domains
 ----------------------------------
