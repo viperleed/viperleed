@@ -344,9 +344,9 @@ def runPhaseshiftGen_old(sl, rp,
                 f"Exit code: {ps_output.returncode}",
                 "stdout:",
                 f"{ps_output.stdout}",
-                "stderr:",
-                f"{ps_output.stderr}",
-            ])
+                ])
+            if ps_output.stderr:
+                wf.writelines(["stderr:", f"{ps_output.stderr}"])
     except OSError:
         logger.error("Could not write EEASISSS stdout/stderr to log file. "
                      "Execution will proceed, but this may indicate a permission "
