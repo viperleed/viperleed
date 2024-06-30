@@ -31,7 +31,8 @@ from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.cli_base import ViPErLEEDCLI
 from viperleed.calc.sections.cleanup import DEFAULT_OUT, DEFAULT_SUPP
 
-logger = logging.getLogger(__name__)
+
+_LOGGER = logging.getLogger(__name__)
 
 _CALC_LOG_PREFIXES = (
     LOG_PREFIX,
@@ -112,25 +113,25 @@ class Bookkeeper():
         self.job_name = job_name
         # attach a stream handler to logger if not already present
         if not any(isinstance(h, logging.StreamHandler)
-                   for h in logger.handlers):
-            logger.addHandler(logging.StreamHandler())
-        logger.setLevel(logging.INFO)
-        logger.propagate = True
+                   for h in _LOGGER.handlers):
+            _LOGGER.addHandler(logging.StreamHandler())
+        _LOGGER.setLevel(logging.INFO)
+        _LOGGER.propagate = True
 
         # Make top level history folder if not there yet
         try:
             self.top_level_history_path.mkdir(exist_ok=True)
         except OSError:
-            logger.error('Error creating history folder.')
+            _LOGGER.error('Error creating history folder.')
             raise
 
         # attach file handler for history/bookkeeper.log
         bookkeeper_log_path = self.top_level_history_path / 'bookkeeper.log'
-        logger.addHandler(logging.FileHandler(bookkeeper_log_path,
-                                              mode='a'))
+        _LOGGER.addHandler(logging.FileHandler(bookkeeper_log_path,
+                                               mode='a'))
 
-        logger.info('\n### Bookeeper running at '
-                    f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###')
+        _LOGGER.info('\n### Bookeeper running at '
+                     f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###')
 
         # history.info handler - creates file if not yet there
         self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
@@ -277,31 +278,29 @@ class Bookkeeper():
         """
         mode = BookkeeperMode(mode)
 
+        _LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
         # ARCHIVE, CLEAR, DISCARD do archiving
         if mode is BookkeeperMode.ARCHIVE:
-            logger.info("Running bookkeeper in ARCHIVE mode.")
             return self._run_archive_mode()
         elif mode is BookkeeperMode.CLEAR:
-            logger.info("Running bookkeeper in CLEAR mode.")
             return self._run_clear_mode()
         elif mode is BookkeeperMode.DISCARD:
-            logger.info("Running bookkeeper in DISCARD mode.")
             return self._run_discard_mode()
         elif mode is BookkeeperMode.DISCARD_FULL:
-            logger.info("Running bookkeeper in DISCARD_FULL mode.")
             return self._run_discard_full_mode()
         else:
             raise ValueError(f'Unknown mode {mode}')
 
     def _run_archive_mode(self):
         if self.history_with_same_base_name_exists:
-            logger.info(
+            _LOGGER.info(
                 f'History directory for run {self.base_history_dir_name} '
-                'exists. Exiting without doing anything.')
+                'exists. Exiting without doing anything.'
+                )
             return 1
         if not self.files_needs_archiving:
-            logger.info('No files to be moved to history. Exiting without doing'
-                           ' anything.')
+            _LOGGER.info('No files to be moved to history. Exiting '
+                         'without doing anything.')
             return 1
         self._make_and_copy_to_history(use_ori=False)
 
@@ -316,8 +315,8 @@ class Bookkeeper():
     def _run_clear_mode(self):
         if (not self.history_with_same_base_name_exists
             and self.files_needs_archiving):
-            logger.info(f'History folder {self.history_dir} does not yet exist.'
-                        ' Running archive mode first.')
+            _LOGGER.info(f'History folder {self.history_dir} does not '
+                         'yet exist. Running archive mode first.')
             self._make_and_copy_to_history(use_ori=True)
 
             # workhistory and history.info
@@ -333,8 +332,8 @@ class Bookkeeper():
     def _run_discard_mode(self):
         if (not self.history_with_same_base_name_exists
             and self.files_needs_archiving):
-            logger.info(f'History folder {self.history_dir} does not yet exist.'
-                        ' Running archive mode first.')
+            _LOGGER.info(f'History folder {self.history_dir} does not '
+                         'yet exist. Running archive mode first.')
             self._make_and_copy_to_history(use_ori=False)
 
             # workhistory and history.info
@@ -344,15 +343,15 @@ class Bookkeeper():
         try:
             self.history_info.discard_last_entry()
         except ValueError:
-            logger.warning('Error: Failed to mark last entry as discarded in '
-                         f'{HISTORY_INFO_NAME}.')
+            _LOGGER.warning('Error: Failed to mark last entry as '
+                            f'discarded in {HISTORY_INFO_NAME}.')
 
     def _run_discard_full_mode(self):
         # check for notes in history.info
         if self.history_info.last_entry_has_notes:
-            logger.warning(f'The last entry in {HISTORY_INFO_NAME} has user notes. '
-                           'If you really want to purge the last run, remove '
-                           'the notes first.')
+            _LOGGER.warning(f'The last entry in {HISTORY_INFO_NAME} has user '
+                            'notes. If you really want to purge the last run, '
+                            'remove the notes first.')
             return 1
 
         # the directory we want to remove is not self.history_dir (since that
@@ -364,18 +363,18 @@ class Bookkeeper():
             try:
                 shutil.rmtree(dir_to_remove)
             except OSError:
-                logger.error(f'Error: Failed to delete {dir_to_remove}.')
+                _LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
                 return 1
             self._discard_common()
         else:
-            logger.error(f'FULL_DISCARD mode failed: could not identify '
-                         'directory to remove. Please proceed manually.')
+            _LOGGER.error(f'FULL_DISCARD mode failed: could not identify '
+                          'directory to remove. Please proceed manually.')
         # remove history entry from history.info
         try:
             self.history_info.remove_last_entry()
         except ValueError:
-            logger.warning('Error: Failed to remove last entry from '
-                         f'{HISTORY_INFO_NAME}.')
+            _LOGGER.warning('Error: Failed to remove last entry from '
+                            f'{HISTORY_INFO_NAME}.')
 
 
     def _discard_common(self):
@@ -461,7 +460,7 @@ class Bookkeeper():
                 try:
                     shutil.move(ori_file, self.cwd / file)
                 except OSError:
-                    logger.error(f'Error: failed to move {ori_file} to {file}.')
+                    _LOGGER.error(f'Failed to move {ori_file} to {file}.')
                     raise
 
     def copy_input_files_from_original_inputs_and_cwd(self, use_ori=False):
@@ -477,10 +476,11 @@ class Bookkeeper():
                 original_timestamp = original_file.stat().st_mtime
                 cwd_timestamp = cwd_file.stat().st_mtime
                 if original_timestamp < cwd_timestamp:
-                    logger.warning(
+                    _LOGGER.warning(
                         f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
                         'copied to history, but the file in the input '
-                        'directory is newer.')
+                        'directory is newer.'
+                        )
             elif original_file.is_file():
                 # just copy original
                 _copy_one_file_to_history(original_file, self.history_dir)
@@ -491,29 +491,31 @@ class Bookkeeper():
                 # copy cwd and warn
                 _copy_one_file_to_history(
                     self.cwd / file, self.history_dir)
-                logger.warning(f'File {file} not found in '
-                            f'{ORIGINAL_INPUTS_DIR_NAME}. Using file from root '
-                            'directory instead and renaming to '
-                            f'{cwd_file.name}_from_root.')
+                _LOGGER.warning(
+                    f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
+                    'Using file from root directory instead and renaming to '
+                    f'{cwd_file.name}_from_root.'
+                    )
                 try:
                     os.rename(self.history_dir / file,
                             self.history_dir / f'{cwd_file.name}_from_root')
                 except OSError:
-                    logger.error(f'Failed to rename {file} to '
-                                f'{cwd_file.name}_from_root.')
+                    _LOGGER.error(f'Failed to rename {file} to '
+                                  f'{cwd_file.name}_from_root.')
 
     def copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
         for name in (DEFAULT_SUPP, DEFAULT_OUT):
             dir = self.cwd / name
             if not dir.is_dir():
-                logger.warning(f'Could not find {name} directory in '
-                               f'{self.cwd}. It will not be copied to history.')
+                _LOGGER.warning(f'Could not find {name} directory in '
+                                f'{self.cwd}. It will not be copied '
+                                'to history.')
                 continue
             try:
                 shutil.copytree(dir, self.history_dir / name)
             except OSError:
-                logger.error(f'Failed to copy {name} directory to history.')
+                _LOGGER.error(f'Failed to copy {name} directory to history.')
 
     def copy_log_files_to_history(self):
         """Copy log files to history."""
@@ -605,7 +607,7 @@ class HistoryInfoFile:
             raise ValueError("No entries to discard.")
         last_entry = self.last_entry
         if last_entry.discarded:
-            logger.warning('Last entry is already discarded.')
+            _LOGGER.warning('Last entry is already discarded.')
         last_entry.discarded = True
         self.remove_last_entry()
         self.append_entry(last_entry)
@@ -725,8 +727,8 @@ def _create_new_history_dir(new_history_path):
     try:
         new_history_path.mkdir()
     except OSError:
-        logger.error('Error: Could not create target directory '
-                     f'{new_history_path}\n Stopping...')
+        _LOGGER.error('Error: Could not create target directory '
+                      f'{new_history_path}\n Stopping...')
         raise
 
 
@@ -904,7 +906,7 @@ def _move_or_discard_one_file(file, target_folder, discard):
     try:
         shutil.move(file, target_folder / file.name)
     except OSError:
-        logger.error(f'Failed to move {file.name}.')
+        _LOGGER.error(f'Failed to move {file.name}.')
 
 
 
@@ -913,7 +915,7 @@ def _copy_one_file_to_history(file_path, history_path):
     try:
         shutil.copy2(file_path, history_path / file_path.name)
     except OSError:
-        logger.error(f'Failed to copy {file_path} to history.')
+        _LOGGER.error(f'Failed to copy {file_path} to history.')
 
 
 
@@ -983,8 +985,8 @@ def _read_and_clear_notes_file(cwd):
         with notes_path.open('w', encoding='utf-8'):
             pass
     except OSError:
-        logger.error(f'Failed to clear the {notes_path.name} '
-                    'file after reading.')
+        _LOGGER.error(f'Failed to clear the {notes_path.name} '
+                      'file after reading.')
     return notes
 
 
