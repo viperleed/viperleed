@@ -16,7 +16,7 @@ from viperleed.calc.classes.slab import MissingBulkSlabError
 _LOGGER = logging.getLogger(__name__)
 
 
-def write(slab, rpars, filename='experiment_symmetry.ini'):
+def write(slab, rpars):
     """Writes a experiment_symmetry.ini file that can be used by the ViPErLEED
     GUI utility to display the expected LEED pattern and show beam labelling."""
     output = f'eMax = {rpars.THEO_ENERGIES.max:.2f}\n'
@@ -39,6 +39,7 @@ def write(slab, rpars, filename='experiment_symmetry.ini'):
     output += f'bulkGroup = {slab.bulkslab.foundplanegroup}\n'
     output += f'bulk3Dsym = {slab.bulkslab.get_bulk_3d_str()}'
     # write output
+    filename = 'experiment_symmetry.ini'
     try:  # pylint: disable=too-many-try-statements  # Two OK for open
         with open(filename, 'w', encoding='utf-8') as file:
             file.write(output)
