@@ -26,10 +26,9 @@ def write(slab, rpars, filename='experiment_symmetry.ini'):
         *rpars.SUPERLATTICE.round().astype(int).ravel()
         )
     output += f'superlattice = {mstring}\n'
-    if slab.planegroup in ['pm', 'pg', 'cm', 'rcm', 'pmg']:
-        pgstring = slab.planegroup+str(slab.orisymplane.par)
-    else:
-        pgstring = slab.planegroup
+    pgstring = slab.planegroup
+    if pgstring in {'pm', 'pg', 'cm', 'rcm', 'pmg'}:
+        pgstring += str(slab.orisymplane.par)
     output += f'surfGroup = {pgstring}\n'
     if slab.bulkslab is None:
         _LOGGER.error('experiment_symmetry.ini: bulk '
