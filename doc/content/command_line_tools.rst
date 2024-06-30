@@ -5,12 +5,7 @@
 Command-line tools
 ==================
 
-
 .. todo:: viperleed gui
-
-.. todo::
-    Look into the sphinx-argparse extension for an easier way to
-    automatically produce documentation for command-line tools.
 
 The ViPErLEED Python package ``viperleed`` provides a number of command-line
 tools that can be used to run calculations, invoke the
