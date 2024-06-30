@@ -46,7 +46,6 @@ The ViPErLEED project comprises a set of :ref:`open-source<license>` tools that
 aims at drastically reducing the effort for quantitative low-energy electron
 diffraction [i.e., |LEED-IV|] on both experimental and computational fronts.
 
-
 The ViPErLEED source code is hosted on
 GitHub at `<https://github.com/viperleed>`__.
 
