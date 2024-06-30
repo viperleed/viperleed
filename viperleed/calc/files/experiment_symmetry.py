@@ -2,6 +2,7 @@
 
 __authors__ = (
     'Florian Kraushofer (@fkraushofer)',
+    'Michele Riva (@michele-riva)',
     )
 __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-08-19'
@@ -13,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def write_experiment_symmetry(sl, rp, filename='experiment_symmetry.ini'):
+def write(sl, rp, filename='experiment_symmetry.ini'):
     """Writes a experiment_symmetry.ini file that can be used by the ViPErLEED
     GUI utility to display the expected LEED pattern and show beam labelling."""
     output = f'eMax = {rp.THEO_ENERGIES.max:.2f}\n'

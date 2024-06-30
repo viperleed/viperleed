@@ -357,7 +357,7 @@ def initialization(sl, rp, subdomain=False):
         raise
 
     if not subdomain:
-        experiment_symmetry.write_experiment_symmetry(sl, rp)
+        experiment_symmetry.write(sl, rp)
 
         # if EXPBEAMS was loaded, it hasn't been checked yet - check now
         if rp.fileLoaded["EXPBEAMS"]:
