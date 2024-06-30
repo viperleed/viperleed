@@ -47,7 +47,7 @@ def write(slab, rpars):                                                         
         )
     output += f'superlattice = {mstring}\n'
     pgstring = slab.planegroup
-    if pgstring in {'pm', 'pg', 'cm', 'rcm', 'pmg'}:                            # TODO: shouldn't we do this whenever there is a slab.orisymplane? The current implementation excludes, e.g., cmm on hex cells.
+    if pgstring in {'pm', 'pg', 'cm', 'rcm', 'pmg'}:
         pgstring += str(slab.orisymplane.par)
     output += f'surfGroup = {pgstring}\n'
     if slab.bulkslab is None:
