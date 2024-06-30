@@ -17,8 +17,28 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def write(slab, rpars):
-    """Writes a experiment_symmetry.ini file that can be used by the ViPErLEED
-    GUI utility to display the expected LEED pattern and show beam labelling."""
+    """Write the experiment_symmetry.ini file for the ViPErLEED GUI.
+
+    The experiment_symmetry.ini file can be used by the ViPErLEED
+    pattern-simulator GUI to display the expected LEED pattern and
+    export a "pattern file" to be used in the spot tracker.
+
+    Parameters
+    ----------
+    slab : Slab
+        The slab whose information should be written to file.
+        It must have its `.bulkslab` attribute already set to
+        the correct bulk slab.
+    rpars : Rparams
+        The current PARAMETERS.
+
+    Raises
+    ------
+    MissingBulkSlabError
+        If slab has no `.bulkslab` attribute.
+    OSError
+        If writing to file experiment_symmetry.ini fails.
+    """
     output = f'eMax = {rpars.THEO_ENERGIES.max:.2f}\n'
     mstring = '[[{}, {}], [{}, {}]]'.format(*slab.ab_cell.T.ravel())
     output += f'surfBasis = {mstring}\n'
