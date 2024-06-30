@@ -46,4 +46,3 @@ def write(sl, rp, filename='experiment_symmetry.ini'):
         logger.error(f'Failed to write {filename}')
         raise
     logger.debug(f'Wrote to {filename} successfully')
-    return
