@@ -153,7 +153,8 @@ class Rparams:
         # RUN VARIABLES
         self.starttime = timer()
         self.source_dir = None  # where to find 'tensorleed'
-        self.workdir = Path(os.getcwd())  # MAIN WORK DIRECTORY; where to find input
+        # .workdir is the MAIN WORK DIRECTORY; where to find input
+        self.workdir = Path.cwd().resolve()
         self.compile_logs_dir = None
         self.searchConvInit = {
             'gaussian': None, 'dgen': {'all': None, 'best': None, 'dec': None}}
