@@ -318,54 +318,64 @@ The full documentation of the |oneAPI| is available from the
     `this guide <https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/2024-1/use-the-setvars-script-with-windows.html>`__
     from Intel.
 
-    Notice that :program:`cmd` can use a mechanism similar to the
-    :file:`.bashrc` startup script for Linux's :program:`bash`. This
-    means that dedicated commands can be executed upon startup of each
-    :program:`cmd` session. To set this up:
+    Notice that :program:`cmd` can, in principle, use a mechanism similar
+    to the :file:`.bashrc` startup script for Linux's :program:`bash`.
+    However, there are limitations, and the |oneAPI| batch scripts
+    **cannot be run automatically** together with :program:`cmd`.
 
-    -  Open the Windows registry editor via the :guilabel:`Run` dialog
-       (\ :kbd:`Win+R`): type ``regedit``, then press :kbd:`Enter`. Confirm
-       the administrator permissions.
-    -  Navigate to
-       :guilabel:`HKEY_CURRENT_USER/Software/Microsoft/Command Processor/`.
-       If :guilabel:`Command Processor` does not exist, right click on
-       :guilabel:`Microsoft`, select :menuselection:`New --> Key`, and
-       name the new entry ``Command Processor``.
-    -  Find the :guilabel:`AutoRun` entry in the right
-       panel. If no :guilabel:`AutoRun` exists, create
-       a :menuselection:`New --> String value` by right
-       clicking. Name it ``AutoRun``.
-    -  Skip this passage if the :guilabel:`AutoRun` entry already has a value.
-       :menuselection:`Modify...` the empty value of the :guilabel:`AutoRun`
-       entry to ``%USERPROFILE%\cmd-autorun.bat``. ``%USERPROFILE%`` is the
-       path to your user directory. You can find its value by typing
+    The easiest alternative is to create an alias batch file, and add its
+    location to the :envvar:`Path` environment variable to limit the amount
+    of typing. This way the alias batch file will be available in every
+    :program:`cmd` session. Here the steps for an example setting:
 
-       .. code-block:: bat
+    -   Navigate to your user-profile directory in :program:`Explorer`. To find
+        the location of your user directory type
 
-          echo %USERPROFILE%
+        .. code-block:: bat
 
-       in a terminal. On Windows 10 and later, you can also directly navigate
-       to the location in :program:`Explorer` by typing ``%USERPROFILE%`` in
-       the Windows Start menu or in the address bar of an :program:`Explorer`
-       window.
-    -  Navigate to the file path set as a value for the :guilabel:`AutoRun`
-       entry. You can create a new file with the correct name if it does not
-       exist. Then append the following lines to the end:
+            echo %USERPROFILE%
 
-       .. code-block:: bat
+        in a terminal. On Windows 10 and later, you can also directly navigate
+        to the location in :program:`Explorer` by typing ``%USERPROFILE%`` in
+        the Windows Start menu or in the address bar of an :program:`Explorer`
+        window.
+    -   Create a folder :file:`.cmd_aliases`
+    -   There, create a file :file:`activate_intel.bat` with the following
+        contents
 
-         @echo off
-         call "<full/path/to/correct/intel/oneapi/bat/file>"
-         @echo on
+        .. code-block:: bat
 
-    -  Close the registry editor.
-    -  Open a new :program:`cmd` session, and test that the |oneAPI| compilers
-       are now visible via
+            @echo off
+            call "<full/path/to/correct/intel/oneapi/bat/file>" 1>nul
+            echo Done
+    -   Add the path to :file:`.cmd_aliases` to your :envvar:`Path`
+        environment variable. See :ref:`set_envvar` for how to access the
+        environment-variable settings on Windows. Edit the :envvar:`Path`
+        environment variable by appending :file:`%USERPROFILE%\\.cmd_aliases`.
+        On Windows 7, use a semicolon as separator.
+    -   Open a new :program:`cmd` session. Activate |oneAPI| by typing
 
-       .. code-block:: bat
+        .. code-block:: bat
 
-         ifort --version
-         mpiifort --version
+            activate_intel.bat
+
+        and wait for the "``Done``" reply. Then check that the |oneAPI|
+        compilers are now visible via
+
+        .. code-block:: bat
+
+            ifort -D
+            mpiifort -D
+    
+    .. important::
+        You will have to
+        
+        .. code-block:: bat
+
+            activate_intel.bat
+        
+        **every time** you open a **new** :program:`cmd` session to have
+        the |oneAPI| compilers available.
 
 
 .. _install_gcc:
