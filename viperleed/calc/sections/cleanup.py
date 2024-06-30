@@ -86,8 +86,8 @@ _OUTFILES = (
     "THEOBEAMS_norm.csv",             # refcalc
     )
 
-# output files that can be used as input in future runs - keep during prerun
-iofiles = ["control.chem", "refcalc-fd.out", "superpos-spec.out"]
+# Outputs that can also be input in future runs - keep during prerun
+_IOFILES = ("control.chem", "refcalc-fd.out", "superpos-spec.out")
 
 logger = logging.getLogger(__name__)
 
@@ -388,7 +388,7 @@ def move_oldruns(rp, prerun=False):
     if prerun:
         filelist = [f for f in os.listdir() if os.path.isfile(f) and
                     (f.endswith(".log") or f in _OUTFILES or f in _SUPP_FILES)
-                    and f not in rp.manifest and f not in iofiles]
+                    and f not in rp.manifest and f not in _IOFILES]
         dirlist = ["SUPP", "OUT"]
     else:
         filelist = [f for f in rp.manifest if os.path.isfile(f) and not
@@ -397,7 +397,7 @@ def move_oldruns(rp, prerun=False):
                    d not in ["Tensors", "Deltas", DEFAULT_WORK_HISTORY]]
     for f in filelist:
         try:
-            if not prerun or f in iofiles:
+            if not prerun or f in _IOFILES:
                 shutil.copy2(f, work_hist_path / f)
             else:
                 shutil.move(f, work_hist_path / f)
