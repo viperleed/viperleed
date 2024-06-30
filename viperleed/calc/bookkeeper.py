@@ -27,9 +27,10 @@ from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.cleanup import DEFAULT_OUT
+from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.cli_base import ViPErLEEDCLI
-from viperleed.calc.sections.cleanup import DEFAULT_OUT, DEFAULT_SUPP
 
 
 _LOGGER = logging.getLogger(__name__)
