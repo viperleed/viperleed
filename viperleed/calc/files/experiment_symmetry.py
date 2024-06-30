@@ -32,7 +32,7 @@ def write(sl, rp, filename='experiment_symmetry.ini'):
     if sl.bulkslab is None:
         logger.error('experiment_symmetry.ini: bulk slab has not been'
                      'initialized.')
-        raise RuntimeError('write_experiment_symmetry called without bulk'
+        raise RuntimeError('experiment_symmetry.write called without bulk'
                            'slab.')
     output += f'bulkGroup = {sl.bulkslab.foundplanegroup}\n'
     output += f'bulk3Dsym = {sl.bulkslab.get_bulk_3d_str()}'
