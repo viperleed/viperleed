@@ -340,9 +340,9 @@ def runPhaseshiftGen_old(sl, rp,
     try:
         with open(phaseshifts_log_path, 'w') as wf:
             wf.writelines([
-                f"Output of EEASISSS called with args '{ps_output.args}'",
-                f"Exit code: {ps_output.returncode}",
-                "stdout:",
+                f"Output of EEASISSS called with args '{ps_output.args}'\n",
+                f"Exit code: {ps_output.returncode}\n",
+                "stdout:\n",
                 f"{ps_output.stdout}",
                 ])
             if ps_output.stderr:
