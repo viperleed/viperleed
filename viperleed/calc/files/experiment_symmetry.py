@@ -22,9 +22,9 @@ def write(slab, rpars, filename='experiment_symmetry.ini'):
     output = f'eMax = {rpars.THEO_ENERGIES.max:.2f}\n'
     mstring = '[[{}, {}], [{}, {}]]'.format(*slab.ab_cell.T.ravel())
     output += f'surfBasis = {mstring}\n'
-    mstring = ('[[{:.0f}, {:.0f}], [{:.0f}, {:.0f}]]'
-               .format(rpars.SUPERLATTICE[0, 0], rpars.SUPERLATTICE[0, 1],
-                       rpars.SUPERLATTICE[1, 0], rpars.SUPERLATTICE[1, 1]))
+    mstring = '[[{}, {}], [{}, {}]]'.format(
+        *rpars.SUPERLATTICE.round().astype(int).ravel()
+        )
     output += f'superlattice = {mstring}\n'
     if slab.planegroup in ['pm', 'pg', 'cm', 'rcm', 'pmg']:
         pgstring = slab.planegroup+str(slab.orisymplane.par)
