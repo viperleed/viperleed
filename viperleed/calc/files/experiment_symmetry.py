@@ -16,29 +16,29 @@ from viperleed.calc.classes.slab import MissingBulkSlabError
 _LOGGER = logging.getLogger(__name__)
 
 
-def write(sl, rp, filename='experiment_symmetry.ini'):
+def write(slab, rpars, filename='experiment_symmetry.ini'):
     """Writes a experiment_symmetry.ini file that can be used by the ViPErLEED
     GUI utility to display the expected LEED pattern and show beam labelling."""
-    output = f'eMax = {rp.THEO_ENERGIES.max:.2f}\n'
-    mstring = '[[{}, {}], [{}, {}]]'.format(*sl.ab_cell.T.ravel())
+    output = f'eMax = {rpars.THEO_ENERGIES.max:.2f}\n'
+    mstring = '[[{}, {}], [{}, {}]]'.format(*slab.ab_cell.T.ravel())
     output += 'surfBasis = '+mstring+'\n'
     mstring = ('[[{:.0f}, {:.0f}], [{:.0f}, {:.0f}]]'
-               .format(rp.SUPERLATTICE[0, 0], rp.SUPERLATTICE[0, 1],
-                       rp.SUPERLATTICE[1, 0], rp.SUPERLATTICE[1, 1]))
+               .format(rpars.SUPERLATTICE[0, 0], rpars.SUPERLATTICE[0, 1],
+                       rpars.SUPERLATTICE[1, 0], rpars.SUPERLATTICE[1, 1]))
     output += 'superlattice = {mstring}\n'
-    if sl.planegroup in ['pm', 'pg', 'cm', 'rcm', 'pmg']:
-        pgstring = sl.planegroup+str(sl.orisymplane.par)
+    if slab.planegroup in ['pm', 'pg', 'cm', 'rcm', 'pmg']:
+        pgstring = slab.planegroup+str(slab.orisymplane.par)
     else:
-        pgstring = sl.planegroup
+        pgstring = slab.planegroup
     output += f'surfGroup = {pgstring}\n'
-    if sl.bulkslab is None:
+    if slab.bulkslab is None:
         _LOGGER.error('experiment_symmetry.ini: bulk '
                       'slab has not been initialized.')
         raise MissingBulkSlabError(
             'experiment_symmetry.write called without bulk slab.'
             )
-    output += f'bulkGroup = {sl.bulkslab.foundplanegroup}\n'
-    output += f'bulk3Dsym = {sl.bulkslab.get_bulk_3d_str()}'
+    output += f'bulkGroup = {slab.bulkslab.foundplanegroup}\n'
+    output += f'bulk3Dsym = {slab.bulkslab.get_bulk_3d_str()}'
     # write output
     try:  # pylint: disable=too-many-try-statements  # Two OK for open
         with open(filename, 'w', encoding='utf-8') as file:
