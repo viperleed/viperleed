@@ -15,10 +15,10 @@ the initialization can be invoked without a subsequent calculation by
 specifying ``RUN = 0``.
 
 .. note::
-    The settings from the :ref:`PARAMETERS` file and, in a single-domain 
-    calculation, the structure from the :ref:`POSCAR` file are read and 
-    interpreted **before** the initialization. This is important for 
-    the :ref:`ASE API<aseapi>` where structure and settings can be 
+    The settings from the :ref:`PARAMETERS` file and, in a single-domain
+    calculation, the structure from the :ref:`POSCAR` file are read and
+    interpreted **before** the initialization. This is important for
+    the :ref:`ASE API<aseapi>` where structure and settings can be
     passed programmatically to |calc| in the form of ``ase.Atoms`` objects.
 
 A large number of tasks and checks are performed during initialization.
@@ -46,7 +46,7 @@ The major steps are listed below in order of execution.
     calculation utility is available, generate new phase shifts automatically.
 8.  Generate the :ref:`BEAMLIST`, :ref:`experiment_symmetry`, and, if not
     provided by the user, :ref:`IVBEAMS` files.
-9. Create the :file:`original_inputs` directory in which all files used to
+9.  Create the :file:`original_inputs` directory in which all files used to
     start the calculation are stored. This way it is possible to look up the
     used settings, even if, for example, the PARAMETERS file was altered by
     the user during the run.
