@@ -48,6 +48,7 @@ STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
 # optional input files that may be generated at runtime - do not warn if missing
 RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
+
 class BookkeeperMode(Enum):
     """Enumeration of bookkeeper modes.
 
@@ -63,7 +64,7 @@ class BookkeeperMode(Enum):
         Re-start from the same input as the previous run. The discarded run is
         kept in history. Has to be run manually after run_calc.
     DISCARD_FULL
-        Discard previous run as if it never happened and removes it from 
+        Discard previous run as if it never happened and removes it from
         history. Has to be run manually after run_calc.
     """
     ARCHIVE = 'archive'
@@ -78,8 +79,8 @@ class BookkeeperMode(Enum):
 
 
 class Bookkeeper():
-    """Bookkeeper to archive or discard the most recent viperleed calc run.
-    """
+    """Bookkeeper to archive or discard the most recent viperleed calc run."""
+
     def __init__(self,
                  job_name=None,
                  history_name=DEFAULT_HISTORY,
@@ -139,7 +140,7 @@ class Bookkeeper():
 
     def update_from_cwd(self):
         """Updates timestamp, tensor number and log lines, etc. from cwd.
-        
+
         This method is called in __init__, but can also be called manually if
         a new run happens during the lifetime of the bookkeeper.
         """
@@ -403,7 +404,7 @@ class Bookkeeper():
                                                     self.max_job_for_tensor,
                                                     discard)
         tensor_nums.add(self.tensor_number)
-        
+
         run_info, r_ref, r_super = self._infer_run_info_from_log()
 
         self.history_info.append_entry(HistoryInfoEntry(
