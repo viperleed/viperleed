@@ -109,6 +109,9 @@ def runPhaseshiftGen_old(sl, rp,
     psgensource = Path(rp.source_dir, psgensource)
     excosource = Path(shortpath, excosource)
 
+    if os.name == 'nt':
+        psgensource = psgensource.with_suffix('.exe')                           # TODO: does this cover it or should we use 'win' in sys.platform()?
+
     if not psgensource.is_file():
         raise FileNotFoundError('Could not find PHASESHIFTS executable at '
                                 f'{psgensource}. Did you forget to compile it? '
@@ -257,7 +260,7 @@ def runPhaseshiftGen_old(sl, rp,
                     "ELEMENT_RENAME or ELEMENT_MIX parameter.")
             logger.error(_err)
             raise RuntimeError(_err)
-        el_charge_density_path = (rp.source_dir / "atom_density_files" / 
+        el_charge_density_path = (rp.source_dir / "atom_density_files" /
                                   chemel / (f"chgden{chemel}")).resolve()
         charge_density_short_path = (Path(atdenssource) / chemel /
                                     f"chgden{chemel}")
