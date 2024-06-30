@@ -40,9 +40,9 @@ def write(sl, rp, filename='experiment_symmetry.ini'):
     output += f'bulkGroup = {sl.bulkslab.foundplanegroup}\n'
     output += f'bulk3Dsym = {sl.bulkslab.get_bulk_3d_str()}'
     # write output
-    try:
-        with open(filename, 'w') as wf:
-            wf.write(output)
+    try:  # pylint: disable=too-many-try-statements  # Two OK for open
+        with open(filename, 'w', encoding='utf-8') as file:
+            file.write(output)
     except OSError:
         _LOGGER.error(f'Failed to write {filename!r}')
         raise
