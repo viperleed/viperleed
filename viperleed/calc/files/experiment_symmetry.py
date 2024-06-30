@@ -12,7 +12,8 @@ import logging
 
 from viperleed.calc.classes.slab import MissingBulkSlabError
 
-logger = logging.getLogger(__name__)
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def write(sl, rp, filename='experiment_symmetry.ini'):
@@ -31,8 +32,8 @@ def write(sl, rp, filename='experiment_symmetry.ini'):
         pgstring = sl.planegroup
     output += f'surfGroup = {pgstring}\n'
     if sl.bulkslab is None:
-        logger.error('experiment_symmetry.ini: bulk slab has not been'
-                     'initialized.')
+        _LOGGER.error('experiment_symmetry.ini: bulk '
+                      'slab has not been initialized.')
         raise MissingBulkSlabError(
             'experiment_symmetry.write called without bulk slab.'
             )
@@ -43,6 +44,6 @@ def write(sl, rp, filename='experiment_symmetry.ini'):
         with open(filename, 'w') as wf:
             wf.write(output)
     except OSError:
-        logger.error(f'Failed to write {filename}')
+        _LOGGER.error(f'Failed to write {filename!r}')
         raise
-    logger.debug(f'Wrote to {filename} successfully')
+    _LOGGER.debug(f'Wrote to {filename!r} successfully')
