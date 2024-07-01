@@ -931,6 +931,7 @@ class SettingsDialog(qtw.QDialog):
         """Return the object whose settings are shown."""
         return self._handled_obj
 
+    @qtc.pyqtSlot()
     def accept(self):
         """Notify if settings changed, then close."""
         self.__on_apply_pressed()
@@ -950,6 +951,7 @@ class SettingsDialog(qtw.QDialog):
             self.settings_saved.emit(_saved)
         super().accept()
 
+    @qtc.pyqtSlot()
     def reject(self):
         """Load back the original settings, then close."""
         if not self.isVisible():
