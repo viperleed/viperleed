@@ -558,16 +558,31 @@ def store_input_files_to_history(root_path, history_path):
         except OSError as exc:
             print(f'Failed to copy file {file} to history: {exc}')
 
+
 class HistoryInfoFile:
     """Deals with the history.info file in a history directory."""
 
     def __init__(self, file_path, create_new=False):
-        self.path = file_path
-        if not self.path.is_file():
-            if not create_new:
-                raise FileNotFoundError("history.info file not found at "
-                                        f"{self.path}.")
-            # create new file
+        """Initialize instance.
+
+        Parameters
+        ----------
+        file_path : str or Path
+            The path to the history.info file.
+        create_new : bool, optional
+            Whether a empty file should be created in case file_path
+            does not exist.
+
+        Raises
+        ------
+        FileNotFoundError
+            If `file_path` does not exist and `create_new` is False.
+        """
+        self.path = Path(file_path)
+        if not self.path.is_file() and not create_new:
+            raise FileNotFoundError('history.info file not '
+                                    f'found at {self.path}.')
+        if not self.path.is_file():  # create new file
             self.path.touch()
 
     @property
