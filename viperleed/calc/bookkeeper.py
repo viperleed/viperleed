@@ -443,19 +443,18 @@ class Bookkeeper():
 
 
     def remove_ori_files(self):
-        _move_or_discard_files(self.cwd_ori_files, self.cwd, True)
+        _discard_files(*self.cwd_ori_files)
 
     def remove_out_and_supp(self):
-        _move_or_discard_files([self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP],
-                               self.cwd, True)
+        _discard_files(self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP)
 
     def remove_log_files(self):
-        _move_or_discard_files(self.all_cwd_logs, self.cwd, True)
+        _discard_files(*self.all_cwd_logs)
 
     def remove_tensors_and_deltas(self):
-        tensor_file = self.cwd / 'Tensors' / f'Tensors_{self.tensor_number:03d}.zip'
-        delta_file = self.cwd / 'Deltas' / f'Deltas_{self.tensor_number:03d}.zip'
-        _move_or_discard_files((tensor_file, delta_file), self.cwd, True)
+        tensor_file = f'Tensors/Tensors_{self.tensor_number:03d}.zip'
+        delta_file = f'Deltas/Deltas_{self.tensor_number:03d}.zip'
+        _discard_files(self.cwd / tensor_file, self.cwd / delta_file)
 
     def replace_state_files_from_ori(self):
         for file in STATE_FILES:
@@ -736,6 +735,11 @@ def _create_new_history_dir(new_history_path):
         raise
 
 
+def _discard_files(*file_paths):
+    """Delete files at `file_paths`. Log if they can't be deleted."""
+    _move_or_discard_files(file_paths, None, discard=True)
+
+
 def _discard_workhistory_previous(work_history_path):
     """Remove 'previous'-labelled directories in `work_history_path`."""
     work_hist_prev = _get_workhistory_directories(work_history_path,
@@ -898,13 +902,13 @@ def _move_or_discard_one_file(file, target_folder, discard):
         try:
             file.unlink()
         except OSError:
-            print(f'Failed to discard file {file.name}.')
+            _LOGGER.warning(f'Failed to discard file {file.name}.')
         return
     if discard:  # Should be a directory
         try:
             shutil.rmtree(file)
         except OSError:
-            print(f'Failed to discard directory {file.name}.')
+            _LOGGER.warning(f'Failed to discard directory {file.name}.')
         return
     # Move it
     try:
