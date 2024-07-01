@@ -262,6 +262,9 @@ class Bookkeeper:
             raise NotImplementedError from exc
 
         LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
+
+        # Read the current state of the history.info file
+        self.history_info.read()
         return method()
 
     def _run_archive_mode(self):
