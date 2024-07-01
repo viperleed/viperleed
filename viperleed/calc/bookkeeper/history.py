@@ -184,7 +184,35 @@ class HistoryInfoFile:
 
 
 @dataclass
-class HistoryInfoEntry:
+class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
+    """A container for information in a single "block" of history.info.
+
+    Attributes
+    ----------
+    tensor_nums : list of int
+        The progressive identifiers of Tensors used during this run.
+    job_nums : list of int
+        The progressive identifiers of the executions that used
+        certain Tensors during this run.
+    timestamp : str
+        The time when this run was started.
+    folder_name : str
+        The name of the history folder that corresponding to this run.
+    notes : str
+        The notes that users have added for
+        this run. May span multiple lines.
+    discarded : bool
+        Whether the user decided to mark this run as DISCARDED.
+    job_name : str, optional
+        A name assigned to this run by the user.
+    run_info : str, optional
+        The sequence of segments that were executed.
+    r_ref : float, optional
+        The R factor resulting from a reference-calculation run.
+    r_super : float, optional
+        The R factor resulting from a superpos-calculation run.
+    """
+
     tensor_nums: List[int]
     job_nums: List[int]
     timestamp: str
@@ -196,9 +224,10 @@ class HistoryInfoEntry:
     r_ref: Optional[float] = None
     r_super: Optional[float] = None
 
-
     def __str__(self):
-        tensor_str = 'None' if self.tensor_nums == [0] else str(self.tensor_nums)[1:-1]
+        """Return a string version of this entry, ready for writing to file."""
+        tensor_str = ('None' if self.tensor_nums == [0]
+                      else str(self.tensor_nums)[1:-1])
         job_str = str(self.job_nums)[1:-1]
         # translate timestamp if necessary
         time_str = (_translate_timestamp(self.timestamp)
