@@ -32,55 +32,18 @@ from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.cli_base import ViPErLEEDCLI
 
-
-_LOGGER = logging.getLogger(__name__)
-
-_CALC_LOG_PREFIXES = (
-    LOG_PREFIX,
-    'tleedm',   # For backwards compatibility
-    )
-HIST_FOLDER_RE = re.compile(
-    r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
-    )
-HISTORY_INFO_NAME = 'history.info'
-_HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
-HISTORY_INFO_SEPARATOR = '\n###########\n'
-
-STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
-# optional input files that may be generated at runtime - do not warn if missing
-RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
+from .constants import CALC_LOG_PREFIXES
+from .constants import HIST_FOLDER_RE
+from .constants import HISTORY_INFO_NAME
+from .constants import LOGGER
+from .constants import RUNTIME_GENERATED_INPUT_FILES
+from .constants import STATE_FILES
+from .history import HistoryInfoEntry
+from .history import HistoryInfoFile
+from .mode import BookkeeperMode
 
 
-class BookkeeperMode(Enum):
-    """Enumeration of bookkeeper modes.
-
-    Attributes
-    ----------
-    ARCHIVE
-        Store last run in history. Overwrite PARAMETERS, POSCAR & VIBROCC from
-        OUT. Runs after run_calc by default.
-    CLEAR
-        Clear the input directory of last run.
-        Runs before run_calc by default.
-    DISCARD
-        Re-start from the same input as the previous run. The discarded run is
-        kept in history. Has to be run manually after run_calc.
-    DISCARD_FULL
-        Discard previous run as if it never happened and removes it from
-        history. Has to be run manually after run_calc.
-    """
-    ARCHIVE = 'archive'
-    CLEAR = 'clear'
-    DISCARD = 'discard'
-    DISCARD_FULL = 'discard_full'
-
-    @property
-    def discard(self):
-        """Return whether this is mode DISCARD."""
-        return self is BookkeeperMode.DISCARD
-
-
-class Bookkeeper():
+class Bookkeeper:
     """Bookkeeper to archive or discard the most recent viperleed calc run."""
 
     def __init__(self,
@@ -114,25 +77,25 @@ class Bookkeeper():
         self.job_name = job_name
         # attach a stream handler to logger if not already present
         if not any(isinstance(h, logging.StreamHandler)
-                   for h in _LOGGER.handlers):
-            _LOGGER.addHandler(logging.StreamHandler())
-        _LOGGER.setLevel(logging.INFO)
-        _LOGGER.propagate = True
+                   for h in LOGGER.handlers):
+            LOGGER.addHandler(logging.StreamHandler())
+        LOGGER.setLevel(logging.INFO)
+        LOGGER.propagate = True
 
         # Make top level history folder if not there yet
         try:
             self.top_level_history_path.mkdir(exist_ok=True)
         except OSError:
-            _LOGGER.error('Error creating history folder.')
+            LOGGER.error('Error creating history folder.')
             raise
 
         # attach file handler for history/bookkeeper.log
         bookkeeper_log_path = self.top_level_history_path / 'bookkeeper.log'
-        _LOGGER.addHandler(logging.FileHandler(bookkeeper_log_path,
-                                               mode='a'))
+        LOGGER.addHandler(logging.FileHandler(bookkeeper_log_path,
+                                              mode='a'))
 
-        _LOGGER.info('\n### Bookeeper running at '
-                     f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###')
+        LOGGER.info('\n### Bookeeper running at '
+                    f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###')
 
         # history.info handler - creates file if not yet there
         self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
@@ -218,7 +181,7 @@ class Bookkeeper():
         for file in self.cwd.glob('*.log'):
             if not file.is_file():
                 continue
-            container = (calc_logs if file.name.startswith(_CALC_LOG_PREFIXES)
+            container = (calc_logs if file.name.startswith(CALC_LOG_PREFIXES)
                         else other_logs)
             container.append(file)
         return calc_logs, other_logs
@@ -292,19 +255,19 @@ class Bookkeeper():
         except AttributeError as exc:
             raise NotImplementedError from exc
 
-        _LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
+        LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
         return method()
 
     def _run_archive_mode(self):
         if self.history_with_same_base_name_exists:
-            _LOGGER.info(
+            LOGGER.info(
                 f'History directory for run {self.base_history_dir_name} '
                 'exists. Exiting without doing anything.'
                 )
             return 1
         if not self.files_needs_archiving:
-            _LOGGER.info('No files to be moved to history. Exiting '
-                         'without doing anything.')
+            LOGGER.info('No files to be moved to history. Exiting '
+                        'without doing anything.')
             return 1
         self._make_and_copy_to_history(use_ori=False)
 
@@ -319,8 +282,8 @@ class Bookkeeper():
     def _run_clear_mode(self):
         if (not self.history_with_same_base_name_exists
             and self.files_needs_archiving):
-            _LOGGER.info(f'History folder {self.history_dir} does not '
-                         'yet exist. Running archive mode first.')
+            LOGGER.info(f'History folder {self.history_dir} does not '
+                        'yet exist. Running archive mode first.')
             self._make_and_copy_to_history(use_ori=True)
 
             # workhistory and history.info
@@ -336,8 +299,8 @@ class Bookkeeper():
     def _run_discard_mode(self):
         if (not self.history_with_same_base_name_exists
             and self.files_needs_archiving):
-            _LOGGER.info(f'History folder {self.history_dir} does not '
-                         'yet exist. Running archive mode first.')
+            LOGGER.info(f'History folder {self.history_dir} does not '
+                        'yet exist. Running archive mode first.')
             self._make_and_copy_to_history(use_ori=False)
 
             # workhistory and history.info
@@ -347,15 +310,15 @@ class Bookkeeper():
         try:
             self.history_info.discard_last_entry()
         except ValueError:
-            _LOGGER.warning('Error: Failed to mark last entry as '
-                            f'discarded in {HISTORY_INFO_NAME}.')
+            LOGGER.warning('Error: Failed to mark last entry as '
+                           f'discarded in {HISTORY_INFO_NAME}.')
 
     def _run_discard_full_mode(self):
         # check for notes in history.info
         if self.history_info.last_entry_has_notes:
-            _LOGGER.warning(f'The last entry in {HISTORY_INFO_NAME} has user '
-                            'notes. If you really want to purge the last run, '
-                            'remove the notes first.')
+            LOGGER.warning(f'The last entry in {HISTORY_INFO_NAME} has user '
+                           'notes. If you really want to purge the last run, '
+                           'remove the notes first.')
             return 1
 
         # the directory we want to remove is not self.history_dir (since that
@@ -367,18 +330,18 @@ class Bookkeeper():
             try:
                 shutil.rmtree(dir_to_remove)
             except OSError:
-                _LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
+                LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
                 return 1
             self._discard_common()
         else:
-            _LOGGER.error(f'FULL_DISCARD mode failed: could not identify '
-                          'directory to remove. Please proceed manually.')
+            LOGGER.error(f'FULL_DISCARD mode failed: could not identify '
+                         'directory to remove. Please proceed manually.')
         # remove history entry from history.info
         try:
             self.history_info.remove_last_entry()
         except ValueError:
-            _LOGGER.warning('Error: Failed to remove last entry from '
-                            f'{HISTORY_INFO_NAME}.')
+            LOGGER.warning('Error: Failed to remove last entry from '
+                           f'{HISTORY_INFO_NAME}.')
 
 
     def _discard_common(self):
@@ -463,7 +426,7 @@ class Bookkeeper():
                 try:
                     shutil.move(ori_file, self.cwd / file)
                 except OSError:
-                    _LOGGER.error(f'Failed to move {ori_file} to {file}.')
+                    LOGGER.error(f'Failed to move {ori_file} to {file}.')
                     raise
 
     def copy_input_files_from_original_inputs_and_cwd(self, use_ori=False):
@@ -479,7 +442,7 @@ class Bookkeeper():
                 original_timestamp = original_file.stat().st_mtime
                 cwd_timestamp = cwd_file.stat().st_mtime
                 if original_timestamp < cwd_timestamp:
-                    _LOGGER.warning(
+                    LOGGER.warning(
                         f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
                         'copied to history, but the file in the input '
                         'directory is newer.'
@@ -494,7 +457,7 @@ class Bookkeeper():
                 # copy cwd and warn
                 _copy_one_file_to_history(
                     self.cwd / file, self.history_dir)
-                _LOGGER.warning(
+                LOGGER.warning(
                     f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
                     'Using file from root directory instead and renaming to '
                     f'{cwd_file.name}_from_root.'
@@ -503,22 +466,22 @@ class Bookkeeper():
                     os.rename(self.history_dir / file,
                             self.history_dir / f'{cwd_file.name}_from_root')
                 except OSError:
-                    _LOGGER.error(f'Failed to rename {file} to '
-                                  f'{cwd_file.name}_from_root.')
+                    LOGGER.error(f'Failed to rename {file} to '
+                                 f'{cwd_file.name}_from_root.')
 
     def copy_out_and_supp(self):
         """Copy OUT and SUPP directories to history."""
         for name in (DEFAULT_SUPP, DEFAULT_OUT):
             dir = self.cwd / name
             if not dir.is_dir():
-                _LOGGER.warning(f'Could not find {name} directory in '
-                                f'{self.cwd}. It will not be copied '
-                                'to history.')
+                LOGGER.warning(f'Could not find {name} directory in '
+                               f'{self.cwd}. It will not be copied '
+                               'to history.')
                 continue
             try:
                 shutil.copytree(dir, self.history_dir / name)
             except OSError:
-                _LOGGER.error(f'Failed to copy {name} directory to history.')
+                LOGGER.error(f'Failed to copy {name} directory to history.')
 
     def copy_log_files_to_history(self):
         """Copy log files to history."""
@@ -559,194 +522,12 @@ def store_input_files_to_history(root_path, history_path):
             print(f'Failed to copy file {file} to history: {exc}')
 
 
-class HistoryInfoFile:
-    """Deals with the history.info file in a history directory."""
-
-    def __init__(self, file_path, create_new=False):
-        """Initialize instance.
-
-        Parameters
-        ----------
-        file_path : str or Path
-            The path to the history.info file.
-        create_new : bool, optional
-            Whether a empty file should be created in case file_path
-            does not exist.
-
-        Raises
-        ------
-        FileNotFoundError
-            If `file_path` does not exist and `create_new` is False.
-        """
-        self.path = Path(file_path)
-        if not self.path.is_file() and not create_new:
-            raise FileNotFoundError('history.info file not '
-                                    f'found at {self.path}.')
-        if not self.path.is_file():  # create new file
-            self.path.touch()
-
-    @property
-    def raw_contents(self):
-        with open(self.path, 'r', encoding='utf-8') as f:
-            raw_contents = f.read()
-        return raw_contents
-
-    @property
-    def last_entry(self):
-        if not self.raw_contents:
-            return None
-        return self._parse_entry(
-            self.raw_contents.split(HISTORY_INFO_SEPARATOR.strip())[-1])
-
-    @property
-    def last_entry_has_notes(self):
-        if self.last_entry is None:
-            return False
-        return bool(self.last_entry.notes)
-
-    @property
-    def last_entry_was_discarded(self):
-        if self.last_entry is None:
-            return False
-        return self.last_entry.discarded
-
-    def append_entry(self, entry):
-        skip_separator = (
-            self.raw_contents.strip().endswith(HISTORY_INFO_SEPARATOR.strip())
-            or not self.raw_contents.strip())
-        with open(self.path, 'a', encoding='utf-8') as f:
-            if not skip_separator:
-                f.write(HISTORY_INFO_SEPARATOR)
-            f.write(str(entry))
-
-    def discard_last_entry(self):
-        """Mark the last entry in the history.info file as discarded."""
-        if self.last_entry is None:
-            raise ValueError("No entries to discard.")
-        last_entry = self.last_entry
-        if last_entry.discarded:
-            _LOGGER.warning('Last entry is already discarded.')
-        last_entry.discarded = True
-        self.remove_last_entry()
-        self.append_entry(last_entry)
-
-    def remove_last_entry(self):
-        """Discard the last entry form the history.info file."""
-        if self.last_entry is None:
-            raise ValueError("No entries to remove.")
-        if HISTORY_INFO_SEPARATOR.strip() in self.raw_contents:
-            content_without_last = self.raw_contents.rsplit(
-                HISTORY_INFO_SEPARATOR.strip(), 1)[0]
-        else:
-            # only one entry
-            content_without_last = ''
-        if content_without_last.endswith('\n'):
-            content_without_last = content_without_last[:-len('\n')]
-        # clear file and write back entries
-        self.path.write_text(content_without_last)
-
-    def _parse_entry(self, entry_str):
-        # remove leading and trailing whitespace
-        entry_str = entry_str.strip()
-        # check for 'DISCARDED' at the end
-        if entry_str.endswith('DISCARDED'):
-            discarded = True
-            entry_str = entry_str[:-len('DISCARDED')]
-        else:
-            discarded = False
-        # Notes may also be optional
-        if 'Notes:' not in entry_str:
-            notes = ''
-            general_info = entry_str
-        else:
-            # split at 'Notes: ' because that is the only one that can be multiline
-            general_info, notes = entry_str.split('Notes:', 1)
-            notes = notes.replace('Notes: ', '').strip()
-        # parse general_info
-        general_info = iter(general_info.split('\n'))
-        tensors = [int(num) for num in
-                   next(general_info).replace('# TENSORS ', '').split()[1:]]
-        jobs = [int(num) for num in
-                next(general_info).replace('# JOB ID ', '').split()[1:]]
-        the_rest = next(general_info)
-        # optionals
-        job_name, run_info, r_ref, r_super = None, None, None, None
-        if the_rest.startswith('# JOB NAME '):
-            job_name = the_rest.replace('# JOB NAME ', '').strip()
-            the_rest = next(general_info)
-        if the_rest.startswith('# RUN '):
-            run_info = the_rest.replace('# RUN ', '').strip()
-            the_rest = next(general_info)
-        if the_rest.startswith('# TIME'):
-            time = the_rest.replace('# TIME ', '').strip()
-            the_rest = next(general_info)
-        if the_rest.startswith('# R REF'):
-            r_ref = float(the_rest.replace('# R REF ', ''))
-            the_rest = next(general_info)
-        if the_rest.startswith('# R SUPER'):
-            r_super = float(the_rest.replace('# R SUPER ', ''))
-            the_rest = next(general_info)
-        folder = the_rest.replace('# FOLDER ', '').strip()
-
-        # this should be all, if there is more, we have a problem
-        try:
-            # there may be empty lines at the end
-            while not next(general_info):
-                pass
-        except StopIteration:
-            pass
-        else:
-            raise ValueError("Error parsing history.info file.")
-
-        return HistoryInfoEntry(tensors, jobs, time, folder, notes, discarded,
-                                job_name, run_info, r_ref, r_super)
-
-@dataclass
-class HistoryInfoEntry:
-    tensor_nums: List[int]
-    job_nums: List[int]
-    timestamp: str
-    folder_name: str
-    notes: str
-    discarded: bool
-    job_name: Optional[str] = None
-    run_info: Optional[str] = None
-    r_ref: Optional[float] = None
-    r_super: Optional[float] = None
-
-
-    def __str__(self):
-        tensor_str = 'None' if self.tensor_nums == [0] else str(self.tensor_nums)[1:-1]
-        job_str = str(self.job_nums)[1:-1]
-        # translate timestamp if necessary
-        time_str = (_translate_timestamp(self.timestamp)
-                    if '-' in self.timestamp else self.timestamp)
-        folder_str = self.folder_name
-        return (
-            '\n'
-            + '# TENSORS '.ljust(_HISTORY_INFO_SPACING) + tensor_str + '\n'
-            + '# JOB ID '.ljust(_HISTORY_INFO_SPACING) + job_str + '\n'
-            + ('# JOB NAME '.ljust(_HISTORY_INFO_SPACING) + self.job_name + '\n'
-                if self.job_name else '')
-            + ('# RUN '.ljust(_HISTORY_INFO_SPACING) + self.run_info + '\n'
-                if self.run_info else '')
-            + '# TIME '.ljust(_HISTORY_INFO_SPACING) + time_str + '\n'
-            + ('# R REF '.ljust(_HISTORY_INFO_SPACING) +f'{self.r_ref:.4f}\n'
-                if self.r_ref is not None else '')
-            + ('# R SUPER '.ljust(_HISTORY_INFO_SPACING) + f'{self.r_super:.4f}\n'
-                if self.r_super is not None else '')
-            + '# FOLDER '.ljust(_HISTORY_INFO_SPACING) + folder_str + '\n'
-            + 'Notes: ' + self.notes.strip()
-            + ('\nDISCARDED' if self.discarded else '')
-            )
-
-
 def _create_new_history_dir(new_history_path):
     try:
         new_history_path.mkdir()
     except OSError:
-        _LOGGER.error('Error: Could not create target directory '
-                      f'{new_history_path}\n Stopping...')
+        LOGGER.error('Error: Could not create target directory '
+                     f'{new_history_path}\n Stopping...')
         raise
 
 
@@ -917,20 +698,19 @@ def _move_or_discard_one_file(file, target_folder, discard):
         try:
             file.unlink()
         except OSError:
-            _LOGGER.warning(f'Failed to discard file {file.name}.')
+            LOGGER.warning(f'Failed to discard file {file.name}.')
         return
     if discard:  # Should be a directory
         try:
             shutil.rmtree(file)
         except OSError:
-            _LOGGER.warning(f'Failed to discard directory {file.name}.')
+            LOGGER.warning(f'Failed to discard directory {file.name}.')
         return
     # Move it
     try:
         shutil.move(file, target_folder / file.name)
     except OSError:
-        _LOGGER.error(f'Failed to move {file.name}.')
-
+        LOGGER.error(f'Failed to move {file.name}.')
 
 
 def _copy_one_file_to_history(file_path, history_path):
@@ -938,8 +718,7 @@ def _copy_one_file_to_history(file_path, history_path):
     try:
         shutil.copy2(file_path, history_path / file_path.name)
     except OSError:
-        _LOGGER.error(f'Failed to copy {file_path} to history.')
-
+        LOGGER.error(f'Failed to copy {file_path} to history.')
 
 
 def _move_workhistory_folders(work_history_path, history_path,
@@ -1008,8 +787,8 @@ def _read_and_clear_notes_file(cwd):
         with notes_path.open('w', encoding='utf-8'):
             pass
     except OSError:
-        _LOGGER.error(f'Failed to clear the {notes_path.name} '
-                      'file after reading.')
+        LOGGER.error(f'Failed to clear the {notes_path.name} '
+                     'file after reading.')
     return notes
 
 
@@ -1019,7 +798,7 @@ def _read_most_recent_log(cwd):
     try:
         most_recent_log = max(
             (log_file
-             for prefix in _CALC_LOG_PREFIXES
+             for prefix in CALC_LOG_PREFIXES
              for log_file in cwd.glob(f'{prefix}*.log')
              if log_file.is_file()),
             key=attrgetter('name')
@@ -1051,95 +830,3 @@ def _update_state_files_from_out(cwd):
                 shutil.move(out_file, cwd / file)
             except OSError:
                 print(f'Error: failed to copy {out_file} as new {file}.')
-
-
-
-# This could probably be done by datetime.strptime
-def _translate_timestamp(time_stamp):
-    """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
-    time_stamp = time_stamp.replace('moved-', '')
-    if len(time_stamp) != 13:
-        print(time_stamp)
-        raise ValueError('Error translating timestamp: Invalid length '
-                         f'{len(time_stamp)}. Expected 13 characters.')
-    year, month, day = time_stamp[:2], time_stamp[2:4], time_stamp[4:6]
-    hour, minutes, secs = time_stamp[7:9], time_stamp[9:11], time_stamp[11:13]
-    return f'{day}.{month}.{year} {hour}:{minutes}:{secs}'
-
-
-
-class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
-    """The main command-line interface for the bookkeeper utility."""
-
-    def add_parser_arguments(self, parser):
-        """Add bookkeeper arguments to parser."""
-        super().add_parser_arguments(parser)
-        what_next = parser.add_mutually_exclusive_group()
-        what_next.add_argument(
-            '-a', '--archive',
-            help=('Store last run in history. Overwrite PARAMETERS, POSCAR &'
-                  'VIBROCC from OUT. Runs after viperleed.calc by default.'),
-            action='store_true',
-            )
-        what_next.add_argument(
-            '-c', '--clear',
-            help=('Clear the input directory and add last run to history if not'
-                  ' already there. Runs before viperleed.calc by default.'),
-            action='store_true',
-            )
-        what_next.add_argument(
-            '-d', '--discard',
-            help=('Discard all results from the last run, and restore the '
-                  'previous inputs. The discarded run is kept in history.'),
-            action='store_true',
-            )
-        what_next.add_argument(
-            '-df', '--discard-full',
-            help=('Discard all results from the last run as if it never '
-                  'happened. The discarded run is removed from history.'),
-            action='store_true',
-            )
-        parser.add_argument(
-            '-j', '--job-name',
-            help=('define a string to be appended to the name of the history '
-                  f'folder that is created, and is logged in {HISTORY_INFO_NAME}'),
-            type=str
-            )
-        parser.add_argument(
-            '--history-name',
-            help=('define the name of the history folder that is '
-                  f'created/used. Default is {DEFAULT_HISTORY!r}'),
-            type=str,
-            default=DEFAULT_HISTORY
-            )
-        parser.add_argument(
-            '--work-history-name',
-            help=('define the name of the workhistory folder that is '
-                  f'created/used. Default is {DEFAULT_WORK_HISTORY!r}'),
-            type=str,
-            default=DEFAULT_WORK_HISTORY
-            )
-
-
-    def __call__(self, args=None):
-        """Call the bookkeeper with command-line args."""
-        parsed_args = self.parse_cli_args(args)
-
-        bookkeeper = Bookkeeper(job_name=parsed_args.job_name,
-                                history_name=parsed_args.history_name,
-                                work_history_name=parsed_args.work_history_name,
-                                cwd=Path.cwd().resolve())
-        # Select mode
-        if parsed_args.clear:
-            mode = BookkeeperMode.CLEAR
-        elif parsed_args.discard:
-            mode = BookkeeperMode.DISCARD
-        elif parsed_args.discard_full:
-            mode = BookkeeperMode.DISCARD_FULL
-        else:
-            mode = BookkeeperMode.ARCHIVE
-        return bookkeeper.run(mode)
-
-
-if __name__ == '__main__':
-    BookkeeperCLI.run_as_script()
