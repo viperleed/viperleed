@@ -23,7 +23,7 @@ from pytest_cases import fixture, parametrize
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
-from viperleed.calc.bookkeeper.constants import CALC_LOG_PREFIXES
+from viperleed.calc.bookkeeper.bookkeeper import CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history import HISTORY_INFO_SEPARATOR
 

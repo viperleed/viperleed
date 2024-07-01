@@ -32,15 +32,24 @@ from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.cli_base import ViPErLEEDCLI
 
-from .constants import CALC_LOG_PREFIXES
-from .constants import HIST_FOLDER_RE
 from .constants import HISTORY_INFO_NAME
 from .constants import LOGGER
-from .constants import RUNTIME_GENERATED_INPUT_FILES
-from .constants import STATE_FILES
 from .history import HistoryInfoEntry
 from .history import HistoryInfoFile
 from .mode import BookkeeperMode
+
+
+CALC_LOG_PREFIXES = (
+    LOG_PREFIX,
+    'tleedm',   # For backwards compatibility
+    )
+HIST_FOLDER_RE = re.compile(
+    r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
+    )
+STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
+
+# Input files that may be generated at runtime - don't warn if missing
+RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 
 class Bookkeeper:
