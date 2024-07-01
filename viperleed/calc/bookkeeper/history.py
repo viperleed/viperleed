@@ -90,9 +90,10 @@ class HistoryInfoFile:
         """Mark the last entry in the history.info file as discarded."""
         if self.last_entry is None:
             raise NoHistoryEntryError('No entries to discard.')
-        last_entry = self.last_entry
-        if last_entry.discarded:
+        if self.last_entry.discarded:
             LOGGER.warning('Last entry is already discarded.')
+            return
+        last_entry = self.last_entry
         last_entry.discarded = True
         self.remove_last_entry()
         self.append_entry(last_entry)
