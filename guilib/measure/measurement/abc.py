@@ -244,7 +244,27 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
     @secondary_controllers.setter
     def secondary_controllers(self, new_controllers):
+        """Set secondary controllers and move them to threads.
+
+        Use the set_secondary_controllers method to set secondary
+        controllers from another thread.
+
+        Parameters
+        ----------
+        new_controllers : list
+            List of MeasureControllerABC objects.
+        """
+        self.set_secondary_controllers(new_controllers)
+
+    @qtc.pyqtSlot(object)
+    def set_secondary_controllers(self, new_controllers):
         """Set the controllers which should be used and handle signals.
+
+        Disconnect old secondary controllers and quit and clear their
+        threads. After that, move new secondary controllers to newly
+        created threads and start them. Then set private
+        __secondary_controllers attribute to the new controllers and
+        connect their signals.
 
         Parameters
         ----------
@@ -253,6 +273,13 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         """
         self.__disconnect_secondary_controllers()
         self._stop_threads()
+        self.threads.clear()
+        for controller in new_controllers:
+            thread = qtc.QThread()
+            controller.moveToThread(thread)
+            self.threads.append(thread)
+        for thread in self.threads:
+            thread.start(priority=thread.TimeCriticalPriority)
         self.__secondary_controllers = new_controllers
         self.__connect_secondary_controllers()
 
@@ -1327,7 +1354,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             infos = tuple()
 
         secondary_controllers = []
-        threads = []
         for info in infos:
             if len(info) != 2:
                 base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
@@ -1341,16 +1367,9 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                 base.emit_error(self, MeasurementErrors.WRONG_CONTROLLER_CLASS,
                                 ctrl.address)
                 continue
-            thread = qtc.QThread()
-            thread.finished.connect(thread.deleteLater)
-            ctrl.moveToThread(thread)
             secondary_controllers.append(ctrl)
-            threads.append(thread)
         # The next one also quits the old threads
         self.secondary_controllers = secondary_controllers
-        self.threads = threads
-        for thread in self.threads:
-            thread.start(priority=thread.TimeCriticalPriority)
 
     def __make_tmp_directory_tree(self):
         """Prepare temporary folder tree where data will be saved."""
