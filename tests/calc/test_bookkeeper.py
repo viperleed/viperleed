@@ -128,7 +128,10 @@ def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name,
 
     with execute_in_dir(tmp_path):
         yield tmp_path
-    shutil.rmtree(tmp_path)
+    # It would be nice to clean up, but the following line causes
+    # a PermissionError. Likely because of logging keeping a hold
+    # of the bookkeeper.log file.
+    # shutil.rmtree(tmp_path)
 
 
 @fixture(name='after_run')
@@ -167,7 +170,10 @@ def fixture_bookkeeper_mock_dir_new(tmp_path):
     bookkeeper = Bookkeeper(cwd=tmp_path)
     with execute_in_dir(tmp_path):
         yield bookkeeper, tmp_path
-    shutil.rmtree(tmp_path)
+    # It would be nice to clean up, but the following line causes
+    # a PermissionError. Likely because of logging keeping a hold
+    # of the bookkeeper.log file
+    # shutil.rmtree(tmp_path)
 
 
 @fixture(name='history_path')
