@@ -10,11 +10,8 @@ __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
 from collections import defaultdict
-from dataclasses import dataclass
-from enum import Enum
 from operator import attrgetter
 from pathlib import Path
-from typing import List, Optional
 import logging
 import os
 import re
@@ -30,7 +27,6 @@ from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
 from viperleed.calc.sections.cleanup import DEFAULT_OUT
 from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
-from viperleed.cli_base import ViPErLEEDCLI
 
 from .constants import HISTORY_INFO_NAME
 from .constants import LOGGER
