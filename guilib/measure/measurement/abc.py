@@ -573,6 +573,21 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         self.__force_end_timer.start()
         self._prepare_finalization()
 
+    def are_runtime_settings_ok(self):
+        """Return whether runtime settings are ok.
+
+        This method can be used to check if the runtime settings that
+        result from the given settings are enough to run a measuremnt.
+        Base implementation returns True.
+
+        Returns
+        -------
+        settings_ok : bool
+            True if the runtime settings are
+            sufficient to start a measurement.
+        """
+        return True
+
     def are_settings_invalid(self, new_settings):
         """Check if there are any invalid settings.
 
@@ -615,6 +630,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             Starts the measurement preparation and carries
             a tuple of energies and times with it.
         """
+        if not self.are_runtime_settings_ok():
+            return
         self.__aborted = False
         self.settings.set('measurement_settings', 'was_aborted', 'False')
         self.settings.set('measurement_info', 'started',

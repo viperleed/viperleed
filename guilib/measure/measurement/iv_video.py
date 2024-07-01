@@ -174,48 +174,19 @@ class IVVideo(MeasurementABC):
         super().abort()
     # pylint: enable=useless-super-delegation
 
-    def set_settings(self, new_settings):
-        """Change settings of the measurement.
+    def are_runtime_settings_ok(self):
+        """Return whether runtime settings are ok.
 
-        Settings are loaded only if they are valid. Otherwise
-        the previous settings stay in effect. If the settings
-        have been accepted, controller and camera objects as
-        specified in the settings will be instantiated, told
-        what they will be measuring, moved to their respective
-        properties and connected to all necessary signals.
-
-        This extension of the base-class method checks that
-        at least one camera is available to the measurement.
-
-        Parameters
-        ----------
-        new_settings : dict or ConfigParser or str or Path or ViPErLEEDSettings
-            Configuration of the measurement.
+        Check if at least one camera is available
+        before starting a measurement.
 
         Returns
         -------
-        settings_valid : bool
-            True if the new settings given were accepted.
-
-        Raises
-        ------
-        TypeError
-            If new_settings is neither a dict, ConfigParser, string
-            or path and if an element of the mandatory_settings is
-            None or has a length greater than 3.
-
-        Emits
-        -----
-        QObjectSettingsErrors.MISSING_SETTINGS
-            If new_settings is missing.
-        QObjectSettingsErrors.INVALID_SETTINGS
-            If any element of the new_settings does not fit the
-            mandatory_settings.
-        MeasurementErrors.MISSING_CAMERA
-            If no camera is available to the IVVideo measurement
+        settings_ok : bool
+            True if the runtime settings are
+            sufficient to start a measurement.
         """
-        settings_valid = super().set_settings(new_settings)
-        if settings_valid and not self.cameras:
+        if not self.cameras:
             base.emit_error(self, MeasurementErrors.MISSING_CAMERA)
-            settings_valid = False
-        return settings_valid
+            return False
+        return True

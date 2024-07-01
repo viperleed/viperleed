@@ -127,6 +127,27 @@ class MeasureEnergyCalibration(MeasurementABC):
             Starts the measurement preparation and carries
             a tuple of energies and times with it.
         """
+        self.__old_coefficients = self.primary_controller.settings.get(
+            'energy_calibration', 'coefficients', fallback=''
+            )
+
+        self.primary_controller.settings.set('energy_calibration',
+                                             'coefficients', '(0, 1)')
+        super().begin_preparation()
+
+    def are_runtime_settings_ok(self):
+        """Return whether runtime settings are ok.
+
+        Checks whether at least one controller measures the beam energy
+        and whether the energy range and sample size is large enough to
+        perform any kind of energy calibration.
+
+        Returns
+        -------
+        settings_ok : bool
+            True if the runtime settings are
+            sufficient to start a measurement.
+        """
         if not any(c.measures(_MEASURED_EGY) for c in self.controllers):
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTINGS,
@@ -134,7 +155,7 @@ class MeasureEnergyCalibration(MeasurementABC):
                 '\nCannot run an energy calibration if no '
                 'controller measures the beam energy.'
                 )
-            return
+            return False
 
         egy_range = self.__end_energy - self.start_energy
         n_steps = 1 + round(egy_range/self.__delta_energy)
@@ -147,7 +168,7 @@ class MeasureEnergyCalibration(MeasurementABC):
                 f"\nToo small energy range ({abs(egy_range)} eV) for "
                 "calibration. It should be at least 10 eV."
                 )
-            return
+            return False
 
         if n_steps < 10:
             # Require at least 10 data points for a decent fit
@@ -158,15 +179,9 @@ class MeasureEnergyCalibration(MeasurementABC):
                 f"\nToo few energies ({n_steps}) for a reasonable fit "
                 "of the calibration curve. Expected at least 10 energies."
                 )
-            return
+            return False
 
-        self.__old_coefficients = self.primary_controller.settings.get(
-            'energy_calibration', 'coefficients', fallback=''
-            )
-
-        self.primary_controller.settings.set('energy_calibration',
-                                             'coefficients', '(0, 1)')
-        super().begin_preparation()
+        return True
 
     def get_settings_handler(self):
         """Return a SettingsHandler object for displaying settings."""
