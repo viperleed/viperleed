@@ -23,22 +23,22 @@ def fixture_calc_parser():
 class TestCalcParser:
     """Tests for parsing CLI arguments of viperleed.calc."""
 
-    def test_viperleed_calc_parse_version(self, calc_parser):
+    def test_parse_version(self, calc_parser):
         """Check that requesting the version exits afterwards."""
         with pytest.raises(SystemExit):
             calc_parser.parse_args(['--version'])
 
-    def test_viperleed_calc_parse_work(self, calc_parser, tmp_path):
+    def test_parse_work(self, calc_parser, tmp_path):
         """Check interpretation of -w flag."""
         parsed = calc_parser.parse_args(['-w', str(tmp_path)])
         assert parsed.work == str(tmp_path)
 
     @parametrize(v_flag=('-v', '--verbose'))
-    def test_viperleed_calc_parse_verbose(self, calc_parser, v_flag):
+    def test_parse_verbose(self, calc_parser, v_flag):
         """Check interpretation of -v flag."""
         assert calc_parser.parse_args([v_flag,]).verbose
 
     @parametrize(v_flag=('-vv', '--very-verbose'))
-    def test_viperleed_calc_parse_very_verbose(self, calc_parser, v_flag):
+    def test_parse_very_verbose(self, calc_parser, v_flag):
         """Check interpretation of -vv flag."""
         assert calc_parser.parse_args([v_flag,]).very_verbose
