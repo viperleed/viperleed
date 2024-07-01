@@ -32,6 +32,7 @@ from .constants import HISTORY_INFO_NAME
 from .constants import LOGGER
 from .history import HistoryInfoEntry
 from .history import HistoryInfoFile
+from .history import NoHistoryEntryError
 from .mode import BookkeeperMode
 
 
@@ -314,9 +315,9 @@ class Bookkeeper:
         self._discard_common()
         try:
             self.history_info.discard_last_entry()
-        except ValueError:
+        except NoHistoryEntryError as exc:
             LOGGER.warning('Error: Failed to mark last entry as '
-                           f'discarded in {HISTORY_INFO_NAME}.')
+                           f'discarded in {HISTORY_INFO_NAME}: {exc}')
 
     def _run_discard_full_mode(self):
         # check for notes in history.info
@@ -344,9 +345,9 @@ class Bookkeeper:
         # remove history entry from history.info
         try:
             self.history_info.remove_last_entry()
-        except ValueError:
+        except NoHistoryEntryError as exc:
             LOGGER.warning('Error: Failed to remove last entry from '
-                           f'{HISTORY_INFO_NAME}.')
+                           f'{HISTORY_INFO_NAME}: {exc}')
 
 
     def _discard_common(self):

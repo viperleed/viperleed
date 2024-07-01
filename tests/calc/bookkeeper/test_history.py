@@ -13,6 +13,7 @@ import pytest
 from pytest_cases import fixture
 
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history import NoHistoryEntryError
 
 
 @fixture(name='history_info_file')
@@ -74,7 +75,7 @@ class TestHistoryInfoFile:
         n_entries = history_info.path.read_text().count('# TENSORS')
         if n_entries == 0:
             assert history_info.last_entry is None
-            with pytest.raises(ValueError):
+            with pytest.raises(NoHistoryEntryError):
                 history_info.remove_last_entry()
         else:
             assert history_info.last_entry is not None

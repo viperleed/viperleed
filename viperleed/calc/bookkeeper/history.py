@@ -21,6 +21,14 @@ _HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
 HISTORY_INFO_SEPARATOR = '\n###########\n'
 
 
+class HistoryInfoError(Exception):
+    """Base class for all errors related to the history.info file."""
+
+
+class NoHistoryEntryError(HistoryInfoError):
+    """There is no entry to process according to the criteria."""
+
+
 class HistoryInfoFile:
     """Deals with the history.info file in a history directory."""
 
@@ -84,7 +92,7 @@ class HistoryInfoFile:
     def discard_last_entry(self):
         """Mark the last entry in the history.info file as discarded."""
         if self.last_entry is None:
-            raise ValueError("No entries to discard.")
+            raise NoHistoryEntryError('No entries to discard.')
         last_entry = self.last_entry
         if last_entry.discarded:
             LOGGER.warning('Last entry is already discarded.')
@@ -95,7 +103,7 @@ class HistoryInfoFile:
     def remove_last_entry(self):
         """Discard the last entry form the history.info file."""
         if self.last_entry is None:
-            raise ValueError("No entries to remove.")
+            raise NoHistoryEntryError('No entries to remove.')
         if HISTORY_INFO_SEPARATOR.strip() in self.raw_contents:
             content_without_last = self.raw_contents.rsplit(
                 HISTORY_INFO_SEPARATOR.strip(), 1)[0]
