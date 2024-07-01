@@ -1,4 +1,4 @@
-"""Module measurementdialog of viperleed.guilib.measure.dialogs.
+"""Module new_measurement_dialog of viperleed.guilib.measure.dialogs.
 
 ========================================
    ViPErLEED Graphical User Interface
@@ -26,7 +26,7 @@ from viperleed.guilib.measure.widgets.pathselector import PathSelector
 from viperleed.guilib.widgets.basewidgets import QNoDefaultDialogButtonBox
 
 
-class MeasurementDialog(qtw.QDialog):
+class SelectNewMeasurementDialog(qtw.QDialog):
     """Dialog that handles selecting measurements."""
 
     measurement_selected = qtc.pyqtSignal(object, ViPErLEEDSettings)
@@ -121,6 +121,7 @@ class MeasurementDialog(qtw.QDialog):
         enable = False if current_choice == 'default' else True
         self._ctrls['clone_settings'].setEnabled(enable)
 
+    @qtc.pyqtSlot()
     def accept(self):
         """Emit selected measurement type and settings path and close."""
         cls = self._ctrls['type_selection'].currentData()
