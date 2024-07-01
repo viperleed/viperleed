@@ -59,17 +59,6 @@ class HistoryInfoFile:
         self.last_entry = None
         self.read()
 
-    def read(self):
-        """Read the current contents of the history.info file."""
-        with open(self.path, 'r', encoding='utf-8') as history_info:
-            self.raw_contents = history_info.read()
-        if not self.raw_contents:
-            self.last_entry = None
-        else:
-            self.last_entry = self._parse_entry(
-                self.raw_contents.split(HISTORY_INFO_SEPARATOR.strip())[-1]
-                )
-
     @property
     def last_entry_has_notes(self):
         """Return whether the last entry has associated notes."""
@@ -107,6 +96,17 @@ class HistoryInfoFile:
         last_entry.discarded = True
         self.remove_last_entry()
         self.append_entry(last_entry)
+
+    def read(self):
+        """Read the current contents of the history.info file."""
+        with open(self.path, 'r', encoding='utf-8') as history_info:
+            self.raw_contents = history_info.read()
+        if not self.raw_contents:
+            self.last_entry = None
+        else:
+            self.last_entry = self._parse_entry(
+                self.raw_contents.split(HISTORY_INFO_SEPARATOR.strip())[-1]
+                )
 
     def remove_last_entry(self):
         """Discard the last entry from the history.info file."""
