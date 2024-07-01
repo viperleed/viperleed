@@ -252,6 +252,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             List of MeasureControllerABC objects.
         """
         self.__disconnect_secondary_controllers()
+        self._stop_threads()
         self.__secondary_controllers = new_controllers
         self.__connect_secondary_controllers()
 
@@ -919,8 +920,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         """
         self.__disconnect_primary_controller()
         self.__force_end_timer.stop()
-        for thread in self.threads:
-            thread.quit()
+        self._stop_threads()
         self.running = False
         self.finished.emit()
 
@@ -1321,6 +1321,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             infos = tuple()
 
         secondary_controllers = []
+        threads = []
         for info in infos:
             if len(info) != 2:
                 base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
@@ -1338,8 +1339,10 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             thread.finished.connect(thread.deleteLater)
             ctrl.moveToThread(thread)
             secondary_controllers.append(ctrl)
-            self.threads.append(thread)
+            threads.append(thread)
+        # The next one also quits the old threads
         self.secondary_controllers = secondary_controllers
+        self.threads = threads
         for thread in self.threads:
             thread.start(priority=thread.TimeCriticalPriority)
 
@@ -1519,6 +1522,11 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         for error in self.__init_errors:
             self.error_occurred.emit(error)
         self.__init_errors = []
+
+    def _stop_threads(self):
+        """Quit all threads immediately."""
+        for thread in self.threads:
+            thread.quit()
 
     def __get_device_settings(self, configname):
         """Return a ViPErLEEDSettings for a device given its path.
