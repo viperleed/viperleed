@@ -250,9 +250,11 @@ class TestBookkeeperArchive:
         bookkeeper, mock_dir = before_run
         assert bookkeeper.archiving_required is False
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
-        # Bookkeeper should not do anything
+        # Bookkeeper should not do anything (except for logging)
         assert (mock_dir / 'history').exists()
-        assert not tuple((mock_dir / 'history').iterdir())
+        history_contents = (f for f in (mock_dir / 'history').iterdir()
+                            if f.name != 'bookkeeper.log')
+        assert not any(history_contents)
         # Originals untouched
         for file in MOCK_STATE_FILES:
             assert (mock_dir / file).is_file()
@@ -284,8 +286,10 @@ class TestBookkeeperClear:
         # bookkeeper should not think that it needs archiving
         assert bookkeeper.archiving_required is False
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
-        # Bookkeeper should not do anything
-        assert not tuple((mock_dir / 'history').iterdir())
+        # Bookkeeper should not do anything (except for logging)
+        history_contents = (f for f in (mock_dir / 'history').iterdir()
+                            if f.name != 'bookkeeper.log')
+        assert not any(history_contents)
         # Originals untouched
         for file in MOCK_STATE_FILES:
             assert (mock_dir / file).is_file()
@@ -366,8 +370,10 @@ class TestBookkeeperDiscard:
         # bookkeeper should not think that it needs archiving
         assert bookkeeper.archiving_required is False
         bookkeeper.run(mode=BookkeeperMode.DISCARD)
-        # Bookkeeper should not do anything
-        assert not tuple((mock_dir / 'history').iterdir())
+        # Bookkeeper should not do anything (except for logging)
+        history_contents = (f for f in (mock_dir / 'history').iterdir()
+                            if f.name != 'bookkeeper.log')
+        assert not any(history_contents)
         # Originals untouched
         for file in MOCK_STATE_FILES:
             assert (mock_dir / file).is_file()
@@ -460,8 +466,10 @@ class TestBookkeeperDiscardFull:
         # bookkeeper should not think that it needs archiving
         assert bookkeeper.archiving_required is False
         bookkeeper.run(mode=BookkeeperMode.DISCARD_FULL)
-        # Bookkeeper should not do anything
-        assert not tuple((mock_dir / 'history').iterdir())
+        # Bookkeeper should not do anything (except for logging)
+        history_contents = (f for f in (mock_dir / 'history').iterdir()
+                            if f.name != 'bookkeeper.log')
+        assert not any(history_contents)
         # Originals untouched
         for file in MOCK_STATE_FILES:
             assert (mock_dir / file).is_file()
