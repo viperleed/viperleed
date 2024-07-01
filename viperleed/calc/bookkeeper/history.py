@@ -105,7 +105,7 @@ class HistoryInfoFile:
         if not self.raw_contents:
             self.last_entry = None
         else:
-            self.last_entry = self._parse_entry(
+            self.last_entry = HistoryInfoEntry.from_string(
                 self.raw_contents.split(HISTORY_INFO_SEPARATOR.strip())[-1]
                 )
 
@@ -125,62 +125,6 @@ class HistoryInfoFile:
         # Clear file and write back entries
         self.path.write_text(content_without_last, encoding='utf-8')
         self.read()  # Re-read to update last_entry
-
-    def _parse_entry(self, entry_str):
-        # remove leading and trailing whitespace
-        entry_str = entry_str.strip()
-        # check for 'DISCARDED' at the end
-        if entry_str.endswith('DISCARDED'):
-            discarded = True
-            entry_str = entry_str[:-len('DISCARDED')]
-        else:
-            discarded = False
-        # Notes may also be optional
-        if 'Notes:' not in entry_str:
-            notes = ''
-            general_info = entry_str
-        else:
-            # split at 'Notes: ' because that is the only one that can be multiline
-            general_info, notes = entry_str.split('Notes:', 1)
-            notes = notes.replace('Notes: ', '').strip()
-        # parse general_info
-        general_info = iter(general_info.split('\n'))
-        tensors = [int(num) for num in
-                   next(general_info).replace('# TENSORS ', '').split()[1:]]
-        jobs = [int(num) for num in
-                next(general_info).replace('# JOB ID ', '').split()[1:]]
-        the_rest = next(general_info)
-        # optionals
-        job_name, run_info, r_ref, r_super = None, None, None, None
-        if the_rest.startswith('# JOB NAME '):
-            job_name = the_rest.replace('# JOB NAME ', '').strip()
-            the_rest = next(general_info)
-        if the_rest.startswith('# RUN '):
-            run_info = the_rest.replace('# RUN ', '').strip()
-            the_rest = next(general_info)
-        if the_rest.startswith('# TIME'):
-            time = the_rest.replace('# TIME ', '').strip()
-            the_rest = next(general_info)
-        if the_rest.startswith('# R REF'):
-            r_ref = float(the_rest.replace('# R REF ', ''))
-            the_rest = next(general_info)
-        if the_rest.startswith('# R SUPER'):
-            r_super = float(the_rest.replace('# R SUPER ', ''))
-            the_rest = next(general_info)
-        folder = the_rest.replace('# FOLDER ', '').strip()
-
-        # this should be all, if there is more, we have a problem
-        try:
-            # there may be empty lines at the end
-            while not next(general_info):
-                pass
-        except StopIteration:
-            pass
-        else:
-            raise ValueError(f'Error parsing {HISTORY_INFO_NAME} file.')
-
-        return HistoryInfoEntry(tensors, jobs, time, folder, notes, discarded,
-                                job_name, run_info, r_ref, r_super)
 
 
 @dataclass
@@ -250,6 +194,64 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
             + 'Notes: ' + self.notes.strip()
             + ('\nDISCARDED' if self.discarded else '')
             )
+
+    @classmethod
+    def from_string(cls, entry_str):
+        """Return an HistoryInfoEntry instance from its string version."""
+        # remove leading and trailing whitespace
+        entry_str = entry_str.strip()
+        # check for 'DISCARDED' at the end
+        if entry_str.endswith('DISCARDED'):
+            discarded = True
+            entry_str = entry_str[:-len('DISCARDED')]
+        else:
+            discarded = False
+        # Notes may also be optional
+        if 'Notes:' not in entry_str:
+            notes = ''
+            general_info = entry_str
+        else:
+            # split at 'Notes: ' because that is the only one that can be multiline
+            general_info, notes = entry_str.split('Notes:', 1)
+            notes = notes.replace('Notes: ', '').strip()
+        # parse general_info
+        general_info = iter(general_info.split('\n'))
+        tensors = [int(num) for num in
+                   next(general_info).replace('# TENSORS ', '').split()[1:]]
+        jobs = [int(num) for num in
+                next(general_info).replace('# JOB ID ', '').split()[1:]]
+        the_rest = next(general_info)
+        # optionals
+        job_name, run_info, r_ref, r_super = None, None, None, None
+        if the_rest.startswith('# JOB NAME '):
+            job_name = the_rest.replace('# JOB NAME ', '').strip()
+            the_rest = next(general_info)
+        if the_rest.startswith('# RUN '):
+            run_info = the_rest.replace('# RUN ', '').strip()
+            the_rest = next(general_info)
+        if the_rest.startswith('# TIME'):
+            time = the_rest.replace('# TIME ', '').strip()
+            the_rest = next(general_info)
+        if the_rest.startswith('# R REF'):
+            r_ref = float(the_rest.replace('# R REF ', ''))
+            the_rest = next(general_info)
+        if the_rest.startswith('# R SUPER'):
+            r_super = float(the_rest.replace('# R SUPER ', ''))
+            the_rest = next(general_info)
+        folder = the_rest.replace('# FOLDER ', '').strip()
+
+        # this should be all, if there is more, we have a problem
+        try:
+            # there may be empty lines at the end
+            while not next(general_info):
+                pass
+        except StopIteration:
+            pass
+        else:
+            raise ValueError(f'Error parsing {HISTORY_INFO_NAME} file.')
+
+        return cls(tensors, jobs, time, folder, notes, discarded,
+                   job_name, run_info, r_ref, r_super)
 
 
 # This could probably be done by datetime.strptime
