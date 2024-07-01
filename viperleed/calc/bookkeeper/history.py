@@ -117,13 +117,12 @@ class HistoryInfoFile:
                 HISTORY_INFO_SEPARATOR.strip(),
                 maxsplit=1
                 )
-        else:
-            # Only one entry
+        else:  # Only one entry
             content_without_last = ''
         if content_without_last.endswith('\n'):
             content_without_last = content_without_last[:-len('\n')]
         # Clear file and write back entries
-        self.path.write_text(content_without_last)
+        self.path.write_text(content_without_last, encoding='utf-8')
         self.read()  # Re-read to update last_entry
 
     def _parse_entry(self, entry_str):
