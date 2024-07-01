@@ -179,21 +179,26 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         folder_str = self.folder_name
         return (
             '\n'
-            + '# TENSORS '.ljust(_HISTORY_INFO_SPACING) + tensor_str + '\n'
-            + '# JOB ID '.ljust(_HISTORY_INFO_SPACING) + job_str + '\n'
-            + ('# JOB NAME '.ljust(_HISTORY_INFO_SPACING) + self.job_name + '\n'
-                if self.job_name else '')
-            + ('# RUN '.ljust(_HISTORY_INFO_SPACING) + self.run_info + '\n'
-                if self.run_info else '')
-            + '# TIME '.ljust(_HISTORY_INFO_SPACING) + time_str + '\n'
-            + ('# R REF '.ljust(_HISTORY_INFO_SPACING) +f'{self.r_ref:.4f}\n'
-                if self.r_ref is not None else '')
-            + ('# R SUPER '.ljust(_HISTORY_INFO_SPACING) + f'{self.r_super:.4f}\n'
-                if self.r_super is not None else '')
-            + '# FOLDER '.ljust(_HISTORY_INFO_SPACING) + folder_str + '\n'
+            + self._format_line('# TENSORS ', tensor_str)
+            + self._format_line('# JOB ID ', job_str)
+            + ('' if not self.job_name
+               else self._format_line('# JOB NAME ', self.job_name))
+            + ('' if not self.run_info
+               else self._format_line('# RUN ', self.run_info))
+            + self._format_line('# TIME ', time_str)
+            + ('' if self.r_ref is None
+               else self._format_line('# R REF ', f'{self.r_ref:.4f}'))
+            + ('' if self.r_super is None
+               else self._format_line('# R SUPER ', f'{self.r_super:.4f}'))
+            + self._format_line('# FOLDER ', folder_str)
             + 'Notes: ' + self.notes.strip()
             + ('\nDISCARDED' if self.discarded else '')
             )
+
+    @staticmethod
+    def _format_line(tag, value):
+        """Return a formatted line from a tag and values."""
+        return f'{tag:<{_HISTORY_INFO_SPACING}}{value}\n'
 
     @classmethod
     def from_string(cls, entry_str):
