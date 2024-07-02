@@ -9,8 +9,10 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
-from dataclasses import dataclass
+import ast
+from dataclasses import dataclass, fields
 from pathlib import Path
+import re
 from typing import List, Optional
 
 from .constants import HISTORY_INFO_NAME
@@ -28,6 +30,10 @@ class HistoryInfoError(Exception):
 
 class NoHistoryEntryError(HistoryInfoError):
     """There is no entry to process according to the criteria."""
+
+
+class EntrySyntaxError(HistoryInfoError):
+    """Something is wrong with the syntax of an entry."""
 
 
 class HistoryInfoFile:
@@ -141,6 +147,39 @@ _TAG = {
     'r_super': '# R SUPER',
     }
 
+# Regular expression portions for parsing a history entry
+_SPACE = r'[ \t]'  # Exclude \n
+_COMMA_SEPARATED = rf'\d+({_SPACE}*,{_SPACE}*\d+)*'
+_SPACE_SEPARATED = rf'\d+({_SPACE}+\d+)*'
+_FLOAT_RE = r'\d+(.\d+)?'
+_FOLDER_RE = (rf'{_TAG["folder_name"]}{_SPACE}+'
+              r'(?P<folder_name>t\d+\.r\d+_\d{6,6}-\d{6,6})')
+_JOB_ID_RE = rf'{_TAG["job_nums"]}{_SPACE}+(?P<job_nums>({_COMMA_SEPARATED})?)'
+_JOB_NAME_RE = rf'{_TAG["job_name"]}{_SPACE}+(?P<job_name>.+)'
+_NOTES_RE = rf'{_TAG["notes"]}{_SPACE}*(?P<notes>.*(\n.*)*)'
+_RUN_ID_RE = rf'{_TAG["run_info"]}{_SPACE}+(?P<run_info>({_SPACE_SEPARATED})?)'
+_R_REF_RE = rf'{_TAG["r_ref"]}{_SPACE}+(?P<r_ref>{_FLOAT_RE})'
+_R_SUPER_RE = rf'{_TAG["r_super"]}{_SPACE}+(?P<r_super>{_FLOAT_RE})'
+_TENSORS_RE = (rf'{_TAG["tensor_nums"]}{_SPACE}+'
+               rf'(?P<tensor_nums>({_COMMA_SEPARATED}|None)?)')
+_TIME_RE = rf'{_TAG["timestamp"]}{_SPACE}+(?P<timestamp>[-:. \d]+)'
+
+
+# Make all entries optional and complain later on if the mandatory
+# fields are missing. It probably means users have modified stuff.
+_ENTRY_RE = re.compile(
+    fr'({_TENSORS_RE})?'
+    fr'(\n{_JOB_ID_RE})?'
+    fr'(\n{_JOB_NAME_RE})?'
+    fr'(\n{_RUN_ID_RE})?'
+    fr'(\n{_TIME_RE})?'
+    fr'(\n{_R_REF_RE})?'
+    fr'(\n{_R_SUPER_RE})?'
+    fr'(\n{_FOLDER_RE})?'
+    fr'(\n{_NOTES_RE})?'
+    )
+
+
 @dataclass
 class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     """A container for information in a single "block" of history.info.
@@ -184,8 +223,8 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
 
     def __str__(self):
         """Return a string version of this entry, ready for writing to file."""
-        tensor_str = ('None' if self.tensor_nums == [0]
-                      else str(self.tensor_nums)[1:-1])
+        no_tensors = not self.tensor_nums or self.tensor_nums == [0]
+        tensor_str = 'None' if no_tensors else str(self.tensor_nums)[1:-1]
         job_str = str(self.job_nums)[1:-1]
         # translate timestamp if necessary
         time_str = (_translate_timestamp(self.timestamp)
@@ -204,6 +243,73 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
             + (f'\n{_DISCARDED}' if self.discarded else '')
             )
 
+    @classmethod
+    def from_string(cls, entry_str):
+        """Return an HistoryInfoEntry instance from its string version."""
+        match = _ENTRY_RE.match(entry_str.strip())
+        if not match:
+            raise EntrySyntaxError(f'Could not parse entry:\n{entry_str}')
+
+        kwargs = {'discarded': False}  # Deal with discarded later
+        for field in fields(cls):
+            name = field.name
+            if name in kwargs:
+                continue
+            tag = _TAG[name].replace('# ', '')
+            value = match[name]
+            try:
+                kwargs[name] = cls._field_from_str(field, value)
+            except (ValueError, TypeError, SyntaxError,
+                    MemoryError, RecursionError) as exc:
+                raise EntrySyntaxError('Could not parse entry field '
+                                       f'{tag!r} with value={value!r}. '
+                                       f'Info: {exc}') from exc
+        # Now deal with "DISCARDED"
+        notes = kwargs['notes']
+        if notes is not None:
+            kwargs['discarded'] = notes.endswith(_DISCARDED)
+            if kwargs['discarded']:
+                kwargs['notes'] = notes[:-len(_DISCARDED)].rstrip()
+        return cls(**kwargs)
+
+    @staticmethod
+    def _field_from_str(field, value_str):
+        """Return a field of the right type from a its string value.
+
+        Parameters
+        ----------
+        field : datclasses.Field
+            The field whose value should be returned.
+        value_str : str or None
+            The string version of the `field` value.
+            It may be `None` for optional fields.
+
+        Returns
+        -------
+        field_value : object
+            The value for field, as parsed from `value_str`. It may
+            be None for an optional field if `value_str` is None.
+
+        Raises
+        ------
+        ValueError, TypeError, SyntaxError, MemoryError, RecursionError
+            If parsing `value_str` via ast.literal_eval fails. Only
+            `value_str` for non-string fields are parsed like this.
+        """
+        # The following trick works because Optional removes 'repeated'
+        # entries, so that Optional[Optional[t]] == Optional[t]
+        is_optional = field.type == Optional[field.type]
+        if is_optional and value_str is None:
+            return value_str
+        is_optional_str = field.type == Optional[str]
+        if is_optional_str or field.type is str:
+            return value_str
+        if field.type.__origin__ is list and not value_str:
+            return []
+        if field.type.__origin__ is list:
+            return list(ast.literal_eval(value_str + ','))
+        return ast.literal_eval(value_str)
+
     @staticmethod
     def _format_line(tag, value):
         """Return a formatted line from a tag and values."""
@@ -217,64 +323,6 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
                 return ''
             value_str = f'{value:{fmt}}'
         return self._format_line(_TAG[field_name], value_str)
-
-    @classmethod
-    def from_string(cls, entry_str):
-        """Return an HistoryInfoEntry instance from its string version."""
-        # remove leading and trailing whitespace
-        entry_str = entry_str.strip()
-        # check for 'DISCARDED' at the end
-        if entry_str.endswith('DISCARDED'):
-            discarded = True
-            entry_str = entry_str[:-len('DISCARDED')]
-        else:
-            discarded = False
-        # Notes may also be optional
-        if 'Notes:' not in entry_str:
-            notes = ''
-            general_info = entry_str
-        else:
-            # split at 'Notes: ' because that is the only one that can be multiline
-            general_info, notes = entry_str.split('Notes:', 1)
-            notes = notes.replace('Notes: ', '').strip()
-        # parse general_info
-        general_info = iter(general_info.split('\n'))
-        tensors = [int(num) for num in
-                   next(general_info).replace('# TENSORS ', '').split()[1:]]
-        jobs = [int(num) for num in
-                next(general_info).replace('# JOB ID ', '').split()[1:]]
-        the_rest = next(general_info)
-        # optionals
-        job_name, run_info, r_ref, r_super = None, None, None, None
-        if the_rest.startswith('# JOB NAME '):
-            job_name = the_rest.replace('# JOB NAME ', '').strip()
-            the_rest = next(general_info)
-        if the_rest.startswith('# RUN '):
-            run_info = the_rest.replace('# RUN ', '').strip()
-            the_rest = next(general_info)
-        if the_rest.startswith('# TIME'):
-            time = the_rest.replace('# TIME ', '').strip()
-            the_rest = next(general_info)
-        if the_rest.startswith('# R REF'):
-            r_ref = float(the_rest.replace('# R REF ', ''))
-            the_rest = next(general_info)
-        if the_rest.startswith('# R SUPER'):
-            r_super = float(the_rest.replace('# R SUPER ', ''))
-            the_rest = next(general_info)
-        folder = the_rest.replace('# FOLDER ', '').strip()
-
-        # this should be all, if there is more, we have a problem
-        try:
-            # there may be empty lines at the end
-            while not next(general_info):
-                pass
-        except StopIteration:
-            pass
-        else:
-            raise ValueError(f'Error parsing {HISTORY_INFO_NAME} file.')
-
-        return cls(tensors, jobs, time, folder, notes, discarded,
-                   job_name, run_info, r_ref, r_super)
 
 
 # This could probably be done by datetime.strptime

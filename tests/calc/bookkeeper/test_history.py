@@ -58,6 +58,12 @@ class TestHistoryInfoFile:
         last_entry = history_info.last_entry
         if last_entry is None:
             return
+        if not last_entry.tensor_nums:
+            # Fixed up the last entry with "None" instead
+            # A bit of a hacky way as we currently do not fix
+            # up all entries, but this will be done soon.
+            fixed_, faulty_ = '# TENSORS   None', '# TENSORS   '
+            actual_text = fixed_.join(actual_text.rsplit(faulty_, 1))
         history_info.remove_last_entry()
         history_info.append_entry(last_entry)
         assert actual_text.strip() == history_info.raw_contents.strip()
