@@ -100,10 +100,9 @@ class HistoryInfoFile:
         if self.last_entry.discarded:
             LOGGER.warning('Last entry is already discarded.')
             return
-        last_entry = self.last_entry
-        last_entry.discarded = True
+        discarded_entry = self.last_entry.as_discarded()
         self.remove_last_entry()
-        self.append_entry(last_entry)
+        self.append_entry(discarded_entry)
 
     def read(self):
         """Read the current contents of the history.info file."""
@@ -180,7 +179,7 @@ _ENTRY_RE = re.compile(
     )
 
 
-@dataclass
+@dataclass(frozen=True)
 class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     """A container for information in a single "block" of history.info.
 
@@ -242,6 +241,15 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
             + f'{_TAG["notes"]} {self.notes.strip()}'
             + (f'\n{_DISCARDED}' if self.discarded else '')
             )
+
+    def as_discarded(self):
+        """Return a discarded version of this entry."""
+        if self.discarded:
+            return self
+        cls = type(self)
+        kwargs = {f.name: getattr(self, f.name) for f in fields(self)}
+        kwargs['discarded'] = True
+        return cls(**kwargs)
 
     @classmethod
     def from_string(cls, entry_str):
