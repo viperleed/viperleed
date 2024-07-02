@@ -13,7 +13,10 @@ import pytest
 from pytest_cases import fixture
 
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history import _DISCARDED
 from viperleed.calc.bookkeeper.history import NoHistoryEntryError
+
+from .conftest import NOTES_TEST_CONTENT
 
 
 @fixture(name='history_info_file')
@@ -38,13 +41,13 @@ class TestHistoryInfoFile:
     def test_history_info_has_notes(self,history_info_file):
         """Check that the history.info file is read correctly."""
         history_info, actual_file = history_info_file
-        if 'This is a test note.' in actual_file.read_text():
-            assert history_info.last_entry.notes == 'This is a test note.'
+        if NOTES_TEST_CONTENT in actual_file.read_text():
+            assert history_info.last_entry.notes == NOTES_TEST_CONTENT
 
     def test_history_info_discarded(self,history_info_file):
         """Check that the history.info file is read correctly."""
         history_info, actual_file = history_info_file
-        discarded_in_entry = 'DISCARDED' in actual_file.read_text()
+        discarded_in_entry = _DISCARDED in actual_file.read_text()
         assert history_info.last_entry_was_discarded == discarded_in_entry
 
     def test_history_info_regenerate_from_entries(self,history_info_file):

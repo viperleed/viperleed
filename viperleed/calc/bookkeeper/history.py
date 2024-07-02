@@ -17,6 +17,7 @@ from .constants import HISTORY_INFO_NAME
 from .constants import LOGGER
 
 
+_DISCARDED = 'DISCARDED'    # Label for entries marked via --discard
 _HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
 HISTORY_INFO_SEPARATOR = '\n###########\n'
 
@@ -200,7 +201,7 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
             + self._format_field('r_super', fmt='.4f')
             + self._format_field('folder_name')
             + f'{_TAG["notes"]} {self.notes.strip()}'
-            + ('\nDISCARDED' if self.discarded else '')
+            + (f'\n{_DISCARDED}' if self.discarded else '')
             )
 
     @staticmethod

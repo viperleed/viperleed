@@ -17,6 +17,7 @@ from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
 from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import store_input_files_to_history
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
+from viperleed.calc.bookkeeper.history import _DISCARDED
 from viperleed.calc.bookkeeper.mode import BookkeeperMode
 
 from ...helpers import execute_in_dir
@@ -25,6 +26,7 @@ from .conftest import MOCK_ORIG_CONTENT
 from .conftest import MOCK_OUT_CONTENT
 from .conftest import MOCK_TIMESTAMP
 from .conftest import MOCK_STATE_FILES
+from .conftest import NOTES_TEST_CONTENT
 
 
 @fixture(name='after_archive')
@@ -287,7 +289,7 @@ class TestBookkeeperDiscard:
             assert MOCK_INPUT_CONTENT in out_content
         # A 'DISCARDED' note should be in history.info
         assert bookkeeper.history_info.last_entry_was_discarded
-        assert "DISCARDED" in bookkeeper.history_info.path.read_text()
+        assert _DISCARDED in bookkeeper.history_info.path.read_text()
         # Check that there are no errors or warnings in log
         assert not any(
             rec.levelno >= logging.WARNING
@@ -324,7 +326,7 @@ class TestBookkeeperDiscard:
             assert MOCK_INPUT_CONTENT in out_content
         # A 'DISCARDED' note should be in history.info
         with bookkeeper.history_info.path.open() as f:
-            assert 'DISCARDED' in f.read()
+            assert _DISCARDED in f.read()
         # Check that there are no errors or warnings in log
         assert not any(rec.levelno >= logging.WARNING for rec in caplog.records)
 
@@ -358,7 +360,8 @@ class TestBookkeeperDiscardFull:
         crashed."""
         bookkeeper, mock_dir, history_path, history_path_run = after_run
         notes_in_history_info = (
-            'This is a test note.' in (mock_dir / HISTORY_INFO_NAME).read_text())
+            NOTES_TEST_CONTENT in (mock_dir / HISTORY_INFO_NAME).read_text()
+            )
         bookkeeper.run(mode=BookkeeperMode.DISCARD_FULL)
         assert not history_path_run.is_dir()
         # Since teh run was not archived, the history should be empty
