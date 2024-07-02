@@ -72,6 +72,21 @@ MOCK_HISTORY_INFO_FILES = {
         '# TENSORS   \n# JOB ID    \n'
         '# TIME      03.02.01 04:05:06\n# FOLDER    t003.r001_010203-040506\n'
         'Notes: This is a test note.\n'),
+    'with tensors None': (
+        '# TENSORS   None\n# JOB ID    \n'
+        '# RUN       1 2 3\n# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes:\n'
+        ),
+    'with tensor numbers': (
+        '# TENSORS   1, 2, 29\n# JOB ID    \n'
+        '# RUN       1 2 3\n# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes:\n'
+        ),
+    'with job ids': (
+        '# TENSORS   1, 2, 29\n# JOB ID    24, 37, 99\n'
+        '# RUN       1 2 3\n# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
+        'Notes:\n'
+        ),
 }
 MOCK_INPUT_CONTENT = 'This is a test input file.'
 MOCK_JOB_NAMES = (None, 'test_jobname')
