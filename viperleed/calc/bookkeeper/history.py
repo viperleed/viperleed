@@ -127,6 +127,19 @@ class HistoryInfoFile:
         self.read()  # Re-read to update last_entry
 
 
+# Map of HistoryInfoEntry-field names to tags in history.info file
+_TAG = {
+    'tensor_nums': '# TENSORS',
+    'job_nums': '# JOB ID',
+    'timestamp': '# TIME',
+    'folder_name': '# FOLDER',
+    'notes': 'Notes:',
+    'job_name': '# JOB NAME',
+    'run_info': '# RUN',
+    'r_ref': '# R REF',
+    'r_super': '# R SUPER',
+    }
+
 @dataclass
 class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     """A container for information in a single "block" of history.info.
@@ -176,22 +189,17 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         # translate timestamp if necessary
         time_str = (_translate_timestamp(self.timestamp)
                     if '-' in self.timestamp else self.timestamp)
-        folder_str = self.folder_name
         return (
             '\n'
-            + self._format_line('# TENSORS ', tensor_str)
-            + self._format_line('# JOB ID ', job_str)
-            + ('' if not self.job_name
-               else self._format_line('# JOB NAME ', self.job_name))
-            + ('' if not self.run_info
-               else self._format_line('# RUN ', self.run_info))
-            + self._format_line('# TIME ', time_str)
-            + ('' if self.r_ref is None
-               else self._format_line('# R REF ', f'{self.r_ref:.4f}'))
-            + ('' if self.r_super is None
-               else self._format_line('# R SUPER ', f'{self.r_super:.4f}'))
-            + self._format_line('# FOLDER ', folder_str)
-            + 'Notes: ' + self.notes.strip()
+            + self._format_field('tensor_nums', value_str=tensor_str)
+            + self._format_field('job_nums', value_str=job_str)
+            + self._format_field('job_name')
+            + self._format_field('run_info')
+            + self._format_field('timestamp', value_str=time_str)
+            + self._format_field('r_ref', fmt='.4f')
+            + self._format_field('r_super', fmt='.4f')
+            + self._format_field('folder_name')
+            + f'{_TAG["notes"]} {self.notes.strip()}'
             + ('\nDISCARDED' if self.discarded else '')
             )
 
@@ -199,6 +207,15 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
     def _format_line(tag, value):
         """Return a formatted line from a tag and values."""
         return f'{tag:<{_HISTORY_INFO_SPACING}}{value}\n'
+
+    def _format_field(self, field_name, value_str=None, fmt=''):
+        """Return a formatted version of a field."""
+        if value_str is None:
+            value = getattr(self, field_name)
+            if not value:
+                return ''
+            value_str = f'{value:{fmt}}'
+        return self._format_line(_TAG[field_name], value_str)
 
     @classmethod
     def from_string(cls, entry_str):
