@@ -106,7 +106,6 @@ class Bookkeeper:
         # history.info handler - creates file if not yet there
         self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
                                             create_new=True)
-
         self.update_from_cwd()
 
     def update_from_cwd(self):
@@ -128,6 +127,9 @@ class Bookkeeper:
         # get history dir to deal with
         self.history_dir = (self.top_level_history_path /
                             self._get_new_history_directory_name())
+
+        # Read the current state of the history.info file
+        self.history_info.read()
 
     @property
     def base_history_dir_name(self):
@@ -262,9 +264,6 @@ class Bookkeeper:
             raise NotImplementedError from exc
 
         LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
-
-        # Read the current state of the history.info file
-        self.history_info.read()
         return method()
 
     def _run_archive_mode(self):
