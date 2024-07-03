@@ -34,59 +34,75 @@ ALT_HISTORY_NAME = 'history_alt_name'
 NOTES_TEST_CONTENT = 'This is a test note.'
 MOCK_HISTORY_INFO_FILES = {
     'no history.info': None,
-    'empty history.info': "",
-    'entry with job name': (
-        '# TENSORS   \n# JOB ID    \n# JOB NAME  test_jobname\n'
-        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes: This is a test note.\n'),
-    'entry without job name': (
-        '# TENSORS   \n# JOB ID    \n'
-        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes: This is a test note.\n'),
-    'entry without note': (
-        '# TENSORS   \n# JOB ID    \n'
-        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes:\n'),
-    'with RUN': (
-        '# TENSORS   \n# JOB ID    \n'
-        '# RUN       1 2 3\n# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes:\n'),
-    'with R REF': (
-        '# TENSORS   \n# JOB ID    \n'
-        '# TIME      03.02.01 04:03:06\n# R REF     0.1234\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes:\n'),
-    'with R SUPER': (
-        '# TENSORS   \n# JOB ID    \n'
-        '# TIME      03.02.01 04:03:06\n# R SUPER   0.1234\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes:\n'),
-    'entry discarded': (
-        '# TENSORS   \n# JOB ID    \n# JOB NAME  test_jobname\n'
-        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes: This is a test note.\n'
-        'DISCARDED\n'),
-    'two entries without job name': (
-        '# TENSORS   \n# JOB ID    \n'
-        '# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes: This is a test note.\n'
-        f'{HISTORY_INFO_SEPARATOR}\n'
-        '# TENSORS   \n# JOB ID    \n'
-        '# TIME      03.02.01 04:05:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes: This is a test note.\n'),
-    'with tensors None': (
-        '# TENSORS   None\n# JOB ID    \n'
-        '# RUN       1 2 3\n# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes:\n'
-        ),
-    'with tensor numbers': (
-        '# TENSORS   1, 2, 29\n# JOB ID    \n'
-        '# RUN       1 2 3\n# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes:\n'
-        ),
-    'with job ids': (
-        '# TENSORS   1, 2, 29\n# JOB ID    24, 37, 99\n'
-        '# RUN       1 2 3\n# TIME      03.02.01 04:03:06\n# FOLDER    t003.r001_010203-040506\n'
-        'Notes:\n'
-        ),
+    'empty history.info': '',
+    'entry with job name': f'''\
+# TENSORS
+# JOB ID
+# JOB NAME  test_jobname
+# TIME      03.02.01 04:03:06
+# FOLDER    t003.r001_010203-040506
+Notes: {NOTES_TEST_CONTENT}
+''',
+    'entry without job name': f'''\
+# TENSORS
+# JOB ID
+# TIME      03.02.01 04:03:06
+# FOLDER    t003.r001_010203-040506
+Notes: {NOTES_TEST_CONTENT}
+''',
+    'entry without note': '''\
+# TENSORS
+# JOB ID
+# TIME      03.02.01 04:03:06
+# FOLDER    t003.r001_010203-040506
+Notes:
+''',
+    'with RUN': '''\
+# TENSORS
+# JOB ID
+# RUN       1 2 3
+# TIME      03.02.01 04:03:06
+# FOLDER    t003.r001_010203-040506
+Notes:
+''',
+    'with R REF': '''\
+# TENSORS
+# JOB ID
+# TIME      03.02.01 04:03:06
+# R REF     0.1234
+# FOLDER    t003.r001_010203-040506
+Notes:
+''',
+    'with R SUPER': '''\
+# TENSORS
+# JOB ID
+# TIME      03.02.01 04:03:06
+# R SUPER   0.1234
+# FOLDER    t003.r001_010203-040506
+Notes:
+''',
+    'entry discarded': f'''\
+# TENSORS
+# JOB ID
+# JOB NAME  test_jobname
+# TIME      03.02.01 04:03:06
+# FOLDER    t003.r001_010203-040506
+Notes: {NOTES_TEST_CONTENT}
+DISCARDED
+''',
+    'two entries without job name': f'''\
+# TENSORS
+# JOB ID
+# TIME      03.02.01 04:03:06
+# FOLDER    t003.r001_010203-040506
+Notes: {NOTES_TEST_CONTENT}
+{HISTORY_INFO_SEPARATOR}
+# TENSORS
+# JOB ID
+# TIME      03.02.01 04:05:06
+# FOLDER    t003.r001_010203-040506
+Notes: {NOTES_TEST_CONTENT}
+''',
 }
 MOCK_INPUT_CONTENT = 'This is a test input file.'
 MOCK_JOB_NAMES = (None, 'test_jobname')
