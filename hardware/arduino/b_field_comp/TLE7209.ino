@@ -18,7 +18,7 @@ Date: 21.04.2023
 
 /** Start an I/O operation for the TLE7209 with given chip-select pin.**/
 void TLE7209startIO(byte chipSelectPin) {
-    SPI.beginTransaction(TLE7209_SPI_SETTING);
+    SPI.beginTransaction(TLE7209_SPI_SETTINGS);
     digitalWrite(chipSelectPin, LOW);
 }
 
@@ -124,7 +124,7 @@ TLE7209_Error TLE7209readIDandVersion(byte chipSelectPin, byte *version) {
 
 TLE7209_Error TLE7209readDiagnosticRegister(byte chipSelectPin,
                                             byte *diagnostics) {
-    /**Read device ID and chip revision from the TLE7209.
+    /**Read device ID and chip revision from the TLE7209.                       // TODO: WRONG, copy-paste of previous
 
     Parameters
     ----------

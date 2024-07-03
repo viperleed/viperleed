@@ -14,6 +14,7 @@ Date: 16.05.2023
 #include <SPI.h>
 #include "pwm.h"            // for set_pwm_frequency, set_coil_current
 #include "TLE7209.h"        // for motor driver functions
+#include "INA239.h"                  // For configuration and functions of current measurement device INA239
 
 // Include some custom libraries. They are in the ../lib directory.
 // This does NOT WORK CORRECTLY when using the Arduino IDE, as the
@@ -53,20 +54,18 @@ TC4_PWM_CHANNEL pin_to_tc4_channel(uint8_t);
 // The pins belonging to 'COIL_1_PWM' and 'COIL_2_PWM' should not be changed.
 // Changing these may require choosing a different Timer/Counter module, e.g.
 // TC1 or TC3 instead of the currently used TC4.
-#define COIL_1_PWM               6   // PWM output 1, i.e., voltage value; Also A7;  PD7 on Atmega32U4                          //  DO NOT CHANGE (OC4D PWM output)
-#define COIL_1_DISABLE          21   // Could later on be an alias of signal "COIL_1_SIGN"
-#define COIL_1_ADC_INPUT        23
+#define COIL_1_PWM              10    // PWM output 1, i.e., voltage value; Also A10; PB6 on Atmega32U4                          //  DO NOT CHANGE (OC1B PWM output)
+#define COIL_1_DISABLE          2    // Could later on be an alias of signal "COIL_1_SIGN"
 
 #define COIL_2_PWM              10   // PWM output 1, i.e., voltage value; Also A10; PB6 on Atmega32U4                          //  DO NOT CHANGE (OC4B PWM output)
-#define COIL_2_DISABLE          22   // Could later on be an alias of signal "COIL_2_SIGN"
+#define COIL_2_DISABLE          3    // Could later on be an alias of signal "COIL_2_SIGN"
 
 // Current direction: positive or negative?
-#define COIL_1_SIGN             18  // Used for INA on shunt; PF7 on ATmega32U4
-#define COIL_2_SIGN             19  // Used for INA on shunt; PF6 on ATmega32U4
+#define COIL_1_SIGN             4    // Used for motor driver; PD4 on ATmega32U4
+#define COIL_2_SIGN             5    // Used for motor driver; PC6 on ATmega32U4
 
-#define COIL_1_SPI_CS           11  // For SPI communication; PB7 on ATmega32U4
-#define COIL_2_SPI_CS           12  // For SPI communication; PD6 on ATmega32U4
-
+#define COIL_1_SPI_CS           11   // For SPI communication; PB7 on ATmega32U4
+#define COIL_2_SPI_CS           12   // For SPI communication; PD6 on ATmega32U4
 
 
 class MotorDriver{
@@ -97,7 +96,8 @@ class MotorDriver{
         const byte disable_pin;
 };
 
-
+                                                                                // TODO: Decide here, which Motordriver is chosen, i.e. TLE209, DRV8842
+                                                                                // TODO: Implement in Motordriver Subclasses for each Motordriver
 class Coil {
     public:
         const MotorDriver driver;
