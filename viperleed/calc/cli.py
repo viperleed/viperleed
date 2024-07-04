@@ -54,7 +54,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             job_name=args.job_name,
             history_name=args.history_name,
             work_history_name=args.work_history_name,
-        )
+            )
         bookkeeper.run(mode=BookkeeperMode.CLEAR)
 
         _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
@@ -77,7 +77,7 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
 
         # update bookkeeper with new run info
         bookkeeper.update_from_cwd()
-        # run bookkeeper in archive modex
+        # run bookkeeper in archive mode
         bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
 
         # Finally clean up work if requested

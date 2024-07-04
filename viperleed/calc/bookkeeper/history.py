@@ -47,8 +47,8 @@ class HistoryInfoFile:
         file_path : str or Path
             The path to the history.info file.
         create_new : bool, optional
-            Whether a empty file should be created in case file_path
-            does not exist.
+            Whether a empty file should be created
+            in case `file_path` does not exist.
 
         Raises
         ------
@@ -116,7 +116,7 @@ class HistoryInfoFile:
                 )
 
     def remove_last_entry(self):
-        """Discard the last entry from the history.info file."""
+        """Remove the last entry from the history.info file."""
         if self.last_entry is None:
             raise NoHistoryEntryError('No entries to remove.')
         if HISTORY_INFO_SEPARATOR.strip() in self.raw_contents:
@@ -289,19 +289,19 @@ class HistoryInfoEntry:  # pylint: disable=R0902  # See pylint #9058
         field : datclasses.Field
             The field whose value should be returned.
         value_str : str or None
-            The string version of the `field` value.
+            The string version of the field value.
             It may be `None` for optional fields.
 
         Returns
         -------
         field_value : object
             The value for field, as parsed from `value_str`. It may
-            be None for an optional field if `value_str` is None.
+            be None for an optional field if `value_str` is `None`.
 
         Raises
         ------
         ValueError, TypeError, SyntaxError, MemoryError, RecursionError
-            If parsing `value_str` via ast.literal_eval fails. Only
+            If parsing `value_str` via `ast.literal_eval fails`. Only
             `value_str` for non-string fields are parsed like this.
         """
         # The following trick works because Optional removes 'repeated'

@@ -148,7 +148,6 @@ class Bookkeeper:
             job_number += 1
         return dir_name(job_number)
 
-
     def _get_new_history_directory_name(self):
         """Return the name of a history directory for a given run.
 
@@ -177,7 +176,6 @@ class Bookkeeper:
                                                  time.localtime())
             dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
         return dir_name
-
 
     @property
     def cwd_ori_files(self):
@@ -306,7 +304,7 @@ class Bookkeeper:
 
     def _run_discard_mode(self):
         if (not self.history_with_same_base_name_exists
-            and self.files_needs_archiving):
+                and self.files_needs_archiving):
             LOGGER.info(f'History folder {self.history_dir} does not '
                         'yet exist. Running archive mode first.')
             self._make_and_copy_to_history(use_ori=False)
@@ -322,7 +320,7 @@ class Bookkeeper:
                            f'discarded in {HISTORY_INFO_NAME}: {exc}')
 
     def _run_discard_full_mode(self):
-        # check for notes in history.info
+        # Check for notes in history.info
         if self.history_info.last_entry_has_notes:
             LOGGER.warning(f'The last entry in {HISTORY_INFO_NAME} has user '
                            'notes. If you really want to purge the last run, '
