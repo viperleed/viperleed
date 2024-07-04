@@ -26,6 +26,8 @@ from viperleed.calc.bookkeeper.bookkeeper import Bookkeeper
 from viperleed.calc.bookkeeper.bookkeeper import CALC_LOG_PREFIXES
 from viperleed.calc.bookkeeper.constants import HISTORY_INFO_NAME
 from viperleed.calc.bookkeeper.history import HISTORY_INFO_SEPARATOR
+from viperleed.calc.sections.cleanup import DEFAULT_OUT
+from viperleed.calc.sections.cleanup import DEFAULT_SUPP
 
 from ...helpers import execute_in_dir
 
@@ -120,8 +122,8 @@ MOCK_LOG_FILES = [f'{pre}-{MOCK_TIMESTAMP}.log' for pre in CALC_LOG_PREFIXES]
 def fixture_bookkeeper_mock_dir_after_run(tmp_path, log_file_name,
                                           history_info_file):
     """Yield a temporary directory for testing the bookkeeper."""
-    out_path = tmp_path / 'OUT'
-    supp_path = tmp_path / 'SUPP'
+    out_path = tmp_path / DEFAULT_OUT
+    supp_path = tmp_path / DEFAULT_SUPP
     tensors_path = tmp_path / 'Tensors'
     deltas_path = tmp_path / 'Deltas'
     directories = (out_path, supp_path, tensors_path, deltas_path)
