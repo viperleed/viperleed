@@ -37,8 +37,7 @@ class MeasureEnergyCalibration(MeasurementABC):
     def __init__(self, measurement_settings):
         """Initialise instance from settings."""
         super().__init__(measurement_settings)
-        self.__old_coefficients = ""
-        self.data_points.time_resolved = False
+        self._old_coefficients = ""
 
     @property
     def start_energy(self):
@@ -113,27 +112,6 @@ class MeasureEnergyCalibration(MeasurementABC):
         return egy                                                              # TODO: warn if end == 1000
 
     @qtc.pyqtSlot()
-    def begin_preparation(self):
-        """Start preparation for measurements.
-
-        Prepare the controllers for a measurement which starts
-        the measurement cycle. This function only performs the
-        first part. (Everything that is done before the starting
-        energy is set.)
-
-        Emits
-        -----
-        __preparation_started
-            Starts the measurement preparation and carries
-            a tuple of energies and times with it.
-        """
-        self.__old_coefficients = self.primary_controller.settings.get(
-            'energy_calibration', 'coefficients', fallback=''
-            )
-
-        self.primary_controller.settings.set('energy_calibration',
-                                             'coefficients', '(0, 1)')
-        super().begin_preparation()
 
     def are_runtime_settings_ok(self):
         """Return whether runtime settings are ok.
@@ -148,6 +126,15 @@ class MeasureEnergyCalibration(MeasurementABC):
             True if the runtime settings are
             sufficient to start a measurement.
         """
+        if not super().are_runtime_settings_ok():
+            return False
+        self._old_coefficients = self.primary_controller.settings.get(
+            'energy_calibration', 'coefficients', fallback=''
+            )
+
+        self.primary_controller.settings.set('energy_calibration',
+                                             'coefficients', '(0, 1)')
+
         if not any(c.measures(_MEASURED_EGY) for c in self.controllers):
             base.emit_error(
                 self, QObjectSettingsErrors.INVALID_SETTINGS,
@@ -196,7 +183,7 @@ class MeasureEnergyCalibration(MeasurementABC):
             )
         return handler
 
-    def start_next_measurement(self):
+    def begin_next_energy_step(self):
         """Set energy and measure.
 
         Set energy via the primary controller. Once this is done
@@ -207,7 +194,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         -------
         None.
         """
-        super().start_next_measurement()
+        super().begin_next_energy_step()
         for device in self.devices:
             # Make all controllers busy, so we do not risk going to the
             # next energy step too early: the secondary controllers may
@@ -335,3 +322,9 @@ class MeasureEnergyCalibration(MeasurementABC):
                                                  'coefficients',
                                                  self.__old_coefficients)
         super().abort()
+
+    def set_settings(self, new_settings):
+        """Change settings of the measurement."""
+        settings_ok = super().set_settings(new_settings)
+        self.data_points.time_resolved = False
+        return settings_ok

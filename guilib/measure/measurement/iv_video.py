@@ -28,11 +28,6 @@ class IVVideo(MeasurementABC):
                            ('measurement_settings', 'end_energy'),
                            ('measurement_settings', 'delta_energy'),]
 
-    def __init__(self, measurement_settings):
-        """Initialise measurement instance."""
-        super().__init__(measurement_settings)
-        self.data_points.time_resolved = False
-
     @property
     def __delta_energy(self):
         """Return the amplitude of an energy step in eV."""
@@ -89,12 +84,34 @@ class IVVideo(MeasurementABC):
                               / self.__delta_energy))
         return len(str(num_meas))
 
-    def get_settings_handler(self):
-        """Return a SettingsHandler object for displaying settings."""
-        handler = super().get_settings_handler()
-        return handler
+    # We don't have anything much to do in abort() that is not
+    # already done in the ABC, but abort is abstract.
+    # pylint: disable-next=useless-super-delegation
+    @qtc.pyqtSlot()
+    def abort(self):
+        """Abort all current actions."""
+        super().abort()
 
-    def start_next_measurement(self):
+    def are_runtime_settings_ok(self):
+        """Return whether runtime settings are ok.
+
+        Check if at least one camera is available
+        before starting a measurement.
+
+        Returns
+        -------
+        settings_ok : bool
+            True if the runtime settings are
+            sufficient to start a measurement.
+        """
+        if not super().are_runtime_settings_ok():
+            return False
+        if not self.cameras:
+            base.emit_error(self, MeasurementErrors.MISSING_CAMERA)
+            return False
+        return True
+
+    def begin_next_energy_step(self):
         """Set energy and measure.
 
         Set energy via the primary controller. Once this is done
@@ -105,7 +122,7 @@ class IVVideo(MeasurementABC):
         -------
         None.
         """
-        super().start_next_measurement()
+        super().begin_next_energy_step()
         for device in self.devices:
             # Make all controllers and cameras busy, so we do not risk
             # going to the next energy step too early: the secondary
@@ -148,6 +165,17 @@ class IVVideo(MeasurementABC):
             cam_time = camera_delay + cam.time_to_image_ready
             print(txt, f"{cam_time:>{30-len(txt)}.2f} ms")
 
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings."""
+        handler = super().get_settings_handler()
+        return handler
+
+    def set_settings(self, new_settings):
+        """Change settings of the measurement."""
+        settings_ok = super().set_settings(new_settings)
+        self.data_points.time_resolved = False
+        return settings_ok
+
     def _is_finished(self):
         """Check if the full measurement cycle is done.
 
@@ -164,29 +192,3 @@ class IVVideo(MeasurementABC):
             return True
         self.current_energy += self.__delta_energy
         return False
-
-    # pylint: disable=useless-super-delegation
-    # We don't have anything much to do in abort() that is not
-    # already done in the ABC, but abort is abstract.
-    @qtc.pyqtSlot()
-    def abort(self):
-        """Abort all current actions."""
-        super().abort()
-    # pylint: enable=useless-super-delegation
-
-    def are_runtime_settings_ok(self):
-        """Return whether runtime settings are ok.
-
-        Check if at least one camera is available
-        before starting a measurement.
-
-        Returns
-        -------
-        settings_ok : bool
-            True if the runtime settings are
-            sufficient to start a measurement.
-        """
-        if not self.cameras:
-            base.emit_error(self, MeasurementErrors.MISSING_CAMERA)
-            return False
-        return True

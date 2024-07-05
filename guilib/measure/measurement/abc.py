@@ -15,7 +15,6 @@ ViPErLEEDErrorEnum class MeasurementErrors.
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from time import localtime, strftime
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 import time
@@ -61,17 +60,26 @@ class MeasurementErrors(base.ViPErLEEDErrorEnum):
         'The devices {} returned more data than expected.'
         )
 
+
+class MeasurementIsRunningError(Exception):
+    """Raised through starting more than one measurement on one instance."""
+
+
+class MeasurementReusedError(Exception):
+    """Raised if a measurement instance is used more than once."""
+
+
 # Progression:
-# Entry: .begin_preparation()
-# * .__continue_preparation()
-# * .__check_preparation_finished()
-# * BEGIN MEASURING by auto-call to .start_next_measurement()
+# Entry: .start_measurement()
+# * ._continue_preparation()
+# * ._check_preparation_finished()
+# * BEGIN MEASURING by auto-call to .begin_next_energy_step()
 # * END OF CURRENT STEP: _on_controller_data_ready/_on_camera_busy_changed,
 #   which call ._ready_for_next_measurement(). This decides to call
-# * .start_next_measurement() or ._prepare_finalization()
+# * .begin_next_energy_step() or ._prepare_finalization()
 
 # too-many-instance-attributes
-class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc about inner workings
+class MeasurementABC(QObjectWithSettingsABC):                                   # TODO: doc about inner workings
     """Generic measurement class."""
 
     # Whole measurement is over
@@ -86,7 +94,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
     # Abort current tasks on all devices
     _request_stop_devices = qtc.pyqtSignal()                                    # TODO: Could use QMetaObject.invokeMethod
 
-    # __preparation_started: emitted in .begin_preparation right
+    # _preparation_started: emitted in ._begin_preparation right
     # before the first energy is set. Carries pairs of energies and
     # settle times, passed on to .primary_controller.set_energy()
     __preparation_started = qtc.pyqtSignal(tuple)                               # TODO: Could use QMetaObject.invokeMethod
@@ -108,11 +116,12 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                                            (self.__class__.__name__,))]
         self.__current_energy = 0
         self.__previous_energy = 0
-        self.__primary_controller = None
         self.__secondary_controllers = []
         self.__cameras = []
-        self.__aborted = False
         self.__temp_dir = None   # Directory for saving files
+        self._primary_controller = None
+        self._aborted = False
+        self._has_been_used_before = False # Used to stop reuse of object.      # TODO: We may want to modify the measurement to allow this behaviour.
 
         # Keep track of which data of which controller was
         # stored in self.data_points at this energy step
@@ -149,6 +158,10 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         if self.__init_errors:
             self.__init_err_timer.start(20)
         self.error_occurred.disconnect(self.__on_init_errors)
+    @property
+    def aborted(self):
+        """Return whether the measurement was aborted."""
+        return self._aborted
 
     @property
     def cameras(self):
@@ -222,7 +235,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
     @property
     def primary_controller(self):
         """Return the primary controllers used by this class."""
-        return self.__primary_controller
+        return self._primary_controller
 
     @primary_controller.setter
     def primary_controller(self, new_controller):
@@ -233,9 +246,10 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         new_controller : ControllerABC
             Controller that sets the energy.
         """
-        self.__disconnect_primary_controller()
-        self.__primary_controller = new_controller
-        self.__connect_primary_controller()
+        self._disconnect_primary_controller()
+        self._primary_controller = new_controller
+        self.data_points.primary_controller = self.primary_controller
+        self._connect_primary_controller()
 
     @property
     def secondary_controllers(self):
@@ -273,6 +287,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         """
         self.__disconnect_secondary_controllers()
         self._stop_threads()
+        qtw.qApp.processEvents()
         self.threads.clear()
         for controller in new_controllers:
             thread = qtc.QThread()
@@ -282,6 +297,67 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             thread.start(priority=thread.TimeCriticalPriority)
         self.__secondary_controllers = new_controllers
         self.__connect_secondary_controllers()
+
+    @property
+    def start_energy(self):
+        """Return the first energy for the energy ramp."""
+        if not self.settings:
+            return 0.0
+        try:
+            return self.settings.getfloat('measurement_settings',
+                                          'start_energy', fallback=0)
+        except (TypeError, ValueError):
+            # Not a float
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/start_energy', '')
+            return 0.0
+
+    @property
+    def step_profile(self):                                                     # TODO: probably move to generator class?
+        """Return a list of energies and times for setting the next energy.
+
+        The returned value excludes the very last step, i.e.,
+        self.current_energy and the settling time for it.
+        A typical call to set_leed_energy would be
+            self.set_leed_energy(*self.step_profile,
+                                 self.current_energy,
+                                 last_settle_time,
+                                 ...)
+
+        Returns
+        -------
+        step_profile : tuple
+            Sequence of energies and waiting intervals.
+        """
+        try:
+            profile = self.settings.getsequence("measurement_settings",
+                                                "step_profile",
+                                                fallback=("abrupt",))
+        except NotASequenceError:
+            profile = self.settings["measurement_settings"]["step_profile"]
+
+        if isinstance(profile, str):
+            profile = (profile,)
+
+        # Now we have two acceptable cases:
+        # (1) the sequence can be cast to (float, int, float, int...)
+        # (2) the first entry is a known profile shape
+        try:
+            return self._step_profile_from_strings(profile)
+        except (ValueError, TypeError):
+            pass
+
+        shape, *params = profile
+        if shape.lower() == 'abrupt':
+            values = tuple()
+        elif shape.lower() == 'linear':
+            values = self._get_linear_step(*params)
+        else:
+            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
+                            'measurement_settings/step_profile',
+                            f'Unknown profile shape {shape}')
+            values = tuple()
+        return values
 
     @classmethod
     def is_matching_default_settings(cls, obj_info, config, match_exactly):
@@ -356,7 +432,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         """Disconnect all connected devices but keep them alive."""
         self.__disconnect_secondary_controllers()
         self.__disconnect_cameras()
-        self.__disconnect_primary_controller()
+        self._disconnect_primary_controller()
 
     def set_settings(self, new_settings):
         """Change settings of the measurement.
@@ -393,7 +469,15 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             If any element of the new_settings does not fit the
             mandatory_settings.
         """
-        self.__aborted = False # Set False in case of abort through settings
+        self._aborted = False # Set False in case of abort through settings
+
+        # Notice that we clear data even if the settings are not accepted.
+        # When the primary controller is set in the primary_controller
+        # setter it is handed to self.data_points. This happens in
+        # _make_primary_ctrl below.
+        self.data_points = DataPoints(parent=self)
+        self.data_points.error_occurred.connect(self.error_occurred)
+
         if not super().set_settings(new_settings):
             return False
 
@@ -417,72 +501,9 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
                               if c.measures()}
         for camera in self.cameras:
             self._missing_data[camera] = 1
-
-        self.data_points.primary_controller = self.primary_controller
         return True
 
-    @property
-    def start_energy(self):
-        """Return the first energy for the energy ramp."""
-        if not self.settings:
-            return 0.0
-        try:
-            return self.settings.getfloat('measurement_settings',
-                                          'start_energy', fallback=0)
-        except (TypeError, ValueError):
-            # Not a float
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/start_energy', '')
-            return 0.0
-
-    @property
-    def step_profile(self):                                                     # TODO: probably move to generator class?
-        """Return a list of energies and times for setting the next energy.
-
-        The returned value excludes the very last step, i.e.,
-        self.current_energy and the settling time for it.
-        A typical call to set_leed_energy would be
-            self.set_leed_energy(*self.step_profile,
-                                 self.current_energy,
-                                 last_settle_time,
-                                 ...)
-
-        Returns
-        -------
-        step_profile : tuple
-            Sequence of energies and waiting intervals.
-        """
-        try:
-            profile = self.settings.getsequence("measurement_settings",
-                                                "step_profile",
-                                                fallback=("abrupt",))
-        except NotASequenceError:
-            profile = self.settings["measurement_settings"]["step_profile"]
-
-        if isinstance(profile, str):
-            profile = (profile,)
-
-        # Now we have two acceptable cases:
-        # (1) the sequence can be cast to (float, int, float, int...)
-        # (2) the first entry is a known profile shape
-        try:
-            return self.__step_profile_from_strings(profile)
-        except (ValueError, TypeError):
-            pass
-
-        shape, *params = profile
-        if shape.lower() == 'abrupt':
-            values = tuple()
-        elif shape.lower() == 'linear':
-            values = self.__get_linear_step(*params)
-        else:
-            base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
-                            'measurement_settings/step_profile',
-                            f'Unknown profile shape {shape}')
-            values = tuple()
-        return values
-
-    def __step_profile_from_strings(self, profile):
+    def _step_profile_from_strings(self, profile):
         """Return a tuple of energies and times from strings."""
         delta = self.current_energy - self.__previous_energy
         if abs(delta) < 1e-4:
@@ -564,13 +585,16 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         -------
         None.
         """
-        if self.__aborted:
+        if self._aborted:
             return
-        self.__aborted = True
+        self._aborted = True
         self._camera_timer.stop()
         if self.settings:
             self.settings.set('measurement_settings', 'was_aborted', 'True')
         self.__force_end_timer.start()
+        if not self.running:
+            self._cleanup_and_end()
+            return
         self._prepare_finalization()
 
     def are_runtime_settings_ok(self):
@@ -586,7 +610,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             True if the runtime settings are
             sufficient to start a measurement.
         """
-        return True
+        return bool(self.primary_controller)
 
     def are_settings_invalid(self, new_settings):
         """Check if there are any invalid settings.
@@ -612,8 +636,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             )
         return [(invalid,) for invalid in invalid_settings]
 
-    @qtc.pyqtSlot()
-    def begin_preparation(self):
+    def _begin_preparation(self):
         """Start preparation for measurements.
 
         Prepare the controllers and cameras for a measurement.
@@ -630,13 +653,6 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             Starts the measurement preparation and carries
             a tuple of energies and times with it.
         """
-        if not self.are_runtime_settings_ok():
-            return
-        self.__aborted = False
-        self.settings.set('measurement_settings', 'was_aborted', 'False')
-        self.settings.set('measurement_info', 'started',
-                          strftime("%Y-%m-%d_%H-%M-%S", localtime()))
-        self.running = True
         self.current_energy = self.start_energy
 
         primary = self.primary_controller
@@ -767,7 +783,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         base_path = tmp_path.parent
         tag = self.settings.get('measurement_info', 'tag', fallback='')
         name_tag = (' ' + tag) if tag else ''
-        current_time = strftime("%Y-%m-%d_%H-%M-%S", localtime())
+        current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
         self.settings.set('measurement_info', 'ended', current_time)
         final_path = base_path / (current_time + name_tag)
         move_to_archive = []
@@ -890,8 +906,32 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         primary.about_to_trigger.emit()
 
+    @qtc.pyqtSlot()
+    def start_measurement(self):
+        """Check runtime settings and start measurement."""
+        if not self.are_runtime_settings_ok():
+            return
+        if self._has_been_used_before:
+            raise MeasurementReusedError(
+                'Cannot reuse measurements to run multiple cycles. '
+                'Create a new instance instead.'
+                )
+        if self.running:
+            raise MeasurementIsRunningError(
+                'Attempted to start a new measurement on an instance '
+                'that was already performing a measurement.'
+                )
+
+        self._has_been_used_before = True
+        self._aborted = False
+        self.settings.set('measurement_settings', 'was_aborted', 'False')
+        self.settings.set('measurement_info', 'started',
+                          time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime()))
+        self.running = True
+        self._begin_preparation()
+
     @abstractmethod
-    def start_next_measurement(self):
+    def begin_next_energy_step(self):
         """Set next energy (if required) and measure.
 
         This method does not increment self.current_energy, as
@@ -948,17 +988,17 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
 
         # Finally, reconnect all devices to
         # be ready to actually take measurements
-        self.__connect_primary_controller()
         self.__connect_secondary_controllers()
         self.__connect_cameras()
+        self._connect_primary_controller()
 
         self.prepared.emit()           # Signal that we're done.
         self.current_energy = self.start_energy
-        self.start_next_measurement()  # And start the measurement loop
+        self.begin_next_energy_step()  # And start the measurement loop
 
     @qtc.pyqtSlot(bool)
     @qtc.pyqtSlot()
-    def __cleanup_and_end(self, *__args):
+    def _cleanup_and_end(self, *__args):
         """Conclude measurement and clean up.
 
         Quit threads and emit finished().
@@ -969,8 +1009,8 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             Emitted right before this method returns. All
             operations are done when this happens.
         """
-        self.__disconnect_primary_controller()
         self.__force_end_timer.stop()
+        self.disconnect_devices()
         self._stop_threads()
         self.running = False
         self.finished.emit()
@@ -1040,7 +1080,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         base.safe_connect(self.__preparation_continued,
                           ctrl.continue_preparation, type=_UNIQUE)
 
-    def __connect_primary_controller(self):
+    def _connect_primary_controller(self):
         """Connect signals of the primary controller."""
         primary = self.primary_controller
         about_to_trigger = primary.about_to_trigger
@@ -1074,11 +1114,11 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         disconnect(self.__preparation_continued, ctrl.continue_preparation)
         busy_slots = (self.__continue_preparation,
                       self.__check_preparation_finished,
-                      self.__cleanup_and_end, self._finalize)
+                      self._cleanup_and_end, self._finalize)
         for slot in busy_slots:
             disconnect(ctrl.busy_changed, slot)
 
-    def __disconnect_primary_controller(self):
+    def _disconnect_primary_controller(self):
         """Disconnect serial and signals of the primary controller."""
         primary = self.primary_controller
         if primary is None:
@@ -1129,7 +1169,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
             # set the LEED energy to zero (and detect it has been set)
             primary = self.primary_controller
             primary.connect_()
-            primary.busy_changed.connect(self.__cleanup_and_end, type=_UNIQUE)
+            primary.busy_changed.connect(self._cleanup_and_end, type=_UNIQUE)
             self.current_energy = 0
             self.set_leed_energy(self.current_energy, 50, trigger_meas=False)
 
@@ -1556,7 +1596,7 @@ class MeasurementABC(QObjectWithSettingsABC):                     # TODO: doc ab
         if self._is_finished():
             self._prepare_finalization()
         else:
-            self.start_next_measurement()
+            self.begin_next_energy_step()
 
     @qtc.pyqtSlot()
     def __report_init_errors(self):
