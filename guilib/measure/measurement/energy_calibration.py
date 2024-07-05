@@ -67,7 +67,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         return max(min_e, start_e)
 
     @property
-    def __delta_energy(self):
+    def _delta_energy(self):
         """Return the amplitude of an energy step in eV."""
         # pylint: disable=redefined-variable-type
         # Seems a pylint bug
@@ -90,7 +90,7 @@ class MeasureEnergyCalibration(MeasurementABC):
         return delta
 
     @property
-    def __end_energy(self):
+    def _end_energy(self):
         """Return the energy (in eV) at which the energy ramp ends."""
         # pylint: disable=redefined-variable-type
         # Seems a pylint bug
@@ -112,6 +112,14 @@ class MeasureEnergyCalibration(MeasurementABC):
         return egy                                                              # TODO: warn if end == 1000
 
     @qtc.pyqtSlot()
+    def abort(self):
+        """Abort all current actions."""
+        if (hasattr(self, "_old_coefficients")
+                and self._old_coefficients):
+            self.primary_controller.settings.set('energy_calibration',
+                                                 'coefficients',
+                                                 self._old_coefficients)
+        super().abort()
 
     def are_runtime_settings_ok(self):
         """Return whether runtime settings are ok.
@@ -144,8 +152,8 @@ class MeasureEnergyCalibration(MeasurementABC):
                 )
             return False
 
-        egy_range = self.__end_energy - self.start_energy
-        n_steps = 1 + round(egy_range/self.__delta_energy)
+        egy_range = self._end_energy - self.start_energy
+        n_steps = 1 + round(egy_range/self._delta_energy)
 
         if egy_range < 10:
             # Require at least 10 eV for a reasonable calibration
@@ -170,19 +178,6 @@ class MeasureEnergyCalibration(MeasurementABC):
 
         return True
 
-    def get_settings_handler(self):
-        """Return a SettingsHandler object for displaying settings."""
-        handler = super().get_settings_handler()
-        min_energy = self.settings.getfloat('measurement_settings',
-                                            'min_energy', fallback=5.)
-        option = handler['measurement_settings']['start_energy']
-        option.handler_widget.soft_minimum = min_energy
-        option.set_info_text(
-            '<nobr>The energy at which the measurement starts.</nobr> The '
-            f'minimum start energy is {min_energy} eV.'
-            )
-        return handler
-
     def begin_next_energy_step(self):
         """Set energy and measure.
 
@@ -202,28 +197,6 @@ class MeasureEnergyCalibration(MeasurementABC):
             device.busy = True
         self.set_leed_energy(*self.step_profile,
                              self.current_energy, self.hv_settle_time)
-
-    def _is_finished(self):
-        """Check if the full measurement cycle is done.
-
-        If the energy is above the __end_energy the cycle is
-        completed. If not, then the delta energy is added
-        and the next measurement is started.
-
-        Returns
-        -------
-        bool
-        """
-        super()._is_finished()
-        if self.current_energy + self.__delta_energy > self.__end_energy:
-            self.calibrate_energy_setpoint()
-            return True
-        self.current_energy += self.__delta_energy
-        return False
-
-    def _make_cameras(self):
-        """Make sure we have no camera."""
-        self.settings.set('devices', 'cameras', '()')
 
     def calibrate_energy_setpoint(self):                                        # TODO: move this to DataPoints?
         """Calibrate the energy setpoint of the LEED electronics.
@@ -313,18 +286,43 @@ class MeasureEnergyCalibration(MeasurementABC):
         with open(file_name, 'w', encoding='utf-8') as configfile:
             primary.settings.write(configfile)
 
-    @qtc.pyqtSlot()
-    def abort(self):
-        """Abort all current actions."""
-        if (hasattr(self, "__old_coefficients")
-                and self.__old_coefficients):
-            self.primary_controller.settings.set('energy_calibration',
-                                                 'coefficients',
-                                                 self.__old_coefficients)
-        super().abort()
+    def get_settings_handler(self):
+        """Return a SettingsHandler object for displaying settings."""
+        handler = super().get_settings_handler()
+        min_energy = self.settings.getfloat('measurement_settings',
+                                            'min_energy', fallback=5.)
+        option = handler['measurement_settings']['start_energy']
+        option.handler_widget.soft_minimum = min_energy
+        option.set_info_text(
+            '<nobr>The energy at which the measurement starts.</nobr> The '
+            f'minimum start energy is {min_energy} eV.'
+            )
+        return handler
 
     def set_settings(self, new_settings):
         """Change settings of the measurement."""
         settings_ok = super().set_settings(new_settings)
         self.data_points.time_resolved = False
         return settings_ok
+
+    def _is_finished(self):
+        """Check if the full measurement cycle is done.
+
+        If the energy is above the _end_energy the cycle is
+        completed. If not, then the delta energy is added
+        and the next measurement is started.
+
+        Returns
+        -------
+        bool
+        """
+        super()._is_finished()
+        if self.current_energy + self._delta_energy > self._end_energy:
+            self.calibrate_energy_setpoint()
+            return True
+        self.current_energy += self._delta_energy
+        return False
+
+    def _make_cameras(self):
+        """Make sure we have no camera."""
+        self.settings.set('devices', 'cameras', '()')

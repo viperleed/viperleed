@@ -29,7 +29,7 @@ class IVVideo(MeasurementABC):
                            ('measurement_settings', 'delta_energy'),]
 
     @property
-    def __delta_energy(self):
+    def _delta_energy(self):
         """Return the amplitude of an energy step in eV."""
         # pylint: disable=redefined-variable-type
         # Seems a pylint bug
@@ -50,7 +50,7 @@ class IVVideo(MeasurementABC):
         return delta
 
     @property
-    def __end_energy(self):
+    def _end_energy(self):
         """Return the energy (in eV) at which the energy ramp ends."""
         # pylint: disable=redefined-variable-type
         # Seems a pylint bug
@@ -70,7 +70,7 @@ class IVVideo(MeasurementABC):
         return egy
 
     @property
-    def __i0_settle_time(self):
+    def _i0_settle_time(self):
         """Return the time interval for the settling of I0."""
         if not self.primary_controller:
             return 0
@@ -80,8 +80,8 @@ class IVVideo(MeasurementABC):
     def _n_digits(self):
         """Return the number of digits needed to represent each step."""
         # Used for zero-padding counter in image names.
-        num_meas = (1 + round((self.__end_energy - self.start_energy)
-                              / self.__delta_energy))
+        num_meas = (1 + round((self._end_energy - self.start_energy)
+                              / self._delta_energy))
         return len(str(num_meas))
 
     # We don't have anything much to do in abort() that is not
@@ -133,7 +133,7 @@ class IVVideo(MeasurementABC):
 
         profile = self.step_profile
         self.set_leed_energy(*profile,
-                             self.current_energy, self.__i0_settle_time)
+                             self.current_energy, self._i0_settle_time)
 
         # TODO: here we should start the camera no earlier than
         # hv_settle_time, but such that image acquisition
@@ -179,7 +179,7 @@ class IVVideo(MeasurementABC):
     def _is_finished(self):
         """Check if the full measurement cycle is done.
 
-        If the energy is above the __end_energy the cycle is
+        If the energy is above the _end_energy the cycle is
         completed. If not, then the delta energy is added
         and the next measurement is started.
 
@@ -188,7 +188,7 @@ class IVVideo(MeasurementABC):
         bool
         """
         super()._is_finished()
-        if self.current_energy + self.__delta_energy > self.__end_energy:
+        if self.current_energy + self._delta_energy > self._end_energy:
             return True
-        self.current_energy += self.__delta_energy
+        self.current_energy += self._delta_energy
         return False

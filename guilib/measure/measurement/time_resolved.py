@@ -38,21 +38,21 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                            ('measurement_settings', 'is_continuous'),
                            ('measurement_settings', 'energy_step_duration'),]
 
-    __request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                 # TODO: could be done with QMetaObject.invokeMethod
+    _request_continuous_mode = qtc.pyqtSignal(bool)   # On/Off                  # TODO: could be done with QMetaObject.invokeMethod
 
     def __init__(self, measurement_settings):
         """Initialise measurement class."""
         super().__init__(measurement_settings)
-        self.__endless = False                                                  # --> generator;
-        self.__constant_energy = False                                          # --> generator;
         self._end_energy = 0                                                    # --> generator; It can happen that there is no proper "end energy" (endless measurement, e.g., wiggle)
         self._delta_energy = 1                                                  # --> generator; There may not be a delta_energy (e.g., I(t) at fixed energy)
+        self._endless = False                                                   # --> generator;
+        self._constant_energy = False                                           # --> generator;
 
         # One timer to trigger a change of electron energy: we will
         # sit at each energy for self.energy_step_duration millisecs.
-        self.__energy_step_timer = qtc.QTimer(parent=self)
-        self.__energy_step_timer.setSingleShot(True)
-        self.__energy_step_timer.timeout.connect(
+        self._energy_step_timer = qtc.QTimer(parent=self)
+        self._energy_step_timer.setSingleShot(True)
+        self._energy_step_timer.timeout.connect(
             self._ready_for_next_measurement
             )
 
@@ -62,8 +62,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # time out faster than the longest time it takes any
         # controller to return measurements. The time interval
         # is read from the settings.
-        trigger.timeout.connect(self.__on_one_measurement_triggered)
         trigger = self._trigger_one_measurement = qtc.QTimer(parent=self)
+        trigger.timeout.connect(self._on_one_measurement_triggered)
 
         # Finally, set the _camera_timer interval to zero, so
         # we can fire it at the same time as measurements are
@@ -72,7 +72,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
         # TODO: use a flag to decide if we want to save images.
         # If not, we can just disconnect _camera_timer, and we
-        # should also not invoke in __on_one_measurement_triggered
+        # should also not invoke in _on_one_measurement_triggered
 
         if self.settings:
             # pylint: disable=redefined-variable-type
@@ -82,10 +82,10 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             self._end_energy = self.settings.getfloat(
                 'measurement_settings', 'end_energy', fallback=10
                 )
-            self.__endless = self.settings.getboolean(
+            self._endless = self.settings.getboolean(
                 'measurement_settings', 'endless', fallback=False
                 )
-            self.__constant_energy = self.settings.getboolean(
+            self._constant_energy = self.settings.getboolean(
                 'measurement_settings', 'constant_energy', fallback=False
                 )
 
@@ -123,7 +123,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             interval = min_t
             self.settings.set('measurement_settings', 'energy_step_duration',
                               str(interval))
-            self.__energy_step_timer.setInterval(interval)
+            self._energy_step_timer.setInterval(interval)
         return interval
 
     @energy_step_duration.setter
@@ -135,7 +135,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
                              f"controllers. Minimum is {min_t}")
         self.settings.set('measurement_settings', 'measurement_interval',
                           str(new_interval))
-        self.__energy_step_timer.setInterval(new_interval)
+        self._energy_step_timer.setInterval(new_interval)
 
     @property
     def energy_step_duration_min(self):
@@ -229,8 +229,8 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         """Interrupt measurement, save partial data, set energy to zero."""
         try:
             timers = (
-                self.__energy_step_timer,
                 self._trigger_one_measurement,
+                self._energy_step_timer,
                 )
         except AttributeError:
             # .abort() happened during super().__init__
@@ -285,14 +285,14 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         energy : float
             Next energy to set.
         """
-        if self.__constant_energy:
+        if self._constant_energy:
             return self.start_energy
         energy = self.current_energy + self._delta_energy
         ramp_finished = energy > self._end_energy
         if self._delta_energy < 0:
             ramp_finished = energy < self._end_energy
 
-        if self.__endless:
+        if self._endless:
             self.new_data_available.emit(self.data_points[-1])
             if ramp_finished:
                 energy = self.start_energy
@@ -380,7 +380,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         _continuous = self.is_continuous
         if _continuous:
             self._missing_data = dict.fromkeys(self._missing_data.keys(), 0)
-        self.__energy_step_timer.setInterval(self.energy_step_duration)
+        self._energy_step_timer.setInterval(self.energy_step_duration)
         about_to_trigger = self.primary_controller.about_to_trigger
 
         # Each energy step will begin when the energy has settled,
@@ -388,7 +388,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # last energy (self.current_energy), i.e., when it emits
         # .about_to_trigger. This is necessary, since we may be
         # using a non-abrupt self.step_profile.
-        base.safe_connect(about_to_trigger, self.__energy_step_timer.start,
+        base.safe_connect(about_to_trigger, self._energy_step_timer.start,
                           type=_UNIQUE)
 
         if _continuous and self.current_step_nr == 2:
@@ -417,7 +417,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         self._trigger_one_measurement.setInterval(self.measurement_interval)
 
     @qtc.pyqtSlot(bool)
-    def __check_is_finished(self, _):                                           # TODO: I'm not happy with the name. __continue_when_primary_stopped?
+    def _check_is_finished(self, _):                                            # TODO: I'm not happy with the name. _continue_when_primary_stopped?
         """Check if the measurement is finished in continuous mode.
 
         This method is used only if self.is_continuous. It does the
@@ -432,7 +432,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         None.
         """
         base.safe_disconnect(self.primary_controller.busy_changed,
-                             self.__check_is_finished)
+                             self._check_is_finished)
         if self.aborted:
             # We entered this call after the measurement was aborted,
             # likely while processing an unprocessed timeout event
@@ -443,7 +443,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         """Connect necessary controller signals."""
         super()._connect_controller(ctrl)
         try:
-            base.safe_connect(self.__request_continuous_mode,
+            base.safe_connect(self._request_continuous_mode,
                               ctrl.set_continuous_mode, type=_UNIQUE)
         except AttributeError:
             # Not a MeasureController or called during super().__init__
@@ -464,7 +464,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         if not ctrl.measures():
             return
 
-        base.safe_disconnect(self.__request_continuous_mode,
+        base.safe_disconnect(self._request_continuous_mode,
                              ctrl.set_continuous_mode)
 
     @qtc.pyqtSlot(bool)
@@ -539,7 +539,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # We must make sure that we have already stored in the
         # datapoints all the images that we have ever triggered for.
         self._missing_data[camera] -= 1
-        if not self.__energy_step_timer.isActive():
+        if not self._energy_step_timer.isActive():
             # We are at the end of an energy step, and just finished
             # waiting for the last image. See if we can go on.
             self._ready_for_next_measurement()
@@ -568,13 +568,13 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         if self.is_continuous:
             return
         self._missing_data[controller] -= 1
-        if not self.__energy_step_timer.isActive():
+        if not self._energy_step_timer.isActive():
             # We are at the end of an energy step, and just finished
             # waiting for the last data. See if we can go on.
             self._ready_for_next_measurement()
 
     @qtc.pyqtSlot()
-    def __on_one_measurement_triggered(self):
+    def _on_one_measurement_triggered(self):
        """Increment the number of missing data for all devices."""
        if self.is_continuous:
            return
@@ -584,7 +584,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
        # is in the same thread. This is to ensure that the next portion
        # of code runs as fast as possible, and does not stall in calling
        # methods in the same thread as the measurement
-       remaining_time = self.__energy_step_timer.remainingTime()
+       remaining_time = self._energy_step_timer.remainingTime()
        for ctrl in self.controllers:
            if not ctrl.measures():
                continue
@@ -598,7 +598,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
            _INVOKE(camera, 'trigger_now', _QUEUED)
            self._missing_data[camera] += 1
 
-    def __prepare_continuous_mode(self):
+    def _prepare_continuous_mode(self):
         """Adjust the preparations to fit continuous mode.
 
         The number of measurements to average over is always 1 in
@@ -627,14 +627,14 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
 
         Emits
         -----
-        __request_continuous_mode(False)
+        _request_continuous_mode(False)
             Tell the controller to turn continuous mode off.
         """
         # First disconnect controller busy_changed from slots that may
         # be inadvertently called in the super() call below.
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.busy_changed,
-                                 self.__check_is_finished)
+                                 self._check_is_finished)
 
         # Disconnect other signals that we will not need any longer.
         if self.primary_controller:
@@ -648,7 +648,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
             else:
                 base.safe_disconnect(about_to_trigger, trigger.start)
                 base.safe_disconnect(trigger.timeout,
-                                     self.__on_one_measurement_triggered)
+                                     self._on_one_measurement_triggered)
 
         super()._prepare_finalization()
 
@@ -658,7 +658,7 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # the controller, which cannot turn "not busy" till all unsent
         # messages are sent. This means that the controllers will turn
         # "not busy" only after the answer to the second command.
-        self.__request_continuous_mode.emit(False)
+        self._request_continuous_mode.emit(False)
 
     @qtc.pyqtSlot()
     def _ready_for_next_measurement(self):
@@ -686,5 +686,5 @@ class TimeResolved(MeasurementABC):  # too-many-instance-attributes
         # sure it properly turns "not busy" when it is done stopping.
         primary = self.primary_controller
         primary.busy = True
-        primary.busy_changed.connect(self.__check_is_finished, type=_UNIQUE)
+        primary.busy_changed.connect(self._check_is_finished, type=_UNIQUE)
         primary.stop()

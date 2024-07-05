@@ -15,7 +15,7 @@ Defines the Measure class, a plug-in for performing LEED(-IV) measurements.
 #        to a timer with a small delay.
 # FIXED?: measurement camera timeout unless started in live mode before
 # FIXED?: measure (timeout), then start viewer --> serial port not open error + wrong camera mode
-# FIXED?: QtWarning infinite recursion on err_box.exec_() in __report_errors
+# FIXED?: QtWarning infinite recursion on err_box.exec_() in _report_errors
 #         may be related to the weird errors above?
 # TESTME: make sure multiple controllers work fine with the new ABC.stop
 # CANT REPRODUCE: badpx file with one line --> not found?? Cannot reproduce with file from J.Mislivicek
@@ -264,7 +264,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             }
 
         # Parent-less dialogs show up in the task bar. They
-        # are set to modal where appropriate (in __compose)
+        # are set to modal where appropriate (in _compose)
         self._dialogs = {
             'sys_settings':
                 SettingsDialog(handled_obj=SystemSettings(),
@@ -296,8 +296,8 @@ class Measure(ViPErLEEDPluginBase):                                             
             }
 
         self.measurement = None
-        self.__measurement_thread = qtc.QThread()
-        self.__measurement_thread.start(_TIME_CRITICAL)
+        self._measurement_thread = qtc.QThread()
+        self._measurement_thread.start(_TIME_CRITICAL)
 
         _timer_setup = (
             # key,      interval, single shot
@@ -315,8 +315,8 @@ class Measure(ViPErLEEDPluginBase):                                             
         self.setWindowTitle(TITLE)
         self.setAcceptDrops(True)
 
-        self.__compose()
-        self.__connect()
+        self._compose()
+        self._connect()
 
         self._timestamps = {'start': -1, 'prepared': -1, 'finished': -1}
 
@@ -336,10 +336,10 @@ class Measure(ViPErLEEDPluginBase):                                             
             return
 
         retry_later = False
-        if self.__measurement_thread.isRunning():
-            self.__measurement_thread.quit()
-            if not self.__measurement_thread.wait(100):
-                self.__measurement_thread.terminate()
+        if self._measurement_thread.isRunning():
+            self._measurement_thread.quit()
+            if not self._measurement_thread.wait(100):
+                self._measurement_thread.terminate()
             retry_later = True
 
         if self._glob['plot']:
@@ -418,17 +418,17 @@ class Measure(ViPErLEEDPluginBase):                                             
         for cam_name, cls_and_info in self._detect_devices("camera"):
             act = cameras.addAction(cam_name)
             act.setData(cls_and_info)
-            act.triggered.connect(self.__on_camera_clicked)
+            act.triggered.connect(self._on_camera_clicked)
         for ctrl_name, cls_and_info in self._detect_devices("controller"):
             act = controllers.addAction(ctrl_name)
             act.setData(cls_and_info)
-            act.triggered.connect(self.__on_controller_clicked)
+            act.triggered.connect(self._on_controller_clicked)
 
         # Leave enabled only those containing entries
         cameras.setEnabled(bool(cameras.actions()))
         controllers.setEnabled(bool(controllers.actions()))
 
-    def __can_take_camera_from_viewer(self, cam_name, viewer):
+    def _can_take_camera_from_viewer(self, cam_name, viewer):
         """Return whether cam_name can be taken from viewer."""
         camera = viewer.camera
         if cam_name != camera.name:
@@ -460,7 +460,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             move_to_front(viewer)
         return True
 
-    def __check_sys_settings_ok(self):
+    def _check_sys_settings_ok(self):
         """Complain if the system settings are missing entries."""
         if self.system_settings.valid:
             return
@@ -474,9 +474,9 @@ class Measure(ViPErLEEDPluginBase):                                             
         if reply == _QMSG.Close:
             self.close()
         else:
-            self.__on_sys_settings_triggered()
+            self._on_sys_settings_triggered()
 
-    def __compose(self):
+    def _compose(self):
         """Place children widgets and menus."""
         self.setStatusBar(qtw.QStatusBar())
         self.setCentralWidget(qtw.QWidget())
@@ -491,30 +491,29 @@ class Measure(ViPErLEEDPluginBase):                                             
         for ctrl in ('measure', 'abort', 'set_energy', 'energy_input',):
             self._ctrls[ctrl].setFont(font)
             self._ctrls[ctrl].ensurePolished()
-        self.__switch_enabled(True)
+        self._switch_enabled(True)
 
         layout = self.centralWidget().layout()
 
         layout.addWidget(self._ctrls['measure'], 1, 1, 1, 1)
         layout.addWidget(self._ctrls['abort'], 1, 2, 1, 1)
-
-        self.__compose_menu()
-        self.__compose_error_box()
         layout.addWidget(self._ctrls['set_energy'], 2, 1, 1, 1)
         layout.addWidget(self._ctrls['energy_input'], 2, 2, 1, 1)
+        self._compose_menu()
+        self._compose_error_box()
 
         # Take care of dialogs and other windows
         self._dialogs['sys_settings'].setModal(True)
         self._dialogs['measurement_selection'].setModal(True)
 
-    def __compose_error_box(self):
+    def _compose_error_box(self):
         """Prepare the message box shown when errors happen."""
         err_box = self._dialogs['error_box']
         err_box.setWindowTitle("Error")
         err_box.setTextInteractionFlags(qtc.Qt.TextSelectableByMouse)
         err_box.setIcon(err_box.Critical)
 
-    def __compose_menu(self):
+    def _compose_menu(self):
         """Put together menu."""
         menu = self.menuBar()
 
@@ -523,7 +522,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         menu.insertMenu(self.about_action, file_menu)
         act = file_menu.addAction("&Open...")
         act.setShortcut("Ctrl+O")
-        act.triggered.connect(self.__on_read_pressed)
+        act.triggered.connect(self._on_read_pressed)
 
         # Devices
         devices_menu = self._ctrls['menus']['devices']                          # TODO: have to update the lists regularly. Use timer to update_device_lists.
@@ -537,7 +536,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         tools_menu = self._ctrls['menus']['tools']
         menu.insertMenu(self.about_action, tools_menu)
         act = tools_menu.addAction("Find bad pixels...")
-        act.triggered.connect(self.__on_bad_pixels_selected)
+        act.triggered.connect(self._on_bad_pixels_selected)
 
         act = tools_menu.addAction("Upload/upgrade firmware...")
         act.setEnabled(True)
@@ -546,29 +545,29 @@ class Measure(ViPErLEEDPluginBase):                                             
         # System settings
         act = self._ctrls['menus']['sys_settings']
         menu.insertAction(self.about_action, act)
-        act.triggered.connect(self.__on_sys_settings_triggered)
+        act.triggered.connect(self._on_sys_settings_triggered)
 
-    def __connect(self):
+    def _connect(self):
         """Connect signals to appropriate slots."""
         # CONTROLS
-        self._ctrls['measure'].clicked.connect(self.__on_start_pressed)
-        self._ctrls['set_energy'].clicked.connect(self.__on_set_energy)
+        self._ctrls['measure'].clicked.connect(self._on_start_pressed)
+        self._ctrls['set_energy'].clicked.connect(self._on_set_energy)
 
         # DIALOGS
         self._dialogs['sys_settings'].settings_changed.connect(
-            self.__on_sys_settings_changed
+            self._on_sys_settings_changed
             )
         self._dialogs['sys_settings'].finished.connect(
-            self.__check_sys_settings_ok
+            self._check_sys_settings_ok
             )
         self._dialogs['bad_px_finder'].finished.connect(
-            functools.partial(self.__switch_enabled, True)
+            functools.partial(self._switch_enabled, True)
             )
         self._dialogs['error_box'].finished.connect(
-            self.__report_errors
+            self._report_errors
             )
         self._dialogs['firmware_upgrade'].error_occurred.connect(
-            self.__on_error_occurred
+            self._on_error_occurred
             )
         self._dialogs['measurement_selection'].measurement_selected.connect(
             self._create_settings_dialog
@@ -580,34 +579,34 @@ class Measure(ViPErLEEDPluginBase):                                             
             self._measurement_cancelled
             )
         # OTHERS
-        self.error_occurred.connect(self.__on_error_occurred)
-        self.__measurement_thread.finished.connect(self.__switch_enabled)
+        self.error_occurred.connect(self._on_error_occurred)
+        self._measurement_thread.finished.connect(self._switch_enabled)
 
         # TIMERS
         slots = (
-            ('report_errors', self.__report_errors),
+            ('report_errors', self._report_errors),
             ('retry_close', self.close),
-            ('start_measurement', self.__on_measurement_started),
-            ('retry_open_bpx_dialog', self.__on_bad_pixels_selected),
-            ('delay_check_settings', self.__check_sys_settings_ok),
+            ('start_measurement', self._on_measurement_started),
+            ('retry_open_bpx_dialog', self._on_bad_pixels_selected),
+            ('delay_check_settings', self._check_sys_settings_ok),
             )
         for timer, slot in slots:
             self._timers[timer].timeout.connect(slot)
 
-    def __connect_measurement(self):
+    def _connect_measurement(self):
         measurement = self.measurement
         starter = self._timers['start_measurement'].timeout
 
         # Errors
-        measurement.error_occurred.connect(self.__on_error_occurred)
+        measurement.error_occurred.connect(self._on_error_occurred)
         for device in measurement.devices:
-            device.error_occurred.connect(self.__on_error_occurred)
+            device.error_occurred.connect(self._on_error_occurred)
 
         # Measurement events and start/stopping
-        measurement.new_data_available.connect(self.__on_data_received)
-        measurement.prepared.connect(self.__on_measurement_prepared)
-        measurement.finished.connect(self.__on_measurement_finished)
-        measurement.finished.connect(self.__print_done)
+        measurement.new_data_available.connect(self._on_data_received)
+        measurement.prepared.connect(self._on_measurement_prepared)
+        measurement.finished.connect(self._on_measurement_finished)
+        measurement.finished.connect(self._print_done)
         starter.connect(measurement.start_measurement)
         self._ctrls['abort'].clicked.connect(measurement.abort)
 
@@ -617,7 +616,6 @@ class Measure(ViPErLEEDPluginBase):                                             
                              interactions_enabled=False)
                 )
 
-    def __delete_outdated_ctrl_dialog(self, ctrl_name):
     def _delete_outdated_ctrl_dialog(self, ctrl_name):
         """Remove controller dialogs for ctrl_name."""
         this_ctrl_dialogs = [
@@ -642,10 +640,10 @@ class Measure(ViPErLEEDPluginBase):                                             
                             'to fix your default settings.')
         return detected_devices
 
-    def __make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
+    def _make_ctrl_settings_dialog(self, ctrl_cls, ctrl_info):
         """Make a new settings dialog for a controller."""
         address = ctrl_info.more['address']
-        ctrl = self.__make_device(ctrl_cls, ctrl_info, address=address)
+        ctrl = self._make_device(ctrl_cls, ctrl_info, address=address)
         if not ctrl:
             return
 
@@ -655,7 +653,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         full_name = ctrl_info.unique_name
         self._dialogs['device_settings'][full_name] = dialog
 
-    def __make_device(self, device_cls, settings_info, **other_info):
+    def _make_device(self, device_cls, settings_info, **other_info):
         """React to the selection of a device."""
         # Find an appropriate settings file, searching in the user
         # configuration folder, and falling back on the base default.
@@ -704,7 +702,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         device.uses_default_settings = False
         return device
 
-    def __on_bad_pixels_selected(self):
+    def _on_bad_pixels_selected(self):
         """Stop all cameras, then open the dialog."""
         _ok_to_open = True
         for viewer in self._dialogs['camera_viewers']:
@@ -726,11 +724,11 @@ class Measure(ViPErLEEDPluginBase):                                             
         # the disconnected cameras anyway
         self._dialogs['camera_viewers'] = []
 
-        self.__switch_enabled(False)
+        self._switch_enabled(False)
         self._ctrls['abort'].setEnabled(False)
         self._dialogs['bad_px_finder'].open()
 
-    def __on_camera_clicked(self, *_):                                          # TODO: may want to display a busy dialog with "starting camera <name>..."
+    def _on_camera_clicked(self, *_):                                           # TODO: may want to display a busy dialog with "starting camera <name>..."
         cam_name = self.sender().text()
         cam_cls, cam_info = self.sender().data()
 
@@ -738,15 +736,15 @@ class Measure(ViPErLEEDPluginBase):                                             
         # (and its settings) from the known camera viewers
         viewers = self._dialogs['camera_viewers']
         for viewer in viewers.copy():
-            if self.__can_take_camera_from_viewer(cam_name, viewer):
+            if self._can_take_camera_from_viewer(cam_name, viewer):
                 return
 
         # Not already available. Make a new camera.
-        camera = self.__make_device(cam_cls, cam_info)
+        camera = self._make_device(cam_cls, cam_info)
         if not camera:
             return
 
-        camera.error_occurred.connect(self.__on_camera_error)
+        camera.error_occurred.connect(self._on_camera_error)
         if camera.mode != 'live':
             camera.settings.set('camera_settings', 'mode', 'live')
             camera.settings.update_file()
@@ -766,14 +764,14 @@ class Measure(ViPErLEEDPluginBase):                                             
             viewers.append(viewer)
 
     @qtc.pyqtSlot(tuple)
-    def __on_camera_error(self, error_info):
+    def _on_camera_error(self, error_info):
         """Stop camera and report errors."""
         *_, err_msg = error_info
         if 'bad_pixels' not in err_msg.replace(" ", "_"):
             self.sender().stop()
-        self.__on_error_occurred(error_info)
+        self._on_error_occurred(error_info)
 
-    def __on_controller_clicked(self, *_):
+    def _on_controller_clicked(self, *_):
         """Show settings of the controller selected."""
         full_name = self.sender().text()
         ctrl_cls, ctrl_info = self.sender().data()
@@ -782,8 +780,8 @@ class Measure(ViPErLEEDPluginBase):                                             
         ctrl_name = ctrl_info.more['name']
 
         if full_name not in self._dialogs['device_settings']:
-            self.__delete_outdated_ctrl_dialog(ctrl_name)
-            self.__make_ctrl_settings_dialog(ctrl_cls, ctrl_info)
+            self._delete_outdated_ctrl_dialog(ctrl_name)
+            self._make_ctrl_settings_dialog(ctrl_cls, ctrl_info)
 
         _dialog = self._dialogs['device_settings'].get(full_name, None)
         if not _dialog:
@@ -796,7 +794,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         ctrl.prepare_to_show_settings()
 
     @qtc.pyqtSlot(dict)
-    def __on_data_received(self, new_data):
+    def _on_data_received(self, new_data):
         """Plot measured data."""
         plot = self._glob['plot']
         plot.data_points.append(new_data)
@@ -804,7 +802,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         plot.plot_new_data()
 
     @qtc.pyqtSlot(tuple)
-    def __on_error_occurred(self, error_info):
+    def _on_error_occurred(self, error_info):
         """React to an error."""
         sender = self.sender()
         error = (sender, *error_info)
@@ -815,26 +813,25 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._timers['start_measurement'].stop()
 
     @qtc.pyqtSlot()
-    def __on_measurement_finished(self, *_):
+    def _on_measurement_finished(self, *_):
         """Reset all after a measurement is over."""
         self._timestamps['finished'] = time.perf_counter()
-        self.__switch_enabled(True)
         self.measurement.disconnect_devices()
+        self._switch_enabled(True)
         for viewer in self._dialogs['camera_viewers']:
             viewer.stop_on_close = True
             viewer.interactions_enabled = True
 
     @qtc.pyqtSlot()
-    def __on_measurement_prepared(self):
+    def _on_measurement_prepared(self):
         self._timestamps['prepared'] = time.perf_counter()
 
     @qtc.pyqtSlot()
-    def __on_measurement_started(self):
+    def _on_measurement_started(self):
         self._timestamps['start'] = time.perf_counter()
-        base.safe_disconnect(self.__measurement_thread.started,
+        base.safe_disconnect(self._measurement_thread.started,
                              self._timers['start_measurement'].start)
 
-    def __on_read_pressed(self, *_):
     @qtc.pyqtSlot(object, ViPErLEEDSettings)
     def _create_settings_dialog(self, measurement_class, settings):
         """Create measurement settings dialog."""
@@ -846,6 +843,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         self._dialogs['measurement_settings'] = dialog
         dialog.open()
 
+    def _on_read_pressed(self, *_):
         """Read data from a measurement file."""
         fname, _ = qtw.QFileDialog.getOpenFileName(
             parent=self, directory=self._glob['last_dir']
@@ -859,40 +857,36 @@ class Measure(ViPErLEEDPluginBase):                                             
         fname = Path(fname)
         suffix = fname.suffix
 
-        if suffix not in ('.csv', '.zip'):                                        # TODO: may make sense to rather look for a (single) .csv file in the folder before erroring out
+        if suffix not in ('.csv', '.zip'):                                      # TODO: may make sense to rather look for a (single) .csv file in the folder before erroring out
             base.emit_error(self, UIErrors.FILE_UNSUPPORTED, fname, '')
             return
-        if (suffix == '.csv' and not self.__read_folder(fname, data, config)):
+        if (suffix == '.csv' and not self._read_folder(fname, data, config)):
             return
-        if (suffix == '.zip' and not self.__read_archive(fname, data, config)):
+        if (suffix == '.zip' and not self._read_archive(fname, data, config)):
             return
 
         self._glob['last_dir'] = str(fname.parent)
         self._glob['plot'].data_points = data
         self._glob['last_cfg'] = config
 
-    def __on_set_energy(self):
+    def _on_set_energy(self):
         """Set energy on primary controller."""
                                                                                 # TODO: implement
 
-    def __on_start_pressed(self):
+    def _on_start_pressed(self):
         """Prepare to begin a measurement."""
         if self.measurement:
-            self.__on_measurement_finished()                                    # TODO: necessary?
+            self._on_measurement_finished()                                     # TODO: necessary?
         for viewer in self._dialogs['camera_viewers']:                          # TODO: Maybe only those relevant for measurement?
             viewer.camera.disconnect_()
             viewer.close()
         self._dialogs['camera_viewers'] = []
-        self.__switch_enabled(False)
+        self._switch_enabled(False)
         qtw.qApp.processEvents()
         self._dialogs['measurement_selection'].cfg_dir = Path(
             self.system_settings['PATHS']['configuration']
             )
         self._dialogs['measurement_selection'].open()
-
-        self.measurement.moveToThread(self.__measurement_thread)
-
-        self.__connect_measurement()
 
     @qtc.pyqtSlot()
     def _on_settings_accepted(self):
@@ -908,16 +902,18 @@ class Measure(ViPErLEEDPluginBase):                                             
         dialog.deleteLater()
         self._dialogs['measurement_settings'] = None
 
+        self.measurement.moveToThread(self._measurement_thread)
+        self._connect_measurement()
         plot = self._glob['plot']
         plot.data_points = deepcopy(self.measurement.data_points)
         plot.show()
         self._glob['last_cfg'] = self.measurement.settings
 
         timer = self._timers['start_measurement']
-        if not self.__measurement_thread.isRunning():
-            base.safe_connect(self.__measurement_thread.started,
+        if not self._measurement_thread.isRunning():
+            base.safe_connect(self._measurement_thread.started,
                               timer.start, type=qtc.Qt.UniqueConnection)
-            self.__measurement_thread.start(_TIME_CRITICAL)
+            self._measurement_thread.start(_TIME_CRITICAL)
         else:
             timer.start()
 
@@ -925,7 +921,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         # the measurement errors out before the timer fires
         self._timestamps['start'] = time.perf_counter()
 
-    def __on_sys_settings_changed(self):
+    def _on_sys_settings_changed(self):
         """Save settings file to disk when system settings change."""
         _dialog = self._dialogs['sys_settings']
 
@@ -962,14 +958,14 @@ class Measure(ViPErLEEDPluginBase):                                             
         CameraViewer.clear_cache()
         self._dialogs['camera_viewers'] = []
 
-    def __on_sys_settings_triggered(self):
+    def _on_sys_settings_triggered(self):
         """React to a user clicking on 'Settings'."""
         # Update from file, then .open (which updates widgets)
         self.system_settings.read_again()
         self._dialogs['sys_settings'].open()
 
     @qtc.pyqtSlot()
-    def __print_done(self):
+    def _print_done(self):
         print("\n#### DONE! ####")
         start, prep, finish = self._timestamps.values()
         n_steps = self.measurement.data_points.nr_steps_done
@@ -983,7 +979,7 @@ class Measure(ViPErLEEDPluginBase):                                             
                     " per energy step")
         print(txt, "\n")
 
-    def __read_archive(self, fname, datapts, meas_config):
+    def _read_archive(self, fname, datapts, meas_config):
         """Read from a .zip archive containing .csv and .ini."""
         fname = Path(fname)
         with ZipFile(fname, 'r') as arch:
@@ -1019,7 +1015,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             return False
         return True
 
-    def __read_folder(self, csv_name, datapts, meas_config):
+    def _read_folder(self, csv_name, datapts, meas_config):
         """Read data from a folder containing .csv and .ini."""
         config_name = csv_name.with_suffix(".ini")
         try:
@@ -1041,7 +1037,7 @@ class Measure(ViPErLEEDPluginBase):                                             
             return False
         return True
 
-    def __report_errors(self):
+    def _report_errors(self):
         if not self._glob['errors']:
             return
 
@@ -1074,7 +1070,6 @@ class Measure(ViPErLEEDPluginBase):                                             
         err_box.open()
         self._glob['errors'] = []
 
-    def __switch_enabled(self, idle=False):
     @qtc.pyqtSlot()
     def _measurement_cancelled(self):
         """Handle measurement cancellation."""
@@ -1085,6 +1080,7 @@ class Measure(ViPErLEEDPluginBase):                                             
         """Emit an error in response to no settings being detected."""
         base.emit_error(self, UIErrors.FILE_NOT_FOUND_ERROR, path, err)
 
+    def _switch_enabled(self, idle=False):
         """Switch enabled status of buttons.
 
         Parameters

@@ -97,11 +97,11 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     # _preparation_started: emitted in ._begin_preparation right
     # before the first energy is set. Carries pairs of energies and
     # settle times, passed on to .primary_controller.set_energy()
-    __preparation_started = qtc.pyqtSignal(tuple)                               # TODO: Could use QMetaObject.invokeMethod
+    _preparation_started = qtc.pyqtSignal(tuple)                                # TODO: Could use QMetaObject.invokeMethod
 
-    # __preparation_continued: emitted after all controllers have
+    # _preparation_continued: emitted after all controllers have
     # completed the first segment of their preparation
-    __preparation_continued = qtc.pyqtSignal()                                  # TODO: Could use QMetaObject.invokeMethod
+    _preparation_continued = qtc.pyqtSignal()                                   # TODO: Could use QMetaObject.invokeMethod
 
     _mandatory_settings = [
         ('devices', 'primary_controller'),
@@ -114,14 +114,14 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._other_mandatory_settings = [('measurement_settings',
                                            'measurement_class',
                                            (self.__class__.__name__,))]
-        self.__current_energy = 0
-        self.__previous_energy = 0
-        self.__secondary_controllers = []
-        self.__cameras = []
-        self.__temp_dir = None   # Directory for saving files
+        self._current_energy = 0
+        self._previous_energy = 0
         self._primary_controller = None
+        self._secondary_controllers = []
+        self._cameras = []
         self._aborted = False
         self._has_been_used_before = False # Used to stop reuse of object.      # TODO: We may want to modify the measurement to allow this behaviour.
+        self._temp_dir = None   # Directory for saving files
 
         # Keep track of which data of which controller was
         # stored in self.data_points at this energy step
@@ -132,32 +132,33 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self.data_points = DataPoints(parent=self)
         self.data_points.error_occurred.connect(self.error_occurred)
 
-        self.__init_errors = []  # Report these with a little delay
-        self.__init_err_timer = qtc.QTimer(parent=self)
-        self.__init_err_timer.setSingleShot(True)
-        self.__init_err_timer.timeout.connect(self.__report_init_errors)
+        self._init_errors = []  # Report these with a little delay
+        self._init_err_timer = qtc.QTimer(parent=self)
+        self._init_err_timer.setSingleShot(True)
+        self._init_err_timer.timeout.connect(self._report_init_errors)
 
-        self.error_occurred.connect(self.__on_init_errors)
-        self.error_occurred.connect(self.__on_hardware_error,  # aborts
+        self.error_occurred.connect(self._on_init_errors)
+        self.error_occurred.connect(self._on_hardware_error,  # aborts
                                     type=_QUEUED)
 
         self._camera_timer = qtc.QTimer(parent=self)
         self._camera_timer.setSingleShot(True)
 
-        # __force_end_timer ensures that no-matter-what we will
+        # _force_end_timer ensures that no-matter-what we will
         # wait at most 4.5 sec to clean up the measurement at its
         # end. Using a timer we can handle a loss (or timeout) of
         # the primary controller.
-        self.__force_end_timer = qtc.QTimer(parent=self)
-        self.__force_end_timer.setSingleShot(True)
-        self.__force_end_timer.setInterval(4500)
-        self.__force_end_timer.timeout.connect(self.__cleanup_and_end)
+        self._force_end_timer = qtc.QTimer(parent=self)
+        self._force_end_timer.setSingleShot(True)
+        self._force_end_timer.setInterval(4500)
+        self._force_end_timer.timeout.connect(self._cleanup_and_end)
 
         self.set_settings(self._settings_to_load)
 
-        if self.__init_errors:
-            self.__init_err_timer.start(20)
-        self.error_occurred.disconnect(self.__on_init_errors)
+        if self._init_errors:
+            self._init_err_timer.start(20)
+        self.error_occurred.disconnect(self._on_init_errors)
+
     @property
     def aborted(self):
         """Return whether the measurement was aborted."""
@@ -166,7 +167,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     @property
     def cameras(self):
         """Return the cameras used by this class."""
-        return self.__cameras
+        return self._cameras
 
     @cameras.setter
     def cameras(self, new_cameras):
@@ -177,14 +178,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         new_cameras : list
             List of camera class objects.
         """
-        self.__disconnect_cameras()
-        self.__cameras = new_cameras
-        self.__connect_cameras()
-
-    @property
-    def aborted(self):
-        """Return whether the measurement was aborted."""
-        return self.__aborted
+        self._disconnect_cameras()
+        self._cameras = new_cameras
+        self._connect_cameras()
 
     @property
     def controllers(self):
@@ -196,7 +192,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     @property
     def current_energy(self):
         """Return the current energy in electronvolts."""
-        return self.__current_energy
+        return self._current_energy
 
     @current_energy.setter
     def current_energy(self, new_energy):
@@ -211,8 +207,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         new_energy : float
             The new current energy
         """
-        self.__previous_energy = self.current_energy
-        self.__current_energy = new_energy
+        self._previous_energy = self.current_energy
+        self._current_energy = new_energy
 
     @property
     def current_step_nr(self):
@@ -254,7 +250,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     @property
     def secondary_controllers(self):
         """Return the controllers used by this class."""
-        return self.__secondary_controllers
+        return self._secondary_controllers
 
     @secondary_controllers.setter
     def secondary_controllers(self, new_controllers):
@@ -277,7 +273,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         Disconnect old secondary controllers and quit and clear their
         threads. After that, move new secondary controllers to newly
         created threads and start them. Then set private
-        __secondary_controllers attribute to the new controllers and
+        _secondary_controllers attribute to the new controllers and
         connect their signals.
 
         Parameters
@@ -285,7 +281,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         new_controllers : list
             List of MeasureControllerABC objects.
         """
-        self.__disconnect_secondary_controllers()
+        self._disconnect_secondary_controllers()
         self._stop_threads()
         qtw.qApp.processEvents()
         self.threads.clear()
@@ -295,8 +291,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             self.threads.append(thread)
         for thread in self.threads:
             thread.start(priority=thread.TimeCriticalPriority)
-        self.__secondary_controllers = new_controllers
-        self.__connect_secondary_controllers()
+        self._secondary_controllers = new_controllers
+        self._connect_secondary_controllers()
 
     @property
     def start_energy(self):
@@ -430,8 +426,8 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
     @qtc.pyqtSlot()
     def disconnect_devices(self):
         """Disconnect all connected devices but keep them alive."""
-        self.__disconnect_secondary_controllers()
-        self.__disconnect_cameras()
+        self._disconnect_secondary_controllers()
+        self._disconnect_cameras()
         self._disconnect_primary_controller()
 
     def set_settings(self, new_settings):
@@ -481,20 +477,20 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if not super().set_settings(new_settings):
             return False
 
-        # We have to disconnect controllers here because __make_primary_ctrl
-        # and __make_secondary_ctrls create controllers before disconnecting
+        # We have to disconnect controllers here because _make_primary_ctrl
+        # and _make_secondary_ctrls create controllers before disconnecting
         # the old ones. If one tries to connect to the same physical devices
         # there are two objects attempting to talk to the same hardware.
         self.disconnect_devices()
 
-        if not self.__make_primary_ctrl():
-            # Something went wrong (already reported in __make_primary)
+        if not self._make_primary_ctrl():
+            # Something went wrong (already reported in _make_primary)
             # TODO: probably good to clean up secondaries and cameras!
             return False
 
-        self.__make_secondary_ctrls()
+        self._make_secondary_ctrls()
         self._make_cameras()
-        self.__make_tmp_directory_tree()
+        self._make_tmp_directory_tree()
 
         self._missing_data = {c: 1
                               for c in self.controllers
@@ -505,7 +501,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
     def _step_profile_from_strings(self, profile):
         """Return a tuple of energies and times from strings."""
-        delta = self.current_energy - self.__previous_energy
+        delta = self.current_energy - self._previous_energy
         if abs(delta) < 1e-4:
             return tuple()
 
@@ -522,7 +518,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             energies_times[2*i+1] = time_
         return tuple(energies_times)
 
-    def __get_linear_step(self, *params):
+    def _get_linear_step(self, *params):
         """Return energies and times for a simple linear step."""
         if len(params) != 2:
             # Too many/too few
@@ -549,7 +545,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             return tuple()
 
         delta_t = tot_time // n_steps
-        delta_e = self.current_energy - self.__previous_energy
+        delta_e = self.current_energy - self._previous_energy
         if not delta_t or abs(delta_e) < 1e-4:
             return tuple()
 
@@ -591,18 +587,18 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._camera_timer.stop()
         if self.settings:
             self.settings.set('measurement_settings', 'was_aborted', 'True')
-        self.__force_end_timer.start()
         if not self.running:
             self._cleanup_and_end()
             return
+        self._force_end_timer.start()
         self._prepare_finalization()
 
     def are_runtime_settings_ok(self):
         """Return whether runtime settings are ok.
 
-        This method can be used to check if the runtime settings that
-        result from the given settings are enough to run a measuremnt.
-        Base implementation returns True.
+        This method is used to check if the runtime settings that result
+        from the given settings are enough to run a measuremnt. Base
+        implementation returns False if no primary controller exists.
 
         Returns
         -------
@@ -649,7 +645,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         Emits
         -----
-        __preparation_started
+        _preparation_started
             Starts the measurement preparation and carries
             a tuple of energies and times with it.
         """
@@ -671,18 +667,18 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
             # When controllers will turn "not busy" at the end of
             # this first preparation segment, go to second segment
-            ctrl.busy_changed.connect(self.__continue_preparation)
+            ctrl.busy_changed.connect(self._continue_preparation)
 
         # Disconnect the camera.busy_changed signal here, and reconnect
-        # it later in .__check_preparation_finished(). This prevents
+        # it later in ._check_preparation_finished(). This prevents
         # early calls to _on_camera_busy_changed.
         for camera in self.cameras:
             base.safe_disconnect(camera.busy_changed,
                                  self._on_camera_busy_changed)
 
         # Notice that we have to handle only controllers:
-        # .__preparation_started is already connected to camera.start
-        self.__preparation_started.emit(
+        # ._preparation_started is already connected to camera.start
+        self._preparation_started.emit(
             (self.start_energy, primary.long_settle_time)
             )
 
@@ -774,12 +770,12 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             self.primary_controller.moveToThread(thread)
 
     # too-many-locals, too-complex
-    def __save_data(self):                                                        # TODO: clean up after testing zip
+    def _save_data(self):                                                       # TODO: clean up after testing zip
         """Save data."""
-        if not self.__temp_dir:
+        if not self._temp_dir:
             return
 
-        tmp_path = self.__temp_dir
+        tmp_path = self._temp_dir
         base_path = tmp_path.parent
         tag = self.settings.get('measurement_info', 'tag', fallback='')
         name_tag = (' ' + tag) if tag else ''
@@ -833,7 +829,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         except OSError as err:
             base.emit_error(self, MeasurementErrors.RUNTIME_ERROR, err)
 
-        self.__temp_dir = None  # Prevents re-saving
+        self._temp_dir = None  # Prevents re-saving
 
         return  # TODO: remove
 
@@ -889,7 +885,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             dummy_dict[QuantityInfo.TIMESTAMPS].append(primary.time_stamp)
             self.data_points.add_data(dummy_dict, primary)
 
-        if self.current_energy != self.__previous_energy:
+        if self.current_energy != self._previous_energy:
             primary.set_energy(energy, settle_time, *more_steps,
                                trigger_meas=trigger_meas)
             return
@@ -965,7 +961,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         return 4
 
     @qtc.pyqtSlot(bool)
-    def __check_preparation_finished(self, _):
+    def _check_preparation_finished(self, _):
         """Check if measurement preparation is done.
 
         Whenever a device is done with its preparation
@@ -984,13 +980,13 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if any(device.busy for device in self.devices):
             return
         for device in self.devices:
-            device.busy_changed.disconnect(self.__check_preparation_finished)
+            device.busy_changed.disconnect(self._check_preparation_finished)
 
         # Finally, reconnect all devices to
         # be ready to actually take measurements
-        self.__connect_secondary_controllers()
-        self.__connect_cameras()
         self._connect_primary_controller()
+        self._connect_secondary_controllers()
+        self._connect_cameras()
 
         self.prepared.emit()           # Signal that we're done.
         self.current_energy = self.start_energy
@@ -1009,14 +1005,14 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             Emitted right before this method returns. All
             operations are done when this happens.
         """
-        self.__force_end_timer.stop()
         self.disconnect_devices()
+        self._force_end_timer.stop()
         self._stop_threads()
         self.running = False
         self.finished.emit()
 
     @qtc.pyqtSlot(bool)
-    def __continue_preparation(self, _):
+    def _continue_preparation(self, _):
         """Continue preparation for measurements.
 
         Do nothing till all controllers are done with te first part
@@ -1027,7 +1023,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         Emits
         -----
-        __preparation_continued
+        _preparation_continued
             Starts the second part of the measurement
             preparation.
         """
@@ -1039,17 +1035,17 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         # that will later start the measurement loop.
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.busy_changed,
-                                 self.__continue_preparation)
+                                 self._continue_preparation)
         # The camera.busy_changed signals are connected only now, rather
-        # than during begin_preparation. This prevents early calls
-        # to the __check_preparation_finished method, should cameras
+        # than during _begin_preparation. This prevents early calls
+        # to the _check_preparation_finished method, should cameras
         # be ready early.
         for device in self.devices:
-            device.busy_changed.connect(self.__check_preparation_finished,
+            device.busy_changed.connect(self._check_preparation_finished,
                                         type=_UNIQUE)
-        self.__preparation_continued.emit()
+        self._preparation_continued.emit()
 
-    def __connect_cameras(self):
+    def _connect_cameras(self):
         """Connect necessary camera signals."""
         # It is not necessary to call .connect_(), as it is called
         # already in the settings setter of the camera. Not calling
@@ -1064,9 +1060,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                               type=_UNIQUE)
             base.safe_connect(self._camera_timer.timeout, camera.trigger_now,
                               type=_UNIQUE)
-            base.safe_connect(self.__preparation_started, camera.start,
+            base.safe_connect(self._preparation_started, camera.start,
                               type=_UNIQUE)
-            base.safe_connect(camera.image_saved, self.__on_image_saved,
+            base.safe_connect(camera.image_saved, self._on_image_saved,
                               type=_UNIQUE)
 
     def _connect_controller(self, ctrl):
@@ -1075,9 +1071,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         base.safe_connect(ctrl.data_ready, self._on_controller_data_ready,
                           type=_UNIQUE)
         base.safe_connect(self._request_stop_devices, ctrl.stop, type=_UNIQUE)
-        base.safe_connect(self.__preparation_started, ctrl.begin_preparation,
+        base.safe_connect(self._preparation_started, ctrl.begin_preparation,
                           type=_UNIQUE)
-        base.safe_connect(self.__preparation_continued,
+        base.safe_connect(self._preparation_continued,
                           ctrl.continue_preparation, type=_UNIQUE)
 
     def _connect_primary_controller(self):
@@ -1086,22 +1082,22 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         about_to_trigger = primary.about_to_trigger
         self._connect_controller(primary)
 
-    def __connect_secondary_controllers(self):
+    def _connect_secondary_controllers(self):
         """Connect necessary controller signals."""
         about_to_trigger = self.primary_controller.about_to_trigger
         for ctrl in self.secondary_controllers:
             base.safe_connect(about_to_trigger, ctrl.measure_now, type=_UNIQUE)
             self._connect_controller(ctrl)
 
-    def __disconnect_cameras(self):
+    def _disconnect_cameras(self):
         """Disconnect necessary camera signals."""
         disconnect = base.safe_disconnect
         for camera in self.cameras:
             disconnect(camera.busy_changed, self._on_camera_busy_changed)
             disconnect(self._camera_timer.timeout, camera.trigger_now)
-            disconnect(self.__preparation_started, camera.start)
+            disconnect(self._preparation_started, camera.start)
             disconnect(camera.stopped, self._finalize)
-            disconnect(camera.image_saved, self.__on_image_saved)
+            disconnect(camera.image_saved, self._on_image_saved)
             camera.disconnect_()
 
     def _disconnect_controller(self, ctrl):
@@ -1110,10 +1106,10 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         ctrl.disconnect_()
         disconnect(ctrl.data_ready, self._on_controller_data_ready)
         disconnect(self._request_stop_devices, ctrl.stop)
-        disconnect(self.__preparation_started, ctrl.begin_preparation)
-        disconnect(self.__preparation_continued, ctrl.continue_preparation)
-        busy_slots = (self.__continue_preparation,
-                      self.__check_preparation_finished,
+        disconnect(self._preparation_started, ctrl.begin_preparation)
+        disconnect(self._preparation_continued, ctrl.continue_preparation)
+        busy_slots = (self._continue_preparation,
+                      self._check_preparation_finished,
                       self._cleanup_and_end, self._finalize)
         for slot in busy_slots:
             disconnect(ctrl.busy_changed, slot)
@@ -1128,7 +1124,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             base.safe_disconnect(about_to_trigger, ctrl.measure_now)
         self._disconnect_controller(primary)
 
-    def __disconnect_secondary_controllers(self):
+    def _disconnect_secondary_controllers(self):
         """Disconnect serials and signals of the secondary controllers."""
         about_to_trigger = getattr(self.primary_controller,
                                    'about_to_trigger',
@@ -1160,7 +1156,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             return
         self._missing_data.clear()
         try:
-            self.__save_data()
+            self._save_data()
         finally:
             # Disconnect all devices and their signals
             self.disconnect_devices()
@@ -1187,7 +1183,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         """
         return True
 
-    def __make_camera(self, camera_settings):
+    def _make_camera(self, camera_settings):
         """Instantiate camera class object.
 
         Take camera settings and generate a camera object from it.
@@ -1216,7 +1212,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             or if failed to make a camera instance.
         """
         try:
-            config = self.__get_device_settings(camera_settings)
+            config = self._get_device_settings(camera_settings)
         except RuntimeError as err:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'devices/path to camera configuration', err)
@@ -1241,7 +1237,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         if camera.mode != 'triggered':
             # Force mode to be triggered
             camera.settings.set("camera_settings", "mode", "triggered")
-            # base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,          # TODO: Should we make this a non-critical warning?
+            # base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,     # TODO: Should we make this a non-critical warning?
                             # 'camera_settings/mode', 'Camera {camera.name}: '
                             # 'Cannot measure in live mode.')
         return camera
@@ -1261,16 +1257,16 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         cameras = []
         for settings in cam_settings:
             try:
-                cam = self.__make_camera(settings)
+                cam = self._make_camera(settings)
             except RuntimeError:
                 continue
-            cam.error_occurred.connect(self.__on_init_errors)
-            cam.error_occurred.connect(self.__on_hardware_error)
+            cam.error_occurred.connect(self._on_init_errors)
+            cam.error_occurred.connect(self._on_hardware_error)
             cam.process_info.count = 1  # Image counter, start at 1
             cameras.append(cam)
         self.cameras = cameras
 
-    def __make_controller(self, configname, measurements, is_primary=False):
+    def _make_controller(self, configname, measurements, is_primary=False):
         """Instantiate controller class object.
 
         Take controller settings and generate a controller object
@@ -1312,7 +1308,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             from the given name.
         """
         try:
-            config = self.__get_device_settings(configname)
+            config = self._get_device_settings(configname)
         except RuntimeError as err:
             base.emit_error(self, QObjectSettingsErrors.INVALID_SETTINGS,
                             'devices/path to controller configuration', err)
@@ -1325,7 +1321,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                             f'No controller_class in {config.last_file}')
             raise RuntimeError
 
-        # For now, check that the address is in the settings.                 # TODO: add getting address from device list
+        # For now, check that the address is in the settings.                   # TODO: add getting address from device list
         # Later on, this check will only happen if the unique name
         # of the controller in the settings file that was passed
         # is not found in the device list.
@@ -1365,16 +1361,16 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         controller = cls(settings=config, address=address,
                          sets_energy=is_primary)
-        # Connect error signal. The connection with __on_init_errors
+        # Connect error signal. The connection with _on_init_errors
         # has any impact only during initialization of self, but it
-        # does not hurt to leave it connected. __on_hardware_error
+        # does not hurt to leave it connected. _on_hardware_error
         # causes abortion of the measurement.
-        controller.error_occurred.connect(self.__on_init_errors)
-        controller.error_occurred.connect(self.__on_hardware_error)
+        controller.error_occurred.connect(self._on_init_errors)
+        controller.error_occurred.connect(self._on_hardware_error)
         controller.set_measurements(measurements)
         return controller
 
-    def __make_primary_ctrl(self):
+    def _make_primary_ctrl(self):
         """Make primary controller from self.settings."""
         try:
             info = self.settings.getsequence('devices', 'primary_controller')
@@ -1387,16 +1383,16 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             return False
 
         try:
-            ctrl = self.__make_controller(*info, is_primary=True)
+            ctrl = self._make_controller(*info, is_primary=True)
         except RuntimeError:
             # something went wrong with instantiating, and is
-            # already reported by emitting in __make_controller
+            # already reported by emitting in _make_controller
             return False
 
         self.primary_controller = ctrl
         return True
 
-    def __make_secondary_ctrls(self):
+    def _make_secondary_ctrls(self):
         """Make secondary controllers from self.settings."""
         # infos should be a sequence with elements of
         # the form (path, (stuff, to, measure, ...))
@@ -1417,7 +1413,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
                                 'devices/secondary_controllers', '')
                 continue
             try:
-                ctrl = self.__make_controller(*info, is_primary=False)
+                ctrl = self._make_controller(*info, is_primary=False)
             except RuntimeError:
                 continue
             if not isinstance(ctrl, MeasureControllerABC):
@@ -1428,7 +1424,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         # The next one also quits the old threads
         self.secondary_controllers = secondary_controllers
 
-    def __make_tmp_directory_tree(self):
+    def _make_tmp_directory_tree(self):
         """Prepare temporary folder tree where data will be saved."""
         sys_config = SystemSettings()
         base_path = sys_config.paths["measurements"]
@@ -1438,7 +1434,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         base_path = Path(base_path).resolve() / "__tmp__"
         base_path.mkdir(parents=True, exist_ok=True)
 
-        self.__temp_dir = base_path
+        self._temp_dir = base_path
 
         for camera in self.cameras:
             cam_dir = base_path / camera.name_clean
@@ -1447,7 +1443,7 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         # Create a blank zip archive (or delete
         # the contents if one is already present)
-        with ZipFile(self.__temp_dir.parent / '__tmp__.zip', 'w'):
+        with ZipFile(self._temp_dir.parent / '__tmp__.zip', 'w'):
             pass
 
     @qtc.pyqtSlot(bool)
@@ -1499,20 +1495,20 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         self._ready_for_next_measurement()
 
     @qtc.pyqtSlot(tuple)
-    def __on_hardware_error(self, *_):
+    def _on_hardware_error(self, *_):
         """Abort if a hardware error occurs."""
         self.abort()
 
     @qtc.pyqtSlot(str)
-    def __on_image_saved(self, img_name):
+    def _on_image_saved(self, img_name):
         """Archive the latest image saved."""
-        if not self.__temp_dir or not self.__temp_dir.exists():
+        if not self._temp_dir or not self._temp_dir.exists():
             return
         img_name = Path(img_name).resolve()
-        arch_name = self.__temp_dir.with_suffix('.zip')
+        arch_name = self._temp_dir.with_suffix('.zip')
         with ZipFile(arch_name, 'a', compression=ZIP_DEFLATED,
                      compresslevel=2) as archive:
-            archive.write(img_name, img_name.relative_to(self.__temp_dir))
+            archive.write(img_name, img_name.relative_to(self._temp_dir))
 
         return  # TODO: remove after testing
 
@@ -1520,9 +1516,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
         img_name.unlink()
 
     @qtc.pyqtSlot(tuple)
-    def __on_init_errors(self, err):
+    def _on_init_errors(self, err):
         """Collect initialization errors to report later."""
-        self.__init_errors.append(err)
+        self._init_errors.append(err)
 
     def _prepare_finalization(self):
         """Prepare for finalization.
@@ -1549,9 +1545,9 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
 
         for ctrl in self.controllers:
             base.safe_disconnect(ctrl.busy_changed,
-                                 self.__continue_preparation)
+                                 self._continue_preparation)
             base.safe_disconnect(ctrl.busy_changed,
-                                 self.__check_preparation_finished)
+                                 self._check_preparation_finished)
             # Force all controllers to busy, such that ._finalize()
             # is called for all when they turn "not busy" anymore
             ctrl.busy = True
@@ -1599,18 +1595,18 @@ class MeasurementABC(QObjectWithSettingsABC):                                   
             self.begin_next_energy_step()
 
     @qtc.pyqtSlot()
-    def __report_init_errors(self):
+    def _report_init_errors(self):
         """Emit error_occurred for each initialization error."""
-        for error in self.__init_errors:
+        for error in self._init_errors:
             self.error_occurred.emit(error)
-        self.__init_errors = []
+        self._init_errors = []
 
     def _stop_threads(self):
         """Quit all threads immediately."""
         for thread in self.threads:
             thread.quit()
 
-    def __get_device_settings(self, configname):
+    def _get_device_settings(self, configname):
         """Return a ViPErLEEDSettings for a device given its path.
 
         This method reads the correct settings, distinguishing
