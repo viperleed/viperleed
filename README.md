@@ -25,7 +25,7 @@ For a documentation of the `viperleed` Python API see
 <https://viperleed.org/content/api.html>
 
 #### Reporting bugs
-You can ask questions, report bugs, and propse new features by creating
+You can ask questions, report bugs, and propose new features by creating
 a new issue under <https://github.com/viperleed/viperleed/issues>. This
 is the preferred means of communication with us.
 
