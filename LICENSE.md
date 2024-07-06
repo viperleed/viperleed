@@ -713,3 +713,9 @@ library, you may consider it more useful to permit linking proprietary
 applications with the library. If this is what you want to do, use the
 GNU Lesser General Public License instead of this License. But first,
 please read <https://www.gnu.org/licenses/why-not-lgpl.html>.
+
+
+## Creative Commons Attribution 4.0
+
+The full legal text of the license can be found under
+<https://creativecommons.org/licenses/by/4.0/legalcode.en>
