@@ -131,6 +131,19 @@ classifiers = [
     [tool.setuptools.dynamic]
     version = {attr = 'viperleed.__version__'}
 
+    [tool.setuptools.package-data]
+    # Here all the non-python files that we use
+    viperleed = ['*.mplstyle']
+    'viperleed.calc.lib' = ['*.dat']
+    'viperleed.extensions' = ['**/*.f*', 'Make*', 'make*']
+    'viperleed.guilib.icons' = ['*.png', '*.svg']
+    'viperleed.guilib.fonts' = [
+        'DejaVuSans.ttf',
+        'cmunrm.otf',
+        'LICENSE*',
+        'FontLog*',
+        ]
+
 
 
 
