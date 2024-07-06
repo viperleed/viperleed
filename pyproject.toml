@@ -65,61 +65,69 @@ classifiers = [
     'Topic :: Scientific/Engineering :: Physics',
     ]
 
-[project.urls]
-homepage = 'https://viperleed.org'
-documentation = 'https://viperleed.org'
-download = 'https://github.com/viperleed/viperleed/releases'
-source = 'https://github.com/viperleed/viperleed'
-tracker = 'https://github.com/viperleed/viperleed/issues'
+    [project.urls]
+    homepage = 'https://viperleed.org'
+    documentation = 'https://viperleed.org'
+    download = 'https://github.com/viperleed/viperleed/releases'
+    source = 'https://github.com/viperleed/viperleed'
+    tracker = 'https://github.com/viperleed/viperleed/issues'
+
+    [project.scripts]
+    viperleed = 'viperleed.cli:ViPErLEEDMain.run_as_script'
+
+    # TODO: add [project.gui_scripts]
+
+    [project.optional-dependencies]
+    GUI = [
+        'PyQt5',
+        'mplcairo',
+        ]
+    hardware = [
+        'requests',
+        ]
+    dev = [
+        'build',
+        'line_profiler',
+        'make-to-batch',   # To generate Windows make.bat from Makefiles
+        'pytest-cases',
+        'pytest-subtests',
+        'pytest<8',  # Till Issue #337 of pytest-cases is fixed
+        'twine',
+        ]
+    doc = [  # Requires >= py3.9!
+        'ase',         # For notebooks
+        'myst-nb>1.0',
+        'myst-parser>1.0',
+        'setuptools',  # Workaround for sphinxcontrib-bibtex #345
+        'sphinx-rtd-theme',
+        'sphinx>6.1',
+        # For now take the sphinx-argparse fork by @michele-riva, till
+        # the edits are released in the main sphinx-argparse repo
+        'sphinx-argparse@git+https://github.com/michele-riva/sphinx-argparse@collated-edits',
+        'sphinx-copybutton',
+        'sphinx-design',
+        'sphinxcontrib-bibtex',
+        'sphinxcontrib-qthelp',
+        'sphinxcontrib-spelling',
+        'sphinxcontrib-svg2pdfconverter',
+        # The following modules are not necessary for sphinx, but are
+        # needed for the build/scripts/embed_fonts.py utility
+        'brotli',    # Some dependency of parsel? We do not use it explicitly
+        'fontTools',
+        'parsel',
+        ]
+
+
+
 
 [tool.setuptools]
-packages = ["viperleed"]
+packages = ['viperleed']
 
-[tool.setuptools.dynamic]
-version = {attr = "viperleed.__version__"}
+    [tool.setuptools.dynamic]
+    version = {attr = 'viperleed.__version__'}
 
-[project.scripts]
-viperleed = "viperleed.cli:ViPErLEEDMain.run_as_script"
 
-[project.optional-dependencies]
-GUI = [
-    'PyQt5',
-    'mplcairo',
-    ]
-hardware = [
-    'requests',
-    ]
-dev = [
-    'build',
-    'line_profiler',
-    'make-to-batch',   # To generate Windows make.bat from Makefiles
-    'pytest-cases',
-    'pytest-subtests',
-    'pytest<8',  # Till Issue #337 of pytest-cases is fixed
-    'twine',
-    ]
-doc = [  # Requires >= py3.9!
-    'ase',         # For notebooks
-    'myst-nb>1.0',
-    'myst-parser>1.0',
-    'setuptools',  # Workaround for sphinxcontrib-bibtex #345
-    'sphinx-rtd-theme',
-    'sphinx>6.1',
-    # For now take the sphinx-argparse fork by @michele-riva, till
-    # the edits are released in the main sphinx-argparse repo
-    'sphinx-argparse@git+https://github.com/michele-riva/sphinx-argparse@collated-edits',
-    'sphinx-copybutton',
-    'sphinx-design',
-    'sphinxcontrib-bibtex',
-    'sphinxcontrib-qthelp',
-    'sphinxcontrib-spelling',
-    'sphinxcontrib-svg2pdfconverter',
-    # The following modules are not necessary for sphinx, but are
-    # needed for the build/scripts/embed_fonts.py utility
-    'brotli',    # Some dependency of parsel? We do not use it explicitly
-    'fontTools',
-    'parsel',
-    ]
+
 
 [tool.pytest.ini_options]
 addopts = [
@@ -137,68 +145,74 @@ required_plugins = [
 xfail_strict = true
 
 
-[tool.pylint.master]
-extension-pkg-whitelist = ['PyQt5', 'quicktions']
-extension-pkg-allow-list = ['PyQt5', 'quicktions']
-load-plugins = [
-    'pylint.extensions.bad_builtin',
-    'pylint.extensions.broad_try_clause',
-    'pylint.extensions.check_elif',
-    'pylint.extensions.code_style',
-    'pylint.extensions.comparison_placement',
-    'pylint.extensions.confusing_elif',
-    'pylint.extensions.consider_refactoring_into_while_condition',
-    'pylint.extensions.consider_ternary_expression',
-    'pylint.extensions.dict_init_mutate',
-    'pylint.extensions.docparams',
-    'pylint.extensions.docstyle',
-    'pylint.extensions.dunder',
-    'pylint.extensions.empty_comment',
-    'pylint.extensions.for_any_all',
-    'pylint.extensions.magic_value',
-    'pylint.extensions.mccabe',
-    'pylint.extensions.overlapping_exceptions',
-    'pylint.extensions.private_import',
-    'pylint.extensions.redefined_variable_type',
-    'pylint.extensions.set_membership',
-    ]
-# It would be nice to have this set, but there are many language
-# features (e.g., equals in f-strings) that are simply not checked
-# even if this is set.
-# py-version = '3.7'
 
-[tool.pylint.basic]
-no-docstring-rgx = '^(?!__init__$)_'
-# The regexes below undo the changes in pylint 3.0 concerning
-# two-letter-long names. The regexes are the only ones that
-# were changed in github.com/pylint-dev/pylint/pull/8813. Note
-# that DEFAULT_NAME_RGX is the one used for function, method,
-# attr, argument, and variable. The long regexs are all the
-# same, and match lower_camel_case.
-# See github.com/pylint-dev/pylint/releases/tag/v3.0.0
-class-rgx = '[^\W\da-z][^\W_]+$'
-class-attribute-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-function-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-method-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-attr-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-argument-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
-variable-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
 
-[tool.pylint.main]
-check-quote-consistency = 'yes'
+[tool.pylint]
 
-[tool.pylint.format]
-max-line-length = 80
+    [tool.pylint.master]
+    extension-pkg-whitelist = ['PyQt5', 'quicktions']
+    extension-pkg-allow-list = ['PyQt5', 'quicktions']
+    load-plugins = [
+        'pylint.extensions.bad_builtin',
+        'pylint.extensions.broad_try_clause',
+        'pylint.extensions.check_elif',
+        'pylint.extensions.code_style',
+        'pylint.extensions.comparison_placement',
+        'pylint.extensions.confusing_elif',
+        'pylint.extensions.consider_refactoring_into_while_condition',
+        'pylint.extensions.consider_ternary_expression',
+        'pylint.extensions.dict_init_mutate',
+        'pylint.extensions.docparams',
+        'pylint.extensions.docstyle',
+        'pylint.extensions.dunder',
+        'pylint.extensions.empty_comment',
+        'pylint.extensions.for_any_all',
+        'pylint.extensions.magic_value',
+        'pylint.extensions.mccabe',
+        'pylint.extensions.overlapping_exceptions',
+        'pylint.extensions.private_import',
+        'pylint.extensions.redefined_variable_type',
+        'pylint.extensions.set_membership',
+        ]
+    # It would be nice to have this set, but there are many language
+    # features (e.g., equals in f-strings) that are simply not checked
+    # even if this is set.
+    # py-version = '3.7'
 
-[tool.pylint.messages_control]
-enable = ['useless-suppression',
-          'use-implicit-booleaness-not-comparison-to-zero',
-          'use-implicit-booleaness-not-comparison-to-string']
-disable = [
-    'logging-fstring-interpolation',
-    'consider-using-assignment-expr',  # We want to support 3.7 too
-    ]
+    [tool.pylint.basic]
+    no-docstring-rgx = '^(?!__init__$)_'
+    # The regexes below undo the changes in pylint 3.0 concerning
+    # two-letter-long names. The regexes are the only ones that
+    # were changed in github.com/pylint-dev/pylint/pull/8813. Note
+    # that DEFAULT_NAME_RGX is the one used for function, method,
+    # attr, argument, and variable. The long regexs are all the
+    # same, and match lower_camel_case.
+    # See github.com/pylint-dev/pylint/releases/tag/v3.0.0
+    class-rgx = '[^\W\da-z][^\W_]+$'
+    class-attribute-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    function-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    method-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    attr-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    argument-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
+    variable-rgx = '([^\W\dA-Z][^\WA-Z]{2,}|_[^\WA-Z]*|__[^\WA-Z\d_][^\WA-Z]+__)$'
 
-[tool.pylint.reports]
-output-format = 'colorized'
-msg-template = '"{module} - L{line:4d}: {msg_id:5s}: {msg} ({symbol})"'
+    [tool.pylint.main]
+    check-quote-consistency = 'yes'
+
+    [tool.pylint.format]
+    max-line-length = 80
+
+    [tool.pylint.messages_control]
+    enable = [
+        'useless-suppression',
+        'use-implicit-booleaness-not-comparison-to-zero',
+        'use-implicit-booleaness-not-comparison-to-string',
+        ]
+    disable = [
+        'logging-fstring-interpolation',
+        'consider-using-assignment-expr',  # We want to support 3.7 too
+        ]
+
+    [tool.pylint.reports]
+    output-format = 'colorized'
+    msg-template = '"{module} - L{line:4d}: {msg_id:5s}: {msg} ({symbol})"'
