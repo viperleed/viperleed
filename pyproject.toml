@@ -34,6 +34,15 @@ keywords = [
     'science',
     'physics',
     ]
+authors = [
+    {name = 'Michele Riva', email='riva@iap.tuwien.ac.at'},
+    {name = 'Florian Kraushofer', email='florian.kraushofer@tum.de'},
+    {name = 'Alexander M. Imre', email='imre@iap.tuwien.ac.at'},
+    {name = 'Florian Dörr', email='doerr@iap.tuwien.ac.at'},
+    ]
+maintainers = [
+    {name = 'ViPErLEED Developers', email='riva@iap.tuwien.ac.at'},
+    ]
 
 [project.urls]
 Homepage = 'https://viperleed.org'
