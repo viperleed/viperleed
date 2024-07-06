@@ -2,10 +2,10 @@
 # ViPErLEED
 
 ViPErLEED is an open-source package for quantitative low-energy electron
-diffraction [LEED-*I*(*V*)]. It comprises tools for measurement, processing,
-and analysis of LEED-*I*(*V*) results, calculation of theoretical *I*(*V*)
-curves based on a structural model of a surface, and optimization of such
-a model to best fit the experimental results.
+diffraction, also known as LEED-*I*(*V*). It comprises tools for measurement,
+processing, and analysis of LEED-*I*(*V*) results, calculation of theoretical
+*I*(*V*) curves based on a structural model of a surface, and optimization of
+such a model to best fit the experimental results.
 
 You can find the full documentation under <https://viperleed.org>.
 
