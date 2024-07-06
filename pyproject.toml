@@ -121,8 +121,12 @@ classifiers = [
 
 
 
+
+# TODO: Check out https://setuptools.pypa.io/en/latest/userguide/datafiles.html#accessing-data-files-at-runtime
+# which seems to be relevant as we use data files!
 [tool.setuptools]
-packages = ['viperleed']
+# Let setuptools discover packages by itself. This works well as
+# long as the old structure of the repository is not around anymore
 
     [tool.setuptools.dynamic]
     version = {attr = 'viperleed.__version__'}
