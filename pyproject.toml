@@ -71,7 +71,7 @@ classifiers = [
     documentation = 'https://viperleed.org'
     download = 'https://github.com/viperleed/viperleed/releases'
     source = 'https://github.com/viperleed/viperleed'
-    tracker = 'https://github.com/viperleed/viperleed/issues'
+    issues = 'https://github.com/viperleed/viperleed/issues'
 
     [project.scripts]
     viperleed = 'viperleed.cli:ViPErLEEDMain.run_as_script'
