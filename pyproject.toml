@@ -133,11 +133,9 @@ packages = ['viperleed']
 addopts = [
     '--import-mode=importlib',
     ]
-pythonpath = [
-    '.', '..'
-    ]
+pythonpath = ['.', '..']
 # Turn all warnings into errors. See also "How to capture warnings"
-filterwarnings = ["error",]
+filterwarnings = ['error',]
 required_plugins = [
     'pytest-cases>=3.8.1',  # 3.8.1 fixes some ScopeMismatch
     'pytest-subtests'
