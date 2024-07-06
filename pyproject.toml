@@ -45,7 +45,11 @@ maintainers = [
     ]
 
 [project.urls]
-Homepage = 'https://viperleed.org'
+homepage = 'https://viperleed.org'
+documentation = 'https://viperleed.org'
+download = 'https://github.com/viperleed/viperleed/releases'
+source = 'https://github.com/viperleed/viperleed'
+tracker = 'https://github.com/viperleed/viperleed/issues'
 
 [tool.setuptools]
 packages = ["viperleed"]
