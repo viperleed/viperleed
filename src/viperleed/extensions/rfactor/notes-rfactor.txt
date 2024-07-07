@@ -1,0 +1,40 @@
+Innermost function Rfactor_beam:
+INPUT: Y1, Y2, Estart1, Estart2, V0rshift -> Y1 and Y2 are already prepared (i.e. same grid steps, I(V) was previously interpolated)
+DOES: figure out overlap region, calculate RPe
+RETURNS: RPe, Number of overlapping points
+
+Rfactor_beamset:
+INPUT: set of arrays Y1, Y2, Estart1, Estart2, V0rshift, beamtypes -> calls the above in a loop over beams
+DOES: call above, average based on overlapping points, also split into types ("integer/fractional")
+RETURNS: array RPe [overall and for each beamtype]
+
+Rfactor_v0ropt:
+INPUT: same as above, but with v0rmin/v0rmax, maybe v0rstep, optimization_type
+DOES: V0r optimization with Rfactor_beamset, either as loop over grid, or parabola
+RETURNS: array RPe [overall and for each beamtype], V0r_shift_optimum
+
+Prepare_beams:
+INPUT: array[I, E_min, E_step, NE], E_grid_step, averaging_scheme, smoothing?, E_min, E_max
+DOES: (0) Limit_range, (1) Average/discard/reorder according to scheme; (2) smooth?; (3) interpolate on grid; (4) compute Y on new grid
+Probably call several functions... see existing PREEXP, similar!
+RETURNS: array of Y
+
+Limit_range:
+INPUT: E_min, E_max, array[I, E_min, E_step, NE]
+RETURNS: Beam cut to only within [E_min, E_max]
+
+DIFFERENT INTERFACE FUNCTIONS:
+
+calling from search: 
+- prepare experiment Y-functions before going to search loop (Prepare_beams)
+- in each generation, for each pop_config: average equivalent theoretical beams, interpolate I_theory, get Y_theory, call Rfactor_v0ropt
+
+calling from python:
+interface function: Rfactor:
+INPUT: set of arrays [I1, I2, E1_min, E1_step, NE1, E2_min, E2_step, NE2, beamtype] for each beam, v0r optimization info [v0rmin/v0rmax, maybe v0rstep, optimization_type]
+DOES: interpolate, prepare Y-functions, call Rfactor_v0ropt
+RETURNS: Rfactors [overall, and per beam type], V0r_shift_opt, Rfactor array per beam, array of overlapping interpolated I(E) theo+exp per beam
+
+GENERAL NOTE:
+beam sets need to be prepared such that they are already in 1:1 correspondence; can be done on python side
+If EMIN, EMAX are set by user, also pre-cut before calling functions
