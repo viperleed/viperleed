@@ -390,7 +390,8 @@ class TestFailingInitialization:
         assert slab.n_atoms == len(self.ase_atoms.positions)
 
 
-def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):              # TODO: this one could be @parametrize and un-indented.
+def make_refcalc_fixture(name, slab_transforms_and_ids,
+                         accept_fails=False, **kwargs):                         # TODO: this one could be @parametrize and un-indented.
     """Return a pytest.fixture for a refcalc with name and kwargs.
 
     Parameters
@@ -400,6 +401,9 @@ def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):              
     slab_transforms_and_ids : Iterable
         Should yield pairs of the form (transforms, id) to be
         used for tests.
+    accept_fails : bool, optional
+        Do not complain if the viperleed.calc execution fails.
+        Default is False.
     kwargs : dict
         Keyword arguments to pass to the fixture decorator.
 
@@ -441,12 +445,19 @@ def make_refcalc_fixture(name, slab_transforms_and_ids, **kwargs):              
         exec_path = tmp_path_factory.mktemp(basename='from_ase_Ni_100_refcalc',
                                             numbered=True)
         inputs_path = ASE_DATA / 'refcalc'
-        results = vpr_ase.run_from_ase(
-            exec_path=exec_path,
-            ase_object=ase_atoms,
-            inputs_path=inputs_path,
-            slab_transforms=request.param,
-            )
+        kwargs = {
+            'exec_path': exec_path,
+            'ase_object': ase_atoms,
+            'inputs_path': inputs_path,
+            'slab_transforms': request.param,
+            }
+        try:
+            results = vpr_ase.run_from_ase(**kwargs)
+        except RuntimeError as exc:
+            calc_failed = 'ViPErLEED calculation failed' in str(exc)
+            if not accept_fails or not calc_failed:
+                raise
+            results = '', '', '', 0
         return results, exec_path, ase_atoms
     return _fixture
 
@@ -505,7 +516,8 @@ class TestSuccessfulRefcalc:
 
 fixture_run_from_ase_refcalc_fails = make_refcalc_fixture(
     'run_from_ase_refcalc_fails',
-    _make_refcalc_fail_transforms()
+    _make_refcalc_fail_transforms(),
+    accept_fails=True,
     )
 
 
