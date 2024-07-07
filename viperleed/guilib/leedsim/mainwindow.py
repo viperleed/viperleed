@@ -43,6 +43,22 @@ def show_pre_release_popup():
     msgBox.exec()
 
 
+def show_use_betatest_version_popup():
+    """Show a pop-up dialog hinting at using the betatest version."""
+    _betatest = 'https://github.com/viperleed/viperleed-betatest'
+    txt = (
+        f'The ViPErLEED graphical user interface for v{gl.GLOBALS["version"]} '
+        'is currently under development.<p>'
+        'Please use the pre-packed version available from the <a href='
+        f'{_betatest}/releases/latest>viperleed-betatest'
+        '</a> GitHub repository (file gui.zip).</p>'
+        )
+    msgBox = qtw.QMessageBox(qtw.QMessageBox.Information,
+                             'Use betatest version',
+                             txt)
+    msgBox.exec_()
+    
+
 @gl.broadcast_mouse
 class LEED_GUI(qtw.QMainWindow):
     pre_release = False

@@ -50,7 +50,6 @@ else:
                                              editStyleSheet,
                                              get_all_children_widgets)
     from viperleed.guilib.leedsim import *
-    from viperleed.guilib.measure import *
 
 
 from viperleed.guilib.leedsim.exportcsv import export_pattern_csv
