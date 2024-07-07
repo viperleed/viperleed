@@ -47,6 +47,14 @@ DEFAULTS = {
         'v' : 5, 'verbose' : 5,
         'vv' : 1, 'vverbose' : 1,
         },
+    'OPTIMIZE': {  # settings for fd optimization
+        'which': 'none',
+        'step': 0.,
+        'minpoints': 4,
+        'maxpoints': 10,
+        'convergence': 0.,
+        'maxstep': 0.,
+        },
     'PHASESHIFT_EPS': {
         'r': 0.1,
         'n': 0.05,
