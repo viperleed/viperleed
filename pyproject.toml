@@ -87,9 +87,10 @@ classifiers = [
         'requests',
         ]
     dev = [
+        'ase',  # Used for testing the ASE interface
         'build',
         'line_profiler',
-        'make-to-batch',   # To generate Windows make.bat from Makefiles
+        'make-to-batch',  # To generate Windows make.bat from Makefiles
         'pytest-cases',
         'pytest-subtests',
         'pytest<8',  # Till Issue #337 of pytest-cases is fixed
