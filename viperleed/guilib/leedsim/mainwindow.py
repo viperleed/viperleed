@@ -45,7 +45,7 @@ def show_pre_release_popup():
 
 @gl.broadcast_mouse
 class LEED_GUI(qtw.QMainWindow):
-    pre_release = True
+    pre_release = False
     extension = '*.tlm'
     version = gl.GLOBALS['version']
     
