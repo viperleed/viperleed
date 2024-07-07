@@ -21,8 +21,7 @@ import shutil
 from viperleed.calc import DEFAULT_HISTORY
 from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import DEFAULT_WORK_HISTORY
-from viperleed.calc.bookkeeper import BookkeeperMode
-from viperleed.calc.bookkeeper import bookkeeper
+from viperleed.calc.bookkeeper import Bookkeeper, BookkeeperMode
 from viperleed.calc.lib.base import copytree_exists_ok
 from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.run import run_calc
@@ -49,12 +48,13 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
         presets = {}  # Replace selected PARAMETERS
         _verbosity_to_log_level(args, presets)
 
-        print('Running bookkeeper...')                                          # TODO: This is lost to stdout if we don't log it
         # NB: job_name is None, as we're cleaning up the previous run
-        bookkeeper(mode=BookkeeperMode.DEFAULT,
-                   job_name=None,
-                   history_name=args.history_name,
-                   work_history_name=args.work_history_name)
+        bookkeeper = Bookkeeper(
+            job_name=args.job_name,
+            history_name=args.history_name,
+            work_history_name=args.work_history_name,
+        )
+        bookkeeper.run(mode=BookkeeperMode.CLEAR)
 
         _copy_tensors_and_deltas_to_work(work_path, args.all_tensors)           # TODO: it would be nice if all_tensors automatically checked PARAMETERS
         _copy_input_files_to_work(work_path)
@@ -67,19 +67,17 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             exit_code = run_calc(
                 system_name=args.name,
                 source=args.tensorleed,
-                preset_params=presets
+                preset_params=presets,
                 )
         finally:
             # Copy back everything listed in manifest, then go back
             _copy_files_from_manifest(cwd)
             os.chdir(cwd)
 
-        # Call bookkeeper again to clean up unless --no-cont is set
-        if not args.no_cont:
-            bookkeeper(mode=BookkeeperMode.CONT,
-                       job_name=args.job_name,
-                       history_name=args.history_name,
-                       work_history_name=args.work_history_name)
+        # update bookkeeper with new run info
+        bookkeeper.update_from_cwd()
+        # run bookkeeper in archive modex
+        bookkeeper.run(mode=BookkeeperMode.ARCHIVE)
 
         # Finally clean up work if requested
         if args.delete_workdir:
@@ -126,11 +124,6 @@ class ViPErLEEDCalcCLI(ViPErLEEDCLI, cli_name='calc'):
             )
 
         # BOOKKEPER
-        parser.add_argument(
-            '--no-cont',
-            help='do not overwrite POSCAR/VIBROCC with those after a search',
-            action='store_true'
-            )
         parser.add_argument(                                                    # TODO: implement (for cont at end; warn if called with --no_cont)
             '-j', '--job-name',
             help=('define a name for the current run. Will be appended to the '

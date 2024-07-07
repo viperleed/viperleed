@@ -4,7 +4,7 @@ KEEP_REFCALC_DIRS
 =================
 
 KEEP_REFCALC_DIRS is a boolean parameter that toggles whether the
-subdirectories in which the :ref:`reference calculation<ref-calc>`
+subfolders in which the :ref:`reference calculation<ref-calc>`
 for each energy step is executed are kept after the section finishes.
 These directories usually contain little useful additional information
 and are discarded by default.

@@ -153,7 +153,6 @@ def run_section(index, sl, rp):
                         "generated vibrational amplitudes."
                         )
                 writeVIBROCC(sl, rp, "VIBROCC")
-                rp.manifest.append("VIBROCC")
             if rp.T_EXPERIMENT is not None:
                 parameters.comment_out(rp, "T_EXPERIMENT")
             if rp.T_DEBYE is not None:

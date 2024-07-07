@@ -9,377 +9,1044 @@ __copyright__ = 'Copyright (c) 2019-2024 ViPErLEED developers'
 __created__ = '2020-01-30'
 __license__ = 'GPLv3+'
 
+from collections import defaultdict
+from dataclasses import dataclass
 from enum import Enum
-import os
+from operator import attrgetter
 from pathlib import Path
+from typing import List, Optional
+import logging
+import os
 import re
 import shutil
 import time
 
 from viperleed.calc import DEFAULT_HISTORY
-from viperleed.calc import DEFAULT_WORK
 from viperleed.calc import DEFAULT_WORK_HISTORY
 from viperleed.calc import LOG_PREFIX
 from viperleed.calc import ORIGINAL_INPUTS_DIR_NAME
+from viperleed.calc.lib.leedbase import getMaxTensorIndex
 from viperleed.calc.sections.calc_section import ALL_INPUT_FILES
+from viperleed.calc.sections.cleanup import DEFAULT_OUT
+from viperleed.calc.sections.cleanup import DEFAULT_SUPP
+from viperleed.calc.sections.cleanup import PREVIOUS_LABEL
 from viperleed.cli_base import ViPErLEEDCLI
+
+
+_LOGGER = logging.getLogger(__name__)
 
 _CALC_LOG_PREFIXES = (
     LOG_PREFIX,
     'tleedm',   # For backwards compatibility
     )
+HIST_FOLDER_RE = re.compile(
+    r't(?P<tensor_num>[0-9]{3}).r(?P<job_num>[0-9]{3})_'
+    )
+HISTORY_INFO_NAME = 'history.info'
+_HISTORY_INFO_SPACING = 12  # For the leftmost field in history.info
+HISTORY_INFO_SEPARATOR = '\n###########\n'
+
+STATE_FILES = ('PARAMETERS', 'POSCAR', 'VIBROCC')
+# optional input files that may be generated at runtime - do not warn if missing
+RUNTIME_GENERATED_INPUT_FILES = ('IVBEAMS', 'PHASESHIFTS')
 
 
 class BookkeeperMode(Enum):
-    DEFAULT = 'default'  # store last run, but do not overwrite POSCAR, VIBROCC
-    CONT = 'cont'        # store last run and overwrite POSCAR, VIBROCC from OUT
-    DISCARD = 'discard'  # discard previous run as if it never happened
+    """Enumeration of bookkeeper modes.
+
+    Attributes
+    ----------
+    ARCHIVE
+        Store last run in history. Overwrite PARAMETERS, POSCAR & VIBROCC from
+        OUT. Runs after run_calc by default.
+    CLEAR
+        Clear the input directory of last run.
+        Runs before run_calc by default.
+    DISCARD
+        Re-start from the same input as the previous run. The discarded run is
+        kept in history. Has to be run manually after run_calc.
+    DISCARD_FULL
+        Discard previous run as if it never happened and removes it from
+        history. Has to be run manually after run_calc.
+    """
+    ARCHIVE = 'archive'
+    CLEAR = 'clear'
+    DISCARD = 'discard'
+    DISCARD_FULL = 'discard_full'
+
+    @property
+    def discard(self):
+        """Return whether this is mode DISCARD."""
+        return self is BookkeeperMode.DISCARD
 
 
-def _translate_timestamp(s):
-    """Takes a timestamp YYMMDD-hhmmss and translates it to format DD.MM.YY
-    hh:mm:ss"""
-    if len(s) != 13:
-        print("Error translating timestamp: Invalid length")
-        return s
-    return "{}.{}.{} {}:{}:{}".format(s[4:6], s[2:4], s[0:2],
-                                      s[7:9], s[9:11], s[11:13])
+class Bookkeeper():
+    """Bookkeeper to archive or discard the most recent viperleed calc run."""
+
+    def __init__(self,
+                 job_name=None,
+                 history_name=DEFAULT_HISTORY,
+                 work_history_name=DEFAULT_WORK_HISTORY,
+                 cwd=Path.cwd()):
+        """Initialize the bookkeeper.
+
+        Parameters
+        ----------
+        job_name : str or None, optional
+            Custom name to append to the stored folder and to history.info.
+            If not given or None, no extra name is added. Default is None.
+        history_name : str, optional
+            The name of the folder in the current directory where the
+            most recent run should be archived. Default is 'history'.
+        work_history_name : str, optional
+            The name of the workhistory subfolder of ./work where
+            intermediate runs may have been stored. Results are also
+            copied from here to ./history_name. Default is workhistory.
+        cwd : Path, optional
+            The current working directory. Default is the current directory.
+        """
+        self.cwd = Path(cwd)
+        self.top_level_history_path = self.cwd / history_name
+        self.work_history_path = self.cwd / work_history_name
+        self.orig_inputs_dir = (self.cwd / DEFAULT_SUPP
+                                / ORIGINAL_INPUTS_DIR_NAME)
+
+        self.job_name = job_name
+        # attach a stream handler to logger if not already present
+        if not any(isinstance(h, logging.StreamHandler)
+                   for h in _LOGGER.handlers):
+            _LOGGER.addHandler(logging.StreamHandler())
+        _LOGGER.setLevel(logging.INFO)
+        _LOGGER.propagate = True
+
+        # Make top level history folder if not there yet
+        try:
+            self.top_level_history_path.mkdir(exist_ok=True)
+        except OSError:
+            _LOGGER.error('Error creating history folder.')
+            raise
+
+        # attach file handler for history/bookkeeper.log
+        bookkeeper_log_path = self.top_level_history_path / 'bookkeeper.log'
+        _LOGGER.addHandler(logging.FileHandler(bookkeeper_log_path,
+                                               mode='a'))
+
+        _LOGGER.info('\n### Bookeeper running at '
+                     f'{time.strftime("%y%m%d-%H%M%S", time.localtime())} ###')
+
+        # history.info handler - creates file if not yet there
+        self.history_info = HistoryInfoFile(self.cwd / HISTORY_INFO_NAME,
+                                            create_new=True)
+
+        self.update_from_cwd()
+
+    def update_from_cwd(self):
+        """Updates timestamp, tensor number and log lines, etc. from cwd.
+
+        This method is called in __init__, but can also be called manually if
+        a new run happens during the lifetime of the bookkeeper.
+        """
+        # Figure out the number of the tensor (it's the most recent one)
+        # and the highest run number currently stored for each tensor in
+        # history_path
+        self.tensor_number = getMaxTensorIndex(home=self.cwd, zip_only=True)
+        self.max_job_for_tensor = _find_max_run_per_tensor(
+            self.top_level_history_path)
+
+        # Infer timestamp from log file, if possible
+        self.timestamp, self.last_log_lines = _read_most_recent_log(self.cwd)
+
+        # get history dir to deal with
+        self.history_dir = (self.top_level_history_path /
+                            self._get_new_history_directory_name())
+
+    @property
+    def base_history_dir_name(self):
+        """The name of the history directory based on timestam, number and name.
+
+        This is not necessarily the name of the history directory! Use
+        self.history_dir.name instead."""
+        suffix = (self.timestamp +
+                  ('' if self.job_name is None else f'_{self.job_name}'))
+        job_number = self.max_job_for_tensor[self.tensor_number]
+        dir_name = lambda job_number: (
+            f't{self.tensor_number:03d}.r{job_number:03d}_{suffix}')
+        # if there is already a folder with the same name and correct
+        # timestamp/suffix, we take that, otherwise, we increase the job number
+        if not (self.top_level_history_path / dir_name(job_number)).is_dir():
+            job_number += 1
+        return dir_name(job_number)
+
+
+    def _get_new_history_directory_name(self):
+        """Return the name of a history directory for a given run.
+
+        Folder has form 'tXXX.rYYY_<suffix>'. <suffix> can vary. It may
+        be:
+        - if there was a log file, and the folder is not
+          present in history:
+              <log_timestamp>[_<job_name>]
+        - if there was a log file, but there is already a folder
+          in history with the same timestamp and job_name (typically
+          that means that bookkeeper was called multiple times with
+          the same job_name on the same run):
+              <log_timestamp>[_<job_name>]_moved-<bookie_timestamp>
+        - if there was no log file:
+              moved-<bookie_timestamp>[_<job_name>]
+        - in the unlikely event that the folder in the previous point
+          already exists (this would mean that the bookkeeper is called
+          twice with the same job_name within one second):
+              moved-<bookie_timestamp>[_<job_name>]_moved-<bookie_timestamp2>
+          where <bookie_timestamp2> may be slightly later than
+          <bookie_timestamp>, but is most likely the same.
+        """
+        dir_name = self.base_history_dir_name
+        if (self.top_level_history_path / dir_name).is_dir():
+            bookkeeper_timestamp = time.strftime('%y%m%d-%H%M%S',
+                                                 time.localtime())
+            dir_name = f'{dir_name}_moved-{bookkeeper_timestamp}'
+        return dir_name
+
+
+    @property
+    def cwd_ori_files(self):
+        return [self.cwd / f'{file}_ori' for file in STATE_FILES]
+
+    @property
+    def cwd_logs(self):
+        calc_logs, other_logs = [], []
+        for file in self.cwd.glob('*.log'):
+            if not file.is_file():
+                continue
+            container = (calc_logs if file.name.startswith(_CALC_LOG_PREFIXES)
+                        else other_logs)
+            container.append(file)
+        return calc_logs, other_logs
+
+    @property
+    def all_cwd_logs(self):
+        return self.cwd_logs[0] + self.cwd_logs[1]
+
+
+    @property
+    def files_needs_archiving(self):
+        """Check if there are any files that need archiving."""
+        # check for OUT and SUPP
+        files_to_archive = [self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP]
+        # any calc logs
+        files_to_archive.extend(self.cwd_logs[0])
+        # check workhistory
+        if self.work_history_path.is_dir():
+            files_to_archive.extend(_get_current_workhistory_directories(
+                self.work_history_path, contains='r'))
+        files_to_archive = [file for file in files_to_archive
+                            if file.is_file() or file.is_dir()]
+        return bool(files_to_archive)
+
+    @property
+    def history_with_same_base_name_exists(self):
+        """Check if a history folder with the same base name exists."""
+        all_history_entires = self.top_level_history_path.glob('*')
+        return any(entry.is_dir() and
+                   entry.name.startswith(self.base_history_dir_name)
+                   for entry in all_history_entires)
+
+    @property
+    def archiving_required(self):
+        """Check if archiving is required."""
+        return (self.files_needs_archiving and
+                not self.history_with_same_base_name_exists)
+
+    def run(self, mode):
+        """Run the bookkeeper in the given mode.
+
+        Parameters
+        ----------
+        mode : str or BookkeeperMode
+            Which bookkeeper mode to use. See help(BookkeeperMode).
+
+        Returns
+        -------
+        exit_code : int
+            0 -> success
+            1 -> No files to be copied
+
+        Raises
+        ------
+        ValueError
+            If `mode` is not a valid bookkeeper mode.
+        NotImplementedError
+            If `mode` is not a valid bookkeeper mode, but
+            there is no method named _run_<mode>_mode.
+        OSError
+            If creation of the history folder or any of the subfolders
+            where results are to be stored fails.
+        """
+        try:
+            mode = BookkeeperMode(mode)
+        except ValueError as exc:
+            raise ValueError(f'Unknown mode {mode}') from exc
+
+        try:
+            method = getattr(self, f'_run_{mode.name.lower()}_mode')
+        except AttributeError as exc:
+            raise NotImplementedError from exc
+
+        _LOGGER.info(f'Running bookkeeper in {mode.name} mode.')
+        return method()
+
+    def _run_archive_mode(self):
+        if self.history_with_same_base_name_exists:
+            _LOGGER.info(
+                f'History directory for run {self.base_history_dir_name} '
+                'exists. Exiting without doing anything.'
+                )
+            return 1
+        if not self.files_needs_archiving:
+            _LOGGER.info('No files to be moved to history. Exiting '
+                         'without doing anything.')
+            return 1
+        self._make_and_copy_to_history(use_ori=False)
+
+        # move old files to _ori and replace from OUT
+        _update_state_files_from_out(self.cwd)
+
+        # workhistory and history.info
+        self._deal_with_workhistory_and_history_info(discard=False)
+
+        return 0
+
+    def _run_clear_mode(self):
+        if (not self.history_with_same_base_name_exists
+            and self.files_needs_archiving):
+            _LOGGER.info(f'History folder {self.history_dir} does not '
+                         'yet exist. Running archive mode first.')
+            self._make_and_copy_to_history(use_ori=True)
+
+            # workhistory and history.info
+            self._deal_with_workhistory_and_history_info(discard=False)
+
+        # remove OUT, SUPP, logs and _ori files
+        self.remove_log_files()
+        self.remove_out_and_supp()
+        self.remove_ori_files()
+
+        return 0
+
+    def _run_discard_mode(self):
+        if (not self.history_with_same_base_name_exists
+            and self.files_needs_archiving):
+            _LOGGER.info(f'History folder {self.history_dir} does not '
+                         'yet exist. Running archive mode first.')
+            self._make_and_copy_to_history(use_ori=False)
+
+            # workhistory and history.info
+            self._deal_with_workhistory_and_history_info(discard=True)
+
+        self._discard_common()
+        try:
+            self.history_info.discard_last_entry()
+        except ValueError:
+            _LOGGER.warning('Error: Failed to mark last entry as '
+                            f'discarded in {HISTORY_INFO_NAME}.')
+
+    def _run_discard_full_mode(self):
+        # check for notes in history.info
+        if self.history_info.last_entry_has_notes:
+            _LOGGER.warning(f'The last entry in {HISTORY_INFO_NAME} has user '
+                            'notes. If you really want to purge the last run, '
+                            'remove the notes first.')
+            return 1
+
+        # the directory we want to remove is not self.history_dir (since that
+        # would be _moved-<timestamp>), but the one with the same base name!
+        dir_to_remove = (self.top_level_history_path
+                         / self.base_history_dir_name)
+        # remove history entry
+        if dir_to_remove.is_dir():
+            try:
+                shutil.rmtree(dir_to_remove)
+            except OSError:
+                _LOGGER.error(f'Error: Failed to delete {dir_to_remove}.')
+                return 1
+            self._discard_common()
+        else:
+            _LOGGER.error(f'FULL_DISCARD mode failed: could not identify '
+                          'directory to remove. Please proceed manually.')
+        # remove history entry from history.info
+        try:
+            self.history_info.remove_last_entry()
+        except ValueError:
+            _LOGGER.warning('Error: Failed to remove last entry from '
+                            f'{HISTORY_INFO_NAME}.')
+
+
+    def _discard_common(self):
+        """Removes files that get discarded for both DISCARD and DISCARD_FULL"""
+        # replace input files from _ori
+        self.replace_state_files_from_ori()
+
+        if self.tensor_number not in self.max_job_for_tensor:
+            self.remove_tensors_and_deltas()
+
+        # remove OUT, SUPP and logs
+        self.remove_log_files()
+        self.remove_out_and_supp()
+
+    def _make_and_copy_to_history(self, use_ori=False):
+                # Copy everything to history
+        _create_new_history_dir(self.history_dir)
+        self.copy_out_and_supp()
+        self.copy_input_files_from_original_inputs_and_cwd(use_ori)
+        self.copy_log_files_to_history()
+
+    def _deal_with_workhistory_and_history_info(self, discard=False):
+        tensor_nums = _move_and_cleanup_workhistory(self.work_history_path,
+                                                    self.top_level_history_path,
+                                                    self.timestamp,
+                                                    self.max_job_for_tensor,
+                                                    discard)
+        tensor_nums.add(self.tensor_number)
+
+        run_info, r_ref, r_super = self._infer_run_info_from_log()
+
+        self.history_info.append_entry(HistoryInfoEntry(
+            tensor_nums=list(tensor_nums),
+            job_nums=[self.max_job_for_tensor[tensor] + 1
+                      for tensor in tensor_nums],
+            timestamp=self.timestamp,
+            discarded=discard,
+            folder_name=self.history_dir.name,
+            notes=_read_and_clear_notes_file(self.cwd),
+            # optionals
+            job_name=self.job_name,
+            run_info=run_info,
+            r_ref=r_ref,
+            r_super=r_super,
+            ))
+
+    def _infer_run_info_from_log(self):
+        run_info, r_ref, r_super = None, None, None
+        for line in self.last_log_lines:
+            if line.startswith('Executed segments: '):
+                run_info = line.split('Executed segments: ')[1].strip()
+                break
+        for line in self.last_log_lines:
+            if 'Final R (refcalc)' in line:
+                r_ref = float(line.split(':', maxsplit=1)[1].strip())
+                break
+        for line in self.last_log_lines:
+            if 'Final R (superpos)' in line:
+                r_super = float(line.split(':', maxsplit=1)[1].strip())
+                break
+        return run_info, r_ref, r_super
+
+
+    def remove_ori_files(self):
+        _move_or_discard_files(self.cwd_ori_files, self.cwd, True)
+
+    def remove_out_and_supp(self):
+        _move_or_discard_files([self.cwd / DEFAULT_OUT, self.cwd / DEFAULT_SUPP],
+                               self.cwd, True)
+
+    def remove_log_files(self):
+        _move_or_discard_files(self.all_cwd_logs, self.cwd, True)
+
+    def remove_tensors_and_deltas(self):
+        tensor_file = self.cwd / 'Tensors' / f'Tensors_{self.tensor_number:03d}.zip'
+        delta_file = self.cwd / 'Deltas' / f'Deltas_{self.tensor_number:03d}.zip'
+        _move_or_discard_files((tensor_file, delta_file), self.cwd, True)
+
+    def replace_state_files_from_ori(self):
+        for file in STATE_FILES:
+            ori_file = self.cwd / f'{file}_ori'
+            if ori_file.is_file():
+                try:
+                    shutil.move(ori_file, self.cwd / file)
+                except OSError:
+                    _LOGGER.error(f'Failed to move {ori_file} to {file}.')
+                    raise
+
+    def copy_input_files_from_original_inputs_and_cwd(self, use_ori=False):
+        """Copy files from original_inputs_path to target_path."""
+        for file in ALL_INPUT_FILES:
+            original_file = self.orig_inputs_dir / file
+            cwd_file = self.cwd / file
+            if file in STATE_FILES and use_ori:
+                cwd_file = self.cwd / f'{file}_ori'
+            if original_file.is_file() and cwd_file.is_file():
+                # copy original, but warn if cwd is newer
+                _copy_one_file_to_history(original_file, self.history_dir)
+                original_timestamp = original_file.stat().st_mtime
+                cwd_timestamp = cwd_file.stat().st_mtime
+                if original_timestamp < cwd_timestamp:
+                    _LOGGER.warning(
+                        f'File {file} from {ORIGINAL_INPUTS_DIR_NAME} was '
+                        'copied to history, but the file in the input '
+                        'directory is newer.'
+                        )
+            elif original_file.is_file():
+                # just copy original
+                _copy_one_file_to_history(original_file, self.history_dir)
+            elif cwd_file.is_file():
+                # if file is optional input file, ignore
+                if file in RUNTIME_GENERATED_INPUT_FILES:
+                    continue
+                # copy cwd and warn
+                _copy_one_file_to_history(
+                    self.cwd / file, self.history_dir)
+                _LOGGER.warning(
+                    f'File {file} not found in {ORIGINAL_INPUTS_DIR_NAME}. '
+                    'Using file from root directory instead and renaming to '
+                    f'{cwd_file.name}_from_root.'
+                    )
+                try:
+                    os.rename(self.history_dir / file,
+                            self.history_dir / f'{cwd_file.name}_from_root')
+                except OSError:
+                    _LOGGER.error(f'Failed to rename {file} to '
+                                  f'{cwd_file.name}_from_root.')
+
+    def copy_out_and_supp(self):
+        """Copy OUT and SUPP directories to history."""
+        for name in (DEFAULT_SUPP, DEFAULT_OUT):
+            dir = self.cwd / name
+            if not dir.is_dir():
+                _LOGGER.warning(f'Could not find {name} directory in '
+                                f'{self.cwd}. It will not be copied '
+                                'to history.')
+                continue
+            try:
+                shutil.copytree(dir, self.history_dir / name)
+            except OSError:
+                _LOGGER.error(f'Failed to copy {name} directory to history.')
+
+    def copy_log_files_to_history(self):
+        """Copy log files to history."""
+        calc_logs, other_logs = self.cwd_logs
+        log_files = calc_logs + other_logs
+        for file in log_files:
+            _copy_one_file_to_history(file, self.history_dir)
 
 
 def store_input_files_to_history(root_path, history_path):
-    """Finds and copies input files to history.
+    """Find input files in `root_path` and copy them to `history_path`.
 
     Parameters
     ----------
     root_path : pathlike
-        Root directory from which to take files. Should be cwd, not ./work.
+        Root directory from which to take files. Should be cwd.
     history_path : pathlike
-        Path to the history directory in which the files should be stored.
+        Path to the history directory in which the files should
+        be stored.
     """
-    _root_path, _history_path = Path(root_path), Path(history_path)
-    original_inputs_path = _root_path / DEFAULT_WORK / ORIGINAL_INPUTS_DIR_NAME
+    root_path, history_path = Path(root_path), Path(history_path)
+    original_inputs_path = root_path / 'SUPP' / ORIGINAL_INPUTS_DIR_NAME
     if original_inputs_path.is_dir():
         input_origin_path = original_inputs_path
     else:
-        input_origin_path = _root_path
-        print("Could not find directory 'original_inputs' with unaltered "
-              "input files. Files will instead be copied from the root "
-              "directory.")
+        input_origin_path = root_path
+        print(f'Could not find directory {ORIGINAL_INPUTS_DIR_NAME!r} with '
+              'unaltered input files. Files will instead be copied from the '
+              'root directory.')
 
-    # only files, no dirs
-    files_in_dir =  (f for f in Path(input_origin_path).iterdir()
-                     if f.is_file())
-    files_to_copy = (file for file in files_in_dir
-                     if file.name in ALL_INPUT_FILES)
-    # copy files to history
+    # Only files, no directories
+    files_to_copy = (file for file in input_origin_path.iterdir()
+                     if file.is_file() and file.name in ALL_INPUT_FILES)
     for file in files_to_copy:
         try:
-            shutil.copy2(file, _history_path/file.name)
-        except OSError as error_msg:
-            print(f"Failed to copy file {file} to history: {error_msg}")
+            shutil.copy2(file, history_path/file.name)
+        except OSError as exc:
+            print(f'Failed to copy file {file} to history: {exc}')
 
+class HistoryInfoFile:
+    """Deals with the history.info file in a history directory."""
 
-def bookkeeper(mode,
-               job_name=None,
-               history_name=DEFAULT_HISTORY,
-               work_history_name=DEFAULT_WORK_HISTORY,):
+    def __init__(self, file_path, create_new=False):
+        self.path = file_path
+        if not self.path.is_file():
+            if not create_new:
+                raise FileNotFoundError("history.info file not found at "
+                                        f"{self.path}.")
+            # create new file
+            self.path.touch()
 
-    # convert mode to enum if necessary
-    _mode = BookkeeperMode(mode)
+    @property
+    def raw_contents(self):
+        with open(self.path, 'r', encoding='utf-8') as f:
+            raw_contents = f.read()
+        return raw_contents
 
-    # get paths for history and workhistory
-    history_path = Path(history_name).resolve()
-    work_history_path = Path(work_history_name).resolve()
-    tensors_path = Path("Tensors").resolve()
-    deltas_path = Path("Deltas").resolve()
-    out_path = Path("OUT").resolve()
+    @property
+    def last_entry(self):
+        if not self.raw_contents:
+            return None
+        return self._parse_entry(
+            self.raw_contents.split(HISTORY_INFO_SEPARATOR.strip())[-1])
 
-    # make list of stuff to move
-    files_to_move = [d for d in os.listdir() if os.path.isdir(d)
-              and (d == "OUT" or d == "SUPP")]
-    # logs will be saved to history; calc in root, others in SUPP
-    logs_to_move = []
-    for file in os.listdir():
-        if os.path.isfile(file) and file.endswith(".log"):
-            if file.startswith(_CALC_LOG_PREFIXES):
-                files_to_move.append(file)
-            else:
-                logs_to_move.append(file)
-    # if there's nothing to move, return.
-    if len(files_to_move) == 0:
-        found = False
-        # check workhist folder:
-        if work_history_path.is_dir():
-            work_history_dirs = [d for d in work_history_path.iterdir() if
-                                (work_history_path / d).is_dir()
-                                and d.name.startswith("r")
-                                and not ("previous" in d.name)]
-            if len(work_history_dirs) > 0:
-                found = True
-        if not found:
-            print("Bookkeeper: Found nothing to do. Exiting...")
-            return 1
-    # check whether history folder is there. If not, make one
-    if not history_path.is_dir():
-        try:
-            os.mkdir(history_name)
-        except Exception:
-            print("Error creating history folder.")
-            raise
-    # figure out the number of the tensor
-    tensor_number = 0
-    if tensors_path.is_dir():
-        indlist = []
-        rgx = re.compile(r'Tensors_[0-9]{3}\.zip')
-        for file in [f for f in os.listdir("Tensors")
-                  if ((tensors_path / f).is_file()
-                      and rgx.match(f))]:
-            match = rgx.match(file)
-            if match.span()[1] == 15:  # exact match
-                indlist.append(int(match.group(0)[-7:-4]))
-        if indlist:
-            tensor_number = max(indlist)
-    # figure out the number of the run
-    dir_list = [d for d in history_path.iterdir()
-                if (history_path / d).is_dir()]
-    max_nums = {}  # max. job number per tensor number
-    rgx = re.compile(r't[0-9]{3}.r[0-9]{3}_')
-    for dir in dir_list:
-        match = rgx.match(dir.name)
-        if match:
-            try:
-                r_fac_line = int(dir.name[1:4])
-                i = int(dir.name[6:9])
-                if r_fac_line not in max_nums:
-                    max_nums[r_fac_line] = i
-                else:
-                    max_nums[r_fac_line] = max(max_nums[r_fac_line], i)
-            except (ValueError, IndexError):
-                pass
-    if tensor_number not in max_nums:
-        num = 1  # Tensor is new - if discard: delete
-        if _mode is BookkeeperMode.DISCARD:
-            tensor_file = tensors_path / "Tensors_{tensor_number:03d}.zip"
-            delta_file = deltas_path / "Deltas_{tensor_number:03d}.zip"
-            for file in (tensor_file, delta_file):
-                if os.path.isfile(file):
-                    try:
-                        os.remove(file)
-                    except Exception:
-                        print(f"Failed to discard file {file}")
-    else:
-        num = max_nums[tensor_number] + 1
-    # find old timestamp, if possible
-    old_log_files = sorted(
-        f for f in os.listdir() if os.path.isfile(f) and
-        f.endswith(".log") and f.startswith(_CALC_LOG_PREFIXES)
-        )
-    last_log_lines = []
-    if len(old_log_files) > 0:
-        old_timestamp = old_log_files[-1][-17:-4]
-        try:
-            with open(old_log_files[-1], "r") as read_file:
-                last_log_lines = read_file.readlines()
-        except Exception:
-            pass
-    else:
-        timestamp = time.strftime("%y%m%d-%H%M%S", time.localtime())
-        old_timestamp = f"moved-{timestamp}"
-    if _mode is not BookkeeperMode.DISCARD:
-        # get dirname
-        dirname = f"t{tensor_number:03d}.r{num:03d}_{old_timestamp}"
-        if job_name is not None:
-            dirname += "_" + job_name
-        tensor_dir = Path(history_name).resolve() / dirname
-        if os.path.isdir(tensor_dir):
-            tensor_dir_2 = f"{tensor_dir}_moved-{timestamp}"
-            print(f"Error: Target directory {tensor_dir} already exists. Will "
-                  "use {tensor_dir_2} instead.")
-            tensor_dir = Path(tensor_dir_2).resolve()
-            dirname = os.path.basename(tensor_dir)
-        try:
-            os.mkdir(tensor_dir)
-        except Exception:
-            print(f"Error: Could not create target directory {tensor_dir}"
-                  "\n Stopping...")
-            raise
-        # copy (or discard) files
-        cwd_path = Path(".")
-        store_input_files_to_history(cwd_path, tensor_dir)
+    @property
+    def last_entry_has_notes(self):
+        if self.last_entry is None:
+            return False
+        return bool(self.last_entry.notes)
 
-    # if CONT, check for POSCAR_OUT / VIBROCC_OUT
-    # do not complain if not found, since we move previous runs to the history
-    # by default
-    if _mode is BookkeeperMode.CONT:
-        if os.path.isdir("OUT"):
-            for file in ("POSCAR", "VIBROCC"):
+    @property
+    def last_entry_was_discarded(self):
+        if self.last_entry is None:
+            return False
+        return self.last_entry.discarded
 
-                files_in_out = sorted(
-                    [f for f in out_path.iterdir()
-                    if (out_path / f).is_file()
-                    and f.name.startswith(f"{file}_OUT_")
-                    and "parabola" not in f.name]
-                )
-                if len(files_in_out) > 0:
-                    path = out_path / files_in_out[-1]
-                    try:
-                        shutil.copy2(path, file)
-                    except Exception:
-                        print(f"Error: failed to copy {path} as new {file}.")
+    def append_entry(self, entry):
+        skip_separator = (
+            self.raw_contents.strip().endswith(HISTORY_INFO_SEPARATOR.strip())
+            or not self.raw_contents.strip())
+        with open(self.path, 'a', encoding='utf-8') as f:
+            if not skip_separator:
+                f.write(HISTORY_INFO_SEPARATOR)
+            f.write(str(entry))
 
-    # move old stuff
-    for file in files_to_move:
-        if _mode is not BookkeeperMode.DISCARD:
-            try:
-                shutil.move(file, tensor_dir / file)
-            except Exception:
-                print(f"Error: Failed to move {file}.")
-        else:  # delete instead
-            try:
-                shutil.rmtree(file)
-            except NotADirectoryError:
-                try:
-                    os.remove(file)
-                except Exception:
-                    print(f"Failed to discard file {file}.")
-            except Exception:
-                print(f"Failed to discard directory {file}.")
-    # move log files to SUPP (except for general viperleed-calc log)
-    for log_file in logs_to_move:
-        if _mode is not BookkeeperMode.DISCARD:
-            try:
-                hist_supp_path = tensor_dir / 'SUPP'
-                shutil.move(log_file, hist_supp_path / log_file)
-            except Exception:
-                print(f"Error: Failed to move {log_file}.")
-        else:   # delete instead
-            try:
-                os.remove(log_file)
-            except Exception:
-                print("Failed to discard file {log_file}.")
+    def discard_last_entry(self):
+        """Mark the last entry in the history.info file as discarded."""
+        if self.last_entry is None:
+            raise ValueError("No entries to discard.")
+        last_entry = self.last_entry
+        if last_entry.discarded:
+            _LOGGER.warning('Last entry is already discarded.')
+        last_entry.discarded = True
+        self.remove_last_entry()
+        self.append_entry(last_entry)
 
-    # if there is a workhist folder, go through it and move contents as well
-    tensor_nums = {tensor_number}
-
-    if work_history_path.is_dir() and _mode is not BookkeeperMode.DISCARD:
-        work_hist_prev = [d for d in os.listdir(work_history_name) if
-                        os.path.isdir(os.path.join(work_history_name, d))
-                        and rgx.match(d) and ("previous" in d)]
-        for dir in work_hist_prev:
-            try:
-                shutil.rmtree(work_history_path / dir)
-            except Exception:
-                print(f"Failed to delete {dir} directory from "
-                      f"{work_history_path}")
-        work_history_dirs = [dir for dir in work_history_path.iterdir() if
-                        (work_history_path / dir).is_dir()
-                        and rgx.match(dir.name)
-                        and not ("previous" in dir.name)
-                        and old_timestamp in dir.name]
-        for dir in work_history_dirs:
-            try:
-                tensor_num_2 = int(dir.name[1:4])
-                search_num = int(dir.name[6:9])
-            except (ValueError, IndexError):
-                pass
-            else:
-                if tensor_num_2 not in max_nums:
-                    num = 1
-                else:
-                    num = max_nums[tensor_num_2] + 1
-                newname = (f"t{tensor_num_2:03d}.r{num:03d}.{search_num:03d}"
-                           + dir.name[9:])
-                try:
-                    shutil.move(os.path.join(work_history_name, dir),
-                                os.path.join(history_name, newname))
-                except OSError:
-                    print(f"Error: Failed to move {work_history_path / dir}.")
-                tensor_nums.add(tensor_num_2)
-    if work_history_path.is_dir():
-        if (len(list(work_history_path.iterdir())) == 0
-            or _mode is BookkeeperMode.DISCARD):
-            try:
-                shutil.rmtree(work_history_name)
-            except OSError as error:
-                if _mode is BookkeeperMode.DISCARD:
-                    print(f"Failed to discard workhistory folder: {error}")
-                else:
-                    print(f"Failed to delete empty {work_history_name} "
-                          f"directory: {str(error)}")
-    if _mode is BookkeeperMode.DISCARD:  # all done
-        return 0
-    job_nums = []
-    for tensor_number in tensor_nums:
-        if tensor_number not in max_nums:
-            job_nums.append(1)
+    def remove_last_entry(self):
+        """Discard the last entry form the history.info file."""
+        if self.last_entry is None:
+            raise ValueError("No entries to remove.")
+        if HISTORY_INFO_SEPARATOR.strip() in self.raw_contents:
+            content_without_last = self.raw_contents.rsplit(
+                HISTORY_INFO_SEPARATOR.strip(), 1)[0]
         else:
-            job_nums.append(max_nums[tensor_number] + 1)
-    # look for notes file
-    notes_name = ""
-    notes = ""
-    for fn in ("notes", "notes.txt"):
-        if os.path.isfile(fn):
-            notes_name = fn
-            break
-    if notes_name:
-        try:
-            with open(notes_name, 'r') as read_file:
-                notes = read_file.read()
-        except Exception:
-            print(f"Error: Failed to read {notes_name} file.")
-    if notes:
-        try:
-            with open(notes_name, 'w'):
-                pass
-        except Exception:
-            print(f"Error: Failed to clear the {notes_name} file after "
-                  "reading.")
-    # write history.info
-    spacing = 12
-    hist = ""
-    if os.path.isfile("history.info"):
-        hist += "\n\n"
-    if tensor_nums == {0}:
-        hist += "# TENSORS ".ljust(spacing) + "None\n"
-    else:
-        hist += "# TENSORS ".ljust(spacing) + str(tensor_nums)[1:-1] + "\n"
-    hist += "# JOB ID ".ljust(spacing) + str(job_nums)[1:-1] + "\n"
-    if job_name is not None:
-        hist += f"# JOB NAME {job_name} \n"
-    if len(last_log_lines) > 0:
-        # try to read what was executed
-        run_info = ""
-        i = len(last_log_lines) - 1
-        while i > 0:
-            if last_log_lines[i].startswith("Executed segments: "):
-                run_info = (last_log_lines[i].split("Executed segments: ")[1]
-                           .strip())
-                break
-            i -= 1
-        if run_info:
-            hist += "# RUN ".ljust(spacing) + run_info + "\n"
-        # now try to read final R-factors
-        for j in range(i+1, len(last_log_lines)):
-            line = last_log_lines[j]
-            if line.startswith("Final R"):
-                r_fac_line = ""
-                if "refcalc" in line:
-                    r_fac_line = "# R REF ".ljust(spacing)
-                elif "superpos" in line:
-                    r_fac_line = "# R SUPER ".ljust(spacing)
-                if r_fac_line:
-                    hist += r_fac_line + line.split(":", maxsplit=1)[1].strip() + "\n"
+            # only one entry
+            content_without_last = ''
+        if content_without_last.endswith('\n'):
+            content_without_last = content_without_last[:-len('\n')]
+        # clear file and write back entries
+        self.path.write_text(content_without_last)
 
-    hist += "# TIME ".ljust(spacing) + f"{_translate_timestamp(old_timestamp)} \n"
-    hist += "# FOLDER ".ljust(spacing) + f"{dirname} \n"
-    hist += f"Notes: {notes}\n"
-    hist += "\n###########\n"
+    def _parse_entry(self, entry_str):
+        # remove leading and trailing whitespace
+        entry_str = entry_str.strip()
+        # check for 'DISCARDED' at the end
+        if entry_str.endswith('DISCARDED'):
+            discarded = True
+            entry_str = entry_str[:-len('DISCARDED')]
+        else:
+            discarded = False
+        # Notes may also be optional
+        if 'Notes:' not in entry_str:
+            notes = ''
+            general_info = entry_str
+        else:
+            # split at 'Notes: ' because that is the only one that can be multiline
+            general_info, notes = entry_str.split('Notes:', 1)
+            notes = notes.replace('Notes: ', '').strip()
+        # parse general_info
+        general_info = iter(general_info.split('\n'))
+        tensors = [int(num) for num in
+                   next(general_info).replace('# TENSORS ', '').split()[1:]]
+        jobs = [int(num) for num in
+                next(general_info).replace('# JOB ID ', '').split()[1:]]
+        the_rest = next(general_info)
+        # optionals
+        job_name, run_info, r_ref, r_super = None, None, None, None
+        if the_rest.startswith('# JOB NAME '):
+            job_name = the_rest.replace('# JOB NAME ', '').strip()
+            the_rest = next(general_info)
+        if the_rest.startswith('# RUN '):
+            run_info = the_rest.replace('# RUN ', '').strip()
+            the_rest = next(general_info)
+        if the_rest.startswith('# TIME'):
+            time = the_rest.replace('# TIME ', '').strip()
+            the_rest = next(general_info)
+        if the_rest.startswith('# R REF'):
+            r_ref = float(the_rest.replace('# R REF ', ''))
+            the_rest = next(general_info)
+        if the_rest.startswith('# R SUPER'):
+            r_super = float(the_rest.replace('# R SUPER ', ''))
+            the_rest = next(general_info)
+        folder = the_rest.replace('# FOLDER ', '').strip()
+
+        # this should be all, if there is more, we have a problem
+        try:
+            # there may be empty lines at the end
+            while not next(general_info):
+                pass
+        except StopIteration:
+            pass
+        else:
+            raise ValueError("Error parsing history.info file.")
+
+        return HistoryInfoEntry(tensors, jobs, time, folder, notes, discarded,
+                                job_name, run_info, r_ref, r_super)
+
+@dataclass
+class HistoryInfoEntry:
+    tensor_nums: List[int]
+    job_nums: List[int]
+    timestamp: str
+    folder_name: str
+    notes: str
+    discarded: bool
+    job_name: Optional[str] = None
+    run_info: Optional[str] = None
+    r_ref: Optional[float] = None
+    r_super: Optional[float] = None
+
+
+    def __str__(self):
+        tensor_str = 'None' if self.tensor_nums == [0] else str(self.tensor_nums)[1:-1]
+        job_str = str(self.job_nums)[1:-1]
+        # translate timestamp if necessary
+        time_str = (_translate_timestamp(self.timestamp)
+                    if '-' in self.timestamp else self.timestamp)
+        folder_str = self.folder_name
+        return (
+            '\n'
+            + '# TENSORS '.ljust(_HISTORY_INFO_SPACING) + tensor_str + '\n'
+            + '# JOB ID '.ljust(_HISTORY_INFO_SPACING) + job_str + '\n'
+            + ('# JOB NAME '.ljust(_HISTORY_INFO_SPACING) + self.job_name + '\n'
+                if self.job_name else '')
+            + ('# RUN '.ljust(_HISTORY_INFO_SPACING) + self.run_info + '\n'
+                if self.run_info else '')
+            + '# TIME '.ljust(_HISTORY_INFO_SPACING) + time_str + '\n'
+            + ('# R REF '.ljust(_HISTORY_INFO_SPACING) +f'{self.r_ref:.4f}\n'
+                if self.r_ref is not None else '')
+            + ('# R SUPER '.ljust(_HISTORY_INFO_SPACING) + f'{self.r_super:.4f}\n'
+                if self.r_super is not None else '')
+            + '# FOLDER '.ljust(_HISTORY_INFO_SPACING) + folder_str + '\n'
+            + 'Notes: ' + self.notes.strip()
+            + ('\nDISCARDED' if self.discarded else '')
+            )
+
+
+def _create_new_history_dir(new_history_path):
     try:
-        with open("history.info", "a") as hist_info_file:
-            hist_info_file.write(hist)
-    except Exception:
-        print("Error: Failed to append to history.info file.")
-    return 0
+        new_history_path.mkdir()
+    except OSError:
+        _LOGGER.error('Error: Could not create target directory '
+                      f'{new_history_path}\n Stopping...')
+        raise
+
+
+def _discard_workhistory_previous(work_history_path):
+    """Remove 'previous'-labelled directories in `work_history_path`."""
+    work_hist_prev = _get_workhistory_directories(work_history_path,
+                                                  contains=PREVIOUS_LABEL)
+    for directory in work_hist_prev:
+        try:
+            shutil.rmtree(directory)
+        except OSError:
+            print(f'Failed to delete {directory} directory '
+                  f'from {work_history_path}')
+
+
+def _find_max_run_per_tensor(history_path):
+    """Return maximum run numbers for all directories in `history_path`.
+
+    Parameters
+    ----------
+    history_path : Path
+        The path to the history folder in which
+        tensor-run directories are looked up.
+
+    Returns
+    -------
+    max_nums : defaultdict(int)
+        The maximum run number currently stored in `history_path`
+        for each of the tensors in `history_path`.
+    """
+    max_nums = defaultdict(int)  # max. job number per tensor number
+    for directory in history_path.iterdir():
+        match = HIST_FOLDER_RE.match(directory.name)
+        if not directory.is_dir() or not match:
+            continue
+        tensor_num = int(match['tensor_num'])
+        job_num = int(match['job_num'])
+        max_nums[tensor_num] = max(max_nums[tensor_num], job_num)
+    return max_nums
+
+
+def _get_current_workhistory_directories(work_history_path, contains=''):
+    """Return a generator of subfolders in work_history_path.
+
+    As compared with _get_workhistory_directories, only those
+    directories not marked as 'previous' are returned.
+
+    Parameters
+    ----------
+    work_history_path : Path
+        Path to the workhistory folder where
+        subdirectories are looked up.
+    contains : str, optional
+        Select only those subdirectories whose name contains this
+        string. Default is an empty string, corresponding to no
+        filtering other than the one described in Returns.
+
+    Returns
+    -------
+    subfolders : generator
+        When iterated over, it yields paths to the immediate
+        subdirectories of `work_history_path` whose name matches
+        the HIST_FOLDER_RE regular expression, whose name
+        include `contains`, but does not contain 'previous'.
+    """
+    directories = _get_workhistory_directories(work_history_path,
+                                               contains=contains)
+    return (d for d in directories if PREVIOUS_LABEL not in d.name)
+
+
+def _get_workhistory_directories(work_history_path, contains=''):
+    """Return a generator of subfolders in `work_history_path`.
+
+    Parameters
+    ----------
+    work_history_path : Path
+        Path to the workhistory folder where
+        subdirectories are looked up.
+    contains : str, optional
+        Select only those subdirectories whose name contains this
+        string. Default is an empty string, corresponding to no
+        filtering other than the one described in Returns.
+
+    Returns
+    -------
+    subfolders : generator
+        When iterated over, it yields paths to the immediate
+        subdirectories of work_history_path whose name matches
+        the HIST_FOLDER_RE regular expression, and whose name
+        include `contains`.
+    """
+    globbed = (work_history_path.glob(f'*{contains}*') if contains
+               else work_history_path.iterdir())
+    return (d for d in globbed if d.is_dir() and HIST_FOLDER_RE.match(d.name))
+
+
+def _move_and_cleanup_workhistory(work_history_path,
+                                  history_path,
+                                  timestamp,
+                                  max_job_for_tensor,
+                                  discard):
+    """Move files from `work_history_path` to `history_path`, then clean up.
+
+    If `work_history_path` is empty, it is always deleted. Otherwise
+    only if `discard` is True.
+
+    Parameters
+    ----------
+    work_history_path : Path
+        Path to the workhistory directory, moved in root by
+        sections.cleanup, as it is included in manifest in
+        move_oldruns.
+    history_path : Path
+        The target history folder where files should be copied.
+    timestamp : str
+        The time-stamp selecting the subfolders to be moved. Only
+        those folders whose name contains timestamp are copied over.
+    max_job_for_tensor : defaultdict(int)
+        The maximum job number known for each tensor number. Used
+        to generate new folder names (incrementing by one unit)
+        in `history_path`.
+    discard : bool
+        Whether files should only be discarded without copying them.
+
+    Returns
+    -------
+    tensor_nums : set of int
+        Indices of tensors found in `work_history_path` that have
+        been moved to `history_path` as new history entries.
+    """
+    tensor_nums = set()
+    if not work_history_path.is_dir():
+        return tensor_nums
+
+    # Always remove any 'previous'-labelled folders
+    _discard_workhistory_previous(work_history_path)
+    if not discard:
+        tensor_nums = _move_workhistory_folders(work_history_path,
+                                                history_path,
+                                                timestamp,
+                                                max_job_for_tensor)
+    is_empty = not any(work_history_path.iterdir())
+    if is_empty or discard:
+        try:
+            shutil.rmtree(work_history_path)
+        except OSError as exc:
+            err_ = f'Failed to {{}} {work_history_path.name} folder: {exc}'
+            print(err_.format('discard' if discard else 'delete empty'))
+    return tensor_nums
+
+
+def _move_or_discard_files(file_paths, target_folder, discard):
+    """Move file_paths to target_folder or delete them."""
+    for file in file_paths:
+        _move_or_discard_one_file(file, target_folder, discard)
+
+
+def _move_or_discard_one_file(file, target_folder, discard):
+    """Move file to target_folder or delete it."""
+    if not file.exists():
+        return
+    if discard and file.is_file():
+        try:
+            file.unlink()
+        except OSError:
+            print(f'Failed to discard file {file.name}.')
+        return
+    if discard:  # Should be a directory
+        try:
+            shutil.rmtree(file)
+        except OSError:
+            print(f'Failed to discard directory {file.name}.')
+        return
+    # Move it
+    try:
+        shutil.move(file, target_folder / file.name)
+    except OSError:
+        _LOGGER.error(f'Failed to move {file.name}.')
+
+
+
+def _copy_one_file_to_history(file_path, history_path):
+    """Copy file_path to history_path."""
+    try:
+        shutil.copy2(file_path, history_path / file_path.name)
+    except OSError:
+        _LOGGER.error(f'Failed to copy {file_path} to history.')
+
+
+
+def _move_workhistory_folders(work_history_path, history_path,
+                              timestamp, max_job_for_tensor):
+    """Move timestamp-labelled folders in work_history_path to history_path.
+
+    Parameters
+    ----------
+    work_history_path : Path
+        Base path to the workhistory folder from
+        which stuff should be moved.
+    history_path : Path
+        Destination path for the subfolders of
+        `work_history_path` that will be moved.
+    timestamp : str
+        Selects which sub-folders of `work_history_path` should be
+        moved. Only those whose name contains `timestamp` are moved.
+    max_job_for_tensor : defaultdict(int)
+        The maximum job number known for each tensor number. Used
+        to generate new folder names (incrementing by one unit)
+        in `history_path` for each of the directories moved from
+        `work_history_path`.
+
+    Returns
+    -------
+    tensor_nums : set
+        The tensor numbers of the folders that have been moved.
+    """
+    tensor_nums = set()
+    directories = _get_current_workhistory_directories(work_history_path,
+                                                       contains=timestamp)
+    for directory in directories:
+        match = HIST_FOLDER_RE.match(directory.name)
+        if not match:  # Should always match
+            continue
+        tensor_num = int(match['tensor_num'])
+        try:
+            search_num = int(directory.name[6:9])                               # TODO: is this right? 6:9 should be job_num
+        except (ValueError, IndexError):
+            continue
+
+        tensor_nums.add(tensor_num)
+        job_num = max_job_for_tensor[tensor_num] + 1
+        newname = (
+            f't{tensor_num:03d}.r{job_num:03d}.{search_num:03d}'
+            + directory.name[9:]
+            )
+        try:
+            shutil.move(directory, history_path / newname)
+        except OSError:
+            print(f'Error: Failed to move {directory}.')
+    return tensor_nums
+
+
+def _read_and_clear_notes_file(cwd):
+    """Return notes read from file. Clear the file contents."""
+    notes_path = next(cwd.glob('notes*'), None)
+    if notes_path is None:
+        return ''
+    try:
+        notes = notes_path.read_text(encoding='utf-8')
+    except OSError:
+        print(f'Error: Failed to read {notes_path.name} file.')
+        return ''
+    try:  # pylint: disable=too-many-try-statements
+        with notes_path.open('w', encoding='utf-8'):
+            pass
+    except OSError:
+        _LOGGER.error(f'Failed to clear the {notes_path.name} '
+                      'file after reading.')
+    return notes
+
+
+def _read_most_recent_log(cwd):
+    """Return timestamp and lines from the most-recent log file in cwd."""
+    last_log_lines = []
+    try:
+        most_recent_log = max(
+            (log_file
+             for prefix in _CALC_LOG_PREFIXES
+             for log_file in cwd.glob(f'{prefix}*.log')
+             if log_file.is_file()),
+            key=attrgetter('name')
+            )
+    except ValueError:  # No log files
+        timestamp = time.strftime('%y%m%d-%H%M%S', time.localtime())
+        old_timestamp = f'moved-{timestamp}'
+        return old_timestamp, last_log_lines
+
+    old_timestamp = most_recent_log.name[-17:-4]
+    try:  # pylint: disable=too-many-try-statements
+        with most_recent_log.open('r', encoding='utf-8') as log_file:
+            last_log_lines = log_file.readlines()
+    except OSError:
+        pass
+    return old_timestamp, last_log_lines
+
+
+def _update_state_files_from_out(cwd):
+    """Moved states files from OUT to root if available and rename old to _ori."""
+    out_path = cwd / 'OUT'
+    if not out_path.is_dir():
+        return
+    for file in STATE_FILES:
+        out_file = out_path / f'{file}_OUT'
+        if out_file.is_file():
+            try:
+                shutil.move(cwd / file, cwd / f'{file}_ori')
+                shutil.move(out_file, cwd / file)
+            except OSError:
+                print(f'Error: failed to copy {out_file} as new {file}.')
+
+
+
+# This could probably be done by datetime.strptime
+def _translate_timestamp(time_stamp):
+    """Return a 'DD.MM.YY hh:mm:ss' timestamp from a YYMMDD-hhmmss one."""
+    time_stamp = time_stamp.replace('moved-', '')
+    if len(time_stamp) != 13:
+        print(time_stamp)
+        raise ValueError('Error translating timestamp: Invalid length '
+                         f'{len(time_stamp)}. Expected 13 characters.')
+    year, month, day = time_stamp[:2], time_stamp[2:4], time_stamp[4:6]
+    hour, minutes, secs = time_stamp[7:9], time_stamp[9:11], time_stamp[11:13]
+    return f'{day}.{month}.{year} {hour}:{minutes}:{secs}'
+
 
 
 class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
@@ -390,23 +1057,33 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
         super().add_parser_arguments(parser)
         what_next = parser.add_mutually_exclusive_group()
         what_next.add_argument(
-            '-c', '--cont',
-            help=('overwrite POSCAR and VIBROCC with POSCAR_OUT and '
-                  'VIBROCC_OUT from the OUT folder, if present.'),
-            action='store_true'
+            '-a', '--archive',
+            help=('Store last run in history. Overwrite PARAMETERS, POSCAR &'
+                  'VIBROCC from OUT. Runs after viperleed.calc by default.'),
+            action='store_true',
+            )
+        what_next.add_argument(
+            '-c', '--clear',
+            help=('Clear the input directory and add last run to history if not'
+                  ' already there. Runs before viperleed.calc by default.'),
+            action='store_true',
             )
         what_next.add_argument(
             '-d', '--discard',
-            help=('discard all results from the last run, as if it had '
-                  'not happened, and do not add anything to history or '
-                  'history.info. Note that this will not necessarily '
-                  'restore modified input files in the main folder.'),
+            help=('Discard all results from the last run, and restore the '
+                  'previous inputs. The discarded run is kept in history.'),
+            action='store_true',
+            )
+        what_next.add_argument(
+            '-df', '--discard-full',
+            help=('Discard all results from the last run as if it never '
+                  'happened. The discarded run is removed from history.'),
             action='store_true',
             )
         parser.add_argument(
             '-j', '--job-name',
             help=('define a string to be appended to the name of the history '
-                  'folder that is created, and is logged in history.info'),
+                  f'folder that is created, and is logged in {HISTORY_INFO_NAME}'),
             type=str
             )
         parser.add_argument(
@@ -424,21 +1101,25 @@ class BookkeeperCLI(ViPErLEEDCLI, cli_name='bookkeeper'):
             default=DEFAULT_WORK_HISTORY
             )
 
+
     def __call__(self, args=None):
         """Call the bookkeeper with command-line args."""
         parsed_args = self.parse_cli_args(args)
 
+        bookkeeper = Bookkeeper(job_name=parsed_args.job_name,
+                                history_name=parsed_args.history_name,
+                                work_history_name=parsed_args.work_history_name,
+                                cwd=Path.cwd().resolve())
         # Select mode
-        if parsed_args.cont:
-            mode = BookkeeperMode.CONT
+        if parsed_args.clear:
+            mode = BookkeeperMode.CLEAR
         elif parsed_args.discard:
             mode = BookkeeperMode.DISCARD
-        else:   # default
-            mode = BookkeeperMode.DEFAULT
-        return bookkeeper(mode,
-                          job_name=parsed_args.job_name,
-                          history_name=parsed_args.history_name,
-                          work_history_name=parsed_args.work_history_name,)
+        elif parsed_args.discard_full:
+            mode = BookkeeperMode.DISCARD_FULL
+        else:
+            mode = BookkeeperMode.ARCHIVE
+        return bookkeeper.run(mode)
 
 
 if __name__ == '__main__':
