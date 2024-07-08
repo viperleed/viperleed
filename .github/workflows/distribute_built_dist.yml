@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - github-workflow-dev
     tags:  # Only stable releases. Is the first pattern enough?
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - '!v[0-9]+.[0-9]+.[0-9]+[a-zA-Z]+'
