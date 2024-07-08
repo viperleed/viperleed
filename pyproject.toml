@@ -36,13 +36,13 @@ keywords = [
     'physics',
     ]
 authors = [
-    {name = 'Michele Riva', email='riva@iap.tuwien.ac.at'},
-    {name = 'Florian Kraushofer', email='florian.kraushofer@tum.de'},
-    {name = 'Alexander M. Imre', email='imre@iap.tuwien.ac.at'},
-    {name = 'Florian Dörr', email='doerr@iap.tuwien.ac.at'},
+    {name = 'Michele Riva'},          # , email='riva@iap.tuwien.ac.at'
+    {name = 'Florian Kraushofer'},    # , email='florian.kraushofer@tum.de'
+    {name = 'Alexander M. Imre'},     # , email='imre@iap.tuwien.ac.at'
+    {name = 'Florian Dörr'},          # , email='doerr@iap.tuwien.ac.at'
     ]
 maintainers = [
-    {name = 'ViPErLEED Developers', email='riva@iap.tuwien.ac.at'},
+    {name = 'ViPErLEED Developers'},  # , email='riva@iap.tuwien.ac.at'
     ]
 classifiers = [
     'Intended Audience :: Science/Research',
@@ -67,11 +67,11 @@ classifiers = [
     ]
 
     [project.urls]
-    homepage = 'https://viperleed.org'
-    documentation = 'https://viperleed.org'
-    download = 'https://github.com/viperleed/viperleed/releases'
-    source = 'https://github.com/viperleed/viperleed'
-    issues = 'https://github.com/viperleed/viperleed/issues'
+    Homepage = 'https://viperleed.org'
+    Documentation = 'https://viperleed.org'
+    Download = 'https://github.com/viperleed/viperleed/releases'
+    Source = 'https://github.com/viperleed/viperleed'
+    Issues = 'https://github.com/viperleed/viperleed/issues'
 
     [project.scripts]
     viperleed = 'viperleed.cli:ViPErLEEDMain.run_as_script'
@@ -85,38 +85,6 @@ classifiers = [
         ]
     hardware = [
         'requests',
-        ]
-    dev = [
-        'ase',  # Used for testing the ASE interface
-        'build',
-        'line_profiler',
-        'make-to-batch',  # To generate Windows make.bat from Makefiles
-        'pytest-cases',
-        'pytest-subtests',
-        'pytest<8',  # Till Issue #337 of pytest-cases is fixed
-        'twine',
-        ]
-    doc = [  # Requires >= py3.9!
-        'ase',         # For notebooks
-        'myst-nb>1.0',
-        'myst-parser>1.0',
-        'setuptools',  # Workaround for sphinxcontrib-bibtex #345
-        'sphinx-rtd-theme',
-        'sphinx>6.1',
-        # For now take the sphinx-argparse fork by @michele-riva, till
-        # the edits are released in the main sphinx-argparse repo
-        'sphinx-argparse@git+https://github.com/michele-riva/sphinx-argparse@collated-edits',
-        'sphinx-copybutton',
-        'sphinx-design',
-        'sphinxcontrib-bibtex',
-        'sphinxcontrib-qthelp',
-        'sphinxcontrib-spelling',
-        'sphinxcontrib-svg2pdfconverter',
-        # The following modules are not necessary for sphinx, but are
-        # needed for the build/scripts/embed_fonts.py utility
-        'brotli',    # Some dependency of parsel? We do not use it explicitly
-        'fontTools',
-        'parsel',
         ]
 
 
