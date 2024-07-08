@@ -1,5 +1,5 @@
 ViPErLEED is a comprehensive set of tools for measuring, processing, and
-analyzing quantitative low-energy electron diffraction (LEED).
+analyzing quantitative low-energy electron diffraction (LEED) data.
 
 Copyright (c) 2019–2024, ViPErLEED Developers.
 All rights reserved.
