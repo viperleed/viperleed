@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4.1.7
     - name: Set up most recent Python 3
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v5.1.0
       with:
         python-version: '3.x'
     - name: Install pypa/build
@@ -28,7 +28,7 @@ jobs:
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
     - name: Store the distribution packages
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4.3.4
       with:
         name: viperleed-dist
         path: dist/
@@ -46,12 +46,12 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4.1.8
       with:
         name: viperleed-dist
         path: dist/
     - name: Publish viperleed to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@v1.9.0
 
   # This assumes that the creation of the release was the event that
   # triggered the workflow in the first place
@@ -69,7 +69,7 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4.1.8
       with:
         name: viperleed-dist
         path: dist/
