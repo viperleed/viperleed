@@ -24,6 +24,9 @@ For installation instructions see
 For a documentation of the `viperleed` Python API see
 <https://viperleed.org/content/api.html>
 
+[![Documentation Status](https://readthedocs.org/projects/viperleed/badge/?version=latest)](https://viperleed.readthedocs.io/en/latest/?badge=latest)
+
+
 #### Reporting bugs
 You can ask questions, report bugs, and propose new features by creating
 a new issue under <https://github.com/viperleed/viperleed/issues>. This
