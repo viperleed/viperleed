@@ -30,4 +30,4 @@ formats:
 python:
    install:
    - requirements: requirements-dist.txt
-   - requirements: requirements-docs.txt
+   - requirements: requirements-doc.txt
