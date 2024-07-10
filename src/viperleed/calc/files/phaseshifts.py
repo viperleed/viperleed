@@ -445,7 +445,7 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
             "Could not check consistency of PHASESHIFTS file: "
             f"PHASESHIFTS for some sites are smaller than {eps} at the largest "
             "energy for LMAX >= {l_max_cutoff}. This may happen if you are "
-            "using very light scatterers (e.g. Hydrogen)."
+            "using very light scatterers (e.g. hydrogen)."
             )
         rp.setHaltingLevel(1)
         return
