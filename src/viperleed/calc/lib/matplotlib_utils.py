@@ -13,8 +13,9 @@ __license__ = 'GPLv+3'
 
 from functools import wraps
 import logging
+from pathlib import Path
 import sys
-from traceback import print_exc
+from traceback import format_exc
 
 if sys.version_info >= (3, 10):
     import importlib.resources as importlib_resources
@@ -120,7 +121,7 @@ def close_figures(pyplot, *figures):
         try:
             pyplot.close(figure)
         except Exception:                                                       # TODO: should catch correct ones, but let's have people tell us.
-            _LOGGER.warning(_log_msg, print_exc())
+            _LOGGER.warning(_log_msg, format_exc())
 
 
 @skip_without_matplotlib
@@ -140,7 +141,8 @@ def use_calc_style():
     # In the early versions of matplotlib, dotted names cannot be
     # used to locate styles. Use here a simplified version of the
     # implementation of more recent matplotlib (v3.7.5)
-    path = importlib_resources.files('viperleed') / f'calc.{STYLE_EXTENSION}'
+    vpr_path = Path(importlib_resources.files('viperleed'))
+    path = vpr_path / f'calc.{STYLE_EXTENSION}'
 
     # Implementation of _rc_params_in_file differs slightly in older
     # matplotlib versions. Hopefully it works anyway.
