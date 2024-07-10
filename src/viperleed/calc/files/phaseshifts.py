@@ -440,10 +440,12 @@ def __check_consitency_element_order(rp, sl, phaseshifts,
         if all(abs(ps_sites) > eps):
             break
     else:
-        # None of the phaseshifts are larger than eps at this energy
+        # At least one of the phaseshifts are smaller than eps at this energy
         logger.warning(
-            "Could not check consistency of PHASESHIFTS file: All "
-            f"PHASESHIFTS are smaller than {eps} at the largest energy."
+            "Could not check consistency of PHASESHIFTS file: "
+            f"PHASESHIFTS for some sites are smaller than {eps} at the largest "
+            "energy for LMAX > {l_max_cutoff}. This may happen if you are "
+            "using very light scatterers."
             )
         rp.setHaltingLevel(1)
         return
