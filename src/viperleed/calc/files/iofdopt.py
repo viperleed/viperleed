@@ -16,6 +16,7 @@ from numpy.polynomial import Polynomial
 from viperleed.calc.files.iorfactor import read_rfactor_columns
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 
@@ -135,11 +136,7 @@ def write_fd_opt_pdf(points, which, filename="FD_Optimization.pdf",
             pdf.close()
         except Exception:
             pass
-    try:
-        plt.close(fig)
-    except Exception:
-        pass
-    return
+    close_figures(plt, fig)
 
 
 def write_fd_opt_beams_pdf(rp, points, which, tmpdirs, best_rfactors,

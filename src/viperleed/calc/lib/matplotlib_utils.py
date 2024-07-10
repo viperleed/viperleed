@@ -12,7 +12,9 @@ __created__ = '2024-07-10'
 __license__ = 'GPLv+3'
 
 from functools import wraps
+import logging
 import sys
+from traceback import print_exc
 
 if sys.version_info >= (3, 10):
     import importlib.resources as importlib_resources
@@ -34,6 +36,9 @@ else:
     CAN_PLOT = True
 
 from viperleed.calc.lib.version import Version
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class HasNoMatplotlibError(Exception):
@@ -105,6 +110,18 @@ def raise_without_matplotlib(func):
 
 
 # ############################  FUNCTIONS  ############################
+
+@raise_without_matplotlib
+def close_figures(pyplot, *figures):
+    """Close pyplot figures safely."""
+    _log_msg = ('Failed to close figure. Please report this to the '
+                'ViPErLEED developers: %s')
+    for figure in figures:
+        try:
+            pyplot.close(figure)
+        except Exception:                                                       # TODO: should catch correct ones, but let's have people tell us.
+            _LOGGER.warning(_log_msg, print_exc())
+
 
 @skip_without_matplotlib
 def prepare_matplotlib_for_calc():

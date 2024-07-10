@@ -37,6 +37,7 @@ from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import use_calc_style
 from viperleed.calc.lib.version import Version
@@ -854,11 +855,7 @@ class Rparams:
         None.
         """
         for figures in self.lastParScatterFigs.values():
-            for figure in figures:
-                try:
-                    plt.close(figure)
-                except Exception:
-                    pass
+            close_figures(plt, *figures)
 
     def generateSearchPars(self, sl, subdomain=False):
         """

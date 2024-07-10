@@ -13,6 +13,7 @@ import logging
 import numpy as np
 
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
 
@@ -433,11 +434,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
 
     # save
     if searchname in rp.lastParScatterFigs:
-        for f in rp.lastParScatterFigs[searchname]:
-            try:
-                plt.close(f)
-            except Exception:
-                pass
+        close_figures(plt, *rp.lastParScatterFigs[searchname])
     rp.lastParScatterFigs[searchname] = figs[1:]
     try:
         pdf = PdfPages(outname)
@@ -456,14 +453,10 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
             pdf.close()
         except Exception:
             pass
-    for fig in [f for f in figs if
-                searchname not in rp.lastParScatterFigs or
-                f not in rp.lastParScatterFigs[searchname]]:
-        try:
-            plt.close(fig)
-        except Exception:
-            pass
-    return None
+    figures = (f for f in figs
+               if searchname not in rp.lastParScatterFigs
+               or f not in rp.lastParScatterFigs[searchname])
+    close_figures(plt, *figures)
 
 
 @skip_without_matplotlib
@@ -592,8 +585,4 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
             pdf.close()
         except Exception:
             pass
-    try:
-        plt.close(fig)
-    except Exception:
-        pass
-    return None
+    close_figures(plt, fig)

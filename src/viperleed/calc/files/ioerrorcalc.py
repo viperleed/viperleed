@@ -22,6 +22,7 @@ from scipy import interpolate
 from viperleed.calc.lib.base import max_diff
 from viperleed.calc.lib.base import range_to_str
 from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import close_figures
 from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
 from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 
@@ -595,8 +596,4 @@ def write_errors_pdf(figs, filename="Errors.pdf"):
             pdf.close()
         except Exception:
             pass
-    for fig in figs:
-        try:
-            plt.close(fig)
-        except Exception:
-            pass
+    close_figures(plt, *figs)
