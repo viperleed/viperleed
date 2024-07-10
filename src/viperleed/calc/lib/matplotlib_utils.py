@@ -31,14 +31,19 @@ except ModuleNotFoundError:
     CAN_PLOT = False
 else:
     import matplotlib
-    from matplotlib import _rc_params_in_file
+    from matplotlib import rc_params_from_file
     from matplotlib import style as mpl_style
     from matplotlib.style.core import STYLE_EXTENSION
     CAN_PLOT = True
 
+# The import position is actually correct. Import from viperleed after
+# other third-party modules. The problem is probably the conditionals
+# and try...except above, which is not inferred correctly.
+# pylint: disable-next=wrong-import-position
 from viperleed.calc.lib.version import Version
 
 
+_CAN_DEAL_WITH_DOTTED_NAMES = '3.7'
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -135,7 +140,7 @@ def prepare_matplotlib_for_calc():
 @skip_without_matplotlib
 def use_calc_style():
     """Use viperleed.calc matplotlib style for plotting."""
-    if Version(mpl_version) >= '3.7':
+    if Version(mpl_version) >= _CAN_DEAL_WITH_DOTTED_NAMES:
         mpl_style.use('viperleed.calc')
         return
     # In the early versions of matplotlib, dotted names cannot be
@@ -144,6 +149,7 @@ def use_calc_style():
     vpr_path = Path(importlib_resources.files('viperleed'))
     path = vpr_path / f'calc.{STYLE_EXTENSION}'
 
-    # Implementation of _rc_params_in_file differs slightly in older
-    # matplotlib versions. Hopefully it works anyway.
-    mpl_style.use(_rc_params_in_file(path))
+    mpl_rc = rc_params_from_file(path,
+                                 fail_on_error=True,
+                                 use_default_template=False)
+    mpl_style.use(mpl_rc)
