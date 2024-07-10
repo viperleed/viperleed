@@ -25,13 +25,6 @@ import random
 import shutil
 from timeit import default_timer as timer
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    _CAN_PLOT = False
-else:
-    _CAN_PLOT = True
-
 import numpy as np
 
 from viperleed.calc.classes.searchpar import SearchPar
@@ -43,6 +36,9 @@ from viperleed.calc.lib.base import parent_name
 from viperleed.calc.lib.checksums import KNOWN_TL_VERSIONS
 from viperleed.calc.lib.checksums import UnknownTensErLEEDVersionError
 from viperleed.calc.sections.calc_section import EXPBEAMS_NAMES
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
+from viperleed.calc.lib.matplotlib_utils import use_calc_style
 from viperleed.calc.lib.version import Version
 from viperleed.calc.files.tenserleed import get_tenserleed_sources
 
@@ -53,8 +49,9 @@ from .special.base import SpecialParameter
 
 
 _LOGGER = logging.getLogger(parent_name(__name__))
-if _CAN_PLOT:
-    plt.style.use('viperleed.calc')
+if CAN_PLOT:
+    import matplotlib.pyplot as plt
+    use_calc_style()
 
 
 class Rparams:
@@ -846,6 +843,7 @@ class Rparams:
             return []
         return self.renormalizeDomainParams(out)
 
+    @skip_without_matplotlib
     def closePdfReportFigs(self):
         """
         Closes the pdf figures from the Search-progress pdf files, which are
@@ -855,9 +853,6 @@ class Rparams:
         -------
         None.
         """
-        if not _CAN_PLOT:
-            return
-
         for figures in self.lastParScatterFigs.values():
             for figure in figures:
                 try:

@@ -10,26 +10,24 @@ __license__ = 'GPLv3+'
 
 import logging
 
-from matplotlib.markers import MarkerStyle
 import numpy as np
 
-try:
-    import matplotlib
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
+from viperleed.calc.lib.matplotlib_utils import skip_without_matplotlib
+
+if CAN_PLOT:
+    prepare_matplotlib_for_calc()
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-    plt.style.use('viperleed.calc')
-except Exception:
-    _CAN_PLOT = False
-else:
-    _CAN_PLOT = True
+    from matplotlib.markers import MarkerStyle
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+@skip_without_matplotlib
 def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
                            outname="Search-progress.pdf",
                            csvname="Search-progress.csv",
@@ -68,10 +66,6 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     None.
 
     """
-    global _CAN_PLOT
-    if not _CAN_PLOT:
-        return None
-
     markers = markers or []
 
     figsPerPage = 5
@@ -472,6 +466,7 @@ def writeSearchProgressPdf(rp, gens, rfacs, lastconfig,
     return None
 
 
+@skip_without_matplotlib
 def writeSearchReportPdf(rp, outname="Search-report.pdf"):
     """
     Writes a pdf file with reports on R-factor convergence and parameter
@@ -489,9 +484,6 @@ def writeSearchReportPdf(rp, outname="Search-report.pdf"):
     None.
 
     """
-    global _CAN_PLOT
-    if not _CAN_PLOT:
-        return None
     allmin = []
     allmax = []
     allmean = []
