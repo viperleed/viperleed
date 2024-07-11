@@ -17,20 +17,16 @@ import fortranformat as ff
 import numpy as np
 
 from viperleed.calc.lib.leedbase import HARTREE_TO_EV
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
+from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 from viperleed.calc.lib.periodic_table import (get_atomic_number,
                                                get_element_symbol)
 
-try:
-    import matplotlib
-except ImportError:
-    _CAN_PLOT = False
-else:
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')
+if CAN_PLOT:
+    prepare_matplotlib_for_calc()
     from matplotlib.backends.backend_pdf import PdfPages
     import matplotlib.pyplot as plt
-    plt.style.use('viperleed.calc')
-    _CAN_PLOT = True
 
 
 logger = logging.getLogger(__name__)
@@ -512,6 +508,7 @@ def writePHASESHIFTS(firstline, phaseshifts, file_path=Path()/'PHASESHIFTS'):
     return
 
 
+@log_without_matplotlib(logger, msg='Skipping Phaseshift plotting.')
 def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
     """
     Outputs plots of the phaseshifts in rp.phaseshifts in a pdf file.
@@ -530,10 +527,6 @@ def plot_phaseshifts(sl, rp, filename="Phaseshifts_plots.pdf"):
     -------
     None.
     """
-    if not _CAN_PLOT:
-        logger.debug("Necessary modules for plotting not found. Skipping "
-                     "Phaseshift plotting.")
-        return
     ps_labels = []
     for el in sl.elements:
         # this reproduces the order of blocks contained in PHASESHIFTS:
