@@ -12,24 +12,22 @@ import logging
 
 import numpy as np
 
-try:
-    import matplotlib
-except Exception:
-    _CAN_PLOT = False
-else:
-    _CAN_PLOT = True
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
+from viperleed.calc.classes.beam import Beam
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
+from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
+
+if CAN_PLOT:
+    prepare_matplotlib_for_calc()
     from matplotlib.backends.backend_pdf import PdfPages
+    from matplotlib.colors import is_color_like
     import matplotlib.pyplot as plt
     import matplotlib.ticker as plticker
-    plt.style.use('viperleed.calc')
-
-from viperleed.calc.classes.beam import Beam
 
 logger = logging.getLogger(__name__)
 
 
+@log_without_matplotlib(logger, msg='Skipping R-factor plotting.')
 def plot_iv(data, filename, labels=[], annotations=[],
             legends=[], formatting={}):
     '''
@@ -85,12 +83,6 @@ def plot_iv(data, filename, labels=[], annotations=[],
     None
 
     '''
-    global _CAN_PLOT
-    if not _CAN_PLOT:
-        logger.debug("Necessary modules for plotting not found. Skipping "
-                     "R-factor plotting.")
-        return
-
     # check data
     if type(data) not in (list, tuple):
         raise TypeError("Expected data as a list or tuple, found "
@@ -269,8 +261,7 @@ def plot_iv(data, filename, labels=[], annotations=[],
                     if minortick is not None:
                         ax.tick_params(which='minor', length=ticklen*0.5)
             if plot_colors:
-                if not all([matplotlib.colors.is_color_like(s)
-                            for s in plot_colors]):
+                if not all(is_color_like(s) for s in plot_colors):
                     plot_colors = []
                     logger.warning("plot_iv: Specified colors not "
                                    "recognized, reverting to default colors")
