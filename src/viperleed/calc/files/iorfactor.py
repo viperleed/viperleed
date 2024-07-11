@@ -20,24 +20,21 @@ import re
 import fortranformat as ff
 import numpy as np
 
-try:
-    import matplotlib
-except ImportError:
-    _CAN_PLOT = False
-else:
-    _CAN_PLOT = True
-    matplotlib.rcParams.update({'figure.max_open_warning': 0})
-    matplotlib.use('Agg')  # !!! check with Michele if this causes conflicts
-    from matplotlib.backends.backend_pdf import PdfPages
-    import matplotlib.pyplot as plt
-    import matplotlib.ticker as plticker
-    plt.style.use('viperleed.calc')
-
 from viperleed.calc.classes.rparams import EnergyRange
 from viperleed.calc.files.beams import writeAUXEXPBEAMS
 from viperleed.calc.files.ivplot import plot_iv
 from viperleed.calc.lib import leedbase
+from viperleed.calc.lib.matplotlib_utils import CAN_PLOT
+from viperleed.calc.lib.matplotlib_utils import log_without_matplotlib
+from viperleed.calc.lib.matplotlib_utils import prepare_matplotlib_for_calc
 from viperleed.calc.lib.version import Version
+
+if CAN_PLOT:
+    prepare_matplotlib_for_calc()
+    from matplotlib.backends.backend_pdf import PdfPages
+    from matplotlib.colors import is_color_like
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as plticker
 
 logger = logging.getLogger(__name__)
 
@@ -654,6 +651,7 @@ def read_rfactor_columns(cols_dir=''):
     return xxyy
 
 
+@log_without_matplotlib(logger, msg='Skipping R-factor plotting.')
 def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
                     analysisFile='', v0i=0., formatting=None):
     '''
@@ -711,13 +709,6 @@ def writeRfactorPdf(beams, colsDir='', outName='Rfactor_plots.pdf',
     None
 
     '''
-
-    global _CAN_PLOT
-    if not _CAN_PLOT:
-        logger.debug("Necessary modules for plotting not found. Skipping "
-                     "R-factor plotting.")
-        return
-
     xyTheo, xyExp = read_rfactor_columns(cols_dir=colsDir)
     labels, rfacs = zip(*beams)
     rfac_str = ["R = {:.4f}".format(r) for r in rfacs]
@@ -838,8 +829,7 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
                       axis=0))
     axs[1].plot(xlims, [0., 0.], color='grey', alpha=0.2)
     if not plotcolors:
-        if not all([matplotlib.colors.is_color_like(s)
-                    for s in plotcolors]):
+        if not all(is_color_like(s) for s in plotcolors):
             plotcolors = []
             logger.warning("writeRfactorPdf: Specified colors not "
                            "recognized, reverting to default colors")
@@ -869,21 +859,14 @@ def plot_analysis(exp, figs, figsize, name, namePos, oritick, plotcolors, rPos, 
     axs[1].legend()
 
 
+@log_without_matplotlib(logger, msg='Skipping R-factor plotting.')
 def writeRfactorPdf_new(n_beams, labels, rfactor_beams,
                         energies, id_start,
                         n_E_beams,
                         int_1, int_2, y_1, y_2 ,
                         outName='Rfactor_plots.pdf',
                         analysisFile='', v0i = 0., formatting=None):
-
     # after applying the V0r shift outside, the id_start and n_E_beams should be same for experiment and theory
-    global _CAN_PLOT
-    if not _CAN_PLOT:
-        logger.debug("Necessary modules for plotting not found. Skipping "
-                     "R-factor plotting.")
-        return
-
-
     # get data
     exp_xy = []
     theo_xy = []
