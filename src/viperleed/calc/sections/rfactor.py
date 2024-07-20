@@ -500,7 +500,7 @@ def run_legacy_rfactor(sl, rp, for_error, name, theobeams, index, only_vary):
     try:
         with rfaclogname.open("w") as log:
             subprocess.run(
-                Path(rfacname).resolve(),
+                str(Path(rfacname).resolve()),
                 input=theospec,
                 encoding="ascii",
                 stdout=log,

@@ -17,7 +17,8 @@ license = {file = 'LICENSE.md'}
 readme = 'README.md'
 dependencies = [
     'fortranformat',
-    'matplotlib',
+    'importlib_resources; python_version<"3.10"',  # Patch matplotlib
+    'matplotlib>=3.5',  # Maybe even lower, but had problems installing
     'numpy',
     'psutil',
     'quicktions',
